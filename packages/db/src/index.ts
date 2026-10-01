@@ -10,7 +10,7 @@ export interface DatabaseEnv {
   connection: HyperdriveBinding;
 }
 
-export { enqueueTransactionalEmailIntent, type TransactionalEmailOutboxInput, type TransactionalEmailPurpose } from './transactional-email.ts';
+export { enqueueTransactionalEmailIntent, lockAuthDelivery, type TransactionalEmailOutboxInput, type TransactionalEmailPurpose } from './transactional-email.ts';
 
 export async function query<T extends QueryResultRow = QueryResultRow>(
   binding: HyperdriveBinding,
@@ -101,15 +101,24 @@ export {
   reconcileBudgetReservation,
   releaseBudgetReservation,
   reserveBudget,
+  reserveBudgetInTransaction,
   settleBudgetReservation,
   type BudgetConfig,
   type BudgetOperationClass,
+  type BudgetScope,
   type BudgetReservation,
   type BudgetReservationStatus,
   type ReconcileBudgetInput,
   type ReserveBudgetInput,
   type SettleBudgetInput,
 } from './budget.ts';
+export {
+  purgeAlphaMedia,
+  scheduleAlphaPurge,
+  type AlphaPurgeBucket,
+  type AlphaPurgeState,
+  type AlphaTerminalState,
+} from './authenticity-alpha.ts';
 export {
   listUserActivity,
   recordUserActivity,

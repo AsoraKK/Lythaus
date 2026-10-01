@@ -71,6 +71,8 @@ jobs:
       - run: npm run validate:cloudflare-hyperdrive-targets:manifest
       - run: npm run validate:ai-gateway-paths
       - run: npm run typecheck:native
+      - name: Verify private auth-email service boundary in workerd
+        run: node --test --test-timeout=60000 scripts/tests/private-email-binding.workerd.mjs
       - run: node --experimental-strip-types --test packages/security/tests/critical-security-policy.test.mjs
       - run: npm run test:native-architecture
       - run: node --test scripts/tests/real-email-acceptance-evidence.test.mjs
@@ -83,9 +85,12 @@ jobs:
       - run: npm ci --ignore-scripts --prefix apps/lythaus-authenticity-runtime
       - run: npx tsc -p apps/lythaus-authenticity-runtime/tsconfig.json --noEmit
       - run: node --experimental-strip-types --test packages/authenticity/tests/beta.test.mjs packages/authenticity/tests/wp005a.test.mjs packages/authenticity/tests/wp005b.test.mjs
+      - name: Exercise private alpha hardening regressions
+        run: npm run test:authenticity-private-alpha
       - run: node --test scripts/tests/authenticity-beta-release.test.mjs
       - run: python3 apps/lythaus-authenticity-runtime/container/test_artifacts.py
       - run: python3 scripts/tests/test_beta_cpu_smoke.py
+      - run: npm run test:authenticity-cpu-orchestration
       - run: python3 apps/lythaus-authenticity-runtime/container/test_supervisor.py
       - name: Record code-only Linux capacity
         run: python3 scripts/ci/authenticity-linux-capacity.py
@@ -223,17 +228,9 @@ jobs:
             -g '!.dart_tool/**' \
             | xargs -r dart format --output=none --set-exit-if-changed
       - run: flutter analyze
+      - run: node --test scripts/tests/version-web-entrypoints.test.mjs
       - run: bash scripts/test-with-coverage.sh
       - run: bash scripts/check_coverage_gates.sh
-      - name: Run browser-critical Flutter smoke tests
-        run: |
-          flutter test test/features/auth/presentation/auth_choice_screen_test.dart
-          flutter test test/features/auth/application/auth_service_test.dart
-          flutter test test/features/auth/presentation/auth_gate_test.dart
-          flutter test test/core/routing/app_router_test.dart
-          flutter test test/core/config/release_web_guard_test.dart
-          flutter test test/ui/screens/adaptive_shell_test.dart
-          flutter test test/screens/profile_screen_test.dart
       - name: Build immutable web release artifact
         run: |
           set -euo pipefail
@@ -257,12 +254,25 @@ jobs:
           path: build/web
           if-no-files-found: error
           retention-days: 7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit
+      - name: Enforce per-module authentication coverage
+        run: node scripts/check-auth-flutter-coverage.mjs
+      - name: Install authentication test browsers
+        run: npx playwright install --with-deps chromium webkit
+      - name: Verify rendered Flutter authentication journey
+        run: node --test --test-timeout=120000 scripts/tests/flutter-auth.browser.mjs
 
   frontends:
     name: Web frontends
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: '22'
@@ -286,10 +296,17 @@ jobs:
           test -f dist/ai-moderation/index.html
           test -f dist/contact/index.html
           echo "All critical marketing site files present"
+      - run: node scripts/cloudflare/validate-marketing-output.mjs apps/marketing-site/dist
       - name: Install homepage test browsers
         run: npx playwright install --with-deps chromium firefox webkit
+      - name: Verify existing browsers receive new app entrypoints
+        run: node scripts/tests/web-release-cache.browser.mjs
       - name: Verify homepage optical and accessibility contracts
         run: npm run marketing:test:browser
+      - name: Verify rendered email authentication controls
+        run: node --test --test-timeout=60000 apps/marketing-site/tests/auth-journey.browser.mjs
+      - name: Verify protected email confirmation controls
+        run: node --experimental-strip-types --test --test-timeout=60000 apps/lythaus-auth-acceptance-coordinator/tests/email-landing.browser.mjs
 
   dependency_audit:
     name: Dependency audit

@@ -9,6 +9,7 @@ import { buildPrivacyDataPassport, decryptPrivatePassportIdentity, ensureWorkflo
 import { EMAIL_LIFECYCLE_QUEUE, handleTransactionalEmailLifecycleWebhook, readTransactionalEmailDeliveryEvidence, reconcileTransactionalEmailLifecycleQueueMessage, relayTransactionalEmailOutbox } from './transactional-email-runtime.ts';
 import { WorkflowEntrypoint } from 'cloudflare:workers';
 import { processBetaEvent, expireBetaWork } from './authenticity-beta.ts';
+import { processAlphaEvent, expireAlphaWork } from './authenticity-alpha.ts';
 import { tombstoneBetaCases, purgeBetaMedia } from '../../../packages/db/src/authenticity-beta.ts';
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 
@@ -1621,6 +1622,7 @@ async function processMessage(message: QueueMessage, env: Env): Promise<void> {
   try {
     if (eventType === 'content.post.created' || eventType === 'content.post.updated') await processPostModeration(message, env);
     if (eventType === 'moderation.authenticity_beta.requested') await processBetaEvent(env, eventId, message.body.payload);
+    if (eventType === 'moderation.authenticity_alpha.requested') await processAlphaEvent(env, eventId, message.body.payload);
     if (eventType === 'content.profile.updated') await processProfileModeration(message, env);
     if (eventType === 'content.comment.created' || eventType === 'content.comment.updated') {
       await processCommentModeration(message, env);
@@ -1892,6 +1894,7 @@ export default {
       await expireBetaWork(env);
       await purgeBetaMedia(env.DB_JOBS_FRESH,env.MEDIA_QUARANTINE);
     }
+    if (env.AUTHENTICITY_ALPHA_ENABLED === 'true') await expireAlphaWork(env);
     await relayTransactionalEmailOutbox(env);
     await relayOutbox(env);
     await deliverAdminOutcomeNotifications(env);

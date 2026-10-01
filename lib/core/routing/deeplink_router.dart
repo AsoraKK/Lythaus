@@ -10,6 +10,35 @@ import 'package:lythaus/features/notifications/presentation/notifications_settin
 /// Deep-link router for handling notification navigation
 /// Parses deep-link URIs and navigates to appropriate screens
 class DeeplinkRouter {
+  /// Whether this link identifies an existing supported first-party screen.
+  static bool canNavigate(String deeplink) {
+    final uri = Uri.tryParse(deeplink);
+    if (uri == null) return false;
+    if (uri.hasScheme &&
+        uri.scheme != 'lythaus' &&
+        !(uri.scheme == 'https' && uri.host == 'app.lythaus.co')) {
+      return false;
+    }
+    if (!uri.hasScheme && (uri.hasAuthority || !uri.path.startsWith('/'))) {
+      return false;
+    }
+    final parsed = _normalize(uri);
+    if (parsed == null) return false;
+    final hasId = parsed.id != null && parsed.id!.isNotEmpty;
+    return switch (parsed.type) {
+      'post' || 'user' => hasId,
+      'comment' =>
+        hasId &&
+            ((parsed.query['postId'] ?? parsed.query['post'] ?? '')
+                    .isNotEmpty ||
+                parsed.remainingPathSegments.isNotEmpty),
+      'settings' => parsed.id == 'notifications',
+      'moderation' => parsed.id == null || parsed.id == 'appeal',
+      'invite' => hasId || (parsed.query['code'] ?? '').isNotEmpty,
+      _ => false,
+    };
+  }
+
   /// Parse and navigate to deep-linked content
   /// Supported formats:
   /// - https://app.lythaus.co/post/{postId} - Navigate to post detail
@@ -84,9 +113,9 @@ class DeeplinkRouter {
     BuildContext context,
     String userId,
   ) async {
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const ProfileScreen()));
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => ProfileScreen(userId: userId)),
+    );
   }
 
   static Future<void> _navigateToComment(

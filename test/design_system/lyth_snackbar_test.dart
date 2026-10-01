@@ -5,7 +5,9 @@ import 'package:lythaus/design_system/components/lyth_snackbar.dart';
 import 'package:lythaus/design_system/index.dart';
 
 void main() {
-  testWidgets('LythSnackbar success uses surface colors', (tester) async {
+  testWidgets('LythSnackbar success uses semantic feedback colors', (
+    tester,
+  ) async {
     final theme = LythausTheme.light();
     late BuildContext capturedContext;
 
@@ -28,7 +30,11 @@ void main() {
 
     expect(find.text('Saved'), findsOneWidget);
     final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-    expect(snackBar.backgroundColor, theme.colorScheme.surface);
+    expect(
+      snackBar.backgroundColor,
+      LythSemanticColors.light['successSurface'],
+    );
+    expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
   });
 
   testWidgets('LythSnackbar error shows action and error color', (
@@ -61,7 +67,8 @@ void main() {
     expect(find.text('Failed'), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
     final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-    expect(snackBar.backgroundColor, theme.colorScheme.error);
+    expect(snackBar.backgroundColor, theme.colorScheme.errorContainer);
+    expect(snackBar.action?.textColor, theme.colorScheme.onErrorContainer);
   });
 
   testWidgets('LythSnackbar info uses surface container color', (tester) async {
@@ -87,7 +94,8 @@ void main() {
 
     expect(find.text('Heads up'), findsOneWidget);
     final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-    expect(snackBar.backgroundColor, theme.colorScheme.surfaceContainer);
+    expect(snackBar.backgroundColor, LythSemanticColors.light['infoSurface']);
+    expect(find.byIcon(Icons.info_outline), findsOneWidget);
   });
 
   testWidgets('LythSnackbar warning uses surface color', (tester) async {
@@ -113,6 +121,10 @@ void main() {
 
     expect(find.text('Careful'), findsOneWidget);
     final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-    expect(snackBar.backgroundColor, theme.colorScheme.surface);
+    expect(
+      snackBar.backgroundColor,
+      LythSemanticColors.light['warningSurface'],
+    );
+    expect(find.byIcon(Icons.warning_amber_outlined), findsOneWidget);
   });
 }

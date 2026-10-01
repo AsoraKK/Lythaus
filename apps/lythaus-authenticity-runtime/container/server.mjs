@@ -10,6 +10,13 @@ import { Readable } from 'node:stream';
 const secret = process.env.AUTHENTICITY_BETA_DISPATCH_SECRET;
 const runtimeDigest = process.env.RUNTIME_DIGEST;
 if (!secret || !/^sha256:[0-9a-f]{64}$/.test(runtimeDigest ?? '')) throw new Error('runtime_configuration_missing');
+let runtimeImageIdentity = null;
+if (process.env.RUNTIME_IMAGE_IDENTITY) {
+  try {
+    runtimeImageIdentity = JSON.parse(process.env.RUNTIME_IMAGE_IDENTITY);
+    if (!runtimeImageIdentity || !/^sha256:[0-9a-f]{64}$/.test(runtimeImageIdentity.imageId ?? '') || !['local_image_id', 'registry_manifest_digest'].includes(runtimeImageIdentity.identityKind)) throw new Error('image_identity_invalid');
+  } catch { throw new Error('image_identity_invalid'); }
+}
 const preprocessingHash = createHash('sha256').update(await readFile(new URL('./safe_process.py', import.meta.url))).digest('hex');
 await mkdir('/tmp/beta', { recursive: true, mode: 0o700 });
 const child = spawn('python', ['-u', new URL('./safe_process.py', import.meta.url).pathname], { stdio: ['pipe','pipe','ignore'], env: { ...process.env, OMP_NUM_THREADS: '1', MKL_NUM_THREADS: '1', OPENBLAS_NUM_THREADS: '1' } });
@@ -68,7 +75,7 @@ createServer(async (req,res) => {
     let cgroupPeakBytes = null;
     try { const peak=Number((await readFile('/sys/fs/cgroup/memory.peak','utf8')).trim()); if(Number.isSafeInteger(peak)&&peak>0)cgroupPeakBytes=peak; } catch {}
     const measurements={startupMs:startup?.loadMs??null,startupPythonRssBytes:startup?.startupRssBytes??null,cgroupPeakBytes,nodeRssBytes:process.memoryUsage().rss,warm:completed>0};
-    const result = { ...binding, schemaVersion:BETA_VERSION, checkpoint:SAFE_CHECKPOINT, preprocessing:SAFE_PREPROCESSING, preprocessingHash, runtimeDigest, status:raw.status, score:raw.score, facts:raw.facts??null, timings:raw.timings, forensics, measurements };
+    const result = { ...binding, schemaVersion:BETA_VERSION, checkpoint:SAFE_CHECKPOINT, preprocessing:SAFE_PREPROCESSING, preprocessingHash, runtimeDigest, ...(runtimeImageIdentity ? {imageIdentity:runtimeImageIdentity} : {}), status:raw.status, score:raw.score, facts:raw.facts??null, timings:raw.timings, forensics, measurements };
     completed++;
     reply(res,200,{result,display});
   } catch { if (!res.headersSent) reply(res,422,{error:'bounded_inference_failed'}); }

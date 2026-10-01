@@ -16,9 +16,7 @@ class PrivacyCooldownRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final mutedColor = Theme.of(
-      context,
-    ).colorScheme.onSurface.withValues(alpha: 0.7);
+    final mutedColor = Theme.of(context).colorScheme.onSurfaceVariant;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,11 +30,13 @@ class PrivacyCooldownRow extends StatelessWidget {
           children: [
             const Icon(Icons.timer_outlined, size: 16),
             const SizedBox(width: 6),
-            Text(
-              nextAvailableLabel,
-              style: textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.w600,
+            Expanded(
+              child: Text(
+                nextAvailableLabel,
+                style: textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],

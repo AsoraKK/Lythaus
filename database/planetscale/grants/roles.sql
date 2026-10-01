@@ -37,6 +37,7 @@ GRANT SELECT, INSERT ON moderation.appeal_review_votes TO lythaus_runtime;
 GRANT SELECT, INSERT ON privacy.requests TO lythaus_runtime;
 GRANT SELECT ON privacy.export_manifests, privacy.retention_rules TO lythaus_runtime;
 GRANT SELECT, INSERT ON system.outbox_events TO lythaus_runtime;
+GRANT INSERT (id, action, reason_code, correlation_id, metadata) ON system.audit_events TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE ON system.transactional_email_outbox TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE ON system.production_auth_acceptance_runs, system.production_auth_acceptance_events TO lythaus_runtime;
 GRANT SELECT, INSERT, UPDATE, DELETE ON system.idempotency_keys TO lythaus_runtime;
@@ -66,7 +67,7 @@ GRANT SELECT, INSERT, UPDATE ON system.rate_limit_windows TO lythaus_admin;
 GRANT SELECT, INSERT, UPDATE ON system.production_auth_acceptance_runs, system.production_auth_acceptance_events TO lythaus_admin;
 GRANT SELECT (id, user_id, created_at, expires_at, consumed_at, superseded_at) ON identity.email_verification_tokens, identity.password_reset_tokens TO lythaus_admin;
 GRANT SELECT (id, user_id, purpose, challenge_id, state, provider, provider_message_id, provider_error_category,
-              accepted_at, delivered_at, created_at, acceptance_run_id)
+              accepted_at, delivered_at, created_at, acceptance_run_id, correlation_id)
   ON system.transactional_email_outbox TO lythaus_admin;
 GRANT USAGE ON SCHEMA marketing TO lythaus_admin;
 GRANT SELECT (id, email_ciphertext, encryption_key_version, status, source, created_at, retention_hold)
@@ -79,6 +80,8 @@ GRANT USAGE ON SCHEMA identity, content, moderation, feed, social, trust, media,
 GRANT SELECT ON identity.users, identity.email_credentials, identity.contact_emails, identity.admin_memberships TO lythaus_jobs;
 GRANT SELECT, INSERT, UPDATE ON content.posts, content.comments, content.content_declarations, moderation.cases, moderation.decisions, moderation.detector_runs, moderation.appeals, moderation.enforcement_events, feed.author_outbox, feed.discovery_candidates, feed.user_inbox, feed.feed_events, feed.topic_memberships, feed.regional_memberships, feed.notifications, media.upload_sessions, media.objects, media.storage_ledger, media.variants, media.moderation_results, media.deletion_events, system.outbox_events, system.consumer_inbox TO lythaus_jobs;
 GRANT SELECT, UPDATE ON system.transactional_email_outbox TO lythaus_jobs;
+GRANT SELECT (id, user_id, expires_at, consumed_at, superseded_at)
+  ON identity.email_verification_tokens, identity.password_reset_tokens TO lythaus_jobs;
 GRANT DELETE ON feed.author_outbox, feed.discovery_candidates, feed.user_inbox, feed.feed_events, feed.notifications, media.storage_ledger, system.consumer_inbox TO lythaus_jobs;
 GRANT SELECT, DELETE ON feed.notification_preferences, feed.notification_devices TO lythaus_jobs;
 GRANT SELECT, DELETE ON trust.accountability_signals TO lythaus_jobs;
@@ -121,6 +124,15 @@ GRANT EXECUTE ON FUNCTION privacy.reconcile_subject_data_locations(uuid) TO lyth
 GRANT USAGE, CREATE ON SCHEMA identity, content, social, feed, moderation, privacy, trust, media, editorial, marketing, system TO lythaus_migrations;
 GRANT SELECT, INSERT, UPDATE ON moderation.authenticity_beta, moderation.authenticity_beta_steps TO lythaus_runtime, lythaus_jobs, lythaus_admin, lythaus_privacy;
 GRANT SELECT, INSERT, DELETE ON moderation.authenticity_beta_feedback TO lythaus_runtime, lythaus_jobs, lythaus_admin, lythaus_privacy;
+-- Private alpha keeps text/image cases and component attempts separate from the
+-- historical image-only beta tables. Runtime never deletes rows; privacy purge
+-- owns deletion after the approved retention decision.
+GRANT SELECT, INSERT, UPDATE ON moderation.authenticity_alpha, moderation.authenticity_alpha_steps TO lythaus_runtime, lythaus_jobs, lythaus_admin;
+GRANT SELECT, INSERT, DELETE ON moderation.authenticity_alpha_feedback TO lythaus_runtime, lythaus_jobs, lythaus_admin;
+GRANT SELECT, DELETE ON moderation.authenticity_alpha, moderation.authenticity_alpha_steps, moderation.authenticity_alpha_feedback TO lythaus_privacy;
+GRANT EXECUTE ON FUNCTION privacy.record_alpha_location(uuid,uuid) TO lythaus_runtime;
+GRANT EXECUTE ON FUNCTION privacy.remove_alpha_location(uuid,uuid) TO lythaus_runtime, lythaus_jobs, lythaus_privacy;
+GRANT EXECUTE ON FUNCTION privacy.alpha_subject_has_hold(uuid) TO lythaus_runtime, lythaus_jobs, lythaus_privacy;
 GRANT UPDATE (status, observed_bytes, finalised_at) ON media.upload_sessions TO lythaus_runtime;
 GRANT UPDATE (state, deleted_at) ON media.objects TO lythaus_runtime;
 GRANT UPDATE (state, resolved_at) ON moderation.cases TO lythaus_runtime;

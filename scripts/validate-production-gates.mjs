@@ -9,6 +9,8 @@ const phase = phaseIndex === -1 ? null : process.argv[phaseIndex + 1];
 const expectedSha = process.env.RELEASE_SHA ?? '';
 const releaseClass = process.env.RELEASE_CLASS ?? 'AUTH_CRITICAL_RELEASE';
 const authCritical = releaseClass === 'AUTH_CRITICAL_RELEASE';
+const ownerTestingDeployment = process.env.OWNER_TESTING_DEPLOYMENT === 'true';
+const authAcceptanceStatus = process.env.AUTH_ACCEPTANCE_STATUS ?? '';
 const allowedStatuses = new Set(['COMPLETED', 'REQUIRED', 'BLOCKED']);
 const failures = [];
 
@@ -56,8 +58,15 @@ if (phase === 'final') {
   for (const evidenceVariable of ['HYPERDRIVE_VERIFIED_MAIN', 'DATABASE_IDENTITY_VERIFIED', 'BUDGET_ENFORCEMENT_VERIFIED']) {
     if (process.env[evidenceVariable] !== 'true') failures.push(`${evidenceVariable}=true is required from this exact deployment run`);
   }
-  if (authCritical && process.env.AUTHENTICATED_ACCEPTANCE_PROVEN !== 'true') failures.push('AUTHENTICATED_ACCEPTANCE_PROVEN=true is required for AUTH_CRITICAL_RELEASE');
+  if (authCritical && process.env.AUTHENTICATED_ACCEPTANCE_PROVEN !== 'true' && !ownerTestingDeployment) failures.push('AUTHENTICATED_ACCEPTANCE_PROVEN=true is required for AUTH_CRITICAL_RELEASE');
   if (!authCritical && process.env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true') failures.push('STANDARD_RELEASE must not claim authenticated acceptance was required');
+  if (ownerTestingDeployment && (!authCritical
+    || process.env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true'
+    || authAcceptanceStatus !== 'OWNER_TEST_PENDING'
+    || Boolean(process.env.AUTH_ACCEPTANCE_RUN_ID))) {
+    failures.push('owner-testing deployment must remain AUTH_CRITICAL_RELEASE with pending, unrun authentication acceptance');
+  }
+  if (!ownerTestingDeployment && authAcceptanceStatus === 'OWNER_TEST_PENDING') failures.push('OWNER_TEST_PENDING requires explicit OWNER_TESTING_DEPLOYMENT=true');
 }
 
 if (failures.length) {

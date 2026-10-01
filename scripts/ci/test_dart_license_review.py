@@ -37,6 +37,41 @@ class LicenseResolutionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'ARCHIVE_INTEGRITY_MISMATCH'):
             licenses.verify_archive(raw, '0' * 64)
 
+    def test_canonical_sdk_packages_remain_exact_and_fail_closed(self):
+        for name in ('matcher', 'test_api', 'test_core'):
+            version, digest = licenses.EVIDENCE[name]
+            change = {**self.change, 'name': name, 'version': version,
+                      'license': None if name == 'matcher' else 'bsd-3-clause',
+                      'package_url': f'pkg:pub/{name}@{version}'}
+            expected = [{**change, 'integrity': digest}]
+            with self.subTest(name=name):
+                self.assertEqual(licenses.eligible(change, expected), (version, digest))
+                for field, value in [('version', version + '+1'), ('license', 'GPL-3.0'),
+                                     ('manifest', 'other/pubspec.lock'), ('package_url', 'pkg:pub/other@' + version)]:
+                    with self.assertRaises(ValueError):
+                        licenses.eligible({**change, field: value}, expected)
+                with self.assertRaisesRegex(ValueError, 'LOCK_INTEGRITY_MISMATCH'):
+                    licenses.eligible(change, [{**expected[0], 'integrity': '0' * 64}])
+
+    def test_missing_metadata_is_not_allowed_for_other_reviewed_packages(self):
+        for name in ('file_selector_ios', 'test_api', 'test_core'):
+            version, digest = licenses.EVIDENCE[name]
+            change = {**self.change, 'name': name, 'version': version, 'license': None,
+                      'package_url': f'pkg:pub/{name}@{version}'}
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, 'UNREVIEWED_VERSION_OR_LICENSE'):
+                licenses.eligible(change, [{**change, 'integrity': digest}])
+
+    def test_new_license_hashes_do_not_approve_changed_text(self):
+        stream = io.BytesIO()
+        with tarfile.open(fileobj=stream, mode='w:gz') as archive:
+            member = tarfile.TarInfo('LICENSE')
+            member.size = 7
+            archive.addfile(member, io.BytesIO(b'GPL-3.0'))
+        raw = stream.getvalue()
+        for digest in licenses.LICENSE_SHA256_BY_PACKAGE.values():
+            with self.subTest(digest=digest), self.assertRaisesRegex(ValueError, 'UNREVIEWED_LICENSE_TEXT'):
+                licenses.verify_archive(raw, hashlib.sha256(raw).hexdigest(), digest)
+
 
 if __name__ == '__main__':
     unittest.main()

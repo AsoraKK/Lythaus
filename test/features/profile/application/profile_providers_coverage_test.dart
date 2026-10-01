@@ -85,6 +85,19 @@ Dio _makeDio(_MockAdapter adapter) {
   return dio;
 }
 
+Future<T> readSubscribed<T>(
+  ProviderContainer container,
+  ProviderListenable<Future<T>> provider,
+) async {
+  final subscription = container.listen(provider, (_, _) {});
+  addTearDown(container.dispose);
+  try {
+    return await container.read(provider);
+  } finally {
+    subscription.close();
+  }
+}
+
 void main() {
   // ─── publicUserProvider ───
 
@@ -109,7 +122,10 @@ void main() {
         ],
       );
 
-      final user = await container.read(publicUserProvider('u1').future);
+      final user = await readSubscribed(
+        container,
+        publicUserProvider('u1').future,
+      );
       expect(user.id, 'u1');
       expect(user.displayName, 'Alice');
       expect(user.reputationScore, 42);
@@ -129,7 +145,10 @@ void main() {
         ],
       );
 
-      final user = await container.read(publicUserProvider('u1').future);
+      final user = await readSubscribed(
+        container,
+        publicUserProvider('u1').future,
+      );
       expect(user.displayName, 'Guest');
     });
 
@@ -146,7 +165,10 @@ void main() {
         ],
       );
 
-      final user = await container.read(publicUserProvider('u1').future);
+      final user = await readSubscribed(
+        container,
+        publicUserProvider('u1').future,
+      );
       expect(user.displayName, 'Guest');
     });
 
@@ -162,7 +184,7 @@ void main() {
       );
 
       expect(
-        () => container.read(publicUserProvider('u1').future),
+        () => readSubscribed(container, publicUserProvider('u1').future),
         throwsA(isA<DioException>()),
       );
     });
@@ -195,7 +217,10 @@ void main() {
         ],
       );
 
-      final passport = await container.read(trustPassportProvider('u2').future);
+      final passport = await readSubscribed(
+        container,
+        trustPassportProvider('u2').future,
+      );
       expect(passport.userId, 'u2');
       expect(passport.transparencyStreakCategory, 'Consistent');
       expect(passport.jurorReliabilityTier, 'Silver');
@@ -220,7 +245,10 @@ void main() {
         ],
       );
 
-      final passport = await container.read(trustPassportProvider('u1').future);
+      final passport = await readSubscribed(
+        container,
+        trustPassportProvider('u1').future,
+      );
       expect(passport.userId, 'u1');
     });
 
@@ -247,7 +275,8 @@ void main() {
           ],
         );
 
-        final passport = await container.read(
+        final passport = await readSubscribed(
+          container,
           trustPassportProvider('u3').future,
         );
         expect(passport.userId, 'u3');
@@ -272,7 +301,10 @@ void main() {
         ],
       );
 
-      final passport = await container.read(trustPassportProvider('u4').future);
+      final passport = await readSubscribed(
+        container,
+        trustPassportProvider('u4').future,
+      );
       expect(passport.userId, 'u4');
     });
   });

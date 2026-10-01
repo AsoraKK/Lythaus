@@ -1,8 +1,8 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
+import SecondaryLayout from '../../layouts/SecondaryLayout.astro';
 const apiBase = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lythaus.co/api';
 ---
-<BaseLayout
+<SecondaryLayout
   title="Invite"
   description="Redeem your Lythaus invite and open the app."
   canonicalPath="/invite"
@@ -16,12 +16,12 @@ const apiBase = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lythaus.co/a
     >
       <span class="pill">Invite check</span>
       <h1>You're almost in.</h1>
-      <p id="invite-message">
+      <p id="invite-message" role="status" aria-live="polite" aria-atomic="true">
         Validating your invite link.
       </p>
       <div class="status-actions">
-        <a class="button primary" id="open-app" href="#">Open Lythaus</a>
-        <button class="button secondary" id="copy-code" type="button">
+        <a class="button primary" id="open-app" href="#" style="display: none">Open Lythaus</a>
+        <button class="button secondary" id="copy-code" type="button" style="display: none">
           Copy invite code
         </button>
       </div>
@@ -31,6 +31,7 @@ const apiBase = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lythaus.co/a
       <noscript class="status-meta">
         Enable JavaScript to validate this invite and open the app.
       </noscript>
+      <a class="text-link" href="/#waitlist">Request an invite</a>
     </div>
   </section>
 
@@ -104,4 +105,4 @@ const apiBase = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lythaus.co/a
 
     validateInvite(parseInviteCode());
   </script>
-</BaseLayout>
+</SecondaryLayout>

@@ -106,6 +106,6 @@ void main() {
     );
     expect(find.text('Pinned Story'), findsOneWidget);
     expect(find.text('News'), findsWidgets);
-    expect(find.byIcon(Icons.workspace_premium_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.push_pin_outlined), findsOneWidget);
   });
 }

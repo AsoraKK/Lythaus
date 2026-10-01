@@ -17,6 +17,27 @@ access boundaries, and lifecycle decisions. Secret values are never recorded.
 | Actions history limitation | The repository-wide endpoint reports 2,500 matches but exposes a maximum 1,000-run page range. Per-workflow endpoints were queried for last-observed and last-successful evidence; any unavailable result remains UNKNOWN. |
 | Repository canary consumer search | No repository consumer of canary-* tags was found on the pinned baseline. |
 
+## Current-main reconciliation (2026-10-01)
+
+The tables and run receipts below retain their pinned 2026-09-27 audit boundary;
+they are not a claim of fresh provider or registration inspection. PR1 was
+reconciled with main `b50c4f7ae6a23ab1d69caea23869f3edd440e3d3`, including
+the canonical Flutter lock/license repair (#882), marketing copy (#883), and
+synthetic authentication fixture repair (#884). Main has 55 workflow files;
+removing only `canary.yml` leaves 54.
+
+The additional `authenticity-cpu-evaluation.yml` workflow is retained. It is a
+separate manual evaluation path with its existing authorization controls, not
+ordinary PR validation. Current private-alpha regression and CPU-orchestration
+checks in `native-workers-validation.yml` must move into CI before PR2 deletes
+that wrapper. Current CI auth coverage, browser journeys, email-service boundary,
+web cache checks, and immutable release artifact handling must also remain.
+
+A fresh repository search still finds no consumer of the tag-only canary.
+`canary-k6.yml`, required security checks, manual production workflows, and
+reviewed exact-main deployment policy remain unchanged. No later cleanup phase
+is authorized by these two PRs.
+
 ## Open PR coordination
 
 Before removing the tag-only workflow, open changes touching the same surface
@@ -238,3 +259,45 @@ Successful GitHub replacement receipts:
 The native, migration, contract, security, and coverage suites retain
 fail-closed negative-path assertions; no continue-on-error or threshold
 relaxation was added.
+
+## PR2 current-main reconciliation
+
+The replacement preserves every existing current-main CI step and adds the
+unique responsibilities of the six wrappers. Private-alpha hardening now runs
+through `npm run test:authenticity-private-alpha`, including
+`packages/authenticity/tests/private-alpha.test.mjs`; CPU orchestration runs
+through its canonical npm command. Both were added to the native wrapper after
+the original PR2 baseline and remain required through the native CI job.
+
+`scripts/test-with-coverage.sh` runs unfiltered `flutter test --coverage` with
+`set -euo pipefail`. All seven former Flutter smoke files remain under `test/`
+and run in that suite, so a second individual invocation of each is unnecessary.
+Formatting, total/module coverage gates, rendered browser auth, immutable web
+artifacts, host/security guards, marketing critical-file checks, and current
+marketing output validation all remain. The Flutter SDK and repaired lockfile
+are unchanged.
+
+CI retains its main PR, main push, and manual triggers, all existing required
+job names and dependency edges, read-only permissions, and no provider secrets.
+No surviving workflow calls a retired wrapper or consumes tag-only canary
+releases. OpenAPI artifact names, generator/oasdiff pins, drift failures, and
+breaking-change/version enforcement remain. The native PostgreSQL service,
+mobile security, manual evaluation, and production workflows stay separate;
+no release approval or exact-main evidence requirement is relaxed. Removing
+the six wrappers leaves 48 workflow files after PR1.
+
+Current Linux reconciliation validation (2026-10-01): actionlint 1.7.7,
+immutable action pins, exact-SHA release contract, and retired-provider scan
+pass. Release governance: 153 passed; private alpha: 22 passed; CPU
+orchestration: 9 passed; production migrations: 22 passed; provider,
+production-gate, and waitlist contracts: 21 passed. OpenAPI lint/examples pass;
+contract Jest: 33 passed, 17 existing platform-skipped tests. Runtime TypeScript
+checks pass. Python artifact, CPU-smoke, and supervisor suites: 9 passed.
+The code-validation container runs as `65532:65532` with network disabled,
+256 MiB, one CPU, and 32 PIDs: 4 passed. The saved workspace has restrictive
+file modes, so this local build uses `git archive` of the staged tree to match
+checkout permissions. GitHub runner-capacity metadata is validated only in
+Actions, where the required event environment exists. A structural comparison
+confirms every current-main CI step remains in order and all trigger,
+permission, job-name, concurrency, and dependency contracts are unchanged.
+Fresh GitHub checks remain the merge gate; historical receipts do not satisfy it.

@@ -96,7 +96,7 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
           try {
             assert.equal(await page.getByRole('heading', { level: 1, name: 'Lythaus', exact: true }).count(), 1);
             assert.equal(await page.locator('h1 svg').getAttribute('aria-hidden'), 'true');
-            assert.equal(await page.locator('.pitch-section').count(), 10);
+            assert.equal(await page.locator('.pitch-section').count(), 4);
             await page.waitForFunction(() => document.documentElement.dataset.opening === 'resolved');
             const elapsed = await page.evaluate(() => window.openingTimes.resolved - window.openingTimes.playing);
             assert.ok(elapsed >= 1750, 'Document loading must not consume the opening timeline');
@@ -175,7 +175,7 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
           await page.goto(origin + '/privacy');
           await page.goBack({ waitUntil: 'domcontentloaded' });
           await finished(page);
-          await page.getByRole('link', { name: 'Join the private beta', exact: true }).click();
+          await page.locator('.pitch-intro-support').getByRole('link', { name: 'Join the waitlist', exact: true }).click();
           assert.equal(new URL(page.url()).hash, '#waitlist');
           assert.ok(await page.locator('#waitlist').isVisible());
         } finally { await context.close(); }
@@ -218,6 +218,11 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
                   return { origin: matrix.m41, extent: matrix.m11 };
                 })(),
                 copy: Number(getComputedStyle(document.querySelector('.pitch-intro-statement')).opacity),
+                supportCopy: [...document.querySelectorAll('.pitch-intro-support p')].map(element => {
+                  let opacity = 1;
+                  for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) opacity *= Number(getComputedStyle(ancestor).opacity);
+                  return opacity;
+                }),
                 energy: Number(getComputedStyle(document.querySelector('[data-light-energy]')).opacity),
                 overflow: document.documentElement.scrollWidth > innerWidth,
               }));
@@ -227,6 +232,9 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
               assert.ok(state.positions[0] >= previousX, 'The beam never reverses');
               previousX = state.positions[0];
               if (at < 1420) assert.equal(state.copy, 0);
+              assert.equal(state.supportCopy.length, 2);
+              if (at < 1510) assert.deepEqual(state.supportCopy, [0, 0], 'Tagline and supporting text wait for the existing copy entrance');
+              if (at >= 1700) assert.deepEqual(state.supportCopy, [1, 1], 'Tagline and supporting text finish together');
               if (at >= 1380) assert.equal(state.energy, 0);
               if (at === 1180) assert.ok(state.positions[0] > 1000, 'Beam continues beyond S');
               assert.equal(state.overflow, false);

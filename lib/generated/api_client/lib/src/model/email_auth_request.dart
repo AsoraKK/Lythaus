@@ -14,17 +14,18 @@ part 'email_auth_request.g.dart';
 /// Properties:
 /// * [mode]
 /// * [email]
-/// * [password]
+/// * [password] - Login verifies existing 12–14 character credentials without imposing the new-creation minimum. Registration requires 15–128 Unicode code points, preserved exactly.
 /// * [turnstileToken]
 @BuiltValue()
 abstract class EmailAuthRequest implements Built<EmailAuthRequest, EmailAuthRequestBuilder> {
   @BuiltValueField(wireName: r'mode')
-  EmailAuthRequestModeEnum get mode;
+  EmailAuthRequestModeEnum? get mode;
   // enum modeEnum {  login,  register,  resend_verification,  };
 
   @BuiltValueField(wireName: r'email')
   String get email;
 
+  /// Login verifies existing 12–14 character credentials without imposing the new-creation minimum. Registration requires 15–128 Unicode code points, preserved exactly.
   @BuiltValueField(wireName: r'password')
   String? get password;
 
@@ -36,7 +37,8 @@ abstract class EmailAuthRequest implements Built<EmailAuthRequest, EmailAuthRequ
   factory EmailAuthRequest([void updates(EmailAuthRequestBuilder b)]) = _$EmailAuthRequest;
 
   @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(EmailAuthRequestBuilder b) => b;
+  static void _defaults(EmailAuthRequestBuilder b) => b
+      ..mode = const EmailAuthRequestModeEnum._('login');
 
   @BuiltValueSerializer(custom: true)
   static Serializer<EmailAuthRequest> get serializer => _$EmailAuthRequestSerializer();
@@ -54,11 +56,13 @@ class _$EmailAuthRequestSerializer implements PrimitiveSerializer<EmailAuthReque
     EmailAuthRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'mode';
-    yield serializers.serialize(
-      object.mode,
-      specifiedType: const FullType(EmailAuthRequestModeEnum),
-    );
+    if (object.mode != null) {
+      yield r'mode';
+      yield serializers.serialize(
+        object.mode,
+        specifiedType: const FullType(EmailAuthRequestModeEnum),
+      );
+    }
     yield r'email';
     yield serializers.serialize(
       object.email,

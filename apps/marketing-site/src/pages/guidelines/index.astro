@@ -1,7 +1,34 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
+import SecondaryLayout from '../../layouts/SecondaryLayout.astro';
+import ArticleContents from '../../components/ArticleContents.astro';
+const articleSections = [
+  {
+    "id": "our-core-principles",
+    "title": "Our Core Principles"
+  },
+  {
+    "id": "whats-not-allowed",
+    "title": "What's Not Allowed"
+  },
+  {
+    "id": "how-moderation-works",
+    "title": "How Moderation Works"
+  },
+  {
+    "id": "appeals",
+    "title": "Appeals"
+  },
+  {
+    "id": "consequences",
+    "title": "Consequences"
+  },
+  {
+    "id": "questions",
+    "title": "Questions?"
+  }
+];
 ---
-<BaseLayout title="Community Guidelines" description="Lythaus community guidelines for safe and authentic interaction." canonicalPath="/guidelines">
+<SecondaryLayout title="Community Guidelines" description="Lythaus community guidelines for safe and authentic interaction." canonicalPath="/guidelines">
   <section class="legal">
     <span class="pill">Community</span>
     <h1>Community Guidelines</h1>
@@ -13,14 +40,16 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       space for everyone.
     </p>
 
-    <h2>Our Core Principles</h2>
+    <ArticleContents sections={articleSections} />
+
+    <h2 id="our-core-principles">Our Core Principles</h2>
     <ol>
       <li><strong>Be Authentic</strong> — Share real experiences and original content.</li>
       <li><strong>Be Respectful</strong> — Treat others with dignity, even in disagreement.</li>
       <li><strong>Be Responsible</strong> — Consider the impact of your words on others.</li>
     </ol>
 
-    <h2>What's Not Allowed</h2>
+    <h2 id="whats-not-allowed">What's Not Allowed</h2>
 
     <h3>Harmful Content</h3>
     <ul>
@@ -45,14 +74,14 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       <li>Copyright or trademark violations.</li>
     </ul>
 
-    <h2>How Moderation Works</h2>
+    <h2 id="how-moderation-works">How Moderation Works</h2>
     <p>
       Every post goes through automated content analysis. High-confidence violations
       are blocked immediately. Borderline content is flagged for human review while
       remaining visible. <strong>Automated decisions can be wrong — you can always appeal.</strong>
     </p>
 
-    <h2>Appeals</h2>
+    <h2 id="appeals">Appeals</h2>
     <p>
       If your content is flagged or blocked, you'll see a clear explanation.
       Eligible cases can be appealed through account activity. Five independently
@@ -61,7 +90,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       adjudications; there is no community vote or unilateral override.
     </p>
 
-    <h2>Consequences</h2>
+    <h2 id="consequences">Consequences</h2>
     <ul>
       <li>First minor violation: content flagged with warning.</li>
       <li>Repeated violations: content blocked, warning issued.</li>
@@ -70,7 +99,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       <li>Criminal content: immediate removal + law enforcement referral.</li>
     </ul>
 
-    <h2>Questions?</h2>
+    <h2 id="questions">Questions?</h2>
     <p>
       Reach out to our Trust &amp; Safety team at
       <a href="mailto:safety@lythaus.app">safety@lythaus.app</a>.
@@ -82,4 +111,4 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       <a href="/privacy">Privacy Policy</a>.
     </p>
   </section>
-</BaseLayout>
+</SecondaryLayout>

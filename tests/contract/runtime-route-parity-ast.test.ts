@@ -29,6 +29,7 @@ const internalRouteKeys = new Set([
   'GET /internal/readiness/database-identity',
   'POST /internal/readiness/transactional-email-key-compatibility',
   'POST /internal/production-auth-acceptance/resend-fixture',
+  'POST /internal/production-auth-acceptance/challenge-observation',
 ]);
 const intentionalStartsWithPrefixes = new Set([
   '/api/auth/email/verify',
@@ -310,7 +311,7 @@ describe('source-derived OpenAPI route parity', () => {
       public: publicExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
       admin: adminExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
     };
-    expect(routeCounts).toEqual({ public: 97, admin: 37 });
+    expect(routeCounts).toEqual({ public: 107, admin: 42 });
     expect(runtimeRoutes.map(routeKey)).toEqual(expect.arrayContaining([
       'GET /.well-known/jwks.json',
       'POST /auth/password/reset/request',

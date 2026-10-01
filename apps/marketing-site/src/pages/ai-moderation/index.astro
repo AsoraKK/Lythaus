@@ -1,7 +1,7 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
+import SecondaryLayout from '../../layouts/SecondaryLayout.astro';
 ---
-<BaseLayout
+<SecondaryLayout
   title="Content Transparency"
   description="How Lythaus combines creator declarations, flags, and trained moderation review."
   canonicalPath="/ai-moderation"
@@ -13,7 +13,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       review. Paid automated detection is not active.
     </p>
 
-    <h2>How it works</h2>
+    <h2 id="how-it-works">How it works</h2>
     <ol>
       <li>
         <strong>Creator declaration</strong> — each publishable post is labelled
@@ -30,14 +30,14 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       </li>
     </ol>
 
-    <h2>Transparency</h2>
+    <h2 id="transparency">Transparency</h2>
     <p>
       If your post is flagged, you will see the reason and can appeal. Our
       moderation console gives moderators full context before any action is
       taken.
     </p>
 
-    <h2>Appeals</h2>
+    <h2 id="appeals">Appeals</h2>
     <p>
       Eligible appeals are reviewed by five independently assigned trained
       reviewers. A trained adjudicator confirms the outcome; high-risk cases
@@ -45,4 +45,4 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       time-based automatic resolution.
     </p>
   </section>
-</BaseLayout>
+</SecondaryLayout>

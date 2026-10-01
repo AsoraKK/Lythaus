@@ -1,5 +1,29 @@
 import { createHash } from 'node:crypto';
-import { expectedMigrationPrefix, loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
+import { APPROVED_MIGRATIONS, expectedMigrationPrefix, loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
+
+export const REQUIRED_RELEASE_SCHEMA_VERSION = APPROVED_MIGRATIONS.at(-1).name;
+
+export function canonicalReleaseSchemaContract({ root = process.cwd(), committedOnly = false } = {}) {
+  const manifest = loadApprovedMigrations({ root, committedOnly });
+  const migrationPrefix = expectedMigrationPrefix(REQUIRED_RELEASE_SCHEMA_VERSION);
+  const relations = relationInventory(manifest.migrations.slice(0, migrationPrefix.length));
+  const migrations = migrationPrefix.map(({ name, appliedSha256 }) => ({ version: name, checksum: appliedSha256 }));
+  return Object.freeze({
+    schemaVersion: REQUIRED_RELEASE_SCHEMA_VERSION,
+    fingerprint: runtimeSchemaFingerprint(relations, migrations), relationCount: relations.length,
+    relations: Object.freeze(relations), migrations: Object.freeze(migrations),
+  });
+}
+
+export function approvedReleaseExpectation(configuredFingerprint = '', configuredRelationCount = '') {
+  const canonical = canonicalReleaseSchemaContract({ committedOnly: process.env.CI === 'true' });
+  const fingerprint = configuredFingerprint.trim() || canonical.fingerprint;
+  const relationCount = String(configuredRelationCount ?? '').trim() ? Number(configuredRelationCount) : canonical.relationCount;
+  if (fingerprint !== canonical.fingerprint || !Number.isInteger(relationCount) || relationCount !== canonical.relationCount) {
+    throw new Error('release schema identity does not match the approved migration contract');
+  }
+  return { fingerprint, relationCount, canonical };
+}
 
 export const APPLICATION_SCHEMAS = Object.freeze([
   'identity',

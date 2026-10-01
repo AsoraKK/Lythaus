@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import pg from 'pg';
 import { loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
+import { assertCompleteMigrationPostconditions, classifyMigrationState } from './planetscale-migration-reconciliation.mjs';
 
 const { Client } = pg;
 
@@ -67,6 +68,8 @@ try {
     const row = recordedMigrations.rows[index];
     if (row.version !== migration.name || row.checksum !== migration.checksum) throw new Error(`PostgreSQL 17 migration checksum mismatch: ${migration.name}`);
   });
+  const releaseMigrationNames = migrations.filter(({ name }) => name >= '0017_').map(({ name }) => name);
+  for (const state of await classifyMigrationState(client, releaseMigrationNames)) assertCompleteMigrationPostconditions(state);
   const grants = fs.readFileSync(path.join(root, 'database', 'planetscale', 'grants', 'roles.sql'), 'utf8');
   await client.query(grants);
   await client.query(fs.readFileSync(path.join(root, 'database', 'planetscale', 'verification', 'verify.sql'), 'utf8'));
@@ -98,9 +101,9 @@ try {
   for (const field of ['users', 'posts', 'subject_locations', 'idempotency', 'contact_emails', 'locator_function', 'retention_function', 'budget_periods', 'budget_reservations', 'usage_events', 'kill_switches', 'waitlist_signups', 'production_auth_acceptance_runs', 'production_auth_acceptance_events']) if (!row[field]) throw new Error(`PostgreSQL 17 compatibility check missing ${field}`);
   if (Number(row.waitlist_retention_column_count) !== 4) throw new Error(`PostgreSQL 17 compatibility check expected waitlist retention and hold columns`);
   if (Number(row.extension_count) !== 3) throw new Error(`PostgreSQL 17 compatibility check expected 3 required extensions, found ${row.extension_count}`);
-  if (Number(row.relation_count) !== 100) throw new Error(`PostgreSQL 17 compatibility check expected 100 local application relations after migration 0017, found ${row.relation_count}`);
-  if (Number(row.relation_count) + 2 !== 102) throw new Error(`PostgreSQL 17 compatibility check expected 102 PlanetScale relations including two provider extension views, found ${Number(row.relation_count) + 2}`);
-  if (Number(row.table_count) !== 99) throw new Error(`PostgreSQL 17 compatibility check expected 99 launch tables after migration 0017, found ${row.table_count}`);
+  if (Number(row.relation_count) !== 103) throw new Error(`PostgreSQL 17 compatibility check expected 103 local application relations through migration 0019, found ${row.relation_count}`);
+  if (Number(row.relation_count) + 2 !== 105) throw new Error(`PostgreSQL 17 compatibility check expected 105 PlanetScale relations including two provider extension views, found ${Number(row.relation_count) + 2}`);
+  if (Number(row.table_count) !== 102) throw new Error(`PostgreSQL 17 compatibility check expected 102 launch tables through migration 0019, found ${row.table_count}`);
 
   const privileges = await client.query(`
     SELECT
@@ -207,7 +210,7 @@ try {
     subjectLocatorReconciled: true,
     rollbackClean: true,
   };
-  console.log(JSON.stringify({ serverVersion: version.rows[0].version, migrations, checks: row, privileges: privilegeRow, transactionChecks }, null, 2));
+  console.log(JSON.stringify({ serverVersion: version.rows[0].version, migrations: migrations.map(({ name, checksum }) => ({ name, checksum })), checks: row, privileges: privilegeRow, transactionChecks }, null, 2));
 } finally {
   await client.end();
 }

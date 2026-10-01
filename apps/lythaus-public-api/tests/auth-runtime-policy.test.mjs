@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import fs from 'node:fs';
 
 import {
   classifyPublicError,
@@ -43,14 +44,14 @@ test('classifies public runtime errors into stable safe responses', () => {
   assert.equal(classifyPublicError(new Error('unsupported_content_type')).status, 415);
   assert.equal(classifyPublicError(new Error('invalid_email')).status, 400);
   assert.deepEqual(classifyPublicError(new Error('database detail')), {
-    exposedCode: 'request_failed', internalCode: 'database detail', status: 500,
+    exposedCode: 'request_failed', internalCode: 'unexpected_failure', status: 500,
   });
   assert.deepEqual(classifyPublicError('not-an-error'), {
-    exposedCode: 'request_failed', internalCode: 'non_error_thrown', status: 500,
+    exposedCode: 'request_failed', internalCode: 'unexpected_failure', status: 500,
   });
 });
 
-test('normalizes email authentication attempts and preserves safe mode defaults', () => {
+test('normalizes email authentication attempts and rejects unsupported modes', () => {
   assert.equal(normalizeEmailAddress('  Person@Example.test '), 'person@example.test');
   assert.throws(() => normalizeEmailAddress('not-an-email'), /invalid_email/);
   assert.throws(() => normalizeEmailAddress(null), /invalid_email/);
@@ -61,9 +62,30 @@ test('normalizes email authentication attempts and preserves safe mode defaults'
     mode: 'register', email: 'person@example.test', password: 'correct-horse-battery', turnstileToken: 'turnstile-token',
   });
   assert.equal(prepareEmailAuthAttempt({ mode: 'resend_verification', email: 'person@example.test' }).mode, 'resend_verification');
-  assert.equal(prepareEmailAuthAttempt({ mode: 'unknown', email: 'person@example.test', password: 'correct-horse-battery' }).mode, 'login');
-  assert.throws(() => prepareEmailAuthAttempt({ mode: 'login', email: 'person@example.test', password: 'short' }), /invalid_password/);
+  assert.throws(() => prepareEmailAuthAttempt({ mode: 'unknown', email: 'person@example.test', password: 'correct-horse-battery' }), /invalid_auth_mode/);
+  assert.equal(prepareEmailAuthAttempt({ email: 'person@example.test', password: 'legacy-word!' }).mode, 'login');
+  assert.throws(() => prepareEmailAuthAttempt({ mode: null, email: 'person@example.test', password: 'correct-horse-battery' }), /invalid_auth_mode/);
+  assert.throws(() => prepareEmailAuthAttempt({ mode: 'login', email: 'person@example.test', password: '' }), /invalid_password/);
   assert.throws(() => prepareEmailAuthAttempt({ mode: 'register', email: 'person@example.test', password: 'x'.repeat(129) }), /invalid_password/);
+});
+
+test('creation and login use the shared code-point fixtures without normalization', () => {
+  const policy = JSON.parse(fs.readFileSync(new URL('../../../packages/contracts/fixtures/password-policy.json', import.meta.url)));
+  for (const fixture of policy.cases) {
+    for (const [mode, allowed] of [['login', fixture.login], ['register', fixture.creation]]) {
+      const attempt = () => prepareEmailAuthAttempt({ mode, email: 'fixture@example.test', password: fixture.password });
+      if (allowed) assert.equal(attempt().password, fixture.password, fixture.name);
+      else assert.throws(attempt, /invalid_password/, fixture.name);
+    }
+    if (fixture.creation) assert.equal(requireResetPassword(fixture.password), fixture.password);
+    else assert.throws(() => requireResetPassword(fixture.password), /invalid_password/);
+  }
+  assert.equal(requireResetPassword('😀'.repeat(128)), '😀'.repeat(128));
+  assert.throws(() => requireResetPassword('😀'.repeat(129)), /invalid_password/);
+  for (const password of [null, {}, [], 12]) {
+    assert.throws(() => prepareEmailAuthAttempt({ email: 'fixture@example.test', password }), /invalid_password/);
+  }
+  assert.equal(classifyPublicError(new Error('invalid_auth_mode')).status, 400);
 });
 
 test('recovers interrupted and migrated registrations without changing verified accounts', () => {
@@ -116,8 +138,8 @@ test('rejects stale access claims', () => {
 });
 
 test('selects bounded rate limits and idempotency replay state', () => {
-  assert.deepEqual(rateLimitPlan('/api/auth/refresh'), { scope: 'auth', limit: 10 });
-  assert.deepEqual(rateLimitPlan('/api/auth/email'), { scope: 'auth', limit: 10 });
+  assert.deepEqual(rateLimitPlan('/api/auth/refresh'), { scope: 'auth:/api/auth/refresh', limit: 10 });
+  assert.deepEqual(rateLimitPlan('/api/auth/email'), { scope: 'auth:/api/auth/email', limit: 10 });
   assert.deepEqual(rateLimitPlan('/api/posts'), { scope: 'public-api', limit: 120 });
   assert.equal(idempotencyKey(null), undefined);
   assert.equal(idempotencyKey(' abcdefgh '), 'abcdefgh');

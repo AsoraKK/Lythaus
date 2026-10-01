@@ -26,10 +26,13 @@ export const APPROVED_MIGRATIONS = [
   { name: '0015_production_auth_acceptance_coordinator.sql', repositorySha256: 'e8db5a46be476750632d1f184eb27aa2c1d9fbf5ecd9969bd7ad880397df4fef', lfOnlyBreaks: [[1, 9999]], appliedBytes: 4_673, appliedSha256: 'e8db5a46be476750632d1f184eb27aa2c1d9fbf5ecd9969bd7ad880397df4fef' },
   { name: '0016_transactional_email_envelope_boundary.sql', repositorySha256: '7d80f32da5bf9a7b598b09f403a3dd8bcf3e86b8a9c7341cbe1b18fac6917ce7', lfOnlyBreaks: [[1, 9999]], appliedBytes: 751, appliedSha256: '7d80f32da5bf9a7b598b09f403a3dd8bcf3e86b8a9c7341cbe1b18fac6917ce7' },
   { name: '0017_authenticity_beta.sql', repositorySha256: '1a766eb057c2da5fbc9eba34f57454043bc92dba87bb86003ec8452ec697e05e', lfOnlyBreaks: [[1, 9999]], appliedBytes: 4903, appliedSha256: '1a766eb057c2da5fbc9eba34f57454043bc92dba87bb86003ec8452ec697e05e' },
+  { name: '0018_authenticity_private_alpha.sql', repositorySha256: '8f786a649cc38ff025e52e1092891c5373247e3553324b2ff76a8ba176312972', lfOnlyBreaks: [[1, 9999]], appliedBytes: 4983, appliedSha256: '8f786a649cc38ff025e52e1092891c5373247e3553324b2ff76a8ba176312972' },
+  { name: '0019_authenticity_alpha_hardening.sql', repositorySha256: '0992aa575b2da6d2da4c30c8ea24bcf792415077e8e0de7d171c7e756ed44531', lfOnlyBreaks: [[1, 9999]], appliedBytes: 1176, appliedSha256: '0992aa575b2da6d2da4c30c8ea24bcf792415077e8e0de7d171c7e756ed44531' },
+  { name: '0020_auth_recovery_delivery.sql', repositorySha256: '6edabdee6786478650f4f08f0daae5a5d923e15f5c8e2cbe14644fcbb18610dc', lfOnlyBreaks: [[1, 9999]], appliedBytes: 269, appliedSha256: '6edabdee6786478650f4f08f0daae5a5d923e15f5c8e2cbe14644fcbb18610dc' },
 ];
 
-export const EXPECTED_MIGRATION_BYTES = 94178;
-export const EXPECTED_MIGRATION_SET_SHA256 = 'eff4f356b6b6b74298e2ff948ec846a7bb5affe1ddcd1e87ae1b3212ab9644fb';
+export const EXPECTED_MIGRATION_BYTES = 100609;
+export const EXPECTED_MIGRATION_SET_SHA256 = '1d5c137e85941a109db09249a56c6e95d24673803db5147fa54fc803933fe09c';
 
 function sha256(value) {
   return createHash('sha256').update(value).digest('hex');

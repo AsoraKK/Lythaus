@@ -41,29 +41,30 @@ final secureDioProvider = Provider<Dio>((ref) {
   dio.options.headers.addAll({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'User-Agent': 'Lythaus-Flutter/${_getAppVersion()}',
+    if (!kIsWeb) 'User-Agent': 'Lythaus-Flutter/${_getAppVersion()}',
   });
+
+  dio.interceptors.add(CanonicalApiPathInterceptor());
 
   // Add device integrity interceptor
   dio.interceptors.add(_DeviceIntegrityInterceptor(ref));
   dio.interceptors.add(IdempotencyRetryInterceptor(dio));
 
-  // Add logging in debug mode
-  if (kDebugMode) {
-    dio.interceptors.add(
-      LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-        requestHeader: false,
-        responseHeader: false,
-        error: true,
-        logPrint: (object) => debugPrint('🌐 HTTP: $object'),
-      ),
-    );
-  }
-
   return dio;
 });
+
+class CanonicalApiPathInterceptor extends Interceptor {
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    final basePath = Uri.parse(
+      options.baseUrl,
+    ).path.replaceFirst(RegExp(r'/$'), '');
+    if (basePath == '/api' && options.path.startsWith('/api/')) {
+      options.path = options.path.substring(4);
+    }
+    handler.next(options);
+  }
+}
 
 /// Retries a transient transport failure once when the operation carries a
 /// valid idempotency key. Reusing the original request options preserves that

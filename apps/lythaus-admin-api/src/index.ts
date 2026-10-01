@@ -7,6 +7,7 @@ import { adminCorsPreflight, assertAdminMutationRequest, withAdminCors } from '.
 import { requireActiveAdminMembership, verifiedAccessSubject, type AdminActor } from './admin-access-runtime-policy.ts';
 import { readBoundedJson } from './request-body-policy.ts';
 import { handleAdminBeta } from './authenticity-beta.ts';
+import { handleAdminAlpha } from './authenticity-alpha.ts';
 import { adminWaitlistFilters, parseAdminUserId, parseReasonCode, rejectUnknownFields, requireConfirmation } from './admin-runtime-policy.ts';
 import { appealOutcomeAuditPlan, assertActionableModerationCase, evaluateAppealFromRecords, parseAppealAdjudicationRequest, type AppealAdjudicationRecord, type AppealVoteRecord } from './runtime-policy.ts';
 import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, parseWaitlistRetentionHoldUpdate, parseWaitlistStatusUpdate, requireWaitlistEncryptionKey, waitlistAuditMetadata, waitlistPageRequest } from './waitlist-runtime-policy.ts';
@@ -1112,6 +1113,8 @@ async function updateAccountStatus(request: Request, env: Env, actor: { userId: 
   return json({ userId: result, status: requestedStatus }, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
 }
 
+import { dispatchKeeperEmail } from './auth-email-dispatch-adapter.ts';
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const id = correlationId(request);
@@ -1123,6 +1126,7 @@ export default {
       if (request.method === 'GET' && url.pathname === '/health') return cors(json({ status: 'ok', service: 'lythaus-admin-api' }));
       if (request.method === 'GET' && url.pathname === '/internal/readiness/database-identity') {
         if (!hasReadinessAuthorization(request, env)) return new Response(null, { status: 404 });
+        const emailBinding = await dispatchKeeperEmail(env, request, { operation: 'probe' });
         const [admin, privacy] = await Promise.all([
           inspectDatabaseIdentity(env.DB_ADMIN_FRESH, databaseExpectationsFromEnv(env)),
           inspectDatabaseIdentity(env.DB_PRIVACY_FRESH, databaseExpectationsFromEnv(env)),
@@ -1132,6 +1136,7 @@ export default {
           service: 'lythaus-admin-api',
           workerVersionId: env.WORKER_VERSION.id,
           releaseTag: env.WORKER_VERSION.tag,
+          emailBinding,
           databases: {
             admin: databaseReadinessResponse(admin, env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true'),
             privacy: databaseReadinessResponse(privacy, env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true'),
@@ -1149,6 +1154,13 @@ export default {
       if (request.method === 'POST' && url.pathname.match(/^\/api\/admin\/authenticity\/cases\/([^/]+)\/(review|retry|advice)$/)) {
         assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
         return cors(await handleAdminBeta(request, env, actor));
+      }
+      if (request.method === 'GET' && url.pathname === '/api/admin/authenticity/alpha/cases') return cors(await handleAdminAlpha(request, env, actor));
+      if (request.method === 'GET' && url.pathname.match(/^\/api\/admin\/authenticity\/alpha\/cases\/([^/]+)$/)) return cors(await handleAdminAlpha(request, env, actor));
+      if (request.method === 'GET' && url.pathname.match(/^\/api\/admin\/authenticity\/alpha\/cases\/([^/]+)\/image$/)) return cors(await handleAdminAlpha(request, env, actor));
+      if (request.method === 'POST' && url.pathname.match(/^\/api\/admin\/authenticity\/alpha\/cases\/([^/]+)\/(review|advice)$/)) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await handleAdminAlpha(request, env, actor));
       }
       const keeperEnv = env as KeeperEnv;
       if (request.method === 'GET' && url.pathname === '/api/admin/auth/summary') return cors(await getAdminAuthSummary(request, keeperEnv, actor, id));

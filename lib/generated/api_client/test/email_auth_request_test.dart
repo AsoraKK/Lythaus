@@ -7,7 +7,7 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(EmailAuthRequest, () {
-    // String mode
+    // String mode (default value: 'login')
     test('to test the property `mode`', () async {
       // TODO
     });
@@ -17,6 +17,7 @@ void main() {
       // TODO
     });
 
+    // Login verifies existing 12–14 character credentials without imposing the new-creation minimum. Registration requires 15–128 Unicode code points, preserved exactly.
     // String password
     test('to test the property `password`', () async {
       // TODO

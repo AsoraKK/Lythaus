@@ -1,37 +1,35 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
+import SecondaryLayout from '../../layouts/SecondaryLayout.astro';
 ---
-<BaseLayout
+<SecondaryLayout
   title="Pricing"
-  description="Lythaus pricing — free during invite-only beta."
+  description="Free to join. Benefits from $5. Join the Lythaus waitlist for updates."
   canonicalPath="/pricing"
 >
-  <section class="section">
+  <section class="section section--wide">
     <h1>Pricing</h1>
     <p>
-      Lythaus is <strong>free during the invite-only beta</strong>. We are
-      focused on building a great experience before thinking about monetisation.
+      <strong>Free to join. Benefits from $5.</strong> Join the waitlist for updates as we build the platform.
     </p>
 
     <div class="grid">
       <div class="card">
-        <h3>Beta (current)</h3>
+        <h2>Free to join</h2>
         <p class="price">Free</p>
-        <ul>
-          <li>Full access to all features</li>
-          <li>Create and share posts</li>
-          <li>AI-powered moderation</li>
-          <li>Cross-platform sync</li>
-        </ul>
+        <p>Joining the waitlist is free. It does not guarantee an invitation
+          or an access date.</p>
+        <p><a class="button primary" href="/#waitlist">Join the waitlist</a></p>
       </div>
 
       <div class="card">
-        <h3>Future plans</h3>
+        <h2>Optional paid benefits</h2>
+        <p class="price">From $5</p>
         <p>
-          We will share pricing details when the platform moves beyond beta.
-          Existing beta users will be rewarded for their early support.
+          Details of paid benefits will be shared when confirmed.
+          Paid membership does not buy reputation, Editorial recognition
+          or different moderation treatment.
         </p>
       </div>
     </div>
   </section>
-</BaseLayout>
+</SecondaryLayout>

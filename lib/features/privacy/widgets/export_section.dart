@@ -41,10 +41,12 @@ class PrivacyExportSection extends StatelessWidget {
             children: [
               Icon(Icons.lock_person_outlined, color: colorScheme.primary),
               SizedBox(width: spacing.md),
-              Text(
-                'Export your data',
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: Text(
+                  'Export your data',
+                  style: textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],

@@ -43,7 +43,7 @@ class ProtocolBucket {
 const bucket=new ProtocolBucket(), owner=uuidv7(), stranger=uuidv7();
 const bytes=new Uint8Array(33);bytes.set([137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82]);new DataView(bytes.buffer).setUint32(16,256);new DataView(bytes.buffer).setUint32(20,256);bytes[24]=8;bytes[25]=2;
 const hash=createHash('sha256').update(bytes).digest('hex');
-const config={enabled:true,expiresAt:new Date(Date.now()+3600000).toISOString(),safeEnabled:true,adviserEnabled:true,allowlist:[owner,stranger],rightsApproval:'a'.repeat(64),budgetApproval:'b'.repeat(64),runtimeApproval:'c'.repeat(64),preprocessingHash:'d'.repeat(64),runtimeDigest:`sha256:${'e'.repeat(64)}`,caseReservationUsd:0.5,sourceHistoryHashes:[hash]};
+const config={enabled:true,expiresAt:new Date(Date.now()+3600000).toISOString(),safeEnabled:true,adviserEnabled:true,allowlist:[owner,stranger],rightsApproval:'a'.repeat(64),budgetApproval:'b'.repeat(64),budgetEvidenceSha256:'b'.repeat(64),budgetObservedAt:new Date(Date.now()-300000).toISOString(),budgetExpiresAt:new Date(Date.now()+1800000).toISOString(),authenticitySubBudgetUsd:2,authenticityHeadroomUsd:0.4,runtimeApproval:'c'.repeat(64),preprocessingHash:'d'.repeat(64),runtimeDigest:`sha256:${'e'.repeat(64)}`,caseReservationUsd:0.5,adviserReservationUsd:0.05,observerReservationUsd:0.04,sourceHistoryHashes:[hash]};
 const env={DB_APP_FRESH:{role:'lythaus_runtime'},DB_JOBS_FRESH:{role:'lythaus_jobs'},DB_ADMIN_FRESH:{role:'lythaus_admin'},AUTHENTICITY_BETA_ENABLED:'true',LYTHAUS_CONFIG:{get:async()=>config},MEDIA_QUARANTINE:bucket,MEDIA_QUARANTINE_BUCKET:'ci-fixture',R2_ACCOUNT_ID:'fixture',R2_ACCESS_KEY_ID:'fixture',R2_SECRET_ACCESS_KEY:'fixture',MEDIA_QUOTA_BYTES:'67108864',COST_BUDGET_ENABLED:'true',COST_BUDGET_LIMIT_USD:'100',COST_BUDGET_WARNING_USD:'70',COST_BUDGET_OPTIONAL_ANALYSIS_USD:'80',COST_BUDGET_ESSENTIAL_ONLY_USD:'90',COST_BUDGET_DEEP_SCAN_STOP_USD:'95',OPENAI_API_KEY:'explicit-ci-fixture',AUTHENTICITY_BETA_DISPATCH_SECRET:'explicit-ci-fixture',AI_GATEWAY_ID:'ci-fixture',AI:{run:async()=>{adviceCalls++;return {response:JSON.stringify(createInsufficientEvidenceRecommendation('EF5 is unavailable; authorship remains unresolved.')),usage:{prompt_tokens:100,completion_tokens:50}};}},AUTHENTICITY_BETA_CONTAINER:{getByName(name){assert.equal(name,'safe-a-beta-v1');return {fetch:async request=>{
   safeCalls++; const binding=JSON.parse(request.headers.get('x-beta-binding'));
   assert.deepEqual(new Uint8Array(await request.arrayBuffer()),bytes);
@@ -61,7 +61,17 @@ async function processCase(id){const e=await event(id);await processBetaEvent(en
 const admin=await connect();
 try {
   const version=(await admin.query("SELECT current_setting('server_version_num')::integer AS n")).rows[0].n;assert.ok(version>=170000&&version<180000);
-  for(const state of await classifyMigrationState(admin,['0017_authenticity_beta.sql'])) assertCompleteMigrationPostconditions(state);
+  const [betaSchema] = await classifyMigrationState(admin,['0017_authenticity_beta.sql']);
+  // Migration 0018 intentionally supersedes upload_sessions constraints while
+  // preserving every other 0017 beta relation contract. Validate that historical
+  // shape explicitly, then validate the alpha migration's final constraints.
+  const preservedBetaArtifacts = betaSchema.artifacts.filter(({ artifact }) => artifact !== 'relation:media.upload_sessions');
+  const missingPreservedBetaArtifacts = preservedBetaArtifacts.filter(({ present }) => !present).map(({ artifact }) => artifact);
+  if (missingPreservedBetaArtifacts.length) throw new Error(`canonical postcondition verification failed for 0017_authenticity_beta.sql: ${missingPreservedBetaArtifacts.join(', ')}`);
+  const [alphaSchema] = await classifyMigrationState(admin,['0018_authenticity_private_alpha.sql']);
+  assertCompleteMigrationPostconditions(alphaSchema);
+  const [alphaHardeningSchema] = await classifyMigrationState(admin,['0019_authenticity_alpha_hardening.sql']);
+  assertCompleteMigrationPostconditions(alphaHardeningSchema);
   for(const relation of ['moderation.authenticity_beta','moderation.authenticity_beta_steps','moderation.authenticity_beta_feedback','media.upload_sessions','system.cost_budget_reservations']) {
     const fingerprint=await admin.query(`WITH resolved AS (SELECT to_regclass($1) AS relation_oid), contract AS (SELECT jsonb_build_object(
       'columns',COALESCE((SELECT jsonb_agg(jsonb_build_object('name',a.attname,'type',format_type(a.atttypid,a.atttypmod),'notNull',a.attnotnull,'default',pg_get_expr(d.adbin,d.adrelid)) ORDER BY a.attnum) FROM pg_attribute a LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum WHERE a.attrelid=resolved.relation_oid AND a.attnum>0 AND NOT a.attisdropped),'[]'::jsonb),
@@ -112,8 +122,8 @@ try {
   await admin.query(`UPDATE media.upload_sessions SET expires_at=now()-interval '20 minutes' WHERE id=$1`,[third]);await admin.query(`UPDATE moderation.authenticity_beta SET deleted_at=now()-interval '20 minutes' WHERE case_id=$1`,[third]);
   assert.equal(await purgeBetaMedia(env.DB_JOBS_FRESH,bucket,owner),0);
   assert.equal((await api('','POST',submission)).status,429);
-  const released=(await admin.query(`SELECT count(*) AS n FROM system.cost_budget_reservations WHERE operation='authenticity_beta_case' AND status='released' AND actual_cost_usd IS NULL`)).rows[0];
-  assert.equal(Number(released.n),1);
+  const rejected=(await admin.query(`SELECT count(*) AS n FROM system.cost_budget_reservations WHERE operation='authenticity_beta_case' AND status='rejected' AND actual_cost_usd IS NULL`)).rows[0];
+  assert.equal(Number(rejected.n),1);
   const committed=(await admin.query(`SELECT status,actual_cost_usd FROM system.cost_budget_reservations WHERE correlation_id=$1`,[third])).rows[0];
   assert.equal(committed.status,'committed');assert.equal(committed.actual_cost_usd,null);
   const billing={caseId:third,actorId:owner,evidenceSha256:'f'.repeat(64),billedCostUsd:0.01,attemptIds:(await admin.query(`SELECT id FROM moderation.authenticity_beta_steps WHERE case_id=$1`,[third])).rows.map(row=>row.id),allChargesFinal:true};

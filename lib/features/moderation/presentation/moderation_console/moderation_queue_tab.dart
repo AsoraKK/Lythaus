@@ -181,7 +181,9 @@ class _ModerationQueueTabState extends ConsumerState<ModerationQueueTab> {
               onSelected: (_) => onSelected(value),
               selectedColor: Theme.of(context).colorScheme.primary,
               labelStyle: chipTheme.labelStyle?.copyWith(
-                color: selectedValue ? Colors.white : null,
+                color: selectedValue
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : null,
               ),
             );
           }).toList(),

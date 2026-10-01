@@ -4,7 +4,13 @@
 
 class AuthFailure implements Exception {
   final String message;
-  const AuthFailure._(this.message);
+  final bool invalidSession;
+  const AuthFailure._(this.message, {this.invalidSession = false});
+
+  factory AuthFailure.sessionExpired() => const AuthFailure._(
+    'Session expired. Please sign in again.',
+    invalidSession: true,
+  );
 
   factory AuthFailure.cancelledByUser() =>
       const AuthFailure._('Cancelled by user');

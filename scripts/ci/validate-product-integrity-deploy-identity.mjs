@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { approvedPost0017Expectation } from './product-integrity-schema-contract.mjs';
+import { approvedReleaseExpectation } from './product-integrity-schema-contract.mjs';
 
 const configPaths = [
   'apps/lythaus-public-api/wrangler.jsonc',
@@ -7,13 +7,13 @@ const configPaths = [
   'apps/lythaus-jobs/wrangler.jsonc',
   'apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc',
 ];
-const requiredVersion = '0017_authenticity_beta.sql';
-const post0017Expectation = approvedPost0017Expectation();
-const expectedFingerprint = post0017Expectation.fingerprint;
-const expectedRelationCount = String(post0017Expectation.relationCount);
+const requiredVersion = '0020_auth_recovery_delivery.sql';
+const releaseExpectation = approvedReleaseExpectation();
+const expectedFingerprint = releaseExpectation.fingerprint;
+const expectedRelationCount = String(releaseExpectation.relationCount);
 const materialize = process.env.MATERIALIZE_PRODUCT_INTEGRITY_DEPLOY_CONFIGS === 'true';
-const fingerprintPlaceholder = 'REPLACE_WITH_POST_0017_SCHEMA_FINGERPRINT';
-const relationCountPlaceholder = 'REPLACE_WITH_POST_0017_RELATION_COUNT';
+const fingerprintPlaceholder = 'REPLACE_WITH_POST_0020_SCHEMA_FINGERPRINT';
+const relationCountPlaceholder = 'REPLACE_WITH_POST_0020_RELATION_COUNT';
 const accessTeamDomain = process.env.PRODUCT_INTEGRITY_ACCESS_TEAM_DOMAIN ?? '';
 const accessAudiences = (process.env.PRODUCT_INTEGRITY_ACCESS_AUDIENCES ?? '')
   .split(',').map((value) => value.trim()).filter(Boolean);
@@ -36,10 +36,10 @@ if (accessAudiences.length !== 2 || new Set(accessAudiences).size !== 2
 for (const configPath of configPaths) {
   const committedSource = fs.readFileSync(configPath, 'utf8');
   if (productionValue(committedSource, 'EXPECTED_DATABASE_SCHEMA_FINGERPRINT') !== fingerprintPlaceholder) {
-    throw new Error(`${configPath} must retain the post-0017 fingerprint placeholder until release materialization`);
+    throw new Error(`${configPath} must retain the post-0020 fingerprint placeholder until release materialization`);
   }
   if (productionValue(committedSource, 'EXPECTED_DATABASE_RELATION_COUNT') !== relationCountPlaceholder) {
-    throw new Error(`${configPath} must retain the post-0017 relation-count placeholder until release materialization`);
+    throw new Error(`${configPath} must retain the post-0020 relation-count placeholder until release materialization`);
   }
   if (productionValue(committedSource, 'AUTHENTICATED_ACCEPTANCE_PROVEN') !== 'false') {
     throw new Error(`${configPath} must remain fail-closed before production materialization`);
@@ -77,4 +77,4 @@ if (process.env.GITHUB_ENV) {
   );
 }
 
-console.log(`${materialize ? 'Materialized' : 'Validated'} canonical post-0017 deployment identity across ${configPaths.length} Worker configs.`);
+console.log(`${materialize ? 'Materialized' : 'Validated'} canonical post-0020 deployment identity across ${configPaths.length} Worker configs.`);

@@ -1,11 +1,11 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
+import SecondaryLayout from '../layouts/SecondaryLayout.astro';
 
 const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lythaus.co';
 const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 ---
 
-<BaseLayout
+<SecondaryLayout
   title="Create your account"
   description="Create a verified Lythaus account."
   canonicalPath="/signup"
@@ -28,11 +28,11 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       <input id="signup-email" name="email" type="email" autocomplete="email" maxlength="320" required />
 
       <label for="signup-password">Password</label>
-      <input id="signup-password" name="password" type="password" autocomplete="new-password" minlength="15" maxlength="128" aria-describedby="signup-password-note" required />
+      <input id="signup-password" name="password" type="password" autocomplete="new-password" maxlength="256" aria-describedby="signup-password-note" required />
       <p class="auth-field-note" id="signup-password-note">Use at least 15 characters, up to 128. Longer passphrases are welcome. Password managers, paste, and autofill are supported.</p>
 
       <label for="signup-password-confirmation">Confirm password</label>
-      <input id="signup-password-confirmation" name="passwordConfirmation" type="password" autocomplete="new-password" minlength="15" maxlength="128" aria-describedby="signup-password-note" required />
+      <input id="signup-password-confirmation" name="passwordConfirmation" type="password" autocomplete="new-password" maxlength="256" aria-describedby="signup-password-note" required />
 
       <div class="auth-turnstile-shell" id="signup-turnstile" role="group" aria-label="Bot verification"></div>
       <button class="button primary" type="submit" data-signup-submit>Create account</button>
@@ -48,7 +48,8 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
   </section>
 
   {turnstileSiteKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>}
-  <script is:inline>
+  <script>
+    import { authFetch, withAuthDeadline, acceptsPassword, transportErrorMessage } from '../scripts/auth-request';
     const form = document.querySelector('[data-signup-form]');
     if (form instanceof HTMLFormElement) {
       const email = form.querySelector('#signup-email');
@@ -62,6 +63,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       const apiBaseUrl = form.dataset.apiBaseUrl?.replace(/\/$/u, '') ?? '';
       const siteKey = form.dataset.turnstileSiteKey ?? '';
       let widgetId;
+      let widgetAction = 'account_signup';
       let tokenResolve;
       let tokenReject;
       let isSubmitting = false;
@@ -105,7 +107,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         if (!window.turnstile || !turnstileContainer || !siteKey || widgetId !== undefined) return false;
         widgetId = window.turnstile.render(turnstileContainer, {
           sitekey: siteKey,
-          action: 'account_signup',
+          action: widgetAction,
           appearance: 'interaction-only',
           execution: 'execute',
           callback: (value) => {
@@ -123,16 +125,24 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         attempts += 1;
         if (renderTurnstile() || attempts >= 100) window.clearInterval(renderTimer);
       }, 100);
-      const requestToken = async () => {
+      const requestToken = async (action = 'account_signup') => {
+        if (widgetAction !== action) {
+          resetVerification();
+          if (widgetId !== undefined && window.turnstile) window.turnstile.remove(widgetId);
+          widgetId = undefined;
+          widgetAction = action;
+        }
         const rendered = widgetId !== undefined || renderTurnstile();
         if (!siteKey || !rendered || widgetId === undefined || !window.turnstile) throw new Error('turnstile_unavailable');
-        return new Promise((resolve, reject) => {
+        return withAuthDeadline(new Promise((resolve, reject) => {
           tokenResolve = resolve;
           tokenReject = reject;
           window.turnstile.execute(widgetId);
-        });
+        }));
       };
       const messageFor = (code) => {
+        const transportMessage = transportErrorMessage(code);
+        if (transportMessage) return transportMessage;
         if (code === 'account_exists') return 'We could not finish that request. If this was a retry, resend the verification email below.';
         if (code === 'email_verification_required') return 'Check your email and click the verification link before signing in.';
         if (code === 'invalid_email') return 'Enter a valid email address.';
@@ -169,8 +179,8 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         resendButton.setAttribute('aria-busy', 'true');
         setStatus('Sending a new verification email...', 'submitting');
         try {
-          const turnstileToken = await requestToken();
-          const response = await fetch(`${apiBaseUrl}/api/auth/email`, {
+          const turnstileToken = await requestToken('verification_resend');
+          const response = await authFetch(`${apiBaseUrl}/api/auth/email`, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ mode: 'resend_verification', email: email.value, turnstileToken }),
@@ -204,7 +214,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
           setStatus('Enter a valid email address.', 'error');
           return;
         }
-        if (!password.validity.valid || password.value !== confirmation.value) {
+        if (!acceptsPassword(password.value, 'creation') || password.value !== confirmation.value) {
           password.setAttribute('aria-invalid', 'true');
           confirmation.setAttribute('aria-invalid', 'true');
           setStatus('Passwords must match and contain at least 15 characters.', 'error');
@@ -221,7 +231,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         let failureReference = '';
         try {
           const turnstileToken = await requestToken();
-          const response = await fetch(`${apiBaseUrl}/api/auth/email`, {
+          const response = await authFetch(`${apiBaseUrl}/api/auth/email`, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ mode: 'register', email: email.value, password: password.value, turnstileToken }),
@@ -233,12 +243,12 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
           failureReference = typeof body.correlationId === 'string'
             ? body.correlationId
             : response.headers.get('x-correlation-id') ?? '';
-          if (!response.ok || body.state !== 'verification_required') throw new Error(typeof body.error === 'string' ? body.error : 'account_creation_failed');
+          if (!response.ok || !['verification_required', 'check_email'].includes(body.state)) throw new Error(typeof body.error === 'string' ? body.error : 'account_creation_failed');
           password.value = '';
           confirmation.value = '';
           if (checkEmailState instanceof HTMLElement) checkEmailState.hidden = false;
           setResendVisible(true);
-          setStatus('Check your email. Your verification request was accepted and a message has been queued or is on its way. Delivery is not confirmed yet.', 'success');
+          setStatus('Your request was accepted. If eligible, check your email for the next step. If you already verified your account, sign in or use Forgot password. Delivery is not confirmed yet.', 'success');
         } catch (error) {
           const code = error instanceof Error ? error.message : 'account_creation_failed';
           setStatus(withSupportReference(messageFor(code), code, failureReference), 'error');
@@ -253,55 +263,4 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       });
     }
   </script>
-</BaseLayout>
-
-<style>
-  .auth-page {
-    display: grid;
-    grid-template-columns: minmax(0, 0.9fr) minmax(320px, 0.7fr);
-    gap: clamp(48px, 10vw, 140px);
-    align-items: start;
-    padding: clamp(82px, 13vw, 150px) 0 120px;
-  }
-  .auth-intro h1 { margin-top: 22px; }
-  .auth-intro p { max-width: 520px; color: var(--muted); font-size: 18px; line-height: 1.7; }
-  .auth-form {
-    display: grid;
-    gap: 10px;
-    padding: 30px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: var(--surface);
-  }
-  .auth-form label { color: var(--muted); font-size: 13px; }
-  .auth-form input {
-    width: 100%;
-    min-height: 50px;
-    padding: 0 15px;
-    color: var(--text);
-    background: #0d0f10;
-    border: 1px solid var(--line-strong);
-    border-radius: 10px;
-    outline: none;
-  }
-  .auth-form input:focus { border-color: rgba(223,231,220,.7); box-shadow: 0 0 0 3px rgba(223,231,220,.08); }
-  .auth-form input[aria-invalid='true'] { border-color: #f1a7a0; }
-  .auth-field-note, .auth-footnote { margin: 0 0 8px; color: var(--quiet); font-size: 12px; line-height: 1.5; }
-  .auth-turnstile-shell { min-height: 65px; margin: 8px 0; }
-  .auth-status { min-height: 24px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
-  .auth-status:focus { outline: 2px solid var(--accent); outline-offset: 4px; }
-  .auth-status[data-state='error'] { color: #f1a7a0; }
-  .auth-status[data-state='success'] { color: #b8d5b5; }
-  .auth-resend { justify-self: start; border: 0; padding: 0; color: var(--muted); background: transparent; text-decoration: underline; cursor: pointer; font: inherit; font-size: 13px; }
-  .auth-resend:disabled { cursor: wait; opacity: .65; }
-  .auth-resend[hidden] { display: none; }
-  .auth-check-email { margin-top: 8px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; }
-  .auth-check-email[hidden] { display: none; }
-  .auth-check-email h2 { margin: 0 0 8px; font-size: 20px; }
-  .auth-check-email p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
-  .auth-footnote { margin-top: 4px; }
-  @media (max-width: 760px) {
-    .auth-page { grid-template-columns: 1fr; padding-top: 72px; }
-    .auth-form { padding: 22px; }
-  }
-</style>
+</SecondaryLayout>

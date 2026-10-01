@@ -7,7 +7,18 @@ import {
   databaseExpectationsFromEnv,
   isDatabaseIdentityReady,
 } from '../../packages/db/src/identity.ts';
-import { approvedPost0016Expectation, canonicalPost0016SchemaContract } from '../ci/product-integrity-schema-contract.mjs';
+import { approvedPost0016Expectation, canonicalPost0016SchemaContract, canonicalReleaseSchemaContract, approvedReleaseExpectation, REQUIRED_RELEASE_SCHEMA_VERSION } from '../ci/product-integrity-schema-contract.mjs';
+
+test('current release derives its identity from the approved complete migration prefix', async () => {
+  const canonical = canonicalReleaseSchemaContract();
+  assert.equal(REQUIRED_RELEASE_SCHEMA_VERSION, '0020_auth_recovery_delivery.sql');
+  assert.equal(canonical.migrations.at(-1).version, REQUIRED_RELEASE_SCHEMA_VERSION);
+  assert.equal(canonical.relationCount, canonical.relations.length);
+  assert.equal(await buildSchemaFingerprint(canonical.relations, canonical.migrations), canonical.fingerprint);
+  assert.equal(approvedReleaseExpectation().fingerprint, canonical.fingerprint);
+  assert.throws(() => approvedReleaseExpectation('0'.repeat(64)), /approved migration contract/);
+  assert.throws(() => approvedReleaseExpectation('', '97'), /approved migration contract/);
+});
 
 test('database identity classification rejects privileged or non-login roles', () => {
   assert.equal(classifyRole({ rolsuper: false, rolcanlogin: true, rolbypassrls: false }), 'login_non_superuser');

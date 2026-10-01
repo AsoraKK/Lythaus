@@ -8,6 +8,42 @@
   "engineeringReady": false,
   "liveRestrictedBeta": ["BLOCKED_RIGHTS", "BLOCKED_RUNTIME", "BLOCKED_ACCESS", "BLOCKED_RELEASE"],
   "publicEnforcement": "PUBLIC_ENFORCEMENT_NOT_APPROVED",
+  "ownerDecisions": {
+    "safeLicenseReliance": {
+      "status": "OWNER_ACCEPTED_APACHE_2_0_RELIANCE_SCOPE_UNCERTAINTY_RETAINED",
+      "acceptedAt": "2026-09-28T06:34:41.771Z",
+      "evidenceCommit": "d76fed1454ae51d03b1399e2a00300da64fce5ef",
+      "scope": ["BOUNDED_PRIVATE_EVALUATION", "PRIVATE_COMMERCIAL_BETA_INFERENCE_HOSTING"],
+      "conditions": ["PRESERVE_APACHE_2_0_OBLIGATIONS", "NO_TRAINING_OR_DISTILLATION", "NO_BLANKET_THIRD_PARTY_CLEARANCE"],
+      "checkpointScopeUncertainty": "RETAINED",
+      "trainingDataProvenance": "UNKNOWN",
+      "maintainerPermission": "NOT_REQUIRED_ON_CURRENT_EVIDENCE",
+      "reopenOnMaterialContraryEvidence": true
+    },
+    "privateCpuEvaluation": {
+      "status": "CONDITIONALLY_AUTHORIZED_PENDING_PREFLIGHT",
+      "issuedAt": "2026-09-28T06:34:41.771Z",
+      "expiresAt": "2026-09-29T06:34:41.771Z",
+      "source": "PROTECTED_GITHUB_HOSTED_UBUNTU_24_04_STANDARD_RUNNER",
+      "sourceSha": null,
+      "sourceShaRequirement": "POST_MERGE_MAIN_SHA_ONLY",
+      "checkpointUpstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+      "checkpointSha256": "b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e",
+      "manifestPath": "docs/models/safe-a-v0.1-smoke.json",
+      "manifestSha256": "ca033720b795f700f7985d431fc807e749b5fda1c0cbf47637561e3042b89132",
+      "fixtureSet": "EIGHT_ORIGINALS_PLUS_EIGHT_CONTROLLED_DESCENDANTS",
+      "maxSafeAttempts": 16,
+      "maxActiveMinutes": 30,
+      "maxFileBytes": 10485760,
+      "maxDecodedPixels": 16777216,
+      "absoluteParityTolerance": 0.000001,
+      "automaticRetries": false,
+      "publicInferenceEndpoint": false,
+      "privateEvidenceDestination": null,
+      "fixturePermissionMapping": null,
+      "preflightState": "BLOCKED_MISSING_PRIVATE_MAPPING_AND_EVIDENCE_DESTINATION"
+    }
+  },
   "scope": "AUTHOR_AND_ADMIN_ONLY_FLUTTER_WEB_FIRST",
   "deployed": false,
   "appEntryPoint": null,
@@ -22,7 +58,23 @@
     "preprocessing": "SAFE_OFFICIAL_RGB_CENTER_CROP_256_DWT_CLASS1_V1",
     "threshold": 0.5864923000335693,
     "comparison": ">=",
-    "rights": "RESEARCH_EVALUATION_ONLY_DEPLOYMENT_REVIEW_UNRESOLVED"
+    "rights": "OWNER_ACCEPTED_APACHE_2_0_RELIANCE_SCOPE_UNCERTAINTY_RETAINED",
+    "licenseRelianceRecord": "docs/models/safe-a-v0.1-license-reliance.md",
+    "licenseEvidence": {
+      "upstreamCommit": "4e998724651b227def64f5be0cd60c0aa1552c35",
+      "licensePath": "LICENSE",
+      "licenseBlobSha1": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "checkpointPath": "checkpoint/checkpoint-best.pth",
+      "checkpointBytes": 5840638,
+      "checkpointSha256Verified": true,
+      "checkpointSpecificTermsFound": false,
+      "commercialUseBanFound": false,
+      "trainingDataRights": "UNKNOWN_NOT_A_PROVED_INFERENCE_RESTRICTION",
+      "narrowScopeQuestionOpen": false,
+      "checkpointScopeUncertainty": "RETAINED",
+      "ownerAccepted": true,
+      "ownerAcceptanceEvidenceCommit": "d76fed1454ae51d03b1399e2a00300da64fce5ef"
+    }
   },
   "adviser": {"role": "GPT_OSS_BETA_ADVISOR", "model": "@cf/openai/gpt-oss-20b", "hostedWeightHash": null, "liveCalls": 0},
   "observer": "DISABLED",
@@ -63,6 +115,7 @@
     "fullFlutter": {"state": "PASSED", "runId": 36339080570, "coveragePercent": 87.13, "unchangedThresholdPercent": 87, "webBuild": "PASSED", "webSmoke": "PASSED", "providerMode": "EXPLICIT_TEST_DOUBLES"},
     "completeCi": {"state": "PASSED", "runId": 36339080617},
     "codeOnlyLinux": {"runner": "GitHub-hosted ubuntu-24.04 standard public runner", "cpuCount": 4, "memoryBytes": 16766414848, "diskFreeBytes": 91532582912, "dockerVersion": "28.0.4", "nonRootSupervisorTests": 4, "codeValidationImageBuilt": true, "evaluationImageBuilt": false, "servingImageBuilt": false, "checkpointLoaded": false, "privateMediaLoaded": false},
+    "evaluationOrchestration": {"state": "PASSED_PROTOCOL_FIXTURES_LOCAL", "workflow": ".github/workflows/authenticity-cpu-evaluation.yml", "tests": "scripts/tests/authenticity-cpu-orchestration.test.mjs", "realCheckpointLoaded": false, "realProviderCalls": 0, "productionWrites": false, "protectedRunId": null},
     "accountEvidence": {"cloudflareReadOnlyInventoryRunId": 36337257617, "inventorySourceSha": "8e3b3ebad2f846e61db2bfe819376723da7e9863", "cloudflareBillingMeters": "UNVERIFIED", "planetScaleObservedAt": "2026-09-27T17:55:55.565Z", "recordedSeptemberExperimentReservations": 0, "recordedSeptemberCommitmentUsd": 0, "existingDatabaseInvoiceLineUsd": 5, "databaseLineBilledThroughCloudflare": true, "offLedgerExperimentCommitments": "UNVERIFIED", "productionWrites": false},
     "admission": {"defaultReservationUsd": null, "measuredCaseReservationUsd": null, "feasibleCaseCapacity": null, "maximumUsageEvidenceAgeSeconds": 3600, "configExpiresWithUsageEvidence": true},
     "realSafeCalls": 0,
@@ -71,5 +124,5 @@
     "liveAppAcceptance": null,
     "rollbackObserved": false
   },
-  "pending": ["checkpoint rights evidence for exact evaluation and hosted scopes", "protected private Linux evaluation access", "real CPU parity, full image build, maximum-input sizing and runtime supply-chain validation", "verified Cloudflare allowances and off-ledger commitments with scoped budget approval", "reviewed merge", "authorized migration and disabled deployment", "actual private app and advisory acceptance", "deployed rollback"]
+  "pending": ["merge and verify the focused licensing correction on current main", "private fixture permission mapping and approved private evidence destination", "protected Ubuntu evaluation preflight and exact post-merge source identity", "real CPU parity, full image build, maximum-input sizing and runtime supply-chain validation", "verified free or already-authorized allowances for evaluation", "reviewed migration/deployment/activation gates", "actual private app and advisory acceptance", "deployed rollback"]
 }

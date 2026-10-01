@@ -1,14 +1,18 @@
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { classifyEmailProviderFailure, lifecycleStateForEmailEvent, nextTransactionalEmailState, renderTransactionalEmail, type TransactionalEmailMessage, type TransactionalEmailPurpose, type TransactionalEmailState } from '@lythaus/contracts';
-import { query, transaction, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
+import { lockAuthDelivery, query, transaction, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
 import { constantTimeEqual, decryptField } from '@lythaus/security';
 
 export interface TransactionalEmailRelayEnv extends EnvBindings {
   DB_JOBS_FRESH: HyperdriveBinding;
 }
 
+type EmailDatabase = { query: typeof query; transaction: typeof transaction };
+const emailDatabase: EmailDatabase = { query, transaction };
+
 interface ClaimedEmail {
   id: string;
+  user_id: string | null;
   purpose: TransactionalEmailPurpose;
   delivery_envelope_ciphertext: string | null;
   delivery_envelope_encryption_key_version: string | null;
@@ -26,6 +30,17 @@ class EmailProviderFailure extends Error {
     this.status = status;
     this.providerCode = providerCode;
     this.name = 'EmailProviderFailure';
+  }
+}
+
+async function withDeliveryDeadline<T>(operation: Promise<T>, timeoutMs = 20_000): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([operation, new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new EmailProviderFailure(undefined, 'E_DELIVERY_ACCEPTANCE_UNKNOWN')), timeoutMs);
+    })]);
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -53,7 +68,7 @@ export async function decryptTransactionalEmailEnvelope(
   const plaintext = await decryptField(field, transactionalEmailKey);
   let envelope: { to?: unknown; token?: unknown; acceptanceContext?: unknown };
   try { envelope = JSON.parse(plaintext) as typeof envelope; } catch { throw new EmailProviderFailure(400, 'E_DELIVERY_ENVELOPE_INVALID'); }
-  if (typeof envelope.to !== 'string' || typeof envelope.token !== 'string') throw new EmailProviderFailure(400, 'E_DELIVERY_ENVELOPE_INVALID');
+  if (!envelope || typeof envelope.to !== 'string' || typeof envelope.token !== 'string') throw new EmailProviderFailure(400, 'E_DELIVERY_ENVELOPE_INVALID');
   return {
     to: envelope.to,
     token: envelope.token,
@@ -77,6 +92,7 @@ async function messageForRow(env: TransactionalEmailRelayEnv, row: ClaimedEmail)
       resetBaseUrl: env.EMAIL_PASSWORD_RESET_BASE_URL,
       acceptanceLinkBaseUrl: env.AUTH_ACCEPTANCE_EMAIL_LINK_BASE_URL,
       acceptanceContext: envelope.acceptanceContext,
+      environment: env.ENVIRONMENT,
     });
     return { ...message, to: envelope.to };
   });
@@ -94,14 +110,14 @@ export async function sendTransactionalEmail(env: TransactionalEmailRelayEnv, me
   if (providerMode === 'cloudflare') {
     if (!env.EMAIL || !env.EMAIL_FROM) throw new EmailProviderFailure(503, 'E_PROVIDER_NOT_CONFIGURED');
     try {
-      const delivery = await env.EMAIL.send({
+      const delivery = await withDeliveryDeadline(env.EMAIL.send({
         to: message.to,
         from: { email: env.EMAIL_FROM, name: 'Lythaus' },
         subject: message.subject,
         html: message.html,
         text: message.text,
-      });
-      if (!delivery.messageId || typeof delivery.messageId !== 'string') throw new EmailProviderFailure(502, 'E_PROVIDER_MESSAGE_ID_MISSING');
+      }));
+      if (!delivery.messageId || typeof delivery.messageId !== 'string') throw new EmailProviderFailure(undefined, 'E_DELIVERY_ACCEPTANCE_UNKNOWN');
       return { provider: 'cloudflare-email', messageId: delivery.messageId, acceptedAt: new Date().toISOString() };
     } catch (error) {
       if (error instanceof EmailProviderFailure) throw error;
@@ -118,24 +134,27 @@ export async function sendTransactionalEmail(env: TransactionalEmailRelayEnv, me
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${env.EMAIL_PROVIDER_TOKEN}` },
       body: JSON.stringify({ from: env.EMAIL_FROM, to: message.to, subject: message.subject, html: message.html, text: message.text }),
+      signal: AbortSignal.timeout(20_000),
     });
   } catch {
-    throw new EmailProviderFailure(503, 'E_PROVIDER_UNAVAILABLE');
+    throw new EmailProviderFailure(undefined, 'E_DELIVERY_ACCEPTANCE_UNKNOWN');
   }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new EmailProviderFailure(response.status, errorResponseCode(payload));
   const messageId = payload && typeof payload === 'object' && typeof (payload as { messageId?: unknown }).messageId === 'string'
     ? (payload as { messageId: string }).messageId
     : '';
-  if (!messageId) throw new EmailProviderFailure(502, 'E_PROVIDER_MESSAGE_ID_MISSING');
+  if (!messageId) throw new EmailProviderFailure(undefined, 'E_DELIVERY_ACCEPTANCE_UNKNOWN');
   return { provider: 'fallback-email', messageId, acceptedAt: new Date().toISOString() };
 }
 
-async function claimTransactionalEmails(env: TransactionalEmailRelayEnv, limit = 25): Promise<ClaimedEmail[]> {
-  return transaction(env.DB_JOBS_FRESH, async (client) => {
+async function claimTransactionalEmails(env: TransactionalEmailRelayEnv, database: EmailDatabase): Promise<ClaimedEmail[]> {
+  return database.transaction(env.DB_JOBS_FRESH, async (client) => {
     await client.query(
       `UPDATE system.transactional_email_outbox
-          SET state = 'queued', updated_at = now()
+          SET state = 'failed', terminal_at = now(), updated_at = now(),
+              delivery_envelope_ciphertext = NULL, delivery_envelope_encryption_key_version = NULL,
+              provider_error_code = 'E_DELIVERY_ACCEPTANCE_UNKNOWN', provider_error_category = 'unknown'
         WHERE state = 'processing' AND updated_at < now() - interval '5 minutes'`,
     );
     const result = await client.query<ClaimedEmail>(
@@ -153,54 +172,81 @@ async function claimTransactionalEmails(env: TransactionalEmailRelayEnv, limit =
               provider_error_code = NULL, provider_error_category = NULL
          FROM claimable
         WHERE outbox.id = claimable.id
-       RETURNING outbox.id, outbox.purpose,
+       RETURNING outbox.id, outbox.user_id, outbox.purpose,
                  outbox.delivery_envelope_ciphertext, outbox.delivery_envelope_encryption_key_version,
                  outbox.template_version, outbox.attempt_count, outbox.correlation_id`,
-      [limit],
+      [1],
     );
     return result.rows;
   });
 }
 
-async function markEmailFailure(env: TransactionalEmailRelayEnv, row: ClaimedEmail, error: unknown): Promise<void> {
+async function markEmailFailure(client: DatabaseClient, row: ClaimedEmail, error: unknown): Promise<void> {
   const details = emailProviderFailureCategory(error);
   const next = nextTransactionalEmailState({ category: details.category, attemptCount: row.attempt_count });
   const terminal = next.state === 'failed';
-  await query(env.DB_JOBS_FRESH,
+  await client.query(
     `UPDATE system.transactional_email_outbox
         SET state = $2,
             next_attempt_at = CASE WHEN $3::bigint IS NULL THEN next_attempt_at ELSE to_timestamp($3::double precision / 1000) END,
             provider_error_code = $4,
             provider_error_category = $5,
             terminal_at = CASE WHEN $6 THEN now() ELSE terminal_at END,
+            delivery_envelope_ciphertext = CASE WHEN $6 THEN NULL ELSE delivery_envelope_ciphertext END,
+            delivery_envelope_encryption_key_version = CASE WHEN $6 THEN NULL ELSE delivery_envelope_encryption_key_version END,
             updated_at = now()
       WHERE id = $1 AND state = 'processing'`,
     [row.id, next.state, next.nextAttemptAt, details.code ?? 'E_PROVIDER_UNKNOWN', details.category, terminal],
   );
 }
 
-async function deliverClaimedEmail(env: TransactionalEmailRelayEnv, row: ClaimedEmail): Promise<void> {
+export async function lockDeliverableEmail(client: DatabaseClient, id: string, userId: string | null): Promise<boolean> {
+  if (userId) await lockAuthDelivery(client, userId);
+  const result = await client.query<{ valid: boolean }>(
+    `SELECT state='processing' AND user_id IS NOT NULL AND (
+       (purpose='password_changed' AND created_at>now()-interval '24 hours') OR
+       (purpose='password_reset' AND EXISTS(SELECT 1 FROM identity.password_reset_tokens t
+          WHERE t.id=o.challenge_id AND t.user_id=o.user_id AND t.expires_at>clock_timestamp()
+            AND t.consumed_at IS NULL AND t.superseded_at IS NULL)) OR
+       (purpose IN ('verification','invite','email_change') AND EXISTS(SELECT 1 FROM identity.email_verification_tokens t
+          WHERE t.id=o.challenge_id AND t.user_id=o.user_id AND t.expires_at>clock_timestamp()
+            AND t.consumed_at IS NULL AND t.superseded_at IS NULL))) AS valid
+       FROM system.transactional_email_outbox o WHERE id=$1 AND user_id IS NOT DISTINCT FROM $2::uuid FOR UPDATE`, [id, userId]);
+  if (result.rows[0]?.valid) return true;
+  await client.query(`UPDATE system.transactional_email_outbox SET state='cancelled', terminal_at=now(), updated_at=now(),
+    delivery_envelope_ciphertext=NULL, delivery_envelope_encryption_key_version=NULL
+    WHERE id=$1 AND state IN ('queued','processing')`, [id]);
+  return false;
+}
+
+async function deliverClaimedEmail(env: TransactionalEmailRelayEnv, row: ClaimedEmail, database: EmailDatabase): Promise<void> {
+  await database.transaction(env.DB_JOBS_FRESH, async client => {
+  if (!await lockDeliverableEmail(client, row.id, row.user_id)) return;
   let delivery: { provider: string; messageId: string; acceptedAt: string };
   try {
     const message = await messageForRow(env, row);
     delivery = await sendTransactionalEmail(env, message);
   } catch (error) {
-    await markEmailFailure(env, row, error);
+    await markEmailFailure(client, row, error);
     return;
   }
-  await query(env.DB_JOBS_FRESH,
+  await client.query(
     `UPDATE system.transactional_email_outbox
         SET state = 'provider_accepted', provider = $2, provider_message_id = $3,
-            accepted_at = $4::timestamptz, delivery_envelope_ciphertext = NULL,
+            accepted_at = clock_timestamp(), delivery_envelope_ciphertext = NULL,
             delivery_envelope_encryption_key_version = NULL, updated_at = now()
       WHERE id = $1 AND state = 'processing'`,
-    [row.id, delivery.provider, delivery.messageId, delivery.acceptedAt],
+    [row.id, delivery.provider, delivery.messageId],
   );
+  });
 }
 
-export async function relayTransactionalEmailOutbox(env: TransactionalEmailRelayEnv): Promise<void> {
-  const claimed = await claimTransactionalEmails(env);
-  for (const row of claimed) await deliverClaimedEmail(env, row);
+export async function relayTransactionalEmailOutbox(env: TransactionalEmailRelayEnv, database: EmailDatabase = emailDatabase): Promise<void> {
+  for (let attempted = 0; attempted < 25; attempted++) {
+    const [row] = await claimTransactionalEmails(env, database);
+    if (!row) break;
+    await deliverClaimedEmail(env, row, database);
+  }
 }
 
 export interface TransactionalEmailLifecycleEvent {
@@ -259,12 +305,13 @@ export function parseTransactionalEmailLifecycleQueueEvent(body: unknown): Trans
 export async function reconcileTransactionalEmailLifecycleQueueMessage(
   env: TransactionalEmailRelayEnv,
   body: unknown,
+  database: EmailDatabase = emailDatabase,
 ): Promise<{ valid: boolean; reconciled: boolean }> {
   const event = parseTransactionalEmailLifecycleQueueEvent(body);
   if (!event) return { valid: false, reconciled: false };
   return {
     valid: true,
-    reconciled: await transaction(env.DB_JOBS_FRESH, (client) => applyTransactionalEmailLifecycle(client, event)),
+    reconciled: await database.transaction(env.DB_JOBS_FRESH, (client) => applyTransactionalEmailLifecycle(client, event)),
   };
 }
 
@@ -288,11 +335,13 @@ export async function applyTransactionalEmailLifecycle(
         SET state = $2,
             provider_error_code = COALESCE($3, provider_error_code),
             provider_error_category = CASE WHEN $4 THEN 'permanent' ELSE provider_error_category END,
-            delivered_at = CASE WHEN $2 = 'delivered' THEN now() ELSE delivered_at END,
-            terminal_at = CASE WHEN $4 THEN now() ELSE terminal_at END,
+            delivered_at = CASE WHEN $2 = 'delivered' THEN COALESCE(delivered_at, clock_timestamp()) ELSE delivered_at END,
+            terminal_at = CASE WHEN $4 THEN COALESCE(terminal_at, now()) ELSE terminal_at END,
             updated_at = now()
       WHERE provider_message_id = $1
-        AND state NOT IN ('cancelled', 'bounced', 'rejected', 'failed', 'complained')`,
+        AND state NOT IN ('cancelled', 'bounced', 'rejected', 'failed', 'complained')
+        AND state <> $2
+        AND NOT (state = 'delivered' AND $2 = 'deferred')`,
     [messageId, state, event.errorCode && /^[A-Z][A-Z0-9_]{2,63}$/.test(event.errorCode) ? event.errorCode : null, terminal],
   );
   if (result.rowCount === 1) return true;
@@ -356,13 +405,14 @@ function validateEvidenceFilter(filter: TransactionalEmailDeliveryEvidenceFilter
 export async function readTransactionalEmailDeliveryEvidence(
   env: TransactionalEmailRelayEnv,
   filter: TransactionalEmailDeliveryEvidenceFilter,
+  database: EmailDatabase = emailDatabase,
 ): Promise<TransactionalEmailDeliveryEvidence> {
   const validated = validateEvidenceFilter(filter);
   const values: unknown[] = [filter.correlationId, validated.start.toISOString(), validated.end.toISOString()];
   const challengePredicate = validated.challengeIds
     ? (() => { values.push(validated.challengeIds); return ' AND challenge_id = ANY($4::uuid[])'; })()
     : '';
-  const result = await query<TransactionalEmailEvidenceGroupRow>(
+  const result = await database.query<TransactionalEmailEvidenceGroupRow>(
     env.DB_JOBS_FRESH,
     `SELECT purpose, state, provider, provider_error_category,
             count(*)::bigint AS row_count,
@@ -414,7 +464,7 @@ export function summarizeTransactionalEmailDeliveryEvidence(
   };
 }
 
-export async function handleTransactionalEmailLifecycleWebhook(request: Request, env: TransactionalEmailRelayEnv): Promise<Response> {
+export async function handleTransactionalEmailLifecycleWebhook(request: Request, env: TransactionalEmailRelayEnv, database: EmailDatabase = emailDatabase): Promise<Response> {
   if (!authorizedEmailLifecycleRequest(request, env.EMAIL_LIFECYCLE_WEBHOOK_SECRET)) return new Response(null, { status: 404 });
   let event: TransactionalEmailLifecycleEvent;
   try {
@@ -422,6 +472,7 @@ export async function handleTransactionalEmailLifecycleWebhook(request: Request,
   } catch {
     return new Response(null, { status: 400 });
   }
-  const updated = await transaction(env.DB_JOBS_FRESH, (client) => applyTransactionalEmailLifecycle(client, event));
+  if (!event || typeof event !== 'object' || Array.isArray(event)) return new Response(null, { status: 400 });
+  const updated = await database.transaction(env.DB_JOBS_FRESH, (client) => applyTransactionalEmailLifecycle(client, event));
   return Response.json({ accepted: updated }, { status: updated ? 200 : 409 });
 }

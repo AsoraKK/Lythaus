@@ -62,12 +62,30 @@ test('service readiness authorization survives the Access edge without weakening
 test('refresh revocation proof is encrypted, bounded, and cleared after use', () => {
   assert.match(migration, /pre_reset_refresh_ciphertext text/);
   assert.match(migration, /pre_reset_refresh_encryption_key_version text/);
-  assert.match(coordinator, /candidate_pre_reset_refresh_accepted/);
+  assert.match(coordinator, /requireAcceptanceRejection\(\{ status: revokedRefresh.response.status/);
+  assert.match(coordinator, /401, \['refresh_token_invalid', 'refresh_token_reuse'\]/);
   assert.match(coordinator, /pre_reset_refresh_ciphertext = NULL/);
   assert.match(coordinator, /password_reset_sessions_revoked/);
   assert.match(coordinator, /SET status = 'completed'/);
   assert.match(coordinator, /completed_at = now\(\)/);
   assert.doesNotMatch(controlPanel, /localStorage|sessionStorage/);
+});
+
+test('human mutations cannot use the observer service token and mailbox lookup never needs token hashes', () => {
+  for (const operation of ['startRegistration', 'prepareResend', 'requestReset', 'initialSessionProof', 'sessionProof']) {
+    assert.match(coordinator.slice(coordinator.indexOf(`async function ${operation}`), coordinator.indexOf(`async function ${operation}`)+220), /await accessSubject\(request, env\)/);
+  }
+  assert.doesNotMatch(coordinator, /WHERE token_hash/);
+  assert.match(coordinator, /acceptanceContextToken\(await runContext/);
+  assert.match(coordinator, /acceptanceContextDigest\(acceptanceContextToken\(context\)\)/);
+  assert.match(coordinator, /completed.body.legacyRecovered !== true/);
+  assert.match(publicApi, /'relink_required', true/);
+  const challengeObserver = publicApi.slice(publicApi.indexOf('async function observeAcceptanceChallenge'), publicApi.indexOf('async function verifyEmail'));
+  assert.match(challengeObserver, /await acceptanceContext\(request, env\)/);
+  assert.match(challengeObserver, /if \(!acceptance\) throw new Error\('authentication_required'\)/);
+  assert.match(challengeObserver, /o.acceptance_run_id=r.id/);
+  assert.match(challengeObserver, /WHERE r.id=\$1 AND t.token_hash=decode\(\$2,'base64'\)/);
+  assert.doesNotMatch(challengeObserver, /return.*token_hash|return.*email_ciphertext/);
 });
 
 test('candidate registration binds only a production-acceptance identity to its run', () => {

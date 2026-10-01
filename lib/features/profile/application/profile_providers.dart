@@ -49,13 +49,17 @@ final profilePreferencesServiceProvider = Provider<ProfilePreferencesService>((
 final publicUserProvider = FutureProvider.autoDispose
     .family<PublicUser, String>((ref, userId) async {
       final dio = ref.watch(secureDioProvider);
+      final cancelToken = CancelToken();
+      ref.onDispose(cancelToken.cancel);
       final token = await ref.watch(jwtProvider.future);
+      if (cancelToken.isCancelled) throw cancelToken.cancelError!;
       final authHeader = (token != null && token.isNotEmpty)
           ? {'Authorization': 'Bearer $token'}
           : null;
 
       final response = await dio.get<Map<String, dynamic>>(
         '/api/users/$userId',
+        cancelToken: cancelToken,
         options: authHeader == null ? null : Options(headers: authHeader),
       );
 
@@ -73,13 +77,17 @@ final publicUserProvider = FutureProvider.autoDispose
 final trustPassportProvider = FutureProvider.autoDispose
     .family<TrustPassport, String>((ref, userId) async {
       final dio = ref.watch(secureDioProvider);
+      final cancelToken = CancelToken();
+      ref.onDispose(cancelToken.cancel);
       final token = await ref.watch(jwtProvider.future);
+      if (cancelToken.isCancelled) throw cancelToken.cancelError!;
       final authHeader = (token != null && token.isNotEmpty)
           ? {'Authorization': 'Bearer $token'}
           : null;
 
       final response = await dio.get<Map<String, dynamic>>(
         '/api/users/$userId/trust-passport',
+        cancelToken: cancelToken,
         options: authHeader == null ? null : Options(headers: authHeader),
       );
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -41,6 +42,9 @@ Future<void> _pumpGoldenScreen(
 void main() {
   setUpAll(() async {
     await loadFontsForGoldenTests();
+    await (FontLoader(
+      'MaterialIcons',
+    )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
   });
 
   testWidgets('Onboarding intro policy copy - light', (tester) async {

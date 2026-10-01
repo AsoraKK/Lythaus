@@ -80,12 +80,31 @@ export function needsPasswordRehash(stored: PasswordHash, pepperVersion = 'v1'):
     || stored.pepperVersion !== pepperVersion;
 }
 
-export function verifyPassword(password: string, stored: PasswordHash, pepper: string): boolean {
-  const salt = decode(stored.salt);
+export function verifyPassword(password: string, stored: PasswordHash, pepper: string, pepperVersion?: string): boolean {
+  if (!stored || stored.version !== PASSWORD_HASH_VERSION
+    || !['argon2id', 'scrypt'].includes(stored.algorithm)
+    || typeof stored.pepperVersion !== 'string'
+    || (pepperVersion !== undefined && stored.pepperVersion !== pepperVersion)) return false;
+  let salt: Uint8Array;
+  let digest: Uint8Array;
+  try {
+    salt = decode(stored.salt);
+    digest = decode(stored.digest);
+  } catch { return false; }
+  if (salt.length !== 16 || digest.length !== 32) return false;
   const derived = stored.algorithm === 'argon2id'
     ? argon2id(password, salt, { ...ARGON2ID_PROFILE, dkLen: 32 })
     : scrypt(password, salt, { ...SCRYPT_PROFILE, dkLen: 32 });
-  return constantTimeEqual(pepperDigest(derived, pepper), decode(stored.digest));
+  return constantTimeEqual(pepperDigest(derived, pepper), digest);
+}
+
+export function verifyLoginPassword(password: string, stored: PasswordHash | undefined, pepper: string): boolean {
+  const record: PasswordHash = stored ?? {
+    algorithm: 'argon2id', version: PASSWORD_HASH_VERSION, pepperVersion: 'v1',
+    salt: encode(new Uint8Array(16)), digest: encode(new Uint8Array(32)),
+  };
+  const matches = verifyPassword(password, record, pepper, 'v1');
+  return stored !== undefined && matches;
 }
 
 export function hashResetToken(token: string): string {

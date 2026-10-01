@@ -85,13 +85,18 @@ test('lifecycle observer credentials are coordinator-only and optional for runti
     coordinatorManaged: true,
     lifecycleReadToken: 'observer-token',
     acceptanceEmailBase: 'test@example.com',
+    acceptanceSecondaryEmailBase: 'test@second.invalid',
   });
   assert.equal(critical.publicSecrets.CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN, undefined);
   assert.equal(critical.jobsSecrets.CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN, undefined);
   assert.equal(critical.coordinatorSecrets.CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN, 'observer-token');
+  assert.equal(critical.coordinatorSecrets.AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE, 'test@second.invalid');
+  assert.equal(critical.publicSecrets.AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE, undefined);
+  assert.equal(critical.jobsSecrets.AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE, undefined);
+  assert.throws(()=>buildScopedSecretPayloads({base,coordinatorManaged:true,lifecycleReadToken:'fixture',acceptanceEmailBase:'test@example.invalid'}),/AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE/);
   const workflow = fs.readFileSync('.github/workflows/native-workers-deploy.yml', 'utf8');
-  assert.match(workflow, /AUTH_ACCEPTANCE_EMAIL_BASE: \$\{\{ contains\(steps\.release_plan\.outputs\.changed_components_json, '\"coordinator\"'\) && secrets\.CODEX_TEST_EMAIL/);
-  assert.match(workflow, /CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: \$\{\{ contains\(steps\.release_plan\.outputs\.changed_components_json, '\"coordinator\"'\) && secrets\.CLOUDFLARE_API_TOKEN/);
+  assert.match(workflow, /AUTH_ACCEPTANCE_EMAIL_BASE: \$\{\{ inputs\.owner_testing_deployment != true && contains\(steps\.release_plan\.outputs\.changed_components_json, '\"coordinator\"'\) && secrets\.CODEX_TEST_EMAIL/);
+  assert.match(workflow, /CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN: \$\{\{ inputs\.owner_testing_deployment != true && contains\(steps\.release_plan\.outputs\.changed_components_json, '\"coordinator\"'\) && secrets\.CLOUDFLARE_API_TOKEN/);
 });
 
 test('acceptance resume evidence requires preserved scoped keys and excludes values', () => {

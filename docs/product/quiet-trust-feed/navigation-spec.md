@@ -1,92 +1,37 @@
-# Quiet Trust Feed Navigation Spec (Lythaus)
+# Lythaus application navigation
 
-## Canonical Information Architecture
+This document describes the routed Flutter implementation after the UI standardisation. The user-approved product direction makes Profile and Rewards primary destinations. It supersedes the earlier proposed Alerts tab and Profile-only Rewards entry.
 
-Bottom navigation has exactly four tabs:
+## Primary shell
 
-1. `Discover`
-2. `Create`
-3. `Alerts`
-4. `Profile`
+1. Discover — `/` or `/?tab=discover`
+2. Create — `/?tab=create`
+3. Profile — `/?tab=profile`
+4. Rewards — `/rewards`, redirecting to `/?tab=rewards`
 
-No additional bottom tab is allowed for feeds, rewards, or moderation.
+Desktop uses a labelled left sidebar with Settings and Help. Tablet uses a rail. Mobile uses four labelled destinations, including the existing left-handed ordering preference. Text scaling can select the compact layout earlier. The reading pane is constrained to 760 logical pixels.
 
-## Route Map
+Visited tabs retain their widgets and scroll/draft state. Unvisited tabs are mounted on demand. Tab URLs retain unrelated query parameters. Native back restores the previous tab and its URL; browser history restores route selection. Guest Create remains blocked, and Rewards requires sign-in to load private data.
 
-- `/discover`
-  - Feed rail owner (first item `Discover`, then custom feeds)
-  - Feed content list
-  - Post detail
-  - Receipt drawer
-- `/create`
-  - Text and image create flow
-  - Optional proof tiles (Challenge Mode)
-- `/alerts`
-  - Social, Trust, Moderation grouped notifications
-- `/profile`
-  - Profile overview
-  - Trust Passport
-  - Settings
-  - Rewards entry point
+## Other routes and flows
 
-Auxiliary routes:
+- `/login`: existing account access, recovery, external signup and guest entry.
+- `/invite/:code`: public invite validation/redemption; pending codes retain existing auth handling.
+- `/post/:postId?commentId=…`: post and targeted reply context.
+- `/user/:userId`: actual target profile, including native-link navigation.
+- `/settings`: grouped preferences, privacy, security, notification centre and Help.
+- `/settings/notifications`: notification preferences and device management.
+- `/moderation`: moderator/admin guard; cases remain subordinate imperative screens.
+- `/moderation/appeal`: existing private account-activity handoff and case-gated appeals.
 
-- `/auth/sheet`
-- `/auth/invite-redeem`
-- `/receipt/:postId`
-- `/appeals/:appealId`
-- `/moderation/*` (role/feature-gated, not bottom-tab owned)
-- `/rewards` (entry from Profile only)
+Search, Trending, replies, profile editing, privacy/security, account activity and receipt sheets use their existing Navigator/sheet flows. Search preserves its query on return from a result. Supported `lythaus://` and `https://app.lythaus.co/` links remain supported; notification rows explain unsupported targets instead of pretending to navigate.
 
-## Tab Ownership and Deep Links
+## Gates and contracts
 
-- Deep links resolve to a tab root first, then to target screen state.
-- `Discover` owns all feed-type routes.
-- Any deep link to a custom feed opens `Discover`, then selects the matching rail chip.
-- Any deep link to rewards opens `Profile` then pushes rewards screen.
-- Unknown deep links fallback to `Discover`.
+Discover remains the launch feed section. Existing custom-feed and Black-only news implementations retain their gates; the redesign does not activate deferred entry points. Moderation is not an unrestricted primary tab. No saved-content destination or other hypothetical product is added.
 
-## Discover Rail Behavior
+Rewards contains the current server-backed offers, eligibility and history. Weekly, Monthly and Quarterly are separate unavailable sections until an approved action/point/recurrence contract exists. Navigation visibility does not mean those integrations are operational.
 
-- Rail order:
-  - System feed chip `Discover` first.
-  - User custom feed chips after system chip, ordered by user preference.
-- Feed mode switching only happens via the discover rail.
-- Feed creation entry lives in Discover context (rail overflow/control), not bottom nav.
+Existing guest write restrictions, device integrity checks, roles, subscription checks and service confirmations remain authoritative. Feed restoration still uses the existing best-effort item/offset snapshots; no ranking or persistence mechanism changes.
 
-## Guest Gating Rules
-
-Guest allowed:
-
-- Read feed and post detail
-- Open receipt drawer
-- View profiles and trust passport public view
-- Share post externally
-
-Guest blocked:
-
-- Follow
-- Like
-- Bookmark
-- Comment/reply
-- Create/edit/delete post
-- Vote on appeals
-- Submit appeals
-
-Blocked actions must invoke auth sheet with remembered intent.
-
-## Deprecated/Removed Patterns
-
-These patterns are deprecated and must not ship:
-
-- 5-tab shell with dedicated rewards or feeds tab
-- Feed mode switching outside Discover rail
-- Moderation scaffolds exposed in primary navigation for all users
-- Any route that bypasses auth gating for write actions
-
-## Feed Restore Contract
-
-- Persist per feed: `lastVisibleItemId` + `lastOffset`.
-- Restore by item if item exists in current list.
-- If missing, restore to top and show `New posts` pill.
-- Restore is best-effort and never blocks initial paint.
+The complete route/state inventory and verification limits are in [the app migration matrix](../../design-system/app-migration.md).

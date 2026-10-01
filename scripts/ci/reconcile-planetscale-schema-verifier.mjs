@@ -1,5 +1,6 @@
 import pg from 'pg';
 import { APPLICATION_SCHEMAS } from './product-integrity-schema-contract.mjs';
+import { incidentAggregateColumns, captureIncidentDatabaseEvidence, verifyIncidentAggregatePrivileges } from './auth-incident-database-contract.mjs';
 
 const { Client } = pg;
 const branch = process.env.PSCALE_BRANCH_NAME ?? '';
@@ -25,22 +26,6 @@ function verifiedConnection(raw, label) {
 function quoteIdentifier(value) {
   return `"${String(value).replaceAll('"', '""')}"`;
 }
-
-const incidentAggregateColumns = [
-  { schema: 'identity', table: 'users', columns: ['status'] },
-  { schema: 'identity', table: 'email_credentials', columns: ['verified_at'] },
-  {
-    schema: 'identity',
-    table: 'email_verification_tokens',
-    columns: ['created_at', 'consumed_at', 'expires_at'],
-  },
-  { schema: 'identity', table: 'account_events', columns: ['event_type', 'created_at'] },
-  // Bootstrap checks count only NOT NULL columns. Do not grant the verifier
-  // table-wide SELECT because these relations contain protected ciphertext
-  // and acceptance metadata.
-  { schema: 'system', table: 'transactional_email_outbox', columns: ['purpose', 'created_at'] },
-  { schema: 'system', table: 'production_auth_acceptance_runs', columns: ['created_at'] },
-];
 
 const adminConnection = verifiedConnection(adminDatabaseUrl, 'admin database URL');
 const verifierConnection = verifiedConnection(verifierDatabaseUrl, 'schema verifier database URL');
@@ -115,6 +100,8 @@ const proof = new Client({ connectionString: verifierConnection, ssl: { rejectUn
 await proof.connect();
 try {
   await proof.query('SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY');
+  await verifyIncidentAggregatePrivileges(proof);
+  await captureIncidentDatabaseEvidence(proof);
   const checks = await proof.query(`SELECT
     has_schema_privilege(current_user, 'marketing', 'USAGE') AS marketing_usage,
     has_table_privilege(current_user, 'marketing.waitlist_signups', 'REFERENCES') AS waitlist_metadata,

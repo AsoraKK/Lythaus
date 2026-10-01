@@ -41,6 +41,23 @@ test('auth-critical acceptance and rollback transitions remain fail-closed', () 
   assert.throws(() => transitionReleaseState(history, 'ACTIVATED', at), /invalid release state transition/);
 });
 
+test('owner testing can activate only into an explicitly uncertified terminal state', () => {
+  let history = transitionReleaseState([], 'PREFLIGHT', at);
+  history = transitionReleaseState(history, 'INFRASTRUCTURE_VERIFIED', at);
+  history = transitionReleaseState(history, 'CANDIDATE_READY', at);
+  history = transitionReleaseState(history, 'PRODUCT_ACCEPTANCE_REQUIRED', at);
+  history = transitionReleaseState(history, 'OWNER_TEST_ACCEPTANCE_PENDING', at);
+  history = transitionReleaseState(history, 'ACTIVATED', at);
+  history = transitionReleaseState(history, 'OWNER_TEST_DEPLOYED_UNCERTIFIED', at);
+  assert.deepEqual(history.map(({ state }) => state).slice(-4), [
+    'PRODUCT_ACCEPTANCE_REQUIRED',
+    'OWNER_TEST_ACCEPTANCE_PENDING',
+    'ACTIVATED',
+    'OWNER_TEST_DEPLOYED_UNCERTIFIED',
+  ]);
+  assert.throws(() => transitionReleaseState(history, 'VERIFIED', at), /invalid release state transition/);
+});
+
 test('a release cannot skip the source preflight state', () => {
   assert.throws(() => transitionReleaseState([], 'CANDIDATE_READY', at), /must start at PREFLIGHT/);
 });

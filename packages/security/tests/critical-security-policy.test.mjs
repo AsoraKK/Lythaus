@@ -18,11 +18,19 @@ import {
   signAccessToken,
   verifyAccessToken,
   verifyPassword,
+  verifyLoginPassword,
 } from '../src/index.ts';
 
 function encode(bytes) {
   return Buffer.from(bytes).toString('base64');
 }
+
+test('unknown login runs the current password verifier but can never authenticate a fixture digest',()=>{
+  assert.equal(verifyLoginPassword('synthetic unknown password',undefined,'synthetic-pepper'),false);
+  const stored=hashPassword('olderpass12!','synthetic-pepper');
+  assert.equal(verifyLoginPassword('olderpass12!',stored,'synthetic-pepper'),true);
+  assert.equal(verifyLoginPassword('wrong',stored,'synthetic-pepper'),false);
+});
 
 function legacyScryptHash(password, pepper) {
   const salt = Uint8Array.from({ length: 16 }, (_, index) => index + 1);
@@ -72,6 +80,20 @@ test('security primitives protect passwords, lookups, and encrypted PII', async 
   const legacy = legacyScryptHash('legacy password', pepper);
   assert.equal(verifyPassword('legacy password', legacy, pepper), true);
   assert.equal(verifyPassword('legacy password', legacy, 'wrong-pepper'), false);
+  assert.equal(verifyPassword('legacy password', legacy, pepper, 'v2'), false);
+  for (const invalid of [
+    { ...legacy, algorithm: 'unknown' }, { ...legacy, version: 0 },
+    { ...legacy, salt: 'bad%' }, { ...legacy, digest: 'bad%' },
+    { ...legacy, salt: encode(new Uint8Array(15)) }, { ...legacy, digest: encode(new Uint8Array(31)) },
+  ]) assert.equal(verifyPassword('legacy password', invalid, pepper), false);
+  for (const older of ['olderpass12!', 'olderpass123!', 'olderpass1234!']) {
+    assert.equal(verifyPassword(older, legacyScryptHash(older, pepper), pepper, 'v1'), true);
+  }
+  const literal = '  e\u0301 long password  ';
+  const literalHash = hashPassword(literal, pepper);
+  assert.equal(verifyPassword(literal, literalHash, pepper), true);
+  assert.equal(verifyPassword(literal.trim(), literalHash, pepper), false);
+  assert.equal(verifyPassword(literal.normalize('NFC'), literalHash, pepper), false);
 
   assert.match(randomToken(4), /^[0-9a-f]{8}$/);
   assert.match(randomToken(), /^[0-9a-f]{64}$/);
@@ -107,7 +129,7 @@ test('access-token verification rejects malformed, expired, cross-issuer, cross-
     tokenVersion: 1,
   });
 
-  const filteredRoles = await trustedTokenBuilder({ roles: ['member', 42, null], tokenVersion: 2.5 }, 'user-filtered')
+  const filteredRoles = await trustedTokenBuilder({ roles: ['member', 42, null] }, 'user-filtered')
     .sign(fixture.privateKey);
   assert.deepEqual(await verifyAccessToken(filteredRoles, fixture.jwksJson), {
     userId: 'user-filtered',
@@ -115,13 +137,24 @@ test('access-token verification rejects malformed, expired, cross-issuer, cross-
     tokenVersion: 1,
   });
 
-  const untypedClaims = await trustedTokenBuilder({ roles: 'admin', tokenVersion: 'two' }, 'user-untyped')
+  const untypedClaims = await trustedTokenBuilder({ roles: 'admin', tokenVersion: 1 }, 'user-untyped')
     .sign(fixture.privateKey);
   assert.deepEqual(await verifyAccessToken(untypedClaims, fixture.jwksJson), {
     userId: 'user-untyped',
     roles: [],
     tokenVersion: 1,
   });
+  for (const tokenVersion of ['two', null, 0, -1, 2.5, Number.MAX_SAFE_INTEGER + 1]) {
+    const token = await trustedTokenBuilder({tokenVersion}, 'synthetic-user').sign(fixture.privateKey);
+    await assert.rejects(verifyAccessToken(token, fixture.jwksJson), /token_version_invalid/);
+  }
+  const future = await trustedTokenBuilder({}, 'synthetic-user').setNotBefore('5m').sign(fixture.privateKey);
+  await assert.rejects(verifyAccessToken(future, fixture.jwksJson));
+  const noExpiry = await new SignJWT({tokenVersion:1})
+    .setProtectedHeader({alg:'ES256',kid:'critical-test-key',typ:'JWT'})
+    .setIssuer(LYTHAUS_ACCESS_TOKEN_ISSUER).setAudience(LYTHAUS_ACCESS_TOKEN_AUDIENCE)
+    .setSubject('synthetic-user').setIssuedAt().sign(fixture.privateKey);
+  await assert.rejects(verifyAccessToken(noExpiry, fixture.jwksJson));
 
   const missingSubject = await trustedTokenBuilder({ roles: [] })
     .sign(fixture.privateKey);

@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:lythaus/core/analytics/analytics_providers.dart';
@@ -41,8 +40,7 @@ class AnalyticsSettingsCard extends ConsumerWidget {
               Expanded(
                 child: Text(
                   'Analytics',
-                  style: GoogleFonts.sora(
-                    fontSize: 18,
+                  style: context.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -58,8 +56,7 @@ class AnalyticsSettingsCard extends ConsumerWidget {
                   children: [
                     Text(
                       'Share anonymous usage data',
-                      style: GoogleFonts.sora(
-                        fontSize: 14,
+                      style: context.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -67,9 +64,8 @@ class AnalyticsSettingsCard extends ConsumerWidget {
                     Text(
                       'Help us improve Lythaus by sharing anonymous usage patterns. '
                       'No personal information is collected.',
-                      style: GoogleFonts.sora(
-                        fontSize: 12,
-                        color: Colors.grey[600],
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -110,15 +106,18 @@ class AnalyticsSettingsCard extends ConsumerWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Icon(Icons.lock_outline, size: 16, color: Colors.grey[600]),
+              Icon(
+                Icons.lock_outline,
+                size: 16,
+                color: context.colorScheme.onSurfaceVariant,
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   'Data is anonymous and can be turned off at any time. '
                   'See our Privacy Policy and Terms of Service for details.',
-                  style: GoogleFonts.sora(
-                    fontSize: 11,
-                    color: Colors.grey[600],
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: context.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),

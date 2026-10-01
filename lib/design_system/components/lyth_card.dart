@@ -82,7 +82,10 @@ class LythCard extends StatelessWidget {
     final backgroundColor =
         this.backgroundColor ?? context.colorScheme.surfaceContainer;
     final borderColor =
-        this.borderColor ?? context.colorScheme.outline.withValues(alpha: 0.1);
+        this.borderColor ??
+        (clickable || onTap != null || onLongPress != null
+            ? context.colorScheme.outline
+            : context.colorScheme.outlineVariant);
 
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(context.radius.card.toDouble()),

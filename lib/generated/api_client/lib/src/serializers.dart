@@ -34,6 +34,17 @@ import 'package:lythaus_api_client/src/model/admin_user_page.dart';
 import 'package:lythaus_api_client/src/model/admin_user_profile_patch.dart';
 import 'package:lythaus_api_client/src/model/admin_waitlist_create.dart';
 import 'package:lythaus_api_client/src/model/admin_waitlist_patch.dart';
+import 'package:lythaus_api_client/src/model/alpha_action.dart';
+import 'package:lythaus_api_client/src/model/alpha_admin_case.dart';
+import 'package:lythaus_api_client/src/model/alpha_admin_case_list.dart';
+import 'package:lythaus_api_client/src/model/alpha_case.dart';
+import 'package:lythaus_api_client/src/model/alpha_case_list.dart';
+import 'package:lythaus_api_client/src/model/alpha_component.dart';
+import 'package:lythaus_api_client/src/model/alpha_create_request.dart';
+import 'package:lythaus_api_client/src/model/alpha_create_response.dart';
+import 'package:lythaus_api_client/src/model/alpha_error.dart';
+import 'package:lythaus_api_client/src/model/alpha_feedback.dart';
+import 'package:lythaus_api_client/src/model/alpha_review.dart';
 import 'package:lythaus_api_client/src/model/api_error.dart';
 import 'package:lythaus_api_client/src/model/appeal_adjudication_request.dart';
 import 'package:lythaus_api_client/src/model/appeal_adjudication_response.dart';
@@ -47,6 +58,7 @@ import 'package:lythaus_api_client/src/model/appeal_reviewer_assignments.dart';
 import 'package:lythaus_api_client/src/model/appeal_reviewer_assignments_items_inner.dart';
 import 'package:lythaus_api_client/src/model/auth_jwks_get200_response.dart';
 import 'package:lythaus_api_client/src/model/auth_logout200_response.dart';
+import 'package:lythaus_api_client/src/model/auth_logout_request.dart';
 import 'package:lythaus_api_client/src/model/auth_password_reset_complete200_response.dart';
 import 'package:lythaus_api_client/src/model/auth_password_reset_complete_request.dart';
 import 'package:lythaus_api_client/src/model/auth_password_reset_request202_response.dart';
@@ -219,6 +231,17 @@ part 'serializers.g.dart';
   AdminUserProfilePatch,
   AdminWaitlistCreate,
   AdminWaitlistPatch,
+  AlphaAction,
+  AlphaAdminCase,
+  AlphaAdminCaseList,
+  AlphaCase,$AlphaCase,
+  AlphaCaseList,
+  AlphaComponent,
+  AlphaCreateRequest,
+  AlphaCreateResponse,
+  AlphaError,
+  AlphaFeedback,
+  AlphaReview,
   ApiError,
   AppealAdjudicationRequest,
   AppealAdjudicationResponse,
@@ -232,6 +255,7 @@ part 'serializers.g.dart';
   AppealReviewerAssignmentsItemsInner,
   AuthJwksGet200Response,
   AuthLogout200Response,
+  AuthLogoutRequest,
   AuthPasswordResetComplete200Response,
   AuthPasswordResetCompleteRequest,
   AuthPasswordResetRequest202Response,
@@ -390,6 +414,7 @@ Serializers serializers = (_$serializers.toBuilder()
         const FullType(BuiltMap, [FullType(String), FullType(JsonObject)]),
         () => MapBuilder<String, JsonObject>(),
       )
+      ..add(AlphaCase.serializer)
       ..add(AppealOutcome.serializer)
       ..add(CursorPage.serializer)
       ..add(PrivacyRequest.serializer)

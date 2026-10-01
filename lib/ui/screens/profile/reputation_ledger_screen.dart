@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -16,32 +17,34 @@ class ReputationLedgerScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Activity & Audit Log'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Reputation'),
-              Tab(text: 'Account activity'),
+      child: ReadingPane(
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('Activity & Audit Log'),
+            bottom: const TabBar(
+              tabs: [
+                Tab(text: 'Reputation'),
+                Tab(text: 'Account activity'),
+              ],
+            ),
+          ),
+          body: const Column(
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  'These private records are issued by Lythaus and cannot be '
+                  'edited here. Appeals begin from an eligible resolved '
+                  'moderation case.',
+                ),
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: [_ReputationDashboard(), _ActivityPage()],
+                ),
+              ),
             ],
           ),
-        ),
-        body: const Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text(
-                'These private records are issued by Lythaus and cannot be '
-                'edited here. Appeals begin from an eligible resolved '
-                'moderation case.',
-              ),
-            ),
-            Expanded(
-              child: TabBarView(
-                children: [_ReputationDashboard(), _ActivityPage()],
-              ),
-            ),
-          ],
         ),
       ),
     );

@@ -51,6 +51,32 @@ test('rollback snapshot permits an absent previous Coordinator only for a new Co
   }), /reused_snapshot_empty/);
 });
 
+test('owner-testing snapshot marks Coordinator state deferred and cannot serialize its rollback', () => {
+  const snapshot = createAcceptanceRollbackSnapshot({
+    workerDeployments: {
+      public: deployment(1),
+      admin: deployment(2),
+      jobs: deployment(3),
+      coordinator: { status: 'NOT_INSPECTED_OWNER_TEST' },
+    },
+    routeSnapshots: {
+      adminApi: routes.adminApi,
+      coordinator: { status: 'NOT_TOUCHED_OWNER_TEST' },
+    },
+    deferredComponents: ['coordinator'],
+  });
+
+  assert.deepEqual(snapshot.deferredComponents, ['coordinator']);
+  assert.deepEqual(snapshot.workers.coordinator.versions, []);
+  assert.equal(snapshot.routes.coordinator, null);
+  assert.throws(() => deploymentPayloadForRollback(snapshot, 'coordinator'), /coordinator_deferred/);
+  assert.throws(() => createAcceptanceRollbackSnapshot({
+    workerDeployments: { public: deployment(1), admin: deployment(2), jobs: deployment(3), coordinator: { versions: [] } },
+    routeSnapshots: { adminApi: routes.adminApi, coordinator: { status: 'NOT_TOUCHED_OWNER_TEST' } },
+    deferredComponents: ['coordinator'],
+  }), /coordinator_deferred_state_unproven/);
+});
+
 test('rollback snapshot rejects zero-traffic-only, duplicate, and unsafe route state', () => {
   const base = {
     schemaVersion: ACCEPTANCE_ROLLBACK_SNAPSHOT_SCHEMA,

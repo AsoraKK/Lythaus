@@ -23,7 +23,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: FeedCard(item: feedItem, onTap: () {}),
+          body: SingleChildScrollView(
+            child: FeedCard(item: feedItem, onTap: () {}),
+          ),
         ),
       ),
     );
@@ -54,7 +56,9 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: FeedCard(item: feedItem, onTap: () {}, showSource: false),
+            body: SingleChildScrollView(
+              child: FeedCard(item: feedItem, onTap: () {}, showSource: false),
+            ),
           ),
         ),
       );
@@ -62,7 +66,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Preview'), findsOneWidget);
-      expect(find.text('Bob'), findsNothing);
+      expect(find.text('Bob'), findsOneWidget);
       expect(find.text('Video'), findsOneWidget);
     },
   );
@@ -149,8 +153,8 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Reuters'), findsOneWidget);
-    expect(find.text('Reporter Name'), findsNothing);
+    expect(find.text('Source: Reuters'), findsOneWidget);
+    expect(find.text('Reporter Name'), findsOneWidget);
     expect(find.byIcon(Icons.link), findsOneWidget);
   });
 }

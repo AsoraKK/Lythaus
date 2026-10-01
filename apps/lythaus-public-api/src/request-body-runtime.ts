@@ -46,7 +46,9 @@ export async function readBoundedJson<T>(request: JsonBodyRequest, maxBytes: num
     offset += chunk.byteLength;
   }
   try {
-    return JSON.parse(new TextDecoder().decode(bytes)) as T;
+    const result: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    if (result === null || typeof result !== 'object' || Array.isArray(result)) throw new Error('invalid_json');
+    return result as T;
   } catch {
     throw new Error('invalid_json');
   }

@@ -139,7 +139,10 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Search across feeds'), findsOneWidget);
+    expect(
+      find.textContaining('Find posts by tag across your feeds.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('feed search screen renders results for query', (tester) async {
@@ -200,6 +203,9 @@ void main() {
     await tester.tap(find.byIcon(Icons.clear));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Search across feeds'), findsOneWidget);
+    expect(
+      find.textContaining('Find posts by tag across your feeds.'),
+      findsOneWidget,
+    );
   });
 }
