@@ -120,12 +120,19 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
     final canCreate = ref.watch(canCreatePostProvider);
     final canEdit =
         canCreate &&
+        !state.isRestoring &&
         !state.isSubmitting &&
         state.errorResult?.outcomeUncertain != true;
     final notifier = ref.read(postCreationProvider.notifier);
     final spacing = context.spacing;
 
     ref.listen<PostCreationState>(postCreationProvider, (previous, next) {
+      if (controller.text != next.text) {
+        controller.value = TextEditingValue(
+          text: next.text,
+          selection: TextSelection.collapsed(offset: next.text.length),
+        );
+      }
       final errorCode = next.errorResult?.code;
       if (errorCode != null &&
           errorCode != previous?.errorResult?.code &&
@@ -298,7 +305,8 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
                     showDuration: const Duration(seconds: 6),
                     child: LythButton.primary(
                       label: canCreate ? 'Post' : 'Sign in first',
-                      onPressed: state.isSubmitting || !canCreate
+                      onPressed:
+                          state.isSubmitting || state.isRestoring || !canCreate
                           ? null
                           : _handleSubmit,
                       isLoading: state.isSubmitting,

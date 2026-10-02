@@ -70,6 +70,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     final isAssisted = state.aiLabel == 'assisted';
     final canEdit =
         canCreate &&
+        !state.isRestoring &&
         !state.isSubmitting &&
         state.errorResult?.outcomeUncertain != true;
     final characterCount = isAssisted
@@ -85,6 +86,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
     // Listen for successful post creation
     ref.listen<PostCreationState>(postCreationProvider, (previous, next) {
+      if (_textController.text != next.text) {
+        _textController.value = TextEditingValue(
+          text: next.text,
+          selection: TextSelection.collapsed(offset: next.text.length),
+        );
+      }
       final errorCode = next.errorResult?.code;
       if (errorCode != null &&
           errorCode != previous?.errorResult?.code &&
@@ -122,7 +129,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                   showDuration: const Duration(seconds: 6),
                   child: FilledButton(
                     onPressed:
-                        state.isSubmitting || !state.isValid || !canCreate
+                        state.isSubmitting ||
+                            state.isRestoring ||
+                            !state.isValid ||
+                            !canCreate
                         ? null
                         : _handleSubmit,
                     child: Semantics(
@@ -191,6 +201,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         children: [
                           // Auth required message
                           if (!canCreate) _AuthRequiredCard(theme: theme),
+                          if (state.isRestoring) const Text('Restoring draft…'),
+                          if (state.draftStatus != null)
+                            Text(state.draftStatus!),
 
                           // Text input
                           const SizedBox(height: 12),

@@ -9,18 +9,63 @@ Submission acknowledgements and locally retained edits show pending publication
 checks. Only the author sees edit and delete controls, and deletion requires a
 matching server acknowledgement before the client removes content.
 
-Within one application session, an uncertain mutation retains its replay key
-and frozen payload across retries and screen navigation. Conflicting edits
-and deletes are held until that attempt is resolved. Definitive failures allow
-a fresh attempt. This registry is in memory; process termination or browser
-reload does not retain it.
+Content requests are saved to an account-bound journal in platform secure
+storage before sending. Restarting the app restores the original key, body,
+disclosure and reply target. Conflicting edits and deletes remain held while
+an earlier request is unresolved. Storage failure prevents a new request from
+being sent. A matching successful acknowledgement atomically clears its draft
+and records an opaque owned-content ID.
 
-The current backend post/comment GETs expose allowed content only. A newly
-submitted or edited item can therefore become unavailable when reopened even
-by its owner. A coordinated owner-only read contract and durable recovery
-journal are follow-up work; public read restrictions must remain intact.
+Unsent text drafts expire after 24 hours. Frozen request text expires after
+seven days. Expiry is enforced when the journal is accessed. Logout and account
+changes clear private in-memory state immediately and remove saved text and
+drafts from that account's journal. Unresolved keys, fingerprints and routing
+IDs remain so re-entering the same text can check the original request safely.
+Another account cannot restore them. Browser storage belongs to the current
+origin and device profile; restoring a fresh device does not transfer drafts.
+The journal contains no session credentials, email addresses or content logs.
+
+An initial definitive failure permits correction. A permission, authentication
+or rate-limit failure during an unresolved retry cannot establish the earlier
+outcome, so its key remains held. The backend's quarantined
+idempotency_outcome_unknown state remains explicit; the client never replaces
+it with a new request. Late responses from a previous session cannot overwrite
+the current user's draft.
+
+GET /api/posts/{id}/owner-view and GET /api/comments/{id}/owner-view return
+known-ID content only to its active author. Responses use private, no-store
+caching and vary by Authorization. Allowed and under-review text is returned;
+blocked, deleted and generated content stays unavailable. Owning a post grants
+no access to another author's pending comment or parent body.
+
+The public post, comment and feed filters retain their publication checks.
+Your submissions opens locally acknowledged posts through the private owner
+view; comment threads restore locally acknowledged own pending IDs. Server
+responses determine ownership and moderation state. A pending declaration
+never becomes a confirmed public authorship label. Pending post edits clear
+previous verification badges. New comments on pending posts and replies to
+pending comments wait for publication; owner edit and delete remain available.
+A deletion whose response
+was lost remains explicitly unconfirmed and can replay its saved key even when
+the body is no longer readable.
 
 Regression coverage lives in test/features/feed/application/content_mutation_test.dart,
-test/features/feed/presentation/post_comment_journey_test.dart, and the existing
+test/features/feed/application/content_recovery_test.dart,
+test/features/feed/presentation/post_comment_journey_test.dart,
+apps/lythaus-public-api/tests/owner-content-reader.test.mjs,
+apps/lythaus-public-api/tests/content-journey.postgres.mjs, and the existing
 feed, composer, repository, network, and policy suites. These checks use synthetic
 fixtures. Real-email/signup and exact-SHA owner acceptance remain separate gates.
+
+The reproducible browser fixture is built with:
+
+```sh
+flutter build web --debug --no-pub --no-wasm-dry-run --target test/browser/content_journey_entry.dart --output build/content-journey-web
+node scripts/tests/content-journey.browser.mjs
+```
+
+It uses real content widgets, a loopback synthetic API whose data persists across
+page reloads, platform secure storage, and browser contexts restored from the
+same device storage. It records canonical requests, exact retry keys, screenshots
+and expected injected HTTP failures. PostgreSQL tests cover real authentication,
+owner predicates, public exclusion and duplicate outbox prevention.

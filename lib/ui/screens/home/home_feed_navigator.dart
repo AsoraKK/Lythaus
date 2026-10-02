@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/feed/presentation/content_editor_screen.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
+import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/state/models/feed_models.dart';
@@ -78,6 +80,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
               useWordmark: true,
             ),
             SizedBox(height: spacing.xs),
+            const _OwnSubmissions(),
             if (feeds.length > 1) ...[
               _FeedSwitchRail(
                 feeds: feeds,
@@ -164,6 +167,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
               onTrendingTap: _openTrending,
               useWordmark: true,
             ),
+            const _OwnSubmissions(),
             Expanded(
               child: Center(
                 child: Padding(
@@ -221,6 +225,60 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     Navigator.of(
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => const FeedSearchScreen()));
+  }
+}
+
+class _OwnSubmissions extends ConsumerWidget {
+  const _OwnSubmissions();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final actor = ref.watch(currentUserProvider)?.id;
+    final journal = ref.watch(contentMutationRegistryProvider);
+    if (actor == null) return const SizedBox.shrink();
+    final ids = {
+      ...journal.owned
+          .where((item) => item.kind == 'post')
+          .map((item) => item.id),
+      ...journal.attempts
+          .where((attempt) => attempt.scope.startsWith('post:$actor:'))
+          .map((attempt) => attempt.scope.split(':').last),
+    }.toList();
+    final hasDraft =
+        journal.pending('post-create:$actor') != null ||
+        journal.draft('post-create:$actor') != null;
+    if (ids.isEmpty && !hasDraft) return const SizedBox.shrink();
+    return Align(
+      alignment: Alignment.centerRight,
+      child: PopupMenuButton<String>(
+        tooltip: 'Your submissions',
+        onSelected: (value) {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => value == 'draft'
+                  ? const CreatePostScreen()
+                  : PostDetailScreen(postId: value),
+            ),
+          );
+        },
+        itemBuilder: (_) => [
+          if (hasDraft)
+            const PopupMenuItem(
+              value: 'draft',
+              child: Text('Resume saved post'),
+            ),
+          for (var i = 0; i < ids.length; i++)
+            PopupMenuItem(
+              value: ids[i],
+              child: Text('Your submission ${i + 1}'),
+            ),
+        ],
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text('Your submissions'),
+        ),
+      ),
+    );
   }
 }
 

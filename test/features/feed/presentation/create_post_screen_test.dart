@@ -1,6 +1,8 @@
 /// Widget tests for post creation form
 library;
 
+import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
+import '../../../helpers/content_recovery.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -119,6 +121,9 @@ void main() {
   }) {
     return ProviderScope(
       overrides: [
+        contentRecoveryStorageProvider.overrideWithValue(
+          MemoryContentRecoveryStorage(),
+        ),
         postRepositoryProvider.overrideWithValue(mockRepository),
         authStateProvider.overrideWith((ref) {
           return MockAuthStateNotifier(user);
@@ -312,6 +317,9 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              contentRecoveryStorageProvider.overrideWithValue(
+                MemoryContentRecoveryStorage(),
+              ),
               postRepositoryProvider.overrideWithValue(mockRepository),
               authStateProvider.overrideWith((ref) {
                 return MockAuthStateNotifier(createTestUser());
@@ -547,7 +555,12 @@ void main() {
   group('PostCreationNotifier Unit Tests', () {
     test('updateText updates state', () {
       final container = ProviderContainer(
-        overrides: [postRepositoryProvider.overrideWithValue(mockRepository)],
+        overrides: [
+          contentRecoveryStorageProvider.overrideWithValue(
+            MemoryContentRecoveryStorage(),
+          ),
+          postRepositoryProvider.overrideWithValue(mockRepository),
+        ],
       );
       addTearDown(container.dispose);
 
@@ -559,7 +572,12 @@ void main() {
 
     test('validate returns error for empty text', () {
       final container = ProviderContainer(
-        overrides: [postRepositoryProvider.overrideWithValue(mockRepository)],
+        overrides: [
+          contentRecoveryStorageProvider.overrideWithValue(
+            MemoryContentRecoveryStorage(),
+          ),
+          postRepositoryProvider.overrideWithValue(mockRepository),
+        ],
       );
       addTearDown(container.dispose);
 
@@ -571,7 +589,12 @@ void main() {
 
     test('validate returns error for text exceeding max length', () {
       final container = ProviderContainer(
-        overrides: [postRepositoryProvider.overrideWithValue(mockRepository)],
+        overrides: [
+          contentRecoveryStorageProvider.overrideWithValue(
+            MemoryContentRecoveryStorage(),
+          ),
+          postRepositoryProvider.overrideWithValue(mockRepository),
+        ],
       );
       addTearDown(container.dispose);
 
@@ -584,7 +607,12 @@ void main() {
 
     test('validate returns null for valid text', () {
       final container = ProviderContainer(
-        overrides: [postRepositoryProvider.overrideWithValue(mockRepository)],
+        overrides: [
+          contentRecoveryStorageProvider.overrideWithValue(
+            MemoryContentRecoveryStorage(),
+          ),
+          postRepositoryProvider.overrideWithValue(mockRepository),
+        ],
       );
       addTearDown(container.dispose);
 
@@ -598,7 +626,12 @@ void main() {
 
     test('reset clears state', () {
       final container = ProviderContainer(
-        overrides: [postRepositoryProvider.overrideWithValue(mockRepository)],
+        overrides: [
+          contentRecoveryStorageProvider.overrideWithValue(
+            MemoryContentRecoveryStorage(),
+          ),
+          postRepositoryProvider.overrideWithValue(mockRepository),
+        ],
       );
       addTearDown(container.dispose);
 

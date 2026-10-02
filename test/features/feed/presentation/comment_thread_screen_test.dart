@@ -3,6 +3,8 @@
 /// Verifies loading, empty, error, and comment-list render states.
 library;
 
+import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
+import '../../../helpers/content_recovery.dart';
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -14,6 +16,7 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
 
 class _MockDio extends Mock implements Dio {}
@@ -60,7 +63,23 @@ Widget _buildApp({
 }) {
   return ProviderScope(
     overrides: [
+      contentRecoveryStorageProvider.overrideWithValue(
+        MemoryContentRecoveryStorage(),
+      ),
       secureDioProvider.overrideWithValue(dio),
+      currentUserProvider.overrideWithValue(
+        jwtToken == null
+            ? null
+            : User(
+                id: 'synthetic-comment-owner',
+                email: 'synthetic@example.invalid',
+                role: UserRole.user,
+                tier: UserTier.bronze,
+                reputationScore: 0,
+                createdAt: DateTime.utc(2026),
+                lastLoginAt: DateTime.utc(2026),
+              ),
+      ),
       jwtProvider.overrideWith((ref) async => jwtToken),
     ],
     child: MaterialApp(home: CommentThreadScreen(postId: postId)),
@@ -342,6 +361,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            contentRecoveryStorageProvider.overrideWithValue(
+              MemoryContentRecoveryStorage(),
+            ),
             secureDioProvider.overrideWithValue(dio),
             jwtProvider.overrideWith((ref) async => null),
           ],
@@ -350,12 +372,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextField), 'Hello');
-      await tester.pump();
-      await tester.tap(find.byIcon(Icons.send));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(SnackBar), findsOneWidget);
+      expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+      expect(
+        tester
+            .widget<FilledButton>(find.widgetWithIcon(FilledButton, Icons.send))
+            .onPressed,
+        isNull,
+      );
       expect(find.textContaining('Sign in'), findsOneWidget);
     });
 

@@ -84,7 +84,7 @@ paths:
                   correlationId: { type: string }
         '401': { $ref: '#/components/responses/OwnerUnauthorized' }
         '404': { $ref: '#/components/responses/OwnerNotFound' }
-        '429': { $ref: './product-integrity.yaml#/components/responses/TooManyRequests' }
+        '429': { $ref: './product-integrity.yaml#/components/responses/SafetyLimited' }
   /comments/{commentId}/owner-view:
     get:
       operationId: commentsOwnerView
@@ -113,4 +113,4 @@ paths:
                   correlationId: { type: string }
         '401': { $ref: '#/components/responses/OwnerUnauthorized' }
         '404': { $ref: '#/components/responses/OwnerNotFound' }
-        '429': { $ref: './product-integrity.yaml#/components/responses/TooManyRequests' }
+        '429': { $ref: './product-integrity.yaml#/components/responses/SafetyLimited' }

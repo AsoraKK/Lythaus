@@ -86,6 +86,7 @@ import 'package:lythaus_api_client/src/model/comment_page.dart';
 import 'package:lythaus_api_client/src/model/comment_submission.dart';
 import 'package:lythaus_api_client/src/model/comment_update_request.dart';
 import 'package:lythaus_api_client/src/model/comment_update_response.dart';
+import 'package:lythaus_api_client/src/model/comments_owner_view200_response.dart';
 import 'package:lythaus_api_client/src/model/create_post_request.dart';
 import 'package:lythaus_api_client/src/model/cursor_page.dart';
 import 'package:lythaus_api_client/src/model/custom_feed.dart';
@@ -139,6 +140,8 @@ import 'package:lythaus_api_client/src/model/notification_page.dart';
 import 'package:lythaus_api_client/src/model/notification_preference_update.dart';
 import 'package:lythaus_api_client/src/model/notification_preferences.dart';
 import 'package:lythaus_api_client/src/model/notification_unread_count.dart';
+import 'package:lythaus_api_client/src/model/owner_comment.dart';
+import 'package:lythaus_api_client/src/model/owner_post.dart';
 import 'package:lythaus_api_client/src/model/pending_appeal_adjudication.dart';
 import 'package:lythaus_api_client/src/model/pending_appeal_adjudication_list.dart';
 import 'package:lythaus_api_client/src/model/personal_feed_item.dart';
@@ -148,6 +151,7 @@ import 'package:lythaus_api_client/src/model/post_revision.dart';
 import 'package:lythaus_api_client/src/model/post_revision_response.dart';
 import 'package:lythaus_api_client/src/model/posts_delete200_response.dart';
 import 'package:lythaus_api_client/src/model/posts_get200_response.dart';
+import 'package:lythaus_api_client/src/model/posts_owner_view200_response.dart';
 import 'package:lythaus_api_client/src/model/privacy_request.dart';
 import 'package:lythaus_api_client/src/model/privacy_request_accepted.dart';
 import 'package:lythaus_api_client/src/model/privacy_request_create.dart';
@@ -283,6 +287,7 @@ part 'serializers.g.dart';
   CommentSubmission,
   CommentUpdateRequest,
   CommentUpdateResponse,
+  CommentsOwnerView200Response,
   CreatePostRequest,
   CursorPage,$CursorPage,
   CustomFeed,
@@ -336,6 +341,8 @@ part 'serializers.g.dart';
   NotificationPreferenceUpdate,
   NotificationPreferences,
   NotificationUnreadCount,
+  OwnerComment,
+  OwnerPost,
   PendingAppealAdjudication,
   PendingAppealAdjudicationList,
   PersonalFeedItem,
@@ -345,6 +352,7 @@ part 'serializers.g.dart';
   PostRevisionResponse,
   PostsDelete200Response,
   PostsGet200Response,
+  PostsOwnerView200Response,
   PrivacyRequest,$PrivacyRequest,
   PrivacyRequestAccepted,
   PrivacyRequestCreate,

@@ -3,6 +3,8 @@
 /// Verifies loading, error, and success render states.
 library;
 
+import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
+import '../../../helpers/content_recovery.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -44,6 +46,9 @@ domain.Post _fakePost({String id = 'post-1', String text = 'Hello world'}) {
 Widget _buildApp({required _MockPostRepository repo, String postId = 'p1'}) {
   return ProviderScope(
     overrides: [
+      contentRecoveryStorageProvider.overrideWithValue(
+        MemoryContentRecoveryStorage(),
+      ),
       postRepositoryProvider.overrideWithValue(repo),
       jwtProvider.overrideWith((ref) async => 'test-token'),
     ],

@@ -9,6 +9,7 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
@@ -34,6 +35,8 @@ class PostCreationState {
   final String contentType;
   final String? aiLabel;
   final ProofSignals proofSignals;
+  final bool isRestoring;
+  final String? draftStatus;
 
   const PostCreationState({
     this.text = '',
@@ -45,6 +48,8 @@ class PostCreationState {
     this.contentType = 'text',
     this.aiLabel,
     this.proofSignals = const ProofSignals(),
+    this.isRestoring = false,
+    this.draftStatus,
   });
 
   PostCreationState copyWith({
@@ -60,6 +65,8 @@ class PostCreationState {
     bool clearMediaUrl = false,
     bool clearResult = false,
     bool clearValidationError = false,
+    bool? isRestoring,
+    String? draftStatus,
   }) {
     return PostCreationState(
       text: text ?? this.text,
@@ -73,6 +80,8 @@ class PostCreationState {
       contentType: contentType ?? this.contentType,
       aiLabel: aiLabel ?? this.aiLabel,
       proofSignals: proofSignals ?? this.proofSignals,
+      isRestoring: isRestoring ?? this.isRestoring,
+      draftStatus: draftStatus ?? this.draftStatus,
     );
   }
 
@@ -123,9 +132,96 @@ const int postTextMaxLength = 5000;
 
 /// Notifier for post creation state
 class PostCreationNotifier extends StateNotifier<PostCreationState> {
-  PostCreationNotifier(this._ref) : super(const PostCreationState());
+  PostCreationNotifier(this._ref) : super(const PostCreationState()) {
+    _actor = _ref.read(currentUserProvider)?.id ?? 'session';
+    _restored = _restore();
+    _ref.listen(currentUserProvider, (previous, next) {
+      if (previous?.id == next?.id) return;
+      _actor = next?.id ?? 'session';
+      ++_sessionEpoch;
+      ++_version;
+      state = const PostCreationState();
+      _restored = _restore();
+    });
+  }
 
   final Ref _ref;
+  late String _actor;
+  late Future<void> _restored;
+  int _version = 0;
+  int _sessionEpoch = 0;
+  String get _scope => 'post-create:$_actor';
+
+  Future<void> _restore() async {
+    final actor = _actor;
+    final version = _version;
+    final sessionEpoch = _sessionEpoch;
+    if (actor == 'session') return;
+    state = state.copyWith(isRestoring: true);
+    final loadingState = state;
+    final registry = _ref.read(contentMutationRegistryProvider);
+    await registry.ready;
+    if (!mounted || actor != _actor || sessionEpoch != _sessionEpoch) return;
+    if (version != _version || !identical(state, loadingState)) {
+      state = state.copyWith(isRestoring: false);
+      return;
+    }
+    final pending = registry.pending(_scope);
+    final saved = pending != null && !pending.needsReentry
+        ? pending.payload
+        : registry.draft(_scope);
+    state = PostCreationState(
+      text: saved?['body'] as String? ?? '',
+      aiLabel: saved?['declaredCreationMode'] == 'ai_assisted'
+          ? 'assisted'
+          : saved?['declaredCreationMode'] == 'human'
+          ? 'human'
+          : null,
+      result: pending != null && !pending.needsReentry
+          ? const CreatePostError(
+              message: 'Retry to check the saved submission.',
+              outcomeUncertain: true,
+            )
+          : null,
+      draftStatus: registry.storageUnavailable
+          ? 'Recovery storage is unavailable.'
+          : pending?.needsReentry == true
+          ? 'Saved text expired or was cleared at logout. Re-enter the same text and disclosure to check the previous request.'
+          : saved == null
+          ? null
+          : 'Draft restored on this device.',
+    );
+  }
+
+  void _persist() {
+    ++_version;
+    if (_actor == 'session') return;
+    final actor = _actor;
+    final version = _version;
+    final registry = _ref.read(contentMutationRegistryProvider);
+    final data = state.text.isEmpty
+        ? null
+        : <String, dynamic>{
+            'body': state.text,
+            'declaredCreationMode': state.aiLabel == 'assisted'
+                ? 'ai_assisted'
+                : state.aiLabel == 'human'
+                ? 'human'
+                : null,
+          };
+    state = state.copyWith(draftStatus: 'Saving draft…');
+    unawaited(
+      registry.saveDraft(_scope, data).then((saved) {
+        if (!mounted || actor != _actor || version != _version) return;
+        state = state.copyWith(
+          draftStatus: saved
+              ? 'Draft saved on this device.'
+              : 'Draft could not be saved on this device.',
+        );
+      }),
+    );
+  }
+
   bool get _canEdit =>
       !state.isSubmitting && state.errorResult?.outcomeUncertain != true;
 
@@ -151,6 +247,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
       validationError: validationError,
       clearValidationError: validationError == null,
     );
+    _persist();
   }
 
   void setIsNews(bool value) {
@@ -186,6 +283,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
       validationError: validationError,
       clearValidationError: validationError == null,
     );
+    _persist();
   }
 
   void updateCaptureMetadataHash(String? value) {
@@ -264,6 +362,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
     }
 
     final draft = state;
+    final sessionEpoch = _sessionEpoch;
     final actor = _ref.read(currentUserProvider)?.id ?? 'session';
     final registry = _ref.read(contentMutationRegistryProvider);
     ContentMutationAttempt? attempt;
@@ -274,8 +373,9 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
     );
 
     try {
+      await _restored;
       final token = await _ref.read(jwtProvider.future);
-      if (!mounted) return false;
+      if (!mounted || sessionEpoch != _sessionEpoch) return false;
       if (token == null ||
           token.isEmpty ||
           (_ref.read(currentUserProvider)?.id ?? 'session') != actor) {
@@ -297,7 +397,10 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
         aiLabel: draft.aiLabel!,
         proofSignals: draft.proofSignals,
       );
-      attempt = registry.begin('post-create:$actor', request.toJson());
+      attempt = await registry.beginDurable(
+        'post-create:$actor',
+        request.toJson(),
+      );
       final result = await repository.createPost(
         request: CreatePostRequest(
           text: request.text,
@@ -310,12 +413,27 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
         ),
         token: token,
       );
-      registry.finish(
+      await registry.finishDurable(
         attempt,
         uncertain: result is CreatePostError && result.outcomeUncertain,
+        receipt: result is CreatePostSuccess
+            ? OwnedContent('post', result.post.id)
+            : null,
       );
-      if (!mounted) return false;
-      state = state.copyWith(isSubmitting: false, result: result);
+      if (!mounted || actor != _actor || sessionEpoch != _sessionEpoch) {
+        return false;
+      }
+      final unconfirmed = registry.pending(attempt.scope) != null;
+      state = state.copyWith(
+        isSubmitting: false,
+        result: unconfirmed && result is! CreatePostSuccess
+            ? const CreatePostError(
+                message:
+                    'The earlier submission is still unconfirmed. Retry the same request after signing in.',
+                outcomeUncertain: true,
+              )
+            : result,
+      );
 
       // If successful, refresh feeds
       if (result is CreatePostSuccess) {
@@ -327,16 +445,23 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
     } catch (e) {
       final failure = contentMutationFailure(e);
       if (attempt != null) {
-        registry.finish(attempt, uncertain: failure.uncertain);
+        try {
+          await registry.finishDurable(attempt, uncertain: failure.uncertain);
+        } catch (_) {}
       }
-      if (!mounted) return false;
+      if (!mounted || actor != _actor || sessionEpoch != _sessionEpoch) {
+        return false;
+      }
       state = state.copyWith(
         isSubmitting: false,
         result: CreatePostError(
           message: failure.message,
           originalError: e,
           code: failure.code,
-          outcomeUncertain: failure.uncertain,
+          outcomeUncertain:
+              registry.pending('post-create:$actor')?.needsReentry != true &&
+              (failure.uncertain ||
+                  registry.pending('post-create:$actor') != null),
         ),
       );
       return false;
@@ -361,6 +486,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
   void reset() {
     if (!_canEdit) return;
     state = const PostCreationState();
+    _persist();
   }
 
   /// Clear any error state

@@ -61,9 +61,10 @@ class PostRepositoryImpl implements PostRepository {
         } on DioException catch (e) {
           return _handleDioError(e);
         } catch (e) {
-          debugPrint('❌ Post creation failed: $e');
+          debugPrint('Post creation response could not be processed');
           return CreatePostError(
-            message: 'Failed to create post: ${e.toString()}',
+            message:
+                'The post response could not be processed. Retry the same submission.',
             originalError: e,
             outcomeUncertain: true,
           );
@@ -130,7 +131,8 @@ class PostRepositoryImpl implements PostRepository {
           return _handleDioError(e);
         } catch (e) {
           return CreatePostError(
-            message: 'Failed to update post: ${e.toString()}',
+            message:
+                'The edit response could not be processed. Retry the same edit.',
             originalError: e,
             outcomeUncertain: true,
           );

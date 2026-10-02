@@ -1,3 +1,5 @@
+import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
+import '../../helpers/content_recovery.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -79,6 +81,9 @@ _Harness _buildHarness({
 
   final container = ProviderContainer(
     overrides: [
+      contentRecoveryStorageProvider.overrideWithValue(
+        MemoryContentRecoveryStorage(),
+      ),
       postCreationProvider.overrideWith((ref) {
         notifier = _FakePostCreationNotifier(submitFn: submitFn, ref: ref);
         return notifier;

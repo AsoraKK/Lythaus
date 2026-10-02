@@ -1,3 +1,5 @@
+import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
+import '../../../helpers/content_recovery.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -11,6 +13,7 @@ import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/features/feed/application/post_repository_impl.dart';
 import 'package:lythaus/features/feed/domain/models.dart' as domain;
 import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
@@ -128,6 +131,8 @@ Future<void> _pump(
   _Adapter adapter, {
   String? actor = 'owner',
   bool feed = false,
+  MemoryContentRecoveryStorage? storage,
+  bool canSubmit = true,
 }) async {
   tester.view.physicalSize = const Size(390, 900);
   tester.view.devicePixelRatio = 1;
@@ -138,6 +143,9 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        contentRecoveryStorageProvider.overrideWithValue(
+          storage ?? MemoryContentRecoveryStorage(),
+        ),
         secureDioProvider.overrideWithValue(dio),
         postRepositoryProvider.overrideWithValue(PostRepositoryImpl(dio)),
         currentUserProvider.overrideWithValue(
@@ -160,8 +168,10 @@ Future<void> _pump(
                         onPressed: () => Navigator.push(
                           context,
                           MaterialPageRoute<void>(
-                            builder: (_) =>
-                                const CommentThreadScreen(postId: 'p1'),
+                            builder: (_) => CommentThreadScreen(
+                              postId: 'p1',
+                              canSubmit: canSubmit,
+                            ),
                           ),
                         ),
                         child: const Text('Open comments'),
@@ -521,6 +531,37 @@ void main() {
   }
 
   testWidgets(
+    'pending post disables new comments while preserving owner controls',
+    (tester) async {
+      final adapter = _Adapter(
+        (request) async => _response({
+          'items': [_comment('c1')],
+        }),
+      );
+      await _pump(tester, adapter, canSubmit: false);
+      await _openComments(tester);
+      expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+      expect(
+        tester
+            .widget<FilledButton>(find.widgetWithIcon(FilledButton, Icons.send))
+            .onPressed,
+        isNull,
+      );
+      expect(
+        find.textContaining('Comments can be submitted after publication.'),
+        findsOneWidget,
+      );
+      expect(find.text('Edit comment'), findsOneWidget);
+      expect(find.text('Delete comment'), findsOneWidget);
+      expect(find.text('Reply'), findsNothing);
+      expect(
+        adapter.requests.where((request) => request.method != 'GET'),
+        isEmpty,
+      );
+    },
+  );
+
+  testWidgets(
     'owner edits a comment with a fresh declaration and pending result',
     (tester) async {
       final adapter = _Adapter(
@@ -642,17 +683,32 @@ void main() {
                   'moderationState': 'under_review',
                 },
               })
-            : _response({'post': _post()}),
+            : _response({
+                'post': {
+                  ..._post(),
+                  'trustStatus': 'verified_signals_attached',
+                  'timeline': {
+                    'created': 'complete',
+                    'mediaChecked': 'complete',
+                    'moderation': 'complete',
+                  },
+                  'proofSignalsProvided': true,
+                  'verifiedContextBadgeEligible': true,
+                  'featuredEligible': true,
+                },
+              }),
       );
       await _pump(tester, adapter);
       await tester.tap(find.text('Open post'));
       await tester.pumpAndSettle();
+      expect(find.text('Verified signals attached'), findsOneWidget);
       await tester.tap(find.byTooltip('Edit post'));
       await tester.pumpAndSettle();
       await _draft(tester, 'Revised synthetic post');
       await tester.tap(find.text('Submit edit'));
       await tester.pumpAndSettle();
       expect(find.text('Revised synthetic post'), findsOneWidget);
+      expect(find.text('Verified signals attached'), findsNothing);
       expect(find.byTooltip('Delete post'), findsOneWidget);
       expect(
         find.text('Under review. Publication checks are pending.'),
@@ -859,6 +915,152 @@ void main() {
       expect(find.text('Edit comment'), findsNothing);
       expect(find.text('Delete comment'), findsNothing);
       expect(find.text('Reply'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'pending owner post survives reopening and can be edited and deleted',
+    (tester) async {
+      final storage = MemoryContentRecoveryStorage();
+      var saved = {
+        ..._post(),
+        'body': 'Private pending post',
+        'moderationState': 'under_review',
+      };
+      final adapter = _Adapter((request) async {
+        if (request.method == 'GET') {
+          return request.path.endsWith('/owner-view')
+              ? _response({'post': saved})
+              : _response({'error': 'post_not_found'}, 404);
+        }
+        if (request.method == 'PUT') {
+          saved = {...saved, ..._body(request)};
+          return _response({'post': saved});
+        }
+        return _response({'postId': 'p1', 'deleted': true});
+      });
+      await _pump(tester, adapter, storage: storage);
+      await tester.tap(find.text('Open post'));
+      await tester.pumpAndSettle();
+      expect(find.text('Private pending post'), findsOneWidget);
+      expect(find.byTooltip('Edit post'), findsOneWidget);
+      await tester.tap(find.byTooltip('Edit post'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Revised pending post');
+      await tester.tap(find.text('Human-authored'));
+      await tester.tap(find.text('Submit edit'));
+      await tester.pumpAndSettle();
+      expect(find.text('Revised pending post'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      await _pump(tester, adapter, storage: storage);
+      await tester.tap(find.text('Open post'));
+      await tester.pumpAndSettle();
+      expect(find.text('Revised pending post'), findsOneWidget);
+      await tester.tap(find.byTooltip('Delete post'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete').last);
+      await tester.pumpAndSettle();
+      expect(adapter.requests.where((r) => r.method == 'DELETE'), hasLength(1));
+    },
+  );
+
+  testWidgets(
+    'own pending comment is restored privately after process restart',
+    (tester) async {
+      final storage = MemoryContentRecoveryStorage();
+      final journal = ContentMutationRegistry(storage: storage)
+        ..activate('owner');
+      await journal.ready;
+      final attempt = await journal.beginDurable('comment-create:owner:p1', {
+        'body': 'Private saved comment',
+        'declaredCreationMode': 'human',
+      });
+      await journal.finishDurable(
+        attempt,
+        receipt: const OwnedContent('comment', 'pending', postId: 'p1'),
+      );
+      journal.dispose();
+      var saved = {
+        ..._comment('pending'),
+        'postId': 'p1',
+        'body': 'Private saved comment',
+        'moderationState': 'under_review',
+      };
+      final adapter = _Adapter((request) async {
+        if (request.path.endsWith('/owner-view')) {
+          return _response({'comment': saved});
+        }
+        if (request.method == 'GET') return _response({'items': <Object>[]});
+        if (request.method == 'PUT') {
+          saved = {...saved, ..._body(request)};
+          return _response(saved);
+        }
+        return _response({'commentId': 'pending', 'deleted': true});
+      });
+      await _pump(tester, adapter, storage: storage);
+      await _openComments(tester);
+      expect(find.text('Private saved comment'), findsOneWidget);
+      expect(find.text('Reply'), findsNothing);
+      await tester.tap(find.text('Edit comment'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Private revised comment');
+      await tester.tap(find.text('AI-assisted'));
+      await tester.tap(find.text('Submit edit'));
+      await tester.pumpAndSettle();
+      expect(find.text('Private revised comment'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      await _pump(tester, adapter, storage: storage);
+      await _openComments(tester);
+      expect(find.text('Private revised comment'), findsOneWidget);
+      await tester.tap(find.text('Delete comment'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Private revised comment'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'reopening after a lost deletion acknowledgement exposes only the saved replay',
+    (tester) async {
+      final storage = MemoryContentRecoveryStorage();
+      var deleted = false;
+      final adapter = _Adapter((request) async {
+        if (request.method == 'GET') {
+          return deleted
+              ? _response({'error': 'post_not_found'}, 404)
+              : _response({'post': _post()});
+        }
+        if (!deleted) {
+          deleted = true;
+          return _response({'error': 'synthetic_acknowledgement_lost'}, 503);
+        }
+        return _response({'postId': 'p1', 'deleted': true});
+      });
+      await _pump(tester, adapter, storage: storage);
+      await tester.tap(find.text('Open post'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Delete post'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete').last);
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox());
+      await _pump(tester, adapter, storage: storage);
+      await tester.tap(find.text('Open post'));
+      await tester.pumpAndSettle();
+      expect(find.text('Retry saved deletion'), findsOneWidget);
+      expect(find.text('Synthetic post'), findsNothing);
+      await tester.tap(find.text('Retry saved deletion'));
+      await tester.pumpAndSettle();
+      final requests = adapter.requests
+          .where((r) => r.method == 'DELETE')
+          .toList();
+      expect(requests, hasLength(2));
+      expect(
+        requests[1].headers['Idempotency-Key'],
+        requests[0].headers['Idempotency-Key'],
+      );
+      expect(find.text('Open post'), findsOneWidget);
     },
   );
 }

@@ -3,6 +3,8 @@
 /// auth-required card, proof tiles, and CreatePostFAB.
 library;
 
+import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
+import '../../../helpers/content_recovery.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -69,6 +71,9 @@ void main() {
     final canCreate = user != null;
     return ProviderScope(
       overrides: [
+        contentRecoveryStorageProvider.overrideWithValue(
+          MemoryContentRecoveryStorage(),
+        ),
         postRepositoryProvider.overrideWithValue(mockRepo),
         postCreationProvider.overrideWith(
           (ref) => _SeededPostCreationNotifier(ref, state),
@@ -439,7 +444,12 @@ void main() {
     testWidgets('renders FAB with Post label', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [canCreatePostProvider.overrideWithValue(true)],
+          overrides: [
+            contentRecoveryStorageProvider.overrideWithValue(
+              MemoryContentRecoveryStorage(),
+            ),
+            canCreatePostProvider.overrideWithValue(true),
+          ],
           child: const MaterialApp(
             home: Scaffold(floatingActionButton: CreatePostFAB()),
           ),
@@ -454,7 +464,12 @@ void main() {
     testWidgets('shows snackbar when not signed in', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [canCreatePostProvider.overrideWithValue(false)],
+          overrides: [
+            contentRecoveryStorageProvider.overrideWithValue(
+              MemoryContentRecoveryStorage(),
+            ),
+            canCreatePostProvider.overrideWithValue(false),
+          ],
           child: const MaterialApp(
             home: Scaffold(floatingActionButton: CreatePostFAB()),
           ),

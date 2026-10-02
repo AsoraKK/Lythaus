@@ -1,3 +1,5 @@
+import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
+import '../../../helpers/content_recovery.dart';
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -131,6 +133,9 @@ void main() {
     ).thenAnswer((_) => result.future);
     final container = ProviderContainer(
       overrides: [
+        contentRecoveryStorageProvider.overrideWithValue(
+          MemoryContentRecoveryStorage(),
+        ),
         currentUserProvider.overrideWithValue(null),
         jwtProvider.overrideWith((ref) => token.future),
         postRepositoryProvider.overrideWithValue(repository),
@@ -181,6 +186,9 @@ void main() {
       });
       final container = ProviderContainer(
         overrides: [
+          contentRecoveryStorageProvider.overrideWithValue(
+            MemoryContentRecoveryStorage(),
+          ),
           currentUserProvider.overrideWithValue(null),
           jwtProvider.overrideWith((ref) async => 'synthetic-token'),
           postRepositoryProvider.overrideWithValue(repository),
@@ -210,6 +218,9 @@ void main() {
       final repository = _Repository();
       final container = ProviderContainer(
         overrides: [
+          contentRecoveryStorageProvider.overrideWithValue(
+            MemoryContentRecoveryStorage(),
+          ),
           currentUserProvider.overrideWithValue(null),
           jwtProvider.overrideWith((ref) => token.future),
           postRepositoryProvider.overrideWithValue(repository),

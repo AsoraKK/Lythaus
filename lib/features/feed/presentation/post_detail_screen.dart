@@ -16,6 +16,8 @@ import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
 import 'package:lythaus/features/feed/presentation/content_editor_screen.dart';
 import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/features/feed/application/owner_content_repository.dart';
 import 'package:lythaus/state/providers/feed_providers.dart' as live;
 
 class PostDetailScreen extends ConsumerStatefulWidget {
@@ -36,6 +38,9 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   late Future<domain.Post> _future;
   bool _busy = false;
   String? _mutationError;
+  String? _actor;
+  int _readEpoch = 0;
+  ProviderSubscription<String?>? _sessionSub;
 
   bool _isOwner(domain.Post post) {
     final actor = ref.read(currentUserProvider)?.id;
@@ -49,19 +54,29 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
   Future<void> _editPost(domain.Post post) async {
     if (_busy || !_isOwner(post)) return;
+    final epoch = _readEpoch;
     final revised = await Navigator.of(context).push<Map<String, dynamic>>(
       MaterialPageRoute(
         builder: (_) =>
             ContentEditorScreen(contentId: post.id, text: post.text),
       ),
     );
-    if (!mounted || revised == null) return;
+    if (!mounted || revised == null || !_isOwner(post) || epoch != _readEpoch) {
+      return;
+    }
     final merged = domain.Post.fromJson({
       ...post.toJson(),
       ...revised,
       'authorship': revised['moderationState'] == 'under_review'
           ? const domain.PostAuthorship.underReview().toJson()
           : post.authorship.toJson(),
+      if (revised['moderationState'] == 'under_review') ...{
+        'trustStatus': 'no_extra_signals',
+        'timeline': const domain.PostTrustTimeline().toJson(),
+        'proofSignalsProvided': false,
+        'verifiedContextBadgeEligible': false,
+        'featuredEligible': false,
+      },
     });
     setState(() {
       _future = Future.value(merged);
@@ -70,10 +85,17 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     _refreshFeeds();
   }
 
-  Future<void> _deletePost(domain.Post post) async {
-    if (_busy || !_isOwner(post)) return;
-    final actor = ref.read(currentUserProvider)!.id;
+  Future<void> _deletePost(domain.Post? post, {String? savedId}) async {
+    final epoch = _readEpoch;
+    final actor = ref.read(currentUserProvider)?.id;
+    if (_busy || actor == null || (post != null && !_isOwner(post))) return;
+    final id = post?.id ?? savedId;
+    if (id == null) return;
     final registry = ref.read(contentMutationRegistryProvider);
+    if (post == null &&
+        registry.pending('post:$actor:$id')?.payload['method'] != 'DELETE') {
+      return;
+    }
     final repository = ref.read(postRepositoryProvider);
     ContentMutationAttempt? attempt;
     setState(() {
@@ -81,23 +103,25 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       _mutationError = null;
     });
     try {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Delete post?'),
-          content: const Text('This removes the post from your feeds.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Delete'),
-            ),
-          ],
-        ),
-      );
+      final confirmed = post == null
+          ? true
+          : await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Delete post?'),
+                content: const Text('This removes the post from your feeds.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Delete'),
+                  ),
+                ],
+              ),
+            );
       if (!mounted) return;
       if (confirmed != true) {
         setState(() => _busy = false);
@@ -106,17 +130,20 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       final token = await ref.read(jwtProvider.future);
       if (!mounted) return;
       if (token == null ||
+          epoch != _readEpoch ||
           token.isEmpty ||
-          !_isOwner(post) ||
+          (post != null && !_isOwner(post)) ||
           ref.read(currentUserProvider)?.id != actor) {
         throw const ContentMutationFailure(
           'Sign in as the author to delete this post.',
           uncertain: false,
         );
       }
-      attempt = registry.begin('post:$actor:${post.id}', {'method': 'DELETE'});
+      attempt = await registry.beginDurable('post:$actor:$id', {
+        'method': 'DELETE',
+      });
       final deleted = await repository.deletePost(
-        postId: post.id,
+        postId: id,
         token: token,
         idempotencyKey: attempt.key,
       );
@@ -125,8 +152,12 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           'Deletion was not confirmed. Retry to check the same deletion.',
         );
       }
-      registry.finish(attempt);
-      if (!mounted) return;
+      await registry.finishDurable(
+        attempt,
+        deleted: true,
+        receipt: OwnedContent('post', id),
+      );
+      if (!mounted || actor != _actor || epoch != _readEpoch) return;
       _refreshFeeds();
       Navigator.of(context).pop(true);
     } catch (error) {
@@ -136,9 +167,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
             : error,
       );
       if (attempt != null) {
-        registry.finish(attempt, uncertain: failure.uncertain);
+        try {
+          await registry.finishDurable(attempt, uncertain: failure.uncertain);
+        } catch (_) {}
       }
-      if (!mounted) return;
+      if (!mounted || actor != _actor || epoch != _readEpoch) return;
       setState(() {
         _busy = false;
         _mutationError = failure.message;
@@ -149,13 +182,65 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _actor = ref.read(currentUserProvider)?.id;
     _future = _loadPost();
+    _sessionSub = ref.listenManual(
+      currentUserProvider.select((user) => user?.id),
+      (previous, next) {
+        if (next == _actor) return;
+        _actor = next;
+        ++_readEpoch;
+        setState(() {
+          _busy = false;
+          _mutationError = null;
+          _future = _loadPost();
+        });
+      },
+    );
   }
 
   Future<domain.Post> _loadPost() async {
+    final actor = _actor;
+    final epoch = _readEpoch;
     final repository = ref.read(postRepositoryProvider);
     final token = await ref.read(jwtProvider.future);
-    return repository.getPost(postId: widget.postId, token: token);
+    domain.Post post;
+    try {
+      post = await repository.getPost(postId: widget.postId, token: token);
+    } on PostException catch (error) {
+      if (error.code != 'not_found' ||
+          actor == null ||
+          token == null ||
+          token.isEmpty ||
+          actor != _actor ||
+          epoch != _readEpoch) {
+        rethrow;
+      }
+      final data = await readOwnerContent(
+        dio: ref.read(secureDioProvider),
+        kind: 'post',
+        id: widget.postId,
+        actor: actor,
+        token: token,
+      );
+      post = domain.Post.fromJson({
+        ...data,
+        'authorship': const domain.PostAuthorship.underReview().toJson(),
+      });
+    }
+    if (epoch != _readEpoch || actor != _actor) {
+      throw const ContentMutationFailure(
+        'Your session changed. Reopen the post.',
+        uncertain: false,
+      );
+    }
+    return post;
+  }
+
+  @override
+  void dispose() {
+    _sessionSub?.close();
+    super.dispose();
   }
 
   Future<void> _openComments(BuildContext context, domain.Post post) async {
@@ -163,6 +248,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       MaterialPageRoute<void>(
         builder: (_) => CommentThreadScreen(
           postId: post.id,
+          canSubmit: post.moderationState != 'under_review',
           initialCommentId: widget.initialCommentId,
         ),
       ),
@@ -172,6 +258,10 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   @override
   Widget build(BuildContext context) {
     ref.watch(currentUserProvider);
+    final journal = ref.watch(contentMutationRegistryProvider);
+    final pendingDelete = _actor == null
+        ? null
+        : journal.pending('post:$_actor:${widget.postId}');
     return PopScope(
       canPop: !_busy,
       child: ReadingPane(
@@ -180,6 +270,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
             title: const Text('Post'),
             actions: [
               FutureBuilder<domain.Post>(
+                key: ValueKey(_actor),
                 future: _future,
                 builder: (context, snapshot) {
                   final post = snapshot.data;
@@ -206,6 +297,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
             ],
           ),
           body: FutureBuilder<domain.Post>(
+            key: ValueKey(_actor),
             future: _future,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -213,6 +305,25 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
               }
 
               if (snapshot.hasError) {
+                if (pendingDelete?.payload['method'] == 'DELETE') {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'The saved deletion has not been confirmed.',
+                        ),
+                        if (_mutationError != null) Text(_mutationError!),
+                        FilledButton(
+                          onPressed: _busy
+                              ? null
+                              : () => _deletePost(null, savedId: widget.postId),
+                          child: const Text('Retry saved deletion'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
                 return _PostDetailError(
                   message:
                       'Unable to load this post. It may be unavailable or awaiting publication checks.',

@@ -3089,14 +3089,17 @@ export default {
       if (url.pathname === '/api/waitlist') return await waitlistRoute(request, env);
       const rateLimit = rateLimitPlan(url.pathname);
       await enforceRateLimit(request, env, rateLimit.scope, rateLimit.limit);
-      const ownerContent = await handleOwnerContentRead(request, {
-        authenticate: () => principal(request, env),
-        query: (sql, values) => query(env.DB_APP_FRESH, sql, values),
-        respond: (body, status) => privateResponse(request, env, {
-          ...body, correlationId: correlationId(request),
-        }, { status }),
-      });
-      if (ownerContent) return ownerContent;
+      const ownerItem = url.pathname.match(/^\/api\/(posts|comments)\/([^/]+)\/owner-view$/);
+      if (request.method === 'GET' && ownerItem) {
+        const ownerContent = await handleOwnerContentRead(request, {
+          authenticate: () => principal(request, env),
+          query: (sql, values) => query(env.DB_APP_FRESH, sql, values),
+          respond: (body, status) => privateResponse(request, env, {
+            ...body, correlationId: correlationId(request),
+          }, { status }),
+        });
+        if (ownerContent) return ownerContent;
+      }
       if (request.method === 'GET' && url.pathname === '/api/feed/discover') {
         const user = request.headers.has('authorization') ? await principal(request, env) : undefined;
         return await discoveryFeed(request, env, user);

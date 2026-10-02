@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:dio/dio.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lythaus/core/network/dio_client.dart';
@@ -15,11 +16,13 @@ class ContentEditorScreen extends ConsumerStatefulWidget {
     required this.contentId,
     required this.text,
     this.isComment = false,
+    this.postId,
   });
 
   final String contentId;
   final String text;
   final bool isComment;
+  final String? postId;
 
   @override
   ConsumerState<ContentEditorScreen> createState() =>
@@ -34,6 +37,11 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
   String? _error;
   bool _busy = false;
   bool _locked = false;
+  bool _restoring = false;
+  String? _draftStatus;
+  int _draftVersion = 0;
+  ProviderSubscription<String?>? _sessionSub;
+  bool _sessionValid = true;
 
   @override
   void initState() {
@@ -57,16 +65,96 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
           ? 'Retry to check the previous edit before changing this content.'
           : 'Check the pending deletion before editing this content.';
     }
+    _sessionSub = ref.listenManual(
+      currentUserProvider.select((user) => user?.id),
+      (previous, next) {
+        if ((next ?? 'session') == _actor) return;
+        ++_draftVersion;
+        _sessionValid = false;
+        _controller.clear();
+        setState(() {
+          _aiLabel = null;
+          _locked = true;
+          _busy = false;
+          _error =
+              'Your session changed. Reopen your content after signing in.';
+        });
+      },
+    );
+    unawaited(_restoreDraft());
+  }
+
+  Future<void> _restoreDraft() async {
+    if (_actor == 'session') return;
+    _restoring = true;
+    final version = _draftVersion;
+    final registry = ref.read(contentMutationRegistryProvider);
+    await registry.ready;
+    if (!mounted || version != _draftVersion) return;
+    final pending = registry.pending(_scope);
+    final saved = pending != null && !pending.needsReentry
+        ? pending.payload['body'] as Map?
+        : registry.draft(_scope);
+    setState(() {
+      _restoring = false;
+      if (saved != null) {
+        _controller.text = saved['body'] as String? ?? widget.text;
+        _aiLabel = saved['declaredCreationMode'] == 'ai_assisted'
+            ? 'assisted'
+            : saved['declaredCreationMode'] == 'human'
+            ? 'human'
+            : null;
+      }
+      _locked = pending != null && !pending.needsReentry;
+      if (pending != null) {
+        _error = pending.needsReentry
+            ? 'Re-enter the same text and disclosure to check the previous edit.'
+            : pending.payload['method'] == 'PUT'
+            ? 'Retry to check the saved edit.'
+            : 'Check the pending deletion before editing.';
+      }
+    });
+  }
+
+  void _saveDraft() {
+    final version = ++_draftVersion;
+    final registry = ref.read(contentMutationRegistryProvider);
+    setState(() => _draftStatus = 'Saving draft…');
+    unawaited(
+      registry
+          .saveDraft(_scope, {
+            'body': _controller.text,
+            'declaredCreationMode': _aiLabel == 'assisted'
+                ? 'ai_assisted'
+                : _aiLabel == 'human'
+                ? 'human'
+                : null,
+          })
+          .then((saved) {
+            if (!mounted || version != _draftVersion) return;
+            setState(
+              () => _draftStatus = saved
+                  ? 'Draft saved on this device.'
+                  : 'Draft could not be saved.',
+            );
+          }),
+    );
   }
 
   @override
   void dispose() {
+    _sessionSub?.close();
     _controller.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
-    if (_busy) return;
+    if (!_sessionValid ||
+        _busy ||
+        _restoring ||
+        (ref.read(currentUserProvider)?.id ?? 'session') != _actor) {
+      return;
+    }
     final text = _controller.text.trim();
     final validation = text.isEmpty
         ? 'Please enter some text.'
@@ -90,6 +178,7 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
       final token = await tokenFuture;
       if (!mounted) return;
       if (token == null ||
+          !_sessionValid ||
           token.isEmpty ||
           (ref.read(currentUserProvider)?.id ?? 'session') != _actor) {
         throw const ContentMutationFailure(
@@ -98,7 +187,10 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
         );
       }
       final body = UpdatePostRequest(text: text, aiLabel: _aiLabel).toJson();
-      attempt = registry.begin(_scope, {'method': 'PUT', 'body': body});
+      attempt = await registry.beginDurable(_scope, {
+        'method': 'PUT',
+        'body': body,
+      });
       Map<String, dynamic> revised;
       if (widget.isComment) {
         final response = await dio.put<Map<String, dynamic>>(
@@ -155,18 +247,37 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
           'The edit outcome is unknown. Retry to check the same edit.',
         );
       }
-      registry.finish(attempt);
-      if (!mounted) return;
+      await registry.finishDurable(
+        attempt,
+        receipt: OwnedContent(
+          widget.isComment ? 'comment' : 'post',
+          widget.contentId,
+          postId: widget.isComment ? widget.postId : null,
+        ),
+      );
+      if (!mounted ||
+          !_sessionValid ||
+          (ref.read(currentUserProvider)?.id ?? 'session') != _actor) {
+        return;
+      }
       Navigator.of(context).pop(revised);
     } catch (error) {
       final failure = contentMutationFailure(error);
       if (attempt != null) {
-        registry.finish(attempt, uncertain: failure.uncertain);
+        try {
+          await registry.finishDurable(attempt, uncertain: failure.uncertain);
+        } catch (_) {}
       }
-      if (!mounted) return;
+      if (!mounted ||
+          !_sessionValid ||
+          (ref.read(currentUserProvider)?.id ?? 'session') != _actor) {
+        return;
+      }
       setState(() {
         _busy = false;
-        _locked = registry.pending(_scope) != null;
+        _locked =
+            registry.pending(_scope) != null &&
+            registry.pending(_scope)?.needsReentry != true;
         _error = failure.message;
       });
     }
@@ -192,7 +303,8 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
             ],
             TextField(
               controller: _controller,
-              enabled: !_busy && !_locked,
+              enabled: !_busy && !_locked && !_restoring,
+              onChanged: (_) => _saveDraft(),
               minLines: 4,
               maxLines: 10,
               decoration: InputDecoration(
@@ -201,6 +313,8 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            if (_restoring) const Text('Restoring draft…'),
+            if (_draftStatus != null) Text(_draftStatus!),
             const Text(
               'Choose the authorship of this edit. AI-generated public content is not allowed. '
               'AI-assisted text is limited to 249 user-perceived characters.',
@@ -212,22 +326,28 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
                 ChoiceChip(
                   label: const Text('Human-authored'),
                   selected: _aiLabel == 'human',
-                  onSelected: _busy || _locked
+                  onSelected: _busy || _locked || _restoring
                       ? null
-                      : (_) => setState(() => _aiLabel = 'human'),
+                      : (_) {
+                          setState(() => _aiLabel = 'human');
+                          _saveDraft();
+                        },
                 ),
                 ChoiceChip(
                   label: const Text('AI-assisted'),
                   selected: _aiLabel == 'assisted',
-                  onSelected: _busy || _locked
+                  onSelected: _busy || _locked || _restoring
                       ? null
-                      : (_) => setState(() => _aiLabel = 'assisted'),
+                      : (_) {
+                          setState(() => _aiLabel = 'assisted');
+                          _saveDraft();
+                        },
                 ),
               ],
             ),
             const SizedBox(height: 16),
             FilledButton(
-              onPressed: _busy ? null : _submit,
+              onPressed: _busy || _restoring ? null : _submit,
               child: Text(
                 _busy
                     ? 'Submitting…'

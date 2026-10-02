@@ -1,3 +1,5 @@
+import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
+import '../../../helpers/content_recovery.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -42,6 +44,9 @@ Widget _screen() {
   final user = _user();
   return ProviderScope(
     overrides: [
+      contentRecoveryStorageProvider.overrideWithValue(
+        MemoryContentRecoveryStorage(),
+      ),
       authStateProvider.overrideWith((ref) => _AuthNotifier(user)),
       jwtProvider.overrideWith((ref) async => 'token'),
     ],
@@ -67,7 +72,9 @@ void main() {
     await tester.pumpWidget(_screen());
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('AI-assisted'));
     await tester.tap(find.text('AI-assisted'));
+    await tester.pump();
     await tester.enterText(find.byType(TextField).first, 'a' * 250);
     await tester.pump();
 

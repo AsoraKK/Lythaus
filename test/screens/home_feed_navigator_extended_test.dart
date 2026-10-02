@@ -1,6 +1,8 @@
 /// Extended tests for HomeFeedNavigator — targeting uncovered widget code paths
 library;
 
+import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
+import '../helpers/content_recovery.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
@@ -83,6 +85,9 @@ void main() {
   }) {
     final container = ProviderContainer(
       overrides: [
+        contentRecoveryStorageProvider.overrideWithValue(
+          MemoryContentRecoveryStorage(),
+        ),
         feedListProvider.overrideWith((ref) => _feeds),
         liveFeedStateProvider.overrideWith(
           (ref, feed) => _StaticLiveFeedNotifier(stateForFeed(feed)),
@@ -117,7 +122,12 @@ void main() {
 
       Widget buildEmpty(AlphaFeedSection section) {
         return ProviderScope(
-          overrides: [feedListProvider.overrideWith((ref) => const [])],
+          overrides: [
+            contentRecoveryStorageProvider.overrideWithValue(
+              MemoryContentRecoveryStorage(),
+            ),
+            feedListProvider.overrideWith((ref) => const []),
+          ],
           child: MaterialApp(
             key: ValueKey(section),
             builder: (context, child) => MediaQuery(
@@ -210,6 +220,9 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          contentRecoveryStorageProvider.overrideWithValue(
+            MemoryContentRecoveryStorage(),
+          ),
           feedListProvider.overrideWith(
             (ref) => [
               const FeedModel(
@@ -262,6 +275,9 @@ void main() {
       final discoverFeed = _feeds.first;
       final container = ProviderContainer(
         overrides: [
+          contentRecoveryStorageProvider.overrideWithValue(
+            MemoryContentRecoveryStorage(),
+          ),
           feedListProvider.overrideWith((ref) => [discoverFeed]),
           liveFeedStateProvider.overrideWith(
             (ref, feed) => _StaticLiveFeedNotifier(
@@ -330,6 +346,9 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          contentRecoveryStorageProvider.overrideWithValue(
+            MemoryContentRecoveryStorage(),
+          ),
           feedListProvider.overrideWith(
             (ref) => [
               _feeds.first,

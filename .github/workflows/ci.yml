@@ -268,6 +268,20 @@ jobs:
         run: npx playwright install --with-deps chromium webkit
       - name: Verify rendered Flutter authentication journey
         run: node --experimental-strip-types --test --test-timeout=120000 scripts/tests/flutter-auth.browser.mjs scripts/tests/optional-profile.browser.mjs
+      - name: Build content journey regression fixture
+        run: flutter build web --debug --no-pub --no-wasm-dry-run --target test/browser/content_journey_entry.dart --output build/content-journey-web
+      - name: Verify rendered content journey and durable recovery
+        env:
+          QA_COMMIT: ${{ github.sha }}
+        run: node scripts/tests/content-journey.browser.mjs
+      - name: Upload content journey browser evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: content-journey-browser-evidence
+          path: build/content-journey-evidence
+          if-no-files-found: warn
+          retention-days: 7
 
   frontends:
     name: Web frontends
