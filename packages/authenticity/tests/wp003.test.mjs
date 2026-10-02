@@ -75,6 +75,31 @@ async function runScript(script, ...args) {
   return execFileAsync(process.execPath, [script, ...args], { cwd: repositoryRoot });
 }
 
+test('directory manifests bind byte counts and digests to regular sources within the approved directory', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'lythaus-manifest-source-'));
+  try {
+    const sourceRoot = path.join(directory, 'sources');
+    const approvalPath = path.join(directory, 'approval.json');
+    const outputPath = path.join(directory, 'manifest.jsonl');
+    const bytes = Buffer.from('synthetic media');
+    await mkdir(sourceRoot);
+    await writeFile(approvalPath, JSON.stringify(approval()));
+    await writeFile(path.join(sourceRoot, 'fixture.jpg'), bytes);
+    await run('manifest', sourceRoot, outputPath, approvalPath);
+    const records = (await readFile(outputPath, 'utf8')).trim().split('\n').map((line) => JSON.parse(line));
+    assert.equal(records.length, 1);
+    assert.equal(records[0].byteLength, bytes.byteLength);
+    assert.equal(records[0].sha256, createHash('sha256').update(bytes).digest('hex'));
+    assert.equal(records[0].relativePath, 'fixture.jpg');
+    const other = path.join(directory, 'other.jpg');
+    await writeFile(other, 'other bytes');
+    await symlink(other, path.join(sourceRoot, 'link.jpg'));
+    await assert.rejects(run('manifest', sourceRoot, outputPath, approvalPath), /path_outside_external_root|symbolic_link_input_rejected/);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test('materialiser accepts approved evaluation records and rejects distillation leakage', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'lythaus-materialiser-'));
   try {

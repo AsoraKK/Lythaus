@@ -2,10 +2,11 @@
 
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, resolve } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Writable } from 'node:stream';
+import { readRegularSource } from './read-source.mjs';
 import {
   MAX_ACQUISITION_BYTES,
   MAX_ACQUISITION_COUNT,
@@ -142,11 +143,11 @@ async function manifestForDirectory(directory, approval) {
   const entries = [];
   async function visit(current) {
     for (const entry of await readdir(current, { withFileTypes: true })) {
-      const path = join(current, entry.name);
+      const path = assertExternalChildPath(root, join(current, entry.name), 'manifest_source');
+      if (entry.isSymbolicLink()) throw new Error('symbolic_link_input_rejected');
       if (entry.isDirectory()) await visit(path);
       else if (!entry.name.endsWith('.json') && !entry.name.endsWith('.jsonl')) {
-        const info = await stat(path);
-        const bytes = await readFile(path);
+        const bytes = await readRegularSource(path);
         entries.push({
           datasetId: 'UNASSIGNED_REVIEW_REQUIRED',
           sampleId: deterministicUuidV7(`manifest:${sha256(bytes)}:${path.slice(root.length + 1)}`, retrievedAt),
@@ -171,7 +172,7 @@ async function manifestForDirectory(directory, approval) {
           privacyFlags: ['UNREVIEWED_SOURCE'],
           containsUserContent: false,
           humanApproval: approval,
-          byteLength: info.size,
+          byteLength: bytes.byteLength,
           relativePath: path.slice(root.length + 1),
         });
       }
