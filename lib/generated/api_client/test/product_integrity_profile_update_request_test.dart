@@ -7,6 +7,7 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ProductIntegrityProfileUpdateRequest, () {
+    // Optional public display name. Saved edits remain private during publication review. Names are normalized and screened by the Lythaus profile-name policy.
     // String displayName
     test('to test the property `displayName`', () async {
       // TODO

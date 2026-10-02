@@ -13,6 +13,7 @@ import 'package:lythaus/features/profile/application/follow_providers.dart';
 import 'package:lythaus/features/profile/application/follow_service.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
+import 'package:lythaus/features/profile/domain/owner_profile.dart';
 import 'package:lythaus/state/models/reputation.dart';
 import 'package:lythaus/state/providers/reputation_providers.dart';
 import 'package:lythaus/ui/screens/profile/profile_screen.dart';
@@ -54,6 +55,12 @@ class _FakeAnalyticsEventTracker implements AnalyticsEventTracker {
   }
 }
 
+OwnerProfile _ownerProfile(PublicUser user) => OwnerProfile(
+  user: user,
+  moderationState: 'allowed',
+  publicVisibility: true,
+);
+
 void main() {
   testWidgets('profile screen prompts sign in when unauthenticated', (
     tester,
@@ -94,9 +101,9 @@ void main() {
       ProviderScope(
         overrides: [
           currentUserProvider.overrideWith((ref) => user),
-          publicUserProvider(
-            user.id,
-          ).overrideWith((ref) => Future.value(profile)),
+          ownerProfileProvider.overrideWith(
+            (ref) => Future.value(_ownerProfile(profile)),
+          ),
           reputationProvider.overrideWith((ref) async => _reputationSnapshot),
         ],
         child: const MaterialApp(home: ProfileScreen()),
@@ -132,9 +139,9 @@ void main() {
       ProviderScope(
         overrides: [
           currentUserProvider.overrideWith((ref) => user),
-          publicUserProvider(
-            user.id,
-          ).overrideWith((ref) => Future.error(Exception('no profile'))),
+          ownerProfileProvider.overrideWith(
+            (ref) => Future.error(Exception('no profile')),
+          ),
         ],
         child: const MaterialApp(home: ProfileScreen()),
       ),
@@ -176,7 +183,7 @@ void main() {
         overrides: [
           currentUserProvider.overrideWith((ref) => currentUser),
           publicUserProvider(
-            currentUser.id,
+            profile.id,
           ).overrideWith((ref) => Future.value(profile)),
           followServiceProvider.overrideWith((ref) => followService),
           followStatusProvider(profile.id).overrideWith(
@@ -190,7 +197,7 @@ void main() {
           ),
           analyticsEventTrackerProvider.overrideWithValue(tracker),
         ],
-        child: const MaterialApp(home: ProfileScreen()),
+        child: const MaterialApp(home: ProfileScreen(userId: 'user-2')),
       ),
     );
 
@@ -233,7 +240,7 @@ void main() {
         overrides: [
           currentUserProvider.overrideWith((ref) => currentUser),
           publicUserProvider(
-            currentUser.id,
+            profile.id,
           ).overrideWith((ref) => Future.value(profile)),
           followServiceProvider.overrideWith((ref) => followService),
           followStatusProvider(profile.id).overrideWith(
@@ -243,7 +250,7 @@ void main() {
           ),
           jwtProvider.overrideWith((ref) async => null),
         ],
-        child: const MaterialApp(home: ProfileScreen()),
+        child: const MaterialApp(home: ProfileScreen(userId: 'user-2')),
       ),
     );
 

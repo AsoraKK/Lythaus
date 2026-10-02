@@ -12,6 +12,7 @@ import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
+import 'package:lythaus/features/profile/domain/owner_profile.dart';
 import 'package:lythaus/state/models/reputation.dart';
 import 'package:lythaus/state/providers/reputation_providers.dart';
 import 'package:lythaus/ui/screens/profile/profile_screen.dart';
@@ -76,6 +77,12 @@ Widget _buildApp({List<Override> overrides = const []}) {
   );
 }
 
+OwnerProfile _ownerProfile(PublicUser user) => OwnerProfile(
+  user: user,
+  moderationState: 'allowed',
+  publicVisibility: true,
+);
+
 void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
@@ -117,9 +124,9 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWithValue(_fakeAuthUser),
-            publicUserProvider(
-              'user-1',
-            ).overrideWith((ref) => completer.future),
+            ownerProfileProvider.overrideWith(
+              (ref) => completer.future.then(_ownerProfile),
+            ),
             jwtProvider.overrideWith((ref) async => 'tok'),
           ],
           child: const MaterialApp(home: ProfileScreen()),
@@ -139,9 +146,9 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWithValue(_fakeAuthUser),
-            publicUserProvider(
-              'user-1',
-            ).overrideWith((ref) async => throw Exception('Network failure')),
+            ownerProfileProvider.overrideWith(
+              (ref) async => throw Exception('Network failure'),
+            ),
             jwtProvider.overrideWith((ref) async => 'tok'),
           ],
           child: const MaterialApp(home: ProfileScreen()),
@@ -160,7 +167,9 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWithValue(_fakeAuthUser),
-            publicUserProvider('user-1').overrideWith((ref) async => _fakeUser),
+            ownerProfileProvider.overrideWith(
+              (ref) async => _ownerProfile(_fakeUser),
+            ),
             jwtProvider.overrideWith((ref) async => 'tok'),
             reputationProvider.overrideWith(
               (ref) async => _fakeReputationState,
@@ -179,7 +188,9 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWithValue(_fakeAuthUser),
-            publicUserProvider('user-1').overrideWith((ref) async => _fakeUser),
+            ownerProfileProvider.overrideWith(
+              (ref) async => _ownerProfile(_fakeUser),
+            ),
             jwtProvider.overrideWith((ref) async => 'tok'),
             reputationProvider.overrideWith(
               (ref) async => _fakeReputationState,
@@ -200,9 +211,9 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWithValue(_fakeAuthUser),
-            publicUserProvider(
-              'user-1',
-            ).overrideWith((ref) async => _ownerVisibleUser),
+            ownerProfileProvider.overrideWith(
+              (ref) async => _ownerProfile(_ownerVisibleUser),
+            ),
             jwtProvider.overrideWith((ref) async => 'tok'),
             reputationProvider.overrideWith(
               (ref) async => _fakeReputationState,
@@ -229,9 +240,9 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWithValue(_fakeAdminUser),
-            publicUserProvider(
-              'user-1',
-            ).overrideWith((ref) async => _ownerVisibleUser),
+            ownerProfileProvider.overrideWith(
+              (ref) async => _ownerProfile(_ownerVisibleUser),
+            ),
             jwtProvider.overrideWith((ref) async => 'tok'),
             reputationProvider.overrideWith(
               (ref) async => _fakeReputationState,
@@ -255,9 +266,9 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWithValue(_fakeAuthUser),
-            publicUserProvider(
-              'user-1',
-            ).overrideWith((ref) async => _ownerVisibleUser),
+            ownerProfileProvider.overrideWith(
+              (ref) async => _ownerProfile(_ownerVisibleUser),
+            ),
             jwtProvider.overrideWith((ref) async => 'tok'),
             reputationProvider.overrideWith(
               (ref) async => _fakeReputationState,
@@ -280,9 +291,9 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWithValue(_fakeAuthUser),
-            publicUserProvider(
-              'user-1',
-            ).overrideWith((ref) async => _ownerVisibleUser),
+            ownerProfileProvider.overrideWith(
+              (ref) async => _ownerProfile(_ownerVisibleUser),
+            ),
             jwtProvider.overrideWith((ref) async => 'tok'),
             reputationProvider.overrideWith(
               (ref) async => _fakeReputationState,
