@@ -12,7 +12,7 @@ const mime = { '.html': 'text/html', '.css': 'text/css', '.js': 'application/jav
 const user = { id: '018f0000-0000-7000-8000-000000000001', email: 'synthetic@example.invalid', role: 'user', tier: 'bronze', subscription_tier: 'free', reputation_score: 0, created_at: '2026-08-01T00:00:00Z', last_login_at: '2026-08-01T00:00:00Z' };
 
 for (const [name, engine] of Object.entries({ chromium, webkit })) for (const width of [1440, 390]) {
-  test(`${name} ${width}: actual guest account entry, cancellation, query return and unsupported feeds`, async t => {
+  test(`${name} ${width}: actual guest account entry, cancellation, query return and unsupported feeds`, { timeout: 120000 }, async t => {
     const calls = [], errors = [];
     let session = false, complete = false;
     const fixture = await localAuthBrowserServer(async route => {
@@ -80,6 +80,7 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) for (const wi
       assert.equal(new URL(page.url()).searchParams.get('returnTo'), destination);
       await button('Continue as guest').click();
       await waitPath(destination);
+      await button('Sign in with email').waitFor({ state: 'hidden' });
     }
     await open();
     await button('Continue as guest').click();
@@ -88,8 +89,10 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) for (const wi
     await text('Trending is not available yet.').waitFor();
     assert.equal(await button('Retry').count(), 0);
     await button('Back').click();
+    await text('No posts yet').waitFor();
     for (const [label, tab] of [['Profile', 'profile'], ['Rewards', 'rewards'], ['Create', 'create']]) {
       await page.getByRole('button', { name: new RegExp('^' + label + '(?:\\b|$)') }).click();
+      await waitPath('/?tab=' + tab);
       await cancelEntry('/?tab=' + tab);
     }
     if (width === 1440) {

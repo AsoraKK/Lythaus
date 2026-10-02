@@ -14,7 +14,7 @@ const user = { id: '018f0000-0000-7000-8000-000000000001', email: 'synthetic@exa
   subscription_tier: 'free', reputation_score: 0, created_at: '2026-08-01T00:00:00Z', last_login_at: '2026-08-01T00:00:00Z' };
 
 for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (const width of [1440, 390]) {
-  test(`${engineName} ${width}: optional profile partial save, skip, pending state and interruption`, async t => {
+  test(`${engineName} ${width}: optional profile partial save, skip, pending state and interruption`, { timeout: 120000 }, async t => {
     let session = false;
     let profile = { id: user.id, displayName: '', bio: '', moderationState: 'allowed', publicVisibility: true, subscriptionTier: 'free' };
     const patches = [], privateReads = [], errors = [], failedRequests = [], consoleErrors = [];

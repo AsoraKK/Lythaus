@@ -12,7 +12,7 @@ assert.match(await readFile(path.join(build,'flutter_bootstrap.js'),'utf8'), /"u
 const mime={'.html':'text/html','.css':'text/css','.js':'application/javascript','.json':'application/json','.wasm':'application/wasm','.ttf':'font/ttf','.otf':'font/otf','.png':'image/png'};
 const user={id:'018f0000-0000-7000-8000-000000000001',email:'synthetic@example.invalid',role:'user',tier:'bronze',subscription_tier:'free',reputation_score:0,created_at:'2026-08-01T00:00:00Z',last_login_at:'2026-08-01T00:00:00Z'};
 for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of [1440,390]) {
-  test(`${name} ${width}: actual Flutter release login, recovery navigation, cookie restore and logout`,async t=>{
+  test(`${name} ${width}: actual Flutter release login, recovery navigation, cookie restore and logout`,{timeout:120000},async t=>{
     const errors=[],calls=[],failedRequests=[];let session=false,verificationRequired=false,userinfoUnavailable=false,complete=false;
     let refreshInFlight=0,maximumRefreshInFlight=0,signingOut=false;
     const fixture=await localAuthBrowserServer(async route=>{
