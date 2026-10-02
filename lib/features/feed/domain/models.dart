@@ -33,6 +33,8 @@ class Post {
   final bool verifiedContextBadgeEligible;
   final bool featuredEligible;
   final PostAuthorship authorship;
+  final String? moderationState;
+  final String? declaredCreationMode;
 
   const Post({
     required this.id,
@@ -58,6 +60,8 @@ class Post {
     this.verifiedContextBadgeEligible = false,
     this.featuredEligible = false,
     this.authorship = const PostAuthorship.underReview(),
+    this.moderationState,
+    this.declaredCreationMode,
   });
 
   factory Post.fromJson(Map<String, dynamic> json) {
@@ -137,6 +141,21 @@ class Post {
       verifiedContextBadgeEligible:
           json['verifiedContextBadgeEligible'] as bool? ?? false,
       featuredEligible: json['featuredEligible'] as bool? ?? false,
+      moderationState:
+          json['moderationState'] as String? ??
+          (json['authorship'] is Map &&
+                  (json['authorship'] as Map)['reviewState'] == 'pending'
+              ? 'under_review'
+              : null),
+      declaredCreationMode:
+          json['declaredCreationMode'] as String? ??
+          (json['authorship'] is Map
+              ? switch ((json['authorship'] as Map)['declaredAuthorship']) {
+                  'human' => 'human',
+                  'assisted' => 'ai_assisted',
+                  _ => null,
+                }
+              : null),
       authorship: PostAuthorship.fromJson(
         json['authorship'] is Map<String, dynamic>
             ? json['authorship'] as Map<String, dynamic>
@@ -174,11 +193,14 @@ class Post {
       'verifiedContextBadgeEligible': verifiedContextBadgeEligible,
       'featuredEligible': featuredEligible,
       'authorship': authorship.toJson(),
+      if (moderationState != null) 'moderationState': moderationState,
+      if (declaredCreationMode != null)
+        'declaredCreationMode': declaredCreationMode,
     };
   }
 
   static String _extractText(Map<String, dynamic> json) {
-    return (json['text'] ?? json['content'] ?? json['body'] ?? '') as String;
+    return (json['body'] ?? json['text'] ?? json['content'] ?? '') as String;
   }
 
   static PostMetadata? _extractMetadata(Map<String, dynamic> json) {
@@ -410,6 +432,9 @@ class Comment {
   final int likeCount;
   final int dislikeCount;
   final String? parentCommentId; // For threaded replies
+  final String? declaredCreationMode;
+  final String? moderationState;
+  final bool deleted;
 
   const Comment({
     required this.id,
@@ -421,19 +446,32 @@ class Comment {
     this.likeCount = 0,
     this.dislikeCount = 0,
     this.parentCommentId,
+    this.declaredCreationMode,
+    this.moderationState,
+    this.deleted = false,
   });
 
   factory Comment.fromJson(Map<String, dynamic> json) {
     return Comment(
-      id: json['id'] as String,
-      postId: json['postId'] as String,
-      authorId: json['authorId'] as String,
-      authorUsername: json['authorUsername'] as String,
-      text: json['text'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      id: (json['id'] ?? json['commentId']) as String,
+      postId: json['postId'] as String? ?? '',
+      authorId: json['authorId'] as String? ?? '',
+      authorUsername:
+          json['authorUsername'] as String? ??
+          json['authorId'] as String? ??
+          'user',
+      text: json['deleted'] == true
+          ? '[deleted]'
+          : (json['body'] ?? json['text']) as String? ?? '',
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       likeCount: json['likeCount'] as int? ?? 0,
       dislikeCount: json['dislikeCount'] as int? ?? 0,
-      parentCommentId: json['parentCommentId'] as String?,
+      parentCommentId: (json['parentId'] ?? json['parentCommentId']) as String?,
+      declaredCreationMode: json['declaredCreationMode'] as String?,
+      moderationState: json['moderationState'] as String?,
+      deleted: json['deleted'] == true,
     );
   }
 
@@ -448,6 +486,10 @@ class Comment {
       'likeCount': likeCount,
       'dislikeCount': dislikeCount,
       if (parentCommentId != null) 'parentCommentId': parentCommentId,
+      if (declaredCreationMode != null)
+        'declaredCreationMode': declaredCreationMode,
+      if (moderationState != null) 'moderationState': moderationState,
+      'deleted': deleted,
     };
   }
 }

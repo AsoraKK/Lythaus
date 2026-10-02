@@ -14,6 +14,7 @@ import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/core/logging/app_logger.dart';
 import 'package:lythaus/core/observability/crash_reporting.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -78,6 +79,7 @@ class _LythausAppState extends ConsumerState<LythausApp> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(contentMutationRegistryProvider);
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(

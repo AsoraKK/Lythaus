@@ -69,6 +69,15 @@ void main() {
       // TODO
     });
 
+    // Read the author's own allowed or pending post
+    //
+    // Known-ID author-bound read. Public post/feed filters are unchanged; guests and other users never receive pending bodies.
+    //
+    //Future<PostsOwnerView200Response> postsOwnerView(String postId) async
+    test('test postsOwnerView', () async {
+      // TODO
+    });
+
     // Replace editable post fields and return the post to review
     //
     //Future<PostRevisionResponse> postsReplace(String id, String idempotencyKey, UpdatePostRequest updatePostRequest) async

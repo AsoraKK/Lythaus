@@ -126,6 +126,7 @@ class _FakePostRepository implements PostRepository {
   Future<bool> deletePost({
     required String postId,
     required String token,
+    String? idempotencyKey,
   }) async {
     throw UnimplementedError();
   }

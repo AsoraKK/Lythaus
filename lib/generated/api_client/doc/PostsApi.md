@@ -17,6 +17,7 @@ Method | HTTP request | Description
 [**postsCreate**](PostsApi.md#postscreate) | **POST** /posts | Create a post with moderation and AI authenticity checks
 [**postsDelete**](PostsApi.md#postsdelete) | **DELETE** /posts/{id} | Soft-delete a post owned by the authenticated user
 [**postsGet**](PostsApi.md#postsget) | **GET** /posts/{id} | Get a post by ID
+[**postsOwnerView**](PostsApi.md#postsownerview) | **GET** /posts/{postId}/owner-view | Read the author&#39;s own allowed or pending post
 [**postsReplace**](PostsApi.md#postsreplace) | **PUT** /posts/{id} | Replace editable post fields and return the post to review
 [**postsUpdate**](PostsApi.md#postsupdate) | **PATCH** /posts/{id} | Update a post with moderation and AI authenticity checks
 
@@ -367,6 +368,49 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**PostsGet200Response**](PostsGet200Response.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **postsOwnerView**
+> PostsOwnerView200Response postsOwnerView(postId)
+
+Read the author's own allowed or pending post
+
+Known-ID author-bound read. Public post/feed filters are unchanged; guests and other users never receive pending bodies.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getPostsApi();
+final String postId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.postsOwnerView(postId);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling PostsApi->postsOwnerView: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **postId** | **String**|  |
+
+### Return type
+
+[**PostsOwnerView200Response**](PostsOwnerView200Response.md)
 
 ### Authorization
 

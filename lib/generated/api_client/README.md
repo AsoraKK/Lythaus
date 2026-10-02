@@ -153,6 +153,7 @@ Class | Method | HTTP request | Description
 [*AuthenticityPrivateAlphaApi*](doc/AuthenticityPrivateAlphaApi.md) | [**requestAuthenticityPrivateAlphaAdvice**](doc/AuthenticityPrivateAlphaApi.md#requestauthenticityprivatealphaadvice) | **POST** /authenticity/alpha/cases/{caseId}/advice | Request one bounded GPT-OSS explanation
 [*AuthenticityPrivateAlphaApi*](doc/AuthenticityPrivateAlphaApi.md) | [**requestAuthenticityPrivateAlphaReview**](doc/AuthenticityPrivateAlphaApi.md#requestauthenticityprivatealphareview) | **POST** /authenticity/alpha/cases/{caseId}/review | Request private alpha review
 [*AuthenticityPrivateAlphaApi*](doc/AuthenticityPrivateAlphaApi.md) | [**submitAuthenticityPrivateAlphaFeedback**](doc/AuthenticityPrivateAlphaApi.md#submitauthenticityprivatealphafeedback) | **POST** /authenticity/alpha/cases/{caseId}/feedback | Submit private alpha feedback
+[*CommentsApi*](doc/CommentsApi.md) | [**commentsOwnerView**](doc/CommentsApi.md#commentsownerview) | **GET** /comments/{commentId}/owner-view | Read the author&#39;s own allowed or pending comment
 [*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsCreate**](doc/CustomFeedsApi.md#customfeedscreate) | **POST** /custom-feeds | Create a custom feed
 [*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsDelete**](doc/CustomFeedsApi.md#customfeedsdelete) | **DELETE** /custom-feeds/{id} | Delete an owned custom feed
 [*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsGet**](doc/CustomFeedsApi.md#customfeedsget) | **GET** /custom-feeds/{id} | Get an owned custom feed
@@ -188,6 +189,7 @@ Class | Method | HTTP request | Description
 [*PostsApi*](doc/PostsApi.md) | [**postsCreate**](doc/PostsApi.md#postscreate) | **POST** /posts | Create a post with moderation and AI authenticity checks
 [*PostsApi*](doc/PostsApi.md) | [**postsDelete**](doc/PostsApi.md#postsdelete) | **DELETE** /posts/{id} | Soft-delete a post owned by the authenticated user
 [*PostsApi*](doc/PostsApi.md) | [**postsGet**](doc/PostsApi.md#postsget) | **GET** /posts/{id} | Get a post by ID
+[*PostsApi*](doc/PostsApi.md) | [**postsOwnerView**](doc/PostsApi.md#postsownerview) | **GET** /posts/{postId}/owner-view | Read the author&#39;s own allowed or pending post
 [*PostsApi*](doc/PostsApi.md) | [**postsReplace**](doc/PostsApi.md#postsreplace) | **PUT** /posts/{id} | Replace editable post fields and return the post to review
 [*PostsApi*](doc/PostsApi.md) | [**postsUpdate**](doc/PostsApi.md#postsupdate) | **PATCH** /posts/{id} | Update a post with moderation and AI authenticity checks
 [*PrivacyApi*](doc/PrivacyApi.md) | [**privacyRequestCreate**](doc/PrivacyApi.md#privacyrequestcreate) | **POST** /privacy/requests | Submit an asynchronous privacy request
@@ -311,6 +313,7 @@ Class | Method | HTTP request | Description
  - [CommentSubmission](doc/CommentSubmission.md)
  - [CommentUpdateRequest](doc/CommentUpdateRequest.md)
  - [CommentUpdateResponse](doc/CommentUpdateResponse.md)
+ - [CommentsOwnerView200Response](doc/CommentsOwnerView200Response.md)
  - [CreatePostRequest](doc/CreatePostRequest.md)
  - [CursorPage](doc/CursorPage.md)
  - [CustomFeed](doc/CustomFeed.md)
@@ -364,6 +367,8 @@ Class | Method | HTTP request | Description
  - [NotificationPreferenceUpdate](doc/NotificationPreferenceUpdate.md)
  - [NotificationPreferences](doc/NotificationPreferences.md)
  - [NotificationUnreadCount](doc/NotificationUnreadCount.md)
+ - [OwnerComment](doc/OwnerComment.md)
+ - [OwnerPost](doc/OwnerPost.md)
  - [PendingAppealAdjudication](doc/PendingAppealAdjudication.md)
  - [PendingAppealAdjudicationList](doc/PendingAppealAdjudicationList.md)
  - [PersonalFeedItem](doc/PersonalFeedItem.md)
@@ -373,6 +378,7 @@ Class | Method | HTTP request | Description
  - [PostRevisionResponse](doc/PostRevisionResponse.md)
  - [PostsDelete200Response](doc/PostsDelete200Response.md)
  - [PostsGet200Response](doc/PostsGet200Response.md)
+ - [PostsOwnerView200Response](doc/PostsOwnerView200Response.md)
  - [PrivacyRequest](doc/PrivacyRequest.md)
  - [PrivacyRequestAccepted](doc/PrivacyRequestAccepted.md)
  - [PrivacyRequestCreate](doc/PrivacyRequestCreate.md)

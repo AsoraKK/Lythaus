@@ -6,8 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
-import 'package:lythaus/features/feed/application/post_creation_providers.dart';
-import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/feed/presentation/content_editor_screen.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
+import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/state/models/feed_models.dart';
@@ -79,6 +80,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
               useWordmark: true,
             ),
             SizedBox(height: spacing.xs),
+            const _OwnSubmissions(),
             if (feeds.length > 1) ...[
               _FeedSwitchRail(
                 feeds: feeds,
@@ -165,6 +167,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
               onTrendingTap: _openTrending,
               useWordmark: true,
             ),
+            const _OwnSubmissions(),
             Expanded(
               child: Center(
                 child: Padding(
@@ -222,6 +225,60 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     Navigator.of(
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => const FeedSearchScreen()));
+  }
+}
+
+class _OwnSubmissions extends ConsumerWidget {
+  const _OwnSubmissions();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final actor = ref.watch(currentUserProvider)?.id;
+    final journal = ref.watch(contentMutationRegistryProvider);
+    if (actor == null) return const SizedBox.shrink();
+    final ids = {
+      ...journal.owned
+          .where((item) => item.kind == 'post')
+          .map((item) => item.id),
+      ...journal.attempts
+          .where((attempt) => attempt.scope.startsWith('post:$actor:'))
+          .map((attempt) => attempt.scope.split(':').last),
+    }.toList();
+    final hasDraft =
+        journal.pending('post-create:$actor') != null ||
+        journal.draft('post-create:$actor') != null;
+    if (ids.isEmpty && !hasDraft) return const SizedBox.shrink();
+    return Align(
+      alignment: Alignment.centerRight,
+      child: PopupMenuButton<String>(
+        tooltip: 'Your submissions',
+        onSelected: (value) {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => value == 'draft'
+                  ? const CreatePostScreen()
+                  : PostDetailScreen(postId: value),
+            ),
+          );
+        },
+        itemBuilder: (_) => [
+          if (hasDraft)
+            const PopupMenuItem(
+              value: 'draft',
+              child: Text('Resume saved post'),
+            ),
+          for (var i = 0; i < ids.length; i++)
+            PopupMenuItem(
+              value: ids[i],
+              child: Text('Your submission ${i + 1}'),
+            ),
+        ],
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text('Your submissions'),
+        ),
+      ),
+    );
   }
 }
 
@@ -518,84 +575,24 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
     WidgetRef ref,
     FeedItem item,
   ) async {
-    final token = await ref.read(jwtProvider.future);
-    if (token == null || token.isEmpty) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Sign in to edit your post.')),
-        );
-      }
-      return;
-    }
-
-    final controller = TextEditingController(text: item.body);
-    final submitted = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit post'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLines: 6,
-          minLines: 3,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            hintText: 'Update your post text',
-          ),
+    final actor = ref.read(currentUserProvider)?.id;
+    if (actor == null || actor.isEmpty || actor != item.authorId) return;
+    final revised = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        builder: (_) =>
+            ContentEditorScreen(contentId: item.id, text: item.body),
+      ),
+    );
+    if (!context.mounted || revised == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          revised['moderationState'] == 'under_review'
+              ? 'Edit submitted. Publication checks are pending.'
+              : 'Post updated',
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
-    controller.dispose();
-
-    final updatedText = submitted?.trim();
-    if (updatedText == null ||
-        updatedText.isEmpty ||
-        updatedText == item.body.trim()) {
-      return;
-    }
-
-    final repository = ref.read(postRepositoryProvider);
-    final result = await repository.updatePost(
-      postId: item.id,
-      request: UpdatePostRequest(
-        text: updatedText,
-        aiLabel: item.authorshipLabel == 'AI-assisted' ? 'assisted' : 'human',
-      ),
-      token: token,
-    );
-
-    if (!context.mounted) {
-      return;
-    }
-
-    switch (result) {
-      case CreatePostSuccess():
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Post updated')));
-        await ref.read(liveFeedStateProvider(widget.feed).notifier).refresh();
-      case CreatePostBlocked(:final message):
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
-      case CreatePostLimitExceeded(:final message):
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
-      case CreatePostError(:final message):
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
-    }
+    await ref.read(liveFeedStateProvider(widget.feed).notifier).refresh();
   }
 }

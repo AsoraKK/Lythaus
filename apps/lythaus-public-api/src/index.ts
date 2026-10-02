@@ -6,6 +6,7 @@ import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/
 import { constantTimeEqual, decryptField, encryptField, hashAuthToken, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyLoginPassword, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
 import { classifyPublicError, idempotencyKey, isCurrentActivePrincipal, normalizeEmailAddress, planEmailLogin, planEmailRegistration, planExistingIdempotencyRecord, prepareEmailAuthAttempt, rateLimitPlan, requireAuthSecrets, requireRefreshToken, requireResetPassword, requireToken, requiresTurnstileVerification } from './auth-runtime-policy.ts';
 import { runClaimedIdempotentWork } from './idempotency-runtime.ts';
+import { handleOwnerContentRead } from './owner-content-reader.ts';
 import { handleBetaApi } from './authenticity-beta.ts';
 import { handleAlphaApi } from './authenticity-alpha.ts';
 import { issueAuthSession, revokeAllAuthSessions, rotateAuthSession } from './auth-session-runtime.ts';
@@ -3088,6 +3089,17 @@ export default {
       if (url.pathname === '/api/waitlist') return await waitlistRoute(request, env);
       const rateLimit = rateLimitPlan(url.pathname);
       await enforceRateLimit(request, env, rateLimit.scope, rateLimit.limit);
+      const ownerItem = url.pathname.match(/^\/api\/(posts|comments)\/([^/]+)\/owner-view$/);
+      if (request.method === 'GET' && ownerItem) {
+        const ownerContent = await handleOwnerContentRead(request, {
+          authenticate: () => principal(request, env),
+          query: (sql, values) => query(env.DB_APP_FRESH, sql, values),
+          respond: (body, status) => privateResponse(request, env, {
+            ...body, correlationId: correlationId(request),
+          }, { status }),
+        });
+        if (ownerContent) return ownerContent;
+      }
       if (request.method === 'GET' && url.pathname === '/api/feed/discover') {
         const user = request.headers.has('authorization') ? await principal(request, env) : undefined;
         return await discoveryFeed(request, env, user);

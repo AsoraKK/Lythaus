@@ -1,0 +1,116 @@
+components:
+  schemas:
+    OwnerPost:
+      type: object
+      additionalProperties: false
+      required: [id, authorId, body, declaredCreationMode, moderationState, visibility, createdAt, updatedAt]
+      description: Private author-only view. A declaration is not a confirmed public authenticity label.
+      properties:
+        id: { type: string, format: uuid }
+        authorId: { type: string, format: uuid }
+        body: { type: string }
+        declaredCreationMode: { type: string, enum: [human, ai_assisted] }
+        moderationState: { type: string, enum: [allowed, under_review] }
+        visibility: { type: string, enum: [public, followers, private] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    OwnerComment:
+      type: object
+      additionalProperties: false
+      required: [id, postId, authorId, parentId, depth, body, declaredCreationMode, moderationState, deleted, createdAt, updatedAt]
+      description: The comment author's own body. Owning its post does not grant access; foreign parent bodies are never included.
+      properties:
+        id: { type: string, format: uuid }
+        postId: { type: string, format: uuid }
+        authorId: { type: string, format: uuid }
+        parentId: { type: string, format: uuid, nullable: true }
+        depth: { type: integer, enum: [0, 1] }
+        body: { type: string }
+        declaredCreationMode: { type: string, enum: [human, ai_assisted] }
+        moderationState: { type: string, enum: [allowed, under_review] }
+        deleted: { type: boolean, enum: [false] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+  headers:
+    PrivateCache:
+      description: Author-only responses must not be stored in shared or browser caches.
+      schema: { type: string, enum: ['private, no-store'] }
+    PrivateVary:
+      description: Separate requests by both origin and authentication.
+      schema: { type: string, enum: ['Origin, Authorization'] }
+  responses:
+    OwnerNotFound:
+      description: Missing, foreign-owned, deleted, blocked, or otherwise unavailable content. All use the same not-found response.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/PrivateCache' }
+        Vary: { $ref: '#/components/headers/PrivateVary' }
+      content:
+        application/json:
+          schema: { $ref: './product-integrity.yaml#/components/schemas/ApiError' }
+    OwnerUnauthorized:
+      description: A current active authenticated principal is required.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/PrivateCache' }
+        Vary: { $ref: '#/components/headers/PrivateVary' }
+      content:
+        application/json:
+          schema: { $ref: './product-integrity.yaml#/components/schemas/ApiError' }
+paths:
+  /posts/{postId}/owner-view:
+    get:
+      operationId: postsOwnerView
+      summary: Read the author's own allowed or pending post
+      description: Known-ID author-bound read. Public post/feed filters are unchanged; guests and other users never receive pending bodies.
+      tags: [Posts]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Private owned post body and declaration/review state.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/PrivateCache' }
+            Vary: { $ref: '#/components/headers/PrivateVary' }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [post]
+                properties:
+                  post: { $ref: '#/components/schemas/OwnerPost' }
+                  correlationId: { type: string }
+        '401': { $ref: '#/components/responses/OwnerUnauthorized' }
+        '404': { $ref: '#/components/responses/OwnerNotFound' }
+        '429': { $ref: './product-integrity.yaml#/components/responses/SafetyLimited' }
+  /comments/{commentId}/owner-view:
+    get:
+      operationId: commentsOwnerView
+      summary: Read the author's own allowed or pending comment
+      description: Known-ID read bound to the comment author, regardless of post ownership. No foreign parent body or moderation signals are exposed.
+      tags: [Comments]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: commentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Private owned comment body and declaration/review state.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/PrivateCache' }
+            Vary: { $ref: '#/components/headers/PrivateVary' }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [comment]
+                properties:
+                  comment: { $ref: '#/components/schemas/OwnerComment' }
+                  correlationId: { type: string }
+        '401': { $ref: '#/components/responses/OwnerUnauthorized' }
+        '404': { $ref: '#/components/responses/OwnerNotFound' }
+        '429': { $ref: './product-integrity.yaml#/components/responses/SafetyLimited' }

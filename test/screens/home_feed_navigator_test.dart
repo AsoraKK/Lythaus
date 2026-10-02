@@ -1,3 +1,5 @@
+import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
+import '../helpers/content_recovery.dart';
 import 'package:lythaus/core/analytics/analytics_client.dart';
 import 'package:lythaus/core/analytics/analytics_event_tracker.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
@@ -107,6 +109,9 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
+        contentRecoveryStorageProvider.overrideWithValue(
+          MemoryContentRecoveryStorage(),
+        ),
         analyticsClientProvider.overrideWithValue(_RecordingAnalyticsClient()),
         analyticsEventTrackerProvider.overrideWithValue(
           _RecordingEventTracker(),

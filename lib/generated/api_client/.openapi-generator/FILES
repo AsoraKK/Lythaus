@@ -1,4 +1,5 @@
 .gitignore
+.openapi-generator-ignore
 README.md
 analysis_options.yaml
 doc/AccountStatusResponse.md
@@ -87,6 +88,8 @@ doc/CommentPage.md
 doc/CommentSubmission.md
 doc/CommentUpdateRequest.md
 doc/CommentUpdateResponse.md
+doc/CommentsApi.md
+doc/CommentsOwnerView200Response.md
 doc/CreatePostRequest.md
 doc/CursorPage.md
 doc/CustomFeed.md
@@ -146,6 +149,8 @@ doc/NotificationPreferenceUpdate.md
 doc/NotificationPreferences.md
 doc/NotificationUnreadCount.md
 doc/NotificationsApi.md
+doc/OwnerComment.md
+doc/OwnerPost.md
 doc/PendingAppealAdjudication.md
 doc/PendingAppealAdjudicationList.md
 doc/PersonalFeedItem.md
@@ -156,6 +161,7 @@ doc/PostRevisionResponse.md
 doc/PostsApi.md
 doc/PostsDelete200Response.md
 doc/PostsGet200Response.md
+doc/PostsOwnerView200Response.md
 doc/PrivacyApi.md
 doc/PrivacyRequest.md
 doc/PrivacyRequestAccepted.md
@@ -230,6 +236,7 @@ lib/src/api/appeals_api.dart
 lib/src/api/auth_api.dart
 lib/src/api/authenticity_beta_api.dart
 lib/src/api/authenticity_private_alpha_api.dart
+lib/src/api/comments_api.dart
 lib/src/api/custom_feeds_api.dart
 lib/src/api/feed_api.dart
 lib/src/api/health_api.dart
@@ -330,6 +337,7 @@ lib/src/model/comment_page.dart
 lib/src/model/comment_submission.dart
 lib/src/model/comment_update_request.dart
 lib/src/model/comment_update_response.dart
+lib/src/model/comments_owner_view200_response.dart
 lib/src/model/create_post_request.dart
 lib/src/model/cursor_page.dart
 lib/src/model/custom_feed.dart
@@ -384,6 +392,8 @@ lib/src/model/notification_page.dart
 lib/src/model/notification_preference_update.dart
 lib/src/model/notification_preferences.dart
 lib/src/model/notification_unread_count.dart
+lib/src/model/owner_comment.dart
+lib/src/model/owner_post.dart
 lib/src/model/pending_appeal_adjudication.dart
 lib/src/model/pending_appeal_adjudication_list.dart
 lib/src/model/personal_feed_item.dart
@@ -393,6 +403,7 @@ lib/src/model/post_revision.dart
 lib/src/model/post_revision_response.dart
 lib/src/model/posts_delete200_response.dart
 lib/src/model/posts_get200_response.dart
+lib/src/model/posts_owner_view200_response.dart
 lib/src/model/privacy_request.dart
 lib/src/model/privacy_request_accepted.dart
 lib/src/model/privacy_request_create.dart
@@ -540,6 +551,8 @@ test/comment_submission_test.dart
 test/comment_test.dart
 test/comment_update_request_test.dart
 test/comment_update_response_test.dart
+test/comments_api_test.dart
+test/comments_owner_view200_response_test.dart
 test/create_post_request_test.dart
 test/cursor_page_test.dart
 test/custom_feed_create_request_test.dart
@@ -599,6 +612,8 @@ test/notification_preferences_test.dart
 test/notification_test.dart
 test/notification_unread_count_test.dart
 test/notifications_api_test.dart
+test/owner_comment_test.dart
+test/owner_post_test.dart
 test/pending_appeal_adjudication_list_test.dart
 test/pending_appeal_adjudication_test.dart
 test/personal_feed_item_test.dart
@@ -609,6 +624,7 @@ test/post_test.dart
 test/posts_api_test.dart
 test/posts_delete200_response_test.dart
 test/posts_get200_response_test.dart
+test/posts_owner_view200_response_test.dart
 test/privacy_api_test.dart
 test/privacy_request_accepted_test.dart
 test/privacy_request_create_test.dart

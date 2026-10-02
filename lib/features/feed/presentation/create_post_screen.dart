@@ -17,6 +17,7 @@ import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:lythaus/core/security/device_integrity_guard.dart';
 import 'package:lythaus/core/error/error_codes.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
@@ -48,8 +49,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   @override
   void initState() {
     super.initState();
+    _textController.text = ref.read(postCreationProvider).text;
     // Request focus when screen opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(postCreationProvider.notifier).refreshDraftOnOpen();
       _focusNode.requestFocus();
     });
   }
@@ -64,9 +68,19 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(postCreationProvider);
+    final inputEpoch = ref.watch(
+      contentMutationRegistryProvider.select(
+        (registry) => registry.sessionEpoch,
+      ),
+    );
     final canCreate = ref.watch(canCreatePostProvider);
     final theme = Theme.of(context);
     final isAssisted = state.aiLabel == 'assisted';
+    final canEdit =
+        canCreate &&
+        !state.isRestoring &&
+        !state.isSubmitting &&
+        state.errorResult?.outcomeUncertain != true;
     final characterCount = isAssisted
         ? state.userPerceivedTextLength
         : state.text.length;
@@ -80,6 +94,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
     // Listen for successful post creation
     ref.listen<PostCreationState>(postCreationProvider, (previous, next) {
+      if (_textController.text != next.text) {
+        _textController.value = TextEditingValue(
+          text: next.text,
+          selection: TextSelection.collapsed(offset: next.text.length),
+        );
+      }
       final errorCode = next.errorResult?.code;
       if (errorCode != null &&
           errorCode != previous?.errorResult?.code &&
@@ -93,223 +113,228 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       }
     });
 
-    return ReadingPane(
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text('Create Post', style: context.textTheme.titleLarge),
-          leading: IconButton(
-            icon: const Icon(Icons.close),
-            tooltip: 'Close composer',
-            onPressed: () => _handleClose(context),
-          ),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Tooltip(
-                key: _policyTooltipKey,
-                message: _policyReminderMessage,
-                triggerMode: TooltipTriggerMode.manual,
-                showDuration: const Duration(seconds: 6),
-                child: FilledButton(
-                  onPressed: state.isSubmitting || !state.isValid || !canCreate
-                      ? null
-                      : _handleSubmit,
-                  child: Semantics(
-                    label: state.isSubmitting ? 'Post' : null,
-                    value: state.isSubmitting ? 'In progress' : null,
-                    liveRegion: state.isSubmitting,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Visibility(
-                          visible: !state.isSubmitting,
-                          maintainSize: true,
-                          maintainAnimation: true,
-                          maintainState: true,
-                          child: const Text('Post'),
-                        ),
-                        if (state.isSubmitting)
-                          SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              value: context.disableAnimations ? 0.75 : null,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
+    return PopScope(
+      canPop: !state.isSubmitting && (state.text.isEmpty || state.isSuccess),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _handleClose(context);
+      },
+      child: ReadingPane(
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text('Create Post', style: context.textTheme.titleLarge),
+            leading: IconButton(
+              icon: const Icon(Icons.close),
+              tooltip: 'Close composer',
+              onPressed: () => _handleClose(context),
+            ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Tooltip(
+                  key: _policyTooltipKey,
+                  message: _policyReminderMessage,
+                  triggerMode: TooltipTriggerMode.manual,
+                  showDuration: const Duration(seconds: 6),
+                  child: FilledButton(
+                    onPressed:
+                        state.isSubmitting ||
+                            state.isRestoring ||
+                            !state.isValid ||
+                            !canCreate
+                        ? null
+                        : _handleSubmit,
+                    child: Semantics(
+                      label: state.isSubmitting ? 'Post' : null,
+                      value: state.isSubmitting ? 'In progress' : null,
+                      liveRegion: state.isSubmitting,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Visibility(
+                            visible: !state.isSubmitting,
+                            maintainSize: true,
+                            maintainAnimation: true,
+                            maintainState: true,
+                            child: const Text('Post'),
                           ),
-                      ],
+                          if (state.isSubmitting)
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                value: context.disableAnimations ? 0.75 : null,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-        body: GestureDetector(
-          onTap: () => _focusNode.requestFocus(),
-          child: Column(
-            children: [
-              // Error banner
-              if (state.isBlocked)
-                _ContentBlockedBanner(
-                  result: state.blockedResult!,
-                  onAppeal:
-                      state.blockedResult!.appealEligible &&
-                          (state.blockedResult!.appealCaseId?.isNotEmpty ??
-                              false)
-                      ? () => _submitBlockedAppeal(
-                          state.blockedResult!.appealCaseId!,
-                        )
-                      : null,
-                ),
-              if (state.isLimitExceeded)
-                _LimitExceededBanner(result: state.limitExceededResult!),
-              if (state.hasError &&
-                  state.errorResult?.code != ErrorCodes.deviceIntegrityBlocked)
-                _ErrorBanner(result: state.errorResult!),
+            ],
+          ),
+          body: GestureDetector(
+            onTap: () => _focusNode.requestFocus(),
+            child: Column(
+              children: [
+                // Error banner
+                if (state.isBlocked)
+                  _ContentBlockedBanner(
+                    result: state.blockedResult!,
+                    onAppeal:
+                        state.blockedResult!.appealEligible &&
+                            (state.blockedResult!.appealCaseId?.isNotEmpty ??
+                                false)
+                        ? () => _submitBlockedAppeal(
+                            state.blockedResult!.appealCaseId!,
+                          )
+                        : null,
+                  ),
+                if (state.isLimitExceeded)
+                  _LimitExceededBanner(result: state.limitExceededResult!),
+                if (state.hasError &&
+                    state.errorResult?.code !=
+                        ErrorCodes.deviceIntegrityBlocked)
+                  _ErrorBanner(result: state.errorResult!),
 
-              // Main content
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Auth required message
-                        if (!canCreate) _AuthRequiredCard(theme: theme),
+                // Main content
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Auth required message
+                          if (!canCreate) _AuthRequiredCard(theme: theme),
+                          if (state.isRestoring) const Text('Restoring draft…'),
+                          if (state.draftStatus != null)
+                            Text(state.draftStatus!),
 
-                        // Text input
-                        TextField(
-                          controller: _textController,
-                          focusNode: _focusNode,
-                          minLines: 8,
-                          maxLines: 12,
-                          textAlignVertical: TextAlignVertical.top,
-                          enabled: canCreate && !state.isSubmitting,
-                          style: context.textTheme.bodyLarge,
-                          decoration: InputDecoration(
-                            labelText: 'Your post',
-                            floatingLabelBehavior: FloatingLabelBehavior.always,
-                            hintText: "What's on your mind?",
-                            hintStyle: context.textTheme.bodyMedium?.copyWith(
-                              color: context.colorScheme.onSurfaceVariant,
+                          // Text input
+                          const SizedBox(height: 12),
+                          TextField(
+                            key: ValueKey(
+                              'post-create-input:$inputEpoch:${state.isRestoring}',
                             ),
-                            border: InputBorder.none,
-                            errorText: state.validationError,
-                            counterText: isAssisted
-                                ? '$characterCount/$characterLimit '
-                                      'user-perceived characters'
-                                : '$characterCount/$characterLimit',
-                            semanticCounterText: isAssisted
-                                ? '$characterCount of $characterLimit '
-                                      'user-perceived characters used'
-                                : '$characterCount of $characterLimit '
-                                      'characters used',
-                          ),
-                          onChanged: (value) {
-                            ref
-                                .read(postCreationProvider.notifier)
-                                .updateText(value);
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'AI disclosure',
-                          style: context.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Required. AI-generated public content is not allowed. '
-                          'AI-assisted public text is limited to '
-                          '$aiAssistedPublicTextMaxGraphemes user-perceived characters.',
-                          style: context.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            ChoiceChip(
-                              label: Text(
-                                'Human-authored',
-                                style: context.textTheme.bodySmall,
+                            controller: _textController,
+                            focusNode: _focusNode,
+                            minLines: 8,
+                            maxLines: 12,
+                            textAlignVertical: TextAlignVertical.top,
+                            enabled: canEdit,
+                            style: context.textTheme.bodyLarge,
+                            decoration: InputDecoration(
+                              labelText: 'Your post',
+                              floatingLabelBehavior:
+                                  FloatingLabelBehavior.always,
+                              hintText: "What's on your mind?",
+                              hintStyle: context.textTheme.bodyMedium?.copyWith(
+                                color: context.colorScheme.onSurfaceVariant,
                               ),
-                              selected: state.aiLabel == 'human',
-                              onSelected: canCreate && !state.isSubmitting
-                                  ? (_) => ref
-                                        .read(postCreationProvider.notifier)
-                                        .setAiLabel('human')
-                                  : null,
+                              border: InputBorder.none,
+                              errorText: state.validationError,
+                              counterText: isAssisted
+                                  ? '$characterCount/$characterLimit '
+                                        'user-perceived characters'
+                                  : '$characterCount/$characterLimit',
+                              semanticCounterText: isAssisted
+                                  ? '$characterCount of $characterLimit '
+                                        'user-perceived characters used'
+                                  : '$characterCount of $characterLimit '
+                                        'characters used',
                             ),
-                            ChoiceChip(
-                              label: Text(
-                                'AI-assisted',
-                                style: context.textTheme.bodySmall,
+                            onChanged: (value) {
+                              ref
+                                  .read(postCreationProvider.notifier)
+                                  .updateText(value);
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'AI disclosure',
+                            style: context.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Required. AI-generated public content is not allowed. '
+                            'AI-assisted public text is limited to '
+                            '$aiAssistedPublicTextMaxGraphemes user-perceived characters.',
+                            style: context.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              ChoiceChip(
+                                label: Text(
+                                  'Human-authored',
+                                  style: context.textTheme.bodySmall,
+                                ),
+                                selected: state.aiLabel == 'human',
+                                onSelected: canEdit
+                                    ? (_) => ref
+                                          .read(postCreationProvider.notifier)
+                                          .setAiLabel('human')
+                                    : null,
                               ),
-                              selected: state.aiLabel == 'assisted',
-                              onSelected: canCreate && !state.isSubmitting
-                                  ? (_) => ref
-                                        .read(postCreationProvider.notifier)
-                                        .setAiLabel('assisted')
-                                  : null,
-                            ),
-                          ],
-                        ),
-                        if (isAssisted)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Text(
-                              '$characterCount of '
-                              '$aiAssistedPublicTextMaxGraphemes user-perceived '
-                              'characters used for AI-assisted public text.',
-                              style: context.textTheme.bodySmall?.copyWith(
-                                color:
-                                    characterCount >
-                                        aiAssistedPublicTextMaxGraphemes
-                                    ? theme.colorScheme.error
-                                    : theme.colorScheme.onSurfaceVariant,
+                              ChoiceChip(
+                                label: Text(
+                                  'AI-assisted',
+                                  style: context.textTheme.bodySmall,
+                                ),
+                                selected: state.aiLabel == 'assisted',
+                                onSelected: canEdit
+                                    ? (_) => ref
+                                          .read(postCreationProvider.notifier)
+                                          .setAiLabel('assisted')
+                                    : null,
+                              ),
+                            ],
+                          ),
+                          if (isAssisted)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                '$characterCount of '
+                                '$aiAssistedPublicTextMaxGraphemes user-perceived '
+                                'characters used for AI-assisted public text.',
+                                style: context.textTheme.bodySmall?.copyWith(
+                                  color:
+                                      characterCount >
+                                          aiAssistedPublicTextMaxGraphemes
+                                      ? theme.colorScheme.error
+                                      : theme.colorScheme.onSurfaceVariant,
+                                ),
                               ),
                             ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Challenge Mode: Proof of origin (optional)',
+                            style: context.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Challenge Mode: Proof of origin (optional)',
-                          style: context.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
+                          const SizedBox(height: 4),
+                          Text(
+                            'Optional. No penalty if not provided.',
+                            style: context.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Optional. No penalty if not provided.',
-                          style: context.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _ProofTile(
-                          title: 'Capture metadata hash',
-                          subtitle: 'Device-captured media fingerprint',
-                          value: state.proofSignals.captureMetadataHash,
-                          onAdd: () => _editProofValue(
+                          const SizedBox(height: 8),
+                          _ProofTile(
                             title: 'Capture metadata hash',
-                            helper:
-                                'Paste a hash generated from device capture metadata.',
-                            currentValue:
-                                state.proofSignals.captureMetadataHash,
-                            onSave: ref
-                                .read(postCreationProvider.notifier)
-                                .updateCaptureMetadataHash,
-                          ),
-                          onViewDetails: () => _showProofDetails(
-                            kind: _ProofTileKind.captureHash,
-                            value: state.proofSignals.captureMetadataHash!,
-                            onEdit: () => _editProofValue(
+                            subtitle: 'Device-captured media fingerprint',
+                            value: state.proofSignals.captureMetadataHash,
+                            onAdd: () => _editProofValue(
                               title: 'Capture metadata hash',
                               helper:
                                   'Paste a hash generated from device capture metadata.',
@@ -319,24 +344,26 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                   .read(postCreationProvider.notifier)
                                   .updateCaptureMetadataHash,
                             ),
+                            onViewDetails: () => _showProofDetails(
+                              kind: _ProofTileKind.captureHash,
+                              value: state.proofSignals.captureMetadataHash!,
+                              onEdit: () => _editProofValue(
+                                title: 'Capture metadata hash',
+                                helper:
+                                    'Paste a hash generated from device capture metadata.',
+                                currentValue:
+                                    state.proofSignals.captureMetadataHash,
+                                onSave: ref
+                                    .read(postCreationProvider.notifier)
+                                    .updateCaptureMetadataHash,
+                              ),
+                            ),
                           ),
-                        ),
-                        _ProofTile(
-                          title: 'Edit history hash',
-                          subtitle: 'Edit sequence fingerprint',
-                          value: state.proofSignals.editHistoryHash,
-                          onAdd: () => _editProofValue(
+                          _ProofTile(
                             title: 'Edit history hash',
-                            helper: 'Paste a hash generated from edit history.',
-                            currentValue: state.proofSignals.editHistoryHash,
-                            onSave: ref
-                                .read(postCreationProvider.notifier)
-                                .updateEditHistoryHash,
-                          ),
-                          onViewDetails: () => _showProofDetails(
-                            kind: _ProofTileKind.editHash,
-                            value: state.proofSignals.editHistoryHash!,
-                            onEdit: () => _editProofValue(
+                            subtitle: 'Edit sequence fingerprint',
+                            value: state.proofSignals.editHistoryHash,
+                            onAdd: () => _editProofValue(
                               title: 'Edit history hash',
                               helper:
                                   'Paste a hash generated from edit history.',
@@ -345,26 +372,26 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                   .read(postCreationProvider.notifier)
                                   .updateEditHistoryHash,
                             ),
+                            onViewDetails: () => _showProofDetails(
+                              kind: _ProofTileKind.editHash,
+                              value: state.proofSignals.editHistoryHash!,
+                              onEdit: () => _editProofValue(
+                                title: 'Edit history hash',
+                                helper:
+                                    'Paste a hash generated from edit history.',
+                                currentValue:
+                                    state.proofSignals.editHistoryHash,
+                                onSave: ref
+                                    .read(postCreationProvider.notifier)
+                                    .updateEditHistoryHash,
+                              ),
+                            ),
                           ),
-                        ),
-                        _ProofTile(
-                          title: 'Source attestation',
-                          subtitle: 'Source link or signed statement URL',
-                          value: state.proofSignals.sourceAttestationUrl,
-                          onAdd: () => _editProofValue(
-                            title: 'Source attestation URL',
-                            helper:
-                                'Provide a source URL that supports this post.',
-                            currentValue:
-                                state.proofSignals.sourceAttestationUrl,
-                            onSave: ref
-                                .read(postCreationProvider.notifier)
-                                .updateSourceAttestationUrl,
-                          ),
-                          onViewDetails: () => _showProofDetails(
-                            kind: _ProofTileKind.sourceAttestation,
-                            value: state.proofSignals.sourceAttestationUrl!,
-                            onEdit: () => _editProofValue(
+                          _ProofTile(
+                            title: 'Source attestation',
+                            subtitle: 'Source link or signed statement URL',
+                            value: state.proofSignals.sourceAttestationUrl,
+                            onAdd: () => _editProofValue(
                               title: 'Source attestation URL',
                               helper:
                                   'Provide a source URL that supports this post.',
@@ -374,42 +401,56 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                   .read(postCreationProvider.notifier)
                                   .updateSourceAttestationUrl,
                             ),
+                            onViewDetails: () => _showProofDetails(
+                              kind: _ProofTileKind.sourceAttestation,
+                              value: state.proofSignals.sourceAttestationUrl!,
+                              onEdit: () => _editProofValue(
+                                title: 'Source attestation URL',
+                                helper:
+                                    'Provide a source URL that supports this post.',
+                                currentValue:
+                                    state.proofSignals.sourceAttestationUrl,
+                                onSave: ref
+                                    .read(postCreationProvider.notifier)
+                                    .updateSourceAttestationUrl,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              // Bottom toolbar
-              SafeArea(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: theme.dividerColor, width: 1),
-                    ),
-                  ),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      '$remainingCharacters '
-                      '${isAssisted ? 'user-perceived characters' : 'characters'} '
-                      'remaining',
-                      style: context.textTheme.bodySmall?.copyWith(
-                        color: characterCount > characterLimit * 0.9
-                            ? theme.colorScheme.error
-                            : theme.colorScheme.onSurfaceVariant,
+                        ],
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+
+                // Bottom toolbar
+                SafeArea(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(color: theme.dividerColor, width: 1),
+                      ),
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '$remainingCharacters '
+                        '${isAssisted ? 'user-perceived characters' : 'characters'} '
+                        'remaining',
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: characterCount > characterLimit * 0.9
+                              ? theme.colorScheme.error
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -446,6 +487,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   void _handleClose(BuildContext context) {
     final state = ref.read(postCreationProvider);
+    if (state.isSubmitting) return;
+    if (state.errorResult?.outcomeUncertain == true) {
+      Navigator.of(context).pop();
+      return;
+    }
     if (state.text.isNotEmpty && !state.isSuccess) {
       _showDiscardDialog(context);
     } else {
@@ -455,33 +501,86 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   void _showDiscardDialog(BuildContext context) {
+    final registry = ref.read(contentMutationRegistryProvider);
+    final epoch = registry.sessionEpoch;
+    final actor = ref.read(currentUserProvider)?.id ?? 'session';
+    var saving = false;
+    String? error;
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        scrollable: true,
-        title: Text('Discard post?', style: context.textTheme.headlineSmall),
-        content: Text(
-          'Your post will be lost if you close this screen.',
-          style: context.textTheme.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Keep editing'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: context.colorScheme.error,
-              foregroundColor: context.colorScheme.onError,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, updateDialog) => PopScope(
+          canPop: !saving,
+          child: AlertDialog(
+            scrollable: true,
+            title: Text(
+              'Discard post?',
+              style: context.textTheme.headlineSmall,
             ),
-            onPressed: () {
-              ref.read(postCreationProvider.notifier).reset();
-              Navigator.of(context).pop();
-              Navigator.of(context).pop();
-            },
-            child: const Text('Discard'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your post will be lost if you close this screen.',
+                  style: context.textTheme.bodyMedium,
+                ),
+                if (error != null)
+                  Text(
+                    error!,
+                    style: TextStyle(color: context.colorScheme.error),
+                  ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: saving
+                    ? null
+                    : () => Navigator.of(dialogContext).pop(),
+                child: const Text('Keep editing'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: context.colorScheme.error,
+                  foregroundColor: context.colorScheme.onError,
+                ),
+                onPressed: saving
+                    ? null
+                    : () async {
+                        if (epoch != registry.sessionEpoch) {
+                          updateDialog(
+                            () => error =
+                                'Your session changed. Reopen your draft.',
+                          );
+                          return;
+                        }
+                        updateDialog(() {
+                          saving = true;
+                          error = null;
+                        });
+                        final cleared = await registry.saveDraft(
+                          'post-create:$actor',
+                          null,
+                        );
+                        if (!mounted || !dialogContext.mounted) return;
+                        if (!cleared || epoch != registry.sessionEpoch) {
+                          updateDialog(() {
+                            saving = false;
+                            error =
+                                'Draft could not be discarded. Keep editing and try again.';
+                          });
+                          return;
+                        }
+                        ref.read(postCreationProvider.notifier).reset();
+                        Navigator.of(dialogContext).pop();
+                        Navigator.of(context).pop();
+                      },
+                child: Text(saving ? 'Discarding…' : 'Discard'),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -499,7 +598,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     }
     LythSnackbar.success(
       context: context,
-      message: 'Post created successfully!',
+      message: result.post.moderationState == 'allowed'
+          ? 'Post created successfully!'
+          : 'Post submitted. Publication checks are pending.',
     );
 
     // Reset and close

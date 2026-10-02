@@ -98,8 +98,14 @@ class CreatePostError extends CreatePostResult {
   final String message;
   final String? code;
   final dynamic originalError;
+  final bool outcomeUncertain;
 
-  const CreatePostError({required this.message, this.code, this.originalError});
+  const CreatePostError({
+    required this.message,
+    this.code,
+    this.originalError,
+    this.outcomeUncertain = false,
+  });
 }
 
 /// Request model for creating a post
@@ -110,6 +116,7 @@ class CreatePostRequest {
   final String contentType;
   final String aiLabel;
   final ProofSignals proofSignals;
+  final String? idempotencyKey;
 
   const CreatePostRequest({
     required this.text,
@@ -118,6 +125,7 @@ class CreatePostRequest {
     this.contentType = 'text',
     this.aiLabel = 'human',
     this.proofSignals = const ProofSignals(),
+    this.idempotencyKey,
   });
 
   Map<String, dynamic> toJson() {
@@ -131,7 +139,9 @@ class CreatePostRequest {
 
     return {
       'body': text,
-      'declaredCreationMode': aiLabel == 'assisted' ? 'ai_assisted' : 'human',
+      'declaredCreationMode': aiLabel.trim().toLowerCase() == 'assisted'
+          ? 'ai_assisted'
+          : 'human',
       'geoScope': 'none',
     };
   }
@@ -142,12 +152,19 @@ class UpdatePostRequest {
   final String? text;
   final String? aiLabel;
   final String? visibility;
+  final String? idempotencyKey;
 
-  const UpdatePostRequest({this.text, this.aiLabel, this.visibility});
+  const UpdatePostRequest({
+    this.text,
+    this.aiLabel,
+    this.visibility,
+    this.idempotencyKey,
+  });
 
   bool get isEmpty => text == null && aiLabel == null && visibility == null;
 
   Map<String, dynamic> toJson() {
+    final normalizedLabel = aiLabel?.trim().toLowerCase();
     if (text != null && aiLabel == null) {
       throw ArgumentError.value(
         aiLabel,
@@ -164,6 +181,14 @@ class UpdatePostRequest {
         throw ArgumentError.value(aiLabel, 'aiLabel', validationError);
       }
     }
+    if (normalizedLabel != null &&
+        !isSupportedPublicAuthorshipLabel(normalizedLabel)) {
+      throw ArgumentError.value(
+        aiLabel,
+        'aiLabel',
+        'AI-generated public content cannot be posted',
+      );
+    }
     if (visibility != null &&
         !const {'public', 'followers', 'private'}.contains(visibility)) {
       throw ArgumentError.value(
@@ -175,7 +200,9 @@ class UpdatePostRequest {
     return {
       if (text != null) 'body': text,
       if (aiLabel != null)
-        'declaredCreationMode': aiLabel == 'assisted' ? 'ai_assisted' : aiLabel,
+        'declaredCreationMode': normalizedLabel == 'assisted'
+            ? 'ai_assisted'
+            : normalizedLabel,
       if (visibility != null) 'visibility': visibility,
     };
   }
@@ -238,7 +265,11 @@ abstract class PostRepository {
   ///
   /// Returns true if deletion was successful
   /// Throws [PostException] on failure
-  Future<bool> deletePost({required String postId, required String token});
+  Future<bool> deletePost({
+    required String postId,
+    required String token,
+    String? idempotencyKey,
+  });
 
   /// Get a single post by ID
   ///

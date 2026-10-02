@@ -9,11 +9,14 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/feed/application/post_repository_impl.dart';
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
+import 'package:lythaus/state/providers/feed_providers.dart' as live;
 
 /// Provider for the post repository implementation
 final postRepositoryProvider = Provider<PostRepository>((ref) {
@@ -32,6 +35,8 @@ class PostCreationState {
   final String contentType;
   final String? aiLabel;
   final ProofSignals proofSignals;
+  final bool isRestoring;
+  final String? draftStatus;
 
   const PostCreationState({
     this.text = '',
@@ -43,6 +48,8 @@ class PostCreationState {
     this.contentType = 'text',
     this.aiLabel,
     this.proofSignals = const ProofSignals(),
+    this.isRestoring = false,
+    this.draftStatus,
   });
 
   PostCreationState copyWith({
@@ -58,6 +65,8 @@ class PostCreationState {
     bool clearMediaUrl = false,
     bool clearResult = false,
     bool clearValidationError = false,
+    bool? isRestoring,
+    String? draftStatus,
   }) {
     return PostCreationState(
       text: text ?? this.text,
@@ -71,6 +80,8 @@ class PostCreationState {
       contentType: contentType ?? this.contentType,
       aiLabel: aiLabel ?? this.aiLabel,
       proofSignals: proofSignals ?? this.proofSignals,
+      isRestoring: isRestoring ?? this.isRestoring,
+      draftStatus: draftStatus ?? this.draftStatus,
     );
   }
 
@@ -121,12 +132,109 @@ const int postTextMaxLength = 5000;
 
 /// Notifier for post creation state
 class PostCreationNotifier extends StateNotifier<PostCreationState> {
-  PostCreationNotifier(this._ref) : super(const PostCreationState());
+  PostCreationNotifier(this._ref) : super(const PostCreationState()) {
+    _actor = _ref.read(currentUserProvider)?.id ?? 'session';
+    _restored = _restore();
+    _ref.listen(currentUserProvider, (previous, next) {
+      if (previous?.id == next?.id) return;
+      _actor = next?.id ?? 'session';
+      ++_sessionEpoch;
+      ++_version;
+      state = const PostCreationState();
+      _restored = _restore();
+    });
+  }
 
   final Ref _ref;
+  late String _actor;
+  late Future<void> _restored;
+  int _version = 0;
+  int _sessionEpoch = 0;
+  String get _scope => 'post-create:$_actor';
+
+  void refreshDraftOnOpen() {
+    if (state.isSubmitting || state.isRestoring || state.draftStatus == null) {
+      return;
+    }
+    _restored = _restore();
+  }
+
+  Future<void> _restore() async {
+    final actor = _actor;
+    final version = _version;
+    final sessionEpoch = _sessionEpoch;
+    if (actor == 'session') return;
+    state = state.copyWith(isRestoring: true);
+    final loadingState = state;
+    final registry = _ref.read(contentMutationRegistryProvider);
+    await registry.refresh();
+    if (!mounted || actor != _actor || sessionEpoch != _sessionEpoch) return;
+    if (version != _version || !identical(state, loadingState)) {
+      state = state.copyWith(isRestoring: false);
+      return;
+    }
+    final pending = registry.pending(_scope);
+    final saved = pending != null && !pending.needsReentry
+        ? pending.payload
+        : registry.draft(_scope);
+    state = PostCreationState(
+      text: saved?['body'] as String? ?? '',
+      aiLabel: saved?['declaredCreationMode'] == 'ai_assisted'
+          ? 'assisted'
+          : saved?['declaredCreationMode'] == 'human'
+          ? 'human'
+          : null,
+      result: pending != null && !pending.needsReentry
+          ? const CreatePostError(
+              message: 'Retry to check the saved submission.',
+              outcomeUncertain: true,
+            )
+          : null,
+      draftStatus: registry.storageUnavailable
+          ? 'Recovery storage is unavailable.'
+          : pending?.needsReentry == true
+          ? 'Saved text expired or was cleared at logout. Re-enter the same text and disclosure to check the previous request.'
+          : saved == null
+          ? null
+          : 'Draft restored on this device.',
+    );
+  }
+
+  void _persist() {
+    ++_version;
+    if (_actor == 'session') return;
+    final actor = _actor;
+    final version = _version;
+    final registry = _ref.read(contentMutationRegistryProvider);
+    final data = state.text.isEmpty
+        ? null
+        : <String, dynamic>{
+            'body': state.text,
+            'declaredCreationMode': state.aiLabel == 'assisted'
+                ? 'ai_assisted'
+                : state.aiLabel == 'human'
+                ? 'human'
+                : null,
+          };
+    state = state.copyWith(draftStatus: 'Saving draft…');
+    unawaited(
+      registry.saveDraft(_scope, data).then((saved) {
+        if (!mounted || actor != _actor || version != _version) return;
+        state = state.copyWith(
+          draftStatus: saved
+              ? 'Draft saved on this device.'
+              : 'Draft could not be saved on this device.',
+        );
+      }),
+    );
+  }
+
+  bool get _canEdit =>
+      !state.isSubmitting && state.errorResult?.outcomeUncertain != true;
 
   /// Update the post text
   void updateText(String text) {
+    if (!_canEdit) return;
     String? validationError;
 
     if (text.isEmpty) {
@@ -146,17 +254,21 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
       validationError: validationError,
       clearValidationError: validationError == null,
     );
+    _persist();
   }
 
   void setIsNews(bool value) {
+    if (!_canEdit) return;
     state = state.copyWith(isNews: value, clearResult: true);
   }
 
   void setContentType(String value) {
+    if (!_canEdit) return;
     state = state.copyWith(contentType: value, clearResult: true);
   }
 
   void setAiLabel(String value) {
+    if (!_canEdit) return;
     final normalizedValue = value.trim().toLowerCase();
     if (!isSupportedPublicAuthorshipLabel(normalizedValue)) {
       state = state.copyWith(
@@ -178,9 +290,11 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
       validationError: validationError,
       clearValidationError: validationError == null,
     );
+    _persist();
   }
 
   void updateCaptureMetadataHash(String? value) {
+    if (!_canEdit) return;
     state = state.copyWith(
       proofSignals: ProofSignals(
         captureMetadataHash: value,
@@ -192,6 +306,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
   }
 
   void updateEditHistoryHash(String? value) {
+    if (!_canEdit) return;
     state = state.copyWith(
       proofSignals: ProofSignals(
         captureMetadataHash: state.proofSignals.captureMetadataHash,
@@ -203,6 +318,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
   }
 
   void updateSourceAttestationUrl(String? value) {
+    if (!_canEdit) return;
     state = state.copyWith(
       proofSignals: ProofSignals(
         captureMetadataHash: state.proofSignals.captureMetadataHash,
@@ -215,6 +331,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
 
   /// Update the media URL
   void updateMediaUrl(String? url) {
+    if (!_canEdit) return;
     state = state.copyWith(
       mediaUrl: url,
       clearMediaUrl: url == null || url.isEmpty,
@@ -243,6 +360,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
 
   /// Submit the post
   Future<bool> submit() async {
+    if (state.isSubmitting || state.isSuccess) return false;
     // Validate first
     final validationError = validate();
     if (validationError != null) {
@@ -250,19 +368,11 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
       return false;
     }
 
-    // Get auth token
-    final token = await _ref.read(jwtProvider.future);
-    if (token == null) {
-      state = state.copyWith(
-        result: const CreatePostError(
-          message: 'Please sign in to create a post',
-          code: 'auth_required',
-        ),
-      );
-      return false;
-    }
-
-    // Set submitting state
+    final draft = state;
+    final sessionEpoch = _sessionEpoch;
+    final actor = _ref.read(currentUserProvider)?.id ?? 'session';
+    final registry = _ref.read(contentMutationRegistryProvider);
+    ContentMutationAttempt? attempt;
     state = state.copyWith(
       isSubmitting: true,
       clearResult: true,
@@ -270,21 +380,67 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
     );
 
     try {
+      await _restored;
+      final token = await _ref.read(jwtProvider.future);
+      if (!mounted || sessionEpoch != _sessionEpoch) return false;
+      if (token == null ||
+          token.isEmpty ||
+          (_ref.read(currentUserProvider)?.id ?? 'session') != actor) {
+        state = state.copyWith(
+          isSubmitting: false,
+          result: const CreatePostError(
+            message: 'Please sign in to create a post',
+            code: 'auth_required',
+          ),
+        );
+        return false;
+      }
       final repository = _ref.read(postRepositoryProvider);
-
+      final request = CreatePostRequest(
+        text: draft.text.trim(),
+        mediaUrl: draft.mediaUrl,
+        isNews: draft.isNews,
+        contentType: draft.contentType,
+        aiLabel: draft.aiLabel!,
+        proofSignals: draft.proofSignals,
+      );
+      attempt = await registry.beginDurable(
+        'post-create:$actor',
+        request.toJson(),
+      );
       final result = await repository.createPost(
         request: CreatePostRequest(
-          text: state.text.trim(),
-          mediaUrl: state.mediaUrl,
-          isNews: state.isNews,
-          contentType: state.contentType,
-          aiLabel: state.aiLabel!,
-          proofSignals: state.proofSignals,
+          text: request.text,
+          mediaUrl: request.mediaUrl,
+          isNews: request.isNews,
+          contentType: request.contentType,
+          aiLabel: request.aiLabel,
+          proofSignals: request.proofSignals,
+          idempotencyKey: attempt.key,
         ),
         token: token,
       );
-
-      state = state.copyWith(isSubmitting: false, result: result);
+      await registry.finishDurable(
+        attempt,
+        uncertain: result is CreatePostError && result.outcomeUncertain,
+        receipt: result is CreatePostSuccess
+            ? OwnedContent('post', result.post.id)
+            : null,
+      );
+      if (!mounted || actor != _actor || sessionEpoch != _sessionEpoch) {
+        return false;
+      }
+      final unconfirmed = registry.pending(attempt.scope) != null;
+      state = state.copyWith(
+        isSubmitting: false,
+        result: unconfirmed && result is! CreatePostSuccess
+            ? const CreatePostError(
+                message:
+                    'The earlier submission is still unconfirmed. Retry the same request after signing in.',
+                outcomeUncertain: true,
+              )
+            : result,
+      );
 
       // If successful, refresh feeds
       if (result is CreatePostSuccess) {
@@ -294,11 +450,25 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
 
       return false;
     } catch (e) {
+      final failure = contentMutationFailure(e);
+      if (attempt != null) {
+        try {
+          await registry.finishDurable(attempt, uncertain: failure.uncertain);
+        } catch (_) {}
+      }
+      if (!mounted || actor != _actor || sessionEpoch != _sessionEpoch) {
+        return false;
+      }
       state = state.copyWith(
         isSubmitting: false,
         result: CreatePostError(
-          message: 'Failed to create post: ${e.toString()}',
+          message: failure.message,
           originalError: e,
+          code: failure.code,
+          outcomeUncertain:
+              registry.pending('post-create:$actor')?.needsReentry != true &&
+              (failure.uncertain ||
+                  registry.pending('post-create:$actor') != null),
         ),
       );
       return false;
@@ -307,6 +477,8 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
 
   /// Refresh all feed providers to show the new post
   void _refreshFeeds() {
+    _ref.invalidate(live.liveFeedStateProvider);
+    _ref.invalidate(live.liveFeedItemsProvider);
     // Invalidate general feed (all active instances via family)
     _ref.invalidate(feedProvider);
 
@@ -319,11 +491,14 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
 
   /// Reset the form to initial state
   void reset() {
+    if (!_canEdit) return;
     state = const PostCreationState();
+    _persist();
   }
 
   /// Clear any error state
   void clearError() {
+    if (!_canEdit) return;
     state = state.copyWith(clearResult: true, clearValidationError: true);
   }
 }

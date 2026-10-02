@@ -925,6 +925,10 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1notifications~1devices'
   /notifications/devices/{id}/revoke:
     $ref: './product-integrity.yaml#/paths/~1notifications~1devices~1{id}~1revoke'
+  /posts/{postId}/owner-view:
+    $ref: './owner-content.yaml#/paths/~1posts~1{postId}~1owner-view'
+  /comments/{commentId}/owner-view:
+    $ref: './owner-content.yaml#/paths/~1comments~1{commentId}~1owner-view'
   /posts/{id}:
     get:
       operationId: postsGet
