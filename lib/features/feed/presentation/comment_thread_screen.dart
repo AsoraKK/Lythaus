@@ -671,6 +671,7 @@ class _ComposerBar extends StatelessWidget {
                 ],
               ),
             Row(
+              key: const ValueKey('comment-composer-input'),
               children: [
                 Expanded(
                   child: TextField(

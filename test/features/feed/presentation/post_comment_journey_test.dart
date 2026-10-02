@@ -320,6 +320,33 @@ void main() {
       await _pump(tester, adapter);
       await _openComments(tester);
       expect(find.text('Reply'), findsOneWidget);
+      await tester.enterText(
+        find.byType(TextField),
+        'Draft retained while selecting a reply target',
+      );
+      await tester.pumpAndSettle();
+      final editor = tester.state<EditableTextState>(find.byType(EditableText));
+      await tester.tap(find.text('Reply'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.state<EditableTextState>(find.byType(EditableText)),
+        same(editor),
+      );
+      expect(
+        editor.widget.controller.text,
+        'Draft retained while selecting a reply target',
+      );
+      expect(editor.widget.focusNode.hasFocus, isTrue);
+      await tester.tap(find.byTooltip('Cancel reply'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.state<EditableTextState>(find.byType(EditableText)),
+        same(editor),
+      );
+      expect(
+        editor.widget.controller.text,
+        'Draft retained while selecting a reply target',
+      );
       await tester.tap(find.text('Reply'));
       await tester.pumpAndSettle();
       await _draft(tester, 'Reply without an artificial mention');
