@@ -28,6 +28,7 @@ domain.Post _post({
   String id = 'post-1',
   String text = 'post text',
   List<String>? tags,
+  String? category,
 }) {
   return domain.Post(
     id: id,
@@ -35,7 +36,9 @@ domain.Post _post({
     authorUsername: 'Author $id',
     text: text,
     createdAt: DateTime(2024, 1, 1),
-    metadata: tags == null ? null : domain.PostMetadata(tags: tags),
+    metadata: tags == null && category == null
+        ? null
+        : domain.PostMetadata(tags: tags ?? const [], category: category),
   );
 }
 
@@ -43,9 +46,10 @@ domain.FeedResponse _feedResponse({
   String id = 'post-1',
   String text = 'post text',
   List<String>? tags,
+  String? category,
 }) {
   return domain.FeedResponse(
-    posts: [_post(id: id, text: text, tags: tags)],
+    posts: [_post(id: id, text: text, tags: tags, category: category)],
     totalCount: 1,
     hasMore: false,
     page: 1,
@@ -96,8 +100,14 @@ void main() {
     expect(find.byType(FeedCard), findsOneWidget);
   });
 
-  testWidgets('trending feed screen shows data', (tester) async {
-    final feed = _feedResponse(text: 'Top story', tags: ['news']);
+  testWidgets('trending feed shows content without routine category or tags', (
+    tester,
+  ) async {
+    final feed = _feedResponse(
+      text: 'Top story',
+      tags: ['news'],
+      category: 'Local updates',
+    );
 
     await tester.pumpWidget(
       ProviderScope(
@@ -114,7 +124,10 @@ void main() {
 
     expect(find.text('Trending'), findsOneWidget);
     expect(find.text('Top story'), findsOneWidget);
-    expect(find.text('news'), findsOneWidget);
+    expect(find.text('Author post-1'), findsOneWidget);
+    expect(find.text('Authorship: Under review'), findsOneWidget);
+    expect(find.text('Local updates'), findsNothing);
+    expect(find.text('news'), findsNothing);
   });
 
   testWidgets('trending feed screen shows error state', (tester) async {
