@@ -52,6 +52,9 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
     mediaController = TextEditingController(text: state.mediaUrl);
     isNews = state.isNews;
     selectedType = _typeFromString(state.contentType);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(postCreationProvider.notifier).refreshDraftOnOpen();
+    });
   }
 
   @override
@@ -183,7 +186,9 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
             ),
             SizedBox(height: spacing.lg),
             LythTextField(
-              key: ValueKey('post-modal-input:$inputEpoch'),
+              key: ValueKey(
+                'post-modal-input:$inputEpoch:${state.isRestoring}',
+              ),
               controller: controller,
               disabled: !canEdit,
               onChanged: notifier.updateText,

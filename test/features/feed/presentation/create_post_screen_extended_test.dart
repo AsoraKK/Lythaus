@@ -1,4 +1,6 @@
 import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
+import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import '../../../helpers/content_recovery.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -73,6 +75,46 @@ Widget _screen({
 }
 
 void main() {
+  test(
+    'reopening a retained post composer refreshes expiry without recreating its provider',
+    () async {
+      final storage = MemoryContentRecoveryStorage();
+      var now = DateTime.utc(2026, 10, 2);
+      final registry = ContentMutationRegistry(
+        storage: storage,
+        clock: () => now,
+      )..activate('user-1');
+      await registry.ready;
+      final container = ProviderContainer(
+        overrides: [
+          currentUserProvider.overrideWithValue(_user()),
+          contentMutationRegistryProvider.overrideWith((ref) => registry),
+        ],
+      );
+      addTearDown(container.dispose);
+      final notifier = container.read(postCreationProvider.notifier);
+      notifier.updateText('Expired retained post body');
+      notifier.setAiLabel('human');
+      final attempt = await registry.beginDurable('post-create:user-1', {
+        'body': 'Expired retained post body',
+        'declaredCreationMode': 'human',
+        'geoScope': 'none',
+      });
+      await registry.finishDurable(attempt, uncertain: true);
+      await Future<void>.delayed(Duration.zero);
+      now = now.add(const Duration(days: 8));
+      notifier.refreshDraftOnOpen();
+      await registry.refresh();
+      expect(notifier.state.text, isEmpty);
+      expect(notifier.state.draftStatus, contains('Re-enter the same text'));
+      expect(registry.pending(attempt.scope)!.key, attempt.key);
+      expect(
+        storage.values.values.join(),
+        isNot(contains('Expired retained post body')),
+      );
+    },
+  );
+
   testWidgets(
     'discard requires a saved journal update and preserves text on storage failure',
     (tester) async {

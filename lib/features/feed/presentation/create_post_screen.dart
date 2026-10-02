@@ -52,6 +52,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     _textController.text = ref.read(postCreationProvider).text;
     // Request focus when screen opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(postCreationProvider.notifier).refreshDraftOnOpen();
       _focusNode.requestFocus();
     });
   }
@@ -214,7 +216,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                           // Text input
                           const SizedBox(height: 12),
                           TextField(
-                            key: ValueKey('post-create-input:$inputEpoch'),
+                            key: ValueKey(
+                              'post-create-input:$inputEpoch:${state.isRestoring}',
+                            ),
                             controller: _textController,
                             focusNode: _focusNode,
                             minLines: 8,

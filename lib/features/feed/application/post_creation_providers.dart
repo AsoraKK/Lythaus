@@ -152,6 +152,13 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
   int _sessionEpoch = 0;
   String get _scope => 'post-create:$_actor';
 
+  void refreshDraftOnOpen() {
+    if (state.isSubmitting || state.isRestoring || state.draftStatus == null) {
+      return;
+    }
+    _restored = _restore();
+  }
+
   Future<void> _restore() async {
     final actor = _actor;
     final version = _version;
