@@ -376,15 +376,19 @@ class ContentMutationRegistry extends ChangeNotifier {
       }
       try {
         final data = await _read(actor);
+        if (_actor != actor || _epoch != epoch) {
+          throw const ContentMutationFailure(
+            'Your session changed. Sign in again.',
+            uncertain: false,
+          );
+        }
         _restore(data);
         final attempt = begin(scope, payload);
         (data['attempts'] as Map)[scope] = {
           'key': attempt.key,
           'fingerprint': attempt.fingerprint,
           'payload': attempt.payload,
-          'expiresAt': _clock()
-              .add(const Duration(days: 7))
-              .millisecondsSinceEpoch,
+          'expiresAt': attempt.expiresAt.millisecondsSinceEpoch,
         };
         await _storage.write(_storageKey(actor), jsonEncode(data));
         if (_epoch != epoch) {

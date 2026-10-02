@@ -20,6 +20,29 @@ class _PausedStorage extends MemoryContentRecoveryStorage {
   }
 }
 
+class _ReadPause {
+  final started = Completer<void>();
+  final release = Completer<void>();
+}
+
+class _PausedReadStorage extends MemoryContentRecoveryStorage {
+  _ReadPause? _pause;
+
+  _ReadPause pauseNextRead() => _pause = _ReadPause();
+
+  @override
+  Future<String?> read(String key) async {
+    final pause = _pause;
+    _pause = null;
+    final value = await super.read(key);
+    if (pause != null) {
+      pause.started.complete();
+      await pause.release.future;
+    }
+    return value;
+  }
+}
+
 Future<ContentMutationRegistry> open(
   ContentRecoveryStorage storage,
   String? actor, {
@@ -212,6 +235,57 @@ void main() {
       );
     },
   );
+
+  for (final entry in {
+    'post-create:a': payload,
+    'post:a:p1': {
+      'method': 'PUT',
+      'body': {
+        'body': 'Sensitive replay edit',
+        'declaredCreationMode': 'human',
+      },
+    },
+  }.entries) {
+    test(
+      'replaying ${entry.key} preserves the original seven-day expiry',
+      () async {
+        final storage = MemoryContentRecoveryStorage();
+        final start = DateTime.utc(2026, 10, 2);
+        var now = start;
+        final registry = await open(storage, 'a', clock: () => now);
+        final original = await registry.beginDurable(entry.key, entry.value);
+        await registry.finishDurable(original, uncertain: true);
+
+        now = start.add(const Duration(days: 6));
+        final retry = await registry.beginDurable(entry.key, entry.value);
+        expect(retry.key, original.key);
+        expect(
+          retry.expiresAt.millisecondsSinceEpoch,
+          original.expiresAt.millisecondsSinceEpoch,
+        );
+        await registry.finishDurable(retry, uncertain: true);
+
+        now = start.add(const Duration(days: 8));
+        final reopened = await open(storage, 'a', clock: () => now);
+        final held = reopened.pending(entry.key)!;
+        expect(held.needsReentry, isTrue);
+        expect(held.key, original.key);
+        expect(held.fingerprint, original.fingerprint);
+        expect(
+          held.expiresAt.millisecondsSinceEpoch,
+          original.expiresAt.millisecondsSinceEpoch,
+        );
+        expect(
+          storage.values.values.join(),
+          isNot(contains('Private synthetic text')),
+        );
+        expect(
+          storage.values.values.join(),
+          isNot(contains('Sensitive replay edit')),
+        );
+      },
+    );
+  }
 
   test(
     'a late acknowledgement after logout and same-account sign-in preserves the new draft',
@@ -412,4 +486,75 @@ void main() {
       expect(registry.attempts, isEmpty);
     },
   );
+
+  for (final nextActor in <String?>[null, 'b', 'a']) {
+    final transition = nextActor == 'a'
+        ? 'logout and same-account sign-in'
+        : 'switching to $nextActor';
+    test(
+      'a paused journal read cannot restore private text after $transition',
+      () async {
+        final storage = _PausedReadStorage();
+        final registry = await open(storage, 'a');
+        const scope = 'post-create:a';
+        await registry.saveDraft(scope, payload);
+        final original = await registry.beginDurable(scope, payload);
+        await registry.finishDurable(original, uncertain: true);
+        final acknowledged = await registry.beginDurable(
+          'comment-create:a:p1',
+          payload,
+        );
+        await registry.finishDurable(
+          acknowledged,
+          receipt: const OwnedContent('comment', 'c1', postId: 'p1'),
+        );
+
+        final read = storage.pauseNextRead();
+        final begin = registry.beginDurable(scope, payload);
+        final rejected = expectLater(
+          begin,
+          throwsA(isA<ContentMutationFailure>()),
+        );
+        await read.started.future;
+        if (nextActor == 'a') registry.activate(null);
+        registry.activate(nextActor);
+        expect(registry.draft(scope), isNull);
+        expect(registry.attempts, isEmpty);
+        expect(registry.owned, isEmpty);
+
+        final cleanup = storage.pauseNextRead();
+        addTearDown(() {
+          if (!read.release.isCompleted) read.release.complete();
+          if (!cleanup.release.isCompleted) cleanup.release.complete();
+        });
+        read.release.complete();
+        await rejected;
+        await cleanup.started.future;
+        expect(registry.draft(scope), isNull);
+        expect(registry.attempts, isEmpty);
+        expect(registry.owned, isEmpty);
+
+        cleanup.release.complete();
+        await registry.ready;
+        expect(registry.draft(scope), isNull);
+        if (nextActor == 'a') {
+          expect(registry.pending(scope)!.key, original.key);
+          expect(registry.pending(scope)!.needsReentry, isTrue);
+          expect(registry.owned.single.id, 'c1');
+        } else {
+          expect(registry.attempts, isEmpty);
+          expect(registry.owned, isEmpty);
+        }
+        expect(
+          storage.values.values.join(),
+          isNot(contains('Private synthetic text')),
+        );
+        final reopened = await open(storage, 'a');
+        expect(reopened.pending(scope)!.key, original.key);
+        expect(reopened.pending(scope)!.needsReentry, isTrue);
+        expect(reopened.draft(scope), isNull);
+        expect(reopened.owned.single.id, 'c1');
+      },
+    );
+  }
 }
