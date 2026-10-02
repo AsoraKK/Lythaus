@@ -20,7 +20,7 @@ const USERS_GUIDE = {
 
 const STATUS_OPTIONS = ['', 'verified', 'pending_verification', 'active', 'relink_required', 'suspended', 'locked', 'deleted'];
 
-function Users() {
+function Users({ inWorkspace = false }) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('');
   const [source, setSource] = useState('');
@@ -142,11 +142,12 @@ function Users() {
   };
 
   return (
-    <PageLayout title="Users" subtitle="Live identity, verification, and account safety operations." guide={USERS_GUIDE}>
+    <PageLayout title={inWorkspace ? 'Account administration' : 'Users'} headingLevel={inWorkspace ? 2 : 1} subtitle="Registered accounts across all statuses. Existing administrator and owner permissions apply." guide={USERS_GUIDE}>
       <LythCard variant="panel">
         <div className="panel-header"><h2>Find accounts</h2><LythButton variant="ghost" type="button" onClick={() => loadUsers()} disabled={loading}>Refresh</LythButton></div>
+        <p className="muted">Includes unverified, suspended, locked and relink-required accounts. Inactivity is not an account status. Account creation alone does not establish a sign-in.</p>
         <form className="form-row" onSubmit={(event) => { event.preventDefault(); loadUsers(); }}>
-          <LythInput type="text" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search id, display name, handle, or email" />
+          <LythInput type="text" aria-label="Search registered accounts" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search id, display name, handle, or email" />
           <select aria-label="Filter by status" value={status} onChange={(event) => setStatus(event.target.value)}>
             {STATUS_OPTIONS.map((value) => <option key={value} value={value}>{value || 'All statuses'}</option>)}
           </select>
@@ -197,7 +198,7 @@ function Users() {
               <div><span className="detail-label">Status</span><span className={`status-pill ${String((detail || selected).status).toLowerCase()}`}>{(detail || selected).status}</span></div>
               <div><span className="detail-label">Verification</span><span>{detail?.verificationState || selected.verificationState || 'Unknown'}</span></div>
               <div><span className="detail-label">Verified</span><span>{formatDateTime(detail?.verifiedAt)}</span></div>
-              <div><span className="detail-label">Last sign-in</span><span>{formatDateTime(detail?.lastLoginAt)}</span></div>
+              <div><span className="detail-label">Last sign-in or account creation</span><span>{formatDateTime(detail?.lastLoginAt)}</span></div>
               <div><span className="detail-label">Email delivery</span><span>{detail?.emailStatus || selected.emailStatus || 'Unknown'}</span></div>
               <div><span className="detail-label">Active sessions</span><span>{detail?.currentSessionCount ?? selected.currentSessionCount ?? 'Unknown'}</span></div>
             </div>

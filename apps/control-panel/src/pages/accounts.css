@@ -1,0 +1,38 @@
+.accounts-workspace {
+  min-width: 0;
+  width: min(1420px, 100%);
+}
+
+.accounts-workspace .page-main,
+.accounts-workspace .page-guide,
+.accounts-workspace .field,
+.accounts-workspace .lyth-card {
+  min-width: 0;
+}
+
+.accounts-workspace .panel-header,
+.accounts-workspace .page-header-row {
+  flex-wrap: wrap;
+}
+
+.accounts-workspace .page-header-row > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.accounts-workspace input,
+.accounts-workspace select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.accounts-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.accounts-navigation .nav-link {
+  white-space: normal;
+}
