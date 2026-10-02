@@ -34,7 +34,7 @@ Responses contain event UUID, source, machine event/action code, timestamp, reco
 
 Filters are `source` (`account`, `activity`, `audit`), exact `eventType`, exact `correlationId`, inclusive `since`, exclusive `until`, and `order` (`newest` by default, or `oldest`). Date filters use UTC ISO timestamps. The UI converts local date inputs to UTC and labels displayed dates as UTC. `limit` is an integer from 1 to 50, default 25.
 
-Keyset cursors include account/filter/order scope, a first-page timestamp boundary and the exact `(created_at, id, source)` position. PostgreSQL microseconds are preserved, with source compared using `C` collation for ties. Changing accounts or filters requires a new first page. Each read uses `clock_timestamp()` for its audit entry so pagination excludes newly generated read audits after the first boundary. A cursor is a pagination position, not an authorization capability.
+Keyset cursors include account/filter/order scope, a first-page timestamp boundary and the exact `(created_at, id, source)` position. PostgreSQL microseconds are preserved, with source compared using `C` collation for ties. Changing accounts or filters requires a new first page. Each read uses `clock_timestamp()` for its audit entry so pagination excludes newly generated read audits after the first boundary. Late-arriving records with older timestamps can still appear; the boundary is not a retained database snapshot. A cursor is a pagination position, not an authorization capability.
 
 Every successful history request commits `identity.account_support_history_viewed`. Audit metadata contains page size, order, source and filter-presence flags; it omits filter values and account content. Replies use `private, no-store` and an `X-Correlation-ID` header.
 
@@ -51,12 +51,20 @@ npm --prefix apps/control-panel run build
 npm run typecheck:native
 npm run test:critical-coverage
 node --test --test-timeout=60000 scripts/tests/private-email-binding.workerd.mjs
+npm run openapi:lint
+npm run openapi:validate:examples
+npm run openapi:test:contract
+npm run openapi:test:dart
 ```
 
 `apps/lythaus-admin-api/tests/account-support.postgres.mjs` requires a complete baseline in disposable local PostgreSQL 17 and rejects remote hosts. Use a database with the `lythaus_auth_test` prefix, or the existing CI PostgreSQL service. Its three tests exercise the real runtime/admin grants, exact lookup and ambiguity, non-owner/inactive-owner denial, audit rollback, timestamp/source ties, date filters, scoped correlation and snapshot pagination. Fixtures are synthetic; no mail is sent.
 
 Control-panel browser validation uses synthetic API responses. Chromium flows at 390, 768 and 1440 pixels cover lookup, pagination, correlation, source/order filters, missing accounts, unavailable history, clear and owner denial. The Browser plugin was unavailable, so regular Playwright used retained browser caches. The existing Google Fonts import fails certificate validation in the cloud browser; fallback fonts render, and TLS verification remains enabled. Browser evidence and scripts stay outside the repository.
 
-Parent integration must reconcile the shared admin router, private email handler, App/Nav, contracts export, both CI workflows and critical-coverage manifest. The frozen public Worker wrapper, homepage protection tests, root npm manifests and locks are unchanged. The existing PostgreSQL CI glob includes the three new database tests, while the main CI explicitly invokes support API tests and the expanded coverage gate.
+The three support operations are explicitly registered in the admin dispatcher and documented by `api/openapi/account-support.yaml`, referenced from the canonical OpenAPI root. The AST parity guard recognizes 107 public and 45 admin operations and still rejects undocumented operations and unexpected dispatcher prefixes. The private lookup path is excluded from the public HTTP contract. Bundle and Dart client regeneration use the pinned 7.7.0 generator; schema tests reject sensitive extra fields and preserve partial-history and unavailable-evidence states.
+
+Parent integration must reconcile the shared admin router, private email handler, App/Nav, contracts export, both CI workflows, critical-coverage manifest, OpenAPI root/bundle and generated Dart client. The frozen public Worker wrapper, homepage protection tests, root npm manifests and locks are unchanged. The existing PostgreSQL CI glob includes the three new database tests, while the main CI explicitly invokes support API tests and the expanded coverage gate.
+
+Deploy the compatible public Worker's private lookup handler before enabling its matching Admin/UI support path. Parent coordinates that release order and preserves other lanes' additive workflow, contracts-export and coverage-manifest changes during integration.
 
 Reputation activity is historical recorded evidence only; this lane adds no earning policy, entitlement calculation or repair. Password/reset, session revocation, impersonation, deletion and reputation repair remain outside this support page. Parent owns serialized merges and exact-SHA owner-testing releases. Real owner email/signup acceptance remains pending mailbox setup; local tests do not establish production acceptance. If the uncommitted PC implementation becomes available, reconcile it against this reconstruction before integration.

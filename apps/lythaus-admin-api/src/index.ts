@@ -1150,7 +1150,13 @@ export default {
       }
       const actor = await requireAdmin(request, env);
       await enforceAdminRateLimit(request, env, actor.userId);
-      if (url.pathname.startsWith('/api/admin/account-support/')) return cors(await handleAccountSupport(request, env, actor, id));
+      if (request.method === 'GET' && url.pathname === '/api/admin/account-support/access') return cors(await handleAccountSupport(request, env, actor, id));
+      if (request.method === 'POST' && url.pathname === '/api/admin/account-support/lookup') return cors(await handleAccountSupport(request, env, actor, id));
+      const accountSupportHistory = url.pathname.match(/^\/api\/admin\/account-support\/users\/([^/]+)\/history$/);
+      if (request.method === 'POST' && accountSupportHistory) return cors(await handleAccountSupport(request, env, actor, id));
+      if (url.pathname === '/api/admin/account-support/access' || url.pathname === '/api/admin/account-support/lookup' || accountSupportHistory) {
+        return cors(await handleAccountSupport(request, env, actor, id));
+      }
       if (request.method === 'GET' && url.pathname === '/api/admin/authenticity/cases') return cors(await handleAdminBeta(request, env, actor));
       if (request.method === 'GET' && url.pathname.match(/^\/api\/admin\/authenticity\/cases\/([^/]+)$/)) return cors(await handleAdminBeta(request, env, actor));
       if (request.method === 'GET' && url.pathname.match(/^\/api\/admin\/authenticity\/cases\/([^/]+)\/image$/)) return cors(await handleAdminBeta(request, env, actor));

@@ -111,6 +111,18 @@ test('worker support has no mutation methods and never accepts URL email lookup'
   reset(); assert.equal((await worker.fetch(request('/api/admin/account-support/lookup?email=synthetic@example.invalid'), env)).status, 404);
 });
 
+test('worker dispatches only the three documented support routes', async () => {
+  for (const path of ['/api/admin/account-support/other', `${historyPath}/extra`, '/api/admin/account-support/lookup/extra']) {
+    reset(); assert.equal((await worker.fetch(request(path), env)).status, 404);
+    assert.equal(state.reads.length, 2);
+  }
+  for (const [path, method, allow] of [['/api/admin/account-support/access', 'POST', 'GET'], [historyPath, 'GET', 'POST']]) {
+    reset(); const response = await worker.fetch(request(path, undefined, {}, method), env);
+    assert.equal(response.status, 405); assert.equal(response.headers.get('allow'), allow);
+    assert.equal(state.reads.length, 2);
+  }
+});
+
 test('worker empty history is explicitly partial and records the owner request', async () => {
   reset(); const response = await worker.fetch(request(historyPath, { reasonCode: 'SUPPORT_REQUEST' }), env);
   assert.equal(response.status, 200); const body = await response.json();

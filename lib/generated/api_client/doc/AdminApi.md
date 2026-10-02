@@ -9,6 +9,9 @@ All URIs are relative to *https://api.lythaus.co/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**adminAccountSupportAccess**](AdminApi.md#adminaccountsupportaccess) | **GET** /admin/account-support/access | Check owner account-support access
+[**adminAccountSupportHistory**](AdminApi.md#adminaccountsupporthistory) | **POST** /admin/account-support/users/{userId}/history | Read partial recorded account history
+[**adminAccountSupportLookup**](AdminApi.md#adminaccountsupportlookup) | **POST** /admin/account-support/lookup | Read minimum account state by exact email
 [**adminAppealsAdjudicate**](AdminApi.md#adminappealsadjudicate) | **POST** /admin/appeals/{appealId}/adjudications | Record a trained editorial appeal adjudication
 [**adminAppealsPendingAdjudicationList**](AdminApi.md#adminappealspendingadjudicationlist) | **GET** /admin/appeals/pending-adjudication | List pending appeal adjudications
 [**adminAuthSummary**](AdminApi.md#adminauthsummary) | **GET** /admin/auth/summary | Read live authentication summary
@@ -52,6 +55,145 @@ Method | HTTP request | Description
 [**requestAdminAuthenticityPrivateAlphaAdvice**](AdminApi.md#requestadminauthenticityprivatealphaadvice) | **POST** /admin/authenticity/alpha/cases/{caseId}/advice | Request one bounded private alpha explanation
 [**reviewAdminAuthenticityPrivateAlphaCase**](AdminApi.md#reviewadminauthenticityprivatealphacase) | **POST** /admin/authenticity/alpha/cases/{caseId}/review | Record an administrator private alpha review
 
+
+# **adminAccountSupportAccess**
+> AccountSupportAccess adminAccountSupportAccess()
+
+Check owner account-support access
+
+Requires verified Cloudflare Access and an active owner membership joined to an active owner account. Returns no account records. Every lookup and history request checks authorization independently.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+
+try {
+    final response = api.adminAccountSupportAccess();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminAccountSupportAccess: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**AccountSupportAccess**](AccountSupportAccess.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminAccountSupportHistory**
+> AccountSupportHistoryResponse adminAccountSupportHistory(userId, accountSupportHistoryRequest)
+
+Read partial recorded account history
+
+Owner-only, audited read with an allowed Origin and a reason code. Unions recorded account, activity and target-user audit events. Returns safe event codes and timestamps, excluding metadata and private content. Identity account events have no recorded correlation IDs. Missing storage, query or audit evidence returns unavailable rather than an empty success. Filters and pagination are in a bounded JSON body; URL parameters are rejected. This operation changes only the support audit, not account state.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String userId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final AccountSupportHistoryRequest accountSupportHistoryRequest = {"reasonCode":"SUPPORT_REQUEST","order":"oldest","limit":25}; // AccountSupportHistoryRequest |
+
+try {
+    final response = api.adminAccountSupportHistory(userId, accountSupportHistoryRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminAccountSupportHistory: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **userId** | **String**|  |
+ **accountSupportHistoryRequest** | [**AccountSupportHistoryRequest**](AccountSupportHistoryRequest.md)|  |
+
+### Return type
+
+[**AccountSupportHistoryResponse**](AccountSupportHistoryResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminAccountSupportLookup**
+> AccountSupportLookupResponse adminAccountSupportLookup(accountSupportLookupRequest)
+
+Read minimum account state by exact email
+
+Owner-only read, using an exact trimmed and case-normalized email. Email is accepted only in a bounded JSON body, never a URL parameter. Requires an allowed Origin and a reason code. An audit must commit before disclosure. Ambiguous matches disclose no account state. Passwords, tokens, reset links, email values and private content are excluded. This operation changes only the support audit, not account state.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final AccountSupportLookupRequest accountSupportLookupRequest = {"email":"synthetic@example.invalid","reasonCode":"SUPPORT_REQUEST"}; // AccountSupportLookupRequest |
+
+try {
+    final response = api.adminAccountSupportLookup(accountSupportLookupRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminAccountSupportLookup: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **accountSupportLookupRequest** | [**AccountSupportLookupRequest**](AccountSupportLookupRequest.md)|  |
+
+### Return type
+
+[**AccountSupportLookupResponse**](AccountSupportLookupResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **adminAppealsAdjudicate**
 > AppealAdjudicationResponse adminAppealsAdjudicate(appealId, appealAdjudicationRequest)
