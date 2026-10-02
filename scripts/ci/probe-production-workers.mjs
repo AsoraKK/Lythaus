@@ -1,5 +1,7 @@
 import fs from 'node:fs';
+import { setTimeout } from 'node:timers/promises';
 import { approvedReleaseExpectation } from './product-integrity-schema-contract.mjs';
+import { parseProductionDeploymentState } from './resolve-production-version-state.mjs';
 
 const token = process.env.DATABASE_READINESS_TOKEN ?? '';
 const requireBudgetMigration = process.env.REQUIRE_BUDGET_MIGRATION === 'true';
@@ -21,6 +23,9 @@ const expectedPublicVersion = process.env.PUBLIC_WORKER_VERSION_ID ?? '';
 const accessClientId = process.env.CF_ACCESS_CLIENT_ID ?? '';
 const accessClientSecret = process.env.CF_ACCESS_CLIENT_SECRET ?? '';
 const outputPath = process.env.PRODUCTION_WORKER_EVIDENCE_PATH;
+const previousDeploymentPath = process.env.PRODUCTION_WORKER_PREVIOUS_DEPLOYMENT_PATH;
+const previousVersionsPath = process.env.PRODUCTION_WORKER_PREVIOUS_VERSIONS_PATH;
+const propagationDelays = [2_000, 4_000, 6_000, 8_000];
 
 function redact(value) {
   let text = String(value);
@@ -161,6 +166,59 @@ function assertDatabaseReport(report, worker, label) {
   }
 }
 
+function assertReadiness(body, target) {
+  if (target.worker === 'lythaus-admin-api-development'
+    && (body.emailBinding?.bindingVerified !== true || body.emailBinding?.publicWorkerVersion !== expectedPublicVersion)) {
+    throw new Error('Admin private email binding did not execute the exact Public candidate');
+  }
+  const reports = body.databases && typeof body.databases === 'object'
+    ? Object.entries(body.databases)
+    : [['primary', body]];
+  for (const [label, report] of reports) assertDatabaseReport(report, target.worker, label);
+  const primaryReport = reports[0]?.[1];
+  if (!primaryReport) throw new Error(`${target.worker} candidate probe returned no database report`);
+  if (body.branchFingerprint !== 'unknown') throw new Error(`${target.worker} top-level probe must not self-assert a branch`);
+  if (typeof body.readyForAuthentication !== 'boolean') throw new Error(`${target.worker} top-level authentication readiness is invalid`);
+  if (authenticatedAcceptanceProven && body.readyForAuthentication !== true) throw new Error(`${target.worker} top-level authentication readiness assertion is inconsistent`);
+  return { reports, primaryReport };
+}
+
+function previousServingVersions() {
+  if (!previousDeploymentPath && !previousVersionsPath) return [];
+  if (requestedWorker !== 'lythaus-admin-api-development' || !previousDeploymentPath || !previousVersionsPath) {
+    throw new Error('Admin propagation retries require both exact predeployment snapshot paths');
+  }
+  return parseProductionDeploymentState(
+    fs.readFileSync(previousDeploymentPath, 'utf8'),
+    fs.readFileSync(previousVersionsPath, 'utf8'),
+  ).serving;
+}
+
+async function fetchCandidateReadiness(base, target, previousVersions) {
+  for (let attempt = 1; ; attempt += 1) {
+    const body = await fetchJson(`${base}/internal/readiness/database-identity`, {
+      headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
+    }, target.worker);
+    const observation = evidence.requests.at(-1);
+    observation.attempt = attempt;
+    writeEvidence();
+    if (body.workerVersionId === expectedWorkerVersionId && body.releaseTag === expectedWorkerSourceSha) return body;
+    const previousVersion = target.worker === 'lythaus-admin-api-development'
+      && body.service === 'lythaus-admin-api'
+      && previousVersions.some(({ versionId, sourceSha }) => body.workerVersionId === versionId && body.releaseTag === sourceSha);
+    if (!previousVersion) throw new Error(`${target.worker} probe did not execute the exact reviewed Worker version`);
+    assertReadiness(body, target);
+    if (attempt > propagationDelays.length) {
+      throw new Error(`${target.worker} probe did not execute the exact reviewed Worker version after ${attempt} bounded propagation attempts`);
+    }
+    const delayMs = propagationDelays[attempt - 1];
+    observation.retry = { reason: 'known_predeployment_version', nextAttempt: attempt + 1, delayMs };
+    writeEvidence();
+    console.error(`${target.worker} observed the verified predeployment version on attempt ${attempt}; retrying the exact candidate in ${delayMs}ms`);
+    await setTimeout(delayMs);
+  }
+}
+
 const evidence = {
   status: 'pending',
   releaseSha,
@@ -178,6 +236,7 @@ const evidence = {
 };
 
 async function probeTargets() {
+  const previousVersions = previousServingVersions();
   for (const target of targets) {
     if (!target.probe) {
       evidence.workers.push({
@@ -195,25 +254,8 @@ async function probeTargets() {
     }
     const base = `${new URL(target.baseUrl).origin}${target.routePrefix}`;
     for (const path of target.anonymousPaths) await fetchJson(`${base}${path}`, {}, target.worker);
-    const body = await fetchJson(`${base}/internal/readiness/database-identity`, {
-      headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
-    }, target.worker);
-    if (body.workerVersionId !== expectedWorkerVersionId || body.releaseTag !== expectedWorkerSourceSha) {
-      throw new Error(`${target.worker} probe did not execute the exact reviewed Worker version`);
-    }
-    if (target.worker === 'lythaus-admin-api-development'
-      && (body.emailBinding?.bindingVerified !== true || body.emailBinding?.publicWorkerVersion !== expectedPublicVersion)) {
-      throw new Error('Admin private email binding did not execute the exact Public candidate');
-    }
-    const reports = body.databases && typeof body.databases === 'object'
-      ? Object.entries(body.databases)
-      : [['primary', body]];
-    for (const [label, report] of reports) assertDatabaseReport(report, target.worker, label);
-    const primaryReport = reports[0]?.[1];
-    if (!primaryReport) throw new Error(`${target.worker} candidate probe returned no database report`);
-    if (body.branchFingerprint !== 'unknown') throw new Error(`${target.worker} top-level probe must not self-assert a branch`);
-    if (typeof body.readyForAuthentication !== 'boolean') throw new Error(`${target.worker} top-level authentication readiness is invalid`);
-    if (authenticatedAcceptanceProven && body.readyForAuthentication !== true) throw new Error(`${target.worker} top-level authentication readiness assertion is inconsistent`);
+    const body = await fetchCandidateReadiness(base, target, previousVersions);
+    const { reports, primaryReport } = assertReadiness(body, target);
     evidence.workers.push({
       worker: target.worker,
       workerVersionId: body.workerVersionId,
