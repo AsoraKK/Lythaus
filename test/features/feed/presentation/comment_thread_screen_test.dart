@@ -41,7 +41,9 @@ DioException _networkError(String path) => DioException(
 
 Map<String, dynamic> _commentJson(String id) => {
   'id': id,
-  'text': 'Comment $id',
+  'body': 'Comment $id',
+  'declaredCreationMode': 'human',
+  'moderationState': 'allowed',
   'authorId': 'user-$id',
   'authorUsername': 'user$id',
   'avatarUrl': null,
@@ -288,7 +290,11 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => Response<Map<String, dynamic>>(
-          data: {'comment': _commentJson('new1')},
+          data: {
+            ..._commentJson('new1'),
+            'body': 'Hello world',
+            'moderationState': 'under_review',
+          },
           statusCode: 201,
           requestOptions: RequestOptions(path: '/comments'),
         ),
@@ -298,6 +304,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField), 'Hello world');
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Human-authored'));
       await tester.pump();
 
       final sendBtn = find.byIcon(Icons.send);
@@ -313,6 +320,14 @@ void main() {
           options: any(named: 'options'),
         ),
       ).called(1);
+      expect(
+        find.text('Under review. Publication checks are pending.'),
+        findsOneWidget,
+      );
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        isEmpty,
+      );
     });
 
     testWidgets('sign-in snackbar shown when no jwt token', (tester) async {
@@ -380,6 +395,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField), 'Hello world');
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Human-authored'));
       await tester.pump();
       await tester.tap(find.byIcon(Icons.send));
       await tester.pumpAndSettle();

@@ -94,6 +94,32 @@ void main() {
 
   group('_ContentBlockedBanner', () {
     for (final dark in [false, true]) {
+      testWidgets(
+        'Your post label remains within the 390x900 scroll viewport, dark=$dark',
+        (tester) async {
+          tester.view.physicalSize = const Size(390, 900);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          await tester.pumpWidget(
+            buildWithState(
+              const PostCreationState(),
+              user: _testUser(),
+              theme: dark ? LythausTheme.dark() : LythausTheme.light(),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final label = tester.getRect(find.text('Your post'));
+          final viewport = tester.getRect(
+            find.byType(SingleChildScrollView).first,
+          );
+          expect(label.top, greaterThanOrEqualTo(viewport.top));
+          expect(label.bottom, lessThan(viewport.bottom));
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+    for (final dark in [false, true]) {
       testWidgets('composer reflows at 320 pixels and 200% text, dark=$dark', (
         tester,
       ) async {

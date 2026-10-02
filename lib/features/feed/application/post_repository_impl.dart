@@ -16,6 +16,7 @@ import 'package:lythaus/core/error/error_codes.dart';
 import 'package:lythaus/core/network/idempotency_key.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/feed/domain/models.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
 
 /// Post repository implementation using Dio HTTP client
 class PostRepositoryImpl implements PostRepository {
@@ -38,14 +39,16 @@ class PostRepositoryImpl implements PostRepository {
             options: Options(
               headers: {
                 'Authorization': 'Bearer $token',
-                'Idempotency-Key': IdempotencyKey.create('post-create'),
+                'Idempotency-Key':
+                    request.idempotencyKey ??
+                    IdempotencyKey.create('post-create'),
               },
             ),
           );
 
           if (response.statusCode == 201) {
             debugPrint('✅ Post created successfully');
-            final data = response.data as Map<String, dynamic>;
+            final data = contentResponsePayload(response.data);
             return CreatePostSuccess(_parsePost(data));
           }
 
@@ -53,6 +56,7 @@ class PostRepositoryImpl implements PostRepository {
           return CreatePostError(
             message: 'Unexpected response status: ${response.statusCode}',
             code: 'unexpected_status',
+            outcomeUncertain: true,
           );
         } on DioException catch (e) {
           return _handleDioError(e);
@@ -61,6 +65,7 @@ class PostRepositoryImpl implements PostRepository {
           return CreatePostError(
             message: 'Failed to create post: ${e.toString()}',
             originalError: e,
+            outcomeUncertain: true,
           );
         }
       },
@@ -88,7 +93,8 @@ class PostRepositoryImpl implements PostRepository {
       );
     }
 
-    final idempotencyKey = IdempotencyKey.create('post-update');
+    final idempotencyKey =
+        request.idempotencyKey ?? IdempotencyKey.create('post-update');
 
     return LythausTracer.traceOperation(
       'PostRepository.updatePost',
@@ -106,14 +112,19 @@ class PostRepositoryImpl implements PostRepository {
           );
 
           if (response.statusCode == 200) {
-            final data = response.data as Map<String, dynamic>;
-            final postData = data['post'] as Map<String, dynamic>? ?? data;
+            final postData = contentResponsePayload(response.data);
+            if (postData['id'] != postId) {
+              throw const ContentMutationFailure(
+                'The update response was incomplete.',
+              );
+            }
             return CreatePostSuccess(_parsePost(postData));
           }
 
           return CreatePostError(
             message: 'Unexpected response status: ${response.statusCode}',
             code: 'unexpected_status',
+            outcomeUncertain: true,
           );
         } on DioException catch (e) {
           return _handleDioError(e);
@@ -121,6 +132,7 @@ class PostRepositoryImpl implements PostRepository {
           return CreatePostError(
             message: 'Failed to update post: ${e.toString()}',
             originalError: e,
+            outcomeUncertain: true,
           );
         }
       },
@@ -139,8 +151,9 @@ class PostRepositoryImpl implements PostRepository {
   Future<bool> deletePost({
     required String postId,
     required String token,
+    String? idempotencyKey,
   }) async {
-    final idempotencyKey = IdempotencyKey.create('post-delete');
+    final replayKey = idempotencyKey ?? IdempotencyKey.create('post-delete');
 
     return LythausTracer.traceOperation(
       'PostRepository.deletePost',
@@ -151,7 +164,7 @@ class PostRepositoryImpl implements PostRepository {
             options: Options(
               headers: {
                 'Authorization': 'Bearer $token',
-                'Idempotency-Key': idempotencyKey,
+                'Idempotency-Key': replayKey,
               },
             ),
           );
@@ -159,7 +172,10 @@ class PostRepositoryImpl implements PostRepository {
           if (response.statusCode == 200) {
             final data = response.data;
             if (data is Map<String, dynamic>) {
-              return data['postId'] == postId && data['deleted'] == true;
+              if (data['postId'] != postId || data['deleted'] is! bool) {
+                return false;
+              }
+              return data['deleted'] == true;
             }
             return false;
           }
@@ -170,7 +186,11 @@ class PostRepositoryImpl implements PostRepository {
           );
         } on DioException catch (e) {
           final message = _extractErrorMessage(e);
-          throw PostException(message, code: 'network_error', originalError: e);
+          throw PostException(
+            message,
+            code: contentErrorCode(e.response?.data) ?? 'network_error',
+            originalError: e,
+          );
         }
       },
       attributes: LythausTracer.httpRequestAttributes(
@@ -231,12 +251,23 @@ class PostRepositoryImpl implements PostRepository {
         message: 'Network error: ${e.message}',
         code: 'network_error',
         originalError: e,
+        outcomeUncertain: true,
       );
     }
 
     final statusCode = response.statusCode;
     final payload = _errorPayload(e);
-    final code = payload?['code'] as String?;
+    final code = contentErrorCode(response.data);
+    if ((statusCode != null && statusCode >= 500) ||
+        (code?.startsWith('idempotency_') ?? false)) {
+      final failure = contentMutationFailure(e);
+      return CreatePostError(
+        message: failure.message,
+        code: code ?? 'api_error',
+        originalError: e,
+        outcomeUncertain: true,
+      );
+    }
     final message =
         payload?['message'] as String? ??
         payload?['error'] as String? ??
@@ -347,6 +378,11 @@ class PostRepositoryImpl implements PostRepository {
 
   /// Parse post from JSON response
   Post _parsePost(Map<String, dynamic> json) {
+    if (json['id'] is! String || (json['id'] as String).isEmpty) {
+      throw const ContentMutationFailure(
+        'The submission response was incomplete.',
+      );
+    }
     return Post.fromJson(json);
   }
 }

@@ -219,6 +219,7 @@ void main() {
       expect(result, isA<CreatePostError>());
       final err = result as CreatePostError;
       expect(err.code, 'api_error');
+      expect(err.outcomeUncertain, isTrue);
     });
 
     test('error payload in nested error object', () async {

@@ -101,7 +101,12 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
                   userId: user.id,
                 );
           }
-          LythSnackbar.success(context: context, message: 'Posted to Lythaus');
+          LythSnackbar.success(
+            context: context,
+            message: state.successResult?.post.moderationState == 'allowed'
+                ? 'Posted to Lythaus'
+                : 'Post submitted. Publication checks are pending.',
+          );
           notifier.reset();
           Navigator.of(context).maybePop();
         }
@@ -113,6 +118,10 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
   Widget build(BuildContext context) {
     final state = ref.watch(postCreationProvider);
     final canCreate = ref.watch(canCreatePostProvider);
+    final canEdit =
+        canCreate &&
+        !state.isSubmitting &&
+        state.errorResult?.outcomeUncertain != true;
     final notifier = ref.read(postCreationProvider.notifier);
     final spacing = context.spacing;
 
@@ -126,168 +135,180 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
       }
     });
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(spacing.lg),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Create',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          SizedBox(height: spacing.lg),
-          Wrap(
-            spacing: spacing.xs,
-            children: ContentType.values
-                .where((type) => type != ContentType.mixed)
-                .map((type) {
-                  final selected = selectedType == type;
-                  return ChoiceChip(
-                    label: Text(_label(type)),
-                    selected: selected,
-                    onSelected: (_) {
-                      setState(() => selectedType = type);
-                      notifier.setContentType(type.name);
-                    },
-                  );
-                })
-                .toList(),
-          ),
-          SizedBox(height: spacing.lg),
-          LythTextField(
-            controller: controller,
-            onChanged: notifier.updateText,
-            maxLines: 4,
-            label: 'Your post',
-            placeholder: 'Share an update...',
-            errorText: state.validationError,
-          ),
-          SizedBox(height: spacing.md),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Authorship disclosure (required)',
-              style: Theme.of(context).textTheme.labelLarge,
+    return PopScope(
+      canPop: !state.isSubmitting,
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(spacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Create',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
-          ),
-          SizedBox(height: spacing.xs),
-          Wrap(
-            spacing: spacing.xs,
-            runSpacing: spacing.xs,
-            children: [
-              ChoiceChip(
-                label: const Text('Human-authored'),
-                selected: state.aiLabel == 'human',
-                onSelected: (_) => notifier.setAiLabel('human'),
+            SizedBox(height: spacing.lg),
+            Wrap(
+              spacing: spacing.xs,
+              children: ContentType.values
+                  .where((type) => type != ContentType.mixed)
+                  .map((type) {
+                    final selected = selectedType == type;
+                    return ChoiceChip(
+                      label: Text(_label(type)),
+                      selected: selected,
+                      onSelected: !canEdit
+                          ? null
+                          : (_) {
+                              setState(() => selectedType = type);
+                              notifier.setContentType(type.name);
+                            },
+                    );
+                  })
+                  .toList(),
+            ),
+            SizedBox(height: spacing.lg),
+            LythTextField(
+              controller: controller,
+              disabled: !canEdit,
+              onChanged: notifier.updateText,
+              maxLines: 4,
+              label: 'Your post',
+              placeholder: 'Share an update...',
+              errorText: state.validationError,
+            ),
+            SizedBox(height: spacing.md),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Authorship disclosure (required)',
+                style: Theme.of(context).textTheme.labelLarge,
               ),
-              ChoiceChip(
-                label: const Text('AI-assisted'),
-                selected: state.aiLabel == 'assisted',
-                onSelected: (_) => notifier.setAiLabel('assisted'),
-              ),
-            ],
-          ),
-          if (state.aiLabel == 'assisted') ...[
+            ),
             SizedBox(height: spacing.xs),
-            Semantics(
-              liveRegion: true,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '${state.userPerceivedTextLength}/'
-                  '$aiAssistedPublicTextMaxGraphemes user-perceived '
-                  'characters for AI-assisted public text',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color:
-                        state.userPerceivedTextLength >
-                            aiAssistedPublicTextMaxGraphemes
-                        ? Theme.of(context).colorScheme.error
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ),
-          ],
-          SizedBox(height: spacing.lg),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: LythButton.tertiary(
-              label: 'Add media',
-              icon: Icons.attach_file_outlined,
-              onPressed: _openMediaPicker,
-            ),
-          ),
-          SizedBox(height: spacing.xs),
-          if (state.mediaUrl != null)
             Wrap(
               spacing: spacing.xs,
               runSpacing: spacing.xs,
               children: [
-                LythChip.input(
-                  label: state.mediaUrl!,
-                  onDeleted: () => notifier.updateMediaUrl(null),
+                ChoiceChip(
+                  label: const Text('Human-authored'),
+                  selected: state.aiLabel == 'human',
+                  onSelected: canEdit
+                      ? (_) => notifier.setAiLabel('human')
+                      : null,
+                ),
+                ChoiceChip(
+                  label: const Text('AI-assisted'),
+                  selected: state.aiLabel == 'assisted',
+                  onSelected: canEdit
+                      ? (_) => notifier.setAiLabel('assisted')
+                      : null,
                 ),
               ],
             ),
-          if (widget.canMarkNews) ...[
-            SizedBox(height: spacing.sm),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('This is News'),
-              subtitle: const Text(
-                'Only Editorial Contributors can mark as news',
-              ),
-              value: isNews,
-              onChanged: (value) {
-                setState(() => isNews = value);
-                notifier.setIsNews(value);
-              },
-            ),
-          ],
-          if (state.hasError &&
-              state.errorResult != null &&
-              state.errorResult?.code != ErrorCodes.deviceIntegrityBlocked)
-            Padding(
-              padding: EdgeInsets.only(top: spacing.sm),
-              child: Text(
-                state.errorResult!.message,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.error,
-                ),
-              ),
-            ),
-          SizedBox(height: spacing.lg),
-          Row(
-            children: [
-              Expanded(
-                child: LythButton.secondary(
-                  label: 'Cancel',
-                  onPressed: state.isSubmitting
-                      ? null
-                      : () => Navigator.of(context).maybePop(),
-                ),
-              ),
-              SizedBox(width: spacing.md),
-              Expanded(
-                child: Tooltip(
-                  key: _policyTooltipKey,
-                  message: _policyReminderMessage,
-                  triggerMode: TooltipTriggerMode.manual,
-                  showDuration: const Duration(seconds: 6),
-                  child: LythButton.primary(
-                    label: canCreate ? 'Post' : 'Sign in first',
-                    onPressed: state.isSubmitting || !canCreate
-                        ? null
-                        : _handleSubmit,
-                    isLoading: state.isSubmitting,
+            if (state.aiLabel == 'assisted') ...[
+              SizedBox(height: spacing.xs),
+              Semantics(
+                liveRegion: true,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${state.userPerceivedTextLength}/'
+                    '$aiAssistedPublicTextMaxGraphemes user-perceived '
+                    'characters for AI-assisted public text',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color:
+                          state.userPerceivedTextLength >
+                              aiAssistedPublicTextMaxGraphemes
+                          ? Theme.of(context).colorScheme.error
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ),
             ],
-          ),
-        ],
+            SizedBox(height: spacing.lg),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: LythButton.tertiary(
+                label: 'Add media',
+                icon: Icons.attach_file_outlined,
+                onPressed: canEdit ? _openMediaPicker : null,
+              ),
+            ),
+            SizedBox(height: spacing.xs),
+            if (state.mediaUrl != null)
+              Wrap(
+                spacing: spacing.xs,
+                runSpacing: spacing.xs,
+                children: [
+                  LythChip.input(
+                    label: state.mediaUrl!,
+                    onDeleted: () => notifier.updateMediaUrl(null),
+                  ),
+                ],
+              ),
+            if (widget.canMarkNews) ...[
+              SizedBox(height: spacing.sm),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('This is News'),
+                subtitle: const Text(
+                  'Only Editorial Contributors can mark as news',
+                ),
+                value: isNews,
+                onChanged: !canEdit
+                    ? null
+                    : (value) {
+                        setState(() => isNews = value);
+                        notifier.setIsNews(value);
+                      },
+              ),
+            ],
+            if (state.hasError &&
+                state.errorResult != null &&
+                state.errorResult?.code != ErrorCodes.deviceIntegrityBlocked)
+              Padding(
+                padding: EdgeInsets.only(top: spacing.sm),
+                child: Text(
+                  state.errorResult!.message,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ),
+            SizedBox(height: spacing.lg),
+            Row(
+              children: [
+                Expanded(
+                  child: LythButton.secondary(
+                    label: 'Cancel',
+                    onPressed: state.isSubmitting
+                        ? null
+                        : () => Navigator.of(context).maybePop(),
+                  ),
+                ),
+                SizedBox(width: spacing.md),
+                Expanded(
+                  child: Tooltip(
+                    key: _policyTooltipKey,
+                    message: _policyReminderMessage,
+                    triggerMode: TooltipTriggerMode.manual,
+                    showDuration: const Duration(seconds: 6),
+                    child: LythButton.primary(
+                      label: canCreate ? 'Post' : 'Sign in first',
+                      onPressed: state.isSubmitting || !canCreate
+                          ? null
+                          : _handleSubmit,
+                      isLoading: state.isSubmitting,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -14,6 +14,8 @@ import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/feed/application/post_repository_impl.dart';
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
+import 'package:lythaus/state/providers/feed_providers.dart' as live;
 
 /// Provider for the post repository implementation
 final postRepositoryProvider = Provider<PostRepository>((ref) {
@@ -124,9 +126,12 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
   PostCreationNotifier(this._ref) : super(const PostCreationState());
 
   final Ref _ref;
+  bool get _canEdit =>
+      !state.isSubmitting && state.errorResult?.outcomeUncertain != true;
 
   /// Update the post text
   void updateText(String text) {
+    if (!_canEdit) return;
     String? validationError;
 
     if (text.isEmpty) {
@@ -149,14 +154,17 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
   }
 
   void setIsNews(bool value) {
+    if (!_canEdit) return;
     state = state.copyWith(isNews: value, clearResult: true);
   }
 
   void setContentType(String value) {
+    if (!_canEdit) return;
     state = state.copyWith(contentType: value, clearResult: true);
   }
 
   void setAiLabel(String value) {
+    if (!_canEdit) return;
     final normalizedValue = value.trim().toLowerCase();
     if (!isSupportedPublicAuthorshipLabel(normalizedValue)) {
       state = state.copyWith(
@@ -181,6 +189,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
   }
 
   void updateCaptureMetadataHash(String? value) {
+    if (!_canEdit) return;
     state = state.copyWith(
       proofSignals: ProofSignals(
         captureMetadataHash: value,
@@ -192,6 +201,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
   }
 
   void updateEditHistoryHash(String? value) {
+    if (!_canEdit) return;
     state = state.copyWith(
       proofSignals: ProofSignals(
         captureMetadataHash: state.proofSignals.captureMetadataHash,
@@ -203,6 +213,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
   }
 
   void updateSourceAttestationUrl(String? value) {
+    if (!_canEdit) return;
     state = state.copyWith(
       proofSignals: ProofSignals(
         captureMetadataHash: state.proofSignals.captureMetadataHash,
@@ -215,6 +226,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
 
   /// Update the media URL
   void updateMediaUrl(String? url) {
+    if (!_canEdit) return;
     state = state.copyWith(
       mediaUrl: url,
       clearMediaUrl: url == null || url.isEmpty,
@@ -243,6 +255,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
 
   /// Submit the post
   Future<bool> submit() async {
+    if (state.isSubmitting || state.isSuccess) return false;
     // Validate first
     final validationError = validate();
     if (validationError != null) {
@@ -250,19 +263,10 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
       return false;
     }
 
-    // Get auth token
-    final token = await _ref.read(jwtProvider.future);
-    if (token == null) {
-      state = state.copyWith(
-        result: const CreatePostError(
-          message: 'Please sign in to create a post',
-          code: 'auth_required',
-        ),
-      );
-      return false;
-    }
-
-    // Set submitting state
+    final draft = state;
+    final actor = _ref.read(currentUserProvider)?.id ?? 'session';
+    final registry = _ref.read(contentMutationRegistryProvider);
+    ContentMutationAttempt? attempt;
     state = state.copyWith(
       isSubmitting: true,
       clearResult: true,
@@ -270,20 +274,47 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
     );
 
     try {
+      final token = await _ref.read(jwtProvider.future);
+      if (!mounted) return false;
+      if (token == null ||
+          token.isEmpty ||
+          (_ref.read(currentUserProvider)?.id ?? 'session') != actor) {
+        state = state.copyWith(
+          isSubmitting: false,
+          result: const CreatePostError(
+            message: 'Please sign in to create a post',
+            code: 'auth_required',
+          ),
+        );
+        return false;
+      }
       final repository = _ref.read(postRepositoryProvider);
-
+      final request = CreatePostRequest(
+        text: draft.text.trim(),
+        mediaUrl: draft.mediaUrl,
+        isNews: draft.isNews,
+        contentType: draft.contentType,
+        aiLabel: draft.aiLabel!,
+        proofSignals: draft.proofSignals,
+      );
+      attempt = registry.begin('post-create:$actor', request.toJson());
       final result = await repository.createPost(
         request: CreatePostRequest(
-          text: state.text.trim(),
-          mediaUrl: state.mediaUrl,
-          isNews: state.isNews,
-          contentType: state.contentType,
-          aiLabel: state.aiLabel!,
-          proofSignals: state.proofSignals,
+          text: request.text,
+          mediaUrl: request.mediaUrl,
+          isNews: request.isNews,
+          contentType: request.contentType,
+          aiLabel: request.aiLabel,
+          proofSignals: request.proofSignals,
+          idempotencyKey: attempt.key,
         ),
         token: token,
       );
-
+      registry.finish(
+        attempt,
+        uncertain: result is CreatePostError && result.outcomeUncertain,
+      );
+      if (!mounted) return false;
       state = state.copyWith(isSubmitting: false, result: result);
 
       // If successful, refresh feeds
@@ -294,11 +325,18 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
 
       return false;
     } catch (e) {
+      final failure = contentMutationFailure(e);
+      if (attempt != null) {
+        registry.finish(attempt, uncertain: failure.uncertain);
+      }
+      if (!mounted) return false;
       state = state.copyWith(
         isSubmitting: false,
         result: CreatePostError(
-          message: 'Failed to create post: ${e.toString()}',
+          message: failure.message,
           originalError: e,
+          code: failure.code,
+          outcomeUncertain: failure.uncertain,
         ),
       );
       return false;
@@ -307,6 +345,8 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
 
   /// Refresh all feed providers to show the new post
   void _refreshFeeds() {
+    _ref.invalidate(live.liveFeedStateProvider);
+    _ref.invalidate(live.liveFeedItemsProvider);
     // Invalidate general feed (all active instances via family)
     _ref.invalidate(feedProvider);
 
@@ -319,11 +359,13 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
 
   /// Reset the form to initial state
   void reset() {
+    if (!_canEdit) return;
     state = const PostCreationState();
   }
 
   /// Clear any error state
   void clearError() {
+    if (!_canEdit) return;
     state = state.copyWith(clearResult: true, clearValidationError: true);
   }
 }

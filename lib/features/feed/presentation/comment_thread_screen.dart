@@ -8,6 +8,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lythaus/core/error/error_codes.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
+import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/presentation/content_editor_screen.dart';
 
 class CommentThreadScreen extends ConsumerStatefulWidget {
   const CommentThreadScreen({
@@ -34,12 +38,34 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   bool _isInitialLoading = true;
   bool _isLoadingMore = false;
   bool _isSubmitting = false;
+  bool _confirmingDeletion = false;
   String? _errorMessage;
   _ThreadComment? _replyTarget;
+  String? _pendingParentId;
+  String? _aiLabel;
+  bool _locked = false;
+  int _loadEpoch = 0;
+  late final String _actor;
+  late final String _createScope;
+  Future<void> Function()? _retryAction;
+  final _locallySubmitted = <String>{};
 
   @override
   void initState() {
     super.initState();
+    _actor = ref.read(currentUserProvider)?.id ?? 'session';
+    _createScope = 'comment-create:$_actor:${widget.postId}';
+    final pending = ref
+        .read(contentMutationRegistryProvider)
+        .pending(_createScope);
+    if (pending != null) {
+      _composerController.text = pending.payload['body'] as String? ?? '';
+      _aiLabel = pending.payload['declaredCreationMode'] == 'ai_assisted'
+          ? 'assisted'
+          : 'human';
+      _pendingParentId = pending.payload['parentId'] as String?;
+      _locked = true;
+    }
     _scrollController.addListener(_onScroll);
     Future<void>.microtask(_loadInitial);
   }
@@ -55,6 +81,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
 
   void _onScroll() {
     if (_isLoadingMore ||
+        _isInitialLoading ||
         _nextCursor == null ||
         !_scrollController.hasClients) {
       return;
@@ -67,15 +94,25 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   }
 
   Future<void> _loadInitial() async {
+    if (!mounted || _isSubmitting) return;
+    final epoch = ++_loadEpoch;
     setState(() {
       _isInitialLoading = true;
       _errorMessage = null;
+      _isLoadingMore = false;
     });
 
     try {
       final page = await _fetchComments();
+      if (!mounted || epoch != _loadEpoch) return;
+      _locallySubmitted.removeAll(page.items.map((comment) => comment.id));
       setState(() {
-        _comments = page.items;
+        _comments = _mergeComments(
+          page.items,
+          _comments
+              .where((comment) => _locallySubmitted.contains(comment.id))
+              .toList(),
+        );
         _nextCursor = page.nextCursor;
         _isInitialLoading = false;
       });
@@ -83,23 +120,28 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _highlightInitialCommentIfNeeded();
       });
     } on DioException catch (error) {
+      if (!mounted || epoch != _loadEpoch) return;
       setState(() {
         _isInitialLoading = false;
         _errorMessage = _messageForCommentsFailure(error);
+        _retryAction = _loadInitial;
       });
     } catch (_) {
+      if (!mounted || epoch != _loadEpoch) return;
       setState(() {
         _isInitialLoading = false;
         _errorMessage = 'Unable to load comments right now.';
+        _retryAction = _loadInitial;
       });
     }
   }
 
   Future<void> _loadMore() async {
     final cursor = _nextCursor;
-    if (cursor == null || _isLoadingMore) {
+    if (cursor == null || _isLoadingMore || _isInitialLoading || !mounted) {
       return;
     }
+    final epoch = _loadEpoch;
 
     setState(() {
       _isLoadingMore = true;
@@ -108,20 +150,25 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
 
     try {
       final page = await _fetchComments(cursor: cursor);
+      if (!mounted || epoch != _loadEpoch) return;
       setState(() {
-        _comments = [..._comments, ...page.items];
-        _nextCursor = page.nextCursor;
+        _comments = _mergeComments(_comments, page.items);
+        _nextCursor = page.nextCursor == cursor ? null : page.nextCursor;
         _isLoadingMore = false;
       });
     } on DioException catch (error) {
+      if (!mounted || epoch != _loadEpoch) return;
       setState(() {
         _isLoadingMore = false;
         _errorMessage = _messageForCommentsFailure(error);
+        _retryAction = _loadMore;
       });
     } catch (_) {
+      if (!mounted || epoch != _loadEpoch) return;
       setState(() {
         _isLoadingMore = false;
         _errorMessage = 'Unable to load more comments right now.';
+        _retryAction = _loadMore;
       });
     }
   }
@@ -137,8 +184,11 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       ),
     );
 
-    final data = response.data ?? const <String, dynamic>{};
+    final data = contentResponsePayload(response.data);
     final rawItems = data['items'] ?? data['comments'];
+    if (rawItems is! List) {
+      throw const FormatException('Invalid comments response');
+    }
     final items =
         (rawItems as List<dynamic>?)
             ?.whereType<Map<String, dynamic>>()
@@ -159,72 +209,257 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
 
   Future<void> _submitComment() async {
     final rawText = _composerController.text.trim();
-    if (rawText.isEmpty || _isSubmitting) {
+    if (rawText.isEmpty || _isSubmitting || _confirmingDeletion) {
       return;
     }
 
-    final token = await ref.read(jwtProvider.future);
-    if (token == null || token.isEmpty) {
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Sign in to comment.')));
-      return;
-    }
-
-    final finalText = _withReplyPrefix(rawText, _replyTarget);
-
+    final label = _aiLabel;
+    final parentId = _pendingParentId ?? _replyTarget?.id;
+    final registry = ref.read(contentMutationRegistryProvider);
+    final dio = ref.read(secureDioProvider);
+    final tokenFuture = ref.read(jwtProvider.future);
+    ContentMutationAttempt? attempt;
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
     });
 
     try {
-      final dio = ref.read(secureDioProvider);
+      final token = await tokenFuture;
+      if (!mounted) return;
+      if (token == null ||
+          token.isEmpty ||
+          (ref.read(currentUserProvider)?.id ?? 'session') != _actor) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Sign in to comment.')));
+        return;
+      }
+      final validation = rawText.length > postTextMaxLength
+          ? 'Comment is too long.'
+          : validatePublicPostAuthorship(text: rawText, aiLabel: label);
+      if (validation != null) {
+        throw ContentMutationFailure(validation, uncertain: false);
+      }
+      final body = {
+        'body': rawText,
+        'declaredCreationMode': label == 'assisted' ? 'ai_assisted' : 'human',
+        if (parentId != null) 'parentId': parentId,
+      };
+      attempt = registry.begin(_createScope, body);
       final response = await dio.post<Map<String, dynamic>>(
         '/api/posts/${widget.postId}/comments',
-        data: {'text': finalText},
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
+        data: body,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Idempotency-Key': attempt.key,
+          },
+        ),
       );
 
-      final payload = response.data ?? const <String, dynamic>{};
-      final rawComment = payload['comment'];
-      final created = rawComment is Map<String, dynamic>
-          ? _ThreadComment.fromJson(rawComment)
-          : null;
-
+      final payload = contentResponsePayload(response.data);
+      if (payload['id'] is! String ||
+          (payload['id'] as String).isEmpty ||
+          payload['body'] is! String ||
+          (payload['body'] as String).isEmpty ||
+          payload['declaredCreationMode'] != body['declaredCreationMode'] ||
+          payload['parentId'] != parentId ||
+          payload['moderationState'] is! String) {
+        throw const ContentMutationFailure(
+          'The comment outcome is unknown. Retry to check the same submission.',
+        );
+      }
+      final created = _ThreadComment.fromJson({
+        'postId': widget.postId,
+        'authorId': _actor == 'session' ? '' : _actor,
+        'createdAt': DateTime.now().toIso8601String(),
+        ...payload,
+      });
+      registry.finish(attempt);
+      if (!mounted) return;
       setState(() {
         _isSubmitting = false;
         _composerController.clear();
         _replyTarget = null;
-        if (created != null) {
-          _comments = [created, ..._comments];
-        }
+        _pendingParentId = null;
+        _aiLabel = null;
+        _locked = false;
+        _locallySubmitted.add(created.id);
+        _comments = _mergeComments(_comments, [created]);
       });
-    } on DioException catch (error) {
+    } catch (error) {
+      final failure = contentMutationFailure(error);
+      if (attempt != null) {
+        registry.finish(attempt, uncertain: failure.uncertain);
+      }
+      if (!mounted) return;
       setState(() {
         _isSubmitting = false;
-        _errorMessage = _messageForCreateFailure(error);
-      });
-    } catch (_) {
-      setState(() {
-        _isSubmitting = false;
-        _errorMessage = 'Unable to post comment right now.';
+        _locked = registry.pending(_createScope) != null;
+        _errorMessage = failure.message;
+        _retryAction = _submitComment;
       });
     }
   }
 
-  String _withReplyPrefix(String text, _ThreadComment? replyTarget) {
-    if (replyTarget == null) {
-      return text;
+  List<_ThreadComment> _mergeComments(
+    List<_ThreadComment> existing,
+    List<_ThreadComment> added,
+  ) {
+    return {
+      for (final comment in existing) comment.id: comment,
+      for (final comment in added) comment.id: comment,
+    }.values.toList();
+  }
+
+  bool _isOwner(_ThreadComment comment) {
+    final actor = ref.read(currentUserProvider)?.id;
+    return !comment.deleted &&
+        actor != null &&
+        actor.isNotEmpty &&
+        actor == comment.authorId;
+  }
+
+  Future<void> _editComment(_ThreadComment comment) async {
+    if (_isSubmitting || _confirmingDeletion || !_isOwner(comment)) return;
+    final revised = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        builder: (_) => ContentEditorScreen(
+          contentId: comment.id,
+          text: comment.text,
+          isComment: true,
+        ),
+      ),
+    );
+    if (!mounted || revised == null) return;
+    final updated = _ThreadComment.fromJson({
+      'id': comment.id,
+      'postId': widget.postId,
+      'authorId': comment.authorId,
+      'authorUsername': comment.authorUsername,
+      'createdAt': comment.createdAt.toIso8601String(),
+      'parentId': comment.parentCommentId,
+      ...revised,
+    });
+    setState(() {
+      _comments = _mergeComments(_comments, [updated]);
+      _locallySubmitted.add(updated.id);
+    });
+  }
+
+  Future<void> _deleteComment(_ThreadComment comment, {bool ask = true}) async {
+    if (_isSubmitting || _confirmingDeletion || !_isOwner(comment)) return;
+    final actor = ref.read(currentUserProvider)!.id;
+    final registry = ref.read(contentMutationRegistryProvider);
+    final dio = ref.read(secureDioProvider);
+    ContentMutationAttempt? attempt;
+    setState(() {
+      _confirmingDeletion = true;
+      _errorMessage = null;
+    });
+    try {
+      if (ask) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Delete comment?'),
+            content: const Text(
+              'A deleted placeholder may remain to preserve replies.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        );
+        if (!mounted) return;
+        if (confirmed != true) {
+          setState(() => _confirmingDeletion = false);
+          return;
+        }
+      }
+      setState(() {
+        _confirmingDeletion = false;
+        _isSubmitting = true;
+      });
+      final token = await ref.read(jwtProvider.future);
+      if (!mounted) return;
+      if (token == null ||
+          token.isEmpty ||
+          ref.read(currentUserProvider)?.id != actor) {
+        throw const ContentMutationFailure(
+          'Sign in as the author to delete this comment.',
+          uncertain: false,
+        );
+      }
+      attempt = registry.begin('comment:$actor:${comment.id}', {
+        'method': 'DELETE',
+      });
+      final response = await dio.delete<Map<String, dynamic>>(
+        '/api/comments/${comment.id}',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Idempotency-Key': attempt.key,
+          },
+        ),
+      );
+      final payload = contentResponsePayload(response.data);
+      if (payload['commentId'] != comment.id || payload['deleted'] != true) {
+        throw const ContentMutationFailure(
+          'Deletion was not confirmed. Retry to check the same deletion.',
+        );
+      }
+      registry.finish(attempt);
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+        _comments = _comments.where((item) => item.id != comment.id).toList();
+        _locallySubmitted.remove(comment.id);
+        if (_replyTarget?.id == comment.id) _replyTarget = null;
+      });
+    } catch (error) {
+      final failure = contentMutationFailure(error);
+      if (attempt != null) {
+        registry.finish(attempt, uncertain: failure.uncertain);
+      }
+      if (!mounted) return;
+      setState(() {
+        _confirmingDeletion = false;
+        _isSubmitting = false;
+        _errorMessage = failure.message;
+        _retryAction = () => _deleteComment(comment, ask: false);
+      });
     }
-    final mention = '@${replyTarget.authorUsername}';
-    if (text.startsWith(mention)) {
-      return text;
-    }
-    return '$mention $text';
+  }
+
+  Future<void> _handleBack() async {
+    if (_isSubmitting) return;
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Discard comment?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep editing'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
+    );
+    if (mounted && discard == true) Navigator.of(context).pop();
   }
 
   String _messageForCommentsFailure(DioException error) {
@@ -233,12 +468,16 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     String? message;
 
     if (data is Map<String, dynamic>) {
-      code = (data['code'] ?? (data['error'] as Map?)?['code']) as String?;
+      code = contentErrorCode(data);
       message =
-          (data['message'] ?? (data['error'] as Map?)?['message']) as String?;
+          (data['message'] ??
+                  (data['error'] is Map
+                      ? (data['error'] as Map)['message']
+                      : null))
+              as String?;
     }
 
-    if (code == 'POST_NOT_FOUND') {
+    if (code == 'POST_NOT_FOUND' || code == 'post_not_found') {
       return 'This post is unavailable.';
     }
     if (code == ErrorCodes.deviceIntegrityBlocked) {
@@ -246,38 +485,6 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     }
 
     return message ?? 'Unable to load comments right now.';
-  }
-
-  String _messageForCreateFailure(DioException error) {
-    final data = error.response?.data;
-    String? code;
-    String? message;
-
-    if (data is Map<String, dynamic>) {
-      code = (data['code'] ?? (data['error'] as Map?)?['code']) as String?;
-      message =
-          (data['message'] ?? (data['error'] as Map?)?['message']) as String?;
-    }
-
-    if (code == ErrorCodes.deviceIntegrityBlocked) {
-      return ErrorMessages.forCode(ErrorCodes.deviceIntegrityBlocked);
-    }
-    if (code == 'CONTENT_BLOCKED' || code == 'content_blocked') {
-      return 'This comment appears to conflict with policy and was not posted.';
-    }
-    if (code == 'DAILY_COMMENT_LIMIT_EXCEEDED' ||
-        code == 'daily_comment_limit_exceeded') {
-      return 'You have reached your daily comment limit. Please try again tomorrow.';
-    }
-    if (error.response?.statusCode == 429) {
-      return 'Too many comments. Please wait before trying again.';
-    }
-    if (error.response?.statusCode == 401 ||
-        error.response?.statusCode == 403) {
-      return 'Sign in to comment.';
-    }
-
-    return message ?? 'Unable to post comment.';
   }
 
   void _highlightInitialCommentIfNeeded() {
@@ -296,33 +503,51 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ReadingPane(
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Comments')),
-        body: Column(
-          children: [
-            if (_errorMessage != null)
-              MaterialBanner(
-                content: Text(_errorMessage!),
-                actions: [
-                  TextButton(
-                    onPressed: _loadInitial,
-                    child: const Text('Retry'),
-                  ),
-                ],
+    ref.watch(currentUserProvider);
+    return PopScope(
+      canPop:
+          !_isSubmitting &&
+          !_confirmingDeletion &&
+          (_composerController.text.isEmpty || _locked),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _handleBack();
+      },
+      child: ReadingPane(
+        child: Scaffold(
+          appBar: AppBar(title: const Text('Comments')),
+          body: Column(
+            children: [
+              if (_errorMessage != null)
+                MaterialBanner(
+                  content: Text(_errorMessage!),
+                  actions: [
+                    TextButton(
+                      onPressed: _isSubmitting
+                          ? null
+                          : () => _retryAction?.call(),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              Expanded(child: _buildCommentList()),
+              _ComposerBar(
+                controller: _composerController,
+                replyTarget: _replyTarget,
+                isSubmitting: _isSubmitting,
+                locked: _locked,
+                aiLabel: _aiLabel,
+                composerFocusNode: _composerFocusNode,
+                onCancelReply: () => setState(() {
+                  if (!_isSubmitting && !_locked) _replyTarget = null;
+                }),
+                onChanged: () => setState(() {}),
+                onDisclosureChanged: (label) => setState(() {
+                  _aiLabel = label;
+                }),
+                onSend: _submitComment,
               ),
-            Expanded(child: _buildCommentList()),
-            _ComposerBar(
-              controller: _composerController,
-              replyTarget: _replyTarget,
-              isSubmitting: _isSubmitting,
-              composerFocusNode: _composerFocusNode,
-              onCancelReply: () => setState(() {
-                _replyTarget = null;
-              }),
-              onSend: _submitComment,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -365,12 +590,24 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
           return _CommentTile(
             comment: comment,
             highlighted: isHighlighted,
-            onReply: () {
-              setState(() {
-                _replyTarget = comment;
-              });
-              _composerFocusNode.requestFocus();
-            },
+            onEdit: _isOwner(comment) && !_isSubmitting
+                ? () => _editComment(comment)
+                : null,
+            onDelete: _isOwner(comment) && !_isSubmitting
+                ? () => _deleteComment(comment)
+                : null,
+            onReply:
+                comment.deleted ||
+                    comment.parentCommentId != null ||
+                    _isSubmitting ||
+                    _locked
+                ? null
+                : () {
+                    setState(() {
+                      _replyTarget = comment;
+                    });
+                    _composerFocusNode.requestFocus();
+                  },
           );
         },
       ),
@@ -383,17 +620,25 @@ class _ComposerBar extends StatelessWidget {
     required this.controller,
     required this.replyTarget,
     required this.isSubmitting,
+    required this.locked,
+    required this.aiLabel,
     required this.composerFocusNode,
     required this.onCancelReply,
     required this.onSend,
+    required this.onChanged,
+    required this.onDisclosureChanged,
   });
 
   final TextEditingController controller;
   final _ThreadComment? replyTarget;
   final bool isSubmitting;
+  final bool locked;
+  final String? aiLabel;
   final FocusNode composerFocusNode;
   final VoidCallback onCancelReply;
   final VoidCallback onSend;
+  final VoidCallback onChanged;
+  final ValueChanged<String> onDisclosureChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -420,7 +665,7 @@ class _ComposerBar extends StatelessWidget {
                   ),
                   IconButton(
                     tooltip: 'Cancel reply',
-                    onPressed: onCancelReply,
+                    onPressed: isSubmitting || locked ? null : onCancelReply,
                     icon: const Icon(Icons.close, size: 18),
                   ),
                 ],
@@ -433,6 +678,8 @@ class _ComposerBar extends StatelessWidget {
                     focusNode: composerFocusNode,
                     minLines: 1,
                     maxLines: 4,
+                    enabled: !isSubmitting && !locked,
+                    onChanged: (_) => onChanged(),
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => onSend(),
                     decoration: const InputDecoration(
@@ -443,7 +690,7 @@ class _ComposerBar extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Tooltip(
-                  message: 'Send reply',
+                  message: locked ? 'Retry same comment' : 'Send reply',
                   child: FilledButton(
                     onPressed: isSubmitting ? null : onSend,
                     child: isSubmitting
@@ -452,6 +699,8 @@ class _ComposerBar extends StatelessWidget {
                             height: 14,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
+                        : locked
+                        ? const Text('Retry same comment')
                         : const Icon(
                             Icons.send,
                             size: 18,
@@ -460,6 +709,33 @@ class _ComposerBar extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 8),
+            if (locked)
+              const Text(
+                'The previous submission is awaiting confirmation. Retry checks the same submission.',
+              ),
+            Wrap(
+              spacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Human-authored'),
+                  selected: aiLabel == 'human',
+                  onSelected: isSubmitting || locked
+                      ? null
+                      : (_) => onDisclosureChanged('human'),
+                ),
+                ChoiceChip(
+                  label: const Text('AI-assisted'),
+                  selected: aiLabel == 'assisted',
+                  onSelected: isSubmitting || locked
+                      ? null
+                      : (_) => onDisclosureChanged('assisted'),
+                ),
+              ],
+            ),
+            const Text(
+              'AI-generated public content is not allowed. AI-assisted text is limited to 249 user-perceived characters.',
             ),
           ],
         ),
@@ -473,11 +749,15 @@ class _CommentTile extends StatelessWidget {
     required this.comment,
     required this.highlighted,
     required this.onReply,
+    this.onEdit,
+    this.onDelete,
   });
 
   final _ThreadComment comment;
   final bool highlighted;
-  final VoidCallback onReply;
+  final VoidCallback? onReply;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -500,28 +780,54 @@ class _CommentTile extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(
-                '@${comment.authorUsername}',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+              Expanded(
+                child: Text(
+                  '@${comment.authorUsername}',
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
               const SizedBox(width: 8),
               Text(
                 _timeAgo(comment.createdAt),
                 style: Theme.of(context).textTheme.labelSmall,
               ),
-              const Spacer(),
-              TextButton(
-                onPressed: onReply,
-                style: TextButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                ),
-                child: const Text('Reply'),
-              ),
             ],
           ),
           Text(comment.text, style: Theme.of(context).textTheme.bodyMedium),
+          if (comment.moderationState == 'under_review')
+            const Text('Under review. Publication checks are pending.'),
+          if (!comment.deleted && comment.declaredCreationMode != null)
+            Text(
+              comment.declaredCreationMode == 'ai_assisted'
+                  ? 'AI-assisted'
+                  : 'Human-authored',
+            ),
+          Wrap(
+            spacing: 8,
+            children: [
+              if (onReply != null)
+                TextButton(
+                  onPressed: onReply,
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child: const Text('Reply'),
+                ),
+              if (onEdit != null)
+                TextButton(
+                  onPressed: onEdit,
+                  child: const Text('Edit comment'),
+                ),
+              if (onDelete != null)
+                TextButton(
+                  onPressed: onDelete,
+                  child: const Text('Delete comment'),
+                ),
+            ],
+          ),
         ],
       ),
     );
@@ -552,6 +858,9 @@ class _ThreadComment {
     required this.text,
     required this.createdAt,
     this.parentCommentId,
+    this.declaredCreationMode,
+    this.moderationState,
+    this.deleted = false,
   });
 
   final String id;
@@ -561,6 +870,9 @@ class _ThreadComment {
   final String text;
   final DateTime createdAt;
   final String? parentCommentId;
+  final String? declaredCreationMode;
+  final String? moderationState;
+  final bool deleted;
 
   factory _ThreadComment.fromJson(Map<String, dynamic> json) {
     final id =
@@ -591,9 +903,14 @@ class _ThreadComment {
       postId: (json['postId'] as String?) ?? '',
       authorId: authorId,
       authorUsername: userFromPayload ?? fallbackUsername(authorId),
-      text: (json['text'] as String?) ?? '',
+      text: json['deleted'] == true
+          ? '[deleted]'
+          : (json['body'] ?? json['text']) as String? ?? '',
       createdAt: DateTime.tryParse(createdAtRaw) ?? DateTime.now(),
-      parentCommentId: json['parentCommentId'] as String?,
+      parentCommentId: (json['parentId'] ?? json['parentCommentId']) as String?,
+      declaredCreationMode: json['declaredCreationMode'] as String?,
+      moderationState: json['moderationState'] as String?,
+      deleted: json['deleted'] == true,
     );
   }
 }

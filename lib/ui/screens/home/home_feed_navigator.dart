@@ -6,8 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
-import 'package:lythaus/features/feed/application/post_creation_providers.dart';
-import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/feed/presentation/content_editor_screen.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/state/models/feed_models.dart';
@@ -518,84 +517,24 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
     WidgetRef ref,
     FeedItem item,
   ) async {
-    final token = await ref.read(jwtProvider.future);
-    if (token == null || token.isEmpty) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Sign in to edit your post.')),
-        );
-      }
-      return;
-    }
-
-    final controller = TextEditingController(text: item.body);
-    final submitted = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit post'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLines: 6,
-          minLines: 3,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            hintText: 'Update your post text',
-          ),
+    final actor = ref.read(currentUserProvider)?.id;
+    if (actor == null || actor.isEmpty || actor != item.authorId) return;
+    final revised = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        builder: (_) =>
+            ContentEditorScreen(contentId: item.id, text: item.body),
+      ),
+    );
+    if (!context.mounted || revised == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          revised['moderationState'] == 'under_review'
+              ? 'Edit submitted. Publication checks are pending.'
+              : 'Post updated',
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
-    controller.dispose();
-
-    final updatedText = submitted?.trim();
-    if (updatedText == null ||
-        updatedText.isEmpty ||
-        updatedText == item.body.trim()) {
-      return;
-    }
-
-    final repository = ref.read(postRepositoryProvider);
-    final result = await repository.updatePost(
-      postId: item.id,
-      request: UpdatePostRequest(
-        text: updatedText,
-        aiLabel: item.authorshipLabel == 'AI-assisted' ? 'assisted' : 'human',
-      ),
-      token: token,
-    );
-
-    if (!context.mounted) {
-      return;
-    }
-
-    switch (result) {
-      case CreatePostSuccess():
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Post updated')));
-        await ref.read(liveFeedStateProvider(widget.feed).notifier).refresh();
-      case CreatePostBlocked(:final message):
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
-      case CreatePostLimitExceeded(:final message):
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
-      case CreatePostError(:final message):
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
-    }
+    await ref.read(liveFeedStateProvider(widget.feed).notifier).refresh();
   }
 }

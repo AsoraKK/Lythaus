@@ -552,6 +552,7 @@ void main() {
       );
       expect(result, isA<CreatePostError>());
       expect((result as CreatePostError).code, 'api_error');
+      expect(result.outcomeUncertain, isTrue);
     });
 
     test('400 validation error', () async {
