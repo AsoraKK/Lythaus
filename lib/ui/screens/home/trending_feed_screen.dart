@@ -7,8 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 import 'package:lythaus/design_system/components/lyth_empty_state.dart';
 import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
-import 'package:lythaus/features/feed/domain/models.dart' as domain;
-import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/state/models/post_feed_item_mapper.dart';
 import 'package:lythaus/ui/components/feed_card.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 
@@ -42,7 +41,11 @@ class TrendingFeedScreen extends ConsumerWidget {
                       bottom: Spacing.xl,
                     ),
                     itemBuilder: (context, index) {
-                      final item = _mapPost(feed.posts[index]);
+                      final item = mapPostToFeedItem(
+                        feed.posts[index],
+                        feedId: 'trending',
+                        fallbackTitle: 'Update',
+                      );
                       return FeedCard(
                         item: item,
                         onTap: () => Navigator.of(context).push(
@@ -71,31 +74,6 @@ class TrendingFeedScreen extends ConsumerWidget {
           ),
         ),
       ),
-    );
-  }
-
-  FeedItem _mapPost(domain.Post post) {
-    final type = (post.mediaUrls?.isNotEmpty ?? false)
-        ? ContentType.image
-        : ContentType.text;
-    return FeedItem(
-      id: post.id,
-      feedId: 'trending',
-      author: post.authorUsername,
-      sourceName: post.source?.name,
-      sourceUrl: post.source?.url,
-      contentType: type,
-      title: post.metadata?.category ?? 'Update',
-      body: post.text,
-      imageUrl: post.mediaUrls?.isNotEmpty == true
-          ? post.mediaUrls!.first
-          : null,
-      publishedAt: post.createdAt,
-      tags: post.metadata?.tags ?? const [],
-      isNews: post.isNews,
-      isPinned: post.metadata?.isPinned ?? false,
-      authorshipLabel: post.authorship.label.label,
-      classificationSource: post.authorship.classificationSource,
     );
   }
 }

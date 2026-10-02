@@ -7,8 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 import 'package:lythaus/design_system/components/lyth_empty_state.dart';
 import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
-import 'package:lythaus/features/feed/domain/models.dart' as domain;
-import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/state/models/post_feed_item_mapper.dart';
 import 'package:lythaus/ui/components/feed_card.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 
@@ -91,7 +90,11 @@ class _FeedSearchScreenState extends ConsumerState<FeedSearchScreen> {
                             bottom: Spacing.xl,
                           ),
                           itemBuilder: (context, index) {
-                            final item = _mapPost(feed.posts[index]);
+                            final item = mapPostToFeedItem(
+                              feed.posts[index],
+                              feedId: 'search',
+                              fallbackTitle: 'Result',
+                            );
                             return FeedCard(
                               item: item,
                               onTap: () => Navigator.of(context).push(
@@ -130,31 +133,6 @@ class _FeedSearchScreenState extends ConsumerState<FeedSearchScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  FeedItem _mapPost(domain.Post post) {
-    final type = (post.mediaUrls?.isNotEmpty ?? false)
-        ? ContentType.image
-        : ContentType.text;
-    return FeedItem(
-      id: post.id,
-      feedId: 'search',
-      author: post.authorUsername,
-      sourceName: post.source?.name,
-      sourceUrl: post.source?.url,
-      contentType: type,
-      title: post.metadata?.category ?? 'Result',
-      body: post.text,
-      imageUrl: post.mediaUrls?.isNotEmpty == true
-          ? post.mediaUrls!.first
-          : null,
-      publishedAt: post.createdAt,
-      tags: post.metadata?.tags ?? const [],
-      isNews: post.isNews,
-      isPinned: post.metadata?.isPinned ?? false,
-      authorshipLabel: post.authorship.label.label,
-      classificationSource: post.authorship.classificationSource,
     );
   }
 }
