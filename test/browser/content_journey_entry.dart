@@ -14,6 +14,8 @@ import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/application/post_repository_impl.dart';
+import 'package:lythaus/features/feed/application/social_feed_providers.dart';
+import 'package:lythaus/features/feed/application/social_feed_service.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
 import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
 import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
@@ -125,7 +127,22 @@ void main() {
         postRepositoryProvider.overrideWithValue(PostRepositoryImpl(dio)),
         analyticsClientProvider.overrideWithValue(const NullAnalyticsClient()),
         feedListProvider.overrideWithValue(const [discover]),
-        liveFeedStateProvider.overrideWith((ref, feed) => FixtureFeed(dio)),
+        if (Uri.base.queryParameters['scenario'] == 'appeal')
+          socialFeedServiceProvider.overrideWithValue(
+            SocialFeedService(
+              Dio(
+                BaseOptions(
+                  baseUrl: '${Uri.base.origin}/api',
+                  headers: dio.options.headers,
+                ),
+              ),
+            ),
+          ),
+        liveFeedStateProvider.overrideWith(
+          (ref, feed) => Uri.base.queryParameters['scenario'] == 'appeal'
+              ? LiveFeedNotifier(ref, feed)
+              : FixtureFeed(dio),
+        ),
       ],
       child: const FixtureApp(),
     ),

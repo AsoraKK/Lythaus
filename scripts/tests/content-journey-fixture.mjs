@@ -17,6 +17,11 @@ export function contentFixture() {
     const state=cases.get(caseId),method=request.method;
     const actor=request.headers.authorization?.replace(/^Bearer synthetic-/,'') ?? 'guest';
     const scenario=request.headers['x-synthetic-scenario'] ?? '';
+    if(scenario==='appeal') Object.assign(state.posts[0],{
+      authorUsername:'owner', trustStatus:'under_appeal', hasAppeal:true,
+      timeline:{created:'complete',mediaChecked:'none',moderation:'warn',appeal:'open'},
+      proofSignalsProvided:true,verifiedContextBadgeEligible:false,featuredEligible:false,
+    });
     let text=''; for await(const part of request) { text+=part; assert.ok(text.length<32768); }
     const body=text ? JSON.parse(text) : {};
     const key=request.headers['idempotency-key'] ?? '';

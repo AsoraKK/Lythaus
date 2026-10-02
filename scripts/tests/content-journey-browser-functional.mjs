@@ -235,6 +235,18 @@ try {
     result.checks.push('Discover renders source-backed card','Feed owner action uses shared declared editor','Successful pending edit refreshes public feed');
     await screenshot(page,result,'discover-edit-pending');
   });
+  await run('appeal-trust-status',{width:390,theme:'light',scenario:'appeal'},async(page,result)=>{
+    await button(page,'Open Discover').click();
+    await content(page,'Synthetic published post').waitFor();
+    await content(page,'Under appeal').waitFor();
+    await content(page,'Moderation: warn').waitFor();
+    await content(page,'Appeal: open').waitFor();
+    assert.equal(await content(page,'No extra signals').count(),0);
+    assert.equal(await content(page,'Moderation: none').count(),0);
+    assert.equal(result.writes.length,0);
+    result.checks.push('Actual social feed service and notifier retain parsed trust metadata','Unresolved moderation and open appeal remain visible','No default no-extra-signals approval or content write');
+    await screenshot(page,result,'appeal-trust-status');
+  });
 } finally {
   await runtime.close();
   const failures = reports.filter(r=>r.status==='failed');

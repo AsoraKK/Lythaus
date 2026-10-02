@@ -50,6 +50,9 @@ responses determine ownership and moderation state. A pending declaration
 never becomes a confirmed public authorship label. Pending post edits clear
 previous verification badges. New comments on pending posts and replies to
 pending comments wait for publication; owner edit and delete remain available.
+Feed mapping preserves server trust status, the complete timeline, appeal and
+proof/eligibility flags. An open appeal cannot fall back to "No extra signals"
+or "Moderation: none" while passing from parsed posts to feed cards.
 A deletion whose response
 was lost remains explicitly unconfirmed and can replay its saved key even when
 the body is no longer readable.

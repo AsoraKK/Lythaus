@@ -485,6 +485,19 @@ FeedItem _mapPostToFeedItem(domain.Post post) {
     tags: post.metadata?.tags ?? const [],
     isNews: post.isNews,
     isPinned: post.metadata?.isPinned ?? false,
+    trustSummary: FeedTrustSummary(
+      trustStatus: post.trustStatus,
+      timeline: FeedTrustTimeline(
+        created: post.timeline.created,
+        mediaChecked: post.timeline.mediaChecked,
+        moderation: post.timeline.moderation,
+        appeal: post.timeline.appeal,
+      ),
+      hasAppeal: post.hasAppeal,
+      proofSignalsProvided: post.proofSignalsProvided,
+      verifiedContextBadgeEligible: post.verifiedContextBadgeEligible,
+      featuredEligible: post.featuredEligible,
+    ),
     authorshipLabel: post.authorship.label.label,
     classificationSource: post.authorship.classificationSource,
   );
