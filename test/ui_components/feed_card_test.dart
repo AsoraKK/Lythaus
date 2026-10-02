@@ -71,7 +71,7 @@ void main() {
     },
   );
 
-  testWidgets('renders text content label and tags without media', (
+  testWidgets('keeps text content prominent without repeated metadata boxes', (
     tester,
   ) async {
     final feedItem = FeedItem(
@@ -96,8 +96,11 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Text'), findsOneWidget);
-    expect(find.text('update'), findsOneWidget);
+    expect(find.text('Short text body'), findsOneWidget);
+    expect(find.text('Authorship: Under review'), findsOneWidget);
+    expect(find.text('Text'), findsNothing);
+    expect(find.text('update'), findsNothing);
+    expect(find.text('Plain update'), findsNothing);
     expect(find.byType(Image), findsNothing);
   });
 
@@ -154,6 +157,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Source: Reuters'), findsOneWidget);
+    expect(find.text('News headline'), findsOneWidget);
     expect(find.text('Reporter Name'), findsOneWidget);
     expect(find.byIcon(Icons.link), findsOneWidget);
   });
