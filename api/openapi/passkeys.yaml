@@ -18,6 +18,7 @@
           }
         ],
         "responses": {
+          "503": { "$ref": "#/components/responses/PasskeyUnavailable" },
           "200": {
             "description": "Successful optional passkey operation; Cache-Control: no-store.",
             "content": {
@@ -93,6 +94,8 @@
           }
         ],
         "responses": {
+          "413": { "$ref": "#/components/responses/PasskeyTooLarge" },
+          "503": { "$ref": "#/components/responses/PasskeyUnavailable" },
           "200": {
             "description": "Successful optional passkey operation; Cache-Control: no-store.",
             "content": {
@@ -178,6 +181,8 @@
           }
         ],
         "responses": {
+          "413": { "$ref": "#/components/responses/PasskeyTooLarge" },
+          "503": { "$ref": "#/components/responses/PasskeyUnavailable" },
           "200": {
             "description": "Successful optional passkey operation; Cache-Control: no-store.",
             "content": {
@@ -259,6 +264,8 @@
           }
         ],
         "responses": {
+          "413": { "$ref": "#/components/responses/PasskeyTooLarge" },
+          "503": { "$ref": "#/components/responses/PasskeyUnavailable" },
           "200": {
             "description": "Successful optional passkey operation; Cache-Control: no-store.",
             "content": {
@@ -340,6 +347,8 @@
           }
         ],
         "responses": {
+          "413": { "$ref": "#/components/responses/PasskeyTooLarge" },
+          "503": { "$ref": "#/components/responses/PasskeyUnavailable" },
           "200": {
             "description": "Successful optional passkey operation; Cache-Control: no-store.",
             "content": {
@@ -425,6 +434,8 @@
           }
         ],
         "responses": {
+          "413": { "$ref": "#/components/responses/PasskeyTooLarge" },
+          "503": { "$ref": "#/components/responses/PasskeyUnavailable" },
           "200": {
             "description": "Successful optional passkey operation; Cache-Control: no-store.",
             "content": {
@@ -510,6 +521,8 @@
           }
         ],
         "responses": {
+          "413": { "$ref": "#/components/responses/PasskeyTooLarge" },
+          "503": { "$ref": "#/components/responses/PasskeyUnavailable" },
           "200": {
             "description": "Successful optional passkey operation; Cache-Control: no-store.",
             "content": {
@@ -595,6 +608,7 @@
           }
         ],
         "responses": {
+          "503": { "$ref": "#/components/responses/PasskeyUnavailable" },
           "200": {
             "description": "Successful optional passkey operation; Cache-Control: no-store.",
             "content": {
@@ -673,6 +687,8 @@
           }
         ],
         "responses": {
+          "413": { "$ref": "#/components/responses/PasskeyTooLarge" },
+          "503": { "$ref": "#/components/responses/PasskeyUnavailable" },
           "200": {
             "description": "Successful optional passkey operation; Cache-Control: no-store.",
             "content": {
@@ -761,6 +777,8 @@
           }
         ],
         "responses": {
+          "413": { "$ref": "#/components/responses/PasskeyTooLarge" },
+          "503": { "$ref": "#/components/responses/PasskeyUnavailable" },
           "200": {
             "description": "Successful optional passkey operation; Cache-Control: no-store.",
             "content": {
@@ -826,6 +844,24 @@
     }
   },
   "components": {
+    "responses": {
+      "PasskeyTooLarge": {
+        "description": "Request body exceeds the 32 KiB ceremony/management limit (request_too_large).",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/PasskeyError" }
+          }
+        }
+      },
+      "PasskeyUnavailable": {
+        "description": "Passkey or session-issuance configuration is unavailable (passkeys_not_configured or authentication_not_configured).",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/PasskeyError" }
+          }
+        }
+      }
+    },
     "parameters": {
       "PasskeyOrigin": {
         "in": "header",

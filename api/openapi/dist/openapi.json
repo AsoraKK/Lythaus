@@ -3463,6 +3463,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "$ref": "#/components/responses/PasskeyUnavailable"
           }
         }
       }
@@ -3529,6 +3532,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PasskeyTooLarge"
+          },
           "429": {
             "description": "Request or account rate limit exceeded.",
             "content": {
@@ -3538,6 +3544,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "$ref": "#/components/responses/PasskeyUnavailable"
           }
         },
         "requestBody": {
@@ -3614,6 +3623,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PasskeyTooLarge"
+          },
           "429": {
             "description": "Request or account rate limit exceeded.",
             "content": {
@@ -3623,6 +3635,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "$ref": "#/components/responses/PasskeyUnavailable"
           }
         },
         "requestBody": {
@@ -3695,6 +3710,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PasskeyTooLarge"
+          },
           "429": {
             "description": "Request or account rate limit exceeded.",
             "content": {
@@ -3704,6 +3722,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "$ref": "#/components/responses/PasskeyUnavailable"
           }
         },
         "requestBody": {
@@ -3776,6 +3797,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PasskeyTooLarge"
+          },
           "429": {
             "description": "Request or account rate limit exceeded.",
             "content": {
@@ -3785,6 +3809,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "$ref": "#/components/responses/PasskeyUnavailable"
           }
         },
         "requestBody": {
@@ -3861,6 +3888,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PasskeyTooLarge"
+          },
           "429": {
             "description": "Request or account rate limit exceeded.",
             "content": {
@@ -3870,6 +3900,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "$ref": "#/components/responses/PasskeyUnavailable"
           }
         },
         "requestBody": {
@@ -3946,6 +3979,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PasskeyTooLarge"
+          },
           "429": {
             "description": "Request or account rate limit exceeded.",
             "content": {
@@ -3955,6 +3991,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "$ref": "#/components/responses/PasskeyUnavailable"
           }
         },
         "requestBody": {
@@ -4040,6 +4079,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "$ref": "#/components/responses/PasskeyUnavailable"
           }
         }
       }
@@ -4109,6 +4151,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PasskeyTooLarge"
+          },
           "429": {
             "description": "Request or account rate limit exceeded.",
             "content": {
@@ -4118,6 +4163,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "$ref": "#/components/responses/PasskeyUnavailable"
           }
         },
         "requestBody": {
@@ -4197,6 +4245,9 @@
               }
             }
           },
+          "413": {
+            "$ref": "#/components/responses/PasskeyTooLarge"
+          },
           "429": {
             "description": "Request or account rate limit exceeded.",
             "content": {
@@ -4206,6 +4257,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "$ref": "#/components/responses/PasskeyUnavailable"
           }
         },
         "requestBody": {
@@ -17092,6 +17146,26 @@
                   "correlationId": "01K1LYTHAUSIDEMPOTENCY0003"
                 }
               }
+            }
+          }
+        }
+      },
+      "PasskeyUnavailable": {
+        "description": "Passkey or session-issuance configuration is unavailable (passkeys_not_configured or authentication_not_configured).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/PasskeyError"
+            }
+          }
+        }
+      },
+      "PasskeyTooLarge": {
+        "description": "Request body exceeds the 32 KiB ceremony/management limit (request_too_large).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/PasskeyError"
             }
           }
         }

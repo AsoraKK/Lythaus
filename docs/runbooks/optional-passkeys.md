@@ -22,6 +22,12 @@ origins in existing `CORS_ALLOWED_ORIGINS`. RP IDs are restricted to `lythaus.co
 or its subdomains; each allowed origin must belong to that RP boundary. Choose
 the RP ID before enrolling credentials: changing it does not migrate keys.
 
+Feature-off disables passkey ceremonies and credential management and hides
+the optional PWA entry points. Installed-schema Jobs export, inventory,
+erasure and expired-challenge retention remain operative, as does the recovery
+trigger. Those privacy safeguards do not depend on feature activation; their
+absent-schema behavior is a no-op. This PR applies no production schema or grants.
+
 `database/planetscale/proposals/optional-passkeys.sql` is an **unnumbered proposal**,
 tested only against disposable local PostgreSQL 17. The parent must reconcile
 the current canonical migration sequence and other lanes before assigning its
