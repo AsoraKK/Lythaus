@@ -52,6 +52,7 @@ const PUBLIC_ERROR_CODES = new Set([
   'invalid_display_name', 'invalid_email', 'invalid_flag', 'invalid_follow',
   'invalid_consent_version', 'invalid_auth_mode', 'invalid_session_transport', 'auth_origin_not_allowed',
   'password_compromised', 'password_screening_unavailable', 'password_setup_required',
+  'passkey_invalid', 'passkeys_not_configured', 'invalid_passkey_name', 'passkey_limit_reached',
   'invalid_geo_scope', 'invalid_idempotency_key', 'invalid_json', 'invalid_mute',
   'invalid_notification_device', 'invalid_page_limit', 'invalid_password', 'invalid_post',
   'invalid_post_visibility', 'invalid_privacy_request', 'invalid_profile_visibility',
@@ -80,7 +81,7 @@ export function classifyPublicError(error: unknown): { exposedCode: string; inte
     || /^email_delivery_failed_[1-5][0-9]{2}$/.test(internalCode);
   const exposedCode = expected ? internalCode : 'request_failed';
   const status = exposedCode === 'request_failed' ? 500
-    : ['authentication_required', 'invalid_credentials', 'refresh_token_invalid', 'refresh_token_reuse'].includes(exposedCode) ? 401
+    : ['authentication_required', 'invalid_credentials', 'refresh_token_invalid', 'refresh_token_reuse', 'passkey_invalid'].includes(exposedCode) ? 401
       : ['news_board_not_entitled', 'social_interaction_not_allowed', 'appeal_vote_not_allowed', 'appeal_recusal_not_allowed', 'auth_origin_not_allowed'].includes(exposedCode) ? 403
         : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
           : exposedCode === 'method_not_allowed' ? 405

@@ -15,6 +15,9 @@ import 'package:lythaus/features/auth/domain/auth_failure.dart';
 import 'package:lythaus/features/auth/domain/password_policy.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/auth/application/session_platform.dart';
+import 'package:lythaus/features/auth/application/passkey_platform.dart';
+
+part 'passkey_service.dart';
 
 class AuthService {
   AuthService({
@@ -24,12 +27,14 @@ class AuthService {
     String authUrl = _defaultAuthUrl,
     Duration requestTimeout = const Duration(seconds: 20),
     bool useWebSession = kIsWeb,
+    PasskeyPlatform? passkeyPlatform,
   }) : _secureStorage = secureStorage ?? const FlutterSecureStorage(),
        _localAuth = localAuth ?? LocalAuthentication(),
        _httpClient = httpClient ?? createSessionClient(),
        _authUrl = _resolveAuthUrl(authUrl),
        _requestTimeout = requestTimeout,
-       _useWebSession = useWebSession;
+       _useWebSession = useWebSession,
+       _passkeyPlatform = passkeyPlatform ?? createPasskeyPlatform();
 
   final FlutterSecureStorage _secureStorage;
   final LocalAuthentication _localAuth;
@@ -37,6 +42,7 @@ class AuthService {
   final String _authUrl;
   final Duration _requestTimeout;
   final bool _useWebSession;
+  final PasskeyPlatform _passkeyPlatform;
   String? _memoryAccessToken;
   Future<void> _storageWrites = Future.value();
   Future<bool>? _refreshInFlight;
@@ -129,21 +135,7 @@ class AuthService {
         throw AuthFailure.serverError(_errorMessage(response));
       }
       final payload = _payload(response);
-      final accessToken =
-          payload['accessToken'] as String? ??
-          payload['access_token'] as String?;
-      final refreshToken =
-          payload['refreshToken'] as String? ??
-          payload['refresh_token'] as String?;
-      if (accessToken == null ||
-          (!_useWebSession && refreshToken == null) ||
-          (_useWebSession && payload['sessionTransport'] != 'cookie-v1')) {
-        throw AuthFailure.serverError('Authentication response is incomplete');
-      }
-      final user = await _fetchCurrentUser(accessToken);
-      if (epoch != _sessionEpoch) throw AuthFailure.cancelledByUser();
-      await _storeSession(epoch, accessToken, refreshToken, user);
-      return user;
+      return await _acceptSession(payload, epoch);
     } on AuthFailure {
       rethrow;
     } on TimeoutException {
@@ -153,6 +145,23 @@ class AuthService {
     } catch (_) {
       throw AuthFailure.serverError('Unable to sign in. Please try again.');
     }
+  }
+
+  Future<User> _acceptSession(Map<String, dynamic> payload, int epoch) async {
+    final accessToken =
+        payload['accessToken'] as String? ?? payload['access_token'] as String?;
+    final refreshToken =
+        payload['refreshToken'] as String? ??
+        payload['refresh_token'] as String?;
+    if (accessToken == null ||
+        (!_useWebSession && refreshToken == null) ||
+        (_useWebSession && payload['sessionTransport'] != 'cookie-v1')) {
+      throw AuthFailure.serverError('Authentication response is incomplete');
+    }
+    final user = await _fetchCurrentUser(accessToken);
+    if (epoch != _sessionEpoch) throw AuthFailure.cancelledByUser();
+    await _storeSession(epoch, accessToken, refreshToken, user);
+    return user;
   }
 
   /// Request another verification email without revealing account state.

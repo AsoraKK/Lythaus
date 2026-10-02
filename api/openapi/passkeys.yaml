@@ -1,0 +1,1203 @@
+{
+  "paths": {
+    "/auth/passkeys/capabilities": {
+      "get": {
+        "operationId": "passkeyCapabilities",
+        "summary": "Check optional passkey availability",
+        "description": "Disabled by default. Returns enabled:false without schema access when the feature flag is off. Browser support is checked locally.",
+        "tags": [
+          "Passkeys"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PasskeyOrigin"
+          },
+          {
+            "$ref": "#/components/parameters/PasskeyTransport"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful optional passkey operation; Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyCapability"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Disabled feature or invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credential, challenge, password, ownership or current account/session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin or browser transport is not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request or account rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys/register/options": {
+      "post": {
+        "operationId": "passkeyRegisterOptions",
+        "summary": "Start passkey register",
+        "description": "Five-minute, single-use challenge with exact origin and RP binding. Enrollment requires current password and a verified email account. Authenticated ceremonies are bound to the current access token and account token version. Anonymous login sets an HttpOnly Secure SameSite=Strict ceremony binding cookie. User verification is required; enrollment uses discoverable credentials and attestation:none.",
+        "tags": [
+          "Passkeys"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PasskeyOrigin"
+          },
+          {
+            "$ref": "#/components/parameters/PasskeyTransport"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful optional passkey operation; Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyChallenge"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Disabled feature or invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credential, challenge, password, ownership or current account/session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin or browser transport is not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request or account rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyRegisterOptionsRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys/register/verify": {
+      "post": {
+        "operationId": "passkeyRegisterVerify",
+        "summary": "Verify passkey register",
+        "description": "Verifies the SimpleWebAuthn credential response, exact challenge/origin/RP, user verification and ownership. Challenges are consumed atomically before cryptographic verification, including failed attempts. Login requires the ceremony binding cookie and returns a standard session with the refresh token only in an HttpOnly cookie. Maintenance records at most one shared zero-point evidence event per owner/policy/UTC month. No reward weights are activated.",
+        "tags": [
+          "Passkeys"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PasskeyOrigin"
+          },
+          {
+            "$ref": "#/components/parameters/PasskeyTransport"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful optional passkey operation; Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyEnrollment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Disabled feature or invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credential, challenge, password, ownership or current account/session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin or browser transport is not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request or account rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyCeremonyRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys/login/options": {
+      "post": {
+        "operationId": "passkeyLoginOptions",
+        "summary": "Start passkey login",
+        "description": "Five-minute, single-use challenge with exact origin and RP binding. Enrollment requires current password and a verified email account. Authenticated ceremonies are bound to the current access token and account token version. Anonymous login sets an HttpOnly Secure SameSite=Strict ceremony binding cookie. User verification is required; enrollment uses discoverable credentials and attestation:none.",
+        "tags": [
+          "Passkeys"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PasskeyOrigin"
+          },
+          {
+            "$ref": "#/components/parameters/PasskeyTransport"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful optional passkey operation; Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyChallenge"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Disabled feature or invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credential, challenge, password, ownership or current account/session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin or browser transport is not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request or account rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyEmptyRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys/login/verify": {
+      "post": {
+        "operationId": "passkeyLoginVerify",
+        "summary": "Verify passkey login",
+        "description": "Verifies the SimpleWebAuthn credential response, exact challenge/origin/RP, user verification and ownership. Challenges are consumed atomically before cryptographic verification, including failed attempts. Login requires the ceremony binding cookie and returns a standard session with the refresh token only in an HttpOnly cookie. Maintenance records at most one shared zero-point evidence event per owner/policy/UTC month. No reward weights are activated.",
+        "tags": [
+          "Passkeys"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PasskeyOrigin"
+          },
+          {
+            "$ref": "#/components/parameters/PasskeyTransport"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful optional passkey operation; Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeySession"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Disabled feature or invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credential, challenge, password, ownership or current account/session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin or browser transport is not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request or account rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyCeremonyRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys/maintenance/options": {
+      "post": {
+        "operationId": "passkeyMaintenanceOptions",
+        "summary": "Start passkey maintenance",
+        "description": "Five-minute, single-use challenge with exact origin and RP binding. Enrollment requires current password and a verified email account. Authenticated ceremonies are bound to the current access token and account token version. Anonymous login sets an HttpOnly Secure SameSite=Strict ceremony binding cookie. User verification is required; enrollment uses discoverable credentials and attestation:none.",
+        "tags": [
+          "Passkeys"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PasskeyOrigin"
+          },
+          {
+            "$ref": "#/components/parameters/PasskeyTransport"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful optional passkey operation; Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyChallenge"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Disabled feature or invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credential, challenge, password, ownership or current account/session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin or browser transport is not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request or account rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyEmptyRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys/maintenance/verify": {
+      "post": {
+        "operationId": "passkeyMaintenanceVerify",
+        "summary": "Verify passkey maintenance",
+        "description": "Verifies the SimpleWebAuthn credential response, exact challenge/origin/RP, user verification and ownership. Challenges are consumed atomically before cryptographic verification, including failed attempts. Login requires the ceremony binding cookie and returns a standard session with the refresh token only in an HttpOnly cookie. Maintenance records at most one shared zero-point evidence event per owner/policy/UTC month. No reward weights are activated.",
+        "tags": [
+          "Passkeys"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PasskeyOrigin"
+          },
+          {
+            "$ref": "#/components/parameters/PasskeyTransport"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful optional passkey operation; Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyMaintenance"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Disabled feature or invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credential, challenge, password, ownership or current account/session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin or browser transport is not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request or account rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyCeremonyRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys/credentials": {
+      "get": {
+        "operationId": "listPasskeys",
+        "summary": "List your active passkeys",
+        "description": "Owner-only names, backup state and timestamps. Public keys, authenticator credential IDs and user handles are omitted.",
+        "tags": [
+          "Passkeys"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PasskeyOrigin"
+          },
+          {
+            "$ref": "#/components/parameters/PasskeyTransport"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful optional passkey operation; Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyCredentialList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Disabled feature or invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credential, challenge, password, ownership or current account/session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin or browser transport is not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request or account rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys/credentials/{passkeyId}": {
+      "patch": {
+        "operationId": "renamePasskey",
+        "summary": "Rename your passkey",
+        "description": "Requires a current active owner session.",
+        "tags": [
+          "Passkeys"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PasskeyOrigin"
+          },
+          {
+            "$ref": "#/components/parameters/PasskeyTransport"
+          },
+          {
+            "$ref": "#/components/parameters/PasskeyId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful optional passkey operation; Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyRenameResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Disabled feature or invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credential, challenge, password, ownership or current account/session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin or browser transport is not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request or account rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyRenameRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/passkeys/credentials/{passkeyId}/revoke": {
+      "post": {
+        "operationId": "revokePasskey",
+        "summary": "Remove your passkey",
+        "description": "Requires the current account password and owner session. Revokes all auth sessions and refresh families, and increments token_version. Email/password and recovery remain available.",
+        "tags": [
+          "Passkeys"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PasskeyOrigin"
+          },
+          {
+            "$ref": "#/components/parameters/PasskeyTransport"
+          },
+          {
+            "$ref": "#/components/parameters/PasskeyId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful optional passkey operation; Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyRevokeResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Disabled feature or invalid input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credential, challenge, password, ownership or current account/session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin or browser transport is not authorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request or account rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyRevokeRequest"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "PasskeyOrigin": {
+        "in": "header",
+        "name": "Origin",
+        "required": true,
+        "description": "Exact HTTPS PWA origin authorized by PASSKEY_ALLOWED_ORIGINS and CORS_ALLOWED_ORIGINS.",
+        "schema": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "PasskeyTransport": {
+        "in": "header",
+        "name": "X-Lythaus-Auth-Transport",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "cookie-v1"
+          ]
+        }
+      },
+      "PasskeyId": {
+        "in": "path",
+        "name": "passkeyId",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "schemas": {
+      "PasskeyCapability": {
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PasskeyName": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64,
+        "pattern": "^[^\\x00-\\x1F\\x7F]+$"
+      },
+      "PasskeyPassword": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128,
+        "writeOnly": true
+      },
+      "PasskeyRegisterOptionsRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "password"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/PasskeyName"
+          },
+          "password": {
+            "$ref": "#/components/schemas/PasskeyPassword"
+          }
+        }
+      },
+      "PasskeyEmptyRequest": {
+        "type": "object",
+        "additionalProperties": false
+      },
+      "PasskeyChallenge": {
+        "type": "object",
+        "required": [
+          "challengeId",
+          "options"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "options": {
+            "type": "object",
+            "description": "Opaque SimpleWebAuthn registration or authentication options JSON, including its generated challenge. Pass this complete object to the pinned browser library.",
+            "additionalProperties": true
+          }
+        }
+      },
+      "PasskeyCeremonyRequest": {
+        "type": "object",
+        "required": [
+          "challengeId",
+          "credential"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "credential": {
+            "type": "object",
+            "required": [
+              "id",
+              "rawId",
+              "type",
+              "response",
+              "clientExtensionResults"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "maxLength": 1400
+              },
+              "rawId": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "public-key"
+                ]
+              },
+              "response": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "clientExtensionResults": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "authenticatorAttachment": {
+                "type": "string",
+                "enum": ["platform", "cross-platform"]
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "PasskeyEnrollment": {
+        "type": "object",
+        "required": [
+          "id",
+          "enrolled"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enrolled": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "PasskeySession": {
+        "type": "object",
+        "required": [
+          "accessToken",
+          "expiresIn",
+          "tokenType",
+          "sessionTransport"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "enum": [
+              900
+            ]
+          },
+          "tokenType": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "sessionTransport": {
+            "type": "string",
+            "enum": [
+              "cookie-v1"
+            ]
+          }
+        }
+      },
+      "PasskeyMaintenance": {
+        "type": "object",
+        "required": [
+          "verified",
+          "evidenceRecorded",
+          "points"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "verified": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "evidenceRecorded": {
+            "type": "boolean"
+          },
+          "points": {
+            "type": "integer",
+            "enum": [
+              0
+            ]
+          }
+        }
+      },
+      "PasskeyCredentialList": {
+        "type": "object",
+        "required": [
+          "credentials"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "credentials": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name",
+                "deviceType",
+                "backedUp",
+                "createdAt",
+                "lastUsedAt",
+                "lastVerifiedAt"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "$ref": "#/components/schemas/PasskeyName"
+                },
+                "deviceType": {
+                  "type": "string",
+                  "enum": [
+                    "singleDevice",
+                    "multiDevice"
+                  ]
+                },
+                "backedUp": {
+                  "type": "boolean"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "lastUsedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true
+                },
+                "lastVerifiedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "PasskeyRenameRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/PasskeyName"
+          }
+        }
+      },
+      "PasskeyRevokeRequest": {
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "password": {
+            "$ref": "#/components/schemas/PasskeyPassword"
+          }
+        }
+      },
+      "PasskeyRenameResult": {
+        "type": "object",
+        "required": [
+          "id",
+          "revoked"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revoked": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          }
+        }
+      },
+      "PasskeyRevokeResult": {
+        "type": "object",
+        "required": [
+          "id",
+          "revoked",
+          "sessionRevocation"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revoked": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "sessionRevocation": {
+            "type": "string",
+            "enum": [
+              "all"
+            ]
+          }
+        }
+      },
+      "PasskeyError": {
+        "type": "object",
+        "required": [
+          "error",
+          "correlationId"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "correlationId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

@@ -34,6 +34,7 @@ const internalRouteKeys = new Set([
 const intentionalStartsWithPrefixes = new Set([
   '/api/auth/email/verify',
   '/api/auth/password/reset',
+  '/api/auth/passkeys',
   '/api/federation',
   '/api/payments',
   '/api/video',
@@ -106,6 +107,16 @@ function defaultFetchBody(sourceFile: ts.SourceFile): ts.Block {
     throw new Error(`default_export_fetch_required:${sourceFile.fileName}`);
   }
   return fetchMethod.body;
+}
+
+function factoryFetchBody(sourceFile: ts.SourceFile, factoryName: string): ts.Block {
+  const factory = sourceFile.statements.find((node): node is ts.FunctionDeclaration =>
+    ts.isFunctionDeclaration(node) && node.name?.text === factoryName);
+  const returned = factory?.body?.statements.find(ts.isReturnStatement)?.expression;
+  if (!returned || !ts.isArrowFunction(returned) || !ts.isBlock(returned.body)) {
+    throw new Error(`delegated_fetch_factory_required:${factoryName}`);
+  }
+  return returned.body;
 }
 
 function pathnameSyntaxDiagnostics(
@@ -215,9 +226,9 @@ function canonicalPath(value: string): string {
   return withoutApiPrefix.replace(/\{[^}]+\}/g, '{param}');
 }
 
-function extractRoutesFromSource(worker: WorkerName, source: string, relativePath: string): ExtractedWorkerRoutes {
+function extractRoutesFromSource(worker: WorkerName, source: string, relativePath: string, factoryName?: string): ExtractedWorkerRoutes {
   const sourceFile = ts.createSourceFile(relativePath, source, ts.ScriptTarget.Latest, true);
-  const fetchBody = defaultFetchBody(sourceFile);
+  const fetchBody = factoryName ? factoryFetchBody(sourceFile, factoryName) : defaultFetchBody(sourceFile);
   const variablePatterns = collectVariablePatterns(fetchBody);
   const routes: RuntimeRoute[] = [];
 
@@ -250,11 +261,12 @@ function extractRoutesFromSource(worker: WorkerName, source: string, relativePat
   };
 }
 
-function extractWorkerRoutes(worker: WorkerName, relativePath: string): ExtractedWorkerRoutes {
+function extractWorkerRoutes(worker: WorkerName, relativePath: string, factoryName?: string): ExtractedWorkerRoutes {
   return extractRoutesFromSource(
     worker,
     fs.readFileSync(path.join(root, relativePath), 'utf8'),
     relativePath,
+    factoryName,
   );
 }
 
@@ -296,22 +308,26 @@ describe('source-derived OpenAPI route parity', () => {
   test('all public and admin Worker dispatcher operations match the bundled contract bidirectionally', () => {
     const publicExtraction = extractWorkerRoutes('public', 'apps/lythaus-public-api/src/index.ts');
     const adminExtraction = extractWorkerRoutes('admin', 'apps/lythaus-admin-api/src/index.ts');
-    const runtimeRoutes = [...publicExtraction.routes, ...adminExtraction.routes];
+    const passkeyExtraction = extractWorkerRoutes('public', 'apps/lythaus-public-api/src/passkey-runtime.ts', 'createPasskeyHandler');
+    const runtimeRoutes = [...publicExtraction.routes, ...passkeyExtraction.routes, ...adminExtraction.routes];
     expect(publicExtraction.unrecognizedPathnameSyntax).toEqual(
       Array.from(intentionalDirectPathnameUses).sort(),
     );
     expect(adminExtraction.unrecognizedPathnameSyntax).toEqual([]);
     expect(publicExtraction.unrecognizedDispatcherBranches).toEqual([]);
     expect(adminExtraction.unrecognizedDispatcherBranches).toEqual([]);
+    expect(passkeyExtraction.unrecognizedDispatcherBranches).toEqual([]);
+    expect(passkeyExtraction.unrecognizedPathnameSyntax).toEqual([]);
+    expect(passkeyExtraction.startsWithPrefixes).toEqual(['/api/auth/passkeys']);
     expect(Array.from(new Set([
       ...publicExtraction.startsWithPrefixes,
       ...adminExtraction.startsWithPrefixes,
     ])).sort()).toEqual(Array.from(intentionalStartsWithPrefixes).sort());
     const routeCounts = {
-      public: publicExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
+      public: [...publicExtraction.routes, ...passkeyExtraction.routes].filter((route) => !internalRouteKeys.has(routeKey(route))).length,
       admin: adminExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
     };
-    expect(routeCounts).toEqual({ public: 107, admin: 42 });
+    expect(routeCounts).toEqual({ public: 117, admin: 42 });
     expect(runtimeRoutes.map(routeKey)).toEqual(expect.arrayContaining([
       'GET /.well-known/jwks.json',
       'POST /auth/password/reset/request',

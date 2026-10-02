@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/presentation/passkeys_screen.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 
 class AccountSecurityScreen extends ConsumerWidget {
@@ -45,6 +46,18 @@ class AccountSecurityScreen extends ConsumerWidget {
               ),
             ),
             const Divider(height: Spacing.xl),
+            if (user != null &&
+                ref.watch(passkeyAvailabilityProvider).valueOrNull == true)
+              ListTile(
+                leading: const Icon(Icons.key_outlined),
+                title: const Text('Passkeys'),
+                subtitle: const Text('Add, verify, rename or remove a passkey'),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const PasskeysScreen(),
+                  ),
+                ),
+              ),
             FilledButton.tonalIcon(
               onPressed: user == null
                   ? null
