@@ -4,9 +4,11 @@ import { decryptField, encryptField, hashAuthToken, hashPassword, hmacLookup, ra
 import { readBoundedJson } from './request-body-runtime.ts';
 import { normalizeEmailAddress } from './auth-runtime-policy.ts';
 import { claimRegistrationAddress, lockRecoveryAccount, recoveryPlan } from './auth-recovery-policy.ts';
+import { handleAccountSupportLookup } from './account-support-entrypoint.ts';
 
 /** Private Admin service capability. Never attached to the public router. */
 export async function handleEmailEnvelope(request: Request, env: EnvBindings, runTransaction = transaction): Promise<Response> {
+  if (new URL(request.url).pathname === '/keeper-account-support/lookup') return handleAccountSupportLookup(request, env, runTransaction);
   const headers = { 'content-type': 'application/json', 'cache-control': 'private, no-store' };
   if (request.method !== 'POST' || new URL(request.url).pathname !== '/keeper-email') return new Response(null, { status: 404, headers });
   const respond = (value: Record<string, unknown>, status = 200) => new Response(JSON.stringify({ ...value, workerVersion: env.WORKER_VERSION?.id }), { status, headers });

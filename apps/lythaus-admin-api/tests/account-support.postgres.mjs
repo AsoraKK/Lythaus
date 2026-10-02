@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto';
 import pg from 'pg';
 import { hmacLookup, uuidv7 } from '@lythaus/security';
 import { handleAccountSupport } from '../src/account-support-runtime.ts';
-import { handleAccountSupportLookup } from '../../lythaus-public-api/src/account-support-entrypoint.ts';
+import { handleEmailEnvelope } from '../../lythaus-public-api/src/email-envelope-entrypoint.ts';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
 const target = new URL(connectionString ?? 'file:///missing');
@@ -41,7 +41,7 @@ const key = randomBytes(32).toString('base64');
 const version = uuidv7();
 const publicEnv = { DB_APP_FRESH: {}, PII_HMAC_KEY_V1: key, WORKER_VERSION: { id: version } };
 const env = { DB_ADMIN_FRESH: {}, CORS_ALLOWED_ORIGINS: 'https://admin.lythaus.co', AUTH_EMAIL_ENVELOPE: {
-  fetch: (url, init) => handleAccountSupportLookup(new Request(url, init), publicEnv, runTransaction('lythaus_runtime'))
+  fetch: (url, init) => handleEmailEnvelope(new Request(url, init), publicEnv, runTransaction('lythaus_runtime'))
 } };
 const request = (body, path = '/api/admin/account-support/lookup') => new Request(`https://admin.lythaus.co${path}`, { method: 'POST',
   headers: { origin: 'https://admin.lythaus.co', 'content-type': 'application/json' }, body: JSON.stringify(body) });

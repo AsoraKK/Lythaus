@@ -8,6 +8,7 @@ on:
       - 'apps/lythaus-public-api/src/auth*.ts'
       - 'apps/lythaus-public-api/src/index.ts'
       - 'apps/lythaus-public-api/src/account-support-entrypoint.ts'
+      - 'apps/lythaus-public-api/src/email-envelope-entrypoint.ts'
       - 'apps/lythaus-public-api/src/worker.ts'
       - 'packages/contracts/src/account-support.ts'
       - 'apps/lythaus-admin-api/src/account-support-runtime.ts'

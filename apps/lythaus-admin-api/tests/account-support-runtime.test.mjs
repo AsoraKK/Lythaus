@@ -3,6 +3,7 @@ import test from 'node:test';
 import { hmacLookup } from '@lythaus/security';
 import { handleAccountSupport } from '../src/account-support-runtime.ts';
 import { handleAccountSupportLookup } from '../../lythaus-public-api/src/account-support-entrypoint.ts';
+import { handleEmailEnvelope } from '../../lythaus-public-api/src/email-envelope-entrypoint.ts';
 import { accountSupportSnapshot } from '@lythaus/contracts';
 
 const ID = '01900000-0000-7000-8000-000000000001';
@@ -59,6 +60,26 @@ test('private service reports missing or ambiguous matches without disclosing ac
     const result = await handleAccountSupportLookup(internal({ actorId: OWNER.userId, email }), publicEnv, database({ rows }).run);
     assert.deepEqual((await result.json()).result, { state, account: null });
   }
+});
+
+test('existing private handler dispatches lookup without email delivery keys and retains owner and read-only boundaries', async () => {
+  for (const [options, expectedStatus, expectedState] of [
+    [{ rows: [record] }, 200, 'found'], [{ rows: [] }, 200, 'not_found'],
+    [{ rows: [record, { ...record, id: OTHER }] }, 200, 'ambiguous'], [{ member: false }, 403, undefined],
+  ]) {
+    const db = database(options);
+    const response = await handleEmailEnvelope(internal({ actorId: OWNER.userId, email }), publicEnv, db.run);
+    assert.equal(response.status, expectedStatus);
+    const body = await response.json();
+    if (expectedState) assert.equal(body.result.state, expectedState);
+    else assert.equal(body.error, 'account_support_owner_required');
+    assert.ok(!JSON.stringify(body).includes(email));
+    assert.ok(db.queries.every(query => query.sql.startsWith('SELECT')));
+  }
+  const rejected = await handleEmailEnvelope(internal({ actorId: OWNER.userId, email, token: 'synthetic-private' }), publicEnv, database().run);
+  assert.equal(rejected.status, 503);
+  assert.ok(!(await rejected.text()).includes('synthetic-private'));
+  assert.equal((await handleEmailEnvelope(internal({}, undefined, 'GET'), publicEnv)).status, 404);
 });
 
 test('private service denies inactive owners and hides malformed input or private database failure', async () => {
