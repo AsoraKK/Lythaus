@@ -199,6 +199,7 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
     const after = JSON.parse(readFileSync(path.join(root, file), 'utf8'));
     after.scripts[script] = after.scripts[script].replace(' --experimental-strip-types', '');
     if (file === 'package.json') {
+      before.scripts['test:product-contracts'] += ' packages/contracts/tests/reward-calendar.test.mjs packages/db/tests/reward-monthly-activity.test.mjs';
       assert.equal(after.overrides['brace-expansion'], '5.0.12');
       assert.equal(after.overrides.undici, '7.29.1');
       assert.equal(after.overrides.miniflare.undici, '7.29.1');
@@ -208,7 +209,7 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
       before.overrides.miniflare.undici = '7.29.1';
       before.overrides['get-uri@8.0.1'] = { 'basic-ftp': '6.2.1' };
     }
-    assert.deepEqual(after, before, 'Only the TypeScript test runtime flag and reviewed security overrides may change; homepage dependencies remain frozen');
+    assert.deepEqual(after, before, 'Only the reviewed test runtime flag, reward test entries and security overrides may change; homepage dependencies remain frozen');
   }
 });
 
