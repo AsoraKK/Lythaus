@@ -11,6 +11,8 @@ import { WorkflowEntrypoint } from 'cloudflare:workers';
 import { processBetaEvent, expireBetaWork } from './authenticity-beta.ts';
 import { processAlphaEvent, expireAlphaWork } from './authenticity-alpha.ts';
 import { deferMonthlyReputationAssessment, processMonthlyReputationAssessment, reconcileDeferredMonthlyReputation } from './monthly-reputation.ts';
+import { processMonthlyEarningEvent, reconcileMonthlyEarning } from './monthly-earning.ts';
+import { MONTHLY_EARNING_SOURCE_EVENTS } from '../../../packages/db/src/monthly-earning.ts';
 import { tombstoneBetaCases, purgeBetaMedia } from '../../../packages/db/src/authenticity-beta.ts';
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 
@@ -18,6 +20,7 @@ interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
   DB_JOBS_FRESH: HyperdriveBinding;
   DB_PRIVACY_FRESH: HyperdriveBinding;
+  MONTHLY_REPUTATION_SHADOW_RULES?: string;
   MODERATION_QUEUE?: Queue;
   FEED_QUEUE?: Queue;
   NOTIFICATIONS_QUEUE?: Queue;
@@ -1680,6 +1683,7 @@ async function processMessage(message: QueueMessage, env: Env): Promise<void> {
       await processAccountStandingRefresh(message, env, eventId);
     }
     await processNotificationSource(message, env, eventId, eventType);
+    if ((MONTHLY_EARNING_SOURCE_EVENTS as readonly string[]).includes(eventType)) await processMonthlyEarningEvent(env, eventId);
     await query(env.DB_JOBS_FRESH,
       `UPDATE system.consumer_inbox SET state = 'completed', processed_at = now() WHERE consumer_name = 'lythaus-jobs' AND event_id = $1`,
       [eventId]
@@ -1907,6 +1911,7 @@ export default {
     }
     if (env.AUTHENTICITY_ALPHA_ENABLED === 'true') await expireAlphaWork(env);
     await reconcileDeferredMonthlyReputation(env);
+    await reconcileMonthlyEarning(env);
     await relayTransactionalEmailOutbox(env);
     await relayOutbox(env);
     await deliverAdminOutcomeNotifications(env);

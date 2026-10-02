@@ -17,6 +17,9 @@ embedded reference-validation counts are not execution evidence for this branch.
 - MT: [monthly policy tests](../../packages/contracts/tests/monthly-reputation.test.mjs).
 - AT: [candidate appeal tests](../../packages/contracts/tests/monthly-peer-appeal.test.mjs).
 - PT: [PostgreSQL 17 integration tests](../../apps/lythaus-jobs/tests/monthly-reputation.postgres.mjs).
+- W: [candidate weekly action calculation](../../packages/contracts/src/monthly-earning-policy.ts); WT: [weekly policy tests](../../packages/contracts/tests/monthly-earning.test.mjs).
+- E: [canonical source persistence](../../packages/db/src/monthly-earning.ts) and [Jobs producer/reconciler](../../apps/lythaus-jobs/src/monthly-earning.ts); ET: [real-source PostgreSQL tests](../../apps/lythaus-jobs/tests/monthly-earning.postgres.mjs).
+- ES: [proposed earning schema](../../database/planetscale/proposals/monthly_reputation_earning.sql), outside the production manifest.
 
 A unit-verified row establishes only the named calculation. A partial row still
 requires the remaining application, privacy, provider or release work. No new
@@ -45,26 +48,26 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | CAL-16 | Email proof expiry at the exact cutoff and a new proof after cutoff are handled correctly. | D / MT | Candidate D08 unit verified; authentication integration pending |
 | CAL-17 | Calendar-month addition handles 29/30/31-day dates without unapproved 90-day substitution. | D / MT | Candidate D08 unit verified; authentication integration pending |
 | CAL-18 | A weekly correction reselects all candidates; the previous fifth can enter the chosen four. | M, P, J, SQL / MT, PT | Partial: shadow persistence verified; full product flow pending |
-| CAL-19 | On-time evidence approved late retains its performance period and audited correction path. | M, P, J, SQL / MT, PT | Partial: shadow persistence verified; full product flow pending |
+| CAL-19 | On-time evidence approved late retains its performance period and audited correction path. | M, P, J, E, ES / MT, PT, ET | Actual publication sources preserve performance period and immutable corrections; monthly assembly/full product flow pending |
 | CAL-20 | End-of-month job replay, overlap and restart cannot publish duplicate entitlements. | M, P, J, SQL / MT, PT | Partial: shadow persistence verified; full product flow pending |
-| PTS-01 | Three accepted human posts award 250 once; two do not; six do not award 500. | T02/T04 | Planned; no test execution claimed |
-| PTS-02 | Duplicate, generated, disallowed or self-manufactured content cannot satisfy a contribution milestone. | T02/T04 | Planned; no test execution claimed |
+| PTS-01 | Three accepted human posts award 250 once; two do not; six do not award 500. | W, E, ES / WT, ET | Shadow producer and concurrent real-source transactions verified; activation pending |
+| PTS-02 | Duplicate, generated, disallowed or self-manufactured content cannot satisfy a contribution milestone. | W, E / WT, ET | Exact duplicate, generated/disallowed publication and self-approval checks verified; broader manipulation adjudication pending |
 | PTS-03 | A short meaningful comment can qualify without a word-count or formal-language gate. | T02/T04 | Planned; no test execution claimed |
-| PTS-04 | Own and other discussion classification cannot double-count the same actor/thread context. | T02/T04 | Planned; no test execution claimed |
+| PTS-04 | Own and other discussion classification cannot double-count the same actor/thread context. | W, E / WT, ET | Stored ownership and one-primary-work calculation verified; contextual acceptance workflow pending |
 | PTS-05 | A member with no replies has the approved meaningful-follow-up route, not invented peer activity. | T02/T04 | Planned; no test execution claimed |
-| PTS-06 | Source and correction share 300; splitting UI rows cannot raise the family cap. | T02/T04 | Planned; no test execution claimed |
-| PTS-07 | Help and accessibility share 250, with the same concurrency protection. | T02/T04; ticket proposal F01 | Planned; include all origins in one shared cap; no test execution claimed |
+| PTS-06 | Source and correction share 300; splitting UI rows cannot raise the family cap. | W / WT | Candidate calculation verified; specialist submission/acceptance transactions pending |
+| PTS-07 | Help and accessibility share 250, with the same concurrency protection. | W / WT; ticket amendment F01 | Candidate shared-cap calculation verified; acceptance/concurrency integration pending; F01 budget unresolved |
 | PTS-08 | Self-acceptance, repeated trivial corrections and reciprocal task farming are held/rejected with evidence. | T02/T04; ticket proposal F01 | Planned; include independent ticket acceptance; no test execution claimed |
-| PTS-09 | Four distinct approved families award breadth 150 once; five/six do not stack it. | T02/T04 | Planned; no test execution claimed |
-| PTS-10 | Two alternatives in one family count as one breadth family; reactions/security are not families. | T02/T04 | Planned; no test execution claimed |
-| PTS-11 | Reversing a supporting contribution recalculates breadth and other dependent components. | T02/T04; ticket proposal F01 | Planned; include accepted-ticket reversals; no test execution claimed |
-| PTS-12 | No posts does not count as 100% human authorship. | T02/T04 | Planned; no test execution claimed |
-| PTS-13 | Permitted AI-assisted participation can earn compliance but no primary human-authorship award. | T02/T04 | Planned; no test execution claimed |
-| PTS-14 | Honest permitted assistance does not erase unrelated human-authored evidence. | T02/T04 | Planned; no test execution claimed |
+| PTS-09 | Four distinct approved families award breadth 150 once; five/six do not stack it. | W / WT | Configurable D03 candidate verified; source integration and activation pending |
+| PTS-10 | Two alternatives in one family count as one breadth family; reactions/security are not families. | W / WT | Candidate calculation verified; full product flow pending |
+| PTS-11 | Reversing a supporting contribution recalculates breadth and other dependent components. | W, E / WT, ET; ticket amendment F01 | Candidate dependent recalculation and publication corrections verified; specialist/ticket integration pending |
+| PTS-12 | No posts does not count as 100% human authorship. | W / WT | Empty evidence earns zero; candidate calculation verified |
+| PTS-13 | Permitted AI-assisted participation can earn compliance but no primary human-authorship award. | W, E / WT, ET | Real publication source and candidate calculation verified; broader workflows pending |
+| PTS-14 | Honest permitted assistance does not erase unrelated human-authored evidence. | W, E / WT, ET | Real publication source and candidate calculation verified; broader workflows pending |
 | PTS-15 | Normalised grapheme counts at 249/250, combining marks, emoji and segmentation evasion are tested. | T02/T04 | Planned; no test execution claimed |
 | PTS-16 | Generative media and material generative edits remain blocked; genuine media remains feature￾gated. | T02/T04 | Planned; no test execution claimed |
 | PTS-17 | Emoji emotions are not blindly interpreted as author approval or disapproval. | T02/T04 | Planned; no test execution claimed |
-| PTS-18 | Small/no feedback samples are insufficient evidence, not guilt or automatic negative points. | T02/T04 | Planned; no test execution claimed |
+| PTS-18 | Small/no feedback samples are insufficient evidence, not guilt or automatic negative points. | W / WT | D06 candidate calculation verified; helpfulness collection/fairness validation pending |
 | PTS-19 | One actor, related-identity abuse and coordinated voting cannot inflate reception; shared IP alone is insufficient for exclusion. | T02/T04 | Planned; no test execution claimed |
 | PTS-20 | Zero reception still leaves a mathematically valid 10,500 maximum through other families. | M / MT | Arithmetic verified; real opportunity/access validation pending |
 | SEC-01 | Forged client award, local-unlock flag and manipulated device clock never credit points. | M, P, J, SQL / MT, PT | Partial: shadow persistence verified; full product flow pending |
@@ -156,15 +159,16 @@ Local evidence on 2 October 2026:
 
 | Check | Result |
 | --- | --- |
-| Node 22.23.3 policy suite | 22 passed; 100% lines, 98.76% branches across the three new policy modules |
+| Node 22.23.3 policy suite | 30 passed; 100% lines, 98.66% branches across four new policy modules |
 | Node 22.23.3 PostgreSQL 17 suite | 9 passed; 100% lines, 98.44% branches across the persistence service and invoked Jobs adapter; actual Jobs queue and scheduled entrypoints exercise durable pause/resume |
+| Node 22.23.3 earning PostgreSQL 17 suite | 10 passed; 99.18% lines, 97.69% branches across real-source persistence and the Jobs producer/reconciler |
 | Complete approved PostgreSQL baseline | Applied and verified locally through 0020; proposed schema separately applied and removed by tests |
 | Native typecheck | Passed |
 | Native Worker config/generated types | Passed using writable temporary npm cache and Wrangler log path; no generated files changed |
 | Existing native architecture suite | 270 passed |
 | Existing product contract and integrity suites | 10 and 21 passed |
 | Existing marketing suite | 47 passed after preserving the frozen root package manifest; homepage guards unchanged |
-| Remote CI at foundation SHA `1c90d6ffe80623b45cf88f5754bad8f9bb8fd572` | All checks passed, including Flutter and rendered journeys; later commits require their own current-head checks |
+| Remote CI at foundation SHA `1c90d6ffe80623b45cf88f5754bad8f9bb8fd572` and delivery-fix SHA `1bac47a879d9d0f685b00bb0af2b02cb24f24e58` | All checks passed, including Flutter and rendered journeys; later commits require their own current-head checks |
 | Existing critical coverage gate | Passed across 41 modules / 13 domain categories |
 | OpenAPI lint and contract tests | Lint passed with two existing warnings; 38 tests passed, 17 pre-existing skips |
 | Provider verification | Read-only database/branch/schema/ledger inspection only; earning, credentials, appeals, partner and release operation unverified |
@@ -182,7 +186,8 @@ node --experimental-strip-types --experimental-test-coverage \
   '--test-coverage-include=packages/contracts/src/monthly-*.ts' \
   --test-coverage-lines=80 --test-coverage-branches=80 \
   --test packages/contracts/tests/monthly-reputation.test.mjs \
-  packages/contracts/tests/monthly-peer-appeal.test.mjs
+  packages/contracts/tests/monthly-peer-appeal.test.mjs \
+  packages/contracts/tests/monthly-earning.test.mjs
 ```
 
 Set `PLANETSCALE_PG17_TEST_DATABASE_URL` to an explicitly disposable local
@@ -200,5 +205,9 @@ node --experimental-strip-types --experimental-test-module-mocks \
 
 CI uses its disposable PostgreSQL service. These exact commands live in the
 workflows because the existing homepage guard freezes the root package manifest.
-The database tests apply and remove only the proposed shadow schema and synthetic
+The earning suite uses the same database with `--test apps/lythaus-jobs/tests/monthly-earning.postgres.mjs`
+and coverage includes for `packages/db/src/monthly-earning.ts` and
+`apps/lythaus-jobs/src/monthly-earning.ts`. Run the database files sequentially:
+each owns and removes its synthetic rule/flag fixtures.
+The database tests apply and remove only the proposed schemas and synthetic
 fixtures. Neither command accesses a provider, deploys a Worker or changes activation.

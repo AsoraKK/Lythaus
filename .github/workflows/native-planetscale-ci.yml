@@ -33,9 +33,12 @@ on:
       - 'packages/contracts/src/monthly-*.ts'
       - 'packages/contracts/policies/Lythaus_Monthly_Rewards_Action_Catalogue_v2.json'
       - 'packages/db/src/monthly-reputation.ts'
+      - 'packages/db/src/monthly-earning.ts'
       - 'apps/lythaus-jobs/src/monthly-reputation.ts'
+      - 'apps/lythaus-jobs/src/monthly-earning.ts'
       - 'apps/lythaus-jobs/src/index.ts'
       - 'apps/lythaus-jobs/tests/monthly-reputation.postgres.mjs'
+      - 'apps/lythaus-jobs/tests/monthly-earning.postgres.mjs'
       - 'scripts/ci/planetscale-migration-*.mjs'
       - 'scripts/ci/auth-incident-database-contract.mjs'
       - 'scripts/ci/audit-production-auth-incident.mjs'
@@ -94,6 +97,16 @@ jobs:
           '--test-coverage-include=apps/lythaus-jobs/src/monthly-reputation.ts'
           --test-coverage-lines=80 --test-coverage-branches=80
           --test apps/lythaus-jobs/tests/monthly-reputation.postgres.mjs
+      - name: Validate real monthly earning source transactions
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: >-
+          node --experimental-strip-types --experimental-test-module-mocks
+          --experimental-test-coverage
+          '--test-coverage-include=packages/db/src/monthly-earning.ts'
+          '--test-coverage-include=apps/lythaus-jobs/src/monthly-earning.ts'
+          --test-coverage-lines=80 --test-coverage-branches=80
+          --test apps/lythaus-jobs/tests/monthly-earning.postgres.mjs
       - name: Prove column-only incident audit grants on real PostgreSQL
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable

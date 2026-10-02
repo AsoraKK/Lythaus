@@ -28,9 +28,10 @@ Its explicit prohibition on runtime activation remains in force. Its embedded
 2,515 reference checks are source claims, not application tests executed here.
 This document contains product requirements only, without personal source details.
 
-The initial implementation is a shadow accounting foundation in the existing
-contracts, PostgreSQL and Jobs layers. It accepts already-settled, preassigned
-whole-week inputs; it does not infer how actions earn points. The D01 proposal must
+The implementation uses shadow accounting in the existing contracts, PostgreSQL
+and Jobs layers. The monthly calculator accepts settled whole-week inputs. A separate
+earning producer consumes canonical post/comment lifecycle and moderation events,
+records immutable evidence, and computes versioned weekly results. The D01 proposal must
 be explicitly named and its complete week boundaries match; no other convention
 is silently substituted. D08 is also tested as a proposed rule only. A separate
 candidate equal-vote evaluator implements configurable D09 rules without invoking
@@ -98,9 +99,9 @@ effective months; separately approved migration, exact-SHA deployment and activa
 | Package | Implementation and test work | Initial status |
 | --- | --- | --- |
 | T01 Reconcile | Source/consumer map, this decision record, historical cutover plan | Inventory complete; cutover pending D13 |
-| T02 Canonical policy | Validated catalogue, cap groups, pure best-four/bands, candidate calendar, approved decision configuration | Original catalogue hash and cap structure verified; calculation, candidate D01/D08 and equal-vote policy tested; action earning and remaining default configuration pending |
-| T03 Persistence | Canonical events/outbox, immutable period revisions, assurance proofs, ballot uniqueness, selections/claims | Shadow source/assessment revisions and Jobs adapter locally tested; full ledger and migration pending |
-| T04 Earning | Real post/discussion/specialist/reception/authorship events and dependency reversals | Catalogue available; D03–D06/D10 activation approvals required |
+| T02 Canonical policy | Validated catalogue, cap groups, pure best-four/bands, candidate calendar, approved decision configuration | All 16 weekly action rows, shared caps, dependent breadth/authorship/reception and configurable candidate rules tested; maintenance and other configuration pending |
+| T03 Persistence | Canonical events/outbox, immutable period revisions, assurance proofs, ballot uniqueness, selections/claims | Immutable monthly/weekly revisions, contribution evidence, source receipts and Jobs transactions tested; full ledger and migration pending |
+| T04 Earning | Real post/discussion/specialist/reception/authorship events and dependency reversals | Canonical post/comment producers, publication milestone, declarations/authorship, duplicate withholding and corrections tested; contextual acceptance, specialist/reception producers and peer participation remain to integrate |
 | T05 Security | Reuse normal validated auth events; capability-aware integrity, credential continuity, Turnstile/refresher | Coordinate with separate disabled passkey work; D07/D08/provider gates pending |
 | T06 Peer review | Private timed electorate, equal ballots/history, close transaction, scoped override, restricted route | Candidate policy tests pass; invoked routes, atomic ballots, D09/D11/D13 and three-Worker cutover pending |
 | T07 Rewards/partners | Persistent Free/Premium/Black selections, proposals, consent/email linkage, QR/invoice idempotency | Commercial terms and approved offers pending; no fake merchants |
@@ -112,13 +113,41 @@ The acceptance matrix in `docs/testing/monthly-reputation-acceptance.md` tracks
 code and executable evidence separately. Passing arithmetic tests does not prove
 provider operation, user workflows, migration or activation.
 
-The source writer currently accepts pre-settled aggregate evidence from a trusted
-internal caller; no production earning producer calls it yet. Real action evidence,
-cap-group concurrency, weekly source identity across revisions, proof provenance,
-scheduled settlement and DSR workflow integration are required before collecting
-personal data. A shadow result is never a confirmed entitlement. The candidate
+The monthly source writer accepts settled aggregate evidence from a trusted internal
+caller; weekly producers are not yet joined with maintenance/email evidence to invoke
+it. Real action evidence has stable contribution and week identities, with transactional
+deduplication, revisions and scheduled settlement. Remaining proof provenance and DSR
+workflow integration are required before production collection. A shadow result is
+never a confirmed entitlement. The candidate
 appeal evaluator is a policy primitive only; eligibility data must come from fresh
 server checks and ballot/close transactions still need T06 implementation.
+
+## Canonical earning producer
+
+`packages/db/src/monthly-earning.ts` reads the stored outbox event and actual content,
+author, current moderation revision and independent decision. Queue point totals,
+claimed authors and client clocks cannot award points. Three distinct accepted human
+posts complete one 250-point milestone. Accepted participation supports the separate
+declaration/authorship components; honest assisted content does not erase unrelated
+human work. Published comments/replies are classified from stored thread ownership
+and remain pending contextual acceptance. Source performance time determines week
+ownership even when review is late. A cross-period edit remains explicitly pending
+review rather than silently backdating newly performed work.
+
+The producer withholds repeated identical accepted work within a week and recomputes
+dependent components on corrections. This is a deterministic duplicate check, not a
+completed manipulation/ring detector. Independent account restrictions remain separate
+from historical earning; erased subjects cannot be recreated by delayed source events.
+Full risk adjudication and cross-period version review remain to integrate.
+
+Collection requires an explicit `MONTHLY_REPUTATION_SHADOW_RULES` version, the matching
+enabled database shadow flag, and an immutable rule-set row with a collection start
+time and the exact catalogue digest. No configuration or flag is seeded/enabled by this
+branch. The proposed SQL stays outside the approved migration manifest. Scheduled
+reconciliation consumes unrecorded canonical sources, including events handled by the
+old Jobs inbox during a pause, and advances weekly open/settling states without changing
+current profiles or entitlements. Evidence, weekly revisions, receipts and result
+events commit or roll back together.
 
 ## Ticket feedback interface proposal
 
