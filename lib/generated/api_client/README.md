@@ -73,6 +73,9 @@ Class | Method | HTTP request | Description
 [*ActivityApi*](doc/ActivityApi.md) | [**productIntegrityProfileGetMe**](doc/ActivityApi.md#productintegrityprofilegetme) | **GET** /users/me | Get my private profile
 [*ActivityApi*](doc/ActivityApi.md) | [**productIntegrityProfileReplaceMe**](doc/ActivityApi.md#productintegrityprofilereplaceme) | **PUT** /users/me | Update my private profile
 [*ActivityApi*](doc/ActivityApi.md) | [**productIntegrityProfileUpdateMe**](doc/ActivityApi.md#productintegrityprofileupdateme) | **PATCH** /users/me | Partially update my private profile
+[*AdminApi*](doc/AdminApi.md) | [**adminAccountSupportAccess**](doc/AdminApi.md#adminaccountsupportaccess) | **GET** /admin/account-support/access | Check owner account-support access
+[*AdminApi*](doc/AdminApi.md) | [**adminAccountSupportHistory**](doc/AdminApi.md#adminaccountsupporthistory) | **POST** /admin/account-support/users/{userId}/history | Read partial recorded account history
+[*AdminApi*](doc/AdminApi.md) | [**adminAccountSupportLookup**](doc/AdminApi.md#adminaccountsupportlookup) | **POST** /admin/account-support/lookup | Read minimum account state by exact email
 [*AdminApi*](doc/AdminApi.md) | [**adminAppealsAdjudicate**](doc/AdminApi.md#adminappealsadjudicate) | **POST** /admin/appeals/{appealId}/adjudications | Record a trained editorial appeal adjudication
 [*AdminApi*](doc/AdminApi.md) | [**adminAppealsPendingAdjudicationList**](doc/AdminApi.md#adminappealspendingadjudicationlist) | **GET** /admin/appeals/pending-adjudication | List pending appeal adjudications
 [*AdminApi*](doc/AdminApi.md) | [**adminAuthSummary**](doc/AdminApi.md#adminauthsummary) | **GET** /admin/auth/summary | Read live authentication summary
@@ -232,6 +235,14 @@ Class | Method | HTTP request | Description
 
  - [AccountStatusResponse](doc/AccountStatusResponse.md)
  - [AccountStatusUpdate](doc/AccountStatusUpdate.md)
+ - [AccountSupportAccess](doc/AccountSupportAccess.md)
+ - [AccountSupportAccount](doc/AccountSupportAccount.md)
+ - [AccountSupportError](doc/AccountSupportError.md)
+ - [AccountSupportHistoryItem](doc/AccountSupportHistoryItem.md)
+ - [AccountSupportHistoryRequest](doc/AccountSupportHistoryRequest.md)
+ - [AccountSupportHistoryResponse](doc/AccountSupportHistoryResponse.md)
+ - [AccountSupportLookupRequest](doc/AccountSupportLookupRequest.md)
+ - [AccountSupportLookupResponse](doc/AccountSupportLookupResponse.md)
  - [AccountTierResponse](doc/AccountTierResponse.md)
  - [AccountTierUpdate](doc/AccountTierUpdate.md)
  - [ActivityEvent](doc/ActivityEvent.md)

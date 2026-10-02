@@ -11,6 +11,12 @@ import 'dart:typed_data';
 import 'package:lythaus_api_client/src/api_util.dart';
 import 'package:lythaus_api_client/src/model/account_status_response.dart';
 import 'package:lythaus_api_client/src/model/account_status_update.dart';
+import 'package:lythaus_api_client/src/model/account_support_access.dart';
+import 'package:lythaus_api_client/src/model/account_support_error.dart';
+import 'package:lythaus_api_client/src/model/account_support_history_request.dart';
+import 'package:lythaus_api_client/src/model/account_support_history_response.dart';
+import 'package:lythaus_api_client/src/model/account_support_lookup_request.dart';
+import 'package:lythaus_api_client/src/model/account_support_lookup_response.dart';
 import 'package:lythaus_api_client/src/model/account_tier_response.dart';
 import 'package:lythaus_api_client/src/model/account_tier_update.dart';
 import 'package:lythaus_api_client/src/model/admin_auth_summary.dart';
@@ -62,6 +68,292 @@ class AdminApi {
   final Serializers _serializers;
 
   const AdminApi(this._dio, this._serializers);
+
+  /// Check owner account-support access
+  /// Requires verified Cloudflare Access and an active owner membership joined to an active owner account. Returns no account records. Every lookup and history request checks authorization independently.
+  ///
+  /// Parameters:
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AccountSupportAccess] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AccountSupportAccess>> adminAccountSupportAccess({
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/account-support/access';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'cloudflareAccess',
+            'keyName': 'CF-Access-Jwt-Assertion',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AccountSupportAccess? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AccountSupportAccess),
+      ) as AccountSupportAccess;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AccountSupportAccess>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Read partial recorded account history
+  /// Owner-only, audited read with an allowed Origin and a reason code. Unions recorded account, activity and target-user audit events. Returns safe event codes and timestamps, excluding metadata and private content. Identity account events have no recorded correlation IDs. Missing storage, query or audit evidence returns unavailable rather than an empty success. Filters and pagination are in a bounded JSON body; URL parameters are rejected. This operation changes only the support audit, not account state.
+  ///
+  /// Parameters:
+  /// * [userId]
+  /// * [accountSupportHistoryRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AccountSupportHistoryResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AccountSupportHistoryResponse>> adminAccountSupportHistory({
+    required String userId,
+    required AccountSupportHistoryRequest accountSupportHistoryRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/account-support/users/{userId}/history'.replaceAll('{' r'userId' '}', encodeQueryParameter(_serializers, userId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'cloudflareAccess',
+            'keyName': 'CF-Access-Jwt-Assertion',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(AccountSupportHistoryRequest);
+      _bodyData = _serializers.serialize(accountSupportHistoryRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AccountSupportHistoryResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AccountSupportHistoryResponse),
+      ) as AccountSupportHistoryResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AccountSupportHistoryResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Read minimum account state by exact email
+  /// Owner-only read, using an exact trimmed and case-normalized email. Email is accepted only in a bounded JSON body, never a URL parameter. Requires an allowed Origin and a reason code. An audit must commit before disclosure. Ambiguous matches disclose no account state. Passwords, tokens, reset links, email values and private content are excluded. This operation changes only the support audit, not account state.
+  ///
+  /// Parameters:
+  /// * [accountSupportLookupRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AccountSupportLookupResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AccountSupportLookupResponse>> adminAccountSupportLookup({
+    required AccountSupportLookupRequest accountSupportLookupRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/account-support/lookup';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'cloudflareAccess',
+            'keyName': 'CF-Access-Jwt-Assertion',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(AccountSupportLookupRequest);
+      _bodyData = _serializers.serialize(accountSupportLookupRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AccountSupportLookupResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AccountSupportLookupResponse),
+      ) as AccountSupportLookupResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AccountSupportLookupResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
 
   /// Record a trained editorial appeal adjudication
   /// This never auto-resolves an appeal. The shared governance policy evaluates the independently assigned reviewer quorum and then requires one trained adjudicator for standard risk or two for high risk. The outcome is applied only when the returned status is resolved.

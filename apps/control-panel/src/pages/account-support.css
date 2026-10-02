@@ -1,0 +1,52 @@
+.account-support .support-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.account-support .support-fields .panel-actions {
+  grid-column: 1 / -1;
+}
+
+.account-support .support-code,
+.account-support dd {
+  overflow-wrap: anywhere;
+  white-space: normal;
+  max-width: 100%;
+}
+
+.support-state {
+  display: grid;
+  gap: 12px;
+}
+
+.support-state > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 12px;
+}
+
+.support-state dt {
+  color: var(--on-surface-muted);
+}
+
+.support-state dd {
+  margin: 0;
+}
+
+.support-timeline {
+  padding: 0;
+  list-style: none;
+}
+
+.support-timeline > li,
+.support-timeline > li > div {
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .account-support .support-fields,
+  .support-state > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

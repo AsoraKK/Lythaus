@@ -15,6 +15,7 @@
     "public-privacy-runtime",
     "public-waitlist-runtime",
     "admin-access-runtime",
+    "admin-account-support-runtime",
     "admin-waitlist-runtime",
     "admin-appeal-runtime",
     "jobs-runtime-policy"
@@ -43,13 +44,28 @@
     "privacy-dsr": ["public-privacy-runtime", "jobs-runtime-policy"],
     "moderation-appeals": ["admin-appeal-runtime", "jobs-runtime-policy", "moderation-appeal-policy"],
     "reputation": ["reputation-impact-policy", "reputation-persistence-policy"],
-    "activity-audit": ["privacy-activity-policy", "admin-appeal-runtime", "admin-waitlist-runtime", "jobs-runtime-policy"],
+    "activity-audit": ["privacy-activity-policy", "admin-appeal-runtime", "admin-waitlist-runtime", "admin-account-support-runtime", "jobs-runtime-policy"],
     "security-crypto": ["worker-security-primitives", "worker-access-token-policy"],
     "notifications": ["notification-input-policy"],
     "authenticity-cost": ["authenticity-cost-admission-policy"],
     "waitlist-security": ["public-waitlist-runtime", "admin-access-runtime", "admin-waitlist-runtime", "worker-security-primitives"]
   },
   "modules": [
+    {
+      "id": "account-support-contract",
+      "priority": "P1",
+      "sources": ["packages/contracts/src/account-support.ts"],
+      "tests": ["packages/contracts/tests/account-support.test.mjs"],
+      "rationale": "Minimal account-state allowlist, strict microsecond timestamps and honest history coverage."
+    },
+    {
+      "id": "admin-account-support-runtime",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-admin-api/src/account-support-runtime.ts", "apps/lythaus-public-api/src/account-support-entrypoint.ts"],
+      "tests": ["apps/lythaus-admin-api/tests/account-support-runtime.test.mjs"],
+      "rationale": "Owner-only read-only support, private exact-email lookup, fail-closed audit and scoped history pagination; PostgreSQL separately proves existing grants."
+    },
     {
       "id": "optional-profile-runtime",
       "priority": "P1",
@@ -69,7 +85,7 @@
       "id": "admin-private-email-envelope",
       "priority": "P1",
       "sources": ["apps/lythaus-admin-api/src/auth-email-dispatch-adapter.ts", "apps/lythaus-public-api/src/email-envelope-entrypoint.ts"],
-      "tests": ["apps/lythaus-admin-api/tests/auth-email-dispatch.test.mjs"],
+      "tests": ["apps/lythaus-admin-api/tests/auth-email-dispatch.test.mjs", "apps/lythaus-admin-api/tests/account-support-runtime.test.mjs"],
       "rationale": "Private, bounded and candidate-aware identity/outbox delegation without copying keys or widening Admin grants; PostgreSQL separately proves transactions."
     },
     {

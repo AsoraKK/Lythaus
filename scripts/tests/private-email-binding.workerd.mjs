@@ -36,5 +36,14 @@ test('actual Public bundle exposes private named capability only through a servi
     const anonymous = await publicWorker.fetch('https://api.lythaus.test/keeper-email', { method:'POST', body:JSON.stringify({operation:'probe'}) });
     assert.notEqual(anonymous.status,200);
     assert.ok(!(await anonymous.text()).includes('bindingVerified'));
+    const supportInput = JSON.stringify({ actorId: version, email: 'synthetic-support@example.invalid' });
+    const privateSupport = await mf.dispatchFetch('https://api.lythaus.test/keeper-account-support/lookup', { method: 'POST', body: supportInput });
+    assert.equal(privateSupport.status, 503);
+    assert.deepEqual(await privateSupport.json(), { error: 'account_support_unavailable', workerVersion: version });
+    const anonymousSupport = await publicWorker.fetch('https://api.lythaus.test/keeper-account-support/lookup', { method: 'POST', body: supportInput });
+    assert.notEqual(anonymousSupport.status, 200);
+    const anonymousBody = await anonymousSupport.text();
+    assert.ok(!anonymousBody.includes('workerVersion'));
+    assert.ok(!anonymousBody.includes('account_support_unavailable'));
   } finally { await mf.dispose(); }
 });

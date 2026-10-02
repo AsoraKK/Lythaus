@@ -3,6 +3,7 @@
 ## Editing the spec
 - Update `api/openapi/openapi.yaml` for any contract changes.
 - Product-integrity route items and focused schemas live in `api/openapi/product-integrity.yaml` and are referenced from the canonical root; do not replace the root with the fragment.
+- Owner-only account-support routes and allowlisted schemas live in `api/openapi/account-support.yaml`. The private lookup binding is not a public HTTP operation.
 - Run the lint and bundle commands before committing to catch validation issues.
 - Keep response schemas aligned with the native Lythaus Workers to prevent contract drift.
 - Comments and replies are created in `under_review`; public availability follows the moderation lifecycle rather than successful submission alone.

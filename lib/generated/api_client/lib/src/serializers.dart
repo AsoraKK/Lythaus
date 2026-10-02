@@ -16,6 +16,14 @@ import 'package:lythaus_api_client/src/model/date.dart';
 
 import 'package:lythaus_api_client/src/model/account_status_response.dart';
 import 'package:lythaus_api_client/src/model/account_status_update.dart';
+import 'package:lythaus_api_client/src/model/account_support_access.dart';
+import 'package:lythaus_api_client/src/model/account_support_account.dart';
+import 'package:lythaus_api_client/src/model/account_support_error.dart';
+import 'package:lythaus_api_client/src/model/account_support_history_item.dart';
+import 'package:lythaus_api_client/src/model/account_support_history_request.dart';
+import 'package:lythaus_api_client/src/model/account_support_history_response.dart';
+import 'package:lythaus_api_client/src/model/account_support_lookup_request.dart';
+import 'package:lythaus_api_client/src/model/account_support_lookup_response.dart';
 import 'package:lythaus_api_client/src/model/account_tier_response.dart';
 import 'package:lythaus_api_client/src/model/account_tier_update.dart';
 import 'package:lythaus_api_client/src/model/activity_event.dart';
@@ -217,6 +225,14 @@ part 'serializers.g.dart';
 @SerializersFor([
   AccountStatusResponse,
   AccountStatusUpdate,
+  AccountSupportAccess,
+  AccountSupportAccount,
+  AccountSupportError,
+  AccountSupportHistoryItem,
+  AccountSupportHistoryRequest,
+  AccountSupportHistoryResponse,
+  AccountSupportLookupRequest,
+  AccountSupportLookupResponse,
   AccountTierResponse,
   AccountTierUpdate,
   ActivityEvent,

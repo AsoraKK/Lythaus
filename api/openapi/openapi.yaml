@@ -1343,6 +1343,12 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1admin~1auth~1summary'
   /admin/email-health:
     $ref: './product-integrity.yaml#/paths/~1admin~1email-health'
+  /admin/account-support/access:
+    $ref: './account-support.yaml#/paths/~1admin~1account-support~1access'
+  /admin/account-support/lookup:
+    $ref: './account-support.yaml#/paths/~1admin~1account-support~1lookup'
+  /admin/account-support/users/{userId}/history:
+    $ref: './account-support.yaml#/paths/~1admin~1account-support~1users~1{userId}~1history'
   /admin/users:
     $ref: './product-integrity.yaml#/paths/~1admin~1users'
   /admin/users/{userId}:

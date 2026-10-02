@@ -32,6 +32,14 @@ export 'package:lythaus_api_client/src/api/waitlist_api.dart';
 
 export 'package:lythaus_api_client/src/model/account_status_response.dart';
 export 'package:lythaus_api_client/src/model/account_status_update.dart';
+export 'package:lythaus_api_client/src/model/account_support_access.dart';
+export 'package:lythaus_api_client/src/model/account_support_account.dart';
+export 'package:lythaus_api_client/src/model/account_support_error.dart';
+export 'package:lythaus_api_client/src/model/account_support_history_item.dart';
+export 'package:lythaus_api_client/src/model/account_support_history_request.dart';
+export 'package:lythaus_api_client/src/model/account_support_history_response.dart';
+export 'package:lythaus_api_client/src/model/account_support_lookup_request.dart';
+export 'package:lythaus_api_client/src/model/account_support_lookup_response.dart';
 export 'package:lythaus_api_client/src/model/account_tier_response.dart';
 export 'package:lythaus_api_client/src/model/account_tier_update.dart';
 export 'package:lythaus_api_client/src/model/activity_event.dart';
