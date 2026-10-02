@@ -187,17 +187,6 @@ void main() {
   test('list feeds use shared response handler', () async {
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/feed/trending',
-        queryParameters: any(named: 'queryParameters'),
-        options: any(named: 'options'),
-      ),
-    ).thenAnswer(
-      (_) async =>
-          _response({'success': true, 'data': _feedData()}, '/feed/trending'),
-    );
-
-    when(
-      () => dio.get<Map<String, dynamic>>(
         '/feed/local',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -231,7 +220,6 @@ void main() {
           _response({'success': true, 'data': _feedData()}, '/feed/following'),
     );
 
-    final trending = await service.getTrendingFeed(page: 1, token: 't1');
     final local = await service.getLocalFeed(
       location: 'Cape Town',
       token: 't1',
@@ -239,7 +227,6 @@ void main() {
     final creators = await service.getNewCreatorsFeed(token: 't1');
     final following = await service.getFollowingFeed(token: 't1');
 
-    expect(trending.posts, hasLength(1));
     expect(local.posts, hasLength(1));
     expect(creators.posts, hasLength(1));
     expect(following.posts, hasLength(1));
@@ -350,19 +337,19 @@ void main() {
 
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/feed/trending',
+        '/feed/discover',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
       ),
     ).thenThrow(
       DioException(
-        requestOptions: RequestOptions(path: '/feed/trending'),
+        requestOptions: RequestOptions(path: '/feed/discover'),
         message: 'boom',
       ),
     );
 
     expect(
-      () => service.getTrendingFeed(),
+      () => service.getDiscoverFeed(),
       throwsA(isA<SocialFeedException>()),
     );
   });

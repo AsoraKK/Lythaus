@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lythaus/core/routing/auth_return_location.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:lythaus/core/network/dio_client.dart';
@@ -21,10 +22,12 @@ class EditProfileScreen extends ConsumerStatefulWidget {
     super.key,
     required this.profile,
     this.onboarding = false,
+    this.onboardingReturnTo = '/',
   });
 
   final OwnerProfile profile;
   final bool onboarding;
+  final String onboardingReturnTo;
 
   @override
   ConsumerState<EditProfileScreen> createState() => _EditProfileScreenState();
@@ -195,7 +198,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     setState(() => _allowPop = true);
     if (widget.onboarding) {
       ref.read(profileSetupRequestedProvider.notifier).state = false;
-      context.go('/');
+      context.go(safeAuthReturn(widget.onboardingReturnTo));
     } else {
       Navigator.of(context).pop();
     }

@@ -3,6 +3,10 @@
 import 'package:flutter/material.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:lythaus/features/auth/domain/auth_required_exception.dart';
+import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
+import 'package:lythaus/ui/components/sign_in_required.dart';
 
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 import 'package:lythaus/design_system/components/lyth_empty_state.dart';
@@ -12,7 +16,9 @@ import 'package:lythaus/ui/components/feed_card.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 
 class FeedSearchScreen extends ConsumerStatefulWidget {
-  const FeedSearchScreen({super.key});
+  const FeedSearchScreen({super.key, this.initialQuery = ''});
+
+  final String initialQuery;
 
   @override
   ConsumerState<FeedSearchScreen> createState() => _FeedSearchScreenState();
@@ -21,6 +27,35 @@ class FeedSearchScreen extends ConsumerStatefulWidget {
 class _FeedSearchScreenState extends ConsumerState<FeedSearchScreen> {
   final controller = TextEditingController();
   String query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    query = widget.initialQuery;
+    controller.text = query;
+  }
+
+  @override
+  void didUpdateWidget(FeedSearchScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialQuery != widget.initialQuery) {
+      query = widget.initialQuery;
+      controller.text = query;
+    }
+  }
+
+  String get _location => Uri(
+    path: '/search',
+    queryParameters: query.isEmpty ? null : {'q': query},
+  ).toString();
+
+  void _search(String value) {
+    setState(() => query = value.trim());
+    final router = GoRouter.maybeOf(context);
+    if (router != null && GoRouterState.of(context).uri.path == '/search') {
+      router.go(_location);
+    }
+  }
 
   @override
   void dispose() {
@@ -52,15 +87,13 @@ class _FeedSearchScreenState extends ConsumerState<FeedSearchScreen> {
                           onPressed: () {
                             setState(() {
                               controller.clear();
-                              query = '';
                             });
+                            _search('');
                           },
                         )
                       : null,
                 ),
-                onSubmitted: (value) {
-                  setState(() => query = value.trim());
-                },
+                onSubmitted: _search,
                 onChanged: (_) => setState(() {}),
                 textInputAction: TextInputAction.search,
               ),
@@ -111,23 +144,40 @@ class _FeedSearchScreenState extends ConsumerState<FeedSearchScreen> {
                         ),
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
-                  error: (_, __) => Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(Spacing.lg),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('Search is unavailable right now.'),
-                          const SizedBox(height: Spacing.md),
-                          FilledButton(
-                            onPressed: () =>
-                                ref.invalidate(feedSearchProvider(query)),
-                            child: const Text('Retry search'),
+                  error: (error, _) => error is AuthRequiredException
+                      ? SignInRequired(
+                          message: 'Sign in to search your feeds.',
+                          returnTo: _location,
+                        )
+                      : error is SocialFeedException &&
+                            error.code == 'SEARCH_UNAVAILABLE'
+                      ? const LythEmptyState(
+                          icon: Icons.search_off_outlined,
+                          title: 'Tag search is not available yet.',
+                          subtitle: 'You can still browse Discover.',
+                        )
+                      : Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(Spacing.lg),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  error is SocialFeedException &&
+                                          error.code == 'FEED_UNAVAILABLE'
+                                      ? 'This search service is not available.'
+                                      : 'Could not load search. Please try again.',
+                                ),
+                                const SizedBox(height: Spacing.md),
+                                FilledButton(
+                                  onPressed: () =>
+                                      ref.invalidate(feedSearchProvider(query)),
+                                  child: const Text('Retry search'),
+                                ),
+                              ],
+                            ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
+                        ),
                 ),
               ),
           ],

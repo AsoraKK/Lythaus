@@ -12,6 +12,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/ui/components/sign_in_required.dart';
 import 'package:lythaus/core/routing/deeplink_router.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:lythaus/features/notifications/domain/notification_models.dart'
@@ -39,11 +41,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
     // Load notifications on init
-    Future.microtask(
-      () => ref
+    Future.microtask(() async {
+      if (!mounted || ref.read(guestModeProvider)) return;
+      await ref
           .read(notificationsControllerProvider.notifier)
-          .loadNotifications(),
-    );
+          .loadNotifications();
+    });
   }
 
   @override
@@ -148,7 +151,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (ref.watch(guestModeProvider)) return _signIn();
     final state = ref.watch(notificationsControllerProvider);
+    if (state.authRequired) return _signIn();
 
     return ReadingPane(
       child: Scaffold(
@@ -182,8 +187,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                         ? const Center(child: CircularProgressIndicator())
                         : state.hasError && state.notifications.isEmpty
                         ? _ErrorState(
-                            message:
-                                'Could not load notifications. Check your connection and try again.',
+                            message: state.serviceUnavailable
+                                ? 'Notifications are not available right now.'
+                                : 'Could not load notifications. Check your connection and try again.',
                             onRetry: _handleRefresh,
                           )
                         : state.notifications.isEmpty
@@ -251,6 +257,16 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       ),
     );
   }
+
+  Widget _signIn() => ReadingPane(
+    child: Scaffold(
+      appBar: AppBar(title: const Text('Notifications')),
+      body: const SignInRequired(
+        message: 'Sign in to view your notifications.',
+        returnTo: '/notifications',
+      ),
+    ),
+  );
 }
 
 // ============================================================================

@@ -445,18 +445,22 @@ void main() {
   });
 
   group('feedSearchProvider', () {
-    test('searches with query as tag', () async {
-      when(
-        () => repo.getFeed(
-          params: any(named: 'params'),
-          token: any(named: 'token'),
-        ),
-      ).thenAnswer((_) async => _feedWith(posts: [_fakePost('s1')]));
-
-      final container = createContainer();
-      final result = await container.read(feedSearchProvider('flutter').future);
-
-      expect(result.posts, hasLength(1));
-    });
+    test(
+      'does not present an unfiltered personal feed as tag results',
+      () async {
+        final container = createContainer();
+        await expectLater(
+          container.read(feedSearchProvider('flutter').future),
+          throwsA(
+            isA<SocialFeedException>().having(
+              (e) => e.code,
+              'code',
+              'SEARCH_UNAVAILABLE',
+            ),
+          ),
+        );
+        verifyZeroInteractions(repo);
+      },
+    );
   });
 }

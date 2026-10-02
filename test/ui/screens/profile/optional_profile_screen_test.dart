@@ -63,6 +63,7 @@ Future<ProviderContainer> _open(
   WidgetTester tester,
   Future<OwnerProfile> Function() fetch, {
   bool requested = true,
+  String returnTo = '/',
   _Adapter? adapter,
 }) async {
   await tester.binding.setSurfaceSize(const Size(430, 1000));
@@ -88,7 +89,12 @@ Future<ProviderContainer> _open(
       ),
       GoRoute(
         path: '/profile/setup',
-        builder: (_, _) => const OptionalProfileScreen(),
+        builder: (_, _) => OptionalProfileScreen(returnTo: returnTo),
+      ),
+      GoRoute(
+        path: '/search',
+        builder: (_, state) =>
+            Scaffold(body: Text('Search ${state.uri.queryParameters['q']}')),
       ),
     ],
   );
@@ -104,6 +110,38 @@ Future<ProviderContainer> _open(
 }
 
 void main() {
+  for (final mode in ['loading', 'error', 'empty', 'saved']) {
+    testWidgets(
+      'optional profile $mode preserves the requested search destination',
+      (tester) async {
+        final pending = Completer<OwnerProfile>();
+        await _open(tester, () {
+          if (mode == 'loading') return pending.future;
+          if (mode == 'error') throw StateError('offline');
+          return Future.value(
+            mode == 'saved'
+                ? const OwnerProfile(
+                    user: PublicUser(
+                      id: 'owner',
+                      displayName: 'Saved name',
+                      tier: 'free',
+                    ),
+                    moderationState: 'allowed',
+                    publicVisibility: false,
+                  )
+                : _empty,
+          );
+        }, returnTo: '/search?q=water');
+        if (mode != 'loading') await tester.pumpAndSettle();
+        if (mode != 'saved') {
+          await tester.tap(find.text('Skip and explore'));
+          await tester.pumpAndSettle();
+        }
+        expect(find.text('Search water'), findsOneWidget);
+        if (mode == 'loading') pending.complete(_empty);
+      },
+    );
+  }
   testWidgets(
     'skip while the owner profile is loading enters the app without a save',
     (tester) async {

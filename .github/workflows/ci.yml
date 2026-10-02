@@ -273,7 +273,7 @@ jobs:
       - name: Install authentication test browsers
         run: npx playwright install --with-deps chromium webkit
       - name: Verify rendered Flutter authentication journey
-        run: node --experimental-strip-types --test --test-timeout=120000 scripts/tests/flutter-auth.browser.mjs scripts/tests/optional-profile.browser.mjs
+        run: node --experimental-strip-types --test --test-timeout=120000 scripts/tests/flutter-auth.browser.mjs scripts/tests/optional-profile.browser.mjs scripts/tests/guest-account-entry.browser.mjs
       - name: Build content journey regression fixture
         run: flutter build web --debug --no-pub --no-wasm-dry-run --target test/browser/content_journey_entry.dart --output build/content-journey-web
       - name: Verify rendered content journey and durable recovery

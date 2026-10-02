@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
 
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 import 'package:lythaus/design_system/components/lyth_empty_state.dart';
@@ -61,17 +62,25 @@ class TrendingFeedScreen extends ConsumerWidget {
                   ),
           ),
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, __) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(Spacing.lg),
-              child: LythEmptyState(
-                icon: Icons.cloud_off_outlined,
-                title: 'Unable to load trending right now.',
-                actionLabel: 'Retry',
-                onAction: () => ref.invalidate(trendingFeedProvider),
-              ),
-            ),
-          ),
+          error: (error, _) =>
+              error is SocialFeedException &&
+                  error.code == 'TRENDING_UNAVAILABLE'
+              ? const LythEmptyState(
+                  icon: Icons.trending_up_outlined,
+                  title: 'Trending is not available yet.',
+                  subtitle: 'You can still browse Discover.',
+                )
+              : Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(Spacing.lg),
+                    child: LythEmptyState(
+                      icon: Icons.cloud_off_outlined,
+                      title: 'Unable to load trending right now.',
+                      actionLabel: 'Retry',
+                      onAction: () => ref.invalidate(trendingFeedProvider),
+                    ),
+                  ),
+                ),
         ),
       ),
     );

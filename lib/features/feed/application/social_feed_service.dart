@@ -10,6 +10,7 @@ library social_feed_service;
 /// 📱 Platform: Flutter with Dio HTTP client
 
 import 'package:dio/dio.dart';
+import 'package:lythaus/features/auth/domain/auth_required_exception.dart';
 import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
 import 'package:lythaus/features/feed/domain/models.dart';
 import 'package:lythaus/core/error/error_codes.dart';
@@ -201,24 +202,9 @@ class SocialFeedService implements SocialFeedRepository {
     int pageSize = 20,
     String? token,
   }) async {
-    return LythausTracer.traceOperation(
-      'SocialFeedService.getTrendingFeed',
-      () async {
-        final response = await _dio.get<Map<String, dynamic>>(
-          '$_baseUrl/feed/trending',
-          queryParameters: {'page': page, 'pageSize': pageSize},
-          options: Options(
-            headers: token != null ? {'Authorization': 'Bearer $token'} : null,
-          ),
-        );
-
-        return _handleFeedResponse(response);
-      },
-      attributes: LythausTracer.httpRequestAttributes(
-        method: 'GET',
-        url: '/api/feed/trending',
-      )..addAll({'request.page': page, 'request.page_size': pageSize}),
-      onError: (error) => _handleError(error),
+    throw const SocialFeedException(
+      'Trending is not available yet.',
+      code: 'TRENDING_UNAVAILABLE',
     );
   }
 
@@ -625,6 +611,16 @@ class SocialFeedService implements SocialFeedRepository {
         throw SocialFeedException(
           ErrorMessages.forCode(ErrorCodes.deviceIntegrityBlocked),
           code: ErrorCodes.deviceIntegrityBlocked,
+          originalError: error,
+        );
+      }
+      if (error.response?.statusCode == 401) {
+        throw const AuthRequiredException();
+      }
+      if (error.response?.statusCode == 404) {
+        throw SocialFeedException(
+          'This feed is not available.',
+          code: 'FEED_UNAVAILABLE',
           originalError: error,
         );
       }

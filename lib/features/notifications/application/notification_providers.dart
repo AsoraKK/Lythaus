@@ -9,6 +9,7 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:lythaus/features/auth/domain/auth_required_exception.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/notifications/domain/notification_models.dart';
 import 'package:lythaus/features/notifications/application/notification_api_service.dart';
@@ -40,6 +41,8 @@ class NotificationsState {
   final bool isLoading;
   final bool isLoadingMore;
   final bool hasError;
+  final bool authRequired;
+  final bool serviceUnavailable;
   final String? errorMessage;
 
   const NotificationsState({
@@ -48,6 +51,8 @@ class NotificationsState {
     this.isLoading = false,
     this.isLoadingMore = false,
     this.hasError = false,
+    this.authRequired = false,
+    this.serviceUnavailable = false,
     this.errorMessage,
   });
 
@@ -57,6 +62,8 @@ class NotificationsState {
     bool? isLoading,
     bool? isLoadingMore,
     bool? hasError,
+    bool? authRequired,
+    bool? serviceUnavailable,
     String? Function()? errorMessage,
   }) {
     return NotificationsState(
@@ -67,6 +74,8 @@ class NotificationsState {
       isLoading: isLoading ?? this.isLoading,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       hasError: hasError ?? this.hasError,
+      authRequired: authRequired ?? this.authRequired,
+      serviceUnavailable: serviceUnavailable ?? this.serviceUnavailable,
       errorMessage: errorMessage != null ? errorMessage() : this.errorMessage,
     );
   }
@@ -80,7 +89,12 @@ class NotificationsController extends StateNotifier<NotificationsState> {
 
   /// Load initial page of notifications
   Future<void> loadNotifications() async {
-    state = state.copyWith(isLoading: true, hasError: false);
+    state = state.copyWith(
+      isLoading: true,
+      hasError: false,
+      authRequired: false,
+      serviceUnavailable: false,
+    );
 
     try {
       final response = await _apiService.getNotifications(limit: 20);
@@ -90,17 +104,26 @@ class NotificationsController extends StateNotifier<NotificationsState> {
         isLoading: false,
       );
     } catch (e) {
+      if (e is AuthRequiredException) {
+        state = const NotificationsState(hasError: true, authRequired: true);
+        return;
+      }
       state = state.copyWith(
         isLoading: false,
         hasError: true,
         errorMessage: () => e.toString(),
+        serviceUnavailable: e is NotificationServiceUnavailable,
       );
     }
   }
 
   /// Load more notifications (pagination)
   Future<void> loadMore() async {
-    if (state.continuationToken == null || state.isLoadingMore) return;
+    if (state.authRequired ||
+        state.continuationToken == null ||
+        state.isLoadingMore) {
+      return;
+    }
 
     state = state.copyWith(isLoadingMore: true);
 
@@ -116,10 +139,15 @@ class NotificationsController extends StateNotifier<NotificationsState> {
         isLoadingMore: false,
       );
     } catch (e) {
+      if (e is AuthRequiredException) {
+        state = const NotificationsState(hasError: true, authRequired: true);
+        return;
+      }
       state = state.copyWith(
         isLoadingMore: false,
         hasError: true,
         errorMessage: () => e.toString(),
+        serviceUnavailable: e is NotificationServiceUnavailable,
       );
     }
   }

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lythaus/core/routing/auth_return_location.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
@@ -10,7 +11,9 @@ import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:lythaus/ui/screens/profile/edit_profile_screen.dart';
 
 class OptionalProfileScreen extends ConsumerWidget {
-  const OptionalProfileScreen({super.key});
+  const OptionalProfileScreen({super.key, this.returnTo = '/'});
+
+  final String returnTo;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,7 +28,7 @@ class OptionalProfileScreen extends ConsumerWidget {
               return;
             }
             ref.read(profileSetupRequestedProvider.notifier).state = false;
-            context.go('/');
+            context.go(safeAuthReturn(returnTo));
           });
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
@@ -35,6 +38,7 @@ class OptionalProfileScreen extends ConsumerWidget {
           key: ValueKey(profile.user.id),
           profile: profile,
           onboarding: true,
+          onboardingReturnTo: safeAuthReturn(returnTo),
         );
       },
       loading: () => _placeholder(context, ref, loading: true),
@@ -69,7 +73,7 @@ class OptionalProfileScreen extends ConsumerWidget {
                 onPressed: () {
                   ref.read(profileSetupRequestedProvider.notifier).state =
                       false;
-                  context.go('/');
+                  context.go(safeAuthReturn(returnTo));
                 },
                 child: const Text('Skip and explore'),
               ),

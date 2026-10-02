@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lythaus/core/routing/auth_return_location.dart';
 
 import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
@@ -139,7 +140,7 @@ class _InviteRedeemScreenState extends ConsumerState<InviteRedeemScreen> {
           message: 'Sign in first — your invite code has been saved.',
         );
         try {
-          context.go('/login');
+          context.go(signInLocation('/invite/${Uri.encodeComponent(code)}'));
         } catch (_) {
           // GoRouter not in context (e.g. isolated widget tests).
           if (mounted) setState(() => _error = 'Sign in to redeem an invite.');

@@ -7,7 +7,15 @@
 library;
 
 import 'package:dio/dio.dart';
+import 'package:lythaus/features/auth/domain/auth_required_exception.dart';
 import 'package:lythaus/features/notifications/domain/notification_models.dart';
+
+class NotificationServiceUnavailable implements Exception {
+  const NotificationServiceUnavailable();
+
+  @override
+  String toString() => 'This notification service is not available.';
+}
 
 /// Response from GET /notifications
 class NotificationsListResponse {
@@ -222,9 +230,13 @@ class NotificationApiService {
   // ========================================================================
 
   Exception _handleError(DioException error, String defaultMessage) {
+    if (error.response?.statusCode == 401) return const AuthRequiredException();
     if (error.response != null) {
       final data = error.response!.data;
-      if (data is Map && data.containsKey('error')) {
+      if (error.response!.statusCode == 404) {
+        return const NotificationServiceUnavailable();
+      }
+      if (data is Map && data['error'] is String) {
         return Exception(data['error'] as String);
       }
       return Exception('$defaultMessage (HTTP ${error.response!.statusCode})');

@@ -237,7 +237,7 @@ void main() {
       expect(find.byType(BottomNavigationBar), findsNothing);
     });
 
-    testWidgets('guest tapping Create shows snackbar', (tester) async {
+    testWidgets('guest tapping Create offers account entry', (tester) async {
       await tester.binding.setSurfaceSize(const Size(1024, 768));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -259,7 +259,8 @@ void main() {
       await tester.tap(find.text('Create'));
       await tester.pump();
 
-      expect(find.text('Sign in to use this Alpha feature.'), findsOneWidget);
+      expect(find.text('Sign in to create a post.'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
     });
 
     testWidgets('breakpoint constant is 768', (tester) async {
