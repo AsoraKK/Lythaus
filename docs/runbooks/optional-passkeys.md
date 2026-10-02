@@ -48,7 +48,9 @@ after their source changes are reconciled. Flutter uses a dedicated
 SimpleWebAuthn server `14.0.3` verifies registration and authentication;
 browser `14.0.0` is copied from the exact lockfile dependency into the release
 artifact, served locally, and loaded before Flutter. No external script CDN is
-introduced. The standard web build bundles the renderer and browser client.
+introduced. The standard web build bundles the renderer and browser client;
+its npm workspace dependencies must be installed from the frozen root lock
+first. CI installs them before compiling the immutable Flutter artifact.
 
 Every ceremony requires an authorized exact Origin and `cookie-v1` transport.
 Registration requires a current verified active account and password proof;
@@ -104,6 +106,13 @@ than bootstrapping. Create a fresh local database whose name begins
 against it, then apply the proposal only there. Set
 `PLANETSCALE_PG17_TEST_DATABASE_URL` to that explicitly local database. The test
 fixture refuses remote or non-disposable targets and cleans up synthetic users.
+The PostgreSQL CI job separately prepares an isolated `lythaus_auth_test`
+database, applies the canonical baseline and then this local-only proposal,
+and runs the existing authentication/email tests together with passkey tests.
+The canonical baseline/schema registry and production migration paths remain
+unchanged. Native dependency review verifies workspace membership and exact
+workspace metadata in the changed root npm lock, retaining full transitive
+review and rejection of mismatched or missing locks.
 
 ```bash
 node --experimental-strip-types --test packages/security/tests/passkeys.test.mjs tests/contract/passkeys-contract.test.mjs
