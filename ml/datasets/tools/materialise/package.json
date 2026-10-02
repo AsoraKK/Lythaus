@@ -3,9 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node materialise.mjs --help"
+    "check": "node materialise.mjs --help",
+    "test": "node --test materialise.test.mjs"
   },
   "dependencies": {
-    "sharp": "^0.35.3"
+    "sharp": "0.35.4"
   }
 }

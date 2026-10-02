@@ -347,6 +347,12 @@ jobs:
         run: node scripts/check-npm-audit.js apps/control-panel
       - name: Audit marketing site dependencies
         run: node scripts/check-npm-audit.js apps/marketing-site
+      - name: Install standalone materialiser dependencies
+        run: npm ci --ignore-scripts --no-audit --prefix ml/datasets/tools/materialise
+      - name: Verify materialiser image decoding
+        run: npm --prefix ml/datasets/tools/materialise test
+      - name: Audit standalone materialiser dependencies
+        run: node scripts/check-npm-audit.js ml/datasets/tools/materialise
       - name: Write launch blockers summary
         if: always()
         shell: bash
