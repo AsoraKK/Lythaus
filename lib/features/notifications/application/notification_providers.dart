@@ -9,6 +9,7 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/auth_required_exception.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/notifications/domain/notification_models.dart';
@@ -26,8 +27,16 @@ final dioProvider = Provider<Dio>((ref) {
 
 /// Notification API service provider
 final notificationApiServiceProvider = Provider<NotificationApiService>((ref) {
+  final ownerId = ref.watch(currentUserProvider.select((user) => user?.id));
   final dio = ref.watch(dioProvider);
-  return NotificationApiService(dioClient: dio);
+  final cancelToken = CancelToken();
+  ref.onDispose(cancelToken.cancel);
+  return NotificationApiService(
+    dioClient: dio,
+    ownerId: ownerId,
+    cancelToken: cancelToken,
+    accessToken: () => ref.read(jwtProvider.future),
+  );
 });
 
 // ============================================================================
@@ -84,13 +93,16 @@ class NotificationsState {
 /// Notifications list controller
 class NotificationsController extends StateNotifier<NotificationsState> {
   final NotificationApiService _apiService;
+  int _loadEpoch = 0;
 
   NotificationsController(this._apiService) : super(const NotificationsState());
 
   /// Load initial page of notifications
   Future<void> loadNotifications() async {
+    final epoch = ++_loadEpoch;
     state = state.copyWith(
       isLoading: true,
+      isLoadingMore: false,
       hasError: false,
       authRequired: false,
       serviceUnavailable: false,
@@ -98,12 +110,14 @@ class NotificationsController extends StateNotifier<NotificationsState> {
 
     try {
       final response = await _apiService.getNotifications(limit: 20);
+      if (!mounted || epoch != _loadEpoch) return;
       state = state.copyWith(
         notifications: response.notifications,
         continuationToken: () => response.continuationToken,
         isLoading: false,
       );
     } catch (e) {
+      if (!mounted || epoch != _loadEpoch) return;
       if (e is AuthRequiredException) {
         state = const NotificationsState(hasError: true, authRequired: true);
         return;
@@ -120,18 +134,21 @@ class NotificationsController extends StateNotifier<NotificationsState> {
   /// Load more notifications (pagination)
   Future<void> loadMore() async {
     if (state.authRequired ||
+        state.isLoading ||
         state.continuationToken == null ||
         state.isLoadingMore) {
       return;
     }
 
     state = state.copyWith(isLoadingMore: true);
+    final epoch = _loadEpoch;
 
     try {
       final response = await _apiService.getNotifications(
         limit: 20,
         continuationToken: state.continuationToken,
       );
+      if (!mounted || epoch != _loadEpoch) return;
 
       state = state.copyWith(
         notifications: [...state.notifications, ...response.notifications],
@@ -139,6 +156,7 @@ class NotificationsController extends StateNotifier<NotificationsState> {
         isLoadingMore: false,
       );
     } catch (e) {
+      if (!mounted || epoch != _loadEpoch) return;
       if (e is AuthRequiredException) {
         state = const NotificationsState(hasError: true, authRequired: true);
         return;
@@ -156,6 +174,7 @@ class NotificationsController extends StateNotifier<NotificationsState> {
   Future<void> markAsRead(String notificationId) async {
     try {
       await _apiService.markAsRead(notificationId);
+      if (!mounted) return;
 
       // Update local state
       final updatedList = state.notifications.map((n) {
@@ -171,6 +190,7 @@ class NotificationsController extends StateNotifier<NotificationsState> {
       state = state.copyWith(notifications: updatedList);
     } catch (e) {
       // Silently fail (can add error toast here)
+      if (!mounted) return;
       debugPrint('[Notifications] Failed to mark as read: $e');
     }
   }
@@ -179,6 +199,7 @@ class NotificationsController extends StateNotifier<NotificationsState> {
   Future<void> dismiss(String notificationId) async {
     try {
       await _apiService.dismissNotification(notificationId);
+      if (!mounted) return;
 
       // Remove from local state
       final updatedList = state.notifications
@@ -186,6 +207,7 @@ class NotificationsController extends StateNotifier<NotificationsState> {
           .toList();
       state = state.copyWith(notifications: updatedList);
     } catch (e) {
+      if (!mounted) return;
       debugPrint('[Notifications] Failed to dismiss notification: $e');
     }
   }
@@ -202,13 +224,6 @@ final notificationsControllerProvider =
 // PREFERENCES PROVIDERS
 // ============================================================================
 
-/// Notification preferences state provider
-final notificationPreferencesProvider =
-    FutureProvider<UserNotificationPreferences>((ref) async {
-      final apiService = ref.watch(notificationApiServiceProvider);
-      return apiService.getPreferences();
-    });
-
 /// Preferences controller for updates
 class PreferencesController
     extends StateNotifier<AsyncValue<UserNotificationPreferences>> {
@@ -221,8 +236,10 @@ class PreferencesController
     state = const AsyncValue.loading();
     try {
       final prefs = await _apiService.getPreferences();
+      if (!mounted) return;
       state = AsyncValue.data(prefs);
     } catch (e, stack) {
+      if (!mounted) return;
       state = AsyncValue.error(e, stack);
     }
   }
@@ -231,9 +248,10 @@ class PreferencesController
   Future<void> update(UserNotificationPreferences preferences) async {
     try {
       final updated = await _apiService.updatePreferences(preferences);
+      if (!mounted) throw StateError('Notification session changed');
       state = AsyncValue.data(updated);
     } catch (e, stack) {
-      state = AsyncValue.error(e, stack);
+      if (mounted) state = AsyncValue.error(e, stack);
       rethrow;
     }
   }
@@ -254,12 +272,6 @@ final preferencesControllerProvider =
 // DEVICES PROVIDERS
 // ============================================================================
 
-/// Devices list provider
-final devicesProvider = FutureProvider<List<UserDeviceToken>>((ref) async {
-  final apiService = ref.watch(notificationApiServiceProvider);
-  return apiService.getDevices(activeOnly: true);
-});
-
 /// Devices controller for actions
 class DevicesController
     extends StateNotifier<AsyncValue<List<UserDeviceToken>>> {
@@ -272,8 +284,10 @@ class DevicesController
     state = const AsyncValue.loading();
     try {
       final devices = await _apiService.getDevices(activeOnly: true);
+      if (!mounted) return;
       state = AsyncValue.data(devices);
     } catch (e, stack) {
+      if (!mounted) return;
       state = AsyncValue.error(e, stack);
     }
   }
@@ -282,6 +296,7 @@ class DevicesController
   Future<void> revoke(String deviceId) async {
     try {
       await _apiService.revokeDevice(deviceId);
+      if (!mounted) throw StateError('Notification session changed');
       // Reload devices after revoke
       await load();
     } catch (e) {

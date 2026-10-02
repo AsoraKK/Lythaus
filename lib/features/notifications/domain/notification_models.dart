@@ -6,6 +6,7 @@
 library;
 
 enum NotificationCategory {
+  system,
   social,
   safety,
   security,
@@ -79,6 +80,7 @@ class Notification {
   final bool dismissed;
   final String? dismissedAt;
   final DateTime createdAt;
+  final String? nativeType;
 
   const Notification({
     required this.id,
@@ -95,9 +97,29 @@ class Notification {
     this.dismissed = false,
     this.dismissedAt,
     required this.createdAt,
+    this.nativeType,
   });
 
-  factory Notification.fromJson(Map<String, dynamic> json) {
+  factory Notification.fromJson(Map<String, dynamic> json, {String? ownerId}) {
+    if (json['notificationType'] is String) {
+      final actor = ownerId ?? json['userId'] as String?;
+      if (actor == null) {
+        throw const FormatException('Missing notification owner');
+      }
+      return Notification(
+        id: json['id'] as String,
+        userId: actor,
+        category: NotificationCategory.system,
+        eventType: NotificationEventType.accountChange,
+        title: json['title'] as String,
+        body: '',
+        nativeType: json['notificationType'] as String,
+        targetId: json['entityId'] as String?,
+        read: json['readAt'] != null,
+        readAt: json['readAt'] as String?,
+        createdAt: DateTime.parse(json['createdAt'] as String),
+      );
+    }
     return Notification(
       id: json['id'] as String,
       userId: json['userId'] as String,
@@ -132,6 +154,8 @@ class Notification {
       'dismissed': dismissed,
       if (dismissedAt != null) 'dismissedAt': dismissedAt,
       'createdAt': createdAt.toIso8601String(),
+      if (nativeType != null) 'notificationType': nativeType,
+      if (nativeType != null && targetId != null) 'entityId': targetId,
     };
   }
 
@@ -166,6 +190,7 @@ class Notification {
       dismissed: dismissed ?? this.dismissed,
       dismissedAt: dismissedAt ?? this.dismissedAt,
       createdAt: createdAt ?? this.createdAt,
+      nativeType: nativeType,
     );
   }
 }
@@ -175,7 +200,8 @@ class UserNotificationPreferences {
   final String timezone;
   final QuietHours quietHours;
   final CategoryPreferences categories;
-  final DateTime updatedAt;
+  final DateTime? updatedAt;
+  final Map<String, bool>? delivery;
 
   const UserNotificationPreferences({
     required this.userId,
@@ -183,9 +209,44 @@ class UserNotificationPreferences {
     required this.quietHours,
     required this.categories,
     required this.updatedAt,
+    this.delivery,
   });
 
-  factory UserNotificationPreferences.fromJson(Map<String, dynamic> json) {
+  factory UserNotificationPreferences.fromJson(
+    Map<String, dynamic> json, {
+    String? ownerId,
+  }) {
+    if (json.containsKey('emailEnabled')) {
+      if (ownerId == null) {
+        throw const FormatException('Missing preferences owner');
+      }
+      const keys = [
+        'emailEnabled',
+        'pushEnabled',
+        'repliesEnabled',
+        'moderationEnabled',
+        'rewardsEnabled',
+      ];
+      if (keys.any((key) => json[key] is! bool)) {
+        throw const FormatException('Invalid delivery preferences');
+      }
+      return UserNotificationPreferences(
+        userId: ownerId,
+        timezone: '',
+        quietHours: QuietHours(List.filled(24, false)),
+        categories: const CategoryPreferences(
+          social: false,
+          news: false,
+          marketing: false,
+        ),
+        updatedAt: json['updatedAt'] == null
+            ? null
+            : DateTime.parse(json['updatedAt'] as String),
+        delivery: Map.unmodifiable({
+          for (final key in keys) key: json[key] as bool,
+        }),
+      );
+    }
     return UserNotificationPreferences(
       userId: json['userId'] as String,
       timezone: json['timezone'] as String,
@@ -200,12 +261,13 @@ class UserNotificationPreferences {
   }
 
   Map<String, dynamic> toJson() {
+    if (delivery != null) return Map<String, dynamic>.from(delivery!);
     return {
       'userId': userId,
       'timezone': timezone,
       'quietHours': quietHours.toJson(),
       'categories': categories.toJson(),
-      'updatedAt': updatedAt.toIso8601String(),
+      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
     };
   }
 
@@ -215,6 +277,7 @@ class UserNotificationPreferences {
     QuietHours? quietHours,
     CategoryPreferences? categories,
     DateTime? updatedAt,
+    Map<String, bool>? delivery,
   }) {
     return UserNotificationPreferences(
       userId: userId ?? this.userId,
@@ -222,6 +285,7 @@ class UserNotificationPreferences {
       quietHours: quietHours ?? this.quietHours,
       categories: categories ?? this.categories,
       updatedAt: updatedAt ?? this.updatedAt,
+      delivery: delivery ?? this.delivery,
     );
   }
 }
@@ -299,38 +363,59 @@ class CategoryPreferences {
 class UserDeviceToken {
   final String id;
   final String userId;
-  final String deviceId;
-  final String pushToken;
+  final String? deviceId;
+  final String? pushToken;
   final String platform; // 'android', 'ios', or 'web'
   final String? label;
   final DateTime createdAt;
-  final DateTime lastSeenAt;
+  final DateTime? lastSeenAt;
+  final bool active;
   final DateTime? revokedAt;
 
   const UserDeviceToken({
     required this.id,
     required this.userId,
-    required this.deviceId,
-    required this.pushToken,
+    this.deviceId,
+    this.pushToken,
     required this.platform,
     this.label,
     required this.createdAt,
-    required this.lastSeenAt,
+    this.lastSeenAt,
+    this.active = true,
     this.revokedAt,
   });
 
-  bool get isActive => revokedAt == null;
+  bool get isActive => active && revokedAt == null;
 
-  factory UserDeviceToken.fromJson(Map<String, dynamic> json) {
+  factory UserDeviceToken.fromJson(
+    Map<String, dynamic> json, {
+    String? ownerId,
+  }) {
+    if (json.containsKey('created_at')) {
+      if (ownerId == null) throw const FormatException('Missing device owner');
+      return UserDeviceToken(
+        id: json['id'] as String,
+        userId: ownerId,
+        platform: json['platform'] as String,
+        active: json['active'] as bool,
+        createdAt: DateTime.parse(json['created_at'] as String),
+        revokedAt: json['revoked_at'] == null
+            ? null
+            : DateTime.parse(json['revoked_at'] as String),
+      );
+    }
     return UserDeviceToken(
       id: json['id'] as String,
       userId: json['userId'] as String,
-      deviceId: json['deviceId'] as String,
-      pushToken: json['pushToken'] as String,
+      deviceId: json['deviceId'] as String?,
+      pushToken: json['pushToken'] as String?,
       platform: json['platform'] as String,
+      active: json['active'] as bool? ?? true,
       label: json['label'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
-      lastSeenAt: DateTime.parse(json['lastSeenAt'] as String),
+      lastSeenAt: json['lastSeenAt'] == null
+          ? null
+          : DateTime.parse(json['lastSeenAt'] as String),
       revokedAt: json['revokedAt'] != null
           ? DateTime.parse(json['revokedAt'] as String)
           : null,
@@ -341,12 +426,13 @@ class UserDeviceToken {
     return {
       'id': id,
       'userId': userId,
-      'deviceId': deviceId,
-      'pushToken': pushToken,
+      if (deviceId != null) 'deviceId': deviceId,
+      if (pushToken != null) 'pushToken': pushToken,
       'platform': platform,
+      'active': active,
       if (label != null) 'label': label,
       'createdAt': createdAt.toIso8601String(),
-      'lastSeenAt': lastSeenAt.toIso8601String(),
+      if (lastSeenAt != null) 'lastSeenAt': lastSeenAt!.toIso8601String(),
       if (revokedAt != null) 'revokedAt': revokedAt!.toIso8601String(),
     };
   }

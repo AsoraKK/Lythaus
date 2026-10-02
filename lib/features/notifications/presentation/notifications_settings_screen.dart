@@ -13,6 +13,8 @@ import 'package:flutter/material.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/ui/components/sign_in_required.dart';
 import 'package:lythaus/features/notifications/domain/notification_models.dart';
 import 'package:lythaus/features/notifications/application/notification_providers.dart';
 import 'package:lythaus/design_system/components/lyth_button.dart';
@@ -32,31 +34,49 @@ class _NotificationsSettingsScreenState
     extends ConsumerState<NotificationsSettingsScreen> {
   bool _saving = false;
   final Set<String> _removing = {};
+  int _sessionEpoch = 0;
 
   Future<void> _savePreferences(UserNotificationPreferences preferences) async {
     if (_saving) return;
+    final epoch = _sessionEpoch;
     setState(() => _saving = true);
     try {
       await ref
           .read(preferencesControllerProvider.notifier)
           .update(preferences);
-      if (mounted) {
+      if (mounted && epoch == _sessionEpoch) {
         LythSnackbar.success(context: context, message: 'Preferences updated');
       }
     } catch (_) {
-      if (mounted) {
+      if (mounted && epoch == _sessionEpoch) {
         LythSnackbar.error(
           context: context,
           message: 'Unable to save preferences. Try again.',
         );
       }
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted && epoch == _sessionEpoch) setState(() => _saving = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(currentUserProvider.select((user) => user?.id), (_, next) {
+      setState(() {
+        _sessionEpoch++;
+        _saving = false;
+        _removing.clear();
+      });
+    });
+    if (ref.watch(guestModeProvider)) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Notification Settings')),
+        body: const SignInRequired(
+          message: 'Sign in to manage notifications.',
+          returnTo: '/settings/notifications',
+        ),
+      );
+    }
     final preferencesAsync = ref.watch(preferencesControllerProvider);
     final devicesAsync = ref.watch(devicesControllerProvider);
 
@@ -79,40 +99,64 @@ class _NotificationsSettingsScreenState
             data: (preferences) => ListView(
               padding: EdgeInsets.all(context.spacing.lg),
               children: [
-                _CategoryTogglesSection(
-                  preferences: preferences,
-                  onUpdate: _savePreferences,
-                ),
-                SizedBox(height: context.spacing.xxl),
-                _QuietHoursSection(
-                  preferences: preferences,
-                  onUpdate: _savePreferences,
-                ),
+                if (preferences.delivery != null) ...[
+                  for (final entry in const {
+                    'emailEnabled': 'Email notifications',
+                    'pushEnabled': 'Push notifications',
+                    'repliesEnabled': 'Replies',
+                    'moderationEnabled': 'Moderation updates',
+                    'rewardsEnabled': 'Reward updates',
+                  }.entries)
+                    SwitchListTile(
+                      title: Text(entry.value),
+                      value: preferences.delivery![entry.key]!,
+                      onChanged: (value) => _savePreferences(
+                        preferences.copyWith(
+                          delivery: {
+                            ...preferences.delivery!,
+                            entry.key: value,
+                          },
+                        ),
+                      ),
+                    ),
+                  const Text('Quiet hours are not available yet.'),
+                ] else ...[
+                  _CategoryTogglesSection(
+                    preferences: preferences,
+                    onUpdate: _savePreferences,
+                  ),
+                  SizedBox(height: context.spacing.xxl),
+                  _QuietHoursSection(
+                    preferences: preferences,
+                    onUpdate: _savePreferences,
+                  ),
+                ],
                 SizedBox(height: context.spacing.xxl),
                 devicesAsync.when(
                   data: (devices) => _DevicesSection(
                     devices: devices,
                     onRevoke: (deviceId) async {
                       if (!_removing.add(deviceId)) return;
+                      final epoch = _sessionEpoch;
                       try {
                         await ref
                             .read(devicesControllerProvider.notifier)
                             .revoke(deviceId);
-                        if (context.mounted) {
+                        if (context.mounted && epoch == _sessionEpoch) {
                           LythSnackbar.success(
                             context: context,
                             message: 'Device removed',
                           );
                         }
                       } catch (e) {
-                        if (context.mounted) {
+                        if (context.mounted && epoch == _sessionEpoch) {
                           LythSnackbar.error(
                             context: context,
                             message: 'Unable to remove this device. Try again.',
                           );
                         }
                       } finally {
-                        _removing.remove(deviceId);
+                        if (epoch == _sessionEpoch) _removing.remove(deviceId);
                       }
                     },
                   ),
@@ -460,7 +504,7 @@ class _DevicesSection extends StatelessWidget {
         ),
         SizedBox(height: spacing.xs),
         Text(
-          'Manage devices receiving push notifications (max 3)',
+          'Manage devices receiving push notifications',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -510,7 +554,12 @@ class _DeviceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final platform = device.platform == 'fcm' ? 'Android' : 'iOS';
+    final (platform, icon) = switch (device.platform) {
+      'android' || 'fcm' => ('Android', Icons.phone_android),
+      'ios' || 'apns' => ('iOS', Icons.phone_iphone),
+      'web' => ('Web browser', Icons.web),
+      _ => ('Device', Icons.devices),
+    };
     final spacing = context.spacing;
 
     return LythCard(
@@ -518,10 +567,7 @@ class _DeviceCard extends StatelessWidget {
       borderColor: theme.colorScheme.outlineVariant,
       child: Row(
         children: [
-          Icon(
-            device.platform == 'fcm' ? Icons.phone_android : Icons.phone_iphone,
-            color: theme.colorScheme.primary,
-          ),
+          Icon(icon, color: theme.colorScheme.primary),
           SizedBox(width: spacing.lg),
           Expanded(
             child: Column(
@@ -535,7 +581,9 @@ class _DeviceCard extends StatelessWidget {
                 ),
                 SizedBox(height: spacing.xs),
                 Text(
-                  'Last seen: ${_formatLastSeen(device.lastSeenAt)}',
+                  device.lastSeenAt == null
+                      ? 'Registered: ${DateFormat.yMMMd().format(device.createdAt.toLocal())}'
+                      : 'Last seen: ${_formatLastSeen(device.lastSeenAt!)}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

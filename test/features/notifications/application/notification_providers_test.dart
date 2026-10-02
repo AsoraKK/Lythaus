@@ -279,9 +279,11 @@ void main() {
         );
         addTearDown(container.dispose);
 
-        final loadedPrefs = await container.read(
-          notificationPreferencesProvider.future,
-        );
+        container.read(preferencesControllerProvider);
+        await Future<void>.delayed(Duration.zero);
+        final loadedPrefs = container
+            .read(preferencesControllerProvider)
+            .requireValue;
         final unread = await container.read(unreadCountProvider.future);
 
         expect(loadedPrefs.userId, 'u1');

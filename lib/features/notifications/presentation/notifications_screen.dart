@@ -35,6 +35,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   final ScrollController _scrollController = ScrollController();
   final Set<String> _pending = {};
   bool _markingAll = false;
+  int _sessionEpoch = 0;
 
   @override
   void initState() {
@@ -80,12 +81,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Future<bool> _markAsRead(models.Notification notification) async {
+    final epoch = _sessionEpoch;
     if (_pending.contains(notification.id)) return false;
     setState(() => _pending.add(notification.id));
     await ref
         .read(notificationsControllerProvider.notifier)
         .markAsRead(notification.id);
-    if (!mounted) return false;
+    if (!mounted || epoch != _sessionEpoch) return false;
     setState(() => _pending.remove(notification.id));
     final read = ref
         .read(notificationsControllerProvider)
@@ -98,12 +100,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Future<void> _dismiss(models.Notification notification) async {
+    final epoch = _sessionEpoch;
     if (_pending.contains(notification.id)) return;
     setState(() => _pending.add(notification.id));
     await ref
         .read(notificationsControllerProvider.notifier)
         .dismiss(notification.id);
-    if (!mounted) return;
+    if (!mounted || epoch != _sessionEpoch) return;
     setState(() => _pending.remove(notification.id));
     if (ref
         .read(notificationsControllerProvider)
@@ -114,6 +117,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Future<void> _markAllRead() async {
+    final epoch = _sessionEpoch;
     if (_markingAll) return;
     setState(() => _markingAll = true);
     final unread = ref
@@ -123,10 +127,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         .toList();
     var failures = 0;
     for (final item in unread) {
-      if (!mounted) return;
+      if (!mounted || epoch != _sessionEpoch) return;
       if (!await _markAsRead(item)) failures += 1;
     }
-    if (!mounted) return;
+    if (!mounted || epoch != _sessionEpoch) return;
     setState(() => _markingAll = false);
     _message(
       failures == 0
@@ -136,11 +140,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Future<void> _handleTap(models.Notification notification) async {
+    final epoch = _sessionEpoch;
     if (!notification.read) {
       await _markAsRead(notification);
     }
 
-    if (!mounted) return;
+    if (!mounted || epoch != _sessionEpoch) return;
     final link = notification.deeplink;
     if (link == null || !DeeplinkRouter.canNavigate(link)) {
       _message('This notification has no available destination.');
@@ -151,6 +156,23 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(currentUserProvider.select((user) => user?.id), (_, next) {
+      setState(() {
+        _sessionEpoch++;
+        _pending.clear();
+        _markingAll = false;
+      });
+      final epoch = _sessionEpoch;
+      if (next != null) {
+        Future.microtask(() {
+          if (mounted && epoch == _sessionEpoch) {
+            ref
+                .read(notificationsControllerProvider.notifier)
+                .loadNotifications();
+          }
+        });
+      }
+    });
     if (ref.watch(guestModeProvider)) return _signIn();
     final state = ref.watch(notificationsControllerProvider);
     if (state.authRequired) return _signIn();
@@ -419,6 +441,7 @@ class _NotificationCard extends StatelessWidget {
 
   IconData _getCategoryIcon(models.NotificationCategory category) {
     return switch (category) {
+      models.NotificationCategory.system => Icons.notifications_outlined,
       models.NotificationCategory.social => Icons.people,
       models.NotificationCategory.safety => Icons.shield,
       models.NotificationCategory.security => Icons.lock,
@@ -432,6 +455,7 @@ class _NotificationCard extends StatelessWidget {
     ColorScheme scheme,
   ) {
     return switch (category) {
+      models.NotificationCategory.system => scheme.secondary,
       models.NotificationCategory.social => scheme.primary,
       models.NotificationCategory.safety => scheme.tertiary,
       models.NotificationCategory.security => scheme.error,
@@ -445,6 +469,7 @@ class _NotificationCard extends StatelessWidget {
     ColorScheme scheme,
   ) {
     return switch (category) {
+      models.NotificationCategory.system => scheme.onSecondary,
       models.NotificationCategory.social => scheme.onPrimary,
       models.NotificationCategory.safety => scheme.onTertiary,
       models.NotificationCategory.security => scheme.onError,
