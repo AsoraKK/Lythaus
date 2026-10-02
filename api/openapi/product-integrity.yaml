@@ -627,18 +627,19 @@ components:
       type: object
       additionalProperties: false
       required: [caseId, statement]
-      description: The caller may appeal a resolved case for their post or comment, or an account case where the case content ID is the caller's user ID.
+      description: The caller owns the challenged content. Activated monthly-policy appeals freeze a blocked or queued current post/comment decision and await safe triage. Historical policy retains its original resolved-case and account-case rules.
       properties:
         caseId: { type: string, format: uuid }
         statement: { type: string, minLength: 1, maxLength: 2000 }
     AppealCreateResponse:
       type: object
-      required: [appealId, state, riskClass, policyVersion]
+      required: [appealId, state, policyVersion]
       properties:
         appealId: { type: string, format: uuid }
-        state: { type: string, enum: [open] }
+        state: { type: string, enum: [submitted, triaged, open, closing, extended, resolved_allow, resolved_retain, unresolved, restricted_review, withdrawn] }
         riskClass: { type: string, enum: [standard, high] }
         policyVersion: { type: string, example: appeals-v1.0.0 }
+        created: { type: boolean }
     AppealOutcome:
       type: object
       required: [status, completedReviewers, totalWeight, overturnWeight, upholdWeight, winningShare, requiredAdjudicators, policyVersion]
@@ -675,14 +676,25 @@ components:
       type: object
       required: [appeal]
       properties:
-        appeal: { $ref: '#/components/schemas/AppealDetail' }
+        appeal:
+          oneOf:
+            - $ref: '#/components/schemas/AppealDetail'
+            - $ref: './community-appeals.yaml#/components/schemas/CommunityAppealDetail'
     GovernanceAppealVoteRequest:
+      oneOf:
+        - $ref: '#/components/schemas/LegacyAppealVoteRequest'
+        - $ref: './community-appeals.yaml#/components/schemas/CommunityBallotRequest'
+    LegacyAppealVoteRequest:
       type: object
       additionalProperties: false
       required: [decision]
       properties:
         decision: { type: string, enum: [overturn, uphold] }
     GovernanceAppealVoteResponse:
+      oneOf:
+        - $ref: '#/components/schemas/LegacyAppealVoteResponse'
+        - $ref: './community-appeals.yaml#/components/schemas/CommunityBallotResponse'
+    LegacyAppealVoteResponse:
       type: object
       required: [voteId, appealId, decision, locked]
       properties:
@@ -2143,7 +2155,7 @@ paths:
     post:
       operationId: appealsCreate
       summary: Submit an appeal
-      description: The case determines standard or high risk; the service assigns independent trained reviewers.
+      description: Dispatches by the activated policy. Monthly-policy cases await safe evidence triage before timed equal-vote community review. Historical cases retain their labelled assignment policy. Unapproved community configuration returns 503.
       tags: [Appeals]
       security:
         - bearerAuth: []
@@ -2193,7 +2205,8 @@ paths:
   /appeals/{id}:
     get:
       operationId: appealsGet
-      summary: Get an appeal visible to its appellant or assigned reviewer
+      summary: Get a private appeal under its recorded policy
+      description: Monthly-policy peers receive only safe evidence and their own ballot. Restricted cases are visible only to their appellant without an evidence preview. Live totals and voter identities are never returned. Historical assigned-reviewer access is preserved.
       tags: [Appeals]
       security:
         - bearerAuth: []
@@ -2216,8 +2229,8 @@ paths:
   /appeals/{appealId}/vote:
     post:
       operationId: appealsVote
-      summary: Submit one immutable reviewer vote
-      description: Only an independently assigned trained reviewer may vote. A vote is locked and cannot be changed.
+      summary: Record a ballot under the case policy
+      description: Monthly-policy ballots have weight one for every eligible email-verified member and use an expected revision; configured changes stop at the server deadline. Historical cases accept the original immutable assigned-reviewer vote. No live totals or other voter identities are returned.
       tags: [Appeals]
       security:
         - bearerAuth: []

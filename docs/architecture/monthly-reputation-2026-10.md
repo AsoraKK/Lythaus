@@ -3,6 +3,9 @@
 Status: confirmed product direction; operational defaults and activation pending.
 Policy: `lythaus-monthly-rewards-2026-10-v1`.
 Reviewed base: `8c4261402dd370b4c57e082cf0fc16b41927f7db` (remote main verified 2 October 2026).
+Main rechecked at `26dc226776f8acd3898954635c327db1ad898128`: intervening feed
+presentation and Android packaging changes do not alter this backend/migration baseline.
+Integration with those changes remains a separate parent-managed step.
 
 The October monthly model replaces the earlier accumulating reputation model for
 future approved assessments. Four highest whole weekly results belonging to source
@@ -34,8 +37,8 @@ earning producer consumes canonical post/comment lifecycle and moderation events
 records immutable evidence, and computes versioned weekly results. The D01 proposal must
 be explicitly named and its complete week boundaries match; no other convention
 is silently substituted. D08 is also tested as a proposed rule only. A separate
-candidate equal-vote evaluator implements configurable D09 rules without invoking
-or changing old-policy appeal routes. Shadow assessments cannot update current levels, reward entitlements or
+equal-vote service implements configurable D09 rules behind explicit activation
+and approval records, with version dispatch preserving old-policy cases. Shadow assessments cannot update current levels, reward entitlements or
 the historical ledger. A proposed schema is validated locally outside the approved
 production migration manifest. No new API, Flutter surface, offer or provider
 resource is activated by this slice.
@@ -103,7 +106,7 @@ effective months; separately approved migration, exact-SHA deployment and activa
 | T03 Persistence | Canonical events/outbox, immutable period revisions, assurance proofs, ballot uniqueness, selections/claims | Immutable monthly/weekly revisions, contribution evidence, source receipts and Jobs transactions tested; full ledger and migration pending |
 | T04 Earning | Real post/discussion/specialist/reception/authorship events and dependency reversals | Canonical post/comment producers, publication milestone, declarations/authorship, duplicate withholding and corrections tested; contextual acceptance, specialist/reception producers and peer participation remain to integrate |
 | T05 Security | Reuse normal validated auth events; capability-aware integrity, credential continuity, Turnstile/refresher | Coordinate with separate disabled passkey work; D07/D08/provider gates pending |
-| T06 Peer review | Private timed electorate, equal ballots/history, close transaction, scoped override, restricted route | Candidate policy tests pass; invoked routes, atomic ballots, D09/D11/D13 and three-Worker cutover pending |
+| T06 Peer review | Private timed electorate, equal ballots/history, close transaction, scoped override, restricted route | Public/admin routes, transactional ballots/closure, scoped restoration, earning corrections and private notices tested; ballot earning, specialist/unresolved execution, D09/D11/D13 activation and Flutter remain |
 | T07 Rewards/partners | Persistent Free/Premium/Black selections, proposals, consent/email linkage, QR/invoice idempotency | Commercial terms and approved offers pending; no fake merchants |
 | T08 Flutter | Existing Rewards tabs, profile tracker, real contribution/review forms, complete states | Depends on authoritative API slices; no parallel route |
 | T09 Reporting/privacy | Stored-calculation parity, full own report, public methodology, safe JSON/CSV, DSR/retention | Full report needs preceding evidence records and report/API/DSR integration |
@@ -118,9 +121,50 @@ caller; weekly producers are not yet joined with maintenance/email evidence to i
 it. Real action evidence has stable contribution and week identities, with transactional
 deduplication, revisions and scheduled settlement. Remaining proof provenance and DSR
 workflow integration are required before production collection. A shadow result is
-never a confirmed entitlement. The candidate
-appeal evaluator is a policy primitive only; eligibility data must come from fresh
-server checks and ballot/close transactions still need T06 implementation.
+never a confirmed entitlement. Appeal eligibility now comes from fresh registered,
+verified-account and scoped restriction checks, without reputation, subscription,
+training or age gates. Peer participation is recorded as evidence at final closure;
+the proposed weekly participation award is not yet connected to earning.
+
+## Private community appeal transactions
+
+`community_appeals.sql` is a local schema proposal. `COMMUNITY_APPEAL_RULES_VERSION`
+must be explicitly configured, the matching `moderation.community_appeals` database
+flag enabled, and an immutable rule-set row must record approval before creation,
+triage, peer evidence, ballots or scheduled closure can run. No configuration,
+approval or flag is seeded. Synthetic test approvals do not approve production policy.
+Owner reports remain readable during a pause. Existing open historical cases are
+kept under their original policy; a new-policy replacement is refused pending D13.
+
+Submission freezes the current challenged decision, content revision, declaration
+and classifier evidence. Only active, conflict-free moderation staff can provide a
+safe redacted text packet and rule context. The clock starts at that transaction.
+Once opened, database triggers prevent replacing the packet under existing votes.
+Restricted cases have no ordinary peer evidence or vote access; specialist resolution
+and accountable unresolved-case actions remain gated on D11.
+
+Public JWT and staff Access routes use fresh database bindings. Public reads contain
+only the safe packet, own ballot and closed outcome. One unique voter/case ballot
+retains immutable revisions, weight exactly one, structured reasons and an expected
+revision. Ballots and closure lock the same session; the insert checks the database
+clock again at the deadline. Closure rechecks current eligibility, allows more than
+five voters, and records valid minority participation identically to the majority.
+There is no ordinary Editorial confirmation or veto.
+
+Closure, scoped override, publication eligibility checks, immutable outcome,
+participation evidence, private preference-aware notifications and outbox events
+commit together. Deleted or edited content, independent decisions and declaration
+rules prevent inappropriate republication. An unchanged classifier evidence set
+cannot immediately requeue an overturned revision. The real Jobs replay path is
+tested. Restoration emits the existing publication event shape, invokes new earning
+correction from authoritative outcome evidence, and does not award historical-policy
+points. Earlier historical consequences remain a D13 reconciliation responsibility.
+
+OpenAPI v9 documents policy-specific response and ballot shapes and adds the private
+review/withdrawal and staff triage/evidence/queue operations. The pinned Dart generator
+has been run, its package compiled/analyzed, and dedicated serialization tests cover
+new and historical shapes. The product Flutter review screen and full DSR lifecycle
+are subsequent work; these backend tests are not deployment or end-to-end UI evidence.
 
 ## Canonical earning producer
 

@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Lythaus API",
-    "version": "v8",
+    "version": "v9",
     "description": "HTTP contract for the Lythaus API. The active runtime is Cloudflare Workers backed by PlanetScale PostgreSQL through Hyperdrive. Initial authentication is Guest plus Email only. Production releases are coordinated from one reviewed main SHA; the release manifest and provider evidence remain outside this HTTP contract.\n",
     "license": {
       "name": "MIT",
@@ -3883,7 +3883,7 @@
       "post": {
         "operationId": "appealsCreate",
         "summary": "Submit an appeal",
-        "description": "The case determines standard or high risk; the service assigns independent trained reviewers.",
+        "description": "Dispatches by the activated policy. Monthly-policy cases await safe evidence triage before timed equal-vote community review. Historical cases retain their labelled assignment policy. Unapproved community configuration returns 503.",
         "tags": [
           "Appeals"
         ],
@@ -3966,7 +3966,8 @@
     "/appeals/{id}": {
       "get": {
         "operationId": "appealsGet",
-        "summary": "Get an appeal visible to its appellant or assigned reviewer",
+        "summary": "Get a private appeal under its recorded policy",
+        "description": "Monthly-policy peers receive only safe evidence and their own ballot. Restricted cases are visible only to their appellant without an evidence preview. Live totals and voter identities are never returned. Historical assigned-reviewer access is preserved.",
         "tags": [
           "Appeals"
         ],
@@ -4009,8 +4010,8 @@
     "/appeals/{appealId}/vote": {
       "post": {
         "operationId": "appealsVote",
-        "summary": "Submit one immutable reviewer vote",
-        "description": "Only an independently assigned trained reviewer may vote. A vote is locked and cannot be changed.",
+        "summary": "Record a ballot under the case policy",
+        "description": "Monthly-policy ballots have weight one for every eligible email-verified member and use an expected revision; configured changes stop at the server deadline. Historical cases accept the original immutable assigned-reviewer vote. No live totals or other voter identities are returned.",
         "tags": [
           "Appeals"
         ],
@@ -4176,6 +4177,88 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/appeals/review/queue": {
+      "get": {
+        "operationId": "communityAppealsQueue",
+        "summary": "List private eligible community reviews",
+        "description": "Random case ordering; no selected panel, live counts, voter identities or restricted evidence. Requires approved configuration and a verified eligible account. No suitable cases returns no_case_available.",
+        "tags": [
+          "Appeals"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private eligible case queue.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityAppealQueue"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "description": "Community policy is not activated."
+          }
+        }
+      }
+    },
+    "/appeals/{appealId}/withdraw": {
+      "post": {
+        "operationId": "communityAppealsWithdraw",
+        "summary": "Withdraw an owned community appeal before closure",
+        "tags": [
+          "Appeals"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/appealId"
+          },
+          {
+            "$ref": "#/components/parameters/idempotencyKey"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Withdrawal recorded without a voting penalty.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityAppealWithdrawal"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "503": {
+            "description": "Community route is not configured."
           }
         }
       }
@@ -9964,6 +10047,163 @@
         }
       }
     },
+    "/admin/appeals/community/queue": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "adminCommunityAppealsQueue",
+        "summary": "List appeals awaiting safe triage or accountable follow-up",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Case metadata only, for active conflict-free moderation staff.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityAppealTriageQueue"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "description": "Community policy is not activated."
+          }
+        }
+      }
+    },
+    "/admin/appeals/{appealId}/triage": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "adminCommunityAppealsTriage",
+        "summary": "Freeze a safe review packet or restrict a submitted appeal",
+        "description": "Active conflict-free moderation staff provide a safe text rendition and rule context. The review clock starts here. Requires approved rules and the active feature flag. This operation cannot alter a community outcome or reopen a triaged packet.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/appealId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommunityAppealTriageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Triage recorded atomically with the case event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityAppealTriageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "The review packet is already frozen."
+          },
+          "503": {
+            "description": "Community policy is not activated."
+          }
+        }
+      }
+    },
+    "/admin/appeals/{appealId}/evidence": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "adminCommunityAppealsEvidence",
+        "summary": "Read frozen evidence for safe triage",
+        "description": "Active conflict-free moderation staff only. No ballots or live tally. Restricted material requires a separately approved specialist route and is refused by this endpoint.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/appealId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private frozen evidence, never a peer preview.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityAppealTriageEvidence"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "description": "Community route is not configured."
+          }
+        }
+      }
+    },
     "/admin/reviewers/{reviewerId}/qualification": {
       "servers": [
         {
@@ -12763,7 +13003,7 @@
           "caseId",
           "statement"
         ],
-        "description": "The caller may appeal a resolved case for their post or comment, or an account case where the case content ID is the caller's user ID.",
+        "description": "The caller owns the challenged content. Activated monthly-policy appeals freeze a blocked or queued current post/comment decision and await safe triage. Historical policy retains its original resolved-case and account-case rules.",
         "properties": {
           "caseId": {
             "type": "string",
@@ -12781,7 +13021,6 @@
         "required": [
           "appealId",
           "state",
-          "riskClass",
           "policyVersion"
         ],
         "properties": {
@@ -12792,7 +13031,16 @@
           "state": {
             "type": "string",
             "enum": [
-              "open"
+              "submitted",
+              "triaged",
+              "open",
+              "closing",
+              "extended",
+              "resolved_allow",
+              "resolved_retain",
+              "unresolved",
+              "restricted_review",
+              "withdrawn"
             ]
           },
           "riskClass": {
@@ -12805,6 +13053,9 @@
           "policyVersion": {
             "type": "string",
             "example": "appeals-v1.0.0"
+          },
+          "created": {
+            "type": "boolean"
           }
         }
       },
@@ -12895,6 +13146,232 @@
           }
         }
       },
+      "CommunityOwnBallot": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "required": [
+          "revision",
+          "choice",
+          "reason_code",
+          "cast_at"
+        ],
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "choice": {
+            "type": "string",
+            "enum": [
+              "allow",
+              "retain",
+              "recuse",
+              "cannot_assess"
+            ]
+          },
+          "reason_code": {
+            "type": "string",
+            "enum": [
+              "rule_misapplied",
+              "rule_applies",
+              "conflict",
+              "insufficient_context"
+            ]
+          },
+          "cast_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CommunityAppealOutcome": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "required": [
+          "result",
+          "restoration"
+        ],
+        "properties": {
+          "restoration": {
+            "type": "string",
+            "enum": [
+              "not_applicable",
+              "restored",
+              "content_changed_or_deleted",
+              "independent_hold",
+              "publication_rule_hold"
+            ]
+          },
+          "result": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "policyVersion",
+              "rulesVersion",
+              "status",
+              "validBallots",
+              "allow",
+              "retain",
+              "reason"
+            ],
+            "properties": {
+              "policyVersion": {
+                "type": "string",
+                "enum": [
+                  "lythaus-monthly-rewards-2026-10-v1"
+                ]
+              },
+              "rulesVersion": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "resolved_allow",
+                  "resolved_retain",
+                  "unresolved"
+                ]
+              },
+              "validBallots": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "allow": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "retain": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "strict_majority",
+                  "tie",
+                  "no_quorum"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "CommunityAppealEvidence": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "required": [
+          "preview",
+          "ruleContext",
+          "version",
+          "evidenceHash"
+        ],
+        "properties": {
+          "preview": {
+            "type": "string",
+            "maxLength": 100000
+          },
+          "ruleContext": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "version": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "evidenceHash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      },
+      "CommunityAppealDetail": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "appealId",
+          "policyVersion",
+          "rulesVersion",
+          "state",
+          "reviewClass",
+          "opensAt",
+          "closesAt",
+          "extensions",
+          "question",
+          "ownBallot",
+          "outcome",
+          "evidence"
+        ],
+        "properties": {
+          "appealId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "policyVersion": {
+            "type": "string",
+            "enum": [
+              "lythaus-monthly-rewards-2026-10-v1"
+            ]
+          },
+          "rulesVersion": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "submitted",
+              "triaged",
+              "open",
+              "closing",
+              "extended",
+              "resolved_allow",
+              "resolved_retain",
+              "unresolved",
+              "restricted_review",
+              "withdrawn"
+            ]
+          },
+          "reviewClass": {
+            "type": "string",
+            "enum": [
+              "untriaged",
+              "standard",
+              "restricted"
+            ]
+          },
+          "opensAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "closesAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "extensions": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "question": {
+            "type": "string",
+            "enum": [
+              "Was the challenged rule correctly applied to this content version?"
+            ]
+          },
+          "ownBallot": {
+            "$ref": "#/components/schemas/CommunityOwnBallot"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/CommunityAppealOutcome"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/CommunityAppealEvidence"
+          }
+        }
+      },
       "AppealDetailResponse": {
         "type": "object",
         "required": [
@@ -12902,11 +13379,18 @@
         ],
         "properties": {
           "appeal": {
-            "$ref": "#/components/schemas/AppealDetail"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AppealDetail"
+              },
+              {
+                "$ref": "#/components/schemas/CommunityAppealDetail"
+              }
+            ]
           }
         }
       },
-      "GovernanceAppealVoteRequest": {
+      "LegacyAppealVoteRequest": {
         "type": "object",
         "additionalProperties": false,
         "required": [
@@ -12922,7 +13406,57 @@
           }
         }
       },
-      "GovernanceAppealVoteResponse": {
+      "CommunityBallotRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "choice",
+          "reasonCode",
+          "expectedRevision",
+          "contextAcknowledged"
+        ],
+        "properties": {
+          "choice": {
+            "type": "string",
+            "enum": [
+              "allow",
+              "retain",
+              "recuse",
+              "cannot_assess"
+            ]
+          },
+          "reasonCode": {
+            "type": "string",
+            "enum": [
+              "rule_misapplied",
+              "rule_applies",
+              "conflict",
+              "insufficient_context"
+            ]
+          },
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "contextAcknowledged": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "GovernanceAppealVoteRequest": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/LegacyAppealVoteRequest"
+          },
+          {
+            "$ref": "#/components/schemas/CommunityBallotRequest"
+          }
+        ]
+      },
+      "LegacyAppealVoteResponse": {
         "type": "object",
         "required": [
           "voteId",
@@ -12953,6 +13487,53 @@
             ]
           }
         }
+      },
+      "CommunityBallotResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ballotId",
+          "revision",
+          "choice",
+          "castAt",
+          "created"
+        ],
+        "properties": {
+          "ballotId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "choice": {
+            "type": "string",
+            "enum": [
+              "allow",
+              "retain",
+              "recuse",
+              "cannot_assess"
+            ]
+          },
+          "castAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created": {
+            "type": "boolean"
+          }
+        }
+      },
+      "GovernanceAppealVoteResponse": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/LegacyAppealVoteResponse"
+          },
+          {
+            "$ref": "#/components/schemas/CommunityBallotResponse"
+          }
+        ]
       },
       "AppealRecusalResponse": {
         "type": "object",
@@ -13049,6 +13630,49 @@
                 }
               }
             }
+          }
+        }
+      },
+      "CommunityAppealQueue": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "items"
+        ],
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "available",
+              "no_case_available"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/CommunityAppealDetail"
+            }
+          }
+        }
+      },
+      "CommunityAppealWithdrawal": {
+        "type": "object",
+        "required": [
+          "appealId",
+          "state"
+        ],
+        "properties": {
+          "appealId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "withdrawn"
+            ]
           }
         }
       },
@@ -16375,6 +16999,179 @@
           }
         }
       },
+      "CommunityAppealTriageQueue": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "required": [
+                "appealId",
+                "state",
+                "reviewClass",
+                "rulesVersion"
+              ],
+              "properties": {
+                "appealId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "submitted",
+                    "restricted_review",
+                    "unresolved"
+                  ]
+                },
+                "reviewClass": {
+                  "type": "string",
+                  "enum": [
+                    "untriaged",
+                    "standard",
+                    "restricted"
+                  ]
+                },
+                "rulesVersion": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "CommunityAppealTriageRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reviewClass",
+          "reasonCode"
+        ],
+        "description": "Standard routing requires a safe text rendition and rule context. Restricted routing forbids peer evidence. Neither route can replace an already opened review packet.",
+        "properties": {
+          "reviewClass": {
+            "type": "string",
+            "enum": [
+              "standard",
+              "restricted"
+            ]
+          },
+          "safePreview": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          },
+          "ruleContext": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "reasonCode": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,79}$"
+          }
+        }
+      },
+      "CommunityAppealTriageResponse": {
+        "type": "object",
+        "required": [
+          "appealId",
+          "state",
+          "opensAt",
+          "closesAt"
+        ],
+        "properties": {
+          "appealId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "restricted_review"
+            ]
+          },
+          "opensAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "closesAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "CommunityAppealTriageEvidence": {
+        "type": "object",
+        "required": [
+          "appealId",
+          "state",
+          "challengedDecisionId",
+          "version",
+          "evidenceHash",
+          "evidence"
+        ],
+        "properties": {
+          "appealId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string"
+          },
+          "challengedDecisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "evidenceHash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "evidence": {
+            "type": "object",
+            "required": [
+              "frozen_content",
+              "classifier_evidence"
+            ],
+            "properties": {
+              "frozen_content": {
+                "type": "object",
+                "required": [
+                  "body",
+                  "declaration"
+                ],
+                "properties": {
+                  "body": {
+                    "type": "string"
+                  },
+                  "declaration": {
+                    "type": "string"
+                  }
+                }
+              },
+              "classifier_evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      },
       "ReviewerQualificationState": {
         "type": "string",
         "enum": [
@@ -16561,6 +17358,15 @@
         "schema": {
           "type": "string",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$"
+        }
+      },
+      "appealId": {
+        "name": "appealId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
         }
       },
       "limit100": {

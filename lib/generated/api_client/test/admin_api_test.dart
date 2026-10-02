@@ -77,6 +77,31 @@ void main() {
       // TODO
     });
 
+    // Read frozen evidence for safe triage
+    //
+    // Active conflict-free moderation staff only. No ballots or live tally. Restricted material requires a separately approved specialist route and is refused by this endpoint.
+    //
+    //Future<CommunityAppealTriageEvidence> adminCommunityAppealsEvidence(String appealId) async
+    test('test adminCommunityAppealsEvidence', () async {
+      // TODO
+    });
+
+    // List appeals awaiting safe triage or accountable follow-up
+    //
+    //Future<CommunityAppealTriageQueue> adminCommunityAppealsQueue() async
+    test('test adminCommunityAppealsQueue', () async {
+      // TODO
+    });
+
+    // Freeze a safe review packet or restrict a submitted appeal
+    //
+    // Active conflict-free moderation staff provide a safe text rendition and rule context. The review clock starts here. Requires approved rules and the active feature flag. This operation cannot alter a community outcome or reopen a triaged packet.
+    //
+    //Future<CommunityAppealTriageResponse> adminCommunityAppealsTriage(String appealId, CommunityAppealTriageRequest communityAppealTriageRequest) async
+    test('test adminCommunityAppealsTriage', () async {
+      // TODO
+    });
+
     // Publish an editorial News Board entry
     //
     //Future<EditorialPublicationResponse> adminEditorialPublicationsCreate(EditorialPublicationCreate editorialPublicationCreate) async

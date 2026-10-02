@@ -17,6 +17,9 @@ Method | HTTP request | Description
 [**adminAuthSummary**](AdminApi.md#adminauthsummary) | **GET** /admin/auth/summary | Read live authentication summary
 [**adminAuthenticityBetaRetry**](AdminApi.md#adminauthenticitybetaretry) | **POST** /admin/authenticity/cases/{caseId}/retry | Resume bounded unfinished work
 [**adminAuthenticityBetaReview**](AdminApi.md#adminauthenticitybetareview) | **POST** /admin/authenticity/cases/{caseId}/review | Record a versioned non-enforcing review
+[**adminCommunityAppealsEvidence**](AdminApi.md#admincommunityappealsevidence) | **GET** /admin/appeals/{appealId}/evidence | Read frozen evidence for safe triage
+[**adminCommunityAppealsQueue**](AdminApi.md#admincommunityappealsqueue) | **GET** /admin/appeals/community/queue | List appeals awaiting safe triage or accountable follow-up
+[**adminCommunityAppealsTriage**](AdminApi.md#admincommunityappealstriage) | **POST** /admin/appeals/{appealId}/triage | Freeze a safe review packet or restrict a submitted appeal
 [**adminEditorialPublicationsCreate**](AdminApi.md#admineditorialpublicationscreate) | **POST** /admin/editorial/publications | Publish an editorial News Board entry
 [**adminEmailHealth**](AdminApi.md#adminemailhealth) | **GET** /admin/email-health | Read transactional email health
 [**adminHealth**](AdminApi.md#adminhealth) | **GET** /admin/health | Check admin Worker health
@@ -415,6 +418,143 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**BetaActionResponse**](BetaActionResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminCommunityAppealsEvidence**
+> CommunityAppealTriageEvidence adminCommunityAppealsEvidence(appealId)
+
+Read frozen evidence for safe triage
+
+Active conflict-free moderation staff only. No ballots or live tally. Restricted material requires a separately approved specialist route and is refused by this endpoint.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String appealId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.adminCommunityAppealsEvidence(appealId);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminCommunityAppealsEvidence: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **appealId** | **String**|  |
+
+### Return type
+
+[**CommunityAppealTriageEvidence**](CommunityAppealTriageEvidence.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminCommunityAppealsQueue**
+> CommunityAppealTriageQueue adminCommunityAppealsQueue()
+
+List appeals awaiting safe triage or accountable follow-up
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+
+try {
+    final response = api.adminCommunityAppealsQueue();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminCommunityAppealsQueue: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**CommunityAppealTriageQueue**](CommunityAppealTriageQueue.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminCommunityAppealsTriage**
+> CommunityAppealTriageResponse adminCommunityAppealsTriage(appealId, communityAppealTriageRequest)
+
+Freeze a safe review packet or restrict a submitted appeal
+
+Active conflict-free moderation staff provide a safe text rendition and rule context. The review clock starts here. Requires approved rules and the active feature flag. This operation cannot alter a community outcome or reopen a triaged packet.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String appealId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final CommunityAppealTriageRequest communityAppealTriageRequest = ; // CommunityAppealTriageRequest |
+
+try {
+    final response = api.adminCommunityAppealsTriage(appealId, communityAppealTriageRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminCommunityAppealsTriage: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **appealId** | **String**|  |
+ **communityAppealTriageRequest** | [**CommunityAppealTriageRequest**](CommunityAppealTriageRequest.md)|  |
+
+### Return type
+
+[**CommunityAppealTriageResponse**](CommunityAppealTriageResponse.md)
 
 ### Authorization
 

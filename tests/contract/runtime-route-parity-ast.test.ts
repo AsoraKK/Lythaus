@@ -311,13 +311,15 @@ describe('source-derived OpenAPI route parity', () => {
       public: publicExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
       admin: adminExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
     };
-    expect(routeCounts).toEqual({ public: 109, admin: 46 });
+    expect(routeCounts).toEqual({ public: 111, admin: 48 });
     expect(runtimeRoutes.map(routeKey)).toEqual(expect.arrayContaining([
       'GET /.well-known/jwks.json',
       'GET /posts/{param}/owner-view',
       'GET /comments/{param}/owner-view',
       'POST /auth/password/reset/request',
       'POST /appeals/{param}/vote',
+      'GET /appeals/review/queue',
+      'POST /appeals/{param}/withdraw',
       'GET /feed/news',
       'POST /waitlist',
       'DELETE /posts/{param}',
@@ -330,6 +332,9 @@ describe('source-derived OpenAPI route parity', () => {
       'POST /admin/waitlist/{param}/status',
       'POST /admin/waitlist/{param}/retention-hold',
       'POST /admin/appeals/{param}/adjudications',
+      'GET /admin/appeals/community/queue',
+      'GET /admin/appeals/{param}/evidence',
+      'POST /admin/appeals/{param}/triage',
       'PUT /admin/reviewers/{param}/qualification',
     ]));
     const crossWorkerDuplicates = Array.from(new Set(runtimeRoutes.map(routeKey)))

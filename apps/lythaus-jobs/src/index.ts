@@ -12,7 +12,10 @@ import { processBetaEvent, expireBetaWork } from './authenticity-beta.ts';
 import { processAlphaEvent, expireAlphaWork } from './authenticity-alpha.ts';
 import { deferMonthlyReputationAssessment, processMonthlyReputationAssessment, reconcileDeferredMonthlyReputation } from './monthly-reputation.ts';
 import { processMonthlyEarningEvent, reconcileMonthlyEarning } from './monthly-earning.ts';
+import { reconcileCommunityAppeals } from './community-appeals.ts';
+import { identicalCommunityAppealOverride } from '../../../packages/db/src/community-appeal-closure.ts';
 import { MONTHLY_EARNING_SOURCE_EVENTS } from '../../../packages/db/src/monthly-earning.ts';
+import { MONTHLY_REPUTATION_POLICY_VERSION } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
 import { tombstoneBetaCases, purgeBetaMedia } from '../../../packages/db/src/authenticity-beta.ts';
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 
@@ -21,6 +24,7 @@ interface Env extends EnvBindings {
   DB_JOBS_FRESH: HyperdriveBinding;
   DB_PRIVACY_FRESH: HyperdriveBinding;
   MONTHLY_REPUTATION_SHADOW_RULES?: string;
+  COMMUNITY_APPEAL_RULES_VERSION?: string;
   MODERATION_QUEUE?: Queue;
   FEED_QUEUE?: Queue;
   NOTIFICATIONS_QUEUE?: Queue;
@@ -628,6 +632,7 @@ async function processReputationSource(message: QueueMessage, env: Env, eventId:
   ].includes(eventType)) return;
   const source = await transaction(env.DB_JOBS_FRESH, (client) => canonicalOutboxEvent(client, eventId, eventType));
   const payload = source.payload;
+  if (payload.policyVersion === MONTHLY_REPUTATION_POLICY_VERSION) return;
   const correlationId = stringValue(message.body.correlationId) ?? eventId;
   const subjectUserId = stringValue(payload.authorId) ?? stringValue(payload.userId) ?? source.actor_id ?? undefined;
   if (!subjectUserId) throw new Error('reputation_subject_event_invalid');
@@ -827,6 +832,9 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
   );
   const post = postResult.rows[0];
   if (!post) return;
+  if (env.COMMUNITY_APPEAL_RULES_VERSION && await transaction(env.DB_JOBS_FRESH, client => identicalCommunityAppealOverride(client, {
+    contentType: 'post', contentId: post.id, sourceEventId: revision.sourceEventId, body: post.body, declaredCreationMode: post.declared_creation_mode,
+  }))) return;
   const inputHash = await sha256Hex(post.body);
   if (!isCurrentContentModerationRevision({
     revision,
@@ -983,6 +991,9 @@ async function processCommentModeration(message: QueueMessage, env: Env): Promis
     );
     const row = comment.rows[0];
     if (!row) return;
+    if (env.COMMUNITY_APPEAL_RULES_VERSION && await identicalCommunityAppealOverride(client, {
+      contentType: 'comment', contentId: row.id, sourceEventId: revision.sourceEventId, body: row.body, declaredCreationMode: row.declared_creation_mode,
+    })) return;
     const bodyHash = await sha256Hex(row.body);
     if (!isCurrentContentModerationRevision({
       revision,
@@ -1912,6 +1923,7 @@ export default {
     if (env.AUTHENTICITY_ALPHA_ENABLED === 'true') await expireAlphaWork(env);
     await reconcileDeferredMonthlyReputation(env);
     await reconcileMonthlyEarning(env);
+    await reconcileCommunityAppeals(env);
     await relayTransactionalEmailOutbox(env);
     await relayOutbox(env);
     await deliverAdminOutcomeNotifications(env);

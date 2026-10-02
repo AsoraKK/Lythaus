@@ -24,6 +24,7 @@ interface ContentRow {
   declared_creation_mode: string; moderation_source_event_id: string | null; moderation_state: string;
   publicly_eligible: boolean; subject_deleted: boolean; own_thread: boolean; parent_id: string | null;
   decision_id: string | null; decision_outcome: string | null; decided_by: string | null;
+  decision_policy: string | null; community_allow: boolean;
 }
 const iso = (value: string | Date) => new Date(value).toISOString();
 async function digest(value: unknown): Promise<string> {
@@ -58,15 +59,26 @@ async function contentEvidence(client: Client, type: 'post' | 'comment', id: str
   const result = await client.query<ContentRow>(
     `WITH current_content AS (${contentSql})
      SELECT c.*, source.created_at AS revision_performed_at,
-       decision.id AS decision_id, decision.outcome AS decision_outcome, decision.decided_by
+       decision.id AS decision_id, decision.outcome AS decision_outcome, decision.decided_by,
+       decision.policy_version AS decision_policy, false AS community_allow
      FROM current_content c LEFT JOIN system.outbox_events source ON source.id = c.moderation_source_event_id
      LEFT JOIN LATERAL (
-       SELECT d.id, d.outcome, d.decided_by FROM moderation.decisions d
+       SELECT d.id, d.outcome, d.decided_by, d.policy_version FROM moderation.decisions d
        JOIN moderation.cases m ON m.id = d.case_id
        WHERE m.content_id = $1 AND m.content_type = $2 AND m.source_event_id = c.moderation_source_event_id
        ORDER BY d.created_at DESC, d.id DESC LIMIT 1
      ) decision ON true`, [id, type]);
-  return result.rows[0];
+  const row = result.rows[0];
+  if (row?.decision_policy === MONTHLY_REPUTATION_POLICY_VERSION && row.decision_outcome === 'allow' && !row.decided_by) {
+    row.community_allow = (await client.query(`SELECT 1 FROM moderation.decisions d
+      JOIN moderation.community_appeal_sessions s ON s.challenged_decision_id IN
+        (SELECT id FROM moderation.decisions WHERE case_id = d.case_id)
+      JOIN moderation.community_appeal_outcomes o ON o.appeal_id = s.appeal_id AND o.recorded_at = d.created_at
+      WHERE d.id = $1 AND s.state = 'resolved_allow' AND o.restoration = 'restored'
+        AND s.content_id = $2 AND s.content_type = $3 AND s.source_event_id = $4`,
+    [row.decision_id, id, type, row.moderation_source_event_id])).rowCount === 1;
+  }
+  return row;
 }
 
 export async function refreshMonthlyEarningWeek(client: Client, input: {
@@ -164,9 +176,9 @@ export async function recordMonthlyContentEarning(client: Client, request: {
   } else if (content.revision_performed_at && iso(content.revision_performed_at) >= week.endsAt) {
     reasonCode = 'cross_period_revision_requires_review';
   } else if (content.moderation_state === 'allowed' && content.decision_outcome === 'allow'
-    && content.decided_by && content.decided_by !== subjectId && content.revision_performed_at) {
+    && ((content.decided_by && content.decided_by !== subjectId) || content.community_allow) && content.revision_performed_at) {
     state = sourceType === 'post' ? 'accepted' : 'pending_review';
-    reasonCode = sourceType === 'post' ? 'independent_publication_accepted' : 'context_review_required';
+    reasonCode = sourceType === 'post' ? content.community_allow ? 'community_appeal_publication_accepted' : 'independent_publication_accepted' : 'context_review_required';
   }
   const old = (await client.query<{ revision: number; input_digest: string; input: ContentEvidence }>(
     'SELECT revision, input_digest, input FROM trust.monthly_earning_evidence_revisions WHERE contribution_id = $1 ORDER BY revision DESC LIMIT 1', [base.id])).rows[0];

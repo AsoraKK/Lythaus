@@ -16,6 +16,7 @@ part 'appeal_create_response.g.dart';
 /// * [state]
 /// * [riskClass]
 /// * [policyVersion]
+/// * [created]
 @BuiltValue()
 abstract class AppealCreateResponse implements Built<AppealCreateResponse, AppealCreateResponseBuilder> {
   @BuiltValueField(wireName: r'appealId')
@@ -23,14 +24,17 @@ abstract class AppealCreateResponse implements Built<AppealCreateResponse, Appea
 
   @BuiltValueField(wireName: r'state')
   AppealCreateResponseStateEnum get state;
-  // enum stateEnum {  open,  };
+  // enum stateEnum {  submitted,  triaged,  open,  closing,  extended,  resolved_allow,  resolved_retain,  unresolved,  restricted_review,  withdrawn,  };
 
   @BuiltValueField(wireName: r'riskClass')
-  AppealCreateResponseRiskClassEnum get riskClass;
+  AppealCreateResponseRiskClassEnum? get riskClass;
   // enum riskClassEnum {  standard,  high,  };
 
   @BuiltValueField(wireName: r'policyVersion')
   String get policyVersion;
+
+  @BuiltValueField(wireName: r'created')
+  bool? get created;
 
   AppealCreateResponse._();
 
@@ -65,16 +69,25 @@ class _$AppealCreateResponseSerializer implements PrimitiveSerializer<AppealCrea
       object.state,
       specifiedType: const FullType(AppealCreateResponseStateEnum),
     );
-    yield r'riskClass';
-    yield serializers.serialize(
-      object.riskClass,
-      specifiedType: const FullType(AppealCreateResponseRiskClassEnum),
-    );
+    if (object.riskClass != null) {
+      yield r'riskClass';
+      yield serializers.serialize(
+        object.riskClass,
+        specifiedType: const FullType(AppealCreateResponseRiskClassEnum),
+      );
+    }
     yield r'policyVersion';
     yield serializers.serialize(
       object.policyVersion,
       specifiedType: const FullType(String),
     );
+    if (object.created != null) {
+      yield r'created';
+      yield serializers.serialize(
+        object.created,
+        specifiedType: const FullType(bool),
+      );
+    }
   }
 
   @override
@@ -126,6 +139,13 @@ class _$AppealCreateResponseSerializer implements PrimitiveSerializer<AppealCrea
           ) as String;
           result.policyVersion = valueDes;
           break;
+        case r'created':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.created = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -157,8 +177,26 @@ class _$AppealCreateResponseSerializer implements PrimitiveSerializer<AppealCrea
 
 class AppealCreateResponseStateEnum extends EnumClass {
 
+  @BuiltValueEnumConst(wireName: r'submitted')
+  static const AppealCreateResponseStateEnum submitted = _$appealCreateResponseStateEnum_submitted;
+  @BuiltValueEnumConst(wireName: r'triaged')
+  static const AppealCreateResponseStateEnum triaged = _$appealCreateResponseStateEnum_triaged;
   @BuiltValueEnumConst(wireName: r'open')
   static const AppealCreateResponseStateEnum open = _$appealCreateResponseStateEnum_open;
+  @BuiltValueEnumConst(wireName: r'closing')
+  static const AppealCreateResponseStateEnum closing = _$appealCreateResponseStateEnum_closing;
+  @BuiltValueEnumConst(wireName: r'extended')
+  static const AppealCreateResponseStateEnum extended = _$appealCreateResponseStateEnum_extended;
+  @BuiltValueEnumConst(wireName: r'resolved_allow')
+  static const AppealCreateResponseStateEnum resolvedAllow = _$appealCreateResponseStateEnum_resolvedAllow;
+  @BuiltValueEnumConst(wireName: r'resolved_retain')
+  static const AppealCreateResponseStateEnum resolvedRetain = _$appealCreateResponseStateEnum_resolvedRetain;
+  @BuiltValueEnumConst(wireName: r'unresolved')
+  static const AppealCreateResponseStateEnum unresolved = _$appealCreateResponseStateEnum_unresolved;
+  @BuiltValueEnumConst(wireName: r'restricted_review')
+  static const AppealCreateResponseStateEnum restrictedReview = _$appealCreateResponseStateEnum_restrictedReview;
+  @BuiltValueEnumConst(wireName: r'withdrawn')
+  static const AppealCreateResponseStateEnum withdrawn = _$appealCreateResponseStateEnum_withdrawn;
 
   static Serializer<AppealCreateResponseStateEnum> get serializer => _$appealCreateResponseStateEnumSerializer;
 

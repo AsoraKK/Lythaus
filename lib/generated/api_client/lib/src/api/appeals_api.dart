@@ -14,6 +14,8 @@ import 'package:lythaus_api_client/src/model/appeal_create_response.dart';
 import 'package:lythaus_api_client/src/model/appeal_detail_response.dart';
 import 'package:lythaus_api_client/src/model/appeal_recusal_response.dart';
 import 'package:lythaus_api_client/src/model/appeal_reviewer_assignments.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_queue.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_withdrawal.dart';
 import 'package:lythaus_api_client/src/model/governance_appeal_vote_request.dart';
 import 'package:lythaus_api_client/src/model/governance_appeal_vote_response.dart';
 import 'package:lythaus_api_client/src/model/pending_appeal_adjudication_list.dart';
@@ -397,7 +399,7 @@ class AppealsApi {
   }
 
   /// Submit an appeal
-  /// The case determines standard or high risk; the service assigns independent trained reviewers.
+  /// Dispatches by the activated policy. Monthly-policy cases await safe evidence triage before timed equal-vote community review. Historical cases retain their labelled assignment policy. Unapproved community configuration returns 503.
   ///
   /// Parameters:
   /// * [appealCreateRequest]
@@ -500,8 +502,8 @@ class AppealsApi {
     );
   }
 
-  /// Get an appeal visible to its appellant or assigned reviewer
-  ///
+  /// Get a private appeal under its recorded policy
+  /// Monthly-policy peers receive only safe evidence and their own ballot. Restricted cases are visible only to their appellant without an evidence preview. Live totals and voter identities are never returned. Historical assigned-reviewer access is preserved.
   ///
   /// Parameters:
   /// * [id]
@@ -665,8 +667,8 @@ class AppealsApi {
     );
   }
 
-  /// Submit one immutable reviewer vote
-  /// Only an independently assigned trained reviewer may vote. A vote is locked and cannot be changed.
+  /// Record a ballot under the case policy
+  /// Monthly-policy ballots have weight one for every eligible email-verified member and use an expected revision; configured changes stop at the server deadline. Historical cases accept the original immutable assigned-reviewer vote. No live totals or other voter identities are returned.
   ///
   /// Parameters:
   /// * [appealId]
@@ -760,6 +762,169 @@ class AppealsApi {
     }
 
     return Response<GovernanceAppealVoteResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// List private eligible community reviews
+  /// Random case ordering; no selected panel, live counts, voter identities or restricted evidence. Requires approved configuration and a verified eligible account. No suitable cases returns no_case_available.
+  ///
+  /// Parameters:
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [CommunityAppealQueue] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<CommunityAppealQueue>> communityAppealsQueue({
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/appeals/review/queue';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    CommunityAppealQueue? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(CommunityAppealQueue),
+      ) as CommunityAppealQueue;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<CommunityAppealQueue>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Withdraw an owned community appeal before closure
+  ///
+  ///
+  /// Parameters:
+  /// * [appealId]
+  /// * [idempotencyKey] - Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [CommunityAppealWithdrawal] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<CommunityAppealWithdrawal>> communityAppealsWithdraw({
+    required String appealId,
+    String? idempotencyKey,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/appeals/{appealId}/withdraw'.replaceAll('{' r'appealId' '}', encodeQueryParameter(_serializers, appealId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        if (idempotencyKey != null) r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    CommunityAppealWithdrawal? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(CommunityAppealWithdrawal),
+      ) as CommunityAppealWithdrawal;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<CommunityAppealWithdrawal>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

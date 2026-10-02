@@ -20,6 +20,9 @@ embedded reference-validation counts are not execution evidence for this branch.
 - W: [candidate weekly action calculation](../../packages/contracts/src/monthly-earning-policy.ts); WT: [weekly policy tests](../../packages/contracts/tests/monthly-earning.test.mjs).
 - E: [canonical source persistence](../../packages/db/src/monthly-earning.ts) and [Jobs producer/reconciler](../../apps/lythaus-jobs/src/monthly-earning.ts); ET: [real-source PostgreSQL tests](../../apps/lythaus-jobs/tests/monthly-earning.postgres.mjs).
 - ES: [proposed earning schema](../../database/planetscale/proposals/monthly_reputation_earning.sql), outside the production manifest.
+- C: [private appeal access](../../packages/db/src/community-appeal-access.ts), [mutations](../../packages/db/src/community-appeal-mutations.ts), [closure](../../packages/db/src/community-appeal-closure.ts), invoked by the existing public/admin/Jobs Workers.
+- CT: [real PostgreSQL and authenticated route tests](../../apps/lythaus-public-api/tests/community-appeals.postgres.mjs); CS: [proposed appeal schema](../../database/planetscale/proposals/community_appeals.sql).
+- DT: [generated-client serialization tests](../../tests/contract/dart/community_appeal_serialization_test.dart.fixture), copied into the generated package by its validation script; the fixture suffix keeps generated-package dependencies out of the product Flutter analyzer.
 
 A unit-verified row establishes only the named calculation. A partial row still
 requires the remaining application, privacy, provider or release work. No new
@@ -86,26 +89,26 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | SEC-14 | A VPN, shared household IP, assistive tool or one challenge failure cannot independently ban a member. | T05 | Planned; no test execution claimed |
 | SEC-15 | Proportionate holds expire or escalate through audited states and have a recovery path. | T05 | Planned; no test execution claimed |
 | SEC-16 | No raw biometric, device PIN, secret, email or content body enters operational logs. | T05 | Planned; no test execution claimed |
-| APP-01 | A Level 1 Free member and Level 5 Black member each cast weight exactly 1. | A / AT | Partial: candidate policy verified; T06 route/database cutover pending |
-| APP-02 | Editorial status adds neither another ballot nor a routine confirmation requirement. | A / AT | Partial: candidate policy verified; T06 route/database cutover pending |
-| APP-03 | More than five eligible peers can vote; quorum is not a fixed panel size. | A / AT | Partial: candidate policy verified; T06 route/database cutover pending |
-| APP-04 | Guest, author self-vote, proven controlled duplicates and relevant conflicts are handled correctly. | A / AT | Partial: candidate policy verified; T06 route/database cutover pending |
-| APP-05 | Eligible low-reputation users are not excluded by old trained-panel or reputation gates. | A / AT | Partial: candidate policy verified; T06 route/database cutover pending |
-| APP-06 | Ballot retries/concurrent writes obey one logical voter/case key; edits do not multiply votes or awards. | A / AT | Partial: candidate policy verified; T06 route/database cutover pending |
-| APP-07 | Live totals and voter identities are hidden; only authorised safe case evidence is served. | A / AT | Partial: candidate policy verified; T06 route/database cutover pending |
-| APP-08 | Votes before/at/after close follow one boundary convention under simultaneous close jobs. | A / AT | Partial: candidate policy verified; T06 route/database cutover pending |
-| APP-09 | Quorum, strict majority, ties and no-quorum extension use the approved default version. | A / AT | Partial: candidate policy verified; T06 route/database cutover pending |
-| APP-10 | A majority in a standard case resolves without an invisible Editorial veto. | A / AT | Partial: candidate policy verified; T06 route/database cutover pending |
-| APP-11 | Unresolved after extension is not automatic author guilt or automatic publication. | A / AT | Partial: candidate policy verified; T06 route/database cutover pending |
-| APP-12 | Sensitive/illegal material follows restricted review and cannot leak through peer preview/media endpoints. | A / AT | Partial: candidate policy verified; T06 route/database cutover pending |
-| APP-13 | A valid minority ballot earns the same participation award as a valid majority ballot. | T06 | Planned; no test execution claimed |
-| APP-14 | A changed ballot is one contribution; skip/recusal does not cause a penalty. | A / AT | Partial: candidate policy verified; T06 route/database cutover pending |
-| APP-15 | No available cases is a neutral opportunity status; no fake production practice awards. | T06 | Planned; no test execution claimed |
-| APP-16 | Overturning a decision reverses only linked consequences and is idempotent. | T06 | Planned; no test execution claimed |
-| APP-17 | The same model output cannot immediately undo a scoped peer overturn on unchanged evidence. | T06 | Planned; no test execution claimed |
-| APP-18 | Allow does not override a separate lawful safety hold, content deletion, unrelated sanction or media launch gate. | T06 | Planned; no test execution claimed |
-| APP-19 | Old-policy cases never mix weight-two ballots into the new equal-vote evaluator. | A / AT | Partial: candidate policy verified; T06 route/database cutover pending |
-| APP-20 | Moderation/author decisions and ballot histories remain auditable after allowed redaction/retention handling. | T06 | Planned; no test execution claimed |
+| APP-01 | A Level 1 Free member and Level 5 Black member each cast weight exactly 1. | A, C, CS / AT, CT | Backend verified: weight-one constraint and no plan/level inputs; activation and UI pending |
+| APP-02 | Editorial status adds neither another ballot nor a routine confirmation requirement. | A, C / AT, CT | Backend verified: direct community closure, no Editorial confirmation |
+| APP-03 | More than five eligible peers can vote; quorum is not a fixed panel size. | A, C / AT, CT | Backend verified: twelve real eligible voters, no assignment ceiling |
+| APP-04 | Guest, author self-vote, proven controlled duplicates and relevant conflicts are handled correctly. | A, C / AT, CT | Backend verified: JWT, verified email, ownership/conflicts, stored scoped restrictions and fresh closure checks; restriction administration remains |
+| APP-05 | Eligible low-reputation users are not excluded by old trained-panel or reputation gates. | A, C / AT, CT | Backend verified using newly registered voters without reputation/training records |
+| APP-06 | Ballot retries/concurrent writes obey one logical voter/case key; edits do not multiply votes or awards. | C, CS / CT | Ballot uniqueness, immutable revisions, retries and concurrent CAS verified; award consumer remains |
+| APP-07 | Live totals and voter identities are hidden; only authorised safe case evidence is served. | C / CT, DT | Real public/admin routes, private cache headers, redaction, own-only ballot and paused access verified; Flutter pending |
+| APP-08 | Votes before/at/after close follow one boundary convention under simultaneous close jobs. | A, C / AT, CT | Exact policy boundaries, final database clock predicate and concurrent closure retries verified |
+| APP-09 | Quorum, strict majority, ties and no-quorum extension use the approved default version. | A, C, CS / AT, CT | Configured rules and missing-approval denial verified with synthetic approvals only; D09 remains pending |
+| APP-10 | A majority in a standard case resolves without an invisible Editorial veto. | C / CT | Actual scheduled Worker resolves and applies allow/retain atomically without confirmation |
+| APP-11 | Unresolved after extension is not automatic author guilt or automatic publication. | C / CT | One configured extension, private notices and unresolved result verified; D11 accountable follow-up remains |
+| APP-12 | Sensitive/illegal material follows restricted review and cannot leak through peer preview/media endpoints. | C / CT | Restricted cases denied peer evidence/votes/queue and ordinary staff evidence; specialist/media handling needs D11 |
+| APP-13 | A valid minority ballot earns the same participation award as a valid majority ballot. | C / CT | Equal valid participation evidence and original cast time verified; D10 award consumer pending |
+| APP-14 | A changed ballot is one contribution; skip/recusal does not cause a penalty. | A, C / AT, CT | Latest revision counted once; recusal excludes participation without penalty; earning consumer pending |
+| APP-15 | No available cases is a neutral opportunity status; no fake production practice awards. | C / CT | Real empty queue returns no_case_available; no practice award producer |
+| APP-16 | Overturning a decision reverses only linked consequences and is idempotent. | C, E / CT | Scoped restoration and monthly earning correction verified, including failure rollback; historical consequence reconciliation remains D13 |
+| APP-17 | The same model output cannot immediately undo a scoped peer overturn on unchanged evidence. | C / CT | Stored source/content/classifier scope and actual Jobs replay guard verified; changed evidence does not match the override |
+| APP-18 | Allow does not override a separate lawful safety hold, content deletion, unrelated sanction or media launch gate. | C / CT | Independent decision, changed/deleted text, parent-post block and generated-content prohibition verified; media route unactivated |
+| APP-19 | Old-policy cases never mix weight-two ballots into the new equal-vote evaluator. | A, C / AT, CT, DT | Historical reads/serialization preserved; old open cases refused new-policy replacement pending D13 |
+| APP-20 | Moderation/author decisions and ballot histories remain auditable after allowed redaction/retention handling. | C, CS / CT | Immutable history and frozen packet verified; full DSR/retention workflow integration pending |
 | PAR-01 | Free L5 remains profile L5 but has at most L3 access for its one selected reward family. | T07 | Planned; no test execution claimed |
 | PAR-02 | Premium cannot obtain five L5 slots; plan/level changes preserve dormant selections correctly. | T07 | Planned; no test execution claimed |
 | PAR-03 | Simultaneous claims/selections cannot exceed slot, inventory or usage limits. | T07 | Planned; no test execution claimed |
@@ -161,18 +164,20 @@ Local evidence on 2 October 2026:
 | --- | --- |
 | Node 22.23.3 policy suite | 30 passed; 100% lines, 98.66% branches across four new policy modules |
 | Node 22.23.3 PostgreSQL 17 suite | 9 passed; 100% lines, 98.44% branches across the persistence service and invoked Jobs adapter; actual Jobs queue and scheduled entrypoints exercise durable pause/resume |
-| Node 22.23.3 earning PostgreSQL 17 suite | 10 passed; 99.18% lines, 97.69% branches across real-source persistence and the Jobs producer/reconciler |
+| Node 22.23.3 earning PostgreSQL 17 suite | 10 passed; 96.09% lines, 94.81% branches across real-source persistence and the Jobs producer/reconciler; appeal provenance branch is additionally exercised by the appeal suite |
+| Node 22.23.3 appeal PostgreSQL 17 suite | 16 passed; 100% lines, 94.93% branches across appeal persistence/access/mutations/closure and the Jobs reconciler; invokes actual JWT/Access routes and Jobs queue/scheduled entrypoints |
 | Complete approved PostgreSQL baseline | Applied and verified locally through 0020; proposed schema separately applied and removed by tests |
 | Native typecheck | Passed |
 | Native Worker config/generated types | Passed using writable temporary npm cache and Wrangler log path; no generated files changed |
 | Existing native architecture suite | 270 passed |
 | Existing product contract and integrity suites | 10 and 21 passed |
 | Existing marketing suite | 47 passed after preserving the frozen root package manifest; homepage guards unchanged |
-| Remote CI at foundation SHA `1c90d6ffe80623b45cf88f5754bad8f9bb8fd572` and delivery-fix SHA `1bac47a879d9d0f685b00bb0af2b02cb24f24e58` | All checks passed, including Flutter and rendered journeys; later commits require their own current-head checks |
+| Remote CI through earning SHA `5de6578e9b1e8d965486efd4fe10162320d2b5e2` | All checks passed, including Flutter and rendered journeys; appeal changes require their own current-head checks |
 | Existing critical coverage gate | Passed across 41 modules / 13 domain categories |
 | OpenAPI lint and contract tests | Lint passed with two existing warnings; 38 tests passed, 17 pre-existing skips |
+| Generated OpenAPI v9 Dart client | Pinned generator 7.7.0; compilation and analysis passed with generated-code warnings; four added serialization tests pass alongside generated test scaffolding |
 | Provider verification | Read-only database/branch/schema/ledger inspection only; earning, credentials, appeals, partner and release operation unverified |
-| Flutter/UI, performance and deployment | Not run for this backend foundation; no new UI or HTTP contract, production migration, deployment or activation |
+| Flutter/UI, performance and deployment | New HTTP contract and generated client validated; product UI, performance and live operation unverified; no production migration, deployment or activation |
 
 The proposal has no approved migration ID. Production baseline remains
 `0020_auth_recovery_delivery.sql`; the candidate SQL does not enter the pinned
@@ -209,5 +214,8 @@ The earning suite uses the same database with `--test apps/lythaus-jobs/tests/mo
 and coverage includes for `packages/db/src/monthly-earning.ts` and
 `apps/lythaus-jobs/src/monthly-earning.ts`. Run the database files sequentially:
 each owns and removes its synthetic rule/flag fixtures.
+The appeal suite is `apps/lythaus-public-api/tests/community-appeals.postgres.mjs`,
+with coverage includes `packages/db/src/community-appeal-*.ts` and
+`apps/lythaus-jobs/src/community-appeals.ts`; CI runs it sequentially as well.
 The database tests apply and remove only the proposed schemas and synthetic
 fixtures. Neither command accesses a provider, deploys a Worker or changes activation.

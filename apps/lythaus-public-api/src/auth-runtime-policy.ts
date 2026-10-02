@@ -41,6 +41,8 @@ const PUBLIC_ERROR_CODES = new Set([
   'appeal_statement_required', 'appeal_vote_invalid', 'appeal_vote_locked',
   'appeal_vote_not_allowed', 'authentication_not_configured', 'authentication_required',
   'case_id_required', 'checksum_required', 'comment_not_found',
+  'community_appeals_unavailable', 'community_appeal_closed', 'community_appeal_revision_conflict',
+  'community_appeal_legacy_case_pending',
   'custom_feed_limit_reached', 'custom_feed_not_found', 'email_delivery_failed', 'email_delivery_not_configured',
   'email_provider_mode_invalid', 'email_verification_required', 'export_not_configured',
   'export_cooldown_active', 'export_not_found', 'export_unavailable', 'feature_disabled',
@@ -84,7 +86,7 @@ export function classifyPublicError(error: unknown): { exposedCode: string; inte
       : ['news_board_not_entitled', 'social_interaction_not_allowed', 'appeal_vote_not_allowed', 'appeal_recusal_not_allowed', 'auth_origin_not_allowed'].includes(exposedCode) ? 403
         : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
           : exposedCode === 'method_not_allowed' ? 405
-            : ['idempotency_key_conflict', 'idempotency_in_progress', 'idempotency_outcome_unknown', 'appeal_vote_locked', 'appeal_already_resolved', 'account_exists', 'reward_already_redeemed'].includes(exposedCode) ? 409
+            : ['idempotency_key_conflict', 'idempotency_in_progress', 'idempotency_outcome_unknown', 'appeal_vote_locked', 'appeal_already_resolved', 'account_exists', 'reward_already_redeemed', 'community_appeal_closed', 'community_appeal_revision_conflict', 'community_appeal_legacy_case_pending'].includes(exposedCode) ? 409
             : exposedCode === 'request_too_large' ? 413
               : exposedCode === 'unsupported_content_type' ? 415
               : exposedCode === 'rate_limit_exceeded'
