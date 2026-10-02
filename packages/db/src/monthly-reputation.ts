@@ -9,6 +9,7 @@ import type { Client } from 'pg';
 
 export const MONTHLY_REPUTATION_SHADOW_FLAG = 'trust.monthly_reputation_shadow';
 export const MONTHLY_REPUTATION_REQUEST_EVENT = 'trust.monthly_assessment.requested';
+export const MONTHLY_REPUTATION_PAUSED = 'monthly_reputation_shadow_paused';
 
 interface SourceRow {
   id: string;
@@ -65,6 +66,22 @@ export async function monthlyReputationShadowEnabled(client: Client): Promise<bo
     [MONTHLY_REPUTATION_SHADOW_FLAG],
   );
   return flag.rows[0]?.enabled === true && flag.rows[0]?.policy_version === MONTHLY_REPUTATION_POLICY_VERSION;
+}
+
+export async function deferMonthlyReputationRequest(client: Client, eventId: string): Promise<void> {
+  requireUuidV7(eventId);
+  const deferred = await client.query(
+    `UPDATE system.outbox_events SET last_error_code = $2
+      WHERE id = $1 AND event_type = $3 AND aggregate_type = 'monthly_reputation_source'
+        AND payload ->> 'sourceId' = aggregate_id::text
+      RETURNING id`,
+    [eventId, MONTHLY_REPUTATION_PAUSED, MONTHLY_REPUTATION_REQUEST_EVENT],
+  );
+  if (deferred.rowCount !== 1) throw new Error('monthly_reputation_canonical_event_required');
+  await client.query(
+    `DELETE FROM system.consumer_inbox WHERE consumer_name = 'lythaus-jobs'
+      AND event_id = $1 AND state = 'processing'`, [eventId],
+  );
 }
 
 export async function recordMonthlyReputationSource(client: Client, request: {
@@ -171,5 +188,9 @@ export async function assessMonthlyReputationSource(client: Client, request: {
     'SELECT id, calculation FROM trust.monthly_reputation_assessments WHERE source_id = $1', [row.id],
   );
   if (!stored.rows[0]) throw new Error('monthly_reputation_assessment_unavailable');
+  await client.query(
+    `UPDATE system.outbox_events SET last_error_code = NULL
+      WHERE id = $1 AND last_error_code = $2`, [request.eventId, MONTHLY_REPUTATION_PAUSED],
+  );
   return { id: stored.rows[0].id, sourceId: row.id, mode: 'shadow', calculation: stored.rows[0].calculation, created };
 }

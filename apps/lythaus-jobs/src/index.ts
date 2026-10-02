@@ -10,7 +10,7 @@ import { EMAIL_LIFECYCLE_QUEUE, handleTransactionalEmailLifecycleWebhook, readTr
 import { WorkflowEntrypoint } from 'cloudflare:workers';
 import { processBetaEvent, expireBetaWork } from './authenticity-beta.ts';
 import { processAlphaEvent, expireAlphaWork } from './authenticity-alpha.ts';
-import { processMonthlyReputationAssessment } from './monthly-reputation.ts';
+import { deferMonthlyReputationAssessment, processMonthlyReputationAssessment, reconcileDeferredMonthlyReputation } from './monthly-reputation.ts';
 import { tombstoneBetaCases, purgeBetaMedia } from '../../../packages/db/src/authenticity-beta.ts';
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 
@@ -1622,7 +1622,14 @@ async function processMessage(message: QueueMessage, env: Env): Promise<void> {
   }
   try {
     if (eventType === 'content.post.created' || eventType === 'content.post.updated') await processPostModeration(message, env);
-    if (eventType === 'trust.monthly_assessment.requested') await processMonthlyReputationAssessment(env, eventId);
+    if (eventType === 'trust.monthly_assessment.requested') {
+      const assessment = await processMonthlyReputationAssessment(env, eventId);
+      if (assessment === null) {
+        await deferMonthlyReputationAssessment(env, eventId);
+        message.ack();
+        return;
+      }
+    }
     if (eventType === 'moderation.authenticity_beta.requested') await processBetaEvent(env, eventId, message.body.payload);
     if (eventType === 'moderation.authenticity_alpha.requested') await processAlphaEvent(env, eventId, message.body.payload);
     if (eventType === 'content.profile.updated') await processProfileModeration(message, env);
@@ -1705,6 +1712,8 @@ async function relayOutbox(env: Env): Promise<void> {
        SELECT id
          FROM system.outbox_events
         WHERE dispatched_at IS NULL
+          AND (event_type <> 'trust.monthly_assessment.requested'
+            OR last_error_code IS DISTINCT FROM 'monthly_reputation_shadow_paused')
           AND (attempted_at IS NULL OR attempted_at < now() - interval '5 minutes')
         ORDER BY created_at
         LIMIT 50
@@ -1897,6 +1906,7 @@ export default {
       await purgeBetaMedia(env.DB_JOBS_FRESH,env.MEDIA_QUARANTINE);
     }
     if (env.AUTHENTICITY_ALPHA_ENABLED === 'true') await expireAlphaWork(env);
+    await reconcileDeferredMonthlyReputation(env);
     await relayTransactionalEmailOutbox(env);
     await relayOutbox(env);
     await deliverAdminOutcomeNotifications(env);

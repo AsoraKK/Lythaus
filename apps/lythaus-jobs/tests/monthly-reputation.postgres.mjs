@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { registerHooks } from 'node:module';
 import { after, before, mock, test } from 'node:test';
 import pg from 'pg';
 import * as database from '@lythaus/db';
@@ -8,7 +9,7 @@ import { MONTHLY_REPUTATION_POLICY_VERSION, MONTHLY_REPUTATION_CATALOGUE_HASH, n
 import { proposedClosingSundayWeeks } from '../../../packages/contracts/src/monthly-reputation-decisions.ts';
 import {
   assessMonthlyReputationSource, recordMonthlyReputationSource,
-  MONTHLY_REPUTATION_REQUEST_EVENT, MONTHLY_REPUTATION_SHADOW_FLAG,
+  MONTHLY_REPUTATION_REQUEST_EVENT, MONTHLY_REPUTATION_SHADOW_FLAG, MONTHLY_REPUTATION_PAUSED,
 } from '../../../packages/db/src/monthly-reputation.ts';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
@@ -41,12 +42,23 @@ async function transact(work, role) {
 
 const sql = (text, values) => transact(client => client.query(text, values));
 mock.module('@lythaus/db', { namedExports: { ...database,
+  query: (binding, text, values) => {
+    assert.equal(binding, freshBinding);
+    return transact(client => client.query(text, values), 'lythaus_jobs');
+  },
   transaction: (binding, work) => {
     assert.equal(binding, freshBinding);
     return transact(work, 'lythaus_jobs');
   },
 } });
-const { processMonthlyReputationAssessment } = await import('../src/monthly-reputation.ts');
+const { processMonthlyReputationAssessment, reconcileDeferredMonthlyReputation } = await import('../src/monthly-reputation.ts');
+const platform = registerHooks({ resolve(specifier, context, nextResolve) {
+  return specifier === 'cloudflare:workers'
+    ? { url: 'data:text/javascript,export class WorkflowEntrypoint {}', shortCircuit: true }
+    : nextResolve(specifier, context);
+} });
+const { default: jobsWorker } = await import('../src/index.ts');
+platform.deregister();
 const freshBinding = Object.freeze({ connectionString: 'local-fixture-binding' });
 const env = { DB_JOBS_FRESH: freshBinding };
 const userId = uuidv7();
@@ -91,6 +103,8 @@ before(async () => {
 });
 
 after(async () => {
+  await sql(`DELETE FROM system.consumer_inbox WHERE event_id IN
+    (SELECT id FROM system.outbox_events WHERE actor_id IN ($1, $2))`, [userId, otherId]);
   await sql('DELETE FROM system.outbox_events WHERE actor_id IN ($1, $2)', [userId, otherId]);
   await sql('DELETE FROM system.feature_flags WHERE flag_key = $1', [MONTHLY_REPUTATION_SHADOW_FLAG]);
   await sql('DROP TABLE IF EXISTS trust.monthly_reputation_assessments, trust.monthly_reputation_sources');
@@ -199,10 +213,69 @@ test('SEC-01/REL-02: nonexistent, mismatched and cross-subject queue events cann
   await sql('DELETE FROM trust.monthly_reputation_sources WHERE id = $1', [corruptSourceId]);
 });
 
+function delivery(eventId) {
+  const result = { acknowledged: 0, retried: 0 };
+  return { result, message: { id: uuidv7(), body: { eventId, eventType: MONTHLY_REPUTATION_REQUEST_EVENT },
+    ack: () => result.acknowledged++, retry: () => result.retried++ } };
+}
+
+test('REL-02: actual Jobs dispatcher durably defers disabled delivery and accepts the same event after re-enabling', async () => {
+  const sourceId = uuidv7(), eventId = uuidv7();
+  await record({ id: sourceId, eventId, subjectUserId: otherId });
+  await sql('UPDATE system.feature_flags SET enabled = false WHERE flag_key = $1', [MONTHLY_REPUTATION_SHADOW_FLAG]);
+  const paused = delivery(eventId);
+  await jobsWorker.queue({ queue: 'synthetic-audit', messages: [paused.message] }, env);
+  assert.deepEqual(paused.result, { acknowledged: 1, retried: 0 });
+  assert.equal((await sql('SELECT id FROM trust.monthly_reputation_assessments WHERE source_id = $1', [sourceId])).rowCount, 0);
+  assert.equal((await sql('SELECT state FROM system.consumer_inbox WHERE event_id = $1', [eventId])).rowCount, 0);
+  assert.equal((await sql('SELECT last_error_code FROM system.outbox_events WHERE id = $1', [eventId])).rows[0].last_error_code, MONTHLY_REPUTATION_PAUSED);
+  assert.equal(await reconcileDeferredMonthlyReputation(env), 0);
+  const invalid = delivery(uuidv7());
+  await jobsWorker.queue({ queue: 'synthetic-audit', messages: [invalid.message] }, env);
+  assert.deepEqual(invalid.result, { acknowledged: 0, retried: 1 });
+  await sql('UPDATE system.feature_flags SET enabled = true WHERE flag_key = $1', [MONTHLY_REPUTATION_SHADOW_FLAG]);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const resumed = delivery(eventId);
+    await jobsWorker.queue({ queue: 'synthetic-audit', messages: [resumed.message] }, env);
+    assert.deepEqual(resumed.result, { acknowledged: 1, retried: 0 });
+  }
+  assert.equal((await sql('SELECT id FROM trust.monthly_reputation_assessments WHERE source_id = $1', [sourceId])).rowCount, 1);
+  assert.equal((await sql('SELECT state FROM system.consumer_inbox WHERE event_id = $1', [eventId])).rows[0].state, 'completed');
+  assert.equal((await sql('SELECT last_error_code FROM system.outbox_events WHERE id = $1', [eventId])).rows[0].last_error_code, null);
+});
+
+test('REL-02: scheduled reconciliation resumes acknowledged deferrals without Queue redelivery and survives invalid neighbors', async () => {
+  const sourceId = uuidv7(), eventId = uuidv7();
+  await record({ id: sourceId, eventId, subjectUserId: otherId, input: input('2026-09') });
+  await sql('UPDATE system.feature_flags SET enabled = false WHERE flag_key = $1', [MONTHLY_REPUTATION_SHADOW_FLAG]);
+  const paused = delivery(eventId);
+  await jobsWorker.queue({ queue: 'synthetic-audit', messages: [paused.message] }, env);
+  assert.deepEqual(paused.result, { acknowledged: 1, retried: 0 });
+  const relayed = [];
+  const scheduledEnv = { ...env, AUDIT_QUEUE: { send: async body => { relayed.push(body); } } };
+  await jobsWorker.scheduled({}, scheduledEnv);
+  assert.equal(relayed.some(body => body.eventId === eventId), false);
+  assert.equal((await sql('SELECT last_error_code FROM system.outbox_events WHERE id = $1', [eventId])).rows[0].last_error_code, MONTHLY_REPUTATION_PAUSED);
+  await sql('UPDATE system.outbox_events SET dispatched_at = now() WHERE id = $1', [eventId]);
+  await sql('UPDATE system.feature_flags SET enabled = true WHERE flag_key = $1', [MONTHLY_REPUTATION_SHADOW_FLAG]);
+  const invalidId = uuidv7();
+  await sql(`INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload, last_error_code)
+    VALUES ($1, $2, 'monthly_reputation_source', $3, $4, '{}'::jsonb, $5)`,
+    [invalidId, MONTHLY_REPUTATION_REQUEST_EVENT, uuidv7(), otherId, MONTHLY_REPUTATION_PAUSED]);
+  await jobsWorker.scheduled({}, scheduledEnv);
+  assert.equal((await sql('SELECT id FROM trust.monthly_reputation_assessments WHERE source_id = $1', [sourceId])).rowCount, 1);
+  assert.equal((await sql('SELECT state FROM system.consumer_inbox WHERE event_id = $1', [eventId])).rows[0].state, 'completed');
+  await sql('DELETE FROM system.outbox_events WHERE id = $1', [invalidId]);
+  assert.equal(await reconcileDeferredMonthlyReputation(env), 0);
+  const repeated = delivery(eventId);
+  await jobsWorker.queue({ queue: 'synthetic-audit', messages: [repeated.message] }, env);
+  assert.deepEqual(repeated.result, { acknowledged: 1, retried: 0 });
+});
+
 test('RPT-01/04 partial: stored calculation is exact and authorised privacy erasure removes all dependent shadow rows', async () => {
   const stored = await sql('SELECT calculation FROM trust.monthly_reputation_assessments WHERE id = $1', [firstAssessment.id]);
   assert.deepEqual(stored.rows[0].calculation, firstAssessment.calculation);
-  await transact(client => client.query('DELETE FROM trust.monthly_reputation_sources WHERE subject_user_id = $1', [userId]), 'lythaus_privacy');
+  await transact(client => client.query('DELETE FROM trust.monthly_reputation_sources WHERE subject_user_id IN ($1, $2)', [userId, otherId]), 'lythaus_privacy');
   assert.equal((await sql('SELECT id FROM trust.monthly_reputation_assessments')).rowCount, 0);
   assert.equal((await sql('SELECT id FROM trust.monthly_reputation_sources')).rowCount, 0);
 });

@@ -191,3 +191,13 @@ erase existing shadow evidence under the applicable approved privacy process. No
 historical score or existing entitlement needs restoration because this slice never
 updates them. The proposed schema has no production migration number or approved
 manifest entry. Dropping production tables is not an authorized rollback.
+
+A request committed before a shadow pause remains durable. Disabled delivery
+records `monthly_reputation_shadow_paused` on the canonical outbox event and removes
+the processing inbox claim before acknowledging transport. It does not mark the
+assessment complete. The ordinary relay excludes these paused events, preserving
+the marker even if an earlier send finishes concurrently. Re-enabling permits the
+same queue event to run again; the scheduled Jobs entrypoint also reconciles up to
+25 marked requests per run without requiring Queue redelivery. Successful assessment
+clears the marker in the assessment transaction. One invalid request remains pending
+and logged while other requests in the batch can proceed.

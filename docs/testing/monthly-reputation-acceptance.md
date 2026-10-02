@@ -124,7 +124,7 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | RPT-03 | JSON/CSV/report links obey authorisation, expiry, CSV injection protection and data minimisation. | T09 | Planned; no test execution claimed |
 | RPT-04 | DSR export/delete, proof revocation, content purge and retained-audit redaction work end to end. | M, P, J, SQL / MT, PT | Partial: shadow persistence verified; full product flow pending |
 | REL-01 | Cached consent/standing cannot approve a stale vote or redemption; fresh Hyperdrive reads are used. | M, P, J, SQL / MT, PT | Partial: shadow persistence verified; full product flow pending |
-| REL-02 | Queue duplicate/out-of-order delivery and worker crash do not duplicate awards or miss corrections. | M, P, J, SQL / MT, PT | Partial: shadow persistence verified; full product flow pending |
+| REL-02 | Queue duplicate/out-of-order delivery and worker crash do not duplicate awards or miss corrections. | M, P, J, SQL / MT, PT | Partial: shadow persistence plus actual queue/scheduled pause-resume recovery verified; earning producers and full product flow pending |
 | REL-03 | Migration dry run, rollback, policy activation and exact reviewed SHA are separately evidenced. | SQL / PT | Partial: local baseline and proposed schema only; release pending |
 | REL-04 | Critical P1/P2 coverage is at least 80%; feed p95 <200 ms target, load/failure testing, API validation and personalised-cache isolation are verified or explicitly reported unverified. | MT, AT, PT | Partial: new-module coverage only; load/feed/browser checks unverified |
 
@@ -157,13 +157,14 @@ Local evidence on 2 October 2026:
 | Check | Result |
 | --- | --- |
 | Node 22.23.3 policy suite | 22 passed; 100% lines, 98.76% branches across the three new policy modules |
-| Node 22.23.3 PostgreSQL 17 suite | 7 passed; 100% lines, 98.15% branches across the persistence service and invoked Jobs adapter |
+| Node 22.23.3 PostgreSQL 17 suite | 9 passed; 100% lines, 98.44% branches across the persistence service and invoked Jobs adapter; actual Jobs queue and scheduled entrypoints exercise durable pause/resume |
 | Complete approved PostgreSQL baseline | Applied and verified locally through 0020; proposed schema separately applied and removed by tests |
 | Native typecheck | Passed |
 | Native Worker config/generated types | Passed using writable temporary npm cache and Wrangler log path; no generated files changed |
 | Existing native architecture suite | 270 passed |
 | Existing product contract and integrity suites | 10 and 21 passed |
 | Existing marketing suite | 47 passed after preserving the frozen root package manifest; homepage guards unchanged |
+| Remote CI at foundation SHA `1c90d6ffe80623b45cf88f5754bad8f9bb8fd572` | All checks passed, including Flutter and rendered journeys; later commits require their own current-head checks |
 | Existing critical coverage gate | Passed across 41 modules / 13 domain categories |
 | OpenAPI lint and contract tests | Lint passed with two existing warnings; 38 tests passed, 17 pre-existing skips |
 | Provider verification | Read-only database/branch/schema/ledger inspection only; earning, credentials, appeals, partner and release operation unverified |
