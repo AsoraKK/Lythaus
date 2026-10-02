@@ -105,7 +105,7 @@ effective months; separately approved migration, exact-SHA deployment and activa
 | T06 Peer review | Private timed electorate, equal ballots/history, close transaction, scoped override, restricted route | Candidate policy tests pass; invoked routes, atomic ballots, D09/D11/D13 and three-Worker cutover pending |
 | T07 Rewards/partners | Persistent Free/Premium/Black selections, proposals, consent/email linkage, QR/invoice idempotency | Commercial terms and approved offers pending; no fake merchants |
 | T08 Flutter | Existing Rewards tabs, profile tracker, real contribution/review forms, complete states | Depends on authoritative API slices; no parallel route |
-| T09 Reporting/privacy | Stored-calculation parity, full own report, public methodology, safe JSON/CSV, DSR/retention | Full report needs catalogue and preceding evidence records |
+| T09 Reporting/privacy | Stored-calculation parity, full own report, public methodology, safe JSON/CSV, DSR/retention | Full report needs preceding evidence records and report/API/DSR integration |
 | T10 Release | Shadow run, fairness/load/failure testing, approved cutover, exact-SHA release and rollback | No release or activation authorization |
 
 The acceptance matrix in `docs/testing/monthly-reputation-acceptance.md` tracks
@@ -119,6 +119,68 @@ scheduled settlement and DSR workflow integration are required before collecting
 personal data. A shadow result is never a confirmed entitlement. The candidate
 appeal evaluator is a policy primitive only; eligibility data must come from fresh
 server checks and ballot/close transactions still need T06 implementation.
+
+## Ticket feedback interface proposal
+
+The separate control-panel ticket workstream owns the user-app sidebar destinations
+**Report a problem** and **Feedback and suggestions**, their ticket backend, private
+case history and staff workflows. This reputation slice must not create competing
+routes or ticket storage. Feedback earning is an owner-review proposal only:
+submission, staff acknowledgement, ticket closure, duplicate reports, votes or
+popularity do not themselves establish an accepted contribution.
+
+The later owner amendment confirms **150 points for one accepted, useful suggestion
+per quarter**, with optional participation and continued access to report bugs or
+suggestions without points. Meaningful independent acceptance is required; this is
+not a submission reward. The amount and cadence supersede the earlier possibility
+of treating every accepted suggestion as an ordinary help task. They are recorded
+in the versioned sidecar
+`packages/contracts/policies/Lythaus_Monthly_Rewards_Suggestion_Amendment_v1.json`;
+the original 22-action catalogue and its digest remain unchanged.
+
+F01 is the remaining decision outside the original catalogue's D01–D13: where this
+150 fits in the existing budget and which source-month assessment it affects.
+The 13,500 source-month maximum is unchanged. No additional score component,
+quarterly-email increase, recurring award in multiple months or allocation to a
+weekly/monthly cap is inferred. The quarter boundary and detailed acceptance rubric
+also remain to be specified. In particular, the earlier D08 email-validity proposal
+does not define the suggestion allowance window.
+
+The same contribution cannot also earn `weekly.accepted_help` or
+`weekly.accepted_accessibility`. Those existing actions share the 250 weekly
+`help_accessibility` cap, with their 125-per-task value still a D04 operational
+proposal. Do not silently apply that value to the newly confirmed 150-point
+suggestion award. Whether a bug report can qualify as a useful suggestion requires
+the approved rubric; ordinary reports remain available without earning points.
+
+The proposed producer/consumer boundary is a server-authored acceptance or
+reversal event through the existing transactional outbox. The ticket workstream
+would own the decision and its private evidence; T04 would consume it only after
+the rubric, source-week assignment and scoring configuration are approved. Agree
+the following interface with that workstream before either side wires a consumer:
+
+| Proposed field or invariant | Owner and purpose |
+| --- | --- |
+| Event ID, stable contribution ID, decision revision and superseded revision | Ticket service generates UUIDv7 IDs and monotonic decision revisions; repeated delivery and reopening cannot award the same contribution again |
+| Ticket reference, subject ID and contribution classification | Ticket service resolves the authenticated submitter server-side; scoring classification remains pending F01, never client-supplied points |
+| Accepted/reversed decision, authoritative timestamp, rubric/policy version and private evidence reference | Ticket service records an auditable decision; consumer verifies supported policy and source identity rather than interpreting ticket status as acceptance |
+| Independent reviewer provenance and duplicate/manipulation findings | Authorised ticket reviewers cannot accept their own work; spam, duplicate underlying work and reciprocal acceptance farming are held or rejected with evidence; shared IP alone is insufficient |
+| Original accepted contribution reference on reversal | T04 reverses that source idempotently and recomputes only linked caps, allowances and dependent calculations under approved budget-placement and correction rules |
+| Current decision revision for reconciliation | Out-of-order accept/reverse events cannot resurrect an invalidated award; duplicate delivery cannot consume a second allowance |
+
+The event payload must not copy ticket text, attachments, email addresses or staff
+notes into the points ledger, public profiles or general logs. Case history remains
+private to the member and authorised staff. Export, redaction, deletion and retention
+need a coordinated reference-handling contract across both workstreams. Public
+methodology can explain approved eligibility without exposing private cases.
+
+F01 must settle budget placement, source-month effect, quarter boundaries, acceptance
+rubric, reviewer authority/conflicts, duplicate treatment, contribution time versus
+acceptance time and correction timing. Privacy retention also needs agreement
+across the two workstreams. There is no wired event consumer or ticket implementation
+in this slice. `runtime_activation_allowed` remains `false`; the current calculator
+cannot add the unplaced 150. Required interface tests are tracked separately from
+the original 100 acceptance cases in the acceptance matrix.
 
 ## Rollback and isolation
 

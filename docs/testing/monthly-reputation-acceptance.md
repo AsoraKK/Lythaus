@@ -53,11 +53,11 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | PTS-04 | Own and other discussion classification cannot double-count the same actor/thread context. | T02/T04 | Planned; no test execution claimed |
 | PTS-05 | A member with no replies has the approved meaningful-follow-up route, not invented peer activity. | T02/T04 | Planned; no test execution claimed |
 | PTS-06 | Source and correction share 300; splitting UI rows cannot raise the family cap. | T02/T04 | Planned; no test execution claimed |
-| PTS-07 | Help and accessibility share 250, with the same concurrency protection. | T02/T04 | Planned; no test execution claimed |
-| PTS-08 | Self-acceptance, repeated trivial corrections and reciprocal task farming are held/rejected with evidence. | T02/T04 | Planned; no test execution claimed |
+| PTS-07 | Help and accessibility share 250, with the same concurrency protection. | T02/T04; ticket proposal F01 | Planned; include all origins in one shared cap; no test execution claimed |
+| PTS-08 | Self-acceptance, repeated trivial corrections and reciprocal task farming are held/rejected with evidence. | T02/T04; ticket proposal F01 | Planned; include independent ticket acceptance; no test execution claimed |
 | PTS-09 | Four distinct approved families award breadth 150 once; five/six do not stack it. | T02/T04 | Planned; no test execution claimed |
 | PTS-10 | Two alternatives in one family count as one breadth family; reactions/security are not families. | T02/T04 | Planned; no test execution claimed |
-| PTS-11 | Reversing a supporting contribution recalculates breadth and other dependent components. | T02/T04 | Planned; no test execution claimed |
+| PTS-11 | Reversing a supporting contribution recalculates breadth and other dependent components. | T02/T04; ticket proposal F01 | Planned; include accepted-ticket reversals; no test execution claimed |
 | PTS-12 | No posts does not count as 100% human authorship. | T02/T04 | Planned; no test execution claimed |
 | PTS-13 | Permitted AI-assisted participation can earn compliance but no primary human-authorship award. | T02/T04 | Planned; no test execution claimed |
 | PTS-14 | Honest permitted assistance does not erase unrelated human-authored evidence. | T02/T04 | Planned; no test execution claimed |
@@ -128,13 +128,35 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | REL-03 | Migration dry run, rollback, policy activation and exact reviewed SHA are separately evidenced. | SQL / PT | Partial: local baseline and proposed schema only; release pending |
 | REL-04 | Critical P1/P2 coverage is at least 80%; feed p95 <200 ms target, load/failure testing, API validation and personalised-cache isolation are verified or explicitly reported unverified. | MT, AT, PT | Partial: new-module coverage only; load/feed/browser checks unverified |
 
+## Additional ticket interface cases
+
+These cases support [F01 in the decision record](../architecture/monthly-reputation-2026-10.md#ticket-feedback-interface-proposal).
+The owner confirmed 150 points for one accepted, useful suggestion per quarter;
+budget placement and the source-month effect remain unresolved. MT verifies the
+versioned amendment and that an unplaced suggestion field cannot add 150 to the
+existing score or exceed 13,500. The integration cases below are additional to the
+original 100 and are not executable tests yet. Activation remains prohibited.
+The control-panel workstream owns the ticket backend.
+
+| Proposed case | Required evidence before integration |
+| --- | --- |
+| Submission, acknowledgement, closure, rejection and duplicate report | No award event or client-side points; private case state remains usable |
+| Meaningful independent acceptance under an approved rubric | One 150-point award under the approved placement; reviewer authority and conflicts verified server-side |
+| Optional participation and approved quarter boundaries | At most one awarded suggestion per quarter; continued reporting without points; no assumed reuse of D08 email validity |
+| Retry, reopen, dual classification and concurrent acceptance | One stable contribution and effective revision; no concurrent second award or double credit as accepted help/accessibility |
+| Budget and source-month placement | Original 13,500 maximum and fixed next-month level respected; no extra component or repeated monthly use without approval |
+| Self-acceptance, spam, duplicate underlying work and reciprocal farming | Hold/rejection evidence; no points based solely on status, popularity or a shared IP |
+| Reversal before/after delivery and out-of-order revision | No resurrection or duplicate allowance; only linked points, caps and stored period revisions reconcile under the approved placement |
+| Wrong subject, unsupported rubric and missing activation approval | Reject or remain pending; no submitted points or forged event can award reputation |
+| Case history, export, redaction and erasure | Authorised private access only; no ticket body, attachments, contact details or staff notes leak through the ledger or public profile |
+
 ## Reproduction
 
 Local evidence on 2 October 2026:
 
 | Check | Result |
 | --- | --- |
-| Node 22.23.3 policy suite | 21 passed; 100% lines, 98.76% branches across the three new policy modules |
+| Node 22.23.3 policy suite | 22 passed; 100% lines, 98.76% branches across the three new policy modules |
 | Node 22.23.3 PostgreSQL 17 suite | 7 passed; 100% lines, 98.15% branches across the persistence service and invoked Jobs adapter |
 | Complete approved PostgreSQL baseline | Applied and verified locally through 0020; proposed schema separately applied and removed by tests |
 | Native typecheck | Passed |

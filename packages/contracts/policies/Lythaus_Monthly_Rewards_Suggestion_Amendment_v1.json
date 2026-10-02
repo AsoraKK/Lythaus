@@ -1,0 +1,50 @@
+{
+  "schema_version": "lythaus-monthly-rewards-amendment-v1",
+  "amendment_id": "accepted-useful-suggestion-2026-10-02-v1",
+  "base_policy_version": "lythaus-monthly-rewards-2026-10-v1",
+  "base_catalogue_sha256": "bc8be9d8f4cae4b0f3ec327e09f308069dd3e6b07e8ff57ccc6a6cc62435f5a2",
+  "source_authority": "Owner clarification on 2026-10-02",
+  "status": "confirmed_value_and_cadence_pending_budget_placement",
+  "decision_id": "F01",
+  "runtime_activation_allowed": false,
+  "confirmed": {
+    "points_per_accepted_suggestion": 150,
+    "maximum_awarded_suggestions_per_quarter": 1,
+    "cadence": "quarterly",
+    "useful_contribution_required": true,
+    "independent_acceptance_required": true,
+    "participation_required": false,
+    "submission_earns_points": false,
+    "reporting_without_rewards_available": true
+  },
+  "unresolved": {
+    "cap_group": null,
+    "source_month_assignment": null,
+    "application_to_source_months": null,
+    "quarter_definition": null,
+    "acceptance_rubric": null,
+    "reviewer_authority": null,
+    "bug_report_eligibility": null,
+    "correction_and_reversal_timing": null
+  },
+  "constraints": {
+    "source_month_maximum_unchanged": 13500,
+    "original_catalogue_preserved": true,
+    "extra_budget_authorised": false,
+    "award_on_submission": false,
+    "same_contribution_cannot_also_earn": [
+      "weekly.accepted_help",
+      "weekly.accepted_accessibility"
+    ],
+    "acceptance_and_reversal_idempotent": true,
+    "duplicate_spam_and_self_acceptance_safeguards_required": true,
+    "case_history_private": true
+  },
+  "integration": {
+    "ticket_backend_owner": "control_panel_ticket_workstream",
+    "destinations": ["Report a problem", "Feedback and suggestions"],
+    "proposed_transport": "existing_transactional_outbox",
+    "consumer_wired": false,
+    "runtime_action_id": null
+  }
+}

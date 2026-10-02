@@ -59,6 +59,29 @@ test('original catalogue has 22 unique actions and coherent shared caps; activat
   assert.equal(catalogue.reference_validation.application_tests_run, false);
 });
 
+test('F01: confirmed suggestion value stays outside scoring until budget placement is approved', () => {
+  const amendment = JSON.parse(readFileSync(new URL('../policies/Lythaus_Monthly_Rewards_Suggestion_Amendment_v1.json', import.meta.url)));
+  assert.equal(amendment.base_policy_version, MONTHLY_REPUTATION_POLICY_VERSION);
+  assert.equal(amendment.base_catalogue_sha256, MONTHLY_REPUTATION_CATALOGUE_HASH);
+  assert.equal(amendment.confirmed.points_per_accepted_suggestion, 150);
+  assert.equal(amendment.confirmed.maximum_awarded_suggestions_per_quarter, 1);
+  assert.equal(amendment.confirmed.cadence, 'quarterly');
+  assert.equal(amendment.confirmed.participation_required, false);
+  assert.equal(amendment.confirmed.submission_earns_points, false);
+  assert.equal(amendment.runtime_activation_allowed, false);
+  assert.equal(amendment.unresolved.cap_group, null);
+  assert.equal(amendment.unresolved.source_month_assignment, null);
+  assert.equal(amendment.integration.runtime_action_id, null);
+  assert.deepEqual(MONTHLY_REPUTATION_ACTIVATION.pendingAmendments, ['F01']);
+  const extraFields = { quarterlySuggestionPoints: amendment.confirmed.points_per_accepted_suggestion };
+  const empty = calculateMonthlyReputation({ ...monthlyInput([]), monthlyPoints: 0, quarterlyPoints: 0, ...extraFields }, now);
+  assert.equal(empty.sourceScore, 0);
+  const maximum = calculateMonthlyReputation({ ...monthlyInput([2500, 2500, 2500, 2500]), monthlyPoints: 2500, ...extraFields }, now);
+  assert.equal(maximum.sourceScore, amendment.constraints.source_month_maximum_unchanged);
+  assert.equal(maximum.sourceScore, 13500);
+  assert.equal(Object.hasOwn(maximum, 'quarterlySuggestionPoints'), false);
+});
+
 for (const scenario of catalogue.reference_scenarios) {
   test(`CAL-10/11/13, PTS-20: owner fixture ${scenario.id}`, () => {
     const input = { ...monthlyInput(scenario.weekly_totals), monthlyPoints: scenario.monthly_points, quarterlyPoints: scenario.quarterly_points };

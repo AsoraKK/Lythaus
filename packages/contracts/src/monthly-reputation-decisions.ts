@@ -8,6 +8,7 @@ export const MONTHLY_REPUTATION_ACTIVATION = Object.freeze({
   state: 'blocked' as const,
   catalogue: 'original_received_activation_prohibited' as const,
   pendingDecisions: MONTHLY_REPUTATION_DECISIONS,
+  pendingAmendments: Object.freeze(['F01'] as const),
   emailValidity: 'proposed_three_calendar_months_pending_approval' as const,
 });
 
