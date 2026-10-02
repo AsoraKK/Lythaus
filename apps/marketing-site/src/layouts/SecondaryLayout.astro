@@ -134,13 +134,15 @@ const fontCss = `@font-face{font-family:"Lythaus Interface";src:url("${regularFo
           toggle.type = 'button';
           toggle.className = 'password-toggle';
           toggle.textContent = 'Show';
-          toggle.setAttribute('aria-label', `Show ${input.labels?.[0]?.textContent?.toLowerCase() || 'password'}`);
+          const fieldLabel = input.labels?.[0]?.textContent?.toLowerCase() || 'password';
+          toggle.setAttribute('aria-label', `Show ${fieldLabel}`);
           toggle.setAttribute('aria-controls', input.id);
           toggle.setAttribute('aria-pressed', 'false');
           toggle.addEventListener('click', () => {
             const visible = input.type === 'password';
             input.type = visible ? 'text' : 'password';
             toggle.textContent = visible ? 'Hide' : 'Show';
+            toggle.setAttribute('aria-label', `${visible ? 'Hide' : 'Show'} ${fieldLabel}`);
             toggle.setAttribute('aria-pressed', String(visible));
           });
           field.append(toggle);

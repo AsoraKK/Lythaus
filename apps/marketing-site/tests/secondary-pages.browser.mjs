@@ -256,7 +256,7 @@ try {
       await page.locator('#sign-in-password').fill('fixture-only-passphrase');
       await page.getByRole('button', { name: 'Show password', exact: true }).click();
       assert.equal(await page.locator('#sign-in-password').getAttribute('type'), 'text');
-      await page.getByRole('button', { name: 'Show password', exact: true }).click();
+      await page.getByRole('button', { name: 'Hide password', exact: true }).click();
       assert.equal(await page.locator('#sign-in-password').getAttribute('type'), 'password');
       await page.locator('[data-sign-in-submit]').click();
       await page.locator('[data-sign-in-status][data-state="success"]').waitFor();

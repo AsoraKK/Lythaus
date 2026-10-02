@@ -26,6 +26,162 @@ before(async()=>{
 });
 after(async()=>{if(server)await new Promise(resolve=>server.close(resolve));});
 
+for (const [engine, type] of Object.entries({ chromium, webkit })) {
+  for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }, { width: 320, height: 844 }]) {
+    test(`${engine} ${viewport.width}: resend cooldown expiry and failure recovery`, async t => {
+      const browser = await type.launch({ headless: true });
+      t.after(() => browser.close());
+      const page = await browser.newPage({ viewport });
+      page.setDefaultTimeout(8000);
+      await page.clock.install();
+      await page.route('https://challenges.cloudflare.com/**', route => route.abort());
+      await page.addInitScript(() => {
+        let options;
+        const fixture = window.resendChallenge = { mode: 'pending', executions: 0, resets: 0,
+          complete: () => options.callback(`local-fixture:${options.action}:${fixture.executions}`) };
+        window.turnstile = {
+          render: (_target, config) => { options = config; return 'resend'; },
+          execute: () => {
+            fixture.executions += 1;
+            if (fixture.mode === 'success') queueMicrotask(fixture.complete);
+            if (fixture.mode === 'error') queueMicrotask(() => options['error-callback']());
+            if (fixture.mode === 'expired') queueMicrotask(() => options['expired-callback']());
+          },
+          reset: () => { fixture.resets += 1; },
+        };
+      });
+      const requests = [], failures = [];
+      page.on('pageerror', error => failures.push(error.message));
+      let responseMode = 'hold', receiveFirst;
+      const firstRoute = new Promise(resolve => { receiveFirst = resolve; });
+      const reply = (route, status = 202, body = { state: 'verification_required' }) => route.fulfill({
+        status, contentType: 'application/json', headers: { 'access-control-allow-origin': origin }, body: JSON.stringify(body),
+      });
+      await page.route('https://api.lythaus.co/**', async route => {
+        requests.push({ url: route.request().url(), body: route.request().postDataJSON(), headers: route.request().headers() });
+        if (responseMode === 'hold') { receiveFirst(route); return; }
+        if (responseMode === 'timeout') return;
+        if (responseMode === 'rejected') return reply(route, 429, { error: 'rate_limit_exceeded' });
+        if (responseMode === 'network') return route.abort('failed');
+        return reply(route);
+      });
+      await page.goto(origin + '/resend-verification');
+      if (viewport.width === 320) await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+      const submit = page.getByRole('button', { name: 'Resend verification email', exact: true });
+      const status = page.locator('[data-verification-status]');
+      await page.getByLabel('Email address', { exact: true }).fill('synthetic@example.invalid');
+      await submit.click();
+      const button = page.locator('[data-verification-submit]');
+      assert.equal(await button.isDisabled(), true);
+      assert.equal(await button.getAttribute('aria-busy'), 'true');
+      await page.locator('form').evaluate(form => form.requestSubmit());
+      assert.equal(await page.evaluate(() => window.resendChallenge.executions), 1, 'Duplicate submission must not request another challenge');
+      await page.clock.fastForward(31_000);
+      assert.equal(await button.isDisabled(), true, 'An outstanding challenge keeps submission disabled');
+      assert.equal(requests.length, 0);
+      await page.evaluate(() => window.resendChallenge.complete());
+      const pendingRequest = await firstRoute;
+      assert.equal(await button.isDisabled(), true, 'An outstanding API request keeps submission disabled');
+      await reply(pendingRequest);
+      await status.filter({ hasText: 'delivery is not confirmed yet' }).waitFor();
+      assert.equal(await button.isDisabled(), true);
+      assert.equal(await button.getAttribute('aria-busy'), 'false');
+      assert.equal(await status.evaluate(element => element === document.activeElement), true);
+      assert.equal(requests[0].url, 'https://api.lythaus.co/api/auth/email');
+      assert.equal(requests[0].body.mode, 'resend_verification');
+      assert.ok(requests[0].headers['idempotency-key']);
+      assert.equal(requests[0].headers.referer, undefined);
+      await page.clock.fastForward(29_000);
+      assert.equal(await button.isDisabled(), true, 'The cooldown remains enforced before expiry');
+      await page.clock.fastForward(2_000);
+      assert.equal(await button.isEnabled(), true, 'Cooldown expiry must restore resend eligibility');
+      assert.equal(await page.locator('[data-verification-cooldown]').innerText(), '');
+
+      responseMode = 'success';
+      await submit.click();
+      await page.clock.fastForward(31_000);
+      assert.equal(await button.isDisabled(), true, 'An expired timer must not enable the next pending challenge');
+      await page.evaluate(() => window.resendChallenge.complete());
+      await status.filter({ hasText: 'delivery is not confirmed yet' }).waitFor();
+      assert.equal(requests.length, 2);
+      assert.notEqual(requests[1].body.turnstileToken, requests[0].body.turnstileToken, 'A second request needs a fresh challenge');
+      assert.notEqual(requests[1].headers['idempotency-key'], requests[0].headers['idempotency-key']);
+      assert.equal(await page.evaluate(() => window.resendChallenge.resets), 2);
+      await page.clock.fastForward(31_000);
+
+      await page.evaluate(() => { window.resendChallenge.mode = 'success'; });
+      for (const mode of ['rejected', 'network', 'timeout']) {
+        responseMode = mode;
+        const pending = mode === 'timeout' ? page.waitForRequest('https://api.lythaus.co/api/auth/email') : undefined;
+        await submit.click();
+        if (pending) {
+          await pending;
+          await page.clock.fastForward(20_001);
+        }
+        await page.locator('[data-verification-status][data-state="error"]').waitFor();
+        assert.equal(await button.isEnabled(), true);
+        assert.equal(await button.getAttribute('aria-busy'), 'false');
+        assert.match(await status.innerText(), mode === 'rejected' ? /Too many requests/ : mode === 'timeout' ? /took too long/ : /could not send/);
+      }
+      const beforeChallengeFailures = requests.length;
+      for (const mode of ['error', 'expired', 'pending']) {
+        await page.evaluate(mode => { window.resendChallenge.mode = mode; }, mode);
+        await submit.click();
+        if (mode === 'pending') {
+          assert.equal(await button.isDisabled(), true);
+          await page.clock.fastForward(120_001);
+        }
+        await page.locator('[data-verification-status][data-state="error"]').waitFor();
+        assert.equal(await button.isEnabled(), true);
+        assert.match(await status.innerText(), mode === 'pending' ? /took too long/ : /could not verify/);
+        assert.equal(requests.length, beforeChallengeFailures, 'Failed challenges must not reach the API');
+      }
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+      assert.deepEqual(failures, []);
+    });
+
+    test(`${engine} ${viewport.width}: password toggle accessible action follows visibility`, async t => {
+      const browser = await type.launch({ headless: true });
+      t.after(() => browser.close());
+      const page = await browser.newPage({ viewport });
+      page.setDefaultTimeout(8000);
+      await page.route('https://challenges.cloudflare.com/**', route => route.abort());
+      const token = 'a'.repeat(64);
+      for (const [route, fields] of [
+        ['/sign-in', [['sign-in-password', 'password', 'current-password']]],
+        ['/signup', [['signup-password', 'password', 'new-password'], ['signup-password-confirmation', 'confirm password', 'new-password']]],
+        [`/reset-password#token=${token}`, [['new-password', 'new password', 'new-password'], ['new-password-confirmation', 'confirm new password', 'new-password']]],
+        [`/verify-email#token=${token}`, [['verification-password', 'your password', 'new-password'], ['verification-password-confirmation', 'confirm password', 'new-password']]],
+      ]) {
+        await page.goto(origin + route);
+        if (viewport.width === 320) await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+        for (const [id, label, autocomplete] of fields) {
+          const input = page.locator(`#${id}`);
+          const toggle = page.locator(`button[aria-controls="${id}"]`);
+          await input.fill('synthetic chosen password');
+          await input.focus();
+          await page.keyboard.press('Tab');
+          assert.equal(await toggle.evaluate(element => element === document.activeElement), true);
+          assert.equal(await toggle.getAttribute('aria-label'), `Show ${label}`);
+          await page.keyboard.press('Enter');
+          assert.equal(await input.getAttribute('type'), 'text');
+          assert.equal(await toggle.getAttribute('aria-label'), `Hide ${label}`);
+          assert.equal(await toggle.getAttribute('aria-pressed'), 'true');
+          assert.equal(await toggle.innerText(), 'Hide');
+          assert.equal(await toggle.evaluate(element => element === document.activeElement), true);
+          await page.keyboard.press('Space');
+          assert.equal(await input.getAttribute('type'), 'password');
+          assert.equal(await toggle.getAttribute('aria-label'), `Show ${label}`);
+          assert.equal(await toggle.getAttribute('aria-pressed'), 'false');
+          assert.equal(await input.getAttribute('autocomplete'), autocomplete);
+          assert.equal(await input.inputValue(), 'synthetic chosen password');
+        }
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+      }
+    });
+  }
+}
+
 for(const [engine,type] of Object.entries({chromium,webkit})) for(const viewport of [{width:1440,height:1000},{width:390,height:844}]) {
   test(`${engine} ${viewport.width}: rendered auth controls, recovery, fragments, errors and keyboard submission`,async t=>{
     const browser=await type.launch({headless:true});t.after(()=>browser.close());
