@@ -31,6 +31,8 @@ outcome, so its key remains held. The backend's quarantined
 idempotency_outcome_unknown state remains explicit; the client never replaces
 it with a new request. Late responses from a previous session cannot overwrite
 the current user's draft.
+Content input widgets are recreated on account changes so stale browser
+accessibility values cannot retain the previous account's text.
 
 GET /api/posts/{id}/owner-view and GET /api/comments/{id}/owner-view return
 known-ID content only to its active author. Responses use private, no-store

@@ -17,6 +17,7 @@ import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:lythaus/core/security/device_integrity_guard.dart';
 import 'package:lythaus/core/error/error_codes.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
@@ -65,6 +66,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(postCreationProvider);
+    final inputEpoch = ref.watch(
+      contentMutationRegistryProvider.select(
+        (registry) => registry.sessionEpoch,
+      ),
+    );
     final canCreate = ref.watch(canCreatePostProvider);
     final theme = Theme.of(context);
     final isAssisted = state.aiLabel == 'assisted';
@@ -208,6 +214,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                           // Text input
                           const SizedBox(height: 12),
                           TextField(
+                            key: ValueKey('post-create-input:$inputEpoch'),
                             controller: _textController,
                             focusNode: _focusNode,
                             minLines: 8,

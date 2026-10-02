@@ -800,6 +800,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
               if (_pendingParentId != null && _replyTarget == null)
                 const Text('Saved reply target retained.'),
               _ComposerBar(
+                key: ValueKey('comment-create-input:$_sessionEpoch'),
                 enabled: canCompose,
                 controller: _composerController,
                 replyTarget: _replyTarget,
@@ -897,6 +898,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
 
 class _ComposerBar extends StatelessWidget {
   const _ComposerBar({
+    super.key,
     required this.controller,
     required this.enabled,
     required this.replyTarget,

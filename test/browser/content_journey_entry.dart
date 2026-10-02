@@ -142,6 +142,7 @@ class FixtureApp extends ConsumerWidget {
     }).toJS;
     return MaterialApp(
       title: 'Lythaus content journey synthetic QA',
+      debugShowCheckedModeBanner: false,
       theme: Uri.base.queryParameters['theme'] == 'dark'
           ? LythausTheme.dark()
           : LythausTheme.light(),

@@ -226,7 +226,8 @@ try {
       assert.equal(await input.inputValue(),currentText);
       await reload(p);
       await open(p,kind==='post'?'Open composer':'Open comments',kind==='post'?'Your post':'Synthetic owner comment');
-      assert.equal(await input.inputValue(),currentText);
+      await input.click();
+      await until(()=>input.inputValue().then(value=>value===currentText),'Current-session draft did not restore into the active browser input');
       await enterText(p,input,originalText);await declare(p);
       await button(p,kind==='post'?'Post':/Send reply/).click();
       if(kind==='post') await button(p,'Open composer').waitFor();

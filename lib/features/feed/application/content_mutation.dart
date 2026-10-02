@@ -93,6 +93,7 @@ class ContentMutationRegistry extends ChangeNotifier {
   bool storageUnavailable = false;
   bool _disposed = false;
 
+  int get sessionEpoch => _epoch;
   List<OwnedContent> get owned => List.unmodifiable(_owned.values);
   List<ContentMutationAttempt> get attempts =>
       List.unmodifiable(_attempts.values);

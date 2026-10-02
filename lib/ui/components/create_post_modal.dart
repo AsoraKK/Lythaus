@@ -15,6 +15,7 @@ import 'package:lythaus/core/error/error_codes.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/state/models/feed_models.dart';
@@ -117,6 +118,11 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(postCreationProvider);
+    final inputEpoch = ref.watch(
+      contentMutationRegistryProvider.select(
+        (registry) => registry.sessionEpoch,
+      ),
+    );
     final canCreate = ref.watch(canCreatePostProvider);
     final canEdit =
         canCreate &&
@@ -177,6 +183,7 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
             ),
             SizedBox(height: spacing.lg),
             LythTextField(
+              key: ValueKey('post-modal-input:$inputEpoch'),
               controller: controller,
               disabled: !canEdit,
               onChanged: notifier.updateText,

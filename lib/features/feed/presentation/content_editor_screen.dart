@@ -302,6 +302,7 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
               const SizedBox(height: 12),
             ],
             TextField(
+              key: ValueKey('content-editor-input:$_sessionValid'),
               controller: _controller,
               enabled: !_busy && !_locked && !_restoring,
               onChanged: (_) => _saveDraft(),
