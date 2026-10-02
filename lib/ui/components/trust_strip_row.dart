@@ -5,13 +5,29 @@ import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 
 class TrustStripRow extends StatelessWidget {
-  const TrustStripRow({super.key, required this.summary, required this.onTap});
+  const TrustStripRow({
+    super.key,
+    required this.summary,
+    required this.onTap,
+    this.compact = false,
+    this.leading,
+  });
 
   final FeedTrustSummary summary;
   final VoidCallback onTap;
+  final bool compact;
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return _CompactTrustDetails(
+        summary: summary,
+        onTap: onTap,
+        leading: leading,
+      );
+    }
+
     final timeline = summary.timeline;
     final chips = <Widget>[
       _TimelineChip(
@@ -56,6 +72,130 @@ class TrustStripRow extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CompactTrustDetails extends StatefulWidget {
+  const _CompactTrustDetails({
+    required this.summary,
+    required this.onTap,
+    this.leading,
+  });
+
+  final FeedTrustSummary summary;
+  final VoidCallback onTap;
+  final Widget? leading;
+
+  @override
+  State<_CompactTrustDetails> createState() => _CompactTrustDetailsState();
+}
+
+class _CompactTrustDetailsState extends State<_CompactTrustDetails> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = widget.summary;
+    final timeline = summary.timeline;
+    final relevantStates = <Widget>[
+      if (summary.trustStatus != 'no_extra_signals')
+        _StatusChip(status: summary.trustStatus),
+      if (timeline.created != 'complete')
+        _TimelineChip(
+          icon: Icons.fiber_manual_record_outlined,
+          label: 'Created',
+          state: timeline.created,
+        ),
+      if (timeline.mediaChecked != 'none' &&
+          timeline.mediaChecked != 'complete')
+        _TimelineChip(
+          icon: Icons.perm_media_outlined,
+          label: 'Media checked',
+          state: timeline.mediaChecked,
+        ),
+      if (timeline.moderation != 'none')
+        _TimelineChip(
+          icon: Icons.gavel_outlined,
+          label: 'Moderation',
+          state: timeline.moderation,
+        ),
+      if (timeline.appeal != null)
+        _TimelineChip(
+          icon: Icons.outbox_outlined,
+          label: 'Appeal',
+          state: timeline.appeal!,
+        ),
+      if (summary.hasAppeal &&
+          timeline.appeal == null &&
+          summary.trustStatus != 'under_appeal')
+        Text('Appeal on record', style: context.textTheme.bodySmall),
+    ];
+
+    final detailsButton = MergeSemantics(
+      child: Semantics(
+        expanded: _expanded,
+        child: TextButton.icon(
+          onPressed: () => setState(() => _expanded = !_expanded),
+          style: ButtonStyle(
+            minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
+            padding: WidgetStatePropertyAll(
+              EdgeInsets.symmetric(horizontal: context.spacing.sm),
+            ),
+            foregroundColor: WidgetStatePropertyAll(
+              context.colorScheme.onSurfaceVariant,
+            ),
+            textStyle: WidgetStatePropertyAll(context.textTheme.bodySmall),
+            animationDuration: Duration.zero,
+            side: WidgetStateProperty.resolveWith(
+              (states) => BorderSide(
+                color: states.contains(WidgetState.focused)
+                    ? context.colorScheme.primary
+                    : Colors.transparent,
+                width: 2,
+              ),
+            ),
+          ),
+          icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
+          label: const Text('Trust details'),
+        ),
+      ),
+    );
+    final leading = widget.leading;
+    final stackDisclosure =
+        MediaQuery.textScalerOf(context).scale(14) > 18 ||
+        relevantStates.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (leading != null)
+          if (stackDisclosure)
+            leading
+          else
+            Row(
+              children: [
+                Expanded(child: leading),
+                SizedBox(width: context.spacing.xs),
+                detailsButton,
+              ],
+            ),
+        if (relevantStates.isNotEmpty)
+          Padding(
+            padding: EdgeInsets.only(top: context.spacing.xs),
+            child: Wrap(
+              spacing: context.spacing.sm,
+              runSpacing: context.spacing.sm,
+              children: relevantStates,
+            ),
+          ),
+        if (leading == null || stackDisclosure) detailsButton,
+        if (_expanded)
+          Padding(
+            padding: EdgeInsets.only(bottom: context.spacing.sm),
+            child: TrustStripRow(summary: summary, onTap: widget.onTap),
+          ),
+      ],
     );
   }
 }
@@ -113,7 +253,8 @@ class _StatusChip extends StatelessWidget {
       'under_appeal' => 'Under appeal',
       'actioned' => 'Actioned',
       'verified_signals_attached' => 'Verified signals attached',
-      _ => 'No extra signals',
+      'no_extra_signals' => 'No extra signals',
+      _ => status.replaceAll('_', ' '),
     };
     final colors = _colorsForState(context, status);
 

@@ -3,11 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import 'package:lythaus/design_system/components/lyth_card.dart';
-import 'package:lythaus/design_system/components/lyth_chip.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 import 'package:lythaus/state/models/feed_models.dart';
-import 'package:lythaus/ui/components/tier_badge.dart';
 import 'package:lythaus/ui/components/trust_strip_row.dart';
 import 'package:lythaus/ui/components/receipt_drawer.dart';
 import 'package:lythaus/ui/components/authorship_disclosure.dart';
@@ -46,102 +43,110 @@ class FeedCard extends StatelessWidget {
         horizontal: spacing.lg,
         vertical: spacing.xs,
       ),
-      child: LythCard.clickable(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _FeedEntrySurface(
+            onTap: onTap,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (item.isPinned)
+                Row(
+                  children: [
+                    if (item.isPinned)
+                      Padding(
+                        padding: EdgeInsets.only(right: spacing.xs),
+                        child: Icon(
+                          Icons.push_pin_outlined,
+                          size: 16,
+                          color: theme.colorScheme.secondary,
+                        ),
+                      ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(item.author, style: theme.textTheme.titleSmall),
+                          Text(
+                            DateFormat.yMMMd().add_jm().format(
+                              item.publishedAt.toLocal(),
+                            ),
+                            style: theme.textTheme.bodySmall,
+                          ),
+                          if (showSource && sourceLabel != item.author)
+                            Wrap(
+                              spacing: spacing.xs,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  'Source: $sourceLabel',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                                if (item.sourceUrl?.isNotEmpty ?? false)
+                                  Icon(
+                                    Icons.link,
+                                    size: 16,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (canEdit && onEdit != null)
+                      PopupMenuButton<String>(
+                        tooltip: 'Post actions',
+                        onSelected: (value) {
+                          if (value == 'edit') {
+                            onEdit!.call();
+                          }
+                        },
+                        itemBuilder: (context) => const [
+                          PopupMenuItem<String>(
+                            value: 'edit',
+                            child: Text('Edit post'),
+                          ),
+                        ],
+                        icon: const Icon(Icons.more_vert, size: 18),
+                      ),
+                  ],
+                ),
+                if (item.isNews && item.title.isNotEmpty) ...[
+                  SizedBox(height: spacing.sm),
+                  Text(item.title, style: headline),
+                ],
+                if (item.imageUrl != null || item.videoThumbnailUrl != null)
                   Padding(
-                    padding: EdgeInsets.only(right: spacing.xs),
-                    child: Icon(
-                      Icons.push_pin_outlined,
-                      size: 16,
-                      color: theme.colorScheme.secondary,
+                    padding: EdgeInsets.only(top: spacing.sm),
+                    child: _MediaPreview(
+                      imageUrl: item.imageUrl ?? item.videoThumbnailUrl!,
+                      isVideo: item.videoThumbnailUrl != null,
                     ),
                   ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(item.author, style: theme.textTheme.titleSmall),
-                      Text(
-                        DateFormat.yMMMd().add_jm().format(
-                          item.publishedAt.toLocal(),
-                        ),
-                        style: theme.textTheme.bodySmall,
-                      ),
-                      if (showSource && sourceLabel != item.author)
-                        Wrap(
-                          spacing: spacing.xs,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(
-                              'Source: $sourceLabel',
-                              style: theme.textTheme.bodySmall,
-                            ),
-                            if (item.sourceUrl?.isNotEmpty ?? false)
-                              Icon(
-                                Icons.link,
-                                size: 16,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                          ],
-                        ),
-                    ],
+                if (item.body.isNotEmpty) ...[
+                  SizedBox(height: spacing.sm),
+                  Text(item.body, style: body),
+                ],
+                if (item.contentType != ContentType.text) ...[
+                  SizedBox(height: spacing.xs),
+                  Text(
+                    _contentLabel(item.contentType),
+                    style: theme.textTheme.bodySmall,
                   ),
+                ],
+                SizedBox(height: spacing.sm),
+                TrustStripRow(
+                  key: ValueKey('trust-${item.id}'),
+                  summary: item.trustSummary,
+                  onTap: () => ReceiptDrawer.show(context, item.id),
+                  compact: true,
+                  leading: AuthorshipDisclosure(label: item.authorshipLabel),
                 ),
-                if (canEdit && onEdit != null)
-                  PopupMenuButton<String>(
-                    tooltip: 'Post actions',
-                    onSelected: (value) {
-                      if (value == 'edit') {
-                        onEdit!.call();
-                      }
-                    },
-                    itemBuilder: (context) => const [
-                      PopupMenuItem<String>(
-                        value: 'edit',
-                        child: Text('Edit post'),
-                      ),
-                    ],
-                    icon: const Icon(Icons.more_vert, size: 18),
-                  ),
               ],
             ),
-            if (item.title.isNotEmpty) ...[
-              SizedBox(height: spacing.sm),
-              Text(item.title, style: headline),
-            ],
-            SizedBox(height: spacing.xs),
-            if (item.imageUrl != null || item.videoThumbnailUrl != null)
-              _MediaPreview(
-                imageUrl: item.imageUrl ?? item.videoThumbnailUrl!,
-                isVideo: item.videoThumbnailUrl != null,
-              ),
-            if (item.body.isNotEmpty) ...[
-              SizedBox(height: spacing.xs),
-              Text(item.body, style: body),
-            ],
-            SizedBox(height: spacing.xs),
-            Wrap(
-              spacing: spacing.xs,
-              runSpacing: spacing.xs,
-              children: [
-                TierBadge(label: _contentLabel(item.contentType)),
-                ...item.tags.map((tag) => LythChip(label: tag)),
-              ],
-            ),
-            SizedBox(height: spacing.sm),
-            AuthorshipDisclosure(label: item.authorshipLabel),
-            TrustStripRow(
-              summary: item.trustSummary,
-              onTap: () => ReceiptDrawer.show(context, item.id),
-            ),
-          ],
-        ),
+          ),
+          Divider(height: 1, color: theme.colorScheme.outlineVariant),
+        ],
       ),
     );
   }
@@ -157,6 +162,67 @@ class FeedCard extends StatelessWidget {
       case ContentType.mixed:
         return 'Mixed';
     }
+  }
+}
+
+class _FeedEntrySurface extends StatefulWidget {
+  const _FeedEntrySurface({required this.child, required this.onTap});
+
+  final Widget child;
+  final VoidCallback? onTap;
+
+  @override
+  State<_FeedEntrySurface> createState() => _FeedEntrySurfaceState();
+}
+
+class _FeedEntrySurfaceState extends State<_FeedEntrySurface> {
+  final _focusNode = FocusNode();
+  bool _focused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_updateFocus);
+  }
+
+  void _updateFocus() {
+    final focused = _focusNode.hasPrimaryFocus;
+    if (_focused != focused) setState(() => _focused = focused);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(context.radius.sm),
+      side: BorderSide(
+        color: _focused ? context.colorScheme.primary : Colors.transparent,
+        width: 2,
+      ),
+    );
+
+    return Material(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      shape: shape,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: widget.onTap,
+        focusNode: _focusNode,
+        customBorder: shape,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: context.spacing.sm,
+            vertical: context.spacing.md,
+          ),
+          child: widget.child,
+        ),
+      ),
+    );
   }
 }
 

@@ -33,6 +33,16 @@ void main() {
     isCustom: true,
   );
 
+  const newsFeedModel = FeedModel(
+    id: 'fm-n',
+    name: 'News Feed',
+    type: FeedType.news,
+    contentFilters: ContentFilters(allowedTypes: {ContentType.text}),
+    sorting: SortingRule.newest,
+    refinements: FeedRefinements(),
+    subscriptionLevelRequired: 0,
+  );
+
   final items = List.generate(
     5,
     (i) => FeedItem(
@@ -43,7 +53,25 @@ void main() {
       contentType: ContentType.text,
       title: 'Title $i',
       body: 'Body $i',
+      tags: const ['routine-topic'],
       publishedAt: DateTime(2024, 1, i + 1),
+    ),
+  );
+
+  final newsItems = List.generate(
+    5,
+    (i) => FeedItem(
+      id: 'news-$i',
+      feedId: newsFeedModel.id,
+      author: 'reporter-$i',
+      authorId: i == 0 ? 'current-user' : 'reporter-$i',
+      sourceName: 'Fixture newsroom',
+      sourceUrl: 'https://example.invalid/news/$i',
+      contentType: ContentType.text,
+      title: 'News headline $i',
+      body: 'News body $i',
+      publishedAt: DateTime(2024, 1, i + 1),
+      isNews: true,
     ),
   );
 
@@ -82,7 +110,12 @@ void main() {
         find.text('Discover calm, trustworthy updates tailored to you.'),
         findsOneWidget,
       );
-      expect(find.text('Title 0'), findsOneWidget);
+      expect(find.text('Body 0'), findsOneWidget);
+      expect(find.text('author-0'), findsOneWidget);
+      expect(find.text('Authorship: Under review'), findsWidgets);
+      expect(find.byTooltip('Post actions'), findsOneWidget);
+      expect(find.text('Title 0'), findsNothing);
+      expect(find.text('routine-topic'), findsNothing);
     });
 
     testWidgets('renders empty state when there are no items', (tester) async {
@@ -171,8 +204,8 @@ void main() {
       await tester.pumpWidget(
         wrap(
           NewsFeed(
-            feed: feed,
-            items: items,
+            feed: newsFeedModel,
+            items: newsItems,
             currentUserId: 'current-user',
             onEditItem: (_) async {},
           ),
@@ -184,11 +217,18 @@ void main() {
         find.text('Editorial coverage from earned, revocable contributors.'),
         findsOneWidget,
       );
-      expect(find.text('Title 0'), findsOneWidget);
+      expect(find.text('News headline 0'), findsOneWidget);
+      expect(find.text('News body 0'), findsOneWidget);
+      expect(find.text('reporter-0'), findsOneWidget);
+      expect(find.text('Source: Fixture newsroom'), findsWidgets);
+      expect(find.text('Authorship: Under review'), findsWidgets);
+      expect(find.byTooltip('Post actions'), findsOneWidget);
     });
 
     testWidgets('renders empty state when there are no items', (tester) async {
-      await tester.pumpWidget(wrap(const NewsFeed(feed: feed, items: [])));
+      await tester.pumpWidget(
+        wrap(const NewsFeed(feed: newsFeedModel, items: [])),
+      );
       await tester.pump();
 
       expect(find.text('No news yet'), findsOneWidget);
@@ -200,8 +240,8 @@ void main() {
       await tester.pumpWidget(
         wrap(
           NewsFeed(
-            feed: feed,
-            items: items,
+            feed: newsFeedModel,
+            items: newsItems,
             hasMore: true,
             onLoadMore: () => loadMoreCalled = true,
           ),
@@ -220,10 +260,14 @@ void main() {
     });
 
     testWidgets('renders without onLoadMore or hasMore', (tester) async {
-      await tester.pumpWidget(wrap(NewsFeed(feed: feed, items: items)));
+      await tester.pumpWidget(
+        wrap(NewsFeed(feed: newsFeedModel, items: newsItems)),
+      );
       await tester.pump();
 
-      expect(find.text('Title 0'), findsOneWidget);
+      expect(find.text('News headline 0'), findsOneWidget);
+      expect(find.text('News body 0'), findsOneWidget);
+      expect(find.text('Authorship: Under review'), findsWidgets);
     });
   });
 
@@ -245,7 +289,12 @@ void main() {
       expect(find.text('+flutter'), findsOneWidget);
       expect(find.text('+dart'), findsOneWidget);
       expect(find.text('-spam'), findsOneWidget);
-      expect(find.text('Title 0'), findsOneWidget);
+      expect(find.text('Body 0'), findsOneWidget);
+      expect(find.text('author-0'), findsOneWidget);
+      expect(find.text('Authorship: Under review'), findsWidgets);
+      expect(find.byTooltip('Post actions'), findsOneWidget);
+      expect(find.text('Title 0'), findsNothing);
+      expect(find.text('routine-topic'), findsNothing);
     });
 
     testWidgets('renders empty state when there are no items', (tester) async {
