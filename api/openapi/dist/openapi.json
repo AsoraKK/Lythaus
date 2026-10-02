@@ -8697,6 +8697,286 @@
         }
       }
     },
+    "/admin/account-support/access": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "adminAccountSupportAccess",
+        "summary": "Check owner account-support access",
+        "description": "Requires verified Cloudflare Access and an active owner membership joined to an active owner account. Returns no account records. Every lookup and history request checks authorization independently.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owner access is available.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/AccountSupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSupportAccess"
+                },
+                "example": {
+                  "available": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AccountSupportUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/AccountSupportForbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/AccountSupportNotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/AccountSupportMethodNotAllowed"
+          },
+          "429": {
+            "$ref": "#/components/responses/AccountSupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/AccountSupportUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/account-support/lookup": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "adminAccountSupportLookup",
+        "summary": "Read minimum account state by exact email",
+        "description": "Owner-only read, using an exact trimmed and case-normalized email. Email is accepted only in a bounded JSON body, never a URL parameter. Requires an allowed Origin and a reason code. An audit must commit before disclosure. Ambiguous matches disclose no account state. Passwords, tokens, reset links, email values and private content are excluded. This operation changes only the support audit, not account state.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountSupportLookupRequest"
+              },
+              "example": {
+                "email": "synthetic@example.invalid",
+                "reasonCode": "SUPPORT_REQUEST"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Audited exact match, missing account or ambiguous match.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/AccountSupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSupportLookupResponse"
+                },
+                "examples": {
+                  "found": {
+                    "value": {
+                      "state": "found",
+                      "account": {
+                        "id": "01900000-0000-7000-8000-000000000001",
+                        "status": "active",
+                        "verificationState": "pending_verification",
+                        "verifiedAt": null,
+                        "createdAt": "2026-10-01T00:00:00.000000Z",
+                        "updatedAt": "2026-10-01T00:00:00.000000Z",
+                        "deletedAt": null,
+                        "lastSignInAt": null,
+                        "activeSessionCount": 0,
+                        "subscriptionTier": "free"
+                      },
+                      "correlationId": "synthetic-support-lookup"
+                    }
+                  },
+                  "notFound": {
+                    "value": {
+                      "state": "not_found",
+                      "account": null,
+                      "correlationId": "synthetic-support-lookup"
+                    }
+                  },
+                  "ambiguous": {
+                    "value": {
+                      "state": "ambiguous",
+                      "account": null,
+                      "correlationId": "synthetic-support-lookup"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AccountSupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/AccountSupportUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/AccountSupportForbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/AccountSupportNotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/AccountSupportMethodNotAllowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/AccountSupportRequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/AccountSupportUnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/AccountSupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/AccountSupportUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/account-support/users/{userId}/history": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "adminAccountSupportHistory",
+        "summary": "Read partial recorded account history",
+        "description": "Owner-only, audited read with an allowed Origin and a reason code. Unions recorded account, activity and target-user audit events. Returns safe event codes and timestamps, excluding metadata and private content. Identity account events have no recorded correlation IDs. Missing storage, query or audit evidence returns unavailable rather than an empty success. Filters and pagination are in a bounded JSON body; URL parameters are rejected. This operation changes only the support audit, not account state.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountSupportHistoryRequest"
+              },
+              "examples": {
+                "chronological": {
+                  "value": {
+                    "reasonCode": "SUPPORT_REQUEST",
+                    "order": "oldest",
+                    "limit": 25
+                  }
+                },
+                "correlated": {
+                  "value": {
+                    "reasonCode": "SUPPORT_REQUEST",
+                    "correlationId": "synthetic-support-lookup",
+                    "since": "2026-10-01T00:00:00Z",
+                    "until": "2026-10-03T00:00:00Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Partial recorded history, including explicit missing-evidence notice.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/AccountSupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSupportHistoryResponse"
+                },
+                "example": {
+                  "items": [],
+                  "nextCursor": null,
+                  "snapshotAt": "2026-10-02T00:00:00.000001Z",
+                  "coverage": "partial",
+                  "notice": "This is partial recorded history. Events may never have been recorded or may have expired or been removed. An empty result does not prove that no activity occurred. Identity account events do not record correlation IDs.",
+                  "correlationId": "synthetic-support-history"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AccountSupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/AccountSupportUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/AccountSupportForbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/AccountSupportNotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/AccountSupportMethodNotAllowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/AccountSupportRequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/AccountSupportUnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/AccountSupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/AccountSupportUnavailable"
+          }
+        }
+      }
+    },
     "/admin/users": {
       "servers": [
         {
@@ -14449,6 +14729,344 @@
           }
         }
       },
+      "AccountSupportAccess": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "available"
+        ],
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "AccountSupportError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "correlationId"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "correlationId": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          }
+        }
+      },
+      "AccountSupportReasonCode": {
+        "type": "string",
+        "minLength": 2,
+        "maxLength": 80,
+        "pattern": "^[A-Za-z0-9_.:-]{2,80}$",
+        "description": "Use a machine reason code without personal information; it is trimmed and normalized to uppercase."
+      },
+      "AccountSupportLookupRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "email",
+          "reasonCode"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 320
+          },
+          "reasonCode": {
+            "$ref": "#/components/schemas/AccountSupportReasonCode"
+          }
+        }
+      },
+      "AccountSupportAccount": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "status",
+          "verificationState",
+          "verifiedAt",
+          "createdAt",
+          "updatedAt",
+          "deletedAt",
+          "lastSignInAt",
+          "activeSessionCount",
+          "subscriptionTier"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended",
+              "locked",
+              "deleted",
+              "relink_required"
+            ]
+          },
+          "verificationState": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "pending_verification",
+              "credential_setup_required"
+            ]
+          },
+          "verifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastSignInAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Last recorded email login, or null when unavailable; account creation is never substituted."
+          },
+          "activeSessionCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "subscriptionTier": {
+            "type": "string",
+            "enum": [
+              "free",
+              "premium",
+              "black"
+            ]
+          }
+        }
+      },
+      "AccountSupportLookupResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "account",
+          "correlationId"
+        ],
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "found",
+              "not_found",
+              "ambiguous"
+            ]
+          },
+          "account": {
+            "$ref": "#/components/schemas/AccountSupportAccount"
+          },
+          "correlationId": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          }
+        },
+        "description": "Account is present only for found; not_found and ambiguous always return null."
+      },
+      "AccountSupportHistoryRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reasonCode"
+        ],
+        "properties": {
+          "reasonCode": {
+            "$ref": "#/components/schemas/AccountSupportReasonCode"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "account",
+              "activity",
+              "audit"
+            ]
+          },
+          "eventType": {
+            "type": "string",
+            "maxLength": 100,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+          },
+          "correlationId": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$",
+            "description": "Inclusive UTC start, with at most six fractional digits; must precede until."
+          },
+          "until": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$",
+            "description": "Exclusive UTC end, with at most six fractional digits."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "newest",
+              "oldest"
+            ],
+            "default": "newest"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "default": 25
+          },
+          "cursor": {
+            "type": "string",
+            "maxLength": 2048,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "description": "Opaque keyset cursor, bound to user, filters, order and the first page's snapshot. Preserve it unchanged and keep the same filters for subsequent pages."
+          }
+        }
+      },
+      "AccountSupportHistoryItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "source",
+          "eventType",
+          "createdAt",
+          "correlationId",
+          "reasonCode",
+          "category",
+          "outcome"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "account",
+              "activity",
+              "audit"
+            ]
+          },
+          "eventType": {
+            "type": "string",
+            "maxLength": 100,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "correlationId": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+            "nullable": true
+          },
+          "reasonCode": {
+            "type": "string",
+            "maxLength": 80,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+            "nullable": true
+          },
+          "category": {
+            "type": "string",
+            "maxLength": 20,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+            "nullable": true
+          },
+          "outcome": {
+            "type": "string",
+            "maxLength": 20,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$",
+            "nullable": true
+          }
+        }
+      },
+      "AccountSupportHistoryResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "nextCursor",
+          "snapshotAt",
+          "coverage",
+          "notice",
+          "correlationId"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/AccountSupportHistoryItem"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 2048,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "snapshotAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "coverage": {
+            "type": "string",
+            "enum": [
+              "partial"
+            ]
+          },
+          "notice": {
+            "type": "string",
+            "minLength": 1
+          },
+          "correlationId": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          }
+        },
+        "description": "Ordered by timestamp, UUID and source, preserving PostgreSQL microsecond precision. Pagination excludes records dated after the first page's boundary, including the read's own audit. Late-arriving records with older timestamps can still appear. An empty page does not establish inactivity."
+      },
       "AdminUser": {
         "type": "object",
         "additionalProperties": false,
@@ -15153,6 +15771,15 @@
           "type": "string",
           "example": "01HZPQ2B3C4D5E6F7G8H9JABCD"
         }
+      },
+      "AccountSupportCacheControl": {
+        "description": "Account-support responses must not be cached.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "private, no-store"
+          ]
+        }
       }
     },
     "parameters": {
@@ -15325,6 +15952,112 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      },
+      "AccountSupportUnauthorized": {
+        "description": "Cloudflare Access assertion is missing or invalid.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AccountSupportError"
+            }
+          }
+        }
+      },
+      "AccountSupportForbidden": {
+        "description": "Active owner authorization is required; POST also requires an allowed Origin.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AccountSupportError"
+            }
+          }
+        }
+      },
+      "AccountSupportNotFound": {
+        "description": "History account does not exist or URL parameters were supplied.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AccountSupportError"
+            }
+          }
+        }
+      },
+      "AccountSupportMethodNotAllowed": {
+        "description": "Only GET access, POST lookup and POST history are supported.",
+        "headers": {
+          "Allow": {
+            "description": "Required method for this route.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "GET",
+                "POST"
+              ]
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AccountSupportError"
+            }
+          }
+        }
+      },
+      "AccountSupportRateLimited": {
+        "description": "Existing administrator request limit exceeded.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AccountSupportError"
+            }
+          }
+        }
+      },
+      "AccountSupportUnavailable": {
+        "description": "Authorization storage, private lookup, history query or audit commit is unavailable. No account data is disclosed.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AccountSupportError"
+            },
+            "example": {
+              "error": "account_support_unavailable",
+              "correlationId": "synthetic-support-history"
+            }
+          }
+        }
+      },
+      "AccountSupportBadRequest": {
+        "description": "Invalid email, reason, user ID, JSON, filter or cursor; unknown fields are rejected.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AccountSupportError"
+            }
+          }
+        }
+      },
+      "AccountSupportRequestTooLarge": {
+        "description": "Request JSON exceeds 4096 bytes.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AccountSupportError"
+            }
+          }
+        }
+      },
+      "AccountSupportUnsupportedMedia": {
+        "description": "POST requires application/json.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AccountSupportError"
             }
           }
         }

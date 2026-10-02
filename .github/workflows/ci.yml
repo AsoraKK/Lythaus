@@ -75,6 +75,8 @@ jobs:
         run: node --test --test-timeout=60000 scripts/tests/private-email-binding.workerd.mjs
       - run: node --experimental-strip-types --test packages/security/tests/critical-security-policy.test.mjs
       - run: npm run test:native-architecture
+      - name: Verify owner-only read-only account support
+        run: node --experimental-strip-types --experimental-test-module-mocks --test packages/contracts/tests/account-support.test.mjs apps/lythaus-admin-api/tests/account-support-runtime.test.mjs apps/lythaus-admin-api/tests/account-support-handler.test.mjs
       - name: Verify owner-testing authentication release scope
         run: node --test scripts/tests/owner-testing-auth-scope.test.mjs
       - run: node --test scripts/tests/real-email-acceptance-evidence.test.mjs
