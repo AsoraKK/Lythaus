@@ -8,6 +8,7 @@ import { requireActiveAdminMembership, verifiedAccessSubject, type AdminActor } 
 import { readBoundedJson } from './request-body-policy.ts';
 import { handleAdminBeta } from './authenticity-beta.ts';
 import { handleAdminAlpha } from './authenticity-alpha.ts';
+import { handleAccountSupport } from './account-support-runtime.ts';
 import { adminWaitlistFilters, parseAdminUserId, parseReasonCode, rejectUnknownFields, requireConfirmation } from './admin-runtime-policy.ts';
 import { appealOutcomeAuditPlan, assertActionableModerationCase, evaluateAppealFromRecords, parseAppealAdjudicationRequest, type AppealAdjudicationRecord, type AppealVoteRecord } from './runtime-policy.ts';
 import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, parseWaitlistRetentionHoldUpdate, parseWaitlistStatusUpdate, requireWaitlistEncryptionKey, waitlistAuditMetadata, waitlistPageRequest } from './waitlist-runtime-policy.ts';
@@ -37,6 +38,7 @@ interface Env extends EnvBindings {
 const ADMIN_ERROR_CODES = new Set([
   'access_assertion_invalid', 'access_required', 'access_subject_missing',
   'access_verification_not_configured', 'admin_public_label_declaration_mismatch',
+  'account_support_owner_required', 'account_support_unavailable', 'account_support_invalid_filter',
   'admin_mutation_content_type_invalid', 'admin_mutation_origin_invalid', 'admin_role_required', 'admin_subject_key_not_configured',
   'auth_data_unavailable', 'auth_email_dispatch_unavailable', 'confirmation_required',
   'email_already_verified', 'email_change_requires_public_flow', 'idempotency_in_progress', 'idempotency_key_reused', 'idempotency_key_required', 'invalid_email',
@@ -62,10 +64,10 @@ function adminError(error: unknown): { exposedCode: string; internalCode: string
   const internalCode = error instanceof Error ? error.message : 'non_error_thrown';
   const exposedCode = ADMIN_ERROR_CODES.has(internalCode) ? internalCode : 'admin_request_failed';
   const status = exposedCode === 'admin_request_failed' || exposedCode === 'appeal_adjudication_not_recorded' ? 500
-    : ['access_verification_not_configured', 'admin_subject_key_not_configured', 'waitlist_unavailable'].includes(exposedCode) ? 503
+    : ['access_verification_not_configured', 'admin_subject_key_not_configured', 'waitlist_unavailable', 'account_support_unavailable'].includes(exposedCode) ? 503
     : ['access_required', 'access_assertion_invalid', 'access_subject_missing'].includes(exposedCode) ? 401
       : ['auth_data_unavailable', 'auth_email_dispatch_unavailable'].includes(exposedCode) ? 503
-        : ['admin_role_required', 'admin_mutation_origin_invalid'].includes(exposedCode) ? 403
+        : ['admin_role_required', 'admin_mutation_origin_invalid', 'account_support_owner_required'].includes(exposedCode) ? 403
           : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
               : ['appeal_adjudication_locked', 'appeal_already_resolved', 'email_already_verified', 'idempotency_in_progress', 'idempotency_key_reused', 'moderation_case_already_resolved', 'moderation_case_superseded', 'moderation_declaration_missing', 'user_email_exists', 'waitlist_duplicate', 'waitlist_status_transition_invalid'].includes(exposedCode) ? 409
               : exposedCode === 'request_too_large' ? 413
@@ -1148,6 +1150,7 @@ export default {
       }
       const actor = await requireAdmin(request, env);
       await enforceAdminRateLimit(request, env, actor.userId);
+      if (url.pathname.startsWith('/api/admin/account-support/')) return cors(await handleAccountSupport(request, env, actor, id));
       if (request.method === 'GET' && url.pathname === '/api/admin/authenticity/cases') return cors(await handleAdminBeta(request, env, actor));
       if (request.method === 'GET' && url.pathname.match(/^\/api\/admin\/authenticity\/cases\/([^/]+)$/)) return cors(await handleAdminBeta(request, env, actor));
       if (request.method === 'GET' && url.pathname.match(/^\/api\/admin\/authenticity\/cases\/([^/]+)\/image$/)) return cors(await handleAdminBeta(request, env, actor));
