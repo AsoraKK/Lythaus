@@ -252,8 +252,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (saved.user.id != widget.profile.user.id) {
         throw const FormatException('Invalid saved profile');
       }
-      ref.invalidate(ownerProfileProvider);
-      ref.invalidate(publicUserProvider(saved.user.id));
+      invalidateOwnerProfileProjections(ref, saved.user.id);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(saved.statusMessage)));

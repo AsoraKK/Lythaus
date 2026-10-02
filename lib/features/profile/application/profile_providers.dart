@@ -43,9 +43,10 @@ class ProfilePreferencesService {
 
   final Dio _dio;
 
-  Future<void> updateTrustPassportVisibility({
+  Future<OwnerProfile> updateTrustPassportVisibility({
     required String accessToken,
     required String visibility,
+    CancelToken? cancelToken,
   }) async {
     if (!_trustPassportVisibilityValues.contains(visibility)) {
       throw ArgumentError.value(
@@ -55,12 +56,21 @@ class ProfilePreferencesService {
       );
     }
 
-    await _dio.patch<Map<String, dynamic>>(
+    final response = await _dio.patch<Map<String, dynamic>>(
       '/api/users/me',
       data: {'trustPassportVisibility': visibility},
+      cancelToken: cancelToken,
       options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
     );
+    return OwnerProfile.fromJson(response.data ?? const {});
   }
+}
+
+void invalidateOwnerProfileProjections(WidgetRef ref, String userId) {
+  if (ref.read(currentUserProvider)?.id != userId) return;
+  ref.invalidate(ownerProfileProvider);
+  ref.invalidate(publicUserProvider(userId));
+  ref.invalidate(trustPassportProvider(userId));
 }
 
 final profilePreferencesServiceProvider = Provider<ProfilePreferencesService>((
