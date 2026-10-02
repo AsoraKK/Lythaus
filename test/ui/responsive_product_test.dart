@@ -138,7 +138,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'offline');
     await tester.testTextInput.receiveAction(TextInputAction.search);
     await tester.pumpAndSettle();
-    expect(find.text('Search is unavailable right now.'), findsOneWidget);
+    expect(find.text('Could not load search. Please try again.'), findsOneWidget);
     expect(find.textContaining('sensitive'), findsNothing);
     await tester.tap(find.text('Retry search'));
     await tester.pumpAndSettle();

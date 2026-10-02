@@ -90,7 +90,8 @@ void main() {
       ),
     );
     await tester.pump();
-    expect(find.textContaining('Sign in'), findsOneWidget);
+    expect(find.text('Sign in to view your profile details.'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
   });
 
   testWidgets('renders display name when profile loads successfully', (
