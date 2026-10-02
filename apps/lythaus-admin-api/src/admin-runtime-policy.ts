@@ -1,4 +1,4 @@
-import { pageRequest, type KeysetCursor } from '@lythaus/contracts';
+import { normalizeProfileName, pageRequest, type KeysetCursor } from '@lythaus/contracts';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const REASON_CODE_PATTERN = /^[A-Z0-9_.:-]{2,80}$/;
@@ -105,10 +105,7 @@ export function adminWaitlistFilters(url: URL): AdminWaitlistFilters {
 
 export function parseDisplayName(value: unknown): string | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== 'string') throw new Error('invalid_display_name');
-  const displayName = value.normalize('NFC').trim();
-  if (displayName.length < 1 || displayName.length > 160) throw new Error('invalid_display_name');
-  return displayName;
+  return normalizeProfileName(value);
 }
 
 export function parseHandle(value: unknown): string | undefined {

@@ -39,6 +39,7 @@ export {
 } from './auth-state-policy.ts';
 export { validateTurnstileResponse, type TurnstileSiteverifyResponse } from './turnstile-policy.ts';
 export { PASSWORD_POLICY, requirePasswordInput } from './password-policy.ts';
+export { PROFILE_NAME_MAX_LENGTH, isDisallowedProfileName, normalizeProfileName } from './profile-name-policy.ts';
 
 export interface TransactionalEmailProvider {
   sendVerification(input: { to: string; token: string }): Promise<EmailDeliveryReference>;

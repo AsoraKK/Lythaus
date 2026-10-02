@@ -15,6 +15,7 @@ import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/application/follow_providers.dart';
 import 'package:lythaus/features/profile/application/follow_service.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
+import 'package:lythaus/features/profile/domain/owner_profile.dart';
 import 'package:lythaus/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
 import 'package:lythaus/design_system/components/lyth_button.dart';
 import 'package:lythaus/design_system/components/lyth_empty_state.dart';
@@ -50,9 +51,14 @@ class ProfileScreen extends ConsumerWidget {
       );
     }
 
-    final profileState = ref.watch(publicUserProvider(targetUserId));
+    final isOwner = currentUser?.id == targetUserId;
+    final ownerState = isOwner ? ref.watch(ownerProfileProvider) : null;
+    final AsyncValue<PublicUser> profileState = isOwner
+        ? ownerState!.whenData<PublicUser>((profile) => profile.user)
+        : ref.watch(publicUserProvider(targetUserId));
     return profileState.when(
-      data: (profile) => _buildProfile(context, ref, profile),
+      data: (profile) =>
+          _buildProfile(context, ref, profile, owner: ownerState?.valueOrNull),
       loading: () => ReadingPane(
         child: Scaffold(
           appBar: AppBar(title: const Text('Profile')),
@@ -72,8 +78,9 @@ class ProfileScreen extends ConsumerWidget {
                   subtitle: 'Please try again.',
                 ),
                 TextButton(
-                  onPressed: () =>
-                      ref.invalidate(publicUserProvider(targetUserId)),
+                  onPressed: () => isOwner
+                      ? ref.invalidate(ownerProfileProvider)
+                      : ref.invalidate(publicUserProvider(targetUserId)),
                   child: const Text('Retry'),
                 ),
               ],
@@ -87,8 +94,9 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildProfile(
     BuildContext context,
     WidgetRef ref,
-    PublicUser profile,
-  ) {
+    PublicUser profile, {
+    OwnerProfile? owner,
+  }) {
     final currentUser = ref.read(currentUserProvider);
     final isOwner = currentUser != null && currentUser.id == profile.id;
     final canModerate =
@@ -102,7 +110,9 @@ class ProfileScreen extends ConsumerWidget {
     return ReadingPane(
       child: Scaffold(
         appBar: AppBar(
-          title: Text(profile.displayName),
+          title: Text(
+            profile.displayName.isEmpty ? 'Your profile' : profile.displayName,
+          ),
           actions: [
             IconButton(
               icon: const Icon(Icons.refresh),
@@ -110,6 +120,7 @@ class ProfileScreen extends ConsumerWidget {
               onPressed: () {
                 ref.invalidate(publicUserProvider(profile.id));
                 if (isOwner) {
+                  ref.invalidate(ownerProfileProvider);
                   ref.invalidate(reputationProvider);
                 }
               },
@@ -169,13 +180,21 @@ class ProfileScreen extends ConsumerWidget {
             ],
             const SizedBox(height: Spacing.lg),
             if (isOwner) ...[
+              if (owner != null && owner.hasDetails) Text(owner.statusMessage),
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.edit_outlined),
-                title: const Text('Edit profile'),
+                title: Text(
+                  owner?.hasDetails == false
+                      ? 'Complete your profile'
+                      : 'Edit profile',
+                ),
+                subtitle: const Text(
+                  'Optional — add or update your details at any time',
+                ),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => EditProfileScreen(profile: profile),
+                    builder: (_) => EditProfileScreen(profile: owner!),
                   ),
                 ),
               ),

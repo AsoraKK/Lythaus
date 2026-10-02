@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { mock, test } from 'node:test';
+import { normalizeProfileName } from '../../../packages/contracts/src/profile-name-policy.ts';
 
 mock.module('@lythaus/contracts', { cache: true, namedExports: {
+  normalizeProfileName,
   pageRequest: (url, maximum = 50, defaultLimit = 25) => ({
     limit: Math.min(maximum, Number(url.searchParams.get('limit') ?? defaultLimit)),
     cursor: url.searchParams.get('cursor') ? { timestamp: '2026-08-10T00:00:00.000Z', id: '01900000-0000-7000-8000-000000000001' } : null,

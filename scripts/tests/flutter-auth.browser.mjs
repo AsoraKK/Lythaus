@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { chromium, webkit } from 'playwright';
 import { localAuthBrowserServer } from './local-auth-browser-server.mjs';
+import { installFlutterEngineFonts } from './flutter-engine-font-fixture.mjs';
 
 const build=path.resolve(process.env.AUTH_WEB_ARTIFACT_DIR??'build/web');
 assert.match(await readFile(path.join(build,'flutter_bootstrap.js'),'utf8'), /"useLocalCanvasKit":true/,
@@ -13,7 +14,7 @@ const user={id:'018f0000-0000-7000-8000-000000000001',email:'synthetic@example.i
 for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of [1440,390]) {
   test(`${name} ${width}: actual Flutter release login, recovery navigation, cookie restore and logout`,async t=>{
     const errors=[],calls=[],failedRequests=[];let session=false,verificationRequired=false,userinfoUnavailable=false,complete=false;
-    let refreshInFlight=0,maximumRefreshInFlight=0;
+    let refreshInFlight=0,maximumRefreshInFlight=0,signingOut=false;
     const fixture=await localAuthBrowserServer(async route=>{
       const req=route.request(),url=new URL(req.url());
       const requestHeaders=await req.allHeaders();
@@ -48,6 +49,7 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
       } else if(url.pathname.endsWith('/auth/userinfo')){status=userinfoUnavailable?503:200;body=userinfoUnavailable?{error:'userinfo_unavailable'}:user;}
       else if(url.pathname.endsWith('/auth/logout')){session=false;headers['set-cookie']='__Host-lythaus_refresh=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0';body={state:'signed_out'};}
       else if(url.pathname===`/api/users/${user.id}`)body={user:{id:user.id,displayName:'Synthetic acceptance',trustPassportVisibility:'private',reputationScore:0}};
+      else if(url.pathname==='/api/users/me')body={user:{id:user.id,displayName:'Synthetic acceptance',trustPassportVisibility:'private',moderationState:'allowed',publicVisibility:false,reputationScore:0}};
       else if(!['/api/feed/discover','/api/subscription/status','/api/custom-feeds','/api/users/me/reputation','/api/reputation/me'].includes(url.pathname)){
         status=404;body={error:'route_not_found'};
       }
@@ -55,10 +57,17 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
     });
     const browser=await engine.launch({headless:true,proxy:{server:fixture.proxy}});
     const context=await browser.newContext({viewport:{width,height:1000},serviceWorkers:'block',ignoreHTTPSErrors:true});
+    await installFlutterEngineFonts(context);
     const page=await context.newPage();page.setDefaultTimeout(15000);
     t.after(async()=>{try{if(!complete&&!page.isClosed())t.diagnostic(JSON.stringify({calls,errors,failedRequests,screen:await page.locator('flt-semantics').allTextContents(),storageKeys:await page.evaluate(()=>Object.keys(localStorage))}));}finally{await browser.close();await fixture.close();}});
     page.on('pageerror',error=>errors.push(error.message));
-    page.on('requestfailed',request=>failedRequests.push({path:new URL(request.url()).pathname,method:request.method(),error:request.failure()?.errorText}));
+    page.on('requestfailed',request=>{
+      const url=new URL(request.url()),error=request.failure()?.errorText;
+      const expectedSignOutCancellation=signingOut&&request.method()==='GET'
+        &&url.origin==='https://api.lythaus.co'&&url.pathname===`/api/users/${user.id}`
+        &&error==='Load request cancelled';
+      failedRequests.push({path:url.pathname,method:request.method(),error,expectedSignOutCancellation});
+    });
     async function openApp(route='/',target=page) {
       await target.goto('https://app.lythaus.co'+route);
       await target.locator('flt-semantics-placeholder').waitFor({timeout:60000});
@@ -118,16 +127,20 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
     if(width<700)await page.getByRole('button',{name:/^Profile(?:\b|$)/}).click();
     await page.getByRole('button',{name:'Settings',exact:true}).click();
     await page.getByText('Account security',{exact:true}).click();
+    signingOut=true;
+    const logoutReply=page.waitForResponse(response=>response.url()==='https://api.lythaus.co/api/auth/logout'
+      &&response.request().method()==='POST'&&response.status()===200);
     await page.getByRole('button',{name:'Sign out of all sessions',exact:true}).click();
+    await (await logoutReply).finished();
     await page.getByRole('button',{name:'Sign in with email',exact:true}).waitFor();
     await secondTab.getByRole('button',{name:'Sign in with email',exact:true}).waitFor();
     await openApp();
     await page.getByRole('button',{name:'Sign in with email',exact:true}).waitFor();
     assert.equal(session,false);
     assert.equal((await context.cookies('https://api.lythaus.co')).some(cookie=>cookie.name==='__Host-lythaus_refresh'),false);
-    const blockedEngineFonts=errors.filter(message=>/^\/fonts\.gstatic\.com\/s\/roboto\//.test(message));
-    assert.deepEqual(errors.filter(message=>!blockedEngineFonts.includes(message)),[]);
-    if(blockedEngineFonts.length)t.diagnostic('Known Flutter engine Roboto fallback requests blocked by the offline fixture; bundled Manrope renders the UI.');
+    assert.deepEqual(errors,[]);
+    assert.deepEqual(failedRequests.filter(request=>!request.expectedSignOutCancellation),[]);
+    if(failedRequests.length)t.diagnostic(JSON.stringify({expectedSignOutCancellations:failedRequests}));
     complete=true;
   });
 }

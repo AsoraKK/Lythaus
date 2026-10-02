@@ -17,6 +17,18 @@ void main() {
       // TODO
     });
 
+    // Current publication review state of the saved owner profile. Only returned by the private owner endpoint.
+    // String moderationState
+    test('to test the property `moderationState`', () async {
+      // TODO
+    });
+
+    // Owner visibility preference. A true value does not publish an under-review or blocked profile.
+    // bool publicVisibility
+    test('to test the property `publicVisibility`', () async {
+      // TODO
+    });
+
     // String handle
     test('to test the property `handle`', () async {
       // TODO
