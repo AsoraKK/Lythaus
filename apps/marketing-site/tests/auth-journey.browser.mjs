@@ -163,16 +163,17 @@ for (const [engine, type] of Object.entries({ chromium, webkit })) {
           await page.keyboard.press('Tab');
           assert.equal(await toggle.evaluate(element => element === document.activeElement), true);
           assert.equal(await toggle.getAttribute('aria-label'), `Show ${label}`);
+          assert.equal(await toggle.getAttribute('aria-pressed'), null);
           await page.keyboard.press('Enter');
           assert.equal(await input.getAttribute('type'), 'text');
           assert.equal(await toggle.getAttribute('aria-label'), `Hide ${label}`);
-          assert.equal(await toggle.getAttribute('aria-pressed'), 'true');
+          assert.equal(await toggle.getAttribute('aria-pressed'), null);
           assert.equal(await toggle.innerText(), 'Hide');
           assert.equal(await toggle.evaluate(element => element === document.activeElement), true);
           await page.keyboard.press('Space');
           assert.equal(await input.getAttribute('type'), 'password');
           assert.equal(await toggle.getAttribute('aria-label'), `Show ${label}`);
-          assert.equal(await toggle.getAttribute('aria-pressed'), 'false');
+          assert.equal(await toggle.getAttribute('aria-pressed'), null);
           assert.equal(await input.getAttribute('autocomplete'), autocomplete);
           assert.equal(await input.inputValue(), 'synthetic chosen password');
         }
