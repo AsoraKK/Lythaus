@@ -40,21 +40,84 @@ User _user() => User(
   lastLoginAt: DateTime(2026),
 );
 
-Widget _screen() {
+Widget _screen({
+  MemoryContentRecoveryStorage? storage,
+  bool viaNavigator = false,
+}) {
   final user = _user();
   return ProviderScope(
     overrides: [
       contentRecoveryStorageProvider.overrideWithValue(
-        MemoryContentRecoveryStorage(),
+        storage ?? MemoryContentRecoveryStorage(),
       ),
       authStateProvider.overrideWith((ref) => _AuthNotifier(user)),
       jwtProvider.overrideWith((ref) async => 'token'),
     ],
-    child: const MaterialApp(home: CreatePostScreen()),
+    child: MaterialApp(
+      home: viaNavigator
+          ? Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const CreatePostScreen(),
+                    ),
+                  ),
+                  child: const Text('Open composer'),
+                ),
+              ),
+            )
+          : const CreatePostScreen(),
+    ),
   );
 }
 
 void main() {
+  testWidgets(
+    'discard requires a saved journal update and preserves text on storage failure',
+    (tester) async {
+      final storage = MemoryContentRecoveryStorage();
+      await tester.pumpWidget(_screen(storage: storage, viaNavigator: true));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open composer'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byType(TextField).first,
+        'Synthetic discard draft',
+      );
+      await tester.pumpAndSettle();
+      storage.failWrites = true;
+      await tester.tap(find.byTooltip('Close composer'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Discard'));
+      await tester.pumpAndSettle();
+      expect(find.text('Discard post?'), findsOneWidget);
+      expect(
+        find.text('Draft could not be discarded. Keep editing and try again.'),
+        findsOneWidget,
+      );
+      expect(
+        tester.widget<TextField>(find.byType(TextField).first).controller!.text,
+        'Synthetic discard draft',
+      );
+      expect(storage.values.values.join(), contains('Synthetic discard draft'));
+      storage.failWrites = false;
+      await tester.tap(find.text('Discard'));
+      await tester.pumpAndSettle();
+      expect(find.text('Open composer'), findsOneWidget);
+      expect(
+        storage.values.values.join(),
+        isNot(contains('Synthetic discard draft')),
+      );
+      await tester.tap(find.text('Open composer'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(find.byType(TextField).first).controller!.text,
+        isEmpty,
+      );
+    },
+  );
+
   testWidgets('offers only allowed public authorship choices', (tester) async {
     await tester.pumpWidget(_screen());
     await tester.pumpAndSettle();

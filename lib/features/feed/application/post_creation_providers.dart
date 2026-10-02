@@ -160,7 +160,7 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
     state = state.copyWith(isRestoring: true);
     final loadingState = state;
     final registry = _ref.read(contentMutationRegistryProvider);
-    await registry.ready;
+    await registry.refresh();
     if (!mounted || actor != _actor || sessionEpoch != _sessionEpoch) return;
     if (version != _version || !identical(state, loadingState)) {
       state = state.copyWith(isRestoring: false);

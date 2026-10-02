@@ -111,7 +111,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     final actor = _actor;
     final version = _draftVersion;
     final registry = ref.read(contentMutationRegistryProvider);
-    await registry.ready;
+    await registry.refresh();
     if (!mounted || actor != _actor || version != _draftVersion) return;
     final pending = registry.pending(_createScope);
     final data = pending != null && !pending.needsReentry

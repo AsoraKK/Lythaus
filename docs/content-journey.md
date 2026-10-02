@@ -19,7 +19,10 @@ and records an opaque owned-content ID.
 Unsent text drafts expire after 24 hours. Frozen request text expires after
 seven days. Expiry is enforced when the journal is accessed. Logout and account
 changes clear private in-memory state immediately and remove saved text and
-drafts from that account's journal. Unresolved keys, fingerprints and routing
+drafts from that account's journal. Reopening a composer refreshes the journal
+and applies expiry even without restarting the app. Discarding a draft waits
+for storage confirmation; failed storage leaves the draft available to edit.
+Unresolved keys, fingerprints and routing
 IDs remain so re-entering the same text can check the original request safely.
 Another account cannot restore them. Browser storage belongs to the current
 origin and device profile; restoring a fresh device does not transfer drafts.

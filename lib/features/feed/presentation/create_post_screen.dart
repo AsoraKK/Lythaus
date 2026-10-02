@@ -497,33 +497,86 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   void _showDiscardDialog(BuildContext context) {
+    final registry = ref.read(contentMutationRegistryProvider);
+    final epoch = registry.sessionEpoch;
+    final actor = ref.read(currentUserProvider)?.id ?? 'session';
+    var saving = false;
+    String? error;
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        scrollable: true,
-        title: Text('Discard post?', style: context.textTheme.headlineSmall),
-        content: Text(
-          'Your post will be lost if you close this screen.',
-          style: context.textTheme.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Keep editing'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: context.colorScheme.error,
-              foregroundColor: context.colorScheme.onError,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, updateDialog) => PopScope(
+          canPop: !saving,
+          child: AlertDialog(
+            scrollable: true,
+            title: Text(
+              'Discard post?',
+              style: context.textTheme.headlineSmall,
             ),
-            onPressed: () {
-              ref.read(postCreationProvider.notifier).reset();
-              Navigator.of(context).pop();
-              Navigator.of(context).pop();
-            },
-            child: const Text('Discard'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your post will be lost if you close this screen.',
+                  style: context.textTheme.bodyMedium,
+                ),
+                if (error != null)
+                  Text(
+                    error!,
+                    style: TextStyle(color: context.colorScheme.error),
+                  ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: saving
+                    ? null
+                    : () => Navigator.of(dialogContext).pop(),
+                child: const Text('Keep editing'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: context.colorScheme.error,
+                  foregroundColor: context.colorScheme.onError,
+                ),
+                onPressed: saving
+                    ? null
+                    : () async {
+                        if (epoch != registry.sessionEpoch) {
+                          updateDialog(
+                            () => error =
+                                'Your session changed. Reopen your draft.',
+                          );
+                          return;
+                        }
+                        updateDialog(() {
+                          saving = true;
+                          error = null;
+                        });
+                        final cleared = await registry.saveDraft(
+                          'post-create:$actor',
+                          null,
+                        );
+                        if (!mounted || !dialogContext.mounted) return;
+                        if (!cleared || epoch != registry.sessionEpoch) {
+                          updateDialog(() {
+                            saving = false;
+                            error =
+                                'Draft could not be discarded. Keep editing and try again.';
+                          });
+                          return;
+                        }
+                        ref.read(postCreationProvider.notifier).reset();
+                        Navigator.of(dialogContext).pop();
+                        Navigator.of(context).pop();
+                      },
+                child: Text(saving ? 'Discarding…' : 'Discard'),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

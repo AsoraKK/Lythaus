@@ -89,7 +89,7 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
     _restoring = true;
     final version = _draftVersion;
     final registry = ref.read(contentMutationRegistryProvider);
-    await registry.ready;
+    await registry.refresh();
     if (!mounted || version != _draftVersion) return;
     final pending = registry.pending(_scope);
     final saved = pending != null && !pending.needsReentry

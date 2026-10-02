@@ -171,6 +171,26 @@ class ContentMutationRegistry extends ChangeNotifier {
       },
   };
 
+  Future<void> refresh() async {
+    await ready;
+    final actor = _actor;
+    final epoch = _epoch;
+    if (actor == null || _storage == null) return;
+    await _queue(() async {
+      if (_epoch != epoch) return;
+      try {
+        final data = await _read(actor);
+        if (_epoch != epoch) return;
+        _restore(data);
+        storageUnavailable = false;
+      } catch (_) {
+        if (_epoch != epoch) return;
+        storageUnavailable = true;
+      }
+      _changed();
+    });
+  }
+
   Future<Map<String, dynamic>> _read(String actor) async {
     final raw = await _storage!.read(_storageKey(actor));
     final data = raw == null

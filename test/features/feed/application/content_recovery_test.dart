@@ -243,6 +243,31 @@ void main() {
   );
 
   test(
+    'reopening a composer in a long-lived session expires cached and stored text',
+    () async {
+      final storage = MemoryContentRecoveryStorage();
+      var now = DateTime.utc(2026, 10, 2);
+      final registry = await open(storage, 'a', clock: () => now);
+      await registry.saveDraft('post-create:a', payload);
+      final attempt = await registry.beginDurable('post-create:a', payload);
+      await registry.finishDurable(attempt, uncertain: true);
+      now = now.add(const Duration(days: 8));
+      await registry.refresh();
+      expect(registry.draft(attempt.scope), isNull);
+      expect(registry.pending(attempt.scope)!.key, attempt.key);
+      expect(registry.pending(attempt.scope)!.needsReentry, isTrue);
+      expect(
+        storage.values.values.join(),
+        isNot(contains('Private synthetic text')),
+      );
+      expect(
+        (await registry.beginDurable(attempt.scope, payload)).key,
+        attempt.key,
+      );
+    },
+  );
+
+  test(
     'an expired journal erases text even when a conflicting replay is rejected',
     () async {
       final storage = MemoryContentRecoveryStorage();
