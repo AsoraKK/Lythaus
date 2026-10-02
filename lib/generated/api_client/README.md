@@ -89,6 +89,7 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminLegalHoldsList**](doc/AdminApi.md#adminlegalholdslist) | **GET** /admin/privacy/legal-holds | List active and released legal holds
 [*AdminApi*](doc/AdminApi.md) | [**adminModerationCasesList**](doc/AdminApi.md#adminmoderationcaseslist) | **GET** /admin/moderation/cases | List moderation cases
 [*AdminApi*](doc/AdminApi.md) | [**adminModerationDecision**](doc/AdminApi.md#adminmoderationdecision) | **POST** /admin/moderation/cases/{caseId}/decision | Apply a moderation decision
+[*AdminApi*](doc/AdminApi.md) | [**adminOverview**](doc/AdminApi.md#adminoverview) | **GET** /admin/overview | Read bounded owner-only community aggregates
 [*AdminApi*](doc/AdminApi.md) | [**adminPrivacyRequestsList**](doc/AdminApi.md#adminprivacyrequestslist) | **GET** /admin/privacy/requests | List privacy requests
 [*AdminApi*](doc/AdminApi.md) | [**adminReviewerQualificationCreate**](doc/AdminApi.md#adminreviewerqualificationcreate) | **POST** /admin/reviewers/{reviewerId}/qualification | Set reviewer qualification state
 [*AdminApi*](doc/AdminApi.md) | [**adminReviewerQualificationUpdate**](doc/AdminApi.md#adminreviewerqualificationupdate) | **PUT** /admin/reviewers/{reviewerId}/qualification | Idempotently set reviewer qualification state
@@ -252,6 +253,10 @@ Class | Method | HTTP request | Description
  - [AdminHealth](doc/AdminHealth.md)
  - [AdminItems](doc/AdminItems.md)
  - [AdminMutationConfirmation](doc/AdminMutationConfirmation.md)
+ - [AdminOverview](doc/AdminOverview.md)
+ - [AdminOverviewGaps](doc/AdminOverviewGaps.md)
+ - [AdminOverviewMetrics](doc/AdminOverviewMetrics.md)
+ - [AdminOverviewProviders](doc/AdminOverviewProviders.md)
  - [AdminUser](doc/AdminUser.md)
  - [AdminUserDeletionResponse](doc/AdminUserDeletionResponse.md)
  - [AdminUserDetail200Response](doc/AdminUserDetail200Response.md)
@@ -367,6 +372,10 @@ Class | Method | HTTP request | Description
  - [NotificationPreferenceUpdate](doc/NotificationPreferenceUpdate.md)
  - [NotificationPreferences](doc/NotificationPreferences.md)
  - [NotificationUnreadCount](doc/NotificationUnreadCount.md)
+ - [OverviewMetric](doc/OverviewMetric.md)
+ - [OverviewProvider](doc/OverviewProvider.md)
+ - [OverviewProviderAccountingPeriod](doc/OverviewProviderAccountingPeriod.md)
+ - [OverviewWindow](doc/OverviewWindow.md)
  - [OwnerComment](doc/OwnerComment.md)
  - [OwnerPost](doc/OwnerPost.md)
  - [PendingAppealAdjudication](doc/PendingAppealAdjudication.md)

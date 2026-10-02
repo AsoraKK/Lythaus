@@ -1,5 +1,4 @@
 .gitignore
-.openapi-generator-ignore
 README.md
 analysis_options.yaml
 doc/AccountStatusResponse.md
@@ -23,6 +22,10 @@ doc/AdminEmailHealth.md
 doc/AdminHealth.md
 doc/AdminItems.md
 doc/AdminMutationConfirmation.md
+doc/AdminOverview.md
+doc/AdminOverviewGaps.md
+doc/AdminOverviewMetrics.md
+doc/AdminOverviewProviders.md
 doc/AdminUser.md
 doc/AdminUserDeletionResponse.md
 doc/AdminUserDetail200Response.md
@@ -149,6 +152,10 @@ doc/NotificationPreferenceUpdate.md
 doc/NotificationPreferences.md
 doc/NotificationUnreadCount.md
 doc/NotificationsApi.md
+doc/OverviewMetric.md
+doc/OverviewProvider.md
+doc/OverviewProviderAccountingPeriod.md
+doc/OverviewWindow.md
 doc/OwnerComment.md
 doc/OwnerPost.md
 doc/PendingAppealAdjudication.md
@@ -276,6 +283,10 @@ lib/src/model/admin_email_health.dart
 lib/src/model/admin_health.dart
 lib/src/model/admin_items.dart
 lib/src/model/admin_mutation_confirmation.dart
+lib/src/model/admin_overview.dart
+lib/src/model/admin_overview_gaps.dart
+lib/src/model/admin_overview_metrics.dart
+lib/src/model/admin_overview_providers.dart
 lib/src/model/admin_user.dart
 lib/src/model/admin_user_deletion_response.dart
 lib/src/model/admin_user_detail200_response.dart
@@ -392,6 +403,10 @@ lib/src/model/notification_page.dart
 lib/src/model/notification_preference_update.dart
 lib/src/model/notification_preferences.dart
 lib/src/model/notification_unread_count.dart
+lib/src/model/overview_metric.dart
+lib/src/model/overview_provider.dart
+lib/src/model/overview_provider_accounting_period.dart
+lib/src/model/overview_window.dart
 lib/src/model/owner_comment.dart
 lib/src/model/owner_post.dart
 lib/src/model/pending_appeal_adjudication.dart
@@ -486,6 +501,10 @@ test/admin_email_health_test.dart
 test/admin_health_test.dart
 test/admin_items_test.dart
 test/admin_mutation_confirmation_test.dart
+test/admin_overview_gaps_test.dart
+test/admin_overview_metrics_test.dart
+test/admin_overview_providers_test.dart
+test/admin_overview_test.dart
 test/admin_user_deletion_response_test.dart
 test/admin_user_detail200_response_test.dart
 test/admin_user_invite_test.dart
@@ -612,6 +631,10 @@ test/notification_preferences_test.dart
 test/notification_test.dart
 test/notification_unread_count_test.dart
 test/notifications_api_test.dart
+test/overview_metric_test.dart
+test/overview_provider_accounting_period_test.dart
+test/overview_provider_test.dart
+test/overview_window_test.dart
 test/owner_comment_test.dart
 test/owner_post_test.dart
 test/pending_appeal_adjudication_list_test.dart

@@ -311,7 +311,7 @@ describe('source-derived OpenAPI route parity', () => {
       public: publicExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
       admin: adminExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
     };
-    expect(routeCounts).toEqual({ public: 109, admin: 45 });
+    expect(routeCounts).toEqual({ public: 109, admin: 46 });
     expect(runtimeRoutes.map(routeKey)).toEqual(expect.arrayContaining([
       'GET /.well-known/jwks.json',
       'GET /posts/{param}/owner-view',
@@ -322,6 +322,7 @@ describe('source-derived OpenAPI route parity', () => {
       'POST /waitlist',
       'DELETE /posts/{param}',
       'GET /admin/privacy/requests',
+      'GET /admin/overview',
       'GET /admin/account-support/access',
       'POST /admin/account-support/lookup',
       'POST /admin/account-support/users/{param}/history',
