@@ -117,11 +117,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.security_outlined),
               title: const Text('Account security'),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const AccountSecurityScreen(),
-                ),
-              ),
+              onTap: () {
+                final router = GoRouter.maybeOf(context);
+                if (router != null) {
+                  router.go(
+                    GoRouterState.of(
+                      context,
+                    ).uri.replace(path: '/settings/security').toString(),
+                  );
+                  return;
+                }
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AccountSecurityScreen(),
+                  ),
+                );
+              },
             ),
             const Divider(height: Spacing.xl),
             Text('Preferences', style: Theme.of(context).textTheme.titleLarge),

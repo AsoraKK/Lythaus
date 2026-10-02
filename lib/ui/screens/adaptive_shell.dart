@@ -73,9 +73,18 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
     }
   }
 
-  void _openSettings() => Navigator.of(
-    context,
-  ).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
+  void _openSettings() {
+    final router = GoRouter.maybeOf(context);
+    if (router != null) {
+      router.go(
+        GoRouterState.of(context).uri.replace(path: '/settings').toString(),
+      );
+      return;
+    }
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
+  }
 
   Widget _buildSidebar() => SizedBox(
     width: 224,

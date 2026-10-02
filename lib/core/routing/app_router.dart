@@ -20,6 +20,7 @@ import 'package:lythaus/ui/screens/adaptive_shell.dart';
 import 'package:lythaus/ui/screens/profile/profile_screen.dart';
 import 'package:lythaus/ui/screens/profile/optional_profile_screen.dart';
 import 'package:lythaus/ui/screens/profile/settings_screen.dart';
+import 'package:lythaus/ui/screens/profile/account_security_screen.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:lythaus/features/authenticity/beta_screen.dart';
 import 'package:lythaus/features/authenticity/alpha_screen.dart';
@@ -37,6 +38,7 @@ abstract final class AppRoutes {
   static const String notificationSettings = 'notification-settings';
   static const String rewards = 'rewards';
   static const String settings = 'settings';
+  static const String accountSecurity = 'account-security';
 }
 
 String? resolveAppRedirect({
@@ -150,11 +152,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ).toString(),
       ),
       GoRoute(
-        name: AppRoutes.settings,
-        path: '/settings',
-        builder: (context, state) => const ReadingPane(child: SettingsScreen()),
-      ),
-      GoRoute(
         path: '/authenticity',
         builder: (context, state) => const AuthenticityPrivateAlphaScreen(),
       ),
@@ -220,11 +217,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // Notification settings
           GoRoute(
-            name: AppRoutes.notificationSettings,
-            path: 'settings/notifications',
-            builder: (context, state) => const NotificationsSettingsScreen(),
+            name: AppRoutes.settings,
+            path: 'settings',
+            builder: (context, state) =>
+                const ReadingPane(child: SettingsScreen()),
+            routes: [
+              GoRoute(
+                name: AppRoutes.accountSecurity,
+                path: 'security',
+                builder: (context, state) => const AccountSecurityScreen(),
+              ),
+              GoRoute(
+                name: AppRoutes.notificationSettings,
+                path: 'notifications',
+                builder: (context, state) =>
+                    const NotificationsSettingsScreen(),
+              ),
+            ],
           ),
         ],
       ),
