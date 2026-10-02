@@ -18,6 +18,8 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     let session = false;
     let profile = { id: user.id, displayName: '', bio: '', moderationState: 'allowed', publicVisibility: true, subscriptionTier: 'free' };
     const patches = [], privateReads = [], errors = [], failedRequests = [], consoleErrors = [];
+    let phase = 'entry';
+    const requestPhases = new WeakMap();
     const fixture = await localAuthBrowserServer(async route => {
       const request = route.request(), url = new URL(request.url());
       if (url.hostname === 'app.lythaus.co') {
@@ -50,7 +52,11 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
           const patch = parseProfileUpdate(request.postDataJSON());
           patches.push({ data: patch, key: (await request.allHeaders())['idempotency-key'] });
           profile = { ...profile, ...patch, moderationState: 'under_review' };
-        } else privateReads.push(profile.moderationState);
+        } else {
+          privateReads.push(profile.moderationState);
+          // Make cancellation on setup disposal reproducible on fast local hosts.
+          if (patches.length === 1) await new Promise(resolve => setTimeout(resolve, 150));
+        }
         body = { user: profile };
       } else if (url.pathname === `/api/users/${user.id}`) {
         status = profile.moderationState === 'allowed' && profile.publicVisibility ? 200 : 404;
@@ -70,6 +76,7 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     await installFlutterEngineFonts(context);
     let page = await context.newPage(); page.setDefaultTimeout(30000);
     function observe(target) {
+      target.on('request', request => requestPhases.set(request, phase));
       target.on('pageerror', error => errors.push(error.message));
       target.on('console', message => {
         if (message.type() !== 'error') return;
@@ -79,14 +86,20 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
         consoleErrors.push({ message: message.text(), location, expectedRefreshRejection });
         if (!expectedRefreshRejection) errors.push(message.text());
       });
-      target.on('requestfailed', request => failedRequests.push({
-        resource: new URL(request.url()).origin + new URL(request.url()).pathname,
-        method: request.method(), failure: request.failure()?.errorText,
-      }));
+      target.on('requestfailed', request => {
+        const url = new URL(request.url()), failure = request.failure()?.errorText;
+        const requestPhase = requestPhases.get(request);
+        const expectedSetupDisposal = requestPhase === 'saving-partial'
+          && patches.length >= 1 && request.method() === 'GET'
+          && url.origin === 'https://api.lythaus.co' && url.pathname === '/api/users/me'
+          && ['net::ERR_ABORTED', 'Load request cancelled'].includes(failure);
+        failedRequests.push({ resource: url.origin + url.pathname,
+          method: request.method(), failure, phase: requestPhase, expectedSetupDisposal });
+      });
     }
     observe(page);
     t.after(async () => {
-      if (errors.length) t.diagnostic(JSON.stringify({ failedRequests, consoleErrors }));
+      if (errors.length || failedRequests.length) t.diagnostic(JSON.stringify({ failedRequests, consoleErrors }));
       if (process.env.AUTH_QA_DIR) {
         await mkdir(process.env.AUTH_QA_DIR, { recursive: true });
         await writeFile(path.join(process.env.AUTH_QA_DIR, `profile-${engineName}-${width}-network.json`), JSON.stringify({ failedRequests, consoleErrors }, null, 2));
@@ -137,8 +150,10 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     await type(page.getByRole('textbox', { name: /Display name/ }), '');
     await type(page.getByRole('textbox', { name: /Bio/ }), 'Saved partial profile');
     await shot('partial-before-save');
+    phase = 'saving-partial';
     await page.getByRole('button', { name: 'Save profile', exact: true }).click();
     await page.getByText('No posts yet', { exact: true }).waitFor();
+    phase = 'discover-after-partial';
     assert.deepEqual(patches[0].data, { bio: 'Saved partial profile' });
     assert.ok(patches[0].key);
     await ownProfile();
@@ -153,7 +168,9 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     await page.getByRole('button', { name: 'Keep editing', exact: true }).click();
     assert.equal(await fieldValue(bio), 'Unsaved interruption');
     assert.equal(patches.length, 1);
+    phase = 'refresh-interruption';
     await page.reload(); await activate();
+    phase = 'restored-session';
     assert.equal(await page.getByText('Set up your profile (optional)', { exact: true }).count(), 0);
     await ownProfile();
     await page.getByRole('button', { name: /^Edit profile(?:\b|$)/ }).click();
@@ -164,10 +181,11 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     assert.deepEqual(patches[1].data, { displayName: 'Zoë O’Connor' });
     assert.ok(privateReads.length >= 3);
     assert.equal(errors.length, 0, errors.join('\n'));
-    assert.deepEqual(failedRequests, []);
+    assert.deepEqual(failedRequests.filter(request => !request.expectedSetupDisposal), []);
     assert.ok(!/Next\.js|Unhandled exception|ErrorWidget/.test((await page.locator('flt-semantics').allTextContents()).join('\n')));
 
     await context.close();
+    phase = 'skip-session';
     profile = { ...profile, displayName: '', bio: '', moderationState: 'allowed' }; session = false;
     const fresh = await browser.newContext({ viewport: { width, height: 1000 }, serviceWorkers: 'block', ignoreHTTPSErrors: true });
     await installFlutterEngineFonts(fresh);
@@ -183,7 +201,7 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     await skipPage.getByRole('button', { name: /^Complete your profile(?:\b|$)/ }).waitFor();
     await shot('skipped');
     assert.equal(errors.length, 0, errors.join('\n'));
-    assert.deepEqual(failedRequests, []);
+    assert.deepEqual(failedRequests.filter(request => !request.expectedSetupDisposal), []);
     await fresh.close();
   });
 }
