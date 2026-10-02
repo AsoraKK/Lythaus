@@ -21,6 +21,10 @@ Secondary routes use their own opt-in layout, stylesheet and fonts. The homepage
 
 ## Evidence locations
 
+### Root tooling security patches, 2 October 2026
+
+The guard accepts the reviewed fast-uri 3.1.8 and ip-address 10.7.1 patches only with their exact package metadata, registry URLs and integrity hashes. The remaining root lock and manifest still match the fixed upstream baseline. Negative tests reject altered versions, URLs, integrity hashes and changes to other dependencies.
+
 ### Secondary route metadata correction, 28 September 2026
 
 The new Help route is appended to the sitemap. Its guard compares the complete file

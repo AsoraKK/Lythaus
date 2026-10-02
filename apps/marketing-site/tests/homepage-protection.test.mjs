@@ -61,15 +61,40 @@ const protectedPaths = [
   'database/planetscale/migrations/0013_marketing_waitlist.sql',
 ];
 const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).trim();
-function assertRootToolingLockOnlyHasSecurityPatches() {
+const reviewedToolingSecurityPatches = {
+  'fast-uri': {
+    version: '3.1.8',
+    resolved: 'https://registry.npmjs.org/fast-uri/-/fast-uri-3.1.8.tgz',
+    integrity: 'sha512-GZMtZUTNRpOVIECoXwLNZS5xUGE+mVNbTB8h/7Rwh2TFWcBQiPzTgyZi05BF9UMZKkLJv8XBRJTlU7zg8+ZfMg==',
+    dev: true,
+    funding: [
+      { type: 'github', url: 'https://github.com/sponsors/fastify' },
+      { type: 'opencollective', url: 'https://opencollective.com/fastify' },
+    ],
+    license: 'BSD-3-Clause',
+  },
+  'ip-address': {
+    version: '10.7.1',
+    resolved: 'https://registry.npmjs.org/ip-address/-/ip-address-10.7.1.tgz',
+    integrity: 'sha512-4OUAqU9Z1i3vCnS05hzGiFnEMDpQ+62pAD/MVQOp83fYyNC8GleCqaS0QikQBmcWCrKFiUs/B8ztRRiYOAXuCA==',
+    dev: true,
+    license: 'MIT',
+    engines: { node: '>= 12' },
+  },
+};
+function assertRootToolingLockOnlyHasSecurityPatches(current = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'))) {
   const original = JSON.parse(git('show', `${upstreamBaselineSha}:package-lock.json`));
-  const current = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
   for (const [name, version] of [['brace-expansion', '5.0.12'], ['undici', '7.29.1'], ['basic-ftp', '6.2.1']]) {
     const packagePath = `node_modules/${name}`;
     const patched = current.packages[packagePath];
     assert.equal(patched?.version, version, `${name} must use the reviewed patched version`);
     assert.ok(patched.resolved.endsWith(`${name}-${version}.tgz`), `${name} lock URL must match the patched version`);
     assert.match(patched.integrity, /^sha512-[A-Za-z0-9+/]+={0,2}$/, `${name} must retain registry integrity metadata`);
+    current.packages[packagePath] = original.packages[packagePath];
+  }
+  for (const [name, patch] of Object.entries(reviewedToolingSecurityPatches)) {
+    const packagePath = `node_modules/${name}`;
+    assert.deepEqual(current.packages[packagePath], patch, `${name} must use the exact reviewed security patch`);
     current.packages[packagePath] = original.packages[packagePath];
   }
   assert.deepEqual(current, original, 'Root tooling lock may change only for the reviewed security patches');
@@ -143,6 +168,22 @@ test('homepage visual assets, build and waitlist dependencies remain frozen', ()
   assertHomepageFrozen();
 });
 
+test('reviewed tooling patches reject a different version, registry URL or integrity', () => {
+  for (const name of Object.keys(reviewedToolingSecurityPatches)) {
+    for (const [field, value] of [['version', '0.0.0'], ['resolved', 'https://example.invalid/package.tgz'], ['integrity', 'sha512-invalid']]) {
+      const changed = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+      changed.packages[`node_modules/${name}`][field] = value;
+      assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(changed), /must use the exact reviewed security patch/);
+    }
+  }
+});
+
+test('reviewed tooling patches keep every other dependency frozen', () => {
+  const changed = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+  changed.packages['node_modules/ajv'].version = '0.0.0';
+  assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(changed), /Root tooling lock may change only for the reviewed security patches/);
+});
+
 test('approved copy refresh preserves homepage scripts, waitlist controls and metadata wiring', () => {
   const read = filename => readFileSync(path.join(root, filename), 'utf8').replaceAll('\r\n', '\n');
   const scripts = source => [...source.replace(/<script\b[^>]*\/>/g, '').matchAll(/<script\b[^>]*>[\s\S]*?<\/script>/g)].map(match => match[0]).join('\n');
@@ -203,10 +244,14 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
       assert.equal(after.overrides.undici, '7.29.1');
       assert.equal(after.overrides.miniflare.undici, '7.29.1');
       assert.deepEqual(after.overrides['get-uri@8.0.1'], { 'basic-ftp': '6.2.1' });
+      assert.equal(after.overrides['fast-uri'], '3.1.8');
+      assert.equal(after.overrides['ip-address'], '10.7.1');
       before.overrides['brace-expansion'] = '5.0.12';
       before.overrides.undici = '7.29.1';
       before.overrides.miniflare.undici = '7.29.1';
       before.overrides['get-uri@8.0.1'] = { 'basic-ftp': '6.2.1' };
+      before.overrides['fast-uri'] = '3.1.8';
+      before.overrides['ip-address'] = '10.7.1';
     }
     assert.deepEqual(after, before, 'Only the TypeScript test runtime flag and reviewed security overrides may change; homepage dependencies remain frozen');
   }
