@@ -3,10 +3,14 @@
 This cloud reconstruction adds optional passkeys alongside email/password and
 guest access. It starts from main `115da92f0918ac4a19fdeb45889c00ff4db65687`;
 the uncommitted PC implementation was unavailable. Current profile/owner-state
-main `a093fbfc6f6f6184a909578f3be5fac9e49bc1ba` is incorporated. Reconcile the PC
-implementation if recovered. This branch does not enable the feature or authorize
-deployment. Successful passkey sign-in follows the same optional profile setup
-and saved owner-profile behavior as email sign-in.
+main `a093fbfc6f6f6184a909578f3be5fac9e49bc1ba` is incorporated, followed by
+release-85 main `1dac5e7c88de959153b57c35c10100d25bc71699`. Owner-only account
+support and the snapshot-proven prior-Admin version propagation retry gates
+are preserved. Reconcile the PC implementation if recovered. This branch does
+not enable the feature or authorize deployment. Merge and release remain held
+for the parent's independent security review and queue go-ahead. Successful
+passkey sign-in follows the same optional profile setup and saved owner-profile
+behavior as email sign-in.
 
 ## Configuration and schema handoff
 

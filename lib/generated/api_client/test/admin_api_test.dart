@@ -7,6 +7,33 @@ void main() {
   final instance = LythausApiClient().getAdminApi();
 
   group(AdminApi, () {
+    // Check owner account-support access
+    //
+    // Requires verified Cloudflare Access and an active owner membership joined to an active owner account. Returns no account records. Every lookup and history request checks authorization independently.
+    //
+    //Future<AccountSupportAccess> adminAccountSupportAccess() async
+    test('test adminAccountSupportAccess', () async {
+      // TODO
+    });
+
+    // Read partial recorded account history
+    //
+    // Owner-only, audited read with an allowed Origin and a reason code. Unions recorded account, activity and target-user audit events. Returns safe event codes and timestamps, excluding metadata and private content. Identity account events have no recorded correlation IDs. Missing storage, query or audit evidence returns unavailable rather than an empty success. Filters and pagination are in a bounded JSON body; URL parameters are rejected. This operation changes only the support audit, not account state.
+    //
+    //Future<AccountSupportHistoryResponse> adminAccountSupportHistory(String userId, AccountSupportHistoryRequest accountSupportHistoryRequest) async
+    test('test adminAccountSupportHistory', () async {
+      // TODO
+    });
+
+    // Read minimum account state by exact email
+    //
+    // Owner-only read, using an exact trimmed and case-normalized email. Email is accepted only in a bounded JSON body, never a URL parameter. Requires an allowed Origin and a reason code. An audit must commit before disclosure. Ambiguous matches disclose no account state. Passwords, tokens, reset links, email values and private content are excluded. This operation changes only the support audit, not account state.
+    //
+    //Future<AccountSupportLookupResponse> adminAccountSupportLookup(AccountSupportLookupRequest accountSupportLookupRequest) async
+    test('test adminAccountSupportLookup', () async {
+      // TODO
+    });
+
     // Record a trained editorial appeal adjudication
     //
     // This never auto-resolves an appeal. The shared governance policy evaluates the independently assigned reviewer quorum and then requires one trained adjudicator for standard risk or two for high risk. The outcome is applied only when the returned status is resolved.

@@ -69,8 +69,19 @@ IDs and release tags, service/path, HTTP status and Cloudflare Ray ID before
 rejecting a mismatch. The Cloudflare inventory includes the read-only custom
 domain mapping for `admin-api.lythaus.co`; inspect this evidence before diagnosing
 an override failure as propagation. Identity, private Public-binding and Access
-checks remain fail-closed. Do not blindly retry a mismatched candidate or change
-routing based on an unverified mapping.
+checks remain fail-closed. The Admin probe permits five readiness attempts with
+2/4/6/8-second delays only when a healthy response identifies a positive-traffic
+Admin version and its exact source tag from the captured predeployment snapshot,
+and its private Public binding already identifies the exact Public candidate.
+All attempts retain sanitized expected/observed identities and retry reasons.
+Only the exact candidate version and source tag can pass; a persistent prior
+version exhausts the bound and triggers the existing rollback. Unknown or missing
+identities, incorrect Public bindings, schema failures and Access rejection fail
+immediately. Cloudflare documents that an override can fall back to normal traffic
+while a deployment becomes available globally:
+https://developers.cloudflare.com/workers/versions-and-deployments/version-overrides/.
+This evidence is consistent with propagation, not proof of it. Do not retry the
+whole release blindly or change routing based on an unverified mapping.
 
 Failed owner-testing releases still publish their canonical manifest and integrity
 digest. A rolled-back release retains `ROLLED_BACK`, the original failure domains

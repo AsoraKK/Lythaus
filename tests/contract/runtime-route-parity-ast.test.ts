@@ -327,7 +327,7 @@ describe('source-derived OpenAPI route parity', () => {
       public: [...publicExtraction.routes, ...passkeyExtraction.routes].filter((route) => !internalRouteKeys.has(routeKey(route))).length,
       admin: adminExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
     };
-    expect(routeCounts).toEqual({ public: 117, admin: 42 });
+    expect(routeCounts).toEqual({ public: 117, admin: 45 });
     expect(runtimeRoutes.map(routeKey)).toEqual(expect.arrayContaining([
       'GET /.well-known/jwks.json',
       'POST /auth/password/reset/request',
@@ -336,6 +336,9 @@ describe('source-derived OpenAPI route parity', () => {
       'POST /waitlist',
       'DELETE /posts/{param}',
       'GET /admin/privacy/requests',
+      'GET /admin/account-support/access',
+      'POST /admin/account-support/lookup',
+      'POST /admin/account-support/users/{param}/history',
       'GET /admin/waitlist',
       'POST /admin/waitlist/{param}/status',
       'POST /admin/waitlist/{param}/retention-hold',
