@@ -27,6 +27,58 @@ class _MockAuthService extends Mock implements AuthService {}
 class _MockIntegrityGuard extends Mock implements DeviceIntegrityGuard {}
 
 void main() {
+  test(
+    'profile setup is offered after interactive login and stays optional',
+    () {
+      expect(
+        resolveAppRedirect(
+          matchedLocation: '/login',
+          user: _user(),
+          isGuest: false,
+          profileSetupRequested: true,
+        ),
+        '/profile/setup',
+      );
+      expect(
+        resolveAppRedirect(
+          matchedLocation: '/profile/setup',
+          user: _user(),
+          isGuest: false,
+          profileSetupRequested: true,
+        ),
+        isNull,
+      );
+      expect(
+        resolveAppRedirect(matchedLocation: '/', user: _user(), isGuest: false),
+        isNull,
+      );
+      expect(
+        resolveAppRedirect(
+          matchedLocation: '/profile/setup',
+          user: null,
+          isGuest: true,
+        ),
+        '/',
+      );
+      expect(
+        resolveAppRedirect(
+          matchedLocation: '/profile/setup',
+          user: null,
+          isGuest: false,
+        ),
+        '/login',
+      );
+      expect(
+        resolveAppRedirect(
+          matchedLocation: '/invite/code',
+          user: _user(),
+          isGuest: false,
+          profileSetupRequested: true,
+        ),
+        isNull,
+      );
+    },
+  );
   testWidgets('auth loading/errors retain router and entered email', (
     tester,
   ) async {

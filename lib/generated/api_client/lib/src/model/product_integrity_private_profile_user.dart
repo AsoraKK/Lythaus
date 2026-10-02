@@ -15,6 +15,8 @@ part 'product_integrity_private_profile_user.g.dart';
 /// Properties:
 /// * [id]
 /// * [displayName]
+/// * [moderationState] - Current publication review state of the saved owner profile. Only returned by the private owner endpoint.
+/// * [publicVisibility] - Owner visibility preference. A true value does not publish an under-review or blocked profile.
 /// * [handle]
 /// * [avatarUrl]
 /// * [bio]
@@ -32,6 +34,15 @@ abstract class ProductIntegrityPrivateProfileUser implements Built<ProductIntegr
 
   @BuiltValueField(wireName: r'displayName')
   String get displayName;
+
+  /// Current publication review state of the saved owner profile. Only returned by the private owner endpoint.
+  @BuiltValueField(wireName: r'moderationState')
+  ProductIntegrityPrivateProfileUserModerationStateEnum get moderationState;
+  // enum moderationStateEnum {  under_review,  allowed,  blocked,  };
+
+  /// Owner visibility preference. A true value does not publish an under-review or blocked profile.
+  @BuiltValueField(wireName: r'publicVisibility')
+  bool get publicVisibility;
 
   @BuiltValueField(wireName: r'handle')
   String? get handle;
@@ -98,6 +109,16 @@ class _$ProductIntegrityPrivateProfileUserSerializer implements PrimitiveSeriali
     yield serializers.serialize(
       object.displayName,
       specifiedType: const FullType(String),
+    );
+    yield r'moderationState';
+    yield serializers.serialize(
+      object.moderationState,
+      specifiedType: const FullType(ProductIntegrityPrivateProfileUserModerationStateEnum),
+    );
+    yield r'publicVisibility';
+    yield serializers.serialize(
+      object.publicVisibility,
+      specifiedType: const FullType(bool),
     );
     if (object.handle != null) {
       yield r'handle';
@@ -197,6 +218,20 @@ class _$ProductIntegrityPrivateProfileUserSerializer implements PrimitiveSeriali
             specifiedType: const FullType(String),
           ) as String;
           result.displayName = valueDes;
+          break;
+        case r'moderationState':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(ProductIntegrityPrivateProfileUserModerationStateEnum),
+          ) as ProductIntegrityPrivateProfileUserModerationStateEnum;
+          result.moderationState = valueDes;
+          break;
+        case r'publicVisibility':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.publicVisibility = valueDes;
           break;
         case r'handle':
           final valueDes = serializers.deserialize(
@@ -298,6 +333,26 @@ class _$ProductIntegrityPrivateProfileUserSerializer implements PrimitiveSeriali
     );
     return result.build();
   }
+}
+
+class ProductIntegrityPrivateProfileUserModerationStateEnum extends EnumClass {
+
+  /// Current publication review state of the saved owner profile. Only returned by the private owner endpoint.
+  @BuiltValueEnumConst(wireName: r'under_review')
+  static const ProductIntegrityPrivateProfileUserModerationStateEnum underReview = _$productIntegrityPrivateProfileUserModerationStateEnum_underReview;
+  /// Current publication review state of the saved owner profile. Only returned by the private owner endpoint.
+  @BuiltValueEnumConst(wireName: r'allowed')
+  static const ProductIntegrityPrivateProfileUserModerationStateEnum allowed = _$productIntegrityPrivateProfileUserModerationStateEnum_allowed;
+  /// Current publication review state of the saved owner profile. Only returned by the private owner endpoint.
+  @BuiltValueEnumConst(wireName: r'blocked')
+  static const ProductIntegrityPrivateProfileUserModerationStateEnum blocked = _$productIntegrityPrivateProfileUserModerationStateEnum_blocked;
+
+  static Serializer<ProductIntegrityPrivateProfileUserModerationStateEnum> get serializer => _$productIntegrityPrivateProfileUserModerationStateEnumSerializer;
+
+  const ProductIntegrityPrivateProfileUserModerationStateEnum._(String name): super(name);
+
+  static BuiltSet<ProductIntegrityPrivateProfileUserModerationStateEnum> get values => _$productIntegrityPrivateProfileUserModerationStateEnumValues;
+  static ProductIntegrityPrivateProfileUserModerationStateEnum valueOf(String name) => _$productIntegrityPrivateProfileUserModerationStateEnumValueOf(name);
 }
 
 class ProductIntegrityPrivateProfileUserTrustPassportVisibilityEnum extends EnumClass {

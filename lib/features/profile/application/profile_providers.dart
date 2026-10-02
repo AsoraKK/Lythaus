@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
+import 'package:lythaus/features/profile/domain/owner_profile.dart';
 import 'package:lythaus/features/profile/domain/trust_passport.dart';
 
 const Set<String> _trustPassportVisibilityValues = {
@@ -13,6 +14,29 @@ const Set<String> _trustPassportVisibilityValues = {
   'public_minimal',
   'private',
 };
+
+final ownerProfileProvider = FutureProvider.autoDispose<OwnerProfile>((
+  ref,
+) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) throw StateError('Sign in to view your private profile');
+  final dio = ref.watch(secureDioProvider);
+  final cancelToken = CancelToken();
+  ref.onDispose(cancelToken.cancel);
+  final token = await ref.watch(jwtProvider.future);
+  if (cancelToken.isCancelled) throw cancelToken.cancelError!;
+  if (token == null || token.isEmpty) throw StateError('Session expired');
+  final response = await dio.get<Map<String, dynamic>>(
+    '/api/users/me',
+    cancelToken: cancelToken,
+    options: Options(headers: {'Authorization': 'Bearer $token'}),
+  );
+  final profile = OwnerProfile.fromJson(response.data ?? const {});
+  if (profile.user.id != user.id) {
+    throw const FormatException('Owner profile does not match the session');
+  }
+  return profile;
+});
 
 class ProfilePreferencesService {
   ProfilePreferencesService(this._dio);

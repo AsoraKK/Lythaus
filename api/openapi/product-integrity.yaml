@@ -356,7 +356,11 @@ components:
       additionalProperties: false
       minProperties: 1
       properties:
-        displayName: { type: string, minLength: 1, maxLength: 160 }
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 160
+          description: Optional public display name. Saved edits remain private during publication review. Names are normalized and screened by the Lythaus profile-name policy.
         bio: { type: string, maxLength: 2000 }
         trustPassportVisibility: { type: string, enum: [public_expanded, public_minimal, private] }
         accountabilityName:
@@ -367,10 +371,17 @@ components:
           description: Private encrypted accountability name. It is never returned by profile or activity APIs.
     ProductIntegrityPrivateProfileUser:
       type: object
-      required: [id, displayName, reputationLevel, trustPassportVisibility, subscriptionTier, accountabilityIdentityDeclared]
+      required: [id, displayName, reputationLevel, trustPassportVisibility, subscriptionTier, accountabilityIdentityDeclared, moderationState, publicVisibility]
       properties:
         id: { type: string, format: uuid }
         displayName: { type: string }
+        moderationState:
+          type: string
+          enum: [under_review, allowed, blocked]
+          description: Current publication review state of the saved owner profile. Only returned by the private owner endpoint.
+        publicVisibility:
+          type: boolean
+          description: Owner visibility preference. A true value does not publish an under-review or blocked profile.
         handle: { type: string, nullable: true }
         avatarUrl: { type: string, nullable: true }
         bio: { type: string, nullable: true }

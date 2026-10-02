@@ -13296,7 +13296,9 @@
           "reputationLevel",
           "trustPassportVisibility",
           "subscriptionTier",
-          "accountabilityIdentityDeclared"
+          "accountabilityIdentityDeclared",
+          "moderationState",
+          "publicVisibility"
         ],
         "properties": {
           "id": {
@@ -13305,6 +13307,19 @@
           },
           "displayName": {
             "type": "string"
+          },
+          "moderationState": {
+            "type": "string",
+            "enum": [
+              "under_review",
+              "allowed",
+              "blocked"
+            ],
+            "description": "Current publication review state of the saved owner profile. Only returned by the private owner endpoint."
+          },
+          "publicVisibility": {
+            "type": "boolean",
+            "description": "Owner visibility preference. A true value does not publish an under-review or blocked profile."
           },
           "handle": {
             "type": "string",
@@ -13378,7 +13393,8 @@
           "displayName": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 160
+            "maxLength": 160,
+            "description": "Optional public display name. Saved edits remain private during publication review. Names are normalized and screened by the Lythaus profile-name policy."
           },
           "bio": {
             "type": "string",

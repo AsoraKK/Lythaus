@@ -49,7 +49,10 @@ class PublicUser {
       handle: (json['handle'] as String?) ?? (json['username'] as String?),
       avatarUrl: json['avatarUrl'] as String?,
       bio: json['bio'] as String?,
-      tier: json['tier'] as String? ?? 'free',
+      tier:
+          json['subscriptionTier'] as String? ??
+          json['tier'] as String? ??
+          'free',
       trustPassportVisibility: _visibilityValues.contains(visibility)
           ? visibility!
           : 'public_minimal',
