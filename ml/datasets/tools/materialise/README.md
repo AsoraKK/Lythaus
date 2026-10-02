@@ -1,5 +1,7 @@
 # Dataset materialiser
 
+Manifest sources must be regular files within the approved external directory. Symbolic-link entries are rejected, and file size and digest come from the same opened file. Parent directories must remain writable only by the operator. File opens require `O_NOFOLLOW` support.
+
 This is a reproducible, provenance-first tool for Lythaus-owned research
 materialisation. It is not a user-upload processor and must only operate on a
 task-scoped external cache.

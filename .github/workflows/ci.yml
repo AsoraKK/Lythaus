@@ -71,6 +71,8 @@ jobs:
       - run: npm run validate:cloudflare-hyperdrive-targets:manifest
       - run: npm run validate:ai-gateway-paths
       - run: npm run typecheck:native
+      - name: Verify file-object safety with synthetic local fixtures
+        run: node --test scripts/tests/file-io-security.test.mjs
       - name: Verify private auth-email service boundary in workerd
         run: node --test --test-timeout=60000 scripts/tests/private-email-binding.workerd.mjs
       - run: node --experimental-strip-types --test packages/security/tests/critical-security-policy.test.mjs
