@@ -87,7 +87,13 @@ jobs:
       - name: Validate proposed monthly reputation shadow schema and transactions
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
-        run: npm run test:monthly-reputation-postgres
+        run: >-
+          node --experimental-strip-types --experimental-test-module-mocks
+          --experimental-test-coverage
+          '--test-coverage-include=packages/db/src/monthly-reputation.ts'
+          '--test-coverage-include=apps/lythaus-jobs/src/monthly-reputation.ts'
+          --test-coverage-lines=80 --test-coverage-branches=80
+          --test apps/lythaus-jobs/tests/monthly-reputation.postgres.mjs
       - name: Prove column-only incident audit grants on real PostgreSQL
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable

@@ -57,6 +57,7 @@ const evaluation = '2026-10-05T00:00:00.000Z';
 const weekIds = Array.from({ length: 5 }, () => uuidv7());
 let firstAssessment;
 let correctedSource;
+let flagGrantExisted = false;
 
 function input(sourceMonth = '2026-08', points = [2200, 1800, 2450, 900, 2000]) {
   return {
@@ -82,6 +83,7 @@ const record = overrides => transact(client => recordMonthlyReputationSource(cli
 before(async () => {
   const version = await sql("SELECT current_setting('server_version_num')::integer AS version");
   assert.ok(version.rows[0].version >= 170000 && version.rows[0].version < 180000);
+  flagGrantExisted = (await sql("SELECT has_table_privilege('lythaus_jobs', 'system.feature_flags', 'SELECT') AS allowed")).rows[0].allowed;
   await sql(readFileSync(new URL('../../../database/planetscale/proposals/monthly_reputation_shadow.sql', import.meta.url), 'utf8'));
   await sql('INSERT INTO identity.users (id, display_name) VALUES ($1, $3), ($2, $3)', [userId, otherId, 'Synthetic monthly accounting fixture']);
   await sql(`INSERT INTO trust.reputation_profiles (user_id, policy_version, current_level, total_score)
@@ -93,6 +95,7 @@ after(async () => {
   await sql('DELETE FROM system.feature_flags WHERE flag_key = $1', [MONTHLY_REPUTATION_SHADOW_FLAG]);
   await sql('DROP TABLE IF EXISTS trust.monthly_reputation_assessments, trust.monthly_reputation_sources');
   await sql('DROP FUNCTION IF EXISTS trust.reject_monthly_reputation_update()');
+  if (!flagGrantExisted) await sql('REVOKE SELECT ON system.feature_flags FROM lythaus_jobs');
   await sql('DELETE FROM trust.reputation_profiles WHERE user_id = $1', [userId]);
   await sql('DELETE FROM identity.users WHERE id IN ($1, $2)', [userId, otherId]);
 });

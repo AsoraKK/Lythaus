@@ -86,7 +86,13 @@ jobs:
       - run: node --test scripts/tests/real-email-acceptance-evidence.test.mjs
       - run: npm run test:product-integrity-runtime
       - run: npm run test:product-contracts
-      - run: npm run test:monthly-reputation-policy
+      - name: Verify monthly reputation and candidate peer policy
+        run: >-
+          node --experimental-strip-types --experimental-test-coverage
+          '--test-coverage-include=packages/contracts/src/monthly-*.ts'
+          --test-coverage-lines=80 --test-coverage-branches=80
+          --test packages/contracts/tests/monthly-reputation.test.mjs
+          packages/contracts/tests/monthly-peer-appeal.test.mjs
       - run: npm run test:critical-coverage
       - run: npm run test:authenticity-foundation
       - run: npm run test:database-identity

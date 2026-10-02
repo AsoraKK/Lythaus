@@ -141,6 +141,7 @@ Local evidence on 2 October 2026:
 | Native Worker config/generated types | Passed using writable temporary npm cache and Wrangler log path; no generated files changed |
 | Existing native architecture suite | 270 passed |
 | Existing product contract and integrity suites | 10 and 21 passed |
+| Existing marketing suite | 47 passed after preserving the frozen root package manifest; homepage guards unchanged |
 | Existing critical coverage gate | Passed across 41 modules / 13 domain categories |
 | OpenAPI lint and contract tests | Lint passed with two existing warnings; 38 tests passed, 17 pre-existing skips |
 | Provider verification | Read-only database/branch/schema/ledger inspection only; earning, credentials, appeals, partner and release operation unverified |
@@ -151,9 +152,30 @@ The proposal has no approved migration ID. Production baseline remains
 production migration manifest. No merged SHA exists for this work at preparation
 time. The review PR/commit records the working SHA and complete changed paths.
 
-Run `npm run test:monthly-reputation-policy` for the isolated policy suite. Run
-`npm run test:monthly-reputation-postgres` with an explicitly disposable local
-PostgreSQL 17 database named `lythaus_monthly_test` and the canonical migration
-baseline already applied. CI uses its disposable PostgreSQL service. The database
-tests apply and remove only the proposed shadow schema and synthetic fixtures.
-Neither command accesses a provider, deploys a Worker or changes activation.
+Use Node 22 for the policy suite:
+
+```sh
+node --experimental-strip-types --experimental-test-coverage \
+  '--test-coverage-include=packages/contracts/src/monthly-*.ts' \
+  --test-coverage-lines=80 --test-coverage-branches=80 \
+  --test packages/contracts/tests/monthly-reputation.test.mjs \
+  packages/contracts/tests/monthly-peer-appeal.test.mjs
+```
+
+Set `PLANETSCALE_PG17_TEST_DATABASE_URL` to an explicitly disposable local
+PostgreSQL 17 database named `lythaus_monthly_test`, with the canonical migration
+baseline already applied, then run:
+
+```sh
+node --experimental-strip-types --experimental-test-module-mocks \
+  --experimental-test-coverage \
+  '--test-coverage-include=packages/db/src/monthly-reputation.ts' \
+  '--test-coverage-include=apps/lythaus-jobs/src/monthly-reputation.ts' \
+  --test-coverage-lines=80 --test-coverage-branches=80 \
+  --test apps/lythaus-jobs/tests/monthly-reputation.postgres.mjs
+```
+
+CI uses its disposable PostgreSQL service. These exact commands live in the
+workflows because the existing homepage guard freezes the root package manifest.
+The database tests apply and remove only the proposed shadow schema and synthetic
+fixtures. Neither command accesses a provider, deploys a Worker or changes activation.
