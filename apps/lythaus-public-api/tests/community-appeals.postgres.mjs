@@ -67,7 +67,7 @@ mock.method(globalThis, 'fetch', async url => {
   assert.equal(String(url), adminEnv.ACCESS_JWKS_URL);
   return Response.json({ keys: [{ ...await exportJWK(publicKey), kid: keyId, alg: 'ES256', use: 'sig' }] });
 });
-const users = [], cases = [], posts = [], grantRestores = [];
+const users = [], cases = [], posts = [], grantRestores = [], priorSelectGrants = [];
 let owner, decider, triager, voters, unverified;
 async function person(verified = true) {
   const id = uuidv7(); users.push(id);
@@ -116,7 +116,15 @@ before(async () => {
   assert.ok((await sql("SELECT current_setting('server_version_num')::integer AS n")).rows[0].n >= 170000);
   for (const [role, table] of [['lythaus_runtime', 'moderation.decisions'], ['lythaus_runtime', 'moderation.detector_runs'],
     ['lythaus_runtime', 'system.feature_flags'], ['lythaus_admin', 'system.feature_flags'], ['lythaus_jobs', 'system.feature_flags']]) {
-    if (!(await sql('SELECT has_table_privilege($1, $2, $3) AS allowed', [role, table, 'SELECT'])).rows[0].allowed) grantRestores.push(`REVOKE SELECT ON ${table} FROM ${role}`);
+    const tableAllowed = (await sql('SELECT has_table_privilege($1, $2, $3) AS allowed', [role, table, 'SELECT'])).rows[0].allowed;
+    const columns = (await sql(`SELECT attname, has_column_privilege($1, $2, attname, 'SELECT') AS allowed
+      FROM pg_attribute WHERE attrelid = $2::regclass AND attnum > 0 AND NOT attisdropped ORDER BY attnum`, [role, table])).rows;
+    priorSelectGrants.push({ role, table, tableAllowed, columns });
+    if (!tableAllowed) {
+      grantRestores.push(`REVOKE SELECT ON ${table} FROM ${role}`);
+      const allowed = columns.filter(column => column.allowed).map(column => `"${column.attname.replaceAll('"', '""')}"`);
+      if (allowed.length) grantRestores.push(`GRANT SELECT (${allowed.join(', ')}) ON ${table} TO ${role}`);
+    }
   }
   if (!(await sql("SELECT has_column_privilege('lythaus_runtime', 'moderation.appeals', 'state', 'UPDATE') AS allowed")).rows[0].allowed) grantRestores.push('REVOKE UPDATE (state) ON moderation.appeals FROM lythaus_runtime');
   await sql(readFileSync(new URL('../../../database/planetscale/proposals/community_appeals.sql', import.meta.url), 'utf8'));
@@ -149,6 +157,12 @@ after(async () => {
   await sql('DELETE FROM identity.email_credentials WHERE user_id = ANY($1::uuid[])', [users]);
   await sql('DELETE FROM identity.users WHERE id = ANY($1::uuid[])', [users]);
   for (const statement of grantRestores) await sql(statement);
+  for (const { role, table, tableAllowed, columns } of priorSelectGrants) {
+    assert.equal((await sql('SELECT has_table_privilege($1, $2, $3) AS allowed', [role, table, 'SELECT'])).rows[0].allowed, tableAllowed);
+    const restored = (await sql(`SELECT attname, has_column_privilege($1, $2, attname, 'SELECT') AS allowed
+      FROM pg_attribute WHERE attrelid = $2::regclass AND attnum > 0 AND NOT attisdropped ORDER BY attnum`, [role, table])).rows;
+    assert.deepEqual(restored, columns, `${role} ${table} column grants must survive cleanup`);
+  }
 });
 
 test('APP-01: pending defaults, missing approval and disabled flag cannot activate appeals', async () => {
