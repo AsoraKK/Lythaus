@@ -1,0 +1,93 @@
+.overview-controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.overview .panel-header {
+  flex-wrap: wrap;
+}
+
+.overview-controls .field {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.overview-controls select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-md);
+  color: var(--on-surface);
+  background: var(--surface);
+  font: inherit;
+}
+
+.overview .kpi-value {
+  display: block;
+  font-size: 1.65rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  color: var(--on-surface);
+}
+
+.overview .kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+  gap: 16px;
+}
+
+.overview .kpi-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-md);
+  overflow-wrap: anywhere;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.overview-metric {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-md);
+  overflow-wrap: anywhere;
+}
+
+.overview-metric h3 {
+  margin-top: 0;
+}
+
+.overview details summary {
+  cursor: pointer;
+  padding: 8px 0;
+}
+
+.overview-source {
+  font-family: monospace;
+}
+
+.overview-gaps {
+  display: grid;
+  gap: 16px;
+}
+
+.overview-gaps dt {
+  font-weight: 600;
+}
+
+.overview-gaps dd {
+  margin: 8px 0 0;
+}
