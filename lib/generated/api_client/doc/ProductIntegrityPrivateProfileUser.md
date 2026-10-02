@@ -10,6 +10,8 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **id** | **String** |  |
 **displayName** | **String** |  |
+**moderationState** | **String** | Current publication review state of the saved owner profile. Only returned by the private owner endpoint. |
+**publicVisibility** | **bool** | Owner visibility preference. A true value does not publish an under-review or blocked profile. |
 **handle** | **String** |  | [optional]
 **avatarUrl** | **String** |  | [optional]
 **bio** | **String** |  | [optional]

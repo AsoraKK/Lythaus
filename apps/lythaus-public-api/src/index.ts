@@ -21,6 +21,7 @@ import { optionalPrivacyRequestType, privacyExportAccessActivity, privacyRequest
 import { normalizeNotificationDevice, normalizeNotificationPreferences } from './notification-policy.ts';
 import { encodeCursor, enforceContentDeclaration, normalizeCustomFeedRules, pageRequest, reputationBand } from './product-policy.ts';
 import { readBoundedJson } from './request-body-runtime.ts';
+import { parseProfileUpdate } from './profile-runtime-policy.ts';
 import { acceptanceContextToken } from '@lythaus/contracts';
 import { createWaitlistRouteHandler } from './waitlist-handler.ts';
 import { parseWaitlistRequest, requireWaitlistSecrets, verifyWaitlistTurnstile } from './waitlist-runtime-policy.ts';
@@ -1306,6 +1307,8 @@ async function rejectUploadReservation(env: Env, userId: string, sessionId: stri
 async function getUserProfile(request: Request, env: Env, userId: string, privateView = false): Promise<Response> {
   const result = await query(env.DB_APP_FRESH,
     `SELECT u.id, u.display_name, u.created_at, h.handle, p.bio, p.avatar_object_id,
+            COALESCE(p.moderation_state, 'allowed') AS moderation_state,
+            COALESCE(p.public_visibility, true) AS public_visibility,
             COALESCE(p.trust_passport_visibility, 'public_minimal') AS trust_passport_visibility,
             COALESCE(r.current_level, 0)::integer AS reputation_level,
             COALESCE(r.status, 'active') AS reputation_status,
@@ -1336,6 +1339,8 @@ async function getUserProfile(request: Request, env: Env, userId: string, privat
     reputation_policy_version: string;
     subscription_tier: string;
     accountability_identity_declared: boolean;
+    moderation_state: string;
+    public_visibility: boolean;
   } | undefined;
   if (!profile) throw new Error('profile_not_found');
   const level = Number(profile.reputation_level);
@@ -1362,6 +1367,8 @@ async function getUserProfile(request: Request, env: Env, userId: string, privat
   if (privateView) {
     body.user.subscriptionTier = normalizeUserTier(profile.subscription_tier);
     body.user.accountabilityIdentityDeclared = profile.accountability_identity_declared;
+    body.user.moderationState = profile.moderation_state;
+    body.user.publicVisibility = profile.public_visibility;
   }
   const output = privateView ? privateResponse(request, env, body) : response(request, env, body);
   if (!privateView) output.headers.set('cache-control', 'public, max-age=30, s-maxage=30');
@@ -1418,19 +1425,9 @@ async function getUserInfo(request: Request, env: Env, userId: string): Promise<
 }
 
 async function updateProfile(request: Request, env: Env, user: Principal): Promise<Response> {
-  const input = await readJson<{ displayName?: string; bio?: string; trustPassportVisibility?: string; accountabilityName?: string | null }>(request, 16 * 1024);
-  const displayName = input.displayName?.trim();
-  const bio = input.bio?.trim();
+  const input = parseProfileUpdate(await readJson<unknown>(request, 16 * 1024));
+  const { displayName, bio, accountabilityName } = input;
   const visibility = input.trustPassportVisibility;
-  const accountabilityName = input.accountabilityName === undefined
-    ? undefined
-    : input.accountabilityName?.normalize('NFC').trim() || null;
-  if (displayName !== undefined && (displayName.length < 1 || displayName.length > 160)) throw new Error('invalid_display_name');
-  if (bio !== undefined && bio.length > 2000) throw new Error('invalid_bio');
-  if (visibility !== undefined && !['public_expanded', 'public_minimal', 'private'].includes(visibility)) throw new Error('invalid_profile_visibility');
-  if (accountabilityName !== undefined && accountabilityName !== null && (accountabilityName.length < 2 || accountabilityName.length > 160)) {
-    throw new Error('invalid_accountability_name');
-  }
   if (accountabilityName !== undefined && !env.PII_ENCRYPTION_KEY_V1) throw new Error('authentication_not_configured');
   await transaction(env.DB_APP_FRESH, async (client) => {
     const currentUser = await client.query<{ display_name: string }>(

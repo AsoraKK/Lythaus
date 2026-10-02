@@ -1,9 +1,33 @@
 // ignore_for_file: public_member_api_docs
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:lythaus/features/profile/application/profile_validator.dart';
 
 void main() {
+  final fixtures =
+      jsonDecode(
+            File(
+              'packages/contracts/fixtures/profile-name-policy.json',
+            ).readAsStringSync(),
+          )
+          as List;
+  for (final fixture in fixtures.cast<Map<String, dynamic>>()) {
+    test('shared profile-name policy: ${fixture['value']}', () {
+      expect(
+        ProfileValidator.validateDisplayName(fixture['value'] as String) ==
+            null,
+        fixture['valid'],
+      );
+    });
+  }
+  test('profile text limits match the API', () {
+    expect(ProfileValidator.validateDisplayName('a' * 160), isNull);
+    expect(ProfileValidator.validateDisplayName('a' * 161), isNotNull);
+    expect(ProfileValidator.validateBio('a' * 2000), isNull);
+    expect(ProfileValidator.validateBio('a' * 2001), isNotNull);
+  });
   group('ProfileValidator.validateDisplayName', () {
     test('returns error for null input', () {
       expect(

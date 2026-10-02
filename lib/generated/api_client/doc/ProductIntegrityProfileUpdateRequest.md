@@ -8,7 +8,7 @@ import 'package:lythaus_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**displayName** | **String** |  | [optional]
+**displayName** | **String** | Optional public display name. Saved edits remain private during publication review. Names are normalized and screened by the Lythaus profile-name policy. | [optional]
 **bio** | **String** |  | [optional]
 **trustPassportVisibility** | **String** |  | [optional]
 **accountabilityName** | **String** | Private encrypted accountability name. It is never returned by profile or activity APIs. | [optional]

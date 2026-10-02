@@ -8,6 +8,7 @@
     "public-auth-runtime",
     "public-idempotency-runtime",
     "public-request-body-runtime",
+    "optional-profile-runtime",
     "public-auth-session-runtime",
     "public-content-runtime",
     "public-feed-runtime",
@@ -35,9 +36,9 @@
   ],
   "domainCategoryOwners": {
     "authentication": ["public-auth-runtime", "public-auth-session-runtime", "admin-access-runtime", "worker-access-token-policy"],
-    "request-boundaries": ["public-request-body-runtime", "public-waitlist-runtime"],
+    "request-boundaries": ["public-request-body-runtime", "public-waitlist-runtime", "optional-profile-runtime"],
     "idempotency": ["public-idempotency-runtime", "reputation-persistence-policy"],
-    "content-publication": ["public-content-runtime", "content-declaration-publication-policy"],
+    "content-publication": ["public-content-runtime", "content-declaration-publication-policy", "profile-name-policy"],
     "feed-entitlements": ["public-feed-runtime", "content-social-feed-policy", "tier-entitlement-policy"],
     "privacy-dsr": ["public-privacy-runtime", "jobs-runtime-policy"],
     "moderation-appeals": ["admin-appeal-runtime", "jobs-runtime-policy", "moderation-appeal-policy"],
@@ -49,6 +50,21 @@
     "waitlist-security": ["public-waitlist-runtime", "admin-access-runtime", "admin-waitlist-runtime", "worker-security-primitives"]
   },
   "modules": [
+    {
+      "id": "optional-profile-runtime",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-public-api/src/profile-runtime-policy.ts"],
+      "tests": ["apps/lythaus-public-api/tests/profile-runtime-policy.test.mjs"],
+      "rationale": "Invoked owner profile patch validation and shared server name safeguards, including Unicode and legitimate-name false positives."
+    },
+    {
+      "id": "profile-name-policy",
+      "priority": "P1",
+      "sources": ["packages/contracts/src/profile-name-policy.ts"],
+      "tests": ["apps/lythaus-public-api/tests/profile-runtime-policy.test.mjs"],
+      "rationale": "Shared name safeguards used by owner updates and admin name parsing; the same fixture validates the Flutter precheck."
+    },
     {
       "id": "admin-private-email-envelope",
       "priority": "P1",
