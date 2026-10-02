@@ -190,6 +190,14 @@
       "rationale": "Invoked public Worker post, comment, reaction, relationship, and deletion transitions."
     },
     {
+      "id": "private-owner-content-read",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-public-api/src/owner-content-reader.ts"],
+      "tests": ["apps/lythaus-public-api/tests/owner-content-reader.test.mjs"],
+      "rationale": "Invoked author-bound private post/comment reads with publication filters preserved."
+    },
+    {
       "id": "public-feed-runtime",
       "priority": "P1",
       "runtimeSeam": true,
