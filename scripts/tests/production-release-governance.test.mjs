@@ -689,6 +689,8 @@ test('admin candidate probe authenticates the Access-protected API route', () =>
   assert.match(adminProbe, /CF_ACCESS_CLIENT_ID: \$\{\{ secrets\.CF_ACCESS_CLIENT_ID \}\}/);
   assert.match(adminProbe, /CF_ACCESS_CLIENT_SECRET: \$\{\{ secrets\.CF_ACCESS_CLIENT_SECRET \}\}/);
   assert.match(adminProbe, /export PRODUCTION_WORKER_VERSION_ID="\$ADMIN_WORKER_VERSION_ID"/);
+  assert.match(adminProbe, /export PRODUCTION_WORKER_PREVIOUS_DEPLOYMENT_PATH="\$RUNNER_TEMP\/production-cutover\/admin-before\.json"/);
+  assert.match(adminProbe, /export PRODUCTION_WORKER_PREVIOUS_VERSIONS_PATH="\$RUNNER_TEMP\/production-cutover\/admin-before-versions\.json"/);
   assert.match(adminProbe, /node scripts\/ci\/probe-production-workers\.mjs/);
 });
 
