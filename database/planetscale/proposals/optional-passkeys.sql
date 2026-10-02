@@ -52,8 +52,11 @@ CREATE UNIQUE INDEX strong_auth_evidence_source_idx ON identity.account_events
 
 REVOKE ALL ON identity.passkey_subjects, identity.passkey_credentials, identity.passkey_challenges FROM PUBLIC;
 GRANT SELECT, INSERT, UPDATE ON identity.passkey_subjects, identity.passkey_credentials, identity.passkey_challenges TO lythaus_runtime;
-GRANT DELETE ON identity.passkey_challenges TO lythaus_runtime;
-GRANT SELECT, DELETE ON identity.passkey_subjects, identity.passkey_credentials, identity.passkey_challenges TO lythaus_privacy;
+GRANT DELETE ON identity.passkey_subjects, identity.passkey_credentials, identity.passkey_challenges TO lythaus_privacy;
+GRANT SELECT (user_id, rp_id) ON identity.passkey_subjects TO lythaus_privacy;
+GRANT SELECT (id, user_id, rp_id, name, device_type, backed_up, transports, created_at, last_used_at, last_verified_at, revoked_at)
+  ON identity.passkey_credentials TO lythaus_privacy;
+GRANT SELECT (id, user_id, expires_at) ON identity.passkey_challenges TO lythaus_privacy;
 
 CREATE FUNCTION identity.revoke_passkeys_after_password_recovery() RETURNS trigger
 LANGUAGE plpgsql AS $$

@@ -79,8 +79,6 @@ async function challengeOptions(deps: PasskeyDependencies, request: Request, con
       options = await registrationOptions(config, subject.rows[0].user_handle, rows.map(webAuthnCredential));
     } else options = await authenticationOptions(config, owner ? rows.filter(row => !row.revoked_at).map(webAuthnCredential) : undefined);
     const challengeId = uuidv7();
-    await client.query(`DELETE FROM identity.passkey_challenges WHERE id IN
-      (SELECT id FROM identity.passkey_challenges WHERE expires_at < now() - interval '1 day' ORDER BY expires_at LIMIT 100)`);
     await client.query(`INSERT INTO identity.passkey_challenges
       (id, user_id, token_version, purpose, challenge, rp_id, origin, binding_hash, name, expires_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now() + interval '5 minutes')`,

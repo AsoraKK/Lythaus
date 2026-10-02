@@ -24,15 +24,22 @@ production DDL, or enable this feature before approved schema/role deployment.
 The proposal contains three identity tables: stable random RP user handles,
 credentials/public keys, and five-minute challenges. Credential tombstones
 prevent re-enrolling the same raw credential ID. Deleting email credentials
-cascades to their passkey data. Runtime grants permit normal ceremonies and
-expired-challenge cleanup; privacy grants permit export/deletion without DDL.
+cascades to their passkey data. Runtime grants permit ceremonies without table
+deletion. Privacy grants permit metadata reads and deletion without DDL;
+key material, raw credential IDs, user handles and binding hashes are excluded
+from privacy-role reads.
 A password-reset consumption trigger revokes all existing passkeys and pending
 owner ceremonies, including when the feature is disabled. Parent integration
-must retain this recovery trigger. The current Jobs account deletion removes
-email credentials and therefore cascades these rows; full privacy export and
-data-location inventory updates for passkey metadata must be reconciled with
-the schema/profile lane before activation. Pending challenge binding hashes
-and public-key material must not appear in ordinary credential list responses.
+must retain this recovery trigger. Jobs exports active and revoked passkey
+metadata in the data passport, adds all three owner stores to the privacy
+inventory, and explicitly erases owner data in the existing account-deletion
+transaction. Erasure requires a locked/deleted account and no active legal hold.
+Deleting email credentials also cascades the passkey rows. Expired challenges
+are purged by Jobs after one day, preserving held owner rows and removing stale
+anonymous rows. These paths work with the installed schema even when enrollment
+is disabled; an absent schema is a no-op, while partial schema or permission
+failure blocks the operation instead of silently omitting data. No new database
+definer function or production operation is introduced.
 
 API logic is isolated in `passkey-runtime.ts`, cryptography in
 `packages/security/src/passkeys.ts`, and persistence in `packages/db/src/passkeys.ts`.
@@ -143,6 +150,54 @@ and the existing critical coverage gate. Owner mailbox setup and real signup,
 email delivery and recovery acceptance remain pending. No actual owner
 passkey was enrolled or removed. Parent-controlled merge, schema approval and
 exact-SHA owner-testing release remain separate gates.
+
+## Activation checklist (parent/owner review)
+
+All production items below remain pending; local synthetic proof is not activation
+authorization. The parent controls integration and the exact-main release after
+the profile and owner changes are reconciled.
+
+- [ ] **Source and CI:** reconcile the current main, profile owner-state/auth client,
+  OpenAPI/generated client, Jobs passport and coverage changes. Require every
+  required check on the final exact SHA; retain feature-off defaults and zero-point
+  evidence. Confirm the release contains the pinned self-hosted browser client.
+- [ ] **Schema:** assign a noncolliding canonical migration number to the proposal,
+  register checksums/postconditions and reconcile role grants and schema fingerprints.
+  Review UUIDv7/FKs/cascade behavior, credential tombstones, challenge constraints,
+  the recovery trigger and idempotent event index. Run fresh PostgreSQL 17/role
+  validation. Obtain separate production DDL approval through the parent workflow.
+- [ ] **Privacy:** verify the actual Jobs privacy binding can export metadata and
+  reconcile all three locations, but cannot read keys, handles or challenge bindings.
+  Verify account locking, legal-hold blocking, owner isolation, retry-safe erasure,
+  cascading email-credential deletion and inventory deletion evidence. Confirm
+  scheduled Jobs cleanup runs with the feature disabled, retains held rows and
+  purges expired anonymous challenges. Preserve existing export retention/deletion.
+- [ ] **Origin/RP:** choose and freeze the RP ID before the first real enrollment.
+  Review exact HTTPS origins and their existing CORS membership; authorize any
+  provider configuration separately. Prove missing/null/HTTP/unrelated origins,
+  wrong RP IDs, embedded cross-origin client data and unauthorized transports fail.
+- [ ] **Recovery and management:** retain verified active ownership, password
+  enrollment/removal proof, required UV, request/account limits, challenge expiry,
+  committed one-use consumption and session/token-version binding. Prove reset and
+  removal revoke passkey/session access, stale sessions fail, owner-only rename/list
+  work, and email/password recovery and guest access remain usable. Verify both
+  single-device regression rejection and valid synced/zero-counter behavior.
+- [ ] **Real devices:** after a separately approved owner-testing release, the owner
+  or an explicitly authorized tester performs enrollment, maintenance, login,
+  rename and removal on supported desktop and mobile browsers using their own
+  device PIN or biometric UI. Cover a synced passkey, a single-device authenticator,
+  cancellation, unsupported browsers, fresh-browser cookie restoration, other-tab
+  sign-out and password fallback. Agents do not enroll or remove owner credentials.
+  Do not infer biometric collection, device authenticity or unique humanity.
+- [ ] **Mailbox and rewards:** complete the pending real signup/verification,
+  delivered email and password-reset acceptance with owner-authorized mailboxes.
+  Keep evidence points at zero unless the owner approves the shared
+  authenticator/passkey policy and canonical source-key deduplication. Historical
+  200/400/shared monthly 50 values remain redesign inputs.
+- [ ] **Rollback:** verify disabling enrollment hides optional entry points while
+  email/password works and installed-schema privacy/retention still runs. Preserve
+  tombstones and legal holds; do not drop/recreate tables, change credentials or
+  activate AI as a rollback shortcut. Parent authorizes any production action.
 
 Library behavior follows the primary [SimpleWebAuthn server documentation](https://simplewebauthn.dev/docs/packages/server)
 and [WebAuthn specification](https://www.w3.org/TR/webauthn-3/).

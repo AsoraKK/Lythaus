@@ -102,6 +102,8 @@ export async function passkeyFixture(t) {
   }
   t.after(async () => {
     for (const id of [userId, otherUserId]) {
+      await control.query('DELETE FROM privacy.subject_data_locations WHERE subject_id=$1', [id]);
+      await control.query('DELETE FROM privacy.legal_holds WHERE subject_id=$1', [id]);
       await control.query('DELETE FROM identity.auth_sessions WHERE user_id=$1', [id]);
       await control.query('DELETE FROM identity.refresh_token_families WHERE user_id=$1', [id]);
       await control.query('DELETE FROM identity.account_events WHERE user_id=$1', [id]);

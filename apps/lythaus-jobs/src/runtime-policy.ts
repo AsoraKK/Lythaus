@@ -370,6 +370,7 @@ export function buildPrivacyDataPassport(input: {
   entitlement: unknown;
   rewardRedemptions: unknown[];
   accountEvents: unknown[];
+  passkeys?: unknown[];
   posts: unknown[];
   comments: unknown[];
   follows: unknown[];
@@ -409,6 +410,7 @@ export function buildPrivacyDataPassport(input: {
     entitlement: input.entitlement,
     rewardRedemptions: input.rewardRedemptions,
     accountEvents: input.accountEvents,
+    passkeys: input.passkeys ?? [],
     posts: input.posts,
     comments: input.comments,
     follows: input.follows,

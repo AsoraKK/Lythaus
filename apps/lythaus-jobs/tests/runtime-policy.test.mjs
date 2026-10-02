@@ -231,6 +231,7 @@ test('routes every worker queue family and preserves a complete privacy data pas
     contactEmail: 'person@example.test',
     consentRecords: [{ id: 'consent-1', purpose: 'privacy', granted: true }],
     entitlement: { subscriptionTier: 'black' }, rewardRedemptions: [{ id: 'reward-1' }], accountEvents: [{ id: 'account-event-1', eventType: 'email_login' }],
+    passkeys: [{ id: 'credential-1', name: 'Synthetic passkey', revokedAt: null }],
     posts: [{ id: 'post-1' }], comments: [{ id: 'comment-1' }], follows: [{ followedId: 'user-2' }],
     reactions: [{ postId: 'post-1', reactionType: 'like' }], blocks: [{ blockedId: 'user-3' }],
     mutes: [{ mutedId: 'user-4' }], bookmarks: [{ postId: 'post-2' }],
@@ -248,6 +249,7 @@ test('routes every worker queue family and preserves a complete privacy data pas
   assert.deepEqual(passport.entitlement, { subscriptionTier: 'black' });
   assert.deepEqual(passport.rewardRedemptions, [{ id: 'reward-1' }]);
   assert.deepEqual(passport.accountEvents, [{ id: 'account-event-1', eventType: 'email_login' }]);
+  assert.deepEqual(passport.passkeys, [{ id: 'credential-1', name: 'Synthetic passkey', revokedAt: null }]);
   assert.deepEqual(passport.customFeeds, [{ id: 'feed-1', rules: [{ id: 'rule-1' }] }]);
   assert.deepEqual(passport.submittedFlags, [{ id: 'flag-1' }]);
   assert.deepEqual(passport.reactions, [{ postId: 'post-1', reactionType: 'like' }]);

@@ -4,6 +4,14 @@ import { uuidv7 } from '@lythaus/security';
 import { createPasskeyHandler } from '../src/passkey-runtime.ts';
 import { passkeyFixture, fixturePassword, assertNoSession } from './passkey-test-support.mjs';
 import { syntheticAuthenticator } from '../../../packages/security/tests/passkey-fixtures.mjs';
+import { erasePasskeyData, exportPasskeyMetadata, purgeExpiredPasskeyChallenges, reconcilePasskeyPrivacyLocations } from '../../../packages/db/src/passkey-privacy.ts';
+
+function privacyTransaction(f, work) {
+  return f.deps.transaction(async client => {
+    await client.query('SET LOCAL ROLE lythaus_privacy');
+    return work(client);
+  });
+}
 
 test('disabled feature exposes capability false without touching storage', async () => {
   const handler = createPasskeyHandler({}, { response: (_request, body) => Response.json(body) });
@@ -160,6 +168,7 @@ test('least-privilege runtime role can complete the lifecycle and cannot run DDL
   const credential = await f.enroll();
   await (await f.login(credential)).verify();
   await f.call(`/credentials/${credential.id}/revoke`, { body: { password: fixturePassword } });
+  await assert.rejects(f.deps.transaction(client => client.query('DELETE FROM identity.passkey_challenges WHERE false')), /permission denied/);
   await assert.rejects(f.deps.transaction(client => client.query('CREATE TABLE identity.passkey_forbidden_fixture (id uuid)')), /permission denied/);
 });
 
@@ -176,4 +185,86 @@ test('removing and adding a new credential never repeats the one-time setup evid
   const rows = await f.control.query(`SELECT metadata FROM identity.account_events WHERE user_id=$1 AND event_type='security.strong_auth_evidence'`, [f.userId]);
   assert.equal(rows.rowCount, 1);
   assert.equal(rows.rows[0].metadata.points, 0);
+});
+
+test('disabled enrollment does not strand privacy metadata and restricted roles cannot export authentication material', async t => {
+  const f = await passkeyFixture(t);
+  const first = await f.enroll();
+  await f.enroll(syntheticAuthenticator(), 'Second synthetic passkey');
+  await f.control.query('UPDATE identity.passkey_credentials SET revoked_at=now() WHERE id=$1', [first.id]);
+  f.env.PASSKEYS_ENABLED = 'false';
+  const rows = await privacyTransaction(f, client => exportPasskeyMetadata(client, f.userId));
+  assert.equal(rows.length, 2);
+  assert.ok(rows.some(row => row.revokedAt));
+  assert.equal((await privacyTransaction(f, client => exportPasskeyMetadata(client, f.otherUserId))).length, 0);
+  for (const row of rows) for (const key of ['public_key','credential_id','user_handle','binding_hash','sign_count']) assert.equal(key in row, false);
+  for (const sql of [
+    'SELECT public_key, credential_id FROM identity.passkey_credentials',
+    'SELECT user_handle FROM identity.passkey_subjects',
+    'SELECT binding_hash, challenge FROM identity.passkey_challenges',
+  ]) await assert.rejects(privacyTransaction(f, client => client.query(sql)), /permission denied/);
+});
+
+test('privacy inventory includes all owned passkey stores, respects holds and is retry-safe', async t => {
+  const f = await passkeyFixture(t);
+  await f.enroll();
+  await f.call('/maintenance/options', { body: {} });
+  await f.control.query('INSERT INTO privacy.legal_holds(id,subject_id,reason) VALUES($1,$2,$3)', [uuidv7(), f.userId, 'Synthetic fixture hold']);
+  await privacyTransaction(f, async client => {
+    await client.query('SELECT privacy.reconcile_subject_data_locations($1)', [f.userId]);
+    await reconcilePasskeyPrivacyLocations(client, f.userId);
+  });
+  const before = await f.control.query(`SELECT resource_reference, entity_id, legal_hold_state FROM privacy.subject_data_locations
+    WHERE subject_id=$1 AND resource_reference LIKE 'identity.passkey_%' ORDER BY resource_reference, entity_id`, [f.userId]);
+  assert.equal(new Set(before.rows.map(row => row.resource_reference)).size, 3);
+  assert.ok(before.rows.every(row => row.legal_hold_state === 'active'));
+  await privacyTransaction(f, client => reconcilePasskeyPrivacyLocations(client, f.userId));
+  const after = await f.control.query(`SELECT resource_reference, entity_id, legal_hold_state FROM privacy.subject_data_locations
+    WHERE subject_id=$1 AND resource_reference LIKE 'identity.passkey_%' ORDER BY resource_reference, entity_id`, [f.userId]);
+  assert.deepEqual(after.rows, before.rows);
+});
+
+test('privacy erasure requires a locked account without a hold and removes every owned passkey store', async t => {
+  const f = await passkeyFixture(t);
+  await f.enroll();
+  await f.call('/maintenance/options', { body: {} });
+  const otherOptions = (await f.call('/register/options', { token: f.otherToken, body: { name: 'Other owner', password: fixturePassword } })).data;
+  await f.call('/register/verify', { token: f.otherToken, body: { challengeId: otherOptions.challengeId, credential: syntheticAuthenticator().registration(otherOptions.options) } });
+  await privacyTransaction(f, client => reconcilePasskeyPrivacyLocations(client, f.otherUserId));
+  await privacyTransaction(f, client => reconcilePasskeyPrivacyLocations(client, f.userId));
+  await assert.rejects(privacyTransaction(f, client => erasePasskeyData(client, f.userId)), /passkey_erasure_blocked/);
+  await f.control.query("UPDATE identity.users SET status='locked' WHERE id=$1", [f.userId]);
+  await f.control.query('INSERT INTO privacy.legal_holds(id,subject_id,reason) VALUES($1,$2,$3)', [uuidv7(), f.userId, 'Synthetic erasure hold']);
+  await assert.rejects(privacyTransaction(f, client => erasePasskeyData(client, f.userId)), /passkey_erasure_blocked/);
+  assert.equal((await f.control.query('SELECT count(*)::int AS count FROM identity.passkey_credentials WHERE user_id=$1', [f.userId])).rows[0].count, 1);
+  await f.control.query('UPDATE privacy.legal_holds SET active=false WHERE subject_id=$1', [f.userId]);
+  await privacyTransaction(f, client => erasePasskeyData(client, f.userId));
+  await privacyTransaction(f, client => erasePasskeyData(client, f.userId));
+  for (const table of ['passkey_subjects','passkey_credentials','passkey_challenges']) {
+    assert.equal((await f.control.query(`SELECT count(*)::int AS count FROM identity.${table} WHERE user_id=$1`, [f.userId])).rows[0].count, 0);
+  }
+  assert.equal((await f.control.query(`SELECT count(*)::int AS count FROM privacy.subject_data_locations
+    WHERE subject_id=$1 AND resource_reference LIKE 'identity.passkey_%' AND deletion_state<>'deleted'`, [f.userId])).rows[0].count, 0);
+  assert.equal((await f.control.query('SELECT count(*)::int AS count FROM identity.email_credentials WHERE user_id=$1', [f.userId])).rows[0].count, 1);
+  for (const table of ['passkey_subjects','passkey_credentials','passkey_challenges']) {
+    assert.equal((await f.control.query(`SELECT count(*)::int AS count FROM identity.${table} WHERE user_id=$1`, [f.otherUserId])).rows[0].count, 1);
+  }
+  assert.equal((await f.control.query(`SELECT count(*)::int AS count FROM privacy.subject_data_locations
+    WHERE subject_id=$1 AND resource_reference LIKE 'identity.passkey_%' AND deletion_state='present'`, [f.otherUserId])).rows[0].count, 3);
+});
+
+test('disabled feature still purges expired anonymous challenges while retaining held and recent owner challenges', async t => {
+  const f = await passkeyFixture(t);
+  await f.enroll();
+  const anonymous = (await f.call('/login/options', { body: {}, token: null })).data.challengeId;
+  const recent = (await f.call('/maintenance/options', { body: {} })).data.challengeId;
+  await f.control.query(`UPDATE identity.passkey_challenges SET created_at=now()-interval '2 days', expires_at=now()-interval '2 days'+interval '5 minutes'
+    WHERE (user_id=$1 AND id<>$3) OR id=$2`, [f.userId, anonymous, recent]);
+  await f.control.query('INSERT INTO privacy.legal_holds(id,subject_id,reason) VALUES($1,$2,$3)', [uuidv7(), f.userId, 'Synthetic retention hold']);
+  f.env.PASSKEYS_ENABLED = 'false';
+  assert.equal(await privacyTransaction(f, purgeExpiredPasskeyChallenges), 1);
+  assert.equal((await f.control.query('SELECT count(*)::int AS count FROM identity.passkey_challenges WHERE user_id=$1', [f.userId])).rows[0].count, 2);
+  await f.control.query('UPDATE privacy.legal_holds SET active=false WHERE subject_id=$1', [f.userId]);
+  assert.equal(await privacyTransaction(f, purgeExpiredPasskeyChallenges), 1);
+  assert.equal((await f.control.query('SELECT id FROM identity.passkey_challenges WHERE user_id=$1', [f.userId])).rows[0].id, recent);
 });
