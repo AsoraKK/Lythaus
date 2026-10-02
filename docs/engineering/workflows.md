@@ -38,6 +38,27 @@ A fresh repository search still finds no consumer of the tag-only canary.
 reviewed exact-main deployment policy remain unchanged. No later cleanup phase
 is authorized by these two PRs.
 
+## Android packaging retirement (2026-10-02)
+
+The owner retired the standalone Android packaging workflow
+`mobile-release-build.yml`. It produced a signed AAB and symbol archive; no
+repository workflow calls it or consumes its `android-release` artifact. Its
+legacy-origin scan applied to that AAB. Flutter validation, the separate Mobile
+Security Check, and the ten required contexts above remain unchanged.
+
+Current protected main `e79102006ef100d61fded62f96ac72fa9676e761` lists those ten
+required contexts and excludes `build-android`. The canonical web/Workers source
+gate requires CI, CodeQL, dependency review, native secret scan, and historical
+branch reconciliation. Android packaging is outside that gate set.
+
+Run history and existing artifacts are retained. The recorded Google Services
+configuration failure remains unresolved; retirement does not change its
+conclusion. Android application code, signing/store evidence checks, credentials,
+and provider configuration remain intact. Future store distribution requires a
+separately approved packaging process. PR #667 also updates this workflow; its
+update to the retired file is superseded, while its other action updates remain
+separate.
+
 ## Open PR coordination
 
 Before removing the tag-only workflow, open changes touching the same surface
@@ -107,7 +128,7 @@ Access decisions use these terms:
 | github-controls-audit.yml / GitHub controls audit | Repository settings and controls audit; Manual, Schedule, Push; runs 22; last 35585660242 at 2026-09-21T09:52:16Z; last success 35585660242 at 2026-09-21T09:52:31Z | Sanitized GitHub controls artifact | Read-only; no secrets | Keep as operational audit |
 | historical-branch-reconciliation.yml / Historical branch reconciliation | Exact-main branch reconciliation required by release contract; Manual, Push; runs 100+; last 36348345649 at 2026-09-27T20:31:25Z; last success 36348345649 at 2026-09-27T20:32:31Z | Successful run ID is a production-release prerequisite | Read-only; no secrets | Keep unchanged |
 | launch-readiness-gate.yml / launch-readiness-gate | Manual launch readiness aggregation; Manual; runs 0; last observed UNKNOWN; last success UNKNOWN | Consumes release, smoke, and performance evidence | Read-only plus release secrets for checks; secret names ANDROID_KEYSTORE_BASE64, ANDROID_KEY_ALIAS, ANDROID_KEYSTORE_PASSWORD, IOS_CERTIFICATE_P12_BASE64, IOS_CERTIFICATE_PASSWORD, IOS_PROVISIONING_PROFILE_BASE64; vars IOS_PUSH_IMPLEMENTED, IOS_PUSH_REQUIRED | Keep separate |
-| mobile-release-build.yml / Android Release Build (Obfuscated) | Paid/release Android build; Manual, Push; runs 100+; last 36348005657 at 2026-09-27T20:26:00Z; last success UNKNOWN | AAB, symbols, and release artifacts; latest failure was missing matching co.lythaus.app client in google-services.json | Protected release access; secrets GOOGLE_SERVICES_JSON, ANDROID_KEYSTORE_BASE64, ANDROID_KEY_ALIAS, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_PASSWORD | Keep separate |
+| mobile-release-build.yml / Android Release Build (Obfuscated) | Paid/release Android build; Manual, Push; runs 100+; last 36348005657 at 2026-09-27T20:26:00Z; last success UNKNOWN | AAB, symbols, and release artifacts; latest failure was missing matching co.lythaus.app client in google-services.json | Protected release access; secrets GOOGLE_SERVICES_JSON, ANDROID_KEYSTORE_BASE64, ANDROID_KEY_ALIAS, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_PASSWORD | Retired on owner request (2026-10-02); history and existing artifacts retained |
 | mobile-security-check.yml / Mobile Security Check | TLS pinning and mobile security contracts; Push, PR, Schedule; runs 100+; last 36348165220 at 2026-09-27T20:28:36Z; last success 36348165220 at 2026-09-27T20:33:12Z | Security contract artifact; weekly value is distinct from CI | Read-only; job may use legacy cloud OIDC on protected push path; exact live variables UNKNOWN | Keep initially; review weekly trigger after consolidation |
 | mvp-preview-validate.yml / MVP Preview Edge Cache Validate | Preview edge/cache smoke; Manual; runs 0; last observed UNKNOWN; last success UNKNOWN | Preview acceptance artifact | Protected provider; dev environment; secrets MVP_SMOKE_EMAIL, MVP_SMOKE_PASSWORD | Keep pending environment and host verification |
 | native-admin-bootstrap-activation.yml / Protected first-admin bootstrap activation | First-admin activation and rollback; Manual; runs 5; last 33986051632 at 2026-09-05T19:05:30Z; last success 33986051632 at 2026-09-05T19:06:25Z | Consumes exact candidate evidence; provider/admin mutation | Protected provider; production environment; secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_AUDIT_API_TOKEN, PLANETSCALE_ADMIN_DATABASE_URL | Retire only after completion and recovery dependency review |

@@ -2,6 +2,13 @@
 
 This is the source-of-truth launch checklist for Google Play, App Store Connect, and signing material. Tick an item only after its evidence has been verified in the named provider. Never place credentials, signing material, personal data, or private console screenshots in this file.
 
+The standalone Android packaging workflow was retired on 2026-10-02. The current
+Cloudflare web/Workers release does not produce a new Android AAB. Existing build
+history is retained; the historical CI-artifact hint in the store validator does
+not identify an active packaging workflow. A future store release requires a
+separately approved build process and verified evidence for every item below.
+Retirement does not satisfy or waive signing, store, or mobile security checks.
+
 ## 1. Google Play Console
 
 - [ ] Play Console app record exists and is not in draft
