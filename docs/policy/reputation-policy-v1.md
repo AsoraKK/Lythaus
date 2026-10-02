@@ -4,6 +4,8 @@
 
 **Canonical repository policy:** `packages/contracts/src/reputation-policy.ts` (`reputation-v2.0.0`). This document explains that policy for product, governance, and implementation review. The machine-readable catalogue is [Reputation Event Catalogue](../contracts/reputation-event-catalogue-v2.json).
 
+The later September points-and-age specification and October calendar reward decisions are reconciled in [Reputation and calendar rewards](reward-calendar-reconciliation.md). Monthly reward qualification is separate from cumulative reputation; its thresholds and activation remain pending. This historical merged policy must not be silently reused as a monthly target table.
+
 ## Purpose and boundaries
 
 Reputation answers whether a person has demonstrated sustained, constructive, accountable, and trustworthy participation. It does **not** measure volume, virality, likes, followers, time spent, streaks, controversy, or subscription spend.
