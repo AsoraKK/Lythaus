@@ -30,6 +30,12 @@ on:
       - 'packages/db/src/authenticity-beta.ts'
       - 'packages/db/src/authenticity-alpha.ts'
       - 'packages/db/src/budget.ts'
+      - 'packages/contracts/src/monthly-*.ts'
+      - 'packages/contracts/policies/Lythaus_Monthly_Rewards_Action_Catalogue_v2.json'
+      - 'packages/db/src/monthly-reputation.ts'
+      - 'apps/lythaus-jobs/src/monthly-reputation.ts'
+      - 'apps/lythaus-jobs/src/index.ts'
+      - 'apps/lythaus-jobs/tests/monthly-reputation.postgres.mjs'
       - 'scripts/ci/planetscale-migration-*.mjs'
       - 'scripts/ci/auth-incident-database-contract.mjs'
       - 'scripts/ci/audit-production-auth-incident.mjs'
@@ -78,6 +84,10 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
         run: node scripts/ci/validate-first-admin-bootstrap-postgres17.mjs
+      - name: Validate proposed monthly reputation shadow schema and transactions
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
+        run: npm run test:monthly-reputation-postgres
       - name: Prove column-only incident audit grants on real PostgreSQL
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable

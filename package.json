@@ -105,6 +105,8 @@
     "authenticity:neutral-png": "node scripts/authenticity/create-neutral-png.mjs",
     "authenticity:geometry-fixture": "node scripts/authenticity/create-geometry-occlusion-fixture.mjs",
     "test:product-contracts": "node --experimental-strip-types --test packages/contracts/tests/product-policy.test.mjs",
+    "test:monthly-reputation-policy": "node --experimental-strip-types --experimental-test-coverage --test-coverage-include=packages/contracts/src/monthly-*.ts --test-coverage-lines=80 --test-coverage-branches=80 --test packages/contracts/tests/monthly-reputation.test.mjs packages/contracts/tests/monthly-peer-appeal.test.mjs",
+    "test:monthly-reputation-postgres": "node --experimental-strip-types --experimental-test-module-mocks --experimental-test-coverage --test-coverage-include=packages/db/src/monthly-reputation.ts --test-coverage-include=apps/lythaus-jobs/src/monthly-reputation.ts --test-coverage-lines=80 --test-coverage-branches=80 --test apps/lythaus-jobs/tests/monthly-reputation.postgres.mjs",
     "test:product-integrity-runtime": "node --test scripts/tests/product-integrity-runtime-invariants.test.mjs",
     "test:critical-coverage": "node scripts/critical-coverage-gate.mjs",
     "ml:thermal-qualify": "node ml/local/eco_train/thermal-qualify.mjs --plan",

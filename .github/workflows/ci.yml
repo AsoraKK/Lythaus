@@ -86,6 +86,7 @@ jobs:
       - run: node --test scripts/tests/real-email-acceptance-evidence.test.mjs
       - run: npm run test:product-integrity-runtime
       - run: npm run test:product-contracts
+      - run: npm run test:monthly-reputation-policy
       - run: npm run test:critical-coverage
       - run: npm run test:authenticity-foundation
       - run: npm run test:database-identity
