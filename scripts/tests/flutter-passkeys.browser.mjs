@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { chromium } from 'playwright';
 import { localAuthBrowserServer } from './local-auth-browser-server.mjs';
+import { installFlutterEngineFonts } from './flutter-engine-font-fixture.mjs';
 import { classifyPublicError } from '../../apps/lythaus-public-api/src/auth-runtime-policy.ts';
 import { passkeyFixture, fixturePassword, origin } from '../../apps/lythaus-public-api/tests/passkey-test-support.mjs';
 
@@ -76,6 +77,11 @@ for (const width of [1440, 390]) {
         session = false;
         headers['set-cookie'] = '__Host-lythaus_refresh=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0';
         body = { loggedOut:true, sessionRevocation:'all' };
+      } else if (url.pathname === '/api/users/me') {
+        assert.ok(session);
+        assert.equal(req.method(), 'GET');
+        assert.ok([`Bearer ${f.ownerToken}`, `Bearer synthetic-access-${f.userId}`].includes(incoming.authorization));
+        body = { user:{ id:f.userId, displayName:'Synthetic passkey owner', bio:'', moderationState:'allowed', publicVisibility:true, subscriptionTier:'free' } };
       } else if (url.pathname === `/api/users/${f.userId}`) body = { user:{ id:f.userId, handle:'synthetic_passkey', displayName:'Synthetic passkey owner', trustPassportVisibility:'private', reputationScore:0 } };
       else if (!['/api/feed/discover','/api/subscription/status','/api/custom-feeds','/api/users/me/reputation','/api/reputation/me'].includes(url.pathname)) {
         status = 404; body = { error:'route_not_found' };
@@ -84,6 +90,7 @@ for (const width of [1440, 390]) {
     });
     const browser = await chromium.launch({ headless:true, proxy:{ server:fixture.proxy, bypass:'<-loopback>' } });
     const context = await browser.newContext({ ignoreHTTPSErrors:true, viewport:{ width,height:1000 }, serviceWorkers:'block' });
+    await installFlutterEngineFonts(context);
     const page = await context.newPage();
     async function capture(label) {
       await mkdir(evidence, { recursive:true });
@@ -189,7 +196,8 @@ for (const width of [1440, 390]) {
     await emailLogin();
     assert.ok(calls.includes('/api/auth/passkeys/login/verify'));
     assert.ok(calls.includes('/api/auth/passkeys/maintenance/verify'));
+    assert.ok(calls.filter(call => call === '/api/users/me').length >= 2);
     assert.equal((await f.control.query(`SELECT count(*)::int AS count FROM identity.account_events WHERE user_id=$1 AND event_type='security.strong_auth_evidence'`, [f.userId])).rows[0].count, 2);
-    assert.deepEqual(errors.filter(message => !/^\/fonts\.gstatic\.com\/s\/roboto\//.test(message)), []);
+    assert.deepEqual(errors, []);
   });
 }

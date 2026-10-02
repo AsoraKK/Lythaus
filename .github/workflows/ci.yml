@@ -267,7 +267,7 @@ jobs:
       - name: Install authentication test browsers
         run: npx playwright install --with-deps chromium webkit
       - name: Verify rendered Flutter authentication journey
-        run: node --test --test-timeout=120000 scripts/tests/flutter-auth.browser.mjs
+        run: node --experimental-strip-types --test --test-timeout=120000 scripts/tests/flutter-auth.browser.mjs scripts/tests/optional-profile.browser.mjs
 
   frontends:
     name: Web frontends

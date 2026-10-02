@@ -25,6 +25,7 @@ final inviteRedeemServiceProvider = Provider<InviteRedeemService>((ref) {
 final tokenVersionProvider = StateProvider<int>((ref) => 0);
 final guestModeProvider = StateProvider<bool>((ref) => false);
 final pendingInviteCodeProvider = StateProvider<String?>((ref) => null);
+final profileSetupRequestedProvider = StateProvider<bool>((ref) => false);
 final passkeyAvailabilityProvider = FutureProvider.autoDispose<bool>((ref) {
   return ref.watch(enhancedAuthServiceProvider).passkeysAvailable();
 });
@@ -45,6 +46,7 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
       if (!mounted) return;
       _operation += 1;
       unawaited(_authService.clearAfterOtherTabSignOut());
+      _ref.read(profileSetupRequestedProvider.notifier).state = false;
       state = const AsyncValue.data(null);
       _bumpTokenVersion();
     });
@@ -87,6 +89,7 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
       state = const AsyncValue.loading();
       final user = await _authService.loginWithEmail(email, password);
       if (!_current(operation)) return;
+      _ref.read(profileSetupRequestedProvider.notifier).state = true;
       state = AsyncValue.data(user);
       _bumpTokenVersion();
     } on AuthFailure catch (error, stackTrace) {
@@ -108,6 +111,7 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
     try {
       final user = await _authService.loginWithPasskey();
       if (!_current(operation)) return;
+      _ref.read(profileSetupRequestedProvider.notifier).state = true;
       state = AsyncValue.data(user);
       _bumpTokenVersion();
     } catch (error, stackTrace) {
@@ -147,6 +151,7 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
 
   Future<void> signOut() async {
     final operation = ++_operation;
+    _ref.read(profileSetupRequestedProvider.notifier).state = false;
     _ref.read(guestModeProvider.notifier).state = false;
     state = const AsyncValue.data(null);
     _bumpTokenVersion();
@@ -169,6 +174,7 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
 
   Future<void> continueAsGuest() async {
     final operation = ++_operation;
+    _ref.read(profileSetupRequestedProvider.notifier).state = false;
     try {
       await _authService.logout();
     } catch (_) {

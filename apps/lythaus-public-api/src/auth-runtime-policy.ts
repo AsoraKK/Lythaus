@@ -49,7 +49,7 @@ const PUBLIC_ERROR_CODES = new Set([
   'invalid_activity_category', 'invalid_bio', 'invalid_block', 'invalid_bookmark',
   'invalid_comment', 'invalid_comment_parent', 'invalid_credentials', 'invalid_cursor',
   'invalid_custom_feed', 'invalid_custom_feed_rule', 'invalid_custom_feed_rules',
-  'invalid_display_name', 'invalid_email', 'invalid_flag', 'invalid_follow',
+  'invalid_display_name', 'invalid_email', 'invalid_flag', 'invalid_follow', 'invalid_profile_update',
   'invalid_consent_version', 'invalid_auth_mode', 'invalid_session_transport', 'auth_origin_not_allowed',
   'password_compromised', 'password_screening_unavailable', 'password_setup_required',
   'passkey_invalid', 'passkeys_not_configured', 'invalid_passkey_name', 'passkey_limit_reached',

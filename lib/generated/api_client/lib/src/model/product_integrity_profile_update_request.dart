@@ -12,12 +12,13 @@ part 'product_integrity_profile_update_request.g.dart';
 /// ProductIntegrityProfileUpdateRequest
 ///
 /// Properties:
-/// * [displayName]
+/// * [displayName] - Optional public display name. Saved edits remain private during publication review. Names are normalized and screened by the Lythaus profile-name policy.
 /// * [bio]
 /// * [trustPassportVisibility]
 /// * [accountabilityName] - Private encrypted accountability name. It is never returned by profile or activity APIs.
 @BuiltValue()
 abstract class ProductIntegrityProfileUpdateRequest implements Built<ProductIntegrityProfileUpdateRequest, ProductIntegrityProfileUpdateRequestBuilder> {
+  /// Optional public display name. Saved edits remain private during publication review. Names are normalized and screened by the Lythaus profile-name policy.
   @BuiltValueField(wireName: r'displayName')
   String? get displayName;
 

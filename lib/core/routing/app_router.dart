@@ -14,6 +14,7 @@ import 'package:lythaus/features/moderation/presentation/screens/appeal_history_
 import 'package:lythaus/features/notifications/presentation/notifications_settings_screen.dart';
 import 'package:lythaus/ui/screens/adaptive_shell.dart';
 import 'package:lythaus/ui/screens/profile/profile_screen.dart';
+import 'package:lythaus/ui/screens/profile/optional_profile_screen.dart';
 import 'package:lythaus/ui/screens/profile/settings_screen.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:lythaus/features/authenticity/beta_screen.dart';
@@ -25,6 +26,7 @@ abstract final class AppRoutes {
   static const String shell = 'shell';
   static const String post = 'post';
   static const String profile = 'profile';
+  static const String profileSetup = 'profile-setup';
   static const String invite = 'invite';
   static const String moderation = 'moderation';
   static const String moderationAppeal = 'moderation-appeal';
@@ -38,6 +40,7 @@ String? resolveAppRedirect({
   required User? user,
   required bool isGuest,
   String? pendingCode,
+  bool profileSetupRequested = false,
 }) {
   final isLoggedIn = user != null || isGuest;
   final isOnLogin = matchedLocation == '/login';
@@ -53,6 +56,12 @@ String? resolveAppRedirect({
     return '/invite/$pendingCode';
   }
   if (!isLoggedIn && !isOnLogin) return '/login';
+  if (matchedLocation == '/profile/setup' && user == null) return '/';
+  if (user != null &&
+      profileSetupRequested &&
+      matchedLocation != '/profile/setup') {
+    return '/profile/setup';
+  }
   if (isLoggedIn && isOnLogin) return '/';
   if (isOnStaffModeration && !canReviewModeration) return '/';
   return null;
@@ -65,6 +74,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   ref.listen(authStateProvider, (_, _) => refresh.value += 1);
   ref.listen(guestModeProvider, (_, _) => refresh.value += 1);
   ref.listen(pendingInviteCodeProvider, (_, _) => refresh.value += 1);
+  ref.listen(profileSetupRequestedProvider, (_, _) => refresh.value += 1);
   final router = GoRouter(
     debugLogDiagnostics: false,
     initialLocation: '/',
@@ -75,6 +85,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         user: ref.read(authStateProvider).valueOrNull,
         isGuest: ref.read(guestModeProvider),
         pendingCode: ref.read(pendingInviteCodeProvider),
+        profileSetupRequested: ref.read(profileSetupRequestedProvider),
       );
     },
     routes: [
@@ -84,6 +95,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/login',
         builder: (context, state) =>
             const ReadingPane(child: AuthChoiceScreen()),
+      ),
+      GoRoute(
+        name: AppRoutes.profileSetup,
+        path: '/profile/setup',
+        builder: (context, state) => const OptionalProfileScreen(),
       ),
 
       // Invite redemption — top-level public route so anonymous users can

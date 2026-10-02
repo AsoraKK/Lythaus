@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:lythaus/features/auth/application/auth_service.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/passkey_platform.dart';
 import 'package:lythaus/features/auth/domain/auth_failure.dart';
 
@@ -129,6 +131,28 @@ void main() {
         requests.any((request) => request.url.path.contains('/api/api/')),
         false,
       );
+    },
+  );
+
+  test(
+    'passkey sign-in requests the shared optional profile flow and sign-out clears it',
+    () async {
+      final auth = service(SyntheticPasskeys(), (request) async {
+        if (request.url.path.endsWith('/refresh')) {
+          return http.Response('{"error":"refresh_token_invalid"}', 401);
+        }
+        return ordinary(request);
+      });
+      final container = ProviderContainer(
+        overrides: [enhancedAuthServiceProvider.overrideWithValue(auth)],
+      );
+      addTearDown(container.dispose);
+      await container.read(passkeySignInProvider)();
+      expect(container.read(currentUserProvider)?.id, user['id']);
+      expect(container.read(profileSetupRequestedProvider), true);
+      await container.read(authStateProvider.notifier).signOut();
+      expect(container.read(profileSetupRequestedProvider), false);
+      expect(container.read(currentUserProvider), isNull);
     },
   );
 

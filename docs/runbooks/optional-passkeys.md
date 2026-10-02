@@ -2,8 +2,11 @@
 
 This cloud reconstruction adds optional passkeys alongside email/password and
 guest access. It starts from main `115da92f0918ac4a19fdeb45889c00ff4db65687`;
-the uncommitted PC implementation was unavailable. Reconcile that implementation
-if recovered. This branch does not enable the feature or authorize deployment.
+the uncommitted PC implementation was unavailable. Current profile/owner-state
+main `a093fbfc6f6f6184a909578f3be5fac9e49bc1ba` is incorporated. Reconcile the PC
+implementation if recovered. This branch does not enable the feature or authorize
+deployment. Successful passkey sign-in follows the same optional profile setup
+and saved owner-profile behavior as email sign-in.
 
 ## Configuration and schema handoff
 
