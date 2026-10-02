@@ -180,6 +180,16 @@ Class | Method | HTTP request | Description
 [*NotificationsApi*](doc/NotificationsApi.md) | [**notificationsPreferencesUpdate**](doc/NotificationsApi.md#notificationspreferencesupdate) | **PATCH** /notifications/preferences | Partially update notification preferences
 [*NotificationsApi*](doc/NotificationsApi.md) | [**notificationsRead**](doc/NotificationsApi.md#notificationsread) | **POST** /notifications/{id}/read | Mark a notification read
 [*NotificationsApi*](doc/NotificationsApi.md) | [**notificationsUnreadCount**](doc/NotificationsApi.md#notificationsunreadcount) | **GET** /notifications/unread-count | Get my unread notification count
+[*PasskeysApi*](doc/PasskeysApi.md) | [**listPasskeys**](doc/PasskeysApi.md#listpasskeys) | **GET** /auth/passkeys/credentials | List your active passkeys
+[*PasskeysApi*](doc/PasskeysApi.md) | [**passkeyCapabilities**](doc/PasskeysApi.md#passkeycapabilities) | **GET** /auth/passkeys/capabilities | Check optional passkey availability
+[*PasskeysApi*](doc/PasskeysApi.md) | [**passkeyLoginOptions**](doc/PasskeysApi.md#passkeyloginoptions) | **POST** /auth/passkeys/login/options | Start passkey login
+[*PasskeysApi*](doc/PasskeysApi.md) | [**passkeyLoginVerify**](doc/PasskeysApi.md#passkeyloginverify) | **POST** /auth/passkeys/login/verify | Verify passkey login
+[*PasskeysApi*](doc/PasskeysApi.md) | [**passkeyMaintenanceOptions**](doc/PasskeysApi.md#passkeymaintenanceoptions) | **POST** /auth/passkeys/maintenance/options | Start passkey maintenance
+[*PasskeysApi*](doc/PasskeysApi.md) | [**passkeyMaintenanceVerify**](doc/PasskeysApi.md#passkeymaintenanceverify) | **POST** /auth/passkeys/maintenance/verify | Verify passkey maintenance
+[*PasskeysApi*](doc/PasskeysApi.md) | [**passkeyRegisterOptions**](doc/PasskeysApi.md#passkeyregisteroptions) | **POST** /auth/passkeys/register/options | Start passkey register
+[*PasskeysApi*](doc/PasskeysApi.md) | [**passkeyRegisterVerify**](doc/PasskeysApi.md#passkeyregisterverify) | **POST** /auth/passkeys/register/verify | Verify passkey register
+[*PasskeysApi*](doc/PasskeysApi.md) | [**renamePasskey**](doc/PasskeysApi.md#renamepasskey) | **PATCH** /auth/passkeys/credentials/{passkeyId} | Rename your passkey
+[*PasskeysApi*](doc/PasskeysApi.md) | [**revokePasskey**](doc/PasskeysApi.md#revokepasskey) | **POST** /auth/passkeys/credentials/{passkeyId}/revoke | Remove your passkey
 [*PostsApi*](doc/PostsApi.md) | [**commentsDelete**](doc/PostsApi.md#commentsdelete) | **DELETE** /comments/{commentId} | Delete my comment
 [*PostsApi*](doc/PostsApi.md) | [**commentsReplace**](doc/PostsApi.md#commentsreplace) | **PUT** /comments/{commentId} | Replace my comment body
 [*PostsApi*](doc/PostsApi.md) | [**commentsUpdate**](doc/PostsApi.md#commentsupdate) | **PATCH** /comments/{commentId} | Partially update my comment body
@@ -364,6 +374,21 @@ Class | Method | HTTP request | Description
  - [NotificationPreferenceUpdate](doc/NotificationPreferenceUpdate.md)
  - [NotificationPreferences](doc/NotificationPreferences.md)
  - [NotificationUnreadCount](doc/NotificationUnreadCount.md)
+ - [PasskeyCapability](doc/PasskeyCapability.md)
+ - [PasskeyCeremonyRequest](doc/PasskeyCeremonyRequest.md)
+ - [PasskeyCeremonyRequestCredential](doc/PasskeyCeremonyRequestCredential.md)
+ - [PasskeyChallenge](doc/PasskeyChallenge.md)
+ - [PasskeyCredentialList](doc/PasskeyCredentialList.md)
+ - [PasskeyCredentialListCredentialsInner](doc/PasskeyCredentialListCredentialsInner.md)
+ - [PasskeyEnrollment](doc/PasskeyEnrollment.md)
+ - [PasskeyError](doc/PasskeyError.md)
+ - [PasskeyMaintenance](doc/PasskeyMaintenance.md)
+ - [PasskeyRegisterOptionsRequest](doc/PasskeyRegisterOptionsRequest.md)
+ - [PasskeyRenameRequest](doc/PasskeyRenameRequest.md)
+ - [PasskeyRenameResult](doc/PasskeyRenameResult.md)
+ - [PasskeyRevokeRequest](doc/PasskeyRevokeRequest.md)
+ - [PasskeyRevokeResult](doc/PasskeyRevokeResult.md)
+ - [PasskeySession](doc/PasskeySession.md)
  - [PendingAppealAdjudication](doc/PendingAppealAdjudication.md)
  - [PendingAppealAdjudicationList](doc/PendingAppealAdjudicationList.md)
  - [PersonalFeedItem](doc/PersonalFeedItem.md)

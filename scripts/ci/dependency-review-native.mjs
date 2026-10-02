@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 import { parse } from 'yaml';
 
 export function comparison(base, head) {
@@ -50,11 +51,27 @@ export function missingCoverage(expected, changes) {
 }
 
 const git = args => execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
-function expectedChanges(base, head) {
+export function npmManifestLock(file, manifest, rootManifest, rootLock) {
+  const directory = file.replace(/\/package\.json$/, '');
+  if (Array.isArray(rootManifest.workspaces) && rootManifest.workspaces.includes(directory)) {
+    const locked = rootLock.packages?.[directory];
+    if (!locked || locked.name !== manifest.name || locked.version !== manifest.version
+      || ['dependencies', 'devDependencies', 'optionalDependencies'].some(field =>
+        !isDeepStrictEqual(locked[field] ?? {}, manifest[field] ?? {}))) {
+      throw new Error(`WORKSPACE_MANIFEST_LOCK_MISMATCH:${file}`);
+    }
+    return 'package-lock.json';
+  }
+  return file.replace(/package\.json$/, 'package-lock.json');
+}
+
+export function expectedChanges(base, head) {
   const filesAt = sha => git(['ls-tree', '-r', '--name-only', sha]).split(/\r?\n/);
   const beforeFiles = new Set(filesAt(base));
   const headFiles = filesAt(head);
   const changed = git(['diff', '--name-only', base, head]).split(/\r?\n/);
+  const rootManifest = JSON.parse(git(['show', `${head}:package.json`]));
+  const rootLock = JSON.parse(git(['show', `${head}:package-lock.json`]));
   const files = headFiles.filter(file => changed.includes(file) && /(^|\/)(package-lock\.json|pubspec\.lock|requirements\.(txt|lock))$/.test(file));
   const changes = [];
   for (const file of files) {
@@ -68,8 +85,9 @@ function expectedChanges(base, head) {
     if (file.endsWith('package.json')) {
       const before = beforeFiles.has(file) ? JSON.parse(git(['show', `${base}:${file}`])) : {};
       const after = headFiles.includes(file) ? JSON.parse(git(['show', `${head}:${file}`])) : {};
+      const lockFile = npmManifestLock(file, after, rootManifest, rootLock);
       for (const field of ['dependencies', 'devDependencies', 'optionalDependencies', 'overrides']) {
-        if (JSON.stringify(before[field]) !== JSON.stringify(after[field]) && !changed.includes(file.replace(/package\.json$/, 'package-lock.json'))) throw new Error(`CHANGED_MANIFEST_WITHOUT_LOCK:${file}`);
+        if (JSON.stringify(before[field]) !== JSON.stringify(after[field]) && !changed.includes(lockFile)) throw new Error(`CHANGED_MANIFEST_WITHOUT_LOCK:${file}`);
       }
     }
   }

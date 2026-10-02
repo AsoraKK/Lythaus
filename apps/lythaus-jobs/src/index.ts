@@ -11,6 +11,7 @@ import { WorkflowEntrypoint } from 'cloudflare:workers';
 import { processBetaEvent, expireBetaWork } from './authenticity-beta.ts';
 import { processAlphaEvent, expireAlphaWork } from './authenticity-alpha.ts';
 import { tombstoneBetaCases, purgeBetaMedia } from '../../../packages/db/src/authenticity-beta.ts';
+import { erasePasskeyData, exportPasskeyMetadata, purgeExpiredPasskeyChallenges, reconcilePasskeyPrivacyLocations } from '../../../packages/db/src/passkey-privacy.ts';
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 
 interface Env extends EnvBindings {
@@ -1916,6 +1917,7 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
     const requestedId = event.payload.requestId;
     const requestId = await step.do('resolve-request', async () => {
       await query(this.env.DB_PRIVACY_FRESH, `SELECT privacy.reconcile_subject_data_locations($1)`, [subjectId]);
+      await transaction(this.env.DB_PRIVACY_FRESH, client => reconcilePasskeyPrivacyLocations(client, subjectId));
       const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
         `SELECT id FROM privacy.requests WHERE id = $1 AND subject_id = $2 AND request_type = 'delete'`, [requestedId, subjectId]);
       if (!result.rows[0]) throw new Error('privacy_delete_request_not_found');
@@ -2050,6 +2052,7 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         );
       });
       await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
+        await erasePasskeyData(client, subjectId);
         await client.query(`DELETE FROM identity.auth_sessions WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.refresh_token_families WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.provider_links WHERE user_id = $1`, [subjectId]);
@@ -2177,6 +2180,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
     if (!exportsBucket) throw new Error('private_exports_not_configured');
     const requestId = await step.do('resolve-export-request', async () => {
       await query(this.env.DB_PRIVACY_FRESH, `SELECT privacy.reconcile_subject_data_locations($1)`, [subjectId]);
+      await transaction(this.env.DB_PRIVACY_FRESH, client => reconcilePasskeyPrivacyLocations(client, subjectId));
       const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
         `SELECT id FROM privacy.requests WHERE id = $1 AND subject_id = $2 AND request_type = 'export'`, [requestedId, subjectId]);
       if (!result.rows[0]) throw new Error('privacy_export_request_not_found');
@@ -2189,7 +2193,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
     });
 
     const passport = await step.do('build-data-passport', async () => {
-      const [identity, locations, privateProfileField, consentRecords, contactEmailField, entitlement, rewardRedemptions, accountEvents] = await Promise.all([
+      const [identity, locations, privateProfileField, consentRecords, contactEmailField, entitlement, rewardRedemptions, accountEvents, passkeys] = await Promise.all([
         query(this.env.DB_PRIVACY_FRESH, `SELECT id, display_name, status, created_at, deleted_at FROM identity.users WHERE id = $1`, [subjectId]),
         query(this.env.DB_PRIVACY_FRESH, `SELECT store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class, legal_hold_state, deletion_state, last_verified_at FROM privacy.subject_data_locations WHERE subject_id = $1`, [subjectId]),
         query<{ encrypted_payload: string; encryption_key_version: string }>(
@@ -2234,6 +2238,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
             ORDER BY created_at, id`,
           [subjectId],
         ),
+        transaction(this.env.DB_PRIVACY_FRESH, client => exportPasskeyMetadata(client, subjectId)),
       ]);
       const privateIdentity = await decryptPrivatePassportIdentity({
         encryptionKey: this.env.PII_ENCRYPTION_KEY_V1,
@@ -2328,6 +2333,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         entitlement: entitlement.rows[0] ?? null,
         rewardRedemptions: rewardRedemptions.rows,
         accountEvents: accountEvents.rows,
+        passkeys,
         posts: posts.rows,
         comments: comments.rows,
         follows: follows.rows,
@@ -2405,9 +2411,11 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
 }
 
 export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: string }> {
-  async run(event: WorkflowEvent<{ runId: string }>, step: WorkflowStep): Promise<{ runId: string; redactedPosts: number; deletedMedia: number; expiredActivityEvents: number; expiredAccountEvents: number; expiredSystemAuditEvents: number; expiredRateLimitWindows: number; expiredIdempotencyTombstones: number; expiredWaitlistSignups: number }> {
+  async run(event: WorkflowEvent<{ runId: string }>, step: WorkflowStep): Promise<{ runId: string; redactedPosts: number; deletedMedia: number; expiredActivityEvents: number; expiredAccountEvents: number; expiredSystemAuditEvents: number; expiredRateLimitWindows: number; expiredIdempotencyTombstones: number; expiredWaitlistSignups: number; expiredPasskeyChallenges: number }> {
     const securityAuditRetention = securityAuditRetentionPlan();
     const securityRetentionInterval = `${securityAuditRetention.retentionDays} days`;
+    const expiredPasskeyChallenges = await step.do('purge-expired-passkey-challenges', async () =>
+      transaction(this.env.DB_PRIVACY_FRESH, purgeExpiredPasskeyChallenges));
     const expiredActivityEvents = await step.do('purge-expired-user-activity', async () => {
       const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
         `DELETE FROM trust.user_activity_events activity
@@ -2542,7 +2550,7 @@ export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: s
       redactedPosts += result.posts;
       deletedMedia += result.media;
     }
-    return { runId: event.payload.runId, redactedPosts, deletedMedia, expiredActivityEvents, expiredAccountEvents, expiredSystemAuditEvents, expiredRateLimitWindows, expiredIdempotencyTombstones, expiredWaitlistSignups };
+    return { runId: event.payload.runId, redactedPosts, deletedMedia, expiredActivityEvents, expiredAccountEvents, expiredSystemAuditEvents, expiredRateLimitWindows, expiredIdempotencyTombstones, expiredWaitlistSignups, expiredPasskeyChallenges };
   }
 }
 

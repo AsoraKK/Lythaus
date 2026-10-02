@@ -26,6 +26,12 @@ final tokenVersionProvider = StateProvider<int>((ref) => 0);
 final guestModeProvider = StateProvider<bool>((ref) => false);
 final pendingInviteCodeProvider = StateProvider<String?>((ref) => null);
 final profileSetupRequestedProvider = StateProvider<bool>((ref) => false);
+final passkeyAvailabilityProvider = FutureProvider.autoDispose<bool>((ref) {
+  return ref.watch(enhancedAuthServiceProvider).passkeysAvailable();
+});
+final passkeySignInProvider = Provider<Future<void> Function()>((ref) {
+  return () => ref.read(authStateProvider.notifier)._signInWithPasskey();
+});
 
 final authStateProvider =
     StateNotifierProvider<AuthStateNotifier, AsyncValue<User?>>((ref) {
@@ -93,6 +99,29 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
       if (!_current(operation)) return;
       state = AsyncValue.error(
         AuthFailure.serverError('Unable to sign in. Please try again.'),
+        stackTrace,
+      );
+    }
+  }
+
+  Future<void> _signInWithPasskey() async {
+    final operation = ++_operation;
+    _ref.read(guestModeProvider.notifier).state = false;
+    state = const AsyncValue.loading();
+    try {
+      final user = await _authService.loginWithPasskey();
+      if (!_current(operation)) return;
+      _ref.read(profileSetupRequestedProvider.notifier).state = true;
+      state = AsyncValue.data(user);
+      _bumpTokenVersion();
+    } catch (error, stackTrace) {
+      if (!_current(operation)) return;
+      state = AsyncValue.error(
+        error is AuthFailure
+            ? error
+            : AuthFailure.serverError(
+                'Passkey sign-in was cancelled or unavailable. Try email and password.',
+              ),
         stackTrace,
       );
     }

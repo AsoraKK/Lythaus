@@ -8,7 +8,9 @@ import { classifyPublicError, idempotencyKey, isCurrentActivePrincipal, normaliz
 import { runClaimedIdempotentWork } from './idempotency-runtime.ts';
 import { handleBetaApi } from './authenticity-beta.ts';
 import { handleAlphaApi } from './authenticity-alpha.ts';
-import { issueAuthSession, revokeAllAuthSessions, rotateAuthSession } from './auth-session-runtime.ts';
+import { issueAuthSession, revokeAllAuthSessions, rotateAuthSession, type AuthAccount } from './auth-session-runtime.ts';
+import { createPasskeyHandler } from './passkey-runtime.ts';
+import type { PasskeyEnvironment } from '../../../packages/security/src/passkeys.ts';
 import { lockLoginAccount, lockRefreshSession } from './auth-account-transaction.ts';
 import { expiredRefreshCookie, optionalRefreshCookie, refreshCookie, sessionTransport, sessionTransportResult, validateAuthRequestOrigin } from './auth-session-transport.ts';
 import { requireUncompromisedPassword } from './auth-password-screen.ts';
@@ -25,7 +27,7 @@ import { acceptanceContextToken } from '@lythaus/contracts';
 import { createWaitlistRouteHandler } from './waitlist-handler.ts';
 import { parseWaitlistRequest, requireWaitlistSecrets, verifyWaitlistTurnstile } from './waitlist-runtime-policy.ts';
 
-interface Env extends EnvBindings {
+interface Env extends EnvBindings, PasskeyEnvironment {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
   DB_APP_FRESH: HyperdriveBinding;
   MEDIA_QUARANTINE: NonNullable<EnvBindings['MEDIA_QUARANTINE']>;
@@ -297,9 +299,21 @@ async function issueSession(
   roles: string[] = [],
   onSessionCreated?: (client: DatabaseClient) => Promise<void>,
 ): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
+  return transaction(env.DB_APP_FRESH, client => issueSessionInTransaction(env, client, userId,
+    subjectId => lockLoginAccount(client, subjectId, verifiedPasswordHash), roles, onSessionCreated));
+}
+
+async function issueSessionInTransaction(
+  env: Env,
+  client: DatabaseClient,
+  userId: string,
+  loadAccount: (subjectId: string) => Promise<AuthAccount | undefined>,
+  roles: string[] = [],
+  onSessionCreated?: (client: DatabaseClient) => Promise<void>,
+): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
   const secrets = requireAuthSecrets(env);
-  return transaction(env.DB_APP_FRESH, async (client) => issueAuthSession({
-    loadAccount: (subjectId) => lockLoginAccount(client, subjectId, verifiedPasswordHash),
+  return issueAuthSession({
+    loadAccount,
     createRefreshFamilyAndSession: async (input) => {
       await client.query(`INSERT INTO identity.refresh_token_families (id, user_id) VALUES ($1, $2)`, [input.familyId, input.userId]);
       await client.query(`INSERT INTO identity.auth_sessions (id, user_id, refresh_family_id, refresh_token_hash, expires_at) VALUES ($1, $2, $3, decode($4, 'base64'), now() + ($5::integer * interval '1 day'))`, [input.sessionId, input.userId, input.familyId, input.refreshTokenHash, input.refreshSessionDays]);
@@ -309,7 +323,7 @@ async function issueSession(
     hashRefreshToken: hashResetToken,
     newId: uuidv7,
     signAccessToken: ({ userId: subjectId, roles: subjectRoles, tokenVersion }) => signAccessToken({ userId: subjectId, roles: [...subjectRoles], tokenVersion, privateKeyPem: secrets.privateKey, keyId: secrets.keyId }),
-  }, { userId, roles }));
+  }, { userId, roles });
 }
 
 async function queueTransactionalEmail(
@@ -3305,6 +3319,25 @@ export default {
         return await idempotentMutation(request, env, user.userId, 'retention.update', () => updateRetentionRule(request, env, user), true);
       }
       if (request.method === 'GET' && url.pathname === '/api/auth/userinfo') return await getUserInfo(request, env, (await principal(request, env)).userId);
+      if (url.pathname.startsWith('/api/auth/passkeys')) {
+        return (await createPasskeyHandler(env, {
+          principal: request => principal(request, env),
+          rateLimit: (request, scope, limit, subject) => enforceRateLimit(request, env, scope, limit, subject),
+          transaction: work => transaction(env.DB_APP_FRESH, work),
+          query: (sql, values) => query(env.DB_APP_FRESH, sql, values),
+          issueSession: (client, account) => issueSessionInTransaction(env, client, account.userId, async () => account),
+          revokeSessions: (client, userId) => revokeAllAuthSessions({
+            revokeAllSessions: async subjectId => { await client.query(`UPDATE identity.auth_sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [subjectId]); },
+            revokeAllRefreshFamilies: async subjectId => { await client.query(`UPDATE identity.refresh_token_families SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [subjectId]); },
+            bumpTokenVersion: async subjectId => { await client.query(`UPDATE identity.users SET token_version = token_version + 1 WHERE id = $1`, [subjectId]); },
+          }, userId),
+          sessionResponse: (request, tokens) => {
+            const result = sessionTransportResult(request, env.CORS_ALLOWED_ORIGINS, tokens);
+            return privateResponse(request, env, result.body, { headers: result.headers });
+          },
+          response: (request, body, init) => privateResponse(request, env, body, init),
+        })(request))!;
+      }
       if (url.pathname === '/api/auth/email' || url.pathname.startsWith('/api/auth/email/verify') || url.pathname.startsWith('/api/auth/password/reset')) {
         if (env.EMAIL_PROVIDER_MODE === 'disabled') return response(request, env, { error: 'provider_unavailable', provider: 'email', correlationId: id }, { status: 404 });
       }
