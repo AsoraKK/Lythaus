@@ -159,6 +159,15 @@ jobs:
           '--test-coverage-include=apps/lythaus-jobs/src/monthly-reward-snapshots.ts'
           --test-coverage-lines=80 --test-coverage-branches=80
           --test apps/lythaus-jobs/tests/monthly-reward-snapshots.postgres.mjs
+      - name: Validate persistent monthly reward selections against fresh authority
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: >-
+          node --experimental-strip-types --experimental-test-module-mocks
+          --experimental-test-coverage
+          '--test-coverage-include=packages/db/src/monthly-reward-selections.ts'
+          --test-coverage-lines=80 --test-coverage-branches=80
+          --test apps/lythaus-jobs/tests/monthly-reward-selections.postgres.mjs
       - name: Prove column-only incident audit grants on real PostgreSQL
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable

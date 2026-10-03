@@ -29,6 +29,7 @@ embedded reference-validation counts are not execution evidence for this branch.
 - V / VS: [final peer participation consumer](../../packages/db/src/monthly-peer-participation.ts), [invoked queue/scheduled adapter](../../apps/lythaus-jobs/src/monthly-peer-participation.ts) / [separately gated proposal](../../database/planetscale/proposals/monthly_reputation_peer_participation.sql); CT verifies the real closure-to-weekly-result path.
 - X / XT / XS: [scoped contextual review](../../packages/db/src/monthly-context-review.ts), [dependency reconciliation](../../packages/db/src/monthly-context-dependencies.ts), [authenticated admin mutation](../../apps/lythaus-admin-api/src/monthly-context-review.ts) / [20 real PostgreSQL cases](../../apps/lythaus-jobs/tests/monthly-context.postgres.mjs) / [separately gated proposal](../../database/planetscale/proposals/monthly_reputation_context.sql). CT additionally verifies actual equal-vote restoration through the admin route and retained publication proof.
 - S / ST / SS: [fixed snapshot and correction transactions](../../packages/db/src/monthly-reward-snapshots.ts), [invoked queue/reconciler](../../apps/lythaus-jobs/src/monthly-reward-snapshots.ts) / [19 real PostgreSQL cases](../../apps/lythaus-jobs/tests/monthly-reward-snapshots.postgres.mjs) / [separately gated proposal](../../database/planetscale/proposals/monthly_reward_snapshots.sql). Confirmed fixtures require explicit synthetic approvals; deployed configuration remains absent.
+- R / RT / RS: [persistent selections and own reader](../../packages/db/src/monthly-reward-selections.ts) / [16 real PostgreSQL cases](../../apps/lythaus-jobs/tests/monthly-reward-selections.postgres.mjs) / [separate selection and signed-offer proposal](../../database/planetscale/proposals/monthly_reward_selections.sql). Higher-tier sources are labelled settled-total fixtures consumed by the actual assembly/assessment/snapshot pipeline; missing earning providers are not proved.
 
 A unit-verified row establishes only the named calculation. A partial row still
 requires the remaining application, privacy, provider or release work. No new
@@ -115,16 +116,16 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | APP-18 | Allow does not override a separate lawful safety hold, content deletion, unrelated sanction or media launch gate. | C / CT | Independent decision, changed/deleted text, parent-post block and generated-content prohibition verified; media route unactivated |
 | APP-19 | Old-policy cases never mix weight-two ballots into the new equal-vote evaluator. | A, C / AT, CT, DT | Historical reads/serialization preserved; old open cases refused new-policy replacement pending D13 |
 | APP-20 | Moderation/author decisions and ballot histories remain auditable after allowed redaction/retention handling. | C, CS / CT | Immutable history and frozen packet verified; full DSR/retention workflow integration pending |
-| PAR-01 | Free L5 remains profile L5 but has at most L3 access for its one selected reward family. | T07 | Planned; no test execution claimed |
-| PAR-02 | Premium cannot obtain five L5 slots; plan/level changes preserve dormant selections correctly. | T07 | Planned; no test execution claimed |
-| PAR-03 | Simultaneous claims/selections cannot exceed slot, inventory or usage limits. | T07 | Planned; no test execution claimed |
-| PAR-04 | Month B entitlement comes from month A, not month B projection. | S / ST | Authoritative fixed next-month snapshot and independent correction verified; actual partner redemption consumer pending |
+| PAR-01 | Free L5 remains profile L5 but has at most L3 access for its one selected reward family. | R / RT | Server selection and own-reader L5/L3 split verified; actual claim consumer and Flutter pending |
+| PAR-02 | Premium cannot obtain five L5 slots; plan/level changes preserve dormant selections correctly. | R, S / RT, ST | One exact variant-level slot/family, retained downgrade choices, Black independent of old selection policy and approved level-drop dormancy verified; D12 switching/grace and product journey pending |
+| PAR-03 | Simultaneous claims/selections cannot exceed slot, inventory or usage limits. | R / RT | Concurrent selection CAS/idempotency and SQL shape/tier/source guards verified; claim inventory/usage consumers pending |
+| PAR-04 | Month B entitlement comes from month A, not month B projection. | S, R / ST, RT | Selection requires actual confirmed current snapshot; other-member/old-month/no-history authority refused; actual partner redemption consumer pending |
 | PAR-05 | An authorised linked-email lookup works; unknown, unlinked and other-partner addresses cannot enumerate members. | T07 | Planned; no test execution claimed |
 | PAR-06 | Response contains no points, security method, case history or private content. | T07 | Planned; no test execution claimed |
 | PAR-07 | Email change, consent revocation, recovery and recycled addresses cannot inherit the wrong link. | T07 | Planned; no test execution claimed |
 | PAR-08 | Recurring invoice retries fulfil once; five-minute QR claims are online-validated and single use. | T07 | Planned; no test execution claimed |
 | PAR-09 | An outage returns unknown/pending, not a silently removed discount or full-price charge. | T07 | Planned; no test execution claimed |
-| PAR-10 | Proposed or paused offers cannot be redeemed; aspirational partners are never seeded as signed offers. | T07 | Planned; no test execution claimed |
+| PAR-10 | Proposed or paused offers cannot be redeemed; aspirational partners are never seeded as signed offers. | R / RT | New selection rejects proposed/paused/expired/future/unapproved-time/changed-terms versions; paused choices dormant, runtime cannot activate offers; signed synthetic fixtures only, redemption pending |
 | UI-01 | Existing sidebar is extended once, beneath Profile; mobile and deep-link equivalents work. | T08 | Planned; no test execution claimed |
 | UI-02 | Profile distinguishes confirmed current-month level from projected next-month progress. | T08 | Planned; no test execution claimed |
 | UI-03 | Weekly/monthly/quarterly rows, shared caps, selected weeks and boundary dates are visible and consistent. | T08 | Planned; no test execution claimed |
@@ -135,10 +136,10 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | RPT-02 | Public policy is inspectable, but another member's private report and ballot identity are inaccessible. | T09 | Planned; no test execution claimed |
 | RPT-03 | JSON/CSV/report links obey authorisation, expiry, CSV injection protection and data minimisation. | T09 | Planned; no test execution claimed |
 | RPT-04 | DSR export/delete, proof revocation, content purge and retained-audit redaction work end to end. | E, B, BS, X, XS, S, SS / ET, BT, XT, CT, ST | Isolated soft-delete erasure, assembly/assessment/snapshot races, corrected-chain staff notices and ordinary purge versus independent invalidation verified; actual export/locator/reviewer retention workflow remains gated before collection |
-| REL-01 | Cached consent/standing cannot approve a stale vote or redemption; fresh Hyperdrive reads are used. | C, S / CT, ST | Fresh vote eligibility, correction reviewer revocation, configuration pause and subject-deletion races verified; partner consent/redemption checks pending |
+| REL-01 | Cached consent/standing cannot approve a stale vote or redemption; fresh Hyperdrive reads are used. | C, S, R / CT, ST, RT | Fresh vote/correction authority and selection account/email/tier/offer/configuration locks and concurrent changes verified; partner consent/redemption checks pending |
 | REL-02 | Queue duplicate/out-of-order delivery and worker crash do not duplicate awards or miss corrections. | P, J, E, B, V, X, S / PT, ET, BT, CT, XT, ST | Includes snapshot publication/correction CAS, receipt guards, rollback and paused queue/backfill plus context/peer/earning/assembly races; specialist/reception consumers remain |
 | REL-03 | Migration dry run, rollback, policy activation and exact reviewed SHA are separately evidenced. | SQL / PT | Partial: local baseline and proposed schema only; release pending |
-| REL-04 | Critical P1/P2 coverage is at least 80%; feed p95 <200 ms target, load/failure testing, API validation and personalised-cache isolation are verified or explicitly reported unverified. | MT, AT, HT, PT, ET, BT, CT, XT, ST | Scoped coverage gates pass: snapshot 99.35/90.00, policy 100/98.87, assembly 98.76/89.91, earning 92.07/80.45, appeal/participation 100/94.64, context 98.94/90.26 (line/branch); load/feed/new browser flows unverified |
+| REL-04 | Critical P1/P2 coverage is at least 80%; feed p95 <200 ms target, load/failure testing, API validation and personalised-cache isolation are verified or explicitly reported unverified. | MT, AT, HT, PT, ET, BT, CT, XT, ST, RT | Scoped coverage gates pass: selection 100/96.15, snapshot 99.35/90.00, policy 100/98.87, assembly 98.76/89.91, earning 92.07/80.45, appeal/participation 100/94.64, context 98.94/90.26 (line/branch); load/feed/new browser flows unverified |
 
 ## Additional ticket interface cases
 
@@ -173,6 +174,15 @@ Local snapshot increment evidence on 3 October 2026:
 | Native typecheck, workflow YAML, matrix and independent review | Passed; 100 unique original IDs retained; both bounded read-only reviewers clear the final receipt/UTC fixes |
 | Settlement boundary fixture | Uses the nearest legal whole-hour cutoff around the actual server clock; explicitly skips only during the first UTC hour or after hour 720 of a month, when no such legal fixture exists; it executed without skips on 3 October |
 | Migration and activation | Proposal applied/removed in disposable PostgreSQL 17 only; no production migration, configuration or activation |
+| Remote snapshot revision | PostgreSQL run `37132704520` succeeds at `8574f4b8e167f1a3ab0ca22b9aa8976eb7e4ddd6`, including downstream synthetic workflows |
+
+Local selection increment evidence on 3 October 2026:
+
+| Check | Result |
+| --- | --- |
+| Persistent selection PostgreSQL suite | 16 passed, zero skipped; 100% lines / 96.15% branches; canonical current snapshot/tier, Free/Premium/Black, lower-level/downgrade dormancy, Black legacy-policy separation, concurrency, failure rollback and fresh authorization races |
+| Fixture scope | Synthetic signed offers and settled weekly totals only; actual assembly/assessment/snapshot/selection code executes; no merchant or missing earning-provider acceptance claimed |
+| Native typecheck and independent review | Passed; both bounded source reviewers clear final narrow offer-lock and Black-history fixes; reviews did not rerun tests |
 
 Local contextual increment evidence on 3 October 2026:
 

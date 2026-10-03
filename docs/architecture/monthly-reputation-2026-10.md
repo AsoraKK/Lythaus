@@ -113,7 +113,7 @@ effective months; separately approved migration, exact-SHA deployment and activa
 | T04 Earning | Real post/discussion/specialist/reception/authorship events and dependency reversals | Canonical post/comment producers, scoped contextual acceptance and final peer-ballot consumer tested with weekly caps and immutable corrections; specialist/reception producers and product forms remain |
 | T05 Security | Reuse normal validated auth events; capability-aware integrity, credential continuity, Turnstile/refresher | Actual email verification feeds bound evidence, including scoring pauses; full-month coverage/assessment calculations tested; other real providers, renewal workflow and D07/D08 activation remain gated |
 | T06 Peer review | Private timed electorate, equal ballots/history, close transaction, scoped override, restricted route | Public/admin routes, ballots/closure, scoped restoration, equal participation earning and private notices tested; specialist/unresolved execution, D09/D10/D11/D13 activation and Flutter remain |
-| T07 Rewards/partners | Persistent Free/Premium/Black selections, proposals, consent/email linkage, QR/invoice idempotency | Commercial terms and approved offers pending; no fake merchants |
+| T07 Rewards/partners | Persistent Free/Premium/Black selections, proposals, consent/email linkage, QR/invoice idempotency | Canonical current-month selection transactions and plan/level dormancy tested; signed synthetic offer fixtures only; consent/claims, approved live terms and product wiring remain |
 | T08 Flutter | Existing Rewards tabs, profile tracker, real contribution/review forms, complete states | Depends on authoritative API slices; no parallel route |
 | T09 Reporting/privacy | Stored-calculation parity, full own report, public methodology, safe JSON/CSV, DSR/retention | Full report needs preceding evidence records and report/API/DSR integration |
 | T10 Release | Shadow run, fairness/load/failure testing, approved cutover, exact-SHA release and rollback | No release or activation authorization |
@@ -154,6 +154,41 @@ concurrent publication/correction, interruption rollback, non-UTC settlement,
 paused queue/backfill, stale receipt denials and deletion races. Isolated subject
 erasure also removes staff-authored correction notices before source cascades.
 This is not complete export, locator, reviewer-retention or DSR acceptance.
+
+## Persistent reward selections
+
+`monthly_reward_selections.sql` is separately gated and remains outside the
+production manifest. It stores immutable member selection revisions across months,
+with full prior choices and command digests. Transactions lock the current UTC
+source period, canonical active/verified member and actual subscription row, then
+require the separately confirmed current-month snapshot. Client fields cannot set
+level, tier, family, points or slot. A versioned approved offer supplies its family,
+level and signed terms. A narrow database helper locks current availability without
+granting the runtime permission to activate or update offers.
+
+Free retains its earned profile level while accessing one selected family up to
+L3. Premium can add one family/variant per earned-level slot, and cannot put an L5
+variant into lower slots or the same family into multiple slots. Black requires no
+selection and keeps earlier selection history. Historical selection policy review
+does not block Black's current eligibility. Lower levels retain higher choices as
+dormant. A multi-choice downgrade to Free requires an explicit retention choice;
+switching, variant movement and transition/grace rules stay blocked pending D12.
+No automatic monthly reset, point spending or quiet price change is introduced.
+
+The own reader reports current profile level, reward access, selected/dormant
+variants, retained history review and explicit pending authority. It is not wired
+into the shared API or Flutter destination until app-flow coordination permits it.
+Merchant proposal/approval, consent/linkage, inventory, QR, invoice consumption and
+missing-provider handling remain separate work; no live merchant is fabricated.
+
+Node 22.23.3/disposable PostgreSQL 17 verify 16 cases, 100% line / 96.15% branch,
+including Free L5/L3, five distinct Premium slots, Black with legacy history,
+lower-level paid denial, independently corrected L5→L2 dormancy, command races,
+rollback/retry, fresh tier/offer/configuration changes and deletion before authority
+reads. Higher-tier fixtures seed explicitly synthetic settled weekly totals before
+the actual assembler, assessment and snapshot publisher. This proves the selection
+transactions, not missing earning providers or the full product journey. Both
+bounded independent source reviews clear the final fixes; native typecheck passes.
 
 The monthly source writer accepts settled aggregate evidence from a trusted internal
 caller. Scheduled monthly assembly joins settled weekly results and maintenance/email
