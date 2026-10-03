@@ -26,6 +26,13 @@ const outputPath = process.env.PRODUCTION_WORKER_EVIDENCE_PATH;
 const previousDeploymentPath = process.env.PRODUCTION_WORKER_PREVIOUS_DEPLOYMENT_PATH;
 const previousVersionsPath = process.env.PRODUCTION_WORKER_PREVIOUS_VERSIONS_PATH;
 const propagationDelays = [2_000, 4_000, 6_000, 8_000];
+const safeErrorCodes = new Set([
+  'auth_email_dispatch_unavailable', 'auth_data_unavailable', 'admin_request_failed',
+  'access_required', 'access_assertion_invalid', 'access_subject_missing',
+  'access_verification_not_configured', 'admin_subject_key_not_configured',
+  'rate_limit_exceeded',
+]);
+const safeResponseMediaTypes = new Set(['application/json', 'text/html', 'text/plain']);
 
 function redact(value) {
   let text = String(value);
@@ -119,8 +126,16 @@ async function fetchJson(url, options = {}, service = requestedWorker) {
     throw new Error(`${service}${observation.path} probe request failed`);
   }
   let body = null;
-  try { body = JSON.parse(text); } catch { /* response details are not evidence */ }
+  observation.responseFormat = 'non_json';
+  try {
+    body = JSON.parse(text);
+    observation.responseFormat = Array.isArray(body) ? 'json_array'
+      : body !== null && typeof body === 'object' ? 'json_object' : 'json_primitive';
+  } catch { /* raw response details are not evidence */ }
+  const mediaType = response.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase();
+  observation.responseMediaType = safeResponseMediaTypes.has(mediaType) ? mediaType : null;
   observation.observed = {
+    errorCode: safeErrorCodes.has(body?.error) ? body.error : null,
     service: identity(body?.service, /^lythaus-(public-api|admin-api|jobs)$/),
     workerVersionId: identity(body?.workerVersionId, /^[0-9a-f-]{36}$/),
     releaseTag: identity(body?.releaseTag, /^[0-9a-f]{40}$/),
