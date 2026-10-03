@@ -79,6 +79,8 @@ jobs:
       - run: npm run test:native-architecture
       - name: Verify owner-only read-only account support
         run: node --experimental-strip-types --experimental-test-module-mocks --test packages/contracts/tests/account-support.test.mjs apps/lythaus-admin-api/tests/account-support-runtime.test.mjs apps/lythaus-admin-api/tests/account-support-handler.test.mjs
+      - name: Verify bounded owner-only Overview analytics
+        run: node --experimental-strip-types --experimental-test-module-mocks --test apps/lythaus-admin-api/tests/overview-policy.test.mjs apps/lythaus-admin-api/tests/overview-runtime.test.mjs apps/lythaus-admin-api/tests/overview-handler.test.mjs
       - name: Verify owner-testing authentication release scope
         run: node --test scripts/tests/owner-testing-auth-scope.test.mjs
       - run: node --test scripts/tests/real-email-acceptance-evidence.test.mjs

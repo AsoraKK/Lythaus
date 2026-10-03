@@ -1,15 +1,13 @@
 import { NavLink } from 'react-router-dom';
 
 const links = [
-  { to: '/', label: 'Home', end: true },
+  { to: '/', label: 'Overview', end: true },
   { to: '/flags', label: 'Flags' },
   { to: '/appeals', label: 'Appeals' },
   { to: '/authenticity', label: 'Authenticity beta' },
-  { to: '/users', label: 'Users' },
-  { to: '/account-support', label: 'Account support' },
+  { to: '/accounts', label: 'Accounts' },
   { to: '/waitlist', label: 'Waitlist' },
   { to: '/audit', label: 'Audit' },
-  { to: '/preview', label: 'Preview' },
   { to: '/production-auth-acceptance', label: 'Auth acceptance' }
 ];
 

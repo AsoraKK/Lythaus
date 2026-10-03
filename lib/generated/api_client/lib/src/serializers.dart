@@ -33,6 +33,10 @@ import 'package:lythaus_api_client/src/model/admin_email_health.dart';
 import 'package:lythaus_api_client/src/model/admin_health.dart';
 import 'package:lythaus_api_client/src/model/admin_items.dart';
 import 'package:lythaus_api_client/src/model/admin_mutation_confirmation.dart';
+import 'package:lythaus_api_client/src/model/admin_overview.dart';
+import 'package:lythaus_api_client/src/model/admin_overview_gaps.dart';
+import 'package:lythaus_api_client/src/model/admin_overview_metrics.dart';
+import 'package:lythaus_api_client/src/model/admin_overview_providers.dart';
 import 'package:lythaus_api_client/src/model/admin_user.dart';
 import 'package:lythaus_api_client/src/model/admin_user_deletion_response.dart';
 import 'package:lythaus_api_client/src/model/admin_user_detail200_response.dart';
@@ -148,6 +152,10 @@ import 'package:lythaus_api_client/src/model/notification_page.dart';
 import 'package:lythaus_api_client/src/model/notification_preference_update.dart';
 import 'package:lythaus_api_client/src/model/notification_preferences.dart';
 import 'package:lythaus_api_client/src/model/notification_unread_count.dart';
+import 'package:lythaus_api_client/src/model/overview_metric.dart';
+import 'package:lythaus_api_client/src/model/overview_provider.dart';
+import 'package:lythaus_api_client/src/model/overview_provider_accounting_period.dart';
+import 'package:lythaus_api_client/src/model/overview_window.dart';
 import 'package:lythaus_api_client/src/model/owner_comment.dart';
 import 'package:lythaus_api_client/src/model/owner_post.dart';
 import 'package:lythaus_api_client/src/model/pending_appeal_adjudication.dart';
@@ -242,6 +250,10 @@ part 'serializers.g.dart';
   AdminHealth,
   AdminItems,
   AdminMutationConfirmation,
+  AdminOverview,
+  AdminOverviewGaps,
+  AdminOverviewMetrics,
+  AdminOverviewProviders,
   AdminUser,
   AdminUserDeletionResponse,
   AdminUserDetail200Response,
@@ -357,6 +369,10 @@ part 'serializers.g.dart';
   NotificationPreferenceUpdate,
   NotificationPreferences,
   NotificationUnreadCount,
+  OverviewMetric,
+  OverviewProvider,
+  OverviewProviderAccountingPeriod,
+  OverviewWindow,
   OwnerComment,
   OwnerPost,
   PendingAppealAdjudication,

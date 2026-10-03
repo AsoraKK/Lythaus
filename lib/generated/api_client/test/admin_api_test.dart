@@ -135,6 +135,15 @@ void main() {
       // TODO
     });
 
+    // Read bounded owner-only community aggregates
+    //
+    // Verified Access, current active owner membership and account, existing rate limits and a committed audit are required. No user identities or content are returned. UTC half-open calendar windows compare matching elapsed prior periods only. Current retained visibility and deletion state apply to both windows. Table populations above the bounded snapshot cap are unavailable, not partial totals. Empty post cohorts have no ratio. No provider polling, billing estimate or payment inference is enabled.
+    //
+    //Future<AdminOverview> adminOverview({ String period }) async
+    test('test adminOverview', () async {
+      // TODO
+    });
+
     // List privacy requests
     //
     //Future<AdminItems> adminPrivacyRequestsList() async

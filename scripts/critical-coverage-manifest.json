@@ -16,6 +16,7 @@
     "public-waitlist-runtime",
     "admin-access-runtime",
     "admin-account-support-runtime",
+    "admin-overview-runtime",
     "admin-waitlist-runtime",
     "admin-appeal-runtime",
     "jobs-runtime-policy"
@@ -44,13 +45,21 @@
     "privacy-dsr": ["public-privacy-runtime", "jobs-runtime-policy"],
     "moderation-appeals": ["admin-appeal-runtime", "jobs-runtime-policy", "moderation-appeal-policy"],
     "reputation": ["reputation-impact-policy", "reputation-persistence-policy"],
-    "activity-audit": ["privacy-activity-policy", "admin-appeal-runtime", "admin-waitlist-runtime", "admin-account-support-runtime", "jobs-runtime-policy"],
+    "activity-audit": ["privacy-activity-policy", "admin-appeal-runtime", "admin-waitlist-runtime", "admin-account-support-runtime", "admin-overview-runtime", "jobs-runtime-policy"],
     "security-crypto": ["worker-security-primitives", "worker-access-token-policy"],
     "notifications": ["notification-input-policy"],
     "authenticity-cost": ["authenticity-cost-admission-policy"],
     "waitlist-security": ["public-waitlist-runtime", "admin-access-runtime", "admin-waitlist-runtime", "worker-security-primitives"]
   },
   "modules": [
+    {
+      "id": "admin-overview-runtime",
+      "priority": "P2",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-admin-api/src/overview-policy.ts", "apps/lythaus-admin-api/src/overview-runtime.ts"],
+      "tests": ["apps/lythaus-admin-api/tests/overview-policy.test.mjs", "apps/lythaus-admin-api/tests/overview-runtime.test.mjs"],
+      "rationale": "Current owner checks before cached aggregate disclosure, fail-closed audit, bounded source populations, UTC elapsed comparisons and explicit unavailable data; PostgreSQL separately reconciles records and query plans."
+    },
     {
       "id": "account-support-contract",
       "priority": "P1",
