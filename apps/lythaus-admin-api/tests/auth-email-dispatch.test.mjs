@@ -121,7 +121,7 @@ test('capability is bound only to existing Public Worker and absent from anonymo
   assert.match(readFileSync('apps/lythaus-public-api/src/worker.ts','utf8'),/class AuthEmailEnvelope extends WorkerEntrypoint/);
   assert.doesNotMatch(readFileSync('apps/lythaus-public-api/src/index.ts','utf8'),/handleEmailEnvelope|['"]\/keeper-email['"]/);
   assert.doesNotMatch(readFileSync('apps/lythaus-admin-api/src/auth-email-dispatch-adapter.ts','utf8'),/ENCRYPTION_KEY|secretCiphertext|console\./);
-  assert.match(readFileSync('scripts/ci/probe-production-workers.mjs','utf8'), /body.emailBinding\?\.publicWorkerVersion !== expectedPublicVersion/);
+  assert.match(readFileSync('scripts/ci/probe-production-workers.mjs','utf8'), /body.emailBinding\?\.bindingVerified !== true \|\| !publicVersionIsExpected/);
   assert.match(readFileSync('apps/lythaus-admin-api/src/index.ts','utf8'), /dispatchKeeperEmail\(env, request, \{ operation: 'probe' \}\)/);
 });
 
