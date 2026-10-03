@@ -61,7 +61,9 @@ decision ledger; member output and privacy export contain public history only.
 Mutations reuse application UUIDv7, the existing transaction abstraction,
 `system.idempotency_keys`, `system.rate_limit_windows`, `system.audit_events`
 and `system.outbox_events`. Idempotency is actor/channel/operation scoped,
-hash-bound and serialized. Replays reauthorize and project current state; they
+hash-bound and serialized. Owner mutations lock the requested subject before
+claiming a replay marker, matching privacy lock order. Markers must match the
+requested target. Replays reauthorize and project current state; they
 do not cache private DTOs. Expected revisions serialize concurrent changes.
 Every successful mutation commits its content, audit, references, replay marker
 and public intent atomically. Private notes/evidence create no public intent.
@@ -73,7 +75,10 @@ append a separate public explanation. Evidence verifies the configured closure
 requirements; it does not claim that a report is objectively fixed without
 the owner's recorded verification. Accepted suggestions do not grant points.
 
-Request lists use scoped keyset cursors and a creation watermark. Histories use
+Request lists use scoped keyset cursors and a creation watermark. They select
+bounded IDs, lock the corresponding subjects in order, then reload current
+nondeleted records. Continuation export also holds the subject lock through
+COMMIT. Histories use
 bounded revision pages and the loaded request's revision watermark. Protocol
 ceilings are 100 items; all operational limits must be supplied explicitly.
 Successful mutations consume quota; replays, rejected inputs and reads do not.
@@ -83,7 +88,9 @@ and `private, no-store` responses. There is no HTTP readiness claim here.
 
 Local `support.operation_refs` records exact shared primary keys so domain
 scrubbing can delete audit/outbox/idempotency records without filtering shared
-JSON tables. The owner helper functions expose only the support idempotency
+JSON tables. Each referenced record must match its support namespace and
+request/event association before deletion, so a forged reference cannot erase
+another subject's unrelated shared records. The owner helper functions expose only the support idempotency
 namespace; the admin role receives no general idempotency-table access, which
 could expose cached authentication responses. Function execution is revoked
 from PUBLIC, runtime, jobs and privacy roles. The local suite transfers all
@@ -95,8 +102,11 @@ Privacy adapters derive the subject from an authoritative processing privacy
 request, lock the account and existing hold rows, and scrub a bounded request
 batch in the caller's transaction. They remove public/private content, replay
 markers and pending intents, then tombstone the request. Approved audit
-retention is explicitly supplied. Retention considers closed age only and
-preserves open or held records. Export is paginated and excludes owner-private
+retention is explicitly supplied. Retention uses the transaction-start closed-age
+cutoff, skips known held subjects and processes only one eligible subject's
+bounded records per transaction. It rechecks holds after selection and preserves
+open or held records. `heldRecords` counts rows encountered during that recheck,
+not all held records excluded by selection. Export is paginated and excludes owner-private
 content and owner author identifiers. These helpers do not delete accounts.
 
 Notification eligibility reloads the authoritative request, public revision,
@@ -119,9 +129,9 @@ node --experimental-strip-types --test --test-isolation=none \
 npm run typecheck:native
 ```
 
-The recorded run passed 22 PostgreSQL tests, 15 support-contract tests, four
+The recorded run passed 30 PostgreSQL tests, 15 support-contract tests, four
 shared support-helper tests and the native typecheck. Coverage of the four new
-TypeScript modules was 99.78% lines, 86.97% branches and 97.78% functions.
+TypeScript modules is reported with the exact final-head handoff.
 The native Hyperdrive transaction adapter was not executed against a live
 binding; coverage is local service evidence only.
 
@@ -135,9 +145,9 @@ proposal independently refuses database names outside this local test prefix.
 | Verification | Evidence / limitation |
 | --- | --- |
 | Identity and permissions | Real signed subjects, current token version, cross-user/wrong-kind denial, forged owner roles, revoked owner and restricted table/function grants |
-| Concurrency | Actual PG lock waits for queued revocation/token changes and subject deletion; owner locks span writes/audit/commit; same-key and same-revision races |
-| Privacy and separation | Public/private projection isolation, typed same-request closure evidence, decision ledger, paginated member-only export, active hold rejection, supplied closed-age retention |
-| Atomic failures | Actual outbox/audit triggers, deferred COMMIT failure and scrub failure; no partial request/history/ref/marker/intent writes and fixed sanitized errors |
+| Concurrency | Actual PG lock waits for queued revocation/token changes and subject deletion; owner locks span writes/audit/commit; same-key/revision races, replay/purge ordering, owner-queue reload and continuation-export deletion races |
+| Privacy and separation | Public/private projection isolation, typed same-request closure evidence, decision ledger, paginated member-only export, forged-reference provenance guards, active/racing hold rejection and retention progress past held subjects |
+| Atomic failures | Actual outbox/audit triggers, deferred COMMIT failure and scrub failure; no partial request/history/ref/marker/intent writes; fixed errors survive hostile message/reflection getters |
 | Query bounds | Captured list SQL EXPLAIN on 3000 synthetic rows: member/queue cursor indexes; four actual rows for a three-item page, four/five shared buffer hits in the recorded run |
 | Notification adapter | Stale public intent, private-only revision, inactive/pending-deletion subject and malformed payload checks; zero sends |
 | Native runtime adapter | Reuses existing TLS-verifying transaction code; typechecked, but no live Hyperdrive write/COMMIT proof |
@@ -160,8 +170,9 @@ proposal independently refuses database names outside this local test prefix.
    hold rows are protected, but the current shared placement path does not
    lock the subject before inserting a new hold. A concurrent new hold is
    therefore an explicitly unverified shared-path race; this slice cannot
-   claim production hold serialization. Also validate multi-subject retention
-   lock ordering and operational batch/query timeouts under the approved job.
+   claim production hold serialization. Validate the retention anti-join indexes,
+   skewed/held-heavy query costs and operational batch/query timeouts before wiring
+   the approved job. The helper takes only one subject's exclusive lock per run.
 5. The approved jobs role needs exact support notification-read permissions,
    event routing/inbox deduplication, preferences and dispatch-time privacy
    checks. No notification transport or support event consumer exists here.

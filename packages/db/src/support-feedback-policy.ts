@@ -21,6 +21,15 @@ export interface SupportServicePolicy {
   readonly privacy: Readonly<{ retentionSeconds: number; batch: number; requestStates: readonly string[]; deleteAudit: boolean }>;
 }
 const ERROR = 'support_policy_invalid';
+export function supportFailureCode(error: unknown, allowed: ReadonlySet<string>, fallback: string): string {
+  try {
+    if(error instanceof Error){
+      const descriptor=Object.getOwnPropertyDescriptor(error,'message');
+      if(descriptor&&Object.hasOwn(descriptor,'value')&&typeof descriptor.value==='string'&&allowed.has(descriptor.value))return descriptor.value;
+    }
+  } catch {}
+  return fallback;
+}
 export function supportObject(value: unknown, allowed?: readonly string[], error = 'support_input_invalid'): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value) || ![null, Object.prototype].includes(Object.getPrototypeOf(value))) throw new Error(error);
   const result: Record<string, unknown> = Object.create(null);
@@ -85,6 +94,7 @@ export function parseSupportServicePolicy(value: unknown): SupportServicePolicy 
     if (new Set(transitions.map(t => `${t.kind}:${t.from}:${t.to}`)).size !== transitions.length) throw new Error(ERROR);
     const fields = ['page', 'messages', 'privateItems', 'messageBytes', 'noteBytes', 'evidenceBytes', 'referenceBytes', 'rateWindowSeconds', 'memberMutations', 'ownerMutations'] as const;
     const supplied = supportObject(p.limits, fields, ERROR), limits = Object.fromEntries(fields.map(k => [k, positive(supplied[k], ['page', 'messages', 'privateItems'].includes(k) ? 100 : Number.MAX_SAFE_INTEGER)])) as unknown as SupportServicePolicy['limits'];
+    if(transitions.some(t=>t.evidenceTypes.length>limits.privateItems))throw new Error(ERROR);
     const privacy = supportObject(p.privacy, ['retentionSeconds', 'batch', 'requestStates', 'deleteAudit'], ERROR);
     if (typeof privacy.deleteAudit !== 'boolean') throw new Error(ERROR);
     return Object.freeze({ version: code(p.version), contract, initial: starts, transitions: Object.freeze(transitions), evidenceTypes,

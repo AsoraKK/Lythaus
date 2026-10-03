@@ -37,7 +37,7 @@ function runner(role,options={}) {
   return async work=>{
     const c=await connection(role);const query=c.query.bind(c);
     if(options.onClient)options.onClient(c);
-    if(options.afterOwnerLock||options.captureQuery)c.query=async(...args)=>{const result=await query(...args);if(options.captureQuery)options.captureQuery(args,result);if(options.afterOwnerLock&&typeof args[0]==='string'&&args[0].includes('SELECT support.lock_owner'))await options.afterOwnerLock(c);return result;};
+    if(options.afterOwnerLock||options.afterSubjectLock||options.afterCandidates||options.afterRetentionCandidates||options.captureQuery)c.query=async(...args)=>{const result=await query(...args);if(options.captureQuery)options.captureQuery(args,result);if(options.afterOwnerLock&&typeof args[0]==='string'&&args[0].includes('SELECT support.lock_owner'))await options.afterOwnerLock(c);if(options.afterSubjectLock&&typeof args[0]==='string'&&args[0]==='SELECT id FROM identity.users WHERE id=$1 FOR UPDATE')await options.afterSubjectLock(c);if(options.afterCandidates&&typeof args[0]==='string'&&args[0].includes('ORDER BY r.created_at DESC,r.id DESC LIMIT $6'))await options.afterCandidates(c);if(options.afterRetentionCandidates&&typeof args[0]==='string'&&args[0].startsWith('WITH next_subject'))await options.afterRetentionCandidates(c);return result;};
     try {await c.query('BEGIN');if(options.failOutbox)await c.query("SET LOCAL support_fixture.fail_outbox='on'");if(options.failCommit)await c.query("SET LOCAL support_fixture.fail_commit='on'");if(options.failAudit)await c.query("SET LOCAL support_fixture.fail_audit='on'");if(options.failScrub)await c.query("SET LOCAL support_fixture.fail_scrub='on'");
       const value=await work(c);await c.query('COMMIT');return value;
     } catch(error){await c.query('ROLLBACK').catch(()=>undefined);throw error;}finally{await c.end();}
@@ -283,7 +283,7 @@ test('retention uses supplied closed-age policy, retains open/held records and i
   assert.equal(await runner('lythaus_privacy')(c=>loadSupportNotificationCandidate(c,intent,policy())),null);
   for(const requestId of [ticket,held])await control.query("UPDATE support.requests SET closed_at=now()-interval '2 hours' WHERE id=$1",[requestId]);
   await control.query('INSERT INTO privacy.legal_holds(id,subject_id,reason) VALUES($1,$2,\'synthetic hold\')',[uuidv7(),f.member]);
-  const heldRun=await runner('lythaus_privacy')(c=>retainSupportBatch(c,policy()));assert.equal(heldRun.scrubbedRecords,0);assert.equal(heldRun.heldRecords,2);
+  const heldRun=await runner('lythaus_privacy')(c=>retainSupportBatch(c,policy()));assert.equal(heldRun.scrubbedRecords,0);assert.equal(heldRun.heldRecords,0);
   await control.query('UPDATE privacy.legal_holds SET active=false WHERE subject_id=$1',[f.member]);
   assert.equal((await runner('lythaus_privacy')(c=>retainSupportBatch(c,policy()))).scrubbedRecords,2);
   assert.equal((await control.query('SELECT deleted_at FROM support.requests WHERE id=$1',[open])).rows[0].deleted_at,null);
@@ -319,6 +319,90 @@ test('a real scrub failure rolls back public/private content, replay markers, in
   assert.equal((await control.query("SELECT count(*)::int AS n FROM system.idempotency_keys WHERE response->>'requestId'=$1",[ticket])).rows[0].n,3);
   assert.equal((await control.query('SELECT count(*)::int AS n FROM support.operation_refs WHERE request_id=$1',[ticket])).rows[0].n,3);
   assert.equal((await runner('lythaus_privacy')(c=>purgeSupportForPrivacy(c,requestId,policy()))).scrubbedRecords,1);
+});
+test('privacy winning the subject lock completes while an owner replay waits without holding its idempotency row',async t=>{
+  const f=await fixture(t),ticket=(await f.submit()).request.id,request=await f.ownerRequest(),input={expectedRevision:1,message:'Synthetic prior committed reply.'};
+  await f.service('owner').ownerReply(request,'problem',ticket,input);
+  const requestId=await f.privacyRequest('delete'),locked=gate(),release=gate(),ownerStarted=gate();
+  const purge=runner('lythaus_privacy',{afterSubjectLock:async()=>{locked.resolve();await release.promise;}})(c=>purgeSupportForPrivacy(c,requestId,policy()));
+  try{
+    await locked.promise;const replay=f.service('owner',{onClient:c=>ownerStarted.resolve(c.processID)}).ownerReply(request,'problem',ticket,input);
+    const denied=rejected(()=>replay,'support_not_found');await blocked(await ownerStarted.promise);release.resolve();
+    assert.deepEqual(await purge,{scrubbedRecords:1,hasMore:false});await denied;
+  }finally{release.resolve();await purge.catch(()=>undefined);}
+});
+test('targeted scrub checks provenance before following forged references into unrelated system records',async t=>{
+  const f=await fixture(t),ticket=(await f.submit()).request.id,peer=(await f.submit(problem(),uuidv7(),f.other)).request.id;
+  const peerIntent=(await control.query('SELECT id FROM system.outbox_events WHERE aggregate_id=$1',[peer])).rows[0].id;
+  const peerMarker=(await control.query("SELECT scope,key FROM system.idempotency_keys WHERE response->>'requestId'=$1",[peer])).rows[0];
+  const authScope='auth:synthetic-session',authKey=uuidv7(),auditId=uuidv7();
+  await control.query('INSERT INTO system.idempotency_keys(scope,key,actor_id,response) VALUES($1,$2,$3,$4::jsonb)',[authScope,authKey,f.other,JSON.stringify({accessToken:'PRIVATE_SENTINEL'})]);
+  await control.query("INSERT INTO system.audit_events(id,action,correlation_id,metadata) VALUES($1,'support.fixture.unrelated',$1::uuid::text,$2::jsonb)",[auditId,JSON.stringify({requestId:peer})]);
+  const admin=await connection('lythaus_admin');try{
+    await admin.query('INSERT INTO support.operation_refs(audit_id,request_id,outbox_id,idempotency_scope,idempotency_key) VALUES($1,$2,$3,$4,$5)',[auditId,ticket,peerIntent,authScope,authKey]);
+    await admin.query('INSERT INTO support.operation_refs(audit_id,request_id,idempotency_scope,idempotency_key) VALUES($1,$2,$3,$4)',[uuidv7(),ticket,peerMarker.scope,peerMarker.key]);
+  }finally{await admin.end();}
+  const requestId=await f.privacyRequest('delete');await runner('lythaus_privacy')(c=>purgeSupportForPrivacy(c,requestId,policy()));
+  for(const [sql,args] of [['SELECT 1 FROM system.outbox_events WHERE id=$1',[peerIntent]],['SELECT 1 FROM system.audit_events WHERE id=$1',[auditId]],['SELECT 1 FROM system.idempotency_keys WHERE scope=$1 AND key=$2',[authScope,authKey]],['SELECT 1 FROM system.idempotency_keys WHERE scope=$1 AND key=$2',[peerMarker.scope,peerMarker.key]]])assert.equal((await control.query(sql,args)).rowCount,1);
+});
+test('retention skips an older held subject and processes at most one unheld subject in each transaction',async t=>{
+  const f=await fixture(t),held=[];for(let i=0;i<4;i++)held.push((await f.submit()).request.id);
+  const eligible=(await f.submit(problem(),uuidv7(),f.other)).request.id;
+  await control.query("UPDATE support.requests SET closed_at=now()-interval '3 hours' WHERE id=ANY($1::uuid[])",[held]);
+  await control.query("UPDATE support.requests SET closed_at=now()-interval '2 hours' WHERE id=$1",[eligible]);
+  await control.query("INSERT INTO privacy.legal_holds(id,subject_id,reason) VALUES($1,$2,'synthetic old hold')",[uuidv7(),f.member]);
+  const lockSubjects=[];const result=await runner('lythaus_privacy',{captureQuery:(args)=>{if(args[0]==='SELECT id FROM identity.users WHERE id=$1 FOR UPDATE')lockSubjects.push(args[1][0]);}})(c=>retainSupportBatch(c,policy()));
+  assert.equal(result.scrubbedRecords,1);assert.deepEqual(lockSubjects,[f.other]);
+  assert.equal((await control.query('SELECT count(*)::int AS n FROM support.requests WHERE id=ANY($1::uuid[]) AND deleted_at IS NULL',[held])).rows[0].n,4);
+});
+test('retention rechecks a hold activated after candidate selection and reports only encountered held rows',async t=>{
+  const f=await fixture(t),ticket=(await f.submit()).request.id,hold=uuidv7(),selected=gate(),release=gate();
+  await control.query("UPDATE support.requests SET closed_at=now()-interval '2 hours' WHERE id=$1",[ticket]);
+  await control.query("INSERT INTO privacy.legal_holds(id,subject_id,reason,active) VALUES($1,$2,'synthetic inactive hold',false)",[hold,f.member]);
+  const retained=runner('lythaus_privacy',{afterRetentionCandidates:async()=>{selected.resolve();await release.promise;}})(c=>retainSupportBatch(c,policy()));
+  try{
+    await selected.promise;await control.query('UPDATE privacy.legal_holds SET active=true WHERE id=$1',[hold]);release.resolve();
+    assert.deepEqual(await retained,{scrubbedRecords:0,heldRecords:1});assert.equal((await control.query('SELECT deleted_at FROM support.requests WHERE id=$1',[ticket])).rows[0].deleted_at,null);
+  }finally{release.resolve();await retained.catch(()=>undefined);}
+});
+test('owner queue reloads bounded candidates after acquiring subject locks when purge commits first',async t=>{
+  const f=await fixture(t);await f.submit({...problem(),title:'PRIVATE_SENTINEL removed before queue commit'});
+  const candidates=gate(),release=gate(),queue=f.service('owner',{afterCandidates:async()=>{candidates.resolve();await release.promise;}}).ownerQueue(await f.ownerRequest(),'problem',{limit:3});
+  try{
+    await candidates.promise;const requestId=await f.privacyRequest('delete');await runner('lythaus_privacy')(c=>purgeSupportForPrivacy(c,requestId,policy()));
+    release.resolve();const result=await queue;assert.deepEqual(result.items,[]);assert.ok(!JSON.stringify(result).includes('PRIVATE_SENTINEL'));
+  }finally{release.resolve();await queue.catch(()=>undefined);}
+});
+test('continuation export waits behind purge and returns no body after purge commits first',async t=>{
+  const f=await fixture(t),ticket=(await f.submit()).request.id;
+  await f.service('member').memberReply(await f.memberRequest(),'problem',ticket,{expectedRevision:1,message:'PRIVATE_SENTINEL removed history'});
+  const exportId=await f.privacyRequest('export'),deleteId=await f.privacyRequest('delete'),locked=gate(),release=gate(),exportStarted=gate();
+  const purge=runner('lythaus_privacy',{afterSubjectLock:async()=>{locked.resolve();await release.promise;}})(c=>purgeSupportForPrivacy(c,deleteId,policy()));
+  try{
+    await locked.promise;const exported=runner('lythaus_privacy',{onClient:c=>exportStarted.resolve(c.processID)})(c=>exportSupportMessagesForPrivacy(c,exportId,ticket,policy(),1,2));
+    await blocked(await exportStarted.promise);release.resolve();await purge;const result=await exported;assert.deepEqual(result.items,[]);assert.ok(!JSON.stringify(result).includes('PRIVATE_SENTINEL'));
+  }finally{release.resolve();await purge.catch(()=>undefined);}
+});
+test('decision machine fields reject nested code before hashing and replay markers must match the requested target',async t=>{
+  const f=await fixture(t),ticket=(await f.submit()).request.id,other=(await f.submit()).request.id;let invoked=false;
+  const nested={get toJSON(){invoked=true;throw new Error('PRIVATE_SENTINEL');}};
+  for(const field of ['state','reason'])await rejected(async()=>f.service('owner').ownerDecision(await f.ownerRequest(),'problem',ticket,{expectedRevision:1,state:'resolved',reason:'verified',memberMessage:'Synthetic explanation',evidenceIds:[],[field]:nested}),'support_input_invalid');
+  assert.equal(invoked,false);
+  const request=await f.ownerRequest(),input={expectedRevision:1,message:'Synthetic target-bound reply'};await f.service('owner').ownerReply(request,'problem',ticket,input);
+  await control.query("UPDATE system.idempotency_keys SET response=jsonb_set(response,'{requestId}',to_jsonb($1::text)) WHERE actor_id=$2 AND key=$3",[other,f.owner,request.headers.get('idempotency-key')]);
+  await rejected(()=>f.service('owner').ownerReply(request,'problem',ticket,input),'support_idempotency_conflict');
+});
+test('hostile Error reflection is never invoked by service or privacy error normalization',async t=>{
+  const f=await fixture(t),ticket=(await f.submit()).request.id;let invoked=false;
+  const hostile=new Error();Object.defineProperty(hostile,'message',{get(){invoked=true;throw new Error('PRIVATE_SENTINEL');}});
+  const body=new Proxy({}, {getPrototypeOf(){throw hostile;}});
+  await rejected(async()=>f.service('owner').ownerNote(await f.ownerRequest(),'problem',ticket,body),'support_unavailable');
+  const requestId=await f.privacyRequest('export');
+  await rejected(()=>runner('lythaus_privacy')(async c=>{
+    const query=c.query.bind(c);c.query=(...args)=>{if(typeof args[0]==='string'&&args[0].includes('FROM support.messages'))throw hostile;return query(...args);};
+    return exportSupportMessagesForPrivacy(c,requestId,ticket,policy(),1,2);
+  }),'support_privacy_unavailable');
+  assert.equal(invoked,false);
 });
 test('delayed notification eligibility rejects inactive, pending-deletion and malformed intents without sending',async t=>{
   const f=await fixture(t),ticket=(await f.submit()).request.id;
@@ -363,4 +447,5 @@ test('supplied policy is strict, immutable and has no default business/award con
   assert.equal(parsed.limits.page,3);assert.equal(parsed.transitions[0].to,'investigating');assert.ok(Object.isFrozen(parsed.transitions[0].evidenceTypes));
   for(const value of [undefined,{}, {...policy(),awardPoints:150}, {...policy(),limits:{...policy().limits,page:101}}, {...policy(),privacy:{...policy().privacy,retentionSeconds:0}}])assert.throws(()=>parseSupportServicePolicy(value),e=>e.message==='support_policy_invalid');
   const accessor=policy();Object.defineProperty(accessor,'transitions',{enumerable:true,get(){throw new Error('PRIVATE_SENTINEL');}});assert.throws(()=>parseSupportServicePolicy(accessor),e=>e.message==='support_policy_invalid');
+  const impossible=policy();impossible.limits.privateItems=1;impossible.transitions[1].evidenceTypes=['verification','usefulness'];assert.throws(()=>parseSupportServicePolicy(impossible),e=>e.message==='support_policy_invalid');
 });

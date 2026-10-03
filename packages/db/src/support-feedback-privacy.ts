@@ -1,10 +1,11 @@
 import type { DatabaseClient } from './index.ts';
 import { supportUuid } from '../../contracts/src/account-support.ts';
 import { projectMemberSupportRequest } from '../../contracts/src/support-feedback.ts';
-import { parseSupportServicePolicy, supportObject } from './support-feedback-policy.ts';
+import { parseSupportServicePolicy, supportFailureCode, supportObject } from './support-feedback-policy.ts';
 import { supportEventProjection } from './support-feedback.ts';
 
 const TIME = (column: string) => `to_char(${column} AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`;
+const ERRORS=new Set(['support_privacy_invalid','support_privacy_held','support_policy_invalid','support_policy_version_mismatch','support_feedback_record_invalid']);
 function uuid(value: unknown): string { if (!supportUuid(value)) throw new Error('support_privacy_invalid'); return value.toLowerCase(); }
 async function privacySubject(client: DatabaseClient, requestId: unknown, requestType: 'export'|'delete', states: readonly string[]): Promise<string> {
   const request = await client.query('SELECT subject_id FROM privacy.requests WHERE id=$1 AND request_type=$2 AND state=ANY($3::text[]) FOR SHARE', [uuid(requestId),requestType,states]);
@@ -24,11 +25,12 @@ async function scrub(client: DatabaseClient, ids: readonly string[], deleteAudit
   await client.query('DELETE FROM support.decisions WHERE request_id=ANY($1::uuid[])',[ids]);
   await client.query('DELETE FROM support.evidence WHERE request_id=ANY($1::uuid[])',[ids]);
   await client.query(`DELETE FROM system.outbox_events e USING support.operation_refs r
-    WHERE r.request_id=ANY($1::uuid[]) AND e.id=r.outbox_id AND e.event_type='support.workflow.changed'`,[ids]);
+    WHERE r.request_id=ANY($1::uuid[]) AND e.id=r.outbox_id AND e.event_type='support.workflow.changed' AND e.aggregate_id=r.request_id`,[ids]);
   await client.query(`DELETE FROM system.idempotency_keys k USING support.operation_refs r
-    WHERE r.request_id=ANY($1::uuid[]) AND k.scope=r.idempotency_scope AND k.key=r.idempotency_key`,[ids]);
+    WHERE r.request_id=ANY($1::uuid[]) AND k.scope=r.idempotency_scope AND k.key=r.idempotency_key
+      AND k.scope LIKE 'support:%' AND k.response->>'requestId'=r.request_id::text`,[ids]);
   if (deleteAudit) await client.query(`DELETE FROM system.audit_events e USING support.operation_refs r
-    WHERE r.request_id=ANY($1::uuid[]) AND e.id=r.audit_id AND e.action LIKE 'support.%'`,[ids]);
+    WHERE r.request_id=ANY($1::uuid[]) AND e.id=r.audit_id AND e.action LIKE 'support.%' AND e.metadata->>'requestId'=r.request_id::text`,[ids]);
   await client.query('DELETE FROM support.operation_refs WHERE request_id=ANY($1::uuid[])',[ids]);
   const result = await client.query(`UPDATE support.requests SET deleted_at=clock_timestamp(),submission=NULL,member_message=NULL,revision=revision+1,public_revision=revision+1,updated_at=clock_timestamp()
     WHERE id=ANY($1::uuid[]) AND deleted_at IS NULL RETURNING id`,[ids]);
@@ -44,18 +46,26 @@ async function purgeSupport(client: DatabaseClient, requestId: unknown, supplied
 }
 async function retainSupport(client: DatabaseClient, suppliedPolicy: unknown) {
   const p=parseSupportServicePolicy(suppliedPolicy);
-  const candidates=await client.query(`SELECT id,submitter_id FROM support.requests WHERE deleted_at IS NULL AND closed_at IS NOT NULL
-    AND closed_at < clock_timestamp()-$1*interval '1 second' ORDER BY closed_at,id LIMIT $2`,[p.privacy.retentionSeconds,p.privacy.batch]);
-  let scrubbedRecords=0,heldRecords=0;
+  const candidates=await client.query(`WITH next_subject AS (
+    SELECT r.submitter_id FROM support.requests r WHERE r.deleted_at IS NULL AND r.closed_at IS NOT NULL
+      AND r.closed_at < CURRENT_TIMESTAMP-$1*interval '1 second'
+      AND NOT EXISTS(SELECT 1 FROM privacy.legal_holds h WHERE h.subject_id=r.submitter_id AND h.active)
+    ORDER BY r.closed_at,r.id LIMIT 1)
+    SELECT r.id,r.submitter_id FROM support.requests r JOIN next_subject s ON s.submitter_id=r.submitter_id
+    WHERE r.deleted_at IS NULL AND r.closed_at IS NOT NULL AND r.closed_at < CURRENT_TIMESTAMP-$1*interval '1 second'
+    ORDER BY r.closed_at,r.id LIMIT $2`,[p.privacy.retentionSeconds,p.privacy.batch]);
+  let scrubbedRecords=0;
+  if(!candidates.rows.length)return Object.freeze({scrubbedRecords:0,heldRecords:0});
+  try {await lockSubject(client,candidates.rows[0].submitter_id);} catch(error) {
+    const code=supportFailureCode(error,ERRORS,'support_privacy_unavailable');
+    if(code==='support_privacy_held')return Object.freeze({scrubbedRecords:0,heldRecords:candidates.rows.length});throw new Error(code);
+  }
   for (const candidate of candidates.rows) {
-    try {await lockSubject(client,candidate.submitter_id);} catch(error) {
-      if(error instanceof Error&&error.message==='support_privacy_held'){heldRecords+=1;continue;} throw error;
-    }
     const current=await client.query(`SELECT id FROM support.requests WHERE id=$1 AND deleted_at IS NULL AND closed_at IS NOT NULL
-      AND closed_at < clock_timestamp()-$2*interval '1 second' FOR UPDATE`,[candidate.id,p.privacy.retentionSeconds]);
+      AND closed_at < CURRENT_TIMESTAMP-$2*interval '1 second' FOR UPDATE`,[candidate.id,p.privacy.retentionSeconds]);
     if(current.rows[0])scrubbedRecords+=await scrub(client,[candidate.id],p.privacy.deleteAudit);
   }
-  return Object.freeze({scrubbedRecords,heldRecords});
+  return Object.freeze({scrubbedRecords,heldRecords:0});
 }
 async function exportSupport(client: DatabaseClient, requestId: unknown, suppliedPolicy: unknown, afterId: unknown = null) {
   const p=parseSupportServicePolicy(suppliedPolicy),subject=await privacySubject(client,requestId,'export',p.privacy.requestStates);
@@ -89,8 +99,7 @@ async function notificationCandidate(client: DatabaseClient, eventId: unknown, s
 }
 async function privacyGuard<T>(work: () => Promise<T>): Promise<T> {
   try {return await work();} catch(error) {
-    const allowed=['support_privacy_invalid','support_privacy_held','support_policy_invalid','support_policy_version_mismatch','support_feedback_record_invalid'];
-    throw new Error(error instanceof Error&&allowed.includes(error.message)?error.message:'support_privacy_unavailable');
+    throw new Error(supportFailureCode(error,ERRORS,'support_privacy_unavailable'));
   }
 }
 export const purgeSupportForPrivacy = (client:DatabaseClient,requestId:unknown,policy:unknown) => privacyGuard(()=>purgeSupport(client,requestId,policy));
@@ -100,6 +109,7 @@ export const loadSupportNotificationCandidate = (client:DatabaseClient,eventId:u
 export function exportSupportMessagesForPrivacy(client:DatabaseClient,requestId:unknown,ticketId:unknown,policy:unknown,afterRevision:unknown,throughRevision:unknown) {
   return privacyGuard(async()=>{
     const p=parseSupportServicePolicy(policy),subject=await privacySubject(client,requestId,'export',p.privacy.requestStates);
+    await client.query('SELECT id FROM identity.users WHERE id=$1 FOR SHARE',[subject]);
     if(typeof afterRevision!=='number'||!Number.isSafeInteger(afterRevision)||afterRevision<1||typeof throughRevision!=='number'||!Number.isSafeInteger(throughRevision)||throughRevision<afterRevision)throw new Error('support_privacy_invalid');
     const rows=await client.query(`SELECT m.id,m.author_role,m.body,m.revision,${TIME('m.created_at')} AS "createdAt"
       FROM support.messages m JOIN support.requests r ON r.id=m.request_id WHERE r.id=$1 AND r.submitter_id=$2 AND r.deleted_at IS NULL
