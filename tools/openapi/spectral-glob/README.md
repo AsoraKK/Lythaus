@@ -5,6 +5,10 @@ with `absolute` and `dot` enabled. This private compatibility package forwards
 that call to the repository's maintained `glob` dependency. It is not a general
 replacement for the full fast-glob API.
 
+The adapter uses the root's already declared and locked `glob` dependency.
+It does not maintain a separate dependency
+graph or install a second glob version.
+
 The override removes the Spectral → fast-glob → micromatch → braces chain.
 [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)
 lists every published braces version as affected and has no patched version.
