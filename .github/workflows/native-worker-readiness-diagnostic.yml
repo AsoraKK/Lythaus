@@ -1,0 +1,114 @@
+name: Read-only Worker readiness diagnostic
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact reviewed main ancestor used by both existing Worker versions
+        required: true
+        type: string
+      public_worker_version:
+        description: Existing Public version UUID; no upload or staging is performed
+        required: true
+        type: string
+      admin_worker_version:
+        description: Existing Admin version UUID; no upload or staging is performed
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lythaus-read-only-worker-readiness-diagnostic
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    name: Probe existing protected Worker versions
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 5
+    env:
+      RELEASE_SHA: ${{ inputs.source_sha }}
+      EXPECTED_WORKER_SOURCE_SHA: ${{ inputs.source_sha }}
+      PUBLIC_WORKER_VERSION_ID: ${{ inputs.public_worker_version }}
+      ADMIN_WORKER_VERSION_ID: ${{ inputs.admin_worker_version }}
+      EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
+      EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
+      EXPECTED_DATABASE_SCHEMA_VERSION: 0020_auth_recovery_delivery.sql
+      EXPECTED_DATABASE_TARGET: main
+      EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
+      REQUIRE_BUDGET_MIGRATION: 'true'
+      AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
+      PRODUCTION_PUBLIC_API_BASE_URL: https://api.lythaus.co
+      PRODUCTION_ADMIN_API_BASE_URL: https://admin-api.lythaus.co
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Require protected main and reviewed source ancestry
+        env:
+          REF_PROTECTED: ${{ github.ref_protected }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$REF_PROTECTED" = true
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$PUBLIC_WORKER_VERSION_ID" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]]
+          [[ "$ADMIN_WORKER_VERSION_ID" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]]
+          git merge-base --is-ancestor "$RELEASE_SHA" HEAD
+          mkdir -p .artifacts/worker-readiness-diagnostic
+      - name: Verify existing Hyperdrive targets read-only before runtime probes
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_AUDIT_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+          PSCALE_BRANCH_NAME: main
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ci/verify-cloudflare-hyperdrive-targets.mjs > .artifacts/worker-readiness-diagnostic/hyperdrive-targets.json
+          echo 'HYPERDRIVE_VERIFIED_MAIN=true' >> "$GITHUB_ENV"
+      - name: Probe existing Public version without identity writes
+        id: public_probe
+        continue-on-error: true
+        env:
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          PRODUCTION_WORKER_SCOPE: lythaus-public-api-development
+          PRODUCTION_WORKER_VERSION_ID: ${{ inputs.public_worker_version }}
+          PRODUCTION_WORKER_EVIDENCE_PATH: .artifacts/worker-readiness-diagnostic/public.json
+        run: node scripts/ci/probe-production-workers.mjs
+      - name: Probe existing Admin and its private Public binding without identity writes
+        id: admin_probe
+        continue-on-error: true
+        env:
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          PRODUCTION_WORKER_SCOPE: lythaus-admin-api-development
+          PRODUCTION_WORKER_VERSION_ID: ${{ inputs.admin_worker_version }}
+          PRODUCTION_WORKER_EVIDENCE_PATH: .artifacts/worker-readiness-diagnostic/admin.json
+        run: node scripts/ci/probe-production-workers.mjs
+      - name: Preserve sanitized diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: worker-readiness-diagnostic-${{ github.run_id }}
+          path: .artifacts/worker-readiness-diagnostic/
+          if-no-files-found: error
+      - name: Preserve diagnostic failures and uncertified authentication
+        if: always()
+        env:
+          PUBLIC_PROBE_OUTCOME: ${{ steps.public_probe.outcome }}
+          ADMIN_PROBE_OUTCOME: ${{ steps.admin_probe.outcome }}
+        run: |
+          echo 'Read-only structural diagnostics only. Authentication remains UNCERTIFIED / OWNER_TEST_PENDING / NO-GO.' >> "$GITHUB_STEP_SUMMARY"
+          test "$PUBLIC_PROBE_OUTCOME" = success && test "$ADMIN_PROBE_OUTCOME" = success
