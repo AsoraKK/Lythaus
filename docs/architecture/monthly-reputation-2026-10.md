@@ -109,11 +109,11 @@ effective months; separately approved migration, exact-SHA deployment and activa
 | --- | --- | --- |
 | T01 Reconcile | Source/consumer map, this decision record, historical cutover plan | Inventory complete; cutover pending D13 |
 | T02 Canonical policy | Validated catalogue, cap groups, pure best-four/bands, candidate calendar, approved decision configuration | All 22 action calculations represented; weekly and maintenance candidate rules tested; operational approvals remain pending |
-| T03 Persistence | Canonical events/outbox, immutable period revisions, assurance proofs, ballot uniqueness, selections/claims | Immutable period revisions, canonical proofs, assemblies, fixed snapshots/corrections, selections and private partner consent tested; claims and migration pending |
+| T03 Persistence | Canonical events/outbox, immutable period revisions, assurance proofs, ballot uniqueness, selections/claims | Immutable period revisions, canonical proofs, assemblies, snapshots/corrections, selections, private consent and synthetic QR/invoice fulfilment tested; live routes, providers and migration pending |
 | T04 Earning | Real post/discussion/specialist/reception/authorship events and dependency reversals | Canonical post/comment producers, scoped contextual acceptance and final peer-ballot consumer tested with weekly caps and immutable corrections; specialist/reception producers and product forms remain |
 | T05 Security | Reuse normal validated auth events; capability-aware integrity, credential continuity, Turnstile/refresher | Actual email verification feeds bound evidence, including scoring pauses; full-month coverage/assessment calculations tested; other real providers, renewal workflow and D07/D08 activation remain gated |
 | T06 Peer review | Private timed electorate, equal ballots/history, close transaction, scoped override, restricted route | Public/admin routes, ballots/closure, scoped restoration, equal participation earning and private notices tested; specialist/unresolved execution, D09/D10/D11/D13 activation and Flutter remain |
-| T07 Rewards/partners | Persistent Free/Premium/Black selections, proposals, consent/email linkage, QR/invoice idempotency | Current-month selections, private consent and scoped eligibility tested; signed synthetic fixtures only; proposals/claims, approved live terms and product wiring remain |
+| T07 Rewards/partners | Persistent Free/Premium/Black selections, proposals, consent/email linkage, QR/invoice idempotency | Current-month selections, private consent, scoped eligibility and transactional synthetic QR/invoice fulfilment tested; merchant API, external evidence, live terms and product wiring remain |
 | T08 Flutter | Existing Rewards tabs, profile tracker, real contribution/review forms, complete states | Depends on authoritative API slices; no parallel route |
 | T09 Reporting/privacy | Stored-calculation parity, full own report, public methodology, safe JSON/CSV, DSR/retention | Full report needs preceding evidence records and report/API/DSR integration |
 | T10 Release | Shadow run, fairness/load/failure testing, approved cutover, exact-SHA release and rollback | No release or activation authorization |
@@ -225,6 +225,45 @@ without deadlock and expiry after the preliminary check. Subject erasure removes
 consumed invitations and unused invitations matching the current credential.
 Historical-email locators, export, retention, alternate merchant-email proof,
 merchant JWT/POST wiring and complete DSR remain required before collection.
+
+## Gated claim transactions
+
+`monthly_reward_claims.sql` adds only an unseeded proposal. Claim rules require an
+explicit approved synthetic adapter, collection privacy reference, approved partner
+rules and signed usage terms. No default five-minute policy, merchant, inventory or
+provider is created.
+
+QR issuance uses one-time opaque random tokens, an encrypted replay copy and a
+keyed token fingerprint. Online fulfilment rechecks account, email, plan, consent,
+recovery generation, offer and confirmed fixed-month snapshot behind ordered
+member/period locks. It records immutable fulfilment and command-source receipts,
+enforces configured entitlement-month usage, then locks inventory. Expiry, current
+UTC month and offer validity are rechecked after inventory waits. Stock decrements
+only after successful fulfilment insertion, so a conflict-skipping duplicate does
+not spend a unit.
+
+Recurring invoice evidence can be inserted only by Jobs, against a live canonical
+identity, linked consent and approved synthetic configuration. The fixture contract
+pins a UTC renewal month. Natural idempotency binds partner, customer, reward family
+and keyed invoice period. Replays preserve the first fulfilment and benefit record;
+QR and invoice claims share a usage cap. External payment evidence, approved live
+commercial terms and retries across the merchant API remain separate gates.
+
+Claims add no points and do not change a monthly snapshot. Fulfilment, stock debit,
+command receipt and outbox notice commit together. Subject erasure checks the
+persisted partner lifecycle marker, deletes private claim data while paused, and
+leaves other members' inventory unchanged. This does not complete DSR, export or
+retention integration.
+
+The combined disposable PostgreSQL 17 selection/partner/claim suite verifies 53
+cases with zero skips: 16 selection, 18 partner-link and 19 claim cases. Coverage
+is 100%/99.05% for selections, 97.98%/86.81% for partner links and 100%/91.53%
+for claims (line/branch). It includes a real two-member shared invoice-period
+collision, rejection of revoked/superseded/recovery-invalid consent before Jobs
+accepts invoice evidence, retry/stock/outbox rollback and deletion races. Native
+typecheck passes. Two bounded read-only reviewers found no remaining P1/P2 in the
+claim source/digest and invoice-consent guards; they did not rerun the tests.
+These are disabled/synthetic fixture transactions, not a live merchant workflow.
 
 The monthly source writer accepts settled aggregate evidence from a trusted internal
 caller. Scheduled monthly assembly joins settled weekly results and maintenance/email

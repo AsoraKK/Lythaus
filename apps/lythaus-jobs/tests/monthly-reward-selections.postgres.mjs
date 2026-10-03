@@ -13,6 +13,7 @@ import { assessMonthlyReputationSource } from '../../../packages/db/src/monthly-
 import { publishMonthlyRewardSnapshot,approveMonthlyRewardSnapshotCorrection,applyMonthlyRewardSnapshotCorrection } from '../../../packages/db/src/monthly-reward-snapshots.ts';
 import { selectMonthlyReward,readOwnMonthlyRewardSelections,MONTHLY_REWARD_SELECTION_FLAG as flag } from '../../../packages/db/src/monthly-reward-selections.ts';
 import { registerPartnerLinkCases,cleanupPartnerLinkCases } from './monthly-reward-partner-links.cases.mjs';
+import { registerRewardClaimCases,cleanupRewardClaimCases } from './monthly-reward-claims.cases.mjs';
 
 const connectionString=process.env.PLANETSCALE_PG17_TEST_DATABASE_URL,target=new URL(connectionString??'file:///missing');
 if(!['127.0.0.1','localhost'].includes(target.hostname)
@@ -91,7 +92,7 @@ before(async()=>{
   for(const role of ['lythaus_runtime','lythaus_admin'])
     if(!(await sql('SELECT has_table_privilege($1,$2,$3) AS allowed',[role,'system.feature_flags','SELECT'])).rows[0].allowed)
       grants.push(`REVOKE SELECT ON system.feature_flags FROM ${role}`);
-  for(const proposal of ['monthly_reputation_shadow','monthly_reputation_earning','monthly_reputation_maintenance','monthly_reward_snapshots','monthly_reward_selections','monthly_reward_partner_links'])
+  for(const proposal of ['monthly_reputation_shadow','monthly_reputation_earning','monthly_reputation_maintenance','monthly_reward_snapshots','monthly_reward_selections','monthly_reward_partner_links','monthly_reward_claims'])
     await sql(readFileSync(new URL(`../../../database/planetscale/proposals/${proposal}.sql`,import.meta.url),'utf8'));
   reviewer=await person();
   await sql("INSERT INTO identity.admin_memberships (user_id,role,active,access_subject_hmac) VALUES ($1,'moderator',true,$2)",[reviewer,randomBytes(32)]);
@@ -114,6 +115,7 @@ before(async()=>{
   for(let level=1;level<=5;level++)variants.push(await offer(level));
 });
 after(async()=>{
+  await cleanupRewardClaimCases({sql});
   await cleanupPartnerLinkCases({sql});
   await sql('DROP TRIGGER IF EXISTS fail_selection_fixture ON system.outbox_events');await sql('DROP FUNCTION IF EXISTS system.fail_selection_fixture()');
   await sql('DROP TRIGGER monthly_reputation_reward_selection_subject_erasure ON identity.users');
@@ -143,6 +145,13 @@ after(async()=>{
   await sql('DELETE FROM identity.users WHERE id=ANY($1::uuid[])',[subjects]);
 });
 
+test('RPT-04/REL-03: installed claim proposal accesses no claim tables during deletion without its lifecycle marker',async()=>{
+  const member=await person();
+  await sql('ALTER TABLE trust.monthly_reward_fulfilments RENAME TO synthetic_dormant_fulfilments');
+  try{await sql("UPDATE identity.users SET status='deleted',deleted_at=now() WHERE id=$1",[member]);}
+  finally{await sql('ALTER TABLE trust.synthetic_dormant_fulfilments RENAME TO monthly_reward_fulfilments');}
+  assert.equal((await sql('SELECT status FROM identity.users WHERE id=$1',[member])).rows[0].status,'deleted');
+});
 test('PAR-10/REL-03: selection is dormant without explicit approved configuration and privacy prerequisite',async()=>{
   statements.length=0;assert.equal((await select(free,variants[0],0,{rulesVersion:undefined})).state,'unavailable');
   assert.equal((await read(free,null)).state,'unavailable');assert.equal(statements.length,0);
@@ -322,4 +331,6 @@ test('RPT-04/REL-02: deleting a selected member erases selections and notices be
   await assert.rejects(select(member,variants[0]),/member_unavailable/);
 });
 
-registerPartnerLinkCases({tx,sql,person,snapshot,select,offer,reviewer:()=>reviewer,selectionRules:rulesVersion,policy});
+const fixture={tx,sql,person,snapshot,select,offer,reviewer:()=>reviewer,selectionRules:rulesVersion,policy};
+const partnerFixture=registerPartnerLinkCases(fixture);
+registerRewardClaimCases({...fixture,...partnerFixture});

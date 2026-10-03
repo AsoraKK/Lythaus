@@ -267,6 +267,7 @@ export function registerPartnerLinkCases(f){
     assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_recovery_generations WHERE subject_user_id=$1',[member])).rowCount,0);
     await sql('DELETE FROM identity.account_events WHERE user_id=$1',[member]);
   });
+  return {keys,partnerRules:version};
 }
 
 export async function cleanupPartnerLinkCases({sql}){
