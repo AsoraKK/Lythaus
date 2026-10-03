@@ -10,12 +10,14 @@ const version = '11111111-1111-4111-8111-111111111111';
 const publicVersion = '22222222-2222-4222-8222-222222222222';
 const wrongVersion = '33333333-3333-4333-8333-333333333333';
 const previousVersion = '44444444-4444-4444-8444-444444444444';
+const previousPublicVersion = '55555555-5555-4555-8555-555555555555';
+const wrongPreviousPublicVersion = '66666666-6666-4666-8666-666666666666';
 const releaseSha = 'a'.repeat(40);
 const previousSha = 'c'.repeat(40);
 const fingerprint = 'd60ce56eda3165e4c21e880e594700b92425b75b0e6eec963caf75fc72d8c1e0';
 const credentials = ['fixture-readiness-secret', 'fixture-access-id', 'fixture-access-secret'];
 
-function runProbe(t, scenario, worker = 'lythaus-admin-api-development', previousState = false) {
+function runProbe(t, scenario, worker = 'lythaus-admin-api-development', previousState = false, ownerTestingDeployment = false, ownerTestingCandidate = ownerTestingDeployment) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lythaus-worker-probe-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const output = path.join(directory, 'probe.json');
@@ -23,6 +25,8 @@ function runProbe(t, scenario, worker = 'lythaus-admin-api-development', previou
   const delays = path.join(directory, 'delays.json');
   const previousDeployment = path.join(directory, 'previous-deployment.json');
   const previousVersions = path.join(directory, 'previous-versions.json');
+  const previousPublicDeployment = path.join(directory, 'previous-public-deployment.json');
+  const previousPublicVersions = path.join(directory, 'previous-public-versions.json');
   if (previousState) {
     fs.writeFileSync(previousDeployment, JSON.stringify({ versions: [
       { version_id: previousVersion, percentage: 100 },
@@ -30,6 +34,14 @@ function runProbe(t, scenario, worker = 'lythaus-admin-api-development', previou
     ] }));
     fs.writeFileSync(previousVersions, JSON.stringify([previousVersion, wrongVersion].map((id) => ({
       id, annotations: previousState === 'missing-provenance' ? {} : { 'workers/tag': previousSha },
+      metadata: { created_on: '2026-10-01T12:00:00Z' },
+    }))));
+    fs.writeFileSync(previousPublicDeployment, JSON.stringify({ versions: [
+      { version_id: previousPublicVersion, percentage: 100 },
+      { version_id: wrongPreviousPublicVersion, percentage: 0 },
+    ] }));
+    fs.writeFileSync(previousPublicVersions, JSON.stringify([previousPublicVersion, wrongPreviousPublicVersion].map((id) => ({
+      id, annotations: { 'workers/tag': previousSha },
       metadata: { created_on: '2026-10-01T12:00:00Z' },
     }))));
   }
@@ -67,18 +79,21 @@ function runProbe(t, scenario, worker = 'lythaus-admin-api-development', previou
         secret: process.env.DATABASE_READINESS_TOKEN, mailbox: 'fixture@example.invalid',
       };
       const priorResponse = scenario.startsWith('previous-')
-        && !(scenario === 'previous-then-matching' && readinessAttempts > 2)
+        && !(['previous-then-matching', 'previous-then-matching-public-candidate'].includes(scenario) && readinessAttempts > 2)
         && !(scenario === 'previous-at-bound' && readinessAttempts > 4)
         && !(scenario === 'previous-then-unauthorized' && readinessAttempts > 1)
         && !(scenario === 'previous-then-unknown' && readinessAttempts > 1);
       if (priorResponse) {
         body.workerVersionId = '${previousVersion}';
         body.releaseTag = '${previousSha}';
+        body.emailBinding.publicWorkerVersion = scenario === 'previous-then-matching-public-candidate'
+          ? '${publicVersion}' : '${previousPublicVersion}';
+        if (process.env.OWNER_TESTING_CANDIDATE === 'true') body.readyForAuthentication = true;
       }
       if (scenario === 'previous-wrong-tag') body.releaseTag = 'b'.repeat(40);
       if (scenario === 'previous-zero-traffic' || (scenario === 'previous-then-unknown' && readinessAttempts > 1)) body.workerVersionId = '${wrongVersion}';
       if (scenario === 'previous-schema') body.relationCount = 102;
-      if (scenario === 'previous-wrong-public') body.emailBinding.publicWorkerVersion = '${wrongVersion}';
+      if (scenario === 'previous-wrong-public') body.emailBinding.publicWorkerVersion = '${wrongPreviousPublicVersion}';
       if (scenario === 'previous-unverified-public') body.emailBinding.bindingVerified = false;
       if (scenario === 'previous-missing-public') delete body.emailBinding;
       if (scenario === 'previous-wrong-service') body.service = 'lythaus-public-api';
@@ -94,6 +109,23 @@ function runProbe(t, scenario, worker = 'lythaus-admin-api-development', previou
         body.workerVersionId = process.env.CF_ACCESS_CLIENT_SECRET;
         body.releaseTag = process.env.DATABASE_READINESS_TOKEN;
         body.emailBinding.publicWorkerVersion = process.env.CF_ACCESS_CLIENT_ID;
+      }
+      if (scenario === 'owner-testing-top-level-true' || scenario === 'normal-mode-auth-ready') {
+        body.readyForAuthentication = true;
+      }
+      if (scenario === 'previous-owner-testing-nested-true') {
+        body.readyForAuthentication = true;
+      }
+      if (new URL(url).hostname === 'admin-api.lythaus.co' && body.service === 'lythaus-admin-api') {
+        const report = Object.fromEntries([
+          'databaseEnvironment', 'branchFingerprint', 'schemaFingerprint', 'relationCount',
+          'identityContactEmails', 'budgetLedgerApplied', 'schemaVersion', 'roleClass',
+          'readiness', 'readyForAuthentication',
+        ].map((field) => [field, body[field]]));
+        body.databases = { admin: { ...report }, privacy: { ...report } };
+        if (scenario === 'owner-testing-nested-true' || scenario === 'previous-owner-testing-nested-true') {
+          body.databases.privacy.readyForAuthentication = true;
+        }
       }
       if (scenario.startsWith('unavailable-') && scenario !== 'unavailable-exact-identity') {
         body.error = scenario === 'unavailable-binding' ? 'auth_email_dispatch_unavailable'
@@ -123,12 +155,16 @@ function runProbe(t, scenario, worker = 'lythaus-admin-api-development', previou
       EXPECTED_DATABASE_SCHEMA_FINGERPRINT: fingerprint, EXPECTED_DATABASE_RELATION_COUNT: '103',
       EXPECTED_DATABASE_SCHEMA_VERSION: '0020_auth_recovery_delivery.sql',
       REQUIRE_BUDGET_MIGRATION: 'true', HYPERDRIVE_VERIFIED_MAIN: 'true', AUTHENTICATED_ACCEPTANCE_PROVEN: 'false',
+      OWNER_TESTING_DEPLOYMENT: ownerTestingDeployment ? 'true' : 'false',
+      OWNER_TESTING_CANDIDATE: ownerTestingCandidate ? 'true' : 'false',
       PRODUCTION_WORKER_SCOPE: worker, PRODUCTION_WORKER_VERSION_ID: version, PUBLIC_WORKER_VERSION_ID: publicVersion,
       PRODUCTION_PUBLIC_API_BASE_URL: 'https://api.lythaus.co', PRODUCTION_ADMIN_API_BASE_URL: 'https://admin-api.lythaus.co',
       PRODUCTION_WORKER_EVIDENCE_PATH: output, PROBE_FIXTURE_REQUESTS: requests, PROBE_FIXTURE_SCENARIO: scenario,
       PROBE_FIXTURE_DELAYS: delays,
       PRODUCTION_WORKER_PREVIOUS_DEPLOYMENT_PATH: previousState ? previousDeployment : undefined,
       PRODUCTION_WORKER_PREVIOUS_VERSIONS_PATH: previousState ? previousVersions : undefined,
+      PRODUCTION_WORKER_PREVIOUS_PUBLIC_DEPLOYMENT_PATH: previousState ? previousPublicDeployment : undefined,
+      PRODUCTION_WORKER_PREVIOUS_PUBLIC_VERSIONS_PATH: previousState ? previousPublicVersions : undefined,
     },
     encoding: 'utf8',
   });
@@ -162,6 +198,44 @@ test('matching Admin identity preserves sanitized observations and both exact ov
     assert.equal(request.headers['cf-access-client-secret'], credentials[2]);
   }
   assert.equal(requests.at(-1).headers.authorization, `Bearer ${credentials[0]}`);
+});
+
+test('owner-testing candidate remains structurally ready while authentication readiness stays false', (t) => {
+  const { result, evidence } = runProbe(t, 'matching', 'lythaus-admin-api-development', false, true);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(evidence.workers[0].readiness, 'pass');
+  assert.equal(evidence.workers[0].readyForAuthentication, false);
+  assert.equal(evidence.workers[0].databaseCount, 2);
+});
+
+for (const scenario of ['owner-testing-top-level-true', 'owner-testing-nested-true']) {
+  test(`${scenario} rejects authentication readiness during owner testing`, (t) => {
+    const { result, evidence, requests, delays } = runProbe(t, scenario, 'lythaus-admin-api-development', false, true);
+    assert.equal(result.status, 1);
+    assert.match(evidence.failure, /claims authentication readiness during owner testing/);
+    assert.equal(evidence.workers.length, 0);
+    assert.equal(requests.length, 2);
+    assert.deepEqual(delays, []);
+  });
+}
+
+test('normal candidate mode preserves the pre-acceptance authentication readiness probe', (t) => {
+  const { result, evidence } = runProbe(t, 'normal-mode-auth-ready');
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(evidence.readyForAuthentication, false);
+  assert.equal(evidence.workers[0].readyForAuthentication, true);
+});
+
+test('owner-testing release marks an exact reused runtime separately from its false release readiness', (t) => {
+  const { result, evidence } = runProbe(t, 'normal-mode-auth-ready', 'lythaus-admin-api-development', false, true, false);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(evidence.ownerTestingDeployment, true);
+  assert.equal(evidence.ownerTestingCandidate, false);
+  assert.equal(evidence.authenticationReadinessExpectation, 'reused_production_runtime_reported');
+  assert.equal(evidence.readyForAuthentication, false);
+  assert.equal(evidence.workers[0].readyForAuthentication, true);
+  assert.equal(evidence.workers[0].workerVersionId, version);
+  assert.equal(evidence.workers[0].releaseTag, releaseSha);
 });
 
 for (const scenario of ['wrong-version', 'wrong-tag', 'missing-version', 'missing-tag']) {
@@ -262,6 +336,7 @@ test('matching Public probe pins only its own version and preserves its identity
 
 for (const [scenario, expectedDelays] of [
   ['previous-then-matching', [2_000, 4_000]],
+  ['previous-then-matching-public-candidate', [2_000, 4_000]],
   ['previous-at-bound', [2_000, 4_000, 6_000, 8_000]],
 ]) {
   test(`${scenario} passes only after the exact candidate arrives within the bound`, (t) => {
@@ -278,6 +353,10 @@ for (const [scenario, expectedDelays] of [
       assert.equal(observation.observed.workerVersionId, previousVersion);
       assert.equal(observation.observed.releaseTag, previousSha);
       assert.deepEqual(observation.retry, { reason: 'known_predeployment_version', nextAttempt: index + 2, delayMs: expectedDelays[index] });
+      assert.equal(
+        observation.observed.emailBinding.publicWorkerVersion,
+        scenario === 'previous-then-matching-public-candidate' ? publicVersion : previousPublicVersion,
+      );
     }
     assert.equal(observations.at(-1).observed.workerVersionId, version);
     assert.equal(observations.at(-1).retry, undefined);
@@ -305,7 +384,7 @@ for (const scenario of [
   'previous-wrong-service', 'previous-invalid-auth-state',
 ]) {
   test(`${scenario} fails immediately despite available prior-version provenance`, (t) => {
-    const { result, evidence, requests, delays } = runProbe(t, scenario, 'lythaus-admin-api-development', true);
+    const { result, evidence, requests, delays } = runProbe(t, scenario, 'lythaus-admin-api-development', true, true);
     assert.equal(result.status, 1);
     assert.equal(evidence.status, 'fail');
     assert.equal(evidence.workers.length, 0);
@@ -314,6 +393,16 @@ for (const scenario of [
     assert.equal(evidence.requests.at(-1).retry, undefined);
   });
 }
+
+test('a certified prior Worker with true nested readiness is retry-only in owner-testing mode', (t) => {
+  const { result, evidence, requests, delays } = runProbe(t, 'previous-owner-testing-nested-true', 'lythaus-admin-api-development', true, true);
+  assert.equal(result.status, 1);
+  assert.match(evidence.failure, /exact reviewed Worker version after 5 bounded propagation attempts/);
+  assert.equal(evidence.readyForAuthentication, false);
+  assert.equal(evidence.workers.length, 0);
+  assert.equal(requests.length, 6);
+  assert.deepEqual(delays, [2_000, 4_000, 6_000, 8_000]);
+});
 
 for (const scenario of ['previous-then-unauthorized', 'previous-then-unknown']) {
   test(`${scenario} stops retries when the next observation is unsafe`, (t) => {

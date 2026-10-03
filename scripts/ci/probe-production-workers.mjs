@@ -15,6 +15,8 @@ const expectedSchemaVersion = process.env.EXPECTED_DATABASE_SCHEMA_VERSION ?? ''
 const expectedBudgetLedgerApplied = requireBudgetMigration;
 const expectedBranch = process.env.HYPERDRIVE_VERIFIED_MAIN === 'true' ? 'main' : 'unknown';
 const authenticatedAcceptanceProven = process.env.AUTHENTICATED_ACCEPTANCE_PROVEN === 'true';
+const ownerTestingDeployment = process.env.OWNER_TESTING_DEPLOYMENT === 'true';
+const ownerTestingCandidate = process.env.OWNER_TESTING_CANDIDATE === 'true';
 const requestedWorker = process.env.PRODUCTION_WORKER_SCOPE ?? 'all';
 const releaseSha = process.env.RELEASE_SHA ?? '';
 const expectedWorkerSourceSha = process.env.EXPECTED_WORKER_SOURCE_SHA ?? releaseSha;
@@ -25,6 +27,8 @@ const accessClientSecret = process.env.CF_ACCESS_CLIENT_SECRET ?? '';
 const outputPath = process.env.PRODUCTION_WORKER_EVIDENCE_PATH;
 const previousDeploymentPath = process.env.PRODUCTION_WORKER_PREVIOUS_DEPLOYMENT_PATH;
 const previousVersionsPath = process.env.PRODUCTION_WORKER_PREVIOUS_VERSIONS_PATH;
+const previousPublicDeploymentPath = process.env.PRODUCTION_WORKER_PREVIOUS_PUBLIC_DEPLOYMENT_PATH;
+const previousPublicVersionsPath = process.env.PRODUCTION_WORKER_PREVIOUS_PUBLIC_VERSIONS_PATH;
 const propagationDelays = [2_000, 4_000, 6_000, 8_000];
 const safeErrorCodes = new Set([
   'auth_email_dispatch_unavailable', 'auth_data_unavailable', 'admin_request_failed',
@@ -57,6 +61,8 @@ if (!/^[0-9a-f-]{36}$/.test(expectedWorkerVersionId)) throw new Error('PRODUCTIO
 if (requestedWorker === 'lythaus-admin-api-development' && !/^[0-9a-f-]{36}$/.test(expectedPublicVersion)) throw new Error('PUBLIC_WORKER_VERSION_ID is required for the private Admin email binding proof');
 if (expectedSchemaVersion !== '0020_auth_recovery_delivery.sql') throw new Error('production probes require migration 0020');
 if (expectedBranch !== 'main') throw new Error('HYPERDRIVE_VERIFIED_MAIN=true is required before runtime probe acceptance');
+if (ownerTestingCandidate && !ownerTestingDeployment) throw new Error('OWNER_TESTING_CANDIDATE=true requires OWNER_TESTING_DEPLOYMENT=true');
+if (ownerTestingCandidate && authenticatedAcceptanceProven) throw new Error('owner-testing candidates cannot claim authenticated acceptance');
 
 const allTargets = [
   {
@@ -152,7 +158,7 @@ async function fetchJson(url, options = {}, service = requestedWorker) {
   return body;
 }
 
-function assertDatabaseReport(report, worker, label) {
+function assertDatabaseReport(report, worker, label, { skipReadinessExpectation = false } = {}) {
   for (const field of ['databaseEnvironment', 'branchFingerprint', 'schemaFingerprint', 'relationCount', 'identityContactEmails', 'budgetLedgerApplied', 'roleClass', 'readiness', 'readyForAuthentication']) {
     if (!(field in report)) throw new Error(`${worker}/${label} readiness is missing ${field}`);
   }
@@ -176,37 +182,58 @@ function assertDatabaseReport(report, worker, label) {
     ].map((field) => [field, report[field]]));
     throw new Error(`${worker}/${label} structural identity probe failed: ${mismatches.join(',')}; observed=${JSON.stringify(observed)}`);
   }
-  if (authenticatedAcceptanceProven && report.readyForAuthentication !== true) {
+  if (!skipReadinessExpectation && ownerTestingCandidate && report.readyForAuthentication !== false) {
+    throw new Error(`${worker}/${label} claims authentication readiness during owner testing`);
+  }
+  if (!skipReadinessExpectation && authenticatedAcceptanceProven && report.readyForAuthentication !== true) {
     throw new Error(`${worker}/${label} authentication readiness assertion is inconsistent`);
   }
 }
 
-function assertReadiness(body, target) {
-  if (target.worker === 'lythaus-admin-api-development'
-    && (body.emailBinding?.bindingVerified !== true || body.emailBinding?.publicWorkerVersion !== expectedPublicVersion)) {
-    throw new Error('Admin private email binding did not execute the exact Public candidate');
+function assertReadiness(body, target, { knownPreviousServingVersion = false, previousPublicVersions = [] } = {}) {
+  if (target.worker === 'lythaus-admin-api-development') {
+    const publicVersionIsExpected = knownPreviousServingVersion
+      ? body.emailBinding?.publicWorkerVersion === expectedPublicVersion
+        || previousPublicVersions.some(({ versionId }) => body.emailBinding?.publicWorkerVersion === versionId)
+      : body.emailBinding?.publicWorkerVersion === expectedPublicVersion;
+    if (body.emailBinding?.bindingVerified !== true || !publicVersionIsExpected) {
+      throw new Error(knownPreviousServingVersion
+        ? 'Admin predeployment email binding did not identify the exact Public candidate or a captured serving Public version'
+        : 'Admin private email binding did not execute the exact Public candidate');
+    }
   }
   const reports = body.databases && typeof body.databases === 'object'
     ? Object.entries(body.databases)
     : [['primary', body]];
-  for (const [label, report] of reports) assertDatabaseReport(report, target.worker, label);
+  for (const [label, report] of reports) {
+    assertDatabaseReport(report, target.worker, label, { skipReadinessExpectation: knownPreviousServingVersion });
+  }
   const primaryReport = reports[0]?.[1];
   if (!primaryReport) throw new Error(`${target.worker} candidate probe returned no database report`);
   if (body.branchFingerprint !== 'unknown') throw new Error(`${target.worker} top-level probe must not self-assert a branch`);
   if (typeof body.readyForAuthentication !== 'boolean') throw new Error(`${target.worker} top-level authentication readiness is invalid`);
-  if (authenticatedAcceptanceProven && body.readyForAuthentication !== true) throw new Error(`${target.worker} top-level authentication readiness assertion is inconsistent`);
+  if (!knownPreviousServingVersion && ownerTestingCandidate && body.readyForAuthentication !== false) {
+    throw new Error(`${target.worker} claims authentication readiness during owner testing`);
+  }
+  if (!knownPreviousServingVersion && authenticatedAcceptanceProven && body.readyForAuthentication !== true) throw new Error(`${target.worker} top-level authentication readiness assertion is inconsistent`);
   return { reports, primaryReport };
 }
 
 function previousServingVersions() {
-  if (!previousDeploymentPath && !previousVersionsPath) return [];
-  if (requestedWorker !== 'lythaus-admin-api-development' || !previousDeploymentPath || !previousVersionsPath) {
-    throw new Error('Admin propagation retries require both exact predeployment snapshot paths');
+  const suppliedPaths = [previousDeploymentPath, previousVersionsPath, previousPublicDeploymentPath, previousPublicVersionsPath];
+  if (suppliedPaths.every((value) => !value)) return { admin: [], public: [] };
+  if (requestedWorker !== 'lythaus-admin-api-development' || suppliedPaths.some((value) => !value)) {
+    throw new Error('Admin propagation retries require exact Admin and Public predeployment snapshot paths');
   }
-  return parseProductionDeploymentState(
+  const admin = parseProductionDeploymentState(
     fs.readFileSync(previousDeploymentPath, 'utf8'),
     fs.readFileSync(previousVersionsPath, 'utf8'),
   ).serving;
+  const publicVersions = parseProductionDeploymentState(
+    fs.readFileSync(previousPublicDeploymentPath, 'utf8'),
+    fs.readFileSync(previousPublicVersionsPath, 'utf8'),
+  ).serving;
+  return { admin, public: publicVersions };
 }
 
 async function fetchCandidateReadiness(base, target, previousVersions) {
@@ -220,9 +247,9 @@ async function fetchCandidateReadiness(base, target, previousVersions) {
     if (body.workerVersionId === expectedWorkerVersionId && body.releaseTag === expectedWorkerSourceSha) return body;
     const previousVersion = target.worker === 'lythaus-admin-api-development'
       && body.service === 'lythaus-admin-api'
-      && previousVersions.some(({ versionId, sourceSha }) => body.workerVersionId === versionId && body.releaseTag === sourceSha);
+      && previousVersions.admin.some(({ versionId, sourceSha }) => body.workerVersionId === versionId && body.releaseTag === sourceSha);
     if (!previousVersion) throw new Error(`${target.worker} probe did not execute the exact reviewed Worker version`);
-    assertReadiness(body, target);
+    assertReadiness(body, target, { knownPreviousServingVersion: true, previousPublicVersions: previousVersions.public });
     if (attempt > propagationDelays.length) {
       throw new Error(`${target.worker} probe did not execute the exact reviewed Worker version after ${attempt} bounded propagation attempts`);
     }
@@ -240,6 +267,12 @@ const evidence = {
   capturedAt: new Date().toISOString(),
   branchFingerprint: expectedBranch,
   readyForAuthentication: authenticatedAcceptanceProven,
+  authenticationReadinessExpectation: ownerTestingCandidate
+    ? 'owner_testing_candidate_false'
+    : ownerTestingDeployment ? 'reused_production_runtime_reported'
+      : authenticatedAcceptanceProven ? 'authenticated_acceptance_true' : 'candidate_runtime_reported',
+  ownerTestingDeployment,
+  ownerTestingCandidate,
   expected: {
     relationCount: expectedRelationCount,
     schemaFingerprint: expectedSchemaFingerprint,
@@ -297,7 +330,11 @@ try {
   await probeTargets();
   evidence.status = 'pass';
   writeEvidence();
-  console.log(redact(JSON.stringify({ status: 'pass', workers: evidence.workers, branchFingerprint: evidence.branchFingerprint, readyForAuthentication: evidence.readyForAuthentication })));
+  console.log(redact(JSON.stringify({
+    status: 'pass', workers: evidence.workers, branchFingerprint: evidence.branchFingerprint,
+    readyForAuthentication: evidence.readyForAuthentication,
+    authenticationReadinessExpectation: evidence.authenticationReadinessExpectation,
+  })));
 } catch (error) {
   evidence.status = 'fail';
   evidence.failure = redact(String(error.message));
