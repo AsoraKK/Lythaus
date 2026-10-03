@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/state/providers/settings_providers.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
@@ -26,19 +27,39 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _savingTrustVisibility = false;
+  CancelToken? _visibilitySave;
+
+  @override
+  void dispose() {
+    _visibilitySave?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     final controller = ref.read(settingsProvider.notifier);
     final currentUser = ref.watch(currentUserProvider);
+    ref.listen(authSessionRevisionProvider, (previous, next) {
+      if (previous != next) {
+        _visibilitySave?.cancel();
+        _visibilitySave = null;
+        setState(() => _savingTrustVisibility = false);
+      }
+    });
     final profileState = currentUser == null
         ? null
-        : ref.watch(publicUserProvider(currentUser.id));
-    final profileVisibility =
-        profileState?.valueOrNull?.trustPassportVisibility;
-    final selectedVisibility =
-        profileVisibility ?? settings.trustPassportVisibility;
+        : ref.watch(ownerProfileProvider);
+    final profile = profileState?.valueOrNull;
+    final selectedVisibility = profile?.user.id == currentUser?.id
+        ? profile?.user.trustPassportVisibility
+        : null;
+    final canSaveVisibility =
+        currentUser != null &&
+        selectedVisibility != null &&
+        profileState?.isLoading == false &&
+        profileState?.hasError == false &&
+        !_savingTrustVisibility;
 
     return ReadingPane(
       child: Scaffold(
@@ -165,6 +186,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 padding: EdgeInsets.symmetric(vertical: Spacing.sm),
                 child: LinearProgressIndicator(minHeight: 2),
               ),
+            if (profileState?.hasError == true) ...[
+              const Text('Unable to load your saved visibility.'),
+              TextButton(
+                onPressed: () => ref.invalidate(ownerProfileProvider),
+                child: const Text('Retry visibility'),
+              ),
+            ],
             Wrap(
               spacing: Spacing.sm,
               runSpacing: Spacing.sm,
@@ -177,11 +205,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ChoiceChip(
                     label: Text(option.value),
                     selected: selectedVisibility == option.key,
-                    onSelected: currentUser == null || _savingTrustVisibility
-                        ? null
-                        : (selected) {
+                    onSelected: canSaveVisibility
+                        ? (selected) {
                             if (selected) _updateTrustVisibility(option.key);
-                          },
+                          }
+                        : null,
                   ),
               ],
             ),
@@ -224,56 +252,68 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _updateTrustVisibility(String visibility) async {
     final user = ref.read(currentUserProvider);
-    if (user == null) {
+    if (user == null || _savingTrustVisibility) {
       return;
     }
-
-    final token = await ref.read(jwtProvider.future);
-    if (token == null || token.isEmpty) {
-      if (!mounted) {
+    final cancelToken = CancelToken();
+    final session = ref.read(authSessionRevisionProvider.notifier);
+    final revision = session.revision;
+    final stop = session.cancelOnChange(cancelToken.cancel);
+    _visibilitySave = cancelToken;
+    setState(() => _savingTrustVisibility = true);
+    bool isCurrentSave() =>
+        mounted &&
+        identical(_visibilitySave, cancelToken) &&
+        !cancelToken.isCancelled &&
+        session.revision == revision &&
+        ref.read(currentUserProvider)?.id == user.id;
+    try {
+      final token = await Future.any<String?>([
+        ref.read(jwtProvider.future),
+        cancelToken.whenCancel.then<String?>((error) => throw error),
+      ]);
+      if (!mounted || !isCurrentSave()) return;
+      if (token == null || token.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sign in to update trust visibility.')),
+        );
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sign in to update trust visibility.')),
-      );
-      return;
-    }
-
-    setState(() => _savingTrustVisibility = true);
-    try {
-      await ref
+      final saved = await ref
           .read(profilePreferencesServiceProvider)
           .updateTrustPassportVisibility(
             accessToken: token,
             visibility: visibility,
+            cancelToken: cancelToken,
           );
-      ref
-          .read(settingsProvider.notifier)
-          .setTrustPassportVisibility(visibility);
-      ref.invalidate(publicUserProvider(user.id));
-      ref.invalidate(trustPassportProvider(user.id));
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile visibility saved.')),
-        );
+      if (!mounted || !isCurrentSave()) return;
+      if (saved.user.id != user.id ||
+          saved.user.trustPassportVisibility != visibility) {
+        throw const FormatException('Invalid saved visibility');
       }
+      invalidateOwnerProfileProjections(ref, user.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile visibility saved.')),
+      );
     } on DioException catch (error) {
       final message = error.response?.statusCode == 429
           ? 'Too many profile updates. Please wait before trying again.'
           : 'Unable to update trust visibility.';
-      if (mounted) {
+      if (mounted && isCurrentSave() && !CancelToken.isCancel(error)) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(message)));
       }
     } catch (_) {
-      if (mounted) {
+      if (mounted && isCurrentSave()) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Unable to update trust visibility.')),
         );
       }
     } finally {
-      if (mounted) {
+      stop();
+      if (mounted && identical(_visibilitySave, cancelToken)) {
+        _visibilitySave = null;
         setState(() => _savingTrustVisibility = false);
       }
     }

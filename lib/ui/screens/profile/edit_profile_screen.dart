@@ -12,6 +12,7 @@ import 'package:uuid/uuid.dart';
 
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/application/profile_validator.dart';
 import 'package:lythaus/features/profile/domain/owner_profile.dart';
@@ -44,17 +45,21 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   bool _saving = false;
   bool _leaving = false;
   bool _allowPop = false;
+  late final int _openedRevision;
 
   bool get _hasChanges =>
       _displayName.text.trim() != widget.profile.user.displayName.trim() ||
       _bio.text.trim() != (widget.profile.user.bio ?? '').trim();
 
   bool get _isOwner =>
+      ref.read(authSessionRevisionProvider.notifier).revision ==
+          _openedRevision &&
       ref.read(currentUserProvider)?.id == widget.profile.user.id;
 
   @override
   void initState() {
     super.initState();
+    _openedRevision = ref.read(authSessionRevisionProvider.notifier).revision;
     _displayName = TextEditingController(text: widget.profile.user.displayName);
     _bio = TextEditingController(text: widget.profile.user.bio ?? '');
   }
@@ -69,6 +74,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(authSessionRevisionProvider);
     final user = ref.watch(currentUserProvider);
     ref.listen(currentUserProvider, (_, next) {
       if (next?.id != widget.profile.user.id) {
@@ -77,9 +83,24 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         _bio.clear();
       }
     });
-    if (user?.id != widget.profile.user.id) {
-      return const Scaffold(
-        body: Center(child: Text('Sign in to edit your profile.')),
+    ref.listen(authSessionRevisionProvider, (_, next) {
+      if (next != _openedRevision) {
+        _cancelToken?.cancel();
+        _displayName.clear();
+        _bio.clear();
+        _saveFingerprint = null;
+        _saveKey = null;
+      }
+    });
+    if (!_isOwner || user?.id != widget.profile.user.id) {
+      return Scaffold(
+        body: Center(
+          child: Text(
+            user?.id == widget.profile.user.id
+                ? 'Your session changed. Reopen your profile to edit.'
+                : 'Sign in to edit your profile.',
+          ),
+        ),
       );
     }
     return PopScope(
@@ -227,8 +248,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _error = null;
     });
     _cancelToken = CancelToken();
+    final stop = ref
+        .read(authSessionRevisionProvider.notifier)
+        .cancelOnChange(_cancelToken!.cancel);
     try {
-      final token = await ref.read(jwtProvider.future);
+      final token = await Future.any<String?>([
+        ref.read(jwtProvider.future),
+        _cancelToken!.whenCancel.then<String?>((error) => throw error),
+      ]);
       if (!mounted || !_isOwner || _cancelToken!.isCancelled) return;
       if (token == null || token.isEmpty) {
         setState(() => _error = 'Your session expired. Sign in again to save.');
@@ -252,8 +279,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (saved.user.id != widget.profile.user.id) {
         throw const FormatException('Invalid saved profile');
       }
-      ref.invalidate(ownerProfileProvider);
-      ref.invalidate(publicUserProvider(saved.user.id));
+      invalidateOwnerProfileProjections(ref, saved.user.id);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(saved.statusMessage)));
@@ -284,6 +310,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         );
       }
     } finally {
+      stop();
       if (mounted) {
         setState(() => _saving = false);
       }

@@ -7,7 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/domain/owner_profile.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
 import 'package:lythaus/ui/screens/profile/edit_profile_screen.dart';
@@ -74,6 +76,9 @@ Future<ProviderContainer> _open(
     ..httpClientAdapter = adapter;
   final container = ProviderContainer(
     overrides: [
+      authSessionRevisionProvider.overrideWith(
+        (ref) => AuthSessionRevision(ref.read(_session.notifier)),
+      ),
       currentUserProvider.overrideWith((ref) => ref.watch(_session)),
       jwtProvider.overrideWith(
         (ref) => token ?? Future.value('synthetic-token'),
@@ -107,6 +112,58 @@ Future<ProviderContainer> _open(
 }
 
 void main() {
+  testWidgets('profile edits refresh all owner and public projections', (
+    tester,
+  ) async {
+    final adapter = _Adapter((request) async {
+      if (request.method == 'PATCH') return _saved(request);
+      return ResponseBody.fromString(
+        jsonEncode(
+          request.path.endsWith('/trust-passport')
+              ? {'userId': 'owner-1', 'counts': <String, dynamic>{}}
+              : {
+                  'user': {
+                    'id': 'owner-1',
+                    'displayName': '',
+                    'moderationState': 'allowed',
+                    'publicVisibility': true,
+                  },
+                },
+        ),
+        200,
+        headers: {
+          Headers.contentTypeHeader: ['application/json'],
+        },
+      );
+    });
+    final container = await _open(tester, adapter);
+    final owner = container.listen(ownerProfileProvider, (_, _) {});
+    final public = container.listen(publicUserProvider('owner-1'), (_, _) {});
+    final passport = container.listen(
+      trustPassportProvider('owner-1'),
+      (_, _) {},
+    );
+    addTearDown(owner.close);
+    addTearDown(public.close);
+    addTearDown(passport.close);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'New saved name');
+    await tester.pump();
+    await tester.tap(find.text('Save profile'));
+    await tester.pumpAndSettle();
+    for (final path in [
+      '/api/users/me',
+      '/api/users/owner-1',
+      '/api/users/owner-1/trust-passport',
+    ]) {
+      expect(
+        adapter.requests.where(
+          (request) => request.method == 'GET' && request.path == path,
+        ),
+        hasLength(2),
+      );
+    }
+  });
   testWidgets(
     'bio-only and name-only changes save explicitly without omitted fields',
     (tester) async {

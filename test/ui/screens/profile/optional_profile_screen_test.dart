@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/domain/owner_profile.dart';
@@ -72,6 +73,9 @@ Future<ProviderContainer> _open(
     ..httpClientAdapter = adapter ?? _Adapter();
   final container = ProviderContainer(
     overrides: [
+      authSessionRevisionProvider.overrideWith(
+        (ref) => AuthSessionRevision(StateController<User?>(_user)),
+      ),
       currentUserProvider.overrideWithValue(_user),
       ownerProfileProvider.overrideWith((ref) => fetch()),
       jwtProvider.overrideWith((ref) async => 'synthetic-token'),

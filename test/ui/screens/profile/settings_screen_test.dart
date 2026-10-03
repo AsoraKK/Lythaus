@@ -1,8 +1,10 @@
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
+import 'package:lythaus/features/profile/domain/owner_profile.dart';
 import 'package:lythaus/state/providers/settings_providers.dart';
 import 'package:lythaus/ui/screens/profile/settings_screen.dart';
 import 'package:dio/dio.dart';
@@ -17,6 +19,7 @@ void main() {
   setUpAll(() {
     registerFallbackValue(RequestOptions(path: '/api/users/me'));
     registerFallbackValue(Options());
+    registerFallbackValue(CancelToken());
   });
 
   testWidgets('SettingsScreen toggles local preferences', (tester) async {
@@ -57,19 +60,30 @@ void main() {
     tester,
   ) async {
     final dio = _MockDio();
+    var visibility = 'public_minimal';
     when(
       () => dio.patch<Map<String, dynamic>>(
         '/api/users/me',
         data: any(named: 'data'),
+        cancelToken: any(named: 'cancelToken'),
         options: any(named: 'options'),
       ),
-    ).thenAnswer(
-      (_) async => Response<Map<String, dynamic>>(
-        data: const {},
+    ).thenAnswer((_) async {
+      visibility = 'private';
+      return Response<Map<String, dynamic>>(
+        data: {
+          'user': {
+            'id': 'u1',
+            'displayName': 'Lythaus User',
+            'moderationState': 'under_review',
+            'publicVisibility': false,
+            'trustPassportVisibility': visibility,
+          },
+        },
         statusCode: 200,
         requestOptions: RequestOptions(path: '/api/users/me'),
-      ),
-    );
+      );
+    });
 
     final user = User(
       id: 'u1',
@@ -85,14 +99,21 @@ void main() {
       ProviderScope(
         overrides: [
           secureDioProvider.overrideWithValue(dio),
+          authSessionRevisionProvider.overrideWith(
+            (ref) => AuthSessionRevision(StateController<User?>(user)),
+          ),
           currentUserProvider.overrideWithValue(user),
           jwtProvider.overrideWith((ref) async => 'token'),
-          publicUserProvider.overrideWith(
-            (ref, userId) async => const PublicUser(
-              id: 'u1',
-              displayName: 'Lythaus User',
-              tier: 'free',
-              trustPassportVisibility: 'public_minimal',
+          ownerProfileProvider.overrideWith(
+            (ref) async => OwnerProfile(
+              user: PublicUser(
+                id: 'u1',
+                displayName: 'Lythaus User',
+                tier: 'free',
+                trustPassportVisibility: visibility,
+              ),
+              moderationState: 'under_review',
+              publicVisibility: false,
             ),
           ),
         ],
@@ -121,6 +142,7 @@ void main() {
       () => dio.patch<Map<String, dynamic>>(
         '/api/users/me',
         data: {'trustPassportVisibility': 'private'},
+        cancelToken: any(named: 'cancelToken'),
         options: any(named: 'options'),
       ),
     ).called(1);
@@ -128,7 +150,14 @@ void main() {
     final container = ProviderScope.containerOf(
       tester.element(find.byType(SettingsScreen)),
     );
-    expect(container.read(settingsProvider).trustPassportVisibility, 'private');
+    expect(
+      container
+          .read(ownerProfileProvider)
+          .valueOrNull
+          ?.user
+          .trustPassportVisibility,
+      'private',
+    );
   });
 
   testWidgets(
@@ -139,6 +168,7 @@ void main() {
         () => dio.patch<Map<String, dynamic>>(
           '/api/users/me',
           data: any(named: 'data'),
+          cancelToken: any(named: 'cancelToken'),
           options: any(named: 'options'),
         ),
       ).thenThrow(
@@ -167,14 +197,21 @@ void main() {
         ProviderScope(
           overrides: [
             secureDioProvider.overrideWithValue(dio),
+            authSessionRevisionProvider.overrideWith(
+              (ref) => AuthSessionRevision(StateController<User?>(user)),
+            ),
             currentUserProvider.overrideWithValue(user),
             jwtProvider.overrideWith((ref) async => 'token'),
-            publicUserProvider.overrideWith(
-              (ref, userId) async => const PublicUser(
-                id: 'u1',
-                displayName: 'Lythaus User',
-                tier: 'free',
-                trustPassportVisibility: 'public_minimal',
+            ownerProfileProvider.overrideWith(
+              (ref) async => const OwnerProfile(
+                user: PublicUser(
+                  id: 'u1',
+                  displayName: 'Lythaus User',
+                  tier: 'free',
+                  trustPassportVisibility: 'public_minimal',
+                ),
+                moderationState: 'under_review',
+                publicVisibility: false,
               ),
             ),
           ],

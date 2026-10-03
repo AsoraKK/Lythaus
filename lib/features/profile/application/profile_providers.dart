@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
 import 'package:lythaus/features/profile/domain/owner_profile.dart';
 import 'package:lythaus/features/profile/domain/trust_passport.dart';
@@ -18,12 +19,19 @@ const Set<String> _trustPassportVisibilityValues = {
 final ownerProfileProvider = FutureProvider.autoDispose<OwnerProfile>((
   ref,
 ) async {
+  ref.watch(authSessionRevisionProvider);
+  final session = ref.read(authSessionRevisionProvider.notifier);
   final user = ref.watch(currentUserProvider);
   if (user == null) throw StateError('Sign in to view your private profile');
   final dio = ref.watch(secureDioProvider);
   final cancelToken = CancelToken();
+  final stop = session.cancelOnChange(cancelToken.cancel);
+  ref.onDispose(stop);
   ref.onDispose(cancelToken.cancel);
-  final token = await ref.watch(jwtProvider.future);
+  final token = await Future.any<String?>([
+    ref.watch(jwtProvider.future),
+    cancelToken.whenCancel.then<String?>((error) => throw error),
+  ]);
   if (cancelToken.isCancelled) throw cancelToken.cancelError!;
   if (token == null || token.isEmpty) throw StateError('Session expired');
   final response = await dio.get<Map<String, dynamic>>(
@@ -32,6 +40,7 @@ final ownerProfileProvider = FutureProvider.autoDispose<OwnerProfile>((
     options: Options(headers: {'Authorization': 'Bearer $token'}),
   );
   final profile = OwnerProfile.fromJson(response.data ?? const {});
+  if (cancelToken.isCancelled) throw cancelToken.cancelError!;
   if (profile.user.id != user.id) {
     throw const FormatException('Owner profile does not match the session');
   }
@@ -43,9 +52,10 @@ class ProfilePreferencesService {
 
   final Dio _dio;
 
-  Future<void> updateTrustPassportVisibility({
+  Future<OwnerProfile> updateTrustPassportVisibility({
     required String accessToken,
     required String visibility,
+    CancelToken? cancelToken,
   }) async {
     if (!_trustPassportVisibilityValues.contains(visibility)) {
       throw ArgumentError.value(
@@ -55,12 +65,21 @@ class ProfilePreferencesService {
       );
     }
 
-    await _dio.patch<Map<String, dynamic>>(
+    final response = await _dio.patch<Map<String, dynamic>>(
       '/api/users/me',
       data: {'trustPassportVisibility': visibility},
+      cancelToken: cancelToken,
       options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
     );
+    return OwnerProfile.fromJson(response.data ?? const {});
   }
+}
+
+void invalidateOwnerProfileProjections(WidgetRef ref, String userId) {
+  if (ref.read(currentUserProvider)?.id != userId) return;
+  ref.invalidate(ownerProfileProvider);
+  ref.invalidate(publicUserProvider(userId));
+  ref.invalidate(trustPassportProvider(userId));
 }
 
 final profilePreferencesServiceProvider = Provider<ProfilePreferencesService>((
