@@ -6,11 +6,12 @@ Reviewed baseline: `8c4261402dd370b4c57e082cf0fc16b41927f7db` (remote main verif
 2 October 2026). The live GitHub `main` rechecked 3 October is
 `627ae30b36cd995c4f117bf3c44789c986b5d46b`; it includes security release 89
 (`6d1d52a4fa3f51ae041fbf38b5724578a8596b61`, run `37118382512`) and PR908 dependency
-repair (`8d91bcb434c4960a0f51ee2e4c7563c4f6e88a6c`). The latest complete test
-candidate is `1f5cff9cca94df137872d2c77950a92070808473`. PR896 remains open/draft at
-published head `7c61e66cafe9a0849048f16b0809f18a9b770763`; the current workspace
-contains uncommitted report/DSR and client-surface changes over that head. The
-disabled email-renewal proof seam is at commit
+repair (`8d91bcb434c4960a0f51ee2e4c7563c4f6e88a6c`). The latest complete PostgreSQL
+test candidate is `1f5cff9cca94df137872d2c77950a92070808473`. PR896 remains
+open/draft and contains implementation commit
+`676f0f3860032e19dc8ec83d0ce8e6b4f0395747`, which adds report/DSR and existing
+Rewards/Profile candidate workflows. The disabled
+email-renewal proof seam is at commit
 `71d60dcb1c85f754251fa265bc00b8109300d4cd`. App-flow owns the exclusive integration
 slot. Shared generated-client regeneration, profile/navigation, privacy status,
 export cooldown and client lifecycle work remain coordinated with app-flow until
@@ -63,7 +64,7 @@ resource is activated by this slice.
 | Appeal runtime | public `index.ts` create/vote/recuse/assignments; Jobs `processAppealVoteLocked` and `AppealLifecycleWorkflow`; admin `adjudicateAppeal` and `runtime-policy.ts` | Assignment foreign keys, weighted outcomes and required adjudication span all three Workers; update together in T06 |
 | Earning | Jobs `processReputationSource`, `processAppealReputationResolution`, `processAccountStandingRefresh` | Old point impacts and reversal semantics are invoked; T04 needs policy-versioned event collection and derived corrections |
 | Rewards | public `rewardsSnapshot`, `redeemReward`; `packages/contracts/src/tier-policy.ts` | Reads current historical profile and enforces seven-day maturity; new access must use fixed monthly snapshots and persistent plan slots |
-| Flutter | `lib/ui/screens/adaptive_shell.dart`, `rewards/rewards_dashboard.dart`, `profile/reputation_ledger_screen.dart`, reputation and reward providers/models | An uncommitted candidate extends the existing Rewards/Profile surfaces and private report tracker. App-flow owns shared client generation and profile/navigation reconciliation; no Flutter SDK, analysis, browser run or mobile acceptance evidence is available in this workspace |
+| Flutter | `lib/ui/screens/adaptive_shell.dart`, `rewards/rewards_dashboard.dart`, `profile/reputation_ledger_screen.dart`, reputation and reward providers/models | The branch candidate extends the existing Rewards/Profile surfaces and private report tracker. App-flow owns shared client generation and profile/navigation reconciliation; no Flutter SDK, analysis, browser run or mobile acceptance evidence is available in this workspace |
 | Contract | `api/openapi/openapi.yaml` and referenced `monthly-reputation.yaml`; `lib/generated/api_client/` | A candidate contract/client exists in the worktree for authenticated monthly report, CSV, rewards read and contextual review. App-flow owns generated-client regeneration until integration; reconcile before Friday's merge window |
 | Privacy | Jobs `AccountExportWorkflow`, `AccountDeleteWorkflow`; `privacy.reconcile_subject_data_locations` | A candidate Data Passport adapter and proposal-only locator function expose the private report and optional contextual/fulfillment locators. App-flow owns privacy-status/export cooldown/client lifecycle changes; DSR tests are isolated, while collection and retention approval remain pending |
 | Database | `0000`–`0020` migrations; `0012_product_integrity_v2.sql`; `trust.policy_versions`, `trust.reputation_events`, `trust.reputation_profiles`, appeal assignments/votes/outcomes | Existing tables are authoritative; add period-specific revisions without relabelling old records |

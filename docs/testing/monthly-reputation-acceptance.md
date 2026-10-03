@@ -11,28 +11,32 @@ embedded reference-validation counts are not execution evidence for this branch.
 GitHub reports live `main` at
 `627ae30b36cd995c4f117bf3c44789c986b5d46b`, descended from security release 89
 (`6d1d52a4fa3f51ae041fbf38b5724578a8596b61`, run `37118382512`) and PR908 dependency
-repair (`8d91bcb434c4960a0f51ee2e4c7563c4f6e88a6c`). PR896 remains open/draft at
-published head `7c61e66cafe9a0849048f16b0809f18a9b770763`. The current workspace
-has uncommitted report/DSR and client-surface changes on that head; they are not
-represented by the published PR revision and await Friday integration coordination.
+repair (`8d91bcb434c4960a0f51ee2e4c7563c4f6e88a6c`). PR896 remains open/draft and
+based on that main SHA; implementation commit
+`676f0f3860032e19dc8ec83d0ce8e6b4f0395747` contains the report/DSR and existing
+Rewards/Profile candidate. The
+app-flow owner still coordinates shared controller/client/export changes before
+Friday integration; no merge or activation has occurred.
 
 The latest complete disposable PostgreSQL evidence remains 162/162 across seven
-suites at code commit `1f5cff9cca94df137872d2c77950a92070808473`. A later local
-selection run reached and passed the new report/correction-lock and DSR-locator
-cases, then failed in its teardown because the old test hook dropped earning
-rules before contextual rules. The hook order is corrected in this workspace, but
-it has not been rerun: this environment has no local PostgreSQL service or
-`PLANETSCALE_PG17_TEST_DATABASE_URL`. Do not treat the candidate as having a clean
-current-head PostgreSQL run.
+suites at code commit `1f5cff9cca94df137872d2c77950a92070808473`; GitHub's exact
+published-head PostgreSQL workflow `37155498056` also passed 162/162 at `7c61e66`,
+which changed documentation only. A later local selection run reached and passed
+the new report/correction-lock and DSR-locator cases, then failed in teardown
+because the old test hook dropped earning rules before contextual rules. Commit
+`676f0f3` corrects the hook order. GitHub's exact-head PostgreSQL workflow
+`37162922141` is running; this environment has no local PostgreSQL service or
+`PLANETSCALE_PG17_TEST_DATABASE_URL`, so no clean 676f0f3 PostgreSQL result is
+claimed until that workflow completes.
 
 | Check | Exact evidence |
 | --- | --- |
 | Disposable PostgreSQL 17.11 | At `1f5cff9`, seven suites passed 162/162 with zero skips: shadow 9, earning 10, contextual acceptance 20, appeals/participation 25, maintenance/assembly and disabled renewal 18, snapshots/corrections 19, and selection/partner/claim/report 61. Synthetic source rows, approvals and adapters only. |
-| OpenAPI and native contracts | In the current workspace based on `7c61e66`, native typecheck passed, architecture tests passed 272/272, and OpenAPI contract tests passed 44 with 17 expected skips (one suite skipped); lint passed with two inherited warnings. The earlier `1f5cff9` migration validation checked 20 files and 102 launch tables. Shared appeal/API and generated-client changes remain for Friday reconciliation. |
-| Dependency audit | Historical CI failure `37118705885` is tied to `76de6af`; its chain was `@stoplight/spectral-cli → fast-glob → micromatch → braces`. Security release 89 completed successfully at `6d1d52a` / run `37118382512`; live `main` is its descendant. Dependency review passed at the exact published PR head `7c61e66` in run `37155498055`. The package/lock graph is unchanged in this workspace, and `npm ls @stoplight/spectral-cli fast-glob micromatch braces --all` resolves `fast-glob` to the in-repository `tools/openapi/spectral-glob` compatibility package, with no `micromatch`/`braces` chain. A fresh `npm audit --audit-level=low` could not reach npm's advisory endpoint from this environment (`EPERM`), so no fresh registry audit is claimed for the current workspace. No suppression or duplicate security task was added. Separate Dependabot alert #330 remains unclassified. |
-| Spectral regression | In the current workspace, `node --test scripts/tests/spectral-glob.test.mjs` passed 2/2 with test-only elevated execution because the default sandbox denied the CLI's nested Node process. `npm run openapi:lint` passed with the two inherited warnings above. |
+| OpenAPI and native contracts | At code commit `676f0f3`, native typecheck passed, architecture tests passed 272/272, and OpenAPI contract tests passed 44 with 17 expected skips (one suite skipped); lint passed with two inherited warnings. The earlier `1f5cff9` migration validation checked 20 files and 102 launch tables. Shared appeal/API and generated-client changes remain for Friday reconciliation. GitHub CI `37162922142` and PostgreSQL `37162922141` are in progress at `676f0f3`. |
+| Dependency audit | Historical CI failure `37118705885` is tied to `76de6af`; its chain was `@stoplight/spectral-cli → fast-glob → micromatch → braces`. Security release 89 completed successfully at `6d1d52a` / run `37118382512`; live `main` is its descendant. Dependency review passed for implementation commit `676f0f3` in run `37162922139` (it also passed at prior PR head `7c61e66` in run `37155498055`). Mobile Security, Native secret scan and CodeQL also passed at `676f0f3` in runs `37162922158`, `37162922140` and `37162922144`. The package/lock graph is unchanged in commit `676f0f3`, and `npm ls @stoplight/spectral-cli fast-glob micromatch braces --all` resolves `fast-glob` to the in-repository `tools/openapi/spectral-glob` compatibility package, with no `micromatch`/`braces` chain. A fresh `npm audit --audit-level=low` could not reach npm's advisory endpoint from this environment (`EPERM`), so no fresh registry audit is claimed for `676f0f3`. No suppression or duplicate security task was added. Separate Dependabot alert #330 remains unclassified. |
+| Spectral regression | At code commit `676f0f3`, `node --test scripts/tests/spectral-glob.test.mjs` passed 2/2 with test-only elevated execution because the default sandbox denied the CLI's nested Node process. `npm run openapi:lint` passed with the two inherited warnings above. |
 | Bounded independent review | Read-only re-review cleared the three report/DSR P2 findings: configuration preflight before proposal reads, matching report/correction lock, and optional contextual/fulfillment locators. Reviewers did not rerun tests. |
-| Not established | No clean PostgreSQL result is claimed for the uncommitted workspace candidate; no live mailbox/provider acceptance, complete 100-case workflow run, Flutter analysis/browser journey, load test, production migration, deployment, configuration or activation is claimed. |
+| Not established | No clean exact-head PostgreSQL result is claimed until run `37162922141` completes; no live mailbox/provider acceptance, complete 100-case workflow run, Flutter analysis/browser journey, load test, production migration, deployment, configuration or activation is claimed. |
 
 The earlier synthetic auth-journey run `37044669047` failed when the test relay did
 not observe its synthetic password-change notice; dependent coordinator/alpha
