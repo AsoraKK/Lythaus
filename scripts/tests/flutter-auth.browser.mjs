@@ -59,7 +59,7 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
     const context=await browser.newContext({viewport:{width,height:1000},serviceWorkers:'block',ignoreHTTPSErrors:true});
     await installFlutterEngineFonts(context);
     const page=await context.newPage();page.setDefaultTimeout(15000);
-    t.after(async()=>{try{if(!complete&&!page.isClosed())t.diagnostic(JSON.stringify({calls,errors,failedRequests,screen:await page.locator('flt-semantics').allTextContents(),storageKeys:await page.evaluate(()=>Object.keys(localStorage))}));}finally{await browser.close();await fixture.close();}});
+    t.after(async()=>{try{if(!complete&&!page.isClosed())t.diagnostic(JSON.stringify({calls,errors,failedRequests,url:page.url(),screen:await page.locator('flt-semantics').allTextContents(),buttons:await page.getByRole('button').evaluateAll(nodes=>nodes.map(node=>({text:node.textContent,label:node.getAttribute('aria-label'),title:node.getAttribute('title')}))),storageKeys:await page.evaluate(()=>Object.keys(localStorage))}));}finally{await browser.close();await fixture.close();}});
     page.on('pageerror',error=>errors.push(error.message));
     page.on('requestfailed',request=>{
       const url=new URL(request.url()),error=request.failure()?.errorText;
@@ -126,7 +126,30 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
     assert.equal(maximumRefreshInFlight,1,'Same-origin tabs must serialize refresh instead of racing a rotating cookie');
     if(width<700)await page.getByRole('button',{name:/^Profile(?:\b|$)/}).click();
     await page.getByRole('button',{name:'Settings',exact:true}).click();
+    await page.waitForURL(url=>url.pathname==='/settings');
     await page.getByText('Account security',{exact:true}).click();
+    await page.waitForURL(url=>url.pathname==='/settings/security');
+    await page.getByRole('button',{name:'Sign out of all sessions',exact:true}).waitFor();
+    await page.goBack();
+    await page.waitForURL(url=>url.pathname==='/settings');
+    await page.getByText('Account security',{exact:true}).waitFor();
+    await page.goForward();
+    await page.waitForURL(url=>url.pathname==='/settings/security');
+    await page.getByRole('button',{name:'Sign out of all sessions',exact:true}).waitFor();
+    const securityLocation=new URL(page.url());
+    await openApp(securityLocation.pathname+securityLocation.search);
+    await page.waitForURL(url=>url.pathname==='/settings/security');
+    await page.getByRole('button',{name:'Sign out of all sessions',exact:true}).waitFor();
+    await page.getByRole('button',{name:'Back',exact:true}).click();
+    await page.waitForURL(url=>url.pathname==='/settings');
+    await page.getByText('Preferences',{exact:true}).waitFor();
+    await page.mouse.move(width-20,900);
+    await page.getByRole('button',{name:'Back',exact:true}).click();
+    await page.waitForURL(url=>url.pathname==='/'&&(width>=700||url.searchParams.get('tab')==='profile'));
+    await page.getByRole('button',{name:'Settings',exact:true}).click();
+    await page.waitForURL(url=>url.pathname==='/settings');
+    await page.getByText('Account security',{exact:true}).click();
+    await page.waitForURL(url=>url.pathname==='/settings/security');
     signingOut=true;
     const logoutReply=page.waitForResponse(response=>response.url()==='https://api.lythaus.co/api/auth/logout'
       &&response.request().method()==='POST'&&response.status()===200);
@@ -134,8 +157,9 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
     await (await logoutReply).finished();
     await page.getByRole('button',{name:'Sign in with email',exact:true}).waitFor();
     await secondTab.getByRole('button',{name:'Sign in with email',exact:true}).waitFor();
-    await openApp();
+    await openApp('/settings/security');
     await page.getByRole('button',{name:'Sign in with email',exact:true}).waitFor();
+    assert.equal(new URL(page.url()).searchParams.get('returnTo'),'/settings/security');
     assert.equal(session,false);
     assert.equal((await context.cookies('https://api.lythaus.co')).some(cookie=>cookie.name==='__Host-lythaus_refresh'),false);
     assert.deepEqual(errors,[]);

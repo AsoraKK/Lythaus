@@ -3,6 +3,7 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lythaus/design_system/components/lyth_avatar.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -226,6 +227,15 @@ class ProfileScreen extends ConsumerWidget {
                 leading: const Icon(Icons.settings_outlined),
                 title: const Text('Settings'),
                 onTap: () {
+                  final router = GoRouter.maybeOf(context);
+                  if (router != null) {
+                    router.go(
+                      GoRouterState.of(
+                        context,
+                      ).uri.replace(path: '/settings').toString(),
+                    );
+                    return;
+                  }
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => const SettingsScreen(),
