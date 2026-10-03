@@ -37,10 +37,37 @@ test('dependency review ignores package scripts and normalizes dependency orderi
   assert.deepEqual(dependencyGraphMetadata(after).dependencies, { astro: '7.1.6', zod: '4.0.0' });
 });
 
+test('native coverage matches linked local identities while still requiring local and registry entries', () => {
+  const expected = resolvedDependencies('package-lock.json', JSON.stringify({ packages: {
+    '': { name: 'synthetic-root', version: '1.0.0' },
+    'node_modules/fast-glob': { resolved: 'tools/openapi/spectral-glob', link: true },
+    'tools/openapi/spectral-glob': { name: 'fast-glob', version: '1.0.0', dev: true },
+    'node_modules/glob': { version: '13.0.6', resolved: 'https://registry.npmjs.org/glob/-/glob-13.0.6.tgz' },
+  } })).map(value => ({ ...value, manifest: 'package-lock.json' }));
+  assert.deepEqual(expected.map(value => [value.name, value.version]), [['tools/openapi/spectral-glob', '1.0.0'], ['glob', '13.0.6']]);
+  const native = expected.map(value => ({ ...value, change_type: 'added' }));
+  assert.deepEqual(missingCoverage(expected, native), []);
+  assert.equal(missingCoverage(expected, native.slice(1)).length, 1, 'The local source must still have native coverage');
+  assert.equal(missingCoverage(expected, native.slice(0, 1)).length, 1, 'Registry dependencies must still have native coverage');
+  assert.equal(missingCoverage(expected, native.map(value => ({ ...value, name: 'unrelated' }))).length, 2);
+});
+
 test('dependency review requires a lockfile for resolved dependency metadata changes', () => {
   const before = { dependencies: { astro: '7.1.6' }, overrides: { nanoid: '3.3.18' } };
   const after = { dependencies: { astro: '7.2.0' }, overrides: { nanoid: '3.3.18' } };
   assert.equal(dependencyGraphChanged(before, after), true);
+});
+
+test('marketing linked policy requires native coverage alongside every registry entry', () => {
+  const lock = fs.readFileSync('apps/marketing-site/package-lock.json', 'utf8');
+  const expected = resolvedDependencies('apps/marketing-site/package-lock.json', lock).map(value => ({ ...value, manifest: 'apps/marketing-site/package-lock.json' }));
+  const local = expected.find(value => value.name === '../../tools/marketing/astro-cache-policy');
+  assert.equal(local.version, '1.0.0');
+  assert.equal(expected.some(value => value.name === 'http-cache-semantics'), false);
+  const native = expected.map(value => ({ ...value, change_type: 'added' }));
+  assert.deepEqual(missingCoverage(expected, native), []);
+  assert.equal(missingCoverage(expected, native.filter(value => value.name !== local.name)).length, 1);
+  assert.equal(missingCoverage(expected, native.filter(value => value.name === local.name)).length, expected.length - 1);
 });
 
 test('local dependency review skips duplicate audits when the dependency graph is unchanged', () => {
