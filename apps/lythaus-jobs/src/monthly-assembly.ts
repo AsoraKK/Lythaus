@@ -10,6 +10,7 @@ export interface MonthlyAssemblyEnv {
   MONTHLY_REPUTATION_SHADOW_RULES?: string;
   MONTHLY_REPUTATION_MAINTENANCE_RULES?: string;
   MONTHLY_REPUTATION_PEER_PARTICIPATION_RULES?: string;
+  MONTHLY_REPUTATION_CONTEXT_RULES?: string;
 }
 
 export async function reconcileMonthlyAssembly(env: MonthlyAssemblyEnv): Promise<{ processed: number }> {
@@ -55,6 +56,7 @@ export async function reconcileMonthlyAssembly(env: MonthlyAssemblyEnv): Promise
       const result = await transaction(env.DB_JOBS_FRESH, client => assembleMonthlyReputation(client, {
         subjectUserId: row.subject_user_id, sourceMonth: row.source_month, weeklyRulesVersion: weeklyVersion,
         peerRulesVersion: env.MONTHLY_REPUTATION_PEER_PARTICIPATION_RULES,
+        contextRulesVersion: env.MONTHLY_REPUTATION_CONTEXT_RULES,
         maintenanceRulesVersion: maintenanceVersion, evaluatedAt: new Date().toISOString(),
       }));
       if (result?.created) processed++;

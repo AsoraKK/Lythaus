@@ -110,7 +110,7 @@ effective months; separately approved migration, exact-SHA deployment and activa
 | T01 Reconcile | Source/consumer map, this decision record, historical cutover plan | Inventory complete; cutover pending D13 |
 | T02 Canonical policy | Validated catalogue, cap groups, pure best-four/bands, candidate calendar, approved decision configuration | All 22 action calculations represented; weekly and maintenance candidate rules tested; operational approvals remain pending |
 | T03 Persistence | Canonical events/outbox, immutable period revisions, assurance proofs, ballot uniqueness, selections/claims | Immutable monthly/weekly revisions, canonical email proofs, assembly reports, source receipts and Jobs transactions tested; selections/claims and migration pending |
-| T04 Earning | Real post/discussion/specialist/reception/authorship events and dependency reversals | Canonical post/comment producers and final peer-ballot consumer tested with weekly caps and immutable corrections; contextual acceptance and specialist/reception producers remain |
+| T04 Earning | Real post/discussion/specialist/reception/authorship events and dependency reversals | Canonical post/comment producers, scoped contextual acceptance and final peer-ballot consumer tested with weekly caps and immutable corrections; specialist/reception producers and product forms remain |
 | T05 Security | Reuse normal validated auth events; capability-aware integrity, credential continuity, Turnstile/refresher | Actual email verification feeds bound evidence, including scoring pauses; full-month coverage/assessment calculations tested; other real providers, renewal workflow and D07/D08 activation remain gated |
 | T06 Peer review | Private timed electorate, equal ballots/history, close transaction, scoped override, restricted route | Public/admin routes, ballots/closure, scoped restoration, equal participation earning and private notices tested; specialist/unresolved execution, D09/D10/D11/D13 activation and Flutter remain |
 | T07 Rewards/partners | Persistent Free/Premium/Black selections, proposals, consent/email linkage, QR/invoice idempotency | Commercial terms and approved offers pending; no fake merchants |
@@ -130,8 +130,8 @@ deduplication, revisions and scheduled settlement. Remaining proof provenance an
 workflow integration are required before production collection. A shadow result is
 never a confirmed entitlement. Appeal eligibility now comes from fresh registered,
 verified-account and scoped restriction checks, without reputation, subscription,
-training or age gates. Peer participation is recorded as evidence at final closure;
-the proposed weekly participation award is not yet connected to earning.
+training or age gates. Final peer participation now feeds the separately gated D10
+weekly allowance through canonical closure evidence and durable reconciliation.
 
 ## Maintenance and monthly assembly
 
@@ -234,7 +234,7 @@ claimed authors and client clocks cannot award points. Three distinct accepted h
 posts complete one 250-point milestone. Accepted participation supports the separate
 declaration/authorship components; honest assisted content does not erase unrelated
 human work. Published comments/replies are classified from stored thread ownership
-and remain pending contextual acceptance. Source performance time determines week
+and await independently approved contextual acceptance. Source performance time determines week
 ownership even when review is late. A cross-period edit remains explicitly pending
 review rather than silently backdating newly performed work.
 
@@ -280,9 +280,53 @@ Retrospective invalidation and its accountable administration remain separate wo
 Disposable PostgreSQL tests cover concurrent duplicate delivery, minority parity,
 one weekly allowance across cases, changed final ballots, recusal, atomic rollback,
 deletion between participant selection and insertion, fresh pause reads and
-original cross-month assignment. The 24-test appeal/participation suite has 100%
-line and 94.83% branch coverage for its six persistence/Jobs modules. These are
+original cross-month assignment. With the contextual restoration regression, the
+25-test appeal/participation suite has 100% line and 94.64% branch coverage, including
+the shared canonical publication proof. These are
 synthetic transactions and authenticated routes, not live activation or UI evidence.
+
+## Scoped contextual acceptance
+
+The existing admin Worker exposes a disabled-by-default context-review mutation.
+An authenticated independent staff member supplies exact comment, thread and parent
+revision identities, an explicitly configured rubric, a bounded private evidence
+reference, expected review revision and UUIDv7 idempotency key. Author, ownership,
+performance time, family, points and publication acceptance are derived from stored
+server state. Client point fields, self-acceptance, revoked membership, changed
+scope and mismatched rubric are rejected. Fresh actor/configuration locks and review,
+outbox and immutable history writes share one transaction.
+
+`monthly_reputation_context.sql` is a disposable proposal. Its environment version,
+matching enabled flag, recorded rubric approval and reviewed collection privacy
+prerequisite are all required; none are seeded. D05 and actual export/locator/DSR
+approval remain pending. Canonical OpenAPI/generated-client updates and the product
+review form require app-flow coordination. Reviewer retention and full DSR handling
+are not approved by these isolated erasure tests.
+
+Jobs consume only the stored review/outbox pairing. Late acceptance uses the original
+week and recomputes whole totals. Latest reversed reviews cannot be resurrected by
+old delivery. Parent/thread edits and independent moderation changes fan out through
+durable per-source/per-comment receipts, including after physical child purge.
+Ordinary soft or physical deletion alone preserves valid accepted work, even before
+first Jobs delivery. Scoped publication proof also accepts an actual equal-vote
+restoration without adding historical-policy points. Changed context or an independent
+block still invalidates the retained proof and appends a correction.
+
+Paused optional contextual backlogs do not starve ordinary publication. Assembly
+refuses relevant unprocessed review/dependency evidence, including a mismatched or
+unavailable replacement configuration, and pins the stored context version. Removing
+an optional producer environment value cannot silently erase earlier accepted credit.
+Unsupported older-version review events remain unreceipted for explicit resume under
+their original approved version; they cannot occupy the ordinary reconciliation batch.
+A fresh valid acceptance can supersede a prior contextual withholding or reversal
+despite ordinary deletion before delivery, with the latest review identity retained.
+
+Node 22.23.3 and disposable PostgreSQL 17 verify 20 contextual cases (98.94% lines,
+90.26% branches), 25 appeals/participation cases (100%, 94.64%), 10 earning regressions
+(92.07%, 80.45%) and 13 assembly regressions (98.76%, 89.91%). The actual authenticated
+admin route and real five-vote restoration are exercised. These are scoped backend
+evidence, not all 100 application cases, provider acceptance, Flutter completion or
+live activation.
 
 ## Ticket feedback interface proposal
 

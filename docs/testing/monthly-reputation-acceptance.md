@@ -27,6 +27,7 @@ embedded reference-validation counts are not execution evidence for this branch.
 - B / BT: [canonical proof capture](../../packages/db/src/monthly-maintenance.ts), [monthly assembly](../../packages/db/src/monthly-assembly.ts), [scheduled reconciler](../../apps/lythaus-jobs/src/monthly-assembly.ts) / [real PostgreSQL tests](../../apps/lythaus-jobs/tests/monthly-assembly.postgres.mjs).
 - BS: [maintenance, assembly and lifecycle proposal](../../database/planetscale/proposals/monthly_reputation_maintenance.sql), outside the approved production manifest. Collection privacy prerequisite is unset until export/locator integration review.
 - V / VS: [final peer participation consumer](../../packages/db/src/monthly-peer-participation.ts), [invoked queue/scheduled adapter](../../apps/lythaus-jobs/src/monthly-peer-participation.ts) / [separately gated proposal](../../database/planetscale/proposals/monthly_reputation_peer_participation.sql); CT verifies the real closure-to-weekly-result path.
+- X / XT / XS: [scoped contextual review](../../packages/db/src/monthly-context-review.ts), [dependency reconciliation](../../packages/db/src/monthly-context-dependencies.ts), [authenticated admin mutation](../../apps/lythaus-admin-api/src/monthly-context-review.ts) / [20 real PostgreSQL cases](../../apps/lythaus-jobs/tests/monthly-context.postgres.mjs) / [separately gated proposal](../../database/planetscale/proposals/monthly_reputation_context.sql). CT additionally verifies actual equal-vote restoration through the admin route and retained publication proof.
 
 A unit-verified row establishes only the named calculation. A partial row still
 requires the remaining application, privacy, provider or release work. No new
@@ -55,16 +56,16 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | CAL-16 | Email proof expiry at the exact cutoff and a new proof after cutoff are handled correctly. | D, H, B / MT, HT, BT | Actual initial verification/paused capture/revocation and historical cutoff verified; renewal API and D08 approval pending |
 | CAL-17 | Calendar-month addition handles 29/30/31-day dates without unapproved 90-day substitution. | D, H / MT, HT | Calendar validity candidate verified; D08 activation pending |
 | CAL-18 | A weekly correction reselects all candidates; the previous fifth can enter the chosen four. | M, E, B / MT, ET, BT | Real independent invalidation reassembles and reselects the fifth; old reports retained |
-| CAL-19 | On-time evidence approved late retains its performance period and audited correction path. | M, E, B / MT, ET, BT | Actual publication events retain original weeks through assembly/correction; contextual/specialist acceptance pending |
+| CAL-19 | On-time evidence approved late retains its performance period and audited correction path. | M, E, B, X / MT, ET, BT, XT | Late scoped acceptance retains original week; actual assembly refuses undrained/mismatched contextual configuration and drains the stored version; specialist acceptance pending |
 | CAL-20 | End-of-month job replay, overlap and restart cannot publish duplicate entitlements. | P, J, B / PT, BT | Atomic assembly/queue replay, scheduled reconciliation and failure rollback verified; live entitlement publisher pending |
 | PTS-01 | Three accepted human posts award 250 once; two do not; six do not award 500. | W, E, ES / WT, ET | Shadow producer and concurrent real-source transactions verified; activation pending |
 | PTS-02 | Duplicate, generated, disallowed or self-manufactured content cannot satisfy a contribution milestone. | W, E / WT, ET | Exact duplicate, generated/disallowed publication and self-approval checks verified; broader manipulation adjudication pending |
-| PTS-03 | A short meaningful comment can qualify without a word-count or formal-language gate. | T02/T04 | Planned; no test execution claimed |
-| PTS-04 | Own and other discussion classification cannot double-count the same actor/thread context. | W, E / WT, ET | Stored ownership and one-primary-work calculation verified; contextual acceptance workflow pending |
-| PTS-05 | A member with no replies has the approved meaningful-follow-up route, not invented peer activity. | T02/T04 | Planned; no test execution claimed |
+| PTS-03 | A short meaningful comment can qualify without a word-count or formal-language gate. | W, E, X / WT, XT, CT | Actual short stored comment independently accepted and credited, including peer-restored publication and deletion before Jobs; D05 rubric approval and product form pending |
+| PTS-04 | Own and other discussion classification cannot double-count the same actor/thread context. | W, E, X / WT, ET, XT | Stored ownership, one primary work and shared contextual allowance verified under concurrent retries; D05 activation pending |
+| PTS-05 | A member with no replies has the approved meaningful-follow-up route, not invented peer activity. | W, X / WT, XT | Actual own-thread follow-up accepted through server review without fabricated replies; D05 rubric approval and product form pending |
 | PTS-06 | Source and correction share 300; splitting UI rows cannot raise the family cap. | W / WT | Candidate calculation verified; specialist submission/acceptance transactions pending |
 | PTS-07 | Help and accessibility share 250, with the same concurrency protection. | W / WT; ticket amendment F01 | Candidate shared-cap calculation verified; acceptance/concurrency integration pending; F01 budget unresolved |
-| PTS-08 | Self-acceptance, repeated trivial corrections and reciprocal task farming are held/rejected with evidence. | T02/T04; ticket proposal F01 | Planned; include independent ticket acceptance; no test execution claimed |
+| PTS-08 | Self-acceptance, repeated trivial corrections and reciprocal task farming are held/rejected with evidence. | X / XT, CT; ticket proposal F01 | Context self-acceptance/fresh revoked staff/forged points refused; immutable bounded evidence and reversal verified; specialist triviality/farming and independent ticket acceptance remain |
 | PTS-09 | Four distinct approved families award breadth 150 once; five/six do not stack it. | W / WT | Configurable D03 candidate verified; source integration and activation pending |
 | PTS-10 | Two alternatives in one family count as one breadth family; reactions/security are not families. | W / WT | Candidate calculation verified; full product flow pending |
 | PTS-11 | Reversing a supporting contribution recalculates breadth and other dependent components. | W, E / WT, ET; ticket amendment F01 | Candidate dependent recalculation and publication corrections verified; specialist/ticket integration pending |
@@ -108,7 +109,7 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | APP-13 | A valid minority ballot earns the same participation award as a valid majority ballot. | C, V / CT | Canonical closure awards both sides 250 under the gated D10 candidate; no choices/reasons enter weekly reports; activation pending |
 | APP-14 | A changed ballot is one contribution; skip/recusal does not cause a penalty. | A, C, V / AT, CT | Final revision earns once in its original week; recusal/cannot-assess earn zero without penalty; D10 activation pending |
 | APP-15 | No available cases is a neutral opportunity status; no fake production practice awards. | C / CT | Real empty queue returns no_case_available; no practice award producer |
-| APP-16 | Overturning a decision reverses only linked consequences and is idempotent. | C, E / CT | Scoped restoration and monthly earning correction verified, including failure rollback; historical consequence reconciliation remains D13 |
+| APP-16 | Overturning a decision reverses only linked consequences and is idempotent. | C, E, X / CT, XT | Scoped restoration and monthly earning correction verified, including failure rollback and retained context proof after purge; historical consequence reconciliation remains D13 |
 | APP-17 | The same model output cannot immediately undo a scoped peer overturn on unchanged evidence. | C / CT | Stored source/content/classifier scope and actual Jobs replay guard verified; changed evidence does not match the override |
 | APP-18 | Allow does not override a separate lawful safety hold, content deletion, unrelated sanction or media launch gate. | C / CT | Independent decision, changed/deleted text, parent-post block and generated-content prohibition verified; media route unactivated |
 | APP-19 | Old-policy cases never mix weight-two ballots into the new equal-vote evaluator. | A, C / AT, CT, DT | Historical reads/serialization preserved; old open cases refused new-policy replacement pending D13 |
@@ -132,11 +133,11 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | RPT-01 | Own report reproduces the exact stored calculation and lists the omitted fifth week. | M, P, B / MT, PT, BT | Immutable server assembly/report parity and omitted fifth verified; own API/Flutter report pending coordination |
 | RPT-02 | Public policy is inspectable, but another member's private report and ballot identity are inaccessible. | T09 | Planned; no test execution claimed |
 | RPT-03 | JSON/CSV/report links obey authorisation, expiry, CSV injection protection and data minimisation. | T09 | Planned; no test execution claimed |
-| RPT-04 | DSR export/delete, proof revocation, content purge and retained-audit redaction work end to end. | E, B, BS / ET, BT | Soft-delete erasure and assembly/assessment races verified; actual export/locator workflow remains gated before collection |
+| RPT-04 | DSR export/delete, proof revocation, content purge and retained-audit redaction work end to end. | E, B, BS, X, XS / ET, BT, XT, CT | Isolated soft-delete erasure, assembly/assessment races and ordinary purge versus independent invalidation verified; actual export/locator/reviewer retention workflow remains gated before collection |
 | REL-01 | Cached consent/standing cannot approve a stale vote or redemption; fresh Hyperdrive reads are used. | M, P, J, SQL / MT, PT | Partial: shadow persistence verified; full product flow pending |
-| REL-02 | Queue duplicate/out-of-order delivery and worker crash do not duplicate awards or miss corrections. | P, J, E, B, V / PT, ET, BT, CT | Includes peer fanout rollback/retry, deletion interruption, fresh pause, durable backfill after completed transport inbox, plus prior earning/assembly races; specialist/reception consumers remain |
+| REL-02 | Queue duplicate/out-of-order delivery and worker crash do not duplicate awards or miss corrections. | P, J, E, B, V, X / PT, ET, BT, CT, XT | Includes context version/backlog isolation, reapproval before soft/purge delivery, dependency fanout, peer rollback/retry and prior earning/assembly races; specialist/reception consumers remain |
 | REL-03 | Migration dry run, rollback, policy activation and exact reviewed SHA are separately evidenced. | SQL / PT | Partial: local baseline and proposed schema only; release pending |
-| REL-04 | Critical P1/P2 coverage is at least 80%; feed p95 <200 ms target, load/failure testing, API validation and personalised-cache isolation are verified or explicitly reported unverified. | MT, AT, HT, PT, ET, BT, CT | Scoped coverage gates pass: policy 100/98.87, assembly 99.10/95.35, earning 96.17/95.04, appeal/participation 100/94.83 (line/branch); load/feed/new browser flows unverified |
+| REL-04 | Critical P1/P2 coverage is at least 80%; feed p95 <200 ms target, load/failure testing, API validation and personalised-cache isolation are verified or explicitly reported unverified. | MT, AT, HT, PT, ET, BT, CT, XT | Current scoped coverage gates pass: policy 100/98.87, assembly 98.76/89.91, earning 92.07/80.45, appeal/participation 100/94.64, context 98.94/90.26 (line/branch); load/feed/new browser flows unverified |
 
 ## Additional ticket interface cases
 
@@ -161,6 +162,17 @@ The control-panel workstream owns the ticket backend.
 | Case history, export, redaction and erasure | Authorised private access only; no ticket body, attachments, contact details or staff notes leak through the ledger or public profile |
 
 ## Reproduction
+
+Local contextual increment evidence on 3 October 2026:
+
+| Check | Result |
+| --- | --- |
+| Scoped contextual PostgreSQL suite | 20 passed; 98.94% lines, 90.26% branches; original-period acceptance, concurrent retries, true source dependency fanout, >50 absent/version-switched backlog, reapproval before deletion, isolated erasure and actual assembly drain |
+| Appeals/participation PostgreSQL suite | 25 passed; 100% lines, 94.64% branches; actual five-vote restoration and authenticated admin review route preserve legitimate credit before soft/purge delivery |
+| Earning PostgreSQL regression | 10 passed; 92.07% lines, 80.45% branches |
+| Maintenance/assembly PostgreSQL regression | 13 passed; 98.76% lines, 89.91% branches |
+| Native typecheck, workflow YAML and matrix identities | Passed; exactly 100 unique original IDs, not 100 passed workflows |
+| Shared dependency integration | PR908 merged separately as main `8d91bcb434c4960a0f51ee2e4c7563c4f6e88a6c`; PR896 reconciliation remains coordinated with app-flow |
 
 Local evidence on 2 October 2026:
 

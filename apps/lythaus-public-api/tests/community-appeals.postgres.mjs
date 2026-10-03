@@ -138,6 +138,11 @@ before(async () => {
   await sql("INSERT INTO identity.admin_memberships (user_id, access_subject_hmac, role) VALUES ($1, decode($2, 'base64'), 'moderator')", [triager.id, hmacLookup(triager.id, adminEnv.ACCESS_SUBJECT_HMAC_KEY)]);
 });
 after(async () => {
+  await sql('DROP TRIGGER IF EXISTS monthly_context_subject_erasure ON identity.users');
+  await sql('DROP TRIGGER IF EXISTS monthly_context_flag_preserved ON system.feature_flags');
+  await sql('DROP TABLE IF EXISTS trust.monthly_context_dependency_receipts, trust.monthly_context_reviews, trust.monthly_context_rule_sets');
+  await sql('DROP FUNCTION IF EXISTS trust.require_monthly_context_review(),trust.lock_monthly_context_configuration(),trust.lock_monthly_context_actor(uuid,uuid),trust.preserve_monthly_context_flag(),trust.erase_monthly_context_subject()');
+  await sql("DELETE FROM system.feature_flags WHERE flag_key = 'trust.monthly_context_review'");
   await sql('DROP TRIGGER IF EXISTS fail_community_fixture ON system.outbox_events');
   await sql('DROP FUNCTION IF EXISTS system.fail_community_fixture()');
   await sql('DROP TRIGGER IF EXISTS fail_peer_fixture ON system.outbox_events');
@@ -687,4 +692,57 @@ test('REL-02/APP-07: pausing ballots also pauses peer evidence while preserving 
   await assert.rejects(cast(voteInput(appeal.appealId, voters[0].id)), /unavailable/);
   await sql('UPDATE system.feature_flags SET enabled = true WHERE flag_key = $1', [flag]);
   assert.equal((await call(voters[0], 'GET', `/api/appeals/${appeal.appealId}`)).status, 200);
+});
+
+test('APP-11/PTS-03/RPT-04: actual equal-vote comment restoration retains context credit after soft/purge before Jobs delivery',async()=>{
+  await sql(readFileSync(new URL('../../../database/planetscale/proposals/monthly_reputation_context.sql',import.meta.url),'utf8'));
+  const contextVersion='synthetic-restored-context-v1',rubric='synthetic-restored-rubric-v1';
+  await sql("INSERT INTO system.feature_flags (flag_key,enabled,policy_version) VALUES ('trust.monthly_context_review',true,$1)",[MONTHLY_REPUTATION_POLICY_VERSION]);
+  await sql(`INSERT INTO trust.monthly_context_rule_sets (version,policy_version,weekly_rules_version,catalogue_hash,rubric_version,mode,status,
+    collect_from,approved_by,approved_at,approval_reference,collection_privacy_version)
+    VALUES ($1,$2,$3,$4,$5,'shadow','pending_owner_approval','2020-01-01',$6,now(),'Synthetic only','monthly-privacy-v1')`,
+  [contextVersion,MONTHLY_REPUTATION_POLICY_VERSION,PROPOSED_WEEKLY_EARNING_RULES.version,MONTHLY_REPUTATION_CATALOGUE_HASH,rubric,triager.id]);
+  const accessToken=await new SignJWT({}).setProtectedHeader({alg:'ES256',kid:keyId}).setSubject(triager.id)
+    .setAudience(adminEnv.ACCESS_AUDIENCES).setIssuer(`https://${adminEnv.ACCESS_TEAM_DOMAIN}`).setIssuedAt().setExpirationTime('10m').sign(privateKey);
+  for(const pending of [false,true]){
+    const root=uuidv7(),threadSource=uuidv7(),commentId=uuidv7(),source=uuidv7(),caseId=uuidv7();posts.push(root);cases.push(caseId);
+    await sql(`INSERT INTO content.posts (id,author_id,body,declared_creation_mode,visibility,moderation_state,moderation_source_event_id)
+      VALUES ($1,$2,'Synthetic restored thread','human','public','allowed',$3)`,[root,owner.id,threadSource]);
+    await sql(`INSERT INTO content.comments (id,post_id,author_id,body,declared_creation_mode,moderation_state,moderation_source_event_id)
+      VALUES ($1,$2,$3,$4,'human','blocked',$5)`,[commentId,root,owner.id,`Synthetic contextual comment ${commentId}`,source]);
+    await sql(`INSERT INTO system.outbox_events (id,event_type,aggregate_type,aggregate_id,actor_id,payload)
+      VALUES ($1,'content.comment.created','comment',$2,$3,'{}'::jsonb)`,[source,commentId,owner.id]);
+    await sql(`INSERT INTO moderation.cases (id,content_type,content_id,state,policy_version,source_event_id)
+      VALUES ($1,'comment',$2,'resolved','synthetic-comment-block',$3)`,[caseId,commentId,source]);
+    await sql(`INSERT INTO moderation.decisions (id,case_id,outcome,public_label,policy_version,decided_by)
+      VALUES ($1,$2,'block','Under review','synthetic-comment-block',$3)`,[uuidv7(),caseId,decider.id]);
+    const appeal=await submit({caseId});await triage(appeal);await majority(appeal.appealId,5,0);await due(appeal.appealId);
+    assert.equal((await close(appeal.appealId)).restoration,'restored');
+    const earning=eventId=>tx(client=>recordMonthlyContentEarning(client,{eventId,rulesVersion:PROPOSED_WEEKLY_EARNING_RULES.version,
+      contextRulesVersion:contextVersion,evaluatedAt:new Date().toISOString()}),'lythaus_jobs');
+    if(pending) await earning(source);
+    const input={rubricVersion:rubric,sourceRevisionId:source,threadRevisionId:threadSource,parentRevisionId:null,
+      decision:'accepted',reasonCode:'synthetic_context_accepted',evidenceReference:'Synthetic private evidence',expectedRevision:0,idempotencyKey:uuidv7()};
+    const contextCall=(body=input,headers={},configuration={...adminEnv,MONTHLY_REPUTATION_CONTEXT_RULES:contextVersion})=>adminWorker.fetch(new Request(
+      `https://admin-api.lythaus.test/api/admin/reputation/comments/${commentId}/context-review`,{method:'POST',
+        headers:{'CF-Access-Jwt-Assertion':accessToken,Origin:'https://admin-api.lythaus.test','Content-Type':'application/json',...headers},body:JSON.stringify(body)}),configuration);
+    assert.equal((await contextCall(input,{'CF-Access-Jwt-Assertion':''})).status,401);
+    assert.equal((await contextCall(input,{Origin:'https://untrusted.invalid'})).status,403);
+    assert.equal((await contextCall(input,{},adminEnv)).status,503);
+    assert.equal((await contextCall({...input,points:13500})).status,400);
+    const response=await contextCall();assert.equal(response.status,201,await response.clone().text());
+    assert.match(response.headers.get('cache-control'),/private.*no-store/);
+    const review=await response.json();assert.equal((await contextCall()).status,200);
+    await sql('UPDATE identity.admin_memberships SET active=false WHERE user_id=$1',[triager.id]);
+    assert.equal((await contextCall()).status,403);
+    await sql('UPDATE identity.admin_memberships SET active=true WHERE user_id=$1',[triager.id]);
+    assert.equal((await sql('SELECT earning_facts FROM trust.monthly_context_reviews WHERE id=$1',[review.reviewId])).rows[0].earning_facts.publicationAccepted,true);
+    await sql('UPDATE content.comments SET deleted_at=now() WHERE id=$1',[commentId]);
+    await earning(review.sourceEventId);
+    await sql('DELETE FROM content.comments WHERE id=$1',[commentId]);
+    const contribution=(await sql(`SELECT evidence.input FROM trust.monthly_earning_contributions contribution
+      JOIN LATERAL (SELECT input FROM trust.monthly_earning_evidence_revisions WHERE contribution_id=contribution.id ORDER BY revision DESC LIMIT 1) evidence ON true
+      WHERE contribution.source_id=$1`,[commentId])).rows[0];
+    assert.equal(contribution.input.state,'accepted');assert.equal(contribution.input.contextReviewId,review.reviewId);
+  }
 });

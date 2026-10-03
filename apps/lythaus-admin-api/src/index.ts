@@ -13,6 +13,7 @@ import { handleOverview } from './overview-runtime.ts';
 import { adminWaitlistFilters, parseAdminUserId, parseReasonCode, rejectUnknownFields, requireConfirmation } from './admin-runtime-policy.ts';
 import { triageCommunityAppeal } from '../../../packages/db/src/community-appeal-mutations.ts';
 import { communityTriageQueue, readCommunityTriageEvidence } from '../../../packages/db/src/community-appeal-access.ts';
+import { handleMonthlyContextReview } from './monthly-context-review.ts';
 import { appealOutcomeAuditPlan, assertActionableModerationCase, evaluateAppealFromRecords, parseAppealAdjudicationRequest, type AppealAdjudicationRecord, type AppealVoteRecord } from './runtime-policy.ts';
 import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, parseWaitlistRetentionHoldUpdate, parseWaitlistStatusUpdate, requireWaitlistEncryptionKey, waitlistAuditMetadata, waitlistPageRequest } from './waitlist-runtime-policy.ts';
 import {
@@ -37,6 +38,7 @@ interface Env extends EnvBindings {
   DB_PRIVACY_FRESH: HyperdriveBinding;
   ACCESS_AUDIENCES?: string;
   COMMUNITY_APPEAL_RULES_VERSION?: string;
+  MONTHLY_REPUTATION_CONTEXT_RULES?: string;
 }
 
 const ADMIN_ERROR_CODES = new Set([
@@ -44,6 +46,10 @@ const ADMIN_ERROR_CODES = new Set([
   'access_verification_not_configured', 'admin_public_label_declaration_mismatch',
   'community_appeals_unavailable', 'community_appeal_triage_not_allowed', 'community_appeal_state_conflict',
   'community_appeal_triage_invalid', 'community_appeal_safe_evidence_required', 'community_appeal_restricted_evidence_forbidden',
+  'monthly_context_unavailable', 'monthly_context_actor_not_allowed', 'monthly_context_comment_not_found',
+  'monthly_context_request_invalid', 'monthly_context_rubric_mismatch', 'monthly_context_idempotency_reused',
+  'monthly_context_revision_conflict', 'monthly_context_rules_locked', 'monthly_context_scope_changed',
+  'monthly_context_publication_ineligible',
   'account_support_owner_required', 'account_support_unavailable', 'account_support_invalid_filter',
   'overview_owner_required', 'overview_unavailable', 'overview_invalid_period',
   'admin_mutation_content_type_invalid', 'admin_mutation_origin_invalid', 'admin_role_required', 'admin_subject_key_not_configured',
@@ -74,9 +80,9 @@ function adminError(error: unknown): { exposedCode: string; internalCode: string
     : ['access_verification_not_configured', 'admin_subject_key_not_configured', 'waitlist_unavailable', 'account_support_unavailable', 'overview_unavailable'].includes(exposedCode) ? 503
     : ['access_required', 'access_assertion_invalid', 'access_subject_missing'].includes(exposedCode) ? 401
       : ['auth_data_unavailable', 'auth_email_dispatch_unavailable'].includes(exposedCode) ? 503
-        : ['admin_role_required', 'admin_mutation_origin_invalid', 'account_support_owner_required', 'overview_owner_required', 'community_appeal_triage_not_allowed'].includes(exposedCode) ? 403
-          : exposedCode === 'community_appeals_unavailable' ? 503
-            : exposedCode === 'community_appeal_state_conflict' ? 409
+        : ['admin_role_required', 'admin_mutation_origin_invalid', 'account_support_owner_required', 'overview_owner_required', 'community_appeal_triage_not_allowed', 'monthly_context_actor_not_allowed'].includes(exposedCode) ? 403
+          : ['community_appeals_unavailable', 'monthly_context_unavailable'].includes(exposedCode) ? 503
+            : ['community_appeal_state_conflict', 'monthly_context_idempotency_reused', 'monthly_context_revision_conflict', 'monthly_context_rules_locked', 'monthly_context_scope_changed'].includes(exposedCode) ? 409
           : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
               : ['appeal_adjudication_locked', 'appeal_already_resolved', 'email_already_verified', 'idempotency_in_progress', 'idempotency_key_reused', 'moderation_case_already_resolved', 'moderation_case_superseded', 'moderation_declaration_missing', 'user_email_exists', 'waitlist_duplicate', 'waitlist_status_transition_invalid'].includes(exposedCode) ? 409
               : exposedCode === 'request_too_large' ? 413
@@ -1193,6 +1199,11 @@ export default {
         return cors(json({ items: result.rows }, { headers: { 'x-correlation-id': id, 'cache-control': 'private, no-store' } }));
       }
       const communityTriage = url.pathname.match(/^\/api\/admin\/appeals\/([^/]+)\/triage$/);
+      const contextReview = url.pathname.match(/^\/api\/admin\/reputation\/comments\/([^/]+)\/context-review$/);
+      if (request.method === 'POST' && contextReview) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await handleMonthlyContextReview(request, env, actor.userId, contextReview[1]));
+      }
       if (request.method === 'GET' && url.pathname === '/api/admin/appeals/community/queue') {
         if (!env.COMMUNITY_APPEAL_RULES_VERSION) throw new Error('community_appeals_unavailable');
         return cors(json(await transaction(env.DB_ADMIN_FRESH, client => communityTriageQueue(client, actor.userId, env.COMMUNITY_APPEAL_RULES_VERSION!)),

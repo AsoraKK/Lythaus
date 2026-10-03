@@ -5,12 +5,16 @@ import { MONTHLY_REPUTATION_CATALOGUE_HASH, MONTHLY_REPUTATION_POLICY_VERSION, r
 import { proposedClosingSundayWeek } from '../../contracts/src/monthly-reputation-decisions.ts';
 import { calculateProposedWeeklyEarning, validateWeeklyEarningRules, type WeeklyContributionEvidence, type WeeklyEarningRules } from '../../contracts/src/monthly-earning-policy.ts';
 import { monthlyReputationShadowEnabled } from './monthly-reputation.ts';
+import { MONTHLY_CONTEXT_EVENT, monthlyContextConfiguration, readMonthlyContextEarning } from './monthly-context-review.ts';
+import { isMonthlyCommunityPublication } from './monthly-publication.ts';
 
 export const MONTHLY_EARNING_SOURCE_EVENTS = [
   'content.post.created', 'content.post.updated', 'content.post.published', 'content.post.deleted',
   'content.comment.created', 'content.comment.updated', 'content.comment.published', 'content.comment.deleted',
   'moderation.content.blocked',
+  MONTHLY_CONTEXT_EVENT,
 ] as const;
+export const monthlyEarningSourceEvents = (contextEnabled = false) => MONTHLY_EARNING_SOURCE_EVENTS.filter(event => contextEnabled || event !== MONTHLY_CONTEXT_EVENT);
 
 export interface MonthlyEarningConfiguration { rules: WeeklyEarningRules; collectFrom: string }
 interface ContentEvidence extends WeeklyContributionEvidence {
@@ -18,6 +22,8 @@ interface ContentEvidence extends WeeklyContributionEvidence {
   contentFingerprint: string | null;
   sourceRevisionId: string | null;
   decisionId: string | null;
+  contextReviewId?: string;
+  contextRulesVersion?: string;
 }
 interface ContentRow {
   author_id: string; body: string; created_at: Date; deleted_at: Date | null; revision_performed_at: Date | null;
@@ -69,15 +75,9 @@ async function contentEvidence(client: Client, type: 'post' | 'comment', id: str
        ORDER BY d.created_at DESC, d.id DESC LIMIT 1
      ) decision ON true`, [id, type]);
   const row = result.rows[0];
-  if (row?.decision_policy === MONTHLY_REPUTATION_POLICY_VERSION && row.decision_outcome === 'allow' && !row.decided_by) {
-    row.community_allow = (await client.query(`SELECT 1 FROM moderation.decisions d
-      JOIN moderation.community_appeal_sessions s ON s.challenged_decision_id IN
-        (SELECT id FROM moderation.decisions WHERE case_id = d.case_id)
-      JOIN moderation.community_appeal_outcomes o ON o.appeal_id = s.appeal_id AND o.recorded_at = d.created_at
-      WHERE d.id = $1 AND s.state = 'resolved_allow' AND o.restoration = 'restored'
-        AND s.content_id = $2 AND s.content_type = $3 AND s.source_event_id = $4`,
-    [row.decision_id, id, type, row.moderation_source_event_id])).rowCount === 1;
-  }
+  if (row) row.community_allow = await isMonthlyCommunityPublication(client, { decisionId: row.decision_id,
+    policyVersion: row.decision_policy, outcome: row.decision_outcome, decidedBy: row.decided_by,
+    contentId: id, contentType: type, sourceRevisionId: row.moderation_source_event_id });
   return row;
 }
 
@@ -124,7 +124,7 @@ export async function refreshMonthlyEarningWeek(client: Client, input: {
 }
 
 export async function recordMonthlyContentEarning(client: Client, request: {
-  eventId: string; rulesVersion: string; evaluatedAt: string;
+  eventId: string; rulesVersion: string; evaluatedAt: string; contextRulesVersion?: string; dependentCommentId?: string;
 }) {
   const configuration = await loadMonthlyEarningConfiguration(client, request.rulesVersion);
   if (!configuration) return null;
@@ -133,37 +133,61 @@ export async function recordMonthlyContentEarning(client: Client, request: {
     `SELECT event_type, aggregate_type, aggregate_id, created_at FROM system.outbox_events WHERE id = $1 AND event_type = ANY($2::text[])`,
     [request.eventId, MONTHLY_EARNING_SOURCE_EVENTS])).rows[0];
   if (!event) throw new Error('monthly_earning_canonical_event_required');
+  const contextConfiguration = await monthlyContextConfiguration(client, request.contextRulesVersion, request.rulesVersion, true);
+  if (event.event_type === MONTHLY_CONTEXT_EVENT && !contextConfiguration) return null;
   if (iso(event.created_at) > request.evaluatedAt) throw new Error('monthly_earning_event_in_future');
-  await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`monthly-earning-event:${request.eventId}`]);
-  if ((await client.query('SELECT 1 FROM trust.monthly_earning_receipts WHERE event_id = $1 AND policy_version = $2',
-    [request.eventId, MONTHLY_REPUTATION_POLICY_VERSION])).rowCount) return { processed: false };
-  const recordReceipt = async (subjectId: string | null) => client.query(
-    `INSERT INTO trust.monthly_earning_receipts (event_id, policy_version, subject_user_id) VALUES ($1, $2, $3)`,
-    [request.eventId, MONTHLY_REPUTATION_POLICY_VERSION, subjectId]);
+  await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`monthly-earning-event:${request.eventId}:${request.dependentCommentId ?? ''}`]);
+  if ((await client.query(request.dependentCommentId
+    ? 'SELECT 1 FROM trust.monthly_context_dependency_receipts WHERE event_id = $1 AND comment_id = $2'
+    : 'SELECT 1 FROM trust.monthly_earning_receipts WHERE event_id = $1 AND policy_version = $2',
+    [request.eventId, request.dependentCommentId ?? MONTHLY_REPUTATION_POLICY_VERSION])).rowCount) return { processed: false };
+  const dependency = request.dependentCommentId ? (await client.query<{ subject_user_id: string }>(`SELECT review.subject_user_id
+    FROM trust.monthly_context_reviews review JOIN identity.users account ON account.id = review.subject_user_id
+    WHERE review.comment_id = $1 AND ((review.thread_id = $2 AND $3 = 'post') OR (review.parent_id = $2 AND $3 = 'comment'))
+      AND account.status <> 'deleted' AND account.deleted_at IS NULL ORDER BY review.revision DESC LIMIT 1`,
+  [request.dependentCommentId, event.aggregate_id, event.aggregate_type])).rows[0] : undefined;
+  if (request.dependentCommentId && !dependency) throw new Error('monthly_context_dependency_required');
+  const recordReceipt = async (subjectId: string | null) => {
+    if (request.dependentCommentId) {
+      if (subjectId ?? dependency?.subject_user_id) return client.query(`INSERT INTO trust.monthly_context_dependency_receipts
+        (event_id, comment_id, subject_user_id) VALUES ($1, $2, $3)`, [request.eventId, request.dependentCommentId, subjectId ?? dependency!.subject_user_id]);
+      return;
+    }
+    return client.query(`INSERT INTO trust.monthly_earning_receipts (event_id, policy_version, subject_user_id) VALUES ($1, $2, $3)`,
+      [request.eventId, MONTHLY_REPUTATION_POLICY_VERSION, subjectId]);
+  };
   if (!['post', 'comment'].includes(event.aggregate_type) || iso(event.created_at) < configuration.collectFrom) {
     await recordReceipt(null); return { processed: true };
   }
-  const sourceType = event.aggregate_type as 'post' | 'comment';
-  const content = await contentEvidence(client, sourceType, event.aggregate_id);
+  const sourceType = request.dependentCommentId ? 'comment' : event.aggregate_type as 'post' | 'comment';
+  const sourceId = request.dependentCommentId ?? event.aggregate_id;
+  if (sourceType === 'comment') await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`monthly-context-comment:${sourceId}`]);
+  const content = await contentEvidence(client, sourceType, sourceId);
   const existing = (await client.query<{ id: string; subject_user_id: string; performed_at: Date; week_start: Date; subject_deleted: boolean }>(
     `SELECT contribution.id, subject_user_id, performed_at, week_start,
        account.status = 'deleted' OR account.deleted_at IS NOT NULL AS subject_deleted
       FROM trust.monthly_earning_contributions contribution JOIN identity.users account ON account.id = subject_user_id
       WHERE policy_version = $1 AND source_type = $2 AND source_id = $3`,
-    [MONTHLY_REPUTATION_POLICY_VERSION, sourceType, event.aggregate_id])).rows[0];
-  if (!content && !existing) { await recordReceipt(null); return { processed: true }; }
+    [MONTHLY_REPUTATION_POLICY_VERSION, sourceType, sourceId])).rows[0];
+  const retainedSubject = !content && !existing && sourceType === 'comment' && contextConfiguration
+    ? (await client.query<{ subject_user_id: string }>(`SELECT subject_user_id FROM trust.monthly_context_reviews
+        WHERE comment_id = $1 AND rules_version = $2 ORDER BY revision DESC LIMIT 1`, [sourceId, request.contextRulesVersion])).rows[0]?.subject_user_id : undefined;
+  const retained = retainedSubject ? await readMonthlyContextEarning(client, { commentId: sourceId, subjectId: retainedSubject,
+    rulesVersion: request.contextRulesVersion, weeklyRulesVersion: configuration.rules.version,
+    canonicalEventId: event.event_type === MONTHLY_CONTEXT_EVENT ? request.eventId : undefined }) : null;
+  if (!content && !existing && !retained?.retainedAccepted) { await recordReceipt(retainedSubject ?? null); return { processed: true }; }
   if (content?.subject_deleted || existing?.subject_deleted) { await recordReceipt(null); return { processed: true }; }
-  const subjectId = content?.author_id ?? existing!.subject_user_id;
-  const performedAt = iso(existing?.performed_at ?? content!.created_at);
+  const subjectId = content?.author_id ?? existing?.subject_user_id ?? retainedSubject!;
+  const performedAt = existing ? iso(existing.performed_at) : content ? iso(content.created_at) : retained!.performedAt;
   if (performedAt < configuration.collectFrom) { await recordReceipt(subjectId); return { processed: true }; }
   const week = proposedClosingSundayWeek(performedAt);
   await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`monthly-earning:${subjectId}:${week.startsAt}`]);
   const base = (await client.query<{ id: string }>(
     `INSERT INTO trust.monthly_earning_contributions (id, subject_user_id, source_type, source_id, policy_version, performed_at, week_start)
      VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (policy_version, source_type, source_id) DO NOTHING RETURNING id`,
-    [uuidv7(), subjectId, sourceType, event.aggregate_id, MONTHLY_REPUTATION_POLICY_VERSION, performedAt, week.startsAt])).rows[0]
+    [uuidv7(), subjectId, sourceType, sourceId, MONTHLY_REPUTATION_POLICY_VERSION, performedAt, week.startsAt])).rows[0]
     ?? (await client.query<{ id: string }>(`SELECT id FROM trust.monthly_earning_contributions WHERE policy_version = $1 AND source_type = $2 AND source_id = $3`,
-      [MONTHLY_REPUTATION_POLICY_VERSION, sourceType, event.aggregate_id])).rows[0];
+      [MONTHLY_REPUTATION_POLICY_VERSION, sourceType, sourceId])).rows[0];
   let state: ContentEvidence['state'] = 'pending_review', reasonCode = 'publication_review_pending';
   let declarationValid = false;
   let creationMode: ContentEvidence['creationMode'] = 'unknown';
@@ -182,13 +206,38 @@ export async function recordMonthlyContentEarning(client: Client, request: {
   }
   const old = (await client.query<{ revision: number; input_digest: string; input: ContentEvidence }>(
     'SELECT revision, input_digest, input FROM trust.monthly_earning_evidence_revisions WHERE contribution_id = $1 ORDER BY revision DESC LIMIT 1', [base.id])).rows[0];
+  const contextVersion = old?.input.contextRulesVersion ?? request.contextRulesVersion;
+  const contextual = sourceType === 'comment' ? await readMonthlyContextEarning(client, {
+    commentId: sourceId, subjectId, rulesVersion: contextVersion,
+    weeklyRulesVersion: configuration.rules.version,
+    canonicalEventId: event.event_type === MONTHLY_CONTEXT_EVENT ? request.eventId : undefined,
+  }) : null;
+  const independentlyInvalidated = !!contextual && ['withheld', 'reversed'].includes(contextual.decision)
+    && (contextual.scopeMatches || contextual.sourceRevisionId === old?.input.sourceRevisionId);
+  if (contextual?.scopeInvalidated && (reasonCode === 'content_deleted' || reasonCode === 'context_review_required')) {
+    state = content && !content.deleted_at ? 'pending_review' : 'withheld'; reasonCode = 'context_scope_changed';
+  }
+  if (independentlyInvalidated) { state = contextual!.decision; reasonCode = 'independent_context_invalidated'; }
+  else if (contextual?.decision === 'accepted' && contextual.scopeMatches && reasonCode === 'context_review_required') {
+    state = 'accepted'; reasonCode = 'independent_context_accepted';
+  }
   let facts: Omit<ContentEvidence, 'id'> = { workId: base.id, kind: !content && old ? old.input.kind : sourceType === 'post' ? 'post'
     : content?.own_thread ? content.parent_id ? 'own_reply' : 'own_comment' : content?.parent_id ? 'other_reply' : 'other_comment',
     performedAt, state, creationMode, declarationValid, reasonCode,
     contentFingerprint: content && !content.deleted_at ? await digest(content.body.normalize('NFC').trim()) : null,
-    sourceRevisionId: content?.moderation_source_event_id ?? null, decisionId: content?.decision_id ?? null };
-  if ((!content || content.deleted_at) && old?.input.state === 'accepted'
-    && content?.moderation_state !== 'blocked' && event.event_type !== 'moderation.content.blocked') {
+    sourceRevisionId: content?.moderation_source_event_id ?? null, decisionId: content?.decision_id ?? null,
+    ...(contextual ? { contextReviewId: contextual.reviewId, contextRulesVersion: contextVersion } : {}) };
+  const acceptedRetention = contextual?.retainedAccepted ? contextual : retained?.retainedAccepted ? retained : null;
+  const newerAcceptedReview = !!acceptedRetention && acceptedRetention.reviewId !== old?.input.contextReviewId;
+  if ((!content || acceptedRetention?.retainedAccepted) && (!old || old.input.state === 'pending_review' || newerAcceptedReview)
+    && acceptedRetention && event.event_type !== 'moderation.content.blocked') {
+    const { publicationAccepted, ...acceptedFacts } = acceptedRetention.facts;
+    facts = { workId: base.id, performedAt, ...acceptedFacts, state: 'accepted', reasonCode: 'accepted_context_deletion_preserved',
+      contextReviewId: acceptedRetention.reviewId, contextRulesVersion: contextVersion };
+  }
+  if (((!content || content.deleted_at) || (request.dependentCommentId && event.event_type.endsWith('.deleted'))) && old?.input.state === 'accepted'
+    && content?.moderation_state !== 'blocked' && event.event_type !== 'moderation.content.blocked'
+    && !independentlyInvalidated && !contextual?.scopeInvalidated && !newerAcceptedReview) {
     const { id: previousEvidenceId, ...previousFacts } = old.input;
     facts = { ...previousFacts, reasonCode: 'legitimate_deletion_preserved' };
   }

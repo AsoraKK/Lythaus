@@ -3,13 +3,14 @@ import { uuidv7 } from '@lythaus/security';
 import { MONTHLY_REPUTATION_POLICY_VERSION, nextReputationMonth, reputationInstant, requireSourceMonth, type LockedReputationWeek } from '../../contracts/src/monthly-reputation-policy.ts';
 import { calculateMonthlyMaintenance } from '../../contracts/src/monthly-maintenance-policy.ts';
 import { proposedClosingSundayWeeks } from '../../contracts/src/monthly-reputation-decisions.ts';
-import { loadMonthlyEarningConfiguration, MONTHLY_EARNING_SOURCE_EVENTS } from './monthly-earning.ts';
+import { loadMonthlyEarningConfiguration, monthlyEarningSourceEvents } from './monthly-earning.ts';
 import { loadMonthlyMaintenanceConfiguration, readMonthlyMaintenanceEvidence } from './monthly-maintenance.ts';
 import { recordMonthlyReputationSource } from './monthly-reputation.ts';
 import { requireMonthlyPeerIngestionDrained } from './monthly-peer-participation.ts';
+import { requireMonthlyContextIngestionDrained } from './monthly-context-review.ts';
 
 export async function assembleMonthlyReputation(client: Client, input: {
-  subjectUserId: string; sourceMonth: string; weeklyRulesVersion: string; maintenanceRulesVersion: string; evaluatedAt: string; peerRulesVersion?: string;
+  subjectUserId: string; sourceMonth: string; weeklyRulesVersion: string; maintenanceRulesVersion: string; evaluatedAt: string; peerRulesVersion?: string; contextRulesVersion?: string;
 }) {
   requireSourceMonth(input.sourceMonth);
   const evaluated = reputationInstant(input.evaluatedAt);
@@ -40,6 +41,12 @@ export async function assembleMonthlyReputation(client: Client, input: {
   const previousPeerVersion = previous?.report && typeof previous.report === 'object'
     ? (previous.report as { peerRulesVersion?: string | null }).peerRulesVersion ?? null : null;
   if (previous && previousPeerVersion !== (peer?.version ?? null)) throw new Error('monthly_assembly_previous_policy_requires_review');
+  const context = await requireMonthlyContextIngestionDrained(client, { subjectUserId: input.subjectUserId,
+    weeklyRulesVersion: input.weeklyRulesVersion, contextRulesVersion: input.contextRulesVersion,
+    startsAt: periods[0].startsAt, endsAt: periods.at(-1)!.endsAt });
+  const previousContextVersion = previous?.report && typeof previous.report === 'object'
+    ? (previous.report as { contextRulesVersion?: string | null }).contextRulesVersion ?? null : null;
+  if (previous && previousContextVersion !== (context?.version ?? null)) throw new Error('monthly_assembly_previous_policy_requires_review');
   const pending = await client.query(`SELECT 1 FROM system.outbox_events event
     LEFT JOIN content.posts post ON event.aggregate_type = 'post' AND post.id = event.aggregate_id
     LEFT JOIN content.comments comment ON event.aggregate_type = 'comment' AND comment.id = event.aggregate_id
@@ -51,7 +58,7 @@ export async function assembleMonthlyReputation(client: Client, input: {
       AND coalesce(contribution.performed_at, post.created_at, comment.created_at) < $6
       AND NOT EXISTS (SELECT 1 FROM trust.monthly_earning_receipts receipt
         WHERE receipt.event_id = event.id AND receipt.policy_version = $2) LIMIT 1`,
-  [input.subjectUserId, MONTHLY_REPUTATION_POLICY_VERSION, MONTHLY_EARNING_SOURCE_EVENTS,
+  [input.subjectUserId, MONTHLY_REPUTATION_POLICY_VERSION, monthlyEarningSourceEvents(!!context),
     weekly.collectFrom, periods[0].startsAt, periods.at(-1)!.endsAt]);
   if (pending.rowCount) throw new Error('monthly_assembly_ingestion_pending');
   const weeks = (await client.query<{ id: string; week_id: string; revision: number; state: LockedReputationWeek['state'] | 'open' | 'settling';
@@ -74,6 +81,7 @@ export async function assembleMonthlyReputation(client: Client, input: {
   const report = { policyVersion: MONTHLY_REPUTATION_POLICY_VERSION, mode: 'shadow', sourceMonth: input.sourceMonth,
     sourceCutoff, rulesVersion: maintenance.rules.version, weeklyRulesVersion: weekly.rules.version,
     peerRulesVersion: peer?.version ?? null,
+    contextRulesVersion: context?.version ?? null,
     maintenance: maintenanceReport, weeks: weeks.map(week => ({ revisionId: week.id, weekId: week.week_id,
       revision: week.revision, calculation: { ...week.calculation, state: week.state } })),
     missingWeeks: periods.filter(period => !locked.some(week => week.startsAt === period.startsAt)).map(period => ({ ...period,
