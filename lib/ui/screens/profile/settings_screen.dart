@@ -131,12 +131,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onTap: () {
                 final router = GoRouter.maybeOf(context);
                 if (router != null) {
-                  router.go(GoRouterState.of(context).uri.replace(path: '/settings/privacy').toString());
+                  router.go(
+                    GoRouterState.of(
+                      context,
+                    ).uri.replace(path: '/settings/privacy').toString(),
+                  );
                   return;
                 }
-                Navigator.of(context).push(MaterialPageRoute<void>(
-                  builder: (_) => const PrivacySettingsScreen(),
-                ));
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const PrivacySettingsScreen(),
+                  ),
+                );
               },
             ),
             ListTile(

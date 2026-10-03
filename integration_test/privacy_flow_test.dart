@@ -13,7 +13,9 @@ void main() {
   final canRun = stagingDomain.isNotEmpty && stagingToken.isNotEmpty;
 
   group('Privacy staging flow', () {
-    testWidgets('export enforces cooldown and delete succeeds', (tester) async {
+    testWidgets('export enforces cooldown and deletion is submitted', (
+      tester,
+    ) async {
       if (!canRun) {
         debugPrint('Skipping privacy flow test - staging env not configured.');
         return;
@@ -37,7 +39,9 @@ void main() {
         ),
       );
 
-      await api.deleteAccount(authToken: stagingToken, hardDelete: true);
+      final deletion = await api.deleteAccount(authToken: stagingToken);
+      expect(deletion.requestState, PrivacyRequestState.received);
+      expect(deletion.requestId, isNotEmpty);
     });
   });
 }
