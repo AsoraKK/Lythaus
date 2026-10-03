@@ -80,7 +80,7 @@ export function registerRewardClaimCases(f){
     await assert.rejects(consume(m,{invoiceEvidenceId:proof}),/usage_exhausted/);assert.equal(await stock(m),1);
     assert.equal((await sql('SELECT source_score FROM trust.monthly_reward_snapshots WHERE subject_user_id=$1',[m.user])).rows[0].source_score,before);
   });
-  test('PAR-08/REL-02: invoice-period retries with different provider proof IDs retain the first fulfilment and original authority',async()=>{
+  test('PAR-08/REL-02: invoice-period retries with different provider proof IDs retain the original authority',async()=>{
     const m=await fixture({stock:3,limit:3}),period=randomBytes(32),first=await invoice(m,{period}),second=await invoice(m,{period}),key=uuidv7();
     const results=await Promise.all([consume(m,{invoiceEvidenceId:first,idempotencyKey:key}),consume(m,{invoiceEvidenceId:second})]);
     assert.equal(results.filter(item=>item.created).length,1);assert.equal(results[0].id,results[1].id);assert.equal(await stock(m),2);
@@ -89,6 +89,36 @@ export function registerRewardClaimCases(f){
     const differentPeriod=await invoice(m);await assert.rejects(consume(m,{invoiceEvidenceId:differentPeriod,idempotencyKey:key}),/idempotency_reused/);
     await sql("UPDATE trust.monthly_reward_offer_availability SET state='paused' WHERE offer_version_id=$1",[m.variant.id]);
     const historical=await consume(m,{invoiceEvidenceId:second});assert.equal(historical.id,results[0].id);assert.equal(historical.created,false);assert.equal(await stock(m),2);
+  });
+  test('PAR-07/08/REL-02: a same-period invoice under a renewed current consent returns the original fulfilment once',async()=>{
+    const m=await fixture({stock:3,limit:3}),period=randomBytes(32),firstProof=await invoice(m,{period});
+    const original=await consume(m,{invoiceEvidenceId:firstProof});assert.equal(original.created,true);
+    const invitation=await tx(client=>inviteMonthlyPartnerLink(client,{partnerId:m.partner,operatorId:m.operator,variantId:m.variant.id,
+      email:m.address,customerReference:m.customerReference,idempotencyKey:uuidv7(),rulesVersion:f.partnerRules,keys}));
+    const renewed=await tx(client=>consentToMonthlyPartnerLink(client,{subjectId:m.user,invitationToken:invitation.token,termsVersion:'synthetic-terms-v1',
+      expectedRevision:m.consent.revision,idempotencyKey:uuidv7(),rulesVersion:f.partnerRules,keys}));
+    const renewedProof=await invoice(m,{period,consentId:renewed.id});
+    const replay=await consume(m,{invoiceEvidenceId:renewedProof});
+    assert.equal(replay.id,original.id);assert.equal(replay.created,false);assert.equal(await stock(m),2);
+    const linked=(await sql(`SELECT command.fulfilment_id,invoice.consent_id,fulfilled.consent_id AS original_consent_id
+      FROM trust.monthly_reward_fulfilment_commands command JOIN trust.monthly_reward_invoice_evidence invoice ON invoice.id=command.invoice_evidence_id
+      JOIN trust.monthly_reward_fulfilments fulfilled ON fulfilled.id=command.fulfilment_id WHERE invoice.id=$1`,[renewedProof])).rows[0];
+    assert.equal(linked.fulfilment_id,original.id);assert.equal(linked.consent_id,renewed.id);assert.equal(linked.original_consent_id,m.consent.id);
+  });
+  test('PAR-07/SEC-01: superseded invoice consent cannot create a fresh command for the old period receipt',async()=>{
+    const m=await fixture({stock:3,limit:3}),period=randomBytes(32);
+    const original=await consume(m,{invoiceEvidenceId:await invoice(m,{period})});assert.equal(original.created,true);
+    const invitation=await tx(client=>inviteMonthlyPartnerLink(client,{partnerId:m.partner,operatorId:m.operator,variantId:m.variant.id,
+      email:m.address,customerReference:m.customerReference,idempotencyKey:uuidv7(),rulesVersion:f.partnerRules,keys}));
+    const renewed=await tx(client=>consentToMonthlyPartnerLink(client,{subjectId:m.user,invitationToken:invitation.token,termsVersion:'synthetic-terms-v1',
+      expectedRevision:m.consent.revision,idempotencyKey:uuidv7(),rulesVersion:f.partnerRules,keys}));
+    const proof=await invoice(m,{period,consentId:renewed.id});
+    const replacement=await tx(client=>inviteMonthlyPartnerLink(client,{partnerId:m.partner,operatorId:m.operator,variantId:m.variant.id,
+      email:m.address,customerReference:m.customerReference,idempotencyKey:uuidv7(),rulesVersion:f.partnerRules,keys}));
+    await tx(client=>consentToMonthlyPartnerLink(client,{subjectId:m.user,invitationToken:replacement.token,termsVersion:'synthetic-terms-v1',
+      expectedRevision:renewed.revision,idempotencyKey:uuidv7(),rulesVersion:f.partnerRules,keys}));
+    await assert.rejects(consume(m,{invoiceEvidenceId:proof}),/command_source_invalid/);assert.equal(await stock(m),2);
+    assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_fulfilment_commands WHERE invoice_evidence_id=$1',[proof])).rowCount,0);
   });
   test('SEC-01/REL-02: a shared invoice-period fingerprint cannot replay another member’s fulfilment',async()=>{
     const first=await fixture({stock:3,limit:3}),second=await fixture({partner:first.partner,operator:first.operator,variant:first.variant}),period=randomBytes(32),key=uuidv7();

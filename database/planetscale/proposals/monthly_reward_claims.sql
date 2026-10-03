@@ -248,8 +248,8 @@ CREATE TRIGGER monthly_reward_stock_commit AFTER INSERT ON trust.monthly_reward_
 
 CREATE FUNCTION trust.require_monthly_reward_fulfilment_command() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
-DECLARE fulfilled trust.monthly_reward_fulfilments; source_fingerprint text; source_offer uuid; source_rules text; expected_digest text;
-  source_kind text;
+DECLARE fulfilled trust.monthly_reward_fulfilments; source_fingerprint text; source_offer uuid; source_rules text;
+  source_consent uuid; expected_digest text; source_kind text; source_grant trust.monthly_reward_partner_consents; who record;
 BEGIN
   IF NOT trust.lock_monthly_reward_partner_operator(NEW.partner_id,NEW.operator_id,'claim:consume') THEN
     RAISE EXCEPTION 'monthly_claim_command_scope_invalid' USING ERRCODE = '55000'; END IF;
@@ -257,27 +257,45 @@ BEGIN
   IF fulfilled.id IS NULL THEN RAISE EXCEPTION 'monthly_claim_command_scope_invalid' USING ERRCODE = '55000'; END IF;
   IF NEW.qr_reservation_id IS NOT NULL THEN
     source_kind := 'qr';
-    SELECT encode(reservation.token_hmac,'hex'),reservation.offer_version_id,reservation.rules_version
-      INTO source_fingerprint,source_offer,source_rules FROM trust.monthly_reward_qr_reservations reservation
+    SELECT encode(reservation.token_hmac,'hex'),reservation.offer_version_id,reservation.rules_version,reservation.consent_id
+      INTO source_fingerprint,source_offer,source_rules,source_consent FROM trust.monthly_reward_qr_reservations reservation
       JOIN trust.monthly_reward_offer_versions offer ON offer.id = reservation.offer_version_id
       WHERE reservation.id = NEW.qr_reservation_id AND reservation.subject_user_id = fulfilled.subject_user_id
         AND reservation.consent_id = fulfilled.consent_id AND offer.partner_id = NEW.partner_id
         AND reservation.rules_version = fulfilled.rules_version AND fulfilled.qr_reservation_id = reservation.id;
   ELSE
     source_kind := 'invoice';
-    SELECT encode(invoice.invoice_period_hmac,'hex'),invoice.offer_version_id,invoice.rules_version
-      INTO source_fingerprint,source_offer,source_rules FROM trust.monthly_reward_invoice_evidence invoice
+    SELECT encode(invoice.invoice_period_hmac,'hex'),invoice.offer_version_id,invoice.rules_version,invoice.consent_id
+      INTO source_fingerprint,source_offer,source_rules,source_consent FROM trust.monthly_reward_invoice_evidence invoice
+      JOIN trust.monthly_reward_partner_consents consent ON consent.id = invoice.consent_id
       JOIN trust.monthly_reward_offer_versions offer ON offer.id = invoice.offer_version_id
       WHERE invoice.id = NEW.invoice_evidence_id AND invoice.subject_user_id = fulfilled.subject_user_id
-        AND invoice.consent_id = fulfilled.consent_id AND invoice.invoice_period_hmac = fulfilled.invoice_period_hmac
+        AND consent.subject_user_id = fulfilled.subject_user_id AND consent.binding_id = fulfilled.binding_id
+        AND consent.revision = (SELECT max(current_consent.revision) FROM trust.monthly_reward_partner_consents current_consent
+          WHERE current_consent.binding_id = consent.binding_id)
+        AND NOT EXISTS (SELECT 1 FROM trust.monthly_reward_consent_revocations revoked WHERE revoked.consent_id = consent.id)
+        AND invoice.invoice_period_hmac = fulfilled.invoice_period_hmac
         AND offer.partner_id = NEW.partner_id AND offer.family_id = fulfilled.family_id
         AND invoice.rules_version = fulfilled.rules_version AND fulfilled.invoice_evidence_id IS NOT NULL;
   END IF;
   IF source_fingerprint IS NULL OR source_offer <> fulfilled.offer_version_id OR source_rules <> fulfilled.rules_version THEN
     RAISE EXCEPTION 'monthly_claim_command_source_invalid' USING ERRCODE = '55000'; END IF;
+  PERFORM trust.lock_monthly_reward_link_members(ARRAY[fulfilled.subject_user_id]);
+  SELECT * INTO who FROM trust.lock_monthly_reward_link_identity(fulfilled.subject_user_id);
+  SELECT * INTO source_grant FROM trust.monthly_reward_partner_consents consent
+    WHERE consent.id = source_consent AND consent.subject_user_id = fulfilled.subject_user_id
+      AND consent.binding_id = fulfilled.binding_id AND consent.offer_version_id = fulfilled.offer_version_id
+      AND consent.terms_version = fulfilled.terms_version
+      AND consent.revision = (SELECT max(current_consent.revision) FROM trust.monthly_reward_partner_consents current_consent
+        WHERE current_consent.binding_id = consent.binding_id)
+      AND NOT EXISTS (SELECT 1 FROM trust.monthly_reward_consent_revocations revoked WHERE revoked.consent_id = consent.id);
+  IF who IS NULL OR source_grant.id IS NULL OR who.binding_digest IS DISTINCT FROM source_grant.email_binding_digest
+    OR who.verified_at_text::timestamptz IS DISTINCT FROM source_grant.verified_at
+    OR who.recovery_generation IS DISTINCT FROM source_grant.recovery_generation THEN
+    RAISE EXCEPTION 'monthly_claim_command_source_invalid' USING ERRCODE = '55000'; END IF;
   expected_digest := encode(public.digest(convert_to('[' || to_json(source_offer::text)::text || ',' ||
     to_json(source_fingerprint)::text || ',' || to_json(source_rules)::text || ',' || to_json(fulfilled.subject_user_id::text)::text || ',' ||
-    to_json(fulfilled.consent_id::text)::text || ',' || to_json(source_kind)::text || ']','UTF8'),'sha256'),'hex');
+    to_json(source_consent::text)::text || ',' || to_json(source_kind)::text || ']','UTF8'),'sha256'),'hex');
   IF NEW.request_digest <> expected_digest THEN RAISE EXCEPTION 'monthly_claim_command_digest_invalid' USING ERRCODE = '55000'; END IF;
   RETURN NEW;
 END; $$;
