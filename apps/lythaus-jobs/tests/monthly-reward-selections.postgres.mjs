@@ -13,6 +13,7 @@ import { assessMonthlyReputationSource } from '../../../packages/db/src/monthly-
 import { publishMonthlyRewardSnapshot,approveMonthlyRewardSnapshotCorrection,applyMonthlyRewardSnapshotCorrection } from '../../../packages/db/src/monthly-reward-snapshots.ts';
 import { selectMonthlyReward,readOwnMonthlyRewardSelections,MONTHLY_REWARD_SELECTION_FLAG as flag } from '../../../packages/db/src/monthly-reward-selections.ts';
 import { readOwnMonthlyReputationReport } from '../../../packages/db/src/monthly-reputation-report.ts';
+import { recordMonthlyContextReview } from '../../../packages/db/src/monthly-context-review.ts';
 import { registerPartnerLinkCases,cleanupPartnerLinkCases } from './monthly-reward-partner-links.cases.mjs';
 import { registerRewardClaimCases,cleanupRewardClaimCases } from './monthly-reward-claims.cases.mjs';
 import { registerMonthlyReportCases } from './monthly-reputation-report.cases.mjs';
@@ -21,15 +22,16 @@ const connectionString=process.env.PLANETSCALE_PG17_TEST_DATABASE_URL,target=new
 if(!['127.0.0.1','localhost'].includes(target.hostname)
   ||!(target.pathname==='/lythaus_monthly_test'||(process.env.GITHUB_ACTIONS==='true'&&target.pathname==='/postgres')))
   throw new Error('Selection tests require explicitly local disposable PostgreSQL');
-const subjects=[],grants=[],statements=[];
+const subjects=[],grants=[],statements=[],contextComments=[],contextPosts=[];
 const rulesVersion='synthetic-selection-v1',snapshotVersion='synthetic-selection-snapshot-v1';
+const contextRulesVersion='synthetic-selection-context-v1',contextRubric='synthetic-context-rubric-v1';
 const maintenance={...defaults,version:'synthetic-selection-maintenance-v1',monthSettlementHours:1};
 let reviewer,sourceMonth,currentMonth,free,premium,black,variants=[];
 async function tx(work,role='lythaus_runtime'){
   const client=new pg.Client({connectionString,ssl:false});await client.connect();
   try{await client.query('BEGIN');await client.query("SET LOCAL statement_timeout='10s'");
     await client.query("SET LOCAL TIME ZONE 'UTC'");
-    if(role){assert.ok(['lythaus_runtime','lythaus_jobs','lythaus_admin'].includes(role));await client.query(`SET LOCAL ROLE ${role}`);}
+    if(role){assert.ok(['lythaus_runtime','lythaus_jobs','lythaus_admin','lythaus_privacy'].includes(role));await client.query(`SET LOCAL ROLE ${role}`);}
     const result=await work({query:(text,values)=>{statements.push(text);return client.query(text,values);}});
     await client.query('COMMIT');return result;
   }catch(error){await client.query('ROLLBACK');throw error;}finally{await client.end();}
@@ -97,7 +99,7 @@ before(async()=>{
   for(const role of ['lythaus_runtime','lythaus_admin'])
     if(!(await sql('SELECT has_table_privilege($1,$2,$3) AS allowed',[role,'system.feature_flags','SELECT'])).rows[0].allowed)
       grants.push(`REVOKE SELECT ON system.feature_flags FROM ${role}`);
-  for(const proposal of ['monthly_reputation_shadow','monthly_reputation_earning','monthly_reputation_maintenance','monthly_reward_snapshots','monthly_reward_selections','monthly_reward_partner_links','monthly_reward_claims'])
+  for(const proposal of ['monthly_reputation_shadow','monthly_reputation_earning','monthly_reputation_maintenance','monthly_reputation_context','monthly_reward_snapshots','monthly_reward_selections','monthly_reward_partner_links','monthly_reward_claims'])
     await sql(readFileSync(new URL(`../../../database/planetscale/proposals/${proposal}.sql`,import.meta.url),'utf8'));
   reviewer=await person();
   await sql("INSERT INTO identity.admin_memberships (user_id,role,active,access_subject_hmac) VALUES ($1,'moderator',true,$2)",[reviewer,randomBytes(32)]);
@@ -108,13 +110,18 @@ before(async()=>{
     await sql(`INSERT INTO trust.${table} (version,policy_version,catalogue_hash,mode,collect_from,configuration${privacyColumn})
       VALUES ($1,$2,$3,'shadow','2026-07-01',$4::jsonb${privacyValue})`,[rules.version,policy,hash,JSON.stringify(rules)]);
   }
-  for(const key of ['trust.monthly_reputation_shadow','trust.monthly_reward_snapshots'])
+  for(const key of ['trust.monthly_reputation_shadow','trust.monthly_reward_snapshots','trust.monthly_context_review'])
     await sql('INSERT INTO system.feature_flags (flag_key,enabled,policy_version) VALUES ($1,true,$2)',[key,policy]);
   await sql(`INSERT INTO trust.monthly_reward_snapshot_rule_sets
     (version,policy_version,catalogue_hash,mode,status,first_source_month,weekly_rules_version,maintenance_rules_version,
       collection_privacy_version,decision_approvals,approved_by,approved_at,approval_reference)
     VALUES ($1,$2,$3,'confirmed','pending_owner_approval','2026-07-01',$4,$5,'monthly-privacy-v1',$6::jsonb,$7,'2026-07-01','synthetic-only')`,
     [snapshotVersion,policy,hash,weekly.version,maintenance.version,JSON.stringify(Object.fromEntries(decisions.map(id=>[id,'synthetic-only']))),reviewer]);
+  await sql(`INSERT INTO trust.monthly_context_rule_sets
+    (version,policy_version,weekly_rules_version,catalogue_hash,rubric_version,mode,status,collect_from,
+      collection_privacy_version,approved_by,approved_at,approval_reference)
+    VALUES ($1,$2,$3,$4,$5,'shadow','pending_owner_approval','2026-07-01','monthly-privacy-v1',$6,'2026-07-01','synthetic-only')`,
+    [contextRulesVersion,policy,weekly.version,hash,contextRubric,reviewer]);
   free=await person();premium=await person('premium');black=await person('black');
   for(const subject of [free,premium,black])await snapshot(subject);
   for(let level=1;level<=5;level++)variants.push(await offer(level));
@@ -122,6 +129,7 @@ before(async()=>{
 after(async()=>{
   await cleanupRewardClaimCases({sql});
   await cleanupPartnerLinkCases({sql});
+  await sql('DROP FUNCTION IF EXISTS privacy.reconcile_monthly_reputation_data_locations(uuid)');
   await sql('DROP TRIGGER IF EXISTS fail_selection_fixture ON system.outbox_events');await sql('DROP FUNCTION IF EXISTS system.fail_selection_fixture()');
   await sql('DROP TRIGGER monthly_reputation_reward_selection_subject_erasure ON identity.users');
   await sql('DROP TRIGGER monthly_reward_selection_flag_preserved ON system.feature_flags');
@@ -135,11 +143,17 @@ after(async()=>{
   await sql('DROP TRIGGER monthly_email_control_revocation ON identity.email_credentials');
   await sql('DROP TRIGGER monthly_reputation_subject_erasure ON identity.users');await sql('DROP TRIGGER monthly_collection_flag_preserved ON system.feature_flags');
   await sql('DROP FUNCTION trust.revoke_monthly_email_control()');
+  await sql('DROP TRIGGER monthly_context_subject_erasure ON identity.users');
+  await sql('DROP TRIGGER monthly_context_flag_preserved ON system.feature_flags');
+  await sql('DROP TABLE trust.monthly_context_dependency_receipts,trust.monthly_context_reviews,trust.monthly_context_rule_sets');
+  await sql('DROP FUNCTION trust.require_monthly_context_review(),trust.lock_monthly_context_configuration(),trust.lock_monthly_context_actor(uuid,uuid),trust.preserve_monthly_context_flag(),trust.erase_monthly_context_subject()');
+  await sql("DELETE FROM system.feature_flags WHERE flag_key='trust.monthly_context_review'");
   await sql(`DROP TABLE trust.monthly_reputation_assemblies,trust.monthly_maintenance_revocations,trust.monthly_maintenance_observations,
     trust.monthly_maintenance_rule_sets,trust.monthly_reputation_assessments,trust.monthly_reputation_sources,
     trust.monthly_earning_week_revisions,trust.monthly_earning_receipts,trust.monthly_earning_evidence_revisions,
     trust.monthly_earning_contributions,trust.monthly_earning_rule_sets`);
   await sql('DROP FUNCTION trust.reject_monthly_maintenance_update(),trust.reject_monthly_reputation_update(),trust.reject_monthly_earning_update(),trust.require_monthly_reputation_subject(),trust.require_monthly_assessment_subject(),trust.erase_monthly_reputation_subject(),trust.preserve_monthly_collection_flag(),trust.lock_monthly_reputation_subject(uuid)');
+  await sql('DROP FUNCTION trust.redact_monthly_earning_calculation(jsonb)');
   await sql("DELETE FROM system.feature_flags WHERE flag_key IN ('trust.monthly_reputation_shadow','trust.monthly_reward_snapshots',$1)",[flag]);
   for(const grant of grants)await sql(grant);
   await sql('DELETE FROM system.consumer_inbox WHERE event_id IN (SELECT id FROM system.outbox_events WHERE actor_id=ANY($1::uuid[]))',[subjects]);
@@ -147,6 +161,9 @@ after(async()=>{
   await sql('DELETE FROM identity.email_credentials WHERE user_id=ANY($1::uuid[])',[subjects]);
   await sql('DELETE FROM identity.admin_memberships WHERE user_id=ANY($1::uuid[])',[subjects]);
   await sql('DELETE FROM identity.account_events WHERE user_id=ANY($1::uuid[])',[subjects]);
+  await sql('DELETE FROM content.comments WHERE id=ANY($1::uuid[])',[contextComments]);
+  await sql('DELETE FROM content.posts WHERE id=ANY($1::uuid[])',[contextPosts]);
+  await sql('DELETE FROM privacy.subject_data_locations WHERE subject_id=ANY($1::uuid[])',[subjects]);
   await sql('DELETE FROM identity.users WHERE id=ANY($1::uuid[])',[subjects]);
 });
 
@@ -156,6 +173,21 @@ test('RPT-04/REL-03: installed claim proposal accesses no claim tables during de
   try{await sql("UPDATE identity.users SET status='deleted',deleted_at=now() WHERE id=$1",[member]);}
   finally{await sql('ALTER TABLE trust.synthetic_dormant_fulfilments RENAME TO monthly_reward_fulfilments');}
   assert.equal((await sql('SELECT status FROM identity.users WHERE id=$1',[member])).rows[0].status,'deleted');
+});
+
+test('RPT-04/REL-02: privacy role reconciles owner-scoped monthly report and reward data locations',async()=>{
+  const locations=await tx(client=>client.query('SELECT privacy.reconcile_monthly_reputation_data_locations($1) AS count',[free]),'lythaus_privacy');
+  assert.ok(locations.rows[0].count>=4);
+  const rows=(await sql(`SELECT resource_reference,entity_type,entity_id FROM privacy.subject_data_locations
+    WHERE subject_id=$1 AND resource_reference LIKE 'trust.monthly_%'`,[free])).rows;
+  assert.ok(rows.some(row=>row.resource_reference==='trust.monthly_reputation_sources'));
+  assert.ok(rows.some(row=>row.resource_reference==='trust.monthly_reputation_assessments'));
+  assert.ok(rows.some(row=>row.resource_reference==='trust.monthly_reputation_assemblies'));
+  assert.ok(rows.some(row=>row.resource_reference==='trust.monthly_earning_week_revisions'));
+  assert.ok(rows.some(row=>row.resource_reference==='trust.monthly_reward_snapshots'));
+  assert.ok(rows.every(row=>row.entity_id));
+  const otherIds=(await sql('SELECT id FROM trust.monthly_reward_snapshots WHERE subject_user_id<>$1',[free])).rows.map(row=>row.id);
+  assert.ok(rows.every(row=>!otherIds.includes(row.entity_id)));
 });
 test('PAR-10/REL-03: selection is dormant without explicit approved configuration and privacy prerequisite',async()=>{
   statements.length=0;assert.equal((await select(free,variants[0],0,{rulesVersion:undefined})).state,'unavailable');
@@ -340,3 +372,49 @@ const fixture={tx,sql,person,snapshot,select,offer,reviewer:()=>reviewer,selecti
 const partnerFixture=registerPartnerLinkCases(fixture);
 registerRewardClaimCases({...fixture,...partnerFixture});
 registerMonthlyReportCases({tx,sql,person,snapshot,reviewer:()=>reviewer,snapshotRulesVersion:snapshotVersion});
+
+test('RPT-04: Data Passport locators include contextual evidence and claim command receipts',async()=>{
+  const postId=uuidv7(),postRevision=uuidv7(),commentId=uuidv7(),commentRevision=uuidv7();
+  contextPosts.push(postId);contextComments.push(commentId);
+  await sql(`INSERT INTO content.posts
+    (id,author_id,body,declared_creation_mode,visibility,moderation_state,moderation_source_event_id,created_at)
+    VALUES ($1,$2,'Synthetic privacy locator thread','human','public','allowed',$3,'2026-08-01')`,[postId,free,postRevision]);
+  await sql(`INSERT INTO content.comments
+    (id,post_id,parent_id,author_id,body,declared_creation_mode,moderation_state,moderation_source_event_id,created_at)
+    VALUES ($1,$2,NULL,$3,'Synthetic privacy locator comment','human','allowed',$4,'2026-08-02')`,
+    [commentId,postId,free,commentRevision]);
+  const review=await tx(client=>recordMonthlyContextReview(client,{
+    commentId,actorId:reviewer,rulesVersion:contextRulesVersion,rubricVersion:contextRubric,
+    sourceRevisionId:commentRevision,threadRevisionId:postRevision,parentRevisionId:null,
+    decision:'withheld',reasonCode:'synthetic_privacy_locator',evidenceReference:'synthetic private evidence',
+    expectedRevision:0,idempotencyKey:uuidv7(),
+  }),'lythaus_admin');
+  await tx(client=>client.query(`INSERT INTO trust.monthly_context_dependency_receipts(event_id,comment_id,subject_user_id)
+    VALUES ($1,$2,$3)`,[review.sourceEventId,commentId,free]),'lythaus_jobs');
+
+  const claimed=(await sql(`SELECT fulfilment.subject_user_id FROM trust.monthly_reward_fulfilment_commands command
+    JOIN trust.monthly_reward_fulfilments fulfilment ON fulfilment.id=command.fulfilment_id
+    JOIN identity.users account ON account.id=fulfilment.subject_user_id
+    WHERE account.status='active' ORDER BY fulfilment.fulfilled_at LIMIT 1`)).rows[0];
+  assert.ok(claimed?.subject_user_id,'claim fixture must retain a synthetic command receipt');
+  await tx(client=>client.query('SELECT privacy.reconcile_monthly_reputation_data_locations($1)',[free]),'lythaus_privacy');
+  await tx(client=>client.query('SELECT privacy.reconcile_monthly_reputation_data_locations($1)',[claimed.subject_user_id]),'lythaus_privacy');
+  const contextLocations=(await sql(`SELECT resource_reference,entity_type,entity_id FROM privacy.subject_data_locations
+    WHERE subject_id=$1 AND (entity_type='monthly_context_review' OR entity_type='monthly_context_dependency_receipt')`,[free])).rows;
+  assert.ok(contextLocations.some(row=>row.entity_type==='monthly_context_review'));
+  assert.ok(contextLocations.some(row=>row.entity_type==='monthly_context_dependency_receipt'&&row.entity_id===commentId));
+  assert.ok(contextLocations.some(row=>row.resource_reference.includes(review.sourceEventId)));
+  const commandLocations=(await sql(`SELECT resource_reference,entity_type,entity_id FROM privacy.subject_data_locations
+    WHERE subject_id=$1 AND resource_reference='trust.monthly_reward_fulfilment_commands'`,[claimed.subject_user_id])).rows;
+  assert.ok(commandLocations.length>0);
+  assert.ok(commandLocations.every(row=>row.entity_type==='monthly_reward_fulfilment_command_set'&&row.entity_id));
+
+  await sql('ALTER TABLE trust.monthly_context_reviews RENAME TO synthetic_unavailable_monthly_context_reviews');
+  await sql('ALTER TABLE trust.monthly_context_dependency_receipts RENAME TO synthetic_unavailable_monthly_context_dependency_receipts');
+  try {
+    await tx(client=>client.query('SELECT privacy.reconcile_monthly_reputation_data_locations($1)',[free]),'lythaus_privacy');
+  } finally {
+    await sql('ALTER TABLE trust.synthetic_unavailable_monthly_context_reviews RENAME TO monthly_context_reviews');
+    await sql('ALTER TABLE trust.synthetic_unavailable_monthly_context_dependency_receipts RENAME TO monthly_context_dependency_receipts');
+  }
+});

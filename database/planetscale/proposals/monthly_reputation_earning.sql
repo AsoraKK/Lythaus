@@ -62,9 +62,28 @@ CREATE TABLE trust.monthly_earning_week_revisions (
   CHECK (calculation @> jsonb_build_object('policyVersion', policy_version, 'rulesVersion', rules_version, 'points', points))
 );
 
+CREATE FUNCTION trust.redact_monthly_earning_calculation(calculation jsonb) RETURNS jsonb
+LANGUAGE sql IMMUTABLE STRICT SET search_path = '' AS $$
+  SELECT (calculation - 'evidence') || jsonb_build_object(
+    'actions', COALESCE((SELECT jsonb_agg(action.value - 'evidenceIds' ORDER BY action.ordinality)
+      FROM jsonb_array_elements(calculation -> 'actions') WITH ORDINALITY AS action(value, ordinality)), '[]'::jsonb),
+    'evidenceRedacted', true)
+$$;
+REVOKE ALL ON FUNCTION trust.redact_monthly_earning_calculation(jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION trust.redact_monthly_earning_calculation(jsonb) TO lythaus_privacy;
+
 CREATE FUNCTION trust.reject_monthly_earning_update() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
+  IF TG_TABLE_NAME = 'monthly_earning_week_revisions' AND TG_OP = 'UPDATE' THEN
+    IF pg_trigger_depth() > 1
+      AND EXISTS (SELECT 1 FROM identity.users account
+        WHERE account.id = OLD.subject_user_id AND (account.status = 'deleted' OR account.deleted_at IS NOT NULL))
+      AND (to_jsonb(NEW) - 'calculation') = (to_jsonb(OLD) - 'calculation')
+      AND NEW.calculation = trust.redact_monthly_earning_calculation(OLD.calculation) THEN
+      RETURN NEW;
+    END IF;
+  END IF;
   RAISE EXCEPTION 'monthly_earning_revision_is_immutable' USING ERRCODE = '55000';
 END;
 $$;

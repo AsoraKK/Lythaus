@@ -1804,6 +1804,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/SafetyLimited'
   /admin/appeals/pending-adjudication:
     servers:
       - url: https://admin-api.lythaus.co/api
@@ -1825,6 +1827,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/SafetyLimited'
   /admin/reviewers/{reviewerId}/qualification:
     servers:
       - url: https://admin-api.lythaus.co/api

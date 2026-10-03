@@ -160,6 +160,7 @@ after(async () => {
     trust.revoke_monthly_email_control(), trust.lock_monthly_reputation_subject(uuid),
     trust.reject_monthly_maintenance_update(), trust.reject_monthly_reputation_update()`);
   await sql('DROP FUNCTION IF EXISTS trust.reject_monthly_earning_update()');
+  await sql('DROP FUNCTION IF EXISTS trust.redact_monthly_earning_calculation(jsonb)');
   await sql("DELETE FROM system.feature_flags WHERE flag_key = 'trust.monthly_reputation_shadow'");
   await sql("DELETE FROM system.feature_flags WHERE flag_key = 'trust.monthly_peer_participation'");
   await sql(`DROP TABLE IF EXISTS moderation.community_appeal_events, moderation.community_appeal_overrides,
@@ -745,4 +746,25 @@ test('APP-11/PTS-03/RPT-04: actual equal-vote comment restoration retains contex
       WHERE contribution.source_id=$1`,[commentId])).rows[0];
     assert.equal(contribution.input.state,'accepted');assert.equal(contribution.input.contextReviewId,review.reviewId);
   }
+});
+
+test('public dispatcher invokes private monthly JSON, CSV, and rewards routes with feature gates closed',async()=>{
+  const report=await call(owner,'GET','/api/reputation/me/reports/monthly/2026-08');
+  assert.equal(report.status,200,await report.clone().text());
+  assert.match(report.headers.get('cache-control')??'',/private.*no-store/);
+  assert.equal((await report.json()).reportState,'pending');
+
+  const csv=await call(owner,'GET','/api/reputation/me/reports/monthly/2026-08/export.csv');
+  assert.equal(csv.status,200,await csv.clone().text());
+  assert.match(csv.headers.get('content-type')??'',/text\/csv/);
+  assert.equal(csv.headers.get('content-disposition'),'attachment; filename="monthly-reputation-2026-08.csv"');
+  assert.ok((await csv.text()).startsWith('rowType,sourceMonth,effectiveMonth'));
+
+  const rewards=await call(owner,'GET','/api/rewards/me/monthly');
+  assert.equal(rewards.status,200,await rewards.clone().text());
+  assert.match(rewards.headers.get('cache-control')??'',/private.*no-store/);
+  assert.deepEqual(await rewards.json(),{
+    state:'pending',reasonCode:'approval_unavailable',effectiveMonth:null,currentLevel:null,sourceMonth:null,sourceScore:null,
+    snapshot:{state:'unavailable',reasonCode:'approval_unavailable'},selection:{state:'unavailable',reasonCode:'approval_unavailable'},
+  });
 });

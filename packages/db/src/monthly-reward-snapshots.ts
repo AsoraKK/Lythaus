@@ -26,6 +26,15 @@ async function digest(value: unknown) {
 }
 export async function monthlyRewardSnapshotConfiguration(client: Client, version?: string) {
   if (!version) return null;
+  const installed = await client.query<{ available: boolean }>(`SELECT
+    to_regclass('trust.monthly_reputation_sources') IS NOT NULL
+      AND to_regclass('trust.monthly_reputation_assemblies') IS NOT NULL
+      AND to_regclass('trust.monthly_reputation_assessments') IS NOT NULL
+      AND to_regclass('trust.monthly_reward_snapshots') IS NOT NULL
+      AND to_regclass('trust.monthly_reward_snapshot_rule_sets') IS NOT NULL
+      AND to_regprocedure('trust.lock_monthly_reward_configuration()') IS NOT NULL
+      AND to_regprocedure('trust.lock_monthly_reward_subject(uuid)') IS NOT NULL AS available`);
+  if (!installed.rows[0]?.available) return null;
   if (!(await client.query('SELECT 1 FROM system.feature_flags WHERE flag_key = $1 AND policy_version = $2',
     [MONTHLY_REWARD_SNAPSHOT_FLAG,MONTHLY_REPUTATION_POLICY_VERSION])).rowCount) return null;
   const flags = await client.query<{ enabled: boolean; policy_version: string }>('SELECT * FROM trust.lock_monthly_reward_configuration()');
@@ -229,8 +238,11 @@ export async function applyMonthlyRewardSnapshotCorrection(client: Client, input
 
 export async function readOwnMonthlyRewardSnapshot(client: Client, input: { subjectId: string; rulesVersion?: string; effectiveMonth?: string }) {
   requireUuid(input.subjectId);
+  let month = input.effectiveMonth ?? new Date().toISOString().slice(0,7);
+  requireSourceMonth(month);
+  if (!input.rulesVersion) return { state:'unavailable' as const,reasonCode:'approval_unavailable',effectiveMonth:month };
   const currentMonth = (await client.query<{ month: string }>("SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM') AS month")).rows[0].month;
-  const month = input.effectiveMonth ?? currentMonth;
+  month = input.effectiveMonth ?? currentMonth;
   requireSourceMonth(month);
   const configuration = await monthlyRewardSnapshotConfiguration(client,input.rulesVersion);
   if (!configuration) return { state:'unavailable' as const,reasonCode:'approval_unavailable',effectiveMonth:month };

@@ -192,6 +192,7 @@ paths:
           content: { application/json: { schema: { $ref: '#/components/schemas/CommunityAppealTriageQueue' } } }
         '401': { $ref: './product-integrity.yaml#/components/responses/Unauthorized' }
         '403': { $ref: './product-integrity.yaml#/components/responses/Forbidden' }
+        '429': { $ref: './product-integrity.yaml#/components/responses/SafetyLimited' }
         '503': { description: Community policy is not activated. }
   /admin/appeals/{appealId}/triage:
     servers: [{ url: 'https://admin-api.lythaus.co/api' }]
@@ -214,6 +215,7 @@ paths:
         '403': { $ref: './product-integrity.yaml#/components/responses/Forbidden' }
         '404': { $ref: './product-integrity.yaml#/components/responses/NotFound' }
         '409': { description: The review packet is already frozen. }
+        '429': { $ref: './product-integrity.yaml#/components/responses/SafetyLimited' }
         '503': { description: Community policy is not activated. }
   /admin/appeals/{appealId}/evidence:
     servers: [{ url: 'https://admin-api.lythaus.co/api' }]
@@ -232,4 +234,5 @@ paths:
         '401': { $ref: './product-integrity.yaml#/components/responses/Unauthorized' }
         '403': { $ref: './product-integrity.yaml#/components/responses/Forbidden' }
         '404': { $ref: './product-integrity.yaml#/components/responses/NotFound' }
+        '429': { $ref: './product-integrity.yaml#/components/responses/SafetyLimited' }
         '503': { description: Community route is not configured. }

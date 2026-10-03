@@ -42,6 +42,20 @@ CREATE TABLE trust.monthly_reputation_assessments (
 CREATE FUNCTION trust.reject_monthly_reputation_update() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
+  IF TG_TABLE_NAME = 'monthly_reward_snapshot_corrections' THEN
+    IF TG_OP = 'UPDATE' THEN
+      IF pg_trigger_depth() > 1
+        AND NEW.evidence_reference = '[redacted]'
+        AND NEW.request_digest = repeat('0', 64)
+        AND (to_jsonb(NEW) - ARRAY['evidence_reference','request_digest'])
+          = (to_jsonb(OLD) - ARRAY['evidence_reference','request_digest'])
+        AND EXISTS (SELECT 1 FROM identity.users account
+          WHERE account.id = OLD.subject_user_id
+            AND (account.status = 'deleted' OR account.deleted_at IS NOT NULL)) THEN
+        RETURN NEW;
+      END IF;
+    END IF;
+  END IF;
   RAISE EXCEPTION 'monthly_reputation_revision_is_immutable' USING ERRCODE = '55000';
 END;
 $$;

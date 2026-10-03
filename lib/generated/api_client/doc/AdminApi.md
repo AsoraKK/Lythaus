@@ -28,6 +28,7 @@ Method | HTTP request | Description
 [**adminLegalHoldsList**](AdminApi.md#adminlegalholdslist) | **GET** /admin/privacy/legal-holds | List active and released legal holds
 [**adminModerationCasesList**](AdminApi.md#adminmoderationcaseslist) | **GET** /admin/moderation/cases | List moderation cases
 [**adminModerationDecision**](AdminApi.md#adminmoderationdecision) | **POST** /admin/moderation/cases/{caseId}/decision | Apply a moderation decision
+[**adminMonthlyContextReview**](AdminApi.md#adminmonthlycontextreview) | **POST** /admin/reputation/comments/{commentId}/context-review | Record a scoped contextual contribution review
 [**adminOverview**](AdminApi.md#adminoverview) | **GET** /admin/overview | Read bounded owner-only community aggregates
 [**adminPrivacyRequestsList**](AdminApi.md#adminprivacyrequestslist) | **GET** /admin/privacy/requests | List privacy requests
 [**adminReviewerQualificationCreate**](AdminApi.md#adminreviewerqualificationcreate) | **POST** /admin/reviewers/{reviewerId}/qualification | Set reviewer qualification state
@@ -903,6 +904,55 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**ModerationDecisionResponse**](ModerationDecisionResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminMonthlyContextReview**
+> MonthlyContextReviewResponse adminMonthlyContextReview(commentId, monthlyContextReviewRequest)
+
+Record a scoped contextual contribution review
+
+Requires a verified Cloudflare Access JWT, active owner, administrator, or moderator membership authorised for this review, and an allowed Origin. The handler binds the reviewer to the current comment, thread and parent revisions. Actor identity and rules version come from server context. evidenceReference is a caller-supplied bounded opaque string stored as supplied; the API does not validate its target or sensitivity. Do not include raw content or secrets; this value is omitted from the response. The request cannot submit points. The route remains unavailable until its separate configuration and collection gates are enabled.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String commentId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final MonthlyContextReviewRequest monthlyContextReviewRequest = ; // MonthlyContextReviewRequest |
+
+try {
+    final response = api.adminMonthlyContextReview(commentId, monthlyContextReviewRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminMonthlyContextReview: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **commentId** | **String**|  |
+ **monthlyContextReviewRequest** | [**MonthlyContextReviewRequest**](MonthlyContextReviewRequest.md)|  |
+
+### Return type
+
+[**MonthlyContextReviewResponse**](MonthlyContextReviewResponse.md)
 
 ### Authorization
 

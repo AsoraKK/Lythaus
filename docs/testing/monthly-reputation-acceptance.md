@@ -8,31 +8,31 @@ embedded reference-validation counts are not execution evidence for this branch.
 
 ## Current verification snapshot — 3 October 2026
 
-The live `main` branch read through GitHub is
+GitHub reports live `main` at
 `627ae30b36cd995c4f117bf3c44789c986b5d46b`, descended from security release 89
-(`6d1d52a4fa3f51ae041fbf38b5724578a8596b61`) and PR908 dependency repair
-(`8d91bcb434c4960a0f51ee2e4c7563c4f6e88a6c`). The local implementation candidate is
-`1f5cff9cca94df137872d2c77950a92070808473`, based directly on that `main` SHA.
-PR896 remains open/draft at published head
-`9a98d462082529c1b08216ae666ac7534120dbd4`; the local candidate is unpushed and
-unmerged. The database-only email renewal seam is present at local commit
-`71d60dcb`; the shared OpenAPI/generated-client, report/DSR controller, privacy
-lifecycle, and profile/navigation work remains coordinated with app-flow.
+(`6d1d52a4fa3f51ae041fbf38b5724578a8596b61`, run `37118382512`) and PR908 dependency
+repair (`8d91bcb434c4960a0f51ee2e4c7563c4f6e88a6c`). PR896 remains open/draft at
+published head `7c61e66cafe9a0849048f16b0809f18a9b770763`. The current workspace
+has uncommitted report/DSR and client-surface changes on that head; they are not
+represented by the published PR revision and await Friday integration coordination.
 
-The complete disposable PostgreSQL run is at exact code candidate `1f5cff9`; this
-documentation refresh does not change application code. The older checkpoint's
-uncommitted OpenAPI fragment is not part of that code candidate. The published PR
-head and local candidate have separate evidence and are not treated as the same
-revision.
+The latest complete disposable PostgreSQL evidence remains 162/162 across seven
+suites at code commit `1f5cff9cca94df137872d2c77950a92070808473`. A later local
+selection run reached and passed the new report/correction-lock and DSR-locator
+cases, then failed in its teardown because the old test hook dropped earning
+rules before contextual rules. The hook order is corrected in this workspace, but
+it has not been rerun: this environment has no local PostgreSQL service or
+`PLANETSCALE_PG17_TEST_DATABASE_URL`. Do not treat the candidate as having a clean
+current-head PostgreSQL run.
 
 | Check | Exact evidence |
 | --- | --- |
 | Disposable PostgreSQL 17.11 | At `1f5cff9`, seven suites passed 162/162 with zero skips: shadow 9, earning 10, contextual acceptance 20, appeals/participation 25, maintenance/assembly and disabled renewal 18, snapshots/corrections 19, and selection/partner/claim/report 61. Synthetic source rows, approvals and adapters only. |
-| OpenAPI and native contracts | At `1f5cff9`, native typecheck and architecture tests passed (272/272); OpenAPI contract tests passed 44 with 17 expected skips (one suite skipped); lint passed with two inherited warnings. Migration validation checked 20 files and 102 launch tables. The admin API still has an independently reviewed response-contract mismatch: pending-adjudication role denial returns 400 where the contract says 403, and five appeals operations can return 429 without declaring it. Exact shared files and proposed changes are in PR comment #5973394747; app-flow owns coordination before edits. |
-| Dependency audit | A fresh `npm audit --audit-level=low` at local candidate `1f5cff9` found zero vulnerabilities. `npm ls @stoplight/spectral-cli fast-glob micromatch braces --all` resolves Spectral 6.15.0's `fast-glob` to `tools/openapi/spectral-glob`; no `micromatch`/`braces` chain remains. The historical failure at `76de6af` / run `37118705885` is resolved at this candidate after the current main security/dependency fixes and local compatibility adapter. No suppression or duplicate security task was added. Separate Dependabot alert #330 remains unclassified and is not dismissed by this audit. |
-| Spectral regression | `node --test scripts/tests/spectral-glob.test.mjs` passed 2/2 with local subprocess execution enabled. `npm run openapi:lint` passed with the two inherited warnings above. |
-| Bounded independent review | Read-only reviews of claims, report projection, contextual-review contract and the disabled renewal seam found no remaining P1/P2. Reviewers did not rerun tests. |
-| Not established | No exact-head remote CI result is claimed for local candidate `1f5cff9`; no live mailbox/provider acceptance, complete 100-case workflow run, Flutter/report/export/DSR integration, load test, production migration, deployment, configuration or activation is claimed. |
+| OpenAPI and native contracts | In the current workspace based on `7c61e66`, native typecheck passed, architecture tests passed 272/272, and OpenAPI contract tests passed 44 with 17 expected skips (one suite skipped); lint passed with two inherited warnings. The earlier `1f5cff9` migration validation checked 20 files and 102 launch tables. Shared appeal/API and generated-client changes remain for Friday reconciliation. |
+| Dependency audit | Historical CI failure `37118705885` is tied to `76de6af`; its chain was `@stoplight/spectral-cli → fast-glob → micromatch → braces`. Security release 89 completed successfully at `6d1d52a` / run `37118382512`; live `main` is its descendant. Dependency review passed at the exact published PR head `7c61e66` in run `37155498055`. The package/lock graph is unchanged in this workspace, and `npm ls @stoplight/spectral-cli fast-glob micromatch braces --all` resolves `fast-glob` to the in-repository `tools/openapi/spectral-glob` compatibility package, with no `micromatch`/`braces` chain. A fresh `npm audit --audit-level=low` could not reach npm's advisory endpoint from this environment (`EPERM`), so no fresh registry audit is claimed for the current workspace. No suppression or duplicate security task was added. Separate Dependabot alert #330 remains unclassified. |
+| Spectral regression | In the current workspace, `node --test scripts/tests/spectral-glob.test.mjs` passed 2/2 with test-only elevated execution because the default sandbox denied the CLI's nested Node process. `npm run openapi:lint` passed with the two inherited warnings above. |
+| Bounded independent review | Read-only re-review cleared the three report/DSR P2 findings: configuration preflight before proposal reads, matching report/correction lock, and optional contextual/fulfillment locators. Reviewers did not rerun tests. |
+| Not established | No clean PostgreSQL result is claimed for the uncommitted workspace candidate; no live mailbox/provider acceptance, complete 100-case workflow run, Flutter analysis/browser journey, load test, production migration, deployment, configuration or activation is claimed. |
 
 The earlier synthetic auth-journey run `37044669047` failed when the test relay did
 not observe its synthetic password-change notice; dependent coordinator/alpha
@@ -72,12 +72,16 @@ gate. Do not describe that matrix as 100 acceptance workflows passed.
 - R / RT / RS: [persistent selections and own reader](../../packages/db/src/monthly-reward-selections.ts) / [16 real PostgreSQL cases](../../apps/lythaus-jobs/tests/monthly-reward-selections.postgres.mjs) / [separate selection and signed-offer proposal](../../database/planetscale/proposals/monthly_reward_selections.sql). Higher-tier sources are labelled settled-total fixtures consumed by the actual assembly/assessment/snapshot pipeline; missing earning providers are not proved.
 - L / LT / LS: [private partner linkage and scoped eligibility](../../packages/db/src/monthly-reward-partner-links.ts) / [18 additional real PostgreSQL cases](../../apps/lythaus-jobs/tests/monthly-reward-partner-links.cases.mjs), registered in RT / [disabled/synthetic-only partner proposal](../../database/planetscale/proposals/monthly_reward_partner_links.sql). Public merchant routes, QR/invoice fulfilment and full privacy lifecycle remain pending.
 - Q / QT / QS: [synthetic QR/invoice claim consumer](../../packages/db/src/monthly-reward-claims.ts) / [19 additional PostgreSQL cases](../../apps/lythaus-jobs/tests/monthly-reward-claims.cases.mjs), registered in RT / [unseeded claims proposal](../../database/planetscale/proposals/monthly_reward_claims.sql). No merchant route or live invoice provider is connected.
-- RP / RPT: [isolated stored-report reader](../../packages/db/src/monthly-reputation-report.ts), [CSV serializer](../../apps/lythaus-public-api/src/monthly-reputation-report-export.ts) / [six PostgreSQL report cases](../../apps/lythaus-jobs/tests/monthly-reputation-report.cases.mjs), registered in [the combined selection/partner/claim/report suite](../../apps/lythaus-jobs/tests/monthly-reward-selections.postgres.mjs). Owner-bound HTTP routes, public methodology, CSV download wiring and DSR lifecycle remain unimplemented pending app-flow coordination and privacy approval.
+- RP / RPT: [stored-report reader](../../packages/db/src/monthly-reputation-report.ts), [authenticated JSON/CSV/rewards handlers](../../apps/lythaus-public-api/src/monthly-reputation-routes.ts), [CSV serializer](../../apps/lythaus-public-api/src/monthly-reputation-report-export.ts), and [Data Passport adapter](../../apps/lythaus-jobs/src/monthly-reputation-dsr.ts) / [six report cases and new lock/locator cases](../../apps/lythaus-jobs/tests/monthly-reward-selections.postgres.mjs), [route tests](../../apps/lythaus-public-api/tests/monthly-reputation-routes.test.mjs), [DSR tests](../../apps/lythaus-jobs/tests/monthly-reputation-dsr.test.mjs). Focused report/route/DSR/config tests passed 16/16 in the current workspace; new PostgreSQL lock and locator cases passed before teardown failed. The local teardown-order fix has not been rerun. Friday coordination and privacy collection/retention approval remain required before integration or activation.
 
-A unit-verified row establishes only the named calculation. A partial row still
-requires the remaining application, privacy, provider or release work. No new
-policy is activated, no production migration is applied, and no desktop/mobile
-screenshot is claimed: the Flutter/API reporting slices are pending.
+A unit-verified row establishes only the named calculation. The current workspace
+contains candidate server-backed report, CSV, rewards-read and Data Passport code;
+the isolated route/config/DSR checks passed 16/16. The Flutter code candidate has
+not been analyzed or run because this workspace has no Flutter SDK. App-flow owns
+shared client generation and privacy-status/export lifecycle reconciliation until
+Friday integration; provider and privacy approvals remain pending. No new policy is
+activated, no production migration is applied, and no desktop/mobile acceptance is
+claimed.
 
 ## Requirements to implementation and tests
 
@@ -169,16 +173,16 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | PAR-08 | Recurring invoice retries fulfil once; five-minute QR claims are online-validated and single use. | Q / QT | Encrypted opaque online QR, single consume, configured short expiry, natural-period invoice retry including current consent renewal, atomic stock/usage, expiry after inventory wait and rollback verified with synthetic adapters; five-minute policy remains pending D12 |
 | PAR-09 | An outage returns unknown/pending, not a silently removed discount or full-price charge. | L / LT | Missing adapter/keys and valid unsettled authority return pending; invalidated consent stays generic unknown; real fulfilment/outage/price protection pending |
 | PAR-10 | Proposed or paused offers cannot be redeemed; aspirational partners are never seeded as signed offers. | R, L / RT, LT | Selection/eligibility refuse paused or unavailable approved offers; runtime cannot activate offers; disabled/synthetic-only adapter, signed synthetic fixtures only; actual redemption pending |
-| UI-01 | Existing sidebar is extended once, beneath Profile; mobile and deep-link equivalents work. | T08 | Planned; no test execution claimed |
-| UI-02 | Profile distinguishes confirmed current-month level from projected next-month progress. | T08 | Planned; no test execution claimed |
-| UI-03 | Weekly/monthly/quarterly rows, shared caps, selected weeks and boundary dates are visible and consistent. | T08 | Planned; no test execution claimed |
-| UI-04 | Each action CTA reaches a real authenticated workflow; no client-only point mutation or fake success. | T08 | Planned; no test execution claimed |
-| UI-05 | Guest cannot earn/vote/redeem; account switching clears all private cached state. | T08 | Planned; no test execution claimed |
-| UI-06 | Keyboard, screen reader, large text, reduced motion and narrow viewports are verified. | T08 | Planned; no test execution claimed |
-| RPT-01 | Own report reproduces the exact stored calculation and lists the omitted fifth week. | M, P, B, RP / MT, PT, BT, RPT | Stored selected/omitted/missing weeks, action allowances, monthly and quarterly-email status, correction history and separately fixed level authority are projected and tested; the source assessment remains labelled shadow. HTTP/Flutter report remains pending coordination |
-| RPT-02 | Public policy is inspectable, but another member's private report and ballot identity are inaccessible. | RP / RPT | Reader query is constrained to the supplied subject and omits evidence identifiers; tests compare distinct subject projections. Authenticated caller-to-owner binding, public methodology route and ballot privacy route remain pending |
-| RPT-03 | JSON/CSV/report links obey authorisation, expiry, CSV injection protection and data minimisation. | RP / RPT | Projection strips raw evidence identifiers and retains only an evidence count; authenticated export, cache headers/expiry, CSV escaping and report-link lifecycle remain pending |
-| RPT-04 | DSR export/delete, proof revocation, content purge and retained-audit redaction work end to end. | E, B, BS, X, XS, S, SS / ET, BT, XT, CT, ST | Isolated soft-delete erasure, assembly/assessment/snapshot races, corrected-chain staff notices, ordinary purge versus independent invalidation, and formula-safe CSV serialization are verified; direct owner download and Data Passport/locator/reviewer retention remain gated before collection |
+| UI-01 | Existing sidebar is extended once, beneath Profile; mobile and deep-link equivalents work. | T08 | Candidate reuses the existing Rewards destination and adds report/status cards; navigation, mobile and deep-link behavior have no Flutter execution evidence and await app-flow reconciliation |
+| UI-02 | Profile distinguishes confirmed current-month level from projected next-month progress. | T08 | Candidate tracker labels the server-confirmed level and explains that current activity builds the next month; projected point-by-point progress is not implemented, and Flutter verification is pending |
+| UI-03 | Weekly/monthly/quarterly rows, shared caps, selected weeks and boundary dates are visible and consistent. | T08, RP / RPT | Candidate report shows total/category caps, selected/omitted counts, action allowances and quarterly-email validity from the server report; detailed week rows and visual boundary review remain pending |
+| UI-04 | Each action CTA reaches a real authenticated workflow; no client-only point mutation or fake success. | T08 | No action CTA workflows are wired in the candidate; server does not accept client point mutations. Real contribution/review forms remain an app-flow work item |
+| UI-05 | Guest cannot earn/vote/redeem; account switching clears all private cached state. | T08 | Candidate private reads require a signed-in session and cancel on session revision changes; guest/action journeys and Flutter cache-isolation tests remain pending |
+| UI-06 | Keyboard, screen reader, large text, reduced motion and narrow viewports are verified. | T08 | Not verified; Flutter SDK and device/browser acceptance are unavailable in this workspace |
+| RPT-01 | Own report reproduces the exact stored calculation and lists the omitted fifth week. | M, P, B, RP / MT, PT, BT, RPT | Stored selected/omitted/missing weeks, action allowances, monthly and quarterly-email status, correction history and separately fixed level authority are projected and tested; authenticated JSON route binds to a fresh principal and returns the private report. Assessment remains labelled shadow; no Flutter acceptance run |
+| RPT-02 | Public policy is inspectable, but another member's private report and ballot identity are inaccessible. | RP / RPT | Authenticated route tests reject anonymous access and ignore caller-supplied owner IDs; report reader omits raw evidence identifiers and is owner scoped. Public methodology route and ballot privacy UI remain pending |
+| RPT-03 | JSON/CSV/report links obey authorisation, expiry, CSV injection protection and data minimisation. | RP / RPT | JSON and CSV use private no-store headers, CSV is formula-safe, and route tests verify owner scoping. Signed-link expiry and public methodology route are not implemented |
+| RPT-04 | DSR export/delete, proof revocation, content purge and retained-audit redaction work end to end. | E, B, BS, X, XS, S, SS / ET, BT, XT, CT, ST, RPT | Ordinary deletion preserves accepted points and redacts evidence; the Data Passport adapter adds report data and proposal-only locators, including optional contextual and fulfillment rows. New locator/lock PostgreSQL cases passed before teardown failed; corrected hook rerun, end-to-end export/delete, invalidation after account deletion and privacy/retention approval remain pending |
 | REL-01 | Cached consent/standing cannot approve a stale vote or redemption; fresh Hyperdrive reads are used. | C, S, R, L, Q / CT, ST, RT, LT, QT | Fresh vote/correction/selection/claim authority and consent/offer locks verified, including revoke during wait, inventory-blocked expiry and queued deletion; live Hyperdrive acceptance pending |
 | REL-02 | Queue duplicate/out-of-order delivery and worker crash do not duplicate awards or miss corrections. | P, J, E, B, V, X, S, R, Q / PT, ET, BT, CT, XT, ST, RT, QT | Snapshot/correction CAS, atomic command/source receipts, conflict-skip safety, stock/usage serialization, interrupted rollback and outbox dedupe verified; specialist/reception, export and release cases remain |
 | REL-03 | Migration dry run, rollback, policy activation and exact reviewed SHA are separately evidenced. | SQL / PT | Partial: local baseline and proposed schema only; release pending |
@@ -254,7 +258,16 @@ Local report-reader increment evidence on 3 October 2026:
 | Report semantics | Stored best-four selection and omitted fifth, missing and unassessed weeks, monthly/quarterly email validity, separate current-level authority and correction history verified. CSV preserves source revision/reason/time, cap metadata, breakdown and correction history when detail is pending, ends with CRLF and escapes formula-leading values. A confirmed level snapshot does not relabel the original shadow assessment as confirmed |
 | Privacy and integrity | Raw evidence identifiers are excluded, distinct subjects return distinct stored projections, deleted owners are refused, and mismatched catalogue/assessment lineage fails closed |
 | Native typecheck and independent review | Native typecheck passes; a focused read-only re-review found no remaining P1/P2 in the exporter slice; reviewers did not run tests |
-| Remaining T09 gates | No authenticated HTTP route/caller-to-owner binding, public policy endpoint, JSON/CSV download wiring, cache expiry, DSR export/locator/reviewer retention or privacy collection approval is claimed |
+| Remaining T09 gates | The candidate adds authenticated owner-bound JSON/CSV/rewards reads and a Data Passport adapter. Public policy endpoint, signed-link expiry, full app-flow privacy-status/export lifecycle reconciliation, a clean rerun of the latest PostgreSQL suite, Flutter verification, collection/privacy and retention approval remain pending |
+
+Current report/DSR handler verification in the workspace:
+
+| Check | Result |
+| --- | --- |
+| Route, DSR and report-config unit cases | 16 passed: 9 authenticated route cases, 5 Data Passport adapter cases, and 2 report-configuration cases; the isolated tests check fresh auth, cross-user query binding, no-store/CSV headers, formula safety, feature-off/schema-absent behavior and owner-scoped month discovery |
+| TypeScript and OpenAPI | `npm run typecheck:native` passed; contract tests passed 44 with 17 expected skips; lint passed with two inherited warnings |
+| Current PostgreSQL candidate | New period-lock and locator cases passed before teardown failed on dependency order. The hook is fixed in the worktree but could not be rerun without the local disposable PostgreSQL 17 service and URL |
+| Independent review | Read-only review cleared the configuration preflight, correction-period lock and optional locator findings; reviewers did not run tests |
 
 Local contextual increment evidence on 3 October 2026:
 

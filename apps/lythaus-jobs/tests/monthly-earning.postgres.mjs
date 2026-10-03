@@ -37,7 +37,7 @@ mock.module('@lythaus/db', { namedExports: { ...database,
 } });
 const { processMonthlyEarningEvent, reconcileMonthlyEarning } = await import('../src/monthly-earning.ts');
 const env = { DB_JOBS_FRESH: binding, MONTHLY_REPUTATION_SHADOW_RULES: PROPOSED_WEEKLY_EARNING_RULES.version };
-const userId = uuidv7(), reviewerId = uuidv7(), otherId = uuidv7();
+const userId = uuidv7(), reviewerId = uuidv7(), otherId = uuidv7(), deletedOpenWeekId = uuidv7();
 const flag = 'trust.monthly_reputation_shadow';
 const rule = PROPOSED_WEEKLY_EARNING_RULES.version;
 const fixtureIds = [];
@@ -70,7 +70,8 @@ before(async () => {
   assert.ok((await sql("SELECT current_setting('server_version_num')::integer AS n")).rows[0].n >= 170000);
   flagGrantExisted = (await sql("SELECT has_table_privilege('lythaus_jobs', 'system.feature_flags', 'SELECT') AS allowed")).rows[0].allowed;
   await sql(readFileSync(new URL('../../../database/planetscale/proposals/monthly_reputation_earning.sql', import.meta.url), 'utf8'));
-  await sql('INSERT INTO identity.users (id, display_name) VALUES ($1, $4), ($2, $4), ($3, $4)', [userId, reviewerId, otherId, 'Synthetic earning fixture']);
+  await sql('INSERT INTO identity.users (id, display_name) VALUES ($1, $5), ($2, $5), ($3, $5), ($4, $5)',
+    [userId, reviewerId, otherId, deletedOpenWeekId, 'Synthetic earning fixture']);
   await sql(`INSERT INTO trust.monthly_earning_rule_sets (version, policy_version, catalogue_hash, mode, collect_from, configuration)
     VALUES ($1, $2, $3, 'shadow', '2026-08-01T00:00:00.000Z', $4::jsonb)`, [rule, MONTHLY_REPUTATION_POLICY_VERSION, MONTHLY_REPUTATION_CATALOGUE_HASH, JSON.stringify(PROPOSED_WEEKLY_EARNING_RULES)]);
 });
@@ -79,14 +80,15 @@ after(async () => {
   await sql('DROP FUNCTION IF EXISTS system.fail_monthly_week_fixture()');
   await sql('DROP TABLE IF EXISTS trust.monthly_earning_week_revisions, trust.monthly_earning_receipts, trust.monthly_earning_evidence_revisions, trust.monthly_earning_contributions, trust.monthly_earning_rule_sets');
   await sql('DROP FUNCTION IF EXISTS trust.reject_monthly_earning_update()');
+  await sql('DROP FUNCTION IF EXISTS trust.redact_monthly_earning_calculation(jsonb)');
   await sql('DELETE FROM system.feature_flags WHERE flag_key = $1', [flag]);
   if (!flagGrantExisted) await sql('REVOKE SELECT ON system.feature_flags FROM lythaus_jobs');
   await sql('DELETE FROM moderation.decisions WHERE case_id IN (SELECT id FROM moderation.cases WHERE content_id = ANY($1::uuid[]))', [fixtureIds]);
   await sql('DELETE FROM moderation.cases WHERE content_id = ANY($1::uuid[])', [fixtureIds]);
-  await sql('DELETE FROM content.comments WHERE author_id IN ($1, $2, $3)', [userId, reviewerId, otherId]);
+  await sql('DELETE FROM content.comments WHERE author_id IN ($1, $2, $3, $4)', [userId, reviewerId, otherId, deletedOpenWeekId]);
   await sql('DELETE FROM content.posts WHERE id = ANY($1::uuid[])', [fixtureIds]);
-  await sql('DELETE FROM system.outbox_events WHERE actor_id IN ($1, $2, $3)', [userId, reviewerId, otherId]);
-  await sql('DELETE FROM identity.users WHERE id IN ($1, $2, $3)', [userId, reviewerId, otherId]);
+  await sql('DELETE FROM system.outbox_events WHERE actor_id IN ($1, $2, $3, $4)', [userId, reviewerId, otherId, deletedOpenWeekId]);
+  await sql('DELETE FROM identity.users WHERE id IN ($1, $2, $3, $4)', [userId, reviewerId, otherId, deletedOpenWeekId]);
 });
 
 test('SEC-01: collection needs explicit shadow rules and a matching enabled policy; there is no implicit default', async () => {
@@ -225,6 +227,31 @@ test('PTS-02/04/05: actual comment and reply ownership is classified from storag
     assert.equal(evidence.reasonCode, 'context_review_required');
     if (!parentId) parentId = id;
   }
+});
+
+test('REL-02: reconciliation skips deleted owners with open weeks without repeated refresh failures', async () => {
+  const post = await makePost({ author: deletedOpenWeekId, created: '2026-08-03T12:00:00.000Z',
+    reviewed: '2026-08-04T12:00:00.000Z' });
+  await transact(client => recordMonthlyContentEarning(client, {
+    eventId: post.event, rulesVersion: rule, evaluatedAt: '2026-08-05T00:00:00.000Z',
+  }));
+  const before = await latest(deletedOpenWeekId);
+  assert.equal(before.calculation.state, 'open');
+  assert.ok(before.points > 0);
+  await sql("UPDATE identity.users SET status = 'deleted', deleted_at = now() WHERE id = $1", [deletedOpenWeekId]);
+
+  const first = await reconcileMonthlyEarning(env);
+  assert.equal(first.settled, 0);
+  const afterFirst = await latest(deletedOpenWeekId);
+  assert.equal(afterFirst.revision, before.revision);
+  assert.equal(afterFirst.points, before.points);
+  assert.equal(afterFirst.calculation.state, 'open');
+
+  const second = await reconcileMonthlyEarning(env);
+  assert.equal(second.settled, 0);
+  const afterSecond = await latest(deletedOpenWeekId);
+  assert.equal(afterSecond.revision, before.revision);
+  assert.equal(afterSecond.points, before.points);
 });
 
 test('CAL-05/PTS-08: after-period edits cannot earn retroactively; deleted and out-of-scope sources leave no invented work', async () => {

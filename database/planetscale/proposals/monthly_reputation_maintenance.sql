@@ -124,10 +124,14 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$ BEGIN
       OR event.aggregate_type = 'monthly_reputation_assessment' AND event.aggregate_id IN
         (SELECT assessment.id FROM trust.monthly_reputation_assessments assessment JOIN trust.monthly_reputation_sources source
           ON source.id = assessment.source_id WHERE source.subject_user_id = NEW.id);
-    DELETE FROM trust.monthly_reputation_sources WHERE subject_user_id = NEW.id;
+    -- Keep immutable score lineage and accepted week totals, while clearing the
+    -- assemblies, observations, contributions, and per-item evidence details.
+    DELETE FROM trust.monthly_reputation_assemblies WHERE subject_user_id = NEW.id;
     DELETE FROM trust.monthly_maintenance_observations WHERE subject_user_id = NEW.id;
+    UPDATE trust.monthly_earning_week_revisions
+      SET calculation = trust.redact_monthly_earning_calculation(calculation)
+      WHERE subject_user_id = NEW.id AND calculation ->> 'evidenceRedacted' IS DISTINCT FROM 'true';
     DELETE FROM trust.monthly_earning_contributions WHERE subject_user_id = NEW.id;
-    DELETE FROM trust.monthly_earning_week_revisions WHERE subject_user_id = NEW.id;
     DELETE FROM trust.monthly_earning_receipts WHERE subject_user_id = NEW.id;
   END IF;
   RETURN NEW;

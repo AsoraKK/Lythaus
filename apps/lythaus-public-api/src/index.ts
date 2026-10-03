@@ -29,6 +29,7 @@ import { communityReviewQueue, readCommunityAppeal } from '../../../packages/db/
 import { castCommunityBallot, submitCommunityAppeal, withdrawCommunityAppeal, type CommunityBallotInput } from '../../../packages/db/src/community-appeal-mutations.ts';
 import { MONTHLY_REPUTATION_POLICY_VERSION } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
 import { recordMonthlyEmailControl } from '../../../packages/db/src/monthly-maintenance.ts';
+import { handleMonthlyReputationRead } from './monthly-reputation-routes.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -41,6 +42,8 @@ interface Env extends EnvBindings {
   LYTHAUS_CONFIG?: NonNullable<EnvBindings['LYTHAUS_CONFIG']>;
   COMMUNITY_APPEAL_RULES_VERSION?: string;
   MONTHLY_REPUTATION_MAINTENANCE_RULES?: string;
+  MONTHLY_REPUTATION_SNAPSHOT_RULES?: string;
+  MONTHLY_REPUTATION_SELECTION_RULES?: string;
 }
 
 function hasReadinessAuthorization(request: Request, env: Env): boolean {
@@ -874,6 +877,25 @@ function response(request: Request, env: Env, body: unknown, init: ResponseInit 
 function privateResponse(request: Request, env: Env, body: unknown, init: ResponseInit = {}): Response {
   const result = response(request, env, body, init);
   result.headers.set('cache-control', 'private, no-store');
+  return result;
+}
+
+function privateTextResponse(request: Request, env: Env, body: string, init: ResponseInit = {}): Response {
+  const result = new Response(body, init);
+  const origin = corsOrigin(request, env);
+  if (origin) {
+    result.headers.set('access-control-allow-origin', origin);
+    result.headers.set('access-control-allow-credentials', 'true');
+  }
+  result.headers.set('x-correlation-id', correlationId(request));
+  result.headers.set('vary', 'Origin, Authorization');
+  result.headers.set('cache-control', 'private, no-store');
+  if (coordinatorAuthorization(request, env)
+    && request.headers.has('x-lythaus-acceptance-run-id')
+    && request.headers.has('x-lythaus-acceptance-context')) {
+    result.headers.set('x-lythaus-candidate-version', env.WORKER_VERSION.id);
+    result.headers.set('x-lythaus-candidate-release', env.WORKER_VERSION.tag);
+  }
   return result;
 }
 
@@ -3291,6 +3313,23 @@ export default {
         return await idempotentMutation(request, env, user.userId, 'appeal.recuse', () => recuseAppealReview(request, env, user, appealRecusal[1]), true);
       }
       if (request.method === 'GET' && url.pathname === '/api/appeals/reviewer/assignments') return await reviewerAssignments(request, env, await principal(request, env));
+      const monthlyReportRoute = url.pathname.match(/^\/api\/reputation\/me\/reports\/monthly\/([^/]+)$/);
+      const monthlyReportCsvRoute = url.pathname.match(/^\/api\/reputation\/me\/reports\/monthly\/([^/]+)\/export\.csv$/);
+      if (request.method === 'GET' && (monthlyReportRoute || monthlyReportCsvRoute || url.pathname === '/api/rewards/me/monthly')) {
+        const monthlyReputationResponse = await handleMonthlyReputationRead(request, {
+          authenticate: async (incoming) => {
+            const user = await principal(incoming, env);
+            return { userId: user.userId };
+          },
+          transaction: (work) => transaction(env.DB_APP_FRESH, work),
+          snapshotRulesVersion: env.MONTHLY_REPUTATION_SNAPSHOT_RULES,
+          selectionRulesVersion: env.MONTHLY_REPUTATION_SELECTION_RULES,
+          respond: (body, status, headers = {}) => typeof body === 'string'
+            ? privateTextResponse(request, env, body, { status, headers })
+            : privateResponse(request, env, body, { status, headers }),
+        });
+        if (monthlyReputationResponse) return monthlyReputationResponse;
+      }
       if (request.method === 'GET' && url.pathname === '/api/reputation/me') {
         const user = await principal(request, env);
         return await reputationSummary(request, env, user.userId, true);

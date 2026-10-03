@@ -57,7 +57,7 @@ const ADMIN_ERROR_CODES = new Set([
   'email_already_verified', 'email_change_requires_public_flow', 'idempotency_in_progress', 'idempotency_key_reused', 'idempotency_key_required', 'invalid_email',
   'ai_assisted_character_limit_exceeded', 'ai_generated_public_content_blocked',
   'appeal_adjudication_decision_invalid', 'appeal_adjudication_locked',
-  'appeal_adjudication_not_recorded', 'appeal_adjudicator_conflict',
+  'appeal_adjudication_list_forbidden', 'appeal_adjudication_not_recorded', 'appeal_adjudicator_conflict',
   'appeal_adjudicator_required', 'appeal_adjudicator_role_invalid',
   'appeal_adjudicator_training_required', 'appeal_already_resolved', 'appeal_not_found',
   'appeal_policy_version_unsupported', 'appeal_risk_class_invalid',
@@ -80,7 +80,7 @@ function adminError(error: unknown): { exposedCode: string; internalCode: string
     : ['access_verification_not_configured', 'admin_subject_key_not_configured', 'waitlist_unavailable', 'account_support_unavailable', 'overview_unavailable'].includes(exposedCode) ? 503
     : ['access_required', 'access_assertion_invalid', 'access_subject_missing'].includes(exposedCode) ? 401
       : ['auth_data_unavailable', 'auth_email_dispatch_unavailable'].includes(exposedCode) ? 503
-        : ['admin_role_required', 'admin_mutation_origin_invalid', 'account_support_owner_required', 'overview_owner_required', 'community_appeal_triage_not_allowed', 'monthly_context_actor_not_allowed'].includes(exposedCode) ? 403
+        : ['admin_role_required', 'admin_mutation_origin_invalid', 'account_support_owner_required', 'overview_owner_required', 'community_appeal_triage_not_allowed', 'monthly_context_actor_not_allowed', 'appeal_adjudication_list_forbidden'].includes(exposedCode) ? 403
           : ['community_appeals_unavailable', 'monthly_context_unavailable'].includes(exposedCode) ? 503
             : ['community_appeal_state_conflict', 'monthly_context_idempotency_reused', 'monthly_context_revision_conflict', 'monthly_context_rules_locked', 'monthly_context_scope_changed'].includes(exposedCode) ? 409
           : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
@@ -974,7 +974,7 @@ async function listPendingAppealAdjudications(
   env: Env,
   actor: { userId: string; role: string },
 ): Promise<Response> {
-  if (!['editorial', 'administrator', 'owner'].includes(actor.role)) throw new Error('appeal_adjudicator_required');
+  if (!['editorial', 'administrator', 'owner'].includes(actor.role)) throw new Error('appeal_adjudication_list_forbidden');
   const result = await query(env.DB_ADMIN_FRESH,
     `SELECT appeal.id AS appeal_id, appeal.case_id, appeal.risk_class, appeal.policy_version,
             appeal.created_at, appeal.expires_at, outcome.reviewer_panel_decision,

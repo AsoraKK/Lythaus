@@ -11,6 +11,7 @@ import 'package:lythaus_api_client/src/api_util.dart';
 import 'package:lythaus_api_client/src/model/api_error.dart';
 import 'package:lythaus_api_client/src/model/error.dart';
 import 'package:lythaus_api_client/src/model/forbidden_error.dart';
+import 'package:lythaus_api_client/src/model/monthly_rewards_me_response.dart';
 import 'package:lythaus_api_client/src/model/reward_redemption.dart';
 import 'package:lythaus_api_client/src/model/rewards_me_response.dart';
 import 'package:lythaus_api_client/src/model/unauthorized_error.dart';
@@ -22,6 +23,85 @@ class RewardsApi {
   final Serializers _serializers;
 
   const RewardsApi(this._dio, this._serializers);
+
+  /// Read my monthly level and reward eligibility
+  /// Returns the server-owned fixed monthly level snapshot and the member&#39;s current reward selection state. Paid tier changes reward choices only, not reputation scoring. No snapshot, selection or partner state is exposed until its owner-approved configuration is available.
+  ///
+  /// Parameters:
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [MonthlyRewardsMeResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<MonthlyRewardsMeResponse>> getMyMonthlyRewards({
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/rewards/me/monthly';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    MonthlyRewardsMeResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(MonthlyRewardsMeResponse),
+      ) as MonthlyRewardsMeResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<MonthlyRewardsMeResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
 
   /// Get my rewards snapshot
   /// Returns rewards available under the caller&#39;s subscription tier, reputation level, redemption limits, and fraud/maturity checks.

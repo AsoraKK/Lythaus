@@ -1,6 +1,6 @@
 import type { Client } from 'pg';
 import { MONTHLY_REPUTATION_POLICY_VERSION, MONTHLY_REPUTATION_CATALOGUE_HASH, MONTHLY_REPUTATION_LIMITS, nextReputationMonth, requireSourceMonth } from '../../contracts/src/monthly-reputation-policy.ts';
-import { readOwnMonthlyRewardSnapshot } from './monthly-reward-snapshots.ts';
+import { monthlyRewardSnapshotConfiguration, readOwnMonthlyRewardSnapshot } from './monthly-reward-snapshots.ts';
 
 type JsonObject = Record<string, unknown>;
 type ReportSourceRow = {
@@ -102,11 +102,55 @@ export async function readOwnMonthlyReputationReport(client: Client, input: {
   requireSubjectId(input.subjectId);
   requireSourceMonth(input.sourceMonth);
   const effectiveMonth = nextReputationMonth(input.sourceMonth);
+  const configuration = input.snapshotRulesVersion
+    ? await monthlyRewardSnapshotConfiguration(client, input.snapshotRulesVersion)
+    : null;
+  if (!configuration) {
+    return {
+      reportState: 'pending' as const,
+      reasonCode: 'report_unavailable',
+      sourceMonth: input.sourceMonth,
+      effectiveMonth,
+      policyVersion: MONTHLY_REPUTATION_POLICY_VERSION,
+      levelAuthority: {
+        state: 'unavailable' as const,
+        reasonCode: 'approval_unavailable',
+        effectiveMonth,
+        sourceMonth: null,
+        sourceScore: null,
+        level: null,
+        levelKind: null,
+      },
+      corrections: { sourceRevisions: [], effectiveSnapshots: [] },
+      report: null,
+    };
+  }
+  await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [
+    `monthly-reputation:${input.subjectId}:${input.sourceMonth}`,
+  ]);
   const authority = await readOwnMonthlyRewardSnapshot(client, {
     subjectId: input.subjectId,
     rulesVersion: input.snapshotRulesVersion,
     effectiveMonth,
   });
+  const base = {
+    sourceMonth: input.sourceMonth,
+    effectiveMonth,
+    policyVersion: MONTHLY_REPUTATION_POLICY_VERSION,
+    levelAuthority: {
+      state: authority.state,
+      reasonCode: authority.reasonCode,
+      effectiveMonth: authority.effectiveMonth,
+      sourceMonth: authority.sourceMonth ?? null,
+      sourceScore: authority.sourceScore ?? null,
+      level: authority.level ?? null,
+      levelKind: authority.levelKind ?? null,
+    },
+    corrections: { sourceRevisions: [], effectiveSnapshots: [] },
+  };
+  if (authority.state === 'unavailable' && authority.reasonCode === 'approval_unavailable') {
+    return { reportState: 'pending' as const, reasonCode: 'report_unavailable', ...base, report: null };
+  }
   const revisions = (await client.query<ReportSourceRow>(`SELECT source.revision, source.reason_code, source.recorded_at,
       source.catalogue_hash, assembly.report, assessment.mode AS assessment_mode, assessment.calculation,
       assessment.weekly_points, assessment.monthly_points, assessment.quarterly_points,
@@ -141,29 +185,15 @@ export async function readOwnMonthlyReputationReport(client: Client, input: {
       recordedAt: row.recorded_at.toISOString(),
     })),
   };
-  const base = {
-    sourceMonth: input.sourceMonth,
-    effectiveMonth,
-    policyVersion: MONTHLY_REPUTATION_POLICY_VERSION,
-    levelAuthority: {
-      state: authority.state,
-      reasonCode: authority.reasonCode,
-      effectiveMonth: authority.effectiveMonth,
-      sourceMonth: authority.sourceMonth ?? null,
-      sourceScore: authority.sourceScore ?? null,
-      level: authority.level ?? null,
-      levelKind: authority.levelKind ?? null,
-    },
-    corrections,
-  };
+  const reportBase = { ...base, corrections };
   const latest = revisions[0];
-  if (!latest) return { reportState: 'pending' as const, reasonCode: 'source_not_assembled', ...base, report: null };
+  if (!latest) return { reportState: 'pending' as const, reasonCode: 'source_not_assembled', ...reportBase, report: null };
   if (latest.catalogue_hash !== MONTHLY_REPUTATION_CATALOGUE_HASH) {
     throw new Error('monthly_report_source_integrity_failed');
   }
   const assembly = object(latest.report);
   if (!latest.report || assembly.policyVersion !== MONTHLY_REPUTATION_POLICY_VERSION || assembly.sourceMonth !== input.sourceMonth) {
-    return { reportState: 'pending' as const, reasonCode: 'assembly_pending', ...base, report: null };
+    return { reportState: 'pending' as const, reasonCode: 'assembly_pending', ...reportBase, report: null };
   }
   const assessment = object(latest.calculation);
   if (latest.calculation && (assessment.policyVersion !== MONTHLY_REPUTATION_POLICY_VERSION
@@ -195,7 +225,7 @@ export async function readOwnMonthlyReputationReport(client: Client, input: {
   return {
     reportState: latest.assessment_mode === 'shadow' ? 'shadow' as const : 'pending' as const,
     reasonCode: latest.assessment_mode ? null : 'assessment_pending',
-    ...base,
+    ...reportBase,
     report: {
       sourceRevision: latest.revision,
       sourceReasonCode: latest.reason_code,

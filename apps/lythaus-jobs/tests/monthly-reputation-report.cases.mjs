@@ -111,6 +111,63 @@ export function registerMonthlyReportCases({ tx, sql, person, snapshot, reviewer
     await assert.rejects(read(member, '2026-08'), /monthly_reward_subject_unavailable/);
   });
 
+  test('RPT-01/REL-01: report authority and correction history are protected by the same source-period lock', async () => {
+    const member = await person();
+    await snapshot(member, 10000, '2026-08');
+    const previous = (await sql(`SELECT id,revision FROM trust.monthly_reward_snapshots
+      WHERE subject_user_id=$1 AND effective_month='2026-09-01' AND mode='confirmed'
+      ORDER BY revision DESC LIMIT 1`, [member])).rows[0];
+    const corrected = await snapshot(member, 1000, '2026-08');
+    const approval = await tx(client => approveMonthlyRewardSnapshotCorrection(client, {
+      actorId: reviewer(), subjectId: member, snapshotId: previous.id, assessmentId: corrected.assessmentId,
+      rulesVersion: snapshotRulesVersion, expectedSnapshotRevision: previous.revision,
+      reasonCode: 'synthetic_independent_provider_invalidation', evidenceReference: 'synthetic private correction fixture',
+      idempotencyKey: uuidv7(),
+    }), 'lythaus_admin');
+
+    let lockReachedResolve;
+    let releaseReader;
+    const lockReached = new Promise(resolve => { lockReachedResolve = resolve; });
+    const readerMayContinue = new Promise(resolve => { releaseReader = resolve; });
+    const reportPromise = tx(client => readOwnMonthlyReputationReport({
+      query: async (sql, values) => {
+        const result = await client.query(sql, values);
+        if (sql.includes('pg_advisory_xact_lock') && values[0] === `monthly-reputation:${member}:2026-08`) {
+          lockReachedResolve();
+          await readerMayContinue;
+        }
+        return result;
+      },
+    }, { subjectId: member, sourceMonth: '2026-08', snapshotRulesVersion }));
+    await lockReached;
+
+    let correctionAttemptedResolve;
+    const correctionAttempted = new Promise(resolve => { correctionAttemptedResolve = resolve; });
+    const correctionPromise = tx(client => applyMonthlyRewardSnapshotCorrection({
+      query: async (sql, values) => {
+        if (sql.includes('pg_advisory_xact_lock') && values[0] === `monthly-reputation:${member}:2026-08`)
+          correctionAttemptedResolve();
+        return client.query(sql, values);
+      },
+    }, { eventId: approval.sourceEventId, rulesVersion: snapshotRulesVersion }), 'lythaus_jobs');
+    await correctionAttempted;
+    const earlyCorrection = await Promise.race([
+      correctionPromise.then(() => true),
+      new Promise(resolve => setTimeout(() => resolve(false), 30)),
+    ]);
+    assert.equal(earlyCorrection, false);
+
+    releaseReader();
+    const beforeCorrection = await reportPromise;
+    await correctionPromise;
+    assert.equal(beforeCorrection.levelAuthority.level, 5);
+    assert.equal(beforeCorrection.corrections.effectiveSnapshots.length, 0);
+    const afterCorrection = await read(member, '2026-08');
+    assert.equal(afterCorrection.levelAuthority.level, 2);
+    assert.equal(afterCorrection.corrections.effectiveSnapshots.length, 1);
+    assert.equal(afterCorrection.corrections.effectiveSnapshots[0].level, 2);
+  });
+
   test('RPT-01: assembled but unassessed source is pending and does not claim selected weeks', async () => {
     const member = await person();
     await snapshot(member, 8000, '2026-08', { weekPoints: [2400, 2200, 1800, 1000, 600], skipAssessment: true });

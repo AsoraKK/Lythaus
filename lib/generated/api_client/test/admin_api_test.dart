@@ -160,6 +160,15 @@ void main() {
       // TODO
     });
 
+    // Record a scoped contextual contribution review
+    //
+    // Requires a verified Cloudflare Access JWT, active owner, administrator, or moderator membership authorised for this review, and an allowed Origin. The handler binds the reviewer to the current comment, thread and parent revisions. Actor identity and rules version come from server context. evidenceReference is a caller-supplied bounded opaque string stored as supplied; the API does not validate its target or sensitivity. Do not include raw content or secrets; this value is omitted from the response. The request cannot submit points. The route remains unavailable until its separate configuration and collection gates are enabled.
+    //
+    //Future<MonthlyContextReviewResponse> adminMonthlyContextReview(String commentId, MonthlyContextReviewRequest monthlyContextReviewRequest) async
+    test('test adminMonthlyContextReview', () async {
+      // TODO
+    });
+
     // Read bounded owner-only community aggregates
     //
     // Verified Access, current active owner membership and account, existing rate limits and a committed audit are required. No user identities or content are returned. UTC half-open calendar windows compare matching elapsed prior periods only. Current retained visibility and deletion state apply to both windows. Table populations above the bounded snapshot cap are unavailable, not partial totals. Empty post cohorts have no ratio. No provider polling, billing estimate or payment inference is enabled.

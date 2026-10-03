@@ -1251,6 +1251,10 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1bookmarks~1{postId}'
   /reputation/me:
     $ref: './product-integrity.yaml#/paths/~1reputation~1me'
+  /reputation/me/reports/monthly/{sourceMonth}:
+    $ref: './monthly-reputation.yaml#/paths/~1reputation~1me~1reports~1monthly~1{sourceMonth}'
+  /reputation/me/reports/monthly/{sourceMonth}/export.csv:
+    $ref: './monthly-reputation.yaml#/paths/~1reputation~1me~1reports~1monthly~1{sourceMonth}~1export.csv'
   /reputation/me/ledger:
     $ref: './product-integrity.yaml#/paths/~1reputation~1me~1ledger'
   /activity:
@@ -1284,6 +1288,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UnauthorizedError'
+  /rewards/me/monthly:
+    $ref: './monthly-reputation.yaml#/paths/~1rewards~1me~1monthly'
   /rewards/{id}/redeem:
     post:
       operationId: rewardsRedeemPost

@@ -331,3 +331,115 @@ GRANT SELECT,INSERT ON trust.monthly_reward_qr_reservations,trust.monthly_reward
 GRANT SELECT ON trust.monthly_reward_invoice_evidence TO lythaus_runtime;
 GRANT SELECT,INSERT ON trust.monthly_reward_invoice_evidence TO lythaus_jobs;
 GRANT SELECT,DELETE ON trust.monthly_reward_qr_reservations,trust.monthly_reward_fulfilments,trust.monthly_reward_invoice_evidence,trust.monthly_reward_fulfilment_commands TO lythaus_privacy;
+
+CREATE FUNCTION privacy.reconcile_monthly_reputation_data_locations(p_subject_id uuid)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  INSERT INTO privacy.subject_data_locations
+    (subject_id,store_type,resource_reference,entity_type,entity_id,authoritative_or_derived,retention_class)
+  SELECT p_subject_id,'planetscale',location.resource_reference,location.entity_type,location.entity_id,'authoritative',location.retention_class
+  FROM (
+    SELECT 'trust.monthly_reputation_sources'::text AS resource_reference,'monthly_reputation_source'::text AS entity_type,
+      source.id AS entity_id,'trust'::text AS retention_class
+      FROM trust.monthly_reputation_sources source WHERE source.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_reputation_assessments','monthly_reputation_assessment',assessment.id,'trust'
+      FROM trust.monthly_reputation_assessments assessment
+      JOIN trust.monthly_reputation_sources source ON source.id = assessment.source_id
+      WHERE source.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_reputation_assemblies','monthly_reputation_assembly',assembly.source_id,'trust'
+      FROM trust.monthly_reputation_assemblies assembly WHERE assembly.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_earning_contributions','monthly_earning_contribution',contribution.id,'trust'
+      FROM trust.monthly_earning_contributions contribution WHERE contribution.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_earning_evidence_revisions','monthly_earning_evidence_revision',evidence.id,'trust'
+      FROM trust.monthly_earning_evidence_revisions evidence
+      JOIN trust.monthly_earning_contributions contribution ON contribution.id = evidence.contribution_id
+      WHERE contribution.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_earning_week_revisions','monthly_earning_week_revision',week.id,'trust'
+      FROM trust.monthly_earning_week_revisions week WHERE week.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_earning_receipts','monthly_earning_receipt',receipt.event_id,'operational'
+      FROM trust.monthly_earning_receipts receipt WHERE receipt.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_maintenance_observations','monthly_maintenance_observation',observation.id,'trust'
+      FROM trust.monthly_maintenance_observations observation WHERE observation.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_maintenance_revocations','monthly_maintenance_revocation',revocation.observation_id,'trust'
+      FROM trust.monthly_maintenance_revocations revocation
+      JOIN trust.monthly_maintenance_observations observation ON observation.id = revocation.observation_id
+      WHERE observation.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_reward_snapshots','monthly_reward_snapshot',snapshot.id,'rewards'
+      FROM trust.monthly_reward_snapshots snapshot WHERE snapshot.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_reward_snapshot_corrections','monthly_reward_snapshot_correction',correction.id,'trust'
+      FROM trust.monthly_reward_snapshot_corrections correction WHERE correction.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_reward_snapshot_receipts','monthly_reward_snapshot_receipt',receipt.event_id,'operational'
+      FROM trust.monthly_reward_snapshot_receipts receipt WHERE receipt.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_reward_selection_revisions','monthly_reward_selection',selection.id,'rewards'
+      FROM trust.monthly_reward_selection_revisions selection WHERE selection.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_reward_customer_bindings','monthly_reward_customer_binding',binding.id,'rewards'
+      FROM trust.monthly_reward_customer_bindings binding WHERE binding.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_reward_partner_consents','monthly_reward_partner_consent',consent.id,'rewards'
+      FROM trust.monthly_reward_partner_consents consent WHERE consent.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_reward_consent_revocations','monthly_reward_consent_revocation',revocation.idempotency_key,'rewards'
+      FROM trust.monthly_reward_consent_revocations revocation WHERE revocation.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_reward_recovery_generations','monthly_reward_recovery_generation',generation.subject_user_id,'account'
+      FROM trust.monthly_reward_recovery_generations generation WHERE generation.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_reward_qr_reservations','monthly_reward_qr_reservation',reservation.id,'rewards'
+      FROM trust.monthly_reward_qr_reservations reservation WHERE reservation.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_reward_invoice_evidence','monthly_reward_invoice_evidence',invoice.id,'rewards'
+      FROM trust.monthly_reward_invoice_evidence invoice WHERE invoice.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_reward_fulfilments','monthly_reward_fulfilment',fulfilment.id,'rewards'
+      FROM trust.monthly_reward_fulfilments fulfilment WHERE fulfilment.subject_user_id = p_subject_id
+    UNION ALL
+    SELECT 'trust.monthly_reward_fulfilment_commands','monthly_reward_fulfilment_command_set',fulfilment.id,'operational'
+      FROM trust.monthly_reward_fulfilments fulfilment
+      JOIN trust.monthly_reward_fulfilment_commands command ON command.fulfilment_id = fulfilment.id
+      WHERE fulfilment.subject_user_id = p_subject_id GROUP BY fulfilment.id
+  ) location
+  ON CONFLICT DO NOTHING;
+
+  IF to_regclass('trust.monthly_context_reviews') IS NOT NULL THEN
+    EXECUTE $context_reviews$
+      INSERT INTO privacy.subject_data_locations
+        (subject_id,store_type,resource_reference,entity_type,entity_id,authoritative_or_derived,retention_class)
+      SELECT $1,'planetscale','trust.monthly_context_reviews','monthly_context_review',review.id,'authoritative','trust'
+        FROM trust.monthly_context_reviews review WHERE review.subject_user_id = $1
+      ON CONFLICT DO NOTHING
+    $context_reviews$ USING p_subject_id;
+  END IF;
+
+  IF to_regclass('trust.monthly_context_dependency_receipts') IS NOT NULL THEN
+    EXECUTE $context_receipts$
+      INSERT INTO privacy.subject_data_locations
+        (subject_id,store_type,resource_reference,entity_type,entity_id,authoritative_or_derived,retention_class)
+      SELECT $1,'planetscale','trust.monthly_context_dependency_receipts/' || receipt.event_id::text,
+        'monthly_context_dependency_receipt',receipt.comment_id,'authoritative','operational'
+        FROM trust.monthly_context_dependency_receipts receipt WHERE receipt.subject_user_id = $1
+      ON CONFLICT DO NOTHING
+    $context_receipts$ USING p_subject_id;
+  END IF;
+
+  RETURN (SELECT count(*)::integer FROM privacy.subject_data_locations WHERE subject_id = p_subject_id);
+END;
+$$;
+REVOKE ALL ON FUNCTION privacy.reconcile_monthly_reputation_data_locations(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION privacy.reconcile_monthly_reputation_data_locations(uuid) TO lythaus_privacy;

@@ -6,15 +6,16 @@ Reviewed baseline: `8c4261402dd370b4c57e082cf0fc16b41927f7db` (remote main verif
 2 October 2026). The live GitHub `main` rechecked 3 October is
 `627ae30b36cd995c4f117bf3c44789c986b5d46b`; it includes security release 89
 (`6d1d52a4fa3f51ae041fbf38b5724578a8596b61`, run `37118382512`) and PR908 dependency
-repair (`8d91bcb434c4960a0f51ee2e4c7563c4f6e88a6c`). The current local code
-candidate is `1f5cff9cca94df137872d2c77950a92070808473`, based directly on that main
-SHA. PR896 remains open/draft at published head
-`9a98d462082529c1b08216ae666ac7534120dbd4`; the candidate is unpushed and unmerged.
-The disabled email-renewal proof seam is at local commit
+repair (`8d91bcb434c4960a0f51ee2e4c7563c4f6e88a6c`). The latest complete test
+candidate is `1f5cff9cca94df137872d2c77950a92070808473`. PR896 remains open/draft at
+published head `7c61e66cafe9a0849048f16b0809f18a9b770763`; the current workspace
+contains uncommitted report/DSR and client-surface changes over that head. The
+disabled email-renewal proof seam is at commit
 `71d60dcb1c85f754251fa265bc00b8109300d4cd`. App-flow owns the exclusive integration
 slot. Shared generated-client regeneration, profile/navigation, privacy status,
-export cooldown and client lifecycle work remain with app-flow until Friday
-coordinates transfer. No monthly integration has occurred.
+export cooldown and client lifecycle work remain coordinated with app-flow until
+Friday transfers the slot. No changes have been merged or deployed. The report/DSR
+proposal and exact overlap paths are in PR comments #5974528093 and #5974663291.
 
 The October monthly model replaces the earlier accumulating reputation model for
 future approved assessments. Four highest whole weekly results belonging to source
@@ -62,9 +63,9 @@ resource is activated by this slice.
 | Appeal runtime | public `index.ts` create/vote/recuse/assignments; Jobs `processAppealVoteLocked` and `AppealLifecycleWorkflow`; admin `adjudicateAppeal` and `runtime-policy.ts` | Assignment foreign keys, weighted outcomes and required adjudication span all three Workers; update together in T06 |
 | Earning | Jobs `processReputationSource`, `processAppealReputationResolution`, `processAccountStandingRefresh` | Old point impacts and reversal semantics are invoked; T04 needs policy-versioned event collection and derived corrections |
 | Rewards | public `rewardsSnapshot`, `redeemReward`; `packages/contracts/src/tier-policy.ts` | Reads current historical profile and enforces seven-day maturity; new access must use fixed monthly snapshots and persistent plan slots |
-| Flutter | `lib/ui/screens/adaptive_shell.dart`, `rewards/rewards_dashboard.dart`, `profile/reputation_ledger_screen.dart`, reputation and reward providers/models | Rewards already appears below Profile on desktop/mobile; extend the existing destination and clear private caches on account change |
-| Contract | `api/openapi/openapi.yaml` and referenced `product-integrity.yaml`; `lib/generated/api_client/` | Existing reputation, reward and appeal operations advertise old semantics; change canonical schemas and regenerate Dart during their vertical slices |
-| Privacy | Jobs `AccountExportWorkflow`, `AccountDeleteWorkflow`; `privacy.reconcile_subject_data_locations` | Extend private report/export and erasure/retention handling before collecting new personal evidence |
+| Flutter | `lib/ui/screens/adaptive_shell.dart`, `rewards/rewards_dashboard.dart`, `profile/reputation_ledger_screen.dart`, reputation and reward providers/models | An uncommitted candidate extends the existing Rewards/Profile surfaces and private report tracker. App-flow owns shared client generation and profile/navigation reconciliation; no Flutter SDK, analysis, browser run or mobile acceptance evidence is available in this workspace |
+| Contract | `api/openapi/openapi.yaml` and referenced `monthly-reputation.yaml`; `lib/generated/api_client/` | A candidate contract/client exists in the worktree for authenticated monthly report, CSV, rewards read and contextual review. App-flow owns generated-client regeneration until integration; reconcile before Friday's merge window |
+| Privacy | Jobs `AccountExportWorkflow`, `AccountDeleteWorkflow`; `privacy.reconcile_subject_data_locations` | A candidate Data Passport adapter and proposal-only locator function expose the private report and optional contextual/fulfillment locators. App-flow owns privacy-status/export cooldown/client lifecycle changes; DSR tests are isolated, while collection and retention approval remain pending |
 | Database | `0000`–`0020` migrations; `0012_product_integrity_v2.sql`; `trust.policy_versions`, `trust.reputation_events`, `trust.reputation_profiles`, appeal assignments/votes/outcomes | Existing tables are authoritative; add period-specific revisions without relabelling old records |
 | Resources | `infrastructure/lythaus-resource-registry.json` | Reuse existing three logical Workers, fresh Hyperdrives, outbox and queues; no new resource/cost approval is implied |
 
@@ -117,8 +118,8 @@ effective months; separately approved migration, exact-SHA deployment and activa
 | T05 Security | Reuse normal validated auth events; capability-aware integrity, credential continuity, Turnstile/refresher | Existing email evidence, monthly assembly and a separately gated database-only renewal challenge/proof seam are tested in synthetic PostgreSQL. Renewal stores a token hash and bound-email digest, writes one proof/outbox receipt atomically, and preserves credentials; no route, email delivery or score activation exists. Full-month protection coverage is calculated. Turnstile/passkey/TOTP collection, D07/D08 and privacy approval remain gated. |
 | T06 Peer review | Private timed electorate, equal ballots/history, close transaction, scoped override, restricted route | Public/admin routes, ballots/closure, scoped restoration, equal participation earning and private notices tested. Restricted-case safeguards are tested; accountable unresolved/specialist handling and D09/D10/D11/D13 activation and Flutter remain. |
 | T07 Rewards/partners | Persistent Free/Premium/Black selections, proposals, consent/email linkage, QR/invoice idempotency | Current-month selections, private consent, scoped eligibility and transactional synthetic QR/invoice fulfilment tested; merchant API, external evidence, live terms and product wiring remain |
-| T08 Flutter | Existing Rewards tabs, profile tracker, real contribution/review forms, complete states | Existing Rewards destination is the only destination; its screens, profile tracker, contribution/review forms and account-change cache lifecycle remain app-flow-owned. No client-side point mutation or parallel route is implemented. |
-| T09 Reporting/privacy | Stored-calculation parity, full own report, public methodology, safe JSON/CSV, DSR/retention | The stored-report database projection and isolated CSV serializer are implemented and tested. The single proposed report route is owner-bound `GET /api/reputation/me/monthly?sourceMonth=YYYY-MM&format=json|csv`; JSON/CSV must be derived from the same server report, use `private, no-store`, and include only the authenticated member's data. The monthly rewards read is separately proposed as `GET /api/rewards/me/monthly`, with effective month, fixed level, entitlement ceiling and selection requirement derived from server state. Include the report in the existing Data Passport export/download and DSR lifecycle with no new retention period. Authenticated route, export/DSR controller, OpenAPI and generated-client integration await Friday's shared slot; privacy collection approval remains pending. |
+| T08 Flutter | Existing Rewards tabs, profile tracker, real contribution/review forms, complete states | The workspace candidate extends the existing Rewards destination and Profile tracker, with no client-side point mutation or duplicate route. Flutter analysis/browser/device acceptance is unavailable; profile/navigation and generated-client reconciliation remain with app-flow until Friday. |
+| T09 Reporting/privacy | Stored-calculation parity, full own report, public methodology, safe JSON/CSV, DSR/retention | The workspace candidate includes authenticated owner-bound `GET /api/reputation/me/reports/monthly/{sourceMonth}` JSON and `/export.csv` reads plus `GET /api/rewards/me/monthly`, using fresh principal identity and private no-store responses. JSON/CSV and Data Passport use one server report projection. The DSR adapter preflights approved configuration and handles absent proposal relations; the proposal adds contextual-review, dependency and fulfillment locators. Route/DSR/config unit tests passed 16/16; two new PostgreSQL assertions passed before a teardown-order failure, and the hook fix awaits rerun. Privacy-status/export lifecycle reconciliation, Friday integration, collection approval and retention decisions remain pending. |
 | T10 Release | Shadow run, fairness/load/failure testing, approved cutover, exact-SHA release and rollback | No release or activation authorization |
 
 The acceptance matrix in `docs/testing/monthly-reputation-acceptance.md` tracks

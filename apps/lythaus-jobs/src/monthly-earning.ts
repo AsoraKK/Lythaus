@@ -59,7 +59,9 @@ export async function reconcileMonthlyEarning(env: MonthlyEarningEnv): Promise<{
        SELECT DISTINCT ON (subject_user_id, week_start) subject_user_id, week_start, state, rules_version
        FROM trust.monthly_earning_week_revisions WHERE policy_version = $1
        ORDER BY subject_user_id, week_start, revision DESC
-     ) latest WHERE rules_version = $2 AND state IN ('open', 'settling')
+     ) latest JOIN identity.users account ON account.id = latest.subject_user_id
+       WHERE rules_version = $2 AND state IN ('open', 'settling')
+       AND account.status <> 'deleted' AND account.deleted_at IS NULL
        AND week_start + interval '7 days' <= now() ORDER BY week_start, subject_user_id LIMIT 50`,
     [MONTHLY_REPUTATION_POLICY_VERSION, version]);
   for (const week of weeks.rows) {

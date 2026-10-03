@@ -158,6 +158,14 @@ import 'package:lythaus_api_client/src/model/media_upload_session_created.dart';
 import 'package:lythaus_api_client/src/model/moderation_decision_request.dart';
 import 'package:lythaus_api_client/src/model/moderation_decision_response.dart';
 import 'package:lythaus_api_client/src/model/moderation_state.dart';
+import 'package:lythaus_api_client/src/model/monthly_context_review_error.dart';
+import 'package:lythaus_api_client/src/model/monthly_context_review_request.dart';
+import 'package:lythaus_api_client/src/model/monthly_context_review_response.dart';
+import 'package:lythaus_api_client/src/model/monthly_report_error.dart';
+import 'package:lythaus_api_client/src/model/monthly_reputation_report_response.dart';
+import 'package:lythaus_api_client/src/model/monthly_reputation_report_response_corrections.dart';
+import 'package:lythaus_api_client/src/model/monthly_reputation_report_response_level_authority.dart';
+import 'package:lythaus_api_client/src/model/monthly_rewards_me_response.dart';
 import 'package:lythaus_api_client/src/model/news_board_feed_page.dart';
 import 'package:lythaus_api_client/src/model/news_board_item.dart';
 import 'package:lythaus_api_client/src/model/news_source_metadata.dart';
@@ -394,6 +402,14 @@ part 'serializers.g.dart';
   ModerationDecisionRequest,
   ModerationDecisionResponse,
   ModerationState,
+  MonthlyContextReviewError,
+  MonthlyContextReviewRequest,
+  MonthlyContextReviewResponse,
+  MonthlyReportError,
+  MonthlyReputationReportResponse,
+  MonthlyReputationReportResponseCorrections,
+  MonthlyReputationReportResponseLevelAuthority,
+  MonthlyRewardsMeResponse,
   NewsBoardFeedPage,
   NewsBoardItem,
   NewsSourceMetadata,

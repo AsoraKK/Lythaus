@@ -92,6 +92,7 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminLegalHoldsList**](doc/AdminApi.md#adminlegalholdslist) | **GET** /admin/privacy/legal-holds | List active and released legal holds
 [*AdminApi*](doc/AdminApi.md) | [**adminModerationCasesList**](doc/AdminApi.md#adminmoderationcaseslist) | **GET** /admin/moderation/cases | List moderation cases
 [*AdminApi*](doc/AdminApi.md) | [**adminModerationDecision**](doc/AdminApi.md#adminmoderationdecision) | **POST** /admin/moderation/cases/{caseId}/decision | Apply a moderation decision
+[*AdminApi*](doc/AdminApi.md) | [**adminMonthlyContextReview**](doc/AdminApi.md#adminmonthlycontextreview) | **POST** /admin/reputation/comments/{commentId}/context-review | Record a scoped contextual contribution review
 [*AdminApi*](doc/AdminApi.md) | [**adminOverview**](doc/AdminApi.md#adminoverview) | **GET** /admin/overview | Read bounded owner-only community aggregates
 [*AdminApi*](doc/AdminApi.md) | [**adminPrivacyRequestsList**](doc/AdminApi.md#adminprivacyrequestslist) | **GET** /admin/privacy/requests | List privacy requests
 [*AdminApi*](doc/AdminApi.md) | [**adminReviewerQualificationCreate**](doc/AdminApi.md#adminreviewerqualificationcreate) | **POST** /admin/reviewers/{reviewerId}/qualification | Set reviewer qualification state
@@ -204,10 +205,14 @@ Class | Method | HTTP request | Description
 [*PrivacyApi*](doc/PrivacyApi.md) | [**storageUsageGet**](doc/PrivacyApi.md#storageusageget) | **GET** /storage/usage | Get the authenticated user&#39;s private storage ledger
 [*PrivacyApi*](doc/PrivacyApi.md) | [**usersMeRegionUpdate**](doc/PrivacyApi.md#usersmeregionupdate) | **PUT** /users/me/region | Update private region and visibility preferences
 [*PrivacyApi*](doc/PrivacyApi.md) | [**usersMeRetentionUpdate**](doc/PrivacyApi.md#usersmeretentionupdate) | **PUT** /users/me/retention | Update a private content-retention rule
+[*ReputationApi*](doc/ReputationApi.md) | [**adminMonthlyContextReview**](doc/ReputationApi.md#adminmonthlycontextreview) | **POST** /admin/reputation/comments/{commentId}/context-review | Record a scoped contextual contribution review
+[*ReputationApi*](doc/ReputationApi.md) | [**downloadMyMonthlyReputationReportCsv**](doc/ReputationApi.md#downloadmymonthlyreputationreportcsv) | **GET** /reputation/me/reports/monthly/{sourceMonth}/export.csv | Export my monthly reputation report as CSV
+[*ReputationApi*](doc/ReputationApi.md) | [**getMyMonthlyReputationReport**](doc/ReputationApi.md#getmymonthlyreputationreport) | **GET** /reputation/me/reports/monthly/{sourceMonth} | Read or export my monthly reputation report
 [*ReputationApi*](doc/ReputationApi.md) | [**reputationLedgerGet**](doc/ReputationApi.md#reputationledgerget) | **GET** /reputation/me/ledger | List my Reputation V2 ledger
 [*ReputationApi*](doc/ReputationApi.md) | [**reputationMeGet**](doc/ReputationApi.md#reputationmeget) | **GET** /reputation/me | Get my private Reputation V2 summary
 [*ReputationApi*](doc/ReputationApi.md) | [**reputationUserGet**](doc/ReputationApi.md#reputationuserget) | **GET** /reputation/users/{id} | Get public Reputation V2 summary
 [*ReputationApi*](doc/ReputationApi.md) | [**reputationUserGetSingular**](doc/ReputationApi.md#reputationusergetsingular) | **GET** /reputation/user/{id} | Get public Reputation V2 summary (compatibility alias)
+[*RewardsApi*](doc/RewardsApi.md) | [**getMyMonthlyRewards**](doc/RewardsApi.md#getmymonthlyrewards) | **GET** /rewards/me/monthly | Read my monthly level and reward eligibility
 [*RewardsApi*](doc/RewardsApi.md) | [**rewardsMeGet**](doc/RewardsApi.md#rewardsmeget) | **GET** /rewards/me | Get my rewards snapshot
 [*RewardsApi*](doc/RewardsApi.md) | [**rewardsRedeemPost**](doc/RewardsApi.md#rewardsredeempost) | **POST** /rewards/{id}/redeem | Redeem a reward
 [*SocialApi*](doc/SocialApi.md) | [**blocksCreate**](doc/SocialApi.md#blockscreate) | **POST** /blocks | Block a user
@@ -383,6 +388,14 @@ Class | Method | HTTP request | Description
  - [ModerationDecisionRequest](doc/ModerationDecisionRequest.md)
  - [ModerationDecisionResponse](doc/ModerationDecisionResponse.md)
  - [ModerationState](doc/ModerationState.md)
+ - [MonthlyContextReviewError](doc/MonthlyContextReviewError.md)
+ - [MonthlyContextReviewRequest](doc/MonthlyContextReviewRequest.md)
+ - [MonthlyContextReviewResponse](doc/MonthlyContextReviewResponse.md)
+ - [MonthlyReportError](doc/MonthlyReportError.md)
+ - [MonthlyReputationReportResponse](doc/MonthlyReputationReportResponse.md)
+ - [MonthlyReputationReportResponseCorrections](doc/MonthlyReputationReportResponseCorrections.md)
+ - [MonthlyReputationReportResponseLevelAuthority](doc/MonthlyReputationReportResponseLevelAuthority.md)
+ - [MonthlyRewardsMeResponse](doc/MonthlyRewardsMeResponse.md)
  - [NewsBoardFeedPage](doc/NewsBoardFeedPage.md)
  - [NewsBoardItem](doc/NewsBoardItem.md)
  - [NewsSourceMetadata](doc/NewsSourceMetadata.md)

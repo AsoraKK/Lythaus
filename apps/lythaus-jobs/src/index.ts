@@ -15,6 +15,7 @@ import { processMonthlyEarningEvent, reconcileMonthlyEarning } from './monthly-e
 import { reconcileMonthlyAssembly } from './monthly-assembly.ts';
 import { processMonthlyPeerParticipation, reconcileMonthlyPeerParticipation } from './monthly-peer-participation.ts';
 import { processMonthlyRewardSnapshotEvent,reconcileMonthlyRewardSnapshots } from './monthly-reward-snapshots.ts';
+import { readMonthlyReputationReportsForPassport } from './monthly-reputation-dsr.ts';
 import { reconcileCommunityAppeals } from './community-appeals.ts';
 import { identicalCommunityAppealOverride } from '../../../packages/db/src/community-appeal-closure.ts';
 import { MONTHLY_EARNING_SOURCE_EVENTS } from '../../../packages/db/src/monthly-earning.ts';
@@ -63,6 +64,14 @@ async function deleteR2Prefix(bucket: NonNullable<EnvBindings['PRIVATE_EXPORTS']
     cursor = listed.truncated ? listed.cursor : undefined;
   } while (cursor);
   return deleted;
+}
+
+async function reconcileMonthlyReputationDataLocations(db: HyperdriveBinding, subjectId: string): Promise<void> {
+  const adapter = await query<{ available: boolean }>(db,
+    `SELECT to_regprocedure('privacy.reconcile_monthly_reputation_data_locations(uuid)') IS NOT NULL AS available`);
+  if (adapter.rows[0]?.available) {
+    await query(db, `SELECT privacy.reconcile_monthly_reputation_data_locations($1)`, [subjectId]);
+  }
 }
 
 function hasReadinessAuthorization(request: Request, env: Env): boolean {
@@ -1958,6 +1967,7 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
     const requestedId = event.payload.requestId;
     const requestId = await step.do('resolve-request', async () => {
       await query(this.env.DB_PRIVACY_FRESH, `SELECT privacy.reconcile_subject_data_locations($1)`, [subjectId]);
+      await reconcileMonthlyReputationDataLocations(this.env.DB_PRIVACY_FRESH, subjectId);
       const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
         `SELECT id FROM privacy.requests WHERE id = $1 AND subject_id = $2 AND request_type = 'delete'`, [requestedId, subjectId]);
       if (!result.rows[0]) throw new Error('privacy_delete_request_not_found');
@@ -2162,7 +2172,10 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
                       'moderation.appeal_review_votes', 'moderation.appeal_adjudications',
                       'moderation.appeal_outcomes', 'moderation.appeal_outcome_effects',
                       'editorial.peer_reviews', 'editorial.publications',
-                      'privacy.requests', 'privacy.request_events', 'privacy.legal_holds'
+                      'privacy.requests', 'privacy.request_events', 'privacy.legal_holds',
+                      'trust.monthly_reputation_sources', 'trust.monthly_reputation_assessments',
+                      'trust.monthly_earning_week_revisions', 'trust.monthly_reward_snapshots',
+                      'trust.monthly_reward_snapshot_corrections'
                     ) THEN 'retained'
                     ELSE 'deleted'
                   END,
@@ -2219,6 +2232,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
     if (!exportsBucket) throw new Error('private_exports_not_configured');
     const requestId = await step.do('resolve-export-request', async () => {
       await query(this.env.DB_PRIVACY_FRESH, `SELECT privacy.reconcile_subject_data_locations($1)`, [subjectId]);
+      await reconcileMonthlyReputationDataLocations(this.env.DB_PRIVACY_FRESH, subjectId);
       const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
         `SELECT id FROM privacy.requests WHERE id = $1 AND subject_id = $2 AND request_type = 'export'`, [requestedId, subjectId]);
       if (!result.rows[0]) throw new Error('privacy_export_request_not_found');
@@ -2288,6 +2302,11 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         contactEmail: contactEmailField.rows[0],
         decrypt: decryptField,
       });
+      const monthlyReputationReports = this.env.MONTHLY_REPUTATION_SNAPSHOT_RULES
+        ? await transaction(this.env.DB_JOBS_FRESH, client => readMonthlyReputationReportsForPassport(
+          client, subjectId, this.env.MONTHLY_REPUTATION_SNAPSHOT_RULES,
+        ))
+        : { state: 'unavailable', reasonCode: 'approval_unavailable', reports: [] };
       const [
         posts,
         comments,
@@ -2384,6 +2403,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         humanContribution: contributions.rows,
         reputationProfile: reputationProfile.rows[0] ?? null,
         reputationEvents: reputationEvents.rows,
+        monthlyReputationReports,
         accountabilitySignals: accountabilitySignals.rows,
         notificationPreferences: notificationPreferences.rows[0] ?? null,
         notificationDevices: notificationDevices.rows,

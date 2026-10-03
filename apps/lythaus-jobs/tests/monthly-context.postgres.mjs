@@ -109,6 +109,7 @@ after(async () => {
     trust.monthly_earning_week_revisions,trust.monthly_earning_receipts,trust.monthly_earning_evidence_revisions,
     trust.monthly_earning_contributions,trust.monthly_earning_rule_sets`);
   await sql('DROP FUNCTION trust.reject_monthly_maintenance_update(),trust.reject_monthly_reputation_update(),trust.reject_monthly_earning_update()');
+  await sql('DROP FUNCTION trust.redact_monthly_earning_calculation(jsonb)');
   await sql('DROP FUNCTION trust.require_monthly_reputation_subject(),trust.require_monthly_assessment_subject(),trust.erase_monthly_reputation_subject(),trust.preserve_monthly_collection_flag(),trust.lock_monthly_reputation_subject(uuid)');
   await sql('DELETE FROM system.feature_flags WHERE flag_key IN ($1,$2)',[shadowFlag,contextFlag]);
   for (const grant of grants) await sql(grant);
@@ -483,5 +484,6 @@ test('REL-02/03: deletion before the fresh authorization lock denies insertion a
   assert.equal((await sql('SELECT 1 FROM trust.monthly_context_reviews WHERE subject_user_id=$1',[erased])).rowCount,0);
   assert.equal((await sql('SELECT 1 FROM system.outbox_events WHERE id=$1',[approved.sourceEventId])).rowCount,0);
   assert.equal((await sql('SELECT 1 FROM system.consumer_inbox WHERE event_id=$1',[approved.sourceEventId])).rowCount,0);
-  assert.equal((await sql('SELECT 1 FROM trust.monthly_earning_week_revisions WHERE subject_user_id=$1',[erased])).rowCount,0);
+  assert.ok((await sql('SELECT 1 FROM trust.monthly_earning_week_revisions WHERE subject_user_id=$1',[erased])).rowCount>0);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_earning_contributions WHERE subject_user_id=$1',[erased])).rowCount,0);
 });

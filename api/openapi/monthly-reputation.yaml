@@ -5,7 +5,61 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    monthlySourceMonth:
+      name: sourceMonth
+      in: path
+      required: true
+      description: Calendar source month in UTC, formatted YYYY-MM.
+      schema: { type: string, pattern: '^\\d{4}-(0[1-9]|1[0-2])$' }
   schemas:
+    MonthlyReputationReportResponse:
+      type: object
+      additionalProperties: true
+      required: [reportState, sourceMonth, effectiveMonth, policyVersion, levelAuthority, corrections, report]
+      properties:
+        reportState: { type: string, enum: [pending, shadow] }
+        reasonCode: { type: string, nullable: true }
+        sourceMonth: { type: string, pattern: '^\\d{4}-(0[1-9]|1[0-2])$' }
+        effectiveMonth: { type: string, pattern: '^\\d{4}-(0[1-9]|1[0-2])$' }
+        policyVersion: { type: string }
+        levelAuthority:
+          type: object
+          additionalProperties: true
+          required: [state, effectiveMonth]
+          properties:
+            state: { type: string }
+            reasonCode: { type: string, nullable: true }
+            effectiveMonth: { type: string, nullable: true }
+            sourceMonth: { type: string, nullable: true }
+            sourceScore: { type: integer, nullable: true, minimum: 0, maximum: 13500 }
+            level: { type: integer, nullable: true, minimum: 1, maximum: 5 }
+            levelKind: { type: string, nullable: true }
+        corrections:
+          type: object
+          required: [sourceRevisions, effectiveSnapshots]
+          properties:
+            sourceRevisions: { type: array, items: { type: object, additionalProperties: true } }
+            effectiveSnapshots: { type: array, items: { type: object, additionalProperties: true } }
+        report: { type: object, nullable: true, additionalProperties: true }
+    MonthlyRewardsMeResponse:
+      type: object
+      additionalProperties: true
+      required: [state, reasonCode, effectiveMonth, currentLevel, sourceMonth, sourceScore, snapshot, selection]
+      properties:
+        state: { type: string, enum: [pending, ready] }
+        reasonCode: { type: string, nullable: true }
+        effectiveMonth: { type: string, nullable: true }
+        currentLevel: { type: integer, nullable: true, minimum: 1, maximum: 5 }
+        sourceMonth: { type: string, nullable: true }
+        sourceScore: { type: integer, nullable: true, minimum: 0, maximum: 13500 }
+        snapshot: { type: object, additionalProperties: true }
+        selection: { type: object, additionalProperties: true }
+    MonthlyReportError:
+      type: object
+      additionalProperties: true
+      required: [error]
+      properties:
+        error: { type: string }
     MonthlyContextReviewRequest:
       type: object
       additionalProperties: false
@@ -41,6 +95,74 @@ components:
         error: { type: string, enum: [rate_limit_exceeded] }
         correlationId: { type: string }
 paths:
+  /reputation/me/reports/monthly/{sourceMonth}:
+    get:
+      operationId: getMyMonthlyReputationReport
+      summary: Read or export my monthly reputation report
+      description: Returns the authenticated member's private JSON report for one calendar source month. It includes selected and omitted assigned weeks, action allowances and accepted/withheld/pending totals, monthly and quarterly email validity, fixed next-calendar-month authority, and correction history. Raw evidence identifiers and private ballots are not returned. The report may remain pending while policy or settlement gates are unresolved.
+      tags: [Reputation]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/monthlySourceMonth'
+      responses:
+        '200':
+          description: Private monthly report or CSV download.
+          headers:
+            Cache-Control:
+              schema: { type: string, example: 'private, no-store' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MonthlyReputationReportResponse' }
+        '400':
+          description: The source month or report format is invalid.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MonthlyReportError' }
+        '401': { $ref: './product-integrity.yaml#/components/responses/Unauthorized' }
+        '503': { $ref: './product-integrity.yaml#/components/responses/ServiceUnavailable' }
+  /reputation/me/reports/monthly/{sourceMonth}/export.csv:
+    get:
+      operationId: downloadMyMonthlyReputationReportCsv
+      summary: Export my monthly reputation report as CSV
+      description: Returns the authenticated member's private formula-safe CSV export for one calendar source month. Raw evidence identifiers and private ballots are omitted. The response is marked private and no-store.
+      tags: [Reputation]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/monthlySourceMonth'
+      responses:
+        '200':
+          description: Private CSV report download.
+          headers:
+            Cache-Control:
+              schema: { type: string, example: 'private, no-store' }
+          content:
+            text/csv:
+              schema: { type: string }
+        '400':
+          description: The source month is invalid.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MonthlyReportError' }
+        '401': { $ref: './product-integrity.yaml#/components/responses/Unauthorized' }
+        '503': { $ref: './product-integrity.yaml#/components/responses/ServiceUnavailable' }
+  /rewards/me/monthly:
+    get:
+      operationId: getMyMonthlyRewards
+      summary: Read my monthly level and reward eligibility
+      description: Returns the server-owned fixed monthly level snapshot and the member's current reward selection state. Paid tier changes reward choices only, not reputation scoring. No snapshot, selection or partner state is exposed until its owner-approved configuration is available.
+      tags: [Rewards]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Current monthly rewards view; unresolved gates are explicit pending states.
+          headers:
+            Cache-Control:
+              schema: { type: string, example: 'private, no-store' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MonthlyRewardsMeResponse' }
+        '401': { $ref: './product-integrity.yaml#/components/responses/Unauthorized' }
+        '503': { $ref: './product-integrity.yaml#/components/responses/ServiceUnavailable' }
   /admin/reputation/comments/{commentId}/context-review:
     servers:
       - url: https://admin-api.lythaus.co/api

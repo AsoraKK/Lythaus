@@ -75,13 +75,13 @@ async function emailFixture(userId = subject, performedAt = '2026-08-15T12:00:00
 const capture = (fixture, rulesVersion = maintenance.version) => tx(client => recordMonthlyEmailControl(client, {
   sourceEventId: fixture.eventId, verificationTokenId: fixture.tokenId, rulesVersion,
 }), 'lythaus_runtime');
-async function post(week, process = true) {
+async function post(week, process = true, author = subject) {
   const id = uuidv7(), event = uuidv7(), caseId = uuidv7(); posts.push({ id, event, week }); cases.push(caseId);
   const performed = `${week}T12:00:00.000Z`;
   await sql(`INSERT INTO content.posts (id, author_id, body, declared_creation_mode, visibility, moderation_state, moderation_source_event_id, created_at)
-    VALUES ($1, $2, $3, 'human', 'public', 'allowed', $4, $5)`, [id, subject, `Distinct synthetic contribution ${id}`, event, performed]);
+    VALUES ($1, $2, $3, 'human', 'public', 'allowed', $4, $5)`, [id, author, `Distinct synthetic contribution ${id}`, event, performed]);
   await sql(`INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload, created_at)
-    VALUES ($1, 'content.post.created', 'post', $2, $3, '{}'::jsonb, $4)`, [event, id, subject, performed]);
+    VALUES ($1, 'content.post.created', 'post', $2, $3, '{}'::jsonb, $4)`, [event, id, author, performed]);
   await sql(`INSERT INTO moderation.cases (id, content_type, content_id, state, policy_version, source_event_id)
     VALUES ($1, 'post', $2, 'resolved', 'synthetic-acceptance', $3)`, [caseId, id, event]);
   await sql(`INSERT INTO moderation.decisions (id, case_id, outcome, public_label, policy_version, decided_by)
@@ -136,6 +136,7 @@ after(async () => {
     trust.monthly_earning_week_revisions, trust.monthly_earning_receipts, trust.monthly_earning_evidence_revisions,
     trust.monthly_earning_contributions, trust.monthly_earning_rule_sets`);
   await sql('DROP FUNCTION IF EXISTS trust.reject_monthly_maintenance_update(), trust.reject_monthly_reputation_update(), trust.reject_monthly_earning_update()');
+  await sql('DROP FUNCTION IF EXISTS trust.redact_monthly_earning_calculation(jsonb)');
   await sql('DROP FUNCTION IF EXISTS trust.require_monthly_reputation_subject(), trust.require_monthly_assessment_subject(), trust.erase_monthly_reputation_subject(), trust.preserve_monthly_collection_flag(), trust.lock_monthly_reputation_subject(uuid)');
   await sql('DELETE FROM system.feature_flags WHERE flag_key = $1', [flag]);
   for (const grant of grants) await sql(grant);
@@ -334,8 +335,19 @@ test('SEC-01/03/16: the real ordinary email verification handler captures eviden
 });
 
 test('RPT-04/REL-02: deletion completes while assembly waits and cannot resurrect private evidence', async () => {
-  const userId = await person(); const proof = await emailFixture(userId); await capture(proof);
+  const userId = await person(); await post(weeks[1], true, userId);
+  const proof = await emailFixture(userId); await capture(proof);
   const initial = await assemble(userId); assert.equal(initial.created, true);
+  const acceptedWeekRows = await sql('SELECT points, calculation FROM trust.monthly_earning_week_revisions WHERE subject_user_id = $1 ORDER BY week_start, revision', [userId]);
+  assert.ok(acceptedWeekRows.rows.length > 0);
+  assert.ok(acceptedWeekRows.rows.some(row => row.points > 0));
+  const acceptedPrivateValues = acceptedWeekRows.rows.flatMap(row => row.calculation.evidence ?? [])
+    .flatMap(item => [item.id, item.workId, item.sourceRevisionId, item.decisionId, item.contentFingerprint].filter(Boolean));
+  assert.ok(acceptedPrivateValues.length > 0);
+  assert.ok(acceptedWeekRows.rows.some(row => row.calculation.actions.some(action => action.evidenceIds?.length)));
+  const scoreProjection = row => ({ points: row.points, actions: row.calculation.actions.map(({ actionId, points, accepted, pending, withheld }) =>
+    ({ actionId, points, accepted, pending, withheld })) });
+  const acceptedScoreProjection = acceptedWeekRows.rows.map(scoreProjection);
   const requested = (await sql("SELECT id FROM system.outbox_events WHERE event_type = 'trust.monthly_assessment.requested' AND aggregate_id = $1", [initial.sourceId])).rows[0];
   const assessed = await tx(client => assessMonthlyReputationSource(client, { eventId: requested.id,
     assessmentId: uuidv7(), resultEventId: uuidv7(), evaluatedAt: new Date().toISOString() }));
@@ -355,10 +367,28 @@ test('RPT-04/REL-02: deletion completes while assembly waits and cannot resurrec
     await tx(client => client.query("UPDATE identity.users SET status = 'deleted', deleted_at = now() WHERE id = $1", [userId]), 'lythaus_privacy');
   } finally { await blocker.query('COMMIT'); await blocker.end(); }
   assert.equal(await pending, null);
-  for (const table of ['monthly_reputation_sources', 'monthly_reputation_assemblies', 'monthly_maintenance_observations',
-    'monthly_earning_contributions', 'monthly_earning_week_revisions', 'monthly_earning_receipts']) {
-    assert.equal((await sql(`SELECT 1 FROM trust.${table} WHERE subject_user_id = $1`, [userId])).rowCount, 0);
+  assert.ok((await sql('SELECT 1 FROM trust.monthly_reputation_sources WHERE subject_user_id = $1', [userId])).rowCount > 0);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reputation_assemblies WHERE subject_user_id = $1', [userId])).rowCount, 0);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_maintenance_observations WHERE subject_user_id = $1', [userId])).rowCount, 0);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_earning_contributions WHERE subject_user_id = $1', [userId])).rowCount, 0);
+  const retainedSource = await sql('SELECT input FROM trust.monthly_reputation_sources WHERE subject_user_id = $1', [userId]);
+  const retainedAssessment = await sql('SELECT calculation FROM trust.monthly_reputation_assessments WHERE source_id = $1', [initial.sourceId]);
+  for (const value of acceptedPrivateValues) {
+    assert.equal(JSON.stringify(retainedSource.rows).includes(value), false);
+    assert.equal(JSON.stringify(retainedAssessment.rows).includes(value), false);
   }
+  const redactedWeekRows = await sql('SELECT points, calculation FROM trust.monthly_earning_week_revisions WHERE subject_user_id = $1 ORDER BY week_start, revision', [userId]);
+  assert.deepEqual(redactedWeekRows.rows.map(scoreProjection), acceptedScoreProjection);
+  for (const row of redactedWeekRows.rows) {
+    assert.equal(row.calculation.evidenceRedacted, true);
+    assert.equal(Object.hasOwn(row.calculation, 'evidence'), false);
+    assert.ok(row.calculation.actions.every(action => !Object.hasOwn(action, 'evidenceIds')));
+    const retained = JSON.stringify(row.calculation);
+    for (const value of acceptedPrivateValues) assert.equal(retained.includes(value), false);
+  }
+  await assert.rejects(sql('UPDATE trust.monthly_earning_week_revisions SET points = points + 1 WHERE subject_user_id = $1', [userId]),
+    /monthly_earning_revision_is_immutable/);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_earning_receipts WHERE subject_user_id = $1', [userId])).rowCount, 0);
   assert.equal((await sql('SELECT 1 FROM trust.monthly_maintenance_revocations WHERE observation_id = $1', [proof.eventId])).rowCount, 0);
   await assert.rejects(capture(proof), /canonical_email_required/);
   assert.equal((await sql("SELECT 1 FROM system.outbox_events WHERE event_type = 'trust.monthly_assessment.requested' AND aggregate_id = $1", [initial.sourceId])).rowCount, 0);
@@ -379,7 +409,7 @@ test('RPT-04/REL-02: interrupted assessment cannot append personal events after 
   try { await tx(client => client.query("UPDATE identity.users SET status = 'deleted', deleted_at = now() WHERE id = $1", [userId]), 'lythaus_privacy'); }
   finally { resume(); }
   await assert.rejects(pending, /subject_unavailable/);
-  assert.equal((await sql('SELECT 1 FROM trust.monthly_reputation_sources WHERE subject_user_id = $1', [userId])).rowCount, 0);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reputation_sources WHERE id = $1', [source.sourceId])).rowCount, 1);
   assert.equal((await sql('SELECT 1 FROM system.outbox_events WHERE id = $1', [resultEventId])).rowCount, 0);
 });
 

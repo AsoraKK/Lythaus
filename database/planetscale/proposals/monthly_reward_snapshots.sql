@@ -305,13 +305,17 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$ BEGIN
       AND event_type = 'trust.monthly_reward_snapshot.recorded');
   DELETE FROM system.outbox_events WHERE id IN (SELECT source_event_id FROM trust.monthly_reward_snapshot_corrections
     WHERE subject_user_id = NEW.id) OR (actor_id = NEW.id AND event_type = 'trust.monthly_reward_snapshot.recorded');
-  DELETE FROM trust.monthly_reward_snapshots WHERE subject_user_id = NEW.id AND correction_id IS NOT NULL;
-  DELETE FROM trust.monthly_reward_snapshot_corrections WHERE subject_user_id = NEW.id;
-  DELETE FROM trust.monthly_reward_snapshots WHERE subject_user_id = NEW.id;
+  UPDATE trust.monthly_reward_snapshot_corrections
+    SET evidence_reference = '[redacted]', request_digest = repeat('0', 64)
+    WHERE subject_user_id = NEW.id
+      AND (evidence_reference IS DISTINCT FROM '[redacted]' OR request_digest IS DISTINCT FROM repeat('0', 64));
+  -- Ordinary status deletion retires private delivery receipts while retaining
+  -- immutable earned snapshots and correction lineage, while removing private evidence.
+  -- Explicit privacy teardown may still delete the score lineage and its snapshots.
   RETURN NEW;
 END; $$;
 REVOKE ALL ON FUNCTION trust.erase_monthly_reward_snapshot_subject() FROM PUBLIC;
-CREATE TRIGGER monthly_reputation_reward_snapshot_subject_erasure BEFORE UPDATE OF status,deleted_at ON identity.users
+CREATE TRIGGER monthly_reputation_reward_snapshot_subject_erasure AFTER UPDATE OF status,deleted_at ON identity.users
   FOR EACH ROW WHEN (NEW.status = 'deleted' OR NEW.deleted_at IS NOT NULL)
   EXECUTE FUNCTION trust.erase_monthly_reward_snapshot_subject();
 

@@ -86,6 +86,7 @@ async function post(author=subject,week='2026-08-03'){
   await sql(`INSERT INTO moderation.decisions (id,case_id,outcome,public_label,policy_version,decided_by)
     VALUES ($1,$2,'allow','Human-authored','synthetic-snapshot-publication',$3)`,[uuidv7(),caseId,reviewer]);
   await tx(client=>recordMonthlyContentEarning(client,{eventId:event,rulesVersion:weekly.version,evaluatedAt:new Date().toISOString()}));
+  return { id, event, caseId };
 }
 async function assessment(author=subject,month='2026-08',evaluatedAt=new Date().toISOString(),maintenanceVersion=maintenance.version){
   const assembly=await tx(client=>assembleMonthlyReputation(client,{subjectUserId:author,sourceMonth:month,
@@ -130,6 +131,7 @@ after(async()=>{
     trust.monthly_earning_week_revisions,trust.monthly_earning_receipts,trust.monthly_earning_evidence_revisions,
     trust.monthly_earning_contributions,trust.monthly_earning_rule_sets`);
   await sql('DROP FUNCTION trust.reject_monthly_maintenance_update(),trust.reject_monthly_reputation_update(),trust.reject_monthly_earning_update(),trust.require_monthly_reputation_subject(),trust.require_monthly_assessment_subject(),trust.erase_monthly_reputation_subject(),trust.preserve_monthly_collection_flag(),trust.lock_monthly_reputation_subject(uuid)');
+  await sql('DROP FUNCTION trust.redact_monthly_earning_calculation(jsonb)');
   await sql("DELETE FROM system.feature_flags WHERE flag_key IN ('trust.monthly_reputation_shadow',$1)",[flag]);
   for(const grant of grants)await sql(grant);
   await sql('DELETE FROM moderation.decisions WHERE case_id=ANY($1::uuid[])',[cases]);
@@ -372,20 +374,58 @@ test('RPT-04/REL-02: subject deletion after canonical source read but before aut
   assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshot_receipts WHERE event_id=$1',[item.eventId])).rowCount,0);
 });
 
-test('RPT-04/REL-02: deleting a subject erases derived snapshot history and notices without resurrection',async()=>{
-  const author=await person();const item=await assessment(author);await publish(item.eventId,confirmed);
+test('RPT-04/CAL-18: account status deletion preserves accepted points while an approved invalidation appends a correction',async()=>{
+  const author=await person();const work=await post(author);const item=await assessment(author);
+  const contributionId=(await sql('SELECT id FROM trust.monthly_earning_contributions WHERE source_id=$1',[work.id])).rows[0].id;
+  const original=await publish(item.eventId,confirmed);assert.ok(original.sourceScore>0);
   await sql("UPDATE identity.users SET status='deleted',deleted_at=now() WHERE id=$1",[author]);
-  for(const table of ['monthly_reward_snapshots','monthly_reward_snapshot_receipts','monthly_reward_snapshot_corrections'])
-    assert.equal((await sql(`SELECT 1 FROM trust.${table} WHERE subject_user_id=$1`,[author])).rowCount,0);
+  assert.deepEqual((await sql('SELECT revision,source_score,level FROM trust.monthly_reward_snapshots WHERE subject_user_id=$1',[author])).rows,
+    [{revision:1,source_score:original.sourceScore,level:original.level}]);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reputation_sources WHERE subject_user_id=$1',[author])).rowCount,1);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reputation_assessments WHERE id=$1',[item.assessmentId])).rowCount,1);
+  assert.ok((await sql('SELECT points FROM trust.monthly_earning_week_revisions WHERE subject_user_id=$1',[author])).rowCount > 0);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reputation_assemblies WHERE subject_user_id=$1',[author])).rowCount,0);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_maintenance_observations WHERE subject_user_id=$1',[author])).rowCount,0);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_earning_contributions WHERE subject_user_id=$1',[author])).rowCount,0);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_earning_evidence_revisions WHERE contribution_id=$1',[contributionId])).rowCount,0);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshot_receipts WHERE subject_user_id=$1',[author])).rowCount,0);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshot_corrections WHERE subject_user_id=$1',[author])).rowCount,0);
+  assert.equal((await sql('SELECT count(*)::int AS n FROM trust.monthly_reward_snapshots WHERE subject_user_id=$1',[author])).rows[0].n,1);
   assert.equal((await sql('SELECT 1 FROM system.outbox_events WHERE actor_id=$1 AND event_type=$2',[author,snapshotEvent])).rowCount,0);
   await assert.rejects(read(author),/subject_unavailable/);await assert.rejects(publish(item.eventId,confirmed),/canonical_assessment/);
+
+  const active=await person();const activeWork=await post(active);const initial=await assessment(active);
+  const activeSnapshot=await publish(initial.eventId,confirmed);assert.ok(activeSnapshot.sourceScore>0);
+  const invalidationEvent=uuidv7();
+  await sql("UPDATE content.posts SET moderation_state='blocked' WHERE id=$1",[activeWork.id]);
+  await sql(`INSERT INTO system.outbox_events (id,event_type,aggregate_type,aggregate_id,actor_id,payload)
+    VALUES ($1,'moderation.content.blocked','post',$2,$3,'{}'::jsonb)`,[invalidationEvent,activeWork.id,reviewer]);
+  await tx(client=>recordMonthlyContentEarning(client,{eventId:invalidationEvent,rulesVersion:weekly.version,evaluatedAt:new Date().toISOString()}));
+  const invalidated=await assessment(active);assert.equal(invalidated.calculation.sourceScore,0);
+  assert.ok(invalidated.calculation.sourceScore<activeSnapshot.sourceScore);
+  assert.equal((await publish(invalidated.eventId,confirmed)).state,'correction_approval_pending');
+  const independent=await tx(client=>approveMonthlyRewardSnapshotCorrection(client,{actorId:reviewer,subjectId:active,snapshotId:activeSnapshot.id,
+    assessmentId:invalidated.assessmentId,rulesVersion:confirmed,expectedSnapshotRevision:1,reasonCode:'synthetic_independent_invalidation',
+    evidenceReference:'synthetic moderation decision',idempotencyKey:uuidv7()}),'lythaus_admin');
+  assert.equal(independent.created,true);
+  assert.equal((await apply(independent.sourceEventId,confirmed)).created,true);
+  const corrected=await read(active);assert.equal(corrected.revision,2);assert.equal(corrected.sourceScore,0);
+  assert.equal((await sql('SELECT count(*)::int AS n FROM trust.monthly_reward_snapshot_corrections WHERE subject_user_id=$1',[active])).rows[0].n,1);
 });
 
-test('RPT-04/REL-02: corrected snapshot chain erasure removes staff-authored correction events before source cascades',async()=>{
+test('RPT-04/REL-02: status deletion preserves a corrected score chain and removes delivery notices',async()=>{
+  const correctionBefore=(await sql('SELECT reason_code,evidence_reference,request_digest FROM trust.monthly_reward_snapshot_corrections WHERE id=$1',[correction.id])).rows[0];
+  assert.equal(correctionBefore.evidence_reference,'synthetic-private-correction');
+  assert.notEqual(correctionBefore.request_digest,'0'.repeat(64));
   await sql("INSERT INTO system.consumer_inbox (consumer_name,event_id,event_type,payload,state) VALUES ('lythaus-jobs',$1,$2,'{}'::jsonb,'completed')",[correction.sourceEventId,correctionEvent]);
   await sql("UPDATE identity.users SET status='deleted',deleted_at=now() WHERE id=$1",[subject]);
-  for(const table of ['monthly_reward_snapshots','monthly_reward_snapshot_receipts','monthly_reward_snapshot_corrections'])
-    assert.equal((await sql(`SELECT 1 FROM trust.${table} WHERE subject_user_id=$1`,[subject])).rowCount,0);
+  assert.equal((await sql('SELECT count(*)::int AS n FROM trust.monthly_reward_snapshots WHERE subject_user_id=$1',[subject])).rows[0].n,3);
+  const retainedCorrection=(await sql('SELECT reason_code,evidence_reference,request_digest FROM trust.monthly_reward_snapshot_corrections WHERE id=$1',[correction.id])).rows[0];
+  assert.equal(retainedCorrection.reason_code,correctionBefore.reason_code);
+  assert.equal(retainedCorrection.evidence_reference,'[redacted]');
+  assert.equal(retainedCorrection.request_digest,'0'.repeat(64));
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshot_corrections WHERE subject_user_id=$1',[subject])).rowCount,1);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshot_receipts WHERE subject_user_id=$1',[subject])).rowCount,0);
   assert.equal((await sql('SELECT 1 FROM system.outbox_events WHERE id=$1',[correction.sourceEventId])).rowCount,0);
   assert.equal((await sql('SELECT 1 FROM system.consumer_inbox WHERE event_id=$1',[correction.sourceEventId])).rowCount,0);
 });
