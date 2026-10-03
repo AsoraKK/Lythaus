@@ -1,19 +1,33 @@
 # Private problem and suggestion services: local implementation
 
-This slice depends on the isolated DTOs in draft PR909 at
-`c3c81b03a3793700d79cc16feac3e3e3f60c06b7`. It introduces direct service
-modules and a disposable PostgreSQL proposal. Nothing imports these modules
-from an active dispatcher or barrel. There are no new HTTP routes, client
-methods, UI destinations, notification consumers, award operations, environment
-settings, production migrations, or provider changes.
+This prepared support increment depends on the isolated DTOs in draft PR909 at
+`ebc77150d21778a77c1ce11337641de1c5dfc165`, based on current main
+`627ae30b36cd995c4f117bf3c44789c986b5d46b`. It adds direct service modules, a
+disposable PostgreSQL proposal, a tested HTTP adapter, and a tested owner-console
+route. Shared API dispatcher registration, OpenAPI/client updates, Flutter
+navigation, privacy/DSR integration, and the existing shared CI workflow are held
+for the rewards-owned temporary shared-file slot. App-flow is finished; parent
+will release the slot after rewards publishes. This increment adds a separate
+support-scoped PG17 workflow without changing the shared CI workflow.
+Nothing is deployed or activated; there are no production migrations,
+notifications, award writes, provider changes, or public-homepage edits.
 
 ## Ownership and integration boundaries
 
-The source baseline is PR909, based on security main
-`8d91bcb434c4960a0f51ee2e4c7563c4f6e88a6c`. Main was observed at
-`cbdc29ff3fd36c9d6ed0f08dea0ea75ca63e39a3` during this work. This is a source
-observation, not a live deployment assertion. The app-flow lane owns integration
-and releases. PR903 and PR909 remain separate, unchanged draft checkpoints.
+PR903 is merged into current main at
+`627ae30b36cd995c4f117bf3c44789c986b5d46b`; its canonical release run
+`37153418668` succeeded, while owner testing remains uncertified. PR909 remains
+an open checked draft at updated head
+`ebc77150d21778a77c1ce11337641de1c5dfc165`, based on current main. Before this
+publication, PR910 was at `05e8548148eeb89dcfc905135d73dca826d8a660`, based on
+the older PR909 head `c3c81b03a3793700d79cc16feac3e3e3f60c06b7`. A Git range-diff
+matched both remote service commits one-to-one with local commits `7846ddf3`
+and `d0797482`. The published branch is reconciled onto the updated PR909 head,
+retaining PR909 as its base dependency and current-main security fixes. The
+remaining shared-slot edits are preserved in the separate workspace patch and
+manifest; they are excluded from this publication. Source presence is not
+deployed-route or provider-health proof. Parent controls integration/releases;
+rewards owns the temporary shared-file slot and app-flow is finished.
 
 Canonical migrations and the existing runtime contain no general private
 problem/suggestion store. An authorized read-only production catalog check
@@ -27,15 +41,16 @@ engine beside an existing general ticket store.
 | Surface | Current owner / future integration file | This slice |
 | --- | --- | --- |
 | Private support DTOs | PR909, `packages/contracts/src/support-feedback.ts` | Imports directly; no contract/barrel changes |
-| Member intake and own history | App-flow, `apps/lythaus-public-api/src/index.ts` | Direct authenticated submit/list/detail/reply operations only |
-| Owner queues and decisions | Admin integration, `apps/lythaus-admin-api/src/index.ts` | Direct owner-only queue/detail/reply/note/evidence/decision operations only |
+| Member intake and own history | Rewards-owned temporary slot, `apps/lythaus-public-api/src/index.ts` | Member service and route adapter are locally testable; dispatcher registration is held and no public endpoint is active |
+| Owner queues and decisions | Rewards-owned temporary slot, `apps/lythaus-admin-api/src/index.ts` | Owner service and route adapter are locally testable; dispatcher registration is held and no admin endpoint is active |
+| Owner support console | Support-owned `apps/control-panel/src/pages/SupportFeedback.jsx`, `App.jsx`, `Nav.jsx` | Separate private queues/detail/reply/note/evidence/decision UI at `/support`; fail-closed until an authorized API responds; synthetic fixtures are tests only |
 | Privacy status/export journey | PR906, `apps/lythaus-public-api/src/privacy-runtime-policy.ts`, public dispatcher, OpenAPI, generated client, `lib/features/privacy/**` | Isolated export/purge adapters; no shared edits |
 | Privacy execution and notification routing | `apps/lythaus-jobs/src/index.ts`, `apps/lythaus-jobs/src/runtime-policy.ts` | No worker/transport wiring |
 | Authoritative privacy locators | `privacy.reconcile_subject_data_locations` in canonical migration0012, jobs deletion/export assembly | Must register the new relations through approved migration/integration work |
 | Legal-hold placement/release | Admin dispatcher `legalHolds` / `clearLegalHold` | Shared subject-lock coordination is an activation gate |
 | Monthly awards and appeals | PR896, monthly/community DB/contracts and jobs modules | No award, reputation, policy, shared activity or Rewards UI changes |
-| Help navigation and generated APIs | App-flow, `lib/core/routing/app_router.dart`, settings/controller files, OpenAPI and generated client | Deferred; coordinate all shared edits through Friday |
-| Owner Accounts workspace | PR903 / existing AccountSupport runtime | Untouched; distinct from private problem/suggestion workflow |
+| Help navigation and generated APIs | Rewards-owned temporary slot, `lib/core/routing/app_router.dart`, settings/controller files, OpenAPI and generated client | Held for shared-file coordination; no member route/API activation |
+| Owner Accounts workspace | Merged PR903 / existing AccountSupport runtime | Untouched; distinct from private problem/suggestion workflow |
 | Public homepage | Marketing site | Untouched |
 
 PR906 and PR896 were observed at `a97dc4a81fc3a7fa491101f009cf76137feda72d`
@@ -126,14 +141,27 @@ SUPPORT_LOCAL_PG_URL="$LOCAL_SUPPORT_TEST_URL" node --experimental-strip-types \
   --test --test-isolation=none packages/db/tests/support-feedback.postgres.mjs
 node --experimental-strip-types --test --test-isolation=none \
   packages/contracts/tests/support-feedback.test.mjs
+node --experimental-strip-types --experimental-test-module-mocks \
+  --test --test-isolation=none packages/contracts/tests/support-feedback.test.mjs \
+  packages/db/tests/support-feedback-http.test.mjs \
+  packages/db/tests/support-feedback-runtime.test.mjs
 npm run typecheck:native
 ```
 
-The recorded run passed 30 PostgreSQL tests, 15 support-contract tests, four
-shared support-helper tests and the native typecheck. Coverage of the four new
-TypeScript modules is reported with the exact final-head handoff.
-The native Hyperdrive transaction adapter was not executed against a live
-binding; coverage is local service evidence only.
+On Node `v24.19.0`, the latest local checkout passed 31 disposable PostgreSQL
+17 tests (98.79% line, 88.02% branch, 96.91% function coverage across the scoped
+support modules), 15 contract tests, seven HTTP-adapter tests and two runtime
+readiness tests (24 focused Node tests total), all 68 control-panel tests across
+10 files (including eight support UI tests), native typecheck, and the
+control-panel production build. The workflow action-pin validator and
+`git diff --check` passed. `actionlint` is not installed in this execution
+environment, so YAML lint was not re-run here. These are local checks; the
+native Hyperdrive transaction adapter and actual Worker routes were not
+executed against live bindings. Flutter/Dart tools are also absent, and no
+browser run was performed for this separate draft work. The local PG run includes
+one additional legal-hold-placement race test using the withheld rewards-slot
+subject-lock helper; the published PR workflow will exercise the existing 30-test
+support PG suite without that shared-file integration.
 
 The URL must point to loopback and a `lythaus_support_test` database. The suite
 creates a per-run disposable database, verifies PG17, loads the exact pinned
@@ -151,14 +179,15 @@ proposal independently refuses database names outside this local test prefix.
 | Query bounds | Captured list SQL EXPLAIN on 3000 synthetic rows: member/queue cursor indexes; four actual rows for a three-item page, four/five shared buffer hits in the recorded run |
 | Notification adapter | Stale public intent, private-only revision, inactive/pending-deletion subject and malformed payload checks; zero sends |
 | Native runtime adapter | Reuses existing TLS-verifying transaction code; typechecked, but no live Hyperdrive write/COMMIT proof |
-| HTTP/client/UI | Unimplemented and unwired; no browser/accessibility or actual endpoint acceptance claim |
-| Production | Read-only catalog ownership evidence only; no DDL, account mutation, activation or deployment |
+| HTTP/client/UI | Service adapter unit tests and owner-console component/router tests pass; shared dispatcher, Flutter member routes and generated API remain held; no browser or actual endpoint acceptance claim |
+| Production | No DDL, account mutation, activation, provider write, or deployment from this work |
 
 ## Gates before activation
 
-1. The integration lane reconciles this isolated branch after PR909 and active
-   app-flow/rewards changes land, then adds the focused PG suite to the native
-   CI job. No active CI/workflow file is changed by this slice.
+1. Parent releases the rewards-owned shared-file slot after rewards publishes,
+   then coordinates the held API, OpenAPI, client, privacy and Flutter files
+   with PR909's DTO dependency resolved. The support PG17 suite uses the separate
+   `.github/workflows/support-feedback-pg17.yml` workflow.
 2. An approved production migration must reconcile exact provider schema,
    roles, least-privilege non-superuser function ownership, index/query costs,
    locators, audit retention and rollback. The local proposal is outside the
@@ -176,10 +205,11 @@ proposal independently refuses database names outside this local test prefix.
 5. The approved jobs role needs exact support notification-read permissions,
    event routing/inbox deduplication, preferences and dispatch-time privacy
    checks. No notification transport or support event consumer exists here.
-6. Integrate separate problem/suggestion forms, private histories and owner
-   queues only through the existing dispatchers and member app. Re-test cache,
-   authorization, audit, pagination, route history, large text, keyboard,
-   light/dark and responsive behavior at the final merged head.
+6. Integrate separate member forms and private histories through the existing
+   dispatchers/member app, then connect the owner console. Re-test actual Worker
+   authorization, private/no-store cache behavior, audit, pagination, member
+   route history, keyboard, light/dark, responsive layout and large-text mode at
+   the final merged head.
 
 Owner-dependent inputs are the approved retention/audit/deletion/export policy,
 operational limits and closure evidence policy, plus notification channel and

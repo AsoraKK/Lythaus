@@ -9,6 +9,7 @@ import AccountSupport from './pages/AccountSupport.jsx';
 import Waitlist from './pages/Waitlist.jsx';
 import Accounts from './pages/Accounts.jsx';
 import ProductionAuthAcceptance from './pages/ProductionAuthAcceptance.jsx';
+import SupportFeedback from './pages/SupportFeedback.jsx';
 import AdminAccessGate from './components/AdminAccessGate.jsx';
 import AuthenticityBeta from './pages/AuthenticityBeta.jsx';
 
@@ -40,6 +41,7 @@ export function ControlPanelRoutes() {
     <Route path="/users" element={<AccountAlias to="/accounts/management" />} />
     <Route path="/account-support" element={<AccountAlias to="/accounts" />} />
     <Route path="/waitlist" element={<Waitlist />} />
+    <Route path="/support" element={<SupportFeedback />} />
     <Route path="/moderation" element={<Flags />} />
     <Route path="/authenticity" element={<AuthenticityBeta />} />
     <Route path="/audit" element={<Audit />} />

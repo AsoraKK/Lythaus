@@ -2,7 +2,7 @@
 
 ## Scope and sequencing
 
-Staged after Accounts on 2026-10-02 from Kyle's voice-call follow-up. This document defines a proposed increment; no ticket API, production migration, notification or reward is activated. Parent review and Astra policy reconciliation precede implementation.
+Staged after Accounts on 2026-10-02 from Kyle's voice-call follow-up. A support-owned service and owner-console increment is prepared for PR910; no ticket API is activated, and there is no production migration, notification, reward or public-homepage change. Parent controls integration and release. App-flow is finished. Rewards currently owns the temporary shared-file slot for dispatchers, OpenAPI/client, privacy/DSR and Flutter-shell wiring; parent will release it after rewards publishes. Astra policy reconciliation remains required before any reward integration.
 
 Two separate app sidebar entries and forms:
 
@@ -13,7 +13,7 @@ Each has its own private submission history, detail, replies and visible status.
 
 ## Current inventory and reuse
 
-- `lib/ui/screens/adaptive_shell.dart` contains a Help link to `lythaus.co/help`; profile settings has the same help fallback. The older feed_screen.dart path is a coming-soon action. Coordinate the active shell change with the Flutter UI lane; do not opportunistically modify feed code in Accounts.
+- `lib/ui/screens/adaptive_shell.dart` contains a Help link to `lythaus.co/help`; profile settings has the same help fallback. The older feed_screen.dart path is a coming-soon action. Coordinate shell and settings changes after parent releases the rewards-owned shared-file slot; do not opportunistically modify feed code in Accounts.
 - `moderation.content_flags` and appeals are content-policy reporting/adjudication; they do not model app bugs or product ideas.
 - `moderation.authenticity_beta_feedback` / `authenticity_alpha_feedback` are case-scoped authenticity feedback, with their own private research/policy contracts. Do not repurpose or delete them.
 - Exact-email Account support is an owner-only identity lookup/history tool, not a user-submitted ticket store.
@@ -40,10 +40,10 @@ Before ticket implementation:
 - Define private retention, deletion, legal-hold behavior and subject-data inventory integration. State which operational audit/evidence may be retained after text removal.
 - Design scoped DB grants and transaction boundaries. Any schema/index/grant migration is validated in disposable PostgreSQL 17, reconciled with the approved baseline and held for parent production-DDL approval.
 - Test current-session/current-owner changes, cross-user list/detail/reply/duplicate access, retry races, cursor tampering, flood/spam limits, deletion/retention and audit failures. Verify private text and credentials never enter logs, aggregate metrics or notifications.
-- Verify two distinct sidebar destinations/forms/queues across responsive layouts, themes, keyboard and large text. Route changes belong in a later coordinated Flutter increment.
+- Verify two distinct sidebar destinations/forms/queues across responsive layouts, themes, keyboard and large text. Flutter route changes belong in a coordinated increment after the rewards-owned shared-file slot is released; the current checkout has no Flutter/Dart toolchain proof.
 - Enable notifications only for configured authorized destinations/channels and approved templates. No sends are authorized by this planning document.
 
-Proposed future API names are a discussion contract, not routes added now: user `/support/problems` and `/support/suggestions`, own ticket detail/replies; corresponding owner `/admin/support/...` queues/triage. Reuse a common engine only behind explicit type and ownership checks.
+The local HTTP adapter exercises `/support/problems` and `/support/suggestions`, own ticket detail/replies, and corresponding owner `/admin/support/...` queues/triage. The public/admin dispatchers are not wired, so these are not active routes. Reuse the existing support engine only behind explicit type and ownership checks.
 
 ## Contribution event and reward gate
 
@@ -71,9 +71,9 @@ Reversal is a new audited event referencing the original acceptance/award, never
 
 ## Reviewable increments after Accounts
 
-1. Finalize private ticket/retention/notification and contribution-event contracts with parent/Astra; report shared API/schema/Flutter overlaps.
-2. Implement typed own-ticket storage and read/write authorization, bounded forms/history and two sidebar entries; synthetic tests and draft PR.
-3. Add owner queues, replies, prioritization, duplicate links and reviewed-release evidence with audit and privacy tests.
-4. Add configured notifications and any contribution reward only after explicit configuration/policy/activation gates; separate draft PR and release review.
+1. Keep the isolated service, owner console, focused tests, and support-specific documentation in draft PR910. The support-scoped PG17 workflow runs without editing the shared native CI workflow.
+2. After rewards publishes and parent releases the shared-file slot, coordinate dispatcher/OpenAPI/client/privacy/Flutter wiring against current PR906 and PR896 contracts. Keep the existing support namespace; do not add a second ticket engine.
+3. Resolve approved production schema/grants, locators, privacy completion, retention, legal-hold serialization and rollback gates. Run final Worker authorization, no-store, audit, query-bound, navigation and responsive/accessibility acceptance at the exact reviewed head.
+4. Add configured notifications only after transport, preferences, dedupe and dispatch-time privacy checks are approved. Add a suggestion award only after Rewards approves the 150-point quarterly policy boundaries and budget; keep bugs unrewarded by inference.
 
 Ultra action-plan lane retains backlog/disposition. This staging creates no issues, closes nothing and changes no release state.
