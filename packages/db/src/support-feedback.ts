@@ -3,7 +3,7 @@ import { uuidv7 } from '../../security/src/index.ts';
 import { isCurrentActivePrincipal } from '../../../apps/lythaus-public-api/src/auth-runtime-policy.ts';
 import { supportTimestamp, supportUuid } from '../../contracts/src/account-support.ts';
 import { parseSupportSubmission, projectMemberSupportRequest, projectOwnerSupportRequest, type SupportFeedbackKind } from '../../contracts/src/support-feedback.ts';
-import { parseSupportServicePolicy, supportArray, supportObject, supportText } from './support-feedback-policy.ts';
+import { parseSupportServicePolicy, supportArray, supportFailureCode, supportObject, supportText } from './support-feedback-policy.ts';
 import type { SupportAuthentication } from './support-feedback-auth.ts';
 
 export type SupportTransaction = <T>(work: (client: DatabaseClient) => Promise<T>) => Promise<T>;
@@ -16,6 +16,7 @@ const EXPECTED = new Set(['support_input_invalid','support_not_found','support_o
 type Row = Record<string, any>;
 function id(value: unknown): string { if (!supportUuid(value)) throw new Error('support_input_invalid'); return value.toLowerCase(); }
 function kind(value: unknown): SupportFeedbackKind { if (value !== 'problem' && value !== 'suggestion') throw new Error('support_input_invalid'); return value; }
+function code(value: unknown): string { if(typeof value!=='string'||!/^[a-z][a-z0-9_-]{0,63}$/.test(value))throw new Error('support_input_invalid');return value; }
 function integer(value: unknown, maximum = Number.MAX_SAFE_INTEGER): number {
   if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1 || value > maximum) throw new Error('support_input_invalid'); return value;
 }
@@ -48,7 +49,7 @@ export function createSupportService(dependencies: { authentication: SupportAuth
         }
         return work(client, actor);
       });
-    } catch (error) { throw new Error(error instanceof Error && EXPECTED.has(error.message) ? error.message : 'support_unavailable'); }
+    } catch (error) { throw new Error(supportFailureCode(error,EXPECTED,'support_unavailable')); }
   }
   async function audit(client: DatabaseClient, actor: string, operation: string, row: Row | null, channel: 'member'|'owner', extra: Record<string, unknown> = {}, refs?: {outboxId: string|null;scope: string;key: string}) {
     const metadata = { actorId: actor, ...(row ? supportEventProjection(row) : {}), policyVersion: p.version, ...extra };
@@ -93,6 +94,7 @@ export function createSupportService(dependencies: { authentication: SupportAuth
     work: (client: DatabaseClient, actor: string, input: Row, row: Row | null) => Promise<{ row: Row; recordId?: string }>) {
     return run(request,channel,async (client,actor) => {
       const input = parse(), k = kind(requestKind ?? input.kind), requestKey = requestId === null ? null : id(requestId);
+      if(channel==='owner'&&requestKey)await load(client,actor,channel,k,requestKey);
       const key = request.headers.get('idempotency-key');
       if (!key || !/^[A-Za-z0-9_-]{1,128}$/.test(key)) throw new Error('support_input_invalid');
       const scope = `support:${channel}:${actor}:${operation}`, hash = await digest(JSON.stringify({ kind:k,id:requestKey,input }));
@@ -104,6 +106,7 @@ export function createSupportService(dependencies: { authentication: SupportAuth
       }
       if (!stored || stored.hash !== hash) throw new Error('support_idempotency_conflict');
       if (stored.requestId) {
+        if(requestKey&&stored.requestId!==requestKey)throw new Error('support_idempotency_conflict');
         const row = await load(client,actor,channel,k,stored.requestId);
         return Object.freeze({ request: projection(row,actor,channel), recordId: stored.recordId ?? null, replayed: true });
       }
@@ -170,13 +173,17 @@ export function createSupportService(dependencies: { authentication: SupportAuth
         } catch {throw new Error('support_input_invalid');}
       }
       const snapshot=cursor?.snapshot ?? (await client.query(`SELECT ${TIME('clock_timestamp()')} AS time`)).rows[0].time;
-      const result=await client.query(`SELECT ${COLUMNS} FROM support.requests r JOIN identity.users u ON u.id=r.submitter_id
+      const result=await client.query(`SELECT r.id,r.submitter_id,${TIME('r.created_at')} AS "createdAt" FROM support.requests r JOIN identity.users u ON u.id=r.submitter_id
         WHERE r.kind=$1 AND r.deleted_at IS NULL AND u.status <> 'deleted' AND ($2::uuid IS NULL OR r.submitter_id=$2)
         AND r.created_at<=$3::timestamptz AND ($4::timestamptz IS NULL OR (r.created_at,r.id)<($4::timestamptz,$5::uuid))
         ORDER BY r.created_at DESC,r.id DESC LIMIT $6`,[k,channel==='member'?actor:null,snapshot,cursor?.createdAt ?? null,cursor?.id ?? null,limit+1]);
-      const rows=result.rows.slice(0,limit),tail=rows.at(-1);
+      const candidates=result.rows.slice(0,limit),tail=candidates.at(-1);
+      const subjects=await client.query("SELECT id FROM identity.users WHERE id=ANY($1::uuid[]) AND status <> 'deleted' ORDER BY id FOR SHARE",[Array.from(new Set(candidates.map(row=>row.submitter_id)))]);
+      const current=await client.query(`SELECT ${COLUMNS} FROM support.requests r WHERE r.id=ANY($1::uuid[]) AND r.submitter_id=ANY($2::uuid[])
+        AND r.kind=$3 AND r.deleted_at IS NULL AND ($4::uuid IS NULL OR r.submitter_id=$4) ORDER BY r.created_at DESC,r.id DESC`,
+      [candidates.map(row=>row.id),subjects.rows.map(row=>row.id),k,channel==='member'?actor:null]);
       const nextCursor=result.rows.length>limit&&tail?btoa(JSON.stringify({scope,snapshot,createdAt:tail.createdAt,id:tail.id})).replaceAll('+','-').replaceAll('/','_').replace(/=+$/u,''):null;
-      const items=Object.freeze(rows.map(row=>projection(row,actor,channel)));
+      const items=Object.freeze(current.rows.map(row=>projection(row,actor,channel)));
       if(channel==='owner')await audit(client,actor,'owner.queue',null,channel,{kind:k,returnedRowCount:items.length,limit,hasCursor:Boolean(cursor)});
       return Object.freeze({items,nextCursor,snapshotAt:snapshot});
     });
@@ -211,7 +218,7 @@ export function createSupportService(dependencies: { authentication: SupportAuth
     ownerDecision(request:Request,k:unknown,requestId:unknown,body:unknown) {
       return mutate(request,'owner',k,requestId,'decision',()=>{const b=supportObject(body,['expectedRevision','state','reason','memberMessage','evidenceIds']);
         const evidenceIds=supportArray(b.evidenceIds,p.limits.privateItems).map(id).sort();if(new Set(evidenceIds).size!==evidenceIds.length)throw new Error('support_input_invalid');
-        return {expectedRevision:integer(b.expectedRevision),state:b.state,reason:b.reason,memberMessage:supportText(b.memberMessage,p.contract.limits.memberMessageBytes),evidenceIds};
+        return {expectedRevision:integer(b.expectedRevision),state:code(b.state),reason:code(b.reason),memberMessage:supportText(b.memberMessage,p.contract.limits.memberMessageBytes),evidenceIds};
       },async(client,actor,input,row)=>{
         const transition=p.transitions.find(t=>t.kind===row!.kind&&t.from===row!.state&&t.to===input.state&&t.reasons.includes(input.reason));
         if(!transition)throw new Error('support_transition_invalid');
