@@ -31,10 +31,15 @@ test('Spectral CLI still enforces rules and unmatched patterns through its overr
     await writeFile(path.join(directory, 'valid.yaml'), 'info:\n  title: Synthetic validation\n');
     await writeFile(path.join(directory, 'invalid.yaml'), 'info:\n  description: Missing title\n');
     const cli = path.resolve('node_modules/@stoplight/spectral-cli/dist/index.js');
+    const noInput = spawnSync(process.execPath, ['-e',
+      `Object.defineProperty(process.stdin, 'isTTY', { value: true }); process.argv = ['node', ${JSON.stringify(cli)}, 'lint']; require(${JSON.stringify(cli)});`],
+    { cwd: directory, encoding: 'utf8', timeout: 15000, env: { ...process.env, NODE_TEST_CONTEXT: undefined } });
+    assert.equal(noInput.status, 1, noInput.stdout + noInput.stderr);
+    assert.match(noInput.stderr, /No documents provided/);
     const output = path.join(directory, 'results.json');
     const run = pattern => spawnSync(process.execPath, [cli, 'lint', pattern, '--ruleset', rules, '--fail-severity', 'error',
       '--fail-on-unmatched-globs', '--format', 'json', '--output', output],
-      { cwd: directory, encoding: 'utf8', env: { ...process.env, NODE_TEST_CONTEXT: undefined } });
+      { cwd: directory, encoding: 'utf8', timeout: 15000, env: { ...process.env, NODE_TEST_CONTEXT: undefined } });
     const valid = run('valid.yaml'); assert.equal(valid.status, 0, valid.stdout + valid.stderr);
     const invalid = run('invalid.yaml'); assert.equal(invalid.status, 1, invalid.stdout + invalid.stderr);
     assert.equal(JSON.parse(await readFile(output, 'utf8'))[0].code, 'title-required');

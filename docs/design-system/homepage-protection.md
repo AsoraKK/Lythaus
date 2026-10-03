@@ -25,6 +25,18 @@ Secondary routes use their own opt-in layout, stylesheet and fonts. The homepage
 
 The guard accepts the reviewed fast-uri 3.1.8 and ip-address 10.7.1 patches only with their exact package metadata, registry URLs and integrity hashes. The remaining root lock and manifest still match the fixed upstream baseline. Negative tests reject altered versions, URLs, integrity hashes and changes to other dependencies.
 
+### Spectral security dependency replacement, 3 October 2026
+
+The root tooling guard additionally requires the exact private Spectral adapter
+reference, override, link target and dependency-free lock metadata. Its explicit
+16-package removal list is confined to the now-unused fast-glob/micromatch/braces
+chain. Every removed package must remain absent; negative tests reject reintroduced
+packages, alternate targets, added adapter dependencies and changed metadata.
+After normalizing only these reviewed security changes, the complete remaining
+lock and manifest must still equal the same frozen upstream baseline. Homepage
+content, rendering assets, marketing dependencies, waitlist wiring, screenshot
+baselines and tolerances are unchanged.
+
 ### Secondary route metadata correction, 28 September 2026
 
 The new Help route is appended to the sitemap. Its guard compares the complete file
