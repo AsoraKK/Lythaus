@@ -47,6 +47,7 @@ on:
       - 'apps/lythaus-jobs/tests/monthly-earning.postgres.mjs'
       - 'apps/lythaus-jobs/tests/monthly-context.postgres.mjs'
       - 'apps/lythaus-jobs/tests/monthly-reward-*.postgres.mjs'
+      - 'apps/lythaus-jobs/tests/monthly-reward-*.cases.mjs'
       - 'scripts/ci/planetscale-migration-*.mjs'
       - 'scripts/ci/auth-incident-database-contract.mjs'
       - 'scripts/ci/audit-production-auth-incident.mjs'
@@ -159,13 +160,14 @@ jobs:
           '--test-coverage-include=apps/lythaus-jobs/src/monthly-reward-snapshots.ts'
           --test-coverage-lines=80 --test-coverage-branches=80
           --test apps/lythaus-jobs/tests/monthly-reward-snapshots.postgres.mjs
-      - name: Validate persistent monthly reward selections against fresh authority
+      - name: Validate persistent reward selections and private partner links
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
         run: >-
           node --experimental-strip-types --experimental-test-module-mocks
           --experimental-test-coverage
           '--test-coverage-include=packages/db/src/monthly-reward-selections.ts'
+          '--test-coverage-include=packages/db/src/monthly-reward-partner-links.ts'
           --test-coverage-lines=80 --test-coverage-branches=80
           --test apps/lythaus-jobs/tests/monthly-reward-selections.postgres.mjs
       - name: Prove column-only incident audit grants on real PostgreSQL

@@ -12,6 +12,7 @@ import { assembleMonthlyReputation } from '../../../packages/db/src/monthly-asse
 import { assessMonthlyReputationSource } from '../../../packages/db/src/monthly-reputation.ts';
 import { publishMonthlyRewardSnapshot,approveMonthlyRewardSnapshotCorrection,applyMonthlyRewardSnapshotCorrection } from '../../../packages/db/src/monthly-reward-snapshots.ts';
 import { selectMonthlyReward,readOwnMonthlyRewardSelections,MONTHLY_REWARD_SELECTION_FLAG as flag } from '../../../packages/db/src/monthly-reward-selections.ts';
+import { registerPartnerLinkCases,cleanupPartnerLinkCases } from './monthly-reward-partner-links.cases.mjs';
 
 const connectionString=process.env.PLANETSCALE_PG17_TEST_DATABASE_URL,target=new URL(connectionString??'file:///missing');
 if(!['127.0.0.1','localhost'].includes(target.hostname)
@@ -66,7 +67,7 @@ async function offer(level,patch={}){
   await sql(`INSERT INTO trust.monthly_reward_offer_versions
     (id,family_id,partner_id,required_level,terms_version,signed_terms_reference,approved_by,approved_at,starts_at,ends_at)
     VALUES ($1,$2,$3,$4,'synthetic-terms-v1','synthetic signed fixture only',$5,$6,$7,$8)`,
-    [id,family,uuidv7(),level,reviewer,patch.approvedAt??'2026-07-01',patch.startsAt??'2026-07-01',patch.endsAt??'9999-01-01']);
+    [id,family,patch.partner??uuidv7(),level,reviewer,patch.approvedAt??'2026-07-01',patch.startsAt??'2026-07-01',patch.endsAt??'9999-01-01']);
   await sql('INSERT INTO trust.monthly_reward_offer_availability (offer_version_id,state) VALUES ($1,$2)',[id,patch.state??'active']);
   return {id,family,level};
 }
@@ -90,7 +91,7 @@ before(async()=>{
   for(const role of ['lythaus_runtime','lythaus_admin'])
     if(!(await sql('SELECT has_table_privilege($1,$2,$3) AS allowed',[role,'system.feature_flags','SELECT'])).rows[0].allowed)
       grants.push(`REVOKE SELECT ON system.feature_flags FROM ${role}`);
-  for(const proposal of ['monthly_reputation_shadow','monthly_reputation_earning','monthly_reputation_maintenance','monthly_reward_snapshots','monthly_reward_selections'])
+  for(const proposal of ['monthly_reputation_shadow','monthly_reputation_earning','monthly_reputation_maintenance','monthly_reward_snapshots','monthly_reward_selections','monthly_reward_partner_links'])
     await sql(readFileSync(new URL(`../../../database/planetscale/proposals/${proposal}.sql`,import.meta.url),'utf8'));
   reviewer=await person();
   await sql("INSERT INTO identity.admin_memberships (user_id,role,active,access_subject_hmac) VALUES ($1,'moderator',true,$2)",[reviewer,randomBytes(32)]);
@@ -113,6 +114,7 @@ before(async()=>{
   for(let level=1;level<=5;level++)variants.push(await offer(level));
 });
 after(async()=>{
+  await cleanupPartnerLinkCases({sql});
   await sql('DROP TRIGGER IF EXISTS fail_selection_fixture ON system.outbox_events');await sql('DROP FUNCTION IF EXISTS system.fail_selection_fixture()');
   await sql('DROP TRIGGER monthly_reputation_reward_selection_subject_erasure ON identity.users');
   await sql('DROP TRIGGER monthly_reward_selection_flag_preserved ON system.feature_flags');
@@ -137,6 +139,7 @@ after(async()=>{
   await sql('DELETE FROM system.outbox_events WHERE actor_id=ANY($1::uuid[])',[subjects]);
   await sql('DELETE FROM identity.email_credentials WHERE user_id=ANY($1::uuid[])',[subjects]);
   await sql('DELETE FROM identity.admin_memberships WHERE user_id=ANY($1::uuid[])',[subjects]);
+  await sql('DELETE FROM identity.account_events WHERE user_id=ANY($1::uuid[])',[subjects]);
   await sql('DELETE FROM identity.users WHERE id=ANY($1::uuid[])',[subjects]);
 });
 
@@ -318,3 +321,5 @@ test('RPT-04/REL-02: deleting a selected member erases selections and notices be
   assert.equal((await sql("SELECT 1 FROM system.outbox_events WHERE actor_id=$1 AND event_type='trust.monthly_reward_selection.recorded'",[member])).rowCount,0);
   await assert.rejects(select(member,variants[0]),/member_unavailable/);
 });
+
+registerPartnerLinkCases({tx,sql,person,snapshot,select,offer,reviewer:()=>reviewer,selectionRules:rulesVersion,policy});

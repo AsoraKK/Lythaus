@@ -109,11 +109,11 @@ effective months; separately approved migration, exact-SHA deployment and activa
 | --- | --- | --- |
 | T01 Reconcile | Source/consumer map, this decision record, historical cutover plan | Inventory complete; cutover pending D13 |
 | T02 Canonical policy | Validated catalogue, cap groups, pure best-four/bands, candidate calendar, approved decision configuration | All 22 action calculations represented; weekly and maintenance candidate rules tested; operational approvals remain pending |
-| T03 Persistence | Canonical events/outbox, immutable period revisions, assurance proofs, ballot uniqueness, selections/claims | Immutable monthly/weekly revisions, canonical email proofs, assembly reports, fixed snapshots and scoped approved corrections tested; selections/claims and migration pending |
+| T03 Persistence | Canonical events/outbox, immutable period revisions, assurance proofs, ballot uniqueness, selections/claims | Immutable period revisions, canonical proofs, assemblies, fixed snapshots/corrections, selections and private partner consent tested; claims and migration pending |
 | T04 Earning | Real post/discussion/specialist/reception/authorship events and dependency reversals | Canonical post/comment producers, scoped contextual acceptance and final peer-ballot consumer tested with weekly caps and immutable corrections; specialist/reception producers and product forms remain |
 | T05 Security | Reuse normal validated auth events; capability-aware integrity, credential continuity, Turnstile/refresher | Actual email verification feeds bound evidence, including scoring pauses; full-month coverage/assessment calculations tested; other real providers, renewal workflow and D07/D08 activation remain gated |
 | T06 Peer review | Private timed electorate, equal ballots/history, close transaction, scoped override, restricted route | Public/admin routes, ballots/closure, scoped restoration, equal participation earning and private notices tested; specialist/unresolved execution, D09/D10/D11/D13 activation and Flutter remain |
-| T07 Rewards/partners | Persistent Free/Premium/Black selections, proposals, consent/email linkage, QR/invoice idempotency | Canonical current-month selection transactions and plan/level dormancy tested; signed synthetic offer fixtures only; consent/claims, approved live terms and product wiring remain |
+| T07 Rewards/partners | Persistent Free/Premium/Black selections, proposals, consent/email linkage, QR/invoice idempotency | Current-month selections, private consent and scoped eligibility tested; signed synthetic fixtures only; proposals/claims, approved live terms and product wiring remain |
 | T08 Flutter | Existing Rewards tabs, profile tracker, real contribution/review forms, complete states | Depends on authoritative API slices; no parallel route |
 | T09 Reporting/privacy | Stored-calculation parity, full own report, public methodology, safe JSON/CSV, DSR/retention | Full report needs preceding evidence records and report/API/DSR integration |
 | T10 Release | Shadow run, fairness/load/failure testing, approved cutover, exact-SHA release and rollback | No release or activation authorization |
@@ -178,8 +178,8 @@ No automatic monthly reset, point spending or quiet price change is introduced.
 The own reader reports current profile level, reward access, selected/dormant
 variants, retained history review and explicit pending authority. It is not wired
 into the shared API or Flutter destination until app-flow coordination permits it.
-Merchant proposal/approval, consent/linkage, inventory, QR, invoice consumption and
-missing-provider handling remain separate work; no live merchant is fabricated.
+Merchant proposal/approval, inventory, QR and invoice consumption remain separate
+work; no live merchant is fabricated. Private linkage is described below.
 
 Node 22.23.3/disposable PostgreSQL 17 verify 16 cases, 100% line / 96.15% branch,
 including Free L5/L3, five distinct Premium slots, Black with legacy history,
@@ -189,6 +189,42 @@ reads. Higher-tier fixtures seed explicitly synthetic settled weekly totals befo
 the actual assembler, assessment and snapshot publisher. This proves the selection
 transactions, not missing earning providers or the full product journey. Both
 bounded independent source reviews clear the final fixes; native typecheck passes.
+
+## Private partner consent and eligibility
+
+`monthly_reward_partner_links.sql` and `monthly-reward-partner-links.ts` remain
+outside the production manifest and shared product routes. Configuration supports
+only disabled or explicitly synthetic fixture adapters, with separate privacy and
+owner approvals. No live provider, credential or offer is created. Scoped active
+merchant operators have no ordinary administrative powers.
+
+Merchant invitation and member consent are separate transactions. Invitations use
+opaque encrypted tokens, partner-scoped keyed email/customer fingerprints and a
+private canonical recipient fingerprint/key version. The producer never queries
+whether an invited address belongs to a member. SQL guards compare the invitation
+recipient to a freshly locked canonical verified credential. Immutable consent
+revisions bind the subject, merchant/customer/family, offer terms, exact email
+verification timestamp and durable recovery generation. Canonical password-reset
+events increment that generation in the original transaction; retention cleanup
+cannot revive an old consent.
+
+Lookups require the specific authorised partner, linked email, customer and offer.
+Only linked email and effective reward level are personal response fields. Unknown,
+unlinked, wrong-partner, recycled-address and invalidated-consent results are
+generic unknown; missing adapter or valid but unsettled authority is pending.
+Ordered member/source locks, fresh consent/standing/plan/offer checks and durable
+command receipts cover races and retries. Consent withdrawal remains available
+while scoring is paused or optional encryption keys are absent.
+
+Disposable PostgreSQL 17 verifies 34 combined cases: 16 selection and 18 partner
+cases, zero skipped. Coverage is 100%/99.05% for selections and 97.98%/86.81% for
+partner links (line/branch). Tests include independent recipient guards, recovery
+after actual audit-event purge, microsecond verification change, revocation during
+lock waits with missing monthly authority, interruption rollback, queued deletion
+without deadlock and expiry after the preliminary check. Subject erasure removes
+consumed invitations and unused invitations matching the current credential.
+Historical-email locators, export, retention, alternate merchant-email proof,
+merchant JWT/POST wiring and complete DSR remain required before collection.
 
 The monthly source writer accepts settled aggregate evidence from a trusted internal
 caller. Scheduled monthly assembly joins settled weekly results and maintenance/email
