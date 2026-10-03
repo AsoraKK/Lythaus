@@ -52,7 +52,7 @@ class _DeleteConfirmationDialogState extends State<DeleteConfirmationDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'This removes your profile and content. This action cannot be undone.',
+            'This submits an account deletion request. Processing may be delayed by required retention or legal holds.',
           ),
           SizedBox(height: spacing.lg),
           Text(

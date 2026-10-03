@@ -27,6 +27,7 @@ function run(arguments_) {
 
 try {
   cpSync(source, validationPackage, { recursive: true });
+  cpSync(resolve('scripts/tests/fixtures/privacy-status-serialization.dart.txt'), join(validationPackage, 'test/privacy_status_serialization_test.dart'));
   run(['pub', 'get']);
   run(['run', 'build_runner', 'build']);
   run(['analyze', '--no-fatal-warnings']);

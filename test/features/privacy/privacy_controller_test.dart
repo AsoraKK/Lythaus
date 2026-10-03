@@ -12,6 +12,32 @@ import 'test_doubles.dart';
 
 void main() {
   group('PrivacyController', () {
+    test('native completed status survives a remaining cooldown', () async {
+      final harness = _ControllerHarness(initialCooldown: Duration.zero);
+      addTearDown(harness.dispose);
+      harness.repository.statusSnapshot = const ExportSnapshot(
+        remainingCooldown: Duration(days: 29),
+        serverState: 'completed',
+      );
+      final controller = await harness.controller();
+      await controller.refreshStatus();
+      expect(controller.state.exportStatus.name, 'completed');
+      expect(controller.state.remainingCooldown, const Duration(days: 29));
+    });
+
+    test('native failed request cannot bypass a live cooldown', () async {
+      final harness = _ControllerHarness(initialCooldown: Duration.zero);
+      addTearDown(harness.dispose);
+      final controller = await harness.controller();
+      controller.state = controller.state.copyWith(
+        exportStatus: ExportStatus.failed,
+        remainingCooldown: const Duration(days: 29),
+      );
+      await controller.export();
+      expect(controller.state.exportStatus, ExportStatus.failed);
+      expect(controller.state.remainingCooldown, const Duration(days: 29));
+    });
+
     test('hydrates from repository snapshot', () async {
       final harness = _ControllerHarness(
         initialCooldown: const Duration(hours: 1),
@@ -19,7 +45,7 @@ void main() {
       addTearDown(harness.dispose);
 
       final controller = await harness.controller();
-      expect(controller.state.exportStatus, ExportStatus.coolingDown);
+      expect(controller.state.exportStatus, ExportStatus.processing);
       expect(controller.state.remainingCooldown, const Duration(hours: 1));
     });
 
@@ -34,7 +60,7 @@ void main() {
       final controller = await harness.controller();
       await controller.export();
 
-      expect(controller.state.exportStatus, ExportStatus.coolingDown);
+      expect(controller.state.exportStatus, ExportStatus.received);
       expect(controller.state.remainingCooldown, const Duration(hours: 24));
     });
 
@@ -108,7 +134,7 @@ void main() {
       final controller = await harness.controller();
       await controller.refreshStatus();
 
-      expect(controller.state.exportStatus, ExportStatus.coolingDown);
+      expect(controller.state.exportStatus, ExportStatus.processing);
       expect(controller.state.remainingCooldown, const Duration(minutes: 30));
     });
 
@@ -124,7 +150,7 @@ void main() {
       final controller = await harness.controller();
       await controller.refreshStatus();
 
-      expect(controller.state.exportStatus, ExportStatus.failed);
+      expect(controller.state.exportStatus, ExportStatus.unknown);
       expect(controller.state.remainingCooldown, const Duration(minutes: 5));
     });
 
@@ -154,7 +180,7 @@ void main() {
       await controller.export();
 
       expect(harness.signOutCalls, greaterThan(0));
-      expect(controller.state.exportStatus, ExportStatus.failed);
+      expect(controller.state.exportStatus, ExportStatus.unknown);
     });
   });
 }
@@ -168,6 +194,8 @@ class _ControllerHarness {
          snapshot: ExportSnapshot(
            remainingCooldown: initialCooldown,
            serverState: initialCooldown > Duration.zero ? 'queued' : 'idle',
+           canRequest: initialCooldown <= Duration.zero,
+           cooldownKnown: true,
          ),
          clock: () => DateTime.utc(2024, 1, 1, 12),
        ),
@@ -210,6 +238,7 @@ class _ControllerHarness {
   Future<PrivacyController> controller() async {
     final notifier = container.read(privacyControllerProvider.notifier);
     await Future<void>.delayed(Duration.zero);
+    await notifier.refreshStatus();
     return notifier;
   }
 
@@ -227,7 +256,7 @@ class _ControllerRepository extends PrivacyRepository {
          api: TestPrivacyApi(),
          storage: NullSecureStorage(),
          logger: AppLogger('controller_repo'),
-         clock: clock,
+         actorId: 'test-owner',
        );
 
   final ExportSnapshot snapshot;
@@ -235,9 +264,6 @@ class _ControllerRepository extends PrivacyRepository {
   ExportSnapshot? statusSnapshot;
   PrivacyException? exportError;
   PrivacyException? statusError;
-
-  @override
-  Duration get cooldownWindow => const Duration(hours: 24);
 
   @override
   Future<ExportSnapshot> loadPersistedSnapshot() async => snapshot;
@@ -255,10 +281,12 @@ class _ControllerRepository extends PrivacyRepository {
   }
 
   @override
-  Future<void> deleteAccount({
-    required String authToken,
-    required bool hardDelete,
-  }) async {}
+  Future<ExportStatusDTO> deleteAccount({required String authToken}) async =>
+      ExportStatusDTO(
+        state: 'received',
+        requestId: 'delete-1',
+        acceptedAt: DateTime.utc(2026, 10, 2),
+      );
 
   @override
   Future<void> clearPersistedExport() async {}

@@ -17,6 +17,10 @@ class PrivacyExportSection extends StatelessWidget {
     required this.onRequest,
     required this.cooldownRow,
     required this.onRefresh,
+    this.statusLabel,
+    this.completedLabel,
+    this.onDownload,
+    this.downloading = false,
   });
 
   final bool isBusy;
@@ -25,6 +29,10 @@ class PrivacyExportSection extends StatelessWidget {
   final VoidCallback? onRequest;
   final VoidCallback onRefresh;
   final PrivacyCooldownRow cooldownRow;
+  final String? statusLabel;
+  final String? completedLabel;
+  final VoidCallback? onDownload;
+  final bool downloading;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +65,19 @@ class PrivacyExportSection extends StatelessWidget {
             style: textTheme.bodyMedium,
           ),
           SizedBox(height: spacing.lg),
+          if (statusLabel != null) ...[
+            Text(statusLabel!),
+            if (completedLabel != null) Text(completedLabel!),
+            SizedBox(height: spacing.md),
+          ],
+          if (onDownload != null || downloading) ...[
+            LythButton(
+              label: 'Download export',
+              onPressed: onDownload,
+              isLoading: downloading,
+            ),
+            SizedBox(height: spacing.md),
+          ],
           SizedBox(
             width: double.infinity,
             child: LythButton(

@@ -17,7 +17,7 @@ import { claimRegistrationAddress, establishVerifiedCredential, findRecoveryUser
 import { idempotentAuthIntake } from './auth-intake-runtime.ts';
 import { assertDistinctReactionAuthor, contentDeletionPlan, planCommentCreation, planCommentRevision, planPostPublication, planPostRevision, planReactionChange, planRelationshipMutation, replyDepth } from './content-runtime-policy.ts';
 import { assertCommentFeedItemEligibility, assertCustomFeedAvailable, assertFeedItemEligibility, assertNewsBoardItemEligibility, commentPublicLabel, entitlementsForTier, feedResponsePlan, requireNewsBoardAccess, type FeedSurface } from './feed-runtime-policy.ts';
-import { optionalPrivacyRequestType, privacyExportAccessActivity, privacyRequestPlan, requirePrivacyExportDependencies, requirePrivacyExportObject, retentionRulePlan } from './privacy-runtime-policy.ts';
+import { optionalPrivacyRequestType, privacyExportAccessActivity, privacyExportRetryAfter, privacyRequestPlan, requirePrivacyExportDependencies, requirePrivacyExportObject, retentionRulePlan } from './privacy-runtime-policy.ts';
 import { normalizeNotificationDevice, normalizeNotificationPreferences } from './notification-policy.ts';
 import { encodeCursor, enforceContentDeclaration, normalizeCustomFeedRules, pageRequest, reputationBand } from './product-policy.ts';
 import { readBoundedJson } from './request-body-runtime.ts';
@@ -2252,6 +2252,9 @@ async function getPrivacyRequestStatus(request: Request, env: Env, user: Princip
   );
   const row = result.rows[0];
   return privateResponse(request, env, {
+    ...(requestType === 'export' ? {
+      retryAfterSeconds: privacyExportRetryAfter(row?.created_at ?? null, Date.now(), PLATFORM_SAFETY_LIMITS.exportCooldownDays),
+    } : {}),
     request: row ? {
       requestId: row.id,
       requestType: row.request_type,

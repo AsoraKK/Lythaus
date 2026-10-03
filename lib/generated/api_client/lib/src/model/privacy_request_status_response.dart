@@ -12,9 +12,14 @@ part 'privacy_request_status_response.g.dart';
 /// PrivacyRequestStatusResponse
 ///
 /// Properties:
+/// * [retryAfterSeconds] - Remaining export cooldown calculated from the server policy. Present for requestType=export; independent of the request's processing state.
 /// * [request]
 @BuiltValue()
 abstract class PrivacyRequestStatusResponse implements Built<PrivacyRequestStatusResponse, PrivacyRequestStatusResponseBuilder> {
+  /// Remaining export cooldown calculated from the server policy. Present for requestType=export; independent of the request's processing state.
+  @BuiltValueField(wireName: r'retryAfterSeconds')
+  int? get retryAfterSeconds;
+
   @BuiltValueField(wireName: r'request')
   PrivacyRequest? get request;
 
@@ -41,6 +46,13 @@ class _$PrivacyRequestStatusResponseSerializer implements PrimitiveSerializer<Pr
     PrivacyRequestStatusResponse object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.retryAfterSeconds != null) {
+      yield r'retryAfterSeconds';
+      yield serializers.serialize(
+        object.retryAfterSeconds,
+        specifiedType: const FullType(int),
+      );
+    }
     yield r'request';
     yield object.request == null ? null : serializers.serialize(
       object.request,
@@ -69,6 +81,13 @@ class _$PrivacyRequestStatusResponseSerializer implements PrimitiveSerializer<Pr
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'retryAfterSeconds':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.retryAfterSeconds = valueDes;
+          break;
         case r'request':
           final valueDes = serializers.deserialize(
             value,

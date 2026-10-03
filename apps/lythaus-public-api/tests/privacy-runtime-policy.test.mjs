@@ -4,11 +4,25 @@ import test from 'node:test';
 import {
   optionalPrivacyRequestType,
   privacyExportAccessActivity,
+  privacyExportRetryAfter,
   privacyRequestPlan,
   requirePrivacyExportDependencies,
   requirePrivacyExportObject,
   retentionRulePlan,
 } from '../src/privacy-runtime-policy.ts';
+import { PLATFORM_SAFETY_LIMITS } from '../../../packages/contracts/src/tier-policy.ts';
+
+test('export cooldown uses the creation timestamp and canonical policy independently of processing state', () => {
+  const now = Date.parse('2026-10-02T12:00:00Z');
+  const days = PLATFORM_SAFETY_LIMITS.exportCooldownDays;
+  assert.equal(privacyExportRetryAfter(null, now, days), 0);
+  assert.equal(privacyExportRetryAfter('2026-10-01T12:00:00Z', now, days), 29 * 86400);
+  assert.equal(privacyExportRetryAfter('2026-09-02T12:00:00Z', now, days), 0);
+  assert.equal(privacyExportRetryAfter('2026-09-01T12:00:00Z', now, days), 0);
+  assert.equal(privacyExportRetryAfter('2026-09-02T12:00:00.001Z', now, days), 1);
+  assert.equal(privacyExportRetryAfter(new Date('2026-09-02T12:00:00.001Z'), now, days), 1);
+  assert.throws(() => privacyExportRetryAfter('invalid', now, days), /privacy_timestamp_invalid/);
+});
 
 test('privacy request plans select the real request, cooldown, and audit activity', () => {
   assert.deepEqual(privacyRequestPlan('export'), {

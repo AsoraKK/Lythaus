@@ -163,6 +163,10 @@ const authRepairPaths = new Set([
   'packages/security/src/jwt.ts',
   'packages/security/tests/critical-security-policy.test.mjs',
 ]);
+const reviewedPrivacyStatusFiles = new Map([
+  ['apps/lythaus-public-api/src/privacy-runtime-policy.ts', '8c674c929d35c748b28579b2fdeed3ff4daac2bc'],
+  ['apps/lythaus-public-api/tests/privacy-runtime-policy.test.mjs', '5609e2acf2bcb0fc32a36cee8b0d7f5c102d497e'],
+]);
 
 export function assertHomepageFrozen() {
   assert.equal(git('rev-parse', `${baselineSha}^{commit}`), baselineSha, 'Frozen baseline must be available; do not substitute HEAD');
@@ -175,6 +179,11 @@ export function assertHomepageFrozen() {
   const changed = [];
   for (const entry of entries) {
     const [metadata, filename] = entry.split('\t');
+    if (reviewedPrivacyStatusFiles.has(filename)) {
+      assert.equal(git('hash-object', `--path=${filename}`, filename), reviewedPrivacyStatusFiles.get(filename),
+        'Privacy status may change only to the exact reviewed cooldown policy and tests');
+      continue;
+    }
     if (authRepairPaths.has(filename)) continue;
     if (filename === 'package-lock.json') continue;
     if (filename === 'apps/marketing-site/package-lock.json') continue;

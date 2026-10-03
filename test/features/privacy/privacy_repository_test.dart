@@ -1,269 +1,236 @@
+import 'package:flutter_test/flutter_test.dart';
 import 'package:lythaus/core/logging/app_logger.dart';
 import 'package:lythaus/features/privacy/services/privacy_api.dart';
 import 'package:lythaus/features/privacy/services/privacy_repository.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
-
-class _MockApi extends Mock implements PrivacyApi {}
-
-class _MockStorage extends Mock implements FlutterSecureStorage {}
+import 'test_doubles.dart';
 
 void main() {
-  group('PrivacyRepository', () {
-    late _MockApi api;
-    late _MockStorage storage;
-    late PrivacyRepository repository;
-    late DateTime now;
-    final store = <String, String?>{};
+  late TestPrivacyApi api;
+  late MemoryPrivacyStorage storage;
+  late PrivacyRepository repo;
+  final accepted = DateTime.utc(2026, 10, 1, 12);
+  final completed = DateTime.utc(2026, 10, 2, 12);
 
-    setUp(() {
-      api = _MockApi();
-      storage = _MockStorage();
-      now = DateTime.utc(2024, 1, 1, 12);
-      repository = PrivacyRepository(
-        api: api,
-        storage: storage,
-        logger: AppLogger(),
-        clock: () => now,
-      );
-
-      store.clear();
-      when(() => storage.read(key: any(named: 'key'))).thenAnswer((invocation) {
-        final key = invocation.namedArguments[#key] as String;
-        return Future.value(store[key]);
-      });
-      when(
-        () => storage.write(
-          key: any(named: 'key'),
-          value: any(named: 'value'),
-        ),
-      ).thenAnswer((invocation) async {
-        final key = invocation.namedArguments[#key] as String;
-        final value = invocation.namedArguments[#value] as String?;
-        store[key] = value;
-      });
-      when(() => storage.delete(key: any(named: 'key'))).thenAnswer((
-        invocation,
-      ) async {
-        final key = invocation.namedArguments[#key] as String;
-        store.remove(key);
-      });
-    });
-
-    test(
-      'requestExport persists acceptedAt and computes cooldown window',
-      () async {
-        final acceptedAt = DateTime.utc(2024, 1, 1, 10);
-        when(
-          () => api.requestExport(authToken: any(named: 'authToken')),
-        ).thenAnswer((_) async {
-          return ExportRequestResult(
-            requestId: 'request-1',
-            acceptedAt: acceptedAt,
-            retryAfter: const Duration(hours: 24),
-          );
-        });
-
-        final snapshot = await repository.requestExport(authToken: 'token');
-
-        expect(snapshot.lastExportAt, acceptedAt.toLocal());
-        expect(snapshot.remainingCooldown, const Duration(hours: 24));
-        verify(
-          () => storage.write(
-            key: any(named: 'key'),
-            value: acceptedAt.toIso8601String(),
-          ),
-        ).called(1);
-      },
+  setUp(() {
+    api = TestPrivacyApi();
+    storage = MemoryPrivacyStorage();
+    repo = PrivacyRepository(
+      api: api,
+      storage: storage,
+      logger: AppLogger(),
+      actorId: 'owner-a',
     );
-
-    test(
-      'loadPersistedSnapshot returns stored timestamp and remaining time',
-      () async {
-        final stored = DateTime.utc(2024, 1, 1, 11);
-        store['privacy.lastExportAt'] = stored.toIso8601String();
-
-        final snapshot = await repository.loadPersistedSnapshot();
-        expect(snapshot.lastExportAt, stored.toLocal());
-        expect(snapshot.remainingCooldown, const Duration(hours: 23));
-      },
-    );
-
-    test('loadPersistedSnapshot ignores malformed timestamp', () async {
-      store['privacy.lastExportAt'] = 'not-a-date';
-
-      final snapshot = await repository.loadPersistedSnapshot();
-
-      expect(snapshot.lastExportAt, isNull);
-      expect(snapshot.remainingCooldown, Duration.zero);
-    });
-
-    test('fetchRemoteStatus prefers server acceptedAt', () async {
-      final acceptedAt = now;
-      when(
-        () => api.getExportStatus(authToken: any(named: 'authToken')),
-      ).thenAnswer((_) async {
-        return ExportStatusDTO(
-          state: 'queued',
-          acceptedAt: acceptedAt,
-          retryAfterSeconds: null,
-        );
-      });
-
-      final snapshot = await repository.fetchRemoteStatus(authToken: 'token');
-      expect(snapshot.lastExportAt, acceptedAt.toLocal());
-      expect(snapshot.remainingCooldown, const Duration(hours: 24));
-      expect(snapshot.serverState, 'queued');
-    });
-
-    test(
-      'fetchRemoteStatus falls back to persisted timestamp when server empty',
-      () async {
-        final stored = DateTime.utc(2024, 1, 1, 7);
-        store['privacy.lastExportAt'] = stored.toIso8601String();
-        when(
-          () => api.getExportStatus(authToken: any(named: 'authToken')),
-        ).thenAnswer((_) async {
-          return const ExportStatusDTO(
-            state: 'idle',
-            acceptedAt: null,
-            retryAfterSeconds: null,
-          );
-        });
-
-        final snapshot = await repository.fetchRemoteStatus(authToken: 'token');
-        expect(snapshot.lastExportAt, stored.toLocal());
-      },
-    );
-
-    test(
-      'fetchRemoteStatus derives timestamp from retryAfterSeconds',
-      () async {
-        when(
-          () => api.getExportStatus(authToken: any(named: 'authToken')),
-        ).thenAnswer((_) async {
-          return const ExportStatusDTO(
-            state: 'cooldown',
-            acceptedAt: null,
-            retryAfterSeconds: 3600,
-          );
-        });
-
-        final snapshot = await repository.fetchRemoteStatus(authToken: 'token');
-        expect(snapshot.remainingCooldown, const Duration(hours: 1));
-        expect(snapshot.serverState, 'cooldown');
-        expect(snapshot.lastExportAt, isNotNull);
-      },
-    );
-
-    test('requestExport clamps retryAfter to cooldown window', () async {
-      final acceptedAt = DateTime.utc(2024, 1, 1, 10);
-      when(
-        () => api.requestExport(authToken: any(named: 'authToken')),
-      ).thenAnswer((_) async {
-        return ExportRequestResult(
-          requestId: 'request-2',
-          acceptedAt: acceptedAt,
-          retryAfter: const Duration(hours: 48),
-        );
-      });
-
-      final snapshot = await repository.requestExport(authToken: 'token');
-      expect(snapshot.remainingCooldown, const Duration(hours: 24));
-    });
-
-    test('deleteAccount preserves export status history', () async {
-      when(
-        () => api.deleteAccount(
-          authToken: any(named: 'authToken'),
-          hardDelete: any(named: 'hardDelete'),
-        ),
-      ).thenAnswer((_) async {});
-
-      await repository.deleteAccount(authToken: 'token', hardDelete: true);
-      verifyNever(() => storage.delete(key: 'privacy.lastExportAt'));
-    });
-
-    test('maps api exceptions to user friendly privacy exceptions', () async {
-      when(
-        () => api.requestExport(authToken: any(named: 'authToken')),
-      ).thenThrow(
-        const PrivacyApiException(
-          PrivacyErrorType.rateLimited,
-          retryAfter: Duration(hours: 1),
-        ),
-      );
-
-      expect(
-        () => repository.requestExport(authToken: 'token'),
-        throwsA(
-          isA<PrivacyException>()
-              .having((e) => e.type, 'type', PrivacyErrorType.rateLimited)
-              .having(
-                (e) => e.retryAfter,
-                'retryAfter',
-                const Duration(hours: 1),
-              ),
-        ),
-      );
-    });
-
-    test('maps unauthorized api exception to sign-in message', () async {
-      when(
-        () => api.requestExport(authToken: any(named: 'authToken')),
-      ).thenThrow(const PrivacyApiException(PrivacyErrorType.unauthorized));
-
-      await expectLater(
-        repository.requestExport(authToken: 'token'),
-        throwsA(
-          isA<PrivacyException>()
-              .having((e) => e.type, 'type', PrivacyErrorType.unauthorized)
-              .having(
-                (e) => e.message,
-                'message',
-                'Session expired. Please sign in.',
-              ),
-        ),
-      );
-    });
-
-    test('maps network api exception to generic retry message', () async {
-      when(
-        () => api.requestExport(authToken: any(named: 'authToken')),
-      ).thenThrow(const PrivacyApiException(PrivacyErrorType.network));
-
-      await expectLater(
-        repository.requestExport(authToken: 'token'),
-        throwsA(
-          isA<PrivacyException>()
-              .having((e) => e.type, 'type', PrivacyErrorType.network)
-              .having(
-                (e) => e.message,
-                'message',
-                'Something went wrong. Try again.',
-              ),
-        ),
-      );
-    });
-
-    test('maps server api exception to generic retry message', () async {
-      when(
-        () => api.requestExport(authToken: any(named: 'authToken')),
-      ).thenThrow(const PrivacyApiException(PrivacyErrorType.server));
-
-      await expectLater(
-        repository.requestExport(authToken: 'token'),
-        throwsA(
-          isA<PrivacyException>()
-              .having((e) => e.type, 'type', PrivacyErrorType.server)
-              .having(
-                (e) => e.message,
-                'message',
-                'Something went wrong. Try again.',
-              ),
-        ),
-      );
-    });
   });
+
+  test('native cooldown is not capped by a client day', () async {
+    api.status = ExportStatusDTO(
+      state: 'completed',
+      acceptedAt: accepted,
+      requestId: 'export-a',
+      retryAfterSeconds: const Duration(days: 29).inSeconds,
+    );
+    expect(
+      (await repo.fetchRemoteStatus(authToken: 'token')).remainingCooldown,
+      const Duration(days: 29),
+    );
+  });
+
+  for (final state in [
+    'received',
+    'processing',
+    'blocked',
+    'completed',
+    'failed',
+  ]) {
+    test(
+      'native $state preserves identity, timestamps and independent cooldown',
+      () async {
+        api.status = ExportStatusDTO(
+          state: state,
+          requestId: 'export-a',
+          acceptedAt: accepted,
+          completedAt: state == 'completed' ? completed : null,
+          retryAfterSeconds: 29 * 86400,
+          canRequest: false,
+        );
+        final value = await repo.fetchRemoteStatus(authToken: 'synthetic');
+        expect(value.serverState, state);
+        expect(value.requestId, 'export-a');
+        expect(value.lastExportAt, accepted.toLocal());
+        expect(value.completedAt, state == 'completed' ? completed : null);
+        expect(value.remainingCooldown, const Duration(days: 29));
+        expect(value.canRequest, isFalse);
+        expect(value.cooldownKnown, isTrue);
+      },
+    );
+  }
+
+  test(
+    'native null history clears owner cache without falling back to legacy timestamp',
+    () async {
+      storage.values['privacy.lastExportAt'] = accepted.toIso8601String();
+      storage.values['privacy.lastExportAt.v2.owner-a'] = accepted
+          .toIso8601String();
+      api.status = const ExportStatusDTO(state: 'idle', canRequest: true);
+      final value = await repo.fetchRemoteStatus(authToken: 'synthetic');
+      expect(value.lastExportAt, isNull);
+      expect(value.requestId, isNull);
+      expect(value.canRequest, isTrue);
+      expect(
+        storage.values.containsKey('privacy.lastExportAt.v2.owner-a'),
+        isFalse,
+      );
+      expect(
+        storage.values['privacy.lastExportAt'],
+        accepted.toIso8601String(),
+      );
+    },
+  );
+
+  test('cache is account scoped and does not authorize requests', () async {
+    storage.values['privacy.lastExportAt'] = accepted.toIso8601String();
+    expect((await repo.loadPersistedSnapshot()).lastExportAt, isNull);
+    api.onExport = () async =>
+        ExportRequestResult(requestId: 'export-a', acceptedAt: accepted);
+    await repo.requestExport(authToken: 'synthetic');
+    final a = await repo.loadPersistedSnapshot();
+    expect(a.lastExportAt, accepted.toLocal());
+    expect(a.canRequest, isFalse);
+    expect(a.cooldownKnown, isFalse);
+    final b = PrivacyRepository(
+      api: api,
+      storage: storage,
+      logger: AppLogger(),
+      actorId: 'owner-b',
+    );
+    expect((await b.loadPersistedSnapshot()).lastExportAt, isNull);
+    expect(storage.values.keys, contains('privacy.lastExportAt.v2.owner-a'));
+  });
+
+  test('guest never reads the account cache', () async {
+    final guest = PrivacyRepository(
+      api: api,
+      storage: storage,
+      logger: AppLogger(),
+    );
+    storage.values['privacy.lastExportAt'] = accepted.toIso8601String();
+    expect((await guest.loadPersistedSnapshot()).lastExportAt, isNull);
+    expect((await guest.loadPersistedSnapshot()).canRequest, isFalse);
+  });
+
+  test('malformed cache does not invent timestamp or permission', () async {
+    storage.values['privacy.lastExportAt.v2.owner-a'] = 'not-a-date';
+    expect((await repo.loadPersistedSnapshot()).lastExportAt, isNull);
+  });
+
+  test(
+    'unknown policy preserves request but never authorizes export',
+    () async {
+      api.status = ExportStatusDTO(
+        state: 'completed',
+        requestId: 'export-a',
+        acceptedAt: accepted,
+        completedAt: completed,
+      );
+      final result = await repo.fetchRemoteStatus(authToken: 'synthetic');
+      expect(result.serverState, 'completed');
+      expect(result.cooldownKnown, isFalse);
+      expect(result.canRequest, isFalse);
+      expect(result.lastExportAt, accepted.toLocal());
+    },
+  );
+
+  test(
+    'request acknowledgement is received and remains asynchronous',
+    () async {
+      api.onExport = () async => ExportRequestResult(
+        requestId: 'export-a',
+        acceptedAt: accepted,
+        retryAfter: const Duration(days: 30),
+      );
+      final result = await repo.requestExport(authToken: 'synthetic');
+      expect(result.serverState, 'received');
+      expect(result.requestId, 'export-a');
+      expect(result.remainingCooldown, const Duration(days: 30));
+      expect(result.canRequest, isFalse);
+      expect(
+        storage.values['privacy.lastExportAt.v2.owner-a'],
+        accepted.toIso8601String(),
+      );
+    },
+  );
+
+  test(
+    'failed local cache write preserves accepted server acknowledgement',
+    () async {
+      storage.failWrites = true;
+      final result = await repo.requestExport(authToken: 'synthetic');
+      expect(result.requestId, 'request-1');
+      expect(result.serverState, 'received');
+    },
+  );
+
+  test('failed cache read remains unknown', () async {
+    storage.failReads = true;
+    expect((await repo.loadPersistedSnapshot()).canRequest, isFalse);
+  });
+
+  test(
+    'deletion acknowledgement and held status preserve identity without erasing cache',
+    () async {
+      storage.values['privacy.lastExportAt.v2.owner-a'] = accepted
+          .toIso8601String();
+      final ack = await repo.deleteAccount(authToken: 'synthetic');
+      expect(ack.state, 'received');
+      expect(ack.requestId, 'delete-1');
+      api.deletion = ExportStatusDTO(
+        state: 'blocked',
+        requestId: 'delete-1',
+        acceptedAt: accepted,
+      );
+      expect(
+        (await repo.fetchDeletionStatus(authToken: 'synthetic')).state,
+        'blocked',
+      );
+      expect(
+        (await repo.loadPersistedSnapshot()).lastExportAt,
+        accepted.toLocal(),
+      );
+    },
+  );
+
+  test('clearing cache affects only the current account', () async {
+    storage.values['privacy.lastExportAt.v2.owner-a'] = accepted
+        .toIso8601String();
+    storage.values['privacy.lastExportAt.v2.owner-b'] = accepted
+        .toIso8601String();
+    storage.values['privacy.lastExportAt'] = accepted.toIso8601String();
+    await repo.clearPersistedExport();
+    expect(
+      storage.values.keys,
+      unorderedEquals([
+        'privacy.lastExportAt.v2.owner-b',
+        'privacy.lastExportAt',
+      ]),
+    );
+  });
+
+  for (final type in PrivacyErrorType.values) {
+    test('$type API error maps without dropping retry information', () async {
+      api.onExport = () =>
+          throw PrivacyApiException(type, retryAfter: const Duration(days: 29));
+      await expectLater(
+        repo.requestExport(authToken: 'synthetic'),
+        throwsA(
+          isA<PrivacyException>()
+              .having((value) => value.type, 'type', type)
+              .having(
+                (value) => value.retryAfter,
+                'retryAfter',
+                const Duration(days: 29),
+              ),
+        ),
+      );
+    });
+  }
 }

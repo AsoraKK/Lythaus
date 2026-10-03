@@ -1,0 +1,29 @@
+import 'package:lythaus_api_client/lythaus_api_client.dart';
+import 'package:test/test.dart';
+
+void main() {
+  for (final remaining in [null, 0, 29 * 86400]) {
+    test(
+      'privacy status preserves nullable history and policy duration $remaining',
+      () {
+        final wire = <String, Object?>{
+          'request': null,
+          if (remaining != null) 'retryAfterSeconds': remaining,
+        };
+        final decoded = standardSerializers.deserializeWith(
+          PrivacyRequestStatusResponse.serializer,
+          wire,
+        )!;
+        expect(decoded.request, isNull);
+        expect(decoded.retryAfterSeconds, remaining);
+        expect(
+          standardSerializers.serializeWith(
+            PrivacyRequestStatusResponse.serializer,
+            decoded,
+          ),
+          wire,
+        );
+      },
+    );
+  }
+}

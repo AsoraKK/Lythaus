@@ -11195,6 +11195,11 @@
           "request"
         ],
         "properties": {
+          "retryAfterSeconds": {
+            "description": "Remaining export cooldown calculated from the server policy. Present for requestType=export; independent of the request's processing state.",
+            "type": "integer",
+            "minimum": 0
+          },
           "request": {
             "type": "object",
             "allOf": [
