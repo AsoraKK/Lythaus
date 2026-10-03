@@ -19,3 +19,8 @@ negated extglobs, then runs the installed Spectral CLI against valid and invalid
 documents. Rule failures and unmatched-pattern failures retain their exit codes.
 Review compatibility before upgrading Spectral or adding another fast-glob
 consumer.
+
+GitHub's native dependency graph identifies linked local lock entries by their
+repository path (`tools/openapi/spectral-glob`), rather than the module's import
+name. The coverage checker retains that identity and still requires complete
+native coverage of the local entry and every changed registry dependency.
