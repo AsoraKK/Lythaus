@@ -6,35 +6,33 @@ acceptance cases from the October task sheet, not a claim that 100 tests pass.
 Owner decisions D01–D13 and runtime activation remain pending. The catalogue's
 embedded reference-validation counts are not execution evidence for this branch.
 
-## Rebased verification snapshot — 3 October 2026
+## Current verification snapshot — 3 October 2026
 
-Live remote main at the 3 October read-only check is
-`42d1f26ba9852cdabb8f7f90b4d0223c0344a3e6`; local `origin/main` remains at cached
-`ae5cb81b62334c7fea7f0770cea0316aa11063bb`. The comparison adds eight release-gate
-files only; package manifests and the lockfile are unchanged. This local candidate is
-based on cached `ae5cb81` pending Friday's integration coordination. Published
-PR896 head is still `9a98d462082529c1b08216ae666ac7534120dbd4`; it shares only the
-`8c426140` base with this rebased local candidate and is not an ancestor of
-`ca210051`. No force-push or merge was made. The local candidate contains
-security release 89
-(`6d1d52a4fa3f51ae041fbf38b5724578a8596b61`), PR908's dependency repair
-(`8d91bcb434c4960a0f51ee2e4c7563c4f6e88a6c`) and the app-flow PR899/901/902/904/905
-changes. Latest local implementation commit is `7cdd6e33682e3370bc67ab292805298a3e38d37f`;
-the shared contract fragment/assertion remain uncommitted. The committed
-contract follow-up is `ca210051dbaa36be5b0725c54b391fff446f0d9a`.
-The full backend PostgreSQL run below was executed at its code parent
-`1136c226bffefcd6b963cd7f403efb8d7b5b265c`; `ca210051` adds only the contextual
-review OpenAPI fragment/bundle and contract assertions, not earning, privacy or
-reward transaction code.
+The live `main` branch read through GitHub is
+`627ae30b36cd995c4f117bf3c44789c986b5d46b`, descended from security release 89
+(`6d1d52a4fa3f51ae041fbf38b5724578a8596b61`) and PR908 dependency repair
+(`8d91bcb434c4960a0f51ee2e4c7563c4f6e88a6c`). The local implementation candidate is
+`1f5cff9cca94df137872d2c77950a92070808473`, based directly on that `main` SHA.
+PR896 remains open/draft at published head
+`9a98d462082529c1b08216ae666ac7534120dbd4`; the local candidate is unpushed and
+unmerged. The database-only email renewal seam is present at local commit
+`71d60dcb`; the shared OpenAPI/generated-client, report/DSR controller, privacy
+lifecycle, and profile/navigation work remains coordinated with app-flow.
+
+The complete disposable PostgreSQL run is at exact code candidate `1f5cff9`; this
+documentation refresh does not change application code. The older checkpoint's
+uncommitted OpenAPI fragment is not part of that code candidate. The published PR
+head and local candidate have separate evidence and are not treated as the same
+revision.
 
 | Check | Exact evidence |
 | --- | --- |
-| Disposable PostgreSQL 17.11 | Baseline 154 passed, zero skipped across shadow 9, earning 10, contextual acceptance 20, appeals/participation 25, maintenance/assembly 13, snapshots/corrections 19 and selections/partner/claims/report 58 at `1136c226`. On the current worktree, maintenance/assembly then passed 18/18, zero skipped, including five disabled renewal/lifecycle cases; combined coverage is 99.20%/87.34%, and renewal-module coverage is 100%/81.63% (lines/branches). These are separate revisions, not one combined run. Synthetic source rows, approvals and providers only. |
-| OpenAPI and native contracts | At committed `ca210051`, `openapi:lint`, `openapi:bundle`, `openapi:check:bundle`, `openapi:validate:examples`, `openapi:test:contract`, and `typecheck:native` passed; Contract Jest had 40 passed, 17 skipped, 4 suites passed and 1 suite skipped. The current worktree has a separate unbundled response-description edit in `api/openapi/monthly-reputation.yaml`; its new parity assertion currently fails because `api/openapi/dist/openapi.json` has not been regenerated. App-flow/Friday coordination is pending before that shared bundle update. Lint has two inherited warnings: `EmailAuthRequest`'s `mode` schema and the single-schema `PrivacyRequestAccepted` `allOf`. |
-| Dependency audit | A fresh `npm audit --audit-level=low` on the current candidate worktree reports zero vulnerabilities. `package.json` and `package-lock.json` match cached main; the live-main delta is release-governance only. The dependency tree resolves Spectral's `fast-glob` import to the private local adapter and does not include the reported `micromatch`/`braces` chain. No suppression or duplicate security task was added; Dependabot alert #330 remains unclassified. |
+| Disposable PostgreSQL 17.11 | At `1f5cff9`, seven suites passed 162/162 with zero skips: shadow 9, earning 10, contextual acceptance 20, appeals/participation 25, maintenance/assembly and disabled renewal 18, snapshots/corrections 19, and selection/partner/claim/report 61. Synthetic source rows, approvals and adapters only. |
+| OpenAPI and native contracts | At `1f5cff9`, native typecheck and architecture tests passed (272/272); OpenAPI contract tests passed 44 with 17 expected skips (one suite skipped); lint passed with two inherited warnings. Migration validation checked 20 files and 102 launch tables. The admin API still has an independently reviewed response-contract mismatch: pending-adjudication role denial returns 400 where the contract says 403, and five appeals operations can return 429 without declaring it. Exact shared files and proposed changes are in PR comment #5973394747; app-flow owns coordination before edits. |
+| Dependency audit | A fresh `npm audit --audit-level=low` at local candidate `1f5cff9` found zero vulnerabilities. `npm ls @stoplight/spectral-cli fast-glob micromatch braces --all` resolves Spectral 6.15.0's `fast-glob` to `tools/openapi/spectral-glob`; no `micromatch`/`braces` chain remains. The historical failure at `76de6af` / run `37118705885` is resolved at this candidate after the current main security/dependency fixes and local compatibility adapter. No suppression or duplicate security task was added. Separate Dependabot alert #330 remains unclassified and is not dismissed by this audit. |
 | Spectral regression | `node --test scripts/tests/spectral-glob.test.mjs` passed 2/2 with local subprocess execution enabled. `npm run openapi:lint` passed with the two inherited warnings above. |
 | Bounded independent review | Read-only reviews of claims, report projection, contextual-review contract and the disabled renewal seam found no remaining P1/P2. Reviewers did not rerun tests. |
-| Not established | No exact-head remote CI result is claimed here; no live mailbox/provider acceptance, complete 100-case workflow run, Flutter/report/export/DSR integration, load test, migration, deployment, configuration or activation is claimed. |
+| Not established | No exact-head remote CI result is claimed for local candidate `1f5cff9`; no live mailbox/provider acceptance, complete 100-case workflow run, Flutter/report/export/DSR integration, load test, production migration, deployment, configuration or activation is claimed. |
 
 The earlier synthetic auth-journey run `37044669047` failed when the test relay did
 not observe its synthetic password-change notice; dependent coordinator/alpha
@@ -243,8 +241,8 @@ Local claim transaction increment evidence on 3 October 2026:
 
 | Check | Result |
 | --- | --- |
-| Combined selection, partner, claim and report PostgreSQL suite | 59 passed, zero skipped; 16 selection, 18 partner, 19 claim and 6 report cases; report reader coverage is 100%/92.71% and CSV exporter coverage is 100%/97.78% (line/branch) |
-| Claim transaction evidence | Same-partner wrong-source command/digest rejected while valid retry succeeds; QR expiry after a real inventory lock wait, last stock unit under two operators, invoice-period natural replay and shared-fingerprint cross-member isolation, current UTC period checks, atomic stock/usage cap, conflict-skipped insert, level correction, interruption rollback, revoked/superseded/recovery-invalid consent rejection, missing authority, paused offer and absent-marker erasure verified |
+| Combined selection, partner, claim and report PostgreSQL suite | At `1f5cff9`, 61 passed, zero skipped: 16 selection, 18 partner, 21 claim and 6 report cases; report reader coverage is 100%/92.71% and CSV exporter coverage is 100%/97.78% (line/branch) |
+| Claim transaction evidence | Same-partner wrong-source command/digest rejected while valid retry succeeds; QR expiry after a real inventory lock wait, last stock unit under two operators, invoice-period natural replay and shared-fingerprint cross-member isolation, current UTC period checks, atomic stock/usage cap, conflict-skipped insert, level correction, interruption rollback, revoked/superseded/recovery-invalid consent rejection, renewed-consent replay returning the original receipt without a second stock debit, missing authority, paused offer and absent-marker erasure verified |
 | Native typecheck, CI YAML and matrix identity | Pass; all 100 original case IDs remain unique. Two bounded read-only reviews found no remaining P1/P2; they did not rerun the test suite |
 | Scope gates | Disabled/explicit synthetic adapter only; five-minute QR remains pending D12. Merchant JWT/API, external invoice verification, funding/territory, live commercial terms, privacy collection, migration, deployment and activation acceptance not claimed |
 
@@ -252,7 +250,7 @@ Local report-reader increment evidence on 3 October 2026:
 
 | Check | Result |
 | --- | --- |
-| Combined PostgreSQL report/claim/partner/selection suite | 59 passed, zero skipped; report reader 100% lines / 92.71% branches and CSV exporter 100% / 97.78%; the run covers pending correction rows, fixed L5 authority versus L2 recalculation, cap/source metadata, and formula escaping |
+| Combined PostgreSQL report/claim/partner/selection suite | At `1f5cff9`, 61 passed, zero skipped; report reader 100% lines / 92.71% branches and CSV exporter 100% / 97.78%; the run covers pending correction rows, fixed L5 authority versus L2 recalculation, cap/source metadata, formula escaping, and renewed-consent invoice replay |
 | Report semantics | Stored best-four selection and omitted fifth, missing and unassessed weeks, monthly/quarterly email validity, separate current-level authority and correction history verified. CSV preserves source revision/reason/time, cap metadata, breakdown and correction history when detail is pending, ends with CRLF and escapes formula-leading values. A confirmed level snapshot does not relabel the original shadow assessment as confirmed |
 | Privacy and integrity | Raw evidence identifiers are excluded, distinct subjects return distinct stored projections, deleted owners are refused, and mismatched catalogue/assessment lineage fails closed |
 | Native typecheck and independent review | Native typecheck passes; a focused read-only re-review found no remaining P1/P2 in the exporter slice; reviewers did not run tests |

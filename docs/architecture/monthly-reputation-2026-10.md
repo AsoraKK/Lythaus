@@ -2,26 +2,19 @@
 
 Status: confirmed product direction; operational defaults and activation pending.
 Policy: `lythaus-monthly-rewards-2026-10-v1`.
-Reviewed base: `8c4261402dd370b4c57e082cf0fc16b41927f7db` (remote main verified 2 October 2026).
-Main rechecked at `26dc226776f8acd3898954635c327db1ad898128`: intervening feed
-presentation and Android packaging changes do not alter this backend/migration baseline.
-Integration with those changes remains a separate parent-managed step.
-Security release 89 was independently verified at
-`6d1d52a4fa3f51ae041fbf38b5724578a8596b61` (run `37118382512`). Live remote main at
-the 3 October check is `42d1f26ba9852cdabb8f7f90b4d0223c0344a3e6`; local
-`origin/main` remains at cached `ae5cb81b62334c7fea7f0770cea0316aa11063bb`. Main
-contains PR908's dependency repair and app-flow PR899/901/902/904/905 changes. The
-diff from cached main adds eight release-governance files only and does not change
-package manifests or the lockfile. This local candidate remains based on `ae5cb81`;
-the published PR896 head is `9a98d462082529c1b08216ae666ac7534120dbd4`, which shares
-only the original `8c426140` base and is not an ancestor of this candidate. Friday
-coordinates reconciliation with app-flow; no force-push or merge has occurred. The
-contextual-review contract follow-up is `ca210051dbaa36be5b0725c54b391fff446f0d9a`;
-disabled email-renewal proof-seam commit is `7cdd6e33682e3370bc67ab292805298a3e38d37f`.
-App-flow owns the exclusive
-integration slot. Shared generated-client regeneration and profile/navigation,
-privacy status, export cooldown and client lifecycle work remain with app-flow until
-Friday coordinates transfer. No monthly integration has occurred.
+Reviewed baseline: `8c4261402dd370b4c57e082cf0fc16b41927f7db` (remote main verified
+2 October 2026). The live GitHub `main` rechecked 3 October is
+`627ae30b36cd995c4f117bf3c44789c986b5d46b`; it includes security release 89
+(`6d1d52a4fa3f51ae041fbf38b5724578a8596b61`, run `37118382512`) and PR908 dependency
+repair (`8d91bcb434c4960a0f51ee2e4c7563c4f6e88a6c`). The current local code
+candidate is `1f5cff9cca94df137872d2c77950a92070808473`, based directly on that main
+SHA. PR896 remains open/draft at published head
+`9a98d462082529c1b08216ae666ac7534120dbd4`; the candidate is unpushed and unmerged.
+The disabled email-renewal proof seam is at local commit
+`71d60dcb1c85f754251fa265bc00b8109300d4cd`. App-flow owns the exclusive integration
+slot. Shared generated-client regeneration, profile/navigation, privacy status,
+export cooldown and client lifecycle work remain with app-flow until Friday
+coordinates transfer. No monthly integration has occurred.
 
 The October monthly model replaces the earlier accumulating reputation model for
 future approved assessments. Four highest whole weekly results belonging to source
