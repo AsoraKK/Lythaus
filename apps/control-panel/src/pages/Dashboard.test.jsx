@@ -11,7 +11,7 @@ const metric = (value, previous = null, unit = 'count') => ({ value, previous, c
   source: 'Synthetic test source', definition: 'Synthetic test population definition', unit });
 function community(period = 'today', overrides = {}) {
   return { contractVersion: 'overview-v1', timezone: 'UTC', sampledAt: now, period, cacheTtlSeconds: 60, rowLimit: 5000,
-    current: { start: '2026-10-02T00:00:00.000Z', end: now }, previous: { start: '2026-10-01T00:00:00.000Z', end: '2026-10-01T12:00:00.000Z' },
+    current: { start: period === 'today' ? '2026-10-02T00:00:00.000Z' : period === 'mtd' ? '2026-10-01T00:00:00.000Z' : '2026-01-01T00:00:00.000Z', end: now }, previous: { start: '2026-10-01T00:00:00.000Z', end: '2026-10-01T12:00:00.000Z' },
     comparable: true, coverage: 'retained_current_state',
     metrics: { posts: metric(2, 1), comments: metric(4, 0), commentsPerPost: metric(1.5, 0, 'ratio'), unansweredPosts: metric(1, 1),
       uniqueContributors: metric(3, 2), newRegistrations: metric(3, 1), subscriptionsFree: metric(2), subscriptionsPremium: metric(1), subscriptionsBlack: metric(1) },
@@ -118,6 +118,42 @@ describe('Overview', () => {
     fireEvent.change(select, { target: { value: 'ytd' } });
     await waitFor(() => expect(within(card('Posts')).getByText('No comparable prior value')).toBeInTheDocument());
     expect(within(card('Posts')).queryByText(/Change:/)).not.toBeInTheDocument();
+  });
+
+  it('does not renew operational freshness while waiting for a slow source', async () => {
+    vi.useFakeTimers();
+    let resolveAudit;
+    adminRequest.mockImplementation((path, options) => path === 'audit' ? new Promise(resolve => { resolveAudit = resolve; }) : Promise.resolve(sources(path, options)));
+    show(); await act(async () => {});
+    await act(async () => { vi.advanceTimersByTime(61000); resolveAudit({ items: [] }); });
+    expect(operational('Verified accounts')).toBe('Unavailable');
+    expect(screen.getByText(/Source requests started/)).toHaveTextContent('Stale or unavailable');
+    expect(adminRequest).toHaveBeenCalledTimes(7);
+  });
+
+  it('withholds operational values after a backward clock change during requests', async () => {
+    let resolveAudit;
+    adminRequest.mockImplementation((path, options) => path === 'audit' ? new Promise(resolve => { resolveAudit = resolve; }) : Promise.resolve(sources(path, options)));
+    show();
+    await act(async () => { vi.setSystemTime(new Date(Date.parse(now) - 1000)); resolveAudit({ items: [] }); });
+    expect(operational('Verified accounts')).toBe('Unavailable');
+  });
+
+  it.each([
+    ['today', '2026-10-02T23:59:59.000Z', '2026-10-02T00:00:00.000Z'],
+    ['mtd', '2026-10-31T23:59:59.000Z', '2026-10-01T00:00:00.000Z'],
+    ['ytd', '2026-12-31T23:59:59.000Z', '2026-01-01T00:00:00.000Z'],
+  ])('expires %s metrics at the UTC reporting boundary without polling', async (period, sampledAt, start) => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date(sampledAt));
+    adminRequest.mockImplementation((path, options) => Promise.resolve(path === 'overview'
+      ? community(options.query.period, { sampledAt, current: { start, end: sampledAt } }) : sources(path, options)));
+    show(); await act(async () => {});
+    if (period !== 'today') await act(async () => { fireEvent.change(screen.getByLabelText('Reporting period (UTC)'), { target: { value: period } }); });
+    expect(value('Posts')).toBe('2');
+    const calls = adminRequest.mock.calls.length;
+    await act(async () => { vi.advanceTimersByTime(1001); });
+    expect(value('Posts')).toBe('Unavailable');
+    expect(adminRequest).toHaveBeenCalledTimes(calls);
   });
 
   it('discards a late earlier-period response', async () => {

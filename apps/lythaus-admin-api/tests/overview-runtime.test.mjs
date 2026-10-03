@@ -92,3 +92,12 @@ test('unsupported periods, duplicate filters and cross-user query parameters are
   for (const path of ['?period=month', '?period=today&period=ytd', '?userId=foreign', '?since=2026-01-01']) await assert.rejects(f.call(path), /overview_invalid_period/);
   assert.equal(f.reads.length, 0);
 });
+
+test('a transaction commit failure discloses nothing and never populates the cache', async () => {
+  const f = fixture();
+  const failCommit = async (binding, work) => { await f.run(binding, work); throw new Error('synthetic private commit failure'); };
+  await assert.rejects(handleOverview(new Request('https://admin.lythaus.co/api/admin/overview'), f.env, owner, 'synthetic-overview', failCommit, at), { message: 'overview_unavailable' });
+  const data = await (await f.call()).json();
+  assert.equal(data.metrics.posts.value, 0);
+  assert.equal(f.reads.filter(x => x.sql.startsWith('WITH')).length, 2);
+});

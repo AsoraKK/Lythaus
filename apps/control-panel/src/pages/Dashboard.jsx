@@ -24,6 +24,20 @@ const timestamp = value => value !== null && value !== undefined && Number.isFin
 const number = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
 const format = (value, unit) => number(value) === null ? 'Unavailable' : value.toLocaleString('en-GB', { maximumFractionDigits: unit === 'ratio' ? 2 : 0 });
 const pageCount = (response, predicate = () => true) => Array.isArray(response?.items) ? response.items.filter(predicate).length : null;
+const calendarStart = (period, at) => {
+  const date = new Date(at);
+  date.setUTCHours(0, 0, 0, 0);
+  if (period === 'mtd') date.setUTCDate(1);
+  if (period === 'ytd') date.setUTCMonth(0, 1);
+  return date.getTime();
+};
+const calendarEnd = (period, at) => {
+  const date = new Date(calendarStart(period, at));
+  if (period === 'today') date.setUTCDate(date.getUTCDate() + 1);
+  if (period === 'mtd') date.setUTCMonth(date.getUTCMonth() + 1);
+  if (period === 'ytd') date.setUTCFullYear(date.getUTCFullYear() + 1);
+  return date.getTime();
+};
 
 function Metric({ label, metric, fresh, comparable }) {
   const value = fresh && metric?.availability === 'available' ? number(metric.value) : null;
@@ -50,6 +64,7 @@ function Dashboard() {
   const loadSnapshot = useCallback(async () => {
     const token = ++version.current;
     setLoading(true); setSnapshot(null); setOperationsExpired(true); setError(''); setCommunityError('');
+    const fetchedAt = Date.now();
     const paths = ['health', 'auth/summary', 'email-health', 'moderation/cases', 'appeals/pending-adjudication', 'audit', 'overview'];
     const results = await Promise.allSettled(paths.map(path => path === 'overview' ? adminRequest(path, { query: { period } }) : adminRequest(path)));
     if (token !== version.current) return;
@@ -63,32 +78,38 @@ function Dashboard() {
     if (!valid) setCommunityError(results[6].status === 'rejected' && results[6].reason?.status === 403
       ? 'Current active owner access is required for community metrics.' : 'Community metrics are unavailable. Refresh to retry.');
     if (results.slice(0, 6).some(result => result.status === 'rejected')) setError('Some operational sources are unavailable. Available sources are shown below.');
-    setSnapshot({ fetchedAt: Date.now(), health: data(0)?.status || 'Unknown', databaseTime: data(0)?.database?.database_time,
+    setSnapshot({ fetchedAt, health: data(0)?.status || 'Unknown', databaseTime: data(0)?.database?.database_time,
       accounts: data(1)?.accounts || {}, waitlist: data(1)?.waitlist || {}, email: data(2) || {},
       openCases: pageCount(data(3), item => item.state === 'open'), appeals: pageCount(data(4)), audit: pageCount(data(5)),
       community: valid ? community : null });
-    setOperationsExpired(false); setLoading(false);
+    const operationsAge = Date.now() - fetchedAt;
+    setOperationsExpired(operationsAge < 0 || operationsAge >= 60000); setLoading(false);
   }, [period]);
 
   useEffect(() => { loadSnapshot(); return () => { version.current += 1; }; }, [loadSnapshot]);
   const community = snapshot?.community;
   useEffect(() => {
     if (snapshot) {
-      const timer = setTimeout(() => setOperationsExpired(true), 60000);
+      const remaining = 60000 - (Date.now() - snapshot.fetchedAt);
+      setOperationsExpired(remaining <= 0 || remaining > 60000);
+      const timer = setTimeout(() => setOperationsExpired(true), Math.max(0, Math.min(60000, remaining)));
       return () => clearTimeout(timer);
     }
   }, [snapshot]);
   useEffect(() => {
-    const remaining = 65000 - (Date.now() - Date.parse(community?.sampledAt));
+    const sampleAt = Date.parse(community?.sampledAt);
+    const remaining = Math.min(65000 - (Date.now() - sampleAt), calendarEnd(period, sampleAt) - Date.now());
     setExpired(!Number.isFinite(remaining) || remaining <= 0);
     if (Number.isFinite(remaining) && remaining > 0) {
       const timer = setTimeout(() => setExpired(true), remaining);
       return () => clearTimeout(timer);
     }
-  }, [community]);
+  }, [community, period]);
   const age = community ? Date.now() - Date.parse(community.sampledAt) : NaN;
-  const fresh = !expired && Number.isFinite(age) && age >= -5000 && age <= 65000 && community.cacheTtlSeconds === 60;
-  const operational = operationsExpired ? null : snapshot;
+  const fresh = !expired && Number.isFinite(age) && age >= -5000 && age <= 65000 && community.cacheTtlSeconds === 60
+    && Date.parse(community.current?.start) === calendarStart(period, Date.now());
+  const operationsAge = Date.now() - snapshot?.fetchedAt;
+  const operational = !operationsExpired && operationsAge >= 0 && operationsAge < 60000 ? snapshot : null;
 
   return <PageLayout title="Overview" subtitle="Community health, account entitlements and operational sources." guide={GUIDE} className="overview">
     <LythCard variant="panel">
@@ -113,7 +134,7 @@ function Dashboard() {
     </div></LythCard>
     <LythCard variant="panel"><h2>Operational snapshot</h2>
       {error ? <div className="notice error" role="alert">{error}</div> : null}
-      <p className="muted">Sources fetched {timestamp(snapshot?.fetchedAt)} · {operational ? 'Fresh' : 'Stale or unavailable'}. Refresh after 60 seconds.</p>
+      <p className="muted">Source requests started {timestamp(snapshot?.fetchedAt)} · {operational ? 'Fresh' : 'Stale or unavailable'}. Refresh after 60 seconds.</p>
       <p className="muted">Database clock: {timestamp(snapshot?.databaseTime)}. Queue counts cover the loaded page only.</p>
       <div className="kpi-grid">
         <div><span className="detail-label">Admin API</span><strong className="kpi-value">{operational?.health || 'Unknown'}</strong></div>

@@ -33,6 +33,7 @@ export const OVERVIEW_AGGREGATE_SQL = `WITH
     SELECT p.id, p.author_id, p.created_at FROM sample_posts p
     JOIN LATERAL (SELECT status, deleted_at, is_production_acceptance FROM identity.users WHERE id = p.author_id LIMIT 1) u ON true
     WHERE p.deleted_at IS NULL AND p.moderation_state = 'allowed' AND p.visibility = 'public'
+      AND (SELECT count(*) FROM sample_posts) < $5 AND (SELECT count(*) FROM sample_comments) < $5
       AND p.created_at < $2::timestamptz
       AND u.deleted_at IS NULL AND u.status <> 'deleted' AND NOT u.is_production_acceptance
   ), eligible_comments AS MATERIALIZED (
@@ -49,6 +50,7 @@ export const OVERVIEW_AGGREGATE_SQL = `WITH
     SELECT u.id, u.created_at, COALESCE(e.subscription_tier, 'free') AS tier
     FROM sample_users u LEFT JOIN LATERAL (SELECT subscription_tier FROM identity.user_entitlements WHERE user_id = u.id LIMIT 1) e ON true
     WHERE u.status <> 'deleted' AND u.deleted_at IS NULL AND NOT u.is_production_acceptance
+      AND (SELECT count(*) FROM sample_users) < $5
       AND u.created_at < $2::timestamptz
   )
   SELECT w.window,
