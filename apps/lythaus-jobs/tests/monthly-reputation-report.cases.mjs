@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { uuidv7 } from '@lythaus/security';
 import { readOwnMonthlyReputationReport } from '../../../packages/db/src/monthly-reputation-report.ts';
 import { approveMonthlyRewardSnapshotCorrection, applyMonthlyRewardSnapshotCorrection } from '../../../packages/db/src/monthly-reward-snapshots.ts';
+import { serializeMonthlyReputationReportCsv } from '../../lythaus-public-api/src/monthly-reputation-report-export.ts';
 
 export function registerMonthlyReportCases({ tx, sql, person, snapshot, reviewer, snapshotRulesVersion }) {
   const read = (subjectId, sourceMonth, rulesVersion = snapshotRulesVersion) =>
@@ -59,6 +60,14 @@ export function registerMonthlyReportCases({ tx, sql, person, snapshot, reviewer
     assert.equal(pending.report.total.sourceScore, 1000);
     assert.equal(pending.levelAuthority.level, 5);
     assert.equal(pending.corrections.sourceRevisions.length, 1);
+    const shadowCsv = serializeMonthlyReputationReportCsv(pending);
+    const csvHeader = shadowCsv.split('\r\n')[0].split(',');
+    const sourceCorrection = shadowCsv.split('\r\n').find(line => line.startsWith('"source_correction",'));
+    assert.ok(sourceCorrection);
+    const sourceCorrectionCells = sourceCorrection.slice(1, -1).split('\",\"').map(cell => cell.replaceAll('\"\"', '\"'));
+    assert.equal(sourceCorrectionCells[csvHeader.indexOf('currentLevel')], '5');
+    assert.equal(sourceCorrectionCells[csvHeader.indexOf('sourceScore')], '1000');
+    assert.equal(sourceCorrectionCells[csvHeader.indexOf('calculatedLevel')], '2');
 
     const correction = await tx(client => approveMonthlyRewardSnapshotCorrection(client, {
       actorId: reviewer(), subjectId: member, snapshotId: previous.id, assessmentId: corrected.assessmentId,
@@ -74,6 +83,15 @@ export function registerMonthlyReportCases({ tx, sql, person, snapshot, reviewer
     assert.equal(report.report.total.calculatedLevel, 2);
     assert.equal(report.corrections.effectiveSnapshots.length, 1);
     assert.equal(report.corrections.effectiveSnapshots[0].level, 2);
+    const sourceId = (await sql('SELECT source_id FROM trust.monthly_reputation_assessments WHERE id=$1', [corrected.assessmentId])).rows[0].source_id;
+    await sql('DELETE FROM trust.monthly_reputation_assemblies WHERE source_id=$1', [sourceId]);
+    const incomplete = await read(member, '2026-08');
+    assert.equal(incomplete.reportState, 'pending');
+    assert.equal(incomplete.reasonCode, 'assembly_pending');
+    assert.equal(incomplete.report, null);
+    const incompleteCsv = serializeMonthlyReputationReportCsv(incomplete);
+    assert.ok(incompleteCsv.includes('source_correction'));
+    assert.ok(incompleteCsv.includes('snapshot_correction'));
   });
 
   test('RPT-01/02: absent reports remain pending, malformed months fail and deleted owners cannot read', async () => {
@@ -139,5 +157,48 @@ export function registerMonthlyReportCases({ tx, sql, person, snapshot, reviewer
     assert.equal(incomplete.reportState, 'pending');
     assert.equal(incomplete.reasonCode, 'assembly_pending');
     assert.equal(incomplete.report, null);
+  });
+
+  test('RPT-04: CSV preserves the report breakdown and escapes formula-leading values', async () => {
+    const member = await person();
+    await snapshot(member, 9300, '2026-08', {
+      weekPoints: [2500, 2300, 2100, 1800, 600],
+      firstWeekActions: [{ actionId: '=HYPERLINK("https://invalid.example")', capGroup: 'posts', allowance: 250,
+        remainingInGroup: 0, points: 250, accepted: 3, pending: 1, withheld: 0,
+        evidenceIds: [uuidv7()], reason: 'earned', validFrom: '2026-08-03T00:00:00.000Z',
+        validUntil: '2026-08-10T00:00:00.000Z' }],
+    });
+    const report = await read(member, '2026-08');
+    const csv = serializeMonthlyReputationReportCsv(report);
+    assert.ok(csv.startsWith('rowType,sourceMonth,effectiveMonth'));
+    assert.ok(csv.includes('weekly_selected'));
+    assert.ok(csv.includes('weekly_omitted'));
+    assert.ok(csv.includes('"\'=HYPERLINK(""https://invalid.example"")"'));
+    assert.ok(csv.includes('"13500"'));
+    assert.ok(csv.endsWith('\r\n'));
+    assert.ok(!csv.includes('evidenceIds'));
+    assert.ok(!csv.includes('observationIds'));
+
+    const correctedCsv = serializeMonthlyReputationReportCsv({
+      sourceMonth: '2026-08', effectiveMonth: '2026-09', reportState: 'shadow',
+      policyVersion: 'lythaus-monthly-rewards-2026-10-v1', levelAuthority: { state: 'confirmed', level: 2 },
+      corrections: {
+        sourceRevisions: [{ sourceRevision: 2, reasonCode: 'independent_invalidation',
+          sourceScore: 1000, level: 2, recordedAt: '2026-10-03T00:00:00.000Z' }],
+        effectiveSnapshots: [{ revision: 2, mode: 'confirmed', sourceRevision: 2,
+          sourceScore: 1000, level: 2, recordedAt: '2026-10-03T00:01:00.000Z' }],
+      },
+      report: { total: { sourceScore: Number.NaN }, weekly: { selectedWeeks: [], omittedWeeks: [], missingWeeks: [], unassessedWeeks: [] },
+        monthly: { actions: [] }, quarterlyEmail: { evidence: null } },
+    });
+    assert.ok(correctedCsv.includes('source_correction'));
+    assert.ok(correctedCsv.includes('snapshot_correction'));
+    assert.ok(correctedCsv.includes('independent_invalidation'));
+    assert.ok(!correctedCsv.includes('NaN'));
+
+    const pendingCsv = serializeMonthlyReputationReportCsv({ sourceMonth: '2026-08', effectiveMonth: '2026-09',
+      reportState: 'pending', reasonCode: 'source_not_assembled', policyVersion: 'lythaus-monthly-rewards-2026-10-v1',
+      levelAuthority: { state: 'pending' }, report: null });
+    assert.ok(pendingCsv.includes('source_not_assembled'));
   });
 }

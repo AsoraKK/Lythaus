@@ -50,6 +50,7 @@ on:
       - 'apps/lythaus-jobs/tests/monthly-reward-*.postgres.mjs'
       - 'apps/lythaus-jobs/tests/monthly-reward-*.cases.mjs'
       - 'apps/lythaus-jobs/tests/monthly-reputation-report.cases.mjs'
+      - 'apps/lythaus-public-api/src/monthly-reputation-report-export.ts'
       - 'scripts/ci/planetscale-migration-*.mjs'
       - 'scripts/ci/auth-incident-database-contract.mjs'
       - 'scripts/ci/audit-production-auth-incident.mjs'
@@ -173,6 +174,7 @@ jobs:
           '--test-coverage-include=packages/db/src/monthly-reward-partner-links.ts'
           '--test-coverage-include=packages/db/src/monthly-reward-claims.ts'
           '--test-coverage-include=packages/db/src/monthly-reputation-report.ts'
+          '--test-coverage-include=apps/lythaus-public-api/src/monthly-reputation-report-export.ts'
           --test-coverage-lines=80 --test-coverage-branches=80
           --test apps/lythaus-jobs/tests/monthly-reward-selections.postgres.mjs
       - name: Prove column-only incident audit grants on real PostgreSQL
