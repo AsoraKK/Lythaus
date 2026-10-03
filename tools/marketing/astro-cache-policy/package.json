@@ -1,0 +1,8 @@
+{
+  "name": "@lythaus/astro-cache-policy",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.cjs",
+  "license": "MIT",
+  "description": "Freshness-only compatibility policy for the pinned Astro remote-image build loader"
+}
