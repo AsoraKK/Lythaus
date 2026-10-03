@@ -82,6 +82,15 @@ const reviewedToolingSecurityPatches = {
     engines: { node: '>= 12' },
   },
 };
+const reviewedSpectralRemovedPackages = [
+  '@nodelib/fs.scandir', '@nodelib/fs.stat', '@nodelib/fs.walk', 'braces', 'fastq',
+  'fill-range', 'glob-parent', 'is-extglob', 'is-glob', 'is-number', 'merge2',
+  'micromatch', 'queue-microtask', 'reusify', 'run-parallel', 'to-regex-range',
+];
+const reviewedSpectralAdapter = 'file:tools/openapi/spectral-glob';
+function assertSpectralAdapterReference(dependencies) {
+  assert.equal(dependencies['fast-glob'], reviewedSpectralAdapter, 'Spectral must use the exact reviewed local adapter');
+}
 function assertRootToolingLockOnlyHasSecurityPatches(current = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'))) {
   const original = JSON.parse(git('show', `${upstreamBaselineSha}:package-lock.json`));
   for (const [name, version] of [['brace-expansion', '5.0.12'], ['undici', '7.29.1'], ['basic-ftp', '6.2.1']]) {
@@ -95,6 +104,19 @@ function assertRootToolingLockOnlyHasSecurityPatches(current = JSON.parse(readFi
   for (const [name, patch] of Object.entries(reviewedToolingSecurityPatches)) {
     const packagePath = `node_modules/${name}`;
     assert.deepEqual(current.packages[packagePath], patch, `${name} must use the exact reviewed security patch`);
+    current.packages[packagePath] = original.packages[packagePath];
+  }
+  assertSpectralAdapterReference(current.packages[''].devDependencies);
+  delete current.packages[''].devDependencies['fast-glob'];
+  assert.deepEqual(current.packages['node_modules/fast-glob'], { resolved: 'tools/openapi/spectral-glob', link: true },
+    'Spectral must link only the exact reviewed local adapter');
+  current.packages['node_modules/fast-glob'] = original.packages['node_modules/fast-glob'];
+  assert.deepEqual(current.packages['tools/openapi/spectral-glob'], { name: 'fast-glob', version: '1.0.0', dev: true },
+    'Spectral adapter lock metadata must remain exact and dependency-free');
+  delete current.packages['tools/openapi/spectral-glob'];
+  for (const name of reviewedSpectralRemovedPackages) {
+    const packagePath = `node_modules/${name}`;
+    assert.equal(current.packages[packagePath], undefined, `${name} must remain removed with the vulnerable Spectral chain`);
     current.packages[packagePath] = original.packages[packagePath];
   }
   assert.deepEqual(current, original, 'Root tooling lock may change only for the reviewed security patches');
@@ -184,6 +206,26 @@ test('reviewed tooling patches keep every other dependency frozen', () => {
   assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(changed), /Root tooling lock may change only for the reviewed security patches/);
 });
 
+test('Spectral security replacement rejects changed targets, metadata or resurrected vulnerable dependencies', () => {
+  const readLock = () => JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+  for (const [packagePath, field, value] of [
+    ['node_modules/fast-glob', 'resolved', 'tools/unreviewed'],
+    ['node_modules/fast-glob', 'link', false],
+    ['tools/openapi/spectral-glob', 'version', '0.0.0'],
+    ['tools/openapi/spectral-glob', 'dependencies', { braces: '3.0.3' }],
+  ]) {
+    const changed = readLock(); changed.packages[packagePath][field] = value;
+    assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(changed), /Spectral/);
+  }
+  const changed = readLock(); changed.packages[''].devDependencies['fast-glob'] = 'file:tools/unreviewed';
+  assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(changed), /exact reviewed local adapter/);
+  const original = JSON.parse(git('show', `${upstreamBaselineSha}:package-lock.json`));
+  for (const name of reviewedSpectralRemovedPackages) {
+    const resurrected = readLock(); resurrected.packages[`node_modules/${name}`] = original.packages[`node_modules/${name}`];
+    assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(resurrected), /must remain removed/);
+  }
+});
+
 test('approved copy refresh preserves homepage scripts, waitlist controls and metadata wiring', () => {
   const read = filename => readFileSync(path.join(root, filename), 'utf8').replaceAll('\r\n', '\n');
   const scripts = source => [...source.replace(/<script\b[^>]*\/>/g, '').matchAll(/<script\b[^>]*>[\s\S]*?<\/script>/g)].map(match => match[0]).join('\n');
@@ -252,8 +294,12 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
       before.overrides['get-uri@8.0.1'] = { 'basic-ftp': '6.2.1' };
       before.overrides['fast-uri'] = '3.1.8';
       before.overrides['ip-address'] = '10.7.1';
+      assertSpectralAdapterReference(after.devDependencies);
+      assert.equal(after.overrides['fast-glob'], '$fast-glob', 'Spectral must retain the exact reviewed override');
+      before.devDependencies['fast-glob'] = reviewedSpectralAdapter;
+      before.overrides['fast-glob'] = '$fast-glob';
     }
-    assert.deepEqual(after, before, 'Only the TypeScript test runtime flag and reviewed security overrides may change; homepage dependencies remain frozen');
+    assert.deepEqual(after, before, 'Only the TypeScript test runtime flag and exact reviewed security changes may change; homepage dependencies remain frozen');
   }
 });
 

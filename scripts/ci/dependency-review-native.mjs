@@ -22,7 +22,11 @@ export function resolvedDependencies(file, content) {
   if (file.endsWith('package-lock.json')) {
     const lock = JSON.parse(content);
     if (!lock.packages) throw new Error(`UNSUPPORTED_LOCK_SCHEMA:${file}`);
-    return Object.entries(lock.packages).filter(([key, value]) => key && !value.link).map(([key, value]) => ({ ecosystem: 'npm', name: value.name ?? key.split('node_modules/').at(-1), version: value.version, relationship: 'resolved' }));
+    const localTargets = new Set(Object.values(lock.packages).filter(value => value.link && typeof value.resolved === 'string').map(value => value.resolved));
+    return Object.entries(lock.packages).filter(([key, value]) => key && !value.link).map(([key, value]) => ({
+      ecosystem: 'npm', name: localTargets.has(key) && !key.includes('node_modules/') ? key : value.name ?? key.split('node_modules/').at(-1),
+      version: value.version, relationship: 'resolved',
+    }));
   }
   if (file.endsWith('pubspec.lock')) {
     const lock = parse(content);
