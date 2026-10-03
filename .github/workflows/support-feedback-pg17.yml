@@ -52,13 +52,13 @@ jobs:
       - name: Install pinned repository dependencies
         run: npm ci --ignore-scripts
       - name: Run support contract, HTTP and runtime tests
-        run: node --experimental-strip-types --experimental-test-module-mocks --test --test-isolation=none packages/contracts/tests/support-feedback.test.mjs packages/db/tests/support-feedback-http.test.mjs packages/db/tests/support-feedback-runtime.test.mjs
+        run: node --experimental-strip-types --experimental-test-module-mocks --test packages/contracts/tests/support-feedback.test.mjs packages/db/tests/support-feedback-http.test.mjs packages/db/tests/support-feedback-runtime.test.mjs
       - name: Typecheck native support services
         run: npm run typecheck:native
       - name: Exercise isolated support services against PostgreSQL 17
         env:
           SUPPORT_LOCAL_PG_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_support_test?sslmode=disable
-        run: node --experimental-strip-types --experimental-test-module-mocks --test --test-isolation=none packages/db/tests/support-feedback.postgres.mjs
+        run: node --experimental-strip-types --experimental-test-module-mocks --test packages/db/tests/support-feedback.postgres.mjs
 
   owner-console:
     runs-on: ubuntu-latest
