@@ -58,6 +58,108 @@ domain.FeedResponse _feedResponse({
 }
 
 void main() {
+  for (final surface in ['search', 'trending']) {
+    for (final trustStatus in ['under_appeal', 'verified_signals_attached']) {
+      testWidgets('$surface preserves public post identity and $trustStatus', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        tester.view.physicalSize = const Size(320, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final hasAppeal = trustStatus == 'under_appeal';
+        final post = domain.Post.fromJson({
+          'id': 'public-fixture',
+          'authorId': 'public-author',
+          'authorUsername': 'Public author',
+          'body': 'A published post.',
+          'publishedAt': '2026-10-02T00:00:00Z',
+          'visibility': 'public',
+          'moderationState': 'allowed',
+          'publicLabel': 'Human-authored',
+          'feedItemDeleted': false,
+          'trustStatus': trustStatus,
+          'timeline': {
+            'created': 'complete',
+            'mediaChecked': 'complete',
+            'moderation': 'complete',
+            if (hasAppeal) 'appeal': 'open',
+          },
+          'hasAppeal': hasAppeal,
+          'proofSignalsProvided': true,
+          'verifiedContextBadgeEligible': !hasAppeal,
+          'featuredEligible': !hasAppeal,
+        });
+        final feed = domain.FeedResponse(
+          posts: [post],
+          totalCount: 1,
+          hasMore: false,
+          page: 1,
+          pageSize: 20,
+        );
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              feedSearchProvider('public').overrideWith((ref) async => feed),
+              trendingFeedProvider.overrideWith(
+                () => _TrendingSuccessNotifier(feed),
+              ),
+            ],
+            child: MaterialApp(
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: const TextScaler.linear(2)),
+                child: child!,
+              ),
+              home: surface == 'search'
+                  ? const FeedSearchScreen()
+                  : const TrendingFeedScreen(),
+            ),
+          ),
+        );
+        if (surface == 'search') {
+          await tester.enterText(find.byType(TextField), 'public');
+          await tester.testTextInput.receiveAction(TextInputAction.search);
+        }
+        await tester.pumpAndSettle();
+        final card = tester.widget<FeedCard>(find.byType(FeedCard));
+        final item = card.item;
+        expect(
+          [item.authorId, item.trustSummary.trustStatus],
+          ['public-author', trustStatus],
+        );
+        expect(item.feedId, surface);
+        expect(item.title, surface == 'search' ? 'Result' : 'Update');
+        expect(item.authorshipLabel, 'Human-authored');
+        expect(item.trustSummary.timeline.moderation, 'complete');
+        expect(item.trustSummary.timeline.appeal, hasAppeal ? 'open' : null);
+        expect(item.trustSummary.hasAppeal, hasAppeal);
+        expect(item.trustSummary.proofSignalsProvided, isTrue);
+        expect(item.trustSummary.verifiedContextBadgeEligible, !hasAppeal);
+        expect(item.trustSummary.featuredEligible, !hasAppeal);
+        expect(card.canEdit, isFalse);
+        expect(find.byTooltip('Post actions'), findsNothing);
+        expect(
+          find.text(hasAppeal ? 'Under appeal' : 'Verified signals attached'),
+          findsOneWidget,
+        );
+        expect(find.text('Authorship: Human-authored'), findsOneWidget);
+        await tester.ensureVisible(find.text('Trust details'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Trust details'));
+        await tester.pumpAndSettle();
+        expect(
+          find.bySemanticsLabel(RegExp('^View content history')),
+          findsOneWidget,
+        );
+        semantics.dispose();
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
   testWidgets('custom feed view renders filters and items', (tester) async {
     const feed = FeedModel(
       id: 'custom-1',

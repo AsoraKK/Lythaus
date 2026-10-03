@@ -10,6 +10,7 @@ import 'package:lythaus/features/feed/domain/models.dart' as domain;
 import 'package:lythaus/services/service_providers.dart';
 import 'package:lythaus/services/subscription/subscription_service.dart';
 import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/state/models/post_feed_item_mapper.dart';
 
 const FeedModel _discoverFeed = FeedModel(
   id: 'discover',
@@ -466,39 +467,5 @@ final feedRestoreResultProvider = Provider.family<FeedRestoreResult, FeedModel>(
   },
 );
 
-FeedItem _mapPostToFeedItem(domain.Post post) {
-  final type = (post.mediaUrls?.isNotEmpty ?? false)
-      ? ContentType.image
-      : ContentType.text;
-  return FeedItem(
-    id: post.id,
-    feedId: 'live',
-    author: post.authorUsername,
-    authorId: post.authorId,
-    sourceName: post.source?.name,
-    sourceUrl: post.source?.url,
-    contentType: type,
-    title: post.metadata?.category ?? 'Update',
-    body: post.text,
-    imageUrl: post.mediaUrls?.isNotEmpty == true ? post.mediaUrls!.first : null,
-    publishedAt: post.createdAt,
-    tags: post.metadata?.tags ?? const [],
-    isNews: post.isNews,
-    isPinned: post.metadata?.isPinned ?? false,
-    trustSummary: FeedTrustSummary(
-      trustStatus: post.trustStatus,
-      timeline: FeedTrustTimeline(
-        created: post.timeline.created,
-        mediaChecked: post.timeline.mediaChecked,
-        moderation: post.timeline.moderation,
-        appeal: post.timeline.appeal,
-      ),
-      hasAppeal: post.hasAppeal,
-      proofSignalsProvided: post.proofSignalsProvided,
-      verifiedContextBadgeEligible: post.verifiedContextBadgeEligible,
-      featuredEligible: post.featuredEligible,
-    ),
-    authorshipLabel: post.authorship.label.label,
-    classificationSource: post.authorship.classificationSource,
-  );
-}
+FeedItem _mapPostToFeedItem(domain.Post post) =>
+    mapPostToFeedItem(post, feedId: 'live', fallbackTitle: 'Update');
