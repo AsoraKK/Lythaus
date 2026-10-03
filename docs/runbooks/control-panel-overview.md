@@ -4,7 +4,7 @@
 
 Prepared 2026-10-02 from GitHub main `8c4261402dd370b4c57e082cf0fc16b41927f7db` (last-live reference supplied by the parent). This is source implementation for a draft PR. Deployed Pages/Worker SHA and production metric values were not independently verified: existing Cloudflare read requests returned HTTP 401. Parent review controls integration, activation and releases. No production SQL writes, DDL, account lookups or mutations, provider resources, credential changes, dependency/lockfile updates or public-homepage edits are part of this increment.
 
-Resumed 2026-10-03: main is `6d1d52a4fa3f51ae041fbf38b5724578a8596b61`, including security #897/#898. PR #903's previous head `e64dbddb42c32e78fdd5e519f80d9cf333d654e7` had all 12 CI checks passing. Its four commits replayed onto current main without conflicts; upstream lockfiles, tooling handle validation, homepage protection and the new file-I/O CI check are preserved. [Canonical release run 37118382512](https://github.com/AsoraKK/Lythaus/actions/runs/37118382512) confirms successful release of this main SHA, including provider-evidence and production-surface verification jobs; it does not deploy PR #903. GitHub branch-protection reads return 403 for the existing integration, so exact required-check configuration must be confirmed by the integration owner.
+Resumed 2026-10-03: main is `6d1d52a4fa3f51ae041fbf38b5724578a8596b61`, including security #897/#898. PR #903's previous head `e64dbddb42c32e78fdd5e519f80d9cf333d654e7` had all 12 CI checks passing. Its four commits replayed onto current main without conflicts; upstream lockfiles, tooling handle validation, homepage protection and the new file-I/O CI check are preserved. [Canonical release run 37118382512](https://github.com/AsoraKK/Lythaus/actions/runs/37118382512) confirms successful release of this main SHA, including provider-evidence and production-surface verification jobs; it does not deploy PR #903. The branch metadata read confirms protection enforced for everyone and ten required contexts: Repository hygiene, Workflow lint, Native Workers and PlanetScale, OpenAPI contract, Flutter analyze and test, Web frontends, Dependency audit, CodeQL JavaScript TypeScript, dependency-review and scan. The full branch-protection endpoint returns 403 for the existing integration; review/approval settings must still be confirmed by the integration owner.
 
 Read root AGENTS.md, native architecture, registry, CI and existing support contracts first. No nested AGENTS.md/SKILL.md was found in the checkout. Registry resources remain authoritative. Live PlanetScale branch metadata currently lists only `main`; AGENTS.md's older development-branch observation is stale. No branch was created.
 
@@ -68,7 +68,7 @@ Statement timeout is 1,500 ms. A repeatable-read transaction checks current acti
 
 Only the aggregate snapshot is cached per binding and period for up to 60 seconds. Authorization is never cached. Calendar rollover and backward clocks invalidate cache reuse; successful commit is required before cache population, including an explicit failed-commit regression test. HTTP responses are private/no-store. The UI expires source values at the earlier of sample TTL or the UTC reporting boundary, resets on refresh/period changes, ignores late responses and withholds incompatible/future/stale samples. Operational freshness starts when the parallel request batch starts, so a delayed source cannot renew earlier values; backward clock changes fail closed. No provider polling or timer-driven API requests were added.
 
-Legacy operations remain separate: auth summary reports current account states/verification and waiting-list totals; it is not active-user analytics and may include acceptance accounts. Email health counts outbox rows created in the last 24 hours grouped by their current accepted/delivered/failure state, not events occurring in that window. Queue figures are bounded loaded pages (cases 200, audit 100; pending-adjudication endpoint's own page). Operational freshness reflects fetch time and expires after 60 seconds; the database clock is labeled as a clock, not an ingestion watermark.
+Legacy operations remain separate: auth summary reports current account states/verification and waiting-list totals; it is not active-user analytics and may include acceptance accounts. Email health independently counts outbox rows created in the last 24 hours with nonnull accepted_at, current delivered state, or a failure state/provider error. These counters can overlap and do not count lifecycle events occurring in that window. Queue figures are bounded loaded pages (cases 200, audit 200; pending-adjudication endpoint's own page). Operational freshness starts before the request batch and expires after 60 seconds; the database clock is labeled as a clock, not an ingestion watermark.
 
 ## Provider capability audit (read-only, 2026-10-02)
 
@@ -89,9 +89,11 @@ Only registry Lythaus account/resources were addressed. No Nite Owl resources we
 
 Both UI provider adapters remain explicitly disabled/unavailable with null telemetry/cost/currency/period. No fake chart or zero-spend fallback was added. A future enabled adapter must validate approved backend credentials, target only registry identifiers, cache bounded provider queries, normalize units/freshness, preserve request-vs-user distinctions and deduplicate Cloudflare-billed PlanetScale lines. Accrued estimates and finalized invoices require separate amounts, currency, accounting period, resource attribution and sample timestamps. Shared account totals cannot be summed into resource totals.
 
+Fresh 2026-10-03 existing-binding reads repeat the capability result: three exact Worker GraphQL filters (limit 1 each, last 15 minutes) and the exact Pages project return 401/code10000. PlanetScale database/branch/namespace-schema, 15-minute one-query Insights, invoice list and exact database/main line item succeed. `cloudflare_billed=true` remains; returned invoice/line strings lack certified currency/finalization/attribution. No new credential, query credential creation, raw user query, production count or provider configuration is used. The canonical main release run succeeds, but direct Cloudflare metadata and release-manifest artifact download remain unavailable (401 and 403 respectively); the run/job evidence does not certify PR903 deployment.
+
 ## Review gates and neighboring work
 
-### Local validation evidence
+### Original checkpoint validation (2026-10-02)
 
 All checks used this original cloud workspace and synthetic/disposable data. Production account state was not read or changed.
 
@@ -109,6 +111,20 @@ All checks used this original cloud workspace and synthetic/disposable data. Pro
 | Browser | 15 layout checks, actual light/dark token themes, 390/768/1440px, doubled text, keyboard details/navigation, legacy query/fragment aliases, back history and Preview 404; 0 page errors |
 
 Browser Overview responses traversed the actual restricted-role handler and database with synthetic records; Access and the six legacy operation responses were simulated. This is local reconciliation, not a production-live claim. A discovered doubled-text Accounts overflow was fixed with scoped wrapping/min-width rules. Temporary evidence in this workspace: `/tmp/lythaus-control-panel-browser-evidence.json`, `/tmp/lythaus-overview-local-snapshot.json`, 12 `/tmp/lythaus-overview-{light,dark}-*.png` / `/tmp/lythaus-accounts-{light,dark}-*.png` screenshots and test logs. The browser plugin was unavailable; installed system Chromium with Playwright was used. Downloads of pinned generator/Dart SDK were checksum-verified; no lockfile changed.
+
+### Resumption validation (2026-10-03)
+
+Tested source head `d033174bd80fe93bbc97873a4d50db55d4397f63` incorporates main security fixes and the bounded cap/freshness corrections. Two independent GPT-6.1 Sol Extra High reviewers report no remaining actionable findings at that exact head after rereview. Formal GitHub review entries remain separate from these source reviews.
+
+| Check | Fresh result |
+| --- | --- |
+| Control panel | All 60 tests / 9 files and production build pass; new delayed-source/backward-clock and Today/MTD/YTD boundary regressions included |
+| API and PostgreSQL | Overview policy/runtime/dispatcher plus unchanged account-support tests pass; all 47 real restricted-role PG17 integration tests pass, including cap/query plan and audit/current-owner denial tests |
+| Coverage and source packaging | Existing 42-module/13-category critical gate passes; native typecheck, four Worker configs/three generated types, 33-resource registry and admin Worker dry-run package pass; security file-handle regressions pass |
+| Contract/client | OpenAPI lint (two existing warnings), all 42 contract tests (17 opt-in live skips), bundle and pinned generator 7.7.0 freshness pass; actual local DB-handler response validates against schema. Dart compilation/analysis is repeated by exact-head CI; generated TODO test counts alone do not establish serialization behavior |
+| Browser | Local actual Overview handler/PG17, simulated Access/legacy sources; 28 checks, 12 screenshots, 6 Overview requests, zero page/unexplained console errors. Includes owner denial, missing values, themes, 390/768/1440px, doubled text, keyboard, aliases and Back history |
+
+Fresh browser receipt and snapshots are outside the repository at `/workspace/lythaus-pr903-evidence/`. The earlier `/tmp` checkpoint artifacts did not survive environment resumption. Google Fonts failed the environment proxy-certificate check; local browser QA isolates that external request and uses fallback fonts. Production webfont rendering remains unverified. No production account changes, SQL/DDL, deployment or activation occurred. Shared Spectral/glob audit remediation belongs exclusively to the rewards lane and is not duplicated or suppressed here.
 
 Reproduce with `npm test` / `npm run build` in apps/control-panel, `npm run openapi:test:contract`, `npm run openapi:lint`, `npm run typecheck:native`, `npm run test:critical-coverage`, and the CI PostgreSQL command against a disposable local database. See `.github/workflows/native-planetscale-ci.yml` for baseline setup and role validation. Never point fixture integration tests at production.
 

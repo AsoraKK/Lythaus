@@ -47,7 +47,7 @@ Proposed future API names are a discussion contract, not routes added now: user 
 
 ## Contribution event and reward gate
 
-Kyle approved an **optional 150 points for one accepted useful suggestion per user per quarter**. Acceptance means an owner-reviewed useful contribution with recorded evidence. Submission alone earns nothing. Additional ideas and bug reports remain allowed and can be accepted without an award. Do not promise a reward in forms before policy activation.
+Kyle approved **150 points per accepted suggestion quarterly**. The checkpoint's one accepted useful suggestion per user per quarter is a proposed eligibility interpretation; quarterly budget, period/boundary defaults and eligibility must be reconciled with parent/Astra before activation. Acceptance means an owner-reviewed useful contribution with recorded evidence. Submission alone earns nothing. Additional ideas and bug reports remain allowed and can be accepted without an award. Do not promise a reward in forms before policy activation.
 
 Astra lane `01a0fd06` owns the reputation/reward policy, its monthly 13,500 model and ledger integration. Parent must reconcile these before ticket reward implementation. No hardcoded 150-point award, policy default, ledger write or activation is added here.
 
