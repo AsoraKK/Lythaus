@@ -10,7 +10,10 @@ import 'package:lythaus/features/notifications/presentation/notifications_screen
 import 'package:lythaus/ui/screens/home/feed_search_screen.dart';
 import 'package:lythaus/ui/screens/profile/profile_screen.dart';
 
-class _NotificationApi extends Mock implements NotificationApiService {}
+class _NotificationApi extends Mock implements NotificationApiService {
+  @override
+  bool get isCurrentSession => true;
+}
 
 void main() {
   for (final entry in <String, Widget>{
