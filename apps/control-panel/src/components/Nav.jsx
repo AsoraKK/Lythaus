@@ -6,6 +6,7 @@ const links = [
   { to: '/appeals', label: 'Appeals' },
   { to: '/authenticity', label: 'Authenticity beta' },
   { to: '/accounts', label: 'Accounts' },
+  { to: '/support', label: 'Support' },
   { to: '/waitlist', label: 'Waitlist' },
   { to: '/audit', label: 'Audit' },
   { to: '/production-auth-acceptance', label: 'Auth acceptance' }

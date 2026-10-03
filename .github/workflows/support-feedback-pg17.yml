@@ -1,0 +1,81 @@
+name: Support feedback scoped validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/support-feedback-pg17.yml'
+      - 'apps/control-panel/package.json'
+      - 'apps/control-panel/package-lock.json'
+      - 'apps/control-panel/src/App.jsx'
+      - 'apps/control-panel/src/components/Nav.jsx'
+      - 'apps/control-panel/src/pages/SupportFeedback*'
+      - 'database/planetscale/proposals/support-feedback.local.sql'
+      - 'docs/runbooks/support-feedback-roadmap.md'
+      - 'docs/testing/support-feedback-local-services.md'
+      - 'packages/contracts/src/support-feedback.ts'
+      - 'packages/contracts/tests/support-feedback.test.mjs'
+      - 'packages/db/src/support-feedback*.ts'
+      - 'packages/db/tests/support-feedback*.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: support-feedback-pg17-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  support-services:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lythaus_support_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d lythaus_support_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install pinned repository dependencies
+        run: npm ci --ignore-scripts
+      - name: Run support contract, HTTP and runtime tests
+        run: node --experimental-strip-types --experimental-test-module-mocks --test --test-isolation=none packages/contracts/tests/support-feedback.test.mjs packages/db/tests/support-feedback-http.test.mjs packages/db/tests/support-feedback-runtime.test.mjs
+      - name: Typecheck native support services
+        run: npm run typecheck:native
+      - name: Exercise isolated support services against PostgreSQL 17
+        env:
+          SUPPORT_LOCAL_PG_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_support_test?sslmode=disable
+        run: node --experimental-strip-types --experimental-test-module-mocks --test --test-isolation=none packages/db/tests/support-feedback.postgres.mjs
+
+  owner-console:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/control-panel/package-lock.json
+      - name: Install pinned control-panel dependencies
+        run: npm ci --ignore-scripts
+        working-directory: apps/control-panel
+      - name: Run control-panel tests
+        run: npm test -- --silent=true
+        working-directory: apps/control-panel
+      - name: Build control panel
+        run: npm run build
+        working-directory: apps/control-panel

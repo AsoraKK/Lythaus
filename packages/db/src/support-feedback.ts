@@ -189,6 +189,13 @@ export function createSupportService(dependencies: { authentication: SupportAuth
     });
   }
   return Object.freeze({
+    supportOptions(request: Request, channel: 'member'|'owner') {
+      return run(request,channel,async () => Object.freeze({
+        version:p.version,contract:p.contract,limits:Object.freeze({page:p.limits.page,messages:p.limits.messages,privateItems:p.limits.privateItems,
+          messageBytes:p.limits.messageBytes,noteBytes:p.limits.noteBytes,evidenceBytes:p.limits.evidenceBytes,referenceBytes:p.limits.referenceBytes}),
+        ...(channel==='owner'?{initial:p.initial,transitions:p.transitions,evidenceTypes:p.evidenceTypes}:{}),
+      }));
+    },
     submit(request: Request,body: unknown) {
         return mutate(request,'member',null,null,'submit',()=>parseSupportSubmission(body,p.contract),async(client,actor,input)=>{
           const inserted=await client.query(`INSERT INTO support.requests AS r(id,submitter_id,kind,submission,revision,state,policy_version)
