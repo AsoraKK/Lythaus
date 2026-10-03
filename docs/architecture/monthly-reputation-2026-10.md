@@ -6,6 +6,10 @@ Reviewed base: `8c4261402dd370b4c57e082cf0fc16b41927f7db` (remote main verified 
 Main rechecked at `26dc226776f8acd3898954635c327db1ad898128`: intervening feed
 presentation and Android packaging changes do not alter this backend/migration baseline.
 Integration with those changes remains a separate parent-managed step.
+Main rechecked on 3 October at `6d1d52a4` after the security tooling changes.
+Security/Friday retains the main/release slot. Shared OpenAPI, generated client,
+profile/navigation and privacy workflow changes require coordination with the
+app-flow owner before overlapping edits; no main integration has occurred here.
 
 The October monthly model replaces the earlier accumulating reputation model for
 future approved assessments. Four highest whole weekly results belonging to source
@@ -102,10 +106,10 @@ effective months; separately approved migration, exact-SHA deployment and activa
 | Package | Implementation and test work | Initial status |
 | --- | --- | --- |
 | T01 Reconcile | Source/consumer map, this decision record, historical cutover plan | Inventory complete; cutover pending D13 |
-| T02 Canonical policy | Validated catalogue, cap groups, pure best-four/bands, candidate calendar, approved decision configuration | All 16 weekly action rows, shared caps, dependent breadth/authorship/reception and configurable candidate rules tested; maintenance and other configuration pending |
-| T03 Persistence | Canonical events/outbox, immutable period revisions, assurance proofs, ballot uniqueness, selections/claims | Immutable monthly/weekly revisions, contribution evidence, source receipts and Jobs transactions tested; full ledger and migration pending |
+| T02 Canonical policy | Validated catalogue, cap groups, pure best-four/bands, candidate calendar, approved decision configuration | All 22 action calculations represented; weekly and maintenance candidate rules tested; operational approvals remain pending |
+| T03 Persistence | Canonical events/outbox, immutable period revisions, assurance proofs, ballot uniqueness, selections/claims | Immutable monthly/weekly revisions, canonical email proofs, assembly reports, source receipts and Jobs transactions tested; selections/claims and migration pending |
 | T04 Earning | Real post/discussion/specialist/reception/authorship events and dependency reversals | Canonical post/comment producers, publication milestone, declarations/authorship, duplicate withholding and corrections tested; contextual acceptance, specialist/reception producers and peer participation remain to integrate |
-| T05 Security | Reuse normal validated auth events; capability-aware integrity, credential continuity, Turnstile/refresher | Coordinate with separate disabled passkey work; D07/D08/provider gates pending |
+| T05 Security | Reuse normal validated auth events; capability-aware integrity, credential continuity, Turnstile/refresher | Actual email verification feeds bound evidence, including scoring pauses; full-month coverage/assessment calculations tested; other real providers, renewal workflow and D07/D08 activation remain gated |
 | T06 Peer review | Private timed electorate, equal ballots/history, close transaction, scoped override, restricted route | Public/admin routes, transactional ballots/closure, scoped restoration, earning corrections and private notices tested; ballot earning, specialist/unresolved execution, D09/D11/D13 activation and Flutter remain |
 | T07 Rewards/partners | Persistent Free/Premium/Black selections, proposals, consent/email linkage, QR/invoice idempotency | Commercial terms and approved offers pending; no fake merchants |
 | T08 Flutter | Existing Rewards tabs, profile tracker, real contribution/review forms, complete states | Depends on authoritative API slices; no parallel route |
@@ -117,14 +121,68 @@ code and executable evidence separately. Passing arithmetic tests does not prove
 provider operation, user workflows, migration or activation.
 
 The monthly source writer accepts settled aggregate evidence from a trusted internal
-caller; weekly producers are not yet joined with maintenance/email evidence to invoke
-it. Real action evidence has stable contribution and week identities, with transactional
+caller. Scheduled monthly assembly joins settled weekly results and maintenance/email
+evidence, then atomically writes the immutable source, private report and assessment
+request. Real action evidence has stable contribution and week identities, with transactional
 deduplication, revisions and scheduled settlement. Remaining proof provenance and DSR
 workflow integration are required before production collection. A shadow result is
 never a confirmed entitlement. Appeal eligibility now comes from fresh registered,
 verified-account and scoped restriction checks, without reputation, subscription,
 training or age gates. Peer participation is recorded as evidence at final closure;
 the proposed weekly participation award is not yet connected to earning.
+
+## Maintenance and monthly assembly
+
+`monthly_reputation_maintenance.sql` remains a disposable schema proposal. Ordinary
+email verification records the consumed canonical token reference and a private
+digest of the keyed email binding in the same authentication transaction. No email
+address, token, password or client-supplied point value becomes scoring evidence.
+Duplicate proof delivery uses a transaction lock and returns the original receipt.
+Renewals replace validity rather than accumulating a component. A dedicated
+quarterly renewal workflow still needs implementation and shared contract coordination.
+
+Collection requires the explicit environment rule version, matching policy flag
+row and immutable `collection_privacy_version = monthly-privacy-v1` prerequisite.
+That prerequisite must remain absent in deployed configuration until actual DSR
+export/locator integration is complete and reviewed. Synthetic fixtures explicitly
+set it; they do not approve collection. A disabled scoring flag pauses assembly
+while configured canonical proof capture and revocation continue. Missing flags or
+configuration stay inert. Capability defaults explicitly mark integrity, credential,
+MFA, challenge and refresher unavailable rather than manufacturing observations.
+
+Assembly requires settlement, each whole week's latest locked revision, and a
+drained canonical source backlog for the actual author and original work period.
+Unprocessed events, including late corrections and batches larger than 50, prevent
+a false settled zero. Missing weeks carry explicit before-collection, before-account
+or no-recorded-activity reasons. Source revisions preserve all selected and omitted
+weeks; replay returns the stored report, and changed evidence appends a correction.
+
+Narrow database functions lock and freshly check the subject. Insert guards and
+soft-delete erasure cover observations, earning revisions, sources, assessments,
+reports and their derived outbox/inbox events. Both an assembly waiting on the month
+lock and an assessment interrupted before insertion fail to resurrect deleted data.
+Lifecycle triggers check the existing feature row before reading proposal tables.
+First writes lock that row, and removal/relabeling is refused while executable
+configuration or evidence requires the erasure protocol. Pausing its enabled bit
+remains available. Actual AccountExportWorkflow/locator integration is still pending.
+
+Ordinary deletion preserves already accepted legitimate contribution evidence and
+its original work identity, fingerprint, week and cap. Independent invalidation
+still appends a correction, including a block delivered after physical content
+purge. No raw content body is retained in the earning record.
+
+Node 22.23.3 verifies 38 policy cases (100% lines, 98.87% branches), 13 real
+maintenance/assembly PostgreSQL cases (99.10%, 95.35%) and 10 earning cases
+(96.17%, 95.04%). Native typechecking passes. These are scoped tests, not proof that
+all 100 application acceptance cases or real provider workflows pass.
+
+The shared-database CI outbox race is fixed separately at
+`76de6afdd65efd6269793bad070a67549f32da36`: suite files now run sequentially while
+intentional in-test concurrency remains. An unrelated scheduled worker could claim
+another fixture's password-change notice without encryption keys and defer it before
+the auth fixture's relay. The exact historical claimant is unobserved. Dedicated
+PostgreSQL run `37118705848` passes authentication, coordinator, beta and alpha;
+this does not establish a live email failure or rewards regression.
 
 ## Private community appeal transactions
 

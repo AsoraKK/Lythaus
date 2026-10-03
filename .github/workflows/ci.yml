@@ -94,6 +94,7 @@ jobs:
           --test packages/contracts/tests/monthly-reputation.test.mjs
           packages/contracts/tests/monthly-peer-appeal.test.mjs
           packages/contracts/tests/monthly-earning.test.mjs
+          packages/contracts/tests/monthly-maintenance.test.mjs
       - run: npm run test:critical-coverage
       - run: npm run test:authenticity-foundation
       - run: npm run test:database-identity

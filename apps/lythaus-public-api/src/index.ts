@@ -28,6 +28,7 @@ import { parseWaitlistRequest, requireWaitlistSecrets, verifyWaitlistTurnstile }
 import { communityReviewQueue, readCommunityAppeal } from '../../../packages/db/src/community-appeal-access.ts';
 import { castCommunityBallot, submitCommunityAppeal, withdrawCommunityAppeal, type CommunityBallotInput } from '../../../packages/db/src/community-appeal-mutations.ts';
 import { MONTHLY_REPUTATION_POLICY_VERSION } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
+import { recordMonthlyEmailControl } from '../../../packages/db/src/monthly-maintenance.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -39,6 +40,7 @@ interface Env extends EnvBindings {
   R2_ACCOUNT_ID: string;
   LYTHAUS_CONFIG?: NonNullable<EnvBindings['LYTHAUS_CONFIG']>;
   COMMUNITY_APPEAL_RULES_VERSION?: string;
+  MONTHLY_REPUTATION_MAINTENANCE_RULES?: string;
 }
 
 function hasReadinessAuthorization(request: Request, env: Env): boolean {
@@ -690,6 +692,10 @@ async function verifyEmail(request: Request, env: Env): Promise<Response> {
        VALUES ($1, 'identity.email.verified', 'user', $2, $2, $3::jsonb)`,
       [sourceEventId, userId, JSON.stringify({ userId })],
     );
+    if (env.MONTHLY_REPUTATION_MAINTENANCE_RULES) {
+      await recordMonthlyEmailControl(client, { rulesVersion: env.MONTHLY_REPUTATION_MAINTENANCE_RULES,
+        sourceEventId, verificationTokenId: found.rows[0].id });
+    }
     await writeActivity(client, request, { userId }, sourceEventId, {
       eventType: 'account.email_verified', category: 'account', title: 'You verified your email',
       explanation: 'Your registered email was verified. The email address is not copied into this log.',

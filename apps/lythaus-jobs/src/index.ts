@@ -12,6 +12,7 @@ import { processBetaEvent, expireBetaWork } from './authenticity-beta.ts';
 import { processAlphaEvent, expireAlphaWork } from './authenticity-alpha.ts';
 import { deferMonthlyReputationAssessment, processMonthlyReputationAssessment, reconcileDeferredMonthlyReputation } from './monthly-reputation.ts';
 import { processMonthlyEarningEvent, reconcileMonthlyEarning } from './monthly-earning.ts';
+import { reconcileMonthlyAssembly } from './monthly-assembly.ts';
 import { reconcileCommunityAppeals } from './community-appeals.ts';
 import { identicalCommunityAppealOverride } from '../../../packages/db/src/community-appeal-closure.ts';
 import { MONTHLY_EARNING_SOURCE_EVENTS } from '../../../packages/db/src/monthly-earning.ts';
@@ -24,6 +25,7 @@ interface Env extends EnvBindings {
   DB_JOBS_FRESH: HyperdriveBinding;
   DB_PRIVACY_FRESH: HyperdriveBinding;
   MONTHLY_REPUTATION_SHADOW_RULES?: string;
+  MONTHLY_REPUTATION_MAINTENANCE_RULES?: string;
   COMMUNITY_APPEAL_RULES_VERSION?: string;
   MODERATION_QUEUE?: Queue;
   FEED_QUEUE?: Queue;
@@ -1923,6 +1925,7 @@ export default {
     if (env.AUTHENTICITY_ALPHA_ENABLED === 'true') await expireAlphaWork(env);
     await reconcileDeferredMonthlyReputation(env);
     await reconcileMonthlyEarning(env);
+    await reconcileMonthlyAssembly(env);
     await reconcileCommunityAppeals(env);
     await relayTransactionalEmailOutbox(env);
     await relayOutbox(env);
