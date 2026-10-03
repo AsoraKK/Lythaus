@@ -20,13 +20,15 @@ class PrivacyController extends StateNotifier<PrivacyState> {
     required PrivacyRepository repository,
     required AppLogger logger,
     required AnalyticsClient analyticsClient,
+    AnalyticsClient Function()? analyticsClientForOperation,
     DateTime Function()? clock,
     Future<void> Function()? onSignOut,
     bool Function()? isCurrentSession,
   }) : _ref = ref,
        _repository = repository,
        _logger = logger,
-       _analyticsClient = analyticsClient,
+       _analyticsClientForOperation =
+           analyticsClientForOperation ?? (() => analyticsClient),
        _now = clock ?? DateTime.now,
        _isCurrentSession = isCurrentSession ?? (() => true),
        _signOut =
@@ -38,7 +40,7 @@ class PrivacyController extends StateNotifier<PrivacyState> {
   final Ref _ref;
   final PrivacyRepository _repository;
   final AppLogger _logger;
-  final AnalyticsClient _analyticsClient;
+  final AnalyticsClient Function() _analyticsClientForOperation;
   final DateTime Function() _now;
   final Future<void> Function() _signOut;
   final bool Function() _isCurrentSession;
@@ -120,7 +122,9 @@ class PrivacyController extends StateNotifier<PrivacyState> {
     final token = await _token();
     if (token == null || !_current(epoch)) return;
     try {
-      await _analyticsClient.logEvent(AnalyticsEvents.privacyExportRequested);
+      await _analyticsClientForOperation().logEvent(
+        AnalyticsEvents.privacyExportRequested,
+      );
       if (!_current(epoch)) return;
       final snapshot = await _repository.requestExport(authToken: token);
       if (_current(epoch)) _applySnapshot(snapshot);
@@ -143,7 +147,9 @@ class PrivacyController extends StateNotifier<PrivacyState> {
     final token = await _token();
     if (token == null || !_current(epoch)) return;
     try {
-      await _analyticsClient.logEvent(AnalyticsEvents.privacyDeleteRequested);
+      await _analyticsClientForOperation().logEvent(
+        AnalyticsEvents.privacyDeleteRequested,
+      );
       if (!_current(epoch)) return;
       final result = await _repository.deleteAccount(authToken: token);
       if (_current(epoch)) _applyDeletion(result);
@@ -333,7 +339,8 @@ final privacyControllerProvider =
         ref: ref,
         repository: ref.watch(privacyRepositoryProvider),
         logger: ref.watch(appLoggerProvider),
-        analyticsClient: ref.watch(analyticsClientProvider),
+        analyticsClient: ref.read(analyticsClientProvider),
+        analyticsClientForOperation: () => ref.read(analyticsClientProvider),
         isCurrentSession: () =>
             session.revision == revision &&
             ref.read(currentUserProvider)?.id == actor,

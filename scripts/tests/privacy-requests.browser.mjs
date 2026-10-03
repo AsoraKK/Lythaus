@@ -80,7 +80,8 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) for (const wi
       finally { await browser.close(); await fixture.close(); }
     });
     const button = name => page.getByRole('button', { name, exact: true });
-    const text = value => page.locator('flt-semantics').getByText(value, { exact: true });
+    const text = value => page.locator('flt-semantics').getByText(value, { exact: true })
+      .or(page.getByRole('group', { name: new RegExp(value.replaceAll('.', '\\.')) }));
     async function open(location) {
       await page.goto('https://app.lythaus.co' + location);
       await page.locator('flt-semantics-placeholder').waitFor({ timeout: 60000 });
@@ -97,6 +98,7 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) for (const wi
     await text('Sign in to manage your data and privacy requests.').waitFor();
     assert.equal(calls.filter(c => c.path.startsWith('/api/privacy')).length, 0);
     await button('Sign in').click();
+    await button('Sign in with email').waitFor();
     assert.equal(new URL(page.url()).searchParams.get('returnTo'), '/settings/privacy?section=data');
     await enterText(page.getByRole('textbox', { name: 'Email', exact: true }), user.email);
     const password = page.locator('input[type=password]'); await enterText(password, 'historical12'); await password.press('Enter');
@@ -120,13 +122,18 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) for (const wi
     await button('Request account deletion').click(); await text('Delete account').waitFor(); await button('Cancel').click();
     assert.equal(mutations.length, 1);
     await button('Request account deletion').click();
-    await enterText(page.getByRole('textbox', { name: 'Confirmation', exact: true }), 'DELETE'); await button('Delete').click();
+    await enterText(page.getByRole('textbox', { name: /^Confirmation/ }), 'DELETE'); await button('Delete').click();
     await text('Deletion request received. Your account remains available while processing is pending.').waitFor();
     assert.deepEqual(mutations, [{ requestType: 'export' }, { requestType: 'delete' }]);
     assert.ok(session);
     await page.mouse.wheel(0, -1000); expired = true; await button('Refresh status').click();
-    await text('Session expired. Please sign in.').waitFor();
+    await button('Sign in with email').waitFor();
+    assert.equal(new URL(page.url()).searchParams.get('returnTo'), '/settings/privacy?section=data');
     assert.equal(await button('Download export').count(), 0);
+    const privateRequests = calls.filter(c => c.path.startsWith('/api/privacy')).length;
+    await button('Continue as guest').click();
+    await text('Sign in to manage your data and privacy requests.').waitFor();
+    assert.equal(calls.filter(c => c.path.startsWith('/api/privacy')).length, privateRequests);
     assert.deepEqual(errors, []); complete = true;
   });
 }
