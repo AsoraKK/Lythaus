@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
@@ -65,21 +66,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.notifications_none),
               title: const Text('Notifications'),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const NotificationsScreen(),
-                ),
-              ),
+              onTap: () {
+                final router = GoRouter.maybeOf(context);
+                if (router != null) {
+                  router.go('/notifications');
+                } else {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const NotificationsScreen(),
+                    ),
+                  );
+                }
+              },
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.notifications_outlined),
               title: const Text('Notification settings'),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const NotificationsSettingsScreen(),
-                ),
-              ),
+              onTap: () {
+                final router = GoRouter.maybeOf(context);
+                if (router != null) {
+                  router.go(
+                    GoRouterState.of(
+                      context,
+                    ).uri.replace(path: '/settings/notifications').toString(),
+                  );
+                  return;
+                }
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const NotificationsSettingsScreen(),
+                  ),
+                );
+              },
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,

@@ -426,27 +426,24 @@ void main() {
   // ─────── getTrendingFeed / getLocalFeed / getNewCreatorsFeed / getFollowingFeed ───────
 
   group('getTrendingFeed', () {
-    test('returns parsed response', () async {
-      adapter.respondWith({
-        'success': true,
-        'data': {
-          'posts': <dynamic>[],
-          'hasMore': false,
-          'totalCount': 0,
-          'page': 1,
-          'pageSize': 20,
-        },
-      });
-
-      final result = await service.getTrendingFeed();
-      expect(result.posts, isEmpty);
+    test('truthfully reports the unavailable native contract', () async {
+      await expectLater(
+        service.getTrendingFeed(),
+        throwsA(
+          isA<SocialFeedException>().having(
+            (e) => e.code,
+            'code',
+            'TRENDING_UNAVAILABLE',
+          ),
+        ),
+      );
     });
 
     test('throws when a successful payload is not a map', () async {
       adapter.respondWith({'success': true, 'data': 'invalid'});
 
       expect(
-        () => service.getTrendingFeed(),
+        () => service.getFollowingFeed(token: 'test-token'),
         throwsA(isA<SocialFeedException>()),
       );
     });
@@ -543,12 +540,15 @@ void main() {
 
   // ─────── _handleFeedResponse ───────
 
-  group('_handleFeedResponse (via getTrendingFeed)', () {
+  group('_handleFeedResponse (via getFollowingFeed)', () {
     test('throws on null data', () async {
       // Respond with empty map that triggers null/invalid path
       adapter.respondWith(<String, dynamic>{});
 
-      expect(() => service.getTrendingFeed(), throwsA(anything));
+      expect(
+        () => service.getFollowingFeed(token: 'test-token'),
+        throwsA(anything),
+      );
     });
   });
 

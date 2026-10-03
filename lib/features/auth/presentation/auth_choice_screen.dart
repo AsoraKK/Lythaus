@@ -21,9 +21,16 @@ import 'package:lythaus/features/auth/presentation/invite_redeem_screen.dart';
 import 'package:lythaus/screens/security_debug_screen.dart';
 
 class AuthChoiceScreen extends ConsumerStatefulWidget {
-  const AuthChoiceScreen({super.key, this.launchAuthPage});
+  const AuthChoiceScreen({
+    super.key,
+    this.launchAuthPage,
+    this.onSignedIn,
+    this.onContinueAsGuest,
+  });
 
   final Future<bool> Function(Uri)? launchAuthPage;
+  final VoidCallback? onSignedIn;
+  final VoidCallback? onContinueAsGuest;
 
   @override
   ConsumerState<AuthChoiceScreen> createState() => _AuthChoiceScreenState();
@@ -128,6 +135,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
           AnalyticsEvents.propIsNewUser: false,
         },
       );
+      widget.onSignedIn?.call();
     }
   }
 
@@ -137,6 +145,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
       properties: {AnalyticsEvents.propMethod: 'guest'},
     );
     await ref.read(authStateProvider.notifier).continueAsGuest();
+    if (!mounted) return;
     _track(
       AnalyticsEvents.authCompleted,
       properties: {
@@ -144,6 +153,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
         AnalyticsEvents.propIsNewUser: false,
       },
     );
+    widget.onContinueAsGuest?.call();
   }
 
   bool _isValidEmail(String value) {

@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/ui/components/lythaus_bottom_nav.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
+import 'package:lythaus/ui/components/sign_in_required.dart';
 import 'package:lythaus/ui/screens/create/create_screen.dart';
 import 'package:lythaus/ui/screens/home/home_feed_navigator.dart';
 import 'package:lythaus/ui/screens/profile/profile_screen.dart';
@@ -51,13 +52,6 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
   }
 
   void _onTabTapped(int index) {
-    final isGuest = ref.read(guestModeProvider);
-    if (isGuest && index == 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sign in to use this Alpha feature.')),
-      );
-      return;
-    }
     if (index == _currentIndex) return;
     setState(() {
       _history.add(_currentIndex);
@@ -139,15 +133,20 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
     final currentUser = ref.watch(currentUserProvider);
     final tabs = <Widget>[
       const HomeFeedNavigator(section: AlphaFeedSection.discover),
-      const CreateScreen(),
+      currentUser == null
+          ? const Scaffold(
+              body: SignInRequired(
+                message: 'Sign in to create a post.',
+                returnTo: '/?tab=create',
+              ),
+            )
+          : const CreateScreen(),
       const ProfileScreen(),
       currentUser == null
           ? const Scaffold(
-              body: Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text('Sign in to view your rewards.'),
-                ),
+              body: SignInRequired(
+                message: 'Sign in to view your rewards.',
+                returnTo: '/?tab=rewards',
               ),
             )
           : const RewardsDashboardScreen(),

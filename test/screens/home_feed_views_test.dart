@@ -296,7 +296,10 @@ void main() {
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
 
-    expect(find.text('Search is unavailable right now.'), findsOneWidget);
+    expect(
+      find.text('Could not load search. Please try again.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('feed search clear button resets query', (tester) async {

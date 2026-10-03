@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/feed/presentation/content_editor_screen.dart';
@@ -216,12 +217,22 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   }
 
   void _openTrending() {
+    final router = GoRouter.maybeOf(context);
+    if (router != null) {
+      router.go('/trending');
+      return;
+    }
     Navigator.of(
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => const TrendingFeedScreen()));
   }
 
   void _openSearch() {
+    final router = GoRouter.maybeOf(context);
+    if (router != null) {
+      router.go('/search');
+      return;
+    }
     Navigator.of(
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => const FeedSearchScreen()));

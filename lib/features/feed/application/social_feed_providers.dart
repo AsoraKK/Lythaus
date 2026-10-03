@@ -12,6 +12,7 @@ import 'package:lythaus/features/feed/domain/models.dart';
 import 'package:lythaus/features/feed/application/social_feed_service.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/auth_required_exception.dart';
 import 'package:lythaus/core/security/device_integrity_guard.dart';
 import 'package:lythaus/core/error/error_codes.dart';
 
@@ -38,16 +39,12 @@ final feedSearchProvider = FutureProvider.family<FeedResponse, String>((
   ref,
   query,
 ) async {
-  final feedService = ref.read(socialFeedServiceProvider);
-  final token = await ref.read(jwtProvider.future);
-  return feedService.getFeed(
-    params: FeedParams(
-      type: FeedType.notable,
-      page: 1,
-      pageSize: 20,
-      tags: [query],
-    ),
-    token: token,
+  if (ref.watch(guestModeProvider)) throw const AuthRequiredException();
+  final token = await ref.watch(jwtProvider.future);
+  if (token == null || token.isEmpty) throw const AuthRequiredException();
+  throw const SocialFeedException(
+    'Tag search is not available yet.',
+    code: 'SEARCH_UNAVAILABLE',
   );
 });
 

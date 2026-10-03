@@ -11,7 +11,10 @@ import 'package:mocktail/mocktail.dart';
 import 'package:lythaus/design_system/index.dart';
 
 class MockNotificationApiService extends Mock
-    implements NotificationApiService {}
+    implements NotificationApiService {
+  @override
+  bool get isCurrentSession => true;
+}
 
 Widget _buildTestWidget({required NotificationApiService api}) {
   return ProviderScope(

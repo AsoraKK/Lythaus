@@ -138,6 +138,24 @@ const externalFragmentPaths = Array.from(
 );
 
 describe('product-integrity OpenAPI parity', () => {
+  test('guest UI keeps protected feeds private and unavailable contracts truthful', () => {
+    expect(workers.public).toContain("url.pathname === '/api/feed') return await getPersonalFeed(request, env, await principal(request, env))");
+    expect(workers.public).toContain("const user = request.headers.has('authorization') ? await principal(request, env) : undefined;\n        return await discoveryFeed(request, env, user)");
+    expect(workers.public).not.toContain("url.pathname === '/api/feed/trending'");
+    expect(spec.paths['/feed/trending']).toBeUndefined();
+    const personalFeed = workers.public.split('async function getPersonalFeed(')[1].split('async function getPost(')[0];
+    expect(personalFeed).not.toMatch(/searchParams\.get\(['"]tags/);
+    const client = fs.readFileSync(path.join(root, 'lib/features/feed/application/social_feed_service.dart'), 'utf8');
+    const trending = client.split('Future<FeedResponse> getTrendingFeed(')[1].split('@override')[0];
+    expect(trending).toContain('TRENDING_UNAVAILABLE');
+    expect(trending).not.toContain('_dio.');
+    const providers = fs.readFileSync(path.join(root, 'lib/features/feed/application/social_feed_providers.dart'), 'utf8');
+    const search = providers.split('final feedSearchProvider =')[1].split('/// Provider for local feed')[0];
+    expect(search).toContain('AuthRequiredException');
+    expect(search).toContain('SEARCH_UNAVAILABLE');
+    expect(search).not.toContain('getFeed(');
+  });
+
   test('each runtime route and verb is declared by the bundled contract', () => {
     for (const route of runtimeRoutes) {
       expect(spec.paths?.[route.path]?.[route.method]).toBeDefined();

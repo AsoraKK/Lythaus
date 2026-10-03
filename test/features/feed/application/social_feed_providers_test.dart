@@ -302,7 +302,7 @@ void main() {
     await container.read(commentsProvider(commentParams).notifier).refresh();
   });
 
-  test('feed search and auth token providers resolve', () async {
+  test('tag search is unavailable and auth token provider resolves', () async {
     final repo = FakeSocialFeedRepository();
     final container = ProviderContainer(
       overrides: [
@@ -312,8 +312,16 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    final search = await container.read(feedSearchProvider('tag').future);
-    expect(search.posts, hasLength(1));
+    await expectLater(
+      container.read(feedSearchProvider('tag').future),
+      throwsA(
+        isA<SocialFeedException>().having(
+          (e) => e.code,
+          'code',
+          'SEARCH_UNAVAILABLE',
+        ),
+      ),
+    );
 
     final token = await container.read(authTokenProvider.future);
     expect(token, 'token');

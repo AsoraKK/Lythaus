@@ -23,6 +23,7 @@ import 'package:lythaus/design_system/components/lyth_snackbar.dart';
 import 'package:lythaus/ui/components/tier_badge.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 import 'package:lythaus/ui/screens/profile/settings_screen.dart';
+import 'package:lythaus/ui/components/sign_in_required.dart';
 import 'package:lythaus/ui/screens/profile/edit_profile_screen.dart';
 import 'package:lythaus/ui/screens/profile/reputation_ledger_screen.dart';
 import 'package:lythaus/state/providers/reputation_providers.dart';
@@ -44,8 +45,9 @@ class ProfileScreen extends ConsumerWidget {
       return ReadingPane(
         child: Scaffold(
           appBar: AppBar(title: const Text('Profile')),
-          body: const Center(
-            child: Text('Sign in to view your profile details.'),
+          body: const SignInRequired(
+            message: 'Sign in to view your profile details.',
+            returnTo: '/?tab=profile',
           ),
         ),
       );
