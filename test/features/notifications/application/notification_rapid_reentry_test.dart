@@ -99,15 +99,9 @@ void main() {
       container.read(session.notifier).state = user();
       await container.pump();
       final current = container.read(notificationsControllerProvider.notifier);
-      print(
-        'same controller after rapid same-account reentry: ${identical(old, current)}',
-      );
       await current.loadNotifications();
       adapter.pending.complete();
       await dismissing;
-      print(
-        'current private rows after old dismiss ack: ${container.read(notificationsControllerProvider).notifications.length}',
-      );
       expect(current, isNot(same(old)));
       expect(
         container.read(notificationsControllerProvider).notifications,
