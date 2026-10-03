@@ -28,6 +28,7 @@ embedded reference-validation counts are not execution evidence for this branch.
 - BS: [maintenance, assembly and lifecycle proposal](../../database/planetscale/proposals/monthly_reputation_maintenance.sql), outside the approved production manifest. Collection privacy prerequisite is unset until export/locator integration review.
 - V / VS: [final peer participation consumer](../../packages/db/src/monthly-peer-participation.ts), [invoked queue/scheduled adapter](../../apps/lythaus-jobs/src/monthly-peer-participation.ts) / [separately gated proposal](../../database/planetscale/proposals/monthly_reputation_peer_participation.sql); CT verifies the real closure-to-weekly-result path.
 - X / XT / XS: [scoped contextual review](../../packages/db/src/monthly-context-review.ts), [dependency reconciliation](../../packages/db/src/monthly-context-dependencies.ts), [authenticated admin mutation](../../apps/lythaus-admin-api/src/monthly-context-review.ts) / [20 real PostgreSQL cases](../../apps/lythaus-jobs/tests/monthly-context.postgres.mjs) / [separately gated proposal](../../database/planetscale/proposals/monthly_reputation_context.sql). CT additionally verifies actual equal-vote restoration through the admin route and retained publication proof.
+- S / ST / SS: [fixed snapshot and correction transactions](../../packages/db/src/monthly-reward-snapshots.ts), [invoked queue/reconciler](../../apps/lythaus-jobs/src/monthly-reward-snapshots.ts) / [19 real PostgreSQL cases](../../apps/lythaus-jobs/tests/monthly-reward-snapshots.postgres.mjs) / [separately gated proposal](../../database/planetscale/proposals/monthly_reward_snapshots.sql). Confirmed fixtures require explicit synthetic approvals; deployed configuration remains absent.
 
 A unit-verified row establishes only the named calculation. A partial row still
 requires the remaining application, privacy, provider or release work. No new
@@ -38,7 +39,7 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 
 | ID | Required acceptance case | Code / test evidence | Status and limits |
 | --- | --- | --- | --- |
-| CAL-01 | Exactly four eligible weekly results sum normally; no missing-month carry. | M, B / MT, BT | Authoritative shadow assembly verified; fixed live snapshot/activation pending |
+| CAL-01 | Exactly four eligible weekly results sum normally; no missing-month carry. | M, B, S / MT, BT, ST | Authoritative assembly and separate fixed snapshot verified; UTC settlement also tested in positive/negative database timezones; activation pending |
 | CAL-02 | Five results select the highest four complete totals; the fifth remains reported. | M, E, B / MT, ET, BT | Real publication + email assembly and stored omitted week verified; product report pending |
 | CAL-03 | Selection never combines best values from different weeks per action. | M, B / MT, BT | Whole server week totals assembled and assessed; activation pending |
 | CAL-04 | Every month over at least a 40-year calendar range has four or five closing Sundays under D01. | D / MT | Candidate D01 unit verified; approval pending |
@@ -47,17 +48,17 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | CAL-07 | Leap February, year boundaries, local daylight-saving changes and UTC cutoffs remain correct. | D / MT | Candidate D01 unit verified; approval pending |
 | CAL-08 | Tied scores have deterministic selected-week ordering. | M / MT | Unit verified; live earning not integrated |
 | CAL-09 | New/partial source months do not fabricate missing weeks. | M, B / MT, BT | Account/collection cutoffs, explicit absent weeks and >50-event drain verified; activation pending |
-| CAL-10 | The 11,700 best-four example produces L5 only in the next month. | M, P, J, SQL / MT, PT | Partial: shadow persistence verified; full product flow pending |
-| CAL-11 | Month A 8,900 produces month B L4; month B 12,150 produces month C L5. | M, P, J, SQL / MT, PT | Partial: shadow persistence verified; full product flow pending |
-| CAL-12 | Current-month progress cannot upgrade/downgrade the already-confirmed current-month level. | M, P, J, SQL / MT, PT | Partial: shadow persistence verified; full product flow pending |
+| CAL-10 | The 11,700 best-four example produces L5 only in the next month. | M, P, J, S / MT, PT, ST | Exact arithmetic example unit-tested; separate server snapshot verifies next-month assignment from real publication; full example product journey pending |
+| CAL-11 | Month A 8,900 produces month B L4; month B 12,150 produces month C L5. | M, P, J, S / MT, PT, ST | Exact examples unit-tested; snapshot scope and future-month refusal verified; full two-month product journey pending |
+| CAL-12 | Current-month progress cannot upgrade/downgrade the already-confirmed current-month level. | M, P, J, S / MT, PT, ST | Server snapshot remains fixed through later activity/source correction; only independently approved correction appends history; unassessed/future/cutover states tested; UI pending |
 | CAL-13 | Maximum allowed components total 13,500; out-of-range components are rejected. | M / MT | Unit verified; live earning not integrated |
 | CAL-14 | Every threshold neighbour 999/1,000, 2,999/3,000, 5,999/6,000 and 9,999/10,000 maps correctly. | M / MT | Unit verified; live earning not integrated |
 | CAL-15 | No age, plan, World or old pillar gate changes the new score-derived level. | M / MT | Unit verified; live earning not integrated |
 | CAL-16 | Email proof expiry at the exact cutoff and a new proof after cutoff are handled correctly. | D, H, B / MT, HT, BT | Actual initial verification/paused capture/revocation and historical cutoff verified; renewal API and D08 approval pending |
 | CAL-17 | Calendar-month addition handles 29/30/31-day dates without unapproved 90-day substitution. | D, H / MT, HT | Calendar validity candidate verified; D08 activation pending |
-| CAL-18 | A weekly correction reselects all candidates; the previous fifth can enter the chosen four. | M, E, B / MT, ET, BT | Real independent invalidation reassembles and reselects the fifth; old reports retained |
+| CAL-18 | A weekly correction reselects all candidates; the previous fifth can enter the chosen four. | M, E, B, S / MT, ET, BT, ST | Real independent invalidation reassembles and reselects the fifth; approved scoped snapshot correction retains old reports/levels; obsolete approval drains durably |
 | CAL-19 | On-time evidence approved late retains its performance period and audited correction path. | M, E, B, X / MT, ET, BT, XT | Late scoped acceptance retains original week; actual assembly refuses undrained/mismatched contextual configuration and drains the stored version; specialist acceptance pending |
-| CAL-20 | End-of-month job replay, overlap and restart cannot publish duplicate entitlements. | P, J, B / PT, BT | Atomic assembly/queue replay, scheduled reconciliation and failure rollback verified; live entitlement publisher pending |
+| CAL-20 | End-of-month job replay, overlap and restart cannot publish duplicate entitlements. | P, J, B, S / PT, BT, ST | Atomic assembly and separate snapshot queue/reconciliation replay, concurrent publication and outbox rollback verified; partner claim consumer and activation pending |
 | PTS-01 | Three accepted human posts award 250 once; two do not; six do not award 500. | W, E, ES / WT, ET | Shadow producer and concurrent real-source transactions verified; activation pending |
 | PTS-02 | Duplicate, generated, disallowed or self-manufactured content cannot satisfy a contribution milestone. | W, E / WT, ET | Exact duplicate, generated/disallowed publication and self-approval checks verified; broader manipulation adjudication pending |
 | PTS-03 | A short meaningful comment can qualify without a word-count or formal-language gate. | W, E, X / WT, XT, CT | Actual short stored comment independently accepted and credited, including peer-restored publication and deletion before Jobs; D05 rubric approval and product form pending |
@@ -117,7 +118,7 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | PAR-01 | Free L5 remains profile L5 but has at most L3 access for its one selected reward family. | T07 | Planned; no test execution claimed |
 | PAR-02 | Premium cannot obtain five L5 slots; plan/level changes preserve dormant selections correctly. | T07 | Planned; no test execution claimed |
 | PAR-03 | Simultaneous claims/selections cannot exceed slot, inventory or usage limits. | T07 | Planned; no test execution claimed |
-| PAR-04 | Month B entitlement comes from month A, not month B projection. | T07 | Planned; no test execution claimed |
+| PAR-04 | Month B entitlement comes from month A, not month B projection. | S / ST | Authoritative fixed next-month snapshot and independent correction verified; actual partner redemption consumer pending |
 | PAR-05 | An authorised linked-email lookup works; unknown, unlinked and other-partner addresses cannot enumerate members. | T07 | Planned; no test execution claimed |
 | PAR-06 | Response contains no points, security method, case history or private content. | T07 | Planned; no test execution claimed |
 | PAR-07 | Email change, consent revocation, recovery and recycled addresses cannot inherit the wrong link. | T07 | Planned; no test execution claimed |
@@ -133,11 +134,11 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | RPT-01 | Own report reproduces the exact stored calculation and lists the omitted fifth week. | M, P, B / MT, PT, BT | Immutable server assembly/report parity and omitted fifth verified; own API/Flutter report pending coordination |
 | RPT-02 | Public policy is inspectable, but another member's private report and ballot identity are inaccessible. | T09 | Planned; no test execution claimed |
 | RPT-03 | JSON/CSV/report links obey authorisation, expiry, CSV injection protection and data minimisation. | T09 | Planned; no test execution claimed |
-| RPT-04 | DSR export/delete, proof revocation, content purge and retained-audit redaction work end to end. | E, B, BS, X, XS / ET, BT, XT, CT | Isolated soft-delete erasure, assembly/assessment races and ordinary purge versus independent invalidation verified; actual export/locator/reviewer retention workflow remains gated before collection |
-| REL-01 | Cached consent/standing cannot approve a stale vote or redemption; fresh Hyperdrive reads are used. | M, P, J, SQL / MT, PT | Partial: shadow persistence verified; full product flow pending |
-| REL-02 | Queue duplicate/out-of-order delivery and worker crash do not duplicate awards or miss corrections. | P, J, E, B, V, X / PT, ET, BT, CT, XT | Includes context version/backlog isolation, reapproval before soft/purge delivery, dependency fanout, peer rollback/retry and prior earning/assembly races; specialist/reception consumers remain |
+| RPT-04 | DSR export/delete, proof revocation, content purge and retained-audit redaction work end to end. | E, B, BS, X, XS, S, SS / ET, BT, XT, CT, ST | Isolated soft-delete erasure, assembly/assessment/snapshot races, corrected-chain staff notices and ordinary purge versus independent invalidation verified; actual export/locator/reviewer retention workflow remains gated before collection |
+| REL-01 | Cached consent/standing cannot approve a stale vote or redemption; fresh Hyperdrive reads are used. | C, S / CT, ST | Fresh vote eligibility, correction reviewer revocation, configuration pause and subject-deletion races verified; partner consent/redemption checks pending |
+| REL-02 | Queue duplicate/out-of-order delivery and worker crash do not duplicate awards or miss corrections. | P, J, E, B, V, X, S / PT, ET, BT, CT, XT, ST | Includes snapshot publication/correction CAS, receipt guards, rollback and paused queue/backfill plus context/peer/earning/assembly races; specialist/reception consumers remain |
 | REL-03 | Migration dry run, rollback, policy activation and exact reviewed SHA are separately evidenced. | SQL / PT | Partial: local baseline and proposed schema only; release pending |
-| REL-04 | Critical P1/P2 coverage is at least 80%; feed p95 <200 ms target, load/failure testing, API validation and personalised-cache isolation are verified or explicitly reported unverified. | MT, AT, HT, PT, ET, BT, CT, XT | Current scoped coverage gates pass: policy 100/98.87, assembly 98.76/89.91, earning 92.07/80.45, appeal/participation 100/94.64, context 98.94/90.26 (line/branch); load/feed/new browser flows unverified |
+| REL-04 | Critical P1/P2 coverage is at least 80%; feed p95 <200 ms target, load/failure testing, API validation and personalised-cache isolation are verified or explicitly reported unverified. | MT, AT, HT, PT, ET, BT, CT, XT, ST | Scoped coverage gates pass: snapshot 99.35/90.00, policy 100/98.87, assembly 98.76/89.91, earning 92.07/80.45, appeal/participation 100/94.64, context 98.94/90.26 (line/branch); load/feed/new browser flows unverified |
 
 ## Additional ticket interface cases
 
@@ -162,6 +163,16 @@ The control-panel workstream owns the ticket backend.
 | Case history, export, redaction and erasure | Authorised private access only; no ticket body, attachments, contact details or staff notes leak through the ledger or public profile |
 
 ## Reproduction
+
+Local snapshot increment evidence on 3 October 2026:
+
+| Check | Result |
+| --- | --- |
+| Fixed snapshot/correction PostgreSQL suite | 19 passed, zero skipped; 99.35% lines, 90.00% branches; real canonical pipeline, fixed month, explicit correction history, concurrency, failure rollback, positive/negative session timezones, fresh authorization and erasure races |
+| Shadow and maintenance/assembly regressions | 9 shadow cases passed, 100% lines / 98.44% branches; 13 assembly cases passed, 98.76% / 89.91% |
+| Native typecheck, workflow YAML, matrix and independent review | Passed; 100 unique original IDs retained; both bounded read-only reviewers clear the final receipt/UTC fixes |
+| Settlement boundary fixture | Uses the nearest legal whole-hour cutoff around the actual server clock; explicitly skips only during the first UTC hour or after hour 720 of a month, when no such legal fixture exists; it executed without skips on 3 October |
+| Migration and activation | Proposal applied/removed in disposable PostgreSQL 17 only; no production migration, configuration or activation |
 
 Local contextual increment evidence on 3 October 2026:
 

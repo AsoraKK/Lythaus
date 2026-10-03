@@ -14,6 +14,7 @@ import { deferMonthlyReputationAssessment, processMonthlyReputationAssessment, r
 import { processMonthlyEarningEvent, reconcileMonthlyEarning } from './monthly-earning.ts';
 import { reconcileMonthlyAssembly } from './monthly-assembly.ts';
 import { processMonthlyPeerParticipation, reconcileMonthlyPeerParticipation } from './monthly-peer-participation.ts';
+import { processMonthlyRewardSnapshotEvent,reconcileMonthlyRewardSnapshots } from './monthly-reward-snapshots.ts';
 import { reconcileCommunityAppeals } from './community-appeals.ts';
 import { identicalCommunityAppealOverride } from '../../../packages/db/src/community-appeal-closure.ts';
 import { MONTHLY_EARNING_SOURCE_EVENTS } from '../../../packages/db/src/monthly-earning.ts';
@@ -29,6 +30,7 @@ interface Env extends EnvBindings {
   MONTHLY_REPUTATION_MAINTENANCE_RULES?: string;
   MONTHLY_REPUTATION_PEER_PARTICIPATION_RULES?: string;
   MONTHLY_REPUTATION_CONTEXT_RULES?: string;
+  MONTHLY_REPUTATION_SNAPSHOT_RULES?: string;
   COMMUNITY_APPEAL_RULES_VERSION?: string;
   MODERATION_QUEUE?: Queue;
   FEED_QUEUE?: Queue;
@@ -1701,6 +1703,8 @@ async function processMessage(message: QueueMessage, env: Env): Promise<void> {
     await processNotificationSource(message, env, eventId, eventType);
     if ((MONTHLY_EARNING_SOURCE_EVENTS as readonly string[]).includes(eventType)) await processMonthlyEarningEvent(env, eventId);
     if (eventType === 'moderation.community_appeal.resolved') await processMonthlyPeerParticipation(env, eventId);
+    if (eventType === 'trust.monthly_assessment.recorded' || eventType === 'trust.monthly_reward_snapshot.correction_approved')
+      await processMonthlyRewardSnapshotEvent(env,eventId,eventType);
     await query(env.DB_JOBS_FRESH,
       `UPDATE system.consumer_inbox SET state = 'completed', processed_at = now() WHERE consumer_name = 'lythaus-jobs' AND event_id = $1`,
       [eventId]
@@ -1932,6 +1936,7 @@ export default {
     await reconcileCommunityAppeals(env);
     await reconcileMonthlyPeerParticipation(env);
     await reconcileMonthlyAssembly(env);
+    await reconcileMonthlyRewardSnapshots(env);
     await relayTransactionalEmailOutbox(env);
     await relayOutbox(env);
     await deliverAdminOutcomeNotifications(env);

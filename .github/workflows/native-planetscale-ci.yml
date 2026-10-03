@@ -36,14 +36,17 @@ on:
       - 'packages/db/src/monthly-earning.ts'
       - 'packages/db/src/monthly-context*.ts'
       - 'packages/db/src/monthly-publication.ts'
+      - 'packages/db/src/monthly-reward-*.ts'
       - 'packages/db/src/community-appeal-*.ts'
       - 'apps/lythaus-jobs/src/monthly-reputation.ts'
       - 'apps/lythaus-jobs/src/monthly-earning.ts'
+      - 'apps/lythaus-jobs/src/monthly-reward-*.ts'
       - 'apps/lythaus-jobs/src/community-appeals.ts'
       - 'apps/lythaus-jobs/src/index.ts'
       - 'apps/lythaus-jobs/tests/monthly-reputation.postgres.mjs'
       - 'apps/lythaus-jobs/tests/monthly-earning.postgres.mjs'
       - 'apps/lythaus-jobs/tests/monthly-context.postgres.mjs'
+      - 'apps/lythaus-jobs/tests/monthly-reward-*.postgres.mjs'
       - 'scripts/ci/planetscale-migration-*.mjs'
       - 'scripts/ci/auth-incident-database-contract.mjs'
       - 'scripts/ci/audit-production-auth-incident.mjs'
@@ -146,6 +149,16 @@ jobs:
           '--test-coverage-include=apps/lythaus-jobs/src/monthly-assembly.ts'
           --test-coverage-lines=80 --test-coverage-branches=80
           --test apps/lythaus-jobs/tests/monthly-assembly.postgres.mjs
+      - name: Validate separately gated fixed monthly snapshots and corrections
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: >-
+          node --experimental-strip-types --experimental-test-module-mocks
+          --experimental-test-coverage
+          '--test-coverage-include=packages/db/src/monthly-reward-snapshots.ts'
+          '--test-coverage-include=apps/lythaus-jobs/src/monthly-reward-snapshots.ts'
+          --test-coverage-lines=80 --test-coverage-branches=80
+          --test apps/lythaus-jobs/tests/monthly-reward-snapshots.postgres.mjs
       - name: Prove column-only incident audit grants on real PostgreSQL
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable

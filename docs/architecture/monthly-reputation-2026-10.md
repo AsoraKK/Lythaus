@@ -109,7 +109,7 @@ effective months; separately approved migration, exact-SHA deployment and activa
 | --- | --- | --- |
 | T01 Reconcile | Source/consumer map, this decision record, historical cutover plan | Inventory complete; cutover pending D13 |
 | T02 Canonical policy | Validated catalogue, cap groups, pure best-four/bands, candidate calendar, approved decision configuration | All 22 action calculations represented; weekly and maintenance candidate rules tested; operational approvals remain pending |
-| T03 Persistence | Canonical events/outbox, immutable period revisions, assurance proofs, ballot uniqueness, selections/claims | Immutable monthly/weekly revisions, canonical email proofs, assembly reports, source receipts and Jobs transactions tested; selections/claims and migration pending |
+| T03 Persistence | Canonical events/outbox, immutable period revisions, assurance proofs, ballot uniqueness, selections/claims | Immutable monthly/weekly revisions, canonical email proofs, assembly reports, fixed snapshots and scoped approved corrections tested; selections/claims and migration pending |
 | T04 Earning | Real post/discussion/specialist/reception/authorship events and dependency reversals | Canonical post/comment producers, scoped contextual acceptance and final peer-ballot consumer tested with weekly caps and immutable corrections; specialist/reception producers and product forms remain |
 | T05 Security | Reuse normal validated auth events; capability-aware integrity, credential continuity, Turnstile/refresher | Actual email verification feeds bound evidence, including scoring pauses; full-month coverage/assessment calculations tested; other real providers, renewal workflow and D07/D08 activation remain gated |
 | T06 Peer review | Private timed electorate, equal ballots/history, close transaction, scoped override, restricted route | Public/admin routes, ballots/closure, scoped restoration, equal participation earning and private notices tested; specialist/unresolved execution, D09/D10/D11/D13 activation and Flutter remain |
@@ -121,6 +121,39 @@ effective months; separately approved migration, exact-SHA deployment and activa
 The acceptance matrix in `docs/testing/monthly-reputation-acceptance.md` tracks
 code and executable evidence separately. Passing arithmetic tests does not prove
 provider operation, user workflows, migration or activation.
+
+## Fixed monthly snapshots
+
+`monthly_reward_snapshots.sql` is a disposable proposal, outside the production
+manifest. The existing Jobs queue and scheduled reconciler read canonical assembly
+and assessment evidence. A separately configured publisher writes an immutable
+snapshot for the following calendar month. Original assessment rows remain shadow;
+no assessment is promoted or rewritten. Confirmed publication requires a distinct
+approved configuration, every D01–D13 approval reference, explicit first source
+month and reviewed collection privacy prerequisite. No configuration is seeded.
+
+UTC settlement uses the actual server clock, including database sessions in other
+timezones. Source-period locking and SQL guards bind the latest source, matching
+weekly/maintenance rules, canonical event, author, score and exact next month.
+Current activity and later source revisions cannot continuously change a published
+month. A fresh independent staff approval names the current snapshot revision,
+target assessment, reason and private evidence reference. Its canonical outbox event
+can append one correction while retaining every prior snapshot. Self-review,
+revoked authority, wrong subjects, stale predecessors and request-key reuse fail.
+Obsolete approved corrections drain with durable superseded receipts.
+
+The own-reader distinguishes unavailable, pending, shadow and confirmed authority.
+Missing previous assessment displays L1 as an unassessed default with no snapshot
+or score; it does not fabricate confirmed entitlement. Future months and periods
+before cutover are explicit pending/unavailable states. It remains an isolated
+server reader until shared API, product report and privacy wiring is coordinated.
+
+Node 22.23.3/disposable PostgreSQL 17 verify 19 cases with 99.35% line and 90.00%
+branch coverage, including real publication → assembly → assessment → snapshot,
+concurrent publication/correction, interruption rollback, non-UTC settlement,
+paused queue/backfill, stale receipt denials and deletion races. Isolated subject
+erasure also removes staff-authored correction notices before source cascades.
+This is not complete export, locator, reviewer-retention or DSR acceptance.
 
 The monthly source writer accepts settled aggregate evidence from a trusted internal
 caller. Scheduled monthly assembly joins settled weekly results and maintenance/email
