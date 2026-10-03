@@ -95,10 +95,23 @@ function runProbe(t, scenario, worker = 'lythaus-admin-api-development', previou
         body.releaseTag = process.env.DATABASE_READINESS_TOKEN;
         body.emailBinding.publicWorkerVersion = process.env.CF_ACCESS_CLIENT_ID;
       }
+      if (scenario.startsWith('unavailable-') && scenario !== 'unavailable-exact-identity') {
+        body.error = scenario === 'unavailable-binding' ? 'auth_email_dispatch_unavailable'
+          : scenario === 'unavailable-runtime' ? 'admin_request_failed' : 'private-runtime-detail';
+        body.message = 'fixture@example.invalid ' + process.env.DATABASE_READINESS_TOKEN;
+        delete body.service;
+        delete body.workerVersionId;
+        delete body.releaseTag;
+        delete body.emailBinding;
+      }
       const status = scenario === 'unauthorized' || (scenario === 'previous-then-unauthorized' && readinessAttempts > 1)
-        ? 401 : scenario === 'forbidden' ? 403 : 200;
+        ? 401 : scenario === 'forbidden' ? 403 : scenario.startsWith('unavailable-') ? 503 : 200;
       const cfRay = scenario === 'redaction' ? process.env.CF_ACCESS_CLIENT_SECRET : '1234567890abcdef-FRA';
-      return new Response(JSON.stringify(body), { status, headers: { 'cf-ray': cfRay } });
+      const response = scenario === 'unavailable-html' ? '<html>fixture@example.invalid ' + process.env.DATABASE_READINESS_TOKEN + '</html>'
+        : scenario === 'unavailable-array' ? JSON.stringify([body]) : JSON.stringify(body);
+      return new Response(response, { status, headers: { 'cf-ray': cfRay,
+        'content-type': scenario === 'unavailable-unknown-content' ? 'fixture/' + process.env.CF_ACCESS_CLIENT_SECRET
+          : scenario === 'unavailable-html' ? 'text/html' : 'application/json' } });
     };
   `);
   const result = spawnSync(process.execPath, ['--import', fixture, 'scripts/ci/probe-production-workers.mjs'], {
@@ -178,6 +191,44 @@ for (const [scenario, status] of [['unauthorized', 401], ['forbidden', 403]]) {
     assert.equal(evidence.workers.length, 0);
   });
 }
+
+for (const [scenario, errorCode, responseFormat] of [
+  ['unavailable-binding', 'auth_email_dispatch_unavailable', 'json_object'],
+  ['unavailable-runtime', 'admin_request_failed', 'json_object'],
+  ['unavailable-unknown', null, 'json_object'],
+  ['unavailable-unknown-content', null, 'json_object'],
+  ['unavailable-html', null, 'non_json'],
+  ['unavailable-array', null, 'json_array'],
+]) {
+  test(`${scenario} preserves only allowlisted failure metadata and never retries`, (t) => {
+    const { result, evidence, requests, delays } = runProbe(t, scenario, 'lythaus-admin-api-development', true);
+    assert.equal(result.status, 1);
+    assert.match(evidence.failure, /HTTP 503/);
+    const observation = evidence.requests.at(-1);
+    assert.equal(observation.httpStatus, 503);
+    assert.equal(observation.observed.errorCode, errorCode);
+    assert.equal(observation.responseFormat, responseFormat);
+    assert.equal(observation.responseMediaType, scenario === 'unavailable-unknown-content' ? null
+      : scenario === 'unavailable-html' ? 'text/html' : 'application/json');
+    assert.equal(observation.observed.workerVersionId, null);
+    assert.equal(observation.observed.releaseTag, null);
+    assert.equal(evidence.workers.length, 0);
+    assert.equal(requests.length, 2);
+    assert.deepEqual(delays, []);
+    assert.ok(!JSON.stringify(evidence).includes('private-runtime-detail'));
+  });
+}
+
+test('HTTP 503 cannot pass even when its response contains the exact candidate identity', (t) => {
+  const { result, evidence, requests, delays } = runProbe(t, 'unavailable-exact-identity', 'lythaus-admin-api-development', true);
+  assert.equal(result.status, 1);
+  assert.match(evidence.failure, /HTTP 503/);
+  assert.equal(evidence.requests.at(-1).observed.workerVersionId, version);
+  assert.equal(evidence.requests.at(-1).observed.releaseTag, releaseSha);
+  assert.equal(evidence.workers.length, 0);
+  assert.equal(requests.length, 2);
+  assert.deepEqual(delays, []);
+});
 
 for (const scenario of ['wrong-public', 'unverified-public']) {
   test(`${scenario} keeps the private Public candidate binding check fail-closed`, (t) => {
