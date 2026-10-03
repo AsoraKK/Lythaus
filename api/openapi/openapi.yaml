@@ -1381,6 +1381,8 @@ paths:
     $ref: './community-appeals.yaml#/paths/~1admin~1appeals~1{appealId}~1triage'
   /admin/appeals/{appealId}/evidence:
     $ref: './community-appeals.yaml#/paths/~1admin~1appeals~1{appealId}~1evidence'
+  /admin/reputation/comments/{commentId}/context-review:
+    $ref: './monthly-reputation.yaml#/paths/~1admin~1reputation~1comments~1{commentId}~1context-review'
   /admin/reviewers/{reviewerId}/qualification:
     $ref: './product-integrity.yaml#/paths/~1admin~1reviewers~1{reviewerId}~1qualification'
   /admin/users/{userId}/status:

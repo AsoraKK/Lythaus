@@ -1,0 +1,84 @@
+components:
+  parameters:
+    commentId:
+      name: commentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  schemas:
+    MonthlyContextReviewRequest:
+      type: object
+      additionalProperties: false
+      required: [rubricVersion, sourceRevisionId, threadRevisionId, parentRevisionId, decision, reasonCode, evidenceReference, expectedRevision, idempotencyKey]
+      properties:
+        rubricVersion: { type: string, minLength: 1, maxLength: 128 }
+        sourceRevisionId: { type: string, format: uuid }
+        threadRevisionId: { type: string, format: uuid }
+        parentRevisionId: { type: string, format: uuid, nullable: true }
+        decision: { type: string, enum: [accepted, withheld, reversed] }
+        reasonCode: { type: string, pattern: '^[a-z][a-z0-9_]{1,99}$' }
+        evidenceReference:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Caller-supplied bounded opaque string stored as supplied; the API does not validate its target or sensitivity. Do not include raw content or secrets. This value is omitted from the response.
+        expectedRevision: { type: integer, minimum: 0 }
+        idempotencyKey: { type: string, format: uuid, pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$' }
+    MonthlyContextReviewResponse:
+      type: object
+      additionalProperties: false
+      required: [reviewId, revision, sourceEventId, created]
+      properties:
+        reviewId: { type: string, format: uuid }
+        revision: { type: integer, minimum: 1 }
+        sourceEventId: { type: string, format: uuid }
+        created: { type: boolean }
+    MonthlyContextReviewError:
+      type: object
+      additionalProperties: false
+      required: [error, correlationId]
+      properties:
+        error: { type: string, enum: [rate_limit_exceeded] }
+        correlationId: { type: string }
+paths:
+  /admin/reputation/comments/{commentId}/context-review:
+    servers:
+      - url: https://admin-api.lythaus.co/api
+        description: Cloudflare Access-protected admin Worker
+    post:
+      operationId: adminMonthlyContextReview
+      summary: Record a scoped contextual contribution review
+      description: Requires a verified Cloudflare Access JWT, active owner, administrator, or moderator membership authorised for this review, and an allowed Origin. The handler binds the reviewer to the current comment, thread and parent revisions. Actor identity and rules version come from server context. evidenceReference is a caller-supplied bounded opaque string stored as supplied; the API does not validate its target or sensitivity. Do not include raw content or secrets; this value is omitted from the response. The request cannot submit points. The route remains unavailable until its separate configuration and collection gates are enabled.
+      tags: [Admin, Reputation]
+      security: [{ cloudflareAccess: [] }]
+      parameters:
+        - $ref: '#/components/parameters/commentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MonthlyContextReviewRequest' }
+      responses:
+        '201':
+          description: A new scoped review was recorded with its durable result event.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MonthlyContextReviewResponse' }
+        '200':
+          description: The same idempotent review was already recorded.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MonthlyContextReviewResponse' }
+        '400': { $ref: './product-integrity.yaml#/components/responses/BadRequest' }
+        '401': { $ref: './product-integrity.yaml#/components/responses/Unauthorized' }
+        '403': { $ref: './product-integrity.yaml#/components/responses/Forbidden' }
+        '404': { $ref: './product-integrity.yaml#/components/responses/NotFound' }
+        '409': { $ref: './product-integrity.yaml#/components/responses/Conflict' }
+        '413': { $ref: './product-integrity.yaml#/components/responses/RequestTooLarge' }
+        '415': { $ref: './product-integrity.yaml#/components/responses/BadRequest' }
+        '429':
+          description: The administrator's per-actor request limit was exceeded (120 requests per minute).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MonthlyContextReviewError' }
+        '503': { $ref: './product-integrity.yaml#/components/responses/ServiceUnavailable' }
