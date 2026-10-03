@@ -71,10 +71,10 @@ module.exports = class AstroCachePolicy {
       if (this.responseHeaders.expires !== undefined) {
         const expires = Date.parse(this.responseHeaders.expires);
         if (!Number.isFinite(expires) || expires < date) return 0;
-        lifetime = Math.max(immutable, (expires - date) / 1000);
+        lifetime = (expires - date) / 1000;
       } else {
         const modified = Date.parse(this.responseHeaders['last-modified']);
-        lifetime = Number.isFinite(modified) && modified < date ? Math.max(immutable, (date - modified) / 10_000) : immutable;
+        lifetime = Number.isFinite(modified) && modified < date ? (date - modified) / 10_000 : immutable;
       }
     }
     const remaining = lifetime - initialAge - Math.max(0, Date.now() - this.receivedAt) / 1000;

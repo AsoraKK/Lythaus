@@ -24,7 +24,9 @@ delta seconds fail closed. Denials are checked by presence, and public opt-in
 must be a valid bare directive. Ordinary max-age, shared s-maxage precedence,
 Age, apparent response age from Date, Expires and Last-Modified heuristics remain
 supported. Immutable's fallback is
-24 hours in seconds before conversion to milliseconds. These conservative
+24 hours only without an explicit expiry or valid modification heuristic;
+immutable never extends either lifetime. Seconds are converted to milliseconds
+once. These conservative
 differences can cause earlier remote-image revalidation; they do not alter the
 homepage or its rendering inputs.
 

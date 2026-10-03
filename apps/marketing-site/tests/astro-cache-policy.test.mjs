@@ -160,3 +160,19 @@ test('actual Astro load and 304 subtract apparent response age without extending
     assert.equal(revalidated.expires, now + ttl, JSON.stringify(headers));
   }
 });
+
+test('actual Astro load and 304 never extend explicit expiry or heuristics for immutable', async t => {
+  freezeTime(t);
+  for (const [headers, ttl] of [
+    [{ expires: new Date(now + 60_000).toUTCString() }, 60_000],
+    [{ expires: date }, 0],
+    [{ expires: new Date(now - 60_000).toUTCString() }, 0],
+    [{ 'last-modified': new Date(now - 100_000).toUTCString() }, 10_000],
+  ]) {
+    const remoteHeaders = { date, 'cache-control': 'public, immutable', ...headers };
+    const loaded = await loadRemoteImage(url, async () => new Response('image', { headers: remoteHeaders }), imageConfig);
+    assert.equal(loaded.expires, now + ttl, JSON.stringify(headers));
+    const revalidated = await revalidateRemoteImage(url, {}, async () => new Response(null, { status: 304, headers: remoteHeaders }), imageConfig);
+    assert.equal(revalidated.expires, now + ttl, JSON.stringify(headers));
+  }
+});
