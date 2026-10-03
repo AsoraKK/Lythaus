@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/state/providers/settings_providers.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
@@ -39,8 +40,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final settings = ref.watch(settingsProvider);
     final controller = ref.read(settingsProvider.notifier);
     final currentUser = ref.watch(currentUserProvider);
-    ref.listen(currentUserProvider, (previous, next) {
-      if (previous?.id != next?.id) {
+    ref.listen(authSessionRevisionProvider, (previous, next) {
+      if (previous != next) {
         _visibilitySave?.cancel();
         _visibilitySave = null;
         setState(() => _savingTrustVisibility = false);
@@ -255,15 +256,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       return;
     }
     final cancelToken = CancelToken();
+    final session = ref.read(authSessionRevisionProvider.notifier);
+    final revision = session.revision;
+    final stop = session.cancelOnChange(cancelToken.cancel);
     _visibilitySave = cancelToken;
     setState(() => _savingTrustVisibility = true);
     bool isCurrentSave() =>
         mounted &&
         identical(_visibilitySave, cancelToken) &&
         !cancelToken.isCancelled &&
+        session.revision == revision &&
         ref.read(currentUserProvider)?.id == user.id;
     try {
-      final token = await ref.read(jwtProvider.future);
+      final token = await Future.any<String?>([
+        ref.read(jwtProvider.future),
+        cancelToken.whenCancel.then<String?>((error) => throw error),
+      ]);
       if (!mounted || !isCurrentSave()) return;
       if (token == null || token.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -303,6 +311,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         );
       }
     } finally {
+      stop();
       if (mounted && identical(_visibilitySave, cancelToken)) {
         _visibilitySave = null;
         setState(() => _savingTrustVisibility = false);

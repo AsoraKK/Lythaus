@@ -1,5 +1,6 @@
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
@@ -98,6 +99,9 @@ void main() {
       ProviderScope(
         overrides: [
           secureDioProvider.overrideWithValue(dio),
+          authSessionRevisionProvider.overrideWith(
+            (ref) => AuthSessionRevision(StateController<User?>(user)),
+          ),
           currentUserProvider.overrideWithValue(user),
           jwtProvider.overrideWith((ref) async => 'token'),
           ownerProfileProvider.overrideWith(
@@ -193,6 +197,9 @@ void main() {
         ProviderScope(
           overrides: [
             secureDioProvider.overrideWithValue(dio),
+            authSessionRevisionProvider.overrideWith(
+              (ref) => AuthSessionRevision(StateController<User?>(user)),
+            ),
             currentUserProvider.overrideWithValue(user),
             jwtProvider.overrideWith((ref) async => 'token'),
             ownerProfileProvider.overrideWith(
