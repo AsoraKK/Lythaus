@@ -1,10 +1,50 @@
 # Monthly reputation acceptance matrix
 
-Base: `8c4261402dd370b4c57e082cf0fc16b41927f7db`. Policy:
+Historical source baseline: `8c4261402dd370b4c57e082cf0fc16b41927f7db`. Policy:
 `lythaus-monthly-rewards-2026-10-v1`. This is the complete set of 100 required
 acceptance cases from the October task sheet, not a claim that 100 tests pass.
 Owner decisions D01–D13 and runtime activation remain pending. The catalogue's
 embedded reference-validation counts are not execution evidence for this branch.
+
+## Rebased verification snapshot — 3 October 2026
+
+Live remote main at the 3 October read-only check is
+`42d1f26ba9852cdabb8f7f90b4d0223c0344a3e6`; local `origin/main` remains at cached
+`ae5cb81b62334c7fea7f0770cea0316aa11063bb`. The comparison adds eight release-gate
+files only; package manifests and the lockfile are unchanged. This local candidate is
+based on cached `ae5cb81` pending Friday's integration coordination. Published
+PR896 head is still `9a98d462082529c1b08216ae666ac7534120dbd4`; it shares only the
+`8c426140` base with this rebased local candidate and is not an ancestor of
+`ca210051`. No force-push or merge was made. The local candidate contains
+security release 89
+(`6d1d52a4fa3f51ae041fbf38b5724578a8596b61`), PR908's dependency repair
+(`8d91bcb434c4960a0f51ee2e4c7563c4f6e88a6c`) and the app-flow PR899/901/902/904/905
+changes. Latest local implementation commit is `7cdd6e33682e3370bc67ab292805298a3e38d37f`;
+the shared contract fragment/assertion remain uncommitted. The committed
+contract follow-up is `ca210051dbaa36be5b0725c54b391fff446f0d9a`.
+The full backend PostgreSQL run below was executed at its code parent
+`1136c226bffefcd6b963cd7f403efb8d7b5b265c`; `ca210051` adds only the contextual
+review OpenAPI fragment/bundle and contract assertions, not earning, privacy or
+reward transaction code.
+
+| Check | Exact evidence |
+| --- | --- |
+| Disposable PostgreSQL 17.11 | Baseline 154 passed, zero skipped across shadow 9, earning 10, contextual acceptance 20, appeals/participation 25, maintenance/assembly 13, snapshots/corrections 19 and selections/partner/claims/report 58 at `1136c226`. On the current worktree, maintenance/assembly then passed 18/18, zero skipped, including five disabled renewal/lifecycle cases; combined coverage is 99.20%/87.34%, and renewal-module coverage is 100%/81.63% (lines/branches). These are separate revisions, not one combined run. Synthetic source rows, approvals and providers only. |
+| OpenAPI and native contracts | At committed `ca210051`, `openapi:lint`, `openapi:bundle`, `openapi:check:bundle`, `openapi:validate:examples`, `openapi:test:contract`, and `typecheck:native` passed; Contract Jest had 40 passed, 17 skipped, 4 suites passed and 1 suite skipped. The current worktree has a separate unbundled response-description edit in `api/openapi/monthly-reputation.yaml`; its new parity assertion currently fails because `api/openapi/dist/openapi.json` has not been regenerated. App-flow/Friday coordination is pending before that shared bundle update. Lint has two inherited warnings: `EmailAuthRequest`'s `mode` schema and the single-schema `PrivacyRequestAccepted` `allOf`. |
+| Dependency audit | A fresh `npm audit --audit-level=low` on the current candidate worktree reports zero vulnerabilities. `package.json` and `package-lock.json` match cached main; the live-main delta is release-governance only. The dependency tree resolves Spectral's `fast-glob` import to the private local adapter and does not include the reported `micromatch`/`braces` chain. No suppression or duplicate security task was added; Dependabot alert #330 remains unclassified. |
+| Spectral regression | `node --test scripts/tests/spectral-glob.test.mjs` passed 2/2 with local subprocess execution enabled. `npm run openapi:lint` passed with the two inherited warnings above. |
+| Bounded independent review | Read-only reviews of claims, report projection, contextual-review contract and the disabled renewal seam found no remaining P1/P2. Reviewers did not rerun tests. |
+| Not established | No exact-head remote CI result is claimed here; no live mailbox/provider acceptance, complete 100-case workflow run, Flutter/report/export/DSR integration, load test, migration, deployment, configuration or activation is claimed. |
+
+The earlier synthetic auth-journey run `37044669047` failed when the test relay did
+not observe its synthetic password-change notice; dependent coordinator/alpha
+checks were skipped. The later PostgreSQL run `37118705848` passed at its own
+revision, resolving that synthetic outbox issue only there. Neither result proves a
+live email failure or live mailbox acceptance, and neither provides evidence of a
+rewards regression.
+
+All 100 original IDs below remain mapped to executable evidence or an explicit
+gate. Do not describe that matrix as 100 acceptance workflows passed.
 
 ## Evidence paths
 
@@ -26,6 +66,7 @@ embedded reference-validation counts are not execution evidence for this branch.
 - DT: [generated-client serialization tests](../../tests/contract/dart/community_appeal_serialization_test.dart.fixture), copied into the generated package by its validation script; the fixture suffix keeps generated-package dependencies out of the product Flutter analyzer.
 - H / HT: [maintenance calculation](../../packages/contracts/src/monthly-maintenance-policy.ts) / [maintenance tests](../../packages/contracts/tests/monthly-maintenance.test.mjs).
 - B / BT: [canonical proof capture](../../packages/db/src/monthly-maintenance.ts), [monthly assembly](../../packages/db/src/monthly-assembly.ts), [scheduled reconciler](../../apps/lythaus-jobs/src/monthly-assembly.ts) / [real PostgreSQL tests](../../apps/lythaus-jobs/tests/monthly-assembly.postgres.mjs).
+- BR: [disabled email-renewal proof seam](../../packages/db/src/monthly-email-renewal.ts), [separate renewal proposal](../../database/planetscale/proposals/monthly_email_renewal.sql), and five renewal/lifecycle cases in BT. Proposal remains outside the production manifest; no public delivery or scoring consumer is connected.
 - BS: [maintenance, assembly and lifecycle proposal](../../database/planetscale/proposals/monthly_reputation_maintenance.sql), outside the approved production manifest. Collection privacy prerequisite is unset until export/locator integration review.
 - V / VS: [final peer participation consumer](../../packages/db/src/monthly-peer-participation.ts), [invoked queue/scheduled adapter](../../apps/lythaus-jobs/src/monthly-peer-participation.ts) / [separately gated proposal](../../database/planetscale/proposals/monthly_reputation_peer_participation.sql); CT verifies the real closure-to-weekly-result path.
 - X / XT / XS: [scoped contextual review](../../packages/db/src/monthly-context-review.ts), [dependency reconciliation](../../packages/db/src/monthly-context-dependencies.ts), [authenticated admin mutation](../../apps/lythaus-admin-api/src/monthly-context-review.ts) / [20 real PostgreSQL cases](../../apps/lythaus-jobs/tests/monthly-context.postgres.mjs) / [separately gated proposal](../../database/planetscale/proposals/monthly_reputation_context.sql). CT additionally verifies actual equal-vote restoration through the admin route and retained publication proof.
@@ -59,7 +100,7 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | CAL-13 | Maximum allowed components total 13,500; out-of-range components are rejected. | M / MT | Unit verified; live earning not integrated |
 | CAL-14 | Every threshold neighbour 999/1,000, 2,999/3,000, 5,999/6,000 and 9,999/10,000 maps correctly. | M / MT | Unit verified; live earning not integrated |
 | CAL-15 | No age, plan, World or old pillar gate changes the new score-derived level. | M / MT | Unit verified; live earning not integrated |
-| CAL-16 | Email proof expiry at the exact cutoff and a new proof after cutoff are handled correctly. | D, H, B / MT, HT, BT | Actual initial verification/paused capture/revocation and historical cutoff verified; renewal API and D08 approval pending |
+| CAL-16 | Email proof expiry at the exact cutoff and a new proof after cutoff are handled correctly. | D, H, B / MT, HT, BT, BR | Actual initial verification/paused capture/revocation and historical cutoff verified; disabled renewal transaction covers one-use, replay, expiry, binding change, pause and erasure. Public API/delivery and D08 approval remain pending |
 | CAL-17 | Calendar-month addition handles 29/30/31-day dates without unapproved 90-day substitution. | D, H / MT, HT | Calendar validity candidate verified; D08 activation pending |
 | CAL-18 | A weekly correction reselects all candidates; the previous fifth can enter the chosen four. | M, E, B, S / MT, ET, BT, ST | Real independent invalidation reassembles and reselects the fifth; approved scoped snapshot correction retains old reports/levels; obsolete approval drains durably |
 | CAL-19 | On-time evidence approved late retains its performance period and audited correction path. | M, E, B, X / MT, ET, BT, XT | Late scoped acceptance retains original week; actual assembly refuses undrained/mismatched contextual configuration and drains the stored version; specialist acceptance pending |
@@ -86,13 +127,13 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | PTS-20 | Zero reception still leaves a mathematically valid 10,500 maximum through other families. | M / MT | Arithmetic verified; real opportunity/access validation pending |
 | SEC-01 | Forged client award, local-unlock flag and manipulated device clock never credit points. | M, P, J, SQL / MT, PT | Partial: shadow persistence verified; full product flow pending |
 | SEC-02 | Turnstile token replay, wrong action/hostname, expiry and cross-account reuse fail safely. | T05 | Planned; no test execution claimed |
-| SEC-03 | An already validated normal challenge event may satisfy the monthly award without replaying its token. | T05 | Planned; no test execution claimed |
+| SEC-03 | An already validated normal challenge event may satisfy the monthly award without replaying its token. | T05, B / BT, BR | Ordinary email-verification evidence capture and the disabled DB-only renewal transaction are tested; no renewal delivery or scoring consumer is connected, and other auth-provider flows remain pending |
 | SEC-04 | Challenge/provider failure becomes retry/pending rather than clearance or misconduct. | T05 | Planned; no test execution claimed |
 | SEC-05 | Native WebView challenge works with controlled origins, accessibility and supported session persistence. | T05 | Planned; no test execution claimed |
 | SEC-06 | Passkey origin/RP, challenge, signature, verification and replay checks are enforced. | T05 | Planned; no test execution claimed |
 | SEC-07 | TOTP seed handling, rate limits, replay protection and recovery paths are tested. | T05 | Planned; no test execution claimed |
 | SEC-08 | Full-month protection history is checked; last-day enrolment is not full-month maintenance. | H / HT | Coverage, gaps, expiry and credential-matched authentication calculated; actual protected-auth provider remains disabled |
-| SEC-09 | Credential removal/readdition, app reinstall and changed email cannot double credit. | H, B, BS / HT, BT | Email change/removal/revoke/duplicate capture verified; protected-auth and reinstall flows pending |
+| SEC-09 | Credential removal/readdition, app reinstall and changed email cannot double credit. | H, B, BS / HT, BT, BR | Email change/removal/revoke/duplicate capture and renewal token/owner binding verified; renewal never mutates credential state. Protected-auth and reinstall flows pending |
 | SEC-10 | Multiple biometric/PIN methods do not generate separate 1,000-point awards. | H / HT | Fixed non-stacking coverage calculation verified; no raw biometric/PIN capture or active provider |
 | SEC-11 | A valid multi-factor credential may satisfy both policy conditions without claiming two personhood proofs. | H / HT | One server-evidence fixture satisfies 250 + 1,000 conditions; real provider assertions pending |
 | SEC-12 | A dormant/unobserved account is not automatically integrity-cleared. | H / HT | Distinct eligible/pending/insufficient/ineligible states verified; rubric/provider approval pending |

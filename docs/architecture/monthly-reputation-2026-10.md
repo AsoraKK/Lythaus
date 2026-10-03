@@ -6,12 +6,22 @@ Reviewed base: `8c4261402dd370b4c57e082cf0fc16b41927f7db` (remote main verified 
 Main rechecked at `26dc226776f8acd3898954635c327db1ad898128`: intervening feed
 presentation and Android packaging changes do not alter this backend/migration baseline.
 Integration with those changes remains a separate parent-managed step.
-Main rechecked on 3 October at `6d1d52a4` after the security tooling changes.
 Security release 89 was independently verified at
-`6d1d52a4fa3f51ae041fbf38b5724578a8596b61` (run `37118382512`). App-flow now
-holds the exclusive main/release integration slot. Shared OpenAPI, generated client,
-profile/navigation and privacy workflow changes require coordination with the
-app-flow owner before overlapping edits; no main integration has occurred here.
+`6d1d52a4fa3f51ae041fbf38b5724578a8596b61` (run `37118382512`). Live remote main at
+the 3 October check is `42d1f26ba9852cdabb8f7f90b4d0223c0344a3e6`; local
+`origin/main` remains at cached `ae5cb81b62334c7fea7f0770cea0316aa11063bb`. Main
+contains PR908's dependency repair and app-flow PR899/901/902/904/905 changes. The
+diff from cached main adds eight release-governance files only and does not change
+package manifests or the lockfile. This local candidate remains based on `ae5cb81`;
+the published PR896 head is `9a98d462082529c1b08216ae666ac7534120dbd4`, which shares
+only the original `8c426140` base and is not an ancestor of this candidate. Friday
+coordinates reconciliation with app-flow; no force-push or merge has occurred. The
+contextual-review contract follow-up is `ca210051dbaa36be5b0725c54b391fff446f0d9a`;
+disabled email-renewal proof-seam commit is `7cdd6e33682e3370bc67ab292805298a3e38d37f`.
+App-flow owns the exclusive
+integration slot. Shared generated-client regeneration and profile/navigation,
+privacy status, export cooldown and client lifecycle work remain with app-flow until
+Friday coordinates transfer. No monthly integration has occurred.
 
 The October monthly model replaces the earlier accumulating reputation model for
 future approved assessments. Four highest whole weekly results belonging to source
@@ -110,12 +120,12 @@ effective months; separately approved migration, exact-SHA deployment and activa
 | T01 Reconcile | Source/consumer map, this decision record, historical cutover plan | Inventory complete; cutover pending D13 |
 | T02 Canonical policy | Validated catalogue, cap groups, pure best-four/bands, candidate calendar, approved decision configuration | All 22 action calculations represented; weekly and maintenance candidate rules tested; operational approvals remain pending |
 | T03 Persistence | Canonical events/outbox, immutable period revisions, assurance proofs, ballot uniqueness, selections/claims | Immutable period revisions, canonical proofs, assemblies, snapshots/corrections, selections, private consent and synthetic QR/invoice fulfilment tested; live routes, providers and migration pending |
-| T04 Earning | Real post/discussion/specialist/reception/authorship events and dependency reversals | Canonical post/comment producers, scoped contextual acceptance and final peer-ballot consumer tested with weekly caps and immutable corrections; specialist/reception producers and product forms remain |
-| T05 Security | Reuse normal validated auth events; capability-aware integrity, credential continuity, Turnstile/refresher | Actual email verification feeds bound evidence, including scoring pauses; full-month coverage/assessment calculations tested; other real providers, renewal workflow and D07/D08 activation remain gated |
-| T06 Peer review | Private timed electorate, equal ballots/history, close transaction, scoped override, restricted route | Public/admin routes, ballots/closure, scoped restoration, equal participation earning and private notices tested; specialist/unresolved execution, D09/D10/D11/D13 activation and Flutter remain |
+| T04 Earning | Real post/discussion/specialist/reception/authorship events and dependency reversals | Canonical post/comment producers, scoped contextual acceptance and final peer-ballot consumer tested with weekly caps and immutable corrections. Specialist/help/accessibility have calculator rules but no canonical task-acceptance service/event; reception refresh has no approved rating source/rubric. Do not substitute ticket closure, moderation, reactions, or authenticity-tool feedback. |
+| T05 Security | Reuse normal validated auth events; capability-aware integrity, credential continuity, Turnstile/refresher | Existing email evidence, monthly assembly and a separately gated database-only renewal challenge/proof seam are tested in synthetic PostgreSQL. Renewal stores a token hash and bound-email digest, writes one proof/outbox receipt atomically, and preserves credentials; no route, email delivery or score activation exists. Full-month protection coverage is calculated. Turnstile/passkey/TOTP collection, D07/D08 and privacy approval remain gated. |
+| T06 Peer review | Private timed electorate, equal ballots/history, close transaction, scoped override, restricted route | Public/admin routes, ballots/closure, scoped restoration, equal participation earning and private notices tested. Restricted-case safeguards are tested; accountable unresolved/specialist handling and D09/D10/D11/D13 activation and Flutter remain. |
 | T07 Rewards/partners | Persistent Free/Premium/Black selections, proposals, consent/email linkage, QR/invoice idempotency | Current-month selections, private consent, scoped eligibility and transactional synthetic QR/invoice fulfilment tested; merchant API, external evidence, live terms and product wiring remain |
-| T08 Flutter | Existing Rewards tabs, profile tracker, real contribution/review forms, complete states | Depends on authoritative API slices; no parallel route |
-| T09 Reporting/privacy | Stored-calculation parity, full own report, public methodology, safe JSON/CSV, DSR/retention | Isolated stored-report database projection and PostgreSQL cases are implemented; authenticated API/Flutter, public methodology, JSON/CSV export, locator and DSR integration remain pending |
+| T08 Flutter | Existing Rewards tabs, profile tracker, real contribution/review forms, complete states | Existing Rewards destination is the only destination; its screens, profile tracker, contribution/review forms and account-change cache lifecycle remain app-flow-owned. No client-side point mutation or parallel route is implemented. |
+| T09 Reporting/privacy | Stored-calculation parity, full own report, public methodology, safe JSON/CSV, DSR/retention | Isolated stored-report database projection and PostgreSQL cases are implemented. The latest route candidate sent to app-flow is owner-bound `GET /api/reputation/monthly/{sourceMonth}` with JSON/CSV through the existing export lifecycle (`private, no-store`, no new retention, existing DSR locator lifecycle). An earlier handoff used `GET /reputation/me/monthly?sourceMonth=YYYY-MM`; path shape remains for Friday/app-flow to resolve before implementation. Authenticated routes, export/DSR controller edits and generated-client work remain pending privacy approval and coordination. |
 | T10 Release | Shadow run, fairness/load/failure testing, approved cutover, exact-SHA release and rollback | No release or activation authorization |
 
 The acceptance matrix in `docs/testing/monthly-reputation-acceptance.md` tracks
@@ -313,8 +323,19 @@ email verification records the consumed canonical token reference and a private
 digest of the keyed email binding in the same authentication transaction. No email
 address, token, password or client-supplied point value becomes scoring evidence.
 Duplicate proof delivery uses a transaction lock and returns the original receipt.
-Renewals replace validity rather than accumulating a component. A dedicated
-quarterly renewal workflow still needs implementation and shared contract coordination.
+Renewals replace validity rather than accumulating a component. An isolated,
+separately gated database seam now handles renewal challenge issuance and one-use
+consumption without changing the credential, password, session or original
+verification timestamp. It stores only a token hash and email-binding digest; the
+consumption transaction atomically writes one private maintenance observation and an
+outbox receipt, with replay, expiry, credential-change invalidation and deletion
+coverage. The current disposable PostgreSQL 17 maintenance/assembly run passes
+18/18 cases, including five renewal/lifecycle cases; combined coverage is
+99.20% lines and 87.34% branches, and the renewal module is 100% lines and 81.63%
+branches. No public route,
+email template/provider, Jobs subscriber, UI or scoring consumer sends or grants
+anything from this seam. D08, DSR/locator review, collection approval and external
+delivery remain required before integration or activation.
 
 Collection requires the explicit environment rule version, matching policy flag
 row and immutable `collection_privacy_version = monthly-privacy-v1` prerequisite.
