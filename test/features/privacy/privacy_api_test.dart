@@ -9,6 +9,27 @@ class _MockDio extends Mock implements Dio {}
 class _MockLogger extends Mock implements AppLogger {}
 
 void main() {
+  test('native unavailable status is not an empty request history', () async {
+    final dio = Dio();
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          handler.reject(
+            DioException(
+              requestOptions: options,
+              response: Response(requestOptions: options, statusCode: 404),
+              type: DioExceptionType.badResponse,
+            ),
+          );
+        },
+      ),
+    );
+    final api = DioPrivacyApi(dio: dio, logger: AppLogger());
+    await expectLater(
+      api.getExportStatus(authToken: 'synthetic'),
+      throwsA(isA<PrivacyApiException>()),
+    );
+  });
   group('DioPrivacyApi', () {
     late Dio dio;
     late AppLogger logger;
@@ -47,6 +68,7 @@ void main() {
           any(),
           data: any(named: 'data'),
           options: any(named: 'options'),
+          cancelToken: any(named: 'cancelToken'),
         ),
       ).thenAnswer((_) async => response);
 
@@ -62,6 +84,7 @@ void main() {
           any(),
           data: any(named: 'data'),
           options: any(named: 'options'),
+          cancelToken: any(named: 'cancelToken'),
         ),
       ).thenThrow(
         DioException(
@@ -85,11 +108,12 @@ void main() {
       );
     });
 
-    test('getExportStatus returns idle snapshot for 404', () async {
+    test('getExportStatus reports unavailable endpoint for 404', () async {
       when(
         () => dio.get<Map<String, dynamic>>(
           any(),
           options: any(named: 'options'),
+          cancelToken: any(named: 'cancelToken'),
         ),
       ).thenThrow(
         DioException(
@@ -101,8 +125,10 @@ void main() {
         ),
       );
 
-      final status = await api.getExportStatus(authToken: 'token');
-      expect(status.state, 'idle');
+      await expectLater(
+        api.getExportStatus(authToken: 'token'),
+        throwsA(isA<PrivacyApiException>()),
+      );
     });
 
     test('getExportStatus surfaces server errors', () async {
@@ -110,6 +136,7 @@ void main() {
         () => dio.get<Map<String, dynamic>>(
           any(),
           options: any(named: 'options'),
+          cancelToken: any(named: 'cancelToken'),
         ),
       ).thenThrow(
         DioException(
@@ -139,6 +166,7 @@ void main() {
         () => dio.get<Map<String, dynamic>>(
           any(),
           options: any(named: 'options'),
+          cancelToken: any(named: 'cancelToken'),
         ),
       ).thenAnswer((_) async {
         return Response<Map<String, dynamic>>(
@@ -146,6 +174,7 @@ void main() {
           data: {
             'request': {
               'state': 'Queued',
+              'requestId': 'request-1',
               'acceptedAt': '2024-01-01T12:00:00.000Z',
               'retryAfterSeconds': 90,
             },
@@ -166,6 +195,7 @@ void main() {
           any(),
           data: any(named: 'data'),
           options: any(named: 'options'),
+          cancelToken: any(named: 'cancelToken'),
         ),
       ).thenThrow(
         DioException.connectionError(
@@ -175,7 +205,7 @@ void main() {
       );
 
       expect(
-        () => api.deleteAccount(authToken: 'token', hardDelete: true),
+        () => api.deleteAccount(authToken: 'token'),
         throwsA(
           isA<PrivacyApiException>().having(
             (error) => error.type,
@@ -194,6 +224,7 @@ void main() {
           any(),
           data: any(named: 'data'),
           options: any(named: 'options'),
+          cancelToken: any(named: 'cancelToken'),
         ),
       ).thenAnswer((invocation) async {
         capturedOptions = invocation.namedArguments[#options] as Options;
@@ -201,11 +232,15 @@ void main() {
         return Response<Map<String, dynamic>>(
           requestOptions: RequestOptions(path: ''),
           statusCode: 202,
-          data: const {'requestId': 'request-2', 'state': 'received'},
+          data: const {
+            'requestId': 'request-2',
+            'state': 'received',
+            'acceptedAt': '2026-10-02T12:00:00Z',
+          },
         );
       });
 
-      await api.deleteAccount(authToken: 'secret', hardDelete: true);
+      await api.deleteAccount(authToken: 'secret');
 
       expect(capturedData, const {'requestType': 'delete'});
       expect(capturedOptions.headers?['Authorization'], 'Bearer secret');
@@ -221,6 +256,7 @@ void main() {
           any(),
           data: any(named: 'data'),
           options: any(named: 'options'),
+          cancelToken: any(named: 'cancelToken'),
         ),
       ).thenThrow(
         DioException(
@@ -254,6 +290,7 @@ void main() {
           any(),
           data: any(named: 'data'),
           options: any(named: 'options'),
+          cancelToken: any(named: 'cancelToken'),
         ),
       ).thenThrow(
         DioException(

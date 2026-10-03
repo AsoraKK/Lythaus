@@ -1,27 +1,50 @@
 // ignore_for_file: public_member_api_docs
 
-/// Privacy feature immutable state and enums.
-///
-/// Defines the export/delete state machines used by the privacy controller.
-library;
-
 import 'package:meta/meta.dart';
 
-/// Export workflow statuses.
-enum ExportStatus { idle, requesting, queued, accepted, coolingDown, failed }
+enum ExportStatus {
+  idle,
+  requesting,
+  queued,
+  accepted,
+  coolingDown,
+  received,
+  processing,
+  blocked,
+  completed,
+  failed,
+  unknown,
+}
 
-/// Account deletion workflow statuses.
-enum DeleteStatus { idle, confirming, deleting, requested, failed }
+enum DeleteStatus {
+  idle,
+  confirming,
+  deleting,
+  requested,
+  processing,
+  blocked,
+  completed,
+  failed,
+  unknown,
+}
 
-/// Immutable privacy state consumed by the UI.
 @immutable
 class PrivacyState {
   const PrivacyState({
-    this.exportStatus = ExportStatus.idle,
-    this.deleteStatus = DeleteStatus.idle,
+    this.exportStatus = ExportStatus.unknown,
+    this.deleteStatus = DeleteStatus.unknown,
     this.lastExportAt,
     this.remainingCooldown = Duration.zero,
     this.error,
+    this.requestId,
+    this.completedAt,
+    this.deleteRequestId,
+    this.exportAllowed = false,
+    this.deleteAllowed = false,
+    this.cooldownKnown = false,
+    this.refreshing = false,
+    this.downloading = false,
+    this.isGuest = false,
   });
 
   final ExportStatus exportStatus;
@@ -29,19 +52,41 @@ class PrivacyState {
   final DateTime? lastExportAt;
   final Duration remainingCooldown;
   final String? error;
+  final String? requestId;
+  final DateTime? completedAt;
+  final String? deleteRequestId;
+  final bool exportAllowed;
+  final bool deleteAllowed;
+  final bool cooldownKnown;
+  final bool refreshing;
+  final bool downloading;
+  final bool isGuest;
 
-  /// Export button is enabled when idle and no cooldown remains.
   bool get canRequestExport =>
+      !isGuest &&
+      exportAllowed &&
+      !refreshing &&
+      !downloading &&
+      deleteStatus != DeleteStatus.deleting &&
+      remainingCooldown <= Duration.zero &&
       (exportStatus == ExportStatus.idle ||
-          exportStatus == ExportStatus.failed) &&
-      remainingCooldown <= Duration.zero;
-
-  /// True when cooldown ticking down.
-  bool get isCoolingDown =>
-      remainingCooldown > Duration.zero &&
-      exportStatus == ExportStatus.coolingDown;
-
-  /// Human readable last export timestamp availability.
+          exportStatus == ExportStatus.failed ||
+          exportStatus == ExportStatus.completed);
+  bool get canRequestDeletion =>
+      !isGuest &&
+      deleteAllowed &&
+      !refreshing &&
+      !downloading &&
+      exportStatus != ExportStatus.requesting &&
+      deleteStatus != DeleteStatus.deleting;
+  bool get canDownload =>
+      !isGuest &&
+      exportStatus == ExportStatus.completed &&
+      requestId != null &&
+      !downloading &&
+      !refreshing &&
+      deleteStatus != DeleteStatus.deleting;
+  bool get isCoolingDown => remainingCooldown > Duration.zero;
   bool get hasLastExport => lastExportAt != null;
 
   PrivacyState copyWith({
@@ -51,13 +96,33 @@ class PrivacyState {
     Duration? remainingCooldown,
     String? error,
     bool clearError = false,
-  }) {
-    return PrivacyState(
-      exportStatus: exportStatus ?? this.exportStatus,
-      deleteStatus: deleteStatus ?? this.deleteStatus,
-      lastExportAt: lastExportAt ?? this.lastExportAt,
-      remainingCooldown: remainingCooldown ?? this.remainingCooldown,
-      error: clearError ? null : error ?? this.error,
-    );
-  }
+    String? requestId,
+    DateTime? completedAt,
+    String? deleteRequestId,
+    bool clearExport = false,
+    bool clearDeletion = false,
+    bool? exportAllowed,
+    bool? deleteAllowed,
+    bool? cooldownKnown,
+    bool? refreshing,
+    bool? downloading,
+    bool? isGuest,
+  }) => PrivacyState(
+    exportStatus: exportStatus ?? this.exportStatus,
+    deleteStatus: deleteStatus ?? this.deleteStatus,
+    lastExportAt: clearExport ? null : lastExportAt ?? this.lastExportAt,
+    remainingCooldown: remainingCooldown ?? this.remainingCooldown,
+    error: clearError ? null : error ?? this.error,
+    requestId: clearExport ? null : requestId ?? this.requestId,
+    completedAt: clearExport ? null : completedAt ?? this.completedAt,
+    deleteRequestId: clearDeletion
+        ? null
+        : deleteRequestId ?? this.deleteRequestId,
+    exportAllowed: exportAllowed ?? this.exportAllowed,
+    deleteAllowed: deleteAllowed ?? this.deleteAllowed,
+    cooldownKnown: cooldownKnown ?? this.cooldownKnown,
+    refreshing: refreshing ?? this.refreshing,
+    downloading: downloading ?? this.downloading,
+    isGuest: isGuest ?? this.isGuest,
+  );
 }

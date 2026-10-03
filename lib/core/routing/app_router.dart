@@ -7,6 +7,7 @@ import 'package:lythaus/core/routing/auth_return_location.dart';
 import 'package:lythaus/ui/screens/home/feed_search_screen.dart';
 import 'package:lythaus/ui/screens/home/trending_feed_screen.dart';
 import 'package:lythaus/features/notifications/presentation/notifications_screen.dart';
+import 'package:lythaus/features/privacy/privacy_settings_screen.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
@@ -223,6 +224,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) =>
                 const ReadingPane(child: SettingsScreen()),
             routes: [
+              GoRoute(
+                path: 'privacy',
+                builder: (context, state) => const PrivacySettingsScreen(),
+              ),
               GoRoute(
                 name: AppRoutes.accountSecurity,
                 path: 'security',

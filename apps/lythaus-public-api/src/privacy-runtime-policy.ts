@@ -1,5 +1,12 @@
 export type PrivacyRequestType = 'export' | 'delete' | 'rectify';
 
+export function privacyExportRetryAfter(acceptedAt: string | Date | null, now: number, cooldownDays: number): number {
+  if (acceptedAt === null) return 0;
+  const createdAt = acceptedAt instanceof Date ? acceptedAt.getTime() : Date.parse(acceptedAt);
+  if (!Number.isFinite(createdAt)) throw new Error('privacy_timestamp_invalid');
+  return Math.max(0, Math.ceil((createdAt + cooldownDays * 86_400_000 - now) / 1000));
+}
+
 export interface PrivacyRequestPlan {
   requestType: PrivacyRequestType;
   requiresExportCooldown: boolean;

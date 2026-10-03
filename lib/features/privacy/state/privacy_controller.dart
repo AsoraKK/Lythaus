@@ -1,11 +1,11 @@
 // ignore_for_file: public_member_api_docs
 
 import 'dart:async';
-
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meta/meta.dart';
-
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/core/analytics/analytics_client.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
@@ -14,7 +14,6 @@ import 'package:lythaus/features/privacy/services/privacy_api.dart';
 import 'package:lythaus/features/privacy/services/privacy_repository.dart';
 import 'package:lythaus/features/privacy/state/privacy_state.dart';
 
-/// Riverpod controller orchestrating privacy flows.
 class PrivacyController extends StateNotifier<PrivacyState> {
   PrivacyController({
     required Ref ref,
@@ -23,19 +22,17 @@ class PrivacyController extends StateNotifier<PrivacyState> {
     required AnalyticsClient analyticsClient,
     DateTime Function()? clock,
     Future<void> Function()? onSignOut,
+    bool Function()? isCurrentSession,
   }) : _ref = ref,
        _repository = repository,
        _logger = logger,
        _analyticsClient = analyticsClient,
        _now = clock ?? DateTime.now,
-       _cooldownWindow = repository.cooldownWindow,
+       _isCurrentSession = isCurrentSession ?? (() => true),
        _signOut =
-           onSignOut ??
-           (() async {
-             await ref.read(authStateProvider.notifier).signOut();
-           }),
-       super(const PrivacyState()) {
-    _hydrate();
+           onSignOut ?? (() => ref.read(authStateProvider.notifier).signOut()),
+       super(PrivacyState(isGuest: repository.actorId == null)) {
+    unawaited(_hydrate());
   }
 
   final Ref _ref;
@@ -43,279 +40,305 @@ class PrivacyController extends StateNotifier<PrivacyState> {
   final AppLogger _logger;
   final AnalyticsClient _analyticsClient;
   final DateTime Function() _now;
-  final Duration _cooldownWindow;
   final Future<void> Function() _signOut;
-
+  final bool Function() _isCurrentSession;
+  final _disposed = Completer<String?>();
   Timer? _cooldownTimer;
+  DateTime? _cooldownUntil;
+  int _epoch = 0;
+  bool get isCurrentSession => mounted && _isCurrentSession();
+  String? get exportRequestId => isCurrentSession ? state.requestId : null;
+  void cancelPendingSession() {
+    _cooldownTimer?.cancel();
+    if (!_disposed.isCompleted) _disposed.complete(null);
+  }
 
-  /// Expose delete confirmation state to the UI.
+  bool _current(int epoch) => isCurrentSession && epoch == _epoch;
+
   void beginDeleteConfirmation() {
-    _logger.info('privacy_delete_confirm_opened');
-    state = state.copyWith(
-      deleteStatus: DeleteStatus.confirming,
-      clearError: true,
-    );
+    if (isCurrentSession && state.canRequestDeletion) {
+      state = state.copyWith(
+        deleteStatus: DeleteStatus.confirming,
+        clearError: true,
+      );
+    }
   }
 
   void cancelDeleteConfirmation() {
-    state = state.copyWith(deleteStatus: DeleteStatus.idle, clearError: true);
+    if (isCurrentSession) {
+      state = state.copyWith(deleteStatus: DeleteStatus.idle, clearError: true);
+    }
   }
 
-  /// Clears the latest surfaced error.
   void clearError() {
-    state = state.copyWith(clearError: true);
+    if (isCurrentSession) {
+      state = state.copyWith(clearError: true);
+    }
   }
 
   Future<void> refreshStatus() async {
-    final token = await _requireAuthToken();
-    if (token == null) return;
-
+    if (!isCurrentSession ||
+        state.isGuest ||
+        state.exportStatus == ExportStatus.requesting ||
+        state.deleteStatus == DeleteStatus.deleting ||
+        state.downloading) {
+      return;
+    }
+    final epoch = ++_epoch;
+    state = state.copyWith(
+      refreshing: true,
+      clearError: true,
+      exportAllowed: false,
+      deleteAllowed: false,
+      exportStatus: ExportStatus.unknown,
+      deleteStatus: DeleteStatus.unknown,
+    );
+    final token = await _token();
+    if (token == null || !_current(epoch)) return;
     try {
-      final snapshot = await _repository.fetchRemoteStatus(authToken: token);
-      _applySnapshot(snapshot);
+      final export = await _repository.fetchRemoteStatus(authToken: token);
+      if (!_current(epoch)) return;
+      _applySnapshot(export);
+      final deletion = await _repository.fetchDeletionStatus(authToken: token);
+      if (!_current(epoch)) return;
+      _applyDeletion(deletion);
     } on PrivacyException catch (error) {
-      await _handleExportError(error);
+      if (_current(epoch)) await _handleError(error);
+    } finally {
+      if (_current(epoch)) state = state.copyWith(refreshing: false);
     }
   }
 
   Future<void> export() async {
-    if (!state.canRequestExport && state.exportStatus != ExportStatus.failed) {
-      return;
-    }
-
-    final token = await _requireAuthToken();
-    if (token == null) return;
-
-    _logger.info('privacy_export_tapped');
-    await _analyticsClient.logEvent(AnalyticsEvents.privacyExportRequested);
+    if (!isCurrentSession || !state.canRequestExport) return;
+    final epoch = ++_epoch;
     state = state.copyWith(
       exportStatus: ExportStatus.requesting,
+      exportAllowed: false,
       clearError: true,
     );
-
+    final token = await _token();
+    if (token == null || !_current(epoch)) return;
     try {
+      await _analyticsClient.logEvent(AnalyticsEvents.privacyExportRequested);
+      if (!_current(epoch)) return;
       final snapshot = await _repository.requestExport(authToken: token);
-
-      state = state.copyWith(
-        exportStatus: ExportStatus.accepted,
-        lastExportAt: snapshot.lastExportAt,
-        remainingCooldown: snapshot.remainingCooldown,
-      );
-
-      _logger.info('privacy_export_accepted');
-      _enterCooldown(snapshot);
+      if (_current(epoch)) _applySnapshot(snapshot);
     } on PrivacyException catch (error) {
-      await _handleExportError(error);
+      if (_current(epoch)) {
+        state = state.copyWith(exportStatus: ExportStatus.failed);
+        await _handleError(error);
+      }
     }
   }
 
-  Future<void> delete({bool hardDelete = true}) async {
-    final token = await _requireAuthToken();
-    if (token == null) return;
-
-    await _analyticsClient.logEvent(AnalyticsEvents.privacyDeleteRequested);
-
+  Future<void> delete() async {
+    if (!isCurrentSession || !state.canRequestDeletion) return;
+    final epoch = ++_epoch;
     state = state.copyWith(
       deleteStatus: DeleteStatus.deleting,
+      deleteAllowed: false,
       clearError: true,
     );
-
+    final token = await _token();
+    if (token == null || !_current(epoch)) return;
     try {
-      await _repository.deleteAccount(authToken: token, hardDelete: hardDelete);
-
-      _logger.info('privacy_delete_confirmed');
-
-      state = state.copyWith(deleteStatus: DeleteStatus.requested);
+      await _analyticsClient.logEvent(AnalyticsEvents.privacyDeleteRequested);
+      if (!_current(epoch)) return;
+      final result = await _repository.deleteAccount(authToken: token);
+      if (_current(epoch)) _applyDeletion(result);
     } on PrivacyException catch (error) {
-      _logger.warning('privacy_delete_failed');
-      state = state.copyWith(
-        deleteStatus: DeleteStatus.failed,
-        error: error.message,
-      );
-      if (error.type == PrivacyErrorType.unauthorized) {
-        await _handleUnauthorized();
+      if (_current(epoch)) {
+        state = state.copyWith(deleteStatus: DeleteStatus.failed);
+        await _handleError(error);
       }
+    }
+  }
+
+  /// Bytes stay within the active caller; they are never cached in state or
+  /// storage. The UI checks this session again before opening a save dialog.
+  Future<Uint8List?> download() async {
+    if (!isCurrentSession || !state.canDownload) return null;
+    final requestId = state.requestId!;
+    state = state.copyWith(downloading: true, clearError: true);
+    final token = await _token();
+    if (token == null || !isCurrentSession) return null;
+    try {
+      final bytes = await _repository.downloadExport(
+        authToken: token,
+        requestId: requestId,
+      );
+      return isCurrentSession && state.requestId == requestId ? bytes : null;
+    } on PrivacyException catch (error) {
+      if (isCurrentSession) await _handleError(error);
+      return null;
+    } finally {
+      if (isCurrentSession) state = state.copyWith(downloading: false);
+    }
+  }
+
+  Future<void> _hydrate() async {
+    final snapshot = await _repository.loadPersistedSnapshot();
+    if (isCurrentSession && _epoch == 0) {
+      state = state.copyWith(lastExportAt: snapshot.lastExportAt);
+    }
+  }
+
+  Future<String?> _token() async {
+    if (!isCurrentSession || state.isGuest) return null;
+    try {
+      final token = await Future.any<String?>([
+        _ref.read(jwtProvider.future),
+        _disposed.future,
+      ]);
+      if (!isCurrentSession) return null;
+      if (token != null && token.isNotEmpty) return token;
+    } catch (_) {
+      if (!isCurrentSession) return null;
+      state = state.copyWith(
+        exportStatus: state.exportStatus == ExportStatus.requesting
+            ? ExportStatus.failed
+            : state.exportStatus,
+        deleteStatus: state.deleteStatus == DeleteStatus.deleting
+            ? DeleteStatus.failed
+            : state.deleteStatus,
+        downloading: false,
+        refreshing: false,
+        exportAllowed: false,
+        deleteAllowed: false,
+        error: 'Unable to check your session. Please try again.',
+      );
+      return null;
+    }
+    await _handleError(
+      const PrivacyException(
+        PrivacyErrorType.unauthorized,
+        'Session expired. Please sign in.',
+      ),
+    );
+    return null;
+  }
+
+  Future<void> _handleError(PrivacyException error) async {
+    if (!isCurrentSession) return;
+    if (error.type == PrivacyErrorType.unauthorized) {
+      _cooldownTimer?.cancel();
+      state = const PrivacyState(
+        error: 'Session expired. Please sign in.',
+        isGuest: true,
+      );
+      // Check before the side effect; never sign out a replacement session.
+      if (isCurrentSession) await _signOut();
+      return;
+    }
+    _logger.warning('privacy_request_failed');
+    final remaining = error.retryAfter;
+    if (remaining != null && remaining > Duration.zero) {
+      _setCooldown(remaining);
+    }
+    state = state.copyWith(
+      error: error.message,
+      remainingCooldown: remaining,
+      exportAllowed: false,
+      deleteAllowed: false,
+    );
+  }
+
+  void _applySnapshot(ExportSnapshot snapshot) {
+    final status = switch (privacyRequestState(snapshot.serverState ?? '')) {
+      PrivacyRequestState.idle => ExportStatus.idle,
+      PrivacyRequestState.received => ExportStatus.received,
+      PrivacyRequestState.processing => ExportStatus.processing,
+      PrivacyRequestState.blocked => ExportStatus.blocked,
+      PrivacyRequestState.completed => ExportStatus.completed,
+      PrivacyRequestState.failed => ExportStatus.failed,
+      PrivacyRequestState.unknown => ExportStatus.unknown,
+    };
+    // Replacing the complete server projection also clears a previously cached
+    // request ID and timestamp when this owner's response is request:null.
+    state = state.copyWith(clearExport: true);
+    state = state.copyWith(
+      exportStatus: status,
+      requestId: snapshot.requestId,
+      lastExportAt: snapshot.lastExportAt,
+      completedAt: snapshot.completedAt,
+      remainingCooldown: snapshot.remainingCooldown,
+      exportAllowed: snapshot.canRequest,
+      cooldownKnown: snapshot.cooldownKnown,
+      clearError: true,
+    );
+    _setCooldown(snapshot.remainingCooldown);
+  }
+
+  void _applyDeletion(ExportStatusDTO result) {
+    final status = switch (result.requestState) {
+      PrivacyRequestState.idle => DeleteStatus.idle,
+      PrivacyRequestState.received => DeleteStatus.requested,
+      PrivacyRequestState.processing => DeleteStatus.processing,
+      PrivacyRequestState.blocked => DeleteStatus.blocked,
+      PrivacyRequestState.completed => DeleteStatus.completed,
+      PrivacyRequestState.failed => DeleteStatus.failed,
+      PrivacyRequestState.unknown => DeleteStatus.unknown,
+    };
+    state = state.copyWith(clearDeletion: true);
+    state = state.copyWith(
+      deleteStatus: status,
+      deleteRequestId: result.requestId,
+      deleteAllowed: result.canRequest && status != DeleteStatus.completed,
+    );
+  }
+
+  void _setCooldown(Duration remaining) {
+    _cooldownTimer?.cancel();
+    _cooldownUntil = _now().toUtc().add(remaining);
+    if (remaining > Duration.zero) {
+      _cooldownTimer = Timer.periodic(
+        const Duration(minutes: 1),
+        (_) => _handleCooldownTick(),
+      );
     }
   }
 
   @visibleForTesting
   void debugTickCooldown() => _handleCooldownTick();
 
+  void _handleCooldownTick() {
+    if (!isCurrentSession || _cooldownUntil == null) return;
+    final remaining = _cooldownUntil!.difference(_now().toUtc());
+    state = state.copyWith(
+      remainingCooldown: remaining.isNegative ? Duration.zero : remaining,
+    );
+    if (remaining <= Duration.zero) {
+      _cooldownTimer?.cancel();
+      // Expiry never changes processing/blocked/completed to idle or grants
+      // permission locally. Refresh the existing owner endpoint.
+      unawaited(refreshStatus());
+    }
+  }
+
   @override
   void dispose() {
     _cooldownTimer?.cancel();
+    if (!_disposed.isCompleted) _disposed.complete(null);
     super.dispose();
-  }
-
-  Future<void> _hydrate() async {
-    final snapshot = await _repository.loadPersistedSnapshot();
-    _applySnapshot(snapshot);
-  }
-
-  Future<String?> _requireAuthToken() async {
-    final token = await _ref.read(jwtProvider.future);
-    if (token == null || token.isEmpty) {
-      await _handleUnauthorized();
-      return null;
-    }
-    return token;
-  }
-
-  Future<void> _handleUnauthorized() async {
-    await _signOut();
-    final deleteStatus =
-        state.deleteStatus == DeleteStatus.deleting ||
-            state.deleteStatus == DeleteStatus.confirming
-        ? DeleteStatus.failed
-        : state.deleteStatus;
-    state = state.copyWith(
-      exportStatus: ExportStatus.failed,
-      deleteStatus: deleteStatus,
-      error: 'Session expired. Please sign in.',
-    );
-  }
-
-  void _applySnapshot(ExportSnapshot snapshot) {
-    final exportStatus = _statusFromServer(
-      snapshot.serverState,
-      snapshot.remainingCooldown,
-    );
-
-    state = state.copyWith(
-      exportStatus: exportStatus,
-      lastExportAt: snapshot.lastExportAt,
-      remainingCooldown: snapshot.remainingCooldown,
-      clearError: true,
-    );
-
-    if (snapshot.remainingCooldown > Duration.zero) {
-      _startCooldownTicker();
-    } else {
-      _cancelCooldownTicker();
-    }
-  }
-
-  ExportStatus _statusFromServer(String? serverState, Duration remaining) {
-    if (remaining > Duration.zero) {
-      return ExportStatus.coolingDown;
-    }
-
-    switch (serverState) {
-      case 'queued':
-        return ExportStatus.queued;
-      case 'email_sent':
-      case 'accepted':
-        return ExportStatus.accepted;
-      case 'failed':
-        return ExportStatus.failed;
-      default:
-        return ExportStatus.idle;
-    }
-  }
-
-  void _enterCooldown(ExportSnapshot snapshot) {
-    state = state.copyWith(
-      exportStatus: ExportStatus.coolingDown,
-      lastExportAt: snapshot.lastExportAt,
-      remainingCooldown: snapshot.remainingCooldown,
-      clearError: true,
-    );
-
-    if (snapshot.remainingCooldown > Duration.zero) {
-      _startCooldownTicker();
-    } else {
-      _cancelCooldownTicker();
-    }
-  }
-
-  Future<void> _handleExportError(PrivacyException error) async {
-    if (error.type == PrivacyErrorType.rateLimited) {
-      _logger.warning('privacy_export_rate_limited');
-    } else if (error.type == PrivacyErrorType.unauthorized) {
-      await _handleUnauthorized();
-      return;
-    }
-
-    final Duration? derivedRemaining = error.retryAfter;
-    DateTime? derivedTimestamp;
-
-    if (derivedRemaining != null && derivedRemaining > Duration.zero) {
-      derivedTimestamp = _repository.estimateLastExportFromRemaining(
-        derivedRemaining,
-      );
-    }
-
-    state = state.copyWith(
-      exportStatus: ExportStatus.failed,
-      error: error.message,
-      lastExportAt: derivedTimestamp?.toLocal() ?? state.lastExportAt,
-      remainingCooldown: derivedRemaining ?? state.remainingCooldown,
-    );
-
-    if (derivedRemaining != null && derivedRemaining > Duration.zero) {
-      _startCooldownTicker();
-    } else if (state.remainingCooldown <= Duration.zero) {
-      _cancelCooldownTicker();
-    }
-  }
-
-  void _startCooldownTicker() {
-    _cooldownTimer?.cancel();
-    _cooldownTimer = Timer.periodic(
-      const Duration(minutes: 1),
-      (_) => _handleCooldownTick(),
-    );
-  }
-
-  void _cancelCooldownTicker() {
-    _cooldownTimer?.cancel();
-    _cooldownTimer = null;
-  }
-
-  void _handleCooldownTick() {
-    final lastExport = state.lastExportAt;
-    if (lastExport == null) {
-      _cancelCooldownTicker();
-      state = state.copyWith(
-        exportStatus: ExportStatus.idle,
-        remainingCooldown: Duration.zero,
-      );
-      return;
-    }
-
-    final nowUtc = _now().toUtc();
-    final remaining = lastExport
-        .toUtc()
-        .add(_cooldownWindow)
-        .difference(nowUtc);
-
-    if (remaining <= Duration.zero) {
-      _cancelCooldownTicker();
-      state = state.copyWith(
-        exportStatus: ExportStatus.idle,
-        remainingCooldown: Duration.zero,
-      );
-    } else {
-      state = state.copyWith(
-        exportStatus: ExportStatus.coolingDown,
-        remainingCooldown: remaining,
-      );
-    }
   }
 }
 
-// coverage:ignore-start
 final privacyControllerProvider =
     StateNotifierProvider.autoDispose<PrivacyController, PrivacyState>((ref) {
-      final repository = ref.watch(privacyRepositoryProvider);
-      final logger = ref.watch(appLoggerProvider);
+      final revision = ref.watch(authSessionRevisionProvider);
+      final session = ref.read(authSessionRevisionProvider.notifier);
+      final actor = ref.watch(currentUserProvider.select((user) => user?.id));
       final controller = PrivacyController(
         ref: ref,
-        repository: repository,
-        logger: logger,
+        repository: ref.watch(privacyRepositoryProvider),
+        logger: ref.watch(appLoggerProvider),
         analyticsClient: ref.watch(analyticsClientProvider),
+        isCurrentSession: () =>
+            session.revision == revision &&
+            ref.read(currentUserProvider)?.id == actor,
       );
-      ref.onDispose(controller.dispose);
+      final stop = session.cancelOnChange(controller.cancelPendingSession);
+      ref.onDispose(stop);
       return controller;
     });
-// coverage:ignore-end

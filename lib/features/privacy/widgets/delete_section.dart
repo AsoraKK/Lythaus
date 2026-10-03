@@ -12,10 +12,12 @@ class PrivacyDeleteSection extends StatelessWidget {
     super.key,
     required this.onDelete,
     required this.isProcessing,
+    this.statusLabel,
   });
 
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
   final bool isProcessing;
+  final String? statusLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -53,6 +55,10 @@ class PrivacyDeleteSection extends StatelessWidget {
             ),
           ),
           SizedBox(height: spacing.lg),
+          if (statusLabel != null && statusLabel!.isNotEmpty) ...[
+            Text(statusLabel!),
+            SizedBox(height: spacing.md),
+          ],
           SizedBox(
             width: double.infinity,
             child: LythButton.destructive(

@@ -1,4 +1,5 @@
 import 'package:lythaus/core/analytics/analytics_client.dart';
+import 'package:lythaus/features/privacy/services/privacy_api.dart';
 import 'package:lythaus/core/logging/app_logger.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/privacy/privacy_settings_screen.dart';
@@ -142,7 +143,11 @@ void main() {
       final controller = container.read(privacyControllerProvider.notifier);
 
       controller.state = controller.state.copyWith(
-        exportStatus: ExportStatus.accepted,
+        exportStatus: ExportStatus.requesting,
+      );
+      await tester.pump();
+      controller.state = controller.state.copyWith(
+        exportStatus: ExportStatus.received,
       );
       await tester.pump();
 
@@ -208,7 +213,13 @@ _Harness _buildHarness({required PrivacyState state, DateTime? initialNow}) {
   final snapshot = ExportSnapshot(
     lastExportAt: derivedLastExport,
     remainingCooldown: state.remainingCooldown,
-    serverState: state.exportStatus.name,
+    serverState: state.exportStatus == ExportStatus.unknown
+        ? 'idle'
+        : state.exportStatus.name,
+    canRequest: state.remainingCooldown <= Duration.zero,
+    cooldownKnown: true,
+    requestId: state.requestId,
+    completedAt: state.completedAt,
   );
   final repository = _TestRepository(snapshot, () => now.value);
 
@@ -242,7 +253,7 @@ class _TestRepository extends PrivacyRepository {
         api: TestPrivacyApi(),
         storage: NullSecureStorage(),
         logger: AppLogger('repo_test'),
-        clock: clock,
+        actorId: 'test-owner',
       );
 
   final ExportSnapshot snapshot;
@@ -259,8 +270,10 @@ class _TestRepository extends PrivacyRepository {
       snapshot;
 
   @override
-  Future<void> deleteAccount({
-    required String authToken,
-    required bool hardDelete,
-  }) async {}
+  Future<ExportStatusDTO> deleteAccount({required String authToken}) async =>
+      ExportStatusDTO(
+        state: 'received',
+        requestId: 'delete-1',
+        acceptedAt: DateTime.utc(2026, 10, 2),
+      );
 }
