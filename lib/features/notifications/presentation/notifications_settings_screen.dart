@@ -14,6 +14,7 @@ import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/ui/components/sign_in_required.dart';
 import 'package:lythaus/features/notifications/domain/notification_models.dart';
 import 'package:lythaus/features/notifications/application/notification_providers.dart';
@@ -34,7 +35,8 @@ class _NotificationsSettingsScreenState
     extends ConsumerState<NotificationsSettingsScreen> {
   bool _saving = false;
   final Set<String> _removing = {};
-  int _sessionEpoch = 0;
+  int get _sessionEpoch =>
+      ref.read(authSessionRevisionProvider.notifier).revision;
 
   Future<void> _savePreferences(UserNotificationPreferences preferences) async {
     if (_saving) return;
@@ -61,9 +63,8 @@ class _NotificationsSettingsScreenState
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(currentUserProvider.select((user) => user?.id), (_, next) {
+    ref.listen(authSessionRevisionProvider, (_, next) {
       setState(() {
-        _sessionEpoch++;
         _saving = false;
         _removing.clear();
       });

@@ -13,6 +13,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/ui/components/sign_in_required.dart';
 import 'package:lythaus/core/routing/deeplink_router.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
@@ -35,7 +36,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   final ScrollController _scrollController = ScrollController();
   final Set<String> _pending = {};
   bool _markingAll = false;
-  int _sessionEpoch = 0;
+  int get _sessionEpoch =>
+      ref.read(authSessionRevisionProvider.notifier).revision;
 
   @override
   void initState() {
@@ -156,14 +158,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(currentUserProvider.select((user) => user?.id), (_, next) {
+    ref.listen(authSessionRevisionProvider, (_, next) {
       setState(() {
-        _sessionEpoch++;
         _pending.clear();
         _markingAll = false;
       });
       final epoch = _sessionEpoch;
-      if (next != null) {
+      if (ref.read(currentUserProvider) != null) {
         Future.microtask(() {
           if (mounted && epoch == _sessionEpoch) {
             ref

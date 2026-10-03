@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/notifications/presentation/notifications_settings_screen.dart';
 
@@ -93,6 +94,9 @@ Future<ProviderContainer> _open(
   final container = ProviderContainer(
     overrides: [
       secureDioProvider.overrideWithValue(dio),
+      authSessionRevisionProvider.overrideWith(
+        (ref) => AuthSessionRevision(ref.read(_session.notifier)),
+      ),
       currentUserProvider.overrideWith((ref) => ref.watch(_session)),
       guestModeProvider.overrideWith((ref) => guest),
       jwtProvider.overrideWith(

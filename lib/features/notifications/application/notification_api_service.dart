@@ -55,17 +55,24 @@ class NotificationApiService {
   final String? ownerId;
   final Future<String?> Function()? _accessToken;
   final CancelToken? _cancelToken;
+  final bool Function()? _isCurrentSession;
 
   NotificationApiService({
     required Dio dioClient,
     this.ownerId,
     Future<String?> Function()? accessToken,
     CancelToken? cancelToken,
+    bool Function()? isCurrentSession,
   }) : _dio = dioClient,
        _accessToken = accessToken,
-       _cancelToken = cancelToken;
+       _cancelToken = cancelToken,
+       _isCurrentSession = isCurrentSession;
+
+  bool get isCurrentSession =>
+      _cancelToken?.isCancelled != true && (_isCurrentSession?.call() ?? true);
 
   Future<Options?> _options() async {
+    if (!isCurrentSession) throw StateError('Notification session changed');
     if (_cancelToken?.isCancelled == true) throw _cancelToken!.cancelError!;
     if (_accessToken == null) return null;
     if (ownerId == null) throw const AuthRequiredException();

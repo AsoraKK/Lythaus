@@ -6,7 +6,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockNotificationApiService extends Mock
-    implements NotificationApiService {}
+    implements NotificationApiService {
+  @override
+  bool get isCurrentSession => true;
+}
 
 void main() {
   setUpAll(() {

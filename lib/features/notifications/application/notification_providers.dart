@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/auth/domain/auth_required_exception.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/notifications/domain/notification_models.dart';
@@ -27,15 +28,20 @@ final dioProvider = Provider<Dio>((ref) {
 
 /// Notification API service provider
 final notificationApiServiceProvider = Provider<NotificationApiService>((ref) {
+  final revision = ref.watch(authSessionRevisionProvider);
+  final session = ref.read(authSessionRevisionProvider.notifier);
   final ownerId = ref.watch(currentUserProvider.select((user) => user?.id));
   final dio = ref.watch(dioProvider);
   final cancelToken = CancelToken();
+  final stop = session.cancelOnChange(cancelToken.cancel);
+  ref.onDispose(stop);
   ref.onDispose(cancelToken.cancel);
   return NotificationApiService(
     dioClient: dio,
     ownerId: ownerId,
     cancelToken: cancelToken,
     accessToken: () => ref.read(jwtProvider.future),
+    isCurrentSession: () => session.revision == revision,
   );
 });
 
@@ -93,6 +99,7 @@ class NotificationsState {
 /// Notifications list controller
 class NotificationsController extends StateNotifier<NotificationsState> {
   final NotificationApiService _apiService;
+  bool get _currentSession => mounted && _apiService.isCurrentSession;
   int _loadEpoch = 0;
 
   NotificationsController(this._apiService) : super(const NotificationsState());
@@ -110,14 +117,14 @@ class NotificationsController extends StateNotifier<NotificationsState> {
 
     try {
       final response = await _apiService.getNotifications(limit: 20);
-      if (!mounted || epoch != _loadEpoch) return;
+      if (!_currentSession || epoch != _loadEpoch) return;
       state = state.copyWith(
         notifications: response.notifications,
         continuationToken: () => response.continuationToken,
         isLoading: false,
       );
     } catch (e) {
-      if (!mounted || epoch != _loadEpoch) return;
+      if (!_currentSession || epoch != _loadEpoch) return;
       if (e is AuthRequiredException) {
         state = const NotificationsState(hasError: true, authRequired: true);
         return;
@@ -148,7 +155,7 @@ class NotificationsController extends StateNotifier<NotificationsState> {
         limit: 20,
         continuationToken: state.continuationToken,
       );
-      if (!mounted || epoch != _loadEpoch) return;
+      if (!_currentSession || epoch != _loadEpoch) return;
 
       state = state.copyWith(
         notifications: [...state.notifications, ...response.notifications],
@@ -156,7 +163,7 @@ class NotificationsController extends StateNotifier<NotificationsState> {
         isLoadingMore: false,
       );
     } catch (e) {
-      if (!mounted || epoch != _loadEpoch) return;
+      if (!_currentSession || epoch != _loadEpoch) return;
       if (e is AuthRequiredException) {
         state = const NotificationsState(hasError: true, authRequired: true);
         return;
@@ -174,7 +181,7 @@ class NotificationsController extends StateNotifier<NotificationsState> {
   Future<void> markAsRead(String notificationId) async {
     try {
       await _apiService.markAsRead(notificationId);
-      if (!mounted) return;
+      if (!_currentSession) return;
 
       // Update local state
       final updatedList = state.notifications.map((n) {
@@ -190,7 +197,7 @@ class NotificationsController extends StateNotifier<NotificationsState> {
       state = state.copyWith(notifications: updatedList);
     } catch (e) {
       // Silently fail (can add error toast here)
-      if (!mounted) return;
+      if (!_currentSession) return;
       debugPrint('[Notifications] Failed to mark as read: $e');
     }
   }
@@ -199,7 +206,7 @@ class NotificationsController extends StateNotifier<NotificationsState> {
   Future<void> dismiss(String notificationId) async {
     try {
       await _apiService.dismissNotification(notificationId);
-      if (!mounted) return;
+      if (!_currentSession) return;
 
       // Remove from local state
       final updatedList = state.notifications
@@ -207,7 +214,7 @@ class NotificationsController extends StateNotifier<NotificationsState> {
           .toList();
       state = state.copyWith(notifications: updatedList);
     } catch (e) {
-      if (!mounted) return;
+      if (!_currentSession) return;
       debugPrint('[Notifications] Failed to dismiss notification: $e');
     }
   }
@@ -228,6 +235,7 @@ final notificationsControllerProvider =
 class PreferencesController
     extends StateNotifier<AsyncValue<UserNotificationPreferences>> {
   final NotificationApiService _apiService;
+  bool get _currentSession => mounted && _apiService.isCurrentSession;
 
   PreferencesController(this._apiService) : super(const AsyncValue.loading());
 
@@ -236,10 +244,10 @@ class PreferencesController
     state = const AsyncValue.loading();
     try {
       final prefs = await _apiService.getPreferences();
-      if (!mounted) return;
+      if (!_currentSession) return;
       state = AsyncValue.data(prefs);
     } catch (e, stack) {
-      if (!mounted) return;
+      if (!_currentSession) return;
       state = AsyncValue.error(e, stack);
     }
   }
@@ -248,10 +256,10 @@ class PreferencesController
   Future<void> update(UserNotificationPreferences preferences) async {
     try {
       final updated = await _apiService.updatePreferences(preferences);
-      if (!mounted) throw StateError('Notification session changed');
+      if (!_currentSession) throw StateError('Notification session changed');
       state = AsyncValue.data(updated);
     } catch (e, stack) {
-      if (mounted) state = AsyncValue.error(e, stack);
+      if (_currentSession) state = AsyncValue.error(e, stack);
       rethrow;
     }
   }
@@ -276,6 +284,7 @@ final preferencesControllerProvider =
 class DevicesController
     extends StateNotifier<AsyncValue<List<UserDeviceToken>>> {
   final NotificationApiService _apiService;
+  bool get _currentSession => mounted && _apiService.isCurrentSession;
 
   DevicesController(this._apiService) : super(const AsyncValue.loading());
 
@@ -284,10 +293,10 @@ class DevicesController
     state = const AsyncValue.loading();
     try {
       final devices = await _apiService.getDevices(activeOnly: true);
-      if (!mounted) return;
+      if (!_currentSession) return;
       state = AsyncValue.data(devices);
     } catch (e, stack) {
-      if (!mounted) return;
+      if (!_currentSession) return;
       state = AsyncValue.error(e, stack);
     }
   }
@@ -296,7 +305,7 @@ class DevicesController
   Future<void> revoke(String deviceId) async {
     try {
       await _apiService.revokeDevice(deviceId);
-      if (!mounted) throw StateError('Notification session changed');
+      if (!_currentSession) throw StateError('Notification session changed');
       // Reload devices after revoke
       await load();
     } catch (e) {
