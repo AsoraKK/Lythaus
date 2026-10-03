@@ -94,7 +94,8 @@ export async function closeCommunityAppeal(client: Client, appealId: string) {
     const ballot = ballots[index], row = rows[index];
     if (!isEligibleCommunityVoter(ballot.eligibility) || !['allow', 'retain'].includes(ballot.choice)) continue;
     await client.query(`INSERT INTO moderation.community_appeal_valid_participation (ballot_id, revision_id, performed_at, recorded_at)
-      VALUES ($1, $2, $3, $4)`, [row.ballot_id, row.id, ballot.castAt, now]);
+      SELECT ballot_id, id, cast_at, $3 FROM moderation.community_appeal_ballot_revisions WHERE id = $2 AND ballot_id = $1`,
+    [row.ballot_id, row.id, now]);
   }
   await client.query('UPDATE moderation.community_appeal_sessions SET state = $2, resolved_at = $3 WHERE appeal_id = $1', [appealId, result.status, now]);
   await client.query('UPDATE moderation.appeals SET state = $2, resolved_at = $3 WHERE id = $1', [appealId, result.status, now]);

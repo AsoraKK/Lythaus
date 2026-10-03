@@ -6,9 +6,10 @@ import { proposedClosingSundayWeeks } from '../../contracts/src/monthly-reputati
 import { loadMonthlyEarningConfiguration, MONTHLY_EARNING_SOURCE_EVENTS } from './monthly-earning.ts';
 import { loadMonthlyMaintenanceConfiguration, readMonthlyMaintenanceEvidence } from './monthly-maintenance.ts';
 import { recordMonthlyReputationSource } from './monthly-reputation.ts';
+import { requireMonthlyPeerIngestionDrained } from './monthly-peer-participation.ts';
 
 export async function assembleMonthlyReputation(client: Client, input: {
-  subjectUserId: string; sourceMonth: string; weeklyRulesVersion: string; maintenanceRulesVersion: string; evaluatedAt: string;
+  subjectUserId: string; sourceMonth: string; weeklyRulesVersion: string; maintenanceRulesVersion: string; evaluatedAt: string; peerRulesVersion?: string;
 }) {
   requireSourceMonth(input.sourceMonth);
   const evaluated = reputationInstant(input.evaluatedAt);
@@ -33,6 +34,12 @@ export async function assembleMonthlyReputation(client: Client, input: {
   if (previous && (!previous.evidence_digest || previous.rules_version !== maintenance.rules.version
     || previous.weekly_rules_version !== weekly.rules.version)) throw new Error('monthly_assembly_previous_policy_requires_review');
   const periods = proposedClosingSundayWeeks(input.sourceMonth);
+  const peer = input.peerRulesVersion ? await requireMonthlyPeerIngestionDrained(client, { subjectUserId: input.subjectUserId,
+    peerRulesVersion: input.peerRulesVersion, weeklyRulesVersion: input.weeklyRulesVersion,
+    startsAt: periods[0].startsAt, endsAt: periods.at(-1)!.endsAt }) : null;
+  const previousPeerVersion = previous?.report && typeof previous.report === 'object'
+    ? (previous.report as { peerRulesVersion?: string | null }).peerRulesVersion ?? null : null;
+  if (previous && previousPeerVersion !== (peer?.version ?? null)) throw new Error('monthly_assembly_previous_policy_requires_review');
   const pending = await client.query(`SELECT 1 FROM system.outbox_events event
     LEFT JOIN content.posts post ON event.aggregate_type = 'post' AND post.id = event.aggregate_id
     LEFT JOIN content.comments comment ON event.aggregate_type = 'comment' AND comment.id = event.aggregate_id
@@ -66,6 +73,7 @@ export async function assembleMonthlyReputation(client: Client, input: {
     rules: maintenance.rules, evidence: observations.evidence });
   const report = { policyVersion: MONTHLY_REPUTATION_POLICY_VERSION, mode: 'shadow', sourceMonth: input.sourceMonth,
     sourceCutoff, rulesVersion: maintenance.rules.version, weeklyRulesVersion: weekly.rules.version,
+    peerRulesVersion: peer?.version ?? null,
     maintenance: maintenanceReport, weeks: weeks.map(week => ({ revisionId: week.id, weekId: week.week_id,
       revision: week.revision, calculation: { ...week.calculation, state: week.state } })),
     missingWeeks: periods.filter(period => !locked.some(week => week.startsAt === period.startsAt)).map(period => ({ ...period,

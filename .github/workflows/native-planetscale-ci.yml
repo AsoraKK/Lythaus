@@ -117,6 +117,8 @@ jobs:
           --experimental-test-coverage
           '--test-coverage-include=packages/db/src/community-appeal-*.ts'
           '--test-coverage-include=apps/lythaus-jobs/src/community-appeals.ts'
+          '--test-coverage-include=packages/db/src/monthly-peer-participation.ts'
+          '--test-coverage-include=apps/lythaus-jobs/src/monthly-peer-participation.ts'
           --test-coverage-lines=80 --test-coverage-branches=80
           --test apps/lythaus-public-api/tests/community-appeals.postgres.mjs
       - name: Validate canonical maintenance and monthly assembly transactions

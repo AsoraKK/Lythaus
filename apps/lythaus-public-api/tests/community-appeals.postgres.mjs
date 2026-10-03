@@ -11,11 +11,15 @@ import * as database from '@lythaus/db';
 import { hmacLookup, signAccessToken, uuidv7 } from '@lythaus/security';
 import { MONTHLY_REPUTATION_POLICY_VERSION, MONTHLY_REPUTATION_CATALOGUE_HASH } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
 import { PROPOSED_WEEKLY_EARNING_RULES } from '../../../packages/contracts/src/monthly-earning-policy.ts';
-import { recordMonthlyContentEarning } from '../../../packages/db/src/monthly-earning.ts';
+import { loadMonthlyEarningConfiguration, recordMonthlyContentEarning, refreshMonthlyEarningWeek } from '../../../packages/db/src/monthly-earning.ts';
 import { PROPOSED_COMMUNITY_APPEAL_RULES } from '../../../packages/contracts/src/monthly-peer-appeal-policy.ts';
 import { communityConfiguration, communityEligibility, communityReviewQueue, communityTriageQueue, readCommunityAppeal, readCommunityTriageEvidence } from '../../../packages/db/src/community-appeal-access.ts';
 import { castCommunityBallot, submitCommunityAppeal, triageCommunityAppeal, withdrawCommunityAppeal } from '../../../packages/db/src/community-appeal-mutations.ts';
 import { closeCommunityAppeal, identicalCommunityAppealOverride } from '../../../packages/db/src/community-appeal-closure.ts';
+import { PROPOSED_MONTHLY_MAINTENANCE_RULES } from '../../../packages/contracts/src/monthly-maintenance-policy.ts';
+import { assembleMonthlyReputation } from '../../../packages/db/src/monthly-assembly.ts';
+import { loadMonthlyPeerConfiguration, recordMonthlyPeerParticipation, requireMonthlyPeerIngestionDrained } from '../../../packages/db/src/monthly-peer-participation.ts';
+import { proposedClosingSundayWeek } from '../../../packages/contracts/src/monthly-reputation-decisions.ts';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
 const target = new URL(connectionString ?? 'file:///missing');
@@ -48,6 +52,7 @@ mock.module('@lythaus/db', { namedExports: { ...database,
 const { default: worker } = await import('../src/index.ts');
 const { default: adminWorker } = await import('../../lythaus-admin-api/src/index.ts');
 const { reconcileCommunityAppeals } = await import('../../lythaus-jobs/src/community-appeals.ts');
+const { processMonthlyPeerParticipation, reconcileMonthlyPeerParticipation } = await import('../../lythaus-jobs/src/monthly-peer-participation.ts');
 const hooks = registerHooks({ resolve(specifier, context, next) {
   return specifier === 'cloudflare:workers' ? { url: 'data:text/javascript,export class WorkflowEntrypoint {}', shortCircuit: true } : next(specifier, context);
 } });
@@ -135,9 +140,23 @@ before(async () => {
 after(async () => {
   await sql('DROP TRIGGER IF EXISTS fail_community_fixture ON system.outbox_events');
   await sql('DROP FUNCTION IF EXISTS system.fail_community_fixture()');
+  await sql('DROP TRIGGER IF EXISTS fail_peer_fixture ON system.outbox_events');
+  await sql('DROP FUNCTION IF EXISTS system.fail_peer_fixture()');
+  await sql('DROP TRIGGER IF EXISTS monthly_peer_flag_preserved ON system.feature_flags');
+  await sql('DROP TRIGGER IF EXISTS monthly_collection_flag_preserved ON system.feature_flags');
+  await sql('DROP TRIGGER IF EXISTS monthly_reputation_subject_erasure ON identity.users');
+  await sql('DROP TRIGGER IF EXISTS monthly_email_control_revocation ON identity.email_credentials');
+  await sql(`DROP TABLE IF EXISTS trust.monthly_peer_participation_receipts, trust.monthly_peer_participation_rule_sets,
+    trust.monthly_reputation_assemblies, trust.monthly_maintenance_revocations, trust.monthly_maintenance_observations,
+    trust.monthly_maintenance_rule_sets, trust.monthly_reputation_assessments, trust.monthly_reputation_sources`);
   await sql('DROP TABLE IF EXISTS trust.monthly_earning_week_revisions, trust.monthly_earning_receipts, trust.monthly_earning_evidence_revisions, trust.monthly_earning_contributions, trust.monthly_earning_rule_sets');
+  await sql(`DROP FUNCTION IF EXISTS trust.preserve_monthly_peer_flag(), trust.lock_monthly_peer_configuration(), trust.preserve_monthly_collection_flag(),
+    trust.require_monthly_assessment_subject(), trust.require_monthly_reputation_subject(), trust.erase_monthly_reputation_subject(),
+    trust.revoke_monthly_email_control(), trust.lock_monthly_reputation_subject(uuid),
+    trust.reject_monthly_maintenance_update(), trust.reject_monthly_reputation_update()`);
   await sql('DROP FUNCTION IF EXISTS trust.reject_monthly_earning_update()');
   await sql("DELETE FROM system.feature_flags WHERE flag_key = 'trust.monthly_reputation_shadow'");
+  await sql("DELETE FROM system.feature_flags WHERE flag_key = 'trust.monthly_peer_participation'");
   await sql(`DROP TABLE IF EXISTS moderation.community_appeal_events, moderation.community_appeal_overrides,
     moderation.community_appeal_valid_participation, moderation.community_appeal_outcomes, moderation.community_voting_restrictions,
     moderation.community_appeal_ballot_revisions, moderation.community_appeal_ballots, moderation.community_appeal_evidence,
@@ -151,6 +170,7 @@ after(async () => {
   await sql('DELETE FROM system.consumer_inbox WHERE event_id IN (SELECT id FROM system.outbox_events WHERE aggregate_id = ANY($1::uuid[]) OR actor_id = ANY($2::uuid[]))', [posts, users]);
   await sql('DELETE FROM system.outbox_events WHERE aggregate_id = ANY($1::uuid[]) OR event_type LIKE $2 OR actor_id = ANY($3::uuid[])', [posts, 'moderation.community_appeal.%', users]);
   await sql('DELETE FROM system.feature_flags WHERE flag_key = $1', [flag]);
+  await sql("DELETE FROM system.feature_flags WHERE flag_key = 'trust.monthly_peer_participation'");
   await sql('DELETE FROM system.idempotency_keys WHERE actor_id = ANY($1::uuid[])', [users]);
   await sql('DELETE FROM feed.notifications WHERE recipient_id = ANY($1::uuid[])', [users]);
   await sql('DELETE FROM identity.admin_memberships WHERE user_id = ANY($1::uuid[])', [users]);
@@ -410,6 +430,230 @@ test('APP-19: an open historical case retains its labelled policy and cannot sil
   await assert.rejects(cast(voteInput(legacyId, voters[0].id)), /appeal_not_found/);
   const response = await call(owner, 'GET', `/api/appeals/${legacyId}`); assert.equal(response.status, 200);
   assert.equal((await response.json()).appeal.policy_version, 'appeals-v1.0.0');
+});
+
+const peerVersion = 'synthetic-peer-participation-v1';
+const peerEnv = { ...jobsEnv, MONTHLY_REPUTATION_SHADOW_RULES: PROPOSED_WEEKLY_EARNING_RULES.version,
+  MONTHLY_REPUTATION_PEER_PARTICIPATION_RULES: peerVersion };
+let pausedPeerAppeal, pausedPeerEvent, peerCollectFrom, prePeerSubject, prePeerAssembly;
+const peerEvent = async appealId => (await sql("SELECT id FROM system.outbox_events WHERE aggregate_id = $1 AND event_type = 'moderation.community_appeal.resolved'", [appealId])).rows[0].id;
+const peerWeek = async userId => (await sql(`SELECT calculation FROM trust.monthly_earning_week_revisions
+  WHERE subject_user_id = $1 ORDER BY week_start DESC, revision DESC LIMIT 1`, [userId])).rows[0]?.calculation;
+
+test('APP-13/REL-03: peer earning needs its own approved configuration; unavailable setup leaves monthly assembly inert', async () => {
+  assert.equal(await processMonthlyPeerParticipation(peerEnv, uuidv7()), null, 'An absent flag must stay inert before installing the peer proposal');
+  for (const proposal of ['monthly_reputation_shadow', 'monthly_reputation_maintenance', 'monthly_reputation_peer_participation']) {
+    await sql(readFileSync(new URL(`../../../database/planetscale/proposals/${proposal}.sql`, import.meta.url), 'utf8'));
+  }
+  await sql(`INSERT INTO trust.monthly_maintenance_rule_sets (version, policy_version, catalogue_hash, mode, collect_from, configuration)
+    VALUES ($1, $2, $3, 'shadow', '2020-01-01T00:00:00.000Z', $4::jsonb)`, [PROPOSED_MONTHLY_MAINTENANCE_RULES.version,
+    MONTHLY_REPUTATION_POLICY_VERSION, MONTHLY_REPUTATION_CATALOGUE_HASH, JSON.stringify(PROPOSED_MONTHLY_MAINTENANCE_RULES)]);
+  statements.length = 0;
+  assert.equal(await processMonthlyPeerParticipation(jobsEnv, uuidv7()), null);
+  assert.deepEqual(await reconcileMonthlyPeerParticipation(jobsEnv), { processed: 0 }); assert.equal(statements.length, 0);
+  const untouched = await person();
+  const assembly = () => tx(client => assembleMonthlyReputation(client, { subjectUserId: untouched.id, sourceMonth: '2026-10',
+    weeklyRulesVersion: PROPOSED_WEEKLY_EARNING_RULES.version, maintenanceRulesVersion: PROPOSED_MONTHLY_MAINTENANCE_RULES.version,
+    peerRulesVersion: peerVersion, evaluatedAt: '2026-11-04T00:00:00.000Z' }), 'lythaus_jobs');
+  assert.equal((await assembly()).created, true, 'An absent peer flag must not block unrelated shadow assembly');
+  await sql("INSERT INTO system.feature_flags (flag_key, enabled, policy_version) VALUES ('trust.monthly_peer_participation', true, $1)", [MONTHLY_REPUTATION_POLICY_VERSION]);
+  await sql(`INSERT INTO trust.monthly_peer_participation_rule_sets
+    (version, policy_version, weekly_rules_version, appeal_rules_version, catalogue_hash, mode, award_rule, weekly_points, status, collect_from)
+    VALUES ($1, $2, $3, $4, $5, 'shadow', 'one_valid_final_ballot', 250, 'pending_owner_approval', '2020-01-01T00:00:00.000Z')`,
+  [peerVersion + '-unapproved', MONTHLY_REPUTATION_POLICY_VERSION, PROPOSED_WEEKLY_EARNING_RULES.version, rules, MONTHLY_REPUTATION_CATALOGUE_HASH]);
+  assert.equal(await tx(client => loadMonthlyPeerConfiguration(client, peerVersion + '-unapproved', PROPOSED_WEEKLY_EARNING_RULES.version), 'lythaus_jobs'), null);
+  assert.equal((await assembly()).created, false);
+  prePeerSubject = await person();
+  await sql("UPDATE identity.users SET created_at = '2026-08-01T00:00:00Z' WHERE id = $1", [prePeerSubject.id]);
+  prePeerAssembly = await tx(client => assembleMonthlyReputation(client, { subjectUserId: prePeerSubject.id, sourceMonth: '2026-09',
+    weeklyRulesVersion: PROPOSED_WEEKLY_EARNING_RULES.version, maintenanceRulesVersion: PROPOSED_MONTHLY_MAINTENANCE_RULES.version,
+    peerRulesVersion: peerVersion, evaluatedAt: '2026-10-04T00:00:00.000Z' }), 'lythaus_jobs');
+  assert.equal(prePeerAssembly.created, true); assert.equal(prePeerAssembly.report.peerRulesVersion, null);
+  peerCollectFrom = (await sql("SELECT date_trunc('milliseconds', clock_timestamp()) AS value")).rows[0].value.toISOString();
+  pausedPeerAppeal = await opened(); await majority(pausedPeerAppeal.appealId, 2, 3); await due(pausedPeerAppeal.appealId); await close(pausedPeerAppeal.appealId);
+  pausedPeerEvent = await peerEvent(pausedPeerAppeal.appealId);
+  let acknowledged = 0;
+  await jobs.queue({ messages: [{ body: { eventId: pausedPeerEvent, eventType: 'moderation.community_appeal.resolved', payload: { points: 13500 } },
+    ack() { acknowledged++; }, retry() { assert.fail('Unavailable peer collector stays inert'); } }] }, peerEnv);
+  assert.equal(acknowledged, 1);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_peer_participation_receipts')).rowCount, 0);
+  assert.equal((await sql("SELECT state FROM system.consumer_inbox WHERE event_id = $1", [pausedPeerEvent])).rows[0].state, 'completed');
+});
+
+test('APP-13/REL-02: resumed final participation awards both sides once despite a completed transport inbox', async () => {
+  await sql(`INSERT INTO trust.monthly_peer_participation_rule_sets
+    (version, policy_version, weekly_rules_version, appeal_rules_version, catalogue_hash, mode, award_rule, weekly_points, status,
+      collect_from, approved_by, approved_at, approval_reference)
+    VALUES ($1, $2, $3, $4, $5, 'shadow', 'one_valid_final_ballot', 250, 'pending_owner_approval',
+      $7, $6, now(), 'synthetic disposable approval only')`,
+  [peerVersion, MONTHLY_REPUTATION_POLICY_VERSION, PROPOSED_WEEKLY_EARNING_RULES.version, rules, MONTHLY_REPUTATION_CATALOGUE_HASH, triager.id, peerCollectFrom]);
+  const period = proposedClosingSundayWeek(new Date().toISOString());
+  await assert.rejects(tx(client => requireMonthlyPeerIngestionDrained(client, { subjectUserId: voters[0].id,
+    weeklyRulesVersion: PROPOSED_WEEKLY_EARNING_RULES.version, peerRulesVersion: peerVersion, startsAt: period.startsAt, endsAt: period.endsAt }), 'lythaus_jobs'), /peer_ingestion_pending/);
+  const results = await Promise.all([processMonthlyPeerParticipation(peerEnv, pausedPeerEvent), processMonthlyPeerParticipation(peerEnv, pausedPeerEvent)]);
+  assert.equal(results.filter(result => result.processed).length, 1); assert.equal(results[0].participants, 5);
+  for (const voter of voters.slice(0, 5)) {
+    const calculation = await peerWeek(voter.id);
+    assert.equal(calculation.points, 250); assert.equal(calculation.actions.find(row => row.actionId === 'weekly.peer_appeal_participation').points, 250);
+    const evidence = calculation.evidence[0];
+    const recorded = (await sql(`SELECT participation.performed_at FROM moderation.community_appeal_valid_participation participation
+      JOIN moderation.community_appeal_ballots ballot ON ballot.id = participation.ballot_id WHERE ballot.appeal_id = $1 AND ballot.voter_user_id = $2`,
+    [pausedPeerAppeal.appealId, voter.id])).rows[0];
+    assert.equal(evidence.performedAt, recorded.performed_at.toISOString());
+    assert.equal(evidence.kind, 'peer_ballot'); assert.equal(evidence.contentFingerprint, null);
+    assert.equal(JSON.stringify(calculation).includes('rule_applies'), false); assert.equal(JSON.stringify(calculation).includes('rule_misapplied'), false);
+  }
+  assert.equal(await peerWeek(owner.id) instanceof Object, true);
+  assert.equal((await sql("SELECT 1 FROM trust.monthly_earning_contributions WHERE subject_user_id = $1 AND source_type = 'peer_ballot'", [owner.id])).rowCount, 0);
+  assert.deepEqual(await reconcileMonthlyPeerParticipation(peerEnv), { processed: 0 });
+  await tx(client => requireMonthlyPeerIngestionDrained(client, { subjectUserId: voters[0].id,
+    weeklyRulesVersion: PROPOSED_WEEKLY_EARNING_RULES.version, peerRulesVersion: peerVersion, startsAt: period.startsAt, endsAt: period.endsAt }), 'lythaus_jobs');
+});
+
+test('APP-06/14/REL-02: multiple final ballots share one weekly allowance; recusal and latest cannot-assess never earn', async () => {
+  const appeal = await opened(); await majority(appeal.appealId, 2, 3);
+  const extra = voters[5]; await cast(voteInput(appeal.appealId, extra.id));
+  await cast(voteInput(appeal.appealId, extra.id, 'cannot_assess', { expectedRevision: 1 }));
+  await cast(voteInput(appeal.appealId, voters[6].id, 'recuse'));
+  await due(appeal.appealId); await close(appeal.appealId);
+  const eventId = await peerEvent(appeal.appealId);
+  assert.equal((await processMonthlyPeerParticipation(peerEnv, eventId)).participants, 5);
+  assert.equal((await peerWeek(voters[0].id)).points, 250); assert.equal((await peerWeek(voters[0].id)).evidence.length, 2);
+  assert.equal(await peerWeek(extra.id), undefined); assert.equal(await peerWeek(voters[6].id), undefined);
+  assert.equal((await processMonthlyPeerParticipation(peerEnv, eventId)).processed, false);
+  await assert.rejects(processMonthlyPeerParticipation(peerEnv, uuidv7()), /canonical_event_required/);
+});
+
+test('CAL-18/REL-03: later peer collection never freezes an earlier month correction', async () => {
+  await tx(async client => {
+    const configuration = await loadMonthlyEarningConfiguration(client, PROPOSED_WEEKLY_EARNING_RULES.version);
+    await refreshMonthlyEarningWeek(client, { subjectUserId: prePeerSubject.id, startsAt: '2026-09-07T00:00:00.000Z',
+      configuration, evaluatedAt: '2026-10-04T00:00:00.000Z' });
+  }, 'lythaus_jobs');
+  const corrected = await tx(client => assembleMonthlyReputation(client, { subjectUserId: prePeerSubject.id, sourceMonth: '2026-09',
+    weeklyRulesVersion: PROPOSED_WEEKLY_EARNING_RULES.version, maintenanceRulesVersion: PROPOSED_MONTHLY_MAINTENANCE_RULES.version,
+    peerRulesVersion: peerVersion, evaluatedAt: '2026-10-04T00:00:00.000Z' }), 'lythaus_jobs');
+  assert.equal(corrected.created, true); assert.equal(corrected.revision, 2); assert.equal(corrected.report.peerRulesVersion, null);
+  assert.notEqual(corrected.sourceId, prePeerAssembly.sourceId);
+  assert.equal((await sql('SELECT report FROM trust.monthly_reputation_assemblies WHERE source_id = $1', [prePeerAssembly.sourceId])).rows[0].report.peerRulesVersion, null);
+});
+
+test('REL-02: failed fanout rolls back every participant and retries from authoritative closure', async () => {
+  const appeal = await opened(); await majority(appeal.appealId, 2, 3); await due(appeal.appealId); await close(appeal.appealId);
+  const eventId = await peerEvent(appeal.appealId), before = (await peerWeek(voters[0].id)).evidence.length;
+  await sql(`CREATE FUNCTION system.fail_peer_fixture() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+    IF NEW.event_type = 'trust.monthly_week.revised' THEN RAISE EXCEPTION 'synthetic_peer_fanout_failure'; END IF; RETURN NEW; END; $$;
+    CREATE TRIGGER fail_peer_fixture BEFORE INSERT ON system.outbox_events FOR EACH ROW EXECUTE FUNCTION system.fail_peer_fixture()`);
+  try { await assert.rejects(processMonthlyPeerParticipation(peerEnv, eventId), /synthetic_peer_fanout_failure/); }
+  finally { await sql('DROP TRIGGER fail_peer_fixture ON system.outbox_events'); await sql('DROP FUNCTION system.fail_peer_fixture()'); }
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_peer_participation_receipts WHERE appeal_id = $1', [appeal.appealId])).rowCount, 0);
+  assert.equal((await peerWeek(voters[0].id)).evidence.length, before);
+  assert.equal((await processMonthlyPeerParticipation(peerEnv, eventId)).participants, 5);
+});
+
+test('REL-02: deletion during fanout rolls back the batch and retry excludes the erased account', async () => {
+  const appeal = await opened(), participants = [];
+  for (let n = 0; n < 5; n++) {
+    const actor = await person(); participants.push(actor);
+    await cast(voteInput(appeal.appealId, actor.id, n < 2 ? 'allow' : 'retain'));
+  }
+  await due(appeal.appealId); await close(appeal.appealId);
+  const eventId = await peerEvent(appeal.appealId), erased = [...participants].sort((a, b) => a.id.localeCompare(b.id))[0];
+  let reached, resume;
+  const barrier = new Promise(resolve => { reached = resolve; }), released = new Promise(resolve => { resume = resolve; });
+  const pending = tx(client => recordMonthlyPeerParticipation({ query: async (text, values) => {
+    if (text.includes('INSERT INTO trust.monthly_earning_contributions') && values[1] === erased.id) { reached(); await released; }
+    return client.query(text, values);
+  } }, { eventId, rulesVersion: peerVersion, weeklyRulesVersion: PROPOSED_WEEKLY_EARNING_RULES.version,
+    evaluatedAt: new Date().toISOString() }), 'lythaus_jobs');
+  const rejection = assert.rejects(pending, /subject_unavailable/);
+  await barrier;
+  try { await sql("UPDATE identity.users SET status = 'deleted', deleted_at = clock_timestamp() WHERE id = $1", [erased.id]); }
+  finally { resume(); }
+  await rejection;
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_peer_participation_receipts WHERE appeal_id = $1', [appeal.appealId])).rowCount, 0);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_earning_contributions WHERE subject_user_id = ANY($1::uuid[])', [participants.map(actor => actor.id)])).rowCount, 0);
+  assert.equal((await processMonthlyPeerParticipation(peerEnv, eventId)).participants, 4);
+  assert.equal(await peerWeek(erased.id), undefined);
+  for (const actor of participants.filter(actor => actor !== erased)) assert.equal((await peerWeek(actor.id)).points, 250);
+});
+
+test('REL-03: concurrent flag pause is observed freshly; approved configuration cannot be removed or relabelled', async () => {
+  const appeal = await opened(); await majority(appeal.appealId, 2, 3); await due(appeal.appealId); await close(appeal.appealId);
+  const eventId = await peerEvent(appeal.appealId), locker = new pg.Client({ connectionString, ssl: false });
+  await locker.connect(); await locker.query('BEGIN');
+  await locker.query("UPDATE system.feature_flags SET enabled = false WHERE flag_key = 'trust.monthly_peer_participation'");
+  let consumerPid, reached;
+  const barrier = new Promise(resolve => { reached = resolve; });
+  const pending = tx(async client => {
+    consumerPid = (await client.query('SELECT pg_backend_pid() AS pid')).rows[0].pid; reached();
+    return recordMonthlyPeerParticipation(client, { eventId, rulesVersion: peerVersion,
+      weeklyRulesVersion: PROPOSED_WEEKLY_EARNING_RULES.version, evaluatedAt: new Date().toISOString() });
+  }, 'lythaus_jobs');
+  await barrier;
+  try {
+    let blocked = false;
+    for (let attempt = 0; attempt < 100; attempt++) {
+      if ((await sql('SELECT cardinality(pg_blocking_pids($1)) > 0 AS blocked', [consumerPid])).rows[0].blocked) { blocked = true; break; }
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    assert.equal(blocked, true, 'The collector must wait for the concurrent configuration update');
+    await locker.query('COMMIT');
+    assert.equal(await pending, null);
+  } finally { await locker.query('ROLLBACK'); await locker.end(); }
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_peer_participation_receipts WHERE appeal_id = $1', [appeal.appealId])).rowCount, 0);
+  assert.deepEqual(await reconcileMonthlyPeerParticipation(peerEnv), { processed: 0 });
+  const period = proposedClosingSundayWeek(new Date().toISOString());
+  await assert.rejects(tx(client => requireMonthlyPeerIngestionDrained(client, { subjectUserId: voters[0].id,
+    weeklyRulesVersion: PROPOSED_WEEKLY_EARNING_RULES.version, peerRulesVersion: peerVersion, startsAt: period.startsAt, endsAt: period.endsAt }), 'lythaus_jobs'), /participation_paused/);
+  await assert.rejects(sql("DELETE FROM system.feature_flags WHERE flag_key = 'trust.monthly_peer_participation'"), /requires_privacy_teardown/);
+  await assert.rejects(sql("UPDATE system.feature_flags SET policy_version = 'different-policy' WHERE flag_key = 'trust.monthly_peer_participation'"), /requires_privacy_teardown/);
+  await assert.rejects(tx(client => client.query("UPDATE system.feature_flags SET enabled = true WHERE flag_key = 'trust.monthly_peer_participation'"), 'lythaus_jobs'), /permission denied/);
+  await sql("UPDATE system.feature_flags SET enabled = true WHERE flag_key = 'trust.monthly_peer_participation'");
+  assert.deepEqual(await reconcileMonthlyPeerParticipation(peerEnv), { processed: 1 });
+  assert.deepEqual(await reconcileMonthlyPeerParticipation(peerEnv), { processed: 0 });
+});
+
+test('CAL-05/06/APP-14: late closure earns only the final revision in its original cross-month week', async () => {
+  const historicalVersion = peerVersion + '-boundary';
+  await sql(`INSERT INTO trust.monthly_peer_participation_rule_sets
+    (version, policy_version, weekly_rules_version, appeal_rules_version, catalogue_hash, mode, award_rule, weekly_points, status,
+      collect_from, approved_by, approved_at, approval_reference)
+    VALUES ($1, $2, $3, $4, $5, 'shadow', 'one_valid_final_ballot', 250, 'pending_owner_approval',
+      '2020-01-01T00:00:00Z', $6, now(), 'synthetic boundary fixture only')`,
+  [historicalVersion, MONTHLY_REPUTATION_POLICY_VERSION, PROPOSED_WEEKLY_EARNING_RULES.version, rules, MONTHLY_REPUTATION_CATALOGUE_HASH, triager.id]);
+  const appeal = await opened(), ballotIds = [];
+  await sql("UPDATE moderation.community_appeal_sessions SET opens_at = '2026-08-30T12:00:00Z', closes_at = '2026-09-01T12:00:00Z' WHERE appeal_id = $1", [appeal.appealId]);
+  for (let n = 0; n < 5; n++) {
+    const ballot = uuidv7(); ballotIds.push(ballot);
+    await sql('INSERT INTO moderation.community_appeal_ballots (id, appeal_id, voter_user_id) VALUES ($1, $2, $3)', [ballot, appeal.appealId, voters[n].id]);
+    await sql(`INSERT INTO moderation.community_appeal_ballot_revisions
+      (id, ballot_id, revision, weight, choice, reason_code, context_acknowledged, idempotency_key, cast_at)
+      VALUES ($1, $2, 1, 1, $3, $4, true, $5, '2026-08-30T23:59:59.123456Z')`,
+    [uuidv7(), ballot, n < 2 ? 'allow' : 'retain', n < 2 ? 'rule_misapplied' : 'rule_applies', uuidv7()]);
+  }
+  const finalRevision = uuidv7();
+  await sql(`INSERT INTO moderation.community_appeal_ballot_revisions
+    (id, ballot_id, revision, weight, choice, reason_code, context_acknowledged, idempotency_key, cast_at)
+    VALUES ($1, $2, 2, 1, 'allow', 'rule_misapplied', true, $3, '2026-08-31T00:00:00.000001Z')`, [finalRevision, ballotIds[0], uuidv7()]);
+  assert.equal((await close(appeal.appealId)).result.status, 'resolved_retain');
+  assert.equal((await sql(`SELECT 1 FROM moderation.community_appeal_valid_participation participation
+    JOIN moderation.community_appeal_ballot_revisions revision ON revision.id = participation.revision_id
+    WHERE participation.ballot_id = ANY($1::uuid[]) AND participation.performed_at = revision.cast_at`, [ballotIds])).rowCount, 5);
+  const historicalEnv = { ...peerEnv, MONTHLY_REPUTATION_PEER_PARTICIPATION_RULES: historicalVersion };
+  assert.equal((await processMonthlyPeerParticipation(historicalEnv, await peerEvent(appeal.appealId))).participants, 5);
+  const earning = (await sql(`SELECT contribution.source_id, contribution.week_start, evidence.input
+    FROM trust.monthly_earning_contributions contribution JOIN trust.monthly_earning_evidence_revisions evidence ON evidence.contribution_id = contribution.id
+    WHERE contribution.source_id = ANY($1::uuid[]) ORDER BY contribution.source_id`, [ballotIds])).rows;
+  assert.equal(earning.length, 5);
+  for (const row of earning) {
+    const expected = row.source_id === ballotIds[0] ? '2026-08-31T00:00:00.000Z' : '2026-08-24T00:00:00.000Z';
+    assert.equal(row.week_start.toISOString(), expected);
+    assert.equal(proposedClosingSundayWeek(row.input.performedAt).ownerMonth, row.source_id === ballotIds[0] ? '2026-09' : '2026-08');
+    assert.equal(row.input.performedAt.startsWith('2026-10'), false, 'Closure delivery must not move the performance period');
+  }
+  assert.equal(earning.find(row => row.source_id === ballotIds[0]).input.sourceRevisionId, finalRevision);
+  await assert.rejects(processMonthlyPeerParticipation(peerEnv, await peerEvent(appeal.appealId)), /previous_policy_requires_review/);
 });
 
 test('APP-07/12: actual staff routes verify Access JWT, membership, Origin, private evidence and triage', async () => {

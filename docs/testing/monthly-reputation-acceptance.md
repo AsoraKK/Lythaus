@@ -26,6 +26,7 @@ embedded reference-validation counts are not execution evidence for this branch.
 - H / HT: [maintenance calculation](../../packages/contracts/src/monthly-maintenance-policy.ts) / [maintenance tests](../../packages/contracts/tests/monthly-maintenance.test.mjs).
 - B / BT: [canonical proof capture](../../packages/db/src/monthly-maintenance.ts), [monthly assembly](../../packages/db/src/monthly-assembly.ts), [scheduled reconciler](../../apps/lythaus-jobs/src/monthly-assembly.ts) / [real PostgreSQL tests](../../apps/lythaus-jobs/tests/monthly-assembly.postgres.mjs).
 - BS: [maintenance, assembly and lifecycle proposal](../../database/planetscale/proposals/monthly_reputation_maintenance.sql), outside the approved production manifest. Collection privacy prerequisite is unset until export/locator integration review.
+- V / VS: [final peer participation consumer](../../packages/db/src/monthly-peer-participation.ts), [invoked queue/scheduled adapter](../../apps/lythaus-jobs/src/monthly-peer-participation.ts) / [separately gated proposal](../../database/planetscale/proposals/monthly_reputation_peer_participation.sql); CT verifies the real closure-to-weekly-result path.
 
 A unit-verified row establishes only the named calculation. A partial row still
 requires the remaining application, privacy, provider or release work. No new
@@ -40,7 +41,7 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | CAL-02 | Five results select the highest four complete totals; the fifth remains reported. | M, E, B / MT, ET, BT | Real publication + email assembly and stored omitted week verified; product report pending |
 | CAL-03 | Selection never combines best values from different weeks per action. | M, B / MT, BT | Whole server week totals assembled and assessed; activation pending |
 | CAL-04 | Every month over at least a 40-year calendar range has four or five closing Sundays under D01. | D / MT | Candidate D01 unit verified; approval pending |
-| CAL-05 | A cross-month week has one owner; edge-day events never earn in two months. | D / MT | Candidate D01 unit verified; approval pending |
+| CAL-05 | A cross-month week has one owner; edge-day events never earn in two months. | D, V / MT, CT | Candidate D01 plus late final ballot revision across Sunday/Monday verified in PostgreSQL; approval pending |
 | CAL-06 | August 2026 has closes on 2, 9, 16, 23 and 30; 31 August belongs to the next closing week under D01. | D / MT | Candidate D01 unit verified; approval pending |
 | CAL-07 | Leap February, year boundaries, local daylight-saving changes and UTC cutoffs remain correct. | D / MT | Candidate D01 unit verified; approval pending |
 | CAL-08 | Tied scores have deterministic selected-week ordering. | M / MT | Unit verified; live earning not integrated |
@@ -97,15 +98,15 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | APP-03 | More than five eligible peers can vote; quorum is not a fixed panel size. | A, C / AT, CT | Backend verified: twelve real eligible voters, no assignment ceiling |
 | APP-04 | Guest, author self-vote, proven controlled duplicates and relevant conflicts are handled correctly. | A, C / AT, CT | Backend verified: JWT, verified email, ownership/conflicts, stored scoped restrictions and fresh closure checks; restriction administration remains |
 | APP-05 | Eligible low-reputation users are not excluded by old trained-panel or reputation gates. | A, C / AT, CT | Backend verified using newly registered voters without reputation/training records |
-| APP-06 | Ballot retries/concurrent writes obey one logical voter/case key; edits do not multiply votes or awards. | C, CS / CT | Ballot uniqueness, immutable revisions, retries and concurrent CAS verified; award consumer remains |
+| APP-06 | Ballot retries/concurrent writes obey one logical voter/case key; edits do not multiply votes or awards. | C, V, CS, VS / CT | Logical ballot uniqueness, concurrent CAS, final-revision earning, receipt replay and one weekly allowance verified; D10 activation pending |
 | APP-07 | Live totals and voter identities are hidden; only authorised safe case evidence is served. | C / CT, DT | Real public/admin routes, private cache headers, redaction, own-only ballot and paused access verified; Flutter pending |
 | APP-08 | Votes before/at/after close follow one boundary convention under simultaneous close jobs. | A, C / AT, CT | Exact policy boundaries, final database clock predicate and concurrent closure retries verified |
 | APP-09 | Quorum, strict majority, ties and no-quorum extension use the approved default version. | A, C, CS / AT, CT | Configured rules and missing-approval denial verified with synthetic approvals only; D09 remains pending |
 | APP-10 | A majority in a standard case resolves without an invisible Editorial veto. | C / CT | Actual scheduled Worker resolves and applies allow/retain atomically without confirmation |
 | APP-11 | Unresolved after extension is not automatic author guilt or automatic publication. | C / CT | One configured extension, private notices and unresolved result verified; D11 accountable follow-up remains |
 | APP-12 | Sensitive/illegal material follows restricted review and cannot leak through peer preview/media endpoints. | C / CT | Restricted cases denied peer evidence/votes/queue and ordinary staff evidence; specialist/media handling needs D11 |
-| APP-13 | A valid minority ballot earns the same participation award as a valid majority ballot. | C / CT | Equal valid participation evidence and original cast time verified; D10 award consumer pending |
-| APP-14 | A changed ballot is one contribution; skip/recusal does not cause a penalty. | A, C / AT, CT | Latest revision counted once; recusal excludes participation without penalty; earning consumer pending |
+| APP-13 | A valid minority ballot earns the same participation award as a valid majority ballot. | C, V / CT | Canonical closure awards both sides 250 under the gated D10 candidate; no choices/reasons enter weekly reports; activation pending |
+| APP-14 | A changed ballot is one contribution; skip/recusal does not cause a penalty. | A, C, V / AT, CT | Final revision earns once in its original week; recusal/cannot-assess earn zero without penalty; D10 activation pending |
 | APP-15 | No available cases is a neutral opportunity status; no fake production practice awards. | C / CT | Real empty queue returns no_case_available; no practice award producer |
 | APP-16 | Overturning a decision reverses only linked consequences and is idempotent. | C, E / CT | Scoped restoration and monthly earning correction verified, including failure rollback; historical consequence reconciliation remains D13 |
 | APP-17 | The same model output cannot immediately undo a scoped peer overturn on unchanged evidence. | C / CT | Stored source/content/classifier scope and actual Jobs replay guard verified; changed evidence does not match the override |
@@ -133,9 +134,9 @@ screenshot is claimed: the Flutter/API reporting slices are pending.
 | RPT-03 | JSON/CSV/report links obey authorisation, expiry, CSV injection protection and data minimisation. | T09 | Planned; no test execution claimed |
 | RPT-04 | DSR export/delete, proof revocation, content purge and retained-audit redaction work end to end. | E, B, BS / ET, BT | Soft-delete erasure and assembly/assessment races verified; actual export/locator workflow remains gated before collection |
 | REL-01 | Cached consent/standing cannot approve a stale vote or redemption; fresh Hyperdrive reads are used. | M, P, J, SQL / MT, PT | Partial: shadow persistence verified; full product flow pending |
-| REL-02 | Queue duplicate/out-of-order delivery and worker crash do not duplicate awards or miss corrections. | P, J, E, B / PT, ET, BT | Actual canonical earning/assembly, concurrent proof capture, queue replay, pause/resume, >50-event drain, rollback, flag/deletion races verified; remaining action consumers pending |
+| REL-02 | Queue duplicate/out-of-order delivery and worker crash do not duplicate awards or miss corrections. | P, J, E, B, V / PT, ET, BT, CT | Includes peer fanout rollback/retry, deletion interruption, fresh pause, durable backfill after completed transport inbox, plus prior earning/assembly races; specialist/reception consumers remain |
 | REL-03 | Migration dry run, rollback, policy activation and exact reviewed SHA are separately evidenced. | SQL / PT | Partial: local baseline and proposed schema only; release pending |
-| REL-04 | Critical P1/P2 coverage is at least 80%; feed p95 <200 ms target, load/failure testing, API validation and personalised-cache isolation are verified or explicitly reported unverified. | MT, AT, HT, PT, ET, BT | Scoped coverage gates pass: policy 100/98.87, assembly 99.10/95.35, earning 96.17/95.04 (line/branch); load/feed/new browser flows unverified |
+| REL-04 | Critical P1/P2 coverage is at least 80%; feed p95 <200 ms target, load/failure testing, API validation and personalised-cache isolation are verified or explicitly reported unverified. | MT, AT, HT, PT, ET, BT, CT | Scoped coverage gates pass: policy 100/98.87, assembly 99.10/95.35, earning 96.17/95.04, appeal/participation 100/94.83 (line/branch); load/feed/new browser flows unverified |
 
 ## Additional ticket interface cases
 

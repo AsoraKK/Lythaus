@@ -7,7 +7,9 @@ Main rechecked at `26dc226776f8acd3898954635c327db1ad898128`: intervening feed
 presentation and Android packaging changes do not alter this backend/migration baseline.
 Integration with those changes remains a separate parent-managed step.
 Main rechecked on 3 October at `6d1d52a4` after the security tooling changes.
-Security/Friday retains the main/release slot. Shared OpenAPI, generated client,
+Security release 89 was independently verified at
+`6d1d52a4fa3f51ae041fbf38b5724578a8596b61` (run `37118382512`). App-flow now
+holds the exclusive main/release integration slot. Shared OpenAPI, generated client,
 profile/navigation and privacy workflow changes require coordination with the
 app-flow owner before overlapping edits; no main integration has occurred here.
 
@@ -108,9 +110,9 @@ effective months; separately approved migration, exact-SHA deployment and activa
 | T01 Reconcile | Source/consumer map, this decision record, historical cutover plan | Inventory complete; cutover pending D13 |
 | T02 Canonical policy | Validated catalogue, cap groups, pure best-four/bands, candidate calendar, approved decision configuration | All 22 action calculations represented; weekly and maintenance candidate rules tested; operational approvals remain pending |
 | T03 Persistence | Canonical events/outbox, immutable period revisions, assurance proofs, ballot uniqueness, selections/claims | Immutable monthly/weekly revisions, canonical email proofs, assembly reports, source receipts and Jobs transactions tested; selections/claims and migration pending |
-| T04 Earning | Real post/discussion/specialist/reception/authorship events and dependency reversals | Canonical post/comment producers, publication milestone, declarations/authorship, duplicate withholding and corrections tested; contextual acceptance, specialist/reception producers and peer participation remain to integrate |
+| T04 Earning | Real post/discussion/specialist/reception/authorship events and dependency reversals | Canonical post/comment producers and final peer-ballot consumer tested with weekly caps and immutable corrections; contextual acceptance and specialist/reception producers remain |
 | T05 Security | Reuse normal validated auth events; capability-aware integrity, credential continuity, Turnstile/refresher | Actual email verification feeds bound evidence, including scoring pauses; full-month coverage/assessment calculations tested; other real providers, renewal workflow and D07/D08 activation remain gated |
-| T06 Peer review | Private timed electorate, equal ballots/history, close transaction, scoped override, restricted route | Public/admin routes, transactional ballots/closure, scoped restoration, earning corrections and private notices tested; ballot earning, specialist/unresolved execution, D09/D11/D13 activation and Flutter remain |
+| T06 Peer review | Private timed electorate, equal ballots/history, close transaction, scoped override, restricted route | Public/admin routes, ballots/closure, scoped restoration, equal participation earning and private notices tested; specialist/unresolved execution, D09/D10/D11/D13 activation and Flutter remain |
 | T07 Rewards/partners | Persistent Free/Premium/Black selections, proposals, consent/email linkage, QR/invoice idempotency | Commercial terms and approved offers pending; no fake merchants |
 | T08 Flutter | Existing Rewards tabs, profile tracker, real contribution/review forms, complete states | Depends on authoritative API slices; no parallel route |
 | T09 Reporting/privacy | Stored-calculation parity, full own report, public methodology, safe JSON/CSV, DSR/retention | Full report needs preceding evidence records and report/API/DSR integration |
@@ -250,6 +252,37 @@ reconciliation consumes unrecorded canonical sources, including events handled b
 old Jobs inbox during a pause, and advances weekly open/settling states without changing
 current profiles or entitlements. Evidence, weekly revisions, receipts and result
 events commit or roll back together.
+
+## Final peer participation consumer
+
+The existing Jobs queue and scheduled handler consume canonical standard appeal
+closures through `monthly-peer-participation.ts`. A separate explicit environment
+version, matching feature flag and immutable approved configuration are required.
+The proposed 250-point weekly allowance remains D10 pending owner approval; no
+configuration, approval, provider or flag is seeded by this branch. An absent flag
+is inert even before the proposal is installed. A narrow database helper locks
+the flag and reads a concurrent pause freshly without granting Jobs feature edits.
+
+Only canonical valid final allow/retain revisions qualify. Both ballot directions
+earn identically; recusal, cannot-assess, restricted cases and deleted subjects do
+not qualify. Contributions retain the final cast's original week, including a
+late closure across a month boundary. Private ballot choices and reasons do not
+enter the weekly calculation. Closure copies the original PostgreSQL timestamp
+directly, preserving microsecond provenance rather than rounding it in JavaScript.
+
+An appeal-scoped receipt, participant evidence, complete weekly recalculations and
+outbox revisions commit atomically. Duplicate or interrupted delivery cannot
+partially fan out points. Scheduled reconciliation resumes events whose older
+transport inbox completed while this collector was unavailable. New peer collection
+does not freeze unrelated corrections to source periods before its collection start.
+Retrospective invalidation and its accountable administration remain separate work.
+
+Disposable PostgreSQL tests cover concurrent duplicate delivery, minority parity,
+one weekly allowance across cases, changed final ballots, recusal, atomic rollback,
+deletion between participant selection and insertion, fresh pause reads and
+original cross-month assignment. The 24-test appeal/participation suite has 100%
+line and 94.83% branch coverage for its six persistence/Jobs modules. These are
+synthetic transactions and authenticated routes, not live activation or UI evidence.
 
 ## Ticket feedback interface proposal
 
