@@ -33,6 +33,7 @@ on:
       - 'packages/contracts/src/monthly-*.ts'
       - 'packages/contracts/policies/Lythaus_Monthly_Rewards_Action_Catalogue_v2.json'
       - 'packages/db/src/monthly-reputation.ts'
+      - 'packages/db/src/monthly-reputation-report.ts'
       - 'packages/db/src/monthly-earning.ts'
       - 'packages/db/src/monthly-context*.ts'
       - 'packages/db/src/monthly-publication.ts'
@@ -48,6 +49,7 @@ on:
       - 'apps/lythaus-jobs/tests/monthly-context.postgres.mjs'
       - 'apps/lythaus-jobs/tests/monthly-reward-*.postgres.mjs'
       - 'apps/lythaus-jobs/tests/monthly-reward-*.cases.mjs'
+      - 'apps/lythaus-jobs/tests/monthly-reputation-report.cases.mjs'
       - 'scripts/ci/planetscale-migration-*.mjs'
       - 'scripts/ci/auth-incident-database-contract.mjs'
       - 'scripts/ci/audit-production-auth-incident.mjs'
@@ -169,6 +171,7 @@ jobs:
           '--test-coverage-include=packages/db/src/monthly-reward-selections.ts'
           '--test-coverage-include=packages/db/src/monthly-reward-partner-links.ts'
           '--test-coverage-include=packages/db/src/monthly-reward-claims.ts'
+          '--test-coverage-include=packages/db/src/monthly-reputation-report.ts'
           --test-coverage-lines=80 --test-coverage-branches=80
           --test apps/lythaus-jobs/tests/monthly-reward-selections.postgres.mjs
       - name: Prove column-only incident audit grants on real PostgreSQL

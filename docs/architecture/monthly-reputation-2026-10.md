@@ -115,7 +115,7 @@ effective months; separately approved migration, exact-SHA deployment and activa
 | T06 Peer review | Private timed electorate, equal ballots/history, close transaction, scoped override, restricted route | Public/admin routes, ballots/closure, scoped restoration, equal participation earning and private notices tested; specialist/unresolved execution, D09/D10/D11/D13 activation and Flutter remain |
 | T07 Rewards/partners | Persistent Free/Premium/Black selections, proposals, consent/email linkage, QR/invoice idempotency | Current-month selections, private consent, scoped eligibility and transactional synthetic QR/invoice fulfilment tested; merchant API, external evidence, live terms and product wiring remain |
 | T08 Flutter | Existing Rewards tabs, profile tracker, real contribution/review forms, complete states | Depends on authoritative API slices; no parallel route |
-| T09 Reporting/privacy | Stored-calculation parity, full own report, public methodology, safe JSON/CSV, DSR/retention | Full report needs preceding evidence records and report/API/DSR integration |
+| T09 Reporting/privacy | Stored-calculation parity, full own report, public methodology, safe JSON/CSV, DSR/retention | Isolated stored-report database projection and PostgreSQL cases are implemented; authenticated API/Flutter, public methodology, JSON/CSV export, locator and DSR integration remain pending |
 | T10 Release | Shadow run, fairness/load/failure testing, approved cutover, exact-SHA release and rollback | No release or activation authorization |
 
 The acceptance matrix in `docs/testing/monthly-reputation-acceptance.md` tracks
@@ -264,6 +264,36 @@ accepts invoice evidence, retry/stock/outbox rollback and deletion races. Native
 typecheck passes. Two bounded read-only reviewers found no remaining P1/P2 in the
 claim source/digest and invoice-consent guards; they did not rerun the tests.
 These are disabled/synthetic fixture transactions, not a live merchant workflow.
+
+## Own stored report projection
+
+`packages/db/src/monthly-reputation-report.ts` projects the latest stored source,
+assembly and assessment for the current monthly policy. It preserves selected,
+omitted, missing and unassessed weeks; weekly allowances and statuses; monthly
+maintenance actions; quarterly-email validity; and source/effective-snapshot
+correction history. The fixed next-month level authority is read separately from
+the original assessment. A confirmed entitlement snapshot therefore never changes
+the source report's `shadow` status. Missing assembly/assessment remains pending,
+and catalogue or assessment-lineage mismatches fail closed. The response omits raw
+evidence, observation and revocation identifiers, retaining only an evidence count;
+per-action evidence-reference and locator handling remains pending privacy review.
+
+The database reader filters its report query to the supplied subject ID, but it is
+not an authenticated route and does not bind the caller to that ID itself. The
+existing public API must pass a freshly authenticated owner's subject. Public
+methodology, HTTP authorization/cache behavior, JSON/CSV generation and escaping,
+export expiry, locator, DSR workflows, historical-policy report aggregation and
+the collection-privacy approval remain pending app-flow coordination. The proposed
+SQL only adds runtime SELECT grants for the isolated reader; it remains outside the
+production migration manifest.
+
+On 3 October, the combined disposable PostgreSQL suite passed 58/58 cases with no
+skips. The report reader has 100% line / 92.71% branch coverage. Tests include
+selected/omitted and missing weeks, separate shadow and confirmed authority labels,
+approved corrections, absent/unassessed/deleted subjects, evidence-ID exclusion,
+and corrupted catalogue/assessment lineage. Native typechecking passes, and one
+bounded independent read-only review found no remaining P1/P2 after the status-label
+correction. This is backend projection evidence, not export, route or DSR acceptance.
 
 The monthly source writer accepts settled aggregate evidence from a trusted internal
 caller. Scheduled monthly assembly joins settled weekly results and maintenance/email

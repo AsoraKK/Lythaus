@@ -12,8 +12,10 @@ import { assembleMonthlyReputation } from '../../../packages/db/src/monthly-asse
 import { assessMonthlyReputationSource } from '../../../packages/db/src/monthly-reputation.ts';
 import { publishMonthlyRewardSnapshot,approveMonthlyRewardSnapshotCorrection,applyMonthlyRewardSnapshotCorrection } from '../../../packages/db/src/monthly-reward-snapshots.ts';
 import { selectMonthlyReward,readOwnMonthlyRewardSelections,MONTHLY_REWARD_SELECTION_FLAG as flag } from '../../../packages/db/src/monthly-reward-selections.ts';
+import { readOwnMonthlyReputationReport } from '../../../packages/db/src/monthly-reputation-report.ts';
 import { registerPartnerLinkCases,cleanupPartnerLinkCases } from './monthly-reward-partner-links.cases.mjs';
 import { registerRewardClaimCases,cleanupRewardClaimCases } from './monthly-reward-claims.cases.mjs';
+import { registerMonthlyReportCases } from './monthly-reputation-report.cases.mjs';
 
 const connectionString=process.env.PLANETSCALE_PG17_TEST_DATABASE_URL,target=new URL(connectionString??'file:///missing');
 if(!['127.0.0.1','localhost'].includes(target.hostname)
@@ -42,23 +44,26 @@ async function person(tier='free',verified=true){
   if(tier!=='free')await sql('INSERT INTO identity.user_entitlements (user_id,subscription_tier) VALUES ($1,$2)',[id,tier]);
   return id;
 }
-async function snapshot(subjectId,score=10000,month=sourceMonth){
+async function snapshot(subjectId,score=10000,month=sourceMonth,options={}){
   let remaining=score;
-  for(const period of proposedClosingSundayWeeks(month)){
+  for(const [index,period] of proposedClosingSundayWeeks(month).entries()){
     const old=(await sql(`SELECT week_id,revision FROM trust.monthly_earning_week_revisions
       WHERE subject_user_id=$1 AND week_start=$2 ORDER BY revision DESC LIMIT 1`,[subjectId,period.startsAt])).rows[0];
-    if(remaining===0&&!old)break;
-    const points=Math.min(2500,remaining);remaining-=points;
+    if(remaining===0&&!old&&options.weekPoints===undefined)break;
+    const points=options.weekPoints?.[index]??Math.min(2500,remaining);remaining=Math.max(0,remaining-points);
+    const calculation={policyVersion:policy,rulesVersion:weekly.version,points,fixture:'synthetic settled provider totals',
+      ...(index===0&&options.firstWeekActions?{actions:options.firstWeekActions}:{})};
     await tx(client=>client.query(`INSERT INTO trust.monthly_earning_week_revisions
       (id,week_id,subject_user_id,week_start,policy_version,rules_version,revision,state,points,calculation,input_digest)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11)`,
       [uuidv7(),old?.week_id??uuidv7(),subjectId,period.startsAt,policy,weekly.version,(old?.revision??0)+1,old?'corrected':'locked',points,
-        JSON.stringify({policyVersion:policy,rulesVersion:weekly.version,points,fixture:'synthetic settled provider totals'}),'a'.repeat(64)]),'lythaus_jobs');
+        JSON.stringify(calculation),'a'.repeat(64)]),'lythaus_jobs');
   }
   const evaluatedAt=new Date().toISOString();
   const assembled=await tx(client=>assembleMonthlyReputation(client,{subjectUserId:subjectId,sourceMonth:month,
     weeklyRulesVersion:weekly.version,maintenanceRulesVersion:maintenance.version,evaluatedAt}),'lythaus_jobs');
   const requested=(await sql("SELECT id FROM system.outbox_events WHERE aggregate_id=$1 AND event_type='trust.monthly_assessment.requested'",[assembled.sourceId])).rows[0].id;
+  if(options.skipAssessment)return{sourceId:assembled.sourceId};
   const assessed=await tx(client=>assessMonthlyReputationSource(client,{eventId:requested,assessmentId:uuidv7(),resultEventId:uuidv7(),evaluatedAt:new Date().toISOString()}),'lythaus_jobs');
   const event=(await sql("SELECT id FROM system.outbox_events WHERE aggregate_id=$1 AND event_type='trust.monthly_assessment.recorded'",[assessed.id])).rows[0].id;
   return {...await tx(client=>publishMonthlyRewardSnapshot(client,{eventId:event,rulesVersion:snapshotVersion}),'lythaus_jobs'),assessmentId:assessed.id};
@@ -334,3 +339,4 @@ test('RPT-04/REL-02: deleting a selected member erases selections and notices be
 const fixture={tx,sql,person,snapshot,select,offer,reviewer:()=>reviewer,selectionRules:rulesVersion,policy};
 const partnerFixture=registerPartnerLinkCases(fixture);
 registerRewardClaimCases({...fixture,...partnerFixture});
+registerMonthlyReportCases({tx,sql,person,snapshot,reviewer:()=>reviewer,snapshotRulesVersion:snapshotVersion});

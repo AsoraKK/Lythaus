@@ -317,6 +317,7 @@ CREATE TRIGGER monthly_reputation_reward_snapshot_subject_erasure BEFORE UPDATE 
 
 GRANT SELECT ON trust.monthly_reward_snapshot_rule_sets,trust.monthly_reward_snapshots TO lythaus_runtime;
 GRANT SELECT ON trust.monthly_reputation_sources TO lythaus_runtime;
+GRANT SELECT ON trust.monthly_reputation_assessments,trust.monthly_reputation_assemblies TO lythaus_runtime;
 GRANT SELECT,INSERT ON trust.monthly_reward_snapshots,trust.monthly_reward_snapshot_receipts TO lythaus_jobs;
 GRANT SELECT ON trust.monthly_reward_snapshot_rule_sets,trust.monthly_reward_snapshot_corrections TO lythaus_jobs;
 GRANT SELECT ON trust.monthly_reward_snapshot_rule_sets,trust.monthly_reward_snapshots,
