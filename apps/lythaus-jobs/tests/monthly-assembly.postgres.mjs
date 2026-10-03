@@ -11,6 +11,7 @@ import { MONTHLY_REPUTATION_POLICY_VERSION as policy, MONTHLY_REPUTATION_CATALOG
 import { PROPOSED_WEEKLY_EARNING_RULES as weekly } from '../../../packages/contracts/src/monthly-earning-policy.ts';
 import { PROPOSED_MONTHLY_MAINTENANCE_RULES as maintenance } from '../../../packages/contracts/src/monthly-maintenance-policy.ts';
 import { recordMonthlyEmailControl, readMonthlyMaintenanceEvidence, loadMonthlyMaintenanceConfiguration } from '../../../packages/db/src/monthly-maintenance.ts';
+import { createMonthlyEmailRenewalChallenge, consumeMonthlyEmailRenewalChallenge } from '../../../packages/db/src/monthly-email-renewal.ts';
 import { assembleMonthlyReputation } from '../../../packages/db/src/monthly-assembly.ts';
 import { assessMonthlyReputationSource } from '../../../packages/db/src/monthly-reputation.ts';
 import { recordMonthlyContentEarning } from '../../../packages/db/src/monthly-earning.ts';
@@ -95,6 +96,7 @@ before(async () => {
   for (const proposal of ['monthly_reputation_shadow', 'monthly_reputation_earning', 'monthly_reputation_maintenance']) {
     await sql(readFileSync(new URL(`../../../database/planetscale/proposals/${proposal}.sql`, import.meta.url), 'utf8'));
   }
+  await sql(readFileSync(new URL('../../../database/planetscale/proposals/monthly_email_renewal.sql', import.meta.url), 'utf8'));
   for (const [table, rules] of [['monthly_earning_rule_sets', weekly], ['monthly_maintenance_rule_sets', maintenance]]) {
     const privacyColumn = table === 'monthly_maintenance_rule_sets' ? ', collection_privacy_version' : '';
     const privacyValue = table === 'monthly_maintenance_rule_sets' ? ", 'monthly-privacy-v1'" : '';
@@ -107,6 +109,21 @@ before(async () => {
   subject = await person(); reviewer = await person(); empty = await person();
 });
 after(async () => {
+  await sql('DROP TRIGGER IF EXISTS monthly_email_renewal_flag_preserved ON system.feature_flags');
+  await sql('DELETE FROM trust.monthly_email_renewal_challenges');
+  await sql('DROP TRIGGER IF EXISTS monthly_email_renewal_insert_authority ON trust.monthly_email_renewal_challenges');
+  await sql('DROP TRIGGER IF EXISTS monthly_email_renewal_consume_authority ON trust.monthly_email_renewal_challenges');
+  await sql('DROP TRIGGER IF EXISTS monthly_email_renewal_challenge_immutable ON trust.monthly_email_renewal_challenges');
+  await sql('DROP TRIGGER IF EXISTS monthly_email_renewal_receipt_complete ON trust.monthly_email_renewal_challenges');
+  await sql('DROP TRIGGER IF EXISTS monthly_email_renewal_credential_invalidation ON identity.email_credentials');
+  await sql('DROP TRIGGER IF EXISTS monthly_email_renewal_subject_erasure ON identity.users');
+  await sql('DROP TRIGGER IF EXISTS monthly_email_renewal_outbox_erasure ON trust.monthly_email_renewal_challenges');
+  await sql('DROP TABLE IF EXISTS trust.monthly_email_renewal_challenges');
+  await sql(`DROP FUNCTION IF EXISTS trust.require_monthly_email_renewal_authority(),
+    trust.protect_monthly_email_renewal_challenge(), trust.require_monthly_email_renewal_receipt(),
+    trust.revoke_monthly_email_renewal_challenges(), trust.erase_monthly_email_renewal_subject(),
+    trust.erase_monthly_email_renewal_outbox(), trust.preserve_monthly_email_renewal_flag()`);
+  await sql('DELETE FROM system.feature_flags WHERE flag_key = $1', ['trust.monthly_email_renewal']);
   await sql('DROP TRIGGER IF EXISTS fail_monthly_assembly_fixture ON trust.monthly_reputation_assemblies');
   await sql('DROP FUNCTION IF EXISTS trust.fail_monthly_assembly_fixture()');
   await sql('DROP TRIGGER IF EXISTS monthly_email_control_revocation ON identity.email_credentials');
@@ -397,4 +414,211 @@ test('CAL-20/REL-02: scheduled reconciliation discovers months, revisits new evi
   assert.deepEqual(await reconcileMonthlyAssembly(env), { processed: 0 });
   assert.equal(await assemble(), null);
   await sql('UPDATE system.feature_flags SET enabled = true WHERE flag_key = $1', [flag]);
+});
+
+test('SEC-03/CAL-16: renewal challenge creation stays separately gated and idempotent', async () => {
+  const userId = await person(), verified = await emailFixture(userId);
+  const input = { subjectUserId: userId, challengeId: uuidv7(), tokenHash: randomBytes(32).toString('hex'),
+    idempotencyKey: uuidv7(), rulesVersion: maintenance.version };
+  await assert.rejects(tx(client => createMonthlyEmailRenewalChallenge(client, { ...input, tokenHash: 'not-a-hash' }), 'lythaus_runtime'), /request_invalid/);
+  await assert.rejects(tx(client => createMonthlyEmailRenewalChallenge(client, input), 'lythaus_runtime'), /unavailable/);
+  await sql("INSERT INTO system.feature_flags (flag_key, enabled, policy_version) VALUES ('trust.monthly_email_renewal', false, $1)", [policy]);
+  await assert.rejects(tx(client => createMonthlyEmailRenewalChallenge(client, input), 'lythaus_runtime'), /unavailable/);
+  await sql("UPDATE system.feature_flags SET enabled = true WHERE flag_key = 'trust.monthly_email_renewal'");
+  const futureRules = { ...maintenance, version: 'synthetic-renewal-before-collect-from' };
+  await sql(`INSERT INTO trust.monthly_maintenance_rule_sets (version, policy_version, catalogue_hash, mode, collect_from, configuration, collection_privacy_version)
+    VALUES ($1, $2, $3, 'shadow', '9999-01-01T00:00:00.000Z', $4::jsonb, 'monthly-privacy-v1')`, [futureRules.version, policy, hash, JSON.stringify(futureRules)]);
+  await assert.rejects(tx(client => createMonthlyEmailRenewalChallenge(client,
+    { ...input, rulesVersion: futureRules.version }), 'lythaus_runtime'), /unavailable/);
+  await assert.rejects(tx(client => client.query(`INSERT INTO trust.monthly_email_renewal_challenges
+    (id, subject_user_id, token_hash, email_binding_digest, rules_version, idempotency_key, request_digest, expires_at, consumed_at, source_event_id)
+    SELECT $1, $2, decode($3, 'hex'), public.digest(credential.email_lookup_hmac, 'sha256'), $4, $5, $6,
+      clock_timestamp() + interval '30 minutes', clock_timestamp(), $7
+      FROM identity.email_credentials credential WHERE credential.user_id = $2`,
+    [uuidv7(), userId, randomBytes(32).toString('hex'), maintenance.version, uuidv7(), 'a'.repeat(64), uuidv7()]), 'lythaus_runtime'), /initial_state_invalid/);
+  await assert.rejects(tx(client => client.query(`INSERT INTO trust.monthly_email_renewal_challenges
+    (id, subject_user_id, token_hash, email_binding_digest, rules_version, idempotency_key, request_digest, expires_at)
+    SELECT $1, $2, decode($3, 'hex'), public.digest(credential.email_lookup_hmac, 'sha256'), $4, $5, $6,
+      clock_timestamp() + interval '30 minutes'
+      FROM identity.email_credentials credential WHERE credential.user_id = $2`,
+    [uuidv7(), userId, randomBytes(32).toString('hex'), futureRules.version, uuidv7(), 'b'.repeat(64)]), 'lythaus_runtime'), /unavailable/);
+  await sql('UPDATE system.feature_flags SET enabled = false WHERE flag_key = $1', [flag]);
+  await assert.rejects(tx(client => createMonthlyEmailRenewalChallenge(client, input), 'lythaus_runtime'), /unavailable/);
+  await sql('UPDATE system.feature_flags SET enabled = true WHERE flag_key = $1', [flag]);
+  await assert.rejects(tx(client => createMonthlyEmailRenewalChallenge(client, { ...input, rulesVersion: 'synthetic-privacy-not-ready' }), 'lythaus_runtime'), /unavailable/);
+
+  const created = await tx(client => createMonthlyEmailRenewalChallenge(client, input), 'lythaus_runtime');
+  assert.equal(created.created, true); assert.equal(created.challengeId, input.challengeId);
+  const remainingMs = Date.parse(created.expiresAt) - Date.now();
+  assert.equal(remainingMs <= 31 * 60_000 && remainingMs > 29 * 60_000, true);
+  assert.equal(JSON.stringify(created).includes(input.tokenHash), false);
+  const replay = await tx(client => createMonthlyEmailRenewalChallenge(client, { ...input, challengeId: uuidv7() }), 'lythaus_runtime');
+  assert.equal(replay.created, false); assert.equal(replay.challengeId, created.challengeId);
+  await assert.rejects(tx(client => createMonthlyEmailRenewalChallenge(client, { ...input, tokenHash: randomBytes(32).toString('hex') }), 'lythaus_runtime'), /idempotency_reused/);
+  await sql("UPDATE system.feature_flags SET enabled = false WHERE flag_key = 'trust.monthly_email_renewal'");
+  await assert.rejects(tx(client => consumeMonthlyEmailRenewalChallenge(client,
+    { tokenHash: input.tokenHash, sourceEventId: uuidv7() }), 'lythaus_runtime'), /unavailable/);
+  assert.equal((await sql('SELECT consumed_at FROM trust.monthly_email_renewal_challenges WHERE id = $1', [created.challengeId])).rows[0].consumed_at, null);
+  await sql("UPDATE system.feature_flags SET enabled = true WHERE flag_key = 'trust.monthly_email_renewal'");
+
+  const rotated = { ...input, challengeId: uuidv7(), tokenHash: randomBytes(32).toString('hex'), idempotencyKey: uuidv7() };
+  const next = await tx(client => createMonthlyEmailRenewalChallenge(client, rotated), 'lythaus_runtime');
+  assert.equal(next.created, true);
+  assert.equal((await sql('SELECT invalidated_at IS NOT NULL AS invalidated FROM trust.monthly_email_renewal_challenges WHERE id = $1', [created.challengeId])).rows[0].invalidated, true);
+  assert.equal((await sql('SELECT email_lookup_hmac IS NOT NULL AND verified_at IS NOT NULL AS intact FROM identity.email_credentials WHERE user_id = $1', [userId])).rows[0].intact, true);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_maintenance_observations WHERE subject_user_id = $1', [userId])).rowCount, 0);
+  assert.equal((await sql('SELECT 1 FROM system.outbox_events WHERE event_type = \'identity.email.renewed\' AND aggregate_id = $1', [created.challengeId])).rowCount, 0);
+  await assert.rejects(sql("DELETE FROM system.feature_flags WHERE flag_key = 'trust.monthly_email_renewal'"), /requires_privacy_teardown/);
+  assert.equal(verified.tokenId.length > 0, true);
+});
+
+test('SEC-03/REL-02: concurrent renewal consumption commits one private proof and retries its receipt', async () => {
+  const userId = await person(), verified = await emailFixture(userId);
+  const before = (await sql('SELECT password_hash, verified_at, email_lookup_hmac FROM identity.email_credentials WHERE user_id = $1', [userId])).rows[0];
+  const input = { subjectUserId: userId, challengeId: uuidv7(), tokenHash: randomBytes(32).toString('hex'),
+    idempotencyKey: uuidv7(), rulesVersion: maintenance.version };
+  const issued = await tx(client => createMonthlyEmailRenewalChallenge(client, input), 'lythaus_runtime');
+  const results = await Promise.all([1, 2].map(() => tx(client => consumeMonthlyEmailRenewalChallenge(client,
+    { tokenHash: input.tokenHash, sourceEventId: uuidv7() }), 'lythaus_runtime')));
+  assert.equal(results.filter(result => result.created).length, 1);
+  const first = results.find(result => result.created);
+  assert.ok(first); assert.equal(first.challengeId, issued.challengeId);
+  assert.equal(results.every(result => result.sourceEventId === first.sourceEventId), true);
+  assert.deepEqual(await tx(client => consumeMonthlyEmailRenewalChallenge(client,
+    { tokenHash: input.tokenHash, sourceEventId: uuidv7() }), 'lythaus_runtime'), { ...first, created: false });
+  const event = (await sql('SELECT event_type, aggregate_type, aggregate_id, actor_id, payload FROM system.outbox_events WHERE id = $1', [first.sourceEventId])).rows[0];
+  assert.equal(event.event_type, 'identity.email.renewed'); assert.equal(event.aggregate_type, 'monthly_email_renewal');
+  assert.equal(event.aggregate_id, issued.challengeId); assert.equal(event.actor_id, userId);
+  assert.deepEqual(event.payload, { userId, challengeId: issued.challengeId, rulesVersion: maintenance.version });
+  assert.equal(JSON.stringify(event.payload).includes(input.tokenHash), false);
+  const evidence = await tx(client => readMonthlyMaintenanceEvidence(client, userId, '9999-01-01T00:00:00.000Z'));
+  assert.equal(evidence.evidence.length, 1); assert.deepEqual(evidence.evidence[0].facts, { kind: 'email_control', emailVersion: issued.challengeId });
+  assert.equal(evidence.evidence[0].id, first.sourceEventId);
+  const afterCredential = (await sql('SELECT password_hash, verified_at, email_lookup_hmac FROM identity.email_credentials WHERE user_id = $1', [userId])).rows[0];
+  assert.deepEqual(afterCredential, before);
+  assert.equal((await sql('SELECT count(*)::int n FROM trust.monthly_maintenance_observations WHERE subject_user_id = $1', [userId])).rows[0].n, 1);
+  assert.equal((await sql('SELECT count(*)::int n FROM system.outbox_events WHERE aggregate_id = $1 AND event_type = \'identity.email.renewed\'', [issued.challengeId])).rows[0].n, 1);
+  assert.equal((await sql('SELECT token_hash FROM trust.monthly_email_renewal_challenges WHERE id = $1', [issued.challengeId])).rows[0].token_hash.toString('hex'), input.tokenHash);
+  await sql('DELETE FROM trust.monthly_maintenance_observations WHERE id = $1', [first.sourceEventId]);
+  await assert.rejects(tx(client => consumeMonthlyEmailRenewalChallenge(client,
+    { tokenHash: input.tokenHash, sourceEventId: uuidv7() }), 'lythaus_runtime'), /receipt_incomplete/);
+  assert.equal(verified.tokenId.length > 0, true);
+});
+
+test('SEC-03/CAL-16: renewal fails for changed email binding or expired proof and stays owner-bound', async () => {
+  const changed = await person(); await emailFixture(changed);
+  const changedInput = { subjectUserId: changed, challengeId: uuidv7(), tokenHash: randomBytes(32).toString('hex'),
+    idempotencyKey: uuidv7(), rulesVersion: maintenance.version };
+  await tx(client => createMonthlyEmailRenewalChallenge(client, changedInput), 'lythaus_runtime');
+  await tx(client => client.query('UPDATE identity.email_credentials SET email_lookup_hmac = $2 WHERE user_id = $1', [changed, randomBytes(32)]), 'lythaus_runtime');
+  assert.equal((await sql('SELECT invalidated_at IS NOT NULL AS invalidated FROM trust.monthly_email_renewal_challenges WHERE id = $1', [changedInput.challengeId])).rows[0].invalidated, true);
+  await assert.rejects(tx(client => consumeMonthlyEmailRenewalChallenge(client,
+    { tokenHash: changedInput.tokenHash, sourceEventId: uuidv7() }), 'lythaus_runtime'), /challenge_invalid/);
+
+  const expired = await person(); await emailFixture(expired);
+  const expiredInput = { subjectUserId: expired, challengeId: uuidv7(), tokenHash: randomBytes(32).toString('hex'),
+    idempotencyKey: uuidv7(), rulesVersion: maintenance.version };
+  await tx(client => createMonthlyEmailRenewalChallenge(client, expiredInput), 'lythaus_runtime');
+  await sql('ALTER TABLE trust.monthly_email_renewal_challenges DISABLE TRIGGER monthly_email_renewal_challenge_immutable');
+  try {
+    await sql(`UPDATE trust.monthly_email_renewal_challenges SET created_at = clock_timestamp() - interval '31 minutes',
+      expires_at = clock_timestamp() - interval '1 minute' WHERE id = $1`, [expiredInput.challengeId]);
+  } finally { await sql('ALTER TABLE trust.monthly_email_renewal_challenges ENABLE TRIGGER monthly_email_renewal_challenge_immutable'); }
+  await assert.rejects(tx(client => consumeMonthlyEmailRenewalChallenge(client,
+    { tokenHash: expiredInput.tokenHash, sourceEventId: uuidv7() }), 'lythaus_runtime'), /challenge_invalid/);
+  await assert.rejects(tx(client => client.query(`UPDATE trust.monthly_email_renewal_challenges
+    SET consumed_at = '2026-08-15T12:00:00.000Z', source_event_id = $2 WHERE id = $1`,
+    [expiredInput.challengeId, uuidv7()]), 'lythaus_runtime'), /challenge_invalid/);
+  assert.equal((await sql('SELECT consumed_at FROM trust.monthly_email_renewal_challenges WHERE id = $1', [expiredInput.challengeId])).rows[0].consumed_at, null);
+
+  const owner = await person(), other = await person(); await emailFixture(owner); await emailFixture(other);
+  const ownerInput = { subjectUserId: owner, challengeId: uuidv7(), tokenHash: randomBytes(32).toString('hex'),
+    idempotencyKey: uuidv7(), rulesVersion: maintenance.version };
+  await tx(client => createMonthlyEmailRenewalChallenge(client, ownerInput), 'lythaus_runtime');
+  const ownerBinding = (await sql('SELECT email_binding_digest FROM trust.monthly_email_renewal_challenges WHERE id = $1', [ownerInput.challengeId])).rows[0].email_binding_digest;
+  const backdatedEventId = uuidv7(), backdatedAt = '2026-08-15T12:00:00.000Z';
+  await assert.rejects(tx(async client => {
+    await client.query(`UPDATE trust.monthly_email_renewal_challenges
+      SET consumed_at = $2, source_event_id = $3 WHERE id = $1`, [ownerInput.challengeId, backdatedAt, backdatedEventId]);
+    await client.query(`INSERT INTO system.outbox_events
+      (id, event_type, aggregate_type, aggregate_id, actor_id, payload, created_at)
+      VALUES ($1, 'identity.email.renewed', 'monthly_email_renewal', $2, $3, $4::jsonb, $5)`,
+    [backdatedEventId, ownerInput.challengeId, owner,
+      JSON.stringify({ userId: owner, challengeId: ownerInput.challengeId, rulesVersion: maintenance.version }), backdatedAt]);
+    await client.query(`INSERT INTO trust.monthly_maintenance_observations
+      (id, subject_user_id, source_event_id, kind, performed_at, facts, email_binding_digest)
+      VALUES ($1, $2, $1, 'email_control', $3, $4::jsonb, $5)`,
+    [backdatedEventId, owner, backdatedAt,
+      JSON.stringify({ kind: 'email_control', emailVersion: ownerInput.challengeId }), ownerBinding]);
+  }, 'lythaus_runtime'), /receipt_incomplete/);
+  assert.equal((await sql('SELECT consumed_at FROM trust.monthly_email_renewal_challenges WHERE id = $1', [ownerInput.challengeId])).rows[0].consumed_at, null);
+  assert.equal((await sql('SELECT 1 FROM system.outbox_events WHERE id = $1', [backdatedEventId])).rowCount, 0);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_maintenance_observations WHERE id = $1', [backdatedEventId])).rowCount, 0);
+  const ownerReceipt = await tx(client => consumeMonthlyEmailRenewalChallenge(client,
+    { tokenHash: ownerInput.tokenHash, sourceEventId: uuidv7() }), 'lythaus_runtime');
+  assert.equal((await sql('SELECT subject_user_id FROM trust.monthly_maintenance_observations WHERE id = $1', [ownerReceipt.sourceEventId])).rows[0].subject_user_id, owner);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_maintenance_observations WHERE subject_user_id = $1', [other])).rowCount, 0);
+  const otherInput = { subjectUserId: other, challengeId: uuidv7(), tokenHash: randomBytes(32).toString('hex'),
+    idempotencyKey: uuidv7(), rulesVersion: maintenance.version };
+  await tx(client => createMonthlyEmailRenewalChallenge(client, otherInput), 'lythaus_runtime');
+  await sql("UPDATE system.feature_flags SET enabled = false WHERE flag_key = 'trust.monthly_email_renewal'");
+  await sql('UPDATE identity.email_credentials SET email_lookup_hmac = $2 WHERE user_id = $1', [other, randomBytes(32)]);
+  assert.equal((await sql('SELECT invalidated_at IS NOT NULL AS invalidated FROM trust.monthly_email_renewal_challenges WHERE id = $1', [otherInput.challengeId])).rows[0].invalidated, true);
+  await sql("UPDATE system.feature_flags SET enabled = true WHERE flag_key = 'trust.monthly_email_renewal'");
+  const deleted = await person(); await emailFixture(deleted);
+  const deletionInput = { subjectUserId: deleted, challengeId: uuidv7(), tokenHash: randomBytes(32).toString('hex'),
+    idempotencyKey: uuidv7(), rulesVersion: maintenance.version };
+  await tx(client => createMonthlyEmailRenewalChallenge(client, deletionInput), 'lythaus_runtime');
+  await sql("UPDATE system.feature_flags SET enabled = false WHERE flag_key = 'trust.monthly_email_renewal'");
+  await sql("UPDATE identity.users SET status = 'deleted', deleted_at = now() WHERE id = $1", [deleted]);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_email_renewal_challenges WHERE id = $1', [deletionInput.challengeId])).rowCount, 0);
+  await sql("UPDATE system.feature_flags SET enabled = true WHERE flag_key = 'trust.monthly_email_renewal'");
+  await assert.rejects(tx(client => createMonthlyEmailRenewalChallenge(client, { ...ownerInput,
+    subjectUserId: other, challengeId: uuidv7(), idempotencyKey: uuidv7() }), 'lythaus_runtime'), /duplicate key/);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_email_renewal_challenges WHERE subject_user_id = $1 AND token_hash = decode($2, \'hex\')', [other, ownerInput.tokenHash])).rowCount, 0);
+});
+
+test('SEC-03/RPT-04/REL-02: renewal transaction rollback and subject erasure clear private receipts', async () => {
+  const userId = await person(); await emailFixture(userId);
+  const input = { subjectUserId: userId, challengeId: uuidv7(), tokenHash: randomBytes(32).toString('hex'),
+    idempotencyKey: uuidv7(), rulesVersion: maintenance.version };
+  await tx(client => createMonthlyEmailRenewalChallenge(client, input), 'lythaus_runtime');
+  await sql(`CREATE FUNCTION trust.fail_monthly_email_renewal_fixture() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.event_type = 'identity.email.renewed' THEN RAISE EXCEPTION 'synthetic_email_renewal_crash'; END IF; RETURN NEW; END; $$;
+    CREATE TRIGGER fail_monthly_email_renewal_fixture BEFORE INSERT ON system.outbox_events
+      FOR EACH ROW EXECUTE FUNCTION trust.fail_monthly_email_renewal_fixture()`);
+  try {
+    await assert.rejects(tx(client => consumeMonthlyEmailRenewalChallenge(client,
+      { tokenHash: input.tokenHash, sourceEventId: uuidv7() }), 'lythaus_runtime'), /synthetic_email_renewal_crash/);
+  } finally {
+    await sql('DROP TRIGGER fail_monthly_email_renewal_fixture ON system.outbox_events');
+    await sql('DROP FUNCTION trust.fail_monthly_email_renewal_fixture()');
+  }
+  assert.equal((await sql('SELECT consumed_at FROM trust.monthly_email_renewal_challenges WHERE id = $1', [input.challengeId])).rows[0].consumed_at, null);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_maintenance_observations WHERE subject_user_id = $1', [userId])).rowCount, 0);
+  const consumed = await tx(client => consumeMonthlyEmailRenewalChallenge(client,
+    { tokenHash: input.tokenHash, sourceEventId: uuidv7() }), 'lythaus_runtime');
+  assert.equal(consumed.created, true);
+  await sql("UPDATE identity.users SET status = 'deleted', deleted_at = now() WHERE id = $1", [userId]);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_email_renewal_challenges WHERE id = $1', [input.challengeId])).rowCount, 0);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_maintenance_observations WHERE subject_user_id = $1', [userId])).rowCount, 0);
+  assert.equal((await sql("SELECT 1 FROM system.outbox_events WHERE event_type = 'identity.email.renewed' AND aggregate_id = $1", [input.challengeId])).rowCount, 0);
+  assert.equal((await sql('SELECT 1 FROM system.consumer_inbox WHERE event_id = $1', [consumed.sourceEventId])).rowCount, 0);
+});
+
+test('SEC-09/RPT-04: ordinary auth lifecycle skips the optional renewal table without its policy marker', async () => {
+  await sql('DELETE FROM trust.monthly_email_renewal_challenges');
+  await sql("DELETE FROM system.feature_flags WHERE flag_key = 'trust.monthly_email_renewal'");
+  await sql('ALTER TABLE trust.monthly_email_renewal_challenges RENAME TO monthly_email_renewal_challenges_absent_marker_fixture');
+  try {
+    const changed = await person(); await emailFixture(changed);
+    await sql('UPDATE identity.email_credentials SET email_lookup_hmac = $2 WHERE user_id = $1', [changed, randomBytes(32)]);
+    assert.equal((await sql('SELECT 1 FROM identity.email_credentials WHERE user_id = $1', [changed])).rowCount, 1);
+
+    const deleted = await person(); await emailFixture(deleted);
+    await sql("UPDATE identity.users SET status = 'deleted', deleted_at = now() WHERE id = $1", [deleted]);
+    assert.equal((await sql('SELECT status FROM identity.users WHERE id = $1', [deleted])).rows[0].status, 'deleted');
+  } finally {
+    await sql('ALTER TABLE trust.monthly_email_renewal_challenges_absent_marker_fixture RENAME TO monthly_email_renewal_challenges');
+  }
 });

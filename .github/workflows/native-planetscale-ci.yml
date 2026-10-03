@@ -148,6 +148,7 @@ jobs:
           node --experimental-strip-types --experimental-test-module-mocks
           --experimental-test-coverage
           '--test-coverage-include=packages/db/src/monthly-maintenance.ts'
+          '--test-coverage-include=packages/db/src/monthly-email-renewal.ts'
           '--test-coverage-include=packages/db/src/monthly-assembly.ts'
           '--test-coverage-include=apps/lythaus-jobs/src/monthly-assembly.ts'
           --test-coverage-lines=80 --test-coverage-branches=80
