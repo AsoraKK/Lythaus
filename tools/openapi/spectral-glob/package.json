@@ -1,0 +1,10 @@
+{
+  "name": "fast-glob",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Spectral file discovery using the repository's maintained glob implementation",
+  "main": "index.cjs",
+  "dependencies": {
+    "glob": "13.0.6"
+  }
+}

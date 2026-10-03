@@ -144,7 +144,9 @@ jobs:
       - run: flutter pub get
       - run: npm run openapi:lint
       - name: Spectral lint
-        run: npx spectral lint api/openapi/openapi.yaml
+        run: |
+          node --test scripts/tests/spectral-glob.test.mjs
+          npx spectral lint api/openapi/openapi.yaml
       - run: npm run openapi:bundle
       - run: npm run openapi:check:bundle
       - run: npm run openapi:validate:examples
