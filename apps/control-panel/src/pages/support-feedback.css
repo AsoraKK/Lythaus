@@ -1,0 +1,173 @@
+.support-feedback .support-kind-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.support-feedback .support-kind-tabs button,
+.support-feedback .support-request {
+  color: var(--on-surface);
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 12px;
+  cursor: pointer;
+  font: inherit;
+  padding: 10px 14px;
+}
+
+.support-feedback .support-kind-tabs button.selected,
+.support-feedback .support-request.selected {
+  border-color: var(--primary);
+  outline: 2px solid color-mix(in srgb, var(--primary) 28%, transparent);
+}
+
+.support-feedback .support-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1.5fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.support-feedback .support-queue,
+.support-feedback .support-detail {
+  min-width: 0;
+}
+
+.support-feedback .support-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.support-feedback .support-panel-heading h2,
+.support-feedback .support-section h3 {
+  margin-top: 0;
+}
+
+.support-feedback .support-queue-list,
+.support-feedback .support-messages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.support-feedback .support-queue-list li + li,
+.support-feedback .support-messages li + li {
+  margin-top: 8px;
+}
+
+.support-feedback .support-request {
+  display: grid;
+  gap: 5px;
+  text-align: left;
+  width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.support-feedback .support-request span,
+.support-feedback .support-facts dt,
+.support-feedback .support-section li > span {
+  color: var(--on-surface-muted);
+  font-size: 0.9em;
+}
+
+.support-feedback .support-facts {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow-wrap: anywhere;
+}
+
+.support-feedback .support-facts div {
+  min-width: 0;
+}
+
+.support-feedback .support-facts dd {
+  margin: 4px 0 0;
+}
+
+.support-feedback .support-content-grid,
+.support-feedback .support-evidence-form {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.support-feedback .support-content-grid > section,
+.support-feedback .support-section li,
+.support-feedback .support-messages li {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.support-feedback .support-section {
+  border-top: 1px solid var(--outline);
+  margin-top: 20px;
+  padding-top: 16px;
+}
+
+.support-feedback .support-section ul,
+.support-feedback .support-section ol {
+  padding-left: 20px;
+}
+
+.support-feedback .support-messages li,
+.support-feedback .support-section li {
+  border: 1px solid var(--outline);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.support-feedback .support-messages p,
+.support-feedback .support-section li p {
+  white-space: pre-wrap;
+}
+
+.support-feedback .support-field {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.support-feedback .support-field textarea,
+.support-feedback .support-field input,
+.support-feedback .support-field select {
+  background: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  color: var(--on-surface);
+  font: inherit;
+  min-height: 40px;
+  padding: 9px 10px;
+  width: 100%;
+}
+
+.support-feedback .support-evidence-select {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.support-feedback .support-evidence-select label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.support-feedback .support-reference {
+  font-family: monospace;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .support-feedback .support-layout,
+  .support-feedback .support-content-grid,
+  .support-feedback .support-evidence-form,
+  .support-feedback .support-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
