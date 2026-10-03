@@ -129,8 +129,8 @@ export async function recordMonthlyContentEarning(client: Client, request: {
   const configuration = await loadMonthlyEarningConfiguration(client, request.rulesVersion);
   if (!configuration) return null;
   reputationInstant(request.evaluatedAt);
-  const event = (await client.query<{ aggregate_type: string; aggregate_id: string; created_at: Date }>(
-    `SELECT aggregate_type, aggregate_id, created_at FROM system.outbox_events WHERE id = $1 AND event_type = ANY($2::text[])`,
+  const event = (await client.query<{ event_type: string; aggregate_type: string; aggregate_id: string; created_at: Date }>(
+    `SELECT event_type, aggregate_type, aggregate_id, created_at FROM system.outbox_events WHERE id = $1 AND event_type = ANY($2::text[])`,
     [request.eventId, MONTHLY_EARNING_SOURCE_EVENTS])).rows[0];
   if (!event) throw new Error('monthly_earning_canonical_event_required');
   if (iso(event.created_at) > request.evaluatedAt) throw new Error('monthly_earning_event_in_future');
@@ -182,11 +182,16 @@ export async function recordMonthlyContentEarning(client: Client, request: {
   }
   const old = (await client.query<{ revision: number; input_digest: string; input: ContentEvidence }>(
     'SELECT revision, input_digest, input FROM trust.monthly_earning_evidence_revisions WHERE contribution_id = $1 ORDER BY revision DESC LIMIT 1', [base.id])).rows[0];
-  const facts: Omit<ContentEvidence, 'id'> = { workId: base.id, kind: !content && old ? old.input.kind : sourceType === 'post' ? 'post'
+  let facts: Omit<ContentEvidence, 'id'> = { workId: base.id, kind: !content && old ? old.input.kind : sourceType === 'post' ? 'post'
     : content?.own_thread ? content.parent_id ? 'own_reply' : 'own_comment' : content?.parent_id ? 'other_reply' : 'other_comment',
     performedAt, state, creationMode, declarationValid, reasonCode,
     contentFingerprint: content && !content.deleted_at ? await digest(content.body.normalize('NFC').trim()) : null,
     sourceRevisionId: content?.moderation_source_event_id ?? null, decisionId: content?.decision_id ?? null };
+  if ((!content || content.deleted_at) && old?.input.state === 'accepted'
+    && content?.moderation_state !== 'blocked' && event.event_type !== 'moderation.content.blocked') {
+    const { id: previousEvidenceId, ...previousFacts } = old.input;
+    facts = { ...previousFacts, reasonCode: 'legitimate_deletion_preserved' };
+  }
   const inputDigest = await digest(facts);
   if (old?.input_digest !== inputDigest) {
     const id = uuidv7();

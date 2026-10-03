@@ -132,13 +132,20 @@ test('PTS-08/13/14: duplicate work, self-acceptance, invalid declarations and pe
   assert.equal((await latest(otherId)).points, 50);
 });
 
-test('CAL-18/REL-02: edits and deletions append corrections; stale publication events cannot resurrect old evidence', async () => {
+test('CAL-18/RPT-04: ordinary deletion preserves legitimate earning; independent invalidation appends a correction', async () => {
   const deleted = posts[2];
   const event = uuidv7();
   await sql('UPDATE content.posts SET deleted_at = now() WHERE id = $1', [deleted.id]);
   await sql(`INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
     VALUES ($1, 'content.post.deleted', 'post', $2, $3, '{}'::jsonb)`, [event, deleted.id, userId]);
   await processMonthlyEarningEvent(env, event);
+  assert.equal((await latest()).points, 500);
+  assert.ok((await latest()).calculation.evidence.some(row => row.reasonCode === 'legitimate_deletion_preserved' && row.state === 'accepted'));
+  const invalidation = uuidv7();
+  await sql("UPDATE content.posts SET moderation_state = 'blocked' WHERE id = $1", [deleted.id]);
+  await sql(`INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
+    VALUES ($1, 'moderation.content.blocked', 'post', $2, $3, '{}'::jsonb)`, [invalidation, deleted.id, otherId]);
+  await processMonthlyEarningEvent(env, invalidation);
   assert.equal((await latest()).points, 250);
   assert.equal((await latest()).state, 'corrected');
   const stale = await makePost({ author: otherId });
@@ -238,6 +245,19 @@ test('CAL-05/PTS-08: after-period edits cannot earn retroactively; deleted and o
     [deletion, edited.id, otherId, uuidv7(), uuidv7(), uuidv7()]);
   const reversed = await processMonthlyEarningEvent(env, deletion);
   assert.ok(reversed.calculation.evidence.some(row => row.reasonCode === 'content_deleted' && row.kind === 'post'));
+  const legitimate = await makePost({ author: otherId });
+  const accepted = await processMonthlyEarningEvent(env, legitimate.event);
+  const work = (await sql('SELECT id FROM trust.monthly_earning_contributions WHERE source_id = $1', [legitimate.id])).rows[0];
+  assert.equal(accepted.calculation.evidence.find(row => row.workId === work.id).state, 'accepted');
+  await sql('DELETE FROM content.posts WHERE id = $1', [legitimate.id]);
+  const ordinaryDeletion = uuidv7(), purgedBlock = uuidv7();
+  await sql(`INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
+    VALUES ($1, 'content.post.deleted', 'post', $2, $3, '{}'::jsonb),
+      ($4, 'moderation.content.blocked', 'post', $2, $5, '{}'::jsonb)`, [ordinaryDeletion, legitimate.id, otherId, purgedBlock, reviewerId]);
+  const preserved = await processMonthlyEarningEvent(env, ordinaryDeletion);
+  assert.equal(preserved.calculation.evidence.find(row => row.workId === work.id).state, 'accepted');
+  const invalidated = await processMonthlyEarningEvent(env, purgedBlock);
+  assert.equal(invalidated.calculation.evidence.find(row => row.workId === work.id).state, 'reversed');
   const historical = await makePost({ author: otherId, created: '2026-07-27T12:00:00.000Z' });
   await processMonthlyEarningEvent(env, historical.event);
   assert.equal((await sql('SELECT id FROM trust.monthly_earning_contributions WHERE source_id = $1', [historical.id])).rowCount, 0);
