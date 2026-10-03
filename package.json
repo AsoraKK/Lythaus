@@ -104,7 +104,7 @@
     "authenticity:wp004b-json-schema-b2-b3": "node --experimental-strip-types scripts/authenticity/wp004b-json-schema-b2-b3-completion.mjs",
     "authenticity:neutral-png": "node scripts/authenticity/create-neutral-png.mjs",
     "authenticity:geometry-fixture": "node scripts/authenticity/create-geometry-occlusion-fixture.mjs",
-    "test:product-contracts": "node --experimental-strip-types --test packages/contracts/tests/product-policy.test.mjs",
+    "test:product-contracts": "node --experimental-strip-types --test packages/contracts/tests/product-policy.test.mjs packages/contracts/tests/reward-calendar.test.mjs packages/db/tests/reward-monthly-activity.test.mjs",
     "test:product-integrity-runtime": "node --test scripts/tests/product-integrity-runtime-invariants.test.mjs",
     "test:critical-coverage": "node scripts/critical-coverage-gate.mjs",
     "ml:thermal-qualify": "node ml/local/eco_train/thermal-qualify.mjs --plan",
