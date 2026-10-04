@@ -135,78 +135,99 @@ void main() {
     expect(supportFeedbackEnabled, isFalse);
   });
 
-  testWidgets('problem and suggestion forms keep their fields and histories distinct', (tester) async {
-    final source = StateController<Object?>(null);
-    addTearDown(source.dispose);
-    final client = _FakeSupportFeedbackClient('Member A');
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        authSessionRevisionProvider.overrideWith((ref) => AuthSessionRevision(source)),
-        supportFeedbackClientProvider.overrideWithValue(client),
-      ],
-      child: const MaterialApp(home: SupportFeedbackScreen()),
-    ));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'problem and suggestion forms keep their fields and histories distinct',
+    (tester) async {
+      final source = StateController<Object?>(null);
+      addTearDown(source.dispose);
+      final client = _FakeSupportFeedbackClient('Member A');
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authSessionRevisionProvider.overrideWith(
+              (ref) => AuthSessionRevision(source),
+            ),
+            supportFeedbackClientProvider.overrideWithValue(client),
+          ],
+          child: const MaterialApp(home: SupportFeedbackScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Member A problem'), findsOneWidget);
-    expect(find.text('What happened?'), findsOneWidget);
-    expect(find.text('What did you expect?'), findsOneWidget);
-    await tester.enterText(find.byType(TextField).at(0), 'Report title');
-    await tester.enterText(find.byType(TextField).at(1), 'It failed this way.');
-    await tester.enterText(find.byType(TextField).at(2), 'It should work this way.');
-    await tester.enterText(find.byType(TextField).at(3), 'Repeat these steps.');
-    await tester.tap(find.text('Send private report'));
-    await tester.pumpAndSettle();
-    expect(client.submissions.single, containsPair('kind', 'problem'));
-    expect(client.submissions.single['actual'], 'It failed this way.');
-    expect(client.submissions.single['expected'], 'It should work this way.');
-    expect(client.submissions.single, isNot(contains('improvement')));
-    expect(client.submissionKeys.single, isNotEmpty);
+      expect(find.text('Member A problem'), findsOneWidget);
+      expect(find.text('What happened?'), findsOneWidget);
+      expect(find.text('What did you expect?'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).at(0), 'Report title');
+      await tester.enterText(find.byType(TextField).at(1), 'It failed this way.');
+      await tester.enterText(find.byType(TextField).at(2), 'It should work this way.');
+      await tester.enterText(find.byType(TextField).at(3), 'Repeat these steps.');
+      await tester.tap(find.text('Send private report'));
+      await tester.pumpAndSettle();
+      expect(client.submissions.single, containsPair('kind', 'problem'));
+      expect(client.submissions.single['actual'], 'It failed this way.');
+      expect(client.submissions.single['expected'], 'It should work this way.');
+      expect(client.submissions.single, isNot(contains('improvement')));
+      expect(client.submissionKeys.single, isNotEmpty);
 
-    await tester.tap(find.text('Feedback and suggestions').first);
-    await tester.pumpAndSettle();
-    expect(find.text('What would you improve?'), findsOneWidget);
-    expect(find.text('Who would this help, and how?'), findsOneWidget);
-    expect(find.text('What happened?'), findsNothing);
-    expect(find.text('Suggestions'), findsOneWidget);
-    expect(client.listedKinds.last, 'suggestion');
-  });
+      await tester.tap(find.text('Feedback and suggestions').first);
+      await tester.pumpAndSettle();
+      expect(find.text('What would you improve?'), findsOneWidget);
+      expect(find.text('Who would this help, and how?'), findsOneWidget);
+      expect(find.text('What happened?'), findsNothing);
+      expect(find.text('Suggestions'), findsOneWidget);
+      expect(client.listedKinds.last, 'suggestion');
+    },
+  );
 
-  testWidgets('history opens private messages and sends a member reply', (tester) async {
-    final source = StateController<Object?>(null);
-    addTearDown(source.dispose);
-    final client = _FakeSupportFeedbackClient('Member A');
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        authSessionRevisionProvider.overrideWith((ref) => AuthSessionRevision(source)),
-        supportFeedbackClientProvider.overrideWithValue(client),
-      ],
-      child: const MaterialApp(home: SupportFeedbackScreen()),
-    ));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'history opens private messages and sends a member reply',
+    (tester) async {
+      final source = StateController<Object?>(null);
+      addTearDown(source.dispose);
+      final client = _FakeSupportFeedbackClient('Member A');
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authSessionRevisionProvider.overrideWith(
+              (ref) => AuthSessionRevision(source),
+            ),
+            supportFeedbackClientProvider.overrideWithValue(client),
+          ],
+          child: const MaterialApp(home: SupportFeedbackScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Member A problem'));
-    await tester.pumpAndSettle();
-    expect(find.text('Owner reply in private history.'), findsOneWidget);
-    await tester.enterText(find.byType(TextField).last, 'My private follow-up.');
-    await tester.tap(find.text('Send reply'));
-    await tester.pumpAndSettle();
-    expect(client.replies, <String>['My private follow-up.']);
-    expect(client.replyKeys.single, isNotEmpty);
-    expect(find.text('Your reply was added to the private history.'), findsOneWidget);
-  });
+      await tester.tap(find.text('Member A problem'));
+      await tester.pumpAndSettle();
+      expect(find.text('Owner reply in private history.'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).last, 'My private follow-up.');
+      await tester.tap(find.text('Send reply'));
+      await tester.pumpAndSettle();
+      expect(client.replies, <String>['My private follow-up.']);
+      expect(client.replyKeys.single, isNotEmpty);
+      expect(
+        find.text('Your reply was added to the private history.'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('cancel stops pending history loading', (tester) async {
     final source = StateController<Object?>(null);
     addTearDown(source.dispose);
     final client = _FakeSupportFeedbackClient('Member A', deferNextList: true);
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        authSessionRevisionProvider.overrideWith((ref) => AuthSessionRevision(source)),
-        supportFeedbackClientProvider.overrideWithValue(client),
-      ],
-      child: const MaterialApp(home: SupportFeedbackScreen()),
-    ));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authSessionRevisionProvider.overrideWith(
+            (ref) => AuthSessionRevision(source),
+          ),
+          supportFeedbackClientProvider.overrideWithValue(client),
+        ],
+        child: const MaterialApp(home: SupportFeedbackScreen()),
+      ),
+    );
     await tester.pump();
     await tester.pump();
     expect(find.text('Cancel loading'), findsOneWidget);
@@ -216,39 +237,52 @@ void main() {
     expect(find.text('No requests in this history yet.'), findsOneWidget);
   });
 
-  testWidgets('account switch cancels old requests and clears old account data', (tester) async {
-    final source = StateController<Object?>(null);
-    addTearDown(source.dispose);
-    final clients = <_FakeSupportFeedbackClient>[];
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        authSessionRevisionProvider.overrideWith((ref) => AuthSessionRevision(source)),
-        supportFeedbackClientProvider.overrideWith((ref) {
-          final revision = ref.watch(authSessionRevisionProvider);
-          final client = _FakeSupportFeedbackClient('Account $revision');
-          clients.add(client);
-          ref.onDispose(client.deactivate);
-          return client;
-        }),
-      ],
-      child: const MaterialApp(home: SupportFeedbackScreen()),
-    ));
-    await tester.pumpAndSettle();
-    expect(find.text('Account 0 problem'), findsOneWidget);
-    await tester.enterText(find.byType(TextField).at(0), 'Old account unsent draft');
-    clients.first.deferNextList = true;
-    await tester.tap(find.text('Feedback and suggestions').first);
-    await tester.pump();
+  testWidgets(
+    'account switch cancels old requests and clears old account data',
+    (tester) async {
+      final source = StateController<Object?>(null);
+      addTearDown(source.dispose);
+      final clients = <_FakeSupportFeedbackClient>[];
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authSessionRevisionProvider.overrideWith(
+              (ref) => AuthSessionRevision(source),
+            ),
+            supportFeedbackClientProvider.overrideWith((ref) {
+              final revision = ref.watch(authSessionRevisionProvider);
+              final client = _FakeSupportFeedbackClient('Account $revision');
+              clients.add(client);
+              ref.onDispose(client.deactivate);
+              return client;
+            }),
+          ],
+          child: const MaterialApp(home: SupportFeedbackScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Account 0 problem'), findsOneWidget);
+      await tester.enterText(
+        find.byType(TextField).at(0),
+        'Old account unsent draft',
+      );
+      clients.first.deferNextList = true;
+      await tester.tap(find.text('Feedback and suggestions').first);
+      await tester.pump();
 
-    source.state = 'account-switched';
-    await tester.pump();
-    await tester.pump();
-    await tester.pumpAndSettle();
-    expect(clients, hasLength(2));
-    expect(clients.first.isCurrentSession, isFalse);
-    expect(clients.first.cancellations, greaterThan(0));
-    expect(find.text('Account 1 suggestion'), findsOneWidget);
-    expect(find.text('Account 0 suggestion'), findsNothing);
-    expect(tester.widget<TextField>(find.byType(TextField).first).controller!.text, isEmpty);
-  });
+      source.state = 'account-switched';
+      await tester.pump();
+      await tester.pump();
+      await tester.pumpAndSettle();
+      expect(clients, hasLength(2));
+      expect(clients.first.isCurrentSession, isFalse);
+      expect(clients.first.cancellations, greaterThan(0));
+      expect(find.text('Account 1 suggestion'), findsOneWidget);
+      expect(find.text('Account 0 suggestion'), findsNothing);
+      expect(
+        tester.widget<TextField>(find.byType(TextField).first).controller!.text,
+        isEmpty,
+      );
+    },
+  );
 }

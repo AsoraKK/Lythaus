@@ -146,9 +146,9 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
                 padding: EdgeInsets.symmetric(vertical: 20),
                 child: Center(child: CircularProgressIndicator()),
               )
-            else if (_options == null)
+            if (_options == null && !_loading)
               _UnavailableNotice(message: _error ?? _unavailableMessage),
-            else ...<Widget>[
+            if (_options != null) ...<Widget>[
               DropdownButtonFormField<String>(
                 key: ValueKey<String>('category-$_kind'),
                 value: selectedCategory,

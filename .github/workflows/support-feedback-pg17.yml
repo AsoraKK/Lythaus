@@ -108,6 +108,11 @@ jobs:
       - run: flutter pub get
       - name: Check support UI formatting
         run: dart format --output=none --set-exit-if-changed lib/features/support lib/core/routing/app_router.dart lib/ui/screens/profile/settings_screen.dart test/features/support
+      - name: Print support UI formatter patch after a format failure
+        if: failure()
+        run: |
+          dart format lib/features/support lib/core/routing/app_router.dart lib/ui/screens/profile/settings_screen.dart test/features/support
+          git --no-pager diff --color=never -- lib/features/support lib/core/routing/app_router.dart lib/ui/screens/profile/settings_screen.dart test/features/support
       - name: Analyze support UI
         run: flutter analyze lib/features/support lib/core/routing/app_router.dart lib/ui/screens/profile/settings_screen.dart
       - name: Test support forms, history, cancellation and account switching
