@@ -133,7 +133,10 @@ class DioSupportFeedbackClient implements SupportFeedbackClient {
   }) async {
     final token = await _accessToken();
     if (!_isCurrentSession() || token == null || token.isEmpty) {
-      throw const SupportFeedbackApiException(401, 'support_authentication_required');
+      throw const SupportFeedbackApiException(
+        401,
+        'support_authentication_required',
+      );
     }
     final cancelToken = CancelToken();
     _pending.add(cancelToken);
@@ -153,7 +156,10 @@ class DioSupportFeedbackClient implements SupportFeedbackClient {
         cancelToken: cancelToken,
       );
       if (!_isCurrentSession()) {
-        throw const SupportFeedbackApiException(401, 'support_authentication_required');
+        throw const SupportFeedbackApiException(
+          401,
+          'support_authentication_required',
+        );
       }
       final value = response.data;
       if (value is! Map) {

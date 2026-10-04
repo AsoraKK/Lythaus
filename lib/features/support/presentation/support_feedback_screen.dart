@@ -123,24 +123,30 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
                 ),
               ],
               selected: <String>{_kind},
-              onSelectionChanged: _loading || _busy ? null : (selection) {
-                if (selection.isEmpty || selection.single == _kind) return;
-                _epoch += 1;
-                ref.read(supportFeedbackClientProvider).cancelPending();
-                setState(() {
-                  _kind = selection.single;
-                  _category = null;
-                  _selectedRequest = null;
-                  _detail = null;
-                  _error = null;
-                  _notice = null;
-                });
-                _clearForm();
-                _loadHistory();
-              },
+              onSelectionChanged: _loading || _busy
+                  ? null
+                  : (selection) {
+                      if (selection.isEmpty || selection.single == _kind)
+                        return;
+                      _epoch += 1;
+                      ref.read(supportFeedbackClientProvider).cancelPending();
+                      setState(() {
+                        _kind = selection.single;
+                        _category = null;
+                        _selectedRequest = null;
+                        _detail = null;
+                        _error = null;
+                        _notice = null;
+                      });
+                      _clearForm();
+                      _loadHistory();
+                    },
             ),
             const SizedBox(height: 20),
-            Text(_labels[_kind]!, style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              _labels[_kind]!,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             if (_options == null && _loading)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 20),
@@ -230,7 +236,11 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
               FilledButton.icon(
                 onPressed: _busy || selectedCategory == null ? null : _submit,
                 icon: const Icon(Icons.send_outlined),
-                label: Text(_kind == 'problem' ? 'Send private report' : 'Send suggestion'),
+                label: Text(
+                  _kind == 'problem'
+                      ? 'Send private report'
+                      : 'Send suggestion',
+                ),
               ),
               if (_busy)
                 TextButton(
@@ -263,7 +273,9 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
               ..._history.map(_historyTile),
             if (_nextCursor != null)
               OutlinedButton(
-                onPressed: _loadingHistory ? null : () => _loadHistory(append: true),
+                onPressed: _loadingHistory
+                    ? null
+                    : () => _loadHistory(append: true),
                 child: Text(_loadingHistory ? 'Loading…' : 'Load more history'),
               ),
             if (_selectedRequest != null && _detail != null) ...<Widget>[
@@ -271,7 +283,10 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
               _requestDetail(context),
             ],
             if (loading)
-              TextButton(onPressed: _cancelPending, child: const Text('Cancel loading')),
+              TextButton(
+                onPressed: _cancelPending,
+                child: const Text('Cancel loading'),
+              ),
           ],
         ),
       ),
@@ -321,7 +336,9 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
         for (final message in messages)
           ListTile(
             contentPadding: EdgeInsets.zero,
-            title: Text(_string(message['from'], 'member') == 'owner' ? 'Lythaus' : 'You'),
+            title: Text(
+              _string(message['from'], 'member') == 'owner' ? 'Lythaus' : 'You',
+            ),
             subtitle: Text(_string(message['text'], '')),
           ),
         if (_detail?['nextMessageCursor'] is int)
@@ -340,7 +357,9 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
         ),
         const SizedBox(height: 8),
         FilledButton(
-          onPressed: _busy || id is! String || revision is! int ? null : _sendReply,
+          onPressed: _busy || id is! String || revision is! int
+              ? null
+              : _sendReply,
           child: const Text('Send reply'),
         ),
       ],
@@ -397,7 +416,9 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
       if (!_current(client, epoch)) return;
       final items = _maps(result['items']);
       setState(() {
-        _history = append ? <Map<String, dynamic>>[..._history, ...items] : items;
+        _history = append
+            ? <Map<String, dynamic>>[..._history, ...items]
+            : items;
         _nextCursor = _nullableString(result['nextCursor']);
         _loadingHistory = false;
       });
@@ -427,7 +448,10 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
       final result = await client.detail(kind: _kind, requestId: id);
       if (!_current(client, epoch)) return;
       final messages = _maps(result['messages'])
-        ..sort((left, right) => (left['revision'] as int).compareTo(right['revision'] as int));
+        ..sort(
+          (left, right) =>
+              (left['revision'] as int).compareTo(right['revision'] as int),
+        );
       setState(() {
         _detail = <String, dynamic>{...result, 'messages': messages};
         _selectedRequest = _asMap(result['request']);
@@ -464,12 +488,21 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
       if (!_current(client, epoch)) return;
       final currentMessages = _maps(_detail?['messages']);
       final olderMessages = _maps(older['messages']);
-      currentMessages.sort((left, right) => (left['revision'] as int).compareTo(right['revision'] as int));
-      olderMessages.sort((left, right) => (left['revision'] as int).compareTo(right['revision'] as int));
+      currentMessages.sort(
+        (left, right) =>
+            (left['revision'] as int).compareTo(right['revision'] as int),
+      );
+      olderMessages.sort(
+        (left, right) =>
+            (left['revision'] as int).compareTo(right['revision'] as int),
+      );
       setState(() {
         _detail = <String, dynamic>{
           ..._detail!,
-          'messages': <Map<String, dynamic>>[...olderMessages, ...currentMessages],
+          'messages': <Map<String, dynamic>>[
+            ...olderMessages,
+            ...currentMessages,
+          ],
           'nextMessageCursor': older['nextMessageCursor'],
         };
         _loadingDetail = false;
@@ -503,10 +536,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
         'expected': second,
         if (_reproductionSteps.text.trim().isNotEmpty)
           'reproductionSteps': _reproductionSteps.text.trim(),
-      } else ...<String, dynamic>{
-        'improvement': first,
-        'benefit': second,
-      },
+      } else ...<String, dynamic>{'improvement': first, 'benefit': second},
     };
     final signature = jsonEncode(body);
     if (_submissionKey == null || _submissionSignature != signature) {
@@ -637,14 +667,18 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
   static Map<String, dynamic> _asMap(Object? value) =>
       value is Map ? Map<String, dynamic>.from(value) : <String, dynamic>{};
 
-  static List<Map<String, dynamic>> _maps(Object? value) =>
-      value is List ? value.map(_asMap).where((item) => item.isNotEmpty).toList() : <Map<String, dynamic>>[];
+  static List<Map<String, dynamic>> _maps(Object? value) => value is List
+      ? value.map(_asMap).where((item) => item.isNotEmpty).toList()
+      : <Map<String, dynamic>>[];
 
-  static String? _nullableString(Object? value) => value is String && value.isNotEmpty ? value : null;
+  static String? _nullableString(Object? value) =>
+      value is String && value.isNotEmpty ? value : null;
 
-  static String _string(Object? value, String fallback) => value is String ? value : fallback;
+  static String _string(Object? value, String fallback) =>
+      value is String ? value : fallback;
 
-  static String _readable(String value) => value.replaceAll('_', ' ').replaceAll('-', ' ');
+  static String _readable(String value) =>
+      value.replaceAll('_', ' ').replaceAll('-', ' ');
 
   static const _unavailableMessage =
       'Support is not available right now. Your account and privacy settings still work as usual.';

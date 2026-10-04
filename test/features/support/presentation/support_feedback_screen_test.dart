@@ -119,7 +119,9 @@ class _FakeSupportFeedbackClient implements SupportFeedbackClient {
         'id': _requestId,
         'kind': kind,
         'category': kind == 'problem' ? 'display' : 'navigation',
-        'title': body?['title'] ?? '$label ${kind == 'problem' ? 'problem' : 'suggestion'}',
+        'title':
+            body?['title'] ??
+            '$label ${kind == 'problem' ? 'problem' : 'suggestion'}',
         'actual': body?['actual'] ?? 'Synthetic actual behavior.',
         'expected': body?['expected'] ?? 'Synthetic expected behavior.',
         'revision': 1,
@@ -158,9 +160,18 @@ void main() {
       expect(find.text('What happened?'), findsOneWidget);
       expect(find.text('What did you expect?'), findsOneWidget);
       await tester.enterText(find.byType(TextField).at(0), 'Report title');
-      await tester.enterText(find.byType(TextField).at(1), 'It failed this way.');
-      await tester.enterText(find.byType(TextField).at(2), 'It should work this way.');
-      await tester.enterText(find.byType(TextField).at(3), 'Repeat these steps.');
+      await tester.enterText(
+        find.byType(TextField).at(1),
+        'It failed this way.',
+      );
+      await tester.enterText(
+        find.byType(TextField).at(2),
+        'It should work this way.',
+      );
+      await tester.enterText(
+        find.byType(TextField).at(3),
+        'Repeat these steps.',
+      );
       await tester.tap(find.text('Send private report'));
       await tester.pumpAndSettle();
       expect(client.submissions.single, containsPair('kind', 'problem'));
@@ -179,39 +190,41 @@ void main() {
     },
   );
 
-  testWidgets(
-    'history opens private messages and sends a member reply',
-    (tester) async {
-      final source = StateController<Object?>(null);
-      addTearDown(source.dispose);
-      final client = _FakeSupportFeedbackClient('Member A');
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            authSessionRevisionProvider.overrideWith(
-              (ref) => AuthSessionRevision(source),
-            ),
-            supportFeedbackClientProvider.overrideWithValue(client),
-          ],
-          child: const MaterialApp(home: SupportFeedbackScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('history opens private messages and sends a member reply', (
+    tester,
+  ) async {
+    final source = StateController<Object?>(null);
+    addTearDown(source.dispose);
+    final client = _FakeSupportFeedbackClient('Member A');
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authSessionRevisionProvider.overrideWith(
+            (ref) => AuthSessionRevision(source),
+          ),
+          supportFeedbackClientProvider.overrideWithValue(client),
+        ],
+        child: const MaterialApp(home: SupportFeedbackScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Member A problem'));
-      await tester.pumpAndSettle();
-      expect(find.text('Owner reply in private history.'), findsOneWidget);
-      await tester.enterText(find.byType(TextField).last, 'My private follow-up.');
-      await tester.tap(find.text('Send reply'));
-      await tester.pumpAndSettle();
-      expect(client.replies, <String>['My private follow-up.']);
-      expect(client.replyKeys.single, isNotEmpty);
-      expect(
-        find.text('Your reply was added to the private history.'),
-        findsOneWidget,
-      );
-    },
-  );
+    await tester.tap(find.text('Member A problem'));
+    await tester.pumpAndSettle();
+    expect(find.text('Owner reply in private history.'), findsOneWidget);
+    await tester.enterText(
+      find.byType(TextField).last,
+      'My private follow-up.',
+    );
+    await tester.tap(find.text('Send reply'));
+    await tester.pumpAndSettle();
+    expect(client.replies, <String>['My private follow-up.']);
+    expect(client.replyKeys.single, isNotEmpty);
+    expect(
+      find.text('Your reply was added to the private history.'),
+      findsOneWidget,
+    );
+  });
 
   testWidgets('cancel stops pending history loading', (tester) async {
     final source = StateController<Object?>(null);
