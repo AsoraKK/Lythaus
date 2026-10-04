@@ -145,7 +145,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 20),
                 child: Center(child: CircularProgressIndicator()),
-              )
+              ),
             if (_options == null && !_loading)
               _UnavailableNotice(message: _error ?? _unavailableMessage),
             if (_options != null) ...<Widget>[

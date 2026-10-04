@@ -111,7 +111,7 @@ jobs:
       - name: Print support UI formatter patch after a format failure
         if: failure()
         run: |
-          dart format lib/features/support lib/core/routing/app_router.dart lib/ui/screens/profile/settings_screen.dart test/features/support
+          dart format lib/features/support lib/core/routing/app_router.dart lib/ui/screens/profile/settings_screen.dart test/features/support || true
           git --no-pager diff --color=never -- lib/features/support lib/core/routing/app_router.dart lib/ui/screens/profile/settings_screen.dart test/features/support
       - name: Analyze support UI
         run: flutter analyze lib/features/support lib/core/routing/app_router.dart lib/ui/screens/profile/settings_screen.dart
