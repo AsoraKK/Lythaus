@@ -1,4 +1,4 @@
-import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, reconcileBudgetReservation, recordReputationSignal, recordUserActivity, refreshReputationProfile, reserveBudget, settleBudgetReservation, transaction, type BudgetConfig, type DatabaseClient, type HyperdriveBinding, type ReputationMutationResult } from '@lythaus/db';
+import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, reconcileBudgetReservation, recordReputationSignal, recordUserActivity, refreshReputationProfile, reserveBudget, settleBudgetReservation, transaction, supportFeedbackPrivacyIsReady, exportSupportForPrivacy, exportSupportMessagesForPrivacy, purgeSupportForPrivacy, retainSupportBatch, parseSupportServicePolicy, type BudgetConfig, type DatabaseClient, type HyperdriveBinding, type ReputationMutationResult } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { evaluateAuthenticity, type AuthenticityEvaluation } from '@lythaus/authenticity';
 import { ACTIVITY_POLICY_VERSION, APPEAL_POLICY, evaluateAppeal, selectAppealReviewers, type ActivityEventInput, type AppealReviewerCandidate, type AppealRiskClass, type AppealVote, type ReputationSignalType } from '@lythaus/contracts';
@@ -33,6 +33,7 @@ interface Env extends EnvBindings {
   MONTHLY_REPUTATION_CONTEXT_RULES?: string;
   MONTHLY_REPUTATION_SNAPSHOT_RULES?: string;
   COMMUNITY_APPEAL_RULES_VERSION?: string;
+  SUPPORT_FEEDBACK_POLICY?: string;
   MODERATION_QUEUE?: Queue;
   FEED_QUEUE?: Queue;
   NOTIFICATIONS_QUEUE?: Queue;
@@ -49,6 +50,74 @@ interface Env extends EnvBindings {
   APPEAL_LIFECYCLE?: WorkflowCreateBinding<{ appealId: string }>;
   BACKUP_VALIDATION?: WorkflowCreateBinding<{ runId: string }>;
   APPEAL_ASSIGNMENT_SECRET?: string;
+}
+
+function configuredSupportFeedbackPolicy(env: Env): unknown {
+  const serialized = env.SUPPORT_FEEDBACK_POLICY;
+  if (typeof serialized !== 'string' || serialized.length === 0 || new TextEncoder().encode(serialized).length > 32 * 1024) {
+    throw new Error('support_policy_invalid');
+  }
+  try {
+    const policy: unknown = JSON.parse(serialized);
+    parseSupportServicePolicy(policy);
+    return policy;
+  } catch {
+    throw new Error('support_policy_invalid');
+  }
+}
+
+async function exportSupportFeedbackForPrivacy(env: Env, requestId: string): Promise<unknown | undefined> {
+  if (!await supportFeedbackPrivacyIsReady(env.DB_PRIVACY_FRESH)) return undefined;
+  const policy = configuredSupportFeedbackPolicy(env);
+  return transaction(env.DB_PRIVACY_FRESH, async client => {
+    const items: Array<{ request: unknown; messages: readonly unknown[] }> = [];
+    let requestCursor: string | null = null;
+    for (let requestPage = 0; requestPage < 1_000; requestPage += 1) {
+      const page = await exportSupportForPrivacy(client, requestId, policy, requestCursor);
+      for (const item of page.items) {
+        const messages: unknown[] = [...item.messages];
+        let messageCursor: number | null = item.nextMessageCursor;
+        for (let messagePage = 0; messageCursor !== null; messagePage += 1) {
+          if (messagePage >= 1_000) throw new Error('support_privacy_export_limit');
+          const next = await exportSupportMessagesForPrivacy(client, requestId, item.request.id, policy, messageCursor, item.request.revision);
+          messages.push(...next.items);
+          if (next.nextCursor !== null && next.nextCursor <= messageCursor) throw new Error('support_privacy_export_limit');
+          messageCursor = next.nextCursor;
+        }
+        items.push(Object.freeze({ request: item.request, messages: Object.freeze(messages) }));
+      }
+      if (page.nextRequestCursor === null) return Object.freeze({ requests: Object.freeze(items) });
+      if (page.nextRequestCursor === requestCursor) throw new Error('support_privacy_export_limit');
+      requestCursor = page.nextRequestCursor;
+    }
+    throw new Error('support_privacy_export_limit');
+  });
+}
+
+async function purgeSupportFeedbackForPrivacy(env: Env, requestId: string): Promise<number> {
+  if (!await supportFeedbackPrivacyIsReady(env.DB_PRIVACY_FRESH)) return 0;
+  const policy = configuredSupportFeedbackPolicy(env);
+  return transaction(env.DB_PRIVACY_FRESH, async client => {
+    let scrubbedRecords = 0;
+    for (let batch = 0; batch < 1_000; batch += 1) {
+      const result = await purgeSupportForPrivacy(client, requestId, policy);
+      scrubbedRecords += result.scrubbedRecords;
+      if (!result.hasMore) return scrubbedRecords;
+      if (result.scrubbedRecords === 0) throw new Error('support_privacy_batch_stalled');
+    }
+    throw new Error('support_privacy_batch_limit');
+  });
+}
+
+async function recordDeletedSupportLocation(env: Env, subjectId: string): Promise<void> {
+  if (!await supportFeedbackPrivacyIsReady(env.DB_PRIVACY_FRESH)) return;
+  await query(env.DB_PRIVACY_FRESH, `
+    INSERT INTO privacy.subject_data_locations
+      (subject_id,store_type,resource_reference,entity_type,entity_id,authoritative_or_derived,retention_class,deletion_state,last_verified_at)
+    SELECT $1,'planetscale','support.requests','support_subject',$1,'authoritative','audit','retained',now()
+    WHERE EXISTS (SELECT 1 FROM support.requests WHERE submitter_id=$1)
+    ON CONFLICT (subject_id,store_type,resource_reference,entity_type,entity_key)
+    DO UPDATE SET deletion_state='retained',last_verified_at=now()`, [subjectId]);
 }
 
 async function deleteR2Prefix(bucket: NonNullable<EnvBindings['PRIVATE_EXPORTS']>, prefix: string): Promise<number> {
@@ -2023,6 +2092,12 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       return { subjectId, state: 'blocked' };
     }
 
+    await step.do('purge-support-feedback-for-deletion', async () => {
+      await purgeSupportFeedbackForPrivacy(this.env, requestId);
+      await recordDeletedSupportLocation(this.env, subjectId);
+      return true;
+    });
+
     if (this.env.AUTHENTICITY_BETA_STORAGE_ENABLED === 'true') {
       await step.do('tombstone-private-beta',async()=>{await tombstoneBetaCases(this.env.DB_JOBS_FRESH,subjectId); return true;});
       await step.sleep('wait-private-beta-upload-expiry','16 minutes');
@@ -2175,7 +2250,7 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
                       'privacy.requests', 'privacy.request_events', 'privacy.legal_holds',
                       'trust.monthly_reputation_sources', 'trust.monthly_reputation_assessments',
                       'trust.monthly_earning_week_revisions', 'trust.monthly_reward_snapshots',
-                      'trust.monthly_reward_snapshot_corrections'
+                      'trust.monthly_reward_snapshot_corrections', 'support.requests'
                     ) THEN 'retained'
                     ELSE 'deleted'
                   END,
@@ -2380,7 +2455,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         query(this.env.DB_JOBS_FRESH, `SELECT case_id, state, consent_version, review_state, created_at, updated_at, expires_at, result->>'finding' AS finding, result->'advisory'->>'status' AS advisory_status FROM moderation.authenticity_beta WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT f.id, f.case_id, f.kind, f.message, f.policy_version, f.created_at FROM moderation.authenticity_beta_feedback f JOIN moderation.authenticity_beta b ON b.case_id=f.case_id WHERE b.owner_id=$1 AND b.deleted_at IS NULL ORDER BY f.created_at`, [subjectId]),
       ]);
-      return buildPrivacyDataPassport({
+      const passport = buildPrivacyDataPassport({
         generatedAt: new Date().toISOString(),
         profile: identity.rows[0] ?? null,
         privateProfile: privateIdentity.privateProfile,
@@ -2418,6 +2493,8 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         appealOutcomeEffects: appealOutcomeEffects.rows,
         subjectDataLocations: locations.rows,
       });
+      const supportFeedback = await exportSupportFeedbackForPrivacy(this.env, requestId);
+      return supportFeedback === undefined ? passport : Object.freeze({ ...passport, supportFeedback });
     });
 
     const completion = await step.do('store-export-and-complete-request', async () => {
@@ -2467,7 +2544,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
 }
 
 export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: string }> {
-  async run(event: WorkflowEvent<{ runId: string }>, step: WorkflowStep): Promise<{ runId: string; redactedPosts: number; deletedMedia: number; expiredActivityEvents: number; expiredAccountEvents: number; expiredSystemAuditEvents: number; expiredRateLimitWindows: number; expiredIdempotencyTombstones: number; expiredWaitlistSignups: number }> {
+  async run(event: WorkflowEvent<{ runId: string }>, step: WorkflowStep): Promise<{ runId: string; redactedPosts: number; deletedMedia: number; expiredActivityEvents: number; expiredAccountEvents: number; expiredSystemAuditEvents: number; expiredRateLimitWindows: number; expiredIdempotencyTombstones: number; expiredWaitlistSignups: number; expiredSupportRecords: number }> {
     const securityAuditRetention = securityAuditRetentionPlan();
     const securityRetentionInterval = `${securityAuditRetention.retentionDays} days`;
     const expiredActivityEvents = await step.do('purge-expired-user-activity', async () => {
@@ -2540,6 +2617,12 @@ export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: s
       });
       return deleted;
     });
+    const expiredSupportRecords = await step.do('purge-expired-support-feedback', async () => {
+      if (!await supportFeedbackPrivacyIsReady(this.env.DB_PRIVACY_FRESH)) return 0;
+      const policy = configuredSupportFeedbackPolicy(this.env);
+      const result = await transaction(this.env.DB_PRIVACY_FRESH, client => retainSupportBatch(client, policy));
+      return result.scrubbedRecords;
+    });
     const candidates = await step.do('find-retention-candidates', async () => {
       const result = await query<{ user_id: string; content_type: string; retention_period: string }>(this.env.DB_PRIVACY_FRESH,
         `SELECT user_id, content_type, retention_period::text FROM privacy.retention_rules ORDER BY created_at LIMIT 100`);
@@ -2604,7 +2687,7 @@ export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: s
       redactedPosts += result.posts;
       deletedMedia += result.media;
     }
-    return { runId: event.payload.runId, redactedPosts, deletedMedia, expiredActivityEvents, expiredAccountEvents, expiredSystemAuditEvents, expiredRateLimitWindows, expiredIdempotencyTombstones, expiredWaitlistSignups };
+    return { runId: event.payload.runId, redactedPosts, deletedMedia, expiredActivityEvents, expiredAccountEvents, expiredSystemAuditEvents, expiredRateLimitWindows, expiredIdempotencyTombstones, expiredWaitlistSignups, expiredSupportRecords };
   }
 }
 

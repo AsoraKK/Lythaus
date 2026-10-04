@@ -1,17 +1,19 @@
 import { NavLink } from 'react-router-dom';
-
-const links = [
-  { to: '/', label: 'Overview', end: true },
-  { to: '/flags', label: 'Flags' },
-  { to: '/appeals', label: 'Appeals' },
-  { to: '/authenticity', label: 'Authenticity beta' },
-  { to: '/accounts', label: 'Accounts' },
-  { to: '/waitlist', label: 'Waitlist' },
-  { to: '/audit', label: 'Audit' },
-  { to: '/production-auth-acceptance', label: 'Auth acceptance' }
-];
+import { supportFeedbackEnabled } from '../support-feedback-config.js';
 
 function Nav() {
+  const links = [
+    { to: '/', label: 'Overview', end: true },
+    { to: '/flags', label: 'Flags' },
+    { to: '/appeals', label: 'Appeals' },
+    { to: '/authenticity', label: 'Authenticity beta' },
+    { to: '/accounts', label: 'Accounts' },
+    { to: '/waitlist', label: 'Waitlist' },
+    { to: '/audit', label: 'Audit' },
+    { to: '/production-auth-acceptance', label: 'Auth acceptance' }
+  ];
+  if (supportFeedbackEnabled()) links.splice(5, 0, { to: '/support', label: 'Support' });
+
   return (
     <header className="nav">
       <div className="brand">

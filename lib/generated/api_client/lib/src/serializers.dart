@@ -155,6 +155,12 @@ import 'package:lythaus_api_client/src/model/legal_hold_response.dart';
 import 'package:lythaus_api_client/src/model/media_upload_finalise_response.dart';
 import 'package:lythaus_api_client/src/model/media_upload_session_create_request.dart';
 import 'package:lythaus_api_client/src/model/media_upload_session_created.dart';
+import 'package:lythaus_api_client/src/model/member_detail.dart';
+import 'package:lythaus_api_client/src/model/member_mutation_result.dart';
+import 'package:lythaus_api_client/src/model/member_problem_request.dart';
+import 'package:lythaus_api_client/src/model/member_request_page.dart';
+import 'package:lythaus_api_client/src/model/member_suggestion_request.dart';
+import 'package:lythaus_api_client/src/model/member_support_request.dart';
 import 'package:lythaus_api_client/src/model/moderation_decision_request.dart';
 import 'package:lythaus_api_client/src/model/moderation_decision_response.dart';
 import 'package:lythaus_api_client/src/model/moderation_state.dart';
@@ -184,7 +190,17 @@ import 'package:lythaus_api_client/src/model/overview_provider.dart';
 import 'package:lythaus_api_client/src/model/overview_provider_accounting_period.dart';
 import 'package:lythaus_api_client/src/model/overview_window.dart';
 import 'package:lythaus_api_client/src/model/owner_comment.dart';
+import 'package:lythaus_api_client/src/model/owner_decision_request.dart';
+import 'package:lythaus_api_client/src/model/owner_detail.dart';
+import 'package:lythaus_api_client/src/model/owner_evidence_request.dart';
+import 'package:lythaus_api_client/src/model/owner_mutation_result.dart';
+import 'package:lythaus_api_client/src/model/owner_note_request.dart';
 import 'package:lythaus_api_client/src/model/owner_post.dart';
+import 'package:lythaus_api_client/src/model/owner_private_records.dart';
+import 'package:lythaus_api_client/src/model/owner_problem_request.dart';
+import 'package:lythaus_api_client/src/model/owner_request_page.dart';
+import 'package:lythaus_api_client/src/model/owner_suggestion_request.dart';
+import 'package:lythaus_api_client/src/model/owner_support_request.dart';
 import 'package:lythaus_api_client/src/model/pending_appeal_adjudication.dart';
 import 'package:lythaus_api_client/src/model/pending_appeal_adjudication_list.dart';
 import 'package:lythaus_api_client/src/model/personal_feed_item.dart';
@@ -199,11 +215,16 @@ import 'package:lythaus_api_client/src/model/privacy_request.dart';
 import 'package:lythaus_api_client/src/model/privacy_request_accepted.dart';
 import 'package:lythaus_api_client/src/model/privacy_request_create.dart';
 import 'package:lythaus_api_client/src/model/privacy_request_status_response.dart';
+import 'package:lythaus_api_client/src/model/private_decision.dart';
+import 'package:lythaus_api_client/src/model/private_evidence.dart';
+import 'package:lythaus_api_client/src/model/private_note.dart';
+import 'package:lythaus_api_client/src/model/problem_submission.dart';
 import 'package:lythaus_api_client/src/model/product_integrity_private_profile_response.dart';
 import 'package:lythaus_api_client/src/model/product_integrity_private_profile_user.dart';
 import 'package:lythaus_api_client/src/model/product_integrity_profile_update_request.dart';
 import 'package:lythaus_api_client/src/model/public_authorship.dart';
 import 'package:lythaus_api_client/src/model/public_authorship_label.dart';
+import 'package:lythaus_api_client/src/model/public_message.dart';
 import 'package:lythaus_api_client/src/model/rate_limit_error.dart';
 import 'package:lythaus_api_client/src/model/reaction_counts.dart';
 import 'package:lythaus_api_client/src/model/reaction_delete_response.dart';
@@ -214,6 +235,7 @@ import 'package:lythaus_api_client/src/model/refresh_token_request.dart';
 import 'package:lythaus_api_client/src/model/relation_change.dart';
 import 'package:lythaus_api_client/src/model/relation_list.dart';
 import 'package:lythaus_api_client/src/model/relation_list_items_inner.dart';
+import 'package:lythaus_api_client/src/model/reply_request.dart';
 import 'package:lythaus_api_client/src/model/reputation_ledger_event.dart';
 import 'package:lythaus_api_client/src/model/reputation_ledger_page.dart';
 import 'package:lythaus_api_client/src/model/reputation_pillars.dart';
@@ -233,6 +255,14 @@ import 'package:lythaus_api_client/src/model/storage_usage_get200_response.dart'
 import 'package:lythaus_api_client/src/model/storage_usage_get200_response_storage.dart';
 import 'package:lythaus_api_client/src/model/subscription_status.dart';
 import 'package:lythaus_api_client/src/model/subscription_status_entitlements.dart';
+import 'package:lythaus_api_client/src/model/suggestion_submission.dart';
+import 'package:lythaus_api_client/src/model/support_error.dart';
+import 'package:lythaus_api_client/src/model/support_feedback_policy.dart';
+import 'package:lythaus_api_client/src/model/support_feedback_policy_categories.dart';
+import 'package:lythaus_api_client/src/model/support_feedback_policy_limits.dart';
+import 'package:lythaus_api_client/src/model/support_options.dart';
+import 'package:lythaus_api_client/src/model/support_options_initial.dart';
+import 'package:lythaus_api_client/src/model/support_transition.dart';
 import 'package:lythaus_api_client/src/model/target_user_request.dart';
 import 'package:lythaus_api_client/src/model/unauthorized_error.dart';
 import 'package:lythaus_api_client/src/model/update_post_request.dart';
@@ -399,6 +429,12 @@ part 'serializers.g.dart';
   MediaUploadFinaliseResponse,
   MediaUploadSessionCreateRequest,
   MediaUploadSessionCreated,
+  MemberDetail,
+  MemberMutationResult,
+  MemberProblemRequest,
+  MemberRequestPage,
+  MemberSuggestionRequest,
+  MemberSupportRequest,
   ModerationDecisionRequest,
   ModerationDecisionResponse,
   ModerationState,
@@ -428,7 +464,17 @@ part 'serializers.g.dart';
   OverviewProviderAccountingPeriod,
   OverviewWindow,
   OwnerComment,
+  OwnerDecisionRequest,
+  OwnerDetail,
+  OwnerEvidenceRequest,
+  OwnerMutationResult,
+  OwnerNoteRequest,
   OwnerPost,
+  OwnerPrivateRecords,
+  OwnerProblemRequest,
+  OwnerRequestPage,
+  OwnerSuggestionRequest,
+  OwnerSupportRequest,
   PendingAppealAdjudication,
   PendingAppealAdjudicationList,
   PersonalFeedItem,
@@ -443,11 +489,16 @@ part 'serializers.g.dart';
   PrivacyRequestAccepted,
   PrivacyRequestCreate,
   PrivacyRequestStatusResponse,
+  PrivateDecision,
+  PrivateEvidence,
+  PrivateNote,
+  ProblemSubmission,
   ProductIntegrityPrivateProfileResponse,
   ProductIntegrityPrivateProfileUser,
   ProductIntegrityProfileUpdateRequest,
   PublicAuthorship,
   PublicAuthorshipLabel,
+  PublicMessage,
   RateLimitError,
   ReactionCounts,
   ReactionDeleteResponse,
@@ -458,6 +509,7 @@ part 'serializers.g.dart';
   RelationChange,
   RelationList,
   RelationListItemsInner,
+  ReplyRequest,
   ReputationLedgerEvent,
   ReputationLedgerPage,
   ReputationPillars,
@@ -477,6 +529,14 @@ part 'serializers.g.dart';
   StorageUsageGet200ResponseStorage,
   SubscriptionStatus,
   SubscriptionStatusEntitlements,
+  SuggestionSubmission,
+  SupportError,
+  SupportFeedbackPolicy,
+  SupportFeedbackPolicyCategories,
+  SupportFeedbackPolicyLimits,
+  SupportOptions,
+  SupportOptionsInitial,
+  SupportTransition,
   TargetUserRequest,
   UnauthorizedError,
   UpdatePostRequest,

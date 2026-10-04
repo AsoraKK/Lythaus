@@ -111,8 +111,10 @@ const voteInput = (appealId, userId, choice = 'allow', patch = {}) => ({ appealI
 const cast = input => tx(client => castCommunityBallot(client, input));
 const close = id => tx(client => closeCommunityAppeal(client, id), 'lythaus_jobs');
 async function due(id, extension = 0) {
-  await sql(`UPDATE moderation.community_appeal_sessions SET closes_at = date_trunc('milliseconds', clock_timestamp()) - interval '1 millisecond',
-    opens_at = date_trunc('milliseconds', clock_timestamp()) - interval '1 millisecond' - ($2::integer * interval '1 hour'), extensions = $3 WHERE appeal_id = $1`, [id, 48 + extension * 24, extension]);
+  await sql(`WITH deadline AS (SELECT date_trunc('milliseconds', clock_timestamp()) - interval '1 millisecond' AS closes_at)
+    UPDATE moderation.community_appeal_sessions SET closes_at = deadline.closes_at,
+      opens_at = deadline.closes_at - ($2::integer * interval '1 hour'), extensions = $3
+    FROM deadline WHERE appeal_id = $1`, [id, 48 + extension * 24, extension]);
 }
 async function majority(appealId, allow = 3, retain = 2) {
   for (let i = 0; i < allow + retain; i++) await cast(voteInput(appealId, voters[i].id, i < allow ? 'allow' : 'retain'));

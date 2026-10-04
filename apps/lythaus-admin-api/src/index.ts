@@ -1,4 +1,4 @@
-import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, recordUserActivity, transaction, type HyperdriveBinding } from '@lythaus/db';
+import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, recordUserActivity, transaction, createSupportFeedbackRuntime, handleSupportFeedbackRequest, isSupportFeedbackPath, supportAuthentication, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { ACTIVITY_POLICY_VERSION, APPEAL_POLICY, encodeCursor, enforceAdminAllowPublication } from '@lythaus/contracts';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
@@ -39,6 +39,8 @@ interface Env extends EnvBindings {
   ACCESS_AUDIENCES?: string;
   COMMUNITY_APPEAL_RULES_VERSION?: string;
   MONTHLY_REPUTATION_CONTEXT_RULES?: string;
+  SUPPORT_FEEDBACK_ENABLED?: string;
+  SUPPORT_FEEDBACK_POLICY?: string;
 }
 
 const ADMIN_ERROR_CODES = new Set([
@@ -1165,6 +1167,30 @@ export default {
       }
       const actor = await requireAdmin(request, env);
       await enforceAdminRateLimit(request, env, actor.userId);
+      if (isSupportFeedbackPath(url.pathname, 'owner')) {
+        const privateSupportResponse = (body: Record<string, unknown>, status: number) => json(body, {
+          status,
+          headers: { 'x-correlation-id': id, 'cache-control': 'private, no-store' },
+        });
+        if (env.SUPPORT_FEEDBACK_ENABLED !== 'true') {
+          return cors(privateSupportResponse({ error: 'feature_disabled' }, 404));
+        }
+        if (request.method === 'POST') assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        const service = await createSupportFeedbackRuntime({
+          binding: env.DB_ADMIN_FRESH,
+          policy: env.SUPPORT_FEEDBACK_POLICY,
+          authentication: supportAuthentication(env),
+          channel: 'owner',
+        });
+        const result = await handleSupportFeedbackRequest({
+          request,
+          service,
+          channel: 'owner',
+          respond: privateSupportResponse,
+          readBody: (bodyRequest, maxBytes) => readBoundedJson(bodyRequest, maxBytes),
+        });
+        return cors(result ?? privateSupportResponse({ error: 'not_found' }, 404));
+      }
       if (request.method === 'GET' && url.pathname === '/api/admin/overview') return cors(await handleOverview(request, env, actor, id));
       if (request.method === 'GET' && url.pathname === '/api/admin/account-support/access') return cors(await handleAccountSupport(request, env, actor, id));
       if (request.method === 'POST' && url.pathname === '/api/admin/account-support/lookup') return cors(await handleAccountSupport(request, env, actor, id));

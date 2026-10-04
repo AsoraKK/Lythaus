@@ -123,6 +123,19 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**requestAdminAuthenticityBetaAdvice**](doc/AdminApi.md#requestadminauthenticitybetaadvice) | **POST** /admin/authenticity/cases/{caseId}/advice | Request one bounded explanation of eligible persisted evidence
 [*AdminApi*](doc/AdminApi.md) | [**requestAdminAuthenticityPrivateAlphaAdvice**](doc/AdminApi.md#requestadminauthenticityprivatealphaadvice) | **POST** /admin/authenticity/alpha/cases/{caseId}/advice | Request one bounded private alpha explanation
 [*AdminApi*](doc/AdminApi.md) | [**reviewAdminAuthenticityPrivateAlphaCase**](doc/AdminApi.md#reviewadminauthenticityprivatealphacase) | **POST** /admin/authenticity/alpha/cases/{caseId}/review | Record an administrator private alpha review
+[*AdminSupportFeedbackApi*](doc/AdminSupportFeedbackApi.md) | [**adminSupportFeedbackOptions**](doc/AdminSupportFeedbackApi.md#adminsupportfeedbackoptions) | **GET** /admin/support/options | Read owner support workflow policy
+[*AdminSupportFeedbackApi*](doc/AdminSupportFeedbackApi.md) | [**adminSupportProblemDecision**](doc/AdminSupportFeedbackApi.md#adminsupportproblemdecision) | **POST** /admin/support/problems/{requestId}/decision | Change problem report state and send its public response
+[*AdminSupportFeedbackApi*](doc/AdminSupportFeedbackApi.md) | [**adminSupportProblemDetail**](doc/AdminSupportFeedbackApi.md#adminsupportproblemdetail) | **GET** /admin/support/problems/{requestId} | Read owner problem report details and private triage records
+[*AdminSupportFeedbackApi*](doc/AdminSupportFeedbackApi.md) | [**adminSupportProblemEvidence**](doc/AdminSupportFeedbackApi.md#adminsupportproblemevidence) | **POST** /admin/support/problems/{requestId}/evidence | Attach owner evidence to a problem report
+[*AdminSupportFeedbackApi*](doc/AdminSupportFeedbackApi.md) | [**adminSupportProblemNote**](doc/AdminSupportFeedbackApi.md#adminsupportproblemnote) | **POST** /admin/support/problems/{requestId}/notes | Add a private owner note
+[*AdminSupportFeedbackApi*](doc/AdminSupportFeedbackApi.md) | [**adminSupportProblemQueue**](doc/AdminSupportFeedbackApi.md#adminsupportproblemqueue) | **GET** /admin/support/problems | Queue private problem reports for owners
+[*AdminSupportFeedbackApi*](doc/AdminSupportFeedbackApi.md) | [**adminSupportProblemReply**](doc/AdminSupportFeedbackApi.md#adminsupportproblemreply) | **POST** /admin/support/problems/{requestId}/messages | Send a public owner reply
+[*AdminSupportFeedbackApi*](doc/AdminSupportFeedbackApi.md) | [**adminSupportSuggestionDecision**](doc/AdminSupportFeedbackApi.md#adminsupportsuggestiondecision) | **POST** /admin/support/suggestions/{requestId}/decision | Change suggestion state and send its public response
+[*AdminSupportFeedbackApi*](doc/AdminSupportFeedbackApi.md) | [**adminSupportSuggestionDetail**](doc/AdminSupportFeedbackApi.md#adminsupportsuggestiondetail) | **GET** /admin/support/suggestions/{requestId} | Read owner suggestion details and private triage records
+[*AdminSupportFeedbackApi*](doc/AdminSupportFeedbackApi.md) | [**adminSupportSuggestionEvidence**](doc/AdminSupportFeedbackApi.md#adminsupportsuggestionevidence) | **POST** /admin/support/suggestions/{requestId}/evidence | Attach owner evidence to a suggestion
+[*AdminSupportFeedbackApi*](doc/AdminSupportFeedbackApi.md) | [**adminSupportSuggestionNote**](doc/AdminSupportFeedbackApi.md#adminsupportsuggestionnote) | **POST** /admin/support/suggestions/{requestId}/notes | Add a private owner note
+[*AdminSupportFeedbackApi*](doc/AdminSupportFeedbackApi.md) | [**adminSupportSuggestionQueue**](doc/AdminSupportFeedbackApi.md#adminsupportsuggestionqueue) | **GET** /admin/support/suggestions | Queue private suggestions for owners
+[*AdminSupportFeedbackApi*](doc/AdminSupportFeedbackApi.md) | [**adminSupportSuggestionReply**](doc/AdminSupportFeedbackApi.md#adminsupportsuggestionreply) | **POST** /admin/support/suggestions/{requestId}/messages | Send a public owner reply
 [*AppealsApi*](doc/AppealsApi.md) | [**adminAppealsPendingAdjudicationList**](doc/AppealsApi.md#adminappealspendingadjudicationlist) | **GET** /admin/appeals/pending-adjudication | List pending appeal adjudications
 [*AppealsApi*](doc/AppealsApi.md) | [**adminReviewerQualificationCreate**](doc/AppealsApi.md#adminreviewerqualificationcreate) | **POST** /admin/reviewers/{reviewerId}/qualification | Set reviewer qualification state
 [*AppealsApi*](doc/AppealsApi.md) | [**adminReviewerQualificationUpdate**](doc/AppealsApi.md#adminreviewerqualificationupdate) | **PUT** /admin/reviewers/{reviewerId}/qualification | Idempotently set reviewer qualification state
@@ -236,6 +249,15 @@ Class | Method | HTTP request | Description
 [*SocialApi*](doc/SocialApi.md) | [**usersFollowLegacyCreate**](doc/SocialApi.md#usersfollowlegacycreate) | **POST** /users/follow | Follow a user
 [*SocialApi*](doc/SocialApi.md) | [**usersMuteCreate**](doc/SocialApi.md#usersmutecreate) | **POST** /users/mute | Mute a user
 [*SubscriptionApi*](doc/SubscriptionApi.md) | [**subscriptionStatus**](doc/SubscriptionApi.md#subscriptionstatus) | **GET** /subscription/status | Get current user subscription status
+[*SupportFeedbackApi*](doc/SupportFeedbackApi.md) | [**supportFeedbackOptions**](doc/SupportFeedbackApi.md#supportfeedbackoptions) | **GET** /support/options | Read support form policy
+[*SupportFeedbackApi*](doc/SupportFeedbackApi.md) | [**supportProblemDetail**](doc/SupportFeedbackApi.md#supportproblemdetail) | **GET** /support/problems/{requestId} | Read a private problem report and public messages
+[*SupportFeedbackApi*](doc/SupportFeedbackApi.md) | [**supportProblemList**](doc/SupportFeedbackApi.md#supportproblemlist) | **GET** /support/problems | List the member&#39;s private problem reports
+[*SupportFeedbackApi*](doc/SupportFeedbackApi.md) | [**supportProblemReply**](doc/SupportFeedbackApi.md#supportproblemreply) | **POST** /support/problems/{requestId}/messages | Reply to a private problem report
+[*SupportFeedbackApi*](doc/SupportFeedbackApi.md) | [**supportProblemSubmit**](doc/SupportFeedbackApi.md#supportproblemsubmit) | **POST** /support/problems | Submit a private problem report
+[*SupportFeedbackApi*](doc/SupportFeedbackApi.md) | [**supportSuggestionDetail**](doc/SupportFeedbackApi.md#supportsuggestiondetail) | **GET** /support/suggestions/{requestId} | Read a private suggestion and public messages
+[*SupportFeedbackApi*](doc/SupportFeedbackApi.md) | [**supportSuggestionList**](doc/SupportFeedbackApi.md#supportsuggestionlist) | **GET** /support/suggestions | List the member&#39;s private suggestions
+[*SupportFeedbackApi*](doc/SupportFeedbackApi.md) | [**supportSuggestionReply**](doc/SupportFeedbackApi.md#supportsuggestionreply) | **POST** /support/suggestions/{requestId}/messages | Reply to a private suggestion
+[*SupportFeedbackApi*](doc/SupportFeedbackApi.md) | [**supportSuggestionSubmit**](doc/SupportFeedbackApi.md#supportsuggestionsubmit) | **POST** /support/suggestions | Submit a private suggestion
 [*UsersApi*](doc/UsersApi.md) | [**usersGet**](doc/UsersApi.md#usersget) | **GET** /users/{id} | Get a public user profile
 [*UsersApi*](doc/UsersApi.md) | [**usersMeRegionUpdate**](doc/UsersApi.md#usersmeregionupdate) | **PUT** /users/me/region | Update private region and visibility preferences
 [*UsersApi*](doc/UsersApi.md) | [**usersMeRetentionUpdate**](doc/UsersApi.md#usersmeretentionupdate) | **PUT** /users/me/retention | Update a private content-retention rule
@@ -385,6 +407,12 @@ Class | Method | HTTP request | Description
  - [MediaUploadFinaliseResponse](doc/MediaUploadFinaliseResponse.md)
  - [MediaUploadSessionCreateRequest](doc/MediaUploadSessionCreateRequest.md)
  - [MediaUploadSessionCreated](doc/MediaUploadSessionCreated.md)
+ - [MemberDetail](doc/MemberDetail.md)
+ - [MemberMutationResult](doc/MemberMutationResult.md)
+ - [MemberProblemRequest](doc/MemberProblemRequest.md)
+ - [MemberRequestPage](doc/MemberRequestPage.md)
+ - [MemberSuggestionRequest](doc/MemberSuggestionRequest.md)
+ - [MemberSupportRequest](doc/MemberSupportRequest.md)
  - [ModerationDecisionRequest](doc/ModerationDecisionRequest.md)
  - [ModerationDecisionResponse](doc/ModerationDecisionResponse.md)
  - [ModerationState](doc/ModerationState.md)
@@ -414,7 +442,17 @@ Class | Method | HTTP request | Description
  - [OverviewProviderAccountingPeriod](doc/OverviewProviderAccountingPeriod.md)
  - [OverviewWindow](doc/OverviewWindow.md)
  - [OwnerComment](doc/OwnerComment.md)
+ - [OwnerDecisionRequest](doc/OwnerDecisionRequest.md)
+ - [OwnerDetail](doc/OwnerDetail.md)
+ - [OwnerEvidenceRequest](doc/OwnerEvidenceRequest.md)
+ - [OwnerMutationResult](doc/OwnerMutationResult.md)
+ - [OwnerNoteRequest](doc/OwnerNoteRequest.md)
  - [OwnerPost](doc/OwnerPost.md)
+ - [OwnerPrivateRecords](doc/OwnerPrivateRecords.md)
+ - [OwnerProblemRequest](doc/OwnerProblemRequest.md)
+ - [OwnerRequestPage](doc/OwnerRequestPage.md)
+ - [OwnerSuggestionRequest](doc/OwnerSuggestionRequest.md)
+ - [OwnerSupportRequest](doc/OwnerSupportRequest.md)
  - [PendingAppealAdjudication](doc/PendingAppealAdjudication.md)
  - [PendingAppealAdjudicationList](doc/PendingAppealAdjudicationList.md)
  - [PersonalFeedItem](doc/PersonalFeedItem.md)
@@ -429,11 +467,16 @@ Class | Method | HTTP request | Description
  - [PrivacyRequestAccepted](doc/PrivacyRequestAccepted.md)
  - [PrivacyRequestCreate](doc/PrivacyRequestCreate.md)
  - [PrivacyRequestStatusResponse](doc/PrivacyRequestStatusResponse.md)
+ - [PrivateDecision](doc/PrivateDecision.md)
+ - [PrivateEvidence](doc/PrivateEvidence.md)
+ - [PrivateNote](doc/PrivateNote.md)
+ - [ProblemSubmission](doc/ProblemSubmission.md)
  - [ProductIntegrityPrivateProfileResponse](doc/ProductIntegrityPrivateProfileResponse.md)
  - [ProductIntegrityPrivateProfileUser](doc/ProductIntegrityPrivateProfileUser.md)
  - [ProductIntegrityProfileUpdateRequest](doc/ProductIntegrityProfileUpdateRequest.md)
  - [PublicAuthorship](doc/PublicAuthorship.md)
  - [PublicAuthorshipLabel](doc/PublicAuthorshipLabel.md)
+ - [PublicMessage](doc/PublicMessage.md)
  - [RateLimitError](doc/RateLimitError.md)
  - [ReactionCounts](doc/ReactionCounts.md)
  - [ReactionDeleteResponse](doc/ReactionDeleteResponse.md)
@@ -444,6 +487,7 @@ Class | Method | HTTP request | Description
  - [RelationChange](doc/RelationChange.md)
  - [RelationList](doc/RelationList.md)
  - [RelationListItemsInner](doc/RelationListItemsInner.md)
+ - [ReplyRequest](doc/ReplyRequest.md)
  - [ReputationLedgerEvent](doc/ReputationLedgerEvent.md)
  - [ReputationLedgerPage](doc/ReputationLedgerPage.md)
  - [ReputationPillars](doc/ReputationPillars.md)
@@ -463,6 +507,14 @@ Class | Method | HTTP request | Description
  - [StorageUsageGet200ResponseStorage](doc/StorageUsageGet200ResponseStorage.md)
  - [SubscriptionStatus](doc/SubscriptionStatus.md)
  - [SubscriptionStatusEntitlements](doc/SubscriptionStatusEntitlements.md)
+ - [SuggestionSubmission](doc/SuggestionSubmission.md)
+ - [SupportError](doc/SupportError.md)
+ - [SupportFeedbackPolicy](doc/SupportFeedbackPolicy.md)
+ - [SupportFeedbackPolicyCategories](doc/SupportFeedbackPolicyCategories.md)
+ - [SupportFeedbackPolicyLimits](doc/SupportFeedbackPolicyLimits.md)
+ - [SupportOptions](doc/SupportOptions.md)
+ - [SupportOptionsInitial](doc/SupportOptionsInitial.md)
+ - [SupportTransition](doc/SupportTransition.md)
  - [TargetUserRequest](doc/TargetUserRequest.md)
  - [UnauthorizedError](doc/UnauthorizedError.md)
  - [UpdatePostRequest](doc/UpdatePostRequest.md)

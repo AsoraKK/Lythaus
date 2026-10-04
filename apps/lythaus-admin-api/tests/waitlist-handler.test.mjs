@@ -23,6 +23,10 @@ function row(id, createdAt, ciphertext) {
 
 mock.module('@lythaus/db', { cache: true, namedExports: {
   databaseExpectationsFromEnv: () => ({}), databaseReadinessResponse: () => ({}),
+  createSupportFeedbackRuntime: async () => null,
+  handleSupportFeedbackRequest: async () => new Response(null, { status: 404 }),
+  isSupportFeedbackPath: () => false,
+  supportAuthentication: () => ({ member: async () => { throw new Error('not reached'); }, owner: async () => { throw new Error('not reached'); } }),
   enqueueTransactionalEmailIntent: async () => undefined,
   inspectDatabaseIdentity: async () => ({ readiness: 'pass', budgetLedgerApplied: true }), recordUserActivity: async () => undefined,
   transaction: async (_binding, work) => { state.transactionCalls += 1; return work({ query: async () => result() }); },

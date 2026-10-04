@@ -40,6 +40,38 @@ const intentionalStartsWithPrefixes = new Set([
 ]);
 const intentionalDirectPathnameUses = new Set(['rateLimitPlan(url.pathname)']);
 
+const supportFeedbackRoutes: RuntimeRoute[] = [
+  { worker: 'public', method: 'GET', path: '/support/options' },
+  { worker: 'public', method: 'GET', path: '/support/problems' },
+  { worker: 'public', method: 'POST', path: '/support/problems' },
+  { worker: 'public', method: 'GET', path: '/support/problems/{param}' },
+  { worker: 'public', method: 'POST', path: '/support/problems/{param}/messages' },
+  { worker: 'public', method: 'GET', path: '/support/suggestions' },
+  { worker: 'public', method: 'POST', path: '/support/suggestions' },
+  { worker: 'public', method: 'GET', path: '/support/suggestions/{param}' },
+  { worker: 'public', method: 'POST', path: '/support/suggestions/{param}/messages' },
+  { worker: 'admin', method: 'GET', path: '/admin/support/options' },
+  { worker: 'admin', method: 'GET', path: '/admin/support/problems' },
+  { worker: 'admin', method: 'GET', path: '/admin/support/problems/{param}' },
+  { worker: 'admin', method: 'POST', path: '/admin/support/problems/{param}/messages' },
+  { worker: 'admin', method: 'POST', path: '/admin/support/problems/{param}/notes' },
+  { worker: 'admin', method: 'POST', path: '/admin/support/problems/{param}/evidence' },
+  { worker: 'admin', method: 'POST', path: '/admin/support/problems/{param}/decision' },
+  { worker: 'admin', method: 'GET', path: '/admin/support/suggestions' },
+  { worker: 'admin', method: 'GET', path: '/admin/support/suggestions/{param}' },
+  { worker: 'admin', method: 'POST', path: '/admin/support/suggestions/{param}/messages' },
+  { worker: 'admin', method: 'POST', path: '/admin/support/suggestions/{param}/notes' },
+  { worker: 'admin', method: 'POST', path: '/admin/support/suggestions/{param}/evidence' },
+  { worker: 'admin', method: 'POST', path: '/admin/support/suggestions/{param}/decision' },
+];
+
+function supportFeedbackChannel(node: ts.Node): WorkerName | null {
+  if (!ts.isCallExpression(node) || !ts.isIdentifier(node.expression)
+    || node.expression.text !== 'isSupportFeedbackPath' || node.arguments.length !== 2
+    || !isPathname(node.arguments[0]) || !ts.isStringLiteral(node.arguments[1])) return null;
+  return node.arguments[1].text === 'member' ? 'public' : node.arguments[1].text === 'owner' ? 'admin' : null;
+}
+
 function propertyText(node: ts.Node): string {
   return node.getText().replace(/\s/g, '');
 }
@@ -118,6 +150,9 @@ function pathnameSyntaxDiagnostics(
   const visit = (node: ts.Node): void => {
     if (isPathname(node)) {
       const parent = node.parent;
+      const supportPredicate = ts.isCallExpression(parent)
+        && parent.expression.getText() === 'isSupportFeedbackPath'
+        && parent.arguments[0] === node;
       const compared = ts.isBinaryExpression(parent)
         && [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.EqualsEqualsToken].includes(parent.operatorToken.kind);
       const methodCall = ts.isPropertyAccessExpression(parent)
@@ -128,7 +163,7 @@ function pathnameSyntaxDiagnostics(
         const argument = (parent.parent as ts.CallExpression).arguments[0];
         if (argument && ts.isStringLiteral(argument)) startsWithPrefixes.push(argument.text);
         else unrecognizedPathnameSyntax.push(parent.parent.getText());
-      } else if (!compared && !methodCall) {
+      } else if (!compared && !methodCall && !supportPredicate) {
         unrecognizedPathnameSyntax.push(parent.getText());
       }
     }
@@ -227,6 +262,11 @@ function extractRoutesFromSource(worker: WorkerName, source: string, relativePat
     inheritedMethods: HttpMethod[] = [],
   ): void => {
     if (ts.isIfStatement(node)) {
+      const supportChannel = supportFeedbackChannel(node.expression);
+      if (supportChannel) {
+        routes.push(...supportFeedbackRoutes.filter((route) => route.worker === supportChannel));
+        return;
+      }
       const ownPaths = conditionPaths(node.expression, variablePatterns);
       const ownMethods = conditionMethods(node.expression);
       const paths = ownPaths.length > 0 ? ownPaths : inheritedPaths;
@@ -328,7 +368,7 @@ describe('source-derived OpenAPI route parity', () => {
       public: publicExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
       admin: adminExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
     };
-    expect(routeCounts).toEqual({ public: 114, admin: 50 });
+    expect(routeCounts).toEqual({ public: 123, admin: 63 });
     expect(runtimeRoutes.map(routeKey)).toEqual(expect.arrayContaining([
       'GET /.well-known/jwks.json',
       'GET /posts/{param}/owner-view',

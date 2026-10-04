@@ -1,4 +1,4 @@
-import { databaseExpectationsFromEnv, databaseReadinessResponse, enqueueTransactionalEmailIntent, inspectDatabaseIdentity, listUserActivity, recordUserActivity, transaction, query, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
+import { databaseExpectationsFromEnv, databaseReadinessResponse, enqueueTransactionalEmailIntent, inspectDatabaseIdentity, listUserActivity, recordUserActivity, transaction, query, createSupportFeedbackRuntime, handleSupportFeedbackRequest, isSupportFeedbackPath, supportAuthentication, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { APPEAL_POLICY, PLATFORM_SAFETY_LIMITS, REPUTATION_POLICY, REWARD_ACCESS_POLICY, REWARD_CATALOG, normalizeUserTier, validateTurnstileResponse, type ActivityCategory, type ActivityEventType, type CreatePostInput, type ReputationEffect, type UserTier } from '@lythaus/contracts';
 import { createPresignedPutUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from '@lythaus/media';
@@ -44,6 +44,8 @@ interface Env extends EnvBindings {
   MONTHLY_REPUTATION_MAINTENANCE_RULES?: string;
   MONTHLY_REPUTATION_SNAPSHOT_RULES?: string;
   MONTHLY_REPUTATION_SELECTION_RULES?: string;
+  SUPPORT_FEEDBACK_ENABLED?: string;
+  SUPPORT_FEEDBACK_POLICY?: string;
 }
 
 function hasReadinessAuthorization(request: Request, env: Env): boolean {
@@ -3145,6 +3147,24 @@ export default {
       if (url.pathname === '/api/waitlist') return await waitlistRoute(request, env);
       const rateLimit = rateLimitPlan(url.pathname);
       await enforceRateLimit(request, env, rateLimit.scope, rateLimit.limit);
+      if (isSupportFeedbackPath(url.pathname, 'member')) {
+        if (env.SUPPORT_FEEDBACK_ENABLED !== 'true') {
+          return privateResponse(request, env, { error: 'feature_disabled' }, { status: 404 });
+        }
+        const service = await createSupportFeedbackRuntime({
+          binding: env.DB_APP_FRESH,
+          policy: env.SUPPORT_FEEDBACK_POLICY,
+          authentication: supportAuthentication(env),
+          channel: 'member',
+        });
+        return await handleSupportFeedbackRequest({
+          request,
+          service,
+          channel: 'member',
+          respond: (body, status) => privateResponse(request, env, body, { status }),
+          readBody: (bodyRequest, maxBytes) => readBoundedJson(bodyRequest, maxBytes),
+        }) ?? privateResponse(request, env, { error: 'not_found' }, { status: 404 });
+      }
       const ownerItem = url.pathname.match(/^\/api\/(posts|comments)\/([^/]+)\/owner-view$/);
       if (request.method === 'GET' && ownerItem) {
         const ownerContent = await handleOwnerContentRead(request, {

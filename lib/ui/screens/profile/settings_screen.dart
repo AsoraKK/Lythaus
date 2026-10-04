@@ -17,6 +17,8 @@ import 'package:lythaus/features/privacy/privacy_settings_screen.dart';
 import 'package:lythaus/ui/screens/profile/account_security_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:lythaus/features/authenticity/alpha_screen.dart';
+import 'package:lythaus/features/support/support_feedback_config.dart';
+import 'package:lythaus/features/support/presentation/support_feedback_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -145,6 +147,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 );
               },
             ),
+            if (currentUser != null && supportFeedbackEnabled)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.feedback_outlined),
+                title: const Text('Report a problem or share an idea'),
+                subtitle: const Text(
+                  'Send a private report or suggestion and follow its history',
+                ),
+                onTap: () {
+                  final router = GoRouter.maybeOf(context);
+                  if (router != null) {
+                    router.go('/settings/support');
+                    return;
+                  }
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const SupportFeedbackScreen(),
+                    ),
+                  );
+                },
+              ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.security_outlined),

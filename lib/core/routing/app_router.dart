@@ -25,6 +25,8 @@ import 'package:lythaus/ui/screens/profile/account_security_screen.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:lythaus/features/authenticity/beta_screen.dart';
 import 'package:lythaus/features/authenticity/alpha_screen.dart';
+import 'package:lythaus/features/support/support_feedback_config.dart';
+import 'package:lythaus/features/support/presentation/support_feedback_screen.dart';
 
 /// Route name constants.
 abstract final class AppRoutes {
@@ -40,6 +42,7 @@ abstract final class AppRoutes {
   static const String rewards = 'rewards';
   static const String settings = 'settings';
   static const String accountSecurity = 'account-security';
+  static const String supportFeedback = 'support-feedback';
 }
 
 String? resolveAppRedirect({
@@ -239,6 +242,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) =>
                     const NotificationsSettingsScreen(),
               ),
+              if (supportFeedbackEnabled)
+                GoRoute(
+                  name: AppRoutes.supportFeedback,
+                  path: 'support',
+                  builder: (context, state) => const SupportFeedbackScreen(),
+                ),
             ],
           ),
         ],
