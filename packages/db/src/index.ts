@@ -12,7 +12,7 @@ export interface DatabaseEnv {
 
 export { enqueueTransactionalEmailIntent, lockAuthDelivery, type TransactionalEmailOutboxInput, type TransactionalEmailPurpose } from './transactional-email.ts';
 export { supportFeedbackSchemaReady, createSupportFeedbackRuntime } from './support-feedback-runtime.ts';
-export { supportFeedbackPrivacySchemaReady } from './support-feedback-privacy-runtime.ts';
+export { supportFeedbackPrivacyIsReady, supportFeedbackPrivacySchemaState, type SupportFeedbackPrivacySchemaState } from './support-feedback-privacy-runtime.ts';
 export { supportAuthentication, type SupportAuthentication } from './support-feedback-auth.ts';
 export { handleSupportFeedbackRequest, isSupportFeedbackPath } from './support-feedback-http.ts';
 export {

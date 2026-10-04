@@ -1,8 +1,8 @@
 # Private problem and suggestion services: local implementation
 
 PR910 is the open draft support slice, stacked on PR909's private DTO contract at
-`ebc77150d21778a77c1ce11337641de1c5dfc165` and the reviewed main snapshot
-`627ae30b36cd995c4f117bf3c44789c986b5d46b`. It now includes the default-off
+`3f7345e9e277c023b4b09306c5b9ac681c6e89e5` and current main snapshot
+`1dc02174dbc70e685960d33767e6dd9722aa34fa`. It now includes the default-off
 member and owner API routes, OpenAPI and generated client, Flutter settings route,
 owner console route, privacy-job adapters, isolated PostgreSQL proposal and
 support-scoped PG17 workflow. This uses the existing support service engine; it
@@ -10,15 +10,17 @@ does not introduce a parallel helpdesk.
 
 Both API surfaces and both UIs are off by default. Support requests return a
 private, no-store unavailable response when the feature is enabled without its
-proposal tables. Normal account and privacy paths continue when those optional
-tables are absent. The SQL stays outside the automatic production migration
+proposal tables. Normal account and privacy paths continue when every optional
+support table is absent. If any support table is present but a required privacy
+relation or grant is missing, export, deletion and retention fail and retry.
+The SQL stays outside the automatic production migration
 manifest. Nothing is deployed or activated; no production DDL, provider changes,
 notification delivery, point awards or public-homepage edits are included.
 
 ## Ownership and integration boundaries
 
 PR903 is merged into current main at
-`627ae30b36cd995c4f117bf3c44789c986b5d46b`; its canonical release run
+`1dc02174dbc70e685960d33767e6dd9722aa34fa`; its canonical release run
 `37153418668` succeeded, while owner testing remains uncertified. PR909 remains
 the support contract dependency; PR910 preserves its base branch and draft
 identity. Parent controls the main merge, activation and release. This draft

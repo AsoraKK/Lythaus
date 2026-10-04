@@ -42,7 +42,7 @@ The published increment includes these controls:
 - The UI/API route tests and CI cover source behavior; actual deployed Worker bindings, production cache behavior, broad accessibility and responsive review remain release-head checks.
 - Notifications remain off until authorized destinations, preferences, dedupe and dispatch-time privacy checks are configured and approved. This roadmap authorizes no sends.
 
-The existing HTTP adapter and dispatchers expose member `/api/support/problems` and `/api/support/suggestions` histories/replies, plus owner `/api/admin/support/...` queues, replies, notes, evidence and decisions. The routes return 404 while the server flag is off; the separate UIs also default off. Missing support tables fail closed for support requests and are treated as optional by ordinary account/privacy flows. Reuse the existing support engine only behind explicit type and ownership checks.
+The existing HTTP adapter and dispatchers expose member `/api/support/problems` and `/api/support/suggestions` histories/replies, plus owner `/api/admin/support/...` queues, replies, notes, evidence and decisions. The routes return 404 while the server flag is off; the separate UIs also default off. When all optional support tables are absent, ordinary account/privacy flows continue without support data. If any support table is present but a required privacy relation or grant is missing, export, deletion and retention fail and retry rather than completing without support data. Reuse the existing support engine only behind explicit type and ownership checks.
 
 ## Contribution event and reward gate
 

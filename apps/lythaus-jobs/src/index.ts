@@ -1,4 +1,4 @@
-import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, reconcileBudgetReservation, recordReputationSignal, recordUserActivity, refreshReputationProfile, reserveBudget, settleBudgetReservation, transaction, supportFeedbackPrivacySchemaReady, exportSupportForPrivacy, exportSupportMessagesForPrivacy, purgeSupportForPrivacy, retainSupportBatch, parseSupportServicePolicy, type BudgetConfig, type DatabaseClient, type HyperdriveBinding, type ReputationMutationResult } from '@lythaus/db';
+import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, reconcileBudgetReservation, recordReputationSignal, recordUserActivity, refreshReputationProfile, reserveBudget, settleBudgetReservation, transaction, supportFeedbackPrivacyIsReady, exportSupportForPrivacy, exportSupportMessagesForPrivacy, purgeSupportForPrivacy, retainSupportBatch, parseSupportServicePolicy, type BudgetConfig, type DatabaseClient, type HyperdriveBinding, type ReputationMutationResult } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { evaluateAuthenticity, type AuthenticityEvaluation } from '@lythaus/authenticity';
 import { ACTIVITY_POLICY_VERSION, APPEAL_POLICY, evaluateAppeal, selectAppealReviewers, type ActivityEventInput, type AppealReviewerCandidate, type AppealRiskClass, type AppealVote, type ReputationSignalType } from '@lythaus/contracts';
@@ -66,7 +66,7 @@ function configuredSupportFeedbackPolicy(env: Env): unknown {
 }
 
 async function exportSupportFeedbackForPrivacy(env: Env, requestId: string): Promise<unknown | undefined> {
-  if (!await supportFeedbackPrivacySchemaReady(env.DB_PRIVACY_FRESH)) return undefined;
+  if (!await supportFeedbackPrivacyIsReady(env.DB_PRIVACY_FRESH)) return undefined;
   const policy = configuredSupportFeedbackPolicy(env);
   return transaction(env.DB_PRIVACY_FRESH, async client => {
     const items: Array<{ request: unknown; messages: readonly unknown[] }> = [];
@@ -94,7 +94,7 @@ async function exportSupportFeedbackForPrivacy(env: Env, requestId: string): Pro
 }
 
 async function purgeSupportFeedbackForPrivacy(env: Env, requestId: string): Promise<number> {
-  if (!await supportFeedbackPrivacySchemaReady(env.DB_PRIVACY_FRESH)) return 0;
+  if (!await supportFeedbackPrivacyIsReady(env.DB_PRIVACY_FRESH)) return 0;
   const policy = configuredSupportFeedbackPolicy(env);
   return transaction(env.DB_PRIVACY_FRESH, async client => {
     let scrubbedRecords = 0;
@@ -109,7 +109,7 @@ async function purgeSupportFeedbackForPrivacy(env: Env, requestId: string): Prom
 }
 
 async function recordDeletedSupportLocation(env: Env, subjectId: string): Promise<void> {
-  if (!await supportFeedbackPrivacySchemaReady(env.DB_PRIVACY_FRESH)) return;
+  if (!await supportFeedbackPrivacyIsReady(env.DB_PRIVACY_FRESH)) return;
   await query(env.DB_PRIVACY_FRESH, `
     INSERT INTO privacy.subject_data_locations
       (subject_id,store_type,resource_reference,entity_type,entity_id,authoritative_or_derived,retention_class,deletion_state,last_verified_at)
@@ -2617,7 +2617,7 @@ export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: s
       return deleted;
     });
     const expiredSupportRecords = await step.do('purge-expired-support-feedback', async () => {
-      if (!await supportFeedbackPrivacySchemaReady(this.env.DB_PRIVACY_FRESH)) return 0;
+      if (!await supportFeedbackPrivacyIsReady(this.env.DB_PRIVACY_FRESH)) return 0;
       const policy = configuredSupportFeedbackPolicy(this.env);
       const result = await transaction(this.env.DB_PRIVACY_FRESH, client => retainSupportBatch(client, policy));
       return result.scrubbedRecords;

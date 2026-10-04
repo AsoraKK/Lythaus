@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import test, { mock } from 'node:test';
 
-const state = { sql: '', rows: [] };
+const state = { sql: '', rows: [], error: null };
 mock.module(new URL('../src/index.ts', import.meta.url), { cache: true, namedExports: {
-  query: async (_binding, sql) => { state.sql = sql; return { rows: state.rows }; },
+  query: async (_binding, sql) => { state.sql = sql; if (state.error) throw state.error; return { rows: state.rows }; },
   transaction: async (_binding, work) => work({ query: async () => ({ rows: [], rowCount: 0 }) }),
 } });
 
 const { supportFeedbackSchemaReady, createSupportFeedbackRuntime } = await import('../src/support-feedback-runtime.ts');
-const { supportFeedbackPrivacySchemaReady } = await import('../src/support-feedback-privacy-runtime.ts');
+const { supportFeedbackPrivacyIsReady, supportFeedbackPrivacySchemaState } = await import('../src/support-feedback-privacy-runtime.ts');
 const policy = { version: 'fixture_v1', contract: {
   limits: { titleBytes: 32, detailBytes: 32, stepsBytes: 32, contextBytes: 32, memberMessageBytes: 32 },
   categories: { problem: ['other'], suggestion: ['other'] }, states: { problem: ['new'], suggestion: ['new'] },
@@ -50,14 +50,24 @@ test('privacy readiness requires the support, identity lock, legal-hold and scru
     audit_delete_access: true, outbox_delete_access: true, idempotency_delete_access: true,
   };
   state.rows = [{ ...allReady, outbox_delete_access: false }];
-  assert.equal(await supportFeedbackPrivacySchemaReady({}), false);
+  assert.equal(await supportFeedbackPrivacySchemaState({}), 'incomplete');
   assert.match(state.sql, /system\.outbox_events/);
   assert.match(state.sql, /system\.idempotency_keys/);
   assert.match(state.sql, /identity\.users/);
   state.rows = [allReady];
-  assert.equal(await supportFeedbackPrivacySchemaReady({}), true);
+  assert.equal(await supportFeedbackPrivacySchemaState({}), 'ready');
+  assert.equal(await supportFeedbackPrivacyIsReady({}), true);
+  state.rows = [{ ...allReady, requests: false, messages: false, notes: false, evidence: false, decisions: false, operation_refs: false }];
+  assert.equal(await supportFeedbackPrivacySchemaState({}), 'absent');
+  assert.equal(await supportFeedbackPrivacyIsReady({}), false);
+  state.rows = [{ ...allReady, outbox_delete_access: false }];
+  await assert.rejects(supportFeedbackPrivacyIsReady({}), { message: 'support_privacy_schema_unavailable' });
   state.rows = [];
-  assert.equal(await supportFeedbackPrivacySchemaReady({}), false);
+  assert.equal(await supportFeedbackPrivacySchemaState({}), 'unavailable');
+  await assert.rejects(supportFeedbackPrivacyIsReady({}), { message: 'support_privacy_schema_unavailable' });
+  state.error = new Error('database unavailable');
+  assert.equal(await supportFeedbackPrivacySchemaState({}), 'unavailable');
+  state.error = null;
 });
 
 test('enabled runtime treats an absent optional proposal schema as unavailable', async () => {

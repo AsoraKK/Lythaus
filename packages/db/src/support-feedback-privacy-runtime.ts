@@ -50,12 +50,24 @@ const PRIVACY_ACCESS_SQL = `
       has_table_privilege(current_user,to_regclass('system.idempotency_keys'),'SELECT')
       AND has_table_privilege(current_user,to_regclass('system.idempotency_keys'),'DELETE') END AS idempotency_delete_access`;
 
-export async function supportFeedbackPrivacySchemaReady(binding: HyperdriveBinding): Promise<boolean> {
+export type SupportFeedbackPrivacySchemaState = 'absent' | 'ready' | 'incomplete' | 'unavailable';
+
+export async function supportFeedbackPrivacySchemaState(binding: HyperdriveBinding): Promise<SupportFeedbackPrivacySchemaState> {
   try {
     const result = await query<Record<string, unknown>>(binding, PRIVACY_ACCESS_SQL);
     const row = result.rows[0];
-    return Boolean(row) && Object.values(row).every(value => value === true);
+    if (!row) return 'unavailable';
+    const supportTables = [row.requests, row.messages, row.notes, row.evidence, row.decisions, row.operation_refs];
+    if (supportTables.every(value => value === false)) return 'absent';
+    return Object.values(row).every(value => value === true) ? 'ready' : 'incomplete';
   } catch {
-    return false;
+    return 'unavailable';
   }
+}
+
+export async function supportFeedbackPrivacyIsReady(binding: HyperdriveBinding): Promise<boolean> {
+  const state = await supportFeedbackPrivacySchemaState(binding);
+  if (state === 'absent') return false;
+  if (state !== 'ready') throw new Error('support_privacy_schema_unavailable');
+  return true;
 }
