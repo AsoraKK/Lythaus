@@ -70,7 +70,7 @@ Reversal is a new audited event referencing the original acceptance/award, never
 
 ## Reviewable increments after Accounts
 
-1. Preserve PR910 as a draft stacked on PR909 until parent reconciles the dependency and current main; the PR910 branch contains services, API/OpenAPI/client, privacy integration, both UIs and scoped CI.
+1. PR909 is merged into current main. PR910's service branch is rebased directly onto main and remains open for parent review before its merge; it contains services, API/OpenAPI/client, privacy integration, both UIs and scoped CI.
 2. Resolve approved production schema/grants, privacy locators/completion, retention, legal-hold and rollback gates. Run final Worker authorization, no-store, audit, query-bound, navigation and responsive/accessibility acceptance at the exact release head.
 3. Add configured notifications only after transport, preferences, dedupe and dispatch-time privacy checks are approved. Add no suggestion award until Rewards approves the 150-point quarterly policy boundaries and budget; keep bugs unrewarded by inference.
 

@@ -1,8 +1,8 @@
 # Private problem and suggestion services: local implementation
 
-PR910 is the open draft support slice, stacked on PR909's private DTO contract at
-`3f7345e9e277c023b4b09306c5b9ac681c6e89e5` and current main snapshot
-`1dc02174dbc70e685960d33767e6dd9722aa34fa`. It now includes the default-off
+PR910 is the open draft support slice, rebased onto current main
+`95fd4c67e1a0a2fc5496cf74efc81b8be25b4790` after PR909 merged its private DTO
+contract into that branch. It includes the default-off
 member and owner API routes, OpenAPI and generated client, Flutter settings route,
 owner console route, privacy-job adapters, isolated PostgreSQL proposal and
 support-scoped PG17 workflow. This uses the existing support service engine; it
@@ -185,11 +185,10 @@ proposal independently refuses database names outside this local test prefix.
 
 ## Gates before activation
 
-1. Merge PR909 at its exact reviewed head after its required/security checks
-   pass, preserving PR910's branch. Then rebase and retarget PR910 onto the
-   resulting main, rerun required checks, and review its final head before any
-   merge. PR906 and PR896 are already merged on current main; PR896's new rewards
-   remain disabled in release94.
+1. PR909 merged at its exact reviewed head as `95fd4c67e1a0a2fc5496cf74efc81b8be25b4790`;
+   PR910's service branch has been rebased and retargeted onto current main and
+   remains open for parent review before its merge. PR906 and PR896 are also
+   merged on current main; PR896's new rewards remain disabled in release94.
 2. Approve and reconcile the support SQL proposal against the exact production
    schema, least-privilege role grants, function ownership, query/index costs,
    audit retention and rollback. It remains outside the automatic migration
