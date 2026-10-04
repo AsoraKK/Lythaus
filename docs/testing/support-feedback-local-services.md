@@ -46,15 +46,17 @@ engine beside an existing general ticket store.
 | OpenAPI and generated client | PR910 canonical OpenAPI contract and generated Dart client | Generated parity is checked in scoped CI |
 | Notification routing | Existing job/outbox infrastructure | Eligibility adapter is present; no support notification transport or delivery is enabled |
 | Authoritative privacy locators | `privacy.reconcile_subject_data_locations` and canonical migration path | Reconcile through approved production migration/integration work before activation |
-| Monthly awards and appeals | PR896, monthly/community DB/contracts and jobs modules | No award, reputation, policy, shared activity or Rewards UI changes |
+| Monthly awards and appeals | PR896, monthly/community DB/contracts and jobs modules | PR896 is merged on current main; its new reward feature remains disabled in release94. PR910 changes no reward, reputation, policy, shared activity or Rewards UI code. |
 | Help navigation and generated APIs | PR910 Flutter route/settings, OpenAPI and generated Dart client | Wired and gated off by default |
 | Owner Accounts workspace | Merged PR903 / existing AccountSupport runtime | Untouched; distinct from private problem/suggestion workflow |
 | Public homepage | Marketing site | Untouched |
 
-PR906 and PR896 were observed at `a97dc4a81fc3a7fa491101f009cf76137feda72d`
-and `fc0cb2819b7a0ff3d571f78d1a80a61e65577656`, respectively. Parent must
-reconcile the final merged heads before merge/activation; PR910 adds no award,
-reputation or PR896-dependent behavior.
+PR906 merged at `cbdc29ff3fd36c9d6ed0f08dea0ea75ca63e39a3`. PR896 head
+`ccc4e0093a42dc36c36ea0347beeaeedc921ebc3` merged as
+`6599418923d39088af836bff08785d7f3ff5a15a`; both are contained in current main
+`1dc02174dbc70e685960d33767e6dd9722aa34fa`. Release94 deployed that main with
+the new rewards disabled. PR910 adds no award, reputation or PR896-dependent
+behavior.
 
 ## Implemented bounds
 
@@ -183,9 +185,11 @@ proposal independently refuses database names outside this local test prefix.
 
 ## Gates before activation
 
-1. Parent reconciles PR909 and PR910 with current main and the final PR906/PR896
-   state. Preserve the stacked draft until that integration review; PR896 remains
-   separately blocked from merge by its direct-confirmation gate.
+1. Merge PR909 at its exact reviewed head after its required/security checks
+   pass, preserving PR910's branch. Then rebase and retarget PR910 onto the
+   resulting main, rerun required checks, and review its final head before any
+   merge. PR906 and PR896 are already merged on current main; PR896's new rewards
+   remain disabled in release94.
 2. Approve and reconcile the support SQL proposal against the exact production
    schema, least-privilege role grants, function ownership, query/index costs,
    audit retention and rollback. It remains outside the automatic migration
