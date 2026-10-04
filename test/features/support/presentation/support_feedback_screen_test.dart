@@ -185,11 +185,8 @@ void main() {
       expect(client.submissions.single, isNot(contains('improvement')));
       expect(client.submissionKeys.single, isNotEmpty);
 
-      await tester.scrollUntilVisible(
-        find.text('Feedback and suggestions'),
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
+      await tester.drag(find.byType(ListView), const Offset(0, 1200));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Feedback and suggestions').first);
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
