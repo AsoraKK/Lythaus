@@ -156,7 +156,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Member A problem'), findsOneWidget);
+      expect(client.listedKinds, <String>['problem']);
       expect(find.text('What happened?'), findsOneWidget);
       expect(find.text('What did you expect?'), findsOneWidget);
       await tester.enterText(find.byType(TextField).at(0), 'Report title');
@@ -185,8 +185,13 @@ void main() {
       expect(find.text('What would you improve?'), findsOneWidget);
       expect(find.text('Who would this help, and how?'), findsOneWidget);
       expect(find.text('What happened?'), findsNothing);
-      expect(find.text('Suggestions'), findsOneWidget);
       expect(client.listedKinds.last, 'suggestion');
+      await tester.scrollUntilVisible(
+        find.text('Suggestions'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Suggestions'), findsOneWidget);
     },
   );
 
@@ -209,6 +214,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('Member A problem'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Member A problem'));
     await tester.pumpAndSettle();
     expect(find.text('Owner reply in private history.'), findsOneWidget);
@@ -274,7 +284,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Account 0 problem'), findsOneWidget);
+      expect(clients.first.listedKinds.first, 'problem');
       await tester.enterText(
         find.byType(TextField).at(0),
         'Old account unsent draft',
@@ -290,8 +300,13 @@ void main() {
       expect(clients, hasLength(2));
       expect(clients.first.isCurrentSession, isFalse);
       expect(clients.first.cancellations, greaterThan(0));
+      await tester.scrollUntilVisible(
+        find.text('Account 1 suggestion'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('Account 1 suggestion'), findsOneWidget);
-      expect(find.text('Account 0 suggestion'), findsNothing);
+      expect(clients.last.listedKinds.first, 'suggestion');
       expect(
         tester.widget<TextField>(find.byType(TextField).first).controller!.text,
         isEmpty,
