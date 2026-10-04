@@ -9152,11 +9152,17 @@
               }
             }
           },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
           "401": {
             "$ref": "#/components/responses/SupportUnauthorized"
           },
           "404": {
             "$ref": "#/components/responses/SupportDisabledOrMissing"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "429": {
             "$ref": "#/components/responses/SupportRateLimited"
@@ -9216,6 +9222,9 @@
           },
           "404": {
             "$ref": "#/components/responses/SupportDisabledOrMissing"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "429": {
             "$ref": "#/components/responses/SupportRateLimited"
@@ -9292,6 +9301,9 @@
           "404": {
             "$ref": "#/components/responses/SupportDisabledOrMissing"
           },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
           "409": {
             "$ref": "#/components/responses/SupportConflict"
           },
@@ -9358,7 +9370,10 @@
             "$ref": "#/components/responses/SupportUnauthorized"
           },
           "404": {
-            "$ref": "#/components/responses/SupportNotFound"
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "429": {
             "$ref": "#/components/responses/SupportRateLimited"
@@ -9442,7 +9457,10 @@
             "$ref": "#/components/responses/SupportUnauthorized"
           },
           "404": {
-            "$ref": "#/components/responses/SupportNotFound"
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "409": {
             "$ref": "#/components/responses/SupportConflict"
@@ -9511,6 +9529,9 @@
           },
           "404": {
             "$ref": "#/components/responses/SupportDisabledOrMissing"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "429": {
             "$ref": "#/components/responses/SupportRateLimited"
@@ -9587,6 +9608,9 @@
           "404": {
             "$ref": "#/components/responses/SupportDisabledOrMissing"
           },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
           "409": {
             "$ref": "#/components/responses/SupportConflict"
           },
@@ -9653,7 +9677,10 @@
             "$ref": "#/components/responses/SupportUnauthorized"
           },
           "404": {
-            "$ref": "#/components/responses/SupportNotFound"
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "429": {
             "$ref": "#/components/responses/SupportRateLimited"
@@ -9737,7 +9764,10 @@
             "$ref": "#/components/responses/SupportUnauthorized"
           },
           "404": {
-            "$ref": "#/components/responses/SupportNotFound"
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "409": {
             "$ref": "#/components/responses/SupportConflict"
@@ -9790,6 +9820,9 @@
               }
             }
           },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
           "401": {
             "$ref": "#/components/responses/SupportUnauthorized"
           },
@@ -9798,6 +9831,9 @@
           },
           "404": {
             "$ref": "#/components/responses/SupportDisabledOrMissing"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "429": {
             "$ref": "#/components/responses/SupportRateLimited"
@@ -9860,6 +9896,9 @@
           },
           "404": {
             "$ref": "#/components/responses/SupportDisabledOrMissing"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "429": {
             "$ref": "#/components/responses/SupportRateLimited"
@@ -9930,7 +9969,10 @@
             "$ref": "#/components/responses/SupportForbidden"
           },
           "404": {
-            "$ref": "#/components/responses/SupportNotFound"
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "429": {
             "$ref": "#/components/responses/SupportRateLimited"
@@ -9993,7 +10035,10 @@
             "$ref": "#/components/responses/SupportForbidden"
           },
           "404": {
-            "$ref": "#/components/responses/SupportNotFound"
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "409": {
             "$ref": "#/components/responses/SupportConflict"
@@ -10065,7 +10110,10 @@
             "$ref": "#/components/responses/SupportForbidden"
           },
           "404": {
-            "$ref": "#/components/responses/SupportNotFound"
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "409": {
             "$ref": "#/components/responses/SupportConflict"
@@ -10138,7 +10186,10 @@
             "$ref": "#/components/responses/SupportForbidden"
           },
           "404": {
-            "$ref": "#/components/responses/SupportNotFound"
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "409": {
             "$ref": "#/components/responses/SupportConflict"
@@ -10211,7 +10262,10 @@
             "$ref": "#/components/responses/SupportForbidden"
           },
           "404": {
-            "$ref": "#/components/responses/SupportNotFound"
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "409": {
             "$ref": "#/components/responses/SupportConflict"
@@ -10287,6 +10341,9 @@
           "404": {
             "$ref": "#/components/responses/SupportDisabledOrMissing"
           },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
           "429": {
             "$ref": "#/components/responses/SupportRateLimited"
           },
@@ -10356,7 +10413,10 @@
             "$ref": "#/components/responses/SupportForbidden"
           },
           "404": {
-            "$ref": "#/components/responses/SupportNotFound"
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "429": {
             "$ref": "#/components/responses/SupportRateLimited"
@@ -10419,7 +10479,10 @@
             "$ref": "#/components/responses/SupportForbidden"
           },
           "404": {
-            "$ref": "#/components/responses/SupportNotFound"
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "409": {
             "$ref": "#/components/responses/SupportConflict"
@@ -10491,7 +10554,10 @@
             "$ref": "#/components/responses/SupportForbidden"
           },
           "404": {
-            "$ref": "#/components/responses/SupportNotFound"
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "409": {
             "$ref": "#/components/responses/SupportConflict"
@@ -10564,7 +10630,10 @@
             "$ref": "#/components/responses/SupportForbidden"
           },
           "404": {
-            "$ref": "#/components/responses/SupportNotFound"
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "409": {
             "$ref": "#/components/responses/SupportConflict"
@@ -10637,7 +10706,10 @@
             "$ref": "#/components/responses/SupportForbidden"
           },
           "404": {
-            "$ref": "#/components/responses/SupportNotFound"
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
           },
           "409": {
             "$ref": "#/components/responses/SupportConflict"
@@ -20746,6 +20818,21 @@
           }
         }
       },
+      "SupportBadRequest": {
+        "description": "Invalid JSON, request field, cursor or query.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/SupportCacheControl"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SupportError"
+            }
+          }
+        }
+      },
       "SupportUnauthorized": {
         "description": "Authenticated member session or valid Cloudflare Access assertion is required.",
         "headers": {
@@ -20776,6 +20863,28 @@
           }
         }
       },
+      "SupportMethodNotAllowed": {
+        "description": "The path does not accept this HTTP method.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/SupportCacheControl"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SupportError"
+            },
+            "examples": {
+              "unsupportedMethod": {
+                "value": {
+                  "error": "method_not_allowed"
+                }
+              }
+            }
+          }
+        }
+      },
       "SupportRateLimited": {
         "description": "The support mutation limit was exceeded.",
         "headers": {
@@ -20793,21 +20902,6 @@
       },
       "SupportUnavailable": {
         "description": "Support policy, authentication, database or optional proposal schema is unavailable; no empty-success fallback is returned.",
-        "headers": {
-          "Cache-Control": {
-            "$ref": "#/components/headers/SupportCacheControl"
-          }
-        },
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/SupportError"
-            }
-          }
-        }
-      },
-      "SupportBadRequest": {
-        "description": "Invalid JSON, request field, cursor or query.",
         "headers": {
           "Cache-Control": {
             "$ref": "#/components/headers/SupportCacheControl"
@@ -20883,8 +20977,8 @@
           }
         }
       },
-      "SupportNotFound": {
-        "description": "Request does not exist or is not visible to this actor.",
+      "SupportNotFoundOrDisabled": {
+        "description": "Request does not exist or is not visible to this actor, or support is disabled (feature_disabled).",
         "headers": {
           "Cache-Control": {
             "$ref": "#/components/headers/SupportCacheControl"
@@ -20894,6 +20988,18 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/SupportError"
+            },
+            "examples": {
+              "notFound": {
+                "value": {
+                  "error": "support_not_found"
+                }
+              },
+              "disabled": {
+                "value": {
+                  "error": "feature_disabled"
+                }
+              }
             }
           }
         }

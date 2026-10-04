@@ -9,8 +9,10 @@ paths:
       security: [{ bearerAuth: [] }]
       responses:
         '200': { description: Member support categories and bounded limits, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportOptions' } } } }
+        '400': { $ref: '#/components/responses/SupportBadRequest' }
         '401': { $ref: '#/components/responses/SupportUnauthorized' }
         '404': { $ref: '#/components/responses/SupportDisabledOrMissing' }
+        '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }
         '429': { $ref: '#/components/responses/SupportRateLimited' }
         '503': { $ref: '#/components/responses/SupportUnavailable' }
   /support/problems:
@@ -24,6 +26,7 @@ paths:
       responses:
         '200': { description: Private problem report history, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberRequestPage' } } } }
         '400': { $ref: '#/components/responses/SupportBadRequest' }
+        '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }
         '401': { $ref: '#/components/responses/SupportUnauthorized' }
         '404': { $ref: '#/components/responses/SupportDisabledOrMissing' }
         '429': { $ref: '#/components/responses/SupportRateLimited' }
@@ -40,6 +43,7 @@ paths:
         '201': { description: Report created, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberMutationResult' } } } }
         '200': { description: Matching idempotent replay, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberMutationResult' } } } }
         '400': { $ref: '#/components/responses/SupportBadRequest' }
+        '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }
         '401': { $ref: '#/components/responses/SupportUnauthorized' }
         '404': { $ref: '#/components/responses/SupportDisabledOrMissing' }
         '409': { $ref: '#/components/responses/SupportConflict' }
@@ -59,7 +63,8 @@ paths:
         '200': { description: Request and public conversation visible only to its submitter, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberDetail' } } } }
         '400': { $ref: '#/components/responses/SupportBadRequest' }
         '401': { $ref: '#/components/responses/SupportUnauthorized' }
-        '404': { $ref: '#/components/responses/SupportNotFound' }
+        '404': { $ref: '#/components/responses/SupportNotFoundOrDisabled' }
+        '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }
         '429': { $ref: '#/components/responses/SupportRateLimited' }
         '503': { $ref: '#/components/responses/SupportUnavailable' }
   /support/problems/{requestId}/messages:
@@ -76,7 +81,8 @@ paths:
         '200': { description: Matching idempotent replay, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberMutationResult' } } } }
         '400': { $ref: '#/components/responses/SupportBadRequest' }
         '401': { $ref: '#/components/responses/SupportUnauthorized' }
-        '404': { $ref: '#/components/responses/SupportNotFound' }
+        '404': { $ref: '#/components/responses/SupportNotFoundOrDisabled' }
+        '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }
         '409': { $ref: '#/components/responses/SupportConflict' }
         '413': { $ref: '#/components/responses/SupportTooLarge' }
         '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }
@@ -93,6 +99,7 @@ paths:
       responses:
         '200': { description: Private suggestion history, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberRequestPage' } } } }
         '400': { $ref: '#/components/responses/SupportBadRequest' }
+        '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }
         '401': { $ref: '#/components/responses/SupportUnauthorized' }
         '404': { $ref: '#/components/responses/SupportDisabledOrMissing' }
         '429': { $ref: '#/components/responses/SupportRateLimited' }
@@ -109,6 +116,7 @@ paths:
         '201': { description: Suggestion created, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberMutationResult' } } } }
         '200': { description: Matching idempotent replay, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberMutationResult' } } } }
         '400': { $ref: '#/components/responses/SupportBadRequest' }
+        '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }
         '401': { $ref: '#/components/responses/SupportUnauthorized' }
         '404': { $ref: '#/components/responses/SupportDisabledOrMissing' }
         '409': { $ref: '#/components/responses/SupportConflict' }
@@ -128,7 +136,8 @@ paths:
         '200': { description: Request and public conversation visible only to its submitter, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberDetail' } } } }
         '400': { $ref: '#/components/responses/SupportBadRequest' }
         '401': { $ref: '#/components/responses/SupportUnauthorized' }
-        '404': { $ref: '#/components/responses/SupportNotFound' }
+        '404': { $ref: '#/components/responses/SupportNotFoundOrDisabled' }
+        '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }
         '429': { $ref: '#/components/responses/SupportRateLimited' }
         '503': { $ref: '#/components/responses/SupportUnavailable' }
   /support/suggestions/{requestId}/messages:
@@ -145,7 +154,8 @@ paths:
         '200': { description: Matching idempotent replay, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberMutationResult' } } } }
         '400': { $ref: '#/components/responses/SupportBadRequest' }
         '401': { $ref: '#/components/responses/SupportUnauthorized' }
-        '404': { $ref: '#/components/responses/SupportNotFound' }
+        '404': { $ref: '#/components/responses/SupportNotFoundOrDisabled' }
+        '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }
         '409': { $ref: '#/components/responses/SupportConflict' }
         '413': { $ref: '#/components/responses/SupportTooLarge' }
         '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }
@@ -160,9 +170,11 @@ paths:
       security: [{ cloudflareAccess: [] }]
       responses:
         '200': { description: Owner workflow policy, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportOptions' } } } }
+        '400': { $ref: '#/components/responses/SupportBadRequest' }
         '401': { $ref: '#/components/responses/SupportUnauthorized' }
         '403': { $ref: '#/components/responses/SupportForbidden' }
         '404': { $ref: '#/components/responses/SupportDisabledOrMissing' }
+        '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }
         '429': { $ref: '#/components/responses/SupportRateLimited' }
         '503': { $ref: '#/components/responses/SupportUnavailable' }
   /admin/support/problems:
@@ -176,6 +188,7 @@ paths:
       responses:
         '200': { description: Owner queue. Contains private request text and submitter IDs; owner access is audited., headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerRequestPage' } } } }
         '400': { $ref: '#/components/responses/SupportBadRequest' }
+        '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }
         '401': { $ref: '#/components/responses/SupportUnauthorized' }
         '403': { $ref: '#/components/responses/SupportForbidden' }
         '404': { $ref: '#/components/responses/SupportDisabledOrMissing' }
@@ -194,7 +207,8 @@ paths:
         '400': { $ref: '#/components/responses/SupportBadRequest' }
         '401': { $ref: '#/components/responses/SupportUnauthorized' }
         '403': { $ref: '#/components/responses/SupportForbidden' }
-        '404': { $ref: '#/components/responses/SupportNotFound' }
+        '404': { $ref: '#/components/responses/SupportNotFoundOrDisabled' }
+        '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }
         '429': { $ref: '#/components/responses/SupportRateLimited' }
         '503': { $ref: '#/components/responses/SupportUnavailable' }
   /admin/support/problems/{requestId}/messages:
@@ -206,7 +220,7 @@ paths:
       security: [{ cloudflareAccess: [] }]
       parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ReplyRequest' } } } }
-      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFound' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
+      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFoundOrDisabled' }, '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
   /admin/support/problems/{requestId}/notes:
     servers: [{ url: https://admin-api.lythaus.co/api }]
     post:
@@ -216,7 +230,7 @@ paths:
       security: [{ cloudflareAccess: [] }]
       parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerNoteRequest' } } } }
-      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFound' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
+      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFoundOrDisabled' }, '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
   /admin/support/problems/{requestId}/evidence:
     servers: [{ url: https://admin-api.lythaus.co/api }]
     post:
@@ -227,7 +241,7 @@ paths:
       security: [{ cloudflareAccess: [] }]
       parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerEvidenceRequest' } } } }
-      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFound' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
+      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFoundOrDisabled' }, '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
   /admin/support/problems/{requestId}/decision:
     servers: [{ url: https://admin-api.lythaus.co/api }]
     post:
@@ -238,7 +252,7 @@ paths:
       security: [{ cloudflareAccess: [] }]
       parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerDecisionRequest' } } } }
-      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFound' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '422': { $ref: '#/components/responses/SupportUnprocessable' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
+      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFoundOrDisabled' }, '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '422': { $ref: '#/components/responses/SupportUnprocessable' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
   /admin/support/suggestions:
     servers: [{ url: https://admin-api.lythaus.co/api }]
     get:
@@ -250,6 +264,7 @@ paths:
       responses:
         '200': { description: Owner queue. Contains private suggestion text and submitter IDs; owner access is audited., headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerRequestPage' } } } }
         '400': { $ref: '#/components/responses/SupportBadRequest' }
+        '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }
         '401': { $ref: '#/components/responses/SupportUnauthorized' }
         '403': { $ref: '#/components/responses/SupportForbidden' }
         '404': { $ref: '#/components/responses/SupportDisabledOrMissing' }
@@ -268,7 +283,8 @@ paths:
         '400': { $ref: '#/components/responses/SupportBadRequest' }
         '401': { $ref: '#/components/responses/SupportUnauthorized' }
         '403': { $ref: '#/components/responses/SupportForbidden' }
-        '404': { $ref: '#/components/responses/SupportNotFound' }
+        '404': { $ref: '#/components/responses/SupportNotFoundOrDisabled' }
+        '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }
         '429': { $ref: '#/components/responses/SupportRateLimited' }
         '503': { $ref: '#/components/responses/SupportUnavailable' }
   /admin/support/suggestions/{requestId}/messages:
@@ -280,7 +296,7 @@ paths:
       security: [{ cloudflareAccess: [] }]
       parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ReplyRequest' } } } }
-      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFound' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
+      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFoundOrDisabled' }, '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
   /admin/support/suggestions/{requestId}/notes:
     servers: [{ url: https://admin-api.lythaus.co/api }]
     post:
@@ -290,7 +306,7 @@ paths:
       security: [{ cloudflareAccess: [] }]
       parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerNoteRequest' } } } }
-      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFound' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
+      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFoundOrDisabled' }, '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
   /admin/support/suggestions/{requestId}/evidence:
     servers: [{ url: https://admin-api.lythaus.co/api }]
     post:
@@ -301,7 +317,7 @@ paths:
       security: [{ cloudflareAccess: [] }]
       parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerEvidenceRequest' } } } }
-      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFound' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
+      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFoundOrDisabled' }, '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
   /admin/support/suggestions/{requestId}/decision:
     servers: [{ url: https://admin-api.lythaus.co/api }]
     post:
@@ -312,7 +328,7 @@ paths:
       security: [{ cloudflareAccess: [] }]
       parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerDecisionRequest' } } } }
-      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFound' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '422': { $ref: '#/components/responses/SupportUnprocessable' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
+      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFoundOrDisabled' }, '405': { $ref: '#/components/responses/SupportMethodNotAllowed' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '422': { $ref: '#/components/responses/SupportUnprocessable' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
 components:
   headers:
     SupportCacheControl: { description: Support content must never be stored in a shared or browser cache., schema: { type: string, enum: ['private, no-store'] } }
@@ -331,7 +347,8 @@ components:
     SupportUnauthorized: { description: Authenticated member session or valid Cloudflare Access assertion is required., headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportError' } } } }
     SupportForbidden: { description: Active owner authorization and an allowed Origin on mutations are required., headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportError' } } } }
     SupportDisabledOrMissing: { description: Support is disabled. An enabled installation without its optional proposal schema returns 503., headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportError' } } } }
-    SupportNotFound: { description: Request does not exist or is not visible to this actor., headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportError' } } } }
+    SupportNotFoundOrDisabled: { description: 'Request does not exist or is not visible to this actor, or support is disabled (feature_disabled).', headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportError' }, examples: { notFound: { value: { error: support_not_found } }, disabled: { value: { error: feature_disabled } } } } } }
+    SupportMethodNotAllowed: { description: 'The path does not accept this HTTP method.', headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportError' }, examples: { unsupportedMethod: { value: { error: method_not_allowed } } } } } }
     SupportConflict:
       description: 'The idempotency key conflicts with existing content, the request revision changed concurrently, or the request is closed.'
       headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }

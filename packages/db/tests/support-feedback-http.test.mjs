@@ -94,6 +94,20 @@ test('owner collection routes cannot submit member requests',async()=>{
   assert.deepEqual(f.calls,[]);
 });
 
+test('options reject query strings and declared routes return documented method errors',async()=>{
+  const f=service(),{handle}=setup(f.service),id='018f0000-0000-7000-8000-000000000003';
+  const memberQuery=await handle(req('GET','/api/support/options?unexpected=1'));
+  const ownerQuery=await handle(req('GET','/api/admin/support/options?unexpected=1'),'owner');
+  const memberMethod=await handle(req('POST','/api/support/options'));
+  const memberDetailMethod=await handle(req('PUT',`/api/support/problems/${id}`));
+  const ownerMethod=await handle(req('GET',`/api/admin/support/problems/${id}/messages`),'owner');
+  assert.deepEqual([memberQuery.status,ownerQuery.status,memberMethod.status,memberDetailMethod.status,ownerMethod.status],[400,400,405,405,405]);
+  assert.deepEqual(await Promise.all([memberQuery.json(),ownerQuery.json(),memberMethod.json(),memberDetailMethod.json(),ownerMethod.json()]),[
+    {error:'support_input_invalid'},{error:'support_input_invalid'},{error:'method_not_allowed'},{error:'method_not_allowed'},{error:'method_not_allowed'},
+  ]);
+  assert.deepEqual(f.calls,[]);
+});
+
 test('bounded JSON reader errors retain client status and safe code',async()=>{
   for(const [code,status] of [['invalid_json',400],['request_too_large',413]]){
     const {handle}=setup(service().service,async()=>{throw new Error(code);});
