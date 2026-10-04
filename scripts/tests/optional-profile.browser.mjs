@@ -66,6 +66,13 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
           reputationStatus: 'active', reputationBand: 'new', policyVersion: 'reputation-v2.0.0',
           pillars: { accountability: 0, contribution: 0, conduct: 0, sourcing: 0, authenticity: 0, reviewReliability: 0 },
           promotionBlockers: [], evaluatedAt: null };
+      } else if (url.pathname === '/api/rewards/me/monthly') {
+        assert.ok(session);
+        assert.equal((await request.allHeaders()).authorization, 'Bearer synthetic-profile-token');
+        body = { state: 'pending', reasonCode: 'approval_unavailable', effectiveMonth: null,
+          currentLevel: null, sourceMonth: null, sourceScore: null,
+          snapshot: { state: 'unavailable', reasonCode: 'approval_unavailable' },
+          selection: { state: 'unavailable', reasonCode: 'approval_unavailable' } };
       } else if (!['/api/feed/discover', '/api/custom-feeds', '/api/subscription/status'].includes(url.pathname)) {
         status = 404; body = { error: 'route_not_found' };
       }
