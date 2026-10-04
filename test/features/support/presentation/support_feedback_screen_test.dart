@@ -172,6 +172,11 @@ void main() {
         find.byType(TextField).at(3),
         'Repeat these steps.',
       );
+      await tester.scrollUntilVisible(
+        find.text('Send private report'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.tap(find.text('Send private report'));
       await tester.pumpAndSettle();
       expect(client.submissions.single, containsPair('kind', 'problem'));
@@ -180,9 +185,24 @@ void main() {
       expect(client.submissions.single, isNot(contains('improvement')));
       expect(client.submissionKeys.single, isNotEmpty);
 
+      await tester.scrollUntilVisible(
+        find.text('Feedback and suggestions').first,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.tap(find.text('Feedback and suggestions').first);
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('What would you improve?'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('What would you improve?'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Who would this help, and how?'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('Who would this help, and how?'), findsOneWidget);
       expect(find.text('What happened?'), findsNothing);
       expect(client.listedKinds.last, 'suggestion');
@@ -221,10 +241,25 @@ void main() {
     );
     await tester.tap(find.text('Member A problem'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Owner reply in private history.'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Owner reply in private history.'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Reply privately'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.enterText(
       find.byType(TextField).last,
       'My private follow-up.',
+    );
+    await tester.scrollUntilVisible(
+      find.text('Send reply'),
+      300,
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.tap(find.text('Send reply'));
     await tester.pumpAndSettle();
