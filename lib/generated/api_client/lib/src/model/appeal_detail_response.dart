@@ -3,7 +3,7 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:lythaus_api_client/src/model/appeal_detail.dart';
+import 'package:lythaus_api_client/src/model/appeal_detail_response_appeal.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -16,7 +16,7 @@ part 'appeal_detail_response.g.dart';
 @BuiltValue()
 abstract class AppealDetailResponse implements Built<AppealDetailResponse, AppealDetailResponseBuilder> {
   @BuiltValueField(wireName: r'appeal')
-  AppealDetail get appeal;
+  AppealDetailResponseAppeal get appeal;
 
   AppealDetailResponse._();
 
@@ -44,7 +44,7 @@ class _$AppealDetailResponseSerializer implements PrimitiveSerializer<AppealDeta
     yield r'appeal';
     yield serializers.serialize(
       object.appeal,
-      specifiedType: const FullType(AppealDetail),
+      specifiedType: const FullType(AppealDetailResponseAppeal),
     );
   }
 
@@ -72,8 +72,8 @@ class _$AppealDetailResponseSerializer implements PrimitiveSerializer<AppealDeta
         case r'appeal':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(AppealDetail),
-          ) as AppealDetail;
+            specifiedType: const FullType(AppealDetailResponseAppeal),
+          ) as AppealDetailResponseAppeal;
           result.appeal.replace(valueDes);
           break;
         default:

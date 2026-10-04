@@ -86,6 +86,15 @@ jobs:
       - run: node --test scripts/tests/real-email-acceptance-evidence.test.mjs
       - run: npm run test:product-integrity-runtime
       - run: npm run test:product-contracts
+      - name: Verify monthly reputation and candidate peer policy
+        run: >-
+          node --experimental-strip-types --experimental-test-coverage
+          '--test-coverage-include=packages/contracts/src/monthly-*.ts'
+          --test-coverage-lines=80 --test-coverage-branches=80
+          --test packages/contracts/tests/monthly-reputation.test.mjs
+          packages/contracts/tests/monthly-peer-appeal.test.mjs
+          packages/contracts/tests/monthly-earning.test.mjs
+          packages/contracts/tests/monthly-maintenance.test.mjs
       - run: npm run test:critical-coverage
       - run: npm run test:authenticity-foundation
       - run: npm run test:database-identity
@@ -192,7 +201,19 @@ jobs:
           CURR=$(node -pe 'JSON.parse(require("node:fs").readFileSync("api/openapi/dist/openapi.json","utf8")).info?.version ?? ""')
           PREV=$(node -pe 'JSON.parse(require("node:fs").readFileSync(process.argv[1],"utf8")).info?.version ?? ""' "$BASE_SPEC")
           echo "Breaking changes detected. Prev=$PREV Curr=$CURR"
-          node -e "const parse=(value)=>{const match=String(value).trim().match(/^v?(\\d+)(?:\\.(\\d+))?(?:\\.(\\d+))?$/i);if(!match)return null;return [Number(match[1]),Number(match[2]||0),Number(match[3]||0)];};const prevRaw=process.argv[1];const currRaw=process.argv[2];const prev=parse(prevRaw);const curr=parse(currRaw);if(!prev||!curr){console.error("Unable to compare versions: Prev=" + prevRaw + " Curr=" + currRaw);process.exit(1);}const greater=curr[0]>prev[0]||(curr[0]===prev[0]&&(curr[1]>prev[1]||(curr[1]===prev[1]&&curr[2]>prev[2])));process.exit(greater ? 0 : 1);" "$PREV" "$CURR"
+          node - "$PREV" "$CURR" <<'NODE'
+          const parse = value => {
+            const match = String(value).trim().match(/^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?$/i);
+            return match ? [Number(match[1]), Number(match[2] || 0), Number(match[3] || 0)] : null;
+          };
+          const [previous, current] = process.argv.slice(2).map(parse);
+          if (!previous || !current) {
+            console.error('Unable to compare OpenAPI versions');
+            process.exit(1);
+          }
+          const firstDifference = current.findIndex((part, index) => part !== previous[index]);
+          process.exit(firstDifference >= 0 && current[firstDifference] > previous[firstDifference] ? 0 : 1);
+          NODE
       - name: Pin OpenAPI generator version
         env:
           OPENAPI_GENERATOR_CLI_SEARCH_URL: DEFAULT

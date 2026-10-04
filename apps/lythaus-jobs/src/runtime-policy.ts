@@ -384,6 +384,7 @@ export function buildPrivacyDataPassport(input: {
   humanContribution: unknown[];
   reputationProfile: unknown;
   reputationEvents: unknown[];
+  monthlyReputationReports: unknown;
   accountabilitySignals: unknown[];
   notificationPreferences: unknown;
   notificationDevices: unknown[];
@@ -425,6 +426,7 @@ export function buildPrivacyDataPassport(input: {
       profile: input.reputationProfile,
       events: input.reputationEvents,
       accountabilitySignals: input.accountabilitySignals,
+      monthlyReports: input.monthlyReputationReports,
     },
     notifications: {
       preferences: input.notificationPreferences,

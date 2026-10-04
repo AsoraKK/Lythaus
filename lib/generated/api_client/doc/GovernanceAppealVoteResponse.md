@@ -12,5 +12,10 @@ Name | Type | Description | Notes
 **appealId** | **String** |  |
 **decision** | **String** |  |
 **locked** | **bool** |  |
+**ballotId** | **String** |  |
+**revision** | **int** |  |
+**choice** | **String** |  |
+**castAt** | [**DateTime**](DateTime.md) |  |
+**created** | **bool** |  |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

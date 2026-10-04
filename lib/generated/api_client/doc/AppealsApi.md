@@ -14,9 +14,11 @@ Method | HTTP request | Description
 [**adminReviewerQualificationUpdate**](AppealsApi.md#adminreviewerqualificationupdate) | **PUT** /admin/reviewers/{reviewerId}/qualification | Idempotently set reviewer qualification state
 [**appealReviewerAssignmentsList**](AppealsApi.md#appealreviewerassignmentslist) | **GET** /appeals/reviewer/assignments | List my appeal-review assignments
 [**appealsCreate**](AppealsApi.md#appealscreate) | **POST** /appeals | Submit an appeal
-[**appealsGet**](AppealsApi.md#appealsget) | **GET** /appeals/{id} | Get an appeal visible to its appellant or assigned reviewer
+[**appealsGet**](AppealsApi.md#appealsget) | **GET** /appeals/{id} | Get a private appeal under its recorded policy
 [**appealsRecuse**](AppealsApi.md#appealsrecuse) | **POST** /appeals/{appealId}/recuse | Publicly record reviewer recusal
-[**appealsVote**](AppealsApi.md#appealsvote) | **POST** /appeals/{appealId}/vote | Submit one immutable reviewer vote
+[**appealsVote**](AppealsApi.md#appealsvote) | **POST** /appeals/{appealId}/vote | Record a ballot under the case policy
+[**communityAppealsQueue**](AppealsApi.md#communityappealsqueue) | **GET** /appeals/review/queue | List private eligible community reviews
+[**communityAppealsWithdraw**](AppealsApi.md#communityappealswithdraw) | **POST** /appeals/{appealId}/withdraw | Withdraw an owned community appeal before closure
 
 
 # **adminAppealsPendingAdjudicationList**
@@ -200,7 +202,7 @@ This endpoint does not need any parameter.
 
 Submit an appeal
 
-The case determines standard or high risk; the service assigns independent trained reviewers.
+Dispatches by the activated policy. Monthly-policy cases await safe evidence triage before timed equal-vote community review. Historical cases retain their labelled assignment policy. Unapproved community configuration returns 503.
 
 ### Example
 ```dart
@@ -243,7 +245,9 @@ Name | Type | Description  | Notes
 # **appealsGet**
 > AppealDetailResponse appealsGet(id)
 
-Get an appeal visible to its appellant or assigned reviewer
+Get a private appeal under its recorded policy
+
+Monthly-policy peers receive only safe evidence and their own ballot. Restricted cases are visible only to their appellant without an evidence preview. Live totals and voter identities are never returned. Historical assigned-reviewer access is preserved.
 
 ### Example
 ```dart
@@ -329,9 +333,9 @@ Name | Type | Description  | Notes
 # **appealsVote**
 > GovernanceAppealVoteResponse appealsVote(appealId, idempotencyKey, governanceAppealVoteRequest)
 
-Submit one immutable reviewer vote
+Record a ballot under the case policy
 
-Only an independently assigned trained reviewer may vote. A vote is locked and cannot be changed.
+Monthly-policy ballots have weight one for every eligible email-verified member and use an expected revision; configured changes stop at the server deadline. Historical cases accept the original immutable assigned-reviewer vote. No live totals or other voter identities are returned.
 
 ### Example
 ```dart
@@ -369,6 +373,88 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **communityAppealsQueue**
+> CommunityAppealQueue communityAppealsQueue()
+
+List private eligible community reviews
+
+Random case ordering; no selected panel, live counts, voter identities or restricted evidence. Requires approved configuration and a verified eligible account. No suitable cases returns no_case_available.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getAppealsApi();
+
+try {
+    final response = api.communityAppealsQueue();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AppealsApi->communityAppealsQueue: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**CommunityAppealQueue**](CommunityAppealQueue.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **communityAppealsWithdraw**
+> CommunityAppealWithdrawal communityAppealsWithdraw(appealId, idempotencyKey)
+
+Withdraw an owned community appeal before closure
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getAppealsApi();
+final String appealId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = idempotencyKey_example; // String | Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection.
+
+try {
+    final response = api.communityAppealsWithdraw(appealId, idempotencyKey);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AppealsApi->communityAppealsWithdraw: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **appealId** | **String**|  |
+ **idempotencyKey** | **String**| Optional caller-generated replay key. Completed requests, including safe validation failures, replay the stored response. A fresh in-flight duplicate returns `idempotency_in_progress`; an aged or ambiguous claim returns `idempotency_outcome_unknown` and is never automatically re-executed. If omitted, the mutation executes without replay protection. | [optional]
+
+### Return type
+
+[**CommunityAppealWithdrawal**](CommunityAppealWithdrawal.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

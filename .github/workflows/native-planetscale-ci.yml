@@ -30,6 +30,27 @@ on:
       - 'packages/db/src/authenticity-beta.ts'
       - 'packages/db/src/authenticity-alpha.ts'
       - 'packages/db/src/budget.ts'
+      - 'packages/contracts/src/monthly-*.ts'
+      - 'packages/contracts/policies/Lythaus_Monthly_Rewards_Action_Catalogue_v2.json'
+      - 'packages/db/src/monthly-reputation.ts'
+      - 'packages/db/src/monthly-reputation-report.ts'
+      - 'packages/db/src/monthly-earning.ts'
+      - 'packages/db/src/monthly-context*.ts'
+      - 'packages/db/src/monthly-publication.ts'
+      - 'packages/db/src/monthly-reward-*.ts'
+      - 'packages/db/src/community-appeal-*.ts'
+      - 'apps/lythaus-jobs/src/monthly-reputation.ts'
+      - 'apps/lythaus-jobs/src/monthly-earning.ts'
+      - 'apps/lythaus-jobs/src/monthly-reward-*.ts'
+      - 'apps/lythaus-jobs/src/community-appeals.ts'
+      - 'apps/lythaus-jobs/src/index.ts'
+      - 'apps/lythaus-jobs/tests/monthly-reputation.postgres.mjs'
+      - 'apps/lythaus-jobs/tests/monthly-earning.postgres.mjs'
+      - 'apps/lythaus-jobs/tests/monthly-context.postgres.mjs'
+      - 'apps/lythaus-jobs/tests/monthly-reward-*.postgres.mjs'
+      - 'apps/lythaus-jobs/tests/monthly-reward-*.cases.mjs'
+      - 'apps/lythaus-jobs/tests/monthly-reputation-report.cases.mjs'
+      - 'apps/lythaus-public-api/src/monthly-reputation-report-export.ts'
       - 'scripts/ci/planetscale-migration-*.mjs'
       - 'scripts/ci/auth-incident-database-contract.mjs'
       - 'scripts/ci/audit-production-auth-incident.mjs'
@@ -78,6 +99,84 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
         run: node scripts/ci/validate-first-admin-bootstrap-postgres17.mjs
+      - name: Validate proposed monthly reputation shadow schema and transactions
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
+        run: >-
+          node --experimental-strip-types --experimental-test-module-mocks
+          --experimental-test-coverage
+          '--test-coverage-include=packages/db/src/monthly-reputation.ts'
+          '--test-coverage-include=apps/lythaus-jobs/src/monthly-reputation.ts'
+          --test-coverage-lines=80 --test-coverage-branches=80
+          --test apps/lythaus-jobs/tests/monthly-reputation.postgres.mjs
+      - name: Validate real monthly earning source transactions
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: >-
+          node --experimental-strip-types --experimental-test-module-mocks
+          --experimental-test-coverage
+          '--test-coverage-include=packages/db/src/monthly-earning.ts'
+          '--test-coverage-include=apps/lythaus-jobs/src/monthly-earning.ts'
+          --test-coverage-lines=80 --test-coverage-branches=80
+          --test apps/lythaus-jobs/tests/monthly-earning.postgres.mjs
+      - name: Validate scoped contextual acceptance and dependent corrections
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: >-
+          node --experimental-strip-types --experimental-test-module-mocks
+          --experimental-test-coverage
+          '--test-coverage-include=packages/db/src/monthly-context*.ts'
+          '--test-coverage-include=apps/lythaus-admin-api/src/monthly-context-review.ts'
+          --test-coverage-lines=80 --test-coverage-branches=80
+          --test apps/lythaus-jobs/tests/monthly-context.postgres.mjs
+      - name: Validate private community appeal transactions and routes
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: >-
+          node --experimental-strip-types --experimental-test-module-mocks
+          --experimental-test-coverage
+          '--test-coverage-include=packages/db/src/community-appeal-*.ts'
+          '--test-coverage-include=apps/lythaus-jobs/src/community-appeals.ts'
+          '--test-coverage-include=packages/db/src/monthly-peer-participation.ts'
+          '--test-coverage-include=apps/lythaus-jobs/src/monthly-peer-participation.ts'
+          '--test-coverage-include=packages/db/src/monthly-publication.ts'
+          --test-coverage-lines=80 --test-coverage-branches=80
+          --test apps/lythaus-public-api/tests/community-appeals.postgres.mjs
+      - name: Validate canonical maintenance and monthly assembly transactions
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: >-
+          node --experimental-strip-types --experimental-test-module-mocks
+          --experimental-test-coverage
+          '--test-coverage-include=packages/db/src/monthly-maintenance.ts'
+          '--test-coverage-include=packages/db/src/monthly-email-renewal.ts'
+          '--test-coverage-include=packages/db/src/monthly-assembly.ts'
+          '--test-coverage-include=apps/lythaus-jobs/src/monthly-assembly.ts'
+          --test-coverage-lines=80 --test-coverage-branches=80
+          --test apps/lythaus-jobs/tests/monthly-assembly.postgres.mjs
+      - name: Validate separately gated fixed monthly snapshots and corrections
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: >-
+          node --experimental-strip-types --experimental-test-module-mocks
+          --experimental-test-coverage
+          '--test-coverage-include=packages/db/src/monthly-reward-snapshots.ts'
+          '--test-coverage-include=apps/lythaus-jobs/src/monthly-reward-snapshots.ts'
+          --test-coverage-lines=80 --test-coverage-branches=80
+          --test apps/lythaus-jobs/tests/monthly-reward-snapshots.postgres.mjs
+      - name: Validate reward selections, partner links and claims
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: >-
+          node --experimental-strip-types --experimental-test-module-mocks
+          --experimental-test-coverage
+          '--test-coverage-include=packages/db/src/monthly-reward-selections.ts'
+          '--test-coverage-include=packages/db/src/monthly-reward-partner-links.ts'
+          '--test-coverage-include=packages/db/src/monthly-reward-claims.ts'
+          '--test-coverage-include=packages/db/src/monthly-reputation-report.ts'
+          '--test-coverage-include=apps/lythaus-public-api/src/monthly-reputation-report-export.ts'
+          --test-coverage-lines=80 --test-coverage-branches=80
+          --test apps/lythaus-jobs/tests/monthly-reward-selections.postgres.mjs
       - name: Prove column-only incident audit grants on real PostgreSQL
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
@@ -85,7 +184,7 @@ jobs:
       - name: Prove authentication and email races on real PostgreSQL
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
-        run: node --experimental-strip-types --experimental-test-module-mocks --test apps/lythaus-public-api/tests/*.postgres.mjs apps/lythaus-admin-api/tests/*.postgres.mjs
+        run: node --experimental-strip-types --experimental-test-module-mocks --test --test-concurrency=1 apps/lythaus-public-api/tests/*.postgres.mjs apps/lythaus-admin-api/tests/*.postgres.mjs
       - name: Enforce executable coordinator coverage on real PostgreSQL
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable

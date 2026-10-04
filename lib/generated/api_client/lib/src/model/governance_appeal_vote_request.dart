@@ -4,8 +4,11 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:lythaus_api_client/src/model/community_ballot_request.dart';
+import 'package:lythaus_api_client/src/model/legacy_appeal_vote_request.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
+import 'package:one_of/one_of.dart';
 
 part 'governance_appeal_vote_request.g.dart';
 
@@ -13,11 +16,14 @@ part 'governance_appeal_vote_request.g.dart';
 ///
 /// Properties:
 /// * [decision]
+/// * [choice]
+/// * [reasonCode]
+/// * [expectedRevision]
+/// * [contextAcknowledged]
 @BuiltValue()
 abstract class GovernanceAppealVoteRequest implements Built<GovernanceAppealVoteRequest, GovernanceAppealVoteRequestBuilder> {
-  @BuiltValueField(wireName: r'decision')
-  GovernanceAppealVoteRequestDecisionEnum get decision;
-  // enum decisionEnum {  overturn,  uphold,  };
+  /// One Of [CommunityBallotRequest], [LegacyAppealVoteRequest]
+  OneOf get oneOf;
 
   GovernanceAppealVoteRequest._();
 
@@ -42,11 +48,6 @@ class _$GovernanceAppealVoteRequestSerializer implements PrimitiveSerializer<Gov
     GovernanceAppealVoteRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'decision';
-    yield serializers.serialize(
-      object.decision,
-      specifiedType: const FullType(GovernanceAppealVoteRequestDecisionEnum),
-    );
   }
 
   @override
@@ -55,34 +56,8 @@ class _$GovernanceAppealVoteRequestSerializer implements PrimitiveSerializer<Gov
     GovernanceAppealVoteRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
-
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required GovernanceAppealVoteRequestBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'decision':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(GovernanceAppealVoteRequestDecisionEnum),
-          ) as GovernanceAppealVoteRequestDecisionEnum;
-          result.decision = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
+    final oneOf = object.oneOf;
+    return serializers.serialize(oneOf.value, specifiedType: FullType(oneOf.valueType))!;
   }
 
   @override
@@ -92,16 +67,10 @@ class _$GovernanceAppealVoteRequestSerializer implements PrimitiveSerializer<Gov
     FullType specifiedType = FullType.unspecified,
   }) {
     final result = GovernanceAppealVoteRequestBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
+    Object? oneOfDataSrc;
+    final targetType = const FullType(OneOf, [FullType(LegacyAppealVoteRequest), FullType(CommunityBallotRequest), ]);
+    oneOfDataSrc = serialized;
+    result.oneOf = serializers.deserialize(oneOfDataSrc, specifiedType: targetType) as OneOf;
     return result.build();
   }
 }
@@ -119,4 +88,42 @@ class GovernanceAppealVoteRequestDecisionEnum extends EnumClass {
 
   static BuiltSet<GovernanceAppealVoteRequestDecisionEnum> get values => _$governanceAppealVoteRequestDecisionEnumValues;
   static GovernanceAppealVoteRequestDecisionEnum valueOf(String name) => _$governanceAppealVoteRequestDecisionEnumValueOf(name);
+}
+
+class GovernanceAppealVoteRequestChoiceEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'allow')
+  static const GovernanceAppealVoteRequestChoiceEnum allow = _$governanceAppealVoteRequestChoiceEnum_allow;
+  @BuiltValueEnumConst(wireName: r'retain')
+  static const GovernanceAppealVoteRequestChoiceEnum retain = _$governanceAppealVoteRequestChoiceEnum_retain;
+  @BuiltValueEnumConst(wireName: r'recuse')
+  static const GovernanceAppealVoteRequestChoiceEnum recuse = _$governanceAppealVoteRequestChoiceEnum_recuse;
+  @BuiltValueEnumConst(wireName: r'cannot_assess')
+  static const GovernanceAppealVoteRequestChoiceEnum cannotAssess = _$governanceAppealVoteRequestChoiceEnum_cannotAssess;
+
+  static Serializer<GovernanceAppealVoteRequestChoiceEnum> get serializer => _$governanceAppealVoteRequestChoiceEnumSerializer;
+
+  const GovernanceAppealVoteRequestChoiceEnum._(String name): super(name);
+
+  static BuiltSet<GovernanceAppealVoteRequestChoiceEnum> get values => _$governanceAppealVoteRequestChoiceEnumValues;
+  static GovernanceAppealVoteRequestChoiceEnum valueOf(String name) => _$governanceAppealVoteRequestChoiceEnumValueOf(name);
+}
+
+class GovernanceAppealVoteRequestReasonCodeEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'rule_misapplied')
+  static const GovernanceAppealVoteRequestReasonCodeEnum ruleMisapplied = _$governanceAppealVoteRequestReasonCodeEnum_ruleMisapplied;
+  @BuiltValueEnumConst(wireName: r'rule_applies')
+  static const GovernanceAppealVoteRequestReasonCodeEnum ruleApplies = _$governanceAppealVoteRequestReasonCodeEnum_ruleApplies;
+  @BuiltValueEnumConst(wireName: r'conflict')
+  static const GovernanceAppealVoteRequestReasonCodeEnum conflict = _$governanceAppealVoteRequestReasonCodeEnum_conflict;
+  @BuiltValueEnumConst(wireName: r'insufficient_context')
+  static const GovernanceAppealVoteRequestReasonCodeEnum insufficientContext = _$governanceAppealVoteRequestReasonCodeEnum_insufficientContext;
+
+  static Serializer<GovernanceAppealVoteRequestReasonCodeEnum> get serializer => _$governanceAppealVoteRequestReasonCodeEnumSerializer;
+
+  const GovernanceAppealVoteRequestReasonCodeEnum._(String name): super(name);
+
+  static BuiltSet<GovernanceAppealVoteRequestReasonCodeEnum> get values => _$governanceAppealVoteRequestReasonCodeEnumValues;
+  static GovernanceAppealVoteRequestReasonCodeEnum valueOf(String name) => _$governanceAppealVoteRequestReasonCodeEnumValueOf(name);
 }

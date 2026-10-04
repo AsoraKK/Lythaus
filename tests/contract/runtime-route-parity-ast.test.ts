@@ -263,6 +263,23 @@ function routeKey(route: Pick<RuntimeRoute, 'method' | 'path'>): string {
 }
 
 describe('source-derived OpenAPI route parity', () => {
+  test('contextual review contract documents runtime authorization and request limits', () => {
+    const path = contract.paths['/admin/reputation/comments/{commentId}/context-review'];
+    const operation = path.post;
+    const requestSchema = contract.components.schemas.MonthlyContextReviewRequest;
+
+    expect(operation.description).toContain('active owner, administrator, or moderator membership');
+    expect(operation.responses['429'].description).toContain('120 requests per minute');
+    expect(operation.responses['429'].content['application/json'].schema.$ref)
+      .toBe('#/components/schemas/MonthlyContextReviewError');
+    expect(requestSchema.properties.idempotencyKey).toMatchObject({
+      format: 'uuid',
+      pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+    });
+    expect(requestSchema.properties.evidenceReference.description)
+      .toContain('the API does not validate its target or sensitivity');
+  });
+
   test('extractor fixtures cover nested guards, captures, and alternation', () => {
     const fixture = `
       export default {
@@ -311,13 +328,15 @@ describe('source-derived OpenAPI route parity', () => {
       public: publicExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
       admin: adminExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
     };
-    expect(routeCounts).toEqual({ public: 109, admin: 46 });
+    expect(routeCounts).toEqual({ public: 114, admin: 50 });
     expect(runtimeRoutes.map(routeKey)).toEqual(expect.arrayContaining([
       'GET /.well-known/jwks.json',
       'GET /posts/{param}/owner-view',
       'GET /comments/{param}/owner-view',
       'POST /auth/password/reset/request',
       'POST /appeals/{param}/vote',
+      'GET /appeals/review/queue',
+      'POST /appeals/{param}/withdraw',
       'GET /feed/news',
       'POST /waitlist',
       'DELETE /posts/{param}',
@@ -330,6 +349,10 @@ describe('source-derived OpenAPI route parity', () => {
       'POST /admin/waitlist/{param}/status',
       'POST /admin/waitlist/{param}/retention-hold',
       'POST /admin/appeals/{param}/adjudications',
+      'GET /admin/appeals/community/queue',
+      'GET /admin/appeals/{param}/evidence',
+      'POST /admin/appeals/{param}/triage',
+      'POST /admin/reputation/comments/{param}/context-review',
       'PUT /admin/reviewers/{param}/qualification',
     ]));
     const crossWorkerDuplicates = Array.from(new Set(runtimeRoutes.map(routeKey)))

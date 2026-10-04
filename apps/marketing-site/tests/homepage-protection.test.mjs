@@ -88,6 +88,27 @@ const reviewedSpectralRemovedPackages = [
   'micromatch', 'queue-microtask', 'reusify', 'run-parallel', 'to-regex-range',
 ];
 const reviewedSpectralAdapter = 'file:tools/openapi/spectral-glob';
+const reviewedOpenApiDartScripts = {
+  'openapi:gen:dart': {
+    baseline: [
+      'node scripts/clean-openapi-dart-generated.mjs',
+      'openapi-generator-cli generate -g dart-dio -i api/openapi/dist/openapi.json -o lib/generated/api_client --additional-properties=pubName=lythaus_api_client,nullableFields=true,hideGenerationTimestamp=true',
+      'node scripts/remove-openapi-oauth-support.mjs lib/generated/api_client',
+      'node scripts/trim-trailing-whitespace.js lib/generated/api_client',
+    ].join(' && '),
+    reviewed: [
+      'node scripts/clean-openapi-dart-generated.mjs',
+      'openapi-generator-cli generate -g dart-dio -i api/openapi/dist/openapi.json -o lib/generated/api_client --additional-properties=pubName=lythaus_api_client,nullableFields=true,hideGenerationTimestamp=true',
+      'node scripts/fix-openapi-dart-nested-builder-assignment.mjs lib/generated/api_client',
+      'node scripts/remove-openapi-oauth-support.mjs lib/generated/api_client',
+      'node scripts/trim-trailing-whitespace.js lib/generated/api_client',
+    ].join(' && '),
+  },
+  'openapi:test:dart': {
+    baseline: 'node scripts/validate-openapi-dart-client.mjs',
+    reviewed: 'node --test scripts/tests/openapi-dart-nested-builder-assignment.test.mjs && node scripts/validate-openapi-dart-client.mjs',
+  },
+};
 function assertSpectralAdapterReference(dependencies) {
   assert.equal(dependencies['fast-glob'], reviewedSpectralAdapter, 'Spectral must use the exact reviewed local adapter');
 }
@@ -322,6 +343,11 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
     const after = JSON.parse(readFileSync(path.join(root, file), 'utf8'));
     after.scripts[script] = after.scripts[script].replace(' --experimental-strip-types', '');
     if (file === 'package.json') {
+      for (const [name, scripts] of Object.entries(reviewedOpenApiDartScripts)) {
+        assert.equal(before.scripts[name], scripts.baseline, `${name} baseline must stay pinned`);
+        assert.equal(after.scripts[name], scripts.reviewed, `${name} must match the exact PR896 normalization script`);
+        before.scripts[name] = scripts.reviewed;
+      }
       assert.equal(after.overrides['brace-expansion'], '5.0.12');
       assert.equal(after.overrides.undici, '7.29.1');
       assert.equal(after.overrides.miniflare.undici, '7.29.1');

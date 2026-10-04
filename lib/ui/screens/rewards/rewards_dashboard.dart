@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import 'package:lythaus/features/rewards/application/reward_providers.dart';
 import 'package:lythaus/features/rewards/domain/reward_models.dart';
+import 'package:lythaus/ui/screens/rewards/monthly_reputation_widgets.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 
 class RewardsDashboardScreen extends ConsumerStatefulWidget {
@@ -114,6 +115,10 @@ class _RewardsDashboardScreenState
                   ),
                 ),
                 const SizedBox(height: Spacing.lg),
+                const MonthlyReputationTrackerCard(),
+                const SizedBox(height: Spacing.sm),
+                const MonthlyReputationReportCard(),
+                const SizedBox(height: Spacing.lg),
                 Text(
                   'Available rewards',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -150,22 +155,6 @@ class _RewardsDashboardScreenState
                       ),
                     ),
                   ),
-                const SizedBox(height: Spacing.lg),
-                const SizedBox(height: Spacing.lg),
-                Text(
-                  'Contribution periods',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: Spacing.sm),
-                const Text('Recurring reward actions are unavailable.'),
-                for (final period in ['Weekly', 'Monthly', 'Quarterly'])
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.event_note_outlined),
-                    title: Text(period),
-                    subtitle: const Text('Actions unavailable'),
-                  ),
-
                 if (snapshot.affiliateDisclosure.isNotEmpty)
                   Text(
                     snapshot.affiliateDisclosure,

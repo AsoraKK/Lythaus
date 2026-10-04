@@ -7,7 +7,7 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(AppealDetailResponse, () {
-    // AppealDetail appeal
+    // AppealDetailResponseAppeal appeal
     test('to test the property `appeal`', () async {
       // TODO
     });
