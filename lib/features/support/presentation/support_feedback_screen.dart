@@ -126,8 +126,9 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
               onSelectionChanged: _loading || _busy
                   ? null
                   : (selection) {
-                      if (selection.isEmpty || selection.single == _kind)
+                      if (selection.isEmpty || selection.single == _kind) {
                         return;
+                      }
                       _epoch += 1;
                       ref.read(supportFeedbackClientProvider).cancelPending();
                       setState(() {
@@ -157,7 +158,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
             if (_options != null) ...<Widget>[
               DropdownButtonFormField<String>(
                 key: ValueKey<String>('category-$_kind'),
-                value: selectedCategory,
+                initialValue: selectedCategory,
                 decoration: const InputDecoration(labelText: 'Category'),
                 items: categories
                     .map(
