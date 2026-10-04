@@ -48,6 +48,10 @@ tags:
     description: Moderation workflows.
   - name: Admin
     description: Lythaus admin moderation and safety operations.
+  - name: SupportFeedback
+    description: Private problem reports and suggestions submitted by authenticated members.
+  - name: AdminSupportFeedback
+    description: Owner-only private support triage, replies, evidence and closure.
   - name: Privacy
     description: User data portability and account deletion (GDPR/CCPA).
   - name: Privacy Admin
@@ -1353,6 +1357,46 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1admin~1auth~1summary'
   /admin/overview:
     $ref: './overview.yaml#/paths/~1admin~1overview'
+  /support/options:
+    $ref: './support-feedback.yaml#/paths/~1support~1options'
+  /support/problems:
+    $ref: './support-feedback.yaml#/paths/~1support~1problems'
+  /support/problems/{requestId}:
+    $ref: './support-feedback.yaml#/paths/~1support~1problems~1{requestId}'
+  /support/problems/{requestId}/messages:
+    $ref: './support-feedback.yaml#/paths/~1support~1problems~1{requestId}~1messages'
+  /support/suggestions:
+    $ref: './support-feedback.yaml#/paths/~1support~1suggestions'
+  /support/suggestions/{requestId}:
+    $ref: './support-feedback.yaml#/paths/~1support~1suggestions~1{requestId}'
+  /support/suggestions/{requestId}/messages:
+    $ref: './support-feedback.yaml#/paths/~1support~1suggestions~1{requestId}~1messages'
+  /admin/support/options:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1options'
+  /admin/support/problems:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1problems'
+  /admin/support/problems/{requestId}:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1problems~1{requestId}'
+  /admin/support/problems/{requestId}/messages:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1problems~1{requestId}~1messages'
+  /admin/support/problems/{requestId}/notes:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1problems~1{requestId}~1notes'
+  /admin/support/problems/{requestId}/evidence:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1problems~1{requestId}~1evidence'
+  /admin/support/problems/{requestId}/decision:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1problems~1{requestId}~1decision'
+  /admin/support/suggestions:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1suggestions'
+  /admin/support/suggestions/{requestId}:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1suggestions~1{requestId}'
+  /admin/support/suggestions/{requestId}/messages:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1suggestions~1{requestId}~1messages'
+  /admin/support/suggestions/{requestId}/notes:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1suggestions~1{requestId}~1notes'
+  /admin/support/suggestions/{requestId}/evidence:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1suggestions~1{requestId}~1evidence'
+  /admin/support/suggestions/{requestId}/decision:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1suggestions~1{requestId}~1decision'
   /admin/email-health:
     $ref: './product-integrity.yaml#/paths/~1admin~1email-health'
   /admin/account-support/access:

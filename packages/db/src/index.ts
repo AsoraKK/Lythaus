@@ -11,6 +11,18 @@ export interface DatabaseEnv {
 }
 
 export { enqueueTransactionalEmailIntent, lockAuthDelivery, type TransactionalEmailOutboxInput, type TransactionalEmailPurpose } from './transactional-email.ts';
+export { supportFeedbackSchemaReady, createSupportFeedbackRuntime } from './support-feedback-runtime.ts';
+export { supportFeedbackPrivacySchemaReady } from './support-feedback-privacy-runtime.ts';
+export { supportAuthentication, type SupportAuthentication } from './support-feedback-auth.ts';
+export { handleSupportFeedbackRequest, isSupportFeedbackPath } from './support-feedback-http.ts';
+export {
+  exportSupportForPrivacy,
+  exportSupportMessagesForPrivacy,
+  purgeSupportForPrivacy,
+  retainSupportBatch,
+  loadSupportNotificationCandidate,
+} from './support-feedback-privacy.ts';
+export { parseSupportServicePolicy, type SupportServicePolicy } from './support-feedback-policy.ts';
 
 export async function query<T extends QueryResultRow = QueryResultRow>(
   binding: HyperdriveBinding,

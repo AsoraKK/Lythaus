@@ -10,13 +10,16 @@ const MEMBER_ACCESS_SQL = `
   SELECT
     to_regclass('support.requests') IS NOT NULL AS requests,
     to_regclass('support.messages') IS NOT NULL AS messages,
+    to_regclass('support.operation_refs') IS NOT NULL AS operation_refs,
     CASE WHEN to_regclass('support.requests') IS NULL THEN false ELSE
       has_table_privilege(current_user,to_regclass('support.requests'),'SELECT')
       AND has_table_privilege(current_user,to_regclass('support.requests'),'INSERT')
       AND has_table_privilege(current_user,to_regclass('support.requests'),'UPDATE') END AS request_access,
     CASE WHEN to_regclass('support.messages') IS NULL THEN false ELSE
       has_table_privilege(current_user,to_regclass('support.messages'),'SELECT')
-      AND has_table_privilege(current_user,to_regclass('support.messages'),'INSERT') END AS message_access`;
+      AND has_table_privilege(current_user,to_regclass('support.messages'),'INSERT') END AS message_access,
+    CASE WHEN to_regclass('support.operation_refs') IS NULL THEN false ELSE
+      has_table_privilege(current_user,to_regclass('support.operation_refs'),'INSERT') END AS operation_ref_access`;
 
 const OWNER_ACCESS_SQL = `
   SELECT

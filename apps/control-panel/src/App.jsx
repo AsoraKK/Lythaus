@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Nav from './components/Nav.jsx';
 import Audit from './pages/Audit.jsx';
@@ -9,9 +10,11 @@ import AccountSupport from './pages/AccountSupport.jsx';
 import Waitlist from './pages/Waitlist.jsx';
 import Accounts from './pages/Accounts.jsx';
 import ProductionAuthAcceptance from './pages/ProductionAuthAcceptance.jsx';
-import SupportFeedback from './pages/SupportFeedback.jsx';
 import AdminAccessGate from './components/AdminAccessGate.jsx';
 import AuthenticityBeta from './pages/AuthenticityBeta.jsx';
+import { supportFeedbackEnabled } from './support-feedback-config.js';
+
+const SupportFeedback = lazy(() => import('./pages/SupportFeedback.jsx'));
 
 const NotFound = () => (
   <section className="page">
@@ -41,7 +44,7 @@ export function ControlPanelRoutes() {
     <Route path="/users" element={<AccountAlias to="/accounts/management" />} />
     <Route path="/account-support" element={<AccountAlias to="/accounts" />} />
     <Route path="/waitlist" element={<Waitlist />} />
-    <Route path="/support" element={<SupportFeedback />} />
+    {supportFeedbackEnabled() && <Route path="/support" element={<Suspense fallback={null}><SupportFeedback /></Suspense>} />}
     <Route path="/moderation" element={<Flags />} />
     <Route path="/authenticity" element={<AuthenticityBeta />} />
     <Route path="/audit" element={<Audit />} />

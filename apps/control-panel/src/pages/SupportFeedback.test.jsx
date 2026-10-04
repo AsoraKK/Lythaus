@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { ControlPanelRoutes } from '../App.jsx';
 import Nav from '../components/Nav.jsx';
@@ -46,7 +46,11 @@ function renderRoutes(path = '/support') {
 }
 
 describe('Support feedback control-panel route', () => {
-  beforeEach(() => adminRequest.mockReset());
+  beforeEach(() => {
+    vi.stubEnv('VITE_SUPPORT_FEEDBACK_ENABLED', 'true');
+    adminRequest.mockReset();
+  });
+  afterEach(() => vi.unstubAllEnvs());
 
   it('opens the owner queues from navigation and keeps problem and suggestion histories separate', async () => {
     adminRequest.mockImplementation((path) => {

@@ -1,0 +1,454 @@
+paths:
+  /support/options:
+    servers: [{ url: https://api.lythaus.co/api }]
+    get:
+      operationId: supportFeedbackOptions
+      summary: Read support form policy
+      description: Authenticated member support options. The feature is default-off; a disabled feature returns 404. All responses are private and no-store.
+      tags: [SupportFeedback]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Member support categories and bounded limits, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportOptions' } } } }
+        '401': { $ref: '#/components/responses/SupportUnauthorized' }
+        '404': { $ref: '#/components/responses/SupportDisabledOrMissing' }
+        '429': { $ref: '#/components/responses/SupportRateLimited' }
+        '503': { $ref: '#/components/responses/SupportUnavailable' }
+  /support/problems:
+    servers: [{ url: https://api.lythaus.co/api }]
+    get:
+      operationId: supportProblemList
+      summary: List the member's private problem reports
+      tags: [SupportFeedback]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/Limit' }, { $ref: '#/components/parameters/Cursor' }]
+      responses:
+        '200': { description: Private problem report history, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberRequestPage' } } } }
+        '400': { $ref: '#/components/responses/SupportBadRequest' }
+        '401': { $ref: '#/components/responses/SupportUnauthorized' }
+        '404': { $ref: '#/components/responses/SupportDisabledOrMissing' }
+        '429': { $ref: '#/components/responses/SupportRateLimited' }
+        '503': { $ref: '#/components/responses/SupportUnavailable' }
+    post:
+      operationId: supportProblemSubmit
+      summary: Submit a private problem report
+      description: Requires an Idempotency-Key. Evidence is not uploaded; only bounded request text is accepted. The report is visible to its submitter and authorized Lythaus owners.
+      tags: [SupportFeedback]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ProblemSubmission' } } } }
+      responses:
+        '201': { description: Report created, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberMutationResult' } } } }
+        '200': { description: Matching idempotent replay, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberMutationResult' } } } }
+        '400': { $ref: '#/components/responses/SupportBadRequest' }
+        '401': { $ref: '#/components/responses/SupportUnauthorized' }
+        '404': { $ref: '#/components/responses/SupportDisabledOrMissing' }
+        '409': { $ref: '#/components/responses/SupportConflict' }
+        '413': { $ref: '#/components/responses/SupportTooLarge' }
+        '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }
+        '429': { $ref: '#/components/responses/SupportRateLimited' }
+        '503': { $ref: '#/components/responses/SupportUnavailable' }
+  /support/problems/{requestId}:
+    servers: [{ url: https://api.lythaus.co/api }]
+    get:
+      operationId: supportProblemDetail
+      summary: Read a private problem report and public messages
+      tags: [SupportFeedback]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/MessageBefore' }]
+      responses:
+        '200': { description: Request and public conversation visible only to its submitter, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberDetail' } } } }
+        '400': { $ref: '#/components/responses/SupportBadRequest' }
+        '401': { $ref: '#/components/responses/SupportUnauthorized' }
+        '404': { $ref: '#/components/responses/SupportNotFound' }
+        '429': { $ref: '#/components/responses/SupportRateLimited' }
+        '503': { $ref: '#/components/responses/SupportUnavailable' }
+  /support/problems/{requestId}/messages:
+    servers: [{ url: https://api.lythaus.co/api }]
+    post:
+      operationId: supportProblemReply
+      summary: Reply to a private problem report
+      tags: [SupportFeedback]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ReplyRequest' } } } }
+      responses:
+        '201': { description: Reply recorded, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberMutationResult' } } } }
+        '200': { description: Matching idempotent replay, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberMutationResult' } } } }
+        '400': { $ref: '#/components/responses/SupportBadRequest' }
+        '401': { $ref: '#/components/responses/SupportUnauthorized' }
+        '404': { $ref: '#/components/responses/SupportNotFound' }
+        '409': { $ref: '#/components/responses/SupportConflict' }
+        '413': { $ref: '#/components/responses/SupportTooLarge' }
+        '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }
+        '429': { $ref: '#/components/responses/SupportRateLimited' }
+        '503': { $ref: '#/components/responses/SupportUnavailable' }
+  /support/suggestions:
+    servers: [{ url: https://api.lythaus.co/api }]
+    get:
+      operationId: supportSuggestionList
+      summary: List the member's private suggestions
+      tags: [SupportFeedback]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/Limit' }, { $ref: '#/components/parameters/Cursor' }]
+      responses:
+        '200': { description: Private suggestion history, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberRequestPage' } } } }
+        '400': { $ref: '#/components/responses/SupportBadRequest' }
+        '401': { $ref: '#/components/responses/SupportUnauthorized' }
+        '404': { $ref: '#/components/responses/SupportDisabledOrMissing' }
+        '429': { $ref: '#/components/responses/SupportRateLimited' }
+        '503': { $ref: '#/components/responses/SupportUnavailable' }
+    post:
+      operationId: supportSuggestionSubmit
+      summary: Submit a private suggestion
+      description: Requires an Idempotency-Key. The suggestion is visible to its submitter and authorized Lythaus owners.
+      tags: [SupportFeedback]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SuggestionSubmission' } } } }
+      responses:
+        '201': { description: Suggestion created, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberMutationResult' } } } }
+        '200': { description: Matching idempotent replay, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberMutationResult' } } } }
+        '400': { $ref: '#/components/responses/SupportBadRequest' }
+        '401': { $ref: '#/components/responses/SupportUnauthorized' }
+        '404': { $ref: '#/components/responses/SupportDisabledOrMissing' }
+        '409': { $ref: '#/components/responses/SupportConflict' }
+        '413': { $ref: '#/components/responses/SupportTooLarge' }
+        '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }
+        '429': { $ref: '#/components/responses/SupportRateLimited' }
+        '503': { $ref: '#/components/responses/SupportUnavailable' }
+  /support/suggestions/{requestId}:
+    servers: [{ url: https://api.lythaus.co/api }]
+    get:
+      operationId: supportSuggestionDetail
+      summary: Read a private suggestion and public messages
+      tags: [SupportFeedback]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/MessageBefore' }]
+      responses:
+        '200': { description: Request and public conversation visible only to its submitter, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberDetail' } } } }
+        '400': { $ref: '#/components/responses/SupportBadRequest' }
+        '401': { $ref: '#/components/responses/SupportUnauthorized' }
+        '404': { $ref: '#/components/responses/SupportNotFound' }
+        '429': { $ref: '#/components/responses/SupportRateLimited' }
+        '503': { $ref: '#/components/responses/SupportUnavailable' }
+  /support/suggestions/{requestId}/messages:
+    servers: [{ url: https://api.lythaus.co/api }]
+    post:
+      operationId: supportSuggestionReply
+      summary: Reply to a private suggestion
+      tags: [SupportFeedback]
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ReplyRequest' } } } }
+      responses:
+        '201': { description: Reply recorded, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberMutationResult' } } } }
+        '200': { description: Matching idempotent replay, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/MemberMutationResult' } } } }
+        '400': { $ref: '#/components/responses/SupportBadRequest' }
+        '401': { $ref: '#/components/responses/SupportUnauthorized' }
+        '404': { $ref: '#/components/responses/SupportNotFound' }
+        '409': { $ref: '#/components/responses/SupportConflict' }
+        '413': { $ref: '#/components/responses/SupportTooLarge' }
+        '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }
+        '429': { $ref: '#/components/responses/SupportRateLimited' }
+        '503': { $ref: '#/components/responses/SupportUnavailable' }
+  /admin/support/options:
+    servers: [{ url: https://admin-api.lythaus.co/api }]
+    get:
+      operationId: adminSupportFeedbackOptions
+      summary: Read owner support workflow policy
+      tags: [AdminSupportFeedback]
+      security: [{ cloudflareAccess: [] }]
+      responses:
+        '200': { description: Owner workflow policy, headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportOptions' } } } }
+        '401': { $ref: '#/components/responses/SupportUnauthorized' }
+        '403': { $ref: '#/components/responses/SupportForbidden' }
+        '404': { $ref: '#/components/responses/SupportDisabledOrMissing' }
+        '429': { $ref: '#/components/responses/SupportRateLimited' }
+        '503': { $ref: '#/components/responses/SupportUnavailable' }
+  /admin/support/problems:
+    servers: [{ url: https://admin-api.lythaus.co/api }]
+    get:
+      operationId: adminSupportProblemQueue
+      summary: Queue private problem reports for owners
+      tags: [AdminSupportFeedback]
+      security: [{ cloudflareAccess: [] }]
+      parameters: [{ $ref: '#/components/parameters/Limit' }, { $ref: '#/components/parameters/Cursor' }]
+      responses:
+        '200': { description: Owner queue. Contains private request text and submitter IDs; owner access is audited., headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerRequestPage' } } } }
+        '400': { $ref: '#/components/responses/SupportBadRequest' }
+        '401': { $ref: '#/components/responses/SupportUnauthorized' }
+        '403': { $ref: '#/components/responses/SupportForbidden' }
+        '404': { $ref: '#/components/responses/SupportDisabledOrMissing' }
+        '429': { $ref: '#/components/responses/SupportRateLimited' }
+        '503': { $ref: '#/components/responses/SupportUnavailable' }
+  /admin/support/problems/{requestId}:
+    servers: [{ url: https://admin-api.lythaus.co/api }]
+    get:
+      operationId: adminSupportProblemDetail
+      summary: Read owner problem report details and private triage records
+      tags: [AdminSupportFeedback]
+      security: [{ cloudflareAccess: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/OwnerMessageBefore' }, { $ref: '#/components/parameters/NoteBefore' }, { $ref: '#/components/parameters/EvidenceBefore' }, { $ref: '#/components/parameters/DecisionBefore' }]
+      responses:
+        '200': { description: 'Private request, public thread and owner-only notes, evidence and decisions.', headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerDetail' } } } }
+        '400': { $ref: '#/components/responses/SupportBadRequest' }
+        '401': { $ref: '#/components/responses/SupportUnauthorized' }
+        '403': { $ref: '#/components/responses/SupportForbidden' }
+        '404': { $ref: '#/components/responses/SupportNotFound' }
+        '429': { $ref: '#/components/responses/SupportRateLimited' }
+        '503': { $ref: '#/components/responses/SupportUnavailable' }
+  /admin/support/problems/{requestId}/messages:
+    servers: [{ url: https://admin-api.lythaus.co/api }]
+    post:
+      operationId: adminSupportProblemReply
+      summary: Send a public owner reply
+      tags: [AdminSupportFeedback]
+      security: [{ cloudflareAccess: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ReplyRequest' } } } }
+      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFound' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
+  /admin/support/problems/{requestId}/notes:
+    servers: [{ url: https://admin-api.lythaus.co/api }]
+    post:
+      operationId: adminSupportProblemNote
+      summary: Add a private owner note
+      tags: [AdminSupportFeedback]
+      security: [{ cloudflareAccess: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerNoteRequest' } } } }
+      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFound' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
+  /admin/support/problems/{requestId}/evidence:
+    servers: [{ url: https://admin-api.lythaus.co/api }]
+    post:
+      operationId: adminSupportProblemEvidence
+      summary: Attach owner evidence to a problem report
+      description: Evidence is a bounded description and optional reference string, not an uploaded file. Evidence IDs are scoped to this request and decisions can cite only evidence attached to it.
+      tags: [AdminSupportFeedback]
+      security: [{ cloudflareAccess: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerEvidenceRequest' } } } }
+      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFound' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
+  /admin/support/problems/{requestId}/decision:
+    servers: [{ url: https://admin-api.lythaus.co/api }]
+    post:
+      operationId: adminSupportProblemDecision
+      summary: Change problem report state and send its public response
+      description: Allowed transitions, terminal states, reason codes, and required evidence types are validated by the server policy. Closure requires same-request evidence where the policy requires it.
+      tags: [AdminSupportFeedback]
+      security: [{ cloudflareAccess: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerDecisionRequest' } } } }
+      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFound' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '422': { $ref: '#/components/responses/SupportUnprocessable' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
+  /admin/support/suggestions:
+    servers: [{ url: https://admin-api.lythaus.co/api }]
+    get:
+      operationId: adminSupportSuggestionQueue
+      summary: Queue private suggestions for owners
+      tags: [AdminSupportFeedback]
+      security: [{ cloudflareAccess: [] }]
+      parameters: [{ $ref: '#/components/parameters/Limit' }, { $ref: '#/components/parameters/Cursor' }]
+      responses:
+        '200': { description: Owner queue. Contains private suggestion text and submitter IDs; owner access is audited., headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerRequestPage' } } } }
+        '400': { $ref: '#/components/responses/SupportBadRequest' }
+        '401': { $ref: '#/components/responses/SupportUnauthorized' }
+        '403': { $ref: '#/components/responses/SupportForbidden' }
+        '404': { $ref: '#/components/responses/SupportDisabledOrMissing' }
+        '429': { $ref: '#/components/responses/SupportRateLimited' }
+        '503': { $ref: '#/components/responses/SupportUnavailable' }
+  /admin/support/suggestions/{requestId}:
+    servers: [{ url: https://admin-api.lythaus.co/api }]
+    get:
+      operationId: adminSupportSuggestionDetail
+      summary: Read owner suggestion details and private triage records
+      tags: [AdminSupportFeedback]
+      security: [{ cloudflareAccess: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/OwnerMessageBefore' }, { $ref: '#/components/parameters/NoteBefore' }, { $ref: '#/components/parameters/EvidenceBefore' }, { $ref: '#/components/parameters/DecisionBefore' }]
+      responses:
+        '200': { description: 'Private request, public thread and owner-only notes, evidence and decisions.', headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerDetail' } } } }
+        '400': { $ref: '#/components/responses/SupportBadRequest' }
+        '401': { $ref: '#/components/responses/SupportUnauthorized' }
+        '403': { $ref: '#/components/responses/SupportForbidden' }
+        '404': { $ref: '#/components/responses/SupportNotFound' }
+        '429': { $ref: '#/components/responses/SupportRateLimited' }
+        '503': { $ref: '#/components/responses/SupportUnavailable' }
+  /admin/support/suggestions/{requestId}/messages:
+    servers: [{ url: https://admin-api.lythaus.co/api }]
+    post:
+      operationId: adminSupportSuggestionReply
+      summary: Send a public owner reply
+      tags: [AdminSupportFeedback]
+      security: [{ cloudflareAccess: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ReplyRequest' } } } }
+      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFound' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
+  /admin/support/suggestions/{requestId}/notes:
+    servers: [{ url: https://admin-api.lythaus.co/api }]
+    post:
+      operationId: adminSupportSuggestionNote
+      summary: Add a private owner note
+      tags: [AdminSupportFeedback]
+      security: [{ cloudflareAccess: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerNoteRequest' } } } }
+      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFound' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
+  /admin/support/suggestions/{requestId}/evidence:
+    servers: [{ url: https://admin-api.lythaus.co/api }]
+    post:
+      operationId: adminSupportSuggestionEvidence
+      summary: Attach owner evidence to a suggestion
+      description: Evidence is a bounded description and optional reference string, not an uploaded file. Evidence IDs are scoped to this request and decisions can cite only evidence attached to it.
+      tags: [AdminSupportFeedback]
+      security: [{ cloudflareAccess: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerEvidenceRequest' } } } }
+      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFound' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
+  /admin/support/suggestions/{requestId}/decision:
+    servers: [{ url: https://admin-api.lythaus.co/api }]
+    post:
+      operationId: adminSupportSuggestionDecision
+      summary: Change suggestion state and send its public response
+      description: Allowed transitions, terminal states, reason codes, and required evidence types are validated by the server policy. Closure requires same-request evidence where the policy requires it.
+      tags: [AdminSupportFeedback]
+      security: [{ cloudflareAccess: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerDecisionRequest' } } } }
+      responses: { '201': { $ref: '#/components/responses/SupportMutationCreated' }, '200': { $ref: '#/components/responses/SupportMutationReplayed' }, '400': { $ref: '#/components/responses/SupportBadRequest' }, '401': { $ref: '#/components/responses/SupportUnauthorized' }, '403': { $ref: '#/components/responses/SupportForbidden' }, '404': { $ref: '#/components/responses/SupportNotFound' }, '409': { $ref: '#/components/responses/SupportConflict' }, '413': { $ref: '#/components/responses/SupportTooLarge' }, '415': { $ref: '#/components/responses/SupportUnsupportedMedia' }, '422': { $ref: '#/components/responses/SupportUnprocessable' }, '429': { $ref: '#/components/responses/SupportRateLimited' }, '503': { $ref: '#/components/responses/SupportUnavailable' } }
+components:
+  headers:
+    SupportCacheControl: { description: Support content must never be stored in a shared or browser cache., schema: { type: string, enum: ['private, no-store'] } }
+  parameters:
+    RequestId: { name: requestId, in: path, required: true, schema: { type: string, format: uuid } }
+    Limit: { name: limit, in: query, required: true, schema: { type: integer, minimum: 1, maximum: 100 } }
+    Cursor: { name: cursor, in: query, required: false, schema: { type: string, maxLength: 2048 } }
+    MessageBefore: { name: messageBefore, in: query, required: false, schema: { type: integer, minimum: 1 } }
+    OwnerMessageBefore: { name: messageBefore, in: query, required: false, schema: { type: integer, minimum: 1 } }
+    NoteBefore: { name: noteBefore, in: query, required: false, schema: { type: integer, minimum: 1 } }
+    EvidenceBefore: { name: evidenceBefore, in: query, required: false, schema: { type: integer, minimum: 1 } }
+    DecisionBefore: { name: decisionBefore, in: query, required: false, schema: { type: integer, minimum: 1 } }
+    IdempotencyKey: { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9_-]{1,128}$' } }
+  responses:
+    SupportBadRequest: { description: 'Invalid JSON, request field, cursor or query.', headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportError' } } } }
+    SupportUnauthorized: { description: Authenticated member session or valid Cloudflare Access assertion is required., headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportError' } } } }
+    SupportForbidden: { description: Active owner authorization and an allowed Origin on mutations are required., headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportError' } } } }
+    SupportDisabledOrMissing: { description: Support is disabled. An enabled installation without its optional proposal schema returns 503., headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportError' } } } }
+    SupportNotFound: { description: Request does not exist or is not visible to this actor., headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportError' } } } }
+    SupportConflict:
+      description: 'The idempotency key conflicts with existing content, the request revision changed concurrently, or the request is closed.'
+      headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/SupportError' }
+          examples:
+            idempotencyConflict: { value: { error: support_idempotency_conflict } }
+            revisionConflict: { value: { error: support_revision_conflict } }
+            closedRequest: { value: { error: support_closed } }
+    SupportTooLarge: { description: Bounded request body exceeded the limit., headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportError' } } } }
+    SupportUnsupportedMedia: { description: Mutation requires application/json., headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportError' } } } }
+    SupportUnprocessable: { description: Requested state transition or evidence requirements are not valid for the configured policy., headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportError' } } } }
+    SupportRateLimited: { description: The support mutation limit was exceeded., headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportError' } } } }
+    SupportUnavailable: { description: 'Support policy, authentication, database or optional proposal schema is unavailable; no empty-success fallback is returned.', headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SupportError' } } } }
+    SupportMutationCreated: { description: Mutation committed., headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerMutationResult' } } } }
+    SupportMutationReplayed: { description: Matching idempotent replay., headers: { Cache-Control: { $ref: '#/components/headers/SupportCacheControl' } }, content: { application/json: { schema: { $ref: '#/components/schemas/OwnerMutationResult' } } } }
+  schemas:
+    SupportError: { type: object, additionalProperties: false, required: [error], properties: { error: { type: string, minLength: 1, maxLength: 80 } } }
+    SupportFeedbackPolicy:
+      type: object
+      additionalProperties: false
+      required: [limits, categories, states]
+      properties:
+        limits: { type: object, additionalProperties: false, required: [titleBytes, detailBytes, stepsBytes, contextBytes, memberMessageBytes], properties: { titleBytes: { type: integer, minimum: 1 }, detailBytes: { type: integer, minimum: 1 }, stepsBytes: { type: integer, minimum: 1 }, contextBytes: { type: integer, minimum: 1 }, memberMessageBytes: { type: integer, minimum: 1 } } }
+        categories: { type: object, additionalProperties: false, required: [problem, suggestion], properties: { problem: { type: array, minItems: 1, items: { type: string } }, suggestion: { type: array, minItems: 1, items: { type: string } } } }
+        states: { type: object, additionalProperties: false, required: [problem, suggestion], properties: { problem: { type: array, minItems: 1, items: { type: string } }, suggestion: { type: array, minItems: 1, items: { type: string } } } }
+    SupportTransition: { type: object, additionalProperties: false, required: [kind, from, to, terminal, reasons, evidenceTypes], properties: { kind: { type: string, enum: [problem, suggestion] }, from: { type: string }, to: { type: string }, terminal: { type: boolean }, reasons: { type: array, items: { type: string } }, evidenceTypes: { type: array, items: { type: string } } } }
+    SupportOptions: { type: object, additionalProperties: false, required: [version, contract, limits], properties: { version: { type: string }, contract: { $ref: '#/components/schemas/SupportFeedbackPolicy' }, limits: { type: object, additionalProperties: { type: integer, minimum: 1 } }, initial: { type: object, additionalProperties: false, properties: { problem: { type: string }, suggestion: { type: string } } }, transitions: { type: array, items: { $ref: '#/components/schemas/SupportTransition' } }, evidenceTypes: { type: array, items: { type: string } } } }
+    ProblemSubmission: { type: object, additionalProperties: false, required: [kind, category, title, actual, expected], properties: { kind: { type: string, enum: [problem] }, category: { type: string, pattern: '^[a-z][a-z0-9_-]{0,63}$' }, title: { type: string, minLength: 1 }, actual: { type: string, minLength: 1 }, expected: { type: string, minLength: 1 }, reproductionSteps: { type: string }, appVersion: { type: string }, platform: { type: string } } }
+    SuggestionSubmission: { type: object, additionalProperties: false, required: [kind, category, title, improvement, benefit], properties: { kind: { type: string, enum: [suggestion] }, category: { type: string, pattern: '^[a-z][a-z0-9_-]{0,63}$' }, title: { type: string, minLength: 1 }, improvement: { type: string, minLength: 1 }, benefit: { type: string, minLength: 1 } } }
+    MemberSupportRequest: { oneOf: [{ $ref: '#/components/schemas/MemberProblemRequest' }, { $ref: '#/components/schemas/MemberSuggestionRequest' }], discriminator: { propertyName: kind } }
+    MemberProblemRequest:
+      type: object
+      additionalProperties: false
+      required: [kind, category, title, actual, expected, id, revision, state, createdAt, updatedAt, memberMessage]
+      properties:
+        kind: { type: string, enum: [problem] }
+        category: { type: string, pattern: '^[a-z][a-z0-9_-]{0,63}$' }
+        title: { type: string, minLength: 1 }
+        actual: { type: string, minLength: 1 }
+        expected: { type: string, minLength: 1 }
+        reproductionSteps: { type: string }
+        appVersion: { type: string }
+        platform: { type: string }
+        id: { type: string, format: uuid }
+        revision: { type: integer, minimum: 1 }
+        state: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        memberMessage: { type: string, nullable: true }
+    MemberSuggestionRequest:
+      type: object
+      additionalProperties: false
+      required: [kind, category, title, improvement, benefit, id, revision, state, createdAt, updatedAt, memberMessage]
+      properties:
+        kind: { type: string, enum: [suggestion] }
+        category: { type: string, pattern: '^[a-z][a-z0-9_-]{0,63}$' }
+        title: { type: string, minLength: 1 }
+        improvement: { type: string, minLength: 1 }
+        benefit: { type: string, minLength: 1 }
+        id: { type: string, format: uuid }
+        revision: { type: integer, minimum: 1 }
+        state: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        memberMessage: { type: string, nullable: true }
+    OwnerSupportRequest: { oneOf: [{ $ref: '#/components/schemas/OwnerProblemRequest' }, { $ref: '#/components/schemas/OwnerSuggestionRequest' }], discriminator: { propertyName: kind } }
+    OwnerProblemRequest:
+      type: object
+      additionalProperties: false
+      required: [kind, category, title, actual, expected, id, revision, state, createdAt, updatedAt, memberMessage, submitterId]
+      properties:
+        kind: { type: string, enum: [problem] }
+        category: { type: string, pattern: '^[a-z][a-z0-9_-]{0,63}$' }
+        title: { type: string, minLength: 1 }
+        actual: { type: string, minLength: 1 }
+        expected: { type: string, minLength: 1 }
+        reproductionSteps: { type: string }
+        appVersion: { type: string }
+        platform: { type: string }
+        id: { type: string, format: uuid }
+        revision: { type: integer, minimum: 1 }
+        state: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        memberMessage: { type: string, nullable: true }
+        submitterId: { type: string, format: uuid }
+    OwnerSuggestionRequest:
+      type: object
+      additionalProperties: false
+      required: [kind, category, title, improvement, benefit, id, revision, state, createdAt, updatedAt, memberMessage, submitterId]
+      properties:
+        kind: { type: string, enum: [suggestion] }
+        category: { type: string, pattern: '^[a-z][a-z0-9_-]{0,63}$' }
+        title: { type: string, minLength: 1 }
+        improvement: { type: string, minLength: 1 }
+        benefit: { type: string, minLength: 1 }
+        id: { type: string, format: uuid }
+        revision: { type: integer, minimum: 1 }
+        state: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        memberMessage: { type: string, nullable: true }
+        submitterId: { type: string, format: uuid }
+    PublicMessage: { type: object, additionalProperties: false, required: [id, from, text, revision, createdAt], properties: { id: { type: string, format: uuid }, from: { type: string, enum: [member, owner] }, text: { type: string }, revision: { type: integer, minimum: 1 }, createdAt: { type: string, format: date-time } } }
+    MemberRequestPage: { type: object, additionalProperties: false, required: [items, nextCursor, snapshotAt], properties: { items: { type: array, items: { $ref: '#/components/schemas/MemberSupportRequest' } }, nextCursor: { type: string, nullable: true }, snapshotAt: { type: string, format: date-time } } }
+    OwnerRequestPage: { type: object, additionalProperties: false, required: [items, nextCursor, snapshotAt], properties: { items: { type: array, items: { $ref: '#/components/schemas/OwnerSupportRequest' } }, nextCursor: { type: string, nullable: true }, snapshotAt: { type: string, format: date-time } } }
+    MemberDetail: { type: object, additionalProperties: false, required: [request, messages, nextMessageCursor], properties: { request: { $ref: '#/components/schemas/MemberSupportRequest' }, messages: { type: array, items: { $ref: '#/components/schemas/PublicMessage' } }, nextMessageCursor: { type: integer, nullable: true } } }
+    PrivateNote: { type: object, additionalProperties: false, required: [id, text, revision, createdAt], properties: { id: { type: string, format: uuid }, text: { type: string }, revision: { type: integer }, createdAt: { type: string, format: date-time } } }
+    PrivateEvidence: { type: object, additionalProperties: false, required: [id, type, description, reference, revision, createdAt], properties: { id: { type: string, format: uuid }, type: { type: string }, description: { type: string }, reference: { type: string, nullable: true }, revision: { type: integer }, createdAt: { type: string, format: date-time } } }
+    PrivateDecision: { type: object, additionalProperties: false, required: [id, fromState, toState, reason, evidenceIds, policyVersion, revision, createdAt], properties: { id: { type: string, format: uuid }, fromState: { type: string }, toState: { type: string }, reason: { type: string }, evidenceIds: { type: array, items: { type: string, format: uuid } }, policyVersion: { type: string }, revision: { type: integer }, createdAt: { type: string, format: date-time } } }
+    OwnerPrivateRecords: { type: object, additionalProperties: false, required: [notes, nextNoteCursor, evidence, nextEvidenceCursor, decisions, nextDecisionCursor], properties: { notes: { type: array, items: { $ref: '#/components/schemas/PrivateNote' } }, nextNoteCursor: { type: integer, nullable: true }, evidence: { type: array, items: { $ref: '#/components/schemas/PrivateEvidence' } }, nextEvidenceCursor: { type: integer, nullable: true }, decisions: { type: array, items: { $ref: '#/components/schemas/PrivateDecision' } }, nextDecisionCursor: { type: integer, nullable: true } } }
+    OwnerDetail: { type: object, additionalProperties: false, required: [request, messages, nextMessageCursor, private], properties: { request: { $ref: '#/components/schemas/OwnerSupportRequest' }, messages: { type: array, items: { $ref: '#/components/schemas/PublicMessage' } }, nextMessageCursor: { type: integer, nullable: true }, private: { $ref: '#/components/schemas/OwnerPrivateRecords' } } }
+    ReplyRequest: { type: object, additionalProperties: false, required: [expectedRevision, message], properties: { expectedRevision: { type: integer, minimum: 1 }, message: { type: string, minLength: 1 } } }
+    OwnerNoteRequest: { type: object, additionalProperties: false, required: [expectedRevision, text], properties: { expectedRevision: { type: integer, minimum: 1 }, text: { type: string, minLength: 1 } } }
+    OwnerEvidenceRequest: { type: object, additionalProperties: false, required: [expectedRevision, type, description], properties: { expectedRevision: { type: integer, minimum: 1 }, type: { type: string }, description: { type: string, minLength: 1 }, reference: { type: string, nullable: true } } }
+    OwnerDecisionRequest: { type: object, additionalProperties: false, required: [expectedRevision, state, reason, memberMessage, evidenceIds], properties: { expectedRevision: { type: integer, minimum: 1 }, state: { type: string }, reason: { type: string }, memberMessage: { type: string, minLength: 1 }, evidenceIds: { type: array, maxItems: 100, items: { type: string, format: uuid } } } }
+    MemberMutationResult: { type: object, additionalProperties: false, required: [request, recordId, replayed], properties: { request: { $ref: '#/components/schemas/MemberSupportRequest' }, recordId: { type: string, format: uuid, nullable: true }, replayed: { type: boolean } } }
+    OwnerMutationResult: { type: object, additionalProperties: false, required: [request, recordId, replayed], properties: { request: { $ref: '#/components/schemas/OwnerSupportRequest' }, recordId: { type: string, format: uuid, nullable: true }, replayed: { type: boolean } } }
