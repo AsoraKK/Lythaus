@@ -39,6 +39,8 @@ interface Env extends EnvBindings {
   ACCESS_AUDIENCES?: string;
   COMMUNITY_APPEAL_RULES_VERSION?: string;
   MONTHLY_REPUTATION_CONTEXT_RULES?: string;
+  SUPPORT_FEEDBACK_ENABLED?: string;
+  SUPPORT_FEEDBACK_POLICY?: string;
 }
 
 const ADMIN_ERROR_CODES = new Set([

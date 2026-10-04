@@ -44,6 +44,8 @@ interface Env extends EnvBindings {
   MONTHLY_REPUTATION_MAINTENANCE_RULES?: string;
   MONTHLY_REPUTATION_SNAPSHOT_RULES?: string;
   MONTHLY_REPUTATION_SELECTION_RULES?: string;
+  SUPPORT_FEEDBACK_ENABLED?: string;
+  SUPPORT_FEEDBACK_POLICY?: string;
 }
 
 function hasReadinessAuthorization(request: Request, env: Env): boolean {

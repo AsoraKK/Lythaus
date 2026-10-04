@@ -45,8 +45,6 @@ export interface EnvBindings {
   MEDIA_QUOTA_BYTES?: string;
   MEDIA_UPLOADS_ENABLED?: string;
   MEDIA_PROCESSING_ENABLED?: string;
-  SUPPORT_FEEDBACK_ENABLED?: string;
-  SUPPORT_FEEDBACK_POLICY?: string;
   MEDIA_QUARANTINE_BUCKET?: string;
   MEDIA_APPROVED_BUCKET?: string;
   AUTH_PASSWORD_PEPPER_V1?: string;
