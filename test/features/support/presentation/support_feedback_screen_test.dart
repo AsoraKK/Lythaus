@@ -186,7 +186,7 @@ void main() {
       expect(client.submissionKeys.single, isNotEmpty);
 
       await tester.scrollUntilVisible(
-        find.text('Feedback and suggestions').first,
+        find.text('Feedback and suggestions'),
         300,
         scrollable: find.byType(Scrollable).first,
       );
