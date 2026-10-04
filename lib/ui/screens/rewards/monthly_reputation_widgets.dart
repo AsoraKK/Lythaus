@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import 'package:lythaus/features/rewards/application/reward_providers.dart';
-import 'package:lythaus/features/rewards/domain/reward_models.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 
 class MonthlyReputationTrackerCard extends ConsumerWidget {
