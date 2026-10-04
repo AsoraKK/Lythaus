@@ -2,9 +2,9 @@
 
 ## Scope and sequencing
 
-Staged after Accounts on 2026-10-02 from Kyle's voice-call follow-up. A support-owned service and owner-console increment is prepared for PR910; no ticket API is activated, and there is no production migration, notification, reward or public-homepage change. Parent controls integration and release. App-flow is finished. Rewards currently owns the temporary shared-file slot for dispatchers, OpenAPI/client, privacy/DSR and Flutter-shell wiring; parent will release it after rewards publishes. Astra policy reconciliation remains required before any reward integration.
+Staged after Accounts on 2026-10-02 from Kyle's voice-call follow-up. PR910 now contains a bounded default-off support slice integrated with the public/admin dispatchers, OpenAPI/generated client, privacy jobs and Flutter member route. Its owner console and member UI remain disabled unless their independent feature flags are explicitly enabled. There is no production migration, notification delivery, reward or public-homepage change. Parent controls integration, activation and release. Astra policy reconciliation remains required before any reward integration.
 
-Two separate app sidebar entries and forms:
+Two separate private support flows and forms:
 
 1. **Report a problem** — Help/Bug: category, concise summary, expected/actual behavior and optional reproduction steps.
 2. **Feedback and suggestions** — Ideas: concise summary, proposed improvement and why it would help.
@@ -13,37 +13,36 @@ Each has its own private submission history, detail, replies and visible status.
 
 ## Current inventory and reuse
 
-- `lib/ui/screens/adaptive_shell.dart` contains a Help link to `lythaus.co/help`; profile settings has the same help fallback. The older feed_screen.dart path is a coming-soon action. Coordinate shell and settings changes after parent releases the rewards-owned shared-file slot; do not opportunistically modify feed code in Accounts.
+- `lib/ui/screens/adaptive_shell.dart` retains its existing Help link to `lythaus.co/help`; profile settings exposes the private support route only when the member-build flag is enabled. The older feed_screen.dart path remains a coming-soon action.
 - `moderation.content_flags` and appeals are content-policy reporting/adjudication; they do not model app bugs or product ideas.
 - `moderation.authenticity_beta_feedback` / `authenticity_alpha_feedback` are case-scoped authenticity feedback, with their own private research/policy contracts. Do not repurpose or delete them.
 - Exact-email Account support is an owner-only identity lookup/history tool, not a user-submitted ticket store.
 - Existing identity authentication, rate-limit/idempotency helpers, audit events, UUIDv7 conventions, account privacy/retention framework and transaction/outbox patterns are reusable. No durable generic Help/Bug/Ideas ticket model was found in the current API/schema inventory.
 - Transactional-email delivery can be considered only after a separate approved support notification purpose/template and configuration are defined. Do not send support mail through verification/reset templates or create a mailbox/vendor/resource.
 
-## Proposed bounded MVP contract
+## Bounded MVP contract
 
-An authenticated user submits a private ticket and can list, read and reply only to their own records. Guest access requires sign-in before submission. Every read/update resolves the current authenticated identity; IDs in paths or pagination cursors never grant cross-user access. Owner operations require verified Access plus current active owner membership and identity, rechecked server-side. No widened management role or browser secret.
+An authenticated user submits a private problem report or suggestion and can list, read and reply only to their own records. Guest access requires sign-in before submission. Every read/update resolves the current authenticated identity; IDs in paths or pagination cursors never grant cross-user access. Owner operations require verified Access plus current active owner membership and identity, rechecked server-side. No widened management role or browser secret. Both forms and histories remain distinct over the shared engine.
 
-Proposed ticket fields: UUIDv7 ID, authenticated submitter ID, type (`problem` or `suggestion`), title, bounded text body, validated category, created/updated timestamps, owner-controlled status, nullable owner priority, nullable canonical duplicate ticket and private release-evidence references. Submitter identity comes from authentication, not request body. Personal email, session details and credentials are not copied into ticket metadata.
+The API stores UUIDv7 ID, authenticated submitter ID, kind, validated category, title, revision/state and timestamps. Problem reports contain actual/expected behavior and optional reproduction steps, app version and platform; suggestions contain the proposed improvement and expected benefit. Submitter identity comes from authentication, not request body. Personal email, session details and credentials are not copied into ticket metadata.
 
 Replies are chronological records with author class (submitter/owner), bounded text, timestamp and ticket ownership checks. Internal triage notes, priority, abuse signals and another user's duplicate details remain owner-private. Public responses use explicit allowlists. Bounded pagination and timeouts apply to queues and histories.
 
-Suggested user-visible statuses: received, reviewing, needs information, planned, resolved, closed. Priority is an owner decision. A “planned” state is not a delivery date promise. Duplicate linking preserves each submitter's private status/history without disclosing another ticket's body, author or identity. Resolution can reference a reviewed PR/release; no automatic announcement or publication.
+User-visible states and transitions are supplied as versioned policy. They are not an SLA or delivery-date promise. Owners record typed same-request evidence and a private decision record when closing a request, with a separate public explanation; no automatic announcement or publication occurs.
 
 Start with text-only forms. Explain that users should omit credentials and private content. Optional app version/platform data must be explicit and minimal. No automatic logs, device dumps or attachments; attachment/diagnostic support needs separate consent, redaction, malware/type/size checks, scoped private storage, retention and cost approval.
 
-## Security, retention and verification dependencies
+## Security, retention and remaining verification
 
-Before ticket implementation:
+The published increment includes these controls:
 
-- Agree field length limits, categories, status transitions, per-user submission/reply limits, idempotency semantics and spam handling. A reward quota must never limit ordinary bug/feedback submissions.
-- Define private retention, deletion, legal-hold behavior and subject-data inventory integration. State which operational audit/evidence may be retained after text removal.
-- Design scoped DB grants and transaction boundaries. Any schema/index/grant migration is validated in disposable PostgreSQL 17, reconciled with the approved baseline and held for parent production-DDL approval.
-- Test current-session/current-owner changes, cross-user list/detail/reply/duplicate access, retry races, cursor tampering, flood/spam limits, deletion/retention and audit failures. Verify private text and credentials never enter logs, aggregate metrics or notifications.
-- Verify two distinct sidebar destinations/forms/queues across responsive layouts, themes, keyboard and large text. Flutter route changes belong in a coordinated increment after the rewards-owned shared-file slot is released; the current checkout has no Flutter/Dart toolchain proof.
-- Enable notifications only for configured authorized destinations/channels and approved templates. No sends are authorized by this planning document.
+- The policy contract requires explicit field limits, categories, states, transitions, per-user quotas, idempotency, privacy retention and evidence rules. The runtime rejects unsupported or mixed-kind inputs; rate limits are independent of rewards.
+- Member and owner operations use current identity checks, object-scoped authorization, audit/idempotency transactions and no-store responses. The support-specific PostgreSQL 17 suite checks cross-user access, replay/concurrency, deletion/retention, active holds and audit failures.
+- The SQL proposal remains outside automatic migrations. Production schema and least-privilege grants require separate review and approval before activation.
+- The UI/API route tests and CI cover source behavior; actual deployed Worker bindings, production cache behavior, broad accessibility and responsive review remain release-head checks.
+- Notifications remain off until authorized destinations, preferences, dedupe and dispatch-time privacy checks are configured and approved. This roadmap authorizes no sends.
 
-The local HTTP adapter exercises `/support/problems` and `/support/suggestions`, own ticket detail/replies, and corresponding owner `/admin/support/...` queues/triage. The public/admin dispatchers are not wired, so these are not active routes. Reuse the existing support engine only behind explicit type and ownership checks.
+The existing HTTP adapter and dispatchers expose member `/api/support/problems` and `/api/support/suggestions` histories/replies, plus owner `/api/admin/support/...` queues, replies, notes, evidence and decisions. The routes return 404 while the server flag is off; the separate UIs also default off. Missing support tables fail closed for support requests and are treated as optional by ordinary account/privacy flows. Reuse the existing support engine only behind explicit type and ownership checks.
 
 ## Contribution event and reward gate
 
@@ -71,9 +70,8 @@ Reversal is a new audited event referencing the original acceptance/award, never
 
 ## Reviewable increments after Accounts
 
-1. Keep the isolated service, owner console, focused tests, and support-specific documentation in draft PR910. The support-scoped PG17 workflow runs without editing the shared native CI workflow.
-2. After rewards publishes and parent releases the shared-file slot, coordinate dispatcher/OpenAPI/client/privacy/Flutter wiring against current PR906 and PR896 contracts. Keep the existing support namespace; do not add a second ticket engine.
-3. Resolve approved production schema/grants, locators, privacy completion, retention, legal-hold serialization and rollback gates. Run final Worker authorization, no-store, audit, query-bound, navigation and responsive/accessibility acceptance at the exact reviewed head.
-4. Add configured notifications only after transport, preferences, dedupe and dispatch-time privacy checks are approved. Add a suggestion award only after Rewards approves the 150-point quarterly policy boundaries and budget; keep bugs unrewarded by inference.
+1. Preserve PR910 as a draft stacked on PR909 until parent reconciles the dependency and current main; the PR910 branch contains services, API/OpenAPI/client, privacy integration, both UIs and scoped CI.
+2. Resolve approved production schema/grants, privacy locators/completion, retention, legal-hold and rollback gates. Run final Worker authorization, no-store, audit, query-bound, navigation and responsive/accessibility acceptance at the exact release head.
+3. Add configured notifications only after transport, preferences, dedupe and dispatch-time privacy checks are approved. Add no suggestion award until Rewards approves the 150-point quarterly policy boundaries and budget; keep bugs unrewarded by inference.
 
 Ultra action-plan lane retains backlog/disposition. This staging creates no issues, closes nothing and changes no release state.
