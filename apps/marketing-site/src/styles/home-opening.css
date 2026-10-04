@@ -1,6 +1,6 @@
 .pitch-wordmark {
   position: relative;
-  width: min(100%, 980px);
+  width: min(50%, 490px);
   max-width: none;
   aspect-ratio: 1000 / 166;
   margin: 0;
