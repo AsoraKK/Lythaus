@@ -96,6 +96,23 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
           try {
             assert.equal(await page.getByRole('heading', { level: 1, name: 'Lythaus', exact: true }).count(), 1);
             assert.equal(await page.locator('h1 svg').getAttribute('aria-hidden'), 'true');
+            const wordmarkGeometry = await page.evaluate(() => {
+              const wordmark = document.querySelector('.pitch-wordmark');
+              const bounds = wordmark.getBoundingClientRect();
+              const parent = wordmark.parentElement.getBoundingClientRect();
+              const clip = document.querySelector('#wordmark-space rect');
+              return {
+                width: bounds.width,
+                expectedWidth: Math.min(parent.width / 2, 490),
+                centerDelta: Math.abs(bounds.x + bounds.width / 2 - (parent.x + parent.width / 2)),
+                clip: ['x', 'y', 'width', 'height'].map((attribute) => Number(clip.getAttribute(attribute))),
+              };
+            });
+            assert.ok(Math.abs(wordmarkGeometry.width - wordmarkGeometry.expectedWidth) < 0.1,
+              'The hero wordmark and beam stay at half their previous responsive scale');
+            assert.ok(wordmarkGeometry.centerDelta < 0.1, 'The smaller hero wordmark stays centered');
+            assert.deepEqual(wordmarkGeometry.clip, [-600, -500, 2300, 1150],
+              'The SVG clip contains the full moving beam and its glow');
             assert.equal(await page.locator('.pitch-section').count(), 4);
             await page.waitForFunction(() => document.documentElement.dataset.opening === 'resolved');
             const elapsed = await page.evaluate(() => window.openingTimes.resolved - window.openingTimes.playing);

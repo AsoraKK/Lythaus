@@ -188,6 +188,24 @@ const reviewedPrivacyStatusFiles = new Map([
   ['apps/lythaus-public-api/src/privacy-runtime-policy.ts', '8c674c929d35c748b28579b2fdeed3ff4daac2bc'],
   ['apps/lythaus-public-api/tests/privacy-runtime-policy.test.mjs', '5609e2acf2bcb0fc32a36cee8b0d7f5c102d497e'],
 ]);
+const approvedHomepageVisualEdits = new Map([
+  ['apps/marketing-site/src/components/OpeningWordmark.astro', (source) => `${replaceExactText(
+    source,
+    '<rect x="-110" y="-140" width="1220" height="450" />',
+    '<rect x="-600" y="-500" width="2300" height="1150" />',
+    'wordmark beam clip',
+  )}\n`],
+  ['apps/marketing-site/src/styles/home-opening.css', (source) => `${replaceExactText(
+    source,
+    'width: min(100%, 980px);',
+    'width: min(50%, 490px);',
+    'hero wordmark width',
+  )}\n`],
+]);
+function replaceExactText(source, before, after, label) {
+  assert.equal(source.split(before).length - 1, 1, `The ${label} baseline must remain exact`);
+  return source.replace(before, after);
+}
 
 export function assertHomepageFrozen() {
   assert.equal(git('rev-parse', `${baselineSha}^{commit}`), baselineSha, 'Frozen baseline must be available; do not substitute HEAD');
@@ -206,6 +224,13 @@ export function assertHomepageFrozen() {
       continue;
     }
     if (authRepairPaths.has(filename)) continue;
+    if (approvedHomepageVisualEdits.has(filename)) {
+      const original = git('show', `${baselineSha}:${filename}`);
+      const expected = approvedHomepageVisualEdits.get(filename)(original);
+      const current = readFileSync(path.join(root, filename), 'utf8').replaceAll('\r\n', '\n');
+      assert.equal(current, expected, `${filename} may contain only the requested wordmark and beam visual fix`);
+      continue;
+    }
     if (filename === 'package-lock.json') continue;
     if (filename === 'apps/marketing-site/package-lock.json') continue;
     const expected = metadata.split(' ')[2];
