@@ -179,7 +179,7 @@ class _$MonthlyReputationReportResponseSerializer implements PrimitiveSerializer
             value,
             specifiedType: const FullType(MonthlyReputationReportResponseLevelAuthority),
           ) as MonthlyReputationReportResponseLevelAuthority;
-          result.levelAuthority = valueDes;
+          result.levelAuthority.replace(valueDes);
           break;
         case r'corrections':
           final valueDes = serializers.deserialize(
