@@ -1,15 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { planetScaleServiceTokenAuthorizationHeader } from './service-token-auth.mjs';
 
 const organization = process.env.PLANETSCALE_ORGANIZATION ?? 'lythaus';
 const database = process.env.PLANETSCALE_DATABASE ?? 'lythaus-core';
-const token = process.env.PLANETSCALE_API_TOKEN ?? '';
+const authorization = planetScaleServiceTokenAuthorizationHeader(process.env.PLANETSCALE_API_TOKEN ?? '');
+const [serviceTokenId, serviceTokenSecret] = authorization.split(':');
 const outputPath = process.env.PLANETSCALE_AUDIT_OUTPUT ?? '.artifacts/provider-inventory/planetscale.json';
 
-if (!token) throw new Error('PLANETSCALE_API_TOKEN is required');
 if (!/^[a-z0-9-]+$/i.test(organization) || !/^[a-z0-9-]+$/i.test(database)) throw new Error('invalid PlanetScale organization/database name');
 
-const headers = { Authorization: `Bearer ${token}`, Accept: 'application/json' };
+const headers = { Authorization: authorization, Accept: 'application/json' };
 
 async function request(url) {
   const response = await fetch(url, { headers });
@@ -25,7 +26,11 @@ async function request(url) {
 function safeError(response) {
   if (response.ok) return null;
   const message = response.payload?.error?.message ?? response.payload?.message ?? response.payload?.error ?? '';
-  return String(message).slice(0, 240) || `HTTP ${response.status}`;
+  const redacted = String(message)
+    .replaceAll(authorization, '[redacted]')
+    .replaceAll(serviceTokenId, '[redacted]')
+    .replaceAll(serviceTokenSecret, '[redacted]');
+  return redacted.slice(0, 240) || `HTTP ${response.status}`;
 }
 
 const base = `https://api.planetscale.com/v1/organizations/${encodeURIComponent(organization)}/databases/${encodeURIComponent(database)}`;
