@@ -12,7 +12,7 @@ import { handleAlphaApi } from './authenticity-alpha.ts';
 import { issueAuthSession, revokeAllAuthSessions, rotateAuthSession } from './auth-session-runtime.ts';
 import { lockLoginAccount, lockRefreshSession } from './auth-account-transaction.ts';
 import { expiredRefreshCookie, optionalRefreshCookie, refreshCookie, sessionTransport, sessionTransportResult, validateAuthRequestOrigin } from './auth-session-transport.ts';
-import { requireUncompromisedPassword } from './auth-password-screen.ts';
+import { passwordScreeningFailureLogFields, requireUncompromisedPassword } from './auth-password-screen.ts';
 import { claimRegistrationAddress, establishVerifiedCredential, findRecoveryUser, lockRecoveryAccount, persistRecoveryIntake, recoveryAddressReason, recoveryPlan, recoverySupportReason } from './auth-recovery-policy.ts';
 import { idempotentAuthIntake } from './auth-intake-runtime.ts';
 import { assertDistinctReactionAuthor, contentDeletionPlan, planCommentCreation, planCommentRevision, planPostPublication, planPostRevision, planReactionChange, planRelationshipMutation, replyDepth } from './content-runtime-policy.ts';
@@ -3468,6 +3468,7 @@ export default {
         errorCode: classified.exposedCode,
         internalErrorCode: classified.internalCode,
         route: new URL(request.url).pathname,
+        ...passwordScreeningFailureLogFields(error),
       });
       const clearCookie = new URL(request.url).pathname === '/api/auth/refresh'
         && request.headers.get('x-lythaus-auth-transport') === 'cookie-v1' && classified.status === 401;
