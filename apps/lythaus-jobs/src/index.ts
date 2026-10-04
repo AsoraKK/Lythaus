@@ -10,6 +10,16 @@ import { EMAIL_LIFECYCLE_QUEUE, handleTransactionalEmailLifecycleWebhook, readTr
 import { WorkflowEntrypoint } from 'cloudflare:workers';
 import { processBetaEvent, expireBetaWork } from './authenticity-beta.ts';
 import { processAlphaEvent, expireAlphaWork } from './authenticity-alpha.ts';
+import { deferMonthlyReputationAssessment, processMonthlyReputationAssessment, reconcileDeferredMonthlyReputation } from './monthly-reputation.ts';
+import { processMonthlyEarningEvent, reconcileMonthlyEarning } from './monthly-earning.ts';
+import { reconcileMonthlyAssembly } from './monthly-assembly.ts';
+import { processMonthlyPeerParticipation, reconcileMonthlyPeerParticipation } from './monthly-peer-participation.ts';
+import { processMonthlyRewardSnapshotEvent,reconcileMonthlyRewardSnapshots } from './monthly-reward-snapshots.ts';
+import { readMonthlyReputationReportsForPassport } from './monthly-reputation-dsr.ts';
+import { reconcileCommunityAppeals } from './community-appeals.ts';
+import { identicalCommunityAppealOverride } from '../../../packages/db/src/community-appeal-closure.ts';
+import { MONTHLY_EARNING_SOURCE_EVENTS } from '../../../packages/db/src/monthly-earning.ts';
+import { MONTHLY_REPUTATION_POLICY_VERSION } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
 import { tombstoneBetaCases, purgeBetaMedia } from '../../../packages/db/src/authenticity-beta.ts';
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 
@@ -17,6 +27,12 @@ interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
   DB_JOBS_FRESH: HyperdriveBinding;
   DB_PRIVACY_FRESH: HyperdriveBinding;
+  MONTHLY_REPUTATION_SHADOW_RULES?: string;
+  MONTHLY_REPUTATION_MAINTENANCE_RULES?: string;
+  MONTHLY_REPUTATION_PEER_PARTICIPATION_RULES?: string;
+  MONTHLY_REPUTATION_CONTEXT_RULES?: string;
+  MONTHLY_REPUTATION_SNAPSHOT_RULES?: string;
+  COMMUNITY_APPEAL_RULES_VERSION?: string;
   MODERATION_QUEUE?: Queue;
   FEED_QUEUE?: Queue;
   NOTIFICATIONS_QUEUE?: Queue;
@@ -48,6 +64,14 @@ async function deleteR2Prefix(bucket: NonNullable<EnvBindings['PRIVATE_EXPORTS']
     cursor = listed.truncated ? listed.cursor : undefined;
   } while (cursor);
   return deleted;
+}
+
+async function reconcileMonthlyReputationDataLocations(db: HyperdriveBinding, subjectId: string): Promise<void> {
+  const adapter = await query<{ available: boolean }>(db,
+    `SELECT to_regprocedure('privacy.reconcile_monthly_reputation_data_locations(uuid)') IS NOT NULL AS available`);
+  if (adapter.rows[0]?.available) {
+    await query(db, `SELECT privacy.reconcile_monthly_reputation_data_locations($1)`, [subjectId]);
+  }
 }
 
 function hasReadinessAuthorization(request: Request, env: Env): boolean {
@@ -624,6 +648,7 @@ async function processReputationSource(message: QueueMessage, env: Env, eventId:
   ].includes(eventType)) return;
   const source = await transaction(env.DB_JOBS_FRESH, (client) => canonicalOutboxEvent(client, eventId, eventType));
   const payload = source.payload;
+  if (payload.policyVersion === MONTHLY_REPUTATION_POLICY_VERSION) return;
   const correlationId = stringValue(message.body.correlationId) ?? eventId;
   const subjectUserId = stringValue(payload.authorId) ?? stringValue(payload.userId) ?? source.actor_id ?? undefined;
   if (!subjectUserId) throw new Error('reputation_subject_event_invalid');
@@ -823,6 +848,9 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
   );
   const post = postResult.rows[0];
   if (!post) return;
+  if (env.COMMUNITY_APPEAL_RULES_VERSION && await transaction(env.DB_JOBS_FRESH, client => identicalCommunityAppealOverride(client, {
+    contentType: 'post', contentId: post.id, sourceEventId: revision.sourceEventId, body: post.body, declaredCreationMode: post.declared_creation_mode,
+  }))) return;
   const inputHash = await sha256Hex(post.body);
   if (!isCurrentContentModerationRevision({
     revision,
@@ -979,6 +1007,9 @@ async function processCommentModeration(message: QueueMessage, env: Env): Promis
     );
     const row = comment.rows[0];
     if (!row) return;
+    if (env.COMMUNITY_APPEAL_RULES_VERSION && await identicalCommunityAppealOverride(client, {
+      contentType: 'comment', contentId: row.id, sourceEventId: revision.sourceEventId, body: row.body, declaredCreationMode: row.declared_creation_mode,
+    })) return;
     const bodyHash = await sha256Hex(row.body);
     if (!isCurrentContentModerationRevision({
       revision,
@@ -1621,6 +1652,14 @@ async function processMessage(message: QueueMessage, env: Env): Promise<void> {
   }
   try {
     if (eventType === 'content.post.created' || eventType === 'content.post.updated') await processPostModeration(message, env);
+    if (eventType === 'trust.monthly_assessment.requested') {
+      const assessment = await processMonthlyReputationAssessment(env, eventId);
+      if (assessment === null) {
+        await deferMonthlyReputationAssessment(env, eventId);
+        message.ack();
+        return;
+      }
+    }
     if (eventType === 'moderation.authenticity_beta.requested') await processBetaEvent(env, eventId, message.body.payload);
     if (eventType === 'moderation.authenticity_alpha.requested') await processAlphaEvent(env, eventId, message.body.payload);
     if (eventType === 'content.profile.updated') await processProfileModeration(message, env);
@@ -1671,6 +1710,10 @@ async function processMessage(message: QueueMessage, env: Env): Promise<void> {
       await processAccountStandingRefresh(message, env, eventId);
     }
     await processNotificationSource(message, env, eventId, eventType);
+    if ((MONTHLY_EARNING_SOURCE_EVENTS as readonly string[]).includes(eventType)) await processMonthlyEarningEvent(env, eventId);
+    if (eventType === 'moderation.community_appeal.resolved') await processMonthlyPeerParticipation(env, eventId);
+    if (eventType === 'trust.monthly_assessment.recorded' || eventType === 'trust.monthly_reward_snapshot.correction_approved')
+      await processMonthlyRewardSnapshotEvent(env,eventId,eventType);
     await query(env.DB_JOBS_FRESH,
       `UPDATE system.consumer_inbox SET state = 'completed', processed_at = now() WHERE consumer_name = 'lythaus-jobs' AND event_id = $1`,
       [eventId]
@@ -1703,6 +1746,8 @@ async function relayOutbox(env: Env): Promise<void> {
        SELECT id
          FROM system.outbox_events
         WHERE dispatched_at IS NULL
+          AND (event_type <> 'trust.monthly_assessment.requested'
+            OR last_error_code IS DISTINCT FROM 'monthly_reputation_shadow_paused')
           AND (attempted_at IS NULL OR attempted_at < now() - interval '5 minutes')
         ORDER BY created_at
         LIMIT 50
@@ -1895,6 +1940,12 @@ export default {
       await purgeBetaMedia(env.DB_JOBS_FRESH,env.MEDIA_QUARANTINE);
     }
     if (env.AUTHENTICITY_ALPHA_ENABLED === 'true') await expireAlphaWork(env);
+    await reconcileDeferredMonthlyReputation(env);
+    await reconcileMonthlyEarning(env);
+    await reconcileCommunityAppeals(env);
+    await reconcileMonthlyPeerParticipation(env);
+    await reconcileMonthlyAssembly(env);
+    await reconcileMonthlyRewardSnapshots(env);
     await relayTransactionalEmailOutbox(env);
     await relayOutbox(env);
     await deliverAdminOutcomeNotifications(env);
@@ -1916,6 +1967,7 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
     const requestedId = event.payload.requestId;
     const requestId = await step.do('resolve-request', async () => {
       await query(this.env.DB_PRIVACY_FRESH, `SELECT privacy.reconcile_subject_data_locations($1)`, [subjectId]);
+      await reconcileMonthlyReputationDataLocations(this.env.DB_PRIVACY_FRESH, subjectId);
       const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
         `SELECT id FROM privacy.requests WHERE id = $1 AND subject_id = $2 AND request_type = 'delete'`, [requestedId, subjectId]);
       if (!result.rows[0]) throw new Error('privacy_delete_request_not_found');
@@ -2120,7 +2172,10 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
                       'moderation.appeal_review_votes', 'moderation.appeal_adjudications',
                       'moderation.appeal_outcomes', 'moderation.appeal_outcome_effects',
                       'editorial.peer_reviews', 'editorial.publications',
-                      'privacy.requests', 'privacy.request_events', 'privacy.legal_holds'
+                      'privacy.requests', 'privacy.request_events', 'privacy.legal_holds',
+                      'trust.monthly_reputation_sources', 'trust.monthly_reputation_assessments',
+                      'trust.monthly_earning_week_revisions', 'trust.monthly_reward_snapshots',
+                      'trust.monthly_reward_snapshot_corrections'
                     ) THEN 'retained'
                     ELSE 'deleted'
                   END,
@@ -2177,6 +2232,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
     if (!exportsBucket) throw new Error('private_exports_not_configured');
     const requestId = await step.do('resolve-export-request', async () => {
       await query(this.env.DB_PRIVACY_FRESH, `SELECT privacy.reconcile_subject_data_locations($1)`, [subjectId]);
+      await reconcileMonthlyReputationDataLocations(this.env.DB_PRIVACY_FRESH, subjectId);
       const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
         `SELECT id FROM privacy.requests WHERE id = $1 AND subject_id = $2 AND request_type = 'export'`, [requestedId, subjectId]);
       if (!result.rows[0]) throw new Error('privacy_export_request_not_found');
@@ -2246,6 +2302,11 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         contactEmail: contactEmailField.rows[0],
         decrypt: decryptField,
       });
+      const monthlyReputationReports = this.env.MONTHLY_REPUTATION_SNAPSHOT_RULES
+        ? await transaction(this.env.DB_JOBS_FRESH, client => readMonthlyReputationReportsForPassport(
+          client, subjectId, this.env.MONTHLY_REPUTATION_SNAPSHOT_RULES,
+        ))
+        : { state: 'unavailable', reasonCode: 'approval_unavailable', reports: [] };
       const [
         posts,
         comments,
@@ -2342,6 +2403,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         humanContribution: contributions.rows,
         reputationProfile: reputationProfile.rows[0] ?? null,
         reputationEvents: reputationEvents.rows,
+        monthlyReputationReports,
         accountabilitySignals: accountabilitySignals.rows,
         notificationPreferences: notificationPreferences.rows[0] ?? null,
         notificationDevices: notificationDevices.rows,

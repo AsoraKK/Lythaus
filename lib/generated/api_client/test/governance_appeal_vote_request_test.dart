@@ -12,5 +12,25 @@ void main() {
       // TODO
     });
 
+    // String choice
+    test('to test the property `choice`', () async {
+      // TODO
+    });
+
+    // String reasonCode
+    test('to test the property `reasonCode`', () async {
+      // TODO
+    });
+
+    // int expectedRevision
+    test('to test the property `expectedRevision`', () async {
+      // TODO
+    });
+
+    // bool contextAcknowledged
+    test('to test the property `contextAcknowledged`', () async {
+      // TODO
+    });
+
   });
 }

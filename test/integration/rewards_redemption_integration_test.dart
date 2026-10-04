@@ -137,6 +137,18 @@ RewardsSnapshot _restrictedAccountSnapshot() {
 // ---------------------------------------------------------------------------
 
 void main() {
+  Future<void> scrollToVisible(WidgetTester tester, Finder target) async {
+    await tester.scrollUntilVisible(
+      target,
+      320,
+      scrollable: find.descendant(
+        of: find.byType(ListView).first,
+        matching: find.byType(Scrollable),
+      ).first,
+    );
+    await tester.pumpAndSettle();
+  }
+
   // -------------------------------------------------------------------------
   // Happy path
   // -------------------------------------------------------------------------
@@ -176,6 +188,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Lythaus Rewards'), findsOneWidget);
+    await scrollToVisible(tester, find.text('Redeem'));
     expect(find.text('Redeem'), findsOneWidget);
 
     await tester.tap(find.text('Redeem'));
@@ -228,6 +241,10 @@ void main() {
 
       await tester.pumpAndSettle();
 
+      await scrollToVisible(
+        tester,
+        find.textContaining('Research Tools Bundle'),
+      );
       expect(find.textContaining('Research Tools Bundle'), findsOneWidget);
       expect(find.text('Locked'), findsOneWidget);
       expect(find.text('Tier limitation'), findsOneWidget);
@@ -263,6 +280,7 @@ void main() {
 
         await tester.pumpAndSettle();
 
+        await scrollToVisible(tester, find.text('Privacy Starter Pack'));
         expect(find.text('Privacy Starter Pack'), findsOneWidget);
         expect(find.text('Redeemed'), findsOneWidget);
         expect(find.text('Redeem'), findsNothing);
@@ -302,6 +320,12 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Redemption status: restricted'), findsOneWidget);
+        await scrollToVisible(
+          tester,
+          find.text(
+            'Redemption is temporarily restricted while account safety checks complete.',
+          ),
+        );
         expect(find.text('Locked'), findsOneWidget);
         expect(
           find.text(
@@ -344,6 +368,7 @@ void main() {
         );
 
         await tester.pumpAndSettle();
+        await scrollToVisible(tester, find.text('Redeem'));
         final fetchCountBeforeTap = fetchCount;
 
         expect(find.text('Redeem'), findsOneWidget);

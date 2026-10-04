@@ -64,6 +64,7 @@ import 'package:lythaus_api_client/src/model/appeal_create_request.dart';
 import 'package:lythaus_api_client/src/model/appeal_create_response.dart';
 import 'package:lythaus_api_client/src/model/appeal_detail.dart';
 import 'package:lythaus_api_client/src/model/appeal_detail_response.dart';
+import 'package:lythaus_api_client/src/model/appeal_detail_response_appeal.dart';
 import 'package:lythaus_api_client/src/model/appeal_outcome.dart';
 import 'package:lythaus_api_client/src/model/appeal_recusal_response.dart';
 import 'package:lythaus_api_client/src/model/appeal_reviewer_assignments.dart';
@@ -99,6 +100,22 @@ import 'package:lythaus_api_client/src/model/comment_submission.dart';
 import 'package:lythaus_api_client/src/model/comment_update_request.dart';
 import 'package:lythaus_api_client/src/model/comment_update_response.dart';
 import 'package:lythaus_api_client/src/model/comments_owner_view200_response.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_detail.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_evidence.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_outcome.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_outcome_result.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_queue.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_triage_evidence.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_triage_evidence_evidence.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_triage_evidence_evidence_frozen_content.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_triage_queue.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_triage_queue_items_inner.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_triage_request.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_triage_response.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_withdrawal.dart';
+import 'package:lythaus_api_client/src/model/community_ballot_request.dart';
+import 'package:lythaus_api_client/src/model/community_ballot_response.dart';
+import 'package:lythaus_api_client/src/model/community_own_ballot.dart';
 import 'package:lythaus_api_client/src/model/create_post_request.dart';
 import 'package:lythaus_api_client/src/model/cursor_page.dart';
 import 'package:lythaus_api_client/src/model/custom_feed.dart';
@@ -130,6 +147,8 @@ import 'package:lythaus_api_client/src/model/forbidden_error_error.dart';
 import 'package:lythaus_api_client/src/model/get_health200_response.dart';
 import 'package:lythaus_api_client/src/model/governance_appeal_vote_request.dart';
 import 'package:lythaus_api_client/src/model/governance_appeal_vote_response.dart';
+import 'package:lythaus_api_client/src/model/legacy_appeal_vote_request.dart';
+import 'package:lythaus_api_client/src/model/legacy_appeal_vote_response.dart';
 import 'package:lythaus_api_client/src/model/legacy_refresh_token_request.dart';
 import 'package:lythaus_api_client/src/model/legal_hold_create.dart';
 import 'package:lythaus_api_client/src/model/legal_hold_response.dart';
@@ -139,6 +158,14 @@ import 'package:lythaus_api_client/src/model/media_upload_session_created.dart';
 import 'package:lythaus_api_client/src/model/moderation_decision_request.dart';
 import 'package:lythaus_api_client/src/model/moderation_decision_response.dart';
 import 'package:lythaus_api_client/src/model/moderation_state.dart';
+import 'package:lythaus_api_client/src/model/monthly_context_review_error.dart';
+import 'package:lythaus_api_client/src/model/monthly_context_review_request.dart';
+import 'package:lythaus_api_client/src/model/monthly_context_review_response.dart';
+import 'package:lythaus_api_client/src/model/monthly_report_error.dart';
+import 'package:lythaus_api_client/src/model/monthly_reputation_report_response.dart';
+import 'package:lythaus_api_client/src/model/monthly_reputation_report_response_corrections.dart';
+import 'package:lythaus_api_client/src/model/monthly_reputation_report_response_level_authority.dart';
+import 'package:lythaus_api_client/src/model/monthly_rewards_me_response.dart';
 import 'package:lythaus_api_client/src/model/news_board_feed_page.dart';
 import 'package:lythaus_api_client/src/model/news_board_item.dart';
 import 'package:lythaus_api_client/src/model/news_source_metadata.dart';
@@ -281,6 +308,7 @@ part 'serializers.g.dart';
   AppealCreateResponse,
   AppealDetail,
   AppealDetailResponse,
+  AppealDetailResponseAppeal,
   AppealOutcome,$AppealOutcome,
   AppealRecusalResponse,
   AppealReviewerAssignments,
@@ -316,6 +344,22 @@ part 'serializers.g.dart';
   CommentUpdateRequest,
   CommentUpdateResponse,
   CommentsOwnerView200Response,
+  CommunityAppealDetail,
+  CommunityAppealEvidence,
+  CommunityAppealOutcome,
+  CommunityAppealOutcomeResult,
+  CommunityAppealQueue,
+  CommunityAppealTriageEvidence,
+  CommunityAppealTriageEvidenceEvidence,
+  CommunityAppealTriageEvidenceEvidenceFrozenContent,
+  CommunityAppealTriageQueue,
+  CommunityAppealTriageQueueItemsInner,
+  CommunityAppealTriageRequest,
+  CommunityAppealTriageResponse,
+  CommunityAppealWithdrawal,
+  CommunityBallotRequest,
+  CommunityBallotResponse,
+  CommunityOwnBallot,
   CreatePostRequest,
   CursorPage,$CursorPage,
   CustomFeed,
@@ -347,6 +391,8 @@ part 'serializers.g.dart';
   GetHealth200Response,
   GovernanceAppealVoteRequest,
   GovernanceAppealVoteResponse,
+  LegacyAppealVoteRequest,
+  LegacyAppealVoteResponse,
   LegacyRefreshTokenRequest,
   LegalHoldCreate,
   LegalHoldResponse,
@@ -356,6 +402,14 @@ part 'serializers.g.dart';
   ModerationDecisionRequest,
   ModerationDecisionResponse,
   ModerationState,
+  MonthlyContextReviewError,
+  MonthlyContextReviewRequest,
+  MonthlyContextReviewResponse,
+  MonthlyReportError,
+  MonthlyReputationReportResponse,
+  MonthlyReputationReportResponseCorrections,
+  MonthlyReputationReportResponseLevelAuthority,
+  MonthlyRewardsMeResponse,
   NewsBoardFeedPage,
   NewsBoardItem,
   NewsSourceMetadata,

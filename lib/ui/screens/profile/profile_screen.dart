@@ -13,6 +13,7 @@ import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
+import 'package:lythaus/features/rewards/application/reward_providers.dart';
 import 'package:lythaus/features/profile/application/follow_providers.dart';
 import 'package:lythaus/features/profile/application/follow_service.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
@@ -27,6 +28,7 @@ import 'package:lythaus/ui/screens/profile/settings_screen.dart';
 import 'package:lythaus/ui/components/sign_in_required.dart';
 import 'package:lythaus/ui/screens/profile/edit_profile_screen.dart';
 import 'package:lythaus/ui/screens/profile/reputation_ledger_screen.dart';
+import 'package:lythaus/ui/screens/rewards/monthly_reputation_widgets.dart';
 import 'package:lythaus/state/providers/reputation_providers.dart';
 import 'package:lythaus/widgets/reputation_badge.dart';
 
@@ -125,6 +127,7 @@ class ProfileScreen extends ConsumerWidget {
                 if (isOwner) {
                   ref.invalidate(ownerProfileProvider);
                   ref.invalidate(reputationProvider);
+                  ref.invalidate(monthlyRewardsViewProvider);
                 }
               },
             ),
@@ -170,6 +173,10 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ],
             ),
+            if (isOwner) ...[
+              const SizedBox(height: Spacing.lg),
+              const MonthlyReputationTrackerCard(),
+            ],
             if (profile.bio?.trim().isNotEmpty == true) ...[
               const SizedBox(height: Spacing.lg),
               Text(profile.bio!, style: Theme.of(context).textTheme.bodyLarge),

@@ -7,6 +7,15 @@ void main() {
   final instance = LythausApiClient().getRewardsApi();
 
   group(RewardsApi, () {
+    // Read my monthly level and reward eligibility
+    //
+    // Returns the server-owned fixed monthly level snapshot and the member's current reward selection state. Paid tier changes reward choices only, not reputation scoring. No snapshot, selection or partner state is exposed until its owner-approved configuration is available.
+    //
+    //Future<MonthlyRewardsMeResponse> getMyMonthlyRewards() async
+    test('test getMyMonthlyRewards', () async {
+      // TODO
+    });
+
     // Get my rewards snapshot
     //
     // Returns rewards available under the caller's subscription tier, reputation level, redemption limits, and fraud/maturity checks.

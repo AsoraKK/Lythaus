@@ -25,6 +25,11 @@ import { parseProfileUpdate } from './profile-runtime-policy.ts';
 import { acceptanceContextToken } from '@lythaus/contracts';
 import { createWaitlistRouteHandler } from './waitlist-handler.ts';
 import { parseWaitlistRequest, requireWaitlistSecrets, verifyWaitlistTurnstile } from './waitlist-runtime-policy.ts';
+import { communityReviewQueue, readCommunityAppeal } from '../../../packages/db/src/community-appeal-access.ts';
+import { castCommunityBallot, submitCommunityAppeal, withdrawCommunityAppeal, type CommunityBallotInput } from '../../../packages/db/src/community-appeal-mutations.ts';
+import { MONTHLY_REPUTATION_POLICY_VERSION } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
+import { recordMonthlyEmailControl } from '../../../packages/db/src/monthly-maintenance.ts';
+import { handleMonthlyReputationRead } from './monthly-reputation-routes.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -35,6 +40,10 @@ interface Env extends EnvBindings {
   JOBS_COMPATIBILITY: NonNullable<EnvBindings['JOBS_COMPATIBILITY']>;
   R2_ACCOUNT_ID: string;
   LYTHAUS_CONFIG?: NonNullable<EnvBindings['LYTHAUS_CONFIG']>;
+  COMMUNITY_APPEAL_RULES_VERSION?: string;
+  MONTHLY_REPUTATION_MAINTENANCE_RULES?: string;
+  MONTHLY_REPUTATION_SNAPSHOT_RULES?: string;
+  MONTHLY_REPUTATION_SELECTION_RULES?: string;
 }
 
 function hasReadinessAuthorization(request: Request, env: Env): boolean {
@@ -686,6 +695,10 @@ async function verifyEmail(request: Request, env: Env): Promise<Response> {
        VALUES ($1, 'identity.email.verified', 'user', $2, $2, $3::jsonb)`,
       [sourceEventId, userId, JSON.stringify({ userId })],
     );
+    if (env.MONTHLY_REPUTATION_MAINTENANCE_RULES) {
+      await recordMonthlyEmailControl(client, { rulesVersion: env.MONTHLY_REPUTATION_MAINTENANCE_RULES,
+        sourceEventId, verificationTokenId: found.rows[0].id });
+    }
     await writeActivity(client, request, { userId }, sourceEventId, {
       eventType: 'account.email_verified', category: 'account', title: 'You verified your email',
       explanation: 'Your registered email was verified. The email address is not copied into this log.',
@@ -864,6 +877,25 @@ function response(request: Request, env: Env, body: unknown, init: ResponseInit 
 function privateResponse(request: Request, env: Env, body: unknown, init: ResponseInit = {}): Response {
   const result = response(request, env, body, init);
   result.headers.set('cache-control', 'private, no-store');
+  return result;
+}
+
+function privateTextResponse(request: Request, env: Env, body: string, init: ResponseInit = {}): Response {
+  const result = new Response(body, init);
+  const origin = corsOrigin(request, env);
+  if (origin) {
+    result.headers.set('access-control-allow-origin', origin);
+    result.headers.set('access-control-allow-credentials', 'true');
+  }
+  result.headers.set('x-correlation-id', correlationId(request));
+  result.headers.set('vary', 'Origin, Authorization');
+  result.headers.set('cache-control', 'private, no-store');
+  if (coordinatorAuthorization(request, env)
+    && request.headers.has('x-lythaus-acceptance-run-id')
+    && request.headers.has('x-lythaus-acceptance-context')) {
+    result.headers.set('x-lythaus-candidate-version', env.WORKER_VERSION.id);
+    result.headers.set('x-lythaus-candidate-release', env.WORKER_VERSION.tag);
+  }
   return result;
 }
 
@@ -2012,6 +2044,12 @@ async function createAppeal(request: Request, env: Env, user: Principal): Promis
   if (!input.caseId) throw new Error('case_id_required');
   const statement = input.statement?.normalize('NFC').trim() ?? '';
   if (!statement || statement.length > 2000) throw new Error('appeal_statement_required');
+  if (env.COMMUNITY_APPEAL_RULES_VERSION) {
+    const result = await transaction(env.DB_APP_FRESH, client => submitCommunityAppeal(client, {
+      userId: user.userId, caseId: input.caseId!, statement, rulesVersion: env.COMMUNITY_APPEAL_RULES_VERSION!,
+    }));
+    return privateResponse(request, env, result, { status: result.created ? 201 : 200 });
+  }
   const appealId = uuidv7();
   const sourceEventId = uuidv7();
   const result = await transaction(env.DB_APP_FRESH, async (client) => {
@@ -2054,6 +2092,9 @@ async function createAppeal(request: Request, env: Env, user: Principal): Promis
 }
 
 async function getAppeal(request: Request, env: Env, user: Principal, appealId: string): Promise<Response> {
+  if (env.COMMUNITY_APPEAL_RULES_VERSION && await isCommunityAppeal(env, appealId)) {
+    return privateResponse(request, env, { appeal: await transaction(env.DB_APP_FRESH, client => readCommunityAppeal(client, user.userId, appealId)) });
+  }
   const result = await query(env.DB_APP_FRESH,
     `SELECT a.id, a.case_id, a.state, a.risk_class, a.policy_version, a.created_at, a.expires_at, a.resolved_at,
             o.reviewer_panel_decision, o.final_decision, o.completed_reviewers, o.state AS outcome_state,
@@ -2068,7 +2109,19 @@ async function getAppeal(request: Request, env: Env, user: Principal, appealId: 
   return privateResponse(request, env, { appeal: result.rows[0] });
 }
 
+async function isCommunityAppeal(env: Env, appealId: string): Promise<boolean> {
+  const result = await query(env.DB_APP_FRESH, 'SELECT 1 FROM moderation.appeals WHERE id = $1 AND policy_version = $2', [appealId, MONTHLY_REPUTATION_POLICY_VERSION]);
+  return result.rowCount === 1;
+}
+
 async function submitAppealVote(request: Request, env: Env, user: Principal, appealId: string): Promise<Response> {
+  if (env.COMMUNITY_APPEAL_RULES_VERSION && await isCommunityAppeal(env, appealId)) {
+    const input = await readJson<Pick<CommunityBallotInput, 'choice' | 'reasonCode' | 'expectedRevision' | 'contextAcknowledged'>>(request, 8 * 1024);
+    const result = await transaction(env.DB_APP_FRESH, client => castCommunityBallot(client, {
+      ...input, appealId, userId: user.userId, idempotencyKey: request.headers.get('idempotency-key')?.trim() ?? '',
+    }));
+    return privateResponse(request, env, result, { status: result.created ? 201 : 200 });
+  }
   const input = await readJson<{ decision?: 'overturn' | 'uphold' }>(request, 8 * 1024);
   if (!input.decision || !['overturn', 'uphold'].includes(input.decision)) throw new Error('appeal_vote_invalid');
   const idempotencyKey = request.headers.get('idempotency-key')?.trim();
@@ -3235,6 +3288,18 @@ export default {
         const user = await principal(request, env);
         return await idempotentMutation(request, env, user.userId, 'appeal.create', () => createAppeal(request, env, user));
       }
+      if (request.method === 'GET' && url.pathname === '/api/appeals/review/queue') {
+        const user = await principal(request, env);
+        if (!env.COMMUNITY_APPEAL_RULES_VERSION) throw new Error('community_appeals_unavailable');
+        return privateResponse(request, env, await transaction(env.DB_APP_FRESH, client => communityReviewQueue(client, user.userId, env.COMMUNITY_APPEAL_RULES_VERSION!)));
+      }
+      const communityWithdraw = url.pathname.match(/^\/api\/appeals\/([^/]+)\/withdraw$/);
+      if (request.method === 'POST' && communityWithdraw) {
+        const user = await principal(request, env);
+        if (!env.COMMUNITY_APPEAL_RULES_VERSION) throw new Error('community_appeals_unavailable');
+        return await idempotentMutation(request, env, user.userId, 'appeal.withdraw', async () =>
+          privateResponse(request, env, await transaction(env.DB_APP_FRESH, client => withdrawCommunityAppeal(client, communityWithdraw[1], user.userId))));
+      }
       const appeal = url.pathname.match(/^\/api\/appeals\/([^/]+)$/);
       if (request.method === 'GET' && appeal) return await getAppeal(request, env, await principal(request, env), appeal[1]);
       const appealVote = url.pathname.match(/^\/api\/appeals\/([^/]+)\/vote$/);
@@ -3248,6 +3313,23 @@ export default {
         return await idempotentMutation(request, env, user.userId, 'appeal.recuse', () => recuseAppealReview(request, env, user, appealRecusal[1]), true);
       }
       if (request.method === 'GET' && url.pathname === '/api/appeals/reviewer/assignments') return await reviewerAssignments(request, env, await principal(request, env));
+      const monthlyReportRoute = url.pathname.match(/^\/api\/reputation\/me\/reports\/monthly\/([^/]+)$/);
+      const monthlyReportCsvRoute = url.pathname.match(/^\/api\/reputation\/me\/reports\/monthly\/([^/]+)\/export\.csv$/);
+      if (request.method === 'GET' && (monthlyReportRoute || monthlyReportCsvRoute || url.pathname === '/api/rewards/me/monthly')) {
+        const monthlyReputationResponse = await handleMonthlyReputationRead(request, {
+          authenticate: async (incoming) => {
+            const user = await principal(incoming, env);
+            return { userId: user.userId };
+          },
+          transaction: (work) => transaction(env.DB_APP_FRESH, work),
+          snapshotRulesVersion: env.MONTHLY_REPUTATION_SNAPSHOT_RULES,
+          selectionRulesVersion: env.MONTHLY_REPUTATION_SELECTION_RULES,
+          respond: (body, status, headers = {}) => typeof body === 'string'
+            ? privateTextResponse(request, env, body, { status, headers })
+            : privateResponse(request, env, body, { status, headers }),
+        });
+        if (monthlyReputationResponse) return monthlyReputationResponse;
+      }
       if (request.method === 'GET' && url.pathname === '/api/reputation/me') {
         const user = await principal(request, env);
         return await reputationSummary(request, env, user.userId, true);

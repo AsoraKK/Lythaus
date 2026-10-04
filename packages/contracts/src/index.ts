@@ -1,4 +1,17 @@
 export type DeclaredCreationMode = 'human' | 'ai_assisted' | 'ai_generated';
+export {
+  MONTHLY_REPUTATION_POLICY_VERSION,
+  MONTHLY_REPUTATION_CATALOGUE_HASH,
+  MONTHLY_REPUTATION_LIMITS,
+  MONTHLY_REPUTATION_BANDS,
+  calculateMonthlyReputation,
+  nextReputationMonth,
+  reputationLevelForMonthlyScore,
+  requireSourceMonth,
+  type MonthlyReputationInput,
+  type MonthlyReputationCalculation,
+  type MonthlyReputationLevel,
+} from './monthly-reputation-policy.ts';
 export type PublicDeclaredCreationMode = Exclude<DeclaredCreationMode, 'ai_generated'>;
 
 export type PublicContentLabel =

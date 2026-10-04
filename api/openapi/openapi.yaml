@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Lythaus API
-  version: v8
+  version: v9
   description: >
     HTTP contract for the Lythaus API. The active runtime is Cloudflare Workers
     backed by PlanetScale PostgreSQL through Hyperdrive. Initial authentication
@@ -565,6 +565,10 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1appeals~1{appealId}~1recuse'
   /appeals/reviewer/assignments:
     $ref: './product-integrity.yaml#/paths/~1appeals~1reviewer~1assignments'
+  /appeals/review/queue:
+    $ref: './community-appeals.yaml#/paths/~1appeals~1review~1queue'
+  /appeals/{appealId}/withdraw:
+    $ref: './community-appeals.yaml#/paths/~1appeals~1{appealId}~1withdraw'
   /auth/refresh:
     post:
       operationId: authRefresh
@@ -1247,6 +1251,10 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1bookmarks~1{postId}'
   /reputation/me:
     $ref: './product-integrity.yaml#/paths/~1reputation~1me'
+  /reputation/me/reports/monthly/{sourceMonth}:
+    $ref: './monthly-reputation.yaml#/paths/~1reputation~1me~1reports~1monthly~1{sourceMonth}'
+  /reputation/me/reports/monthly/{sourceMonth}/export.csv:
+    $ref: './monthly-reputation.yaml#/paths/~1reputation~1me~1reports~1monthly~1{sourceMonth}~1export.csv'
   /reputation/me/ledger:
     $ref: './product-integrity.yaml#/paths/~1reputation~1me~1ledger'
   /activity:
@@ -1280,6 +1288,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UnauthorizedError'
+  /rewards/me/monthly:
+    $ref: './monthly-reputation.yaml#/paths/~1rewards~1me~1monthly'
   /rewards/{id}/redeem:
     post:
       operationId: rewardsRedeemPost
@@ -1371,6 +1381,14 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1admin~1appeals~1{appealId}~1adjudications'
   /admin/appeals/pending-adjudication:
     $ref: './product-integrity.yaml#/paths/~1admin~1appeals~1pending-adjudication'
+  /admin/appeals/community/queue:
+    $ref: './community-appeals.yaml#/paths/~1admin~1appeals~1community~1queue'
+  /admin/appeals/{appealId}/triage:
+    $ref: './community-appeals.yaml#/paths/~1admin~1appeals~1{appealId}~1triage'
+  /admin/appeals/{appealId}/evidence:
+    $ref: './community-appeals.yaml#/paths/~1admin~1appeals~1{appealId}~1evidence'
+  /admin/reputation/comments/{commentId}/context-review:
+    $ref: './monthly-reputation.yaml#/paths/~1admin~1reputation~1comments~1{commentId}~1context-review'
   /admin/reviewers/{reviewerId}/qualification:
     $ref: './product-integrity.yaml#/paths/~1admin~1reviewers~1{reviewerId}~1qualification'
   /admin/users/{userId}/status:
