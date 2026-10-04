@@ -531,14 +531,15 @@ test('APP-06/14/REL-02: multiple final ballots share one weekly allowance; recus
 });
 
 test('CAL-18/REL-03: later peer collection never freezes an earlier month correction', async () => {
+  const evaluatedAt = new Date(Date.now() + 60_000).toISOString();
   await tx(async client => {
     const configuration = await loadMonthlyEarningConfiguration(client, PROPOSED_WEEKLY_EARNING_RULES.version);
     await refreshMonthlyEarningWeek(client, { subjectUserId: prePeerSubject.id, startsAt: '2026-09-07T00:00:00.000Z',
-      configuration, evaluatedAt: '2026-10-04T00:00:00.000Z' });
+      configuration, evaluatedAt });
   }, 'lythaus_jobs');
   const corrected = await tx(client => assembleMonthlyReputation(client, { subjectUserId: prePeerSubject.id, sourceMonth: '2026-09',
     weeklyRulesVersion: PROPOSED_WEEKLY_EARNING_RULES.version, maintenanceRulesVersion: PROPOSED_MONTHLY_MAINTENANCE_RULES.version,
-    peerRulesVersion: peerVersion, evaluatedAt: '2026-10-04T00:00:00.000Z' }), 'lythaus_jobs');
+    peerRulesVersion: peerVersion, evaluatedAt }), 'lythaus_jobs');
   assert.equal(corrected.created, true); assert.equal(corrected.revision, 2); assert.equal(corrected.report.peerRulesVersion, null);
   assert.notEqual(corrected.sourceId, prePeerAssembly.sourceId);
   assert.equal((await sql('SELECT report FROM trust.monthly_reputation_assemblies WHERE source_id = $1', [prePeerAssembly.sourceId])).rows[0].report.peerRulesVersion, null);
