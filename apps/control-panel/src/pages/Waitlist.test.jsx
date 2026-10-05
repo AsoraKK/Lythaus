@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Waitlist from './Waitlist.jsx';
 import { adminRequest } from '../api/adminApi.js';
@@ -93,21 +93,81 @@ describe('Waitlist', () => {
     render(<Waitlist />);
     await screen.findByText('person@example.com');
     fireEvent.change(screen.getByLabelText('Update waitlist status for person@example.com'), { target: { value: 'invited' } });
+    expect(screen.getByRole('note')).toHaveTextContent('person@example.com');
+    expect(screen.getByText('Change status from waiting to invited.')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Waitlist reason code'), { target: { value: 'BETA_INVITE' } });
-    fireEvent.change(screen.getByLabelText('Waitlist confirmation'), { target: { value: 'UPDATE WAITLIST STATUS' } });
+    fireEvent.change(screen.getByLabelText('Waitlist confirmation'), { target: { value: `UPDATE WAITLIST STATUS ${waitlistId} TO INVITED` } });
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
     await waitFor(() => expect(screen.getByText('invited', { selector: 'span.waitlist-status' })).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Place hold' }));
+    expect(screen.getByText('Place the retention hold for this contact.')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Waitlist reason code'), { target: { value: 'RETENTION_REVIEW' } });
-    fireEvent.change(screen.getByLabelText('Waitlist confirmation'), { target: { value: 'PLACE RETENTION HOLD' } });
+    fireEvent.change(screen.getByLabelText('Waitlist confirmation'), { target: { value: `PLACE RETENTION HOLD ${waitlistId}` } });
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Release hold' })).toBeInTheDocument());
     expect(adminRequest).toHaveBeenCalledWith(`waitlist/${firstPage.items[0].id}/status`, {
-      method: 'POST', body: { status: 'invited', reasonCode: 'BETA_INVITE', confirmation: 'UPDATE WAITLIST STATUS' }
+      method: 'POST', body: { status: 'invited', reasonCode: 'BETA_INVITE', confirmation: `UPDATE WAITLIST STATUS ${waitlistId} TO INVITED` }
     });
     expect(adminRequest).toHaveBeenCalledWith(`waitlist/${firstPage.items[0].id}/retention-hold`, {
-      method: 'POST', body: { active: true, reasonCode: 'RETENTION_REVIEW', confirmation: 'PLACE RETENTION HOLD' }
+      method: 'POST', body: { active: true, reasonCode: 'RETENTION_REVIEW', confirmation: `PLACE RETENTION HOLD ${waitlistId}` }
     });
+  });
+
+  it('cancels a pending action as soon as a filter changes', async () => {
+    adminRequest.mockImplementation((path) => path === 'account-support/access' ? ownerDenied() : Promise.resolve(firstPage));
+    render(<Waitlist />);
+    await screen.findByText('person@example.com');
+
+    fireEvent.change(screen.getByLabelText('Update waitlist status for person@example.com'), { target: { value: 'invited' } });
+    expect(screen.getByRole('heading', { name: 'Confirm waitlist action' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Search waitlist by exact email'), { target: { value: 'other@example.com' } });
+
+    expect(screen.queryByRole('heading', { name: 'Confirm waitlist action' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
+  });
+
+  it('cancels a pending action on refresh and clears the contact if access is denied', async () => {
+    let waitlistRequests = 0;
+    let rejectRefresh;
+    adminRequest.mockImplementation((path) => {
+      if (path === 'account-support/access') return ownerDenied();
+      waitlistRequests += 1;
+      if (waitlistRequests === 1) return Promise.resolve(firstPage);
+      return new Promise((_resolve, reject) => { rejectRefresh = reject; });
+    });
+    render(<Waitlist />);
+    await screen.findByText('person@example.com');
+
+    fireEvent.change(screen.getByLabelText('Update waitlist status for person@example.com'), { target: { value: 'invited' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(screen.queryByRole('heading', { name: 'Confirm waitlist action' })).not.toBeInTheDocument();
+
+    await act(async () => {
+      rejectRefresh(Object.assign(new Error('Denied'), { status: 403 }));
+    });
+    expect(await screen.findByRole('alert')).toHaveTextContent('Administrator access is required');
+    expect(screen.queryByText('person@example.com')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
+  });
+
+  it('clears a pending action and contact data when a mutation is denied', async () => {
+    adminRequest.mockImplementation((path) => {
+      if (path === 'account-support/access') return ownerDenied();
+      if (path === 'waitlist') return Promise.resolve(firstPage);
+      if (path.endsWith('/status')) return Promise.reject(Object.assign(new Error('Denied'), { status: 403 }));
+      return Promise.reject(new Error('Unexpected test route'));
+    });
+    render(<Waitlist />);
+    await screen.findByText('person@example.com');
+
+    fireEvent.change(screen.getByLabelText('Update waitlist status for person@example.com'), { target: { value: 'invited' } });
+    fireEvent.change(screen.getByLabelText('Waitlist reason code'), { target: { value: 'BETA_INVITE' } });
+    fireEvent.change(screen.getByLabelText('Waitlist confirmation'), { target: { value: `UPDATE WAITLIST STATUS ${waitlistId} TO INVITED` } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Administrator access is required');
+    expect(screen.queryByText('person@example.com')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Confirm waitlist action' })).not.toBeInTheDocument();
   });
 
   it('searches an exact email through the bounded Worker filter', async () => {
@@ -172,7 +232,10 @@ describe('Waitlist', () => {
     });
     render(<Waitlist />);
     await screen.findByText('person@example.com');
+    expect(screen.queryByRole('option', { name: 'Unsubscribe and request purge' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Unsubscribe + request purge' }));
+    expect(screen.getByRole('note')).toHaveTextContent('person@example.com');
+    expect(screen.getByText(/Current status: waiting; resulting status: unsubscribed\. An active retention hold blocks purge; this action does not immediately delete the contact\./)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Waitlist reason code'), { target: { value: 'RETENTION_REVIEW' } });
     fireEvent.change(screen.getByLabelText('Waitlist confirmation'), { target: { value: `UNSUBSCRIBE AND REQUEST PURGE ${waitlistId}` } });
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));

@@ -154,3 +154,16 @@ test('waitlist mutation handler rejects cross-origin and non-JSON requests befor
   assert.equal((await nonJson.json()).error, 'admin_mutation_content_type_invalid');
   assert.equal(state.transactionCalls, 0);
 });
+
+test('waitlist unsubscribe cannot bypass the retention-aware purge-request route', async () => {
+  resetState();
+  const path = `/api/admin/waitlist/${WAITLIST_ID}/status`;
+  const response = await worker.fetch(request(path, {
+    method: 'POST',
+    headers: { origin: 'https://admin.lythaus.co', 'content-type': 'application/json' },
+    body: JSON.stringify({ status: 'unsubscribed', reasonCode: 'RETENTION_REVIEW', confirmation: `UNSUBSCRIBE AND REQUEST PURGE ${WAITLIST_ID}` }),
+  }), env());
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error, 'invalid_waitlist_status');
+  assert.equal(state.transactionCalls, 0);
+});

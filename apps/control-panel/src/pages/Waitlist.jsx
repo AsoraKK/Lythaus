@@ -40,6 +40,9 @@ function Waitlist() {
   const [newEntry, setNewEntry] = useState({ email: '', source: 'keeper', reasonCode: '', confirmation: '' });
 
   const loadWaitlist = useCallback(async ({ cursor = null, append = false } = {}) => {
+    setPendingAction(null);
+    setReasonCode('');
+    setConfirmation('');
     append ? setLoadingMore(true) : setLoading(true);
     if (!append) { setLinkedAccounts({}); setAppliedFilters({ ...filters }); }
     setError('');
@@ -141,10 +144,28 @@ function Waitlist() {
       setPendingAction(null);
       setActionMessage(resultMessage);
       setUpdatingId(null);
-    } catch {
+    } catch (requestError) {
+      if (requestError.status === 401 || requestError.status === 403) {
+        setPendingAction(null);
+        setReasonCode('');
+        setConfirmation('');
+        setItems([]);
+        setNextCursor(null);
+        setSummary({ totalWaiting: null, last7Days: null, last24Hours: null });
+        setError(requestError.status === 403 ? 'Administrator access is required to view waitlist contacts.' : 'Sign in through approved admin access to view waitlist contacts.');
+        setUpdatingId(null);
+        return;
+      }
       setActionMessage('The waitlist action could not be completed.');
       setUpdatingId(null);
     }
+  };
+
+  const updateFilter = (patch) => {
+    setPendingAction(null);
+    setReasonCode('');
+    setConfirmation('');
+    setFilters((current) => ({ ...current, ...patch }));
   };
 
   const submitNewEntry = async (event) => {
@@ -175,11 +196,11 @@ function Waitlist() {
       <LythCard variant="panel">
         <p className="muted">Email search is exact. Account-link checks are owner-only, read-only, and never merge identities.</p>
         <form className="form-row" onSubmit={(event) => { event.preventDefault(); loadWaitlist(); }}>
-          <LythInput type="email" aria-label="Search waitlist by exact email" value={filters.q} onChange={(event) => setFilters({ ...filters, q: event.target.value })} placeholder="Exact email address" />
-          <select aria-label="Filter waitlist status" value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}><option value="">All statuses</option><option value="waiting">Waiting</option><option value="invited">Invited</option><option value="converted">Converted</option><option value="unsubscribed">Unsubscribed</option></select>
-          <LythInput value={filters.source} onChange={(event) => setFilters({ ...filters, source: event.target.value })} placeholder="Source" />
-          <LythInput type="datetime-local" aria-label="Waitlist created after" value={filters.createdAfter} onChange={(event) => setFilters({ ...filters, createdAfter: event.target.value })} />
-          <LythInput type="datetime-local" aria-label="Waitlist created before" value={filters.createdBefore} onChange={(event) => setFilters({ ...filters, createdBefore: event.target.value })} />
+          <LythInput type="email" aria-label="Search waitlist by exact email" value={filters.q} onChange={(event) => updateFilter({ q: event.target.value })} placeholder="Exact email address" />
+          <select aria-label="Filter waitlist status" value={filters.status} onChange={(event) => updateFilter({ status: event.target.value })}><option value="">All statuses</option><option value="waiting">Waiting</option><option value="invited">Invited</option><option value="converted">Converted</option><option value="unsubscribed">Unsubscribed</option></select>
+          <LythInput value={filters.source} onChange={(event) => updateFilter({ source: event.target.value })} placeholder="Source" />
+          <LythInput type="datetime-local" aria-label="Waitlist created after" value={filters.createdAfter} onChange={(event) => updateFilter({ createdAfter: event.target.value })} />
+          <LythInput type="datetime-local" aria-label="Waitlist created before" value={filters.createdBefore} onChange={(event) => updateFilter({ createdBefore: event.target.value })} />
           <LythButton type="submit" disabled={loading}>Filter</LythButton>
         </form>
       </LythCard>
@@ -203,16 +224,16 @@ function Waitlist() {
         {!loading && !error && items.length > 0 ? <div className="waitlist-table-wrap"><table className="waitlist-table"><thead><tr><th>Email</th><th>Status</th><th>Source</th><th>Joined</th><th>Existing account</th><th>Actions</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}>
           <td>{item.email}</td><td><span className={`waitlist-status ${String(item.status).toLowerCase()}`}>{item.status}</span><span className="muted">{item.retentionHold ? 'Retention hold active' : ''}</span></td><td>{item.source}</td><td>{formatDateTime(item.createdAt)}</td><td><AccountLinkStatus item={item} value={linkedAccounts[item.id]} access={supportAccess} busy={linkLookupBusyId === item.id} onCheck={checkAccountLink} /></td>
           <td><div className="waitlist-actions">
-            <select aria-label={`Update waitlist status for ${item.email}`} value={item.status} onChange={(event) => beginAction({ ...item, nextStatus: event.target.value }, 'status', 'UPDATE WAITLIST STATUS')} disabled={updatingId === item.id || ['converted', 'unsubscribed'].includes(item.status)}><option value={item.status}>{item.status}</option><option value="invited">Invited</option><option value="converted">Converted</option><option value="unsubscribed">Unsubscribe and request purge</option></select>
-            <LythButton variant="ghost" type="button" onClick={() => beginAction({ ...item, nextActive: !item.retentionHold }, 'hold', item.retentionHold ? 'RELEASE RETENTION HOLD' : 'PLACE RETENTION HOLD')} disabled={updatingId === item.id}>{item.retentionHold ? 'Release hold' : 'Place hold'}</LythButton>
-            <LythButton variant="ghost" type="button" onClick={() => beginAction(item, 'edit', 'UPDATE WAITLIST')}>Edit source</LythButton>
-            <LythButton variant="danger" type="button" onClick={() => beginAction(item, 'delete', `UNSUBSCRIBE AND REQUEST PURGE ${item.id}`)}>Unsubscribe + request purge</LythButton>
+            <select aria-label={`Update waitlist status for ${item.email}`} value={item.status} onChange={(event) => beginAction({ ...item, nextStatus: event.target.value }, 'status', `UPDATE WAITLIST STATUS ${item.id} TO ${event.target.value.toUpperCase()}`)} disabled={loading || loadingMore || updatingId === item.id || ['converted', 'unsubscribed'].includes(item.status)}><option value={item.status}>{item.status}</option>{item.status === 'waiting' ? <option value="invited">Invited</option> : null}{['waiting', 'invited'].includes(item.status) ? <option value="converted">Converted</option> : null}</select>
+            <LythButton variant="ghost" type="button" onClick={() => beginAction({ ...item, nextActive: !item.retentionHold }, 'hold', `${item.retentionHold ? 'RELEASE' : 'PLACE'} RETENTION HOLD ${item.id}`)} disabled={loading || loadingMore || updatingId === item.id}>{item.retentionHold ? 'Release hold' : 'Place hold'}</LythButton>
+            <LythButton variant="ghost" type="button" onClick={() => beginAction(item, 'edit', `UPDATE WAITLIST ${item.id}`)} disabled={loading || loadingMore || updatingId === item.id}>Edit source</LythButton>
+            <LythButton variant="danger" type="button" onClick={() => beginAction(item, 'delete', `UNSUBSCRIBE AND REQUEST PURGE ${item.id}`)} disabled={loading || loadingMore || updatingId === item.id}>Unsubscribe + request purge</LythButton>
           </div></td>
         </tr>)}</tbody></table></div> : null}
         {nextCursor && !loading ? <div className="waitlist-pagination"><LythButton variant="secondary" type="button" onClick={() => loadWaitlist({ cursor: nextCursor, append: true })} disabled={loadingMore}>{loadingMore ? 'Loading...' : 'Load more'}</LythButton></div> : null}
       </LythCard>
 
-      {pendingAction ? <LythCard variant="panel"><div className="panel-header"><h2>Confirm waitlist action</h2></div><p>Type <strong>{pendingAction.expected}</strong> to continue.</p><div className="form-row">{pendingAction.operation === 'edit' ? <LythInput aria-label="Waitlist source" value={editSource} onChange={(event) => setEditSource(event.target.value)} placeholder="Source" /> : null}<LythInput aria-label="Waitlist reason code" value={reasonCode} onChange={(event) => setReasonCode(event.target.value)} placeholder="Reason code" /><LythInput aria-label="Waitlist confirmation" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} placeholder={pendingAction.expected} /><LythButton variant="danger" type="button" onClick={confirmAction} disabled={updatingId === pendingAction.item.id}>Confirm</LythButton><LythButton variant="ghost" type="button" onClick={() => setPendingAction(null)}>Cancel</LythButton></div></LythCard> : null}
+      {pendingAction ? <LythCard variant="panel"><div className="panel-header"><h2>Confirm waitlist action</h2></div><div className="waitlist-confirmation-summary" role="note"><p><strong>Record:</strong> {pendingAction.item.email}</p><p>{waitlistActionSummary(pendingAction, editSource)}</p></div><p>Type <strong>{pendingAction.expected}</strong> to confirm this action.</p><div className="form-row">{pendingAction.operation === 'edit' ? <LythInput aria-label="Waitlist source" value={editSource} onChange={(event) => setEditSource(event.target.value)} placeholder="Source" /> : null}<LythInput aria-label="Waitlist reason code" value={reasonCode} onChange={(event) => setReasonCode(event.target.value)} placeholder="Reason code" /><LythInput aria-label="Waitlist confirmation" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} placeholder={pendingAction.expected} /><LythButton variant="danger" type="button" onClick={confirmAction} disabled={updatingId === pendingAction.item.id}>Confirm</LythButton><LythButton variant="ghost" type="button" onClick={() => { setPendingAction(null); setReasonCode(''); setConfirmation(''); }}>Cancel</LythButton></div></LythCard> : null}
     </PageLayout>
   );
 }
@@ -223,6 +244,17 @@ function idempotencyKey() {
 
 function hasWaitlistFilters(filters) {
   return Object.values(filters).some(Boolean);
+}
+
+function waitlistActionSummary(action, editSource) {
+  const { item, operation } = action;
+  if (operation === 'status' && item.nextStatus === 'unsubscribed') {
+    return `Unsubscribe and record a retention-aware purge request for this contact. Current status: ${item.status}; requested status: unsubscribed. An active retention hold blocks purge; this action does not immediately delete the contact.`;
+  }
+  if (operation === 'status') return `Change status from ${item.status} to ${item.nextStatus}.`;
+  if (operation === 'hold') return `${item.nextActive ? 'Place' : 'Release'} the retention hold for this contact.`;
+  if (operation === 'edit') return `Change source from ${item.source || 'none'} to ${editSource || 'none'}.`;
+  return `Unsubscribe this contact and record a retention-aware purge request. Current status: ${item.status}; resulting status: unsubscribed. An active retention hold blocks purge; this action does not immediately delete the contact.`;
 }
 
 function AccountLinkStatus({ item, value, access, busy, onCheck }) {

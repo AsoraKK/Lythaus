@@ -231,7 +231,7 @@ async function updateWaitlistStatus(request: Request, env: Env, actor: AdminActo
   const input = rejectUnknownFields(await readBoundedJson(request), ['status', 'reasonCode', 'confirmation']);
   const status = parseWaitlistStatusUpdate(input);
   const reasonCode = parseReasonCode(input.reasonCode);
-  requireConfirmation(input.confirmation, 'UPDATE WAITLIST STATUS');
+  requireConfirmation(input.confirmation, `UPDATE WAITLIST STATUS ${id} TO ${status.toUpperCase()}`);
   const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
     const current = await client.query<{ status: string }>(
       `SELECT status FROM marketing.waitlist_signups WHERE id = $1 FOR UPDATE`, [id]);
@@ -245,8 +245,7 @@ async function updateWaitlistStatus(request: Request, env: Env, actor: AdminActo
                 updated_at = now(),
                 invited_at = CASE WHEN $2 = 'invited' THEN COALESCE(invited_at, now()) ELSE invited_at END,
                 converted_at = CASE WHEN $2 = 'converted' THEN COALESCE(converted_at, now()) ELSE converted_at END,
-                unsubscribed_at = CASE WHEN $2 = 'unsubscribed' THEN COALESCE(unsubscribed_at, now()) ELSE unsubscribed_at END,
-                purge_after = CASE WHEN $2 IN ('converted', 'unsubscribed')
+                purge_after = CASE WHEN $2 = 'converted'
                   THEN LEAST(purge_after, now() + interval '30 days') ELSE purge_after END
           WHERE id = $1`, [id, status]);
     }
@@ -267,7 +266,7 @@ async function updateWaitlistRetentionHold(request: Request, env: Env, actor: Ad
   const input = rejectUnknownFields(await readBoundedJson(request), ['active', 'reasonCode', 'confirmation']);
   const active = parseWaitlistRetentionHoldUpdate(input);
   const reasonCode = parseReasonCode(input.reasonCode);
-  requireConfirmation(input.confirmation, active ? 'PLACE RETENTION HOLD' : 'RELEASE RETENTION HOLD');
+  requireConfirmation(input.confirmation, `${active ? 'PLACE' : 'RELEASE'} RETENTION HOLD ${id}`);
   const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
     const updated = await client.query<{ id: string; retention_hold: boolean }>(
       `UPDATE marketing.waitlist_signups

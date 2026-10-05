@@ -854,6 +854,20 @@ textarea.lyth-input {
   font-size: 0.78rem;
 }
 
+.waitlist-confirmation-summary {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 12px;
+  background: var(--waitlist-surface-soft);
+  border: 1px solid var(--waitlist-line);
+  border-radius: 3px;
+}
+
+.waitlist-confirmation-summary p {
+  margin: 0;
+}
+
 .waitlist-action-error {
   margin: 0 0 14px;
   color: var(--waitlist-accent);

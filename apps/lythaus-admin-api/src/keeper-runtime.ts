@@ -367,16 +367,16 @@ export async function updateAdminWaitlistEntry(request: Request, env: KeeperEnv,
   const input = objectBody(await readBoundedJson(request));
   rejectUnknownFields(input, ['status', 'source', 'reasonCode', 'confirmation']);
   const reasonCode = parseReasonCode(input.reasonCode);
-  requireConfirmation(input.confirmation, 'UPDATE WAITLIST');
+  requireConfirmation(input.confirmation, `UPDATE WAITLIST ${id}`);
   const source = input.source === undefined ? undefined : parseSource(input.source);
-  const status = input.status === undefined ? undefined : (typeof input.status === 'string' && ['invited', 'converted', 'unsubscribed'].includes(input.status) ? input.status : (() => { throw new Error('invalid_waitlist_status'); })());
+  const status = input.status === undefined ? undefined : (typeof input.status === 'string' && ['invited', 'converted'].includes(input.status) ? input.status : (() => { throw new Error('invalid_waitlist_status'); })());
   if (source === undefined && status === undefined) throw new Error('unknown_field');
   const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
     const current = await client.query<WaitlistRecord>(`SELECT id, status, source, consent_version, created_at, updated_at, retention_hold, convert_from(email_ciphertext, 'utf8') AS email_ciphertext, encryption_key_version FROM marketing.waitlist_signups WHERE id = $1 FOR UPDATE`, [id]);
     if (!current.rows[0]) throw new Error('waitlist_not_found');
     const row = current.rows[0];
     if (status !== undefined) assertWaitlistStatusTransition(row.status, status as never);
-    await client.query(`UPDATE marketing.waitlist_signups SET status = COALESCE($2, status), source = COALESCE($3, source), updated_at = now(), invited_at = CASE WHEN $2 = 'invited' THEN COALESCE(invited_at, now()) ELSE invited_at END, converted_at = CASE WHEN $2 = 'converted' THEN COALESCE(converted_at, now()) ELSE converted_at END, unsubscribed_at = CASE WHEN $2 = 'unsubscribed' THEN COALESCE(unsubscribed_at, now()) ELSE unsubscribed_at END, purge_after = CASE WHEN $2 IN ('converted', 'unsubscribed') THEN LEAST(purge_after, now() + interval '30 days') ELSE purge_after END WHERE id = $1`, [id, status ?? null, source ?? null]);
+    await client.query(`UPDATE marketing.waitlist_signups SET status = COALESCE($2, status), source = COALESCE($3, source), updated_at = now(), invited_at = CASE WHEN $2 = 'invited' THEN COALESCE(invited_at, now()) ELSE invited_at END, converted_at = CASE WHEN $2 = 'converted' THEN COALESCE(converted_at, now()) ELSE converted_at END, purge_after = CASE WHEN $2 = 'converted' THEN LEAST(purge_after, now() + interval '30 days') ELSE purge_after END WHERE id = $1`, [id, status ?? null, source ?? null]);
     const after = { status: status ?? row.status, source: source ?? row.source };
     await client.query(`INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata) VALUES ($1, $2, 'marketing.waitlist_changed', 'marketing.waitlist', $3, $4, $5, $6::jsonb)`, [uuidv7(), actor.userId, id, reasonCode, correlation, JSON.stringify({ before: { status: row.status, source: row.source }, after })]);
     return { id, ...after };

@@ -5,11 +5,11 @@ export interface WaitlistPageRequest {
   cursor: KeysetCursor | null;
 }
 
-export type WaitlistStatus = 'invited' | 'converted' | 'unsubscribed';
+export type WaitlistStatus = 'invited' | 'converted';
 export const WAITLIST_SEARCH_MAX_CANDIDATES = 1000;
 
 const WAITLIST_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const WAITLIST_STATUSES = new Set<WaitlistStatus>(['invited', 'converted', 'unsubscribed']);
+const WAITLIST_STATUSES = new Set<WaitlistStatus>(['invited', 'converted']);
 
 export function assertWaitlistAdminRole(role: unknown): void {
   if (role !== 'administrator' && role !== 'owner') throw new Error('admin_role_required');
@@ -39,8 +39,8 @@ export function parseWaitlistStatusUpdate(input: unknown): WaitlistStatus {
 export function assertWaitlistStatusTransition(current: unknown, next: WaitlistStatus): void {
   if (current === next) return;
   const allowed: Record<string, readonly WaitlistStatus[]> = {
-    waiting: ['invited', 'converted', 'unsubscribed'],
-    invited: ['converted', 'unsubscribed'],
+    waiting: ['invited', 'converted'],
+    invited: ['converted'],
     converted: [],
     unsubscribed: [],
   };
