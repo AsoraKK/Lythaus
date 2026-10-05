@@ -685,7 +685,7 @@ async function lifecycleSubscription(env: Env): Promise<{ source: string; domain
   const accountId = requiredSecret(env, 'CLOUDFLARE_ACCOUNT_ID');
   const token = requiredSecret(env, 'CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN');
   const call = async (path: string): Promise<unknown[]> => {
-    const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}${path}`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15_000) });
+    const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}${path}`, { headers: { authorization: `Bearer ${token}` }, redirect: 'manual', signal: AbortSignal.timeout(15_000) });
     const body = await response.json().catch(() => null) as { success?: boolean; result?: unknown } | null;
     if (!response.ok || body?.success !== true || !Array.isArray(body.result)) throw new Error('cloudflare_lifecycle_observation_unavailable');
     return body.result;

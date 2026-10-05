@@ -269,6 +269,7 @@ async function verifyTurnstile(env: Env, token: unknown, expectedAction: 'accoun
         response: token,
         idempotency_key: uuidv7(),
       }),
+      redirect: 'manual',
       signal: AbortSignal.timeout(8000),
     });
   } catch {
