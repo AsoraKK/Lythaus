@@ -219,6 +219,8 @@ export 'package:lythaus_api_client/src/model/owner_problem_request.dart';
 export 'package:lythaus_api_client/src/model/owner_request_page.dart';
 export 'package:lythaus_api_client/src/model/owner_suggestion_request.dart';
 export 'package:lythaus_api_client/src/model/owner_support_request.dart';
+export 'package:lythaus_api_client/src/model/owner_timeline_page.dart';
+export 'package:lythaus_api_client/src/model/owner_timeline_post.dart';
 export 'package:lythaus_api_client/src/model/pending_appeal_adjudication.dart';
 export 'package:lythaus_api_client/src/model/pending_appeal_adjudication_list.dart';
 export 'package:lythaus_api_client/src/model/personal_feed_item.dart';

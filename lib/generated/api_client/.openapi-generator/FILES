@@ -202,6 +202,8 @@ doc/OwnerProblemRequest.md
 doc/OwnerRequestPage.md
 doc/OwnerSuggestionRequest.md
 doc/OwnerSupportRequest.md
+doc/OwnerTimelinePage.md
+doc/OwnerTimelinePost.md
 doc/PendingAppealAdjudication.md
 doc/PendingAppealAdjudicationList.md
 doc/PersonalFeedItem.md
@@ -513,6 +515,8 @@ lib/src/model/owner_problem_request.dart
 lib/src/model/owner_request_page.dart
 lib/src/model/owner_suggestion_request.dart
 lib/src/model/owner_support_request.dart
+lib/src/model/owner_timeline_page.dart
+lib/src/model/owner_timeline_post.dart
 lib/src/model/pending_appeal_adjudication.dart
 lib/src/model/pending_appeal_adjudication_list.dart
 lib/src/model/personal_feed_item.dart
@@ -799,6 +803,8 @@ test/owner_problem_request_test.dart
 test/owner_request_page_test.dart
 test/owner_suggestion_request_test.dart
 test/owner_support_request_test.dart
+test/owner_timeline_page_test.dart
+test/owner_timeline_post_test.dart
 test/pending_appeal_adjudication_list_test.dart
 test/pending_appeal_adjudication_test.dart
 test/personal_feed_item_test.dart

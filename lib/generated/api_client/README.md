@@ -212,6 +212,7 @@ Class | Method | HTTP request | Description
 [*PostsApi*](doc/PostsApi.md) | [**postsOwnerView**](doc/PostsApi.md#postsownerview) | **GET** /posts/{postId}/owner-view | Read the author&#39;s own allowed or pending post
 [*PostsApi*](doc/PostsApi.md) | [**postsReplace**](doc/PostsApi.md#postsreplace) | **PUT** /posts/{id} | Replace editable post fields and return the post to review
 [*PostsApi*](doc/PostsApi.md) | [**postsUpdate**](doc/PostsApi.md#postsupdate) | **PATCH** /posts/{id} | Update a post with moderation and AI authenticity checks
+[*PostsApi*](doc/PostsApi.md) | [**usersMePostsList**](doc/PostsApi.md#usersmepostslist) | **GET** /users/me/posts | List my own published and pending posts
 [*PrivacyApi*](doc/PrivacyApi.md) | [**privacyRequestCreate**](doc/PrivacyApi.md#privacyrequestcreate) | **POST** /privacy/requests | Submit an asynchronous privacy request
 [*PrivacyApi*](doc/PrivacyApi.md) | [**privacyRequestExportDownload**](doc/PrivacyApi.md#privacyrequestexportdownload) | **GET** /privacy/requests/{requestId}/export | Download my completed privacy export
 [*PrivacyApi*](doc/PrivacyApi.md) | [**privacyRequestStatus**](doc/PrivacyApi.md#privacyrequeststatus) | **GET** /privacy/requests | Get the latest privacy request status
@@ -453,6 +454,8 @@ Class | Method | HTTP request | Description
  - [OwnerRequestPage](doc/OwnerRequestPage.md)
  - [OwnerSuggestionRequest](doc/OwnerSuggestionRequest.md)
  - [OwnerSupportRequest](doc/OwnerSupportRequest.md)
+ - [OwnerTimelinePage](doc/OwnerTimelinePage.md)
+ - [OwnerTimelinePost](doc/OwnerTimelinePost.md)
  - [PendingAppealAdjudication](doc/PendingAppealAdjudication.md)
  - [PendingAppealAdjudicationList](doc/PendingAppealAdjudicationList.md)
  - [PersonalFeedItem](doc/PersonalFeedItem.md)

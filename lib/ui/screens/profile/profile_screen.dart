@@ -348,11 +348,11 @@ class _OwnerPostsSection extends ConsumerWidget {
         Text('Your posts', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: Spacing.sm),
         postsState.when(
-          loading: () => const Padding(
-            padding: EdgeInsets.symmetric(vertical: Spacing.md),
+          loading: () => Padding(
+            padding: const EdgeInsets.symmetric(vertical: Spacing.md),
             child: Semantics(
               label: 'Loading your posts',
-              child: LinearProgressIndicator(minHeight: 2),
+              child: const LinearProgressIndicator(minHeight: 2),
             ),
           ),
           error: (error, stackTrace) => Column(
@@ -579,9 +579,9 @@ class _FollowSectionState extends ConsumerState<_FollowSection> {
                 ],
               ],
             ),
-      loading: () => const Semantics(
+      loading: () => Semantics(
         label: 'Loading follow status',
-        child: Center(child: CircularProgressIndicator()),
+        child: const Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -663,7 +663,7 @@ class _FollowSectionState extends ConsumerState<_FollowSection> {
       }
     } catch (error) {
       if (mounted &&
-          !CancelToken.isCancel(error) &&
+          !(error is DioException && CancelToken.isCancel(error)) &&
           _isCurrentSession(revision, cancelToken)) {
         ref.invalidate(followStatusProvider(widget.profileId));
         LythSnackbar.error(

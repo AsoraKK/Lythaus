@@ -74,7 +74,7 @@ class OwnerPostsController
     } catch (error) {
       if (!_sessionMatches() ||
           requestRevision != _requestRevision ||
-          CancelToken.isCancel(error)) {
+          (error is DioException && CancelToken.isCancel(error))) {
         return;
       }
       final latest = state.valueOrNull;
@@ -98,7 +98,7 @@ class OwnerPostsController
     } catch (error, stackTrace) {
       if (!_sessionMatches() ||
           requestRevision != _requestRevision ||
-          CancelToken.isCancel(error)) {
+          (error is DioException && CancelToken.isCancel(error))) {
         return;
       }
       state = AsyncError(error, stackTrace);

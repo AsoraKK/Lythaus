@@ -110,19 +110,19 @@ void main() {
     final service = _StubOwnerPostsService();
     final container = _container(service);
     addTearDown(container.dispose);
-    final ownerAKey = const OwnerPostsKey(userId: 'owner-a', sessionRevision: 0);
+    const ownerAKey = OwnerPostsKey(userId: 'owner-a', sessionRevision: 0);
     final ownerAProvider = ownerPostsTimelineProvider(ownerAKey);
     final ownerASubscription = container.listen(ownerAProvider, (_, _) {});
     addTearDown(ownerASubscription.close);
 
     final firstPage = await container.read(ownerAProvider.future);
-    expect(firstPage.items.map((post) => post.id), ['owner-a-post-1']);
+    expect(firstPage.items.map((post) => post.id), const ['owner-a-post-1']);
     expect(firstPage.hasMore, isTrue);
     await container.read(ownerAProvider.notifier).loadMore();
     final completeTimeline = container.read(ownerAProvider).value!;
     expect(
       completeTimeline.items.map((post) => post.id),
-      ['owner-a-post-1', 'owner-a-post-2'],
+      const ['owner-a-post-1', 'owner-a-post-2'],
     );
     expect(completeTimeline.items.last.statusLabel, 'Awaiting review');
     expect(completeTimeline.hasMore, isFalse);
@@ -132,7 +132,7 @@ void main() {
     ]);
 
     container.read(_session.notifier).state = _user('owner-b');
-    final ownerBKey = const OwnerPostsKey(userId: 'owner-b', sessionRevision: 1);
+    const ownerBKey = OwnerPostsKey(userId: 'owner-b', sessionRevision: 1);
     final ownerBProvider = ownerPostsTimelineProvider(ownerBKey);
     final ownerBSubscription = container.listen(ownerBProvider, (_, _) {});
     addTearDown(ownerBSubscription.close);

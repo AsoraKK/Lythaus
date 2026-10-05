@@ -201,6 +201,8 @@ import 'package:lythaus_api_client/src/model/owner_problem_request.dart';
 import 'package:lythaus_api_client/src/model/owner_request_page.dart';
 import 'package:lythaus_api_client/src/model/owner_suggestion_request.dart';
 import 'package:lythaus_api_client/src/model/owner_support_request.dart';
+import 'package:lythaus_api_client/src/model/owner_timeline_page.dart';
+import 'package:lythaus_api_client/src/model/owner_timeline_post.dart';
 import 'package:lythaus_api_client/src/model/pending_appeal_adjudication.dart';
 import 'package:lythaus_api_client/src/model/pending_appeal_adjudication_list.dart';
 import 'package:lythaus_api_client/src/model/personal_feed_item.dart';
@@ -475,6 +477,8 @@ part 'serializers.g.dart';
   OwnerRequestPage,
   OwnerSuggestionRequest,
   OwnerSupportRequest,
+  OwnerTimelinePage,
+  OwnerTimelinePost,
   PendingAppealAdjudication,
   PendingAppealAdjudicationList,
   PersonalFeedItem,
