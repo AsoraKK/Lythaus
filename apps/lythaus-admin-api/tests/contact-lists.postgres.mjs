@@ -26,6 +26,7 @@ const createdAtValues = ['2026-10-03T12:00:00.000800Z', '2026-10-03T12:00:00.000
 const key = Buffer.from(Array.from({ length: 32 }, (_, index) => index + 1)).toString('base64');
 const hmacKey = `contact-list-test-${uuidv7()}`;
 const tags = [uuidv7(), uuidv7(), uuidv7()];
+const userMarker = `userlist-${uuidv7()}`;
 const handles = tags.map(tag => `rec${tag.replaceAll('-', '').slice(-10)}`);
 const source = `recovery-ci-${uuidv7()}`;
 const consentVersion = `synthetic-test-${uuidv7()}`;
@@ -51,7 +52,7 @@ before(async () => {
   await adminClient.query('SET ROLE lythaus_admin');
 
   for (let index = 0; index < userIds.length; index += 1) {
-    await sql('INSERT INTO identity.users (id, display_name, created_at) VALUES ($1, $2, $3)', [userIds[index], `Recovery Contact ${tags[index]}`, createdAtValues[index]]);
+    await sql('INSERT INTO identity.users (id, display_name, created_at) VALUES ($1, $2, $3)', [userIds[index], `Recovery Contact ${userMarker} ${tags[index]}`, createdAtValues[index]]);
     await sql('INSERT INTO identity.handles (user_id, handle, handle_normalized) VALUES ($1, $2, $2)', [userIds[index], handles[index]]);
   }
   await sql('INSERT INTO identity.user_entitlements (user_id, subscription_tier) VALUES ($1, $2)', [userIds[0], 'premium']);
@@ -82,7 +83,7 @@ test('real lythaus_admin grants support private-minimal registered-user pages an
 
   const correlation1 = `contact-users-${uuidv7()}`;
   userCorrelations.push(correlation1);
-  const firstResponse = await listAdminUsers(await request('/api/admin/users?limit=2'), env, actor, correlation1, runAsAdmin);
+  const firstResponse = await listAdminUsers(await request(`/api/admin/users?limit=2&q=${encodeURIComponent(userMarker)}`), env, actor, correlation1, runAsAdmin);
   const first = await readBody(firstResponse);
   assert.equal(first.items.length, 2);
   assert.ok(first.nextCursor);
