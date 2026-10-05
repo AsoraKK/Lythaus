@@ -399,3 +399,11 @@ Before GO, retain exact serving/reused provenance, positive-traffic rollback,
 real Turnstile, mailbox receipt at two independent authorized providers, setup,
 replay, legacy fixture ID preservation, reset/revocation and post-activation
 cached/fresh browser evidence. Missing evidence remains a certification blocker.
+
+The browser preserves an intake key after a timeout or uncertain response. An
+expired or changed key produces a definitive `idempotency_key_conflict`; that
+rejected response now discards the browser key so the next deliberate submission
+starts a fresh request. It does not automatically submit again. An
+`idempotency_outcome_unknown` or in-progress response retains its original key.
+Fresh requests still require a fresh Turnstile proof and obey the existing
+cooldown, rate limits, challenge expiry and account linkage checks.
