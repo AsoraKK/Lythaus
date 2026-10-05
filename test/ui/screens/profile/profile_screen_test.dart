@@ -269,6 +269,38 @@ void main() {
       expect(find.textContaining('@janedoe'), findsOneWidget);
     });
 
+    testWidgets('keeps identity readable when narrow', (tester) async {
+      tester.view.physicalSize = const Size(195, 422);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            currentUserProvider.overrideWithValue(_fakeAuthUser),
+            ownerPostsServiceProvider.overrideWithValue(
+              _FakeOwnerPostsService(),
+            ),
+            ownerProfileProvider.overrideWith(
+              (ref) async => _ownerProfile(_fakeUser),
+            ),
+            jwtProvider.overrideWith((ref) async => 'tok'),
+            reputationProvider.overrideWith(
+              (ref) async => _fakeReputationState,
+            ),
+          ],
+          child: const MaterialApp(home: ProfileScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Profile'), findsOneWidget);
+      expect(find.text('Jane Doe'), findsOneWidget);
+      expect(find.text('Subscription: silver'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('shows honest published and pending posts with pagination', (
       tester,
     ) async {
@@ -285,6 +317,11 @@ void main() {
               body: 'A private post under review',
               moderationState: 'under_review',
               visibility: 'private',
+            ),
+            _post(
+              id: 'post-3',
+              body: 'An approved follower post awaiting publication',
+              visibility: 'followers',
             ),
           ],
           nextCursor: 'next-page',
@@ -316,6 +353,15 @@ void main() {
       await tester.ensureVisible(find.text('A private post under review'));
       expect(find.text('A private post under review'), findsOneWidget);
       expect(find.text('Only you can see this while it is under review.'), findsOneWidget);
+      await tester.ensureVisible(
+        find.text('Approved; publication is not confirmed yet.'),
+      );
+      expect(find.text('Approved'), findsOneWidget);
+      expect(
+        find.text('Approved; publication is not confirmed yet.'),
+        findsOneWidget,
+      );
+      expect(find.text('Visible to followers.'), findsNothing);
     });
 
     testWidgets('post timeline recovers from a load error', (tester) async {

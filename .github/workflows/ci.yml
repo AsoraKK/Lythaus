@@ -305,6 +305,20 @@ jobs:
           path: build/guest-search-evidence
           if-no-files-found: warn
           retention-days: 7
+      - name: Verify rendered member profile states
+        env:
+          AUTH_WEB_ARTIFACT_DIR: build/web
+          PROFILE_VISUAL_QA_DIR: build/profile-visual-evidence
+          QA_COMMIT: ${{ github.sha }}
+        run: node --experimental-strip-types --test --test-timeout=600000 scripts/tests/profile-visual-qa.browser.mjs
+      - name: Upload member profile visual evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: member-profile-visual-evidence
+          path: build/profile-visual-evidence
+          if-no-files-found: warn
+          retention-days: 7
       - name: Build content journey regression fixture
         run: flutter build web --debug --no-pub --no-wasm-dry-run --target test/browser/content_journey_entry.dart --output build/content-journey-web
       - name: Verify rendered content journey and durable recovery

@@ -130,6 +130,7 @@ test('owner timeline rejects guests and malformed pagination before SQL',async()
   assert.equal(guest.status,401);
   for(const path of ['/api/users/me/posts?limit=0','/api/users/me/posts?limit=21','/api/users/me/posts?limit=2.5',
     '/api/users/me/posts?cursor=malformed','/api/users/me/posts?cursor='+encodeURIComponent(cursor('not-a-time',id)),
+    '/api/users/me/posts?cursor='+encodeURIComponent(cursor('2026-02-31T00:00:00.000000Z',id)),
     '/api/users/me/posts?cursor='+encodeURIComponent(cursor('2026-10-02T00:00:00.000000Z','not-a-uuid'))]){
     const response=await handleOwnerContentRead(request(path),dependencies([],{query:async()=>assert.fail('invalid page reached SQL')}));
     assert.equal(response.status,400);

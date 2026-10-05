@@ -121,7 +121,11 @@ class ProfileScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           title: Text(
-            profile.displayName.isEmpty ? 'Your profile' : profile.displayName,
+            MediaQuery.sizeOf(context).width < 240
+                ? 'Profile'
+                : profile.displayName.isEmpty
+                ? 'Your profile'
+                : profile.displayName,
           ),
           actions: [
             IconButton(
@@ -148,44 +152,60 @@ class ProfileScreen extends ConsumerWidget {
         body: ListView(
           padding: const EdgeInsets.all(Spacing.lg),
           children: [
-            Row(
-              children: [
-                LythAvatar(
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final avatar = LythAvatar(
                   name: profile.displayName.isEmpty
                       ? profile.handleLabel ?? 'Member'
                       : profile.displayName,
                   imageUrl: profile.avatarUrl,
-                ),
-                const SizedBox(width: Spacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                );
+                final details = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      profile.displayName,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (profile.handleLabel case final handleLabel?) ...[
+                      const SizedBox(height: Spacing.xs),
                       Text(
-                        profile.displayName,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
+                        handleLabel,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
-                      if (profile.handleLabel case final handleLabel?) ...[
-                        const SizedBox(height: Spacing.xs),
-                        Text(
-                          handleLabel,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: Spacing.xs),
-                      TierBadge(label: 'Subscription: ${profile.tier}'),
-                      if (isOwner) ...[
-                        const SizedBox(height: Spacing.xs),
-                        _ReputationStateBadge(),
-                      ],
                     ],
-                  ),
-                ),
-              ],
+                    const SizedBox(height: Spacing.xs),
+                    TierBadge(label: 'Subscription: ${profile.tier}'),
+                    if (isOwner) ...[
+                      const SizedBox(height: Spacing.xs),
+                      _ReputationStateBadge(),
+                    ],
+                  ],
+                );
+
+                if (constraints.maxWidth < 240) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      avatar,
+                      const SizedBox(height: Spacing.md),
+                      details,
+                    ],
+                  );
+                }
+
+                return Row(
+                  children: [
+                    avatar,
+                    const SizedBox(width: Spacing.md),
+                    Expanded(child: details),
+                  ],
+                );
+              },
             ),
             if (isOwner) ...[
               const SizedBox(height: Spacing.lg),
@@ -441,9 +461,9 @@ class _OwnerPostCard extends StatelessWidget {
 
   String get _visibilityDescription {
     if (post.isPending) return 'Only you can see this while it is under review.';
+    if (post.publishedAt == null) return 'Approved; publication is not confirmed yet.';
     if (post.visibility == 'private') return 'Only you can see this.';
     if (post.visibility == 'followers') return 'Visible to followers.';
-    if (post.publishedAt == null) return 'Approved; publication is not confirmed yet.';
     return 'Published.';
   }
 

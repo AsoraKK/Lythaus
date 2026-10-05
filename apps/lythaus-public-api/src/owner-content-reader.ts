@@ -43,12 +43,29 @@ export const ownerCommentQuery = `SELECT comment.id, comment.post_id AS "postId"
    AND comment.moderation_state IN ('allowed', 'under_review')`;
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const cursorTimestamp = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{6})Z$/;
 const ownerPostsPageSize = 8;
 const ownerPostsMaximumPageSize = 20;
 
 interface OwnerPostsCursor {
   timestamp: string;
   id: string;
+}
+
+function isValidCursorTimestamp(value: string): boolean {
+  const match = value.match(cursorTimestamp);
+  if (!match) return false;
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return false;
+  const parsed = new Date(timestamp);
+  const [, year, month, day, hour, minute, second, microseconds] = match;
+  return parsed.getUTCFullYear() === Number(year)
+    && parsed.getUTCMonth() + 1 === Number(month)
+    && parsed.getUTCDate() === Number(day)
+    && parsed.getUTCHours() === Number(hour)
+    && parsed.getUTCMinutes() === Number(minute)
+    && parsed.getUTCSeconds() === Number(second)
+    && parsed.getUTCMilliseconds() === Number(microseconds.slice(0, 3));
 }
 
 function parseOwnerPostsCursor(value: string | null): OwnerPostsCursor | undefined | false {
@@ -58,8 +75,7 @@ function parseOwnerPostsCursor(value: string | null): OwnerPostsCursor | undefin
     const decoded = atob(value.replace(/-/g, '+').replace(/_/g, '/'));
     const candidate = JSON.parse(decoded) as Record<string, unknown>;
     if (typeof candidate.timestamp !== 'string'
-        || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/.test(candidate.timestamp)
-        || !Number.isFinite(Date.parse(candidate.timestamp))
+        || !isValidCursorTimestamp(candidate.timestamp)
         || typeof candidate.id !== 'string' || !uuid.test(candidate.id)) return false;
     return { timestamp: candidate.timestamp, id: candidate.id };
   } catch {

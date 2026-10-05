@@ -96,9 +96,18 @@ void main() {
         publishedAt: null,
       ),
     );
+    final approvedFollowerPostNotPublished = OwnerPost.fromJson(
+      _postJson(
+        'post-3',
+        'owner-a',
+        visibility: 'followers',
+        publishedAt: null,
+      ),
+    );
 
     expect(published.statusLabel, 'Followers only');
     expect(pending.statusLabel, 'Awaiting review');
+    expect(approvedFollowerPostNotPublished.statusLabel, 'Approved');
     expect(
       () => OwnerPost.fromJson(const {'id': 'incomplete'}),
       throwsFormatException,
@@ -137,6 +146,9 @@ void main() {
     ]);
 
     container.read(_session.notifier).state = _user('owner-b');
+    await expectLater(container.read(ownerAProvider.future), throwsStateError);
+    expect(container.read(ownerAProvider).valueOrNull, isNull);
+
     const ownerBKey = OwnerPostsKey(userId: 'owner-b', sessionRevision: 1);
     final ownerBProvider = ownerPostsTimelineProvider(ownerBKey);
     final ownerBSubscription = container.listen(ownerBProvider, (_, _) {});
