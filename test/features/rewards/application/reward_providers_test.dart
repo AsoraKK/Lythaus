@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/core/network/idempotency_key.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
@@ -49,6 +50,7 @@ class _Adapter implements HttpClientAdapter {
 Dio _dioWith(_Adapter adapter) {
   final dio = Dio(BaseOptions(baseUrl: 'http://test'));
   dio.httpClientAdapter = adapter;
+  dio.interceptors.add(IdempotencyRetryInterceptor(dio));
   return dio;
 }
 
@@ -133,6 +135,7 @@ RewardRedemptionRequest _redemptionRequest(
 ) => (
   rewardId: rewardId,
   sessionRevision: container.read(authSessionRevisionProvider),
+  idempotencyKey: IdempotencyKey.create('reward.redeem'),
 );
 
 void main() {
@@ -328,9 +331,8 @@ void main() {
       final container = _container(adapter, user: _user('account-a'));
       addTearDown(container.dispose);
 
-      final provider = redeemRewardProvider(
-        _redemptionRequest(container, 'lvl1-privacy-basics'),
-      );
+      final request = _redemptionRequest(container, 'lvl1-privacy-basics');
+      final provider = redeemRewardProvider(request);
       final subscription = container.listen(provider, (_, _) {});
       final redemption = await container.read(provider.future);
       subscription.close();
@@ -343,6 +345,10 @@ void main() {
       expect(
         adapter.requests.single.headers['Authorization'],
         'Bearer session-account-a',
+      );
+      expect(
+        adapter.requests.single.headers['Idempotency-Key'],
+        request.idempotencyKey,
       );
       expect(redemption.rewardId, 'lvl1-privacy-basics');
       expect(redemption.status, 'redeemed');
@@ -379,9 +385,8 @@ void main() {
         });
         final container = _container(adapter, user: _user('account-a'));
         addTearDown(container.dispose);
-        final provider = redeemRewardProvider(
-          _redemptionRequest(container, 'lvl1-privacy-basics'),
-        );
+        final request = _redemptionRequest(container, 'lvl1-privacy-basics');
+        final provider = redeemRewardProvider(request);
         final subscription = container.listen(provider, (_, _) {});
 
         await expectLater(
@@ -403,6 +408,62 @@ void main() {
         expect(attempts, 2);
         expect(
           adapter.requests.map((request) => request.headers['Authorization']),
+          everyElement('Bearer session-account-a'),
+        );
+        expect(
+          adapter.requests.map((request) => request.headers['Idempotency-Key']),
+          everyElement(request.idempotencyKey),
+        );
+        subscription.close();
+      },
+    );
+
+    test(
+      'lost response requires manual retry with the same idempotency key',
+      () async {
+        final attempts = <RequestOptions>[];
+        ResponseBody? committedResponse;
+        final adapter = _Adapter((options) async {
+          attempts.add(options);
+          if (committedResponse == null) {
+            committedResponse = _jsonResponse(_redemptionPayload(), 201);
+            throw DioException(
+              requestOptions: options,
+              type: DioExceptionType.receiveTimeout,
+            );
+          }
+          return committedResponse!;
+        });
+        final container = _container(adapter, user: _user('account-a'));
+        addTearDown(container.dispose);
+        final request = _redemptionRequest(container, 'lvl1-privacy-basics');
+        final provider = redeemRewardProvider(request);
+        final subscription = container.listen(provider, (_, _) {});
+
+        await expectLater(
+          container.read(provider.future),
+          throwsA(
+            isA<DioException>().having(
+              (error) => error.type,
+              'type',
+              DioExceptionType.receiveTimeout,
+            ),
+          ),
+        );
+        expect(attempts, hasLength(1));
+        expect(committedResponse, isNotNull);
+
+        container.invalidate(provider);
+        final redemption = await container.read(provider.future);
+
+        expect(redemption.status, 'redeemed');
+        expect(attempts, hasLength(2));
+        expect(
+          attempts.map((options) => options.headers['Idempotency-Key']),
+          everyElement(request.idempotencyKey),
+        );
+        expect(
+          attempts.map((options) => options.headers['Authorization']),
           everyElement('Bearer session-account-a'),
         );
         subscription.close();

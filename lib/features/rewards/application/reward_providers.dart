@@ -101,7 +101,11 @@ final monthlyReputationCsvProvider = FutureProvider.autoDispose
       return Uint8List.fromList(data);
     });
 
-typedef RewardRedemptionRequest = ({String rewardId, int sessionRevision});
+typedef RewardRedemptionRequest = ({
+  String rewardId,
+  int sessionRevision,
+  String idempotencyKey,
+});
 
 final redeemRewardProvider = FutureProvider.autoDispose
     .family<RewardRedemption, RewardRedemptionRequest>((ref, request) async {
@@ -110,11 +114,20 @@ final redeemRewardProvider = FutureProvider.autoDispose
         unauthenticatedMessage: 'Sign in to redeem rewards',
         expectedSessionRevision: request.sessionRevision,
       );
-      final response = await dio.post<Map<String, dynamic>>(
+      final requestFuture = dio.post<Map<String, dynamic>>(
         '/rewards/${request.rewardId}/redeem',
         cancelToken: cancelToken,
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Idempotency-Key': request.idempotencyKey,
+          },
+          extra: {
+            IdempotencyRetryInterceptor.disableAutomaticRetryExtraKey: true,
+          },
+        ),
       );
+      final response = await requestFuture;
       if (cancelToken.isCancelled) throw cancelToken.cancelError!;
       final data = response.data;
       if (data == null) {
