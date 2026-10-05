@@ -389,3 +389,26 @@ Before GO, retain exact serving/reused provenance, positive-traffic rollback,
 real Turnstile, mailbox receipt at two independent authorized providers, setup,
 replay, legacy fixture ID preservation, reset/revocation and post-activation
 cached/fresh browser evidence. Missing evidence remains a certification blocker.
+
+Prompt transactional-email dispatch is prepared behind
+`TRANSACTIONAL_EMAIL_DISPATCH_ENABLED`; absence or any value other than `true`
+keeps publishing and consuming dispatch hints off. No deployment configuration,
+binding, provider resource, secret, grant or cron change accompanies this code.
+The proposed producer binding reuses `lythaus-email-lifecycle-dev` only after
+explicit capability/inventory approval. Provider lifecycle events keep their
+existing parser; internal hints have a distinct type, opaque outbox UUID and
+HKDF/HMAC signature derived from the existing delivery key. They carry no
+recipient, message content or bearer token. Publish occurs after commit; the
+database remains authoritative if publishing fails. Duplicate hints claim the
+same due row at most once, and explicit transient failures request a delayed
+Queue retry using database `next_attempt_at`. Unknown acceptance remains
+terminal; an expired or superseded challenge cannot be delivered.
+
+The proposed measurable healthy-path target is p95 first dispatch within ten
+seconds of persisted intent, measured separately from provider acceptance and
+inbox arrival. This target is not live-verified. The existing quarter-hour cron
+remains the recovery path in this patch; a lost publish can still wait for that
+tick. A separately approved mail-only minute fallback can reduce that residual
+wait without increasing other Jobs workloads. Do not claim a hard latency
+guarantee, activate the flag, add bindings or change scheduling without parent
+review, exact-head fixture/security checks and canonical release gates.

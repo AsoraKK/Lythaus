@@ -168,6 +168,21 @@
       "rationale": "Neutral intake idempotency without storing passwords or bearer tokens."
     },
     {
+      "id": "transactional-email-queue-hints",
+      "priority": "P1",
+      "runtimeSeam": true,
+      "sources": ["apps/lythaus-public-api/src/auth-email-dispatch-queue.ts"],
+      "tests": ["apps/lythaus-public-api/tests/auth-email-dispatch-queue.test.mjs"],
+      "rationale": "Default-off post-commit dispatch capability, authenticated opaque queue hints and safe durable-outbox fallback without credential logging."
+    },
+    {
+      "id": "transactional-email-dispatch-authentication",
+      "priority": "P1",
+      "sources": ["packages/security/src/transactional-email-dispatch.ts"],
+      "tests": ["apps/lythaus-public-api/tests/auth-email-dispatch-queue.test.mjs"],
+      "rationale": "Domain-separated HKDF/HMAC hints reject provider-payload confusion, altered intent identifiers and unauthorized producers."
+    },
+    {
       "id": "public-auth-password-screen",
       "priority": "P1",
       "runtimeSeam": true,

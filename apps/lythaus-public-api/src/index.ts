@@ -15,6 +15,7 @@ import { expiredRefreshCookie, optionalRefreshCookie, refreshCookie, sessionTran
 import { passwordScreeningFailureLogFields, requireUncompromisedPassword } from './auth-password-screen.ts';
 import { claimRegistrationAddress, establishVerifiedCredential, findRecoveryUser, lockRecoveryAccount, persistRecoveryIntake, recoveryAddressReason, recoveryPlan, recoverySupportReason } from './auth-recovery-policy.ts';
 import { idempotentAuthIntake } from './auth-intake-runtime.ts';
+import { publishCommittedEmailDispatch } from './auth-email-dispatch-queue.ts';
 import { assertDistinctReactionAuthor, contentDeletionPlan, planCommentCreation, planCommentRevision, planPostPublication, planPostRevision, planReactionChange, planRelationshipMutation, replyDepth } from './content-runtime-policy.ts';
 import { assertCommentFeedItemEligibility, assertCustomFeedAvailable, assertFeedItemEligibility, assertNewsBoardItemEligibility, commentPublicLabel, entitlementsForTier, feedResponsePlan, requireNewsBoardAccess, type FeedSurface } from './feed-runtime-policy.ts';
 import { optionalPrivacyRequestType, privacyExportAccessActivity, privacyExportRetryAfter, privacyRequestPlan, requirePrivacyExportDependencies, requirePrivacyExportObject, retentionRulePlan } from './privacy-runtime-policy.ts';
@@ -336,14 +337,15 @@ async function queueTransactionalEmail(
     correlationId: string;
     acceptance?: AcceptanceContext;
   },
-): Promise<void> {
+): Promise<string> {
   const envelope = await encryptField(JSON.stringify({
     to: input.recipient,
     token: input.token,
     acceptanceContext: input.acceptance?.context,
   }), input.deliveryEncryptionKey, 'v1');
+  const outboxId = uuidv7();
   await enqueueTransactionalEmailIntent(client, {
-    id: uuidv7(),
+    id: outboxId,
     userId: input.userId,
     contactEmailUserId: input.userId,
     purpose: input.purpose,
@@ -364,6 +366,7 @@ async function queueTransactionalEmail(
       [uuidv7(), input.purpose, input.userId, input.acceptance.runId],
     );
   }
+  return outboxId;
 }
 
 async function cancelPendingAuthEmails(client: DatabaseClient, userId: string, purpose: 'verification' | 'password_reset'): Promise<void> {
@@ -418,6 +421,7 @@ async function proveTransactionalEmailKeyCompatibility(request: Request, env: En
 async function queueRecoveryEmail(request: Request, env: Env, lookup: string, intent: 'verification' | 'recovery', acceptance?: AcceptanceContext): Promise<void> {
   const secrets = requireAuthSecrets(env);
   const deliveryEncryptionKey = requiredTransactionalEmailKey(env);
+  let outboxId: string | undefined;
   const outcome = await transaction(env.DB_APP_FRESH, client => persistRecoveryIntake(client, correlationId(request), async () => {
     const userId = await findRecoveryUser(client, lookup);
     const account = userId ? await lockRecoveryAccount(client, userId) : undefined;
@@ -443,7 +447,7 @@ async function queueRecoveryEmail(request: Request, env: Env, lookup: string, in
     await client.query(
       `INSERT INTO ${table}(id,user_id,token_hash,expires_at) VALUES($1,$2,decode($3,'base64'),now()+interval '30 minutes')`,
       [challengeId, account.id, hashAuthToken(token, purpose)]);
-    await queueTransactionalEmail(client, {
+    outboxId = await queueTransactionalEmail(client, {
       userId: account.id, purpose, challengeId, token, recipient, deliveryEncryptionKey,
       correlationId: acceptance?.runId ?? correlationId(request), acceptance,
     });
@@ -456,6 +460,7 @@ async function queueRecoveryEmail(request: Request, env: Env, lookup: string, in
     });
     return 'queued';
   }));
+  if (outcome === 'queued') await publishCommittedEmailDispatch(env, outboxId);
   logEvent({ service: 'lythaus-public-api', event: 'auth_recovery_intake', outcome, correlationId: correlationId(request) });
 }
 
@@ -510,7 +515,7 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
       return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
     }
     const userId = uuidv7();
-    await transaction(env.DB_APP_FRESH, async (client) => {
+    const outboxId = await transaction(env.DB_APP_FRESH, async (client) => {
       if (!await claimRegistrationAddress(client, lookup)) {
         if (acceptance) throw new Error('acceptance_identity_collision');
         return;
@@ -519,7 +524,7 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
       await client.query(`INSERT INTO identity.email_credentials (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, hmac_key_version, password_hash) VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'v1', $4::jsonb)`, [userId, encrypted.ciphertext, lookup, JSON.stringify(passwordHash)]);
       await client.query(`INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider) VALUES ($1, convert_to($2, 'utf8'), decode($3, 'base64'), 'v1', 'email')`, [userId, encrypted.ciphertext, lookup]);
       await client.query(`INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, decode($3, 'base64'), now() + interval '30 minutes')`, [challengeId, userId, hashAuthToken(verificationToken, 'verification')]);
-      await queueTransactionalEmail(client, {
+      const queuedId = await queueTransactionalEmail(client, {
         userId,
         purpose: 'verification',
         challengeId,
@@ -545,7 +550,9 @@ async function emailAuth(request: Request, env: Env): Promise<Response> {
         objectType: 'account', objectId: userId, retentionClass: 'security',
         metadata: { authenticationMethod: 'email' },
       });
+      return queuedId;
     });
+    await publishCommittedEmailDispatch(env, outboxId);
     return privateResponse(request, env, { state: 'verification_required' }, { status: 202 });
   }
   const passwordMatches = verifyLoginPassword(password, account?.password_hash, secrets.pepper);
@@ -813,7 +820,7 @@ async function completePasswordReset(request: Request, env: Env): Promise<Respon
   const secrets = requireAuthSecrets(env);
   const passwordHash = hashConfiguredPassword(env, password, secrets.pepper);
   const sourceEventId = uuidv7();
-  await transaction(env.DB_APP_FRESH, async (client) => {
+  const outboxId = await transaction(env.DB_APP_FRESH, async (client) => {
     const owner = await client.query<{ user_id: string }>(`SELECT user_id FROM identity.password_reset_tokens WHERE token_hash = decode($1, 'base64')`, [hashAuthToken(token, 'password_reset')]);
     if (!owner.rows[0]) throw new Error('reset_token_invalid');
     const account = await lockRecoveryAccount(client, owner.rows[0].user_id);
@@ -836,7 +843,7 @@ async function completePasswordReset(request: Request, env: Env): Promise<Respon
     await cancelPendingAuthEmails(client, account.id, 'password_reset');
     const recipient = normalizeEmailAddress(await decryptField({ ciphertext: account.contact_ciphertext!, encryptionKeyVersion: account.contact_key_version! }, secrets.encryptionKey));
     if (hmacLookup(recipient, secrets.hmacKey) !== account.contact_lookup) throw new Error('authentication_not_configured');
-    await queueTransactionalEmail(client, {
+    const queuedId = await queueTransactionalEmail(client, {
       userId: account.id, purpose: 'password_changed', token: '', recipient,
       deliveryEncryptionKey: requiredTransactionalEmailKey(env), correlationId: correlationId(request),
     });
@@ -847,7 +854,9 @@ async function completePasswordReset(request: Request, env: Env): Promise<Respon
       objectType: 'account', objectId: found.rows[0].user_id, retentionClass: 'security',
       metadata: { authenticationMethod: 'email', sessionAction: 'revoke_all' },
     });
+    return queuedId;
   });
+  await publishCommittedEmailDispatch(env, outboxId);
   return privateResponse(request, env, { state: 'password_reset_completed' });
 }
 

@@ -50,7 +50,7 @@ mock.module('../../lythaus-auth-acceptance-coordinator/src/access-policy.ts', { 
 } });
 const { default: coordinator } = await import('../../lythaus-auth-acceptance-coordinator/src/index.ts');
 const { parseRealEmailAcceptanceEvidence } = await import('../../../scripts/ci/real-email-acceptance-evidence.mjs');
-const { relayTransactionalEmailOutbox, applyTransactionalEmailLifecycle } = await import('../../lythaus-jobs/src/transactional-email-runtime.ts');
+const { relayTransactionalEmailOutbox, applyTransactionalEmailLifecycle, dispatchTransactionalEmailQueueMessage } = await import('../../lythaus-jobs/src/transactional-email-runtime.ts');
 const { privateKey, publicKey } = await generateKeyPair('ES256', { extractable: true });
 const keyId = 'local-auth-fixture';
 const publicJwk = { ...await exportJWK(publicKey), kid: keyId, use: 'sig', alg: 'ES256' };
@@ -193,6 +193,119 @@ test('real PostgreSQL + real API handler: signup, mailbox-owned setup, cookie se
   assert.ok(!notice.text.includes(newPassword));
   const serializedLogs=JSON.stringify(logs);
   for(const secret of [email,token,resetToken,password,newPassword,session.accessToken]) assert.ok(!serializedLogs.includes(secret),'Operational logs must exclude identity and credentials');
+});
+
+test('post-commit queue hints dispatch a fresh proof without cron and recover a failed publish from durable intent', async t => {
+  fixtureIp=`2001:db8::${randomBytes(2).toString('hex')}`;
+  const email=`synthetic-${uuidv7()}@example.invalid`,password='synthetic immediate dispatch passphrase';
+  const hints=[];
+  const provider=env.EMAIL;
+  t.after(()=>{env.EMAIL=provider;delete env.TRANSACTIONAL_EMAIL_DISPATCH_ENABLED;delete env.TRANSACTIONAL_EMAIL_DISPATCH_QUEUE;});
+  env.TRANSACTIONAL_EMAIL_DISPATCH_ENABLED='true';
+  env.TRANSACTIONAL_EMAIL_DISPATCH_QUEUE={send:async hint=>{
+    assert.equal((await sql('SELECT state FROM system.transactional_email_outbox WHERE id=$1',[hint.outboxId])).rows[0]?.state,'queued','A hint is emitted only after its identity and intent commit');
+    hints.push(hint);
+  }};
+  const input={mode:'register',email,password,turnstileToken:'account_signup'},key=uuidv7();
+  await expectStatus(await request('email',input,{headers:{'idempotency-key':key}}),202);
+  await expectStatus(await request('email',input,{headers:{'idempotency-key':key}}),202);
+  assert.equal(hints.length,1,'An intake replay creates neither a second intent nor hint');
+  env.EMAIL={send:async()=>{throw {code:'E_INTERNAL_SERVER_ERROR'};}};
+  const deferred=await dispatchTransactionalEmailQueueMessage(env,hints[0]);
+  assert.ok(deferred.retryAfterSeconds>0 && deferred.retryAfterSeconds<=40);
+  env.EMAIL=provider;
+  assert.ok((await dispatchTransactionalEmailQueueMessage(env,hints[0])).retryAfterSeconds>0);
+  assert.equal(mailbox.filter(message=>message.to===email).length,0,'A queue retry cannot bypass the stored backoff');
+  await sql("UPDATE system.transactional_email_outbox SET next_attempt_at=now()-interval '1 second' WHERE id=$1",[hints[0].outboxId]);
+  assert.deepEqual(await dispatchTransactionalEmailQueueMessage(env,hints[0]),{retryAfterSeconds:null});
+  assert.deepEqual(await dispatchTransactionalEmailQueueMessage(env,hints[0]),{retryAfterSeconds:null});
+  assert.equal(mailbox.filter(message=>message.to===email).length,1);
+  const id=(await sql('SELECT user_id FROM system.transactional_email_outbox WHERE id=$1',[hints[0].outboxId])).rows[0].user_id;
+  await sql("UPDATE identity.email_verification_tokens SET created_at=created_at-interval '25 hours',expires_at=expires_at-interval '25 hours' WHERE user_id=$1",[id]);
+  env.TRANSACTIONAL_EMAIL_DISPATCH_QUEUE={send:async()=>{throw new Error('synthetic queue outage');}};
+  await expectStatus(await request('email',{mode:'resend_verification',email,turnstileToken:'verification_resend'}),202);
+  assert.equal((await sql("SELECT count(*)::int n FROM system.transactional_email_outbox WHERE user_id=$1 AND state='queued'",[id])).rows[0].n,1,'A failed publish preserves a committed fresh intent');
+  await relayTransactionalEmailOutbox(env);
+  assert.equal(mailbox.filter(message=>message.to===email).length,2);
+});
+
+test('next-day resend and duplicate signup retain identity and create fresh verification proofs', async () => {
+  fixtureIp=`2001:db8::${randomBytes(2).toString('hex')}`;
+  const email=`synthetic-${uuidv7()}@example.invalid`,password='synthetic pending next day passphrase';
+  const signup={mode:'register',email,password,turnstileToken:'account_signup'},key=uuidv7();
+  await expectStatus(await request('email',signup,{headers:{'idempotency-key':key}}),202);
+  const id=(await sql("SELECT user_id FROM identity.email_credentials WHERE email_lookup_hmac=decode($1,'base64')",[hmacLookup(email,env.PII_HMAC_KEY_V1)])).rows[0].user_id;
+  await relayTransactionalEmailOutbox(env);
+  const original=mailbox.find(message=>message.to===email);
+  assert.ok(original);
+  const advancePendingClock=async()=>{
+    await sql("UPDATE identity.email_verification_tokens SET created_at=created_at-interval '25 hours',expires_at=expires_at-interval '25 hours' WHERE user_id=$1",[id]);
+  };
+  await advancePendingClock();
+  await sql("UPDATE system.idempotency_keys SET created_at=created_at-interval '25 hours' WHERE key=$1",[key]);
+  await expectStatus(await request('email',signup,{headers:{'idempotency-key':key}}),409);
+  await expectStatus(await request('email',signup,{headers:{'idempotency-key':uuidv7()}}),202);
+  assert.equal((await sql('SELECT count(*)::int n FROM system.transactional_email_outbox WHERE user_id=$1',[id])).rows[0].n,2);
+  const resend={mode:'resend_verification',email,turnstileToken:'verification_resend'},resendKey=uuidv7();
+  await expectStatus(await request('email',resend,{headers:{'idempotency-key':resendKey}}),202);
+  await expectStatus(await request('email',resend,{headers:{'idempotency-key':resendKey}}),202);
+  assert.equal((await sql('SELECT count(*)::int n FROM system.transactional_email_outbox WHERE user_id=$1',[id])).rows[0].n,2,'Cooldown and a replay must not issue additional proofs');
+  await advancePendingClock();
+  await expectStatus(await request('email',resend,{headers:{'idempotency-key':uuidv7()}}),202);
+  const outbox=(await sql('SELECT state FROM system.transactional_email_outbox WHERE user_id=$1 ORDER BY created_at',[id])).rows;
+  assert.deepEqual(outbox.map(row=>row.state),['provider_accepted','cancelled','queued']);
+  await relayTransactionalEmailOutbox(env);
+  await relayTransactionalEmailOutbox(env);
+  const delivered=mailbox.filter(message=>message.to===email);
+  assert.equal(delivered.length,2,'Only a fresh valid intent is sent, once');
+  assert.notEqual(tokenOf(delivered[1]),tokenOf(original));
+  await expectStatus(await request('email/verify',{token:tokenOf(original),password}),400);
+  await expectStatus(await request('email/verify',{token:tokenOf(delivered[1]),password}),200);
+  await expectStatus(await request('email/verify',{token:tokenOf(delivered[1]),password}),400);
+  await expectStatus(await request('email',resend),202);
+  await expectStatus(await request('email',signup),202);
+  assert.equal((await sql('SELECT count(*)::int n FROM system.transactional_email_outbox WHERE user_id=$1',[id])).rows[0].n,3,'A verified account receives a neutral response without another verification email');
+  assert.equal((await sql("SELECT count(*)::int n FROM identity.email_credentials WHERE email_lookup_hmac=decode($1,'base64')",[hmacLookup(email,env.PII_HMAC_KEY_V1)])).rows[0].n,1);
+});
+
+test('pending accounts can resend after old queued, processing or failed mail without a permanent dedupe key', async () => {
+  for(const state of ['queued','processing','failed']) {
+    fixtureIp=`2001:db8::${randomBytes(2).toString('hex')}`;
+    const email=`synthetic-${uuidv7()}@example.invalid`,password='synthetic pending stale outbox passphrase';
+    await expectStatus(await request('email',{mode:'register',email,password,turnstileToken:'account_signup'}),202);
+    const id=(await sql("SELECT user_id FROM identity.email_credentials WHERE email_lookup_hmac=decode($1,'base64')",[hmacLookup(email,env.PII_HMAC_KEY_V1)])).rows[0].user_id;
+    await sql("UPDATE identity.email_verification_tokens SET created_at=created_at-interval '25 hours',expires_at=expires_at-interval '25 hours' WHERE user_id=$1",[id]);
+    await sql(`UPDATE system.transactional_email_outbox SET state=$2,updated_at=now()-interval '25 hours',
+      terminal_at=CASE WHEN $2='failed' THEN now() ELSE NULL END,
+      delivery_envelope_ciphertext=CASE WHEN $2='failed' THEN NULL ELSE delivery_envelope_ciphertext END,
+      delivery_envelope_encryption_key_version=CASE WHEN $2='failed' THEN NULL ELSE delivery_envelope_encryption_key_version END WHERE user_id=$1`,[id,state]);
+    await expectStatus(await request('email',{mode:'resend_verification',email,turnstileToken:'verification_resend'}),202);
+    assert.deepEqual((await sql('SELECT state FROM system.transactional_email_outbox WHERE user_id=$1 ORDER BY created_at',[id])).rows.map(row=>row.state),['cancelled','queued']);
+    await relayTransactionalEmailOutbox(env);
+    await relayTransactionalEmailOutbox(env);
+    assert.equal(mailbox.filter(message=>message.to===email).length,1);
+  }
+});
+
+test('explicit provider failure retries the same intent when due and recovers without a duplicate send', async t => {
+  fixtureIp=`2001:db8::${randomBytes(2).toString('hex')}`;
+  const email=`synthetic-${uuidv7()}@example.invalid`,password='synthetic provider retry passphrase';
+  const provider=env.EMAIL;
+  t.after(()=>{env.EMAIL=provider;});
+  await expectStatus(await request('email',{mode:'register',email,password,turnstileToken:'account_signup'}),202);
+  const id=(await sql("SELECT user_id FROM identity.email_credentials WHERE email_lookup_hmac=decode($1,'base64')",[hmacLookup(email,env.PII_HMAC_KEY_V1)])).rows[0].user_id;
+  env.EMAIL={send:async message=>{if(message.to===email)throw {code:'E_INTERNAL_SERVER_ERROR'};return provider.send(message);}};
+  await relayTransactionalEmailOutbox(env);
+  const failed=(await sql('SELECT id,state,attempt_count,next_attempt_at>now() AS waiting FROM system.transactional_email_outbox WHERE user_id=$1',[id])).rows[0];
+  assert.equal(failed.state,'queued');assert.equal(failed.attempt_count,1);assert.equal(failed.waiting,true);
+  env.EMAIL=provider;
+  await relayTransactionalEmailOutbox(env);
+  assert.equal(mailbox.filter(message=>message.to===email).length,0,'Not-yet-due retries cannot send early');
+  await sql("UPDATE system.transactional_email_outbox SET next_attempt_at=now()-interval '1 second' WHERE id=$1",[failed.id]);
+  await relayTransactionalEmailOutbox(env);
+  await relayTransactionalEmailOutbox(env);
+  assert.equal(mailbox.filter(message=>message.to===email).length,1);
+  assert.deepEqual((await sql('SELECT id,state,attempt_count FROM system.transactional_email_outbox WHERE user_id=$1',[id])).rows,[{id:failed.id,state:'provider_accepted',attempt_count:2}]);
 });
 
 test('real handler idempotency, concurrent registration and resend preserve identity and one current challenge', async () => {
