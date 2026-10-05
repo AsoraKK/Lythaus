@@ -25,6 +25,7 @@ const upstreamProtectedPaths = [
   'scripts/ci/materialize-public-waitlist-deploy.mjs',
 ];
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+const nativeModerationWorkerdTest = 'packages/authenticity/tests/openai-moderation.workerd.mjs';
 const protectedPaths = [
   'apps/marketing-site/src/components/OpeningWordmark.astro',
   'apps/marketing-site/src/scripts/home-opening.js',
@@ -61,6 +62,13 @@ const protectedPaths = [
   'database/planetscale/migrations/0013_marketing_waitlist.sql',
 ];
 const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).trim();
+function assertOnlyReviewedNativeModerationTestRegistration(before, after) {
+  const script = 'test:native-architecture';
+  const expected = `${before.scripts[script]} ${nativeModerationWorkerdTest}`;
+  assert.equal(after.scripts[script], expected, 'Only the native Workerd moderation regression may be appended');
+  before.scripts[script] = expected;
+  assert.deepEqual(after, before, 'Only the native Workerd moderation regression may be registered; unrelated scripts and dependencies stay frozen');
+}
 const reviewedToolingSecurityPatches = {
   'fast-uri': {
     version: '3.1.8',
@@ -395,8 +403,38 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
       before.dependencies['http-cache-semantics'] = reviewedAstroPolicy;
       before.overrides['http-cache-semantics'] = '$http-cache-semantics';
     }
-    assert.deepEqual(after, before, 'Only the TypeScript test runtime flag and exact reviewed security changes may change; homepage dependencies remain frozen');
+    if (file === 'package.json') {
+      assertOnlyReviewedNativeModerationTestRegistration(before, after);
+    } else {
+      assert.deepEqual(after, before, 'Only the TypeScript test runtime flag and exact reviewed security changes may change; homepage dependencies remain frozen');
+    }
   }
+});
+
+test('homepage protection permits only the native moderation Workerd test registration', () => {
+  const before = {
+    scripts: {
+      'test:native-architecture': 'node --test scripts/tests/native-architecture.test.mjs',
+      'marketing:test': 'node --test apps/marketing-site/tests/*.test.mjs',
+    },
+    dependencies: { astro: '5.0.0' },
+    devDependencies: { miniflare: '4.0.0' },
+  };
+  const reviewed = structuredClone(before);
+  reviewed.scripts['test:native-architecture'] += ` ${nativeModerationWorkerdTest}`;
+  assert.doesNotThrow(() => assertOnlyReviewedNativeModerationTestRegistration(structuredClone(before), reviewed));
+
+  const unrelatedScript = structuredClone(reviewed);
+  unrelatedScript.scripts['marketing:test'] += ' --update-snapshots';
+  assert.throws(() => assertOnlyReviewedNativeModerationTestRegistration(structuredClone(before), unrelatedScript), assert.AssertionError);
+
+  const unrelatedDependency = structuredClone(reviewed);
+  unrelatedDependency.dependencies.astro = '6.0.0';
+  assert.throws(() => assertOnlyReviewedNativeModerationTestRegistration(structuredClone(before), unrelatedDependency), assert.AssertionError);
+
+  const extraTestPath = structuredClone(reviewed);
+  extraTestPath.scripts['test:native-architecture'] += ' scripts/tests/unreviewed.test.mjs';
+  assert.throws(() => assertOnlyReviewedNativeModerationTestRegistration(structuredClone(before), extraTestPath), assert.AssertionError);
 });
 
 test('upstream integration preserves homepage rendering inputs and waitlist route dispatch', () => {
