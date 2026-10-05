@@ -5,9 +5,19 @@ import { monthlyReputationShadowEnabled } from './monthly-reputation.ts';
 
 export async function loadMonthlyMaintenanceConfiguration(client: Client, version: string, forCollection = false) {
   if (forCollection) {
-    const flag = (await client.query<{ policy_version: string }>(
-      'SELECT policy_version FROM system.feature_flags WHERE flag_key = $1', ['trust.monthly_reputation_shadow'])).rows[0];
-    if (flag?.policy_version !== MONTHLY_REPUTATION_POLICY_VERSION) return null;
+    const schema = await client.query<{ available: boolean }>(`SELECT
+      to_regclass('system.feature_flags') IS NOT NULL
+      AND to_regclass('system.outbox_events') IS NOT NULL
+      AND to_regclass('identity.email_verification_tokens') IS NOT NULL
+      AND to_regclass('identity.email_credentials') IS NOT NULL
+      AND to_regclass('identity.users') IS NOT NULL
+      AND to_regclass('trust.monthly_maintenance_rule_sets') IS NOT NULL
+      AND to_regclass('trust.monthly_maintenance_observations') IS NOT NULL
+      AND to_regclass('trust.monthly_maintenance_revocations') IS NOT NULL AS available`);
+    if (!schema.rows[0]?.available) return null;
+    const flag = (await client.query<{ enabled: boolean; policy_version: string }>(
+      'SELECT enabled, policy_version FROM system.feature_flags WHERE flag_key = $1', ['trust.monthly_reputation_shadow'])).rows[0];
+    if (flag?.enabled !== true || flag.policy_version !== MONTHLY_REPUTATION_POLICY_VERSION) return null;
   } else if (!await monthlyReputationShadowEnabled(client)) return null;
   const row = (await client.query<{ configuration: MonthlyMaintenanceRules; collect_from: Date }>(
     `SELECT configuration, collect_from FROM trust.monthly_maintenance_rule_sets
