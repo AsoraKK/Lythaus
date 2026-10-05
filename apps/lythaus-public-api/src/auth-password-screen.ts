@@ -42,7 +42,7 @@ export async function requireUncompromisedPassword(
         let response: Response;
         try {
           response = await fetcher(`https://api.pwnedpasswords.com/range/${hash.slice(0, 5)}`, {
-            method: 'GET', redirect: 'error', signal: controller.signal,
+            method: 'GET', redirect: 'manual', signal: controller.signal,
             headers: { 'Add-Padding': 'true', 'User-Agent': 'Lythaus-password-screening' },
           });
         } catch {

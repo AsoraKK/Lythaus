@@ -150,10 +150,20 @@ describe('product-integrity OpenAPI parity', () => {
     expect(trending).toContain('TRENDING_UNAVAILABLE');
     expect(trending).not.toContain('_dio.');
     const providers = fs.readFileSync(path.join(root, 'lib/features/feed/application/social_feed_providers.dart'), 'utf8');
-    const search = providers.split('final feedSearchProvider =')[1].split('/// Provider for local feed')[0];
-    expect(search).toContain('AuthRequiredException');
-    expect(search).toContain('SEARCH_UNAVAILABLE');
+    const search = providers.split('class FeedSearchNotifier')[1].split('/// Notifier for trending feed')[0];
+    expect(search).toContain('getDiscoverFeed(');
+    expect(search).toContain('tag: arg.tag');
+    expect(search).not.toContain('AuthRequiredException');
+    expect(search).not.toContain('SEARCH_UNAVAILABLE');
     expect(search).not.toContain('getFeed(');
+    const discovery = workers.public.split('async function discoveryFeed(')[1].split('async function notifications(')[0];
+    expect(discovery).toContain("throw new Error('tag_search_unavailable')");
+    expect(discovery).not.toMatch(/p\.body\s+(?:ILIKE|~\*)/);
+    expect(spec.paths['/feed/discover'].get.responses['503'].description).toContain('exact-token index');
+    expect(spec.paths['/feed/discover'].get.parameters.map((item: { name: string }) => item.name)).toContain('tag');
+    const router = fs.readFileSync(path.join(root, 'lib/core/routing/app_router.dart'), 'utf8');
+    expect(router).toContain("name: AppRoutes.profile");
+    expect(router).toContain("path: 'user/:userId'");
   });
 
   test('each runtime route and verb is declared by the bundled contract', () => {

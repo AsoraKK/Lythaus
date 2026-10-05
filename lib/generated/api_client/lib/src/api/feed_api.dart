@@ -21,12 +21,13 @@ class FeedApi {
 
   const FeedApi(this._dio, this._serializers);
 
-  /// List the public discovery feed
-  /// Anonymous callers receive the public page. Authenticated callers additionally receive block and mute filtering.
+  /// List the public discovery feed or search a tag
+  /// Anonymous callers receive the public page. Authenticated callers additionally receive block and mute filtering. Supplying tag requests exact hashtag search in chronological order; tag search currently returns unavailable until a migration-backed exact-token index passes representative-scale validation.
   ///
   /// Parameters:
   /// * [cursor] - Opaque keyset cursor returned by the preceding page.
   /// * [limit]
+  /// * [tag] - Exact hashtag token, with an optional leading
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -39,6 +40,7 @@ class FeedApi {
   Future<Response<DiscoveryFeedPage>> feedDiscover({
     String? cursor,
     int? limit = 25,
+    String? tag,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -68,6 +70,7 @@ class FeedApi {
     final _queryParameters = <String, dynamic>{
       if (cursor != null) r'cursor': encodeQueryParameter(_serializers, cursor, const FullType(String)),
       if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
+      if (tag != null) r'tag': encodeQueryParameter(_serializers, tag, const FullType(String)),
     };
 
     final _response = await _dio.request<Object>(

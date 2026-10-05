@@ -181,7 +181,7 @@ Class | Method | HTTP request | Description
 [*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsList**](doc/CustomFeedsApi.md#customfeedslist) | **GET** /custom-feeds | List my custom feeds
 [*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsReplace**](doc/CustomFeedsApi.md#customfeedsreplace) | **PUT** /custom-feeds/{id} | Replace an owned custom feed
 [*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsUpdate**](doc/CustomFeedsApi.md#customfeedsupdate) | **PATCH** /custom-feeds/{id} | Partially update an owned custom feed
-[*FeedApi*](doc/FeedApi.md) | [**feedDiscover**](doc/FeedApi.md#feeddiscover) | **GET** /feed/discover | List the public discovery feed
+[*FeedApi*](doc/FeedApi.md) | [**feedDiscover**](doc/FeedApi.md#feeddiscover) | **GET** /feed/discover | List the public discovery feed or search a tag
 [*FeedApi*](doc/FeedApi.md) | [**feedList**](doc/FeedApi.md#feedlist) | **GET** /feed | List the authenticated personal feed
 [*FeedApi*](doc/FeedApi.md) | [**feedNews**](doc/FeedApi.md#feednews) | **GET** /feed/news | List the Black-tier News Board
 [*FeedApi*](doc/FeedApi.md) | [**newsBoardGetLegacy**](doc/FeedApi.md#newsboardgetlegacy) | **GET** /news-board | List the Black-tier News Board

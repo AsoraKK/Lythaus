@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
+import './auth-password-screen.workerd.mjs';
 import { classifyPublicError } from '../src/auth-runtime-policy.ts';
 import {
   PasswordScreeningUnavailableError,
@@ -32,7 +33,7 @@ test('new-password screening sends only five digest characters, requests padding
   const result = await requireUncompromisedPassword(password, async (url, init) => {
     assert.equal(url, `https://api.pwnedpasswords.com/range/${digest.slice(0, 5)}`);
     assert.equal(init.headers['Add-Padding'], 'true');
-    assert.equal(init.redirect, 'error');
+    assert.equal(init.redirect, 'manual');
     assert.equal(init.body, undefined);
     assert.doesNotMatch(JSON.stringify({ url, init }), /synthetic screening fixture/);
     return new Response(`${digest.slice(5)}:0\r\n${'F'.repeat(35)}:2`);

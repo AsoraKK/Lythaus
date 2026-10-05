@@ -49,6 +49,8 @@ class Repository extends Fake implements SocialFeedRepository {
     String? cursor,
     int limit = 25,
     String? token,
+    String? tag,
+    FeedRequestCancellation? cancellation,
   }) async => domain.FeedResponse(
     posts: [
       post(cursor == null ? 'under_appeal' : 'verified_signals_attached'),
