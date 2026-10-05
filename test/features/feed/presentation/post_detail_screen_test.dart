@@ -10,6 +10,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -248,6 +249,53 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('testuser'), findsOneWidget);
+      expect(find.byTooltip('View testuser profile'), findsOneWidget);
+    });
+
+    testWidgets('post detail author link opens the existing profile route', (
+      tester,
+    ) async {
+      when(
+        () => repo.getPost(
+          postId: any(named: 'postId'),
+          token: any(named: 'token'),
+        ),
+      ).thenAnswer((_) async => _fakePost());
+      final router = GoRouter(
+        initialLocation: '/post',
+        routes: [
+          GoRoute(
+            path: '/post',
+            builder: (context, state) => const PostDetailScreen(postId: 'p1'),
+          ),
+          GoRoute(
+            name: 'profile',
+            path: '/user/:userId',
+            builder: (context, state) => Scaffold(
+              body: Text('profile:${state.pathParameters['userId']}'),
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            contentRecoveryStorageProvider.overrideWithValue(
+              MemoryContentRecoveryStorage(),
+            ),
+            postRepositoryProvider.overrideWithValue(repo),
+            jwtProvider.overrideWith((ref) async => 'test-token'),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('View testuser profile'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('profile:author-1'), findsOneWidget);
     });
 
     testWidgets('renders horizontal media strip for multiple URLs', (

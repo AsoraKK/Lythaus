@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 import 'package:lythaus/features/feed/domain/models.dart' as domain;
+import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/ui/components/feed_card.dart';
 import 'package:lythaus/ui/screens/home/custom_feed.dart';
@@ -22,6 +23,15 @@ class _TrendingSuccessNotifier extends TrendingFeedNotifier {
 class _TrendingErrorNotifier extends TrendingFeedNotifier {
   @override
   Future<domain.FeedResponse> build() async => throw Exception('boom');
+}
+
+class _SearchNotifier extends FeedSearchNotifier {
+  _SearchNotifier(this.responseFor);
+
+  final Future<domain.FeedResponse> Function(FeedSearchKey key) responseFor;
+
+  @override
+  Future<domain.FeedResponse> build(FeedSearchKey arg) => responseFor(arg);
 }
 
 domain.Post _post({
@@ -101,7 +111,9 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              feedSearchProvider('public').overrideWith((ref) async => feed),
+              feedSearchProvider.overrideWith(
+                () => _SearchNotifier((_) async => feed),
+              ),
               trendingFeedProvider.overrideWith(
                 () => _TrendingSuccessNotifier(feed),
               ),
@@ -119,11 +131,14 @@ void main() {
             ),
           ),
         );
+        final initialException = tester.takeException();
+        expect(initialException, isNull, reason: 'after initial render');
         if (surface == 'search') {
           await tester.enterText(find.byType(TextField), 'public');
           await tester.testTextInput.receiveAction(TextInputAction.search);
         }
         await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: 'after loading results');
         final card = tester.widget<FeedCard>(find.byType(FeedCard));
         final item = card.item;
         expect(
@@ -150,6 +165,7 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('Trust details'));
         await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: 'after expanding trust');
         expect(
           find.bySemanticsLabel(RegExp('^View content history')),
           findsOneWidget,
@@ -266,7 +282,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          feedSearchProvider('cats').overrideWith((ref) => Future.value(feed)),
+          feedSearchProvider.overrideWith(
+            () => _SearchNotifier((_) async => feed),
+          ),
         ],
         child: const MaterialApp(home: FeedSearchScreen()),
       ),
@@ -280,13 +298,69 @@ void main() {
     expect(find.text('cats'), findsWidgets);
   });
 
+  testWidgets('feed search shows an empty state for an unknown tag', (
+    tester,
+  ) async {
+    const empty = domain.FeedResponse(
+      posts: [],
+      totalCount: 0,
+      hasMore: false,
+      page: 1,
+      pageSize: 25,
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          feedSearchProvider.overrideWith(
+            () => _SearchNotifier((_) async => empty),
+          ),
+        ],
+        child: const MaterialApp(
+          home: FeedSearchScreen(initialQuery: 'unknown'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('No results for “unknown”'), findsOneWidget);
+  });
+
+  testWidgets('feed search explains unavailable and offers retry', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          feedSearchProvider.overrideWith(
+            () => _SearchNotifier(
+              (_) => Future.error(
+                const SocialFeedException(
+                  'Tag search is temporarily unavailable.',
+                  code: 'tag_search_unavailable',
+                ),
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: FeedSearchScreen(initialQuery: 'civic')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tag search is temporarily unavailable.'), findsOneWidget);
+    expect(find.text('Retry search'), findsOneWidget);
+    await tester.tap(find.text('Retry search'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tag search is temporarily unavailable.'), findsOneWidget);
+  });
+
   testWidgets('feed search screen shows error state', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          feedSearchProvider(
-            'down',
-          ).overrideWith((ref) => Future.error(Exception('fail'))),
+          feedSearchProvider.overrideWith(
+            () => _SearchNotifier((_) => Future.error(Exception('fail'))),
+          ),
         ],
         child: const MaterialApp(home: FeedSearchScreen()),
       ),
@@ -308,7 +382,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          feedSearchProvider('reset').overrideWith((ref) => Future.value(feed)),
+          feedSearchProvider.overrideWith(
+            () => _SearchNotifier((_) async => feed),
+          ),
         ],
         child: const MaterialApp(home: FeedSearchScreen()),
       ),

@@ -7,11 +7,11 @@ void main() {
   final instance = LythausApiClient().getFeedApi();
 
   group(FeedApi, () {
-    // List the public discovery feed
+    // List the public discovery feed or search a tag
     //
-    // Anonymous callers receive the public page. Authenticated callers additionally receive block and mute filtering.
+    // Anonymous callers receive the public page. Authenticated callers additionally receive block and mute filtering. Supplying tag requests exact hashtag search in chronological order; tag search currently returns unavailable until a migration-backed exact-token index passes representative-scale validation.
     //
-    //Future<DiscoveryFeedPage> feedDiscover({ String cursor, int limit }) async
+    //Future<DiscoveryFeedPage> feedDiscover({ String cursor, int limit, String tag }) async
     test('test feedDiscover', () async {
       // TODO
     });

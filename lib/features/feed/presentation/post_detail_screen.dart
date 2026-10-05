@@ -12,6 +12,7 @@ import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/ui/components/receipt_drawer.dart';
 import 'package:lythaus/ui/components/trust_strip_row.dart';
 import 'package:lythaus/ui/components/authorship_disclosure.dart';
+import 'package:lythaus/ui/components/author_profile_link.dart';
 import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
 import 'package:lythaus/features/feed/presentation/content_editor_screen.dart';
 import 'package:lythaus/features/feed/application/content_mutation.dart';
@@ -457,9 +458,10 @@ class _PostHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                post.authorUsername,
-                style: textTheme.titleSmall?.copyWith(
+              AuthorProfileLink(
+                userId: post.authorId,
+                label: post.authorUsername,
+                textStyle: textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),

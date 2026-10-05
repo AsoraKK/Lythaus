@@ -12,7 +12,6 @@ import 'package:lythaus/features/feed/domain/models.dart';
 import 'package:lythaus/features/feed/application/social_feed_service.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
-import 'package:lythaus/features/auth/domain/auth_required_exception.dart';
 import 'package:lythaus/core/security/device_integrity_guard.dart';
 import 'package:lythaus/core/error/error_codes.dart';
 
@@ -35,18 +34,12 @@ final trendingFeedProvider =
     );
 
 /// Provider for searching feeds by keyword/tag
-final feedSearchProvider = FutureProvider.family<FeedResponse, String>((
-  ref,
-  query,
-) async {
-  if (ref.watch(guestModeProvider)) throw const AuthRequiredException();
-  final token = await ref.watch(jwtProvider.future);
-  if (token == null || token.isEmpty) throw const AuthRequiredException();
-  throw const SocialFeedException(
-    'Tag search is not available yet.',
-    code: 'SEARCH_UNAVAILABLE',
-  );
-});
+typedef FeedSearchKey = ({String tag, int tokenVersion});
+
+final feedSearchProvider = AsyncNotifierProvider.autoDispose
+    .family<FeedSearchNotifier, FeedResponse, FeedSearchKey>(
+      FeedSearchNotifier.new,
+    );
 
 /// Provider for local feed
 final localFeedProvider =
@@ -195,6 +188,72 @@ class FeedNotifier extends FamilyAsyncNotifier<FeedResponse, FeedParams> {
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() => build(arg));
+  }
+}
+
+class FeedSearchNotifier
+    extends AutoDisposeFamilyAsyncNotifier<FeedResponse, FeedSearchKey> {
+  FeedRequestCancellation? _cancellation;
+  bool _loadingMore = false;
+
+  @override
+  Future<FeedResponse> build(FeedSearchKey arg) async {
+    final cancellation = FeedRequestCancellation();
+    _cancellation = cancellation;
+    ref.onDispose(cancellation.cancel);
+    final token = await ref.watch(jwtProvider.future);
+    return ref
+        .read(socialFeedServiceProvider)
+        .getDiscoverFeed(
+          tag: arg.tag,
+          token: token,
+          cancellation: cancellation,
+        );
+  }
+
+  Future<void> loadMore() async {
+    final current = state.value;
+    final cancellation = _cancellation;
+    if (_loadingMore ||
+        current == null ||
+        !current.hasMore ||
+        current.nextCursor == null ||
+        cancellation == null ||
+        cancellation.isCancelled) {
+      return;
+    }
+
+    _loadingMore = true;
+    try {
+      final token = await ref.read(jwtProvider.future);
+      final nextPage = await ref
+          .read(socialFeedServiceProvider)
+          .getDiscoverFeed(
+            tag: arg.tag,
+            cursor: current.nextCursor,
+            limit: current.pageSize,
+            token: token,
+            cancellation: cancellation,
+          );
+      if (cancellation.isCancelled) return;
+
+      final seenIds = current.posts.map((post) => post.id).toSet();
+      final uniquePosts = nextPage.posts
+          .where((post) => seenIds.add(post.id))
+          .toList(growable: false);
+      state = AsyncData(
+        FeedResponse(
+          posts: [...current.posts, ...uniquePosts],
+          totalCount: current.totalCount + uniquePosts.length,
+          hasMore: nextPage.hasMore,
+          nextCursor: nextPage.nextCursor,
+          page: current.page + 1,
+          pageSize: current.pageSize,
+        ),
+      );
+    } finally {
+      _loadingMore = false;
+    }
   }
 }
 

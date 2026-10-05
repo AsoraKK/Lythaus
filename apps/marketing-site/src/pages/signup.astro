@@ -24,16 +24,18 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       data-turnstile-site-key={turnstileSiteKey}
       novalidate
     >
-      <label for="signup-email">Email address</label>
-      <input id="signup-email" name="email" type="email" autocomplete="email" maxlength="320" required />
+      <div class="auth-fields" data-signup-fields>
+        <label for="signup-email">Email address</label>
+        <input id="signup-email" name="email" type="email" autocomplete="email" maxlength="320" required />
 
-      <label for="signup-password">Password</label>
-      <input id="signup-password" name="password" type="password" autocomplete="new-password" maxlength="256" aria-describedby="signup-password-note" required />
-      <p class="auth-field-note" id="signup-password-note">Use at least 15 characters, up to 128. Longer passphrases are welcome. Password managers, paste, and autofill are supported.</p>
+        <label for="signup-password">Password</label>
+        <input id="signup-password" name="password" type="password" autocomplete="new-password" maxlength="256" aria-describedby="signup-password-note" required />
+        <p class="auth-field-note" id="signup-password-note">Use at least 15 characters, up to 128. Longer passphrases are welcome. Password managers, paste, and autofill are supported.</p>
 
-      <label for="signup-password-confirmation">Confirm password</label>
-      <input id="signup-password-confirmation" name="passwordConfirmation" type="password" autocomplete="new-password" maxlength="256" aria-describedby="signup-password-note" required />
+        <label for="signup-password-confirmation">Confirm password</label>
+        <input id="signup-password-confirmation" name="passwordConfirmation" type="password" autocomplete="new-password" maxlength="256" aria-describedby="signup-password-note" required />
 
+      </div>
       <div class="auth-turnstile-shell" id="signup-turnstile" role="group" aria-label="Bot verification"></div>
       <button class="button primary" type="submit" data-signup-submit>Create account</button>
       <p class="auth-status" data-signup-status aria-live="polite" aria-atomic="true" role="status" tabindex="-1"></p>
@@ -41,7 +43,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       <p class="auth-field-note" id="signup-resend-cooldown" data-signup-resend-cooldown aria-live="polite"></p>
       <div class="auth-check-email" data-signup-check-email hidden aria-labelledby="signup-check-email-title">
         <h2 id="signup-check-email-title">Check your email</h2>
-        <p>If the request was accepted, a verification message has been queued or is on its way. Delivery can take a few minutes and is not confirmed on this page.</p>
+        <p>If the request was accepted, a verification message has been queued or is on its way. This page cannot confirm inbox arrival. Use the latest verification link to finish setup; requesting another message replaces earlier links.</p>
       </div>
       <p class="auth-footnote">Already have an account? <a href="/sign-in">Sign in to Lythaus</a>.</p>
     </form>
@@ -59,6 +61,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       const status = form.querySelector('[data-signup-status]');
       const resendButton = form.querySelector('[data-signup-resend]');
       const checkEmailState = form.querySelector('[data-signup-check-email]');
+      const signupFields = form.querySelector('[data-signup-fields]');
       const turnstileContainer = form.querySelector('#signup-turnstile');
       const apiBaseUrl = form.dataset.apiBaseUrl?.replace(/\/$/u, '') ?? '';
       const siteKey = form.dataset.turnstileSiteKey ?? '';
@@ -67,6 +70,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       let tokenResolve;
       let tokenReject;
       let isSubmitting = false;
+      let signupAccepted = false;
       let cooldownUntil = 0;
       let cooldownTimer;
 
@@ -206,7 +210,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        if (isSubmitting || !(email instanceof HTMLInputElement) || !(password instanceof HTMLInputElement) || !(confirmation instanceof HTMLInputElement) || !(button instanceof HTMLButtonElement)) return;
+        if (isSubmitting || signupAccepted || !(email instanceof HTMLInputElement) || !(password instanceof HTMLInputElement) || !(confirmation instanceof HTMLInputElement) || !(button instanceof HTMLButtonElement)) return;
         email.removeAttribute('aria-invalid');
         if (!email.validity.valid) {
           email.setAttribute('aria-invalid', 'true');
@@ -246,8 +250,13 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
           if (!response.ok || !['verification_required', 'check_email'].includes(body.state)) throw new Error(typeof body.error === 'string' ? body.error : 'account_creation_failed');
           password.value = '';
           confirmation.value = '';
+          signupAccepted = true;
+          email.readOnly = true;
+          if (signupFields instanceof HTMLElement) signupFields.hidden = true;
+          button.hidden = true;
           if (checkEmailState instanceof HTMLElement) checkEmailState.hidden = false;
           setResendVisible(true);
+          startCooldown();
           setStatus('Your request was accepted. If eligible, check your email for the next step. If you already verified your account, sign in or use Forgot password. Delivery is not confirmed yet.', 'success');
         } catch (error) {
           const code = error instanceof Error ? error.message : 'account_creation_failed';

@@ -2,6 +2,7 @@ import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/ui/components/feed_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
   testWidgets('shows pinned icon, label, and author when feed item is pinned', (
@@ -11,6 +12,7 @@ void main() {
       id: 'feed-1',
       feedId: 'home',
       author: 'Alice',
+      authorId: 'author-alice',
       contentType: ContentType.image,
       title: 'Pinned update',
       body: 'Details about the pinned post',
@@ -35,6 +37,50 @@ void main() {
     expect(find.byIcon(Icons.push_pin_outlined), findsOneWidget);
     expect(find.text('Image'), findsOneWidget);
     expect(find.text('Alice'), findsOneWidget);
+    expect(find.byTooltip('View Alice profile'), findsOneWidget);
+  });
+
+  testWidgets('author link opens profile without opening the post card', (
+    tester,
+  ) async {
+    var postOpened = false;
+    final item = FeedItem(
+      id: 'post-1',
+      feedId: 'discover',
+      author: 'Alice',
+      authorId: 'author-alice',
+      contentType: ContentType.text,
+      title: 'Update',
+      body: 'A public update',
+      publishedAt: DateTime.utc(2025, 1, 1),
+      tags: const [],
+    );
+    final router = GoRouter(
+      initialLocation: '/feed',
+      routes: [
+        GoRoute(
+          path: '/feed',
+          builder: (context, state) => Scaffold(
+            body: FeedCard(item: item, onTap: () => postOpened = true),
+          ),
+        ),
+        GoRoute(
+          name: 'profile',
+          path: '/user/:userId',
+          builder: (context, state) =>
+              Scaffold(body: Text('profile:${state.pathParameters['userId']}')),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('View Alice profile'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('profile:author-alice'), findsOneWidget);
+    expect(postOpened, isFalse);
   });
 
   testWidgets(

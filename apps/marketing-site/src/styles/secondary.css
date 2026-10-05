@@ -65,6 +65,7 @@ html[data-secondary] *, html[data-secondary] *::before, html[data-secondary] *::
 .auth-intro { max-width: 500px; padding-top: 16px; }
 .auth-intro > p { font-size: 1.0625rem; line-height: 1.8; }
 .auth-form { display: grid; min-width: 0; gap: 12px; padding: 32px; border: 1px solid var(--ds-border); border-radius: var(--ds-radius-surface); background: var(--ds-surface); }
+.auth-fields:not([hidden]) { display: grid; min-width: 0; gap: 12px; }
 .auth-form label { color: var(--ds-text); font-size: .875rem; font-weight: 600; }
 .auth-form input, .appearance-control select { width: 100%; min-width: 0; min-height: 48px; padding: 10px 12px; color: var(--ds-text); background: var(--ds-canvas); border: 1px solid var(--ds-control); border-radius: var(--ds-radius-control); }
 .auth-form input[aria-invalid="true"] { border-color: var(--ds-danger); }

@@ -445,22 +445,35 @@ void main() {
   });
 
   group('feedSearchProvider', () {
-    test(
-      'does not present an unfiltered personal feed as tag results',
-      () async {
-        final container = createContainer();
-        await expectLater(
-          container.read(feedSearchProvider('flutter').future),
-          throwsA(
-            isA<SocialFeedException>().having(
-              (e) => e.code,
-              'code',
-              'SEARCH_UNAVAILABLE',
-            ),
-          ),
-        );
-        verifyZeroInteractions(repo);
-      },
-    );
+    test('uses the public discovery endpoint for tag results', () async {
+      final container = createContainer();
+      when(
+        () => repo.getDiscoverFeed(
+          cursor: any(named: 'cursor'),
+          limit: any(named: 'limit'),
+          token: any(named: 'token'),
+          tag: any(named: 'tag'),
+          cancellation: any(named: 'cancellation'),
+        ),
+      ).thenAnswer((_) async => _feedWith());
+      await container.read(
+        feedSearchProvider((tag: 'flutter', tokenVersion: 0)).future,
+      );
+      verify(
+        () => repo.getDiscoverFeed(
+          cursor: null,
+          limit: 25,
+          token: 'test-token',
+          tag: 'flutter',
+          cancellation: any(named: 'cancellation'),
+        ),
+      ).called(1);
+      verifyNever(
+        () => repo.getFeed(
+          params: any(named: 'params'),
+          token: any(named: 'token'),
+        ),
+      );
+    });
   });
 }

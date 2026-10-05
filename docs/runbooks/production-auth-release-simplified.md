@@ -139,6 +139,16 @@ authentication certification. Keep issue #720 open and complete the separate
 certification journey—including the independent second-mailbox-provider
 requirement—before any certified GO claim.
 
+The public signup page shows a waiting state after an accepted request, with a
+30-second cooldown before deliberate verification resend. A resend replaces
+earlier verification links. Verification sets the final account password and
+does not establish a session. Its success action opens the marketing sign-in
+page, which establishes the existing `cookie-v1` API session before opening the
+app. The handoff carries no password, verification token, or access token in a
+URL or browser storage. A different browser does not inherit that session.
+Profile completion remains optional through the existing Profile action;
+cookie restoration does not automatically request the profile-setup wizard.
+
 The initial restoration requires two authorized mailboxes on independent
 providers. `CODEX_TEST_EMAIL` remains the primary protected secret;
 `CODEX_TEST_SECONDARY_EMAIL` supplies the second authorized mailbox to the
@@ -389,6 +399,14 @@ Before GO, retain exact serving/reused provenance, positive-traffic rollback,
 real Turnstile, mailbox receipt at two independent authorized providers, setup,
 replay, legacy fixture ID preservation, reset/revocation and post-activation
 cached/fresh browser evidence. Missing evidence remains a certification blocker.
+
+The browser preserves an intake key after a timeout or uncertain response. An
+expired or changed key produces a definitive `idempotency_key_conflict`; that
+rejected response now discards the browser key so the next deliberate submission
+starts a fresh request. It does not automatically submit again. An
+`idempotency_outcome_unknown` or in-progress response retains its original key.
+Fresh requests still require a fresh Turnstile proof and obey the existing
+cooldown, rate limits, challenge expiry and account linkage checks.
 
 Prompt transactional-email dispatch is prepared behind
 `TRANSACTIONAL_EMAIL_DISPATCH_ENABLED`; absence or any value other than `true`
