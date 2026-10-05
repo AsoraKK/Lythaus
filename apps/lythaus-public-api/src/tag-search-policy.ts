@@ -1,4 +1,4 @@
-export const TAG_SEARCH_PROPOSAL_VERSION = 'exact-token-proposal-v2';
+export const TAG_SEARCH_PROPOSAL_VERSION = 'exact-token-proposal-v3';
 export const TAG_SEARCH_PROPOSED_MAX_DISTINCT_TAGS_PER_POST = 16;
 export const TAG_SEARCH_PROPOSED_MAX_CANDIDATES_PER_REQUEST = 1000;
 export const TAG_SEARCH_MAX_TRACKED_DISTINCT_TAGS_PER_POST = 50_000;
@@ -24,8 +24,8 @@ export function normalizeTagSearchQuery(value: unknown): string {
 
 /**
  * Proposed body-token semantics. The 16-tag search cap is unapproved. The
- * extractor keeps the full bounded token set so an overflow can be excluded
- * per tag without losing exactness or disabling unrelated searches.
+ * extractor keeps the full bounded token set so an over-limit legacy post
+ * can be excluded as one unit without disabling unrelated searches.
  */
 export function extractHashtags(body: string, maxDistinctTags = TAG_SEARCH_PROPOSED_MAX_DISTINCT_TAGS_PER_POST): ExtractedHashtags {
   if (!Number.isInteger(maxDistinctTags) || maxDistinctTags < 1 || maxDistinctTags > 128) {
@@ -56,4 +56,10 @@ export function extractHashtags(body: string, maxDistinctTags = TAG_SEARCH_PROPO
     complete: true,
     exceedsLimit: tokens.size > maxDistinctTags,
   };
+}
+
+export function enforcePostTagLimit(body: string, maxDistinctTags = TAG_SEARCH_PROPOSED_MAX_DISTINCT_TAGS_PER_POST): ExtractedHashtags {
+  const extracted = extractHashtags(body, maxDistinctTags);
+  if (!extracted.complete || extracted.exceedsLimit) throw new Error('post_tag_limit_exceeded');
+  return extracted;
 }

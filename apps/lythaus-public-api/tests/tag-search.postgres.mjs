@@ -5,8 +5,7 @@ import pg from 'pg';
 import { exportJWK, exportPKCS8, generateKeyPair } from 'jose';
 import * as database from '@lythaus/db';
 import { signAccessToken, uuidv7 } from '@lythaus/security';
-import { normalizeTagSearchQuery } from '../src/tag-search-policy.ts';
-import { extractHashtags } from '../src/tag-search-policy.ts';
+import { enforcePostTagLimit, extractHashtags, normalizeTagSearchQuery, TAG_SEARCH_PROPOSAL_VERSION } from '../src/tag-search-policy.ts';
 import { prepareTagSearchCandidate } from './tag-search-candidate.mjs';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
@@ -95,6 +94,8 @@ test('tag normalization accepts exact NFC tokens and rejects malformed input', (
   assert.equal(overflow.observedDistinctCount, 17);
   assert.equal(overflow.complete, true, 'the exact token set remains complete above the per-post search cap');
   assert.equal(overflow.exceedsLimit, true);
+  assert.equal(enforcePostTagLimit(Array.from({ length: 16 }, (_, i) => `#cap${i}`).join(' ')).observedDistinctCount, 16);
+  assert.throws(() => enforcePostTagLimit(Array.from({ length: 17 }, (_, i) => `#cap${i}`).join(' ')), /post_tag_limit_exceeded/);
   const hardLimit = extractHashtags(Array.from({ length: 50_001 }, (_, i) => `#bounded${i}`).join(' '));
   assert.equal(hardLimit.tokens.length, 0);
   assert.equal(hardLimit.observedDistinctCount, 50_001);
@@ -160,8 +161,8 @@ async function post({ authorId, body = 'Synthetic #city fixture', visibility = '
       if (!deleted) {
         const extracted = extractHashtags(body);
         await client.query(
-          `SELECT feed.write_post_tag_search_index($1::uuid,$2::text[],$3::integer,$4::boolean,'exact-token-proposal-v2')`,
-          [id, extracted.tokens, extracted.observedDistinctCount, extracted.complete],
+          `SELECT feed.write_post_tag_search_index($1::uuid,$2::text[],$3::integer,$4::boolean,$5::text)`,
+          [id, extracted.tokens, extracted.observedDistinctCount, extracted.complete, TAG_SEARCH_PROPOSAL_VERSION],
         );
       }
       await client.query(
@@ -450,84 +451,114 @@ test('native discovery preserves visibility, block/mute isolation, and chronolog
   assert.deepEqual(pageIds, [visibleNewest, visibleMiddle, visibleOldest]);
 });
 
-test('an over-limit post is excluded per tag without disabling unrelated searches', async () => {
-  const author = await actor();
-  const body = Array.from({ length: 17 }, (_, index) => `#overflow${index}`).join(' ');
+test('enabled post writes reject over-limit tags before creation or edit mutation', async () => {
+  await sql('UPDATE feed.tag_search_index_control SET search_enabled=true WHERE singleton=true');
+  const owner = await actor();
+  const tag = `writecap${uuidv7().replaceAll('-', '')}`;
+  const tooManyTags = `#${tag} ${Array.from({ length: 16 }, (_, index) => `#capfill${index}`).join(' ')}`;
+  const rejectedCreate = await mutate('POST', '/api/posts', {
+    body: tooManyTags, declaredCreationMode: 'human', geoScope: 'none',
+  }, owner);
+  assert.equal(rejectedCreate.status, 400, await rejectedCreate.clone().text());
+  assert.equal((await rejectedCreate.json()).error, 'post_tag_limit_exceeded');
+  const absentCreate = await sql('SELECT count(*)::integer AS count FROM content.posts WHERE author_id=$1 AND body=$2', [owner.id, tooManyTags]);
+  assert.equal(absentCreate.rows[0].count, 0, 'rejected create never becomes a post or index candidate');
+
   const created = await mutate('POST', '/api/posts', {
-    body, declaredCreationMode: 'human', geoScope: 'none',
-  }, author);
+    body: `#${tag}`, declaredCreationMode: 'human', geoScope: 'none',
+  }, owner);
   assert.equal(created.status, 201, await created.clone().text());
-  const overflowPost = (await created.json()).id;
-  createdPostIds.push(overflowPost);
+  const postId = (await created.json()).id;
+  createdPostIds.push(postId);
   await sql(
     `INSERT INTO content.content_declarations(post_id,declared_creation_mode,public_label)
      VALUES($1,'human','Human-authored')`,
-    [overflowPost],
+    [postId],
   );
-  await sql("UPDATE content.posts SET moderation_state='allowed',published_at=now() WHERE id=$1", [overflowPost]);
+  await sql("UPDATE content.posts SET moderation_state='allowed',published_at=now() WHERE id=$1", [postId]);
 
-  const state = await sql(
-    'SELECT complete,observed_distinct_count,excluded_reason FROM content.post_tag_search_state WHERE post_id=$1',
-    [overflowPost],
+  const rejectedEdit = await mutate('PUT', `/api/posts/${postId}`, {
+    body: tooManyTags, declaredCreationMode: 'human',
+  }, owner);
+  assert.equal(rejectedEdit.status, 400, await rejectedEdit.clone().text());
+  assert.equal((await rejectedEdit.json()).error, 'post_tag_limit_exceeded');
+  const preserved = await sql(
+    `SELECT post.body, post.published_at IS NOT NULL AS published, state.complete,
+            state.excluded_reason, array_agg(token.tag_key ORDER BY token.tag_key)
+              FILTER (WHERE token.tag_key IS NOT NULL) AS tags
+       FROM content.posts post
+       JOIN content.post_tag_search_state state ON state.post_id=post.id
+       LEFT JOIN content.post_tag_search_tokens token ON token.post_id=post.id
+      WHERE post.id=$1 GROUP BY post.id,state.complete,state.excluded_reason`,
+    [postId],
   );
-  assert.deepEqual(state.rows[0], {
-    complete: true,
-    observed_distinct_count: 17,
-    excluded_reason: 'tag_limit_exceeded',
+  assert.deepEqual(preserved.rows[0], {
+    body: `#${tag}`, published: true, complete: true,
+    excluded_reason: null, tags: [tag],
+  }, 'rejected edit preserves published body and its valid index state');
+  const searchable = await get(`/api/feed/discover?tag=${tag}`, '203.0.113.50');
+  assert.equal(searchable.status, 200, await searchable.clone().text());
+  assert.deepEqual((await searchable.json()).items.map(({ id }) => id), [postId]);
+});
+
+test('legacy over-limit posts remain feed-visible but cannot poison popular-tag search or cursors', async () => {
+  await sql('UPDATE feed.tag_search_index_control SET search_enabled=true WHERE singleton=true');
+  const viewer = await actor();
+  const legacyAuthor = await actor();
+  const topAuthor = await actor();
+  const blockedAuthor = await actor();
+  const mutedAuthor = await actor();
+  const olderAuthor = await actor();
+  const tag = `popularattack${uuidv7().replaceAll('-', '')}`;
+  const time = (secondsAgo) => new Date(Date.now() + 6 * 60 * 60_000 - secondsAgo * 1000).toISOString();
+  const legacyBody = `#${tag} ${Array.from({ length: 16 }, (_, index) => `#attackfill${index}`).join(' ')}`;
+  const legacyPost = await post({ authorId: legacyAuthor.id, body: legacyBody, publishedAt: time(0) });
+  const top = await post({ authorId: topAuthor.id, body: `#${tag}`, publishedAt: time(1) });
+  const blocked = await post({ authorId: blockedAuthor.id, body: `#${tag}`, publishedAt: time(2) });
+  const muted = await post({ authorId: mutedAuthor.id, body: `#${tag}`, publishedAt: time(3) });
+  const older = await post({ authorId: olderAuthor.id, body: `#${tag}`, publishedAt: time(4) });
+  await sql('INSERT INTO social.blocks(blocker_id,blocked_id) VALUES($1,$2)', [viewer.id, blockedAuthor.id]);
+  await sql('INSERT INTO social.mutes(muter_id,muted_id) VALUES($1,$2)', [viewer.id, mutedAuthor.id]);
+
+  const legacyState = await sql(
+    `SELECT complete,observed_distinct_count,excluded_reason
+       FROM content.post_tag_search_state WHERE post_id=$1`,
+    [legacyPost],
+  );
+  assert.deepEqual(legacyState.rows[0], {
+    complete: true, observed_distinct_count: 17, excluded_reason: 'legacy_tag_limit_exceeded',
   });
-  const tokens = await sql(
-    `SELECT count(*)::integer AS count,
-            count(*) FILTER (WHERE searchable)::integer AS searchable,
-            count(*) FILTER (WHERE exclusion_reason='tag_limit_exceeded')::integer AS excluded
-       FROM content.post_tag_search_tokens WHERE post_id=$1`,
-    [overflowPost],
-  );
-  assert.deepEqual(tokens.rows[0], { count: 17, searchable: 0, excluded: 17 });
+  await sql("UPDATE content.posts SET moderation_state='under_review',published_at=NULL WHERE id=$1", [legacyPost]);
+  await sql("UPDATE content.posts SET moderation_state='allowed',published_at=$2 WHERE id=$1", [legacyPost, time(0)]);
+  const legacyTokens = await sql('SELECT count(*)::integer AS count FROM content.post_tag_search_tokens WHERE post_id=$1', [legacyPost]);
+  assert.equal(legacyTokens.rows[0].count, 0, 'publication transitions cannot add an excluded legacy post to tag candidates');
 
-  const unaffected = await mutate('POST', '/api/posts', {
-    body: '#unrelatedafteroverflow', declaredCreationMode: 'human', geoScope: 'none',
-  }, author);
-  assert.equal(unaffected.status, 201, await unaffected.clone().text());
-  const unaffectedPost = (await unaffected.json()).id;
-  createdPostIds.push(unaffectedPost);
-  await sql(
-    `INSERT INTO content.content_declarations(post_id,declared_creation_mode,public_label)
-     VALUES($1,'human','Human-authored')`,
-    [unaffectedPost],
-  );
-  await sql("UPDATE content.posts SET moderation_state='allowed',published_at=now() WHERE id=$1", [unaffectedPost]);
+  const publicFeed = await get('/api/feed/discover?limit=50', '203.0.113.51');
+  assert.equal(publicFeed.status, 200, await publicFeed.clone().text());
+  assert.ok((await publicFeed.json()).items.some(({ id }) => id === legacyPost),
+    'legacy over-limit content remains in ordinary public feeds');
 
-  const response = await get('/api/feed/discover?tag=overflow0', '203.0.113.51');
-  assert.equal(response.status, 503);
-  assert.equal((await response.json()).error, 'tag_search_unavailable');
-  const unrelated = await get('/api/feed/discover?tag=unrelatedafteroverflow', '203.0.113.52');
-  assert.equal(unrelated.status, 200, await unrelated.clone().text());
-  assert.deepEqual((await unrelated.json()).items.map(({ id }) => id), [unaffectedPost]);
+  const guestSearch = await get(`/api/feed/discover?tag=${tag}&limit=10`, '203.0.113.52');
+  assert.equal(guestSearch.status, 200, await guestSearch.clone().text());
+  assert.deepEqual((await guestSearch.json()).items.map(({ id }) => id), [top, blocked, muted, older]);
+
+  const pagedIds = [];
+  let cursor;
+  for (let page = 0; page < 2; page += 1) {
+    const path = `/api/feed/discover?tag=${tag}&limit=1${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+    const result = await get(path, '203.0.113.53', viewer);
+    assert.equal(result.status, 200, await result.clone().text());
+    const body = await result.json();
+    assert.equal(body.items.length, 1);
+    pagedIds.push(body.items[0].id);
+    cursor = body.nextCursor;
+    if (page === 0) assert.equal(typeof cursor, 'string');
+    if (page === 1) assert.equal(cursor, null);
+  }
+  assert.deepEqual(pagedIds, [top, older], 'block and mute filters still apply across stable chronological cursors');
+  assert.equal(new Set(pagedIds).size, pagedIds.length, 'cursor pages contain no duplicates');
   const gate = await sql('SELECT search_enabled FROM feed.tag_search_index_control WHERE singleton=true');
-  assert.equal(gate.rows[0].search_enabled, true, 'one post overflow does not close the global search gate');
-
-  const blockedViewer = await actor();
-  await sql('INSERT INTO social.blocks(blocker_id,blocked_id) VALUES($1,$2)', [blockedViewer.id, author.id]);
-  const blocked = await get('/api/feed/discover?tag=overflow0', '203.0.113.56', blockedViewer);
-  assert.equal(blocked.status, 200, await blocked.clone().text());
-  assert.deepEqual((await blocked.json()).items, [], 'blocked overflow markers do not disclose matching posts');
-
-  const repaired = await mutate('PUT', `/api/posts/${overflowPost}`, {
-    body: '#overflow0', declaredCreationMode: 'human',
-  }, author);
-  assert.equal(repaired.status, 200, await repaired.clone().text());
-  const repairedState = await sql(
-    'SELECT complete,observed_distinct_count,excluded_reason FROM content.post_tag_search_state WHERE post_id=$1',
-    [overflowPost],
-  );
-  assert.deepEqual(repairedState.rows[0], { complete: true, observed_distinct_count: 1, excluded_reason: null });
-  await sql("UPDATE content.posts SET moderation_state='allowed',published_at=now() WHERE id=$1", [overflowPost]);
-  const nowSearchable = await get('/api/feed/discover?tag=overflow0', '203.0.113.53');
-  assert.equal(nowSearchable.status, 200, await nowSearchable.clone().text());
-  assert.deepEqual((await nowSearchable.json()).items.map(({ id }) => id), [overflowPost]);
-  const removedTag = await get('/api/feed/discover?tag=overflow16', '203.0.113.54');
-  assert.equal(removedTag.status, 200, await removedTag.clone().text());
-  assert.deepEqual((await removedTag.json()).items, [], 'edited overflow tokens no longer poison their old tags');
+  assert.equal(gate.rows[0].search_enabled, true, 'legacy overflow does not disable the global search gate');
 });
 
 test('invalid index metadata remains a systemic fail-closed condition', async () => {

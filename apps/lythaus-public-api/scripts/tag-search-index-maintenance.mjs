@@ -4,6 +4,7 @@ import path from 'node:path';
 import { extractHashtags, TAG_SEARCH_PROPOSED_MAX_DISTINCT_TAGS_PER_POST, TAG_SEARCH_PROPOSAL_VERSION } from '../src/tag-search-policy.ts';
 
 const { Client } = pg;
+const MAX_RESTART_SWEEPS = 1;
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL ?? '';
 const target = new URL(connectionString || 'file:///missing');
 
@@ -24,6 +25,7 @@ function prepareExtracted(posts) {
       tokens: extracted.tokens,
       observed_distinct_count: extracted.observedDistinctCount,
       complete: extracted.complete,
+      exceeds_limit: extracted.exceedsLimit,
       extractor_version: TAG_SEARCH_PROPOSAL_VERSION,
     };
   });
@@ -61,13 +63,14 @@ async function countReconciliationMismatches(client, posts, extractedRows) {
   const storedById = new Map(result.rows.map((row) => [row.id, row]));
   return extractedRows.reduce((mismatches, expected) => {
     const current = storedById.get(expected.post_id);
-    const expectedSearchable = expected.tokens.map(() => !expected.exceedsLimit);
-    const expectedReasons = expected.tokens.map(() => expected.exceedsLimit ? 'tag_limit_exceeded' : null);
+    const expectedTokens = expected.exceeds_limit ? [] : expected.tokens;
+    const expectedSearchable = expectedTokens.map(() => true);
+    const expectedReasons = expectedTokens.map(() => null);
     const matches = current?.extractor_version === expected.extractor_version
       && current?.observed_distinct_count === expected.observed_distinct_count
       && current?.complete === expected.complete
-      && current?.excluded_reason === (expected.exceedsLimit ? 'tag_limit_exceeded' : null)
-      && JSON.stringify(current?.tokens ?? []) === JSON.stringify(expected.tokens)
+      && current?.excluded_reason === (expected.exceeds_limit ? 'legacy_tag_limit_exceeded' : null)
+      && JSON.stringify(current?.tokens ?? []) === JSON.stringify(expectedTokens)
       && JSON.stringify(current?.searchable_flags ?? []) === JSON.stringify(expectedSearchable)
       && JSON.stringify(current?.exclusion_reasons ?? []) === JSON.stringify(expectedReasons);
     return mismatches + (matches ? 0 : 1);
@@ -78,8 +81,9 @@ async function beginBatch(client) {
   await client.query('BEGIN');
   await client.query("SET LOCAL statement_timeout='20s'");
   const control = await client.query(
-    `SELECT backfill_cursor, backfill_complete, backfill_post_count,
-            reconciliation_cursor, reconciliation_complete, reconciliation_post_count
+    `SELECT backfill_cursor, backfill_complete, backfill_post_count, backfill_restart_count,
+            legacy_tag_limit_excluded_post_count,
+            reconciliation_cursor, reconciliation_complete, reconciliation_post_count, reconciliation_restart_count
        FROM feed.tag_search_index_control WHERE singleton = true FOR UPDATE`,
   );
   if (!control.rows[0]) throw new Error('tag search candidate control row is missing; apply the proposal in a disposable database first');
@@ -92,12 +96,19 @@ export async function runTagIndexBatch(client, mode, batchSize = 200) {
   const cursorField = mode === 'backfill' ? 'backfill_cursor' : 'reconciliation_cursor';
   const completeField = mode === 'backfill' ? 'backfill_complete' : 'reconciliation_complete';
   const countField = mode === 'backfill' ? 'backfill_post_count' : 'reconciliation_post_count';
+  const restartField = mode === 'backfill' ? 'backfill_restart_count' : 'reconciliation_restart_count';
 
   const control = await beginBatch(client);
   try {
     if (control[completeField]) {
       await client.query('COMMIT');
-      return { mode, complete: true, processed: 0, mismatches: 0, incomplete: 0, cursor: control[cursorField] };
+      return {
+        mode, complete: true, blocked: false, restartSweep: false,
+        processed: 0, mismatches: 0, incomplete: 0,
+        excludedLegacyOverflowPosts: 0,
+        excludedLegacyOverflowTotal: Number(control.legacy_tag_limit_excluded_post_count),
+        cursor: control[cursorField],
+      };
     }
     const candidates = await client.query(
       `SELECT post.id, post.body
@@ -112,6 +123,7 @@ export async function runTagIndexBatch(client, mode, batchSize = 200) {
     const hasMore = candidates.rows.length > batchSize;
     const posts = candidates.rows.slice(0, batchSize);
     const extractedRows = prepareExtracted(posts);
+    const excludedLegacyOverflowPosts = extractedRows.filter((row) => row.complete && row.exceeds_limit).length;
     const mismatches = mode === 'reconcile'
       ? await countReconciliationMismatches(client, posts, extractedRows)
       : 0;
@@ -119,16 +131,26 @@ export async function runTagIndexBatch(client, mode, batchSize = 200) {
     const nextCursor = posts.at(-1)?.id ?? control[cursorField] ?? null;
     const total = Number(control[countField]) + posts.length;
     if (hasMore) {
+      const updateField = mode === 'reconcile'
+        ? 'reconciliation_mismatch_count = reconciliation_mismatch_count + $3'
+        : 'legacy_tag_limit_excluded_post_count = legacy_tag_limit_excluded_post_count + $3';
       await client.query(
         `UPDATE feed.tag_search_index_control
-            SET ${cursorField} = $1::uuid, ${countField} = $2,
-                ${mode === 'reconcile' ? 'reconciliation_mismatch_count = reconciliation_mismatch_count + $3,' : ''}
+            SET ${cursorField} = $1::uuid, ${countField} = $2, ${updateField},
                 updated_at = now()
           WHERE singleton = true`,
-        mode === 'reconcile' ? [nextCursor, total, mismatches] : [nextCursor, total],
+        [nextCursor, total, mode === 'reconcile' ? mismatches : excludedLegacyOverflowPosts],
       );
       await client.query('COMMIT');
-      return { mode, complete: false, processed: posts.length, mismatches, incomplete: null, cursor: nextCursor };
+      return {
+        mode, complete: false, blocked: false, restartSweep: false,
+        processed: posts.length, mismatches, incomplete: null,
+        excludedLegacyOverflowPosts,
+        excludedLegacyOverflowTotal: mode === 'backfill'
+          ? Number(control.legacy_tag_limit_excluded_post_count) + excludedLegacyOverflowPosts
+          : Number(control.legacy_tag_limit_excluded_post_count),
+        cursor: nextCursor,
+      };
     }
 
     const incompletes = await client.query(
@@ -138,21 +160,64 @@ export async function runTagIndexBatch(client, mode, batchSize = 200) {
         WHERE post.deleted_at IS NULL AND state.complete IS DISTINCT FROM true`,
     );
     const incomplete = Number(incompletes.rows[0]?.count ?? 0);
+    const restartCount = Number(control[restartField]);
+    if (incomplete > 0 && restartCount < MAX_RESTART_SWEEPS) {
+      const restartAssignments = mode === 'backfill'
+        ? `backfill_cursor = NULL, backfill_post_count = 0,
+           backfill_restart_count = backfill_restart_count + 1,
+           legacy_tag_limit_excluded_post_count = 0,
+           backfill_complete = false`
+        : `reconciliation_cursor = NULL, reconciliation_post_count = 0,
+           reconciliation_restart_count = reconciliation_restart_count + 1,
+           reconciliation_mismatch_count = 0,
+           reconciliation_complete = false`;
+      await client.query(
+        `UPDATE feed.tag_search_index_control
+            SET ${restartAssignments}, incomplete_post_count = $1,
+                block_reason = 'post_tag_index_incomplete', search_enabled = false,
+                updated_at = now()
+          WHERE singleton = true`,
+        [incomplete],
+      );
+      await client.query('COMMIT');
+      return {
+        mode, complete: false, blocked: false, restartSweep: true,
+        processed: posts.length, mismatches, incomplete, cursor: null,
+        excludedLegacyOverflowPosts,
+        excludedLegacyOverflowTotal: mode === 'backfill' ? 0 : Number(control.legacy_tag_limit_excluded_post_count),
+      };
+    }
+    const blocked = incomplete > 0;
     await client.query(
       `UPDATE feed.tag_search_index_control
           SET ${cursorField} = $1::uuid,
               ${countField} = $2,
+              ${restartField} = CASE WHEN $3::integer = 0 THEN 0 ELSE ${restartField} END,
+              ${mode === 'backfill' ? 'legacy_tag_limit_excluded_post_count = legacy_tag_limit_excluded_post_count + $4,' : ''}
               ${completeField} = ($3::integer = 0),
               incomplete_post_count = $3,
               ${mode === 'reconcile' ? 'reconciliation_mismatch_count = reconciliation_mismatch_count + $4,' : 'reconciliation_complete = false, reconciliation_cursor = NULL,'}
-              block_reason = CASE WHEN $3::integer > 0 THEN 'post_tag_index_incomplete' ELSE block_reason END,
+              block_reason = CASE
+                WHEN $3::integer > 0 THEN 'post_tag_index_incomplete'
+                WHEN block_reason = 'post_tag_index_incomplete' THEN NULL
+                ELSE block_reason END,
               search_enabled = CASE WHEN $3::integer > 0 THEN false ELSE search_enabled END,
               updated_at = now()
         WHERE singleton = true`,
-      mode === 'reconcile' ? [nextCursor, total, incomplete, mismatches] : [nextCursor, total, incomplete],
+      mode === 'reconcile'
+        ? [nextCursor, total, incomplete, mismatches]
+        : [nextCursor, total, incomplete, excludedLegacyOverflowPosts],
     );
     await client.query('COMMIT');
-    return { mode, complete: incomplete === 0, processed: posts.length, mismatches, incomplete, cursor: nextCursor };
+    return {
+      mode, complete: incomplete === 0, blocked, restartSweep: false,
+      processed: posts.length, mismatches, incomplete, cursor: nextCursor,
+      excludedLegacyOverflowPosts,
+      excludedLegacyOverflowTotal: mode === 'backfill'
+        ? Number(control.legacy_tag_limit_excluded_post_count) + excludedLegacyOverflowPosts
+        : Number(control.legacy_tag_limit_excluded_post_count),
+      ...(blocked ? { reason: 'post_tag_index_incomplete' } : {}),
+    };
   } catch (error) {
     await client.query('ROLLBACK').catch(() => undefined);
     throw error;
@@ -179,7 +244,9 @@ async function main() {
       await client.query(
         `UPDATE feed.tag_search_index_control
             SET ${cursor} = NULL, ${complete} = false, ${count} = 0,
-                ${mode === 'backfill' ? 'reconciliation_complete = false, reconciliation_cursor = NULL, reconciliation_post_count = 0, reconciliation_mismatch_count = 0,' : 'reconciliation_mismatch_count = 0,'}
+                ${mode === 'backfill'
+                  ? 'backfill_restart_count = 0, legacy_tag_limit_excluded_post_count = 0, reconciliation_complete = false, reconciliation_cursor = NULL, reconciliation_post_count = 0, reconciliation_restart_count = 0, reconciliation_mismatch_count = 0,'
+                  : 'reconciliation_restart_count = 0, reconciliation_mismatch_count = 0,'}
                 search_enabled = false, updated_at = now()
           WHERE singleton = true`,
       );
@@ -188,7 +255,10 @@ async function main() {
     do {
       result = await runTagIndexBatch(client, mode, batchSize);
       process.stdout.write(`${JSON.stringify(result)}\n`);
-      if (once || result.complete) break;
+      if (once || result.complete || result.blocked) {
+        if (result.blocked) process.exitCode = 1;
+        break;
+      }
     } while (true);
   } finally {
     await client.end();

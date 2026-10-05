@@ -4,15 +4,18 @@
 
 CREATE TABLE IF NOT EXISTS feed.tag_search_index_control (
   singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
-  policy_version text NOT NULL DEFAULT 'exact-token-proposal-v2',
+  policy_version text NOT NULL DEFAULT 'exact-token-proposal-v3',
   policy_approved boolean NOT NULL DEFAULT false,
   max_distinct_tags_per_post integer NOT NULL DEFAULT 16 CHECK (max_distinct_tags_per_post BETWEEN 1 AND 128),
   max_candidates_per_request integer NOT NULL DEFAULT 1000 CHECK (max_candidates_per_request BETWEEN 1 AND 5000),
   backfill_cursor uuid,
   backfill_post_count bigint NOT NULL DEFAULT 0 CHECK (backfill_post_count >= 0),
+  backfill_restart_count smallint NOT NULL DEFAULT 0 CHECK (backfill_restart_count BETWEEN 0 AND 1),
+  legacy_tag_limit_excluded_post_count bigint NOT NULL DEFAULT 0 CHECK (legacy_tag_limit_excluded_post_count >= 0),
   backfill_complete boolean NOT NULL DEFAULT false,
   reconciliation_cursor uuid,
   reconciliation_post_count bigint NOT NULL DEFAULT 0 CHECK (reconciliation_post_count >= 0),
+  reconciliation_restart_count smallint NOT NULL DEFAULT 0 CHECK (reconciliation_restart_count BETWEEN 0 AND 1),
   reconciliation_mismatch_count bigint NOT NULL DEFAULT 0 CHECK (reconciliation_mismatch_count >= 0),
   incomplete_post_count bigint NOT NULL DEFAULT 0 CHECK (incomplete_post_count >= 0),
   reconciliation_complete boolean NOT NULL DEFAULT false,
@@ -25,19 +28,26 @@ CREATE TABLE IF NOT EXISTS feed.tag_search_index_control (
 ALTER TABLE feed.tag_search_index_control
   ADD COLUMN IF NOT EXISTS max_candidates_per_request integer NOT NULL DEFAULT 1000
     CHECK (max_candidates_per_request BETWEEN 1 AND 5000);
+ALTER TABLE feed.tag_search_index_control
+  ADD COLUMN IF NOT EXISTS backfill_restart_count smallint NOT NULL DEFAULT 0;
+ALTER TABLE feed.tag_search_index_control
+  ADD COLUMN IF NOT EXISTS legacy_tag_limit_excluded_post_count bigint NOT NULL DEFAULT 0;
+ALTER TABLE feed.tag_search_index_control
+  ADD COLUMN IF NOT EXISTS reconciliation_restart_count smallint NOT NULL DEFAULT 0;
 
 INSERT INTO feed.tag_search_index_control(singleton) VALUES (true)
 ON CONFLICT (singleton) DO NOTHING;
 
 UPDATE feed.tag_search_index_control
-   SET policy_version = 'exact-token-proposal-v2',
+   SET policy_version = 'exact-token-proposal-v3',
        policy_approved = false,
-       backfill_cursor = NULL, backfill_post_count = 0, backfill_complete = false,
-       reconciliation_cursor = NULL, reconciliation_post_count = 0,
+       backfill_cursor = NULL, backfill_post_count = 0, backfill_restart_count = 0,
+       legacy_tag_limit_excluded_post_count = 0, backfill_complete = false,
+       reconciliation_cursor = NULL, reconciliation_post_count = 0, reconciliation_restart_count = 0,
        reconciliation_mismatch_count = 0, reconciliation_complete = false,
        incomplete_post_count = 0, search_enabled = false,
        block_reason = 'tag_search_policy_version_changed', updated_at = now()
- WHERE singleton = true AND policy_version IS DISTINCT FROM 'exact-token-proposal-v2';
+ WHERE singleton = true AND policy_version IS DISTINCT FROM 'exact-token-proposal-v3';
 
 CREATE TABLE IF NOT EXISTS content.post_tag_search_state (
   post_id uuid PRIMARY KEY REFERENCES content.posts(id) ON DELETE CASCADE,
@@ -191,7 +201,7 @@ BEGIN
     DELETE FROM content.post_tag_search_state WHERE post_id = p_post_id;
     RETURN;
   END IF;
-  IF p_extractor_version IS DISTINCT FROM 'exact-token-proposal-v2'
+  IF p_extractor_version IS DISTINCT FROM 'exact-token-proposal-v3'
      OR p_observed_distinct_count IS NULL OR p_observed_distinct_count < 0
      OR p_observed_distinct_count > 50001
      OR token_count > 50000
@@ -210,12 +220,12 @@ BEGIN
   END IF;
 
   write_exclusion_reason := CASE
-    WHEN write_complete AND token_count > configured_limit THEN 'tag_limit_exceeded'
+    WHEN write_complete AND token_count > configured_limit THEN 'legacy_tag_limit_exceeded'
     ELSE NULL
   END;
 
   DELETE FROM content.post_tag_search_tokens WHERE post_id = p_post_id;
-  IF write_complete THEN
+  IF write_complete AND write_exclusion_reason IS NULL THEN
     INSERT INTO content.post_tag_search_tokens(
       post_id, tag_key, indexed_published_at, searchable, exclusion_reason)
     SELECT p_post_id, token,
@@ -225,8 +235,8 @@ BEGIN
                       AND declaration.public_label IN ('Human-authored', 'AI-assisted')
                       AND declaration.review_required = false
                 THEN post.published_at ELSE NULL END,
-           write_exclusion_reason IS NULL,
-           write_exclusion_reason
+           true,
+           NULL
       FROM unnest(COALESCE(p_tokens, ARRAY[]::text[])) AS supplied(token)
       JOIN content.posts post ON post.id = p_post_id
       JOIN identity.users author ON author.id = post.author_id
@@ -312,6 +322,10 @@ BEGIN
         AND new_post.deleted_at IS NULL AND new_post.published_at IS NOT NULL
         AND declaration.public_label IN ('Human-authored', 'AI-assisted')
         AND declaration.review_required = false AND author.status = 'active'
+        AND token.searchable AND token.exclusion_reason IS NULL
+        AND EXISTS (SELECT 1 FROM content.post_tag_search_state index_state
+                     WHERE index_state.post_id = token.post_id AND index_state.complete
+                       AND index_state.excluded_reason IS NULL)
        THEN new_post.published_at ELSE NULL END
     FROM old_posts old_post
     JOIN new_posts new_post ON new_post.id = old_post.id
@@ -352,6 +366,10 @@ BEGIN
         AND post.deleted_at IS NULL AND post.published_at IS NOT NULL
         AND declaration.public_label IN ('Human-authored', 'AI-assisted')
         AND declaration.review_required = false AND author.status = 'active'
+        AND token.searchable AND token.exclusion_reason IS NULL
+        AND EXISTS (SELECT 1 FROM content.post_tag_search_state index_state
+                     WHERE index_state.post_id = token.post_id AND index_state.complete
+                       AND index_state.excluded_reason IS NULL)
        THEN post.published_at ELSE NULL END
     FROM new_declarations declaration
     JOIN content.posts post ON post.id = declaration.post_id
@@ -394,6 +412,10 @@ BEGIN
         AND post.deleted_at IS NULL AND post.published_at IS NOT NULL
         AND declaration.public_label IN ('Human-authored', 'AI-assisted')
         AND declaration.review_required = false AND author.status = 'active'
+        AND token.searchable AND token.exclusion_reason IS NULL
+        AND EXISTS (SELECT 1 FROM content.post_tag_search_state index_state
+                     WHERE index_state.post_id = token.post_id AND index_state.complete
+                       AND index_state.excluded_reason IS NULL)
        THEN post.published_at ELSE NULL END
     FROM new_declarations declaration
     JOIN content.posts post ON post.id = declaration.post_id
@@ -446,6 +468,10 @@ BEGIN
           AND post.deleted_at IS NULL AND post.published_at IS NOT NULL
           AND declaration.public_label IN ('Human-authored', 'AI-assisted')
           AND declaration.review_required = false
+          AND token.searchable AND token.exclusion_reason IS NULL
+          AND EXISTS (SELECT 1 FROM content.post_tag_search_state index_state
+                       WHERE index_state.post_id = token.post_id AND index_state.complete
+                         AND index_state.excluded_reason IS NULL)
        THEN post.published_at ELSE NULL END
     FROM content.posts post
     LEFT JOIN content.content_declarations declaration ON declaration.post_id = post.id

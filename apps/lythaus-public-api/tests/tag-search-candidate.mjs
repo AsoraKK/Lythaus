@@ -21,8 +21,10 @@ export async function prepareTagSearchCandidate(client) {
         SET policy_approved = false,
             max_distinct_tags_per_post = 16,
             max_candidates_per_request = 1000,
-            backfill_cursor = NULL, backfill_post_count = 0, backfill_complete = false,
+            backfill_cursor = NULL, backfill_post_count = 0, backfill_restart_count = 0,
+            legacy_tag_limit_excluded_post_count = 0, backfill_complete = false,
             reconciliation_cursor = NULL, reconciliation_post_count = 0,
+            reconciliation_restart_count = 0,
             reconciliation_mismatch_count = 0, reconciliation_complete = false,
             incomplete_post_count = 0, search_enabled = false, block_reason = NULL,
             updated_at = now()
@@ -30,14 +32,16 @@ export async function prepareTagSearchCandidate(client) {
   );
   for (let batches = 0; batches < 100_000; batches += 1) {
     const result = await runTagIndexBatch(client, 'backfill', 200);
+    if (result.blocked) assert.fail(`candidate tag backfill blocked: ${result.reason}`);
     if (result.complete) break;
-    if (result.processed === 0) assert.fail('candidate tag backfill made no progress');
+    if (result.processed === 0 && !result.restartSweep) assert.fail('candidate tag backfill made no progress');
     if (batches === 99_999) assert.fail('candidate tag backfill exceeded the bounded test loop');
   }
   for (let batches = 0; batches < 100_000; batches += 1) {
     const result = await runTagIndexBatch(client, 'reconcile', 200);
+    if (result.blocked) assert.fail(`candidate tag reconciliation blocked: ${result.reason}`);
     if (result.complete) break;
-    if (result.processed === 0) assert.fail('candidate tag reconciliation made no progress');
+    if (result.processed === 0 && !result.restartSweep) assert.fail('candidate tag reconciliation made no progress');
     if (batches === 99_999) assert.fail('candidate tag reconciliation exceeded the bounded test loop');
   }
   const enabled = await client.query(

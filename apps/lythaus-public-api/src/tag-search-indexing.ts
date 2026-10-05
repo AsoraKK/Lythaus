@@ -1,5 +1,5 @@
 import {
-  extractHashtags,
+  enforcePostTagLimit,
   TAG_SEARCH_PROPOSED_MAX_CANDIDATES_PER_REQUEST,
   TAG_SEARCH_PROPOSED_MAX_DISTINCT_TAGS_PER_POST,
   TAG_SEARCH_PROPOSAL_VERSION,
@@ -29,7 +29,7 @@ export async function maintainPostTagIndex(
   body: string,
   maxDistinctTags: number,
 ): Promise<void> {
-  const extracted = extractHashtags(body, maxDistinctTags);
+  const extracted = enforcePostTagLimit(body, maxDistinctTags);
   await client.query(
     `SELECT feed.write_post_tag_search_index($1::uuid, $2::text[], $3::integer, $4::boolean, $5::text)`,
     [postId, extracted.tokens, extracted.observedDistinctCount, extracted.complete, TAG_SEARCH_PROPOSAL_VERSION],

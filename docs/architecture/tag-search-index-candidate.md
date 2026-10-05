@@ -28,23 +28,29 @@ Examples:
 - Repeating `#city` 20 times uses one distinct-tag slot.
 
 The default cap of **16 distinct tags per post is proposed and unapproved**.
-For a post above that cap but within the parser's hard ceiling of 50,000
-distinct tokens, indexing records the exact token set and marks every token
-`tag_limit_exceeded`; the post state remains complete. If such a currently
-eligible post appears in a request's bounded candidate window, that tag query
-returns retryable `tag_search_unavailable` instead of returning a partial
-page. Other tags remain searchable. Blocked, muted, pending, deleted,
-moderated, or otherwise ineligible posts do not trigger that unavailable
-state. Editing the post to 16 or fewer distinct tags replaces the exclusion
-markers and restores those tag searches. This avoids a global outage while
-keeping result pages honest.
+When tag-index maintenance is explicitly enabled, new post creation and body
+edits above the configured cap return the clear `post_tag_limit_exceeded`
+validation error before inserting/updating content or index state. The
+maintenance flag defaults off, and this cap remains unapproved until the owner
+chooses it.
+
+Historical posts above the cap are handled separately during offline
+backfill. Their index state remains complete and records
+`legacy_tag_limit_exceeded` plus the exact observed tag count; no searchable
+token rows are written for that post. The control row and backfill output
+report `legacy_tag_limit_excluded_post_count`. This does not delete, unpublish,
+or change visibility of old content: otherwise-eligible legacy posts remain in
+ordinary public feeds, but are omitted from tag-search results. They consume no
+tag candidate slots and cannot make a legitimate post's popular tag
+unavailable. The owner must decide how to communicate or remediate this legacy
+search exclusion before activation; the candidate performs no bulk content
+mutation.
 
 The 50,000-token ceiling is only an implementation safety bound, not a product
 limit. A parser result above that ceiling or an invalid/inconsistent index
 record is treated as systemic incompleteness and closes the global search gate.
-The owner still needs to choose the public behavior for new or edited posts
-above 16 tags; the candidate currently accepts the write and exposes no
-successful partial search page for an affected tag.
+That condition is distinct from a complete historical over-limit state, which
+does not close the gate or fail individual tag searches.
 
 The proposed query cap is **1,000 candidate posts per request**, also
 unapproved and configurable. It bounds viewer-specific block/mute checks and
@@ -82,11 +88,12 @@ an empty page only after the index readiness gate succeeds; missing schema,
 incomplete backfill, policy mismatch, cancellation, or query failure returns
 `tag_search_unavailable`.
 
-Post creation and body edits can write the side index in the same transaction
-when the maintenance flag is explicitly enabled. Database triggers clear
-tokens when a post is soft-deleted or its body changes, refresh indexed
-publication timestamps when moderation/publication/declaration state changes,
-and disable search if an eligible post commits without complete index state.
+Post creation and body edits are checked against the configured cap before
+their write transaction when the maintenance flag is explicitly enabled, then
+write valid side-index entries in that same transaction. Database triggers
+clear tokens when a post is soft-deleted or its body changes, refresh indexed
+publication timestamps only for searchable complete state, and disable search
+if an eligible post commits without complete index state.
 The public query still checks current blocks, mutes, author status, visibility,
 deletion, moderation, and review state on every request. No profile, admin, or
 jobs source files are changed; `discovery_candidates`, `user_inbox`,
@@ -98,8 +105,13 @@ jobs source files are changed; `discovery_candidates`, `user_inbox`,
 local-only `backfill` and `reconcile` operations. It rejects non-local database
 hosts, uses batches of at most 500 rows, persists a UUID keyset cursor in each
 batch transaction, writes each extracted batch in one database round trip, and
-resumes after interruption. Reconciliation compares body-derived tokens to
-stored state and repairs mismatches. Neither operation enables search. Runtime
+resumes after interruption. A terminal completeness check triggers at most
+one bounded restart sweep for rows that became incomplete behind the cursor;
+if incompleteness persists, the command emits a blocked result and exits
+rather than spinning without progress. Backfill reports legacy excluded-post
+counts. Reconciliation compares body-derived tokens and exclusion state to
+stored state, so clean overflow is not a mismatch and stale token rows remain
+detectable. Neither operation enables search. Runtime
 reads also require
 `TAG_SEARCH_INDEX_READ_ENABLED=true`, a matching
 `TAG_SEARCH_MAX_DISTINCT_TAGS_PER_POST` and
@@ -145,11 +157,12 @@ the global gate.
 
 1. Approve or change the exact boundary/normalization semantics, including
    whether hyphenated text such as `#city-news` should index `city`.
-2. Choose the over-16 post policy: (a) reject or hold new/edit requests with a
-   clear validation message, while legacy overflow stays excluded per tag;
-   (b) accept the post and keep only its affected tag queries unavailable; or
-   (c) approve a higher bounded tag cap after storage testing. The current
-   candidate implements (b) and does not return a successful partial page.
+2. Choose the over-16 post policy: (a) reject/hold new and edited bodies with a
+   clear per-post validation result, while legacy posts remain visible in
+   ordinary feeds but are excluded from tag search and reported per post; or
+   (b) approve a higher bounded tag cap after storage testing. The candidate
+   implements (a) only when indexing maintenance is explicitly enabled; the
+   cap and legacy remediation policy remain unapproved.
 3. Keep the 1,000-candidate request cap and accept a retryable per-request 503
    when blocks/mutes consume the window, or approve a larger bounded cap after
    service-budget testing. Neither outcome disables other tag searches.
@@ -172,6 +185,7 @@ the global gate.
 | Pagination and trust identity | Existing cursor codec and `FeedResponseCandidate`; chronological keyset integration test |
 | Unknown versus unavailable | Empty page only when the readiness gate is complete; explicit 503 tests for closed gate and query cancellation |
 | Lifecycle and deletion | Same-transaction API indexing; candidate post/declaration/user triggers; local backfill/reconciliation script |
-| Per-post overflow | Exact tokens plus `tag_limit_exceeded` state/token reason; tests for affected-tag unavailability, unrelated-tag success, block privacy, and repair after edit |
+| Per-post overflow | Enabled writes reject before mutation; legacy rows retain feed visibility, record `legacy_tag_limit_exceeded`, and have no tag tokens; adversarial popular-tag, pagination, reconciliation, and backfill-report tests |
+| Backfill progress | One bounded restart sweep recovers behind-cursor incompleteness; persistent state returns an explicit blocked result instead of an infinite loop |
 | Safe activation boundary | Proposal outside canonical manifests, control row defaults false, and Worker flags default off |
 | Rate and result bounds | Existing native 30-request rate limit, proposed 1,000-candidate scan cap, and integration tests for 429, complete guest pagination, and request-level unavailability for filtered windows |

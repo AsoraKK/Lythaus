@@ -121,6 +121,22 @@ void main() {
     }
   });
 
+  test('tag-limit validation gives actionable text and is definitive', () {
+    final failure = contentMutationFailure(
+      DioException(
+        requestOptions: RequestOptions(path: '/posts'),
+        response: Response(
+          data: {'error': 'post_tag_limit_exceeded'},
+          statusCode: 400,
+          requestOptions: RequestOptions(path: '/posts'),
+        ),
+      ),
+    );
+    expect(failure.code, 'post_tag_limit_exceeded');
+    expect(failure.uncertain, isFalse);
+    expect(failure.message, 'This post has too many distinct tags for search. Remove some tags and try again.');
+  });
+
   test('post submit locks before token lookup and freezes the draft', () async {
     final token = Completer<String?>();
     final result = Completer<CreatePostResult>();
