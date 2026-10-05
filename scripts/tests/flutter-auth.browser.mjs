@@ -47,6 +47,7 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
         else{status=401;body={error:'refresh_token_invalid'};}
         refreshInFlight--;
       } else if(url.pathname.endsWith('/auth/userinfo')){status=userinfoUnavailable?503:200;body=userinfoUnavailable?{error:'userinfo_unavailable'}:user;}
+      else if(url.pathname==='/api/auth/passkeys/capabilities')body={enabled:false};
       else if(url.pathname.endsWith('/auth/logout')){session=false;headers['set-cookie']='__Host-lythaus_refresh=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0';body={state:'signed_out'};}
       else if(url.pathname===`/api/users/${user.id}`)body={user:{id:user.id,displayName:'Synthetic acceptance',trustPassportVisibility:'private',reputationScore:0}};
       else if(url.pathname==='/api/users/me')body={user:{id:user.id,displayName:'Synthetic acceptance',trustPassportVisibility:'private',moderationState:'allowed',publicVisibility:false,reputationScore:0}};

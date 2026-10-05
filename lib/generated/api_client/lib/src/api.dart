@@ -22,6 +22,7 @@ import 'package:lythaus_api_client/src/api/health_api.dart';
 import 'package:lythaus_api_client/src/api/media_api.dart';
 import 'package:lythaus_api_client/src/api/moderation_api.dart';
 import 'package:lythaus_api_client/src/api/notifications_api.dart';
+import 'package:lythaus_api_client/src/api/passkeys_api.dart';
 import 'package:lythaus_api_client/src/api/posts_api.dart';
 import 'package:lythaus_api_client/src/api/privacy_api.dart';
 import 'package:lythaus_api_client/src/api/reputation_api.dart';
@@ -162,6 +163,12 @@ class LythausApiClient {
   /// by doing that all interceptors will not be executed
   NotificationsApi getNotificationsApi() {
     return NotificationsApi(dio, serializers);
+  }
+
+  /// Get PasskeysApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  PasskeysApi getPasskeysApi() {
+    return PasskeysApi(dio, serializers);
   }
 
   /// Get PostsApi instance, base route and serializer can be overridden by a given but be careful,

@@ -7,6 +7,14 @@ on:
       - 'database/planetscale/**'
       - 'apps/lythaus-public-api/src/auth*.ts'
       - 'apps/lythaus-public-api/src/index.ts'
+      - 'apps/lythaus-public-api/src/passkey-runtime.ts'
+      - 'apps/lythaus-public-api/tests/passkey-test-support.mjs'
+      - 'packages/security/src/passkeys.ts'
+      - 'packages/security/tests/passkey-fixtures.mjs'
+      - 'packages/db/src/passkeys.ts'
+      - 'packages/db/src/passkey-privacy.ts'
+      - 'apps/lythaus-jobs/src/index.ts'
+      - 'apps/lythaus-jobs/src/runtime-policy.ts'
       - 'apps/lythaus-public-api/src/account-support-entrypoint.ts'
       - 'apps/lythaus-public-api/src/email-envelope-entrypoint.ts'
       - 'apps/lythaus-public-api/src/worker.ts'
@@ -181,9 +189,16 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
         run: node --test scripts/tests/auth-incident-grants.postgres.mjs
-      - name: Prove authentication and email races on real PostgreSQL
+      - name: Prepare isolated passkey proposal fixture
         env:
-          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_passkeys_ci?sslmode=disable
+        run: |
+          psql 'postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable' -v ON_ERROR_STOP=1 -c 'CREATE DATABASE lythaus_auth_test_passkeys_ci'
+          npm run validate:planetscale-postgres17
+          psql "$PLANETSCALE_PG17_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction -f database/planetscale/proposals/optional-passkeys.sql
+      - name: Prove authentication, passkey and email races on real PostgreSQL
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_passkeys_ci?sslmode=disable
         run: node --experimental-strip-types --experimental-test-module-mocks --test --test-concurrency=1 apps/lythaus-public-api/tests/*.postgres.mjs apps/lythaus-admin-api/tests/*.postgres.mjs
       - name: Enforce executable coordinator coverage on real PostgreSQL
         env:

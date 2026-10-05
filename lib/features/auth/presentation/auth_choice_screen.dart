@@ -156,6 +156,25 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
     widget.onContinueAsGuest?.call();
   }
 
+  Future<void> _handlePasskeySignIn() async {
+    if (_isSignInPending ||
+        _isRecoveryActionLoading ||
+        ref.read(authStateProvider).isLoading) {
+      return;
+    }
+    setState(() => _isSignInPending = true);
+    try {
+      await runWithDeviceGuard(
+        context,
+        ref,
+        IntegrityUseCase.signIn,
+        () => ref.read(passkeySignInProvider)(),
+      );
+    } finally {
+      if (mounted) setState(() => _isSignInPending = false);
+    }
+  }
+
   bool _isValidEmail(String value) {
     return value.length <= 320 &&
         RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value);
@@ -326,6 +345,13 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                         icon: Icons.lock_reset,
                         onPressed: isBusy ? null : _openPasswordReset,
                       ),
+                      if (ref.watch(passkeyAvailabilityProvider).valueOrNull ==
+                          true)
+                        LythButton.secondary(
+                          label: 'Sign in with a passkey',
+                          icon: Icons.key_outlined,
+                          onPressed: isBusy ? null : _handlePasskeySignIn,
+                        ),
                       LythButton.tertiary(
                         label: _isRecoveryActionLoading
                             ? 'Opening verification…'

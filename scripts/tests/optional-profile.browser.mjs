@@ -44,6 +44,7 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
         status = session && cookie?.includes('__Host-lythaus_refresh=') ? 200 : 401;
         body = status === 200 ? { accessToken: 'synthetic-profile-token', expiresIn: 900, sessionTransport: 'cookie-v1' } : { error: 'refresh_token_invalid' };
       } else if (url.pathname === '/api/auth/userinfo') body = user;
+      else if (url.pathname === '/api/auth/passkeys/capabilities') body = { enabled: false };
       else if (url.pathname === '/api/auth/logout') { session = false; body = { state: 'signed_out' }; }
       else if (url.pathname === '/api/users/me') {
         assert.ok(session);
