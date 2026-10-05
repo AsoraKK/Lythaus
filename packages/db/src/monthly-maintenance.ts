@@ -7,8 +7,13 @@ export async function loadMonthlyMaintenanceConfiguration(client: Client, versio
   if (forCollection) {
     const schema = await client.query<{ available: boolean }>(`SELECT
       to_regclass('system.feature_flags') IS NOT NULL
+      AND to_regclass('system.outbox_events') IS NOT NULL
+      AND to_regclass('identity.email_verification_tokens') IS NOT NULL
+      AND to_regclass('identity.email_credentials') IS NOT NULL
+      AND to_regclass('identity.users') IS NOT NULL
       AND to_regclass('trust.monthly_maintenance_rule_sets') IS NOT NULL
-      AND to_regclass('trust.monthly_maintenance_observations') IS NOT NULL AS available`);
+      AND to_regclass('trust.monthly_maintenance_observations') IS NOT NULL
+      AND to_regclass('trust.monthly_maintenance_revocations') IS NOT NULL AS available`);
     if (!schema.rows[0]?.available) return null;
     const flag = (await client.query<{ enabled: boolean; policy_version: string }>(
       'SELECT enabled, policy_version FROM system.feature_flags WHERE flag_key = $1', ['trust.monthly_reputation_shadow'])).rows[0];

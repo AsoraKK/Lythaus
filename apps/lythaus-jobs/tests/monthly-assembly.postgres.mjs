@@ -181,13 +181,15 @@ test('SEC-01/REL-03: wrong policy and unavailable monthly schema cannot collect 
     await sql('ALTER TABLE system.feature_flags ENABLE TRIGGER monthly_collection_flag_preserved');
   }
 
-  const unavailableUser = await person(), unavailableProof = await emailFixture(unavailableUser);
-  await sql('ALTER TABLE trust.monthly_maintenance_rule_sets RENAME TO monthly_maintenance_rule_sets_unavailable_fixture');
-  try {
-    assert.equal(await capture(unavailableProof), null);
+  for (const table of ['monthly_maintenance_rule_sets', 'monthly_maintenance_observations', 'monthly_maintenance_revocations']) {
+    const unavailableUser = await person(), unavailableProof = await emailFixture(unavailableUser);
+    await sql(`ALTER TABLE trust.${table} RENAME TO ${table}_unavailable_fixture`);
+    try {
+      assert.equal(await capture(unavailableProof), null);
+    } finally {
+      await sql(`ALTER TABLE trust.${table}_unavailable_fixture RENAME TO ${table}`);
+    }
     assert.equal((await sql('SELECT 1 FROM trust.monthly_maintenance_observations WHERE source_event_id = $1', [unavailableProof.eventId])).rowCount, 0);
-  } finally {
-    await sql('ALTER TABLE trust.monthly_maintenance_rule_sets_unavailable_fixture RENAME TO monthly_maintenance_rule_sets');
   }
 });
 
@@ -352,6 +354,41 @@ test('SEC-01/03/16: ordinary email verification succeeds with the monthly featur
   const noAward = await assemble(userId);
   assert.equal(noAward.report.maintenance.quarterlyPoints, 0);
   assert.deepEqual(noAward.report.observationIds, []);
+});
+
+test('SEC-01/03/16: enabled current monthly policy captures safe email evidence and revokes it on binding change', async () => {
+  const userId = await person(), tokenId = uuidv7(), token = randomBytes(32).toString('base64url');
+  const lookup = randomBytes(32);
+  await sql(`INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider)
+    VALUES ($1, convert_to('synthetic-encrypted-contact', 'utf8'), $2, 'v1', 'email')`, [userId, lookup]);
+  await sql(`INSERT INTO identity.email_credentials
+    (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, hmac_key_version, password_hash)
+    VALUES ($1, convert_to('synthetic-encrypted-contact', 'utf8'), $2, 'v1', 'v1', '{}'::jsonb)`, [userId, lookup]);
+  await sql(`INSERT INTO identity.email_verification_tokens (id, user_id, token_hash, expires_at)
+    VALUES ($1, $2, decode($3, 'base64'), now() + interval '5 minutes')`, [tokenId, userId, hashAuthToken(token, 'verification')]);
+  const { privateKey } = await generateKeyPair('ES256', { extractable: true });
+  const apiEnv = { ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test', CORS_ALLOWED_ORIGINS: 'https://app.lythaus.test',
+    DB_APP_FRESH: runtimeBinding, MONTHLY_REPUTATION_MAINTENANCE_RULES: maintenance.version,
+    AUTH_PASSWORD_PEPPER_V1: randomBytes(32).toString('base64'), PII_ENCRYPTION_KEY_V1: randomBytes(32).toString('base64'),
+    PII_HMAC_KEY_V1: randomBytes(32).toString('base64'), JWT_KEY_ID: 'synthetic-maintenance', JWT_PRIVATE_KEY: await exportPKCS8(privateKey) };
+  const password = 'synthetic monthly verification passphrase';
+  const call = () => worker.fetch(new Request('https://api.lythaus.test/api/auth/email/verify', { method: 'POST',
+    headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, password }) }), apiEnv);
+  await sql('UPDATE system.feature_flags SET enabled = true WHERE flag_key = $1', [flag]);
+  assert.deepEqual((await sql('SELECT enabled, policy_version FROM system.feature_flags WHERE flag_key = $1', [flag])).rows[0],
+    { enabled: true, policy_version: policy });
+  const response = await call(); assert.equal(response.status, 200, JSON.stringify(await response.clone().json()));
+  const observed = (await sql('SELECT facts, performed_at FROM trust.monthly_maintenance_observations WHERE subject_user_id = $1', [userId])).rows;
+  assert.equal(observed.length, 1); assert.deepEqual(observed[0].facts, { kind: 'email_control', emailVersion: tokenId });
+  assert.equal(JSON.stringify(observed).includes(password), false); assert.equal(JSON.stringify(observed).includes(token), false);
+  assert.equal((await call()).status, 400);
+  await tx(client => client.query('UPDATE identity.email_credentials SET email_lookup_hmac = $2 WHERE user_id = $1',
+    [userId, randomBytes(32)]), 'lythaus_runtime');
+  assert.equal((await sql(`SELECT reason_code FROM trust.monthly_maintenance_revocations WHERE observation_id IN
+    (SELECT id FROM trust.monthly_maintenance_observations WHERE subject_user_id = $1)`, [userId])).rows[0].reason_code, 'email_binding_changed');
+  const evidence = await tx(client => readMonthlyMaintenanceEvidence(client, userId, '2026-11-01T00:00:00.000Z'));
+  assert.equal(evidence.evidence.length, 1); assert.notEqual(evidence.evidence[0].revokedAt, null);
+  assert.deepEqual(evidence.evidence[0].facts, { kind: 'email_control', emailVersion: tokenId });
 });
 
 test('RPT-04/REL-02: deletion completes while assembly waits and cannot resurrect private evidence', async () => {
