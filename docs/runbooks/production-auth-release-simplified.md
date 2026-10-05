@@ -430,3 +430,11 @@ tick. A separately approved mail-only minute fallback can reduce that residual
 wait without increasing other Jobs workloads. Do not claim a hard latency
 guarantee, activate the flag, add bindings or change scheduling without parent
 review, exact-head fixture/security checks and canonical release gates.
+
+Before prompt dispatch activation, the existing canonical Queue-list read must
+prove delivery is unpaused, delivery delay is zero, and the sole consumer is
+`lythaus-jobs-development` with the configured batching, retries and DLQ.
+Missing metadata or drift blocks activation; the dashboard's Inactive label
+does not prove pause state. Paired production flags force lifecycle verification
+into existing-resource-only mode, so it cannot create resources or repair
+subscriptions. The default-off patch makes no additional provider requests.

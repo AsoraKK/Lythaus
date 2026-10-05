@@ -10,7 +10,7 @@ const LIFECYCLE_QUEUE = 'lythaus-email-lifecycle-dev';
 const LIFECYCLE_DLQ = 'lythaus-email-lifecycle-dlq-dev';
 const SENDING_DOMAIN = 'mail.lythaus.co';
 const SUBSCRIPTION_NAME = 'lythaus-email-lifecycle-mail-lythaus-co';
-const verifyExisting = process.env.OWNER_TESTING_DEPLOYMENT === 'true';
+let verifyExisting = process.env.OWNER_TESTING_DEPLOYMENT === 'true';
 const REQUIRED_EVENTS = [
   'message.delivered',
   'message.deferred',
@@ -74,6 +74,32 @@ export function assertConsumerDeclaration() {
   const config = fs.readFileSync('apps/lythaus-jobs/wrangler.jsonc', 'utf8');
   const required = `\\{ \\\"queue\\\": \\\"${CONSUMER.queue}\\\", \\\"max_batch_size\\\": ${CONSUMER.max_batch_size}, \\\"max_batch_timeout\\\": ${CONSUMER.max_batch_timeout}, \\\"max_retries\\\": ${CONSUMER.max_retries}, \\\"dead_letter_queue\\\": \\\"${CONSUMER.dead_letter_queue}\\\" \\}`;
   if (!new RegExp(required).test(config)) throw new Error('email_lifecycle_consumer_configuration_drift');
+}
+
+export function promptDispatchRequested(publicConfig, jobsConfig) {
+  const publishing = publicConfig.vars?.TRANSACTIONAL_EMAIL_DISPATCH_ENABLED === 'true';
+  const consuming = jobsConfig.vars?.TRANSACTIONAL_EMAIL_DISPATCH_ENABLED === 'true';
+  if (publishing !== consuming) throw new Error('email_dispatch_activation_flags_mismatch');
+  if (!publishing) return false;
+  const bindings = publicConfig.queues?.producers?.filter(producer => producer.binding === 'TRANSACTIONAL_EMAIL_DISPATCH_QUEUE') ?? [];
+  if (bindings.length !== 1 || bindings[0].queue !== LIFECYCLE_QUEUE) throw new Error('email_dispatch_producer_binding_drift');
+  return true;
+}
+
+export function assertPromptDispatchConsumer(queue) {
+  if (queueName(queue) !== LIFECYCLE_QUEUE || queue.settings?.delivery_paused !== false
+    || queue.settings?.delivery_delay !== 0) throw new Error('email_dispatch_live_delivery_not_verified');
+  const consumers = queue.consumers;
+  if (queue.consumers_total_count !== 1 || !Array.isArray(consumers) || consumers.length !== 1) {
+    throw new Error('email_dispatch_live_consumer_not_verified');
+  }
+  const consumer = consumers[0];
+  if (consumer.type !== 'worker' || consumer.script_name !== 'lythaus-jobs-development'
+    || consumer.dead_letter_queue !== LIFECYCLE_DLQ || consumer.settings?.batch_size !== CONSUMER.max_batch_size
+    || consumer.settings?.max_wait_time_ms !== CONSUMER.max_batch_timeout * 1000
+    || consumer.settings?.max_retries !== CONSUMER.max_retries) throw new Error('email_dispatch_live_consumer_drift');
+  return { status: 'VERIFIED', source: 'existing_queue_list_response', queue: LIFECYCLE_QUEUE,
+    deliveryPaused: false, deliveryDelaySeconds: 0, worker: consumer.script_name, ...CONSUMER };
 }
 
 async function cloudflare(pathname, init = {}) {
@@ -173,7 +199,12 @@ async function main() {
   const zoneId = required('CLOUDFLARE_ZONE_ID');
   const outputPath = required('CLOUDFLARE_EMAIL_LIFECYCLE_OUTPUT');
   assertConsumerDeclaration();
+  const configs = ['apps/lythaus-public-api/wrangler.jsonc', 'apps/lythaus-jobs/wrangler.jsonc']
+    .map(file => JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\s*\/\/.*$/gm, '').replace(/,\s*([}\]])/g, '$1')));
+  const promptDispatch = promptDispatchRequested(...configs);
+  verifyExisting ||= promptDispatch;
   const lifecycleQueue = await ensureQueue(accountId, LIFECYCLE_QUEUE);
+  const promptDispatchConsumer = promptDispatch ? assertPromptDispatchConsumer(lifecycleQueue) : { status: 'NOT_REQUESTED' };
   const deadLetterQueue = await ensureQueue(accountId, LIFECYCLE_DLQ);
   const subscription = await ensureSubscription(accountId, lifecycleQueue, zoneId);
   const evidence = {
@@ -193,6 +224,7 @@ async function main() {
       events: normalEvents(subscription.events),
     },
     consumer: CONSUMER,
+    promptDispatchConsumer,
   };
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
