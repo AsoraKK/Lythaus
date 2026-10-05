@@ -75,6 +75,8 @@ jobs:
         run: node --test scripts/tests/file-io-security.test.mjs
       - name: Verify private auth-email service boundary in workerd
         run: node --test --test-timeout=60000 scripts/tests/private-email-binding.workerd.mjs
+      - name: Verify owner profile posts in workerd
+        run: node --test --test-timeout=60000 apps/lythaus-public-api/tests/owner-content-reader.workerd.mjs
       - run: node --experimental-strip-types --test packages/security/tests/critical-security-policy.test.mjs
       - run: npm run test:native-architecture
       - name: Verify owner-only read-only account support
