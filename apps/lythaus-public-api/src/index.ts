@@ -21,6 +21,8 @@ import { optionalPrivacyRequestType, privacyExportAccessActivity, privacyExportR
 import { normalizeNotificationDevice, normalizeNotificationPreferences } from './notification-policy.ts';
 import { encodeCursor, enforceContentDeclaration, normalizeCustomFeedRules, pageRequest, reputationBand } from './product-policy.ts';
 import { normalizeTagSearchQuery } from './tag-search-policy.ts';
+import { maintainPostTagIndex, tagSearchCandidateScanLimit, tagSearchMaxDistinctTags } from './tag-search-indexing.ts';
+import { TAGGED_DISCOVERY_SQL } from './tag-search-query.ts';
 import { readBoundedJson } from './request-body-runtime.ts';
 import { parseProfileUpdate } from './profile-runtime-policy.ts';
 import { acceptanceContextToken } from '@lythaus/contracts';
@@ -47,6 +49,10 @@ interface Env extends EnvBindings {
   MONTHLY_REPUTATION_SELECTION_RULES?: string;
   SUPPORT_FEEDBACK_ENABLED?: string;
   SUPPORT_FEEDBACK_POLICY?: string;
+  TAG_SEARCH_INDEX_MAINTENANCE_ENABLED?: string;
+  TAG_SEARCH_INDEX_READ_ENABLED?: string;
+  TAG_SEARCH_MAX_DISTINCT_TAGS_PER_POST?: string;
+  TAG_SEARCH_MAX_CANDIDATES_PER_REQUEST?: string;
 }
 
 function hasReadinessAuthorization(request: Request, env: Env): boolean {
@@ -1166,6 +1172,9 @@ async function createPost(request: Request, env: Env, user: Principal): Promise<
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9)`,
       [postId, user.userId, declaration.body, declaration.declaredCreationMode, publication.geoScope, publication.placeId ?? null, publication.moderationState, createdAt, eventId]
     );
+    if (env.TAG_SEARCH_INDEX_MAINTENANCE_ENABLED === 'true') {
+      await maintainPostTagIndex(client, postId, declaration.body, tagSearchMaxDistinctTags(env.TAG_SEARCH_MAX_DISTINCT_TAGS_PER_POST));
+    }
     if (publication.locationPrecision) {
       await client.query(
         `INSERT INTO content.post_locations (post_id, place_id, location_source, location_precision)
@@ -1836,6 +1845,7 @@ async function updatePost(request: Request, env: Env, user: Principal, postId: s
     const changed = declaration.body !== current.rows[0].body
       || declaration.declaredCreationMode !== current.rows[0].declared_creation_mode
       || revision.visibility !== current.rows[0].visibility;
+    const bodyChanged = declaration.body !== current.rows[0].body;
     if (!changed) {
       return {
         id: postId,
@@ -1853,6 +1863,9 @@ async function updatePost(request: Request, env: Env, user: Principal, postId: s
         WHERE id = $6 AND author_id = $7`,
       [declaration.body, declaration.declaredCreationMode, revision.visibility, revision.moderationState, sourceEventId, postId, user.userId],
     );
+    if (bodyChanged && env.TAG_SEARCH_INDEX_MAINTENANCE_ENABLED === 'true') {
+      await maintainPostTagIndex(client, postId, declaration.body, tagSearchMaxDistinctTags(env.TAG_SEARCH_MAX_DISTINCT_TAGS_PER_POST));
+    }
     await client.query(
       `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload)
        VALUES ($1, 'content.post.updated', 'post', $2, $3, $4::jsonb)`,
@@ -2638,10 +2651,61 @@ async function discoveryFeed(request: Request, env: Env, viewer?: Principal): Pr
   const page = pageRequest(url);
   if (tag !== undefined) {
     await enforceRateLimit(request, env, 'feed:tag-search', 30);
-    // A bounded page size and statement timeout cannot bound the rows examined
-    // by an unindexed body scan. Keep tag search unavailable until a
-    // migration-backed exact-token index has passed representative-scale tests.
-    throw new Error('tag_search_unavailable');
+    if (env.TAG_SEARCH_INDEX_READ_ENABLED !== 'true') throw new Error('tag_search_unavailable');
+    const maxDistinctTags = tagSearchMaxDistinctTags(env.TAG_SEARCH_MAX_DISTINCT_TAGS_PER_POST);
+    const maxCandidates = tagSearchCandidateScanLimit(env.TAG_SEARCH_MAX_CANDIDATES_PER_REQUEST);
+    let control;
+    try {
+      control = await query<{
+        policy_version: string;
+        policy_approved: boolean;
+        max_distinct_tags_per_post: number;
+        max_candidates_per_request: number;
+        backfill_complete: boolean;
+        reconciliation_complete: boolean;
+        search_enabled: boolean;
+      }>(env.DB_APP_FRESH,
+        `SELECT policy_version, policy_approved, max_distinct_tags_per_post, max_candidates_per_request,
+                backfill_complete, reconciliation_complete, search_enabled
+           FROM feed.tag_search_index_control WHERE singleton = true`, []);
+    } catch {
+      throw new Error('tag_search_unavailable');
+    }
+    const readiness = control.rows[0];
+    if (!readiness || readiness.policy_version !== 'exact-token-proposal-v1'
+      || !readiness.policy_approved || readiness.max_distinct_tags_per_post !== maxDistinctTags
+      || readiness.max_candidates_per_request !== maxCandidates
+      || !readiness.backfill_complete || !readiness.reconciliation_complete || !readiness.search_enabled) {
+      throw new Error('tag_search_unavailable');
+    }
+    const queryValues: unknown[] = [
+      viewer?.userId ?? null,
+      page.cursor?.timestamp ?? null,
+      page.cursor?.id ?? null,
+      page.limit + 1,
+      tag,
+      maxCandidates,
+    ];
+    let result;
+    try {
+      result = await query<FeedResponseCandidate & { id: string | null; publishedAt: string | null; tagSearchScanTruncated: boolean }>(
+        env.DB_APP_FRESH, TAGGED_DISCOVERY_SQL, queryValues,
+      );
+    } catch {
+      // Includes statement cancellation and candidate-schema/query failures.
+      // Never turn an unavailable index into an empty successful page.
+      throw new Error('tag_search_unavailable');
+    }
+    if (result.rows.some((row) => row.tagSearchScanTruncated)) throw new Error('tag_search_unavailable');
+    const indexedRows = result.rows.filter((row): row is typeof row & { id: string; publishedAt: string } => row.id !== null && row.publishedAt !== null);
+    assertFeedResponseCandidates(indexedRows, viewer);
+    const hasMore = indexedRows.length > page.limit;
+    const items = indexedRows.slice(0, page.limit);
+    const tail = items.at(-1);
+    return feedResponse(request, env, {
+      items: presentFeedItems(items.map(({ tagSearchScanTruncated: _truncated, ...item }) => item)),
+      nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.publishedAt, id: tail.id }) : null,
+    }, 'discovery', Boolean(viewer));
   }
   const queryValues: unknown[] = [
     viewer?.userId ?? null,
