@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:lythaus/features/rewards/application/reward_providers.dart';
 import 'package:lythaus/features/rewards/domain/reward_models.dart';
 import 'package:lythaus/ui/screens/rewards/rewards_dashboard.dart';
@@ -141,10 +143,12 @@ void main() {
     await tester.scrollUntilVisible(
       target,
       320,
-      scrollable: find.descendant(
-        of: find.byType(ListView).first,
-        matching: find.byType(Scrollable),
-      ).first,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView).first,
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
     await tester.pumpAndSettle();
   }
@@ -159,26 +163,26 @@ void main() {
     var fetchCount = 0;
     var redemptionCalls = 0;
     var currentSnapshot = _snapshot(redeemed: false, history: const []);
+    final pendingRedemption = Completer<RewardRedemption>();
+    final redemption = RewardRedemption(
+      id: 'red-1',
+      rewardId: 'lvl1-privacy-basics',
+      rewardLevel: 1,
+      rewardTitle: 'Privacy Starter Pack',
+      redeemedAt: DateTime(2026, 5, 27),
+      status: 'redeemed',
+    );
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          rewardsSnapshotProvider.overrideWith((ref) async {
+          rewardsSnapshotProvider.overrideWith((ref, _) async {
             fetchCount++;
             return currentSnapshot;
           }),
-          redeemRewardProvider.overrideWith((ref, rewardId) async {
+          redeemRewardProvider.overrideWith((ref, request) {
             redemptionCalls++;
-            final redemption = RewardRedemption(
-              id: 'red-1',
-              rewardId: rewardId,
-              rewardLevel: 1,
-              rewardTitle: 'Privacy Starter Pack',
-              redeemedAt: DateTime(2026, 5, 27),
-              status: 'redeemed',
-            );
-            currentSnapshot = _snapshot(redeemed: true, history: [redemption]);
-            return redemption;
+            return pendingRedemption.future;
           }),
         ],
         child: const MaterialApp(home: RewardsDashboardScreen()),
@@ -193,6 +197,11 @@ void main() {
 
     await tester.tap(find.text('Redeem'));
     await tester.pump();
+    expect(find.text('Redeeming...'), findsOneWidget);
+    await tester.tap(find.text('Redeeming...'));
+    expect(redemptionCalls, 1);
+    currentSnapshot = _snapshot(redeemed: true, history: [redemption]);
+    pendingRedemption.complete(redemption);
     await tester.pumpAndSettle();
 
     expect(redemptionCalls, 1);
@@ -228,9 +237,9 @@ void main() {
         ProviderScope(
           overrides: [
             rewardsSnapshotProvider.overrideWith(
-              (_) async => _lockedOfferSnapshot(),
+              (_, _) async => _lockedOfferSnapshot(),
             ),
-            redeemRewardProvider.overrideWith((ref, rewardId) async {
+            redeemRewardProvider.overrideWith((ref, request) async {
               redemptionCalls++;
               throw StateError('Should not be called for a locked offer');
             }),
@@ -267,9 +276,9 @@ void main() {
           ProviderScope(
             overrides: [
               rewardsSnapshotProvider.overrideWith(
-                (_) async => _alreadyRedeemedSnapshot(),
+                (_, _) async => _alreadyRedeemedSnapshot(),
               ),
-              redeemRewardProvider.overrideWith((ref, rewardId) async {
+              redeemRewardProvider.overrideWith((ref, request) async {
                 redemptionCalls++;
                 throw StateError('Should not be called for a redeemed offer');
               }),
@@ -304,9 +313,9 @@ void main() {
           ProviderScope(
             overrides: [
               rewardsSnapshotProvider.overrideWith(
-                (_) async => _restrictedAccountSnapshot(),
+                (_, _) async => _restrictedAccountSnapshot(),
               ),
-              redeemRewardProvider.overrideWith((ref, rewardId) async {
+              redeemRewardProvider.overrideWith((ref, request) async {
                 redemptionCalls++;
                 throw StateError(
                   'Should not be called for a restricted account',
@@ -354,11 +363,11 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              rewardsSnapshotProvider.overrideWith((ref) async {
+              rewardsSnapshotProvider.overrideWith((ref, _) async {
                 fetchCount++;
                 return _snapshot(redeemed: false, history: const []);
               }),
-              redeemRewardProvider.overrideWith((ref, rewardId) async {
+              redeemRewardProvider.overrideWith((ref, request) async {
                 redemptionCalls++;
                 throw Exception('Internal server error');
               }),

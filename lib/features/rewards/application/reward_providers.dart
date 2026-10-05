@@ -10,11 +10,19 @@ import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/rewards/domain/reward_models.dart';
 
-Future<(Dio, CancelToken, String)> _monthlyReadContext(Ref ref) async {
-  ref.watch(authSessionRevisionProvider);
+Future<(Dio, CancelToken, String)> _monthlyReadContext(
+  Ref ref, {
+  String unauthenticatedMessage = 'Sign in to view monthly rewards',
+  int? expectedSessionRevision,
+}) async {
+  final sessionRevision = ref.watch(authSessionRevisionProvider);
   final session = ref.read(authSessionRevisionProvider.notifier);
+  if (expectedSessionRevision != null &&
+      expectedSessionRevision != sessionRevision) {
+    throw StateError('Session changed');
+  }
   final user = ref.watch(currentUserProvider);
-  if (user == null) throw StateError('Sign in to view monthly rewards');
+  if (user == null) throw StateError(unauthenticatedMessage);
   final cancelToken = CancelToken();
   final stop = session.cancelOnChange(cancelToken.cancel);
   ref.onDispose(stop);
@@ -28,15 +36,25 @@ Future<(Dio, CancelToken, String)> _monthlyReadContext(Ref ref) async {
   return (ref.watch(secureDioProvider), cancelToken, token);
 }
 
-final rewardsSnapshotProvider = FutureProvider<RewardsSnapshot>((ref) async {
-  final dio = ref.read(secureDioProvider);
-  final response = await dio.get<Map<String, dynamic>>('/rewards/me');
-  final data = response.data;
-  if (data == null) {
-    throw StateError('Empty response from rewards endpoint');
-  }
-  return RewardsSnapshot.fromJson(data);
-});
+final rewardsSnapshotProvider = FutureProvider.autoDispose
+    .family<RewardsSnapshot, int>((ref, sessionRevision) async {
+      final (dio, cancelToken, token) = await _monthlyReadContext(
+        ref,
+        unauthenticatedMessage: 'Sign in to view rewards',
+        expectedSessionRevision: sessionRevision,
+      );
+      final response = await dio.get<Map<String, dynamic>>(
+        '/rewards/me',
+        cancelToken: cancelToken,
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      if (cancelToken.isCancelled) throw cancelToken.cancelError!;
+      final data = response.data;
+      if (data == null) {
+        throw StateError('Empty response from rewards endpoint');
+      }
+      return RewardsSnapshot.fromJson(data);
+    });
 
 final monthlyRewardsViewProvider =
     FutureProvider.autoDispose<MonthlyRewardsView>((ref) async {
@@ -52,8 +70,8 @@ final monthlyRewardsViewProvider =
       return MonthlyRewardsView.fromJson(data);
     });
 
-final monthlyReputationReportProvider =
-    FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, sourceMonth) async {
+final monthlyReputationReportProvider = FutureProvider.autoDispose
+    .family<Map<String, dynamic>, String>((ref, sourceMonth) async {
       final (dio, cancelToken, token) = await _monthlyReadContext(ref);
       final response = await dio.get<Map<String, dynamic>>(
         '/reputation/me/reports/monthly/$sourceMonth',
@@ -66,8 +84,8 @@ final monthlyReputationReportProvider =
       return data;
     });
 
-final monthlyReputationCsvProvider =
-    FutureProvider.autoDispose.family<Uint8List, String>((ref, sourceMonth) async {
+final monthlyReputationCsvProvider = FutureProvider.autoDispose
+    .family<Uint8List, String>((ref, sourceMonth) async {
       final (dio, cancelToken, token) = await _monthlyReadContext(ref);
       final response = await dio.get<List<int>>(
         '/reputation/me/reports/monthly/$sourceMonth/export.csv',
@@ -83,17 +101,24 @@ final monthlyReputationCsvProvider =
       return Uint8List.fromList(data);
     });
 
-final redeemRewardProvider = FutureProvider.family<RewardRedemption, String>((
-  ref,
-  rewardId,
-) async {
-  final dio = ref.read(secureDioProvider);
-  final response = await dio.post<Map<String, dynamic>>(
-    '/rewards/$rewardId/redeem',
-  );
-  final data = response.data;
-  if (data == null) {
-    throw StateError('Empty response from reward redemption endpoint');
-  }
-  return RewardRedemption.fromJson(data);
-});
+typedef RewardRedemptionRequest = ({String rewardId, int sessionRevision});
+
+final redeemRewardProvider = FutureProvider.autoDispose
+    .family<RewardRedemption, RewardRedemptionRequest>((ref, request) async {
+      final (dio, cancelToken, token) = await _monthlyReadContext(
+        ref,
+        unauthenticatedMessage: 'Sign in to redeem rewards',
+        expectedSessionRevision: request.sessionRevision,
+      );
+      final response = await dio.post<Map<String, dynamic>>(
+        '/rewards/${request.rewardId}/redeem',
+        cancelToken: cancelToken,
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      if (cancelToken.isCancelled) throw cancelToken.cancelError!;
+      final data = response.data;
+      if (data == null) {
+        throw StateError('Empty response from reward redemption endpoint');
+      }
+      return RewardRedemption.fromJson(data);
+    });

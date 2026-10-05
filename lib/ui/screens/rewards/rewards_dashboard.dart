@@ -5,6 +5,7 @@ import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/rewards/application/reward_providers.dart';
 import 'package:lythaus/features/rewards/domain/reward_models.dart';
 import 'package:lythaus/ui/screens/rewards/monthly_reputation_widgets.dart';
@@ -24,13 +25,22 @@ class _RewardsDashboardScreenState
 
   Future<void> _redeem(String rewardId) async {
     if (_redeemingIds.contains(rewardId)) return;
+    final sessionRevision = ref.read(authSessionRevisionProvider);
+    final redemptionRequest = (
+      rewardId: rewardId,
+      sessionRevision: sessionRevision,
+    );
+    final redemptionProvider = redeemRewardProvider(redemptionRequest);
     setState(() => _redeemingIds.add(rewardId));
 
     try {
-      ref.invalidate(redeemRewardProvider(rewardId));
-      final redemption = await ref.read(redeemRewardProvider(rewardId).future);
-      ref.invalidate(rewardsSnapshotProvider);
-      if (!mounted) return;
+      ref.invalidate(redemptionProvider);
+      final redemption = await ref.read(redemptionProvider.future);
+      if (!mounted ||
+          ref.read(authSessionRevisionProvider) != sessionRevision) {
+        return;
+      }
+      ref.invalidate(rewardsSnapshotProvider(sessionRevision));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -41,7 +51,10 @@ class _RewardsDashboardScreenState
         ),
       );
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted ||
+          ref.read(authSessionRevisionProvider) != sessionRevision) {
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Unable to redeem this reward right now.'),
@@ -56,7 +69,8 @@ class _RewardsDashboardScreenState
 
   @override
   Widget build(BuildContext context) {
-    final rewardsAsync = ref.watch(rewardsSnapshotProvider);
+    final sessionRevision = ref.watch(authSessionRevisionProvider);
+    final rewardsAsync = ref.watch(rewardsSnapshotProvider(sessionRevision));
 
     return rewardsAsync.when(
       loading: () => ReadingPane(
@@ -75,7 +89,8 @@ class _RewardsDashboardScreenState
                 const Text('Unable to load rewards right now.'),
                 const SizedBox(height: Spacing.sm),
                 FilledButton(
-                  onPressed: () => ref.invalidate(rewardsSnapshotProvider),
+                  onPressed: () =>
+                      ref.invalidate(rewardsSnapshotProvider(sessionRevision)),
                   child: const Text('Retry'),
                 ),
               ],

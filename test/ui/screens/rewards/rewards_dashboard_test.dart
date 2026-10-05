@@ -54,7 +54,7 @@ void main() {
     return ProviderScope(
       overrides: [
         rewardsSnapshotProvider.overrideWith(
-          (ref) => rewardsValue.when(
+          (ref, _) => rewardsValue.when(
             data: (d) => Future.value(d),
             loading: () => Future.delayed(const Duration(days: 1)),
             error: (e, s) => Future.error(e, s),

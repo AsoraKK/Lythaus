@@ -92,7 +92,7 @@ void main() {
               currentUserProvider.overrideWithValue(null),
               feedSearchProvider.overrideWith(_UnavailableSearchNotifier.new),
               rewardsSnapshotProvider.overrideWith(
-                (ref) => Future<RewardsSnapshot>.error(
+                (ref, _) => Future<RewardsSnapshot>.error(
                   StateError('private fixture error'),
                 ),
               ),
