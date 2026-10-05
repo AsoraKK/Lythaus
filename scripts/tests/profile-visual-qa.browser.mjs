@@ -242,7 +242,12 @@ test(
           } else if (
             requestUrl.pathname === `/api/users/${publicMember.id}/follow`
           ) {
-            body = { following: false, followerCount: 0 };
+            body = {
+              userId: publicMember.id,
+              following: false,
+              followedBy: false,
+              blocked: false,
+            };
           } else if (
             ['/api/reputation/me', '/api/users/me/reputation'].includes(
               requestUrl.pathname,
@@ -552,7 +557,6 @@ test(
           await page.getByText(publicMember.displayName, { exact: true }).waitFor();
           await page.getByText(publicMember.bio, { exact: true }).waitFor();
           await page.getByRole('button', { name: 'Follow', exact: true }).waitFor();
-          await page.getByText('0 followers', { exact: true }).waitFor();
           assert.equal(
             await page.getByRole('link', { name: /followers|following/i }).count(),
             0,
