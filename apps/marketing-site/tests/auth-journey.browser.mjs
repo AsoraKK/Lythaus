@@ -4,6 +4,7 @@ import { readFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
 import { chromium, webkit } from 'playwright';
+import { localAuthBrowserServer } from '../../../scripts/tests/local-auth-browser-server.mjs';
 
 const dist=path.resolve(import.meta.dirname,'../dist');
 let server, origin;
@@ -25,6 +26,177 @@ before(async()=>{
   origin=`http://127.0.0.1:${server.address().port}`;
 });
 after(async()=>{if(server)await new Promise(resolve=>server.close(resolve));});
+
+for (const [engine, type] of Object.entries({ chromium, webkit })) {
+  for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }, { width: 320, height: 844 }]) {
+    test(`${engine} ${viewport.width}: accepted signup shows only waiting and deliberate resend actions`, async t => {
+      const browser = await type.launch({ headless: true });
+      t.after(() => browser.close());
+      const page = await browser.newPage({ viewport });
+      const errors = [];
+      page.on('pageerror', error => errors.push(error.message));
+      await page.clock.install();
+      await page.route('https://challenges.cloudflare.com/**', route => route.abort());
+      await page.addInitScript(() => {
+        let options;
+        window.turnstile = {
+          render: (_target, config) => { options = config; return 'signup'; },
+          execute: () => queueMicrotask(() => options.callback(`local-fixture:${options.action}`)),
+          reset: () => {}, remove: () => {},
+        };
+      });
+      const requests = [];
+      await page.route('https://api.lythaus.co/**', route => {
+        requests.push(route.request().postDataJSON());
+        return route.fulfill({ status: 202, contentType: 'application/json',
+          headers: { 'access-control-allow-origin': origin }, body: JSON.stringify({ state: 'verification_required' }) });
+      });
+      await page.goto(origin + '/signup');
+      await page.locator('#signup-email').fill('synthetic@example.invalid');
+      await page.locator('#signup-password').fill('synthetic chosen password');
+      await page.locator('#signup-password-confirmation').fill('synthetic chosen password');
+      await page.getByRole('button', { name: 'Create account', exact: true }).click();
+      await page.locator('[data-signup-check-email]').waitFor({ state: 'visible' });
+      assert.equal(await page.locator('#signup-email').isVisible(), false);
+      assert.equal(await page.locator('#signup-password').isVisible(), false);
+      assert.equal(await page.locator('#signup-password-confirmation').isVisible(), false);
+      assert.equal(await page.locator('[data-signup-submit]').isVisible(), false);
+      assert.equal(await page.locator('#signup-password').inputValue(), '');
+      assert.equal(await page.locator('#signup-password-confirmation').inputValue(), '');
+      if (process.env.AUTH_QA_DIR) {
+        await mkdir(process.env.AUTH_QA_DIR, { recursive: true });
+        await page.screenshot({ path: path.join(process.env.AUTH_QA_DIR, `${engine}-${viewport.width}-signup-waiting.png`) });
+      }
+      const resend = page.getByRole('button', { name: 'Resend verification email', exact: true });
+      assert.equal(await resend.isDisabled(), true);
+      await page.locator('form').evaluate(form => form.requestSubmit());
+      assert.equal(requests.length, 1);
+      await page.clock.fastForward(29_000);
+      assert.equal(await resend.isDisabled(), true);
+      await page.clock.fastForward(2_000);
+      assert.equal(await resend.isEnabled(), true);
+      assert.equal(await page.locator('#signup-turnstile').isVisible(), true, 'Resend must retain a visible interactive challenge container');
+      await resend.click();
+      await page.locator('[data-signup-status]').filter({ hasText: 'delivery is not confirmed yet' }).waitFor();
+      assert.deepEqual(requests[1], { mode: 'resend_verification', email: 'synthetic@example.invalid', turnstileToken: 'local-fixture:verification_resend' });
+      assert.equal(await resend.isDisabled(), true);
+      assert.equal(await page.locator('#signup-password').isVisible(), false);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
+      assert.deepEqual(errors, []);
+    });
+
+    test(`${engine} ${viewport.width}: verification leads to same-site sign-in and app cookie restoration`, async t => {
+      const requests = [];
+      let session = false;
+      let interruptedVerification = false;
+      const fixture = await localAuthBrowserServer(async route => {
+        const request = route.request(), url = new URL(request.url());
+        if (url.hostname === 'lythaus.co') {
+          let file = path.resolve(dist, '.' + url.pathname);
+          assert.ok(file === dist || file.startsWith(dist + path.sep));
+          if (!path.extname(file)) file = path.join(file, 'index.html');
+          const contentType = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.ttf': 'font/ttf', '.png': 'image/png', '.ico': 'image/x-icon' }[path.extname(file)] ?? 'application/octet-stream';
+          try { return route.fulfill({ contentType, body: await readFile(file) }); }
+          catch { return route.fulfill({ status: 404, body: 'Local fixture missing' }); }
+        }
+        if (url.hostname === 'app.lythaus.co') {
+          return route.fulfill({ contentType: 'text/html', body: `<title>Local cookie handoff fixture</title><main id="session">Restoring session</main><script>fetch('https://api.lythaus.co/api/auth/refresh',{method:'POST',credentials:'include',headers:{'content-type':'application/json','x-lythaus-auth-transport':'cookie-v1'},body:'{}'}).then(r=>{document.querySelector('#session').textContent=r.ok?'Session restored':'Sign-in required';});</script>` });
+        }
+        if (url.hostname !== 'api.lythaus.co') return route.abort();
+        const requestHeaders = await request.allHeaders();
+        const headers = { 'access-control-allow-origin': requestHeaders.origin ?? 'https://lythaus.co',
+          'access-control-allow-credentials': 'true', 'access-control-allow-methods': 'POST,OPTIONS',
+          'access-control-allow-headers': 'content-type,idempotency-key,x-lythaus-auth-transport' };
+        if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
+        const body = request.postDataJSON();
+        requests.push({ path: url.pathname, body, transport: requestHeaders['x-lythaus-auth-transport'], idempotencyKey: requestHeaders['idempotency-key'], hasCookie: requestHeaders.cookie?.includes('__Host-lythaus_refresh=') ?? false });
+        if (url.pathname.endsWith('/email/verify')) {
+          const expired = body.token === 'b'.repeat(64);
+          if (!expired && !interruptedVerification) {
+            interruptedVerification = true;
+            return route.fulfill({ status: 502, contentType: 'application/json', headers, body: JSON.stringify({ error: 'request_failed' }) });
+          }
+          return route.fulfill({ status: expired ? 400 : 200, contentType: 'application/json', headers,
+            body: JSON.stringify(expired ? { error: 'verification_token_invalid' } : { state: 'verified' }) });
+        }
+        if (url.pathname.endsWith('/email') && body.mode === 'login') {
+          session = true;
+          headers['set-cookie'] = `__Host-lythaus_refresh=${'f'.repeat(48)}; Path=/; HttpOnly; Secure; SameSite=Strict`;
+          return route.fulfill({ contentType: 'application/json', headers, body: JSON.stringify({ accessToken: 'synthetic-only', sessionTransport: 'cookie-v1', expiresIn: 900 }) });
+        }
+        assert.equal(url.pathname, '/api/auth/refresh');
+        return route.fulfill({ status: session && requestHeaders.cookie?.includes('__Host-lythaus_refresh=') ? 200 : 401,
+          contentType: 'application/json', headers, body: JSON.stringify({ accessToken: 'synthetic-refreshed', sessionTransport: 'cookie-v1' }) });
+      });
+      t.after(() => fixture.close());
+      const browser = await type.launch({ headless: true, proxy: { server: fixture.proxy } });
+      t.after(() => browser.close());
+      const context = await browser.newContext({ viewport, ignoreHTTPSErrors: true, serviceWorkers: 'block' });
+      const page = await context.newPage();
+      const errors = [];
+      page.on('pageerror', error => errors.push(error.message));
+      const token = 'a'.repeat(64);
+      await page.goto(`https://lythaus.co/verify-email#token=${'b'.repeat(64)}`);
+      await page.waitForURL('https://lythaus.co/verify-email');
+      assert.equal(requests.length, 0, 'GET must not redeem a verification link');
+      await page.locator('#verification-password').fill('synthetic chosen password');
+      await page.locator('#verification-password-confirmation').fill('synthetic chosen password');
+      await page.getByRole('button', { name: 'Verify email and finish setup', exact: true }).click();
+      await page.locator('[data-email-verification-status]').filter({ hasText: 'already used' }).waitFor();
+      assert.equal(await page.locator('#verification-password').isVisible(), false);
+      assert.equal(await page.locator('#verification-password').inputValue(), '');
+      assert.equal(await page.locator('#verification-password-confirmation').inputValue(), '');
+      const beforeReplacement = requests.length;
+      await page.evaluate(token => { window.location.hash = new URLSearchParams({ token }).toString(); }, token);
+      await page.waitForURL('https://lythaus.co/verify-email');
+      await page.locator('#verification-password').waitFor({ state: 'visible' });
+      assert.equal(requests.length, beforeReplacement, 'Opening a replacement link must not redeem it');
+      await page.locator('#verification-password').fill('synthetic chosen password');
+      await page.locator('#verification-password-confirmation').fill('synthetic chosen password');
+      await page.getByRole('button', { name: 'Verify email and finish setup', exact: true }).click();
+      await page.locator('[data-email-verification-status][data-state="error"]').waitFor();
+      assert.equal(await page.locator('#verification-password').isVisible(), true, 'An uncertain result keeps deliberate retry available');
+      assert.equal(await page.locator('#verification-password').inputValue(), 'synthetic chosen password');
+      assert.equal(requests.length, 2, 'An uncertain response must not automatically retry');
+      await page.getByRole('button', { name: 'Verify email and finish setup', exact: true }).click();
+      const signIn = page.locator('[data-email-verification-signin]');
+      await signIn.waitFor({ state: 'visible' });
+      assert.equal(await signIn.getAttribute('href'), '/sign-in');
+      assert.equal(await page.locator('#verification-password').inputValue(), '');
+      assert.equal(await page.locator('#verification-password-confirmation').inputValue(), '');
+      assert.equal(await page.locator('#verification-password').isVisible(), false);
+      assert.equal(await page.locator('#verification-password-confirmation').isVisible(), false);
+      const signInBounds = await signIn.boundingBox();
+      assert.ok(signInBounds && signInBounds.y >= 0 && signInBounds.y + signInBounds.height <= viewport.height, 'Completed verification must show sign-in within the viewport');
+      assert.equal(requests[1].idempotencyKey, requests[2].idempotencyKey, 'Deliberate uncertain retry must preserve the operation key');
+      assert.equal((await context.cookies('https://api.lythaus.co')).length, 0, 'Verification must not create a session');
+      if (process.env.AUTH_QA_DIR) {
+        await mkdir(process.env.AUTH_QA_DIR, { recursive: true });
+        await page.screenshot({ path: path.join(process.env.AUTH_QA_DIR, `${engine}-${viewport.width}-verified-signin.png`) });
+      }
+      await signIn.click();
+      await page.waitForURL('https://lythaus.co/sign-in');
+      await page.locator('#sign-in-email').fill('synthetic@example.invalid');
+      await page.locator('#sign-in-password').fill('synthetic chosen password');
+      await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+      await page.waitForURL('https://app.lythaus.co/');
+      await page.locator('#session').filter({ hasText: 'Session restored' }).waitFor();
+      assert.equal(requests.find(request => request.body.mode === 'login').transport, 'cookie-v1');
+      assert.equal(requests.find(request => request.path.endsWith('/auth/refresh')).hasCookie, true);
+      assert.equal(page.url().includes(token), false);
+      const [cookie] = await context.cookies('https://api.lythaus.co');
+      assert.equal(cookie.httpOnly, true);
+      assert.equal(cookie.secure, true);
+      assert.equal(cookie.sameSite, 'Strict');
+      const otherBrowser = await browser.newContext({ viewport, ignoreHTTPSErrors: true });
+      const otherPage = await otherBrowser.newPage();
+      await otherPage.goto('https://app.lythaus.co/');
+      await otherPage.locator('#session').filter({ hasText: 'Sign-in required' }).waitFor();
+      assert.equal(requests.at(-1).hasCookie, false, 'Another browser must not inherit the owner session');
+      assert.deepEqual(errors, []);
+    });
+  }
+}
 
 for (const [engine, type] of Object.entries({ chromium, webkit })) {
   for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }, { width: 320, height: 844 }]) {
@@ -204,7 +376,7 @@ for (const [engine, type] of Object.entries({ chromium, webkit })) {
         ['/sign-in', [['sign-in-password', 'password', 'current-password']]],
         ['/signup', [['signup-password', 'password', 'new-password'], ['signup-password-confirmation', 'confirm password', 'new-password']]],
         [`/reset-password#token=${token}`, [['new-password', 'new password', 'new-password'], ['new-password-confirmation', 'confirm new password', 'new-password']]],
-        [`/verify-email#token=${token}`, [['verification-password', 'your password', 'new-password'], ['verification-password-confirmation', 'confirm password', 'new-password']]],
+        [`/verify-email#token=${token}`, [['verification-password', 'set your password', 'new-password'], ['verification-password-confirmation', 'confirm password', 'new-password']]],
       ]) {
         await page.goto(origin + route);
         if (viewport.width === 320) await page.addStyleTag({ content: 'html { font-size: 200%; }' });
