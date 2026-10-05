@@ -122,6 +122,43 @@ Widget _buildApp({List<Override> overrides = const []}) {
   );
 }
 
+Future<void> _pumpProfileAtViewport(
+  WidgetTester tester, {
+  required Size physicalSize,
+  double textScale = 1,
+}) async {
+  tester.view.physicalSize = physicalSize;
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        currentUserProvider.overrideWithValue(_fakeAuthUser),
+        ownerPostsServiceProvider.overrideWithValue(
+          _FakeOwnerPostsService(),
+        ),
+        ownerProfileProvider.overrideWith(
+          (ref) async => _ownerProfile(_fakeUser),
+        ),
+        jwtProvider.overrideWith((ref) async => 'tok'),
+        reputationProvider.overrideWith((ref) async => _fakeReputationState),
+      ],
+      child: MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(textScale),
+          ),
+          child: child!,
+        ),
+        home: const ProfileScreen(),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 OwnerProfile _ownerProfile(PublicUser user) => OwnerProfile(
   user: user,
   moderationState: 'allowed',
@@ -270,40 +307,26 @@ void main() {
     });
 
     testWidgets('keeps identity readable when narrow', (tester) async {
-      tester.view.physicalSize = const Size(195, 422);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            currentUserProvider.overrideWithValue(_fakeAuthUser),
-            ownerPostsServiceProvider.overrideWithValue(
-              _FakeOwnerPostsService(),
-            ),
-            ownerProfileProvider.overrideWith(
-              (ref) async => _ownerProfile(_fakeUser),
-            ),
-            jwtProvider.overrideWith((ref) async => 'tok'),
-            reputationProvider.overrideWith(
-              (ref) async => _fakeReputationState,
-            ),
-          ],
-          child: MaterialApp(
-            builder: (context, child) => MediaQuery(
-              data: MediaQuery.of(context).copyWith(
-                textScaler: const TextScaler.linear(2),
-              ),
-              child: child!,
-            ),
-            home: const ProfileScreen(),
-          ),
-        ),
+      await _pumpProfileAtViewport(
+        tester,
+        physicalSize: const Size(195, 422),
       );
-      await tester.pumpAndSettle();
 
       expect(find.text('Profile'), findsOneWidget);
+      expect(find.text('Jane Doe'), findsOneWidget);
+      expect(find.text('Subscription: silver'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('keeps identity readable with large text on a narrow phone', (
+      tester,
+    ) async {
+      await _pumpProfileAtViewport(
+        tester,
+        physicalSize: const Size(320, 640),
+        textScale: 2,
+      );
+
       expect(find.text('Jane Doe'), findsOneWidget);
       expect(find.text('Subscription: silver'), findsOneWidget);
       expect(tester.takeException(), isNull);
