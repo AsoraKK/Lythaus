@@ -459,9 +459,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final completeProfile = find.text('Complete your profile');
-      await _scrollTo(tester, completeProfile);
-      await tester.tap(completeProfile);
+      final editProfile = find.text('Edit profile');
+      await _scrollTo(tester, editProfile);
+      await tester.tap(editProfile);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Edit profile'), findsAtLeastNWidgets(1));
