@@ -99,9 +99,14 @@ void main() {
 
     expect(published.statusLabel, 'Followers only');
     expect(pending.statusLabel, 'Awaiting review');
-    expect(() => OwnerPost.fromJson({'id': 'incomplete'}), throwsFormatException);
     expect(
-      () => OwnerPostsPage.fromJson({'items': 'not-a-list', 'nextCursor': null}),
+      () => OwnerPost.fromJson(const {'id': 'incomplete'}),
+      throwsFormatException,
+    );
+    expect(
+      () => OwnerPostsPage.fromJson(
+        const {'items': 'not-a-list', 'nextCursor': null},
+      ),
       throwsFormatException,
     );
   });
