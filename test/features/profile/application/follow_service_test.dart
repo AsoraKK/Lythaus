@@ -19,6 +19,7 @@ Response<Map<String, dynamic>> _response(
 void main() {
   setUpAll(() {
     registerFallbackValue(Options());
+    registerFallbackValue(CancelToken());
   });
 
   test('getStatus returns follow status', () async {
@@ -26,12 +27,14 @@ void main() {
     when(
       () => dio.get<Map<String, dynamic>>(
         '/api/users/u1/follow',
+        cancelToken: null,
         options: any(named: 'options'),
       ),
     ).thenAnswer(
       (_) async => _response({
         'following': true,
-        'followerCount': 12,
+        'followedBy': true,
+        'blocked': false,
       }, '/api/users/u1/follow'),
     );
 
@@ -42,7 +45,8 @@ void main() {
     );
 
     expect(status.following, isTrue);
-    expect(status.followerCount, 12);
+    expect(status.followedBy, isTrue);
+    expect(status.blocked, isFalse);
   });
 
   test('follow posts follow request', () async {
@@ -50,23 +54,33 @@ void main() {
     when(
       () => dio.post<Map<String, dynamic>>(
         '/api/users/u1/follow',
+        cancelToken: null,
         options: any(named: 'options'),
       ),
     ).thenAnswer(
       (_) async => _response({
-        'following': true,
-        'followerCount': 1,
+        'following': 'u1',
+        'created': true,
       }, '/api/users/u1/follow'),
     );
 
     final service = FollowService(dio);
-    final status = await service.follow(
+    final result = await service.follow(
       targetUserId: 'u1',
       accessToken: 'token',
+      idempotencyKey: 'follow-create-key',
     );
 
-    expect(status.following, isTrue);
-    expect(status.followerCount, 1);
+    expect(result.targetUserId, 'u1');
+    expect(result.created, isTrue);
+    final options = verify(
+      () => dio.post<Map<String, dynamic>>(
+        '/api/users/u1/follow',
+        cancelToken: null,
+        options: captureAny(named: 'options'),
+      ),
+    ).captured.single as Options;
+    expect(options.headers?['Idempotency-Key'], 'follow-create-key');
   });
 
   test('unfollow deletes follow request', () async {
@@ -74,22 +88,24 @@ void main() {
     when(
       () => dio.delete<Map<String, dynamic>>(
         '/api/users/u1/follow',
+        cancelToken: null,
         options: any(named: 'options'),
       ),
     ).thenAnswer(
       (_) async => _response({
-        'following': false,
-        'followerCount': 0,
+        'following': 'u1',
+        'removed': true,
       }, '/api/users/u1/follow'),
     );
 
     final service = FollowService(dio);
-    final status = await service.unfollow(
+    final result = await service.unfollow(
       targetUserId: 'u1',
       accessToken: 'token',
+      idempotencyKey: 'follow-remove-key',
     );
 
-    expect(status.following, isFalse);
-    expect(status.followerCount, 0);
+    expect(result.targetUserId, 'u1');
+    expect(result.removed, isTrue);
   });
 }

@@ -37,7 +37,7 @@ List<Override> _commonOverrides(String userId) => [
   jwtProvider.overrideWith((ref) async => null),
   currentUserProvider.overrideWith((ref) => null),
   followStatusProvider(userId).overrideWith(
-    (_) => Future.value(const FollowStatus(following: false, followerCount: 0)),
+    (_) => Future.value(const FollowStatus(following: false)),
   ),
 ];
 

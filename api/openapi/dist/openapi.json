@@ -5979,6 +5979,79 @@
         }
       }
     },
+    "/users/me/posts": {
+      "get": {
+        "operationId": "usersMePostsList",
+        "summary": "List my own published and pending posts",
+        "description": "Returns a private cursor-paginated timeline for the active author. Deleted, blocked, unsupported generated, or other users' posts are never returned.",
+        "tags": [
+          "Posts"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "default": 8
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 512
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current author's posts, including their own items awaiting review.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/PrivateCache"
+              },
+              "Vary": {
+                "$ref": "#/components/headers/PrivateVary"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerTimelinePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid page size or cursor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/OwnerUnauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/SafetyLimited"
+          }
+        }
+      }
+    },
     "/comments/{commentId}/owner-view": {
       "get": {
         "operationId": "commentsOwnerView",
@@ -16173,6 +16246,90 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "OwnerTimelinePost": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "authorId",
+          "body",
+          "declaredCreationMode",
+          "moderationState",
+          "visibility",
+          "publishedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "description": "Private author-only timeline item. Only allowed or under-review, non-deleted human or AI-assisted posts are returned.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "body": {
+            "type": "string"
+          },
+          "declaredCreationMode": {
+            "type": "string",
+            "enum": [
+              "human",
+              "ai_assisted"
+            ]
+          },
+          "moderationState": {
+            "type": "string",
+            "enum": [
+              "allowed",
+              "under_review"
+            ]
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "followers",
+              "private"
+            ]
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OwnerTimelinePage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OwnerTimelinePost"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
           }
         }
       },

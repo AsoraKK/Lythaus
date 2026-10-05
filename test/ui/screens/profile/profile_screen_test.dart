@@ -3,6 +3,7 @@ library;
 
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,7 +11,9 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/features/profile/application/owner_posts.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
+import 'package:lythaus/features/profile/domain/owner_post.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
 import 'package:lythaus/features/profile/domain/owner_profile.dart';
 import 'package:lythaus/state/models/reputation.dart';
@@ -70,6 +73,48 @@ final _fakeAuthUser = User(
 
 final _fakeAdminUser = _fakeAuthUser.copyWith(role: UserRole.admin);
 
+class _FakeOwnerPostsService extends OwnerPostsService {
+  _FakeOwnerPostsService({OwnerPostsPage? page, this.failuresRemaining = 0})
+    : page = page ?? const OwnerPostsPage(items: [], nextCursor: null),
+      super(Dio());
+
+  final OwnerPostsPage page;
+  int failuresRemaining;
+  int requests = 0;
+
+  @override
+  Future<OwnerPostsPage> getPage({
+    required String accessToken,
+    String? cursor,
+    CancelToken? cancelToken,
+  }) async {
+    requests++;
+    if (failuresRemaining > 0) {
+      failuresRemaining--;
+      throw StateError('Synthetic timeline failure');
+    }
+    return page;
+  }
+}
+
+OwnerPost _post({
+  required String id,
+  required String body,
+  String moderationState = 'allowed',
+  String visibility = 'public',
+  DateTime? publishedAt,
+}) => OwnerPost(
+  id: id,
+  authorId: 'user-1',
+  body: body,
+  declaredCreationMode: 'human',
+  moderationState: moderationState,
+  visibility: visibility,
+  publishedAt: publishedAt,
+  createdAt: DateTime.utc(2026, 10, 5),
+  updatedAt: DateTime.utc(2026, 10, 5),
+);
+
 Widget _buildApp({List<Override> overrides = const []}) {
   return ProviderScope(
     overrides: overrides,
@@ -124,6 +169,9 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWithValue(_fakeAuthUser),
+            ownerPostsServiceProvider.overrideWithValue(
+              _FakeOwnerPostsService(),
+            ),
             ownerProfileProvider.overrideWith(
               (ref) => completer.future.then(_ownerProfile),
             ),
@@ -146,6 +194,9 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWithValue(_fakeAuthUser),
+            ownerPostsServiceProvider.overrideWithValue(
+              _FakeOwnerPostsService(),
+            ),
             ownerProfileProvider.overrideWith(
               (ref) async => throw Exception('Network failure'),
             ),
@@ -167,6 +218,9 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWithValue(_fakeAuthUser),
+            ownerPostsServiceProvider.overrideWithValue(
+              _FakeOwnerPostsService(),
+            ),
             ownerProfileProvider.overrideWith(
               (ref) async => _ownerProfile(_fakeUser),
             ),
@@ -188,6 +242,9 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWithValue(_fakeAuthUser),
+            ownerPostsServiceProvider.overrideWithValue(
+              _FakeOwnerPostsService(),
+            ),
             ownerProfileProvider.overrideWith(
               (ref) async => _ownerProfile(_fakeUser),
             ),
@@ -204,6 +261,82 @@ void main() {
       expect(find.textContaining('@janedoe'), findsOneWidget);
     });
 
+    testWidgets('shows honest published and pending posts with pagination', (
+      tester,
+    ) async {
+      final service = _FakeOwnerPostsService(
+        page: OwnerPostsPage(
+          items: [
+            _post(
+              id: 'post-1',
+              body: 'A published synthetic post',
+              publishedAt: DateTime.utc(2026, 10, 5),
+            ),
+            _post(
+              id: 'post-2',
+              body: 'A private post under review',
+              moderationState: 'under_review',
+              visibility: 'private',
+            ),
+          ],
+          nextCursor: 'next-page',
+        ),
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            currentUserProvider.overrideWithValue(_fakeAuthUser),
+            ownerProfileProvider.overrideWith(
+              (ref) async => _ownerProfile(_fakeUser),
+            ),
+            ownerPostsServiceProvider.overrideWithValue(service),
+            jwtProvider.overrideWith((ref) async => 'tok'),
+            reputationProvider.overrideWith(
+              (ref) async => _fakeReputationState,
+            ),
+          ],
+          child: const MaterialApp(home: ProfileScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Your posts'), findsOneWidget);
+      expect(find.text('Published'), findsOneWidget);
+      expect(find.text('Awaiting review'), findsOneWidget);
+      expect(find.text('Load more posts'), findsOneWidget);
+      expect(find.textContaining('A short bio can add context'), findsOneWidget);
+      await tester.ensureVisible(find.text('A private post under review'));
+      expect(find.text('A private post under review'), findsOneWidget);
+      expect(find.text('Only you can see this while it is under review.'), findsOneWidget);
+    });
+
+    testWidgets('post timeline recovers from a load error', (tester) async {
+      final service = _FakeOwnerPostsService(failuresRemaining: 1);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            currentUserProvider.overrideWithValue(_fakeAuthUser),
+            ownerProfileProvider.overrideWith(
+              (ref) async => _ownerProfile(_fakeUser),
+            ),
+            ownerPostsServiceProvider.overrideWithValue(service),
+            jwtProvider.overrideWith((ref) async => 'tok'),
+            reputationProvider.overrideWith(
+              (ref) async => _fakeReputationState,
+            ),
+          ],
+          child: const MaterialApp(home: ProfileScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Unable to load your posts. Your profile is still available.'), findsOneWidget);
+      await tester.tap(find.text('Retry posts'));
+      await tester.pumpAndSettle();
+      expect(find.text('You have not posted yet. Your posts will appear here after you share them.'), findsOneWidget);
+      expect(service.requests, 2);
+    });
+
     testWidgets('owner sees profile actions but not staff tools by default', (
       tester,
     ) async {
@@ -211,6 +344,9 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWithValue(_fakeAuthUser),
+            ownerPostsServiceProvider.overrideWithValue(
+              _FakeOwnerPostsService(),
+            ),
             ownerProfileProvider.overrideWith(
               (ref) async => _ownerProfile(_ownerVisibleUser),
             ),
@@ -240,6 +376,9 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWithValue(_fakeAdminUser),
+            ownerPostsServiceProvider.overrideWithValue(
+              _FakeOwnerPostsService(),
+            ),
             ownerProfileProvider.overrideWith(
               (ref) async => _ownerProfile(_ownerVisibleUser),
             ),
@@ -266,6 +405,9 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWithValue(_fakeAuthUser),
+            ownerPostsServiceProvider.overrideWithValue(
+              _FakeOwnerPostsService(),
+            ),
             ownerProfileProvider.overrideWith(
               (ref) async => _ownerProfile(_ownerVisibleUser),
             ),
@@ -291,6 +433,9 @@ void main() {
         ProviderScope(
           overrides: [
             currentUserProvider.overrideWithValue(_fakeAuthUser),
+            ownerPostsServiceProvider.overrideWithValue(
+              _FakeOwnerPostsService(),
+            ),
             ownerProfileProvider.overrideWith(
               (ref) async => _ownerProfile(_ownerVisibleUser),
             ),
@@ -338,6 +483,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('Private Person'), findsWidgets);
+      expect(find.text('Your posts'), findsNothing);
       expect(find.textContaining('Trust Passport'), findsNothing);
       expect(find.text('Reputation'), findsNothing);
     });

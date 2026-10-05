@@ -3183,7 +3183,8 @@ export default {
         }) ?? privateResponse(request, env, { error: 'not_found' }, { status: 404 });
       }
       const ownerItem = url.pathname.match(/^\/api\/(posts|comments)\/([^/]+)\/owner-view$/);
-      if (request.method === 'GET' && ownerItem) {
+      const ownerPostsList = url.pathname === '/api/users/me/posts';
+      if (request.method === 'GET' && (ownerItem || ownerPostsList)) {
         const ownerContent = await handleOwnerContentRead(request, {
           authenticate: () => principal(request, env),
           query: (sql, values) => query(env.DB_APP_FRESH, sql, values),
