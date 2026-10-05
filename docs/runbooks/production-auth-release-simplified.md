@@ -410,8 +410,12 @@ cooldown, rate limits, challenge expiry and account linkage checks.
 
 Prompt transactional-email dispatch is prepared behind
 `TRANSACTIONAL_EMAIL_DISPATCH_ENABLED`; absence or any value other than `true`
-keeps publishing and consuming dispatch hints off. No deployment configuration,
-binding, provider resource, secret, grant or cron change accompanies this code.
+keeps publishing and consuming dispatch hints off. No live binding, provider
+resource, secret, grant or cron change has been applied. The draft proposes
+`max_concurrency: 1` for the existing lifecycle consumer in both root production
+and development Wrangler declarations. That setting is independent of the
+dispatch flag and would apply on deployment; it requires explicit consumer-cap
+approval even if dispatch stays OFF. Other Queue consumers remain unchanged.
 The proposed producer binding reuses `lythaus-email-lifecycle-dev` only after
 explicit capability/inventory approval. Provider lifecycle events keep their
 existing parser; internal hints have a distinct type, opaque outbox UUID and
@@ -433,7 +437,12 @@ review, exact-head fixture/security checks and canonical release gates.
 
 Before prompt dispatch activation, the existing canonical Queue-list read must
 prove delivery is unpaused, delivery delay is zero, and the sole consumer is
-`lythaus-jobs-development` with the configured batching, retries and DLQ.
+`lythaus-jobs-development` with the configured batching, retries and DLQ, and
+numeric `settings.max_concurrency=1`. Missing, null/automatic or any other cap
+fails closed before upload; the verifier never patches it. After separate owner
+approval, set this existing Queue's Settings → Edit Consumer → Maximum consumer
+invocations to1 while publication remains OFF, then let the canonical existing
+Queue-list read prove the cap before activating compatible Jobs and Public.
 Missing metadata or drift blocks activation; the dashboard's Inactive label
 does not prove pause state. Paired production flags force lifecycle verification
 into existing-resource-only mode, so it cannot create resources or repair
@@ -444,14 +453,32 @@ starting dispatch hints. Dispatch runs with at most two active operations per
 invocation, limiting simultaneous provider calls and their database transactions.
 The25-message slow-provider fixture proves delivered/bounced/complained events
 at the end of a batch finish before stalled sends and that database/provider
-concurrency never exceeds two. Per-message acknowledgement and retry remain
-isolated. This does not establish live Queue scheduling or a ten-second p95;
-a slow-provider burst can still take several dispatch waves, and lifecycle
-events arriving in a later batch depend on Queue scheduling. No consumer setting,
-provider timeout, resource, connection configuration or cron changes here.
+concurrency never exceeds two within that invocation. Per-message acknowledgement
+and retry remain isolated. The code limit is not global: without a verified
+consumer cap, Cloudflare can invoke multiple handlers. After the approved cap1
+is applied and verified, this Queue has at most one invocation with two awaited
+dispatch operations/database connections. Scheduled outbox sweeps and other
+Jobs paths are independent; this is not an account-wide database or provider
+concurrency limit. A provider operation may also outlive an ambiguous timeout,
+which remains terminal rather than being blindly retried.
+
+The cap trades backlog latency for a bounded Queue database footprint. As an
+illustrative slow-provider model,25 hints requiring20seconds each need13 waves
+with two lanes, about260seconds before database/retry overhead. Lifecycle events
+already in the batch run first; later batches can wait behind that batch. No
+live throughput or ten-second p95 is established. Do not automatically increase
+the cap to clear backlog or treat queue age as inbox delivery evidence. The only
+proposed provider setting change is this consumer cap; provider deadlines,
+resources, connection configuration and cron remain unchanged.
+
+[Cloudflare consumer concurrency](https://developers.cloudflare.com/queues/configuration/consumer-concurrency/)
+is enabled automatically unless capped; the existing
+[Queue-list response](https://developers.cloudflare.com/api/resources/queues/methods/list/)
+includes the live consumer cap used by this fail-closed check.
 
 Rollback disables Public publication first, then Jobs dispatch, while retaining
-the lifecycle parser, delivery key, durable outbox and quarter-hour sweep.
+the lifecycle parser, delivery key, durable outbox, approved cap1 and quarter-hour
+sweep. Raising/removing the cap requires a separate resource/capacity approval.
 With Jobs dispatch OFF, existing hints retry after60seconds and can exhaust the
 configured ten-retry budget into `lythaus-email-lifecycle-dlq-dev`. Re-enabling
 Jobs does not move those hints back. The outbox remains authoritative: its due

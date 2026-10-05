@@ -23,6 +23,7 @@ const CONSUMER = {
   queue: LIFECYCLE_QUEUE,
   max_batch_size: 25,
   max_batch_timeout: 5,
+  max_concurrency: 1,
   max_retries: 10,
   dead_letter_queue: LIFECYCLE_DLQ,
 };
@@ -70,10 +71,16 @@ function isExactSubscription(subscription, lifecycleQueueId, zoneId) {
     && sourceDomain(subscription.source) === SENDING_DOMAIN;
 }
 
-export function assertConsumerDeclaration() {
-  const config = fs.readFileSync('apps/lythaus-jobs/wrangler.jsonc', 'utf8');
-  const required = `\\{ \\\"queue\\\": \\\"${CONSUMER.queue}\\\", \\\"max_batch_size\\\": ${CONSUMER.max_batch_size}, \\\"max_batch_timeout\\\": ${CONSUMER.max_batch_timeout}, \\\"max_retries\\\": ${CONSUMER.max_retries}, \\\"dead_letter_queue\\\": \\\"${CONSUMER.dead_letter_queue}\\\" \\}`;
-  if (!new RegExp(required).test(config)) throw new Error('email_lifecycle_consumer_configuration_drift');
+export function assertConsumerDeclaration(config = JSON.parse(
+  fs.readFileSync('apps/lythaus-jobs/wrangler.jsonc', 'utf8').replace(/^\s*\/\/.*$/gm, '').replace(/,\s*([}\]])/g, '$1'),
+)) {
+  for (const declaration of [config, config.env?.development]) {
+    const consumers = declaration?.queues?.consumers;
+    const matching = Array.isArray(consumers) ? consumers.filter(consumer => consumer.queue === LIFECYCLE_QUEUE) : [];
+    if (matching.length !== 1 || Object.entries(CONSUMER).some(([key, value]) => matching[0][key] !== value)) {
+      throw new Error('email_lifecycle_consumer_configuration_drift');
+    }
+  }
 }
 
 export function promptDispatchRequested(publicConfig, jobsConfig) {
@@ -98,6 +105,9 @@ export function assertPromptDispatchConsumer(queue) {
     || consumer.dead_letter_queue !== LIFECYCLE_DLQ || consumer.settings?.batch_size !== CONSUMER.max_batch_size
     || consumer.settings?.max_wait_time_ms !== CONSUMER.max_batch_timeout * 1000
     || consumer.settings?.max_retries !== CONSUMER.max_retries) throw new Error('email_dispatch_live_consumer_drift');
+  if (consumer.settings?.max_concurrency !== CONSUMER.max_concurrency) {
+    throw new Error('email_dispatch_live_consumer_concurrency_not_verified');
+  }
   return { status: 'VERIFIED', source: 'existing_queue_list_response', queue: LIFECYCLE_QUEUE,
     deliveryPaused: false, deliveryDelaySeconds: 0, worker: consumer.script_name, ...CONSUMER };
 }
