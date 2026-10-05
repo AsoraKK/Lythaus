@@ -58,6 +58,10 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
           if (patches.length === 1) await new Promise(resolve => setTimeout(resolve, 150));
         }
         body = { user: profile };
+      } else if (url.pathname === '/api/users/me/posts') {
+        assert.ok(session);
+        assert.equal((await request.allHeaders()).authorization, 'Bearer synthetic-profile-token');
+        body = { items: [], nextCursor: null };
       } else if (url.pathname === `/api/users/${user.id}`) {
         status = profile.moderationState === 'allowed' && profile.publicVisibility ? 200 : 404;
         body = status === 200 ? { user: { id: user.id, displayName: profile.displayName, bio: profile.bio } } : { error: 'profile_not_found' };
