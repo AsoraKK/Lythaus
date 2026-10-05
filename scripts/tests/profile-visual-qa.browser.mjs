@@ -599,6 +599,8 @@ test(
           });
           await page.waitForTimeout(300);
           await screenshot('owner-populated-large-text-top', 'device');
+          const largeTextTopContent = await profileText();
+          assert.ok(largeTextTopContent.includes(owner.displayName));
           const zoomViewport = await page.evaluate(() => ({
             width: window.innerWidth,
             height: window.innerHeight,
@@ -640,7 +642,6 @@ test(
           );
           const largeTextContent = await profileText();
           assert.ok(largeTextContent.includes(firstPage[0].body));
-          assert.ok(largeTextContent.includes(owner.displayName));
           const largeTextMetrics = await page.evaluate(() => ({
             viewportWidth: window.innerWidth,
             documentWidth: document.documentElement.scrollWidth,
