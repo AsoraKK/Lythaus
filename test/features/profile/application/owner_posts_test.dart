@@ -145,7 +145,11 @@ void main() {
       ('token-owner-a', 'cursor-a-2'),
     ]);
 
+    ownerASubscription.close();
+    await container.pump();
     container.read(_session.notifier).state = _user('owner-b');
+    await container.pump();
+    expect(container.read(authSessionRevisionProvider), 1);
     await expectLater(container.read(ownerAProvider.future), throwsStateError);
     expect(container.read(ownerAProvider).valueOrNull, isNull);
 

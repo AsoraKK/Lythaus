@@ -514,7 +514,10 @@ class _ReputationStateBadge extends ConsumerWidget {
       data: (state) => ReputationBadge(
         state: state,
         size: ReputationBadgeSize.medium,
-        showLabel: true,
+        // The full server-issued level name is available from the badge's
+        // tooltip and semantics label. Keep the visible chip compact on very
+        // narrow layouts so it cannot push the profile column off-screen.
+        showLabel: MediaQuery.sizeOf(context).width >= 240,
       ),
       loading: () => Semantics(
         label: 'Loading reputation',
