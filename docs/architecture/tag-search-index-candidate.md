@@ -29,10 +29,18 @@ Examples:
 
 The default cap of **16 distinct tags per post is proposed and unapproved**.
 When tag-index maintenance is explicitly enabled, new post creation and body
-edits above the configured cap return the clear `post_tag_limit_exceeded`
+edits above the v3 cap return the clear `post_tag_limit_exceeded`
 validation error before inserting/updating content or index state. The
 maintenance flag defaults off, and this cap remains unapproved until the owner
 chooses it.
+
+The v3 extractor policy pins that cap to 16. The candidate control table
+enforces the pairing, and reapplying the proposal resets approval, readiness,
+cursors, and counts if the stored policy version or cap drifts before restoring
+the constraint. Maintenance refuses a mismatched policy/cap. The Worker keeps
+write validation at the v3 cap; a runtime cap override that differs from the
+control row makes tag search unavailable. Any future cap needs a new policy
+version and a full backfill and reconciliation before search can be ready.
 
 Historical posts above the cap are handled separately during offline
 backfill. Their index state remains complete and records

@@ -207,6 +207,44 @@ test('tag-search gate returns unavailable until indexed state is ready, then unk
   assert.equal(ordinaryDiscover.status, 200, await ordinaryDiscover.clone().text());
 });
 
+test('v3 cap drift cannot qualify search or change post write limits silently', async () => {
+  const configuredCap = env.TAG_SEARCH_MAX_DISTINCT_TAGS_PER_POST;
+  try {
+    await sql(
+      `UPDATE feed.tag_search_index_control
+          SET policy_approved=true,backfill_complete=true,reconciliation_complete=true,
+              search_enabled=true,block_reason=NULL WHERE singleton=true`,
+    );
+    await assert.rejects(
+      sql('UPDATE feed.tag_search_index_control SET max_distinct_tags_per_post=24 WHERE singleton=true'),
+      (error) => error.code === '23514',
+      'the immutable v3 cap constraint rejects a control-row change that could leave stale readiness qualified',
+    );
+
+    env.TAG_SEARCH_MAX_DISTINCT_TAGS_PER_POST = '24';
+    const unavailable = await get(`/api/feed/discover?tag=capdrift${uuidv7().replaceAll('-', '')}`, '203.0.113.38');
+    assert.equal(unavailable.status, 503, await unavailable.clone().text());
+    assert.equal((await unavailable.json()).error, 'tag_search_unavailable');
+
+    const owner = await actor();
+    const overV3Cap = `#${uuidv7().replaceAll('-', '')} ${Array.from({ length: 16 }, (_, index) => `#capguard${index}`).join(' ')}`;
+    const rejected = await mutate('POST', '/api/posts', {
+      body: overV3Cap, declaredCreationMode: 'human', geoScope: 'none',
+    }, owner);
+    assert.equal(rejected.status, 400, await rejected.clone().text());
+    assert.equal((await rejected.json()).error, 'post_tag_limit_exceeded');
+
+    const control = await sql(
+      `SELECT max_distinct_tags_per_post,search_enabled
+         FROM feed.tag_search_index_control WHERE singleton=true`,
+    );
+    assert.deepEqual(control.rows[0], { max_distinct_tags_per_post: 16, search_enabled: true });
+  } finally {
+    if (configuredCap === undefined) delete env.TAG_SEARCH_MAX_DISTINCT_TAGS_PER_POST;
+    else env.TAG_SEARCH_MAX_DISTINCT_TAGS_PER_POST = configuredCap;
+  }
+});
+
 test('indexed tag results retain exact identity, privacy filters, and chronological keyset pages', async () => {
   const viewer = await actor();
   const visibleAuthor = await actor();

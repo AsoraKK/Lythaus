@@ -311,6 +311,51 @@ test('backfill restarts once for behind-cursor state and blocks persistent no-pr
   }
 });
 
+test('cap drift blocks maintenance and reapplied proposal resets readiness before restoring v3', async () => {
+  const client = await connect();
+  try {
+    await applyTagSearchProposal(client);
+    await client.query(
+      `UPDATE feed.tag_search_index_control
+          SET policy_approved=true,backfill_complete=true,reconciliation_complete=true,
+              search_enabled=true,block_reason=NULL WHERE singleton=true`,
+    );
+    await client.query('ALTER TABLE feed.tag_search_index_control DROP CONSTRAINT tag_search_policy_cap_check');
+    await client.query('UPDATE feed.tag_search_index_control SET max_distinct_tags_per_post=24 WHERE singleton=true');
+
+    await assert.rejects(
+      runTagIndexBatch(client, 'backfill', 1),
+      /tag_search_policy_cap_mismatch/,
+      'maintenance must not reconcile an index using a different cap from its pinned extractor policy',
+    );
+
+    await applyTagSearchProposal(client);
+    const reset = await client.query(
+      `SELECT policy_version,max_distinct_tags_per_post,policy_approved,
+              backfill_complete,reconciliation_complete,search_enabled,block_reason
+         FROM feed.tag_search_index_control WHERE singleton=true`,
+    );
+    assert.deepEqual(reset.rows[0], {
+      policy_version: 'exact-token-proposal-v3',
+      max_distinct_tags_per_post: 16,
+      policy_approved: false,
+      backfill_complete: false,
+      reconciliation_complete: false,
+      search_enabled: false,
+      block_reason: 'tag_search_policy_or_cap_changed',
+    });
+    const constraint = await client.query(
+      `SELECT convalidated FROM pg_constraint
+        WHERE conrelid='feed.tag_search_index_control'::regclass
+          AND conname='tag_search_policy_cap_check'`,
+    );
+    assert.deepEqual(constraint.rows, [{ convalidated: true }]);
+  } finally {
+    await applyTagSearchProposal(client).catch(() => undefined);
+    await finish(client);
+  }
+});
+
 test('maintenance refuses remote PostgreSQL targets before connecting', () => {
   const script = new URL('../scripts/tag-search-index-maintenance.mjs', import.meta.url).pathname;
   const result = spawnSync(process.execPath, ['--experimental-strip-types', script, 'backfill', '--once'], {

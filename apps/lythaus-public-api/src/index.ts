@@ -20,7 +20,12 @@ import { assertCommentFeedItemEligibility, assertCustomFeedAvailable, assertFeed
 import { optionalPrivacyRequestType, privacyExportAccessActivity, privacyExportRetryAfter, privacyRequestPlan, requirePrivacyExportDependencies, requirePrivacyExportObject, retentionRulePlan } from './privacy-runtime-policy.ts';
 import { normalizeNotificationDevice, normalizeNotificationPreferences } from './notification-policy.ts';
 import { encodeCursor, enforceContentDeclaration, normalizeCustomFeedRules, pageRequest, reputationBand } from './product-policy.ts';
-import { enforcePostTagLimit, normalizeTagSearchQuery } from './tag-search-policy.ts';
+import {
+  enforcePostTagLimit,
+  normalizeTagSearchQuery,
+  TAG_SEARCH_PROPOSAL_VERSION,
+  TAG_SEARCH_PROPOSED_MAX_DISTINCT_TAGS_PER_POST,
+} from './tag-search-policy.ts';
 import { maintainPostTagIndex, tagSearchCandidateScanLimit, tagSearchMaxDistinctTags } from './tag-search-indexing.ts';
 import { TAGGED_DISCOVERY_SQL } from './tag-search-query.ts';
 import { readBoundedJson } from './request-body-runtime.ts';
@@ -1163,7 +1168,7 @@ async function createPost(request: Request, env: Env, user: Principal): Promise<
   const declaration = enforceContentDeclaration(input);
   const tagSearchMaintenanceEnabled = env.TAG_SEARCH_INDEX_MAINTENANCE_ENABLED === 'true';
   const maxDistinctTags = tagSearchMaintenanceEnabled
-    ? tagSearchMaxDistinctTags(env.TAG_SEARCH_MAX_DISTINCT_TAGS_PER_POST)
+    ? TAG_SEARCH_PROPOSED_MAX_DISTINCT_TAGS_PER_POST
     : 0;
   if (tagSearchMaintenanceEnabled) enforcePostTagLimit(declaration.body, maxDistinctTags);
   const publication = planPostPublication(input.geoScope, input.placeId);
@@ -1834,7 +1839,7 @@ async function updatePost(request: Request, env: Env, user: Principal, postId: s
   const input = await readJson<{ body?: string; declaredCreationMode?: unknown; visibility?: string }>(request, 64 * 1024);
   const tagSearchMaintenanceEnabled = env.TAG_SEARCH_INDEX_MAINTENANCE_ENABLED === 'true';
   const maxDistinctTags = tagSearchMaintenanceEnabled
-    ? tagSearchMaxDistinctTags(env.TAG_SEARCH_MAX_DISTINCT_TAGS_PER_POST)
+    ? TAG_SEARCH_PROPOSED_MAX_DISTINCT_TAGS_PER_POST
     : 0;
   const sourceEventId = uuidv7();
   const updated = await transaction(env.DB_APP_FRESH, async (client) => {
@@ -2684,7 +2689,7 @@ async function discoveryFeed(request: Request, env: Env, viewer?: Principal): Pr
       throw new Error('tag_search_unavailable');
     }
     const readiness = control.rows[0];
-    if (!readiness || readiness.policy_version !== 'exact-token-proposal-v3'
+    if (!readiness || readiness.policy_version !== TAG_SEARCH_PROPOSAL_VERSION
       || !readiness.policy_approved || readiness.max_distinct_tags_per_post !== maxDistinctTags
       || readiness.max_candidates_per_request !== maxCandidates
       || !readiness.backfill_complete || !readiness.reconciliation_complete || !readiness.search_enabled) {

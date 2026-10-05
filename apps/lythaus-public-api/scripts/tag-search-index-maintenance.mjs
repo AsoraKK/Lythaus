@@ -81,7 +81,8 @@ async function beginBatch(client) {
   await client.query('BEGIN');
   await client.query("SET LOCAL statement_timeout='20s'");
   const control = await client.query(
-    `SELECT backfill_cursor, backfill_complete, backfill_post_count, backfill_restart_count,
+    `SELECT policy_version, max_distinct_tags_per_post,
+            backfill_cursor, backfill_complete, backfill_post_count, backfill_restart_count,
             legacy_tag_limit_excluded_post_count,
             reconciliation_cursor, reconciliation_complete, reconciliation_post_count, reconciliation_restart_count
        FROM feed.tag_search_index_control WHERE singleton = true FOR UPDATE`,
@@ -100,6 +101,10 @@ export async function runTagIndexBatch(client, mode, batchSize = 200) {
 
   const control = await beginBatch(client);
   try {
+    if (control.policy_version !== TAG_SEARCH_PROPOSAL_VERSION
+      || Number(control.max_distinct_tags_per_post) !== TAG_SEARCH_PROPOSED_MAX_DISTINCT_TAGS_PER_POST) {
+      throw new Error('tag_search_policy_cap_mismatch; apply the matching policy proposal before maintenance');
+    }
     if (control[completeField]) {
       await client.query('COMMIT');
       return {

@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS feed.tag_search_index_control (
   policy_version text NOT NULL DEFAULT 'exact-token-proposal-v3',
   policy_approved boolean NOT NULL DEFAULT false,
   max_distinct_tags_per_post integer NOT NULL DEFAULT 16 CHECK (max_distinct_tags_per_post BETWEEN 1 AND 128),
+  CONSTRAINT tag_search_policy_cap_check
+    CHECK (policy_version IS DISTINCT FROM 'exact-token-proposal-v3' OR max_distinct_tags_per_post = 16),
   max_candidates_per_request integer NOT NULL DEFAULT 1000 CHECK (max_candidates_per_request BETWEEN 1 AND 5000),
   backfill_cursor uuid,
   backfill_post_count bigint NOT NULL DEFAULT 0 CHECK (backfill_post_count >= 0),
@@ -35,19 +37,31 @@ ALTER TABLE feed.tag_search_index_control
 ALTER TABLE feed.tag_search_index_control
   ADD COLUMN IF NOT EXISTS reconciliation_restart_count smallint NOT NULL DEFAULT 0;
 
+-- Reconcile old candidate rows before restoring the v3 cap invariant. A cap
+-- change is a policy change: readiness is invalid until a full reindex passes.
+ALTER TABLE feed.tag_search_index_control
+  DROP CONSTRAINT IF EXISTS tag_search_policy_cap_check;
+
 INSERT INTO feed.tag_search_index_control(singleton) VALUES (true)
 ON CONFLICT (singleton) DO NOTHING;
 
 UPDATE feed.tag_search_index_control
    SET policy_version = 'exact-token-proposal-v3',
+       max_distinct_tags_per_post = 16,
        policy_approved = false,
        backfill_cursor = NULL, backfill_post_count = 0, backfill_restart_count = 0,
        legacy_tag_limit_excluded_post_count = 0, backfill_complete = false,
        reconciliation_cursor = NULL, reconciliation_post_count = 0, reconciliation_restart_count = 0,
        reconciliation_mismatch_count = 0, reconciliation_complete = false,
        incomplete_post_count = 0, search_enabled = false,
-       block_reason = 'tag_search_policy_version_changed', updated_at = now()
- WHERE singleton = true AND policy_version IS DISTINCT FROM 'exact-token-proposal-v3';
+       block_reason = 'tag_search_policy_or_cap_changed', updated_at = now()
+ WHERE singleton = true
+   AND (policy_version IS DISTINCT FROM 'exact-token-proposal-v3'
+     OR max_distinct_tags_per_post IS DISTINCT FROM 16);
+
+ALTER TABLE feed.tag_search_index_control
+  ADD CONSTRAINT tag_search_policy_cap_check
+  CHECK (policy_version IS DISTINCT FROM 'exact-token-proposal-v3' OR max_distinct_tags_per_post = 16);
 
 CREATE TABLE IF NOT EXISTS content.post_tag_search_state (
   post_id uuid PRIMARY KEY REFERENCES content.posts(id) ON DELETE CASCADE,
