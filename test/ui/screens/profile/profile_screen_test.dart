@@ -318,16 +318,22 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('keeps identity readable with large text on a narrow phone', (
+    testWidgets('keeps identity readable at 195 px with large text', (
       tester,
     ) async {
       await _pumpProfileAtViewport(
         tester,
-        physicalSize: const Size(320, 640),
+        physicalSize: const Size(195, 422),
         textScale: 2,
       );
 
-      expect(find.text('Jane Doe'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(ListView).first,
+          matching: find.text('Jane Doe'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Subscription: silver'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

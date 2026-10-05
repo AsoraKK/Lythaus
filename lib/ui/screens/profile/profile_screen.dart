@@ -510,17 +510,18 @@ class _ReputationStateBadge extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reputation = ref.watch(reputationProvider);
+    final compact =
+        MediaQuery.sizeOf(context).width < 360 ||
+        MediaQuery.textScalerOf(context).scale(1) >= 1.8;
     return reputation.when(
       data: (state) => ReputationBadge(
         state: state,
-        size: ReputationBadgeSize.medium,
+        size: compact ? ReputationBadgeSize.small : ReputationBadgeSize.medium,
         // The full server-issued level name is available from the badge's
         // tooltip and semantics label. Keep the visible chip compact on very
         // narrow layouts or with large text so it cannot push the profile
         // column off-screen.
-        showLabel:
-            MediaQuery.sizeOf(context).width >= 240 &&
-            MediaQuery.textScalerOf(context).scale(1) < 1.8,
+        showLabel: !compact,
       ),
       loading: () => Semantics(
         label: 'Loading reputation',
