@@ -290,7 +290,15 @@ void main() {
               (ref) async => _fakeReputationState,
             ),
           ],
-          child: const MaterialApp(home: ProfileScreen()),
+          child: MaterialApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: const TextScaler.linear(2),
+              ),
+              child: child!,
+            ),
+            home: const ProfileScreen(),
+          ),
         ),
       );
       await tester.pumpAndSettle();
