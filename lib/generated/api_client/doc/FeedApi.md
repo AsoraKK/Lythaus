@@ -9,18 +9,18 @@ All URIs are relative to *https://api.lythaus.co/api*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**feedDiscover**](FeedApi.md#feeddiscover) | **GET** /feed/discover | List the public discovery feed
+[**feedDiscover**](FeedApi.md#feeddiscover) | **GET** /feed/discover | List the public discovery feed or search a tag
 [**feedList**](FeedApi.md#feedlist) | **GET** /feed | List the authenticated personal feed
 [**feedNews**](FeedApi.md#feednews) | **GET** /feed/news | List the Black-tier News Board
 [**newsBoardGetLegacy**](FeedApi.md#newsboardgetlegacy) | **GET** /news-board | List the Black-tier News Board
 
 
 # **feedDiscover**
-> DiscoveryFeedPage feedDiscover(cursor, limit)
+> DiscoveryFeedPage feedDiscover(cursor, limit, tag)
 
-List the public discovery feed
+List the public discovery feed or search a tag
 
-Anonymous callers receive the public page. Authenticated callers additionally receive block and mute filtering.
+Anonymous callers receive the public page. Authenticated callers additionally receive block and mute filtering. Supplying tag requests exact hashtag search in chronological order; tag search currently returns unavailable until a migration-backed exact-token index passes representative-scale validation.
 
 ### Example
 ```dart
@@ -29,9 +29,10 @@ import 'package:lythaus_api_client/api.dart';
 final api = LythausApiClient().getFeedApi();
 final String cursor = cursor_example; // String | Opaque keyset cursor returned by the preceding page.
 final int limit = 56; // int |
+final String tag = tag_example; // String | Exact hashtag token, with an optional leading
 
 try {
-    final response = api.feedDiscover(cursor, limit);
+    final response = api.feedDiscover(cursor, limit, tag);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling FeedApi->feedDiscover: $e\n');
@@ -44,6 +45,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **cursor** | **String**| Opaque keyset cursor returned by the preceding page. | [optional]
  **limit** | **int**|  | [optional] [default to 25]
+ **tag** | **String**| Exact hashtag token, with an optional leading | [optional]
 
 ### Return type
 

@@ -4,6 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/auth_required_exception.dart';
+import 'package:lythaus/features/feed/application/social_feed_providers.dart';
+import 'package:lythaus/features/feed/domain/models.dart';
+import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
 import 'package:lythaus/features/notifications/application/notification_api_service.dart';
 import 'package:lythaus/features/notifications/application/notification_providers.dart';
 import 'package:lythaus/features/notifications/presentation/notifications_screen.dart';
@@ -15,9 +18,17 @@ class _NotificationApi extends Mock implements NotificationApiService {
   bool get isCurrentSession => true;
 }
 
+class _UnavailableSearchNotifier extends FeedSearchNotifier {
+  @override
+  Future<FeedResponse> build(FeedSearchKey arg) async =>
+      throw const SocialFeedException(
+        'Tag search is temporarily unavailable.',
+        code: 'tag_search_unavailable',
+      );
+}
+
 void main() {
   for (final entry in <String, Widget>{
-    'search': const FeedSearchScreen(initialQuery: 'water'),
     'profile': const ProfileScreen(),
     'notifications': const NotificationsScreen(),
   }.entries) {
@@ -56,6 +67,46 @@ void main() {
       },
     );
   }
+
+  testWidgets(
+    'guest tag search shows a public retry state without a sign-in gate',
+    (tester) async {
+      final api = _NotificationApi();
+      await tester.binding.setSurfaceSize(const Size(320, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            guestModeProvider.overrideWith((ref) => true),
+            currentUserProvider.overrideWith((ref) => null),
+            notificationApiServiceProvider.overrideWithValue(api),
+            feedSearchProvider.overrideWith(_UnavailableSearchNotifier.new),
+          ],
+          child: MaterialApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: const TextScaler.linear(2)),
+              child: child!,
+            ),
+            home: const FeedSearchScreen(initialQuery: 'water'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Tag search is temporarily unavailable.'),
+        findsOneWidget,
+      );
+      expect(find.text('Retry search'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Sign in'), findsNothing);
+      expect(tester.takeException(), isNull);
+      verifyZeroInteractions(api);
+      semantics.dispose();
+    },
+  );
 
   testWidgets(
     'expired notification session shows account entry without retry',

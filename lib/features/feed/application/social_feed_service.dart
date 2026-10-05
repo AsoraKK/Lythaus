@@ -38,46 +38,64 @@ class SocialFeedService implements SocialFeedRepository {
     String? cursor,
     String? token,
     Map<String, dynamic>? extraQuery,
+    FeedRequestCancellation? cancellation,
   }) async {
     return LythausTracer.traceOperation(
       'SocialFeedService.$operation',
       () async {
+        final dioCancellation = cancellation == null ? null : CancelToken();
+        final removeCancellationListener = dioCancellation == null
+            ? null
+            : cancellation!.addListener(
+                () => dioCancellation.cancel('feed_search_cancelled'),
+              );
         final queryParameters = <String, dynamic>{
           'limit': limit,
           if (cursor != null) 'cursor': cursor,
           if (extraQuery != null) ...extraQuery,
         };
-
-        final response = await _dio.get<Map<String, dynamic>>(
-          urlPath,
-          queryParameters: queryParameters,
-          options: Options(
+        try {
+          final options = Options(
             headers: token != null ? {'Authorization': 'Bearer $token'} : null,
-          ),
-        );
-
-        final data = response.data;
-        if (data == null) {
-          throw const SocialFeedException(
-            'Invalid feed response',
-            code: 'INVALID_RESPONSE',
           );
+          final response = dioCancellation == null
+              ? await _dio.get<Map<String, dynamic>>(
+                  urlPath,
+                  queryParameters: queryParameters,
+                  options: options,
+                )
+              : await _dio.get<Map<String, dynamic>>(
+                  urlPath,
+                  queryParameters: queryParameters,
+                  cancelToken: dioCancellation,
+                  options: options,
+                );
+
+          final data = response.data;
+          if (data == null) {
+            throw const SocialFeedException(
+              'Invalid feed response',
+              code: 'INVALID_RESPONSE',
+            );
+          }
+
+          final payload = _unwrapEnvelope(data);
+          final rawItems = payload['items'] ?? payload['posts'];
+          final posts =
+              (rawItems as List<dynamic>?)
+                  ?.whereType<Map<Object?, Object?>>()
+                  .map((item) => Post.fromJson(Map<String, dynamic>.from(item)))
+                  .toList() ??
+              [];
+
+          return FeedResponse.fromCursor(
+            posts: posts,
+            nextCursor: _nextCursor(payload),
+            limit: limit,
+          );
+        } finally {
+          removeCancellationListener?.call();
         }
-
-        final payload = _unwrapEnvelope(data);
-        final rawItems = payload['items'] ?? payload['posts'];
-        final posts =
-            (rawItems as List<dynamic>?)
-                ?.whereType<Map<Object?, Object?>>()
-                .map((item) => Post.fromJson(Map<String, dynamic>.from(item)))
-                .toList() ??
-            [];
-
-        return FeedResponse.fromCursor(
-          posts: posts,
-          nextCursor: _nextCursor(payload),
-          limit: limit,
-        );
       },
       attributes: () {
         final attrs =
@@ -101,6 +119,8 @@ class SocialFeedService implements SocialFeedRepository {
     String? cursor,
     int limit = 25,
     String? token,
+    String? tag,
+    FeedRequestCancellation? cancellation,
   }) {
     return _fetchCursorFeed(
       operation: 'getDiscoverFeed',
@@ -108,6 +128,8 @@ class SocialFeedService implements SocialFeedRepository {
       cursor: cursor,
       limit: limit,
       token: token,
+      extraQuery: tag == null ? null : {'tag': tag},
+      cancellation: cancellation,
     );
   }
 
@@ -600,6 +622,8 @@ class SocialFeedService implements SocialFeedRepository {
       if (data is Map<String, dynamic>) {
         if (data['code'] is String) {
           code = data['code'] as String;
+        } else if (data['error'] is String) {
+          code = data['error'] as String;
         } else if (data['error'] is Map<String, dynamic>) {
           final nested = data['error'] as Map<String, dynamic>;
           if (nested['code'] is String) {
@@ -621,6 +645,27 @@ class SocialFeedService implements SocialFeedRepository {
         throw SocialFeedException(
           'This feed is not available.',
           code: 'FEED_UNAVAILABLE',
+          originalError: error,
+        );
+      }
+      if (code == 'tag_search_unavailable') {
+        throw SocialFeedException(
+          'Tag search is temporarily unavailable.',
+          code: code,
+          originalError: error,
+        );
+      }
+      if (code == 'rate_limit_exceeded') {
+        throw SocialFeedException(
+          'Please wait before searching again.',
+          code: code,
+          originalError: error,
+        );
+      }
+      if (code == 'invalid_tag_search') {
+        throw SocialFeedException(
+          'Enter a valid tag.',
+          code: code,
           originalError: error,
         );
       }
