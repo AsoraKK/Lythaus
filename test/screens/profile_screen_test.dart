@@ -139,6 +139,11 @@ void main() {
     expect(find.text('Founding member'), findsNothing);
     expect(find.text('Reputation'), findsNothing);
     expect(find.text('Moderation hub'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('Settings'),
+      280,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Settings'), findsOneWidget);
   });
 

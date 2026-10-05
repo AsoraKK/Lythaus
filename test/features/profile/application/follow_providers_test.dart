@@ -34,9 +34,12 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
+    final provider = followStatusProvider('u1');
+    final subscription = container.listen(provider, (_, _) {});
+    addTearDown(subscription.close);
 
     await expectLater(
-      container.read(followStatusProvider('u1').future),
+      container.read(provider.future),
       throwsA(isA<Exception>()),
     );
   });
@@ -61,8 +64,11 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
+    final provider = followStatusProvider('u1');
+    final subscription = container.listen(provider, (_, _) {});
+    addTearDown(subscription.close);
 
-    final status = await container.read(followStatusProvider('u1').future);
+    final status = await container.read(provider.future);
     expect(status.following, isTrue);
     expect(status.followedBy, isTrue);
   });

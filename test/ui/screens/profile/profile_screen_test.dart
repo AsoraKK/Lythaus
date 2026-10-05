@@ -128,6 +128,14 @@ OwnerProfile _ownerProfile(PublicUser user) => OwnerProfile(
   publicVisibility: true,
 );
 
+Future<void> _scrollTo(WidgetTester tester, Finder target) async {
+  await tester.scrollUntilVisible(
+    target,
+    280,
+    scrollable: find.byType(Scrollable).first,
+  );
+}
+
 void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
@@ -367,6 +375,7 @@ void main() {
       expect(find.text('Editor'), findsNothing);
       expect(find.text('Moderation hub'), findsNothing);
       expect(find.text('Control Panel'), findsNothing);
+      await _scrollTo(tester, find.text('Settings'));
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('Reputation'), findsNothing);
     });
@@ -393,6 +402,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
+      await _scrollTo(tester, find.text('Moderation hub'));
       expect(find.text('Moderation hub'), findsOneWidget);
       expect(find.text('Control Panel'), findsNothing);
       expect(find.text('Reputation'), findsNothing);
@@ -449,15 +459,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.ensureVisible(find.text('Edit profile'));
-      await tester.tap(find.text('Edit profile'));
+      final completeProfile = find.text('Complete your profile');
+      await _scrollTo(tester, completeProfile);
+      await tester.tap(completeProfile);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Edit profile'), findsAtLeastNWidgets(1));
       await tester.pageBack();
       await tester.pumpAndSettle();
 
-      await tester.ensureVisible(find.text('Settings'));
+      await _scrollTo(tester, find.text('Settings'));
       await tester.tap(find.text('Settings'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
