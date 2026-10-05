@@ -518,10 +518,10 @@ class _ReputationStateBadge extends ConsumerWidget {
         state: state,
         size: compact ? ReputationBadgeSize.small : ReputationBadgeSize.medium,
         // The full server-issued level name is available from the badge's
-        // tooltip and semantics label. Keep the visible chip compact on very
-        // narrow layouts or with large text so it cannot push the profile
-        // column off-screen.
+        // tooltip and semantics label. Keep the visible chip compact and wrap
+        // its label on narrow layouts or with large text.
         showLabel: !compact,
+        wrapLabel: compact,
       ),
       loading: () => Semantics(
         label: 'Loading reputation',
