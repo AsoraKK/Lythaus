@@ -5,9 +5,11 @@ import { adminRequest } from '../api/adminApi.js';
 
 vi.mock('../api/adminApi.js', () => ({ adminRequest: vi.fn() }));
 
+const waitlistId = '01900000-0000-7000-8000-000000000001';
+
 const firstPage = {
   items: [{
-    id: '01900000-0000-7000-8000-000000000001',
+    id: waitlistId,
     email: 'person@example.com',
     status: 'waiting',
     source: 'lythaus.co',
@@ -18,12 +20,23 @@ const firstPage = {
   summary: { totalWaiting: 123, last7Days: 18 }
 };
 
+function ownerDenied() {
+  return Promise.reject(Object.assign(new Error('Denied'), { status: 403 }));
+}
+
+function emptyPage() {
+  return { items: [], nextCursor: null, summary: { totalWaiting: 0, last7Days: 0, last24Hours: 0 } };
+}
+
 describe('Waitlist', () => {
-  beforeEach(() => adminRequest.mockReset());
+  beforeEach(() => {
+    adminRequest.mockReset();
+    adminRequest.mockImplementation((path) => path === 'account-support/access' ? ownerDenied() : Promise.resolve(emptyPage()));
+  });
 
   it('shows loading before rendering any PII, then renders summary and table', async () => {
     let resolveRequest;
-    adminRequest.mockReturnValue(new Promise((resolve) => { resolveRequest = resolve; }));
+    adminRequest.mockImplementation((path) => path === 'account-support/access' ? ownerDenied() : new Promise((resolve) => { resolveRequest = resolve; }));
     render(<Waitlist />);
     expect(screen.getByText('Loading waitlist...')).toBeInTheDocument();
     expect(screen.queryByText('person@example.com')).not.toBeInTheDocument();
@@ -44,20 +57,24 @@ describe('Waitlist', () => {
   });
 
   it('renders a safe API error state', async () => {
-    adminRequest.mockResolvedValue({ error: 'database stack detail' });
+    adminRequest.mockImplementation((path) => path === 'account-support/access' ? ownerDenied() : Promise.resolve({ error: 'database stack detail' }));
     render(<Waitlist />);
     expect(await screen.findByText('Waitlist data could not be loaded.')).toBeInTheDocument();
     expect(screen.queryByText('database stack detail')).not.toBeInTheDocument();
   });
 
   it('uses the opaque next cursor and appends the next page', async () => {
-    adminRequest
-      .mockResolvedValueOnce(firstPage)
-      .mockResolvedValueOnce({
+    let page = 0;
+    adminRequest.mockImplementation((path) => {
+      if (path === 'account-support/access') return ownerDenied();
+      if (path !== 'waitlist') return Promise.reject(new Error('Unexpected test route'));
+      page += 1;
+      return Promise.resolve(page === 1 ? firstPage : {
         items: [{ id: 'second', email: 'second@example.com', status: 'waiting', source: 'lythaus.co', createdAt: '2026-08-13T07:00:00.000Z', retentionHold: false }],
         nextCursor: null,
         summary: firstPage.summary
       });
+    });
     render(<Waitlist />);
     await screen.findByText('person@example.com');
     fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
@@ -66,10 +83,13 @@ describe('Waitlist', () => {
   });
 
   it('updates status and a retention hold without exposing implementation detail', async () => {
-    adminRequest
-      .mockResolvedValueOnce(firstPage)
-      .mockResolvedValueOnce({ id: firstPage.items[0].id, status: 'invited' })
-      .mockResolvedValueOnce({ id: firstPage.items[0].id, retentionHold: true });
+    adminRequest.mockImplementation((path) => {
+      if (path === 'account-support/access') return ownerDenied();
+      if (path === 'waitlist') return Promise.resolve(firstPage);
+      if (path.endsWith('/status')) return Promise.resolve({ id: firstPage.items[0].id, status: 'invited' });
+      if (path.endsWith('/retention-hold')) return Promise.resolve({ id: firstPage.items[0].id, retentionHold: true });
+      return Promise.reject(new Error('Unexpected test route'));
+    });
     render(<Waitlist />);
     await screen.findByText('person@example.com');
     fireEvent.change(screen.getByLabelText('Update waitlist status for person@example.com'), { target: { value: 'invited' } });
@@ -82,11 +102,81 @@ describe('Waitlist', () => {
     fireEvent.change(screen.getByLabelText('Waitlist confirmation'), { target: { value: 'PLACE RETENTION HOLD' } });
     fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Release hold' })).toBeInTheDocument());
-    expect(adminRequest).toHaveBeenNthCalledWith(2, `waitlist/${firstPage.items[0].id}/status`, {
+    expect(adminRequest).toHaveBeenCalledWith(`waitlist/${firstPage.items[0].id}/status`, {
       method: 'POST', body: { status: 'invited', reasonCode: 'BETA_INVITE', confirmation: 'UPDATE WAITLIST STATUS' }
     });
-    expect(adminRequest).toHaveBeenNthCalledWith(3, `waitlist/${firstPage.items[0].id}/retention-hold`, {
+    expect(adminRequest).toHaveBeenCalledWith(`waitlist/${firstPage.items[0].id}/retention-hold`, {
       method: 'POST', body: { active: true, reasonCode: 'RETENTION_REVIEW', confirmation: 'PLACE RETENTION HOLD' }
     });
+  });
+
+  it('searches an exact email through the bounded Worker filter', async () => {
+    let call = 0;
+    adminRequest.mockImplementation((path) => {
+      if (path === 'account-support/access') return ownerDenied();
+      if (path !== 'waitlist') return Promise.reject(new Error('Unexpected test route'));
+      call += 1;
+      return Promise.resolve(call === 1 ? emptyPage() : firstPage);
+    });
+    render(<Waitlist />);
+    await screen.findByText('No waitlist signups yet');
+    fireEvent.change(screen.getByLabelText('Search waitlist by exact email'), { target: { value: 'person@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
+    await screen.findByText('person@example.com');
+    expect(adminRequest).toHaveBeenLastCalledWith('waitlist', { query: { q: 'person@example.com', status: '', source: '', createdAfter: '', createdBefore: '', limit: 50, cursor: null } });
+  });
+
+  it('checks an existing account only through owner support and keeps the result read-only', async () => {
+    adminRequest.mockImplementation((path) => {
+      if (path === 'account-support/access') return Promise.resolve({ available: true });
+      if (path === 'waitlist') return Promise.resolve(firstPage);
+      if (path === 'account-support/lookup') return Promise.resolve({ state: 'found', account: { id: 'account-id', status: 'active' } });
+      return Promise.reject(new Error('Unexpected test route'));
+    });
+    render(<Waitlist />);
+    await screen.findByText('person@example.com');
+    fireEvent.click(screen.getByRole('button', { name: 'Check existing account for person@example.com' }));
+    expect(await screen.findByText('Existing account · active')).toBeInTheDocument();
+    expect(adminRequest).toHaveBeenCalledWith('account-support/lookup', { method: 'POST', body: { email: 'person@example.com', reasonCode: 'SUPPORT_REQUEST' } });
+    expect(screen.getAllByText(/never merge identities/i).length).toBeGreaterThan(0);
+  });
+
+  it('distinguishes an admin access denial from an empty waitlist', async () => {
+    adminRequest.mockImplementation((path) => path === 'account-support/access' ? ownerDenied() : Promise.reject(Object.assign(new Error('Denied'), { status: 403 })));
+    render(<Waitlist />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Administrator access is required');
+    expect(screen.queryByText('No waitlist signups yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('person@example.com')).not.toBeInTheDocument();
+  });
+
+  it('explains how to narrow an exact search that reaches the scan limit', async () => {
+    let requests = 0;
+    adminRequest.mockImplementation((path) => {
+      if (path === 'account-support/access') return ownerDenied();
+      requests += 1;
+      return requests === 1 ? Promise.resolve(emptyPage()) : Promise.reject(Object.assign(new Error('limit'), { status: 422, payload: { error: 'waitlist_search_limit_exceeded' } }));
+    });
+    render(<Waitlist />);
+    await screen.findByText('No waitlist signups yet');
+    fireEvent.change(screen.getByLabelText('Search waitlist by exact email'), { target: { value: 'missing@example.invalid' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('This exact-email search reached the 1,000-contact scan limit. Narrow the status, source, or date filters and try again.');
+  });
+
+  it('describes the delete route as a retention-aware unsubscribe request', async () => {
+    adminRequest.mockImplementation((path) => {
+      if (path === 'account-support/access') return ownerDenied();
+      if (path === 'waitlist') return Promise.resolve(firstPage);
+      if (path === `waitlist/${waitlistId}`) return Promise.resolve({ purgeBlockedByRetentionHold: true });
+      return Promise.reject(new Error('Unexpected test route'));
+    });
+    render(<Waitlist />);
+    await screen.findByText('person@example.com');
+    fireEvent.click(screen.getByRole('button', { name: 'Unsubscribe + request purge' }));
+    fireEvent.change(screen.getByLabelText('Waitlist reason code'), { target: { value: 'RETENTION_REVIEW' } });
+    fireEvent.change(screen.getByLabelText('Waitlist confirmation'), { target: { value: `UNSUBSCRIBE AND REQUEST PURGE ${waitlistId}` } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Purge is blocked by the active retention hold');
+    expect(adminRequest).toHaveBeenCalledWith(`waitlist/${waitlistId}`, expect.objectContaining({ method: 'DELETE', body: expect.objectContaining({ confirmation: `UNSUBSCRIBE AND REQUEST PURGE ${waitlistId}` }) }));
   });
 });

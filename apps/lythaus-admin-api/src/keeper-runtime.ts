@@ -2,7 +2,7 @@ import { query, transaction, type DatabaseClient, type HyperdriveBinding } from 
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { encodeCursor } from '@lythaus/contracts';
 import { json } from '@lythaus/observability';
-import { decryptField, encryptField, hmacLookup, uuidv7 } from '@lythaus/security';
+import { encryptField, hmacLookup, uuidv7 } from '@lythaus/security';
 import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, requireWaitlistEncryptionKey } from './waitlist-runtime-policy.ts';
 import { readBoundedJson } from './request-body-policy.ts';
 import {
@@ -35,13 +35,9 @@ interface UserRecord {
   handle: string | null;
   status: string;
   created_at: string | Date;
+  cursor_timestamp?: string;
   updated_at: string | Date;
   deleted_at: string | Date | null;
-  email_ciphertext: string | null;
-  encryption_key_version: string | null;
-  verified_at: string | Date | null;
-  email_status: string | null;
-  source: string | null;
   last_login_at: string | Date | null;
   current_session_count: string | number;
   subscription_tier: string;
@@ -118,23 +114,12 @@ function mutationHeaders(correlation: string): HeadersInit {
   return { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' };
 }
 
-async function decryptEmail(row: Pick<UserRecord, 'email_ciphertext' | 'encryption_key_version'>, env: KeeperEnv): Promise<string | null> {
-  if (!row.email_ciphertext || !row.encryption_key_version) return null;
-  if (!env.PII_ENCRYPTION_KEY_V1) throw new Error('auth_data_unavailable');
-  return decryptField({ ciphertext: row.email_ciphertext, encryptionKeyVersion: row.encryption_key_version }, env.PII_ENCRYPTION_KEY_V1);
-}
-
-function userOutput(row: UserRecord, email: string | null): Record<string, unknown> {
+function userOutput(row: UserRecord): Record<string, unknown> {
   return {
     id: row.id,
-    email,
     displayName: row.display_name,
     handle: row.handle,
     status: row.status,
-    verificationState: row.verified_at ? 'verified' : 'pending_verification',
-    verifiedAt: iso(row.verified_at),
-    emailStatus: row.email_status ?? null,
-    source: row.source,
     subscriptionTier: row.subscription_tier,
     createdAt: iso(row.created_at),
     updatedAt: iso(row.updated_at),
@@ -144,39 +129,24 @@ function userOutput(row: UserRecord, email: string | null): Record<string, unkno
   };
 }
 
-function userQuery(page: AdminUserPageRequest, env: KeeperEnv): { sql: string; values: unknown[] } {
+function userQuery(page: AdminUserPageRequest): { sql: string; values: unknown[] } {
   const values: unknown[] = [];
   const conditions = ['1 = 1'];
   const add = (value: unknown): string => { values.push(value); return `$${values.length}`; };
   if (page.query) {
-    if (page.query.includes('@')) {
-      const keys = requireAuthData(env);
-      conditions.push(`COALESCE(c.email_lookup_hmac, e.email_lookup_hmac) = decode(${add(hmacLookup(page.query, keys.hmacKey))}, 'base64')`);
-    } else {
-      const pattern = `%${page.query.toLowerCase()}%`;
-      const parameter = add(pattern);
-      conditions.push(`(u.id::text = ${parameter} OR lower(u.display_name) LIKE ${parameter} OR lower(h.handle_normalized) LIKE ${parameter})`);
-    }
+    const parameter = add(page.query);
+    conditions.push(`(u.id::text = ${parameter} OR strpos(lower(u.display_name), ${parameter}) > 0 OR strpos(lower(h.handle_normalized), ${parameter}) > 0)`);
   }
-  if (page.status === 'verified') conditions.push('COALESCE(c.verified_at, e.verified_at) IS NOT NULL');
-  if (page.status === 'pending_verification') conditions.push('COALESCE(c.verified_at, e.verified_at) IS NULL');
-  if (page.status && !['verified', 'pending_verification'].includes(page.status)) conditions.push(`u.status = ${add(page.status)}`);
-  if (page.source) {
-    const sourceParameter = add(page.source);
-    conditions.push(`(EXISTS (SELECT 1 FROM identity.provider_links source_link WHERE source_link.user_id = u.id AND source_link.provider = ${sourceParameter}) OR COALESCE(c.source_provider, CASE WHEN e.user_id IS NOT NULL THEN 'email' END) = ${sourceParameter})`);
-  }
+  if (page.status) conditions.push(`u.status = ${add(page.status)}`);
   if (page.createdAfter) conditions.push(`u.created_at >= ${add(page.createdAfter)}::timestamptz`);
   if (page.createdBefore) conditions.push(`u.created_at < ${add(page.createdBefore)}::timestamptz`);
   if (page.cursor) {
     conditions.push(`(u.created_at, u.id) < (${add(page.cursor.timestamp)}::timestamptz, ${add(page.cursor.id)}::uuid)`);
   }
   return {
-    sql: `SELECT u.id, u.display_name, h.handle, u.status, u.created_at, u.updated_at, u.deleted_at,
-                 convert_from(COALESCE(c.email_ciphertext, e.email_ciphertext), 'utf8') AS email_ciphertext,
-                 COALESCE(c.encryption_key_version, e.encryption_key_version) AS encryption_key_version,
-                 COALESCE(c.verified_at, e.verified_at) AS verified_at,
-                 email_delivery.email_status,
-                 COALESCE(source_link.provider, c.source_provider, CASE WHEN e.user_id IS NOT NULL THEN 'email' END) AS source,
+    sql: `SELECT u.id, u.display_name, h.handle, u.status, u.created_at,
+                 to_char(u.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_timestamp,
+                 u.updated_at, u.deleted_at,
                  COALESCE((SELECT max(event.created_at) FROM identity.account_events event
                            WHERE event.user_id = u.id AND event.event_type IN ('email_login', 'google_login')), u.created_at) AS last_login_at,
                  (SELECT count(*) FROM identity.auth_sessions session
@@ -184,16 +154,6 @@ function userQuery(page: AdminUserPageRequest, env: KeeperEnv): { sql: string; v
                  COALESCE(entitlement.subscription_tier, 'free') AS subscription_tier
             FROM identity.users u
             LEFT JOIN identity.handles h ON h.user_id = u.id
-            LEFT JOIN identity.contact_emails c ON c.user_id = u.id
-            LEFT JOIN identity.email_credentials e ON e.user_id = u.id
-            LEFT JOIN LATERAL (SELECT provider FROM identity.provider_links
-                                WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) source_link ON true
-            LEFT JOIN LATERAL (SELECT outbox.state AS email_status
-                                FROM system.transactional_email_outbox outbox
-                                INNER JOIN identity.email_verification_tokens challenge ON challenge.id = outbox.challenge_id
-                               WHERE challenge.user_id = u.id
-                                 AND outbox.purpose IN ('invite', 'verification')
-                               ORDER BY outbox.created_at DESC LIMIT 1) email_delivery ON true
             LEFT JOIN identity.user_entitlements entitlement ON entitlement.user_id = u.id
            WHERE ${conditions.join(' AND ')}
            ORDER BY u.created_at DESC, u.id DESC
@@ -202,20 +162,20 @@ function userQuery(page: AdminUserPageRequest, env: KeeperEnv): { sql: string; v
   };
 }
 
-export async function listAdminUsers(request: Request, env: KeeperEnv, actor: AdminActorLike, correlation: string): Promise<Response> {
+export async function listAdminUsers(request: Request, env: KeeperEnv, actor: AdminActorLike, correlation: string, runQuery: typeof query = query): Promise<Response> {
   requireKeeperAdmin(actor);
   const page = adminUserPageRequest(new URL(request.url));
-  const built = userQuery(page, env);
-  const result = await query<UserRecord>(env.DB_ADMIN_FRESH, built.sql, built.values);
+  const built = userQuery(page);
+  const result = await runQuery<UserRecord>(env.DB_ADMIN_FRESH, built.sql, built.values);
   const hasMore = result.rows.length > page.limit;
   const rows = result.rows.slice(0, page.limit);
-  const items = await Promise.all(rows.map(async (row: UserRecord) => userOutput(row, await decryptEmail(row, env))));
+  const items = rows.map((row: UserRecord) => userOutput(row));
   const tail = rows.at(-1);
-  await query(env.DB_ADMIN_FRESH,
+  await runQuery(env.DB_ADMIN_FRESH,
     `INSERT INTO system.audit_events (id, actor_id, action, target_type, reason_code, correlation_id, metadata)
      VALUES ($1, $2, 'identity.users_viewed', 'user_collection', 'USERS_LIST_VIEW', $3, $4::jsonb)`,
     [uuidv7(), actor.userId, correlation, JSON.stringify({ returnedRowCount: items.length, requestedLimit: page.limit, hasCursor: Boolean(page.cursor), hasMore })]);
-  return json({ items, nextCursor: hasMore && tail ? encodeCursor({ timestamp: new Date(tail.created_at).toISOString(), id: tail.id }) : null }, { headers: mutationHeaders(correlation) });
+  return json({ items, nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.cursor_timestamp!, id: tail.id }) : null }, { headers: mutationHeaders(correlation) });
 }
 
 export async function getAdminUser(_request: Request, env: KeeperEnv, actor: AdminActorLike, rawUserId: string, correlation: string): Promise<Response> {
@@ -223,72 +183,27 @@ export async function getAdminUser(_request: Request, env: KeeperEnv, actor: Adm
   const userId = parseAdminUserId(rawUserId);
   const result = await query<UserRecord>(env.DB_ADMIN_FRESH,
     `SELECT u.id, u.display_name, h.handle, u.status, u.created_at, u.updated_at, u.deleted_at,
-            convert_from(COALESCE(c.email_ciphertext, e.email_ciphertext), 'utf8') AS email_ciphertext,
-            COALESCE(c.encryption_key_version, e.encryption_key_version) AS encryption_key_version,
-            COALESCE(c.verified_at, e.verified_at) AS verified_at,
-            email_delivery.email_status,
-            COALESCE(pl.provider, c.source_provider, CASE WHEN e.user_id IS NOT NULL THEN 'email' END) AS source,
             COALESCE((SELECT max(event.created_at) FROM identity.account_events event WHERE event.user_id = u.id AND event.event_type IN ('email_login', 'google_login')), u.created_at) AS last_login_at,
             (SELECT count(*) FROM identity.auth_sessions session WHERE session.user_id = u.id AND session.revoked_at IS NULL AND session.expires_at > now()) AS current_session_count,
             COALESCE(entitlement.subscription_tier, 'free') AS subscription_tier
        FROM identity.users u
        LEFT JOIN identity.handles h ON h.user_id = u.id
-       LEFT JOIN identity.contact_emails c ON c.user_id = u.id
-       LEFT JOIN identity.email_credentials e ON e.user_id = u.id
-       LEFT JOIN LATERAL (SELECT provider FROM identity.provider_links WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) pl ON true
-       LEFT JOIN LATERAL (SELECT outbox.state AS email_status
-                            FROM system.transactional_email_outbox outbox
-                            INNER JOIN identity.email_verification_tokens challenge ON challenge.id = outbox.challenge_id
-                           WHERE challenge.user_id = u.id
-                             AND outbox.purpose IN ('invite', 'verification')
-                           ORDER BY outbox.created_at DESC LIMIT 1) email_delivery ON true
        LEFT JOIN identity.user_entitlements entitlement ON entitlement.user_id = u.id
       WHERE u.id = $1`, [userId]);
   const row = result.rows[0];
   if (!row) throw new Error('user_not_found');
-  const [email, activity] = await Promise.all([
-    decryptEmail(row, env),
-    query<{ event_type: string; created_at: string | Date }>(env.DB_ADMIN_FRESH,
-      `SELECT event_type, created_at FROM identity.account_events WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`, [userId]),
-  ]);
   await query(env.DB_ADMIN_FRESH,
     `INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id)
      VALUES ($1, $2, 'identity.user_viewed', 'user', $3, 'USER_DETAIL_VIEW', $4)`,
     [uuidv7(), actor.userId, userId, correlation]);
   return json({
-    user: userOutput(row, email),
-    activity: activity.rows.map((event) => ({ eventType: event.event_type, occurredAt: iso(event.created_at) })),
+    user: userOutput(row),
   }, { headers: mutationHeaders(correlation) });
 }
 
-export async function patchAdminUser(request: Request, env: KeeperEnv, actor: AdminActorLike, rawUserId: string, correlation: string): Promise<Response> {
+export async function patchAdminUser(_request: Request, _env: KeeperEnv, actor: AdminActorLike, _rawUserId: string, _correlation: string): Promise<Response> {
   requireKeeperAdmin(actor);
-  const userId = parseAdminUserId(rawUserId);
-  const input = objectBody(await readBoundedJson(request));
-  rejectUnknownFields(input, ['displayName', 'handle', 'reasonCode', 'confirmation']);
-  const reasonCode = parseReasonCode(input.reasonCode);
-  requireConfirmation(input.confirmation, 'UPDATE PROFILE');
-  if (input.email !== undefined) throw new Error('email_change_requires_public_flow');
-  const displayName = input.displayName === undefined ? undefined : parseDisplayName(input.displayName);
-  const handle = input.handle === undefined ? undefined : parseHandle(input.handle);
-  if (displayName === undefined && handle === undefined) throw new Error('unknown_field');
-  const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
-    const current = await client.query<{ display_name: string; handle: string | null }>(
-      `SELECT u.display_name, h.handle FROM identity.users u LEFT JOIN identity.handles h ON h.user_id = u.id WHERE u.id = $1 FOR UPDATE`, [userId]);
-    if (!current.rows[0]) throw new Error('user_not_found');
-    const before = current.rows[0];
-    if (displayName !== undefined) await client.query(`UPDATE identity.users SET display_name = $1, updated_at = now() WHERE id = $2`, [displayName, userId]);
-    if (handle !== undefined) await client.query(
-      `INSERT INTO identity.handles (user_id, handle, handle_normalized) VALUES ($1, $2, lower($2))
-       ON CONFLICT (user_id) DO UPDATE SET handle = EXCLUDED.handle, handle_normalized = EXCLUDED.handle_normalized, updated_at = now()`, [userId, handle]);
-    const after = { displayName: displayName ?? before.display_name, handle: handle ?? before.handle };
-    await client.query(
-      `INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
-       VALUES ($1, $2, 'identity.user_profile_changed', 'user', $3, $4, $5, $6::jsonb)`,
-      [uuidv7(), actor.userId, userId, reasonCode, correlation, JSON.stringify({ before: { displayName: before.display_name, handle: before.handle }, after })]);
-    return after;
-  });
-  return json({ userId, ...result }, { headers: mutationHeaders(correlation) });
+  throw new Error('profile_editing_unavailable');
 }
 
 export async function inviteAdminUser(request: Request, env: KeeperEnv, actor: AdminActorLike, correlation: string): Promise<Response> {
@@ -476,7 +391,7 @@ export async function deleteWaitlistEntry(request: Request, env: KeeperEnv, acto
   const input = objectBody(await readBoundedJson(request));
   rejectUnknownFields(input, ['reasonCode', 'confirmation']);
   const reasonCode = parseReasonCode(input.reasonCode);
-  requireConfirmation(input.confirmation, `DELETE WAITLIST ${id}`);
+  requireConfirmation(input.confirmation, `UNSUBSCRIBE AND REQUEST PURGE ${id}`);
   const idempotencyScope = `admin.waitlist.delete:${id}`;
   const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
     const replay = await claimKeeperIdempotency(client, idempotencyScope, idempotencyKey, actor.userId);
@@ -485,7 +400,7 @@ export async function deleteWaitlistEntry(request: Request, env: KeeperEnv, acto
     if (!current.rows[0]) throw new Error('waitlist_not_found');
     await client.query(`UPDATE marketing.waitlist_signups SET status = 'unsubscribed', unsubscribed_at = COALESCE(unsubscribed_at, now()), purge_after = CASE WHEN retention_hold THEN purge_after ELSE LEAST(purge_after, now() + interval '30 days') END, updated_at = now() WHERE id = $1`, [id]);
     const response = { id, status: 'unsubscribed', purgeBlockedByRetentionHold: current.rows[0].retention_hold };
-    await client.query(`INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata) VALUES ($1, $2, 'marketing.waitlist_deleted', 'marketing.waitlist', $3, $4, $5, $6::jsonb)`, [uuidv7(), actor.userId, id, reasonCode, correlation, JSON.stringify({ previousStatus: current.rows[0].status, retentionHold: current.rows[0].retention_hold })]);
+    await client.query(`INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata) VALUES ($1, $2, 'marketing.waitlist_unsubscribe_requested', 'marketing.waitlist', $3, $4, $5, $6::jsonb)`, [uuidv7(), actor.userId, id, reasonCode, correlation, JSON.stringify({ previousStatus: current.rows[0].status, retentionHold: current.rows[0].retention_hold })]);
     await finalizeKeeperIdempotency(client, idempotencyScope, idempotencyKey, actor.userId, response);
     return response;
   });

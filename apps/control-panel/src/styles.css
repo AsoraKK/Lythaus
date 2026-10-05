@@ -539,6 +539,20 @@ a {
   gap: 10px;
 }
 
+.users-data-table {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.users-data-table .data-row {
+  min-width: 760px;
+  grid-template-columns: minmax(190px, 1.5fr) minmax(100px, .8fr) minmax(130px, 1fr) minmax(120px, .9fr) minmax(90px, .6fr) minmax(90px, .6fr);
+}
+
+.user-account-id {
+  overflow-wrap: anywhere;
+}
+
 .data-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -771,7 +785,7 @@ textarea.lyth-input {
 
 .waitlist-table {
   width: 100%;
-  min-width: 860px;
+  min-width: 1020px;
   border-collapse: collapse;
   text-align: left;
 }
@@ -821,6 +835,7 @@ textarea.lyth-input {
 .waitlist-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 

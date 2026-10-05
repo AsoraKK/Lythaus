@@ -6,6 +6,7 @@ export interface WaitlistPageRequest {
 }
 
 export type WaitlistStatus = 'invited' | 'converted' | 'unsubscribed';
+export const WAITLIST_SEARCH_MAX_CANDIDATES = 1000;
 
 const WAITLIST_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const WAITLIST_STATUSES = new Set<WaitlistStatus>(['invited', 'converted', 'unsubscribed']);

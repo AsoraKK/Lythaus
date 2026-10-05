@@ -15,7 +15,7 @@ import { triageCommunityAppeal } from '../../../packages/db/src/community-appeal
 import { communityTriageQueue, readCommunityTriageEvidence } from '../../../packages/db/src/community-appeal-access.ts';
 import { handleMonthlyContextReview } from './monthly-context-review.ts';
 import { appealOutcomeAuditPlan, assertActionableModerationCase, evaluateAppealFromRecords, parseAppealAdjudicationRequest, type AppealAdjudicationRecord, type AppealVoteRecord } from './runtime-policy.ts';
-import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, parseWaitlistRetentionHoldUpdate, parseWaitlistStatusUpdate, requireWaitlistEncryptionKey, waitlistAuditMetadata, waitlistPageRequest } from './waitlist-runtime-policy.ts';
+import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, parseWaitlistRetentionHoldUpdate, parseWaitlistStatusUpdate, requireWaitlistEncryptionKey, waitlistAuditMetadata, waitlistPageRequest, WAITLIST_SEARCH_MAX_CANDIDATES } from './waitlist-runtime-policy.ts';
 import {
   createWaitlistEntry,
   deleteWaitlistEntry,
@@ -72,7 +72,7 @@ const ADMIN_ERROR_CODES = new Set([
   'invalid_waitlist_search', 'invalid_waitlist_source', 'legal_hold_not_found',
   'moderation_case_already_resolved', 'moderation_case_not_found', 'moderation_declaration_missing',
   'moderation_case_superseded', 'rate_limit_exceeded', 'reason_code_required',
-  'request_too_large', 'reviewer_qualification_state_invalid', 'unknown_field', 'user_email_exists', 'user_not_found', 'waitlist_duplicate', 'waitlist_not_found', 'waitlist_status_transition_invalid', 'waitlist_unavailable',
+  'profile_editing_unavailable', 'request_too_large', 'reviewer_qualification_state_invalid', 'unknown_field', 'user_email_exists', 'user_not_found', 'waitlist_duplicate', 'waitlist_not_found', 'waitlist_search_limit_exceeded', 'waitlist_status_transition_invalid', 'waitlist_unavailable',
 ]);
 
 function adminError(error: unknown): { exposedCode: string; internalCode: string; status: number } {
@@ -82,12 +82,13 @@ function adminError(error: unknown): { exposedCode: string; internalCode: string
     : ['access_verification_not_configured', 'admin_subject_key_not_configured', 'waitlist_unavailable', 'account_support_unavailable', 'overview_unavailable'].includes(exposedCode) ? 503
     : ['access_required', 'access_assertion_invalid', 'access_subject_missing'].includes(exposedCode) ? 401
       : ['auth_data_unavailable', 'auth_email_dispatch_unavailable'].includes(exposedCode) ? 503
-        : ['admin_role_required', 'admin_mutation_origin_invalid', 'account_support_owner_required', 'overview_owner_required', 'community_appeal_triage_not_allowed', 'monthly_context_actor_not_allowed', 'appeal_adjudication_list_forbidden'].includes(exposedCode) ? 403
+        : ['admin_role_required', 'admin_mutation_origin_invalid', 'account_support_owner_required', 'overview_owner_required', 'community_appeal_triage_not_allowed', 'monthly_context_actor_not_allowed', 'appeal_adjudication_list_forbidden', 'profile_editing_unavailable'].includes(exposedCode) ? 403
           : ['community_appeals_unavailable', 'monthly_context_unavailable'].includes(exposedCode) ? 503
             : ['community_appeal_state_conflict', 'monthly_context_idempotency_reused', 'monthly_context_revision_conflict', 'monthly_context_rules_locked', 'monthly_context_scope_changed'].includes(exposedCode) ? 409
           : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
               : ['appeal_adjudication_locked', 'appeal_already_resolved', 'email_already_verified', 'idempotency_in_progress', 'idempotency_key_reused', 'moderation_case_already_resolved', 'moderation_case_superseded', 'moderation_declaration_missing', 'user_email_exists', 'waitlist_duplicate', 'waitlist_status_transition_invalid'].includes(exposedCode) ? 409
-              : exposedCode === 'request_too_large' ? 413
+              : exposedCode === 'waitlist_search_limit_exceeded' ? 422
+                : exposedCode === 'request_too_large' ? 413
                 : exposedCode === 'admin_mutation_content_type_invalid' ? 415
                 : exposedCode === 'rate_limit_exceeded' ? 429 : 400;
   return { exposedCode, internalCode, status };
@@ -147,74 +148,63 @@ interface WaitlistRow {
   status: string;
   source: string;
   created_at: string | Date;
-  invited_at: string | Date | null;
-  converted_at: string | Date | null;
-  unsubscribed_at: string | Date | null;
+  cursor_timestamp: string;
   retention_hold: boolean;
-  linked_user_id?: string | null;
-  linked_user_status?: string | null;
 }
 
-async function listWaitlist(request: Request, env: Env, actor: AdminActor, correlation: string): Promise<Response> {
+export async function listWaitlist(request: Request, env: Env, actor: AdminActor, correlation: string, runQuery: typeof query = query): Promise<Response> {
   assertWaitlistAdminRole(actor.role);
   const encryptionKey = requireWaitlistEncryptionKey(env.PII_ENCRYPTION_KEY_V1);
-  const filters = adminWaitlistFilters(new URL(request.url));
-  const page = waitlistPageRequest(new URL(request.url));
+  const url = new URL(request.url);
+  const filters = adminWaitlistFilters(url);
+  const page = waitlistPageRequest(url);
+  if (filters.query && page.cursor) throw new Error('invalid_cursor');
   const values: unknown[] = [];
   const addValue = (value: unknown): string => { values.push(value); return `$${values.length}`; };
   const conditions = ['1 = 1'];
-  if (filters.query) {
-    if (!env.PII_HMAC_KEY_V1) throw new Error('waitlist_unavailable');
-    conditions.push(`w.email_lookup_hmac = decode(${addValue(hmacLookup(filters.query.toLowerCase(), env.PII_HMAC_KEY_V1))}, 'base64')`);
-  }
   if (filters.status) conditions.push(`w.status = ${addValue(filters.status)}`);
   if (filters.source) conditions.push(`w.source = ${addValue(filters.source)}`);
   if (filters.createdAfter) conditions.push(`w.created_at >= ${addValue(filters.createdAfter)}::timestamptz`);
   if (filters.createdBefore) conditions.push(`w.created_at < ${addValue(filters.createdBefore)}::timestamptz`);
   if (page.cursor) conditions.push(`(w.created_at, w.id) < (${addValue(page.cursor.timestamp)}::timestamptz, ${addValue(page.cursor.id)}::uuid)`);
-  const limitValue = addValue(page.limit + 1);
+  const limitValue = addValue(filters.query ? WAITLIST_SEARCH_MAX_CANDIDATES + 1 : page.limit + 1);
   const [records, summaryResult] = await Promise.all([
-    query<WaitlistRow>(env.DB_ADMIN_FRESH,
+    runQuery<WaitlistRow>(env.DB_ADMIN_FRESH,
       `SELECT w.id, convert_from(w.email_ciphertext, 'utf8') AS email_ciphertext,
-              w.encryption_key_version, w.status, w.source, w.created_at, w.invited_at, w.converted_at, w.unsubscribed_at, w.retention_hold,
-              linked_user.id AS linked_user_id, linked_user.status AS linked_user_status
+              w.encryption_key_version, w.status, w.source, w.created_at,
+              to_char(w.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_timestamp,
+              w.retention_hold
          FROM marketing.waitlist_signups w
-         LEFT JOIN LATERAL (
-           SELECT u.id, u.status FROM identity.users u
-           LEFT JOIN identity.contact_emails c ON c.user_id = u.id
-           LEFT JOIN identity.email_credentials e ON e.user_id = u.id
-           WHERE COALESCE(c.email_lookup_hmac, e.email_lookup_hmac) = w.email_lookup_hmac
-           LIMIT 1
-         ) linked_user ON true
         WHERE ${conditions.join(' AND ')}
         ORDER BY w.created_at DESC, w.id DESC
         LIMIT ${limitValue}`,
       values),
-    query<{ total_waiting: string; last_7_days: string; last_24_hours: string }>(env.DB_ADMIN_FRESH,
+    runQuery<{ total_waiting: string; last_7_days: string; last_24_hours: string }>(env.DB_ADMIN_FRESH,
       `SELECT count(id) FILTER (WHERE status = 'waiting')::text AS total_waiting,
               count(id) FILTER (WHERE created_at >= now() - interval '7 days')::text AS last_7_days,
               count(id) FILTER (WHERE created_at >= now() - interval '24 hours')::text AS last_24_hours
          FROM marketing.waitlist_signups`),
   ]);
-  const hasMore = records.rows.length > page.limit;
-  const selectedRows = records.rows.slice(0, page.limit);
+  const decryptedCandidates = filters.query ? await Promise.all(records.rows.slice(0, WAITLIST_SEARCH_MAX_CANDIDATES).map(async row => ({
+    row,
+    email: await decryptField({ ciphertext: row.email_ciphertext, encryptionKeyVersion: row.encryption_key_version }, encryptionKey),
+  }))) : null;
+  const searchMatch = decryptedCandidates?.find(candidate => candidate.email.normalize('NFKC').trim().toLowerCase() === filters.query);
+  if (filters.query && !searchMatch && records.rows.length > WAITLIST_SEARCH_MAX_CANDIDATES) throw new Error('waitlist_search_limit_exceeded');
+  const hasMore = filters.query ? false : records.rows.length > page.limit;
+  const selectedRows = filters.query ? (searchMatch ? [searchMatch.row] : []) : records.rows.slice(0, page.limit);
   const items = await Promise.all(selectedRows.map(async (row: WaitlistRow) => {
-    const item: Record<string, unknown> = {
+    return {
       id: row.id,
-      email: await decryptField({ ciphertext: row.email_ciphertext, encryptionKeyVersion: row.encryption_key_version }, encryptionKey),
+      email: searchMatch?.row.id === row.id ? searchMatch.email : await decryptField({ ciphertext: row.email_ciphertext, encryptionKeyVersion: row.encryption_key_version }, encryptionKey),
       status: row.status,
       source: row.source,
       createdAt: new Date(row.created_at).toISOString(),
-      invitedAt: row.invited_at ? new Date(row.invited_at).toISOString() : null,
-      convertedAt: row.converted_at ? new Date(row.converted_at).toISOString() : null,
-      unsubscribedAt: row.unsubscribed_at ? new Date(row.unsubscribed_at).toISOString() : null,
       retentionHold: row.retention_hold,
     };
-    if (row.linked_user_id) item.linkedAccount = { id: row.linked_user_id, status: row.linked_user_status };
-    return item;
   }));
   const tail = selectedRows.at(-1);
-  await query(env.DB_ADMIN_FRESH,
+  await runQuery(env.DB_ADMIN_FRESH,
     `INSERT INTO system.audit_events
        (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
      VALUES ($1, $2, 'marketing.waitlist_viewed', 'marketing.waitlist', NULL, 'WAITLIST_LIST_VIEW', $3, $4::jsonb)`,
@@ -226,7 +216,7 @@ async function listWaitlist(request: Request, env: Env, actor: AdminActor, corre
     }), hasSearch: Boolean(filters.query), statusFilter: filters.status, sourceFilter: filters.source })]);
   return json({
     items,
-    nextCursor: hasMore && tail ? encodeCursor({ timestamp: new Date(tail.created_at).toISOString(), id: tail.id }) : null,
+    nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.cursor_timestamp, id: tail.id }) : null,
     summary: {
       totalWaiting: Number(summaryResult.rows[0]?.total_waiting ?? 0),
       last7Days: Number(summaryResult.rows[0]?.last_7_days ?? 0),

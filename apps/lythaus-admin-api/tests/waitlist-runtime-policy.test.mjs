@@ -11,6 +11,7 @@ import {
   requireWaitlistEncryptionKey,
   waitlistAuditMetadata,
   waitlistPageRequest,
+  WAITLIST_SEARCH_MAX_CANDIDATES,
 } from '../src/waitlist-runtime-policy.ts';
 
 const cursor = { timestamp: '2026-08-14T07:00:00.000Z', id: '01900000-0000-7000-8000-000000000001' };
@@ -33,6 +34,7 @@ test('uses stable descending keyset pagination with default 50 and maximum 100',
 });
 
 test('requires only the PII decryption key and emits PII-free audit metadata', () => {
+  assert.equal(WAITLIST_SEARCH_MAX_CANDIDATES, 1000);
   assert.equal(requireWaitlistEncryptionKey('encryption-key'), 'encryption-key');
   assert.throws(() => requireWaitlistEncryptionKey(undefined), /waitlist_unavailable/);
   assert.deepEqual(waitlistAuditMetadata({ returnedRowCount: 50, requestedLimit: 50, hasCursor: true, hasMore: true }), {

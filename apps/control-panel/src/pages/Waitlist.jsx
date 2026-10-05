@@ -10,10 +10,11 @@ const WAITLIST_GUIDE = {
   title: 'Handling waitlist data',
   summary: 'This view contains identifiable email addresses submitted for Lythaus early access.',
   items: [
-    'Use search, status, and source filters before loading more records.',
+    'Email search matches the complete address exactly and checks no more than 1,000 contacts after the selected filters.',
     'Do not copy email addresses into tickets, chat, or operational logs.',
     'Every successful view and mutation is recorded in the administrator audit trail.',
-    'Deletion is a controlled unsubscribe and retention-aware purge request.'
+    'Unsubscribe records a retention-aware purge request; an active hold blocks purge.',
+    'Existing-account checks use the owner-only support lookup and never merge identities.'
   ],
   footnote: 'Cloudflare Access authentication and administrator membership are enforced by the admin API.'
 };
@@ -23,11 +24,15 @@ function Waitlist() {
   const [summary, setSummary] = useState({ totalWaiting: null, last7Days: null, last24Hours: null });
   const [nextCursor, setNextCursor] = useState(null);
   const [filters, setFilters] = useState({ q: '', status: '', source: '', createdAfter: '', createdBefore: '' });
+  const [appliedFilters, setAppliedFilters] = useState({ q: '', status: '', source: '', createdAfter: '', createdBefore: '' });
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
   const [actionMessage, setActionMessage] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
+  const [supportAccess, setSupportAccess] = useState('checking');
+  const [linkedAccounts, setLinkedAccounts] = useState({});
+  const [linkLookupBusyId, setLinkLookupBusyId] = useState(null);
   const [pendingAction, setPendingAction] = useState(null);
   const [reasonCode, setReasonCode] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -36,6 +41,7 @@ function Waitlist() {
 
   const loadWaitlist = useCallback(async ({ cursor = null, append = false } = {}) => {
     append ? setLoadingMore(true) : setLoading(true);
+    if (!append) { setLinkedAccounts({}); setAppliedFilters({ ...filters }); }
     setError('');
     try {
       const response = await adminRequest('waitlist', { query: { ...filters, limit: 50, cursor } });
@@ -43,9 +49,17 @@ function Waitlist() {
       setItems((current) => append ? [...current, ...response.items] : response.items);
       setSummary({ totalWaiting: Number(response.summary.totalWaiting ?? 0), last7Days: Number(response.summary.last7Days ?? 0), last24Hours: Number(response.summary.last24Hours ?? 0) });
       setNextCursor(response.nextCursor || null);
-    } catch {
-      if (!append) { setItems([]); setNextCursor(null); }
-      setError('Waitlist data could not be loaded.');
+    } catch (requestError) {
+      if (requestError.status === 401 || requestError.status === 403) {
+        setItems([]); setNextCursor(null); setSummary({ totalWaiting: null, last7Days: null, last24Hours: null });
+        setError(requestError.status === 403 ? 'Administrator access is required to view waitlist contacts.' : 'Sign in through approved admin access to view waitlist contacts.');
+      } else if (requestError.payload?.error === 'waitlist_search_limit_exceeded') {
+        setItems([]); setNextCursor(null);
+        setError('This exact-email search reached the 1,000-contact scan limit. Narrow the status, source, or date filters and try again.');
+      } else {
+        if (!append) { setItems([]); setNextCursor(null); }
+        setError('Waitlist data could not be loaded.');
+      }
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -53,6 +67,36 @@ function Waitlist() {
   }, [filters]);
 
   useEffect(() => { loadWaitlist(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    let active = true;
+    adminRequest('account-support/access').then((response) => {
+      if (active) setSupportAccess(response?.available === true ? 'ready' : 'unavailable');
+    }).catch((requestError) => {
+      if (active) setSupportAccess(requestError.status === 403 ? 'denied' : 'unavailable');
+    });
+    return () => { active = false; };
+  }, []);
+
+  const checkAccountLink = async (item) => {
+    if (supportAccess !== 'ready') return;
+    setLinkLookupBusyId(item.id);
+    setLinkedAccounts((current) => ({ ...current, [item.id]: { state: 'checking' } }));
+    try {
+      const response = await adminRequest('account-support/lookup', {
+        method: 'POST', body: { email: item.email, reasonCode: 'SUPPORT_REQUEST' },
+      });
+      setLinkedAccounts((current) => ({ ...current, [item.id]: {
+        state: response?.state,
+        status: response?.state === 'found' ? response.account?.status : null,
+      } }));
+    } catch (requestError) {
+      if (requestError.status === 401 || requestError.status === 403) setSupportAccess('denied');
+      setLinkedAccounts((current) => ({ ...current, [item.id]: { state: 'unavailable' } }));
+    } finally {
+      setLinkLookupBusyId(null);
+    }
+  };
 
   const beginAction = (item, operation, expected) => {
     setPendingAction({ item, operation, expected });
@@ -72,10 +116,14 @@ function Waitlist() {
     }
     setUpdatingId(item.id);
     setActionMessage('');
+    let resultMessage = 'Action recorded.';
     try {
       if (operation === 'status') {
         const response = await adminRequest(`waitlist/${encodeURIComponent(item.id)}/status`, { method: 'POST', body: { status: item.nextStatus, reasonCode: normalizedReason, confirmation } });
         setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, status: response.status } : entry));
+        if (item.nextStatus === 'unsubscribed') resultMessage = item.retentionHold
+          ? 'Unsubscribed. Purge is blocked by the active retention hold.'
+          : 'Unsubscribed. A retention-aware purge request was recorded.';
       } else if (operation === 'hold') {
         const response = await adminRequest(`waitlist/${encodeURIComponent(item.id)}/retention-hold`, { method: 'POST', body: { active: item.nextActive, reasonCode: normalizedReason, confirmation } });
         setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, retentionHold: response.retentionHold } : entry));
@@ -83,11 +131,15 @@ function Waitlist() {
         const response = await adminRequest(`waitlist/${encodeURIComponent(item.id)}`, { method: 'PATCH', body: { source: editSource, reasonCode: normalizedReason, confirmation } });
         setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, source: response.source } : entry));
       } else {
-        await adminRequest(`waitlist/${encodeURIComponent(item.id)}`, { method: 'DELETE', body: { reasonCode: normalizedReason, confirmation }, headers: { 'Idempotency-Key': idempotencyKey() } });
+        const response = await adminRequest(`waitlist/${encodeURIComponent(item.id)}`, { method: 'DELETE', body: { reasonCode: normalizedReason, confirmation }, headers: { 'Idempotency-Key': idempotencyKey() } });
         setItems((current) => current.filter((entry) => entry.id !== item.id));
+        setLinkedAccounts((current) => { const next = { ...current }; delete next[item.id]; return next; });
+        resultMessage = response?.purgeBlockedByRetentionHold
+          ? 'Unsubscribed. Purge is blocked by the active retention hold.'
+          : 'Unsubscribed. A retention-aware purge request was recorded.';
       }
       setPendingAction(null);
-      setActionMessage('Action recorded.');
+      setActionMessage(resultMessage);
       setUpdatingId(null);
     } catch {
       setActionMessage('The waitlist action could not be completed.');
@@ -121,8 +173,9 @@ function Waitlist() {
       </div>
 
       <LythCard variant="panel">
+        <p className="muted">Email search is exact. Account-link checks are owner-only, read-only, and never merge identities.</p>
         <form className="form-row" onSubmit={(event) => { event.preventDefault(); loadWaitlist(); }}>
-          <LythInput value={filters.q} onChange={(event) => setFilters({ ...filters, q: event.target.value })} placeholder="Search email" />
+          <LythInput type="email" aria-label="Search waitlist by exact email" value={filters.q} onChange={(event) => setFilters({ ...filters, q: event.target.value })} placeholder="Exact email address" />
           <select aria-label="Filter waitlist status" value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })}><option value="">All statuses</option><option value="waiting">Waiting</option><option value="invited">Invited</option><option value="converted">Converted</option><option value="unsubscribed">Unsubscribed</option></select>
           <LythInput value={filters.source} onChange={(event) => setFilters({ ...filters, source: event.target.value })} placeholder="Source" />
           <LythInput type="datetime-local" aria-label="Waitlist created after" value={filters.createdAfter} onChange={(event) => setFilters({ ...filters, createdAfter: event.target.value })} />
@@ -146,14 +199,14 @@ function Waitlist() {
         {loading ? <p className="waitlist-loading" aria-live="polite">Loading waitlist...</p> : null}
         {error ? <div className="notice error" role="alert"><strong>{error}</strong><span>Try again. If the problem continues, check the admin API status.</span></div> : null}
         {actionMessage ? <p className="waitlist-action-error" role="status">{actionMessage}</p> : null}
-        {!loading && !error && items.length === 0 ? <div className="waitlist-empty"><h2>No waitlist signups yet</h2><p>New waitlist requests will appear here.</p></div> : null}
-        {!loading && items.length > 0 ? <div className="waitlist-table-wrap"><table className="waitlist-table"><thead><tr><th>Email</th><th>Status</th><th>Source</th><th>Joined</th><th>Linked account</th><th>Actions</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}>
-          <td>{item.email}</td><td><span className={`waitlist-status ${String(item.status).toLowerCase()}`}>{item.status}</span><span className="muted">{item.invitedAt ? `Invited ${formatDateTime(item.invitedAt)}` : item.convertedAt ? `Converted ${formatDateTime(item.convertedAt)}` : item.unsubscribedAt ? `Unsubscribed ${formatDateTime(item.unsubscribedAt)}` : ''}</span></td><td>{item.source}</td><td>{formatDateTime(item.createdAt)}</td><td>{item.linkedAccount?.status || 'None'}</td>
+        {!loading && !error && items.length === 0 ? <div className="waitlist-empty"><h2>{hasWaitlistFilters(appliedFilters) ? 'No contacts match these filters' : 'No waitlist signups yet'}</h2><p>{hasWaitlistFilters(appliedFilters) ? 'Try a different exact address or widen the selected filters.' : 'New waitlist requests will appear here.'}</p></div> : null}
+        {!loading && !error && items.length > 0 ? <div className="waitlist-table-wrap"><table className="waitlist-table"><thead><tr><th>Email</th><th>Status</th><th>Source</th><th>Joined</th><th>Existing account</th><th>Actions</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}>
+          <td>{item.email}</td><td><span className={`waitlist-status ${String(item.status).toLowerCase()}`}>{item.status}</span><span className="muted">{item.retentionHold ? 'Retention hold active' : ''}</span></td><td>{item.source}</td><td>{formatDateTime(item.createdAt)}</td><td><AccountLinkStatus item={item} value={linkedAccounts[item.id]} access={supportAccess} busy={linkLookupBusyId === item.id} onCheck={checkAccountLink} /></td>
           <td><div className="waitlist-actions">
-            <select aria-label={`Update waitlist status for ${item.email}`} value={item.status} onChange={(event) => beginAction({ ...item, nextStatus: event.target.value }, 'status', 'UPDATE WAITLIST STATUS')} disabled={updatingId === item.id || ['converted', 'unsubscribed'].includes(item.status)}><option value={item.status}>{item.status}</option><option value="invited">Invited</option><option value="converted">Converted</option><option value="unsubscribed">Unsubscribed</option></select>
+            <select aria-label={`Update waitlist status for ${item.email}`} value={item.status} onChange={(event) => beginAction({ ...item, nextStatus: event.target.value }, 'status', 'UPDATE WAITLIST STATUS')} disabled={updatingId === item.id || ['converted', 'unsubscribed'].includes(item.status)}><option value={item.status}>{item.status}</option><option value="invited">Invited</option><option value="converted">Converted</option><option value="unsubscribed">Unsubscribe and request purge</option></select>
             <LythButton variant="ghost" type="button" onClick={() => beginAction({ ...item, nextActive: !item.retentionHold }, 'hold', item.retentionHold ? 'RELEASE RETENTION HOLD' : 'PLACE RETENTION HOLD')} disabled={updatingId === item.id}>{item.retentionHold ? 'Release hold' : 'Place hold'}</LythButton>
             <LythButton variant="ghost" type="button" onClick={() => beginAction(item, 'edit', 'UPDATE WAITLIST')}>Edit source</LythButton>
-            <LythButton variant="danger" type="button" onClick={() => beginAction(item, 'delete', `DELETE WAITLIST ${item.id}`)}>Delete</LythButton>
+            <LythButton variant="danger" type="button" onClick={() => beginAction(item, 'delete', `UNSUBSCRIBE AND REQUEST PURGE ${item.id}`)}>Unsubscribe + request purge</LythButton>
           </div></td>
         </tr>)}</tbody></table></div> : null}
         {nextCursor && !loading ? <div className="waitlist-pagination"><LythButton variant="secondary" type="button" onClick={() => loadWaitlist({ cursor: nextCursor, append: true })} disabled={loadingMore}>{loadingMore ? 'Loading...' : 'Load more'}</LythButton></div> : null}
@@ -166,6 +219,22 @@ function Waitlist() {
 
 function idempotencyKey() {
   return globalThis.crypto?.randomUUID?.() || `keeper-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function hasWaitlistFilters(filters) {
+  return Object.values(filters).some(Boolean);
+}
+
+function AccountLinkStatus({ item, value, access, busy, onCheck }) {
+  if (value?.state === 'checking' || busy) return <span role="status">Checking...</span>;
+  if (value?.state === 'found') return <span>Existing account · {value.status || 'status unavailable'}</span>;
+  if (value?.state === 'not_found') return <span>No exact account match</span>;
+  if (value?.state === 'ambiguous') return <span>Conflicting account records · no link returned</span>;
+  if (value?.state === 'unavailable') return <span>Account link could not be checked</span>;
+  if (access === 'ready') return <LythButton variant="ghost" type="button" onClick={() => onCheck(item)} aria-label={`Check existing account for ${item.email}`}>Check account link</LythButton>;
+  if (access === 'checking') return <span>Checking owner access...</span>;
+  if (access === 'denied') return <span>Owner-only lookup</span>;
+  return <span>Account lookup unavailable</span>;
 }
 
 function metric(value) {
