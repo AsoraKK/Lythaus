@@ -11,7 +11,8 @@ export const fixturePassword = 'Synthetic passkey fallback 123!';
 export const fixturePepper = 'local-synthetic-passkey-pepper';
 
 export async function passkeyFixture(t) {
-  const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
+  const connectionString = process.env.PASSKEY_PG17_TEST_DATABASE_URL
+    ?? process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
   if (!connectionString) throw new Error('Passkey tests require an explicitly local disposable PostgreSQL URL');
   const target = new URL(connectionString);
   if (!['localhost', '127.0.0.1', '[::1]'].includes(target.hostname) || !target.pathname.startsWith('/lythaus_auth_test')) {
