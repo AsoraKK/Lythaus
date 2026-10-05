@@ -2,7 +2,8 @@ import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { classifyEmailProviderFailure, lifecycleStateForEmailEvent, nextTransactionalEmailState, renderTransactionalEmail, type TransactionalEmailMessage, type TransactionalEmailPurpose, type TransactionalEmailState } from '@lythaus/contracts';
 import { lockAuthDelivery, query, transaction, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
 import { constantTimeEqual, decryptField } from '@lythaus/security';
-import { verifyTransactionalEmailDispatchMessage } from '../../../packages/security/src/transactional-email-dispatch.ts';
+import { logEvent } from '@lythaus/observability';
+import { TRANSACTIONAL_EMAIL_DISPATCH_TYPE, verifyTransactionalEmailDispatchMessage } from '../../../packages/security/src/transactional-email-dispatch.ts';
 
 export interface TransactionalEmailRelayEnv extends EnvBindings {
   DB_JOBS_FRESH: HyperdriveBinding;
@@ -275,6 +276,46 @@ export interface TransactionalEmailLifecycleEvent {
 }
 
 export const EMAIL_LIFECYCLE_QUEUE = 'lythaus-email-lifecycle-dev';
+
+interface EmailQueueMessage {
+  id: string;
+  body: unknown;
+  ack(): void;
+  retry(options?: { delaySeconds: number }): void;
+}
+
+export async function processEmailLifecycleQueue(
+  batch: { queue: string; messages: readonly EmailQueueMessage[] },
+  env: TransactionalEmailRelayEnv,
+  database: EmailDatabase = emailDatabase,
+): Promise<void> {
+  const isDispatch = (message: EmailQueueMessage) => recordValue(message.body)?.type === TRANSACTIONAL_EMAIL_DISPATCH_TYPE;
+  const process = async (message: EmailQueueMessage): Promise<void> => {
+    try {
+      if (recordValue(message.body)?.type === TRANSACTIONAL_EMAIL_DISPATCH_TYPE) {
+        const dispatch = await dispatchTransactionalEmailQueueMessage(env, message.body, database);
+        if (dispatch.retryAfterSeconds === null) message.ack();
+        else message.retry({ delaySeconds: dispatch.retryAfterSeconds });
+        return;
+      }
+      const result = await reconcileTransactionalEmailLifecycleQueueMessage(env, message.body, database);
+      if (!result.valid || !result.reconciled) {
+        logEvent({ service: 'lythaus-jobs', queue: batch.queue, messageId: message.id,
+          errorCode: result.valid ? 'email_lifecycle_event_unmatched' : 'email_lifecycle_event_invalid' });
+        message.retry();
+      } else message.ack();
+    } catch {
+      logEvent({ service: 'lythaus-jobs', queue: batch.queue, messageId: message.id, errorCode: 'email_lifecycle_reconciliation_failed' });
+      message.retry();
+    }
+  };
+  for (const message of batch.messages.filter(message => !isDispatch(message))) await process(message);
+  const dispatches = batch.messages.filter(isDispatch);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(2, dispatches.length) }, async () => {
+    while (next < dispatches.length) await process(dispatches[next++]);
+  }));
+}
 
 const CLOUDFLARE_LIFECYCLE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   'cf.email.sending.message.delivered': 'message.delivered',

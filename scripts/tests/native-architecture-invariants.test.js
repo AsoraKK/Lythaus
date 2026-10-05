@@ -110,7 +110,8 @@ test('native auth outbox and scanner-safe verification contracts are explicit', 
   assert.match(jobs, /cf\.email\.sending\.message\.delivered/);
   assert.match(jobs, /Recipient, subject/);
   assert.match(jobsIndex, /EMAIL_LIFECYCLE_QUEUE/);
-  assert.match(jobsIndex, /email_lifecycle_event_invalid/);
+  assert.match(jobsIndex, /await processEmailLifecycleQueue\(batch, env\)/);
+  assert.match(jobs, /email_lifecycle_event_invalid/);
   assert.match(jobsConfig, /lythaus-email-lifecycle-dev/);
   assert.match(jobsConfig, /lythaus-email-lifecycle-dlq-dev/);
   assert.match(jobs, /provider_accepted_only/);

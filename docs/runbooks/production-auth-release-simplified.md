@@ -438,3 +438,54 @@ Missing metadata or drift blocks activation; the dashboard's Inactive label
 does not prove pause state. Paired production flags force lifecycle verification
 into existing-resource-only mode, so it cannot create resources or repair
 subscriptions. The default-off patch makes no additional provider requests.
+
+The shared consumer reconciles the batch's provider lifecycle events before
+starting dispatch hints. Dispatch runs with at most two active operations per
+invocation, limiting simultaneous provider calls and their database transactions.
+The25-message slow-provider fixture proves delivered/bounced/complained events
+at the end of a batch finish before stalled sends and that database/provider
+concurrency never exceeds two. Per-message acknowledgement and retry remain
+isolated. This does not establish live Queue scheduling or a ten-second p95;
+a slow-provider burst can still take several dispatch waves, and lifecycle
+events arriving in a later batch depend on Queue scheduling. No consumer setting,
+provider timeout, resource, connection configuration or cron changes here.
+
+Rollback disables Public publication first, then Jobs dispatch, while retaining
+the lifecycle parser, delivery key, durable outbox and quarter-hour sweep.
+With Jobs dispatch OFF, existing hints retry after60seconds and can exhaust the
+configured ten-retry budget into `lythaus-email-lifecycle-dlq-dev`. Re-enabling
+Jobs does not move those hints back. The outbox remains authoritative: its due
+queued rows are still processed by the existing sweep even with dispatch OFF.
+An expired/superseded challenge is cancelled; unknown acceptance remains terminal.
+
+For reconciliation, inspect only a bounded allowlist of the affected outbox IDs
+through existing authorized read-only database access. Read `state`,
+`next_attempt_at`, `attempt_count`, safe provider error category/code and whether
+acceptance/provider-ID evidence exists; do not retrieve delivery envelopes,
+recipients, tokens or keys. Confirm the next ordinary sweep's outcome before
+considering accelerated redrive. Never reset `processing`, failed acceptance-
+unknown, accepted/delivered or other terminal rows to queued, replace their
+challenge, or call the provider directly. The dispatch handler's due-row claim,
+account lock and challenge check remain the authority even if that read races.
+
+A separately authorized selective redrive uses the existing Cloudflare dashboard
+without changing consumers: Queues → `lythaus-email-lifecycle-dlq-dev` → Messages
+→ List previews a batch without acknowledgement. Select only recognized internal
+dispatch hints for allowlisted still-queued intents. After compatible Jobs is
+enabled and the existing live-consumer gate passes, copy each original hint's
+exact JSON into Queues → `lythaus-email-lifecycle-dev` → Messages → Send message,
+using JSON content type. Do not alter or regenerate its HMAC, ID or payload, and
+do not bulk-republish mixed provider lifecycle records. Record sanitized counts
+and outbox states rather than message bodies. On an ambiguous publish result,
+retain the DLQ record and reconcile outbox state instead of repeatedly sending.
+After confirmed publication or authoritative completed/terminal reconciliation,
+acknowledge only the individually reconciled DLQ hints through their checkboxes;
+never acknowledge the whole shared DLQ. Duplicate hints still pass through the
+same SQL claim and cannot deliberately resend a previously accepted intent.
+
+These are operator steps requiring separate approval; no redrive or cleanup is
+performed by this patch. Dashboard [message preview/acknowledgement](https://developers.cloudflare.com/queues/examples/list-messages-from-dash/)
+and [message publication](https://developers.cloudflare.com/queues/examples/send-messages-from-dash/)
+are distinct operations. [DLQ retry exhaustion](https://developers.cloudflare.com/queues/configuration/dead-letter-queues/)
+does not preserve messages indefinitely. Do not enable a pull consumer, change
+retention or request new credentials as an automatic recovery step.
