@@ -136,7 +136,7 @@ class _FeedSearchScreenState extends ConsumerState<FeedSearchScreen> {
                 controller: controller,
                 decoration: InputDecoration(
                   labelText: 'Search tags',
-                  hintText: '#civic',
+                  helperText: 'Example: #civic',
                   prefixIcon: const Icon(Icons.search),
                   border: const OutlineInputBorder(),
                   suffixIcon: controller.text.isNotEmpty

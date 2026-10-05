@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 import { chromium, webkit } from 'playwright';
@@ -7,6 +7,8 @@ import { localAuthBrowserServer } from './local-auth-browser-server.mjs';
 import { installFlutterEngineFonts } from './flutter-engine-font-fixture.mjs';
 
 const build = path.resolve(process.env.AUTH_WEB_ARTIFACT_DIR ?? 'build/web');
+const evidence = path.resolve(process.env.GUEST_SEARCH_EVIDENCE_DIR ?? 'build/guest-search-evidence');
+await mkdir(evidence, { recursive: true });
 assert.match(await readFile(path.join(build, 'flutter_bootstrap.js'), 'utf8'), /"useLocalCanvasKit":true/);
 const mime = { '.html': 'text/html', '.css': 'text/css', '.js': 'application/javascript', '.json': 'application/json', '.wasm': 'application/wasm', '.ttf': 'font/ttf', '.otf': 'font/otf', '.png': 'image/png' };
 const user = { id: '018f0000-0000-7000-8000-000000000001', email: 'synthetic@example.invalid', role: 'user', tier: 'bronze', subscription_tier: 'free', reputation_score: 0, created_at: '2026-08-01T00:00:00Z', last_login_at: '2026-08-01T00:00:00Z' };
@@ -27,7 +29,7 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) for (const wi
       if (url.hostname !== 'api.lythaus.co') return route.abort();
       const headers = { 'access-control-allow-origin': 'https://app.lythaus.co', 'access-control-allow-credentials': 'true', 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS', 'access-control-allow-headers': 'Authorization, Content-Type, Idempotency-Key, X-Correlation-ID, X-Device-Rooted, X-Device-Emulator, X-Device-Debug, X-Live-Test-Mode, X-Lythaus-Auth-Transport' };
       if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
-      calls.push({ path: url.pathname, method: request.method(), session });
+      calls.push({ path: url.pathname, method: request.method(), session, query: Object.fromEntries(url.searchParams) });
       let status = 200, body = { items: [], hasMore: false, nextCursor: null };
       if (url.pathname === '/api/auth/email') {
         assert.equal(request.postDataJSON().password, 'historical12');
@@ -43,7 +45,9 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) for (const wi
         headers['set-cookie'] = '__Host-lythaus_refresh=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0';
         body = { state: 'signed_out' };
       } else if (url.pathname === '/api/users/me') body = { user: { id: user.id, displayName: 'Synthetic acceptance', trustPassportVisibility: 'private', moderationState: 'allowed', publicVisibility: false, reputationScore: 0 } };
-      else if (!['/api/feed/discover', '/api/subscription/status', '/api/custom-feeds', '/api/reputation/me'].includes(url.pathname)) {
+      else if (url.pathname === '/api/feed/discover' && url.searchParams.has('tag')) {
+        status = 503; body = { error: 'tag_search_unavailable' };
+      } else if (!['/api/feed/discover', '/api/subscription/status', '/api/custom-feeds', '/api/reputation/me'].includes(url.pathname)) {
         status = 404; body = { error: 'route_not_found' };
       }
       return route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify(body) });
@@ -114,27 +118,35 @@ for (const [name, engine] of Object.entries({ chromium, webkit })) for (const wi
     await enterText(query, 'water');
     await query.press('Enter');
     await waitPath('/search?q=water');
-    await cancelEntry('/search?q=water');
     await expectQuery();
-    assert.equal(await button('Retry search').count(), 0);
+    await text('Tag search is temporarily unavailable.').waitFor();
+    assert.equal(await button('Retry search').count(), 1);
+    assert.equal(await text('No results for “water”').count(), 0);
+    assert.equal(await button('Sign in').count(), 0);
+    const searchCallsBeforeRetry = calls.filter(call => call.path === '/api/feed/discover' && call.query.tag === 'water');
+    assert.ok(searchCallsBeforeRetry.length > 0);
+    assert.ok(searchCallsBeforeRetry.every(call => call.method === 'GET' && !call.session));
+    const retryResponse = page.waitForResponse(response => {
+      const url = new URL(response.url());
+      return url.hostname === 'api.lythaus.co' && url.pathname === '/api/feed/discover' && url.searchParams.get('tag') === 'water';
+    });
+    await button('Retry search').click();
+    assert.equal((await retryResponse).status(), 503);
+    assert.ok(calls.filter(call => call.path === '/api/feed/discover' && call.query.tag === 'water').length > searchCallsBeforeRetry.length);
     await open('/search?q=water');
     await button('Continue as guest').click();
     await waitPath('/search?q=water');
     await expectQuery();
+    await text('Tag search is temporarily unavailable.').waitFor();
+    assert.equal(await button('Retry search').count(), 1);
     assert.deepEqual(calls.filter(call => ['/api/feed', '/api/feed/trending', '/api/notifications'].includes(call.path)), []);
-    await button('Sign in').click();
-    await enterText(page.getByRole('textbox', { name: 'Email', exact: true }), user.email);
-    const password = page.locator('input[type=password]');
-    await enterText(password, 'historical12');
-    await password.press('Enter');
-    await text('Tag search is not available yet.').waitFor();
-    await waitPath('/search?q=water');
-    await expectQuery();
-    await open('/search?q=water');
-    await text('Tag search is not available yet.').waitFor();
-    await waitPath('/search?q=water');
+    const allSearchCalls = calls.filter(call => call.path === '/api/feed/discover' && call.query.tag === 'water');
+    assert.ok(allSearchCalls.length > searchCallsBeforeRetry.length);
+    assert.ok(allSearchCalls.every(call => call.method === 'GET' && !call.session));
+    assert.equal(await button('Sign in').count(), 0);
     assert.deepEqual(calls.filter(call => ['/api/feed', '/api/feed/trending', '/api/notifications'].includes(call.path)), []);
     assert.deepEqual(errors, []);
+    await page.screenshot({ path: path.join(evidence, `${name}-${width}.png`), fullPage: true });
     complete = true;
   });
 }
