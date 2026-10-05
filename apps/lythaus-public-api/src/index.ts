@@ -2672,7 +2672,7 @@ async function discoveryFeed(request: Request, env: Env, viewer?: Principal): Pr
       throw new Error('tag_search_unavailable');
     }
     const readiness = control.rows[0];
-    if (!readiness || readiness.policy_version !== 'exact-token-proposal-v1'
+    if (!readiness || readiness.policy_version !== 'exact-token-proposal-v2'
       || !readiness.policy_approved || readiness.max_distinct_tags_per_post !== maxDistinctTags
       || readiness.max_candidates_per_request !== maxCandidates
       || !readiness.backfill_complete || !readiness.reconciliation_complete || !readiness.search_enabled) {
@@ -2688,7 +2688,7 @@ async function discoveryFeed(request: Request, env: Env, viewer?: Principal): Pr
     ];
     let result;
     try {
-      result = await query<FeedResponseCandidate & { id: string | null; publishedAt: string | null; tagSearchScanTruncated: boolean }>(
+      result = await query<FeedResponseCandidate & { id: string | null; publishedAt: string | null; tagSearchUnavailable: boolean }>(
         env.DB_APP_FRESH, TAGGED_DISCOVERY_SQL, queryValues,
       );
     } catch {
@@ -2696,14 +2696,14 @@ async function discoveryFeed(request: Request, env: Env, viewer?: Principal): Pr
       // Never turn an unavailable index into an empty successful page.
       throw new Error('tag_search_unavailable');
     }
-    if (result.rows.some((row) => row.tagSearchScanTruncated)) throw new Error('tag_search_unavailable');
+    if (result.rows.some((row) => row.tagSearchUnavailable)) throw new Error('tag_search_unavailable');
     const indexedRows = result.rows.filter((row): row is typeof row & { id: string; publishedAt: string } => row.id !== null && row.publishedAt !== null);
     assertFeedResponseCandidates(indexedRows, viewer);
     const hasMore = indexedRows.length > page.limit;
     const items = indexedRows.slice(0, page.limit);
     const tail = items.at(-1);
     return feedResponse(request, env, {
-      items: presentFeedItems(items.map(({ tagSearchScanTruncated: _truncated, ...item }) => item)),
+      items: presentFeedItems(items.map(({ tagSearchUnavailable: _unavailable, ...item }) => item)),
       nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.publishedAt, id: tail.id }) : null,
     }, 'discovery', Boolean(viewer));
   }

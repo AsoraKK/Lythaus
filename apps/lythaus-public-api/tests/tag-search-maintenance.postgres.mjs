@@ -28,7 +28,8 @@ async function finish(client) {
 test('bounded backfill and reconciliation resume and repair only disposable index state', async () => {
   const client = await connect();
   const authorId = uuidv7();
-  const postIds = [uuidv7(), uuidv7(), uuidv7()];
+  const postIds = [uuidv7(), uuidv7(), uuidv7(), uuidv7()];
+  const overLimitBody = Array.from({ length: 17 }, (_, index) => `#maintoverflow${index}`).join(' ');
   try {
     await applyTagSearchProposal(client);
     await client.query('BEGIN');
@@ -39,10 +40,11 @@ test('bounded backfill and reconciliation resume and repair only disposable inde
     );
     await client.query(
       `INSERT INTO content.posts(id,author_id,body,declared_creation_mode,visibility,moderation_state,published_at)
-       VALUES($1,$4,'Synthetic #maintenance #café body','human','public','allowed',now()),
-             ($2,$4,'Synthetic post without any hashtags','human','public','allowed',now()-interval '1 second'),
-             ($3,$4,'Synthetic repeated #maintenance #maintenance body','human','public','allowed',now()-interval '2 seconds')`,
-      [...postIds, authorId],
+       VALUES($1,$5,'Synthetic #maintenance #café body','human','public','allowed',now()),
+             ($2,$5,'Synthetic post without any hashtags','human','public','allowed',now()-interval '1 second'),
+             ($3,$5,'Synthetic repeated #maintenance #maintenance body','human','public','allowed',now()-interval '2 seconds'),
+             ($4,$5,$6,'human','public','allowed',now()-interval '3 seconds')`,
+      [...postIds, authorId, overLimitBody],
     );
     await client.query(
       `INSERT INTO content.content_declarations(post_id,declared_creation_mode,public_label)
@@ -90,6 +92,24 @@ test('bounded backfill and reconciliation resume and repair only disposable inde
         [postIds],
       );
       assert.equal(tagRows.rows[0].count, 2, 'duplicate tags produce one side-table token per post');
+      const excludedOverflow = await resumed.query(
+        `SELECT state.complete, state.observed_distinct_count, state.excluded_reason,
+                count(token.tag_key)::integer AS token_count,
+                count(token.tag_key) FILTER (WHERE token.searchable)::integer AS searchable_count,
+                count(token.tag_key) FILTER (WHERE token.exclusion_reason='tag_limit_exceeded')::integer AS excluded_count
+           FROM content.post_tag_search_state state
+           LEFT JOIN content.post_tag_search_tokens token ON token.post_id=state.post_id
+          WHERE state.post_id=$1 GROUP BY state.post_id`,
+        [postIds[3]],
+      );
+      assert.deepEqual(excludedOverflow.rows[0], {
+        complete: true,
+        observed_distinct_count: 17,
+        excluded_reason: 'tag_limit_exceeded',
+        token_count: 17,
+        searchable_count: 0,
+        excluded_count: 17,
+      }, 'ordinary per-post tag overflow is fully recorded without marking the global index incomplete');
 
       await resumed.query(
         `UPDATE feed.tag_search_index_control
@@ -114,6 +134,12 @@ test('bounded backfill and reconciliation resume and repair only disposable inde
           [postIds[0]],
         );
         await restarted.query(
+          `UPDATE content.post_tag_search_tokens
+              SET searchable=true, exclusion_reason=NULL
+            WHERE post_id=$1::uuid AND tag_key='maintoverflow0'`,
+          [postIds[3]],
+        );
+        await restarted.query(
           `UPDATE feed.tag_search_index_control
               SET reconciliation_cursor=NULL, reconciliation_post_count=0,
                   reconciliation_mismatch_count=0, reconciliation_complete=false
@@ -130,6 +156,13 @@ test('bounded backfill and reconciliation resume and repair only disposable inde
           [postIds[0]],
         );
         assert.equal(restored.rows[0].count, 1);
+        const repairedOverflow = await restarted.query(
+          `SELECT searchable, exclusion_reason FROM content.post_tag_search_tokens
+            WHERE post_id=$1::uuid AND tag_key='maintoverflow0'`,
+          [postIds[3]],
+        );
+        assert.deepEqual(repairedOverflow.rows[0], { searchable: false, exclusion_reason: 'tag_limit_exceeded' },
+          'reconciliation repairs per-token exclusion metadata as well as the exact token set');
         const control = await restarted.query(
           `SELECT search_enabled, reconciliation_mismatch_count, incomplete_post_count
              FROM feed.tag_search_index_control WHERE singleton=true`,

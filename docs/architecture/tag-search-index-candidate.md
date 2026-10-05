@@ -27,22 +27,34 @@ Examples:
 - A 65-character word after `#` is rejected as one token; it is not truncated.
 - Repeating `#city` 20 times uses one distinct-tag slot.
 
-The default cap of **16 distinct tags per post is proposed and unapproved**. A
-post above the configured cap is marked incomplete and contributes no partial
-tokens. If the feature was enabled, that condition closes the global search
-gate and returns an unavailable error until backfill and reconciliation finish
-and an operator explicitly enables it again. This can make all tag searches
-temporarily unavailable because one post exceeds the cap. The owner must
-approve the cap and the fail-closed behavior before activation.
+The default cap of **16 distinct tags per post is proposed and unapproved**.
+For a post above that cap but within the parser's hard ceiling of 50,000
+distinct tokens, indexing records the exact token set and marks every token
+`tag_limit_exceeded`; the post state remains complete. If such a currently
+eligible post appears in a request's bounded candidate window, that tag query
+returns retryable `tag_search_unavailable` instead of returning a partial
+page. Other tags remain searchable. Blocked, muted, pending, deleted,
+moderated, or otherwise ineligible posts do not trigger that unavailable
+state. Editing the post to 16 or fewer distinct tags replaces the exclusion
+markers and restores those tag searches. This avoids a global outage while
+keeping result pages honest.
+
+The 50,000-token ceiling is only an implementation safety bound, not a product
+limit. A parser result above that ceiling or an invalid/inconsistent index
+record is treated as systemic incompleteness and closes the global search gate.
+The owner still needs to choose the public behavior for new or edited posts
+above 16 tags; the candidate currently accepts the write and exposes no
+successful partial search page for an affected tag.
 
 The proposed query cap is **1,000 candidate posts per request**, also
 unapproved and configurable. It bounds viewer-specific block/mute checks and
 metadata joins. If those filters leave too few results within the cap while
-more matching candidates remain, the endpoint returns unavailable rather than
-a partial page or false empty result. A member with many blocked or muted
-authors among the newest matches can therefore see a temporary unavailable
-state even when older visible posts exist. The owner must approve this bound
-and decide whether that availability trade-off is acceptable.
+more matching candidates remain, that request returns unavailable rather than
+a partial page or false empty result. The response does not disable the global
+tag index or other tags. A member with many blocked or muted authors among the
+newest matches can therefore see a temporary unavailable state even when
+older visible posts exist. The owner must approve this request-level
+availability trade-off.
 
 The parser uses JavaScript Unicode property classes and lowercase behavior so
 indexing agrees with the existing Worker query parser. PostgreSQL does not
@@ -54,8 +66,9 @@ provide the same Unicode contract.
 The candidate keeps tokens in a private side table with a unique
 `(post_id, tag_key)` key and a B-tree on
 `(tag_key, indexed_published_at DESC, post_id DESC)`. A state row records the
-extractor version, distinct count, and completeness for each indexed post. The
-runtime cannot select the private state or token tables. It calls a
+extractor version, distinct count, completeness, and any per-post exclusion
+reason; token rows also record whether they are searchable. The runtime cannot
+select the private state or token tables. It calls a
 `SECURITY DEFINER` search function that returns only bounded post identifiers
 after checking active authors, published public posts, allowed moderation
 state, accepted public-authorship labels, `review_required = false`, blocks,
@@ -97,20 +110,22 @@ settings are not set by this change.
 The scale test uses 75,000 synthetic posts, the exact SQL stored in the
 bounded search function, a 4 MB `work_mem`, a 64 MB `temp_file_limit`, and no
 parallel workers. On a fresh local PostgreSQL 17 database, a tag miss examined
-zero posts in 0.064 ms (3 shared hits, no reads); a common-tag page examined 26
-posts in 0.925 ms (404 shared hits, no reads). Both plans used the tag B-tree;
-the common-tag plan read at most 1,001 token rows (the 1,000-candidate cap plus
-its truncation sentinel), used point lookups for post/declaration metadata, and
-did not scan declarations. These are single-run local measurements, not a
-latency target or a production forecast.
+zero posts in 0.107 ms (3 shared hits, no reads); a common-tag query returned a
+26-row page after examining 1,000 bounded candidates in 13.087 ms (15,028
+shared hits, no reads). Both plans used the tag B-tree; the common-tag plan
+read at most 1,001 token rows (the 1,000-candidate cap plus its truncation
+sentinel), used indexed point lookups for post, state, declaration, and author
+metadata, and did not scan declarations. These are single-run local
+measurements, not a latency target or a production forecast.
 
 The one-tag-per-post fixture wrote 75,000 state rows and 75,000 token rows, or
-two side-table rows per post. The token table used 7,593,984 heap bytes,
-8,601,600 bytes for its primary key, 7,249,920 bytes for its lookup index, and
-23,486,464 bytes total; the state table plus its primary key used 16,392,192
-bytes. At the proposed cap, 16 distinct tags can add 16 token rows and 32 token
-index entries per post, plus one state row. This illustrates possible write
-amplification;
+two side-table rows per post. The token table used 8,192,000 heap bytes,
+8,388,608 bytes for its primary key, 7,241,728 bytes for its lookup index, and
+23,855,104 bytes total. The state table plus its primary key used 16,220,160
+bytes. No separate overflow index is added: searchable and excluded tags reuse
+the same primary key and lookup B-tree. At the proposed cap, 16 distinct tags
+can add 16 token rows and 32 index entries per post, plus one state row. This
+illustrates possible write amplification;
 the test does not model production tag distribution, update churn, vacuum, or
 replica/backup overhead. The test measures storage on a disposable local
 synthetic corpus and does not estimate production bytes.
@@ -123,16 +138,21 @@ constrained local test is a guard against an unbounded body scan; it is not a
 simulation of that service tier. Before activation, the owner still needs to
 choose a representative production corpus size, an acceptable query latency
 and memory budget, a write-amplification/storage budget, and the operational
-response when the cap closes the gate.
+response when an individual query is unavailable or systemic corruption closes
+the global gate.
 
 ## Decisions still required
 
 1. Approve or change the exact boundary/normalization semantics, including
    whether hyphenated text such as `#city-news` should index `city`.
-2. Approve or change the 16 distinct-tag cap and decide whether one overflow
-   should close all tag search or use another explicit availability policy.
-3. Approve or change the 1,000-candidate request cap and its unavailable-state
-   behavior when viewer filters consume the candidate window.
+2. Choose the over-16 post policy: (a) reject or hold new/edit requests with a
+   clear validation message, while legacy overflow stays excluded per tag;
+   (b) accept the post and keep only its affected tag queries unavailable; or
+   (c) approve a higher bounded tag cap after storage testing. The current
+   candidate implements (b) and does not return a successful partial page.
+3. Keep the 1,000-candidate request cap and accept a retryable per-request 503
+   when blocks/mutes consume the window, or approve a larger bounded cap after
+   service-budget testing. Neither outcome disables other tag searches.
 4. Approve production corpus, memory, latency, write-amplification, and storage
    targets using current PlanetScale telemetry.
 5. Approve the canonical migration, maintenance-before-read rollout order,
@@ -152,5 +172,6 @@ response when the cap closes the gate.
 | Pagination and trust identity | Existing cursor codec and `FeedResponseCandidate`; chronological keyset integration test |
 | Unknown versus unavailable | Empty page only when the readiness gate is complete; explicit 503 tests for closed gate and query cancellation |
 | Lifecycle and deletion | Same-transaction API indexing; candidate post/declaration/user triggers; local backfill/reconciliation script |
+| Per-post overflow | Exact tokens plus `tag_limit_exceeded` state/token reason; tests for affected-tag unavailability, unrelated-tag success, block privacy, and repair after edit |
 | Safe activation boundary | Proposal outside canonical manifests, control row defaults false, and Worker flags default off |
-| Rate and result bounds | Existing native 30-request rate limit, proposed 1,000-candidate scan cap, and integration tests for 429 and fail-closed filtered windows |
+| Rate and result bounds | Existing native 30-request rate limit, proposed 1,000-candidate scan cap, and integration tests for 429, complete guest pagination, and request-level unavailability for filtered windows |

@@ -44,22 +44,32 @@ async function countReconciliationMismatches(client, posts, extractedRows) {
   if (!posts.length) return 0;
   const result = await client.query(
     `SELECT target.post_id AS id, state.extractor_version, state.observed_distinct_count,
-            state.complete,
+            state.complete, state.excluded_reason,
             COALESCE(array_agg(token.tag_key ORDER BY token.tag_key)
-              FILTER (WHERE token.tag_key IS NOT NULL), ARRAY[]::text[]) AS tokens
+              FILTER (WHERE token.tag_key IS NOT NULL), ARRAY[]::text[]) AS tokens,
+            COALESCE(array_agg(token.searchable ORDER BY token.tag_key)
+              FILTER (WHERE token.tag_key IS NOT NULL), ARRAY[]::boolean[]) AS searchable_flags,
+            COALESCE(array_agg(token.exclusion_reason ORDER BY token.tag_key)
+              FILTER (WHERE token.tag_key IS NOT NULL), ARRAY[]::text[]) AS exclusion_reasons
        FROM unnest($1::uuid[]) AS target(post_id)
        LEFT JOIN content.post_tag_search_state state ON state.post_id = target.post_id
        LEFT JOIN content.post_tag_search_tokens token ON token.post_id = target.post_id
-      GROUP BY target.post_id, state.extractor_version, state.observed_distinct_count, state.complete`,
+      GROUP BY target.post_id, state.extractor_version, state.observed_distinct_count,
+               state.complete, state.excluded_reason`,
     [posts.map((post) => post.id)],
   );
   const storedById = new Map(result.rows.map((row) => [row.id, row]));
   return extractedRows.reduce((mismatches, expected) => {
     const current = storedById.get(expected.post_id);
+    const expectedSearchable = expected.tokens.map(() => !expected.exceedsLimit);
+    const expectedReasons = expected.tokens.map(() => expected.exceedsLimit ? 'tag_limit_exceeded' : null);
     const matches = current?.extractor_version === expected.extractor_version
       && current?.observed_distinct_count === expected.observed_distinct_count
       && current?.complete === expected.complete
-      && JSON.stringify(current?.tokens ?? []) === JSON.stringify(expected.tokens);
+      && current?.excluded_reason === (expected.exceedsLimit ? 'tag_limit_exceeded' : null)
+      && JSON.stringify(current?.tokens ?? []) === JSON.stringify(expected.tokens)
+      && JSON.stringify(current?.searchable_flags ?? []) === JSON.stringify(expectedSearchable)
+      && JSON.stringify(current?.exclusion_reasons ?? []) === JSON.stringify(expectedReasons);
     return mismatches + (matches ? 0 : 1);
   }, 0);
 }

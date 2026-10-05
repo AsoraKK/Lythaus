@@ -47,7 +47,7 @@ test('candidate tagged discovery uses the exact-token B-tree at constrained repr
     );
     const inserted = await client.query(
       `INSERT INTO content.post_tag_search_state(post_id,extractor_version,observed_distinct_count,complete)
-       SELECT id,'exact-token-proposal-v1',1,true FROM content.posts WHERE author_id=$1
+       SELECT id,'exact-token-proposal-v2',1,true FROM content.posts WHERE author_id=$1
        ON CONFLICT (post_id) DO UPDATE SET extractor_version=EXCLUDED.extractor_version,
          observed_distinct_count=1,complete=true,updated_at=now()`,
       [authorId],

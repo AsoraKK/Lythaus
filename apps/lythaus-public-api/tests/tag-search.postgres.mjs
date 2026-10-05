@@ -90,9 +90,15 @@ test('tag normalization accepts exact NFC tokens and rejects malformed input', (
   assert.deepEqual(extractHashtags('#City_Update #CAFÉ #cafe\u0301').tokens, ['café', 'city_update']);
   assert.deepEqual(extractHashtags('mail#inline ##double #cityscape').tokens, ['cityscape']);
   assert.deepEqual(extractHashtags(`#${'x'.repeat(65)}`).tokens, []);
-  assert.deepEqual(extractHashtags(Array.from({ length: 17 }, (_, i) => `#tag${i}`).join(' ')), {
-    tokens: [], observedDistinctCount: 17, complete: false,
-  });
+  const overflow = extractHashtags(Array.from({ length: 17 }, (_, i) => `#tag${i}`).join(' '));
+  assert.equal(overflow.tokens.length, 17);
+  assert.equal(overflow.observedDistinctCount, 17);
+  assert.equal(overflow.complete, true, 'the exact token set remains complete above the per-post search cap');
+  assert.equal(overflow.exceedsLimit, true);
+  const hardLimit = extractHashtags(Array.from({ length: 50_001 }, (_, i) => `#bounded${i}`).join(' '));
+  assert.equal(hardLimit.tokens.length, 0);
+  assert.equal(hardLimit.observedDistinctCount, 50_001);
+  assert.equal(hardLimit.complete, false, 'the hard parser ceiling fails closed instead of storing a truncated token set');
   assert.equal(extractHashtags('#one #one #one').complete, true, 'duplicate tags count once');
 });
 
@@ -154,7 +160,7 @@ async function post({ authorId, body = 'Synthetic #city fixture', visibility = '
       if (!deleted) {
         const extracted = extractHashtags(body);
         await client.query(
-          `SELECT feed.write_post_tag_search_index($1::uuid,$2::text[],$3::integer,$4::boolean,'exact-token-proposal-v1')`,
+          `SELECT feed.write_post_tag_search_index($1::uuid,$2::text[],$3::integer,$4::boolean,'exact-token-proposal-v2')`,
           [id, extracted.tokens, extracted.observedDistinctCount, extracted.complete],
         );
       }
@@ -334,10 +340,12 @@ test('viewer filtering beyond the candidate scan bound is unavailable, not a par
   const newestAuthor = await actor();
   const middleAuthor = await actor();
   const oldestAuthor = await actor();
+  const unrelatedAuthor = await actor();
   const timestamp = (secondsAgo) => new Date(Date.now() + 6 * 60 * 60_000 - secondsAgo * 1000).toISOString();
-  await post({ authorId: newestAuthor.id, body: 'Synthetic #boundedlimit', publishedAt: timestamp(0) });
+  const newest = await post({ authorId: newestAuthor.id, body: 'Synthetic #boundedlimit', publishedAt: timestamp(0) });
   await post({ authorId: middleAuthor.id, body: 'Synthetic #boundedlimit', publishedAt: timestamp(1) });
   const visible = await post({ authorId: oldestAuthor.id, body: 'Synthetic #boundedlimit', publishedAt: timestamp(2) });
+  const unrelated = await post({ authorId: unrelatedAuthor.id, body: 'Synthetic #boundedunrelated', publishedAt: timestamp(3) });
   await sql('INSERT INTO social.blocks(blocker_id,blocked_id) VALUES($1,$2),($1,$3)', [
     viewer.id, newestAuthor.id, middleAuthor.id,
   ]);
@@ -347,6 +355,16 @@ test('viewer filtering beyond the candidate scan bound is unavailable, not a par
     const bounded = await get('/api/feed/discover?tag=boundedlimit', '203.0.113.52', viewer);
     assert.equal(bounded.status, 503);
     assert.equal((await bounded.json()).error, 'tag_search_unavailable');
+    const guestPage = await get('/api/feed/discover?tag=boundedlimit&limit=1', '203.0.113.54');
+    assert.equal(guestPage.status, 200, await guestPage.clone().text());
+    const guestBody = await guestPage.json();
+    assert.deepEqual(guestBody.items.map(({ id }) => id), [newest]);
+    assert.ok(guestBody.nextCursor, 'a bounded window containing limit + 1 public posts preserves pagination');
+    const otherTag = await get('/api/feed/discover?tag=boundedunrelated', '203.0.113.55', viewer);
+    assert.equal(otherTag.status, 200, await otherTag.clone().text());
+    assert.deepEqual((await otherTag.json()).items.map(({ id }) => id), [unrelated]);
+    const gate = await sql('SELECT search_enabled FROM feed.tag_search_index_control WHERE singleton=true');
+    assert.equal(gate.rows[0].search_enabled, true, 'a block-heavy request does not close the global index gate');
 
     await sql('UPDATE feed.tag_search_index_control SET max_candidates_per_request=3 WHERE singleton=true');
     env.TAG_SEARCH_MAX_CANDIDATES_PER_REQUEST = '3';
@@ -432,14 +450,108 @@ test('native discovery preserves visibility, block/mute isolation, and chronolog
   assert.deepEqual(pageIds, [visibleNewest, visibleMiddle, visibleOldest]);
 });
 
-test('an over-limit post closes search rather than exposing a partial index', async () => {
+test('an over-limit post is excluded per tag without disabling unrelated searches', async () => {
   const author = await actor();
   const body = Array.from({ length: 17 }, (_, index) => `#overflow${index}`).join(' ');
-  const overflowPost = await post({ authorId: author.id, body, publishedAt: new Date(Date.now() + 6 * 60 * 60_000).toISOString() });
+  const created = await mutate('POST', '/api/posts', {
+    body, declaredCreationMode: 'human', geoScope: 'none',
+  }, author);
+  assert.equal(created.status, 201, await created.clone().text());
+  const overflowPost = (await created.json()).id;
+  createdPostIds.push(overflowPost);
+  await sql(
+    `INSERT INTO content.content_declarations(post_id,declared_creation_mode,public_label)
+     VALUES($1,'human','Human-authored')`,
+    [overflowPost],
+  );
+  await sql("UPDATE content.posts SET moderation_state='allowed',published_at=now() WHERE id=$1", [overflowPost]);
+
+  const state = await sql(
+    'SELECT complete,observed_distinct_count,excluded_reason FROM content.post_tag_search_state WHERE post_id=$1',
+    [overflowPost],
+  );
+  assert.deepEqual(state.rows[0], {
+    complete: true,
+    observed_distinct_count: 17,
+    excluded_reason: 'tag_limit_exceeded',
+  });
+  const tokens = await sql(
+    `SELECT count(*)::integer AS count,
+            count(*) FILTER (WHERE searchable)::integer AS searchable,
+            count(*) FILTER (WHERE exclusion_reason='tag_limit_exceeded')::integer AS excluded
+       FROM content.post_tag_search_tokens WHERE post_id=$1`,
+    [overflowPost],
+  );
+  assert.deepEqual(tokens.rows[0], { count: 17, searchable: 0, excluded: 17 });
+
+  const unaffected = await mutate('POST', '/api/posts', {
+    body: '#unrelatedafteroverflow', declaredCreationMode: 'human', geoScope: 'none',
+  }, author);
+  assert.equal(unaffected.status, 201, await unaffected.clone().text());
+  const unaffectedPost = (await unaffected.json()).id;
+  createdPostIds.push(unaffectedPost);
+  await sql(
+    `INSERT INTO content.content_declarations(post_id,declared_creation_mode,public_label)
+     VALUES($1,'human','Human-authored')`,
+    [unaffectedPost],
+  );
+  await sql("UPDATE content.posts SET moderation_state='allowed',published_at=now() WHERE id=$1", [unaffectedPost]);
+
   const response = await get('/api/feed/discover?tag=overflow0', '203.0.113.51');
   assert.equal(response.status, 503);
   assert.equal((await response.json()).error, 'tag_search_unavailable');
-  const state = await sql('SELECT complete,observed_distinct_count FROM content.post_tag_search_state WHERE post_id=$1', [overflowPost]);
-  assert.deepEqual(state.rows[0], { complete: false, observed_distinct_count: 17 });
-  await sql('DELETE FROM content.posts WHERE id=$1', [overflowPost]);
+  const unrelated = await get('/api/feed/discover?tag=unrelatedafteroverflow', '203.0.113.52');
+  assert.equal(unrelated.status, 200, await unrelated.clone().text());
+  assert.deepEqual((await unrelated.json()).items.map(({ id }) => id), [unaffectedPost]);
+  const gate = await sql('SELECT search_enabled FROM feed.tag_search_index_control WHERE singleton=true');
+  assert.equal(gate.rows[0].search_enabled, true, 'one post overflow does not close the global search gate');
+
+  const blockedViewer = await actor();
+  await sql('INSERT INTO social.blocks(blocker_id,blocked_id) VALUES($1,$2)', [blockedViewer.id, author.id]);
+  const blocked = await get('/api/feed/discover?tag=overflow0', '203.0.113.56', blockedViewer);
+  assert.equal(blocked.status, 200, await blocked.clone().text());
+  assert.deepEqual((await blocked.json()).items, [], 'blocked overflow markers do not disclose matching posts');
+
+  const repaired = await mutate('PUT', `/api/posts/${overflowPost}`, {
+    body: '#overflow0', declaredCreationMode: 'human',
+  }, author);
+  assert.equal(repaired.status, 200, await repaired.clone().text());
+  const repairedState = await sql(
+    'SELECT complete,observed_distinct_count,excluded_reason FROM content.post_tag_search_state WHERE post_id=$1',
+    [overflowPost],
+  );
+  assert.deepEqual(repairedState.rows[0], { complete: true, observed_distinct_count: 1, excluded_reason: null });
+  await sql("UPDATE content.posts SET moderation_state='allowed',published_at=now() WHERE id=$1", [overflowPost]);
+  const nowSearchable = await get('/api/feed/discover?tag=overflow0', '203.0.113.53');
+  assert.equal(nowSearchable.status, 200, await nowSearchable.clone().text());
+  assert.deepEqual((await nowSearchable.json()).items.map(({ id }) => id), [overflowPost]);
+  const removedTag = await get('/api/feed/discover?tag=overflow16', '203.0.113.54');
+  assert.equal(removedTag.status, 200, await removedTag.clone().text());
+  assert.deepEqual((await removedTag.json()).items, [], 'edited overflow tokens no longer poison their old tags');
+});
+
+test('invalid index metadata remains a systemic fail-closed condition', async () => {
+  const author = await actor();
+  const postId = await post({ authorId: author.id, body: '#systemicindexfailure' });
+  await withClient(async (client) => {
+    await client.query('BEGIN');
+    try {
+      await client.query(
+        `SELECT feed.write_post_tag_search_index(
+           $1::uuid, ARRAY['systemicindexfailure']::text[], 1, true, 'unknown-extractor')`,
+        [postId],
+      );
+      const state = await client.query(
+        'SELECT complete FROM content.post_tag_search_state WHERE post_id=$1', [postId],
+      );
+      const gate = await client.query(
+        'SELECT search_enabled FROM feed.tag_search_index_control WHERE singleton=true',
+      );
+      assert.equal(state.rows[0].complete, false);
+      assert.equal(gate.rows[0].search_enabled, false,
+        'unknown extraction metadata closes search because exact token completeness cannot be proven');
+    } finally {
+      await client.query('ROLLBACK');
+    }
+  });
 });

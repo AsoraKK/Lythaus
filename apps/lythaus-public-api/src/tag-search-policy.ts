@@ -1,11 +1,13 @@
-export const TAG_SEARCH_PROPOSAL_VERSION = 'exact-token-proposal-v1';
+export const TAG_SEARCH_PROPOSAL_VERSION = 'exact-token-proposal-v2';
 export const TAG_SEARCH_PROPOSED_MAX_DISTINCT_TAGS_PER_POST = 16;
 export const TAG_SEARCH_PROPOSED_MAX_CANDIDATES_PER_REQUEST = 1000;
+export const TAG_SEARCH_MAX_TRACKED_DISTINCT_TAGS_PER_POST = 50_000;
 
 export interface ExtractedHashtags {
   tokens: string[];
   observedDistinctCount: number;
   complete: boolean;
+  exceedsLimit: boolean;
 }
 
 export function normalizeTagSearchQuery(value: unknown): string {
@@ -21,8 +23,9 @@ export function normalizeTagSearchQuery(value: unknown): string {
 }
 
 /**
- * Proposed body-token semantics. The 16-tag cap is an unapproved default;
- * callers must keep the database control row and runtime setting aligned.
+ * Proposed body-token semantics. The 16-tag search cap is unapproved. The
+ * extractor keeps the full bounded token set so an overflow can be excluded
+ * per tag without losing exactness or disabling unrelated searches.
  */
 export function extractHashtags(body: string, maxDistinctTags = TAG_SEARCH_PROPOSED_MAX_DISTINCT_TAGS_PER_POST): ExtractedHashtags {
   if (!Number.isInteger(maxDistinctTags) || maxDistinctTags < 1 || maxDistinctTags > 128) {
@@ -37,14 +40,20 @@ export function extractHashtags(body: string, maxDistinctTags = TAG_SEARCH_PROPO
     const length = Array.from(token).length;
     if (length < 1 || length > 64 || !/^[\p{L}\p{N}_]+$/u.test(token)) continue;
     tokens.add(token);
-    if (tokens.size > maxDistinctTags) {
+    if (tokens.size > TAG_SEARCH_MAX_TRACKED_DISTINCT_TAGS_PER_POST) {
       return {
         tokens: [],
-        observedDistinctCount: maxDistinctTags + 1,
+        observedDistinctCount: TAG_SEARCH_MAX_TRACKED_DISTINCT_TAGS_PER_POST + 1,
         complete: false,
+        exceedsLimit: true,
       };
     }
   }
 
-  return { tokens: [...tokens].sort(), observedDistinctCount: tokens.size, complete: true };
+  return {
+    tokens: [...tokens].sort(),
+    observedDistinctCount: tokens.size,
+    complete: true,
+    exceedsLimit: tokens.size > maxDistinctTags,
+  };
 }

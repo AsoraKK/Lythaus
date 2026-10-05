@@ -4,7 +4,7 @@
 
 CREATE TABLE IF NOT EXISTS feed.tag_search_index_control (
   singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
-  policy_version text NOT NULL DEFAULT 'exact-token-proposal-v1',
+  policy_version text NOT NULL DEFAULT 'exact-token-proposal-v2',
   policy_approved boolean NOT NULL DEFAULT false,
   max_distinct_tags_per_post integer NOT NULL DEFAULT 16 CHECK (max_distinct_tags_per_post BETWEEN 1 AND 128),
   max_candidates_per_request integer NOT NULL DEFAULT 1000 CHECK (max_candidates_per_request BETWEEN 1 AND 5000),
@@ -29,24 +29,52 @@ ALTER TABLE feed.tag_search_index_control
 INSERT INTO feed.tag_search_index_control(singleton) VALUES (true)
 ON CONFLICT (singleton) DO NOTHING;
 
+UPDATE feed.tag_search_index_control
+   SET policy_version = 'exact-token-proposal-v2',
+       policy_approved = false,
+       backfill_cursor = NULL, backfill_post_count = 0, backfill_complete = false,
+       reconciliation_cursor = NULL, reconciliation_post_count = 0,
+       reconciliation_mismatch_count = 0, reconciliation_complete = false,
+       incomplete_post_count = 0, search_enabled = false,
+       block_reason = 'tag_search_policy_version_changed', updated_at = now()
+ WHERE singleton = true AND policy_version IS DISTINCT FROM 'exact-token-proposal-v2';
+
 CREATE TABLE IF NOT EXISTS content.post_tag_search_state (
   post_id uuid PRIMARY KEY REFERENCES content.posts(id) ON DELETE CASCADE,
   extractor_version text NOT NULL,
-  observed_distinct_count integer NOT NULL CHECK (observed_distinct_count BETWEEN 0 AND 129),
+  observed_distinct_count integer NOT NULL CHECK (observed_distinct_count BETWEEN 0 AND 50001),
   complete boolean NOT NULL,
+  excluded_reason text,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE content.post_tag_search_state
+  ADD COLUMN IF NOT EXISTS excluded_reason text;
+ALTER TABLE content.post_tag_search_state
+  DROP CONSTRAINT IF EXISTS post_tag_search_state_observed_distinct_count_check;
+ALTER TABLE content.post_tag_search_state
+  ADD CONSTRAINT post_tag_search_state_observed_distinct_count_check
+  CHECK (observed_distinct_count BETWEEN 0 AND 50001);
 
 CREATE TABLE IF NOT EXISTS content.post_tag_search_tokens (
   post_id uuid NOT NULL REFERENCES content.posts(id) ON DELETE CASCADE,
   tag_key text NOT NULL CHECK (char_length(tag_key) BETWEEN 1 AND 64),
   indexed_published_at timestamptz,
+  searchable boolean NOT NULL DEFAULT true,
+  exclusion_reason text,
   PRIMARY KEY (post_id, tag_key)
 );
+
+ALTER TABLE content.post_tag_search_tokens
+  ADD COLUMN IF NOT EXISTS searchable boolean NOT NULL DEFAULT true;
+ALTER TABLE content.post_tag_search_tokens
+  ADD COLUMN IF NOT EXISTS exclusion_reason text;
 
 CREATE INDEX IF NOT EXISTS post_tag_search_tokens_lookup_idx
   ON content.post_tag_search_tokens (tag_key, indexed_published_at DESC, post_id DESC)
   WHERE indexed_published_at IS NOT NULL;
+
+DROP INDEX IF EXISTS content.post_tag_search_tokens_excluded_idx;
 
 CREATE OR REPLACE FUNCTION feed.search_public_posts_by_tag(
   p_tag text,
@@ -62,7 +90,7 @@ SECURITY DEFINER
 SET search_path = pg_catalog, pg_temp
 AS $$
   WITH candidate_tokens AS MATERIALIZED (
-    SELECT token.post_id, token.indexed_published_at
+    SELECT token.post_id, token.indexed_published_at, token.searchable, token.exclusion_reason
       FROM content.post_tag_search_tokens token
      WHERE token.tag_key = $1
        AND token.indexed_published_at IS NOT NULL
@@ -74,16 +102,17 @@ AS $$
     SELECT count(*) > $6 AS scan_truncated FROM candidate_tokens
   ),
   bounded_candidates AS MATERIALIZED (
-    SELECT post_id, indexed_published_at
+    SELECT post_id, indexed_published_at, searchable, exclusion_reason
       FROM candidate_tokens
      ORDER BY indexed_published_at DESC, post_id DESC
      LIMIT $6
   ),
-  eligible_page AS MATERIALIZED (
-    SELECT candidate.post_id, eligible.published_at
+  eligible_candidates AS MATERIALIZED (
+    SELECT candidate.post_id, eligible.published_at, candidate.searchable,
+           candidate.exclusion_reason, eligible.excluded_reason
       FROM bounded_candidates candidate
       JOIN LATERAL (
-        SELECT post.published_at
+        SELECT post.published_at, index_state.excluded_reason
           FROM content.posts post
           JOIN content.post_tag_search_state index_state
             ON index_state.post_id = post.id AND index_state.complete
@@ -106,12 +135,22 @@ AS $$
            ))
          OFFSET 0
       ) eligible ON true
-     ORDER BY candidate.indexed_published_at DESC, candidate.post_id DESC
+  ),
+  eligible_page AS MATERIALIZED (
+    SELECT post_id, published_at
+      FROM eligible_candidates
+     WHERE searchable
+     ORDER BY published_at DESC, post_id DESC
      LIMIT $5
   ),
   page_status AS (
-    SELECT candidate_status.scan_truncated
-           AND (SELECT count(*) FROM eligible_page) < $5 AS scan_truncated
+    SELECT EXISTS (
+             SELECT 1 FROM eligible_candidates
+              WHERE searchable = false OR exclusion_reason IS NOT NULL OR excluded_reason IS NOT NULL
+                 OR searchable IS DISTINCT FROM (exclusion_reason IS NULL)
+                 OR excluded_reason IS DISTINCT FROM exclusion_reason)
+           OR (candidate_status.scan_truncated
+               AND (SELECT count(*) FROM eligible_page) < $5) AS scan_truncated
       FROM candidate_status
   )
   SELECT eligible_page.post_id, eligible_page.published_at, page_status.scan_truncated
@@ -138,6 +177,7 @@ DECLARE
   configured_limit integer;
   token_count integer := COALESCE(cardinality(p_tokens), 0);
   write_complete boolean;
+  write_exclusion_reason text;
 BEGIN
   SELECT max_distinct_tags_per_post INTO configured_limit
     FROM feed.tag_search_index_control WHERE singleton = true;
@@ -151,47 +191,62 @@ BEGIN
     DELETE FROM content.post_tag_search_state WHERE post_id = p_post_id;
     RETURN;
   END IF;
-  IF p_extractor_version IS DISTINCT FROM 'exact-token-proposal-v1'
+  IF p_extractor_version IS DISTINCT FROM 'exact-token-proposal-v2'
      OR p_observed_distinct_count IS NULL OR p_observed_distinct_count < 0
-     OR p_observed_distinct_count > 129
-     OR token_count > configured_limit
+     OR p_observed_distinct_count > 50001
+     OR token_count > 50000
      OR p_observed_distinct_count < token_count
      OR NOT COALESCE(p_complete, false)
      OR p_observed_distinct_count <> token_count
-     OR p_observed_distinct_count > configured_limit
      OR EXISTS (SELECT 1 FROM unnest(COALESCE(p_tokens, ARRAY[]::text[])) token
                  WHERE token IS NULL OR char_length(token) NOT BETWEEN 1 AND 64
                     OR position('#' in token) > 0 OR btrim(token) <> token)
+     OR (SELECT count(*) FROM unnest(COALESCE(p_tokens, ARRAY[]::text[])) token)
+        <> (SELECT count(DISTINCT token) FROM unnest(COALESCE(p_tokens, ARRAY[]::text[])) token)
   THEN
     write_complete := false;
   ELSE
     write_complete := true;
   END IF;
 
+  write_exclusion_reason := CASE
+    WHEN write_complete AND token_count > configured_limit THEN 'tag_limit_exceeded'
+    ELSE NULL
+  END;
+
   DELETE FROM content.post_tag_search_tokens WHERE post_id = p_post_id;
   IF write_complete THEN
-    INSERT INTO content.post_tag_search_tokens(post_id, tag_key, indexed_published_at)
+    INSERT INTO content.post_tag_search_tokens(
+      post_id, tag_key, indexed_published_at, searchable, exclusion_reason)
     SELECT p_post_id, token,
            CASE WHEN post.visibility = 'public' AND post.moderation_state = 'allowed'
                       AND post.deleted_at IS NULL AND post.published_at IS NOT NULL
                       AND author.status = 'active'
                       AND declaration.public_label IN ('Human-authored', 'AI-assisted')
                       AND declaration.review_required = false
-                THEN post.published_at ELSE NULL END
+                THEN post.published_at ELSE NULL END,
+           write_exclusion_reason IS NULL,
+           write_exclusion_reason
       FROM unnest(COALESCE(p_tokens, ARRAY[]::text[])) AS supplied(token)
       JOIN content.posts post ON post.id = p_post_id
       JOIN identity.users author ON author.id = post.author_id
       LEFT JOIN content.content_declarations declaration ON declaration.post_id = post.id
     ON CONFLICT (post_id, tag_key) DO UPDATE
-      SET indexed_published_at = EXCLUDED.indexed_published_at;
+      SET indexed_published_at = EXCLUDED.indexed_published_at,
+          searchable = EXCLUDED.searchable,
+          exclusion_reason = EXCLUDED.exclusion_reason;
   END IF;
 
-  INSERT INTO content.post_tag_search_state(post_id, extractor_version, observed_distinct_count, complete, updated_at)
-  VALUES (p_post_id, COALESCE(p_extractor_version, 'unknown'), LEAST(COALESCE(p_observed_distinct_count, 0), 129), write_complete, now())
+  INSERT INTO content.post_tag_search_state(
+    post_id, extractor_version, observed_distinct_count, complete, excluded_reason, updated_at)
+  VALUES (p_post_id, COALESCE(p_extractor_version, 'unknown'),
+          LEAST(COALESCE(p_observed_distinct_count, 0), 50001), write_complete,
+          write_exclusion_reason, now())
   ON CONFLICT (post_id) DO UPDATE
     SET extractor_version = EXCLUDED.extractor_version,
         observed_distinct_count = EXCLUDED.observed_distinct_count,
         complete = EXCLUDED.complete,
+        excluded_reason = EXCLUDED.excluded_reason,
         updated_at = EXCLUDED.updated_at;
 
   IF NOT write_complete THEN
@@ -248,6 +303,7 @@ BEGIN
     SET extractor_version = EXCLUDED.extractor_version,
         observed_distinct_count = 0,
         complete = false,
+        excluded_reason = NULL,
         updated_at = now();
 
   UPDATE content.post_tag_search_tokens token
