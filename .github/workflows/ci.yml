@@ -309,6 +309,8 @@ jobs:
           retention-days: 7
       - name: Build content journey regression fixture
         run: flutter build web --debug --no-pub --no-wasm-dry-run --target test/browser/content_journey_entry.dart --output build/content-journey-web
+      - name: Add pinned passkey client to content journey fixture
+        run: node scripts/build-passkey-web-client.mjs build/content-journey-web/passkeys-client.js
       - name: Verify rendered content journey and durable recovery
         env:
           QA_COMMIT: ${{ github.sha }}
