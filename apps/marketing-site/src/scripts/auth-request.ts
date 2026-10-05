@@ -63,8 +63,7 @@ export async function authFetch(input: string, init: RequestInit, fetcher = fetc
       let body: unknown;
       try { body = JSON.parse(text); } catch { throw new Error('network_response_invalid'); }
       if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error('network_response_invalid');
-      const definitiveConflict = response.status === 409 && (body as { error?: unknown }).error === 'idempotency_key_conflict';
-      if (key && (response.status === 202 || [400,401,403,429].includes(response.status) || definitiveConflict)) pendingIntake = undefined;
+      if (key && (response.status === 202 || [400,401,403,429].includes(response.status))) pendingIntake = undefined;
       return new Response(text, { status: response.status, headers: response.headers });
     })(), timeoutMs);
   } finally {
@@ -79,6 +78,6 @@ export function transportErrorMessage(code: string): string | undefined {
   if (code === 'password_compromised') return 'Choose a different password. This one appears in a known compromised-password list.';
   if (code === 'password_screening_unavailable') return 'We cannot safely check new passwords right now. Please try again shortly.';
   if (code === 'idempotency_outcome_unknown') return 'The earlier request is still uncertain. Wait before requesting another verification or recovery link. Do not keep submitting the same form.';
-  if (code === 'idempotency_key_conflict') return 'The earlier request expired or changed. Reload the page before trying again.';
+  if (code === 'idempotency_key_conflict') return 'This form changed while a request was in progress. Reload the page before trying again.';
   return undefined;
 }
