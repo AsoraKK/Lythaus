@@ -96,7 +96,7 @@ an empty page only after the index readiness gate succeeds; missing schema,
 incomplete backfill, policy mismatch, cancellation, or query failure returns
 `tag_search_unavailable`.
 
-Post creation and body edits are checked against the configured cap before
+Post creation and body edits are checked against the pinned v3 cap before
 their write transaction when the maintenance flag is explicitly enabled, then
 write valid side-index entries in that same transaction. Database triggers
 clear tokens when a post is soft-deleted or its body changes, refresh indexed
