@@ -49,7 +49,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
   {turnstileSiteKey && <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>}
   <script>
-    import { authFetch, withAuthDeadline, acceptsPassword, transportErrorMessage } from '../scripts/auth-request';
+    import { authFetch, authSupportReference, withAuthDeadline, acceptsPassword, transportErrorMessage } from '../scripts/auth-request';
     const form = document.querySelector('[data-signup-form]');
     if (form instanceof HTMLFormElement) {
       const email = form.querySelector('#signup-email');
@@ -157,7 +157,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         'turnstile_failed', 'turnstile_required', 'turnstile_unavailable',
       ].includes(code);
       const withSupportReference = (message, code, reference) => (
-        reference && (code === 'request_failed' || code === 'account_creation_failed')
+        reference && ['request_failed', 'account_creation_failed', 'password_screening_unavailable'].includes(code)
           ? `${message} Reference: ${reference}.`
           : message
       );
@@ -240,9 +240,9 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
             referrerPolicy: 'no-referrer',
           });
           const body = await response.json().catch(() => ({}));
-          failureReference = typeof body.correlationId === 'string'
-            ? body.correlationId
-            : response.headers.get('x-correlation-id') ?? '';
+          failureReference = authSupportReference(body)
+            ?? authSupportReference({ correlationId: response.headers.get('x-correlation-id') })
+            ?? '';
           if (!response.ok || !['verification_required', 'check_email'].includes(body.state)) throw new Error(typeof body.error === 'string' ? body.error : 'account_creation_failed');
           password.value = '';
           confirmation.value = '';

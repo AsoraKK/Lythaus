@@ -28,6 +28,59 @@ after(async()=>{if(server)await new Promise(resolve=>server.close(resolve));});
 
 for (const [engine, type] of Object.entries({ chromium, webkit })) {
   for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }, { width: 320, height: 844 }]) {
+    test(`${engine} ${viewport.width}: screening outage exposes only a safe support reference`, async t => {
+      const browser = await type.launch({ headless: true });
+      t.after(() => browser.close());
+      const page = await browser.newPage({ viewport });
+      page.setDefaultTimeout(8000);
+      await page.route('https://challenges.cloudflare.com/**', route => route.abort());
+      await page.addInitScript(() => {
+        let options;
+        window.turnstile = {
+          render: (_target, config) => { options = config; return 'signup'; },
+          execute: () => queueMicrotask(() => options.callback('local-fixture:account_signup')),
+          reset: () => {},
+        };
+      });
+      let requests = 0, reference = '3b8a5c5c-07c8-4b55-a0a5-7a66235648cc', headerReference;
+      await page.route('https://api.lythaus.co/**', route => {
+        requests += 1;
+        return route.fulfill({ status: 503, contentType: 'application/json',
+          headers: { 'access-control-allow-origin': origin, 'access-control-expose-headers': 'x-correlation-id', ...(headerReference ? { 'x-correlation-id': headerReference } : {}) },
+          body: JSON.stringify({ error: 'password_screening_unavailable', ...(reference ? { correlationId: reference } : {}) }),
+        });
+      });
+      await page.goto(origin + '/signup');
+      await page.locator('#signup-email').fill('synthetic@example.invalid');
+      await page.locator('#signup-password').fill('synthetic chosen password');
+      await page.locator('#signup-password-confirmation').fill('synthetic chosen password');
+      const submit = page.getByRole('button', { name: 'Create account', exact: true });
+      const status = page.locator('[data-signup-status]');
+      const attempt = async () => {
+        await submit.click();
+        await status.filter({ hasText: 'We cannot safely check new passwords right now.' }).waitFor();
+        assert.equal(await submit.isEnabled(), true);
+        assert.equal(await submit.getAttribute('aria-busy'), 'false');
+        assert.equal(await page.locator('[data-signup-check-email]').isVisible(), false);
+        assert.equal(await page.locator('#signup-password').getAttribute('aria-invalid'), null);
+      };
+      await attempt();
+      assert.match(await status.innerText(), /Reference: 3b8a5c5c-07c8-4b55-a0a5-7a66235648cc\./);
+      assert.equal(requests, 1, 'The error must not automatically retry the request');
+      for (const unsafe of ['synthetic@example.invalid', 'synthetic chosen password', '<script>unsafe</script>']) {
+        reference = unsafe;
+        await attempt();
+        assert.doesNotMatch(await status.innerText(), /Reference:|synthetic|<script>/);
+      }
+      reference = undefined;
+      headerReference = '57b98e96-7109-4a9b-a716-77ca7c5fc8dd';
+      await attempt();
+      assert.match(await status.innerText(), /Reference: 57b98e96-7109-4a9b-a716-77ca7c5fc8dd\./);
+      headerReference = 'synthetic@example.invalid';
+      await attempt();
+      assert.doesNotMatch(await status.innerText(), /Reference:|synthetic/);
+    });
+
     test(`${engine} ${viewport.width}: resend cooldown expiry and failure recovery`, async t => {
       const browser = await type.launch({ headless: true });
       t.after(() => browser.close());
