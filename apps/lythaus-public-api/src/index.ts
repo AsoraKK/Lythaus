@@ -20,6 +20,7 @@ import { assertCommentFeedItemEligibility, assertCustomFeedAvailable, assertFeed
 import { optionalPrivacyRequestType, privacyExportAccessActivity, privacyExportRetryAfter, privacyRequestPlan, requirePrivacyExportDependencies, requirePrivacyExportObject, retentionRulePlan } from './privacy-runtime-policy.ts';
 import { normalizeNotificationDevice, normalizeNotificationPreferences } from './notification-policy.ts';
 import { encodeCursor, enforceContentDeclaration, normalizeCustomFeedRules, pageRequest, reputationBand } from './product-policy.ts';
+import { normalizeTagSearchQuery } from './tag-search-policy.ts';
 import { readBoundedJson } from './request-body-runtime.ts';
 import { parseProfileUpdate } from './profile-runtime-policy.ts';
 import { acceptanceContextToken } from '@lythaus/contracts';
@@ -2630,7 +2631,24 @@ async function getNewsBoard(request: Request, env: Env, user: Principal): Promis
 }
 
 async function discoveryFeed(request: Request, env: Env, viewer?: Principal): Promise<Response> {
-  const page = pageRequest(new URL(request.url));
+  const url = new URL(request.url);
+  const tagValues = url.searchParams.getAll('tag');
+  if (tagValues.length > 1) throw new Error('invalid_tag_search');
+  const tag = tagValues.length === 1 ? normalizeTagSearchQuery(tagValues[0]) : undefined;
+  const page = pageRequest(url);
+  if (tag !== undefined) {
+    await enforceRateLimit(request, env, 'feed:tag-search', 30);
+    // A bounded page size and statement timeout cannot bound the rows examined
+    // by an unindexed body scan. Keep tag search unavailable until a
+    // migration-backed exact-token index has passed representative-scale tests.
+    throw new Error('tag_search_unavailable');
+  }
+  const queryValues: unknown[] = [
+    viewer?.userId ?? null,
+    page.cursor?.timestamp ?? null,
+    page.cursor?.id ?? null,
+    page.limit + 1,
+  ];
   const result = await query<FeedResponseCandidate & { id: string; publishedAt: string }>(env.DB_APP_FRESH,
     `SELECT p.id, p.author_id AS "authorId", p.body, p.published_at AS "publishedAt",
             p.visibility, p.moderation_state AS "moderationState", (p.deleted_at IS NOT NULL) AS "feedItemDeleted",
@@ -2657,8 +2675,7 @@ async function discoveryFeed(request: Request, env: Env, viewer?: Principal): Pr
           AND NOT EXISTS (SELECT 1 FROM social.mutes m WHERE m.muter_id = $1 AND m.muted_id = p.author_id)
         ))
         AND ($2::timestamptz IS NULL OR (p.published_at, p.id) < ($2::timestamptz, $3::uuid))
-      ORDER BY p.published_at DESC, p.id DESC LIMIT $4`,
-    [viewer?.userId ?? null, page.cursor?.timestamp ?? null, page.cursor?.id ?? null, page.limit + 1]);
+      ORDER BY p.published_at DESC, p.id DESC LIMIT $4`, queryValues);
   assertFeedResponseCandidates(result.rows, viewer);
   const hasMore = result.rows.length > page.limit;
   const items = result.rows.slice(0, page.limit);

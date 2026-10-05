@@ -9,11 +9,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lythaus/design_system/index.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/feed/application/social_feed_providers.dart';
+import 'package:lythaus/features/feed/domain/models.dart' as domain;
+import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
 import 'package:lythaus/features/rewards/application/reward_providers.dart';
 import 'package:lythaus/features/rewards/domain/reward_models.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/ui/screens/adaptive_shell.dart';
+import 'package:lythaus/ui/screens/home/feed_search_screen.dart';
 import 'package:lythaus/ui/screens/profile/account_security_screen.dart';
 import 'package:lythaus/ui/screens/profile/settings_screen.dart';
 import 'package:lythaus/ui/screens/rewards/rewards_dashboard.dart';
@@ -21,7 +25,6 @@ import 'package:dio/dio.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
-import 'package:lythaus/features/feed/domain/models.dart' as domain;
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
@@ -50,6 +53,15 @@ class _ReviewFeed extends LiveFeedController {
 
   @override
   Future<void> refresh() async {}
+}
+
+class _UnavailableSearchNotifier extends FeedSearchNotifier {
+  @override
+  Future<domain.FeedResponse> build(FeedSearchKey arg) async =>
+      throw const SocialFeedException(
+        'Tag search is temporarily unavailable.',
+        code: 'tag_search_unavailable',
+      );
 }
 
 void main() {
@@ -97,6 +109,7 @@ void main() {
     for (final dark in [false, true]) {
       for (final entry in <String, Widget>{
         'feed': const AdaptiveShell(),
+        'tag-search': const FeedSearchScreen(initialQuery: 'civic'),
         'settings': const SettingsScreen(),
         'security': const AccountSecurityScreen(),
         'rewards': const RewardsDashboardScreen(),
@@ -199,6 +212,7 @@ void main() {
                 liveFeedStateProvider.overrideWith((ref, _) => _ReviewFeed()),
                 liveFeedItemsProvider.overrideWith((ref, _) async => []),
                 rewardsSnapshotProvider.overrideWith((ref) async => rewards),
+                feedSearchProvider.overrideWith(_UnavailableSearchNotifier.new),
               ],
               child: MaterialApp(
                 theme: dark ? LythausTheme.dark() : LythausTheme.light(),

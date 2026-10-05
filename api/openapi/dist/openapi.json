@@ -5354,8 +5354,8 @@
     "/feed/discover": {
       "get": {
         "operationId": "feedDiscover",
-        "summary": "List the public discovery feed",
-        "description": "Anonymous callers receive the public page. Authenticated callers additionally receive block and mute filtering.",
+        "summary": "List the public discovery feed or search a tag",
+        "description": "Anonymous callers receive the public page. Authenticated callers additionally receive block and mute filtering. Supplying tag requests exact hashtag search in chronological order; tag search currently returns unavailable until a migration-backed exact-token index passes representative-scale validation.",
         "tags": [
           "Feed"
         ],
@@ -5371,6 +5371,17 @@
           },
           {
             "$ref": "#/components/parameters/limit"
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "required": false,
+            "description": "Exact hashtag token, with an optional leading",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65
+            }
           }
         ],
         "responses": {
@@ -5386,6 +5397,34 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "description": "Tag searches are rate limited per source address.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Tag search is unavailable until a migration-backed exact-token index is approved and validated at representative scale.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }

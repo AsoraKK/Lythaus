@@ -74,27 +74,61 @@ void main() {
       },
     );
   }
-  test(
-    'guest search explains authentication without a protected request',
-    () async {
-      final dio = _Dio();
-      final container = ProviderContainer(
-        overrides: [
-          guestModeProvider.overrideWith((ref) => true),
-          jwtProvider.overrideWith((ref) async => null),
-          socialFeedServiceProvider.overrideWithValue(
-            SocialFeedService(dio, baseUrl: ''),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-      await expectLater(
-        container.read(feedSearchProvider('water').future),
-        throwsA(predicate((Object e) => e.toString().contains('Sign in'))),
-      );
-      verifyZeroInteractions(dio);
-    },
-  );
+  test('guest tag search uses the public discovery endpoint', () async {
+    final dio = _Dio();
+    final request = RequestOptions(path: '/feed/discover');
+    when(
+      () => dio.get<Map<String, dynamic>>(
+        '/feed/discover',
+        queryParameters: any(named: 'queryParameters'),
+        cancelToken: any(named: 'cancelToken'),
+        options: any(named: 'options'),
+      ),
+    ).thenAnswer(
+      (_) async => Response<Map<String, dynamic>>(
+        data: {
+          'items': [
+            {
+              'id': 'post-1',
+              'authorId': 'author-1',
+              'authorUsername': 'public-author',
+              'body': 'Public #water update',
+              'publishedAt': '2025-01-01T00:00:00.000Z',
+            },
+          ],
+          'nextCursor': null,
+        },
+        statusCode: 200,
+        requestOptions: request,
+      ),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        guestModeProvider.overrideWith((ref) => true),
+        jwtProvider.overrideWith((ref) async => null),
+        socialFeedServiceProvider.overrideWithValue(
+          SocialFeedService(dio, baseUrl: ''),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    final result = await container.read(
+      feedSearchProvider((tag: 'water', tokenVersion: 0)).future,
+    );
+    expect(result.posts.single.id, 'post-1');
+    final captured = verify(
+      () => dio.get<Map<String, dynamic>>(
+        '/feed/discover',
+        queryParameters: captureAny(named: 'queryParameters'),
+        cancelToken: any(named: 'cancelToken'),
+        options: captureAny(named: 'options'),
+      ),
+    ).captured;
+    final query = captured[0] as Map<String, dynamic>;
+    final options = captured[1] as Options;
+    expect(query['tag'], 'water');
+    expect(options.headers?['Authorization'], isNull);
+  });
 
   test(
     'Trending has no native handler and never makes an HTTP request',

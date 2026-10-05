@@ -6,6 +6,7 @@ import 'package:lythaus/design_system/index.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 import 'package:lythaus/features/feed/domain/models.dart';
+import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
 import 'package:lythaus/features/rewards/application/reward_providers.dart';
 import 'package:lythaus/features/rewards/domain/reward_models.dart';
 import 'package:lythaus/state/models/feed_models.dart';
@@ -13,6 +14,24 @@ import 'package:lythaus/ui/components/feed_card.dart';
 import 'package:lythaus/ui/screens/home/feed_search_screen.dart';
 import 'package:lythaus/ui/screens/profile/settings_screen.dart';
 import 'package:lythaus/ui/screens/rewards/rewards_dashboard.dart';
+
+class _SearchNotifier extends FeedSearchNotifier {
+  _SearchNotifier(this.responseFor);
+
+  final Future<FeedResponse> Function(FeedSearchKey key) responseFor;
+
+  @override
+  Future<FeedResponse> build(FeedSearchKey arg) => responseFor(arg);
+}
+
+class _UnavailableSearchNotifier extends FeedSearchNotifier {
+  @override
+  Future<FeedResponse> build(FeedSearchKey arg) async =>
+      throw const SocialFeedException(
+        'Tag search is temporarily unavailable.',
+        code: 'tag_search_unavailable',
+      );
+}
 
 void main() {
   test('notification links require an existing supported target', () {
@@ -40,7 +59,12 @@ void main() {
   });
 
   for (final dark in [false, true]) {
-    for (final screen in ['post', 'settings', 'rewards-error']) {
+    for (final screen in [
+      'post',
+      'settings',
+      'rewards-error',
+      'search-unavailable',
+    ]) {
       testWidgets('$screen supports 320px and 200% in $dark theme', (
         tester,
       ) async {
@@ -66,6 +90,7 @@ void main() {
           ProviderScope(
             overrides: [
               currentUserProvider.overrideWithValue(null),
+              feedSearchProvider.overrideWith(_UnavailableSearchNotifier.new),
               rewardsSnapshotProvider.overrideWith(
                 (ref) => Future<RewardsSnapshot>.error(
                   StateError('private fixture error'),
@@ -85,6 +110,9 @@ void main() {
                 'post' => Scaffold(
                   body: SingleChildScrollView(child: FeedCard(item: post)),
                 ),
+                'search-unavailable' => const FeedSearchScreen(
+                  initialQuery: 'civic',
+                ),
                 'settings' => const SettingsScreen(),
                 _ => const RewardsDashboardScreen(),
               },
@@ -102,6 +130,12 @@ void main() {
           expect(find.textContaining('private fixture'), findsNothing);
           expect(find.textContaining('Reputation level: 0'), findsNothing);
         }
+        if (screen == 'search-unavailable') {
+          expect(
+            find.text('Tag search is temporarily unavailable.'),
+            findsOneWidget,
+          );
+        }
       });
     }
   }
@@ -113,17 +147,19 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          feedSearchProvider.overrideWith((ref, query) async {
-            requests++;
-            if (query == 'offline') {
-              throw StateError('sensitive infrastructure');
-            }
-            return FeedResponse.fromCursor(
-              posts: const [],
-              nextCursor: null,
-              limit: 25,
-            );
-          }),
+          feedSearchProvider.overrideWith(
+            () => _SearchNotifier((key) async {
+              requests++;
+              if (key.tag == 'offline') {
+                throw StateError('sensitive infrastructure');
+              }
+              return FeedResponse.fromCursor(
+                posts: const [],
+                nextCursor: null,
+                limit: 25,
+              );
+            }),
+          ),
         ],
         child: MaterialApp(
           theme: LythausTheme.light(),
@@ -138,7 +174,10 @@ void main() {
     await tester.enterText(find.byType(TextField), 'offline');
     await tester.testTextInput.receiveAction(TextInputAction.search);
     await tester.pumpAndSettle();
-    expect(find.text('Could not load search. Please try again.'), findsOneWidget);
+    expect(
+      find.text('Could not load search. Please try again.'),
+      findsOneWidget,
+    );
     expect(find.textContaining('sensitive'), findsNothing);
     await tester.tap(find.text('Retry search'));
     await tester.pumpAndSettle();

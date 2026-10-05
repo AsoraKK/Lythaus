@@ -58,6 +58,7 @@ const PUBLIC_ERROR_CODES = new Set([
   'invalid_notification_device', 'invalid_page_limit', 'invalid_password', 'invalid_post',
   'invalid_post_visibility', 'invalid_privacy_request', 'invalid_profile_visibility',
   'invalid_reaction', 'invalid_retention_content_type', 'invalid_retention_period',
+  'invalid_tag_search', 'tag_search_unavailable',
   'invalid_visibility_level', 'invalid_countryCode', 'invalid_regionCode',
   'invalid_municipalityCode', 'media_signing_not_configured', 'media_size_exceeded',
   'news_board_not_entitled', 'notification_device_not_found',
