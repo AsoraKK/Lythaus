@@ -349,9 +349,12 @@ test('auth repair exceptions cannot alter homepage assets or waitlist routing', 
     assert.equal(updated.trim(), git('show', `${upstreamBaselineSha}:${file}`));
   }
   const bindingFile = 'packages/cloudflare-env/src/index.ts';
-  assert.equal(readFileSync(path.join(root, bindingFile), 'utf8').replace(/\r\n/g, '\n')
+  const bindings = readFileSync(path.join(root, bindingFile), 'utf8').replace(/\r\n/g, '\n');
+  const dispatchBindings = '  TRANSACTIONAL_EMAIL_DISPATCH_QUEUE?: Queue;\n  TRANSACTIONAL_EMAIL_DISPATCH_ENABLED?: string;\n';
+  assert.equal(bindings.split(dispatchBindings).length, 2, 'Dispatch may add only the exact optional Queue and opt-in declarations');
+  assert.equal(bindings.replace(dispatchBindings, '')
     .replace('  AUTH_EMAIL_ENVELOPE?: ServiceBinding;\n', '').trim(), git('show', `${upstreamBaselineSha}:${bindingFile}`),
-  'Only the private Admin auth service binding type may change');
+  'Only the private Admin auth binding and exact optional dispatch declarations may change');
   assert.equal(readFileSync(path.join(root, 'apps/lythaus-public-api/src/worker.ts'), 'utf8').replace(/\r\n/g, '\n').trim(), `import { WorkerEntrypoint } from 'cloudflare:workers';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { handleEmailEnvelope } from './email-envelope-entrypoint.ts';
