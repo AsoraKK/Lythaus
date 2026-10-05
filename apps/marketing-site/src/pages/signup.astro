@@ -35,9 +35,9 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         <label for="signup-password-confirmation">Confirm password</label>
         <input id="signup-password-confirmation" name="passwordConfirmation" type="password" autocomplete="new-password" maxlength="256" aria-describedby="signup-password-note" required />
 
-        <div class="auth-turnstile-shell" id="signup-turnstile" role="group" aria-label="Bot verification"></div>
-        <button class="button primary" type="submit" data-signup-submit>Create account</button>
       </div>
+      <div class="auth-turnstile-shell" id="signup-turnstile" role="group" aria-label="Bot verification"></div>
+      <button class="button primary" type="submit" data-signup-submit>Create account</button>
       <p class="auth-status" data-signup-status aria-live="polite" aria-atomic="true" role="status" tabindex="-1"></p>
       <button class="auth-resend" type="button" data-signup-resend hidden>Resend verification email</button>
       <p class="auth-field-note" id="signup-resend-cooldown" data-signup-resend-cooldown aria-live="polite"></p>
@@ -253,6 +253,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
           signupAccepted = true;
           email.readOnly = true;
           if (signupFields instanceof HTMLElement) signupFields.hidden = true;
+          button.hidden = true;
           if (checkEmailState instanceof HTMLElement) checkEmailState.hidden = false;
           setResendVisible(true);
           startCooldown();

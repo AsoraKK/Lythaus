@@ -75,6 +75,7 @@ for (const [engine, type] of Object.entries({ chromium, webkit })) {
       assert.equal(await resend.isDisabled(), true);
       await page.clock.fastForward(2_000);
       assert.equal(await resend.isEnabled(), true);
+      assert.equal(await page.locator('#signup-turnstile').isVisible(), true, 'Resend must retain a visible interactive challenge container');
       await resend.click();
       await page.locator('[data-signup-status]').filter({ hasText: 'delivery is not confirmed yet' }).waitFor();
       assert.deepEqual(requests[1], { mode: 'resend_verification', email: 'synthetic@example.invalid', turnstileToken: 'local-fixture:verification_resend' });
@@ -165,6 +166,8 @@ for (const [engine, type] of Object.entries({ chromium, webkit })) {
       assert.equal(await page.locator('#verification-password-confirmation').inputValue(), '');
       assert.equal(await page.locator('#verification-password').isVisible(), false);
       assert.equal(await page.locator('#verification-password-confirmation').isVisible(), false);
+      const signInBounds = await signIn.boundingBox();
+      assert.ok(signInBounds && signInBounds.y >= 0 && signInBounds.y + signInBounds.height <= viewport.height, 'Completed verification must show sign-in within the viewport');
       assert.equal(requests[1].idempotencyKey, requests[2].idempotencyKey, 'Deliberate uncertain retry must preserve the operation key');
       assert.equal((await context.cookies('https://api.lythaus.co')).length, 0, 'Verification must not create a session');
       if (process.env.AUTH_QA_DIR) {
