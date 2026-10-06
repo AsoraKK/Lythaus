@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import os from 'node:os';
@@ -221,4 +222,72 @@ test('production auth incident audit uses only aggregate-safe verifier columns',
   assert.doesNotMatch(authIncidentDatabase, /email_ciphertext|password_hash|email_lookup_hmac/);
   assert.match(authIncidentAudit, /BEGIN READ ONLY/);
   assert.match(authIncidentDatabase, /SHOW transaction_read_only/);
+});
+
+test('actual auth incident audit records Queue facts with read-only SQL and no real email operation', t => {
+  const authAccount='e5b7ae46e04698f507b7e4b3d4ef1af0', lifecycleId='1'.repeat(32), deadLetterId='2'.repeat(32);
+  const directory = mkdtempSync(join(os.tmpdir(), 'lythaus-auth-queue-audit-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const output = join(directory, 'audit.json'), calls = join(directory, 'calls.jsonl');
+  const pgModule = createRequire(import.meta.url).resolve('pg');
+  const fixture = `
+    import fs from 'node:fs';
+    import assert from 'node:assert/strict';
+    import {mock} from 'node:test';
+    mock.module(${JSON.stringify(pgModule)}, {defaultExport:{Client:class {
+      async connect(){} async end(){}
+      async query(sql){
+        assert.ok(/^(BEGIN READ ONLY|SHOW transaction_read_only|SELECT|ROLLBACK)/i.test(sql.trim()));
+        return {rows:sql==='SHOW transaction_read_only'?[{transaction_read_only:'on'}]:[]};
+      }
+    }}});
+    const queue=${JSON.stringify({ queue_id: '1'.repeat(32), queue_name: 'lythaus-email-lifecycle-dev', settings: {delivery_paused:false,delivery_delay:0}, consumers_total_count:1, consumers:[{consumer_id:'3'.repeat(32),type:'worker',script_name:'lythaus-jobs-development',dead_letter_queue:'lythaus-email-lifecycle-dlq-dev',settings:{batch_size:25,max_wait_time_ms:5000,max_retries:10,max_concurrency:1}}] })};
+    queue.consumers[0].settings.max_concurrency=JSON.parse(process.env.SYNTHETIC_QUEUE_CAP);
+    queue.secret='fixture-private-marker';
+    globalThis.fetch=async(input,init={})=>{
+      const url=new URL(input),method=init.method??'GET';
+      assert.equal(url.origin,'https://api.cloudflare.com');
+      fs.appendFileSync(${JSON.stringify(calls)},JSON.stringify({path:url.pathname,method})+'\\n');
+      let result;
+      if(url.pathname==='/client/v4/zones/7bc572c8b7cd3c00be9c655176c29382/email/sending/subdomains'){
+        assert.equal(method,'GET');result=[{name:'mail.lythaus.co',enabled:true,tag:'fixture-private-marker'}];
+      }else if(url.pathname==='/client/v4/accounts/${authAccount}/queues'){
+        assert.equal(method,'GET');result=[queue,{queue_id:'${deadLetterId}',queue_name:'lythaus-email-lifecycle-dlq-dev'}];
+        return Response.json({success:true,result,result_info:{page:1,per_page:100,count:2,
+          total_count:process.env.SYNTHETIC_QUEUE_PARTIAL==='true'?101:2,
+          total_pages:process.env.SYNTHETIC_QUEUE_PARTIAL==='true'?2:1}});
+      }else if(url.pathname==='/client/v4/accounts/${authAccount}/queues/${lifecycleId}'){
+        assert.equal(method,'GET');result=queue;
+      }else if(url.pathname==='/client/v4/graphql'){
+        assert.equal(method,'POST');const query=JSON.parse(init.body).query;
+        assert.match(query,/^query EmailSendingIncident/);assert.doesNotMatch(query,/mutation/);
+        return Response.json({data:{viewer:{zones:[{emailSendingAdaptiveGroups:[]}]}}});
+      }else assert.fail('Unexpected endpoint; email send and Queue message operations are forbidden');
+      return Response.json({success:true,result});
+    };
+  `;
+  for (const [cap, partial] of [[1, false], [null, false], [1, true]]) {
+    writeFileSync(calls, '');
+    const result = spawnSync(process.execPath, ['--experimental-test-module-mocks', '--import', `data:text/javascript,${encodeURIComponent(fixture)}`,
+      'scripts/ci/audit-production-auth-incident.mjs'], { encoding: 'utf8', timeout: 10000, env: {
+      PLANETSCALE_SCHEMA_READ_DATABASE_URL: 'postgresql://schema@fixture.invalid/postgres?sslmode=verify-full',
+      CLOUDFLARE_API_TOKEN: 'fixture-private-marker', CLOUDFLARE_ACCOUNT_ID: authAccount,
+      CLOUDFLARE_ZONE_ID: '7bc572c8b7cd3c00be9c655176c29382', AUTH_INCIDENT_SEND_PROBE: 'false',
+      AUTH_INCIDENT_AUDIT_OUTPUT: output, SYNTHETIC_QUEUE_CAP: JSON.stringify(cap), GITHUB_SHA: 'f'.repeat(40),
+      SYNTHETIC_QUEUE_PARTIAL: String(partial),
+    } });
+    const ready = cap === 1 && !partial;
+    assert.equal(result.status, ready ? 0 : 1, result.stderr);
+    const serialized = readFileSync(output, 'utf8'), report = JSON.parse(serialized);
+    assert.equal(report.mode, 'read_only');
+    assert.equal(report.cloudflare.arbitraryRecipientProbe.attempted, false);
+    assert.equal(report.cloudflare.dispatchQueue.status, ready ? 'VERIFIED' : 'BLOCKED');
+    if (partial) assert.equal(report.cloudflare.dispatchQueue.reason, 'email_dispatch_queue_inventory_incomplete');
+    assert.equal(report.cloudflare.remainingSendingQuota.status, 'UNVERIFIED');
+    assert.deepEqual(report.failures, ready ? [] : ['cloudflare_dispatch_queue_not_ready']);
+    assert.ok(!serialized.includes('fixture-private-marker'));
+    const requests = readFileSync(calls, 'utf8').trim().split('\n').map(JSON.parse);
+    assert.ok(requests.every(call => call.method === 'GET' || (call.method === 'POST' && call.path === '/client/v4/graphql')));
+    assert.equal(requests.some(call => call.path === `/client/v4/accounts/${authAccount}/queues/${lifecycleId}`), !partial);
+  }
 });
