@@ -42,7 +42,7 @@
     "idempotency": ["public-idempotency-runtime", "reputation-persistence-policy"],
     "content-publication": ["public-content-runtime", "content-declaration-publication-policy", "profile-name-policy"],
     "feed-entitlements": ["public-feed-runtime", "content-social-feed-policy", "tier-entitlement-policy"],
-    "privacy-dsr": ["public-privacy-runtime", "jobs-runtime-policy"],
+    "privacy-dsr": ["public-privacy-runtime", "jobs-runtime-policy", "passkey-privacy-lifecycle"],
     "moderation-appeals": ["admin-appeal-runtime", "jobs-runtime-policy", "moderation-appeal-policy"],
     "reputation": ["reputation-impact-policy", "reputation-persistence-policy"],
     "activity-audit": ["privacy-activity-policy", "admin-appeal-runtime", "admin-waitlist-runtime", "admin-account-support-runtime", "admin-overview-runtime", "jobs-runtime-policy"],
@@ -59,6 +59,20 @@
       "sources": ["apps/lythaus-admin-api/src/overview-policy.ts", "apps/lythaus-admin-api/src/overview-runtime.ts"],
       "tests": ["apps/lythaus-admin-api/tests/overview-policy.test.mjs", "apps/lythaus-admin-api/tests/overview-runtime.test.mjs"],
       "rationale": "Current owner checks before cached aggregate disclosure, fail-closed audit, bounded source populations, UTC elapsed comparisons and explicit unavailable data; PostgreSQL separately reconciles records and query plans."
+    },
+    {
+      "id": "passkey-privacy-lifecycle",
+      "priority": "P1",
+      "sources": ["packages/db/src/passkey-privacy.ts"],
+      "tests": ["packages/db/tests/passkey-privacy.test.mjs"],
+      "rationale": "Schema-aware passkey privacy export/inventory, locked account and legal-hold erasure controls, and expired challenge retention. Real PostgreSQL separately verifies column grants, ownership, cascade deletion and holds."
+    },
+    {
+      "id": "worker-passkey-policy",
+      "priority": "P1",
+      "sources": ["packages/security/src/passkeys.ts"],
+      "tests": ["packages/security/tests/passkeys.test.mjs"],
+      "rationale": "Optional WebAuthn secure origin/RP binding, UV/signature verification, synced counters and zero-point evidence. Disposable PostgreSQL and virtual browser tests separately prove replay, ownership and session transactions."
     },
     {
       "id": "account-support-contract",

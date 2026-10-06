@@ -105,6 +105,7 @@ flutter build web --release --no-tree-shake-icons --no-web-resources-cdn \
   --dart-define=API_BASE_URL="${API_BASE_URL}" \
   --dart-define=AUTH_URL="${AUTH_URL}"
 
+node scripts/build-passkey-web-client.mjs build/web/passkeys-client.js
 node scripts/ci/version-web-entrypoints.mjs build/web
 
 echo "==> Copying _redirects for SPA routing"

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -127,8 +128,55 @@ const reviewedOpenApiDartScripts = {
 function assertSpectralAdapterReference(dependencies) {
   assert.equal(dependencies['fast-glob'], reviewedSpectralAdapter, 'Spectral must use the exact reviewed local adapter');
 }
+const passkeyLibraryLocks = {
+  'node_modules/@hexagon/base64': '98abf477bbf2077e54ece608a25f18b3093d8a160517efd7adea69f387b7b41b',
+  'node_modules/@levischuck/tiny-cbor': '794d566a1e0b4c589d4c770335d1b667b89c226716eb1049793f883ba228439e',
+  'node_modules/@peculiar/asn1-android': 'd45a08d053c7717a7871c3986e3d99e03d77c7970f017d67511f4fbb811c73a2',
+  'node_modules/@peculiar/asn1-asym-key': '759cdce5b79fa23f2a75e16d3b93bce32f0b1f7e7eaae5e630d17e4cda91426a',
+  'node_modules/@peculiar/asn1-cms': '72a6926f562fb72ad47cc50f183766c9250879429936c60dacc814d7e199955b',
+  'node_modules/@peculiar/asn1-csr': '39a72005e0ad847b998eece74bf786f9d545a699c2eec13c3d292b0e56535a7f',
+  'node_modules/@peculiar/asn1-ecc': '1f0f43d42ab7c8d150eeae2f50166bda61048912bfae008d732332b864ea1ae6',
+  'node_modules/@peculiar/asn1-pfx': '0223602da39fbc7bc4f47ffaaf686b2164fb95ad5205508d73053042bcf4d91f',
+  'node_modules/@peculiar/asn1-pkcs8': 'a4b32cba7be3f91f8f78d6b05c054701e51043003a298743da9d4e2e107276b7',
+  'node_modules/@peculiar/asn1-pkcs9': 'c50fd65fc41ac54dbb88f608c538f36b65015d1865d9834d7321d5c977d644c0',
+  'node_modules/@peculiar/asn1-rsa': 'af5b4b57938409539c3432c1da7f2a6cedfeea0b5f6d387d2bfd8f736c6a3d34',
+  'node_modules/@peculiar/asn1-schema': '23f784f95315a901c24f33c7f78a5cd1d65e114efff4cc020cf2f7fa1120a72d',
+  'node_modules/@peculiar/asn1-x509': '26195ebbc1d7ead10d45bebbb80d275bf5eed9a99c92f378a4c46bd1c263f561',
+  'node_modules/@peculiar/asn1-x509-attr': '976f798a931c48da4763895f5277387da4ed0faac8d9e7c2c5c545a73f34e041',
+  'node_modules/@peculiar/asn1-x509-post-quantum': '132fe5baa5c576b771725df9f79043140f7563eff11d6ed34fe99ff984c88463',
+  'node_modules/@peculiar/utils': '5a388236915d3ebeff24455db8fcb41a0a5ec67166f67e69c3b94698e3ada05c',
+  'node_modules/@peculiar/x509': '786757108892d967199f54d6b711ac2aba5cce8424ebba61e3892d35963b293e',
+  'node_modules/@simplewebauthn/browser': '5b070cc890ecf767d47d6c22f4a8c2bced07ad5348ba388855d7e8d7ca9ac2dd',
+  'node_modules/@simplewebauthn/server': 'b9a3a9c976c4d513988a79660002f6f20d38d9106852c76e7d9e250948a2d33d',
+  'node_modules/asn1js': '9a5ffab99c92fdc6add0bef305f150237c2d120868f1b7bdf250121e472b441b',
+  'node_modules/pvtsutils': '17a81711e36da556283c71ebf70bbf33979e2427eb92c79364a5ef84e9fa0772',
+  'node_modules/pvutils': '425f266dd9983367585dc969c42b9667c8addeb525b28f0d93986de05dd5faf7',
+  'node_modules/tsyringe': '9e5a0e642aec520d92dbdc421e95810c013fd1930c75bcdaeb506c6f3830b671',
+  'node_modules/tsyringe/node_modules/tslib': '64d2393b7285671a90bf8c1d730e1777bbe15be0e3a19e1e32a9733d68e38c27',
+};
 function assertRootToolingLockOnlyHasSecurityPatches(current = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'))) {
   const original = JSON.parse(git('show', `${upstreamBaselineSha}:package-lock.json`));
+  for (const [packagePath, expectedHash] of Object.entries(passkeyLibraryLocks)) {
+    assert.equal(original.packages[packagePath], undefined);
+    assert.equal(createHash('sha256').update(JSON.stringify(current.packages[packagePath])).digest('hex'), expectedHash,
+      `${packagePath} must retain the exact reviewed passkey dependency lock`);
+    delete current.packages[packagePath];
+  }
+  for (const packagePath of ['node_modules/reflect-metadata', 'node_modules/tslib']) {
+    const runtimeDependency = { ...original.packages[packagePath] };
+    delete runtimeDependency.dev;
+    assert.deepEqual(current.packages[packagePath], runtimeDependency);
+    current.packages[packagePath] = original.packages[packagePath];
+  }
+  const securityPackage = structuredClone(original.packages['packages/security']);
+  securityPackage.dependencies['@simplewebauthn/browser'] = '14.0.0';
+  securityPackage.dependencies['@simplewebauthn/server'] = '14.0.3';
+  assert.deepEqual(current.packages['packages/security'], securityPackage);
+  current.packages['packages/security'] = original.packages['packages/security'];
+  const securityManifest = JSON.parse(git('show', `${upstreamBaselineSha}:packages/security/package.json`));
+  securityManifest.dependencies['@simplewebauthn/browser'] = '14.0.0';
+  securityManifest.dependencies['@simplewebauthn/server'] = '14.0.3';
+  assert.deepEqual(JSON.parse(readFileSync(path.join(root, 'packages/security/package.json'), 'utf8')), securityManifest);
   for (const [name, version] of [['brace-expansion', '5.0.12'], ['undici', '7.29.1'], ['basic-ftp', '6.2.1']]) {
     const packagePath = `node_modules/${name}`;
     const patched = current.packages[packagePath];
@@ -155,7 +203,7 @@ function assertRootToolingLockOnlyHasSecurityPatches(current = JSON.parse(readFi
     assert.equal(current.packages[packagePath], undefined, `${name} must remain removed with the vulnerable Spectral chain`);
     current.packages[packagePath] = original.packages[packagePath];
   }
-  assert.deepEqual(current, original, 'Root tooling lock may change only for the reviewed security patches');
+  assert.deepEqual(current, original, 'Root tooling lock may change only for the exact passkey library additions and reviewed security patches');
 }
 const reviewedAstroPolicy = 'file:../../tools/marketing/astro-cache-policy';
 function assertMarketingLockOnlyHasSecurityPatch(current = JSON.parse(readFileSync(path.join(root, 'apps/marketing-site/package-lock.json'), 'utf8'))) {
@@ -182,6 +230,7 @@ function assertMarketingLockOnlyHasSecurityPatch(current = JSON.parse(readFileSy
   assert.deepEqual(current, original, 'Marketing lock may change only for the exact reviewed security repairs');
 }
 const authRepairPaths = new Set([
+  'packages/security/package.json',
   'package.json',
   'apps/marketing-site/package.json',
   'apps/lythaus-public-api/wrangler.jsonc',
@@ -325,7 +374,7 @@ test('source-map security patch rejects changed metadata and unrelated dependenc
 test('reviewed tooling patches keep every other dependency frozen', () => {
   const changed = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
   changed.packages['node_modules/ajv'].version = '0.0.0';
-  assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(changed), /Root tooling lock may change only for the reviewed security patches/);
+  assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(changed), /Root tooling lock may change only for the exact passkey library additions and reviewed security patches/);
 });
 
 test('Spectral security replacement rejects changed targets, metadata or resurrected vulnerable dependencies', () => {
@@ -345,6 +394,21 @@ test('Spectral security replacement rejects changed targets, metadata or resurre
   for (const name of reviewedSpectralRemovedPackages) {
     const resurrected = readLock(); resurrected.packages[`node_modules/${name}`] = original.packages[`node_modules/${name}`];
     assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(resurrected), /must remain removed/);
+  }
+});
+
+test('passkey lock exceptions reject library, integrity, extra dependency and existing dependency mutations', () => {
+  const current = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+  for (const mutate of [
+    value => { value.packages['node_modules/@simplewebauthn/server'].version = '14.0.4'; },
+    value => { value.packages['node_modules/@simplewebauthn/browser'].integrity = 'sha512-invalid'; },
+    value => { value.packages['node_modules/arbitrary-fixture'] = { version: '1.0.0' }; },
+    value => { value.packages['node_modules/jose'].version = '0.0.0'; },
+    value => { value.packages['packages/security'].dependencies['@simplewebauthn/server'] = '^14.0.3'; },
+  ]) {
+    const candidate = structuredClone(current);
+    mutate(candidate);
+    assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(candidate));
   }
 });
 

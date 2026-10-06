@@ -7,6 +7,27 @@ on:
       - 'database/planetscale/**'
       - 'apps/lythaus-public-api/src/auth*.ts'
       - 'apps/lythaus-public-api/src/index.ts'
+      - 'apps/lythaus-public-api/src/passkey-runtime.ts'
+      - 'apps/lythaus-public-api/tests/passkey-test-support.mjs'
+      - 'lib/features/auth/application/auth_providers.dart'
+      - 'lib/features/auth/application/auth_service.dart'
+      - 'lib/features/auth/application/passkey_*.dart'
+      - 'lib/features/auth/presentation/auth_choice_screen.dart'
+      - 'lib/features/auth/presentation/passkeys_screen.dart'
+      - 'lib/ui/screens/profile/account_security_screen.dart'
+      - 'scripts/build-passkey-web-client.mjs'
+      - 'scripts/cf-pages-build.sh'
+      - 'scripts/tests/flutter-passkeys.browser.mjs'
+      - 'scripts/tests/local-auth-browser-server.mjs'
+      - 'test/features/auth/application/passkey_service_test.dart'
+      - 'test/features/auth/presentation/auth_choice_screen_test.dart'
+      - 'web/index.html'
+      - 'packages/security/src/passkeys.ts'
+      - 'packages/security/tests/passkey-fixtures.mjs'
+      - 'packages/db/src/passkeys.ts'
+      - 'packages/db/src/passkey-privacy.ts'
+      - 'apps/lythaus-jobs/src/index.ts'
+      - 'apps/lythaus-jobs/src/runtime-policy.ts'
       - 'apps/lythaus-public-api/src/account-support-entrypoint.ts'
       - 'apps/lythaus-public-api/src/email-envelope-entrypoint.ts'
       - 'apps/lythaus-public-api/src/worker.ts'
@@ -65,7 +86,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:17
@@ -181,10 +202,39 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
         run: node --test scripts/tests/auth-incident-grants.postgres.mjs
-      - name: Prove authentication and email races on real PostgreSQL
+      - name: Prepare isolated passkey proposal fixture
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_passkeys_ci?sslmode=disable
+        run: |
+          psql 'postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable' -v ON_ERROR_STOP=1 -c 'CREATE DATABASE lythaus_auth_test_passkeys_ci'
+          npm run validate:planetscale-postgres17
+          psql "$PLANETSCALE_PG17_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction -f database/planetscale/proposals/optional-passkeys.sql
+      - name: Prove authentication, passkey and email races on real PostgreSQL
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
+          PASSKEY_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_passkeys_ci?sslmode=disable
         run: node --experimental-strip-types --experimental-test-module-mocks --test --test-concurrency=1 apps/lythaus-public-api/tests/*.postgres.mjs apps/lythaus-admin-api/tests/*.postgres.mjs
+      - name: Build release PWA for the synthetic passkey browser journey
+        env:
+          ENVIRONMENT: production
+          API_BASE_URL: https://api.lythaus.co/api
+          AUTH_URL: https://api.lythaus.co/api
+        run: bash scripts/cf-pages-build.sh
+      - name: Install Chromium for the virtual WebAuthn authenticator
+        run: npx playwright install --with-deps chromium
+      - name: Verify PWA passkey recovery with a virtual authenticator
+        env:
+          PASSKEY_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_passkeys_ci?sslmode=disable
+          AUTH_QA_DIR: ${{ runner.temp }}/lythaus-passkey-qa
+        run: node --experimental-strip-types --test --test-concurrency=1 --test-timeout=600000 scripts/tests/flutter-passkeys.browser.mjs
+      - name: Upload virtual-authenticator browser evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: flutter-passkeys-browser-evidence
+          path: ${{ runner.temp }}/lythaus-passkey-qa
+          if-no-files-found: warn
+          retention-days: 7
       - name: Enforce executable coordinator coverage on real PostgreSQL
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable

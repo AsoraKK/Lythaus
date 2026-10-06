@@ -30,6 +30,8 @@ tags:
     description: Liveness monitoring endpoints.
   - name: Auth
     description: Email and guest authentication endpoints.
+  - name: Passkeys
+    description: Optional PWA passkeys for verified email accounts; disabled by default.
   - name: Posts
     description: Post authoring endpoints.
   - name: Media
@@ -355,6 +357,26 @@ paths:
                     items: { type: object, additionalProperties: true }
         '404':
           description: Opaque not-found response outside the canonical host boundary.
+  /auth/passkeys/capabilities:
+    $ref: './passkeys.yaml#/paths/~1auth~1passkeys~1capabilities'
+  /auth/passkeys/register/options:
+    $ref: './passkeys.yaml#/paths/~1auth~1passkeys~1register~1options'
+  /auth/passkeys/register/verify:
+    $ref: './passkeys.yaml#/paths/~1auth~1passkeys~1register~1verify'
+  /auth/passkeys/login/options:
+    $ref: './passkeys.yaml#/paths/~1auth~1passkeys~1login~1options'
+  /auth/passkeys/login/verify:
+    $ref: './passkeys.yaml#/paths/~1auth~1passkeys~1login~1verify'
+  /auth/passkeys/maintenance/options:
+    $ref: './passkeys.yaml#/paths/~1auth~1passkeys~1maintenance~1options'
+  /auth/passkeys/maintenance/verify:
+    $ref: './passkeys.yaml#/paths/~1auth~1passkeys~1maintenance~1verify'
+  /auth/passkeys/credentials:
+    $ref: './passkeys.yaml#/paths/~1auth~1passkeys~1credentials'
+  /auth/passkeys/credentials/{passkeyId}:
+    $ref: './passkeys.yaml#/paths/~1auth~1passkeys~1credentials~1{passkeyId}'
+  /auth/passkeys/credentials/{passkeyId}/revoke:
+    $ref: './passkeys.yaml#/paths/~1auth~1passkeys~1credentials~1{passkeyId}~1revoke'
   /auth/email:
     post:
       operationId: authEmail

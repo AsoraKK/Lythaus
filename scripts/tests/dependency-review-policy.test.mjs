@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { dependencyGraphChanged, dependencyGraphMetadata, shouldRunLocalAudit } from '../ci/dependency-review-policy.mjs';
-import { comparison, apiFailure, resolvedDependencies, missingCoverage } from '../ci/dependency-review-native.mjs';
+import { comparison, apiFailure, resolvedDependencies, missingCoverage, npmManifestLock } from '../ci/dependency-review-native.mjs';
 import fs from 'node:fs';
 
 test('native comparison requires distinct exact commits and classifies actual API errors', () => {
@@ -68,6 +68,23 @@ test('marketing linked policy requires native coverage alongside every registry 
   assert.deepEqual(missingCoverage(expected, native), []);
   assert.equal(missingCoverage(expected, native.filter(value => value.name !== local.name)).length, 1);
   assert.equal(missingCoverage(expected, native.filter(value => value.name === local.name)).length, expected.length - 1);
+});
+
+test('workspace manifests use the root lock only when membership and locked dependency metadata match', () => {
+  const file = 'packages/security/package.json';
+  const manifest = { name: '@lythaus/security', version: '0.1.0', dependencies: { example: '1.0.0' } };
+  const root = { workspaces: ['packages/security'] };
+  const lock = { packages: { 'packages/security': structuredClone(manifest) } };
+  assert.equal(npmManifestLock(file, manifest, root, lock), 'package-lock.json');
+  assert.equal(npmManifestLock(file, manifest, {}, lock), 'packages/security/package-lock.json');
+  assert.equal(npmManifestLock('apps/standalone/package.json', manifest, root, lock), 'apps/standalone/package-lock.json');
+  for (const broken of [
+    { packages: {} },
+    { packages: { 'packages/security': { ...manifest, name: 'another-package' } } },
+    { packages: { 'packages/security': { ...manifest, version: '0.2.0' } } },
+    { packages: { 'packages/security': { ...manifest, dependencies: { example: '2.0.0' } } } },
+    { packages: { 'packages/security': { ...manifest, optionalDependencies: { unreviewed: '1.0.0' } } } },
+  ]) assert.throws(() => npmManifestLock(file, manifest, root, broken), /WORKSPACE_MANIFEST_LOCK_MISMATCH/);
 });
 
 test('local dependency review skips duplicate audits when the dependency graph is unchanged', () => {

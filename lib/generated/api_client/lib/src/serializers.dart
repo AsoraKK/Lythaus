@@ -201,6 +201,21 @@ import 'package:lythaus_api_client/src/model/owner_problem_request.dart';
 import 'package:lythaus_api_client/src/model/owner_request_page.dart';
 import 'package:lythaus_api_client/src/model/owner_suggestion_request.dart';
 import 'package:lythaus_api_client/src/model/owner_support_request.dart';
+import 'package:lythaus_api_client/src/model/passkey_capability.dart';
+import 'package:lythaus_api_client/src/model/passkey_ceremony_request.dart';
+import 'package:lythaus_api_client/src/model/passkey_ceremony_request_credential.dart';
+import 'package:lythaus_api_client/src/model/passkey_challenge.dart';
+import 'package:lythaus_api_client/src/model/passkey_credential_list.dart';
+import 'package:lythaus_api_client/src/model/passkey_credential_list_credentials_inner.dart';
+import 'package:lythaus_api_client/src/model/passkey_enrollment.dart';
+import 'package:lythaus_api_client/src/model/passkey_error.dart';
+import 'package:lythaus_api_client/src/model/passkey_maintenance.dart';
+import 'package:lythaus_api_client/src/model/passkey_register_options_request.dart';
+import 'package:lythaus_api_client/src/model/passkey_rename_request.dart';
+import 'package:lythaus_api_client/src/model/passkey_rename_result.dart';
+import 'package:lythaus_api_client/src/model/passkey_revoke_request.dart';
+import 'package:lythaus_api_client/src/model/passkey_revoke_result.dart';
+import 'package:lythaus_api_client/src/model/passkey_session.dart';
 import 'package:lythaus_api_client/src/model/pending_appeal_adjudication.dart';
 import 'package:lythaus_api_client/src/model/pending_appeal_adjudication_list.dart';
 import 'package:lythaus_api_client/src/model/personal_feed_item.dart';
@@ -478,6 +493,21 @@ part 'serializers.g.dart';
   OwnerRequestPage,
   OwnerSuggestionRequest,
   OwnerSupportRequest,
+  PasskeyCapability,
+  PasskeyCeremonyRequest,
+  PasskeyCeremonyRequestCredential,
+  PasskeyChallenge,
+  PasskeyCredentialList,
+  PasskeyCredentialListCredentialsInner,
+  PasskeyEnrollment,
+  PasskeyError,
+  PasskeyMaintenance,
+  PasskeyRegisterOptionsRequest,
+  PasskeyRenameRequest,
+  PasskeyRenameResult,
+  PasskeyRevokeRequest,
+  PasskeyRevokeResult,
+  PasskeySession,
   PendingAppealAdjudication,
   PendingAppealAdjudicationList,
   PersonalFeedItem,

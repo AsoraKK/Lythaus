@@ -85,6 +85,8 @@ jobs:
         run: node --experimental-strip-types --experimental-test-module-mocks --test packages/contracts/tests/account-support.test.mjs apps/lythaus-admin-api/tests/account-support-runtime.test.mjs apps/lythaus-admin-api/tests/account-support-handler.test.mjs
       - name: Verify bounded owner-only Overview analytics
         run: node --experimental-strip-types --experimental-test-module-mocks --test apps/lythaus-admin-api/tests/overview-policy.test.mjs apps/lythaus-admin-api/tests/overview-runtime.test.mjs apps/lythaus-admin-api/tests/overview-handler.test.mjs
+      - name: Verify optional passkey response contracts
+        run: node --experimental-strip-types --test tests/contract/passkeys-contract.test.mjs
       - name: Verify owner-testing authentication release scope
         run: node --test scripts/tests/owner-testing-auth-scope.test.mjs
       - run: node --test scripts/tests/real-email-acceptance-evidence.test.mjs
@@ -250,6 +252,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit
       - uses: ./.github/actions/flutter-setup
         with:
           flutter-version-file: .fvmrc
@@ -290,11 +297,6 @@ jobs:
           path: build/web
           if-no-files-found: error
           retention-days: 7
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version: '22'
-          cache: npm
-      - run: npm ci --ignore-scripts --no-audit
       - name: Enforce per-module authentication coverage
         run: node scripts/check-auth-flutter-coverage.mjs
       - name: Install authentication test browsers
@@ -311,6 +313,8 @@ jobs:
           retention-days: 7
       - name: Build content journey regression fixture
         run: flutter build web --debug --no-pub --no-wasm-dry-run --target test/browser/content_journey_entry.dart --output build/content-journey-web
+      - name: Add pinned passkey client to content journey fixture
+        run: node scripts/build-passkey-web-client.mjs build/content-journey-web/passkeys-client.js
       - name: Verify rendered content journey and durable recovery
         env:
           QA_COMMIT: ${{ github.sha }}
