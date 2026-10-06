@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import test from 'node:test';
 import { attachAuthEmailConsumer, AUTH_EMAIL_ATTACHMENT as a } from '../ci/attach-auth-email-consumer.mjs';
@@ -215,6 +216,27 @@ test('read-only inspection captures bounded Worker references, environments and 
   const serialized = JSON.stringify(receipt);
   assert.ok(!serialized.includes('private-fixture-marker'));
   assert.ok(!serialized.includes('fixture-namespace'));
+});
+
+test('read-only inspection never fingerprints secret-like ASCII type or environment values in any snapshot', async () => {
+  const marker = 'fixture_token_ASCII_1234567890';
+  const fingerprint = `sha256:${createHash('sha256').update(marker).digest('hex')}`;
+  const f = fixture({ attached: true, consumerFields: { type: marker, environment: marker, environment_name: marker,
+    script: { name: a.worker, environment: marker, environment_name: marker } } });
+  const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, now });
+  assert.equal(receipt.status, 'BLOCKED');
+  assert.equal(receipt.mutationAttempted, false);
+  assert.ok(f.calls.every(call => call.method === 'GET'));
+  for (const consumer of [receipt.before.listing.consumers[0], receipt.before.consumers[0], receipt.beforeConsumerList[0]]) {
+    assert.equal(consumer.type, 'unknown');
+    assert.deepEqual(consumer.typeField, { present: true, type: 'string' });
+    for (const fields of [consumer.environmentFields, consumer.workerIdentityFields.script.reference.environmentFields]) {
+      for (const field of Object.values(fields)) assert.equal(Object.hasOwn(field, 'valueHash'), false);
+    }
+  }
+  const serialized = JSON.stringify(receipt);
+  assert.ok(!serialized.includes(marker));
+  assert.ok(!serialized.includes(fingerprint));
 });
 
 test('usage is refreshed with a current time window immediately before attachment and remains an estimate', async () => {

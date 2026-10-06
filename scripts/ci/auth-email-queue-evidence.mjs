@@ -14,7 +14,12 @@ const name = queue => queue?.queue_name ?? queue?.name;
 function fieldEvidence(container, field) {
   const value = container[field];
   return { present: Object.hasOwn(container, field),
-    type: value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value,
+    type: value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value };
+}
+
+function resourceIdentityEvidence(container, field) {
+  const value = container[field];
+  return { ...fieldEvidence(container, field),
     valueHash: typeof value === 'string' && value.length >= 1 && value.length <= 128 && !/[^a-zA-Z0-9_-]/.test(value)
       ? `sha256:${createHash('sha256').update(value).digest('hex')}` : null };
 }
@@ -28,10 +33,10 @@ function environmentEvidence(container) {
 
 function workerFieldEvidence(container, field) {
   const value = container[field], reference = object(value);
-  return { ...fieldEvidence(container, field), valueMatchesExpectedWorker: value === WORKER,
+  return { ...resourceIdentityEvidence(container, field), valueMatchesExpectedWorker: value === WORKER,
     reference: value && typeof value === 'object' && !Array.isArray(value) ? {
       identityFields: Object.fromEntries(['name', 'id', 'script_name'].map(key => [key, {
-        ...fieldEvidence(reference, key), valueMatchesExpectedWorker: reference[key] === WORKER,
+        ...resourceIdentityEvidence(reference, key), valueMatchesExpectedWorker: reference[key] === WORKER,
       }])),
       environmentFields: environmentEvidence(reference),
     } : null };
@@ -64,7 +69,7 @@ export function consumerEvidence(value) {
     typeField: fieldEvidence(consumer, 'type'),
     expectedWorkerMatches: consumer.script_name === WORKER,
     workerIdentityFields: Object.fromEntries(['script_name', 'script', 'service', 'worker'].map(field => [field, workerFieldEvidence(consumer, field)])),
-    environmentFields: environmentEvidence(consumer), namespaceField: fieldEvidence(consumer, 'namespace'),
+    environmentFields: environmentEvidence(consumer), namespaceField: resourceIdentityEvidence(consumer, 'namespace'),
     pauseFields: pauseEvidence(consumer),
     expectedDeadLetterMatches: consumer.dead_letter_queue === LIFECYCLE_DLQ,
     batchSize: number(settings.batch_size), maxWaitTimeMs: number(settings.max_wait_time_ms),

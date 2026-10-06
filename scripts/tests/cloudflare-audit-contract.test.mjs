@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -113,6 +114,33 @@ test('auth Queue audit records exact existing delivery and consumer settings wit
   assert.equal(evidence.mutationPerformed, false);
 });
 
+test('auth Queue audit never fingerprints unknown ASCII type or environment values', async () => {
+  const marker = 'fixture_token_ASCII_1234567890';
+  const fingerprint = `sha256:${createHash('sha256').update(marker).digest('hex')}`;
+  const queue = queueFixture();
+  Object.assign(queue.consumers[0], { type: marker, environment: marker, environment_name: marker,
+    script: { name: 'lythaus-jobs-development', environment: marker, environment_name: marker } });
+  const reader = queueReader(queue);
+  const evidence = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: reader.requestJson });
+  assert.equal(evidence.status, 'BLOCKED');
+  assert.equal(evidence.reason, 'email_dispatch_live_consumer_drift');
+  for (const consumer of [evidence.listing.consumers[0], evidence.consumers[0]]) {
+    assert.equal(consumer.type, 'unknown');
+    assert.deepEqual(consumer.typeField, { present: true, type: 'string' });
+    for (const fields of [consumer.environmentFields, consumer.workerIdentityFields.script.reference.environmentFields]) {
+      for (const field of Object.values(fields)) assert.deepEqual(field, {
+        present: true, type: 'string', matchesProduction: false, matchesDevelopment: false,
+      });
+    }
+    assert.match(consumer.workerIdentityFields.script.reference.identityFields.name.valueHash, /^sha256:[0-9a-f]{64}$/);
+  }
+  const serialized = JSON.stringify(evidence);
+  assert.ok(!serialized.includes(marker));
+  assert.ok(!serialized.includes(fingerprint));
+  assert.equal(reader.calls.length, 2);
+  assert.equal(evidence.mutationPerformed, false);
+});
+
 for (const field of ['script', 'service']) {
   test(`auth Queue audit records ${field} response shape without accepting an alias or leaking its value`, async () => {
     const queue = queueFixture();
@@ -211,7 +239,7 @@ test('auth Queue audit redacts invalid or oversized identity/environment values 
   assert.equal(evidence.status, 'BLOCKED');
   const observed = evidence.consumers[0];
   assert.equal(observed.type, 'unknown');
-  assert.equal(observed.typeField.valueHash, null);
+  assert.deepEqual(observed.typeField, { present: true, type: 'string' });
   assert.equal(observed.workerIdentityFields.script.type, 'array');
   assert.equal(observed.workerIdentityFields.script.reference, null);
   assert.equal(observed.workerIdentityFields.service.valueHash, null);
@@ -241,8 +269,10 @@ for (const [label, value] of [['empty', ''], ['newline', 'private-marker\n'], ['
   test(`auth Queue audit never hashes invalid resource-name strings: ${label}`, async () => {
     const queue = queueFixture();
     queue.consumers[0].environment = value;
+    queue.consumers[0].namespace = value;
     const evidence = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: queueReader(queue).requestJson });
-    assert.equal(evidence.consumers[0].environmentFields.environment.valueHash, null);
+    assert.equal(Object.hasOwn(evidence.consumers[0].environmentFields.environment, 'valueHash'), false);
+    assert.equal(evidence.consumers[0].namespaceField.valueHash, null);
   });
 }
 
