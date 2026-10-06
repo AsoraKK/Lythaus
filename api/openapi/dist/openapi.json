@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Lythaus API",
-    "version": "v9",
+    "version": "v10",
     "description": "HTTP contract for the Lythaus API. The active runtime is Cloudflare Workers backed by PlanetScale PostgreSQL through Hyperdrive. Initial authentication is Guest plus Email only. Production releases are coordinated from one reviewed main SHA; the release manifest and provider evidence remain outside this HTTP contract.\n",
     "license": {
       "name": "MIT",
@@ -6860,14 +6860,11 @@
       "get": {
         "operationId": "usersGet",
         "summary": "Get a public user profile",
+        "description": "Public profile reads return approved public identity fields. Reputation is omitted when the Passport is private; public reputation contains only level and label, never enforcement status.",
         "tags": [
           "Users"
         ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "security": [],
         "parameters": [
           {
             "name": "id",
@@ -6880,11 +6877,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "Public profile with only explicitly public fields.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ProductIntegrityPublicProfileResponse"
                 }
               }
             }
@@ -6911,6 +6908,16 @@
           },
           "403": {
             "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile is unavailable.",
             "content": {
               "application/json": {
                 "schema": {
@@ -16593,6 +16600,87 @@
           }
         }
       },
+      "ProductIntegrityPublicProfileUser": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "displayName",
+          "trustPassportVisibility",
+          "journalistVerified",
+          "badges"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "handle": {
+            "type": "string",
+            "nullable": true
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "bio": {
+            "type": "string",
+            "nullable": true
+          },
+          "trustPassportVisibility": {
+            "type": "string",
+            "enum": [
+              "public_expanded",
+              "public_minimal",
+              "private"
+            ],
+            "description": "Persisted Passport visibility preference. Private suppresses the public reputation summary."
+          },
+          "reputation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "level",
+              "label"
+            ],
+            "properties": {
+              "level": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 5
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "description": "Present for public Passport visibility. Never contains enforcement status or evidence."
+          },
+          "journalistVerified": {
+            "type": "boolean"
+          },
+          "badges": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "ProductIntegrityPublicProfileResponse": {
+        "type": "object",
+        "required": [
+          "user"
+        ],
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/ProductIntegrityPublicProfileUser"
+          }
+        }
+      },
       "FollowCreateRequest": {
         "type": "object",
         "additionalProperties": false,
@@ -16764,8 +16852,40 @@
           }
         }
       },
-      "ReputationPublicV2": {
+      "ReputationPillars": {
         "type": "object",
+        "required": [
+          "accountability",
+          "contribution",
+          "conduct",
+          "sourcing",
+          "authenticity",
+          "reviewReliability"
+        ],
+        "properties": {
+          "accountability": {
+            "type": "number"
+          },
+          "contribution": {
+            "type": "number"
+          },
+          "conduct": {
+            "type": "number"
+          },
+          "sourcing": {
+            "type": "number"
+          },
+          "authenticity": {
+            "type": "number"
+          },
+          "reviewReliability": {
+            "type": "number"
+          }
+        }
+      },
+      "ReputationPrivateV2": {
+        "type": "object",
+        "additionalProperties": false,
         "required": [
           "userId",
           "level",
@@ -16773,7 +16893,10 @@
           "levelName",
           "reputationStatus",
           "reputationBand",
-          "policyVersion"
+          "policyVersion",
+          "pillars",
+          "promotionBlockers",
+          "evaluatedAt"
         ],
         "properties": {
           "userId": {
@@ -16814,70 +16937,22 @@
           "policyVersion": {
             "type": "string",
             "example": "reputation-v2.0.0"
-          }
-        }
-      },
-      "ReputationPillars": {
-        "type": "object",
-        "required": [
-          "accountability",
-          "contribution",
-          "conduct",
-          "sourcing",
-          "authenticity",
-          "reviewReliability"
-        ],
-        "properties": {
-          "accountability": {
-            "type": "number"
           },
-          "contribution": {
-            "type": "number"
+          "pillars": {
+            "$ref": "#/components/schemas/ReputationPillars"
           },
-          "conduct": {
-            "type": "number"
-          },
-          "sourcing": {
-            "type": "number"
-          },
-          "authenticity": {
-            "type": "number"
-          },
-          "reviewReliability": {
-            "type": "number"
-          }
-        }
-      },
-      "ReputationPrivateV2": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/ReputationPublicV2"
-          },
-          {
-            "type": "object",
-            "required": [
-              "pillars",
-              "promotionBlockers",
-              "evaluatedAt"
-            ],
-            "properties": {
-              "pillars": {
-                "$ref": "#/components/schemas/ReputationPillars"
-              },
-              "promotionBlockers": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "evaluatedAt": {
-                "type": "string",
-                "format": "date-time",
-                "nullable": true
-              }
+          "promotionBlockers": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
+          },
+          "evaluatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           }
-        ]
+        }
       },
       "MonthlyReputationReportResponse": {
         "type": "object",
@@ -17261,6 +17336,30 @@
             }
           }
         ]
+      },
+      "ReputationPublicV2": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Public reputation output contains only the approved categorical level and its label. Enforcement status, scoring pillars, policy metadata, blockers, and evaluation timestamps are owner-only.",
+        "required": [
+          "userId",
+          "level",
+          "levelName"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "level": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "levelName": {
+            "type": "string"
+          }
+        }
       },
       "ReactionRequest": {
         "type": "object",

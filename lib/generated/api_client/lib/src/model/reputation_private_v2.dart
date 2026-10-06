@@ -3,7 +3,6 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:lythaus_api_client/src/model/reputation_public_v2.dart';
 import 'package:lythaus_api_client/src/model/reputation_pillars.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
@@ -25,15 +24,38 @@ part 'reputation_private_v2.g.dart';
 /// * [promotionBlockers]
 /// * [evaluatedAt]
 @BuiltValue()
-abstract class ReputationPrivateV2 implements ReputationPublicV2, Built<ReputationPrivateV2, ReputationPrivateV2Builder> {
+abstract class ReputationPrivateV2 implements Built<ReputationPrivateV2, ReputationPrivateV2Builder> {
+  @BuiltValueField(wireName: r'userId')
+  String get userId;
+
+  @BuiltValueField(wireName: r'level')
+  int get level;
+
+  @BuiltValueField(wireName: r'reputationLevel')
+  int get reputationLevel;
+
+  @BuiltValueField(wireName: r'levelName')
+  String get levelName;
+
+  @BuiltValueField(wireName: r'reputationStatus')
+  ReputationPrivateV2ReputationStatusEnum get reputationStatus;
+  // enum reputationStatusEnum {  active,  restricted,  suspended,  under_investigation,  };
+
+  @BuiltValueField(wireName: r'reputationBand')
+  ReputationPrivateV2ReputationBandEnum get reputationBand;
+  // enum reputationBandEnum {  new,  accountable,  trusted,  established,  };
+
+  @BuiltValueField(wireName: r'policyVersion')
+  String get policyVersion;
+
   @BuiltValueField(wireName: r'pillars')
   ReputationPillars get pillars;
 
-  @BuiltValueField(wireName: r'evaluatedAt')
-  DateTime? get evaluatedAt;
-
   @BuiltValueField(wireName: r'promotionBlockers')
   BuiltList<String> get promotionBlockers;
+
+  @BuiltValueField(wireName: r'evaluatedAt')
+  DateTime? get evaluatedAt;
 
   ReputationPrivateV2._();
 
@@ -58,15 +80,10 @@ class _$ReputationPrivateV2Serializer implements PrimitiveSerializer<ReputationP
     ReputationPrivateV2 object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'policyVersion';
+    yield r'userId';
     yield serializers.serialize(
-      object.policyVersion,
+      object.userId,
       specifiedType: const FullType(String),
-    );
-    yield r'pillars';
-    yield serializers.serialize(
-      object.pillars,
-      specifiedType: const FullType(ReputationPillars),
     );
     yield r'level';
     yield serializers.serialize(
@@ -78,35 +95,40 @@ class _$ReputationPrivateV2Serializer implements PrimitiveSerializer<ReputationP
       object.reputationLevel,
       specifiedType: const FullType(int),
     );
-    yield r'reputationBand';
-    yield serializers.serialize(
-      object.reputationBand,
-      specifiedType: const FullType(ReputationPublicV2ReputationBandEnum),
-    );
-    yield r'reputationStatus';
-    yield serializers.serialize(
-      object.reputationStatus,
-      specifiedType: const FullType(ReputationPublicV2ReputationStatusEnum),
-    );
     yield r'levelName';
     yield serializers.serialize(
       object.levelName,
       specifiedType: const FullType(String),
     );
-    yield r'evaluatedAt';
-    yield object.evaluatedAt == null ? null : serializers.serialize(
-      object.evaluatedAt,
-      specifiedType: const FullType.nullable(DateTime),
+    yield r'reputationStatus';
+    yield serializers.serialize(
+      object.reputationStatus,
+      specifiedType: const FullType(ReputationPrivateV2ReputationStatusEnum),
+    );
+    yield r'reputationBand';
+    yield serializers.serialize(
+      object.reputationBand,
+      specifiedType: const FullType(ReputationPrivateV2ReputationBandEnum),
+    );
+    yield r'policyVersion';
+    yield serializers.serialize(
+      object.policyVersion,
+      specifiedType: const FullType(String),
+    );
+    yield r'pillars';
+    yield serializers.serialize(
+      object.pillars,
+      specifiedType: const FullType(ReputationPillars),
     );
     yield r'promotionBlockers';
     yield serializers.serialize(
       object.promotionBlockers,
       specifiedType: const FullType(BuiltList, [FullType(String)]),
     );
-    yield r'userId';
-    yield serializers.serialize(
-      object.userId,
-      specifiedType: const FullType(String),
+    yield r'evaluatedAt';
+    yield object.evaluatedAt == null ? null : serializers.serialize(
+      object.evaluatedAt,
+      specifiedType: const FullType.nullable(DateTime),
     );
   }
 
@@ -131,19 +153,12 @@ class _$ReputationPrivateV2Serializer implements PrimitiveSerializer<ReputationP
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'policyVersion':
+        case r'userId':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(String),
           ) as String;
-          result.policyVersion = valueDes;
-          break;
-        case r'pillars':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(ReputationPillars),
-          ) as ReputationPillars;
-          result.pillars.replace(valueDes);
+          result.userId = valueDes;
           break;
         case r'level':
           final valueDes = serializers.deserialize(
@@ -159,20 +174,6 @@ class _$ReputationPrivateV2Serializer implements PrimitiveSerializer<ReputationP
           ) as int;
           result.reputationLevel = valueDes;
           break;
-        case r'reputationBand':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(ReputationPublicV2ReputationBandEnum),
-          ) as ReputationPublicV2ReputationBandEnum;
-          result.reputationBand = valueDes;
-          break;
-        case r'reputationStatus':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(ReputationPublicV2ReputationStatusEnum),
-          ) as ReputationPublicV2ReputationStatusEnum;
-          result.reputationStatus = valueDes;
-          break;
         case r'levelName':
           final valueDes = serializers.deserialize(
             value,
@@ -180,13 +181,33 @@ class _$ReputationPrivateV2Serializer implements PrimitiveSerializer<ReputationP
           ) as String;
           result.levelName = valueDes;
           break;
-        case r'evaluatedAt':
+        case r'reputationStatus':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType.nullable(DateTime),
-          ) as DateTime?;
-          if (valueDes == null) continue;
-          result.evaluatedAt = valueDes;
+            specifiedType: const FullType(ReputationPrivateV2ReputationStatusEnum),
+          ) as ReputationPrivateV2ReputationStatusEnum;
+          result.reputationStatus = valueDes;
+          break;
+        case r'reputationBand':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(ReputationPrivateV2ReputationBandEnum),
+          ) as ReputationPrivateV2ReputationBandEnum;
+          result.reputationBand = valueDes;
+          break;
+        case r'policyVersion':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.policyVersion = valueDes;
+          break;
+        case r'pillars':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(ReputationPillars),
+          ) as ReputationPillars;
+          result.pillars.replace(valueDes);
           break;
         case r'promotionBlockers':
           final valueDes = serializers.deserialize(
@@ -195,12 +216,13 @@ class _$ReputationPrivateV2Serializer implements PrimitiveSerializer<ReputationP
           ) as BuiltList<String>;
           result.promotionBlockers.replace(valueDes);
           break;
-        case r'userId':
+        case r'evaluatedAt':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.userId = valueDes;
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.evaluatedAt = valueDes;
           break;
         default:
           unhandled.add(key);

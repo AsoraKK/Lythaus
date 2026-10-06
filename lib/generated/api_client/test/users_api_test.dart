@@ -9,7 +9,9 @@ void main() {
   group(UsersApi, () {
     // Get a public user profile
     //
-    //Future<JsonObject> usersGet(String id) async
+    // Public profile reads return approved public identity fields. Reputation is omitted when the Passport is private; public reputation contains only level and label, never enforcement status.
+    //
+    //Future<ProductIntegrityPublicProfileResponse> usersGet(String id) async
     test('test usersGet', () async {
       // TODO
     });
