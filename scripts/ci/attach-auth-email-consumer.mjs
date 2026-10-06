@@ -22,13 +22,14 @@ const identifier = value => typeof value === 'string' && /^[0-9a-f]{32}$/.test(v
 const hash = value => `sha256:${createHash('sha256').update(value).digest('hex')}`;
 const api = 'https://api.cloudflare.com/client/v4';
 
-export async function attachAuthEmailConsumer({ requestJson, apply = false, now = new Date() }) {
+export async function attachAuthEmailConsumer({ requestJson, apply = false, now = new Date(), clock = () => new Date() }) {
   const a = AUTH_EMAIL_ATTACHMENT;
   const base = `${api}/accounts/${a.account}`;
   const receipt = { schemaVersion: 'lythaus-auth-email-consumer-attachment-v1', observedAt: now.toISOString(),
     mode: apply ? 'attach' : 'inspect', status: 'BLOCKED', reason: null,
     sourceSha: process.env.GITHUB_SHA ?? null, target: { queue: a.queue, worker: a.worker, deadLetterQueue: a.dlq },
-    before: null, currentJobs: null, backlog: null, includedQueueAllowance: null, immediatePrewrite: null, blockedRead: null,
+    before: null, currentJobs: null, backlog: null, includedQueueAllowance: null, prewriteQueueEvidence: null,
+    prewriteIncludedQueueAllowance: null, immediatePrewrite: null, blockedRead: null,
     mutationAttempted: false, mutationConfirmed: false, postHttpStatus: null, after: null,
     messagesRead: false, piiIncluded: false, emailsSent: false, pauseOrDelayChanged: false };
   const stop = reason => ({ ...receipt, reason });
@@ -45,11 +46,33 @@ export async function attachAuthEmailConsumer({ requestJson, apply = false, now 
     return response.body.result;
   };
   const observe = () => captureAuthEmailQueueEvidence({ accountId: a.account, requestJson });
+  const pinnedIdentities = evidence => evidence.inventory.complete && evidence.api.details?.httpStatus === 200
+    && evidence.api.details?.success === true && evidence.lifecycleIdHash === a.queueHash && evidence.deadLetterIdHash === a.dlqHash;
+  const usageEstimate = async at => {
+    const usage = await requestJson(`${api}/graphql`, { method: 'POST', body: JSON.stringify({
+      query: `query AttachmentQueueUsage($accountTag: string!, $start: Time!, $end: Time!) {
+        viewer { accounts(filter: { accountTag: $accountTag }) {
+          queueMessageOperationsAdaptiveGroups(limit: 1, filter: { datetime_geq: $start, datetime_leq: $end }) {
+            sum { billableOperations }
+          }
+        } }
+      }`,
+      variables: { accountTag: a.account, start: new Date(at.getTime() - 31 * 86400000).toISOString(), end: at.toISOString() },
+    }) });
+    const accounts = usage?.body?.data?.viewer?.accounts;
+    const groups = Array.isArray(accounts) && accounts.length === 1 ? accounts[0].queueMessageOperationsAdaptiveGroups : null;
+    const operations = Array.isArray(groups) && groups.length === 1 ? groups[0]?.sum?.billableOperations : null;
+    return usage?.httpStatus === 200 && !usage.body?.errors?.length && safeInteger(operations) ? operations : null;
+  };
+  const estimatedAdditionalOperations = metrics => 14 * (metrics.backlog_count + Math.ceil(metrics.backlog_bytes / 64000));
+  const allowanceEstimate = (operations, metrics, at) => ({ ownerConfirmedPlan: 'Workers Paid', windowDays: 31,
+    observedAt: at.toISOString(), observedOperationsEstimate: operations, includedMonthlyOperations: 1000000,
+    additionalObservedBacklogOperationsEstimate: estimatedAdditionalOperations(metrics), headroomOperations: 100000,
+    usageBasis: 'SAMPLED_ADAPTIVE_ANALYTICS', backlogBasis: 'BEST_EFFORT_POINT_IN_TIME_METRICS',
+    noOverageGuaranteed: false, futureUsageReserved: false, hardAccountWideBillingCap: false });
   try {
     receipt.before = await observe();
-    if (!receipt.before.inventory.complete || receipt.before.api.details?.httpStatus !== 200
-      || receipt.before.api.details?.success !== true || receipt.before.lifecycleIdHash !== a.queueHash
-      || receipt.before.deadLetterIdHash !== a.dlqHash) return stop('queue_identity_not_verified');
+    if (!pinnedIdentities(receipt.before)) return stop('queue_identity_not_verified');
     const queues = await read(`${base}/queues?per_page=100`, 'queue_inventory');
     const matches = Array.isArray(queues) ? queues.filter(queue => queue.queue_name === a.queue) : [];
     const dlqs = Array.isArray(queues) ? queues.filter(queue => queue.queue_name === a.dlq) : [];
@@ -63,6 +86,9 @@ export async function attachAuthEmailConsumer({ requestJson, apply = false, now 
         const existingQueue = await read(queueBase, 'existing_attachment_details');
         try { assertPromptDispatchConsumer({ ...existingQueue, consumers }); }
         catch { return stop('existing_consumer_requires_review'); }
+        receipt.after = await observe();
+        if (!pinnedIdentities(receipt.after)) return stop('queue_identity_changed_during_readback');
+        if (receipt.after.status !== 'VERIFIED') return stop('existing_consumer_requires_review');
         receipt.status = 'ALREADY_ATTACHED_VERIFIED';
         return receipt;
       }
@@ -82,53 +108,49 @@ export async function attachAuthEmailConsumer({ requestJson, apply = false, now 
     const metrics = await read(`${queueBase}/metrics`, 'backlog_metrics');
     if (!safeInteger(metrics?.backlog_count) || !safeInteger(metrics?.backlog_bytes)) return stop('backlog_not_verified');
     receipt.backlog = { count: metrics.backlog_count, bytes: metrics.backlog_bytes,
-      oldestMessageTimestampMs: safeInteger(metrics.oldest_message_timestamp_ms) ? metrics.oldest_message_timestamp_ms : null };
+      oldestMessageTimestampMs: safeInteger(metrics.oldest_message_timestamp_ms) ? metrics.oldest_message_timestamp_ms : null,
+      measurementBasis: 'BEST_EFFORT_POINT_IN_TIME_METRICS', actualQueueSizeGuaranteed: false };
     if (metrics.backlog_count > 128 || metrics.backlog_bytes > 16 * 128 * 1024) return stop('backlog_exceeds_reviewed_attachment_bound');
-    const usage = await requestJson(`${api}/graphql`, { method: 'POST', body: JSON.stringify({
-      query: `query AttachmentQueueUsage($accountTag: string!, $start: Time!, $end: Time!) {
-        viewer { accounts(filter: { accountTag: $accountTag }) {
-          queueMessageOperationsAdaptiveGroups(limit: 1, filter: { datetime_geq: $start, datetime_leq: $end }) {
-            sum { billableOperations }
-          }
-        } }
-      }`,
-      variables: { accountTag: a.account, start: new Date(now.getTime() - 31 * 86400000).toISOString(), end: now.toISOString() },
-    }) });
-    const accounts = usage?.body?.data?.viewer?.accounts;
-    const groups = Array.isArray(accounts) && accounts.length === 1 ? accounts[0].queueMessageOperationsAdaptiveGroups : null;
-    const operations = Array.isArray(groups) && groups.length === 1 ? groups[0]?.sum?.billableOperations : null;
-    if (usage?.httpStatus !== 200 || usage.body?.errors?.length || !safeInteger(operations)) return stop('included_queue_usage_not_verified');
-    const additionalOperationsBound = 14 * (metrics.backlog_count + Math.ceil(metrics.backlog_bytes / 64000));
-    receipt.includedQueueAllowance = { ownerConfirmedPlan: 'Workers Paid', windowDays: 31, observedOperations: operations,
-      includedMonthlyOperations: 1000000, additionalBacklogOperationsBound: additionalOperationsBound,
-      reserveOperations: 100000, futureUsageReserved: false, hardAccountWideBillingCap: false };
-    if (operations + additionalOperationsBound + 100000 >= 1000000) return stop('included_queue_allowance_insufficient');
+    const operations = await usageEstimate(now);
+    if (operations === null) return stop('included_queue_usage_not_verified');
+    receipt.includedQueueAllowance = allowanceEstimate(operations, metrics, now);
+    if (operations + estimatedAdditionalOperations(metrics) + 100000 >= 1000000) return stop('included_queue_allowance_insufficient');
     if (!apply) { receipt.status = 'INSPECTED_ATTACHMENT_READY'; return receipt; }
-    if (!await currentJobsMatches()) return stop('current_jobs_version_changed_before_write');
     const immediateMetrics = await read(`${queueBase}/metrics`, 'prewrite_backlog_metrics');
     if (!safeInteger(immediateMetrics?.backlog_count) || !safeInteger(immediateMetrics?.backlog_bytes)) return stop('backlog_not_verified_before_write');
     if (immediateMetrics.backlog_count > 128 || immediateMetrics.backlog_bytes > 16 * 128 * 1024) return stop('backlog_exceeds_reviewed_attachment_bound_before_write');
-    const immediateOperationsBound = 14 * (immediateMetrics.backlog_count + Math.ceil(immediateMetrics.backlog_bytes / 64000));
-    if (operations + immediateOperationsBound + 100000 >= 1000000) return stop('included_queue_allowance_insufficient_before_write');
+    const refreshedAt = clock();
+    const immediateOperations = await usageEstimate(refreshedAt);
+    if (immediateOperations === null) return stop('included_queue_usage_not_verified_before_write');
+    receipt.prewriteIncludedQueueAllowance = allowanceEstimate(immediateOperations, immediateMetrics, refreshedAt);
+    if (immediateOperations + estimatedAdditionalOperations(immediateMetrics) + 100000 >= 1000000) return stop('included_queue_allowance_insufficient_before_write');
+    if (!await currentJobsMatches()) return stop('current_jobs_version_changed_before_write');
+    receipt.prewriteQueueEvidence = await observe();
+    if (!pinnedIdentities(receipt.prewriteQueueEvidence)) return stop('queue_identity_changed_before_write');
+    if (receipt.prewriteQueueEvidence.reportedConsumerCount !== 0 || receipt.prewriteQueueEvidence.observedConsumerCount !== 0) return stop('consumer_or_identity_changed_before_write');
+    if (receipt.prewriteQueueEvidence.deliveryDelaySeconds !== 0 || receipt.prewriteQueueEvidence.deliveryPaused === true) return stop('delivery_changed_before_write');
     const immediate = await read(queueBase, 'prewrite_queue_details');
     const immediateConsumers = await read(`${queueBase}/consumers`, 'prewrite_consumers');
     if (immediate?.queue_name !== a.queue || immediate?.queue_id !== matches[0].queue_id
       || immediate.consumers_total_count !== 0 || !Array.isArray(immediate.consumers) || immediate.consumers.length !== 0
       || !Array.isArray(immediateConsumers) || immediateConsumers.length !== 0) return stop('consumer_or_identity_changed_before_write');
     if (immediate.settings?.delivery_delay !== 0 || immediate.settings?.delivery_paused === true) return stop('delivery_changed_before_write');
-    receipt.immediatePrewrite = { queueIdentityVerified: true, reportedConsumers: 0, listedConsumers: 0,
-      backlogCount: immediateMetrics.backlog_count, backlogBytes: immediateMetrics.backlog_bytes,
-      additionalBacklogOperationsBound: immediateOperationsBound };
+    receipt.immediatePrewrite = { queueIdentityVerified: true, deadLetterIdentityVerified: true,
+      lifecycleIdHash: receipt.prewriteQueueEvidence.lifecycleIdHash, deadLetterIdHash: receipt.prewriteQueueEvidence.deadLetterIdHash,
+      reportedConsumers: 0, listedConsumers: 0,
+      observedBacklogCount: immediateMetrics.backlog_count, observedBacklogBytes: immediateMetrics.backlog_bytes,
+      additionalObservedBacklogOperationsEstimate: estimatedAdditionalOperations(immediateMetrics) };
     receipt.mutationAttempted = true;
     let created;
     try { created = await requestJson(`${queueBase}/consumers`, { method: 'POST', body: JSON.stringify(a.body) }); }
     catch { created = null; }
     receipt.postHttpStatus = created?.httpStatus ?? null;
     receipt.mutationConfirmed = created?.httpStatus === 200 && created?.body?.success === true;
-    receipt.after = await observe();
     const afterConsumers = await read(`${queueBase}/consumers`, 'postwrite_consumers');
     if (!Array.isArray(afterConsumers) || afterConsumers.length !== 1) return stop('attachment_readback_not_verified');
     const afterQueue = await read(queueBase, 'postwrite_queue_details');
+    receipt.after = await observe();
+    if (!pinnedIdentities(receipt.after)) return stop('queue_identity_changed_during_readback');
     try { assertPromptDispatchConsumer({ ...afterQueue, consumers: afterConsumers }); }
     catch { return stop('attachment_or_delivery_readback_not_verified'); }
     if (receipt.after.status !== 'VERIFIED') return stop('canonical_attachment_readback_not_verified');

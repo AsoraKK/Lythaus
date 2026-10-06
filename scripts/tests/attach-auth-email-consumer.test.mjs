@@ -8,9 +8,10 @@ const dlqId = '00637c71243442cb864cd069f00d824e';
 const now = new Date('2026-10-06T10:10:00Z');
 function fixture(options = {}) {
   const calls = [];
-  let attached = Boolean(options.attached), consumerReads = 0, deploymentReads = 0, queueReads = 0, metricsReads = 0;
+  let attached = Boolean(options.attached), consumerReads = 0, deploymentReads = 0, queueReads = 0, metricsReads = 0, inventoryReads = 0, usageReads = 0;
   const consumer = { consumer_id: '1'.repeat(32), ...structuredClone(a.body) };
-  const queue = () => ({ queue_name: a.queue, queue_id: queueId,
+  const replacementId = '3'.repeat(32);
+  const queue = (id = queueId) => ({ queue_name: a.queue, queue_id: id,
     settings: { delivery_delay: 0, delivery_paused: false },
     consumers_total_count: attached ? 1 : 0, consumers: attached ? [consumer] : [] });
   return { calls, requestJson: async (url, init) => {
@@ -18,14 +19,15 @@ function fixture(options = {}) {
     calls.push({ url, method: init.method, body: init.body });
     let result;
     if (url.endsWith('/graphql')) {
+      usageReads += 1;
       assert.equal(init.method, 'POST');
       const body = JSON.parse(init.body);
       assert.ok(!body.query.includes('mutation'));
       assert.equal(body.variables.accountTag, a.account);
       const start = new Date(body.variables.start), end = new Date(body.variables.end);
       assert.equal(end.getTime() - start.getTime(), 31 * 86400000);
-      return { httpStatus: 200, body: options.usageMissing ? { errors: [{ message: 'private-fixture-marker' }] } : {
-        data: { viewer: { accounts: [{ queueMessageOperationsAdaptiveGroups: [{ sum: { billableOperations: options.operations ?? 31 } }] }] } } } };
+      return { httpStatus: 200, body: options.usageMissing || (options.immediateUsageMissing && usageReads === 2) ? { errors: [{ message: 'private-fixture-marker' }] } : {
+        data: { viewer: { accounts: [{ queueMessageOperationsAdaptiveGroups: [{ sum: { billableOperations: usageReads === 2 ? options.immediateOperations ?? options.operations ?? 31 : options.operations ?? 31 } }] }] } } } };
     }
     if (init.method === 'POST') {
       assert.ok(url.endsWith(`/queues/${queueId}/consumers`));
@@ -38,7 +40,11 @@ function fixture(options = {}) {
     }
     assert.equal(init.method, 'GET');
     if (url.endsWith('/queues?per_page=100')) {
-      const result = [queue(), { queue_name: a.dlq, queue_id: options.wrongIdentity ? '2'.repeat(32) : dlqId }];
+      inventoryReads += 1;
+      const phase = attached ? 'after' : 'before';
+      const replacesQueue = options.prewriteQueueReplacement && inventoryReads === 3 || options.afterQueueReplacement && phase === 'after' && inventoryReads >= 3;
+      const replacesDlq = options.prewriteDlqReplacement && inventoryReads === 3 || options.afterDlqReplacement && phase === 'after' && inventoryReads >= 3;
+      const result = [queue(replacesQueue ? replacementId : queueId), { queue_name: a.dlq, queue_id: options.wrongIdentity || replacesDlq ? '2'.repeat(32) : dlqId }];
       return { httpStatus: 200, body: { success: true, result,
         result_info: { page: 1, per_page: 100, count: 2, total_count: options.partialInventory ? 101 : 2, total_pages: options.partialInventory ? 2 : 1 } } };
     }
@@ -51,9 +57,9 @@ function fixture(options = {}) {
       metricsReads += 1;
       result = { backlog_count: metricsReads === 2 ? options.immediateBacklogCount ?? options.backlogCount ?? 1 : options.backlogCount ?? 1,
         backlog_bytes: options.backlogBytes ?? 256, oldest_message_timestamp_ms: 1 };
-    } else if (url.endsWith(`/queues/${queueId}`)) {
+    } else if (url.endsWith(`/queues/${queueId}`) || url.endsWith(`/queues/${replacementId}`)) {
       queueReads += 1;
-      result = queue();
+      result = queue(url.endsWith(`/queues/${replacementId}`) ? replacementId : queueId);
       if (options.pauseUnknown) delete result.settings.delivery_paused;
       if (options.pauseChanged && queueReads === 2) result.settings.delivery_paused = true;
     } else if (url.endsWith(`/workers/scripts/${a.worker}/deployments`)) {
@@ -71,7 +77,10 @@ test('inspection reads aggregate readiness without an attachment or message read
   const f = fixture();
   const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, now });
   assert.equal(receipt.status, 'INSPECTED_ATTACHMENT_READY');
-  assert.equal(receipt.includedQueueAllowance.observedOperations, 31);
+  assert.equal(receipt.includedQueueAllowance.observedOperationsEstimate, 31);
+  assert.equal(receipt.includedQueueAllowance.noOverageGuaranteed, false);
+  assert.equal(receipt.includedQueueAllowance.usageBasis, 'SAMPLED_ADAPTIVE_ANALYTICS');
+  assert.equal(receipt.includedQueueAllowance.backlogBasis, 'BEST_EFFORT_POINT_IN_TIME_METRICS');
   assert.equal(writes(f).length, 0);
   assert.equal(receipt.mutationAttempted, false);
   assert.equal(receipt.messagesRead, false);
@@ -84,6 +93,10 @@ test('approved attachment makes exactly one exact POST after last consumer GET a
   assert.equal(receipt.mutationConfirmed, true);
   assert.equal(receipt.after.status, 'VERIFIED');
   assert.equal(receipt.after.consumers[0].maxConcurrency, 1);
+  assert.equal(receipt.immediatePrewrite.lifecycleIdHash, a.queueHash);
+  assert.equal(receipt.immediatePrewrite.deadLetterIdHash, a.dlqHash);
+  assert.equal(receipt.after.lifecycleIdHash, a.queueHash);
+  assert.equal(receipt.after.deadLetterIdHash, a.dlqHash);
   assert.equal(writes(f).length, 1);
   const index = f.calls.indexOf(writes(f)[0]);
   assert.ok(f.calls[index - 1].url.endsWith('/consumers'));
@@ -105,6 +118,10 @@ for (const [label, options, reason] of [
   ['invalid backlog count', { backlogCount: '1' }, 'backlog_not_verified'],
   ['backlog grows before attachment', { immediateBacklogCount: 129 }, 'backlog_exceeds_reviewed_attachment_bound_before_write'],
   ['backlog becomes unavailable before attachment', { immediateBacklogCount: '1' }, 'backlog_not_verified_before_write'],
+  ['same-name lifecycle Queue replaced before attachment', { prewriteQueueReplacement: true }, 'queue_identity_changed_before_write'],
+  ['same-name DLQ replaced before attachment', { prewriteDlqReplacement: true }, 'queue_identity_changed_before_write'],
+  ['usage grows past included allowance estimate before attachment', { immediateOperations: 999999 }, 'included_queue_allowance_insufficient_before_write'],
+  ['usage estimate becomes unavailable before attachment', { immediateUsageMissing: true }, 'included_queue_usage_not_verified_before_write'],
 ]) {
   test(`${label} stops before any provider write`, async () => {
     const f = fixture(options);
@@ -121,6 +138,44 @@ test('existing verified attachment is not duplicated', async () => {
   const f = fixture({ attached: true });
   const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, apply: true, now });
   assert.equal(receipt.status, 'ALREADY_ATTACHED_VERIFIED');
+  assert.equal(writes(f).length, 0);
+});
+
+test('usage is refreshed with a current time window immediately before attachment and remains an estimate', async () => {
+  const f = fixture({ immediateOperations: 43 });
+  const refreshedAt = new Date(now.getTime() + 60000);
+  const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, apply: true, now, clock: () => refreshedAt });
+  const queries = f.calls.filter(call => call.url.endsWith('/graphql'));
+  assert.equal(receipt.status, 'ATTACHED_VERIFIED');
+  assert.equal(queries.length, 2);
+  assert.equal(JSON.parse(queries[0].body).variables.end, now.toISOString());
+  assert.equal(JSON.parse(queries[1].body).variables.end, refreshedAt.toISOString());
+  assert.equal(receipt.includedQueueAllowance.observedOperationsEstimate, 31);
+  assert.equal(receipt.prewriteIncludedQueueAllowance.observedOperationsEstimate, 43);
+  assert.equal(receipt.prewriteIncludedQueueAllowance.noOverageGuaranteed, false);
+  assert.equal(receipt.prewriteIncludedQueueAllowance.futureUsageReserved, false);
+  assert.equal(receipt.prewriteIncludedQueueAllowance.hardAccountWideBillingCap, false);
+  assert.equal(writes(f).length, 1);
+});
+
+for (const options of [{ afterQueueReplacement: true }, { afterDlqReplacement: true }, { afterDlqReplacement: true, postUncertain: true }]) {
+  test(`same-name replacement during final read-back stays blocked without retry: ${JSON.stringify(options)}`, async () => {
+    const f = fixture(options);
+    const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, apply: true, now });
+    assert.equal(receipt.status, 'BLOCKED');
+    assert.equal(receipt.reason, 'queue_identity_changed_during_readback');
+    assert.equal(receipt.after.status, 'VERIFIED');
+    assert.equal(receipt.mutationConfirmed, !options.postUncertain);
+    assert.ok(receipt.after.lifecycleIdHash !== a.queueHash || receipt.after.deadLetterIdHash !== a.dlqHash);
+    assert.equal(writes(f).length, 1);
+  });
+}
+
+test('existing attachment cannot report success after a same-name DLQ replacement', async () => {
+  const f = fixture({ attached: true, afterDlqReplacement: true });
+  const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, apply: true, now });
+  assert.equal(receipt.status, 'BLOCKED');
+  assert.equal(receipt.reason, 'queue_identity_changed_during_readback');
   assert.equal(writes(f).length, 0);
 });
 
