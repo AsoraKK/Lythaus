@@ -3,8 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 
+import 'package:lythaus/core/network/idempotency_key.dart';
+import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/rewards/application/reward_providers.dart';
 import 'package:lythaus/features/rewards/domain/reward_models.dart';
 import 'package:lythaus/ui/screens/rewards/monthly_reputation_widgets.dart';
@@ -21,16 +24,62 @@ class RewardsDashboardScreen extends ConsumerStatefulWidget {
 class _RewardsDashboardScreenState
     extends ConsumerState<RewardsDashboardScreen> {
   final Set<String> _redeemingIds = <String>{};
+  final _redemptionKeys = <({String rewardId, int sessionRevision}), String>{};
+
+  void _clearRedemptionKeysForSession(int sessionRevision) {
+    _redemptionKeys.removeWhere(
+      (scope, _) => scope.sessionRevision != sessionRevision,
+    );
+  }
+
+  String? _redemptionErrorCode(Object error) {
+    if (error is! DioException || error.response?.data is! Map) return null;
+    final code = (error.response!.data as Map)['error'];
+    return code is String ? code : null;
+  }
+
+  bool _redemptionOutcomeUncertain(Object error, String? errorCode) {
+    if (errorCode == 'idempotency_outcome_unknown' ||
+        errorCode == 'idempotency_in_progress') {
+      return true;
+    }
+    if (error is DioException) {
+      final statusCode = error.response?.statusCode;
+      return statusCode == null || statusCode >= 500;
+    }
+    return true;
+  }
 
   Future<void> _redeem(String rewardId) async {
     if (_redeemingIds.contains(rewardId)) return;
+    final sessionRevision = ref.read(authSessionRevisionProvider);
+    _clearRedemptionKeysForSession(sessionRevision);
+    final keyScope = (rewardId: rewardId, sessionRevision: sessionRevision);
+    final idempotencyKey = _redemptionKeys.putIfAbsent(
+      keyScope,
+      () => IdempotencyKey.create('reward.redeem'),
+    );
+    final redemptionRequest = (
+      rewardId: rewardId,
+      sessionRevision: sessionRevision,
+      idempotencyKey: idempotencyKey,
+    );
+    final redemptionProvider = redeemRewardProvider(redemptionRequest);
     setState(() => _redeemingIds.add(rewardId));
+    ref.invalidate(redemptionProvider);
+    final redemptionSubscription = ref.listenManual(
+      redemptionProvider,
+      (_, _) {},
+    );
 
     try {
-      ref.invalidate(redeemRewardProvider(rewardId));
-      final redemption = await ref.read(redeemRewardProvider(rewardId).future);
-      ref.invalidate(rewardsSnapshotProvider);
-      if (!mounted) return;
+      final redemption = await ref.read(redemptionProvider.future);
+      if (!mounted ||
+          ref.read(authSessionRevisionProvider) != sessionRevision) {
+        return;
+      }
+      _redemptionKeys.remove(keyScope);
+      ref.invalidate(rewardsSnapshotProvider(sessionRevision));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -40,14 +89,32 @@ class _RewardsDashboardScreenState
           ),
         ),
       );
-    } catch (_) {
-      if (!mounted) return;
+    } catch (error) {
+      if (!mounted ||
+          ref.read(authSessionRevisionProvider) != sessionRevision) {
+        return;
+      }
+      final errorCode = _redemptionErrorCode(error);
+      final outcomeUncertain = _redemptionOutcomeUncertain(error, errorCode);
+      if (!outcomeUncertain) {
+        _redemptionKeys.remove(keyScope);
+      }
+      if (outcomeUncertain || errorCode == 'reward_already_redeemed') {
+        ref.invalidate(rewardsSnapshotProvider(sessionRevision));
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to redeem this reward right now.'),
+        SnackBar(
+          content: Text(
+            errorCode == 'reward_already_redeemed'
+                ? 'This reward was already redeemed. Your rewards have been refreshed.'
+                : outcomeUncertain
+                ? 'We could not confirm this redemption. Your rewards are refreshing; retrying will reuse this request.'
+                : 'Unable to redeem this reward right now.',
+          ),
         ),
       );
     } finally {
+      redemptionSubscription.close();
       if (mounted) {
         setState(() => _redeemingIds.remove(rewardId));
       }
@@ -56,7 +123,9 @@ class _RewardsDashboardScreenState
 
   @override
   Widget build(BuildContext context) {
-    final rewardsAsync = ref.watch(rewardsSnapshotProvider);
+    final sessionRevision = ref.watch(authSessionRevisionProvider);
+    _clearRedemptionKeysForSession(sessionRevision);
+    final rewardsAsync = ref.watch(rewardsSnapshotProvider(sessionRevision));
 
     return rewardsAsync.when(
       loading: () => ReadingPane(
@@ -75,7 +144,8 @@ class _RewardsDashboardScreenState
                 const Text('Unable to load rewards right now.'),
                 const SizedBox(height: Spacing.sm),
                 FilledButton(
-                  onPressed: () => ref.invalidate(rewardsSnapshotProvider),
+                  onPressed: () =>
+                      ref.invalidate(rewardsSnapshotProvider(sessionRevision)),
                   child: const Text('Retry'),
                 ),
               ],
