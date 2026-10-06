@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import test from 'node:test';
 import { attachAuthEmailConsumer, AUTH_EMAIL_ATTACHMENT as a } from '../ci/attach-auth-email-consumer.mjs';
@@ -10,6 +11,11 @@ function fixture(options = {}) {
   const calls = [];
   let attached = Boolean(options.attached), consumerReads = 0, deploymentReads = 0, queueReads = 0, metricsReads = 0, inventoryReads = 0, usageReads = 0;
   const consumer = { consumer_id: '1'.repeat(32), ...structuredClone(a.body) };
+  if (options.consumerIdentityField) {
+    consumer[options.consumerIdentityField] = consumer.script_name;
+    delete consumer.script_name;
+  }
+  Object.assign(consumer, options.consumerFields ?? {});
   const replacementId = '3'.repeat(32);
   const queue = (id = queueId) => ({ queue_name: a.queue, queue_id: id,
     settings: { delivery_delay: 0, delivery_paused: false },
@@ -139,6 +145,98 @@ test('existing verified attachment is not duplicated', async () => {
   const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, apply: true, now });
   assert.equal(receipt.status, 'ALREADY_ATTACHED_VERIFIED');
   assert.equal(writes(f).length, 0);
+});
+
+for (const field of ['script', 'service']) {
+  test(`read-only inspection preserves ${field} identity diagnostics and unknown pause without certifying or duplicating an attachment`, async () => {
+    const f = fixture({ attached: true, pauseUnknown: true, consumerIdentityField: field });
+    const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, now });
+    assert.equal(receipt.status, 'BLOCKED');
+    assert.equal(receipt.reason, 'existing_consumer_requires_review');
+    assert.equal(receipt.before.deliveryPaused, null);
+    assert.deepEqual(receipt.before.deliveryPausedField, { present: false, type: 'undefined' });
+    for (const consumer of [receipt.before.consumers[0], receipt.beforeConsumerList[0]]) {
+      assert.equal(consumer.expectedWorkerMatches, false);
+      assert.deepEqual(consumer.workerIdentityFields.script_name, { present: false, type: 'undefined', valueHash: null, valueMatchesExpectedWorker: false, reference: null });
+      assert.equal(consumer.workerIdentityFields[field].present, true);
+      assert.equal(consumer.workerIdentityFields[field].type, 'string');
+      assert.equal(consumer.workerIdentityFields[field].valueMatchesExpectedWorker, true);
+      assert.match(consumer.workerIdentityFields[field].valueHash, /^sha256:[0-9a-f]{64}$/);
+    }
+    assert.equal(receipt.mutationAttempted, false);
+    assert.equal(writes(f).length, 0);
+    assert.ok(f.calls.every(call => call.method === 'GET'));
+  });
+}
+
+test('confirmed attachment with unknown pause preserves both read-back shapes and exact validator reason without retry', async () => {
+  const f = fixture({ pauseUnknown: true, consumerIdentityField: 'script' });
+  const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, apply: true, now });
+  assert.equal(receipt.status, 'BLOCKED');
+  assert.equal(receipt.reason, 'attachment_or_delivery_readback_not_verified');
+  assert.equal(receipt.readbackReason, 'email_dispatch_live_delivery_not_verified');
+  assert.equal(receipt.mutationAttempted, true);
+  assert.equal(receipt.mutationConfirmed, true);
+  assert.equal(receipt.postHttpStatus, 200);
+  assert.equal(receipt.after.reportedConsumerCount, 1);
+  assert.equal(receipt.after.observedConsumerCount, 1);
+  assert.equal(receipt.after.deliveryPaused, null);
+  assert.equal(receipt.after.consumers[0].workerIdentityFields.script.valueMatchesExpectedWorker, true);
+  assert.equal(receipt.afterConsumerList[0].workerIdentityFields.script.valueMatchesExpectedWorker, true);
+  assert.equal(writes(f).length, 1);
+  assert.ok(!JSON.stringify(receipt).includes('private-fixture-marker'));
+});
+
+test('read-only inspection captures bounded Worker references, environments and namespace across all response representations', async () => {
+  const f = fixture({ attached: true, pauseUnknown: true, consumerIdentityField: 'script', consumerFields: {
+    script: { name: a.worker, id: a.worker, script_name: a.worker, environment: 'production', secret: 'private-fixture-marker' },
+    service: a.worker, worker: a.worker, environment: 'production', environment_name: 'development', namespace: 'fixture-namespace',
+  } });
+  const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, now });
+  assert.equal(receipt.status, 'BLOCKED');
+  assert.equal(receipt.mutationAttempted, false);
+  assert.ok(f.calls.every(call => call.method === 'GET'));
+  for (const consumer of [receipt.before.listing.consumers[0], receipt.before.consumers[0], receipt.beforeConsumerList[0]]) {
+    assert.equal(consumer.type, 'worker');
+    assert.equal(consumer.typeField.present, true);
+    assert.equal(consumer.expectedWorkerMatches, false);
+    assert.equal(consumer.workerIdentityFields.script.type, 'object');
+    assert.equal(consumer.workerIdentityFields.script.valueMatchesExpectedWorker, false);
+    assert.equal(consumer.workerIdentityFields.script.reference.identityFields.name.valueMatchesExpectedWorker, true);
+    assert.equal(consumer.workerIdentityFields.script.reference.environmentFields.environment.matchesProduction, true);
+    assert.equal(consumer.workerIdentityFields.service.valueMatchesExpectedWorker, true);
+    assert.equal(consumer.workerIdentityFields.worker.valueMatchesExpectedWorker, true);
+    assert.equal(consumer.environmentFields.environment.matchesProduction, true);
+    assert.equal(consumer.environmentFields.environment_name.matchesDevelopment, true);
+    assert.match(consumer.namespaceField.valueHash, /^sha256:[0-9a-f]{64}$/);
+  }
+  assert.equal(receipt.before.listing.pauseFields['settings.delivery_paused'].booleanValue, false);
+  assert.equal(receipt.before.pauseFields['settings.delivery_paused'].present, false);
+  assert.equal(receipt.before.deliveryPaused, null);
+  const serialized = JSON.stringify(receipt);
+  assert.ok(!serialized.includes('private-fixture-marker'));
+  assert.ok(!serialized.includes('fixture-namespace'));
+});
+
+test('read-only inspection never fingerprints secret-like ASCII type or environment values in any snapshot', async () => {
+  const marker = 'fixture_token_ASCII_1234567890';
+  const fingerprint = `sha256:${createHash('sha256').update(marker).digest('hex')}`;
+  const f = fixture({ attached: true, consumerFields: { type: marker, environment: marker, environment_name: marker,
+    script: { name: a.worker, environment: marker, environment_name: marker } } });
+  const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, now });
+  assert.equal(receipt.status, 'BLOCKED');
+  assert.equal(receipt.mutationAttempted, false);
+  assert.ok(f.calls.every(call => call.method === 'GET'));
+  for (const consumer of [receipt.before.listing.consumers[0], receipt.before.consumers[0], receipt.beforeConsumerList[0]]) {
+    assert.equal(consumer.type, 'unknown');
+    assert.deepEqual(consumer.typeField, { present: true, type: 'string' });
+    for (const fields of [consumer.environmentFields, consumer.workerIdentityFields.script.reference.environmentFields]) {
+      for (const field of Object.values(fields)) assert.equal(Object.hasOwn(field, 'valueHash'), false);
+    }
+  }
+  const serialized = JSON.stringify(receipt);
+  assert.ok(!serialized.includes(marker));
+  assert.ok(!serialized.includes(fingerprint));
 });
 
 test('usage is refreshed with a current time window immediately before attachment and remains an estimate', async () => {

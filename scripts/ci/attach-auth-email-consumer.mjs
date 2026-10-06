@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { captureAuthEmailQueueEvidence } from './auth-email-queue-evidence.mjs';
+import { captureAuthEmailQueueEvidence, consumerEvidence } from './auth-email-queue-evidence.mjs';
 import { assertPromptDispatchConsumer } from './provision-cloudflare-email-lifecycle.mjs';
 
 export const AUTH_EMAIL_ATTACHMENT = Object.freeze({
@@ -28,7 +28,8 @@ export async function attachAuthEmailConsumer({ requestJson, apply = false, now 
   const receipt = { schemaVersion: 'lythaus-auth-email-consumer-attachment-v1', observedAt: now.toISOString(),
     mode: apply ? 'attach' : 'inspect', status: 'BLOCKED', reason: null,
     sourceSha: process.env.GITHUB_SHA ?? null, target: { queue: a.queue, worker: a.worker, deadLetterQueue: a.dlq },
-    before: null, currentJobs: null, backlog: null, includedQueueAllowance: null, prewriteQueueEvidence: null,
+    before: null, beforeConsumerList: null, afterConsumerList: null, readbackReason: null,
+    currentJobs: null, backlog: null, includedQueueAllowance: null, prewriteQueueEvidence: null,
     prewriteIncludedQueueAllowance: null, immediatePrewrite: null, blockedRead: null,
     mutationAttempted: false, mutationConfirmed: false, postHttpStatus: null, after: null,
     messagesRead: false, piiIncluded: false, emailsSent: false, pauseOrDelayChanged: false };
@@ -81,6 +82,7 @@ export async function attachAuthEmailConsumer({ requestJson, apply = false, now 
     const queueBase = `${base}/queues/${matches[0].queue_id}`;
     const consumers = await read(`${queueBase}/consumers`, 'consumer_list');
     if (!Array.isArray(consumers)) return stop('consumer_list_not_verified');
+    receipt.beforeConsumerList = consumers.slice(0, 2).map(consumerEvidence);
     if (consumers.length !== 0 || receipt.before.reportedConsumerCount !== 0 || receipt.before.observedConsumerCount !== 0) {
       if (consumers.length === 1 && receipt.before.status === 'VERIFIED') {
         const existingQueue = await read(queueBase, 'existing_attachment_details');
@@ -147,12 +149,16 @@ export async function attachAuthEmailConsumer({ requestJson, apply = false, now 
     receipt.postHttpStatus = created?.httpStatus ?? null;
     receipt.mutationConfirmed = created?.httpStatus === 200 && created?.body?.success === true;
     const afterConsumers = await read(`${queueBase}/consumers`, 'postwrite_consumers');
+    receipt.afterConsumerList = Array.isArray(afterConsumers) ? afterConsumers.slice(0, 2).map(consumerEvidence) : null;
     if (!Array.isArray(afterConsumers) || afterConsumers.length !== 1) return stop('attachment_readback_not_verified');
     const afterQueue = await read(queueBase, 'postwrite_queue_details');
     receipt.after = await observe();
     if (!pinnedIdentities(receipt.after)) return stop('queue_identity_changed_during_readback');
     try { assertPromptDispatchConsumer({ ...afterQueue, consumers: afterConsumers }); }
-    catch { return stop('attachment_or_delivery_readback_not_verified'); }
+    catch (error) {
+      receipt.readbackReason = /^email_dispatch_[a-z_]+$/.test(error?.message ?? '') ? error.message : 'email_dispatch_queue_metadata_invalid';
+      return stop('attachment_or_delivery_readback_not_verified');
+    }
     if (receipt.after.status !== 'VERIFIED') return stop('canonical_attachment_readback_not_verified');
     receipt.status = receipt.mutationConfirmed ? 'ATTACHED_VERIFIED' : 'POST_UNCERTAIN_READBACK_VERIFIED';
     return receipt;
