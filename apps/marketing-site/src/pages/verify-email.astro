@@ -22,8 +22,6 @@ const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lyt
           <label for="verification-password">Set your password</label>
           <input id="verification-password" name="password" type="password" autocomplete="new-password" maxlength="256" required aria-describedby="verification-password-note" />
           <p class="auth-field-note" id="verification-password-note">Choose 15–128 characters. This becomes your account password. Spaces, Unicode, paste, and password managers are supported.</p>
-          <label for="verification-password-confirmation">Confirm password</label>
-          <input id="verification-password-confirmation" name="passwordConfirmation" type="password" autocomplete="new-password" maxlength="256" required aria-describedby="verification-password-note" />
           <button class="button primary" type="submit" data-email-verification-submit>Verify email and finish setup</button>
         </div>
         <p class="auth-status" data-email-verification-status aria-live="polite" aria-atomic="true" role="status" tabindex="-1"></p>
@@ -41,7 +39,6 @@ const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lyt
     if (form instanceof HTMLElement) {
       const button = form.querySelector('[data-email-verification-submit]');
       const password = form.querySelector('#verification-password');
-      const confirmation = form.querySelector('#verification-password-confirmation');
       const status = form.querySelector('[data-email-verification-status]');
       const signInLink = form.querySelector('[data-email-verification-signin]');
       const resendLink = form.querySelector('[data-email-verification-resend]');
@@ -62,8 +59,9 @@ const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lyt
       };
       const showInvalidState = (message) => {
         token = '';
-        for (const input of [password, confirmation]) {
-          if (input instanceof HTMLInputElement) { input.value = ''; input.disabled = true; }
+        if (password instanceof HTMLInputElement) {
+          password.value = '';
+          password.disabled = true;
         }
         if (fields instanceof HTMLElement) fields.hidden = true;
         if (button instanceof HTMLButtonElement) button.disabled = true;
@@ -77,8 +75,9 @@ const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lyt
         linkGeneration += 1;
         isSubmitting = false;
         if (fields instanceof HTMLElement) fields.hidden = false;
-        for (const input of [password, confirmation]) {
-          if (input instanceof HTMLInputElement) { input.value = ''; input.disabled = !token; }
+        if (password instanceof HTMLInputElement) {
+          password.value = '';
+          password.disabled = !token;
         }
         if (button instanceof HTMLButtonElement) {
           button.disabled = !token;
@@ -95,10 +94,10 @@ const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lyt
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
         if (isSubmitting || !token || !(button instanceof HTMLButtonElement)) return;
-        if (!(password instanceof HTMLInputElement) || !(confirmation instanceof HTMLInputElement)) return;
-        if (!acceptsPassword(password.value, 'creation') || password.value !== confirmation.value) {
+        if (!(password instanceof HTMLInputElement)) return;
+        if (!acceptsPassword(password.value, 'creation')) {
           password.setAttribute('aria-invalid', 'true');
-          setStatus('Passwords must match and contain 15–128 characters.', 'error');
+          setStatus('Use a password between 15 and 128 characters.', 'error');
           return;
         }
         password.removeAttribute('aria-invalid');
@@ -122,9 +121,7 @@ const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lyt
           if (!response.ok || body.state !== 'verified') throw new Error(code);
           token = '';
           password.value = '';
-          confirmation.value = '';
           password.disabled = true;
-          confirmation.disabled = true;
           if (fields instanceof HTMLElement) fields.hidden = true;
           button.textContent = 'Email verified';
           showLink(signInLink);

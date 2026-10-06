@@ -32,9 +32,6 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         <input id="signup-password" name="password" type="password" autocomplete="new-password" maxlength="256" aria-describedby="signup-password-note" required />
         <p class="auth-field-note" id="signup-password-note">Use at least 15 characters, up to 128. Longer passphrases are welcome. Password managers, paste, and autofill are supported.</p>
 
-        <label for="signup-password-confirmation">Confirm password</label>
-        <input id="signup-password-confirmation" name="passwordConfirmation" type="password" autocomplete="new-password" maxlength="256" aria-describedby="signup-password-note" required />
-
       </div>
       <div class="auth-turnstile-shell" id="signup-turnstile" role="group" aria-label="Bot verification"></div>
       <button class="button primary" type="submit" data-signup-submit>Create account</button>
@@ -56,7 +53,6 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     if (form instanceof HTMLFormElement) {
       const email = form.querySelector('#signup-email');
       const password = form.querySelector('#signup-password');
-      const confirmation = form.querySelector('#signup-password-confirmation');
       const button = form.querySelector('[data-signup-submit]');
       const status = form.querySelector('[data-signup-status]');
       const resendButton = form.querySelector('[data-signup-resend]');
@@ -210,7 +206,7 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        if (isSubmitting || signupAccepted || !(email instanceof HTMLInputElement) || !(password instanceof HTMLInputElement) || !(confirmation instanceof HTMLInputElement) || !(button instanceof HTMLButtonElement)) return;
+        if (isSubmitting || signupAccepted || !(email instanceof HTMLInputElement) || !(password instanceof HTMLInputElement) || !(button instanceof HTMLButtonElement)) return;
         email.removeAttribute('aria-invalid');
         if (!email.validity.valid) {
           email.setAttribute('aria-invalid', 'true');
@@ -218,14 +214,12 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
           setStatus('Enter a valid email address.', 'error');
           return;
         }
-        if (!acceptsPassword(password.value, 'creation') || password.value !== confirmation.value) {
+        if (!acceptsPassword(password.value, 'creation')) {
           password.setAttribute('aria-invalid', 'true');
-          confirmation.setAttribute('aria-invalid', 'true');
-          setStatus('Passwords must match and contain at least 15 characters.', 'error');
+          setStatus('Use a password between 15 and 128 characters.', 'error');
           return;
         }
         password.removeAttribute('aria-invalid');
-        confirmation.removeAttribute('aria-invalid');
         isSubmitting = true;
         button.disabled = true;
         button.setAttribute('aria-busy', 'true');
@@ -249,7 +243,6 @@ const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
             ?? '';
           if (!response.ok || !['verification_required', 'check_email'].includes(body.state)) throw new Error(typeof body.error === 'string' ? body.error : 'account_creation_failed');
           password.value = '';
-          confirmation.value = '';
           signupAccepted = true;
           email.readOnly = true;
           if (signupFields instanceof HTMLElement) signupFields.hidden = true;
