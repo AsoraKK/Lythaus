@@ -408,16 +408,19 @@ starts a fresh request. It does not automatically submit again. An
 Fresh requests still require a fresh Turnstile proof and obey the existing
 cooldown, rate limits, challenge expiry and account linkage checks.
 
-Prompt transactional-email dispatch is prepared behind
-`TRANSACTIONAL_EMAIL_DISPATCH_ENABLED`; absence or any value other than `true`
-keeps publishing and consuming dispatch hints off. No live binding, provider
-resource, secret, grant or cron change has been applied. The draft proposes
-`max_concurrency: 1` for the existing lifecycle consumer in both root production
-and development Wrangler declarations. That setting is independent of the
-dispatch flag and would apply on deployment; it requires explicit consumer-cap
-approval even if dispatch stays OFF. Other Queue consumers remain unchanged.
-The proposed producer binding reuses `lythaus-email-lifecycle-dev` only after
-explicit capability/inventory approval. Provider lifecycle events keep their
+Production configuration enables prompt transactional-email dispatch with paired
+Public and Jobs `TRANSACTIONAL_EMAIL_DISPATCH_ENABLED=true` flags and a Public
+producer binding to the existing `lythaus-email-lifecycle-dev`. Development
+configuration remains disabled; absence or any value other than `true` keeps
+publishing and consuming dispatch hints off. The existing lifecycle consumer has
+`max_concurrency: 1` in both root production and development Wrangler declarations.
+That setting is independent of the dispatch flag. Owner approval covers this
+existing consumer cap, paired flags and producer binding; it does not authorize
+new resources, plans, credentials, DDL, scheduling changes or selective redrive.
+Activation still requires verified live capacity, compatible consumer settings,
+independent review, exact-head checks and canonical release gates. Configuration
+and synthetic tests do not establish live activation or inbox latency.
+Other Queue consumers remain unchanged. Provider lifecycle events keep their
 existing parser; internal hints have a distinct type, opaque outbox UUID and
 HKDF/HMAC signature derived from the existing delivery key. They carry no
 recipient, message content or bearer token. Publish occurs after commit; the
@@ -426,27 +429,27 @@ same due row at most once, and explicit transient failures request a delayed
 Queue retry using database `next_attempt_at`. Unknown acceptance remains
 terminal; an expired or superseded challenge cannot be delivered.
 
-The proposed measurable healthy-path target is p95 first dispatch within ten
-seconds of persisted intent, measured separately from provider acceptance and
-inbox arrival. This target is not live-verified. The existing quarter-hour cron
-remains the recovery path in this patch; a lost publish can still wait for that
-tick. A separately approved mail-only minute fallback can reduce that residual
-wait without increasing other Jobs workloads. Do not claim a hard latency
-guarantee, activate the flag, add bindings or change scheduling without parent
-review, exact-head fixture/security checks and canonical release gates.
+Measure persisted-intent-to-first-dispatch latency separately from retry and
+duplicate outcomes, provider acceptance and inbox arrival. No live latency target
+has been established. The existing quarter-hour cron remains the recovery path;
+a lost publish can still wait for that tick. Any mail-only minute fallback needs
+separate approval. Do not claim a hard latency guarantee or change scheduling.
 
 Before prompt dispatch activation, the existing canonical Queue-list read must
 prove delivery is unpaused, delivery delay is zero, and the sole consumer is
 `lythaus-jobs-development` with the configured batching, retries and DLQ, and
 numeric `settings.max_concurrency=1`. Missing, null/automatic or any other cap
-fails closed before upload; the verifier never patches it. After separate owner
-approval, set this existing Queue's Settings → Edit Consumer → Maximum consumer
+fails closed before upload; the verifier never patches it. Under the bounded
+owner approval, set this existing Queue's Settings → Edit Consumer → Maximum consumer
 invocations to1 while publication remains OFF, then let the canonical existing
 Queue-list read prove the cap before activating compatible Jobs and Public.
 Missing metadata or drift blocks activation; the dashboard's Inactive label
 does not prove pause state. Paired production flags force lifecycle verification
 into existing-resource-only mode, so it cannot create resources or repair
-subscriptions. The default-off patch makes no additional provider requests.
+subscriptions. Confirm current sending-domain enablement and remaining account
+quota through authorized read-only provider evidence before activation; previous
+screenshots and local fixtures do not prove current capacity. Do not send an
+email solely to probe capacity or request a quota/plan increase as a fallback.
 
 The shared consumer reconciles the batch's provider lifecycle events before
 starting dispatch hints. Dispatch runs with at most two active operations per
