@@ -407,3 +407,115 @@ starts a fresh request. It does not automatically submit again. An
 `idempotency_outcome_unknown` or in-progress response retains its original key.
 Fresh requests still require a fresh Turnstile proof and obey the existing
 cooldown, rate limits, challenge expiry and account linkage checks.
+
+Production configuration enables prompt transactional-email dispatch with paired
+Public and Jobs `TRANSACTIONAL_EMAIL_DISPATCH_ENABLED=true` flags and a Public
+producer binding to the existing `lythaus-email-lifecycle-dev`. Development
+configuration remains disabled; absence or any value other than `true` keeps
+publishing and consuming dispatch hints off. The existing lifecycle consumer has
+`max_concurrency: 1` in both root production and development Wrangler declarations.
+That setting is independent of the dispatch flag. Owner approval covers this
+existing consumer cap, paired flags and producer binding; it does not authorize
+new resources, plans, credentials, DDL, scheduling changes or selective redrive.
+Activation still requires verified live capacity, compatible consumer settings,
+independent review, exact-head checks and canonical release gates. Configuration
+and synthetic tests do not establish live activation or inbox latency.
+Other Queue consumers remain unchanged. Provider lifecycle events keep their
+existing parser; internal hints have a distinct type, opaque outbox UUID and
+HKDF/HMAC signature derived from the existing delivery key. They carry no
+recipient, message content or bearer token. Publish occurs after commit; the
+database remains authoritative if publishing fails. Duplicate hints claim the
+same due row at most once, and explicit transient failures request a delayed
+Queue retry using database `next_attempt_at`. Unknown acceptance remains
+terminal; an expired or superseded challenge cannot be delivered.
+
+Measure persisted-intent-to-first-dispatch latency separately from retry and
+duplicate outcomes, provider acceptance and inbox arrival. No live latency target
+has been established. The existing quarter-hour cron remains the recovery path;
+a lost publish can still wait for that tick. Any mail-only minute fallback needs
+separate approval. Do not claim a hard latency guarantee or change scheduling.
+
+Before prompt dispatch activation, the existing canonical Queue-list read must
+prove delivery is unpaused, delivery delay is zero, and the sole consumer is
+`lythaus-jobs-development` with the configured batching, retries and DLQ, and
+numeric `settings.max_concurrency=1`. Missing, null/automatic or any other cap
+fails closed before upload; the verifier never patches it. Under the bounded
+owner approval, set this existing Queue's Settings → Edit Consumer → Maximum consumer
+invocations to1 while publication remains OFF, then let the canonical existing
+Queue-list read prove the cap before activating compatible Jobs and Public.
+Missing metadata or drift blocks activation; the dashboard's Inactive label
+does not prove pause state. Paired production flags force lifecycle verification
+into existing-resource-only mode, so it cannot create resources or repair
+subscriptions. Confirm current sending-domain enablement and remaining account
+quota through authorized read-only provider evidence before activation; previous
+screenshots and local fixtures do not prove current capacity. Do not send an
+email solely to probe capacity or request a quota/plan increase as a fallback.
+
+The shared consumer reconciles the batch's provider lifecycle events before
+starting dispatch hints. Dispatch runs with at most two active operations per
+invocation, limiting simultaneous provider calls and their database transactions.
+The25-message slow-provider fixture proves delivered/bounced/complained events
+at the end of a batch finish before stalled sends and that database/provider
+concurrency never exceeds two within that invocation. Per-message acknowledgement
+and retry remain isolated. The code limit is not global: without a verified
+consumer cap, Cloudflare can invoke multiple handlers. After the approved cap1
+is applied and verified, this Queue has at most one invocation with two awaited
+dispatch operations/database connections. Scheduled outbox sweeps and other
+Jobs paths are independent; this is not an account-wide database or provider
+concurrency limit. A provider operation may also outlive an ambiguous timeout,
+which remains terminal rather than being blindly retried.
+
+The cap trades backlog latency for a bounded Queue database footprint. As an
+illustrative slow-provider model,25 hints requiring20seconds each need13 waves
+with two lanes, about260seconds before database/retry overhead. Lifecycle events
+already in the batch run first; later batches can wait behind that batch. No
+live throughput or ten-second p95 is established. Do not automatically increase
+the cap to clear backlog or treat queue age as inbox delivery evidence. The only
+proposed provider setting change is this consumer cap; provider deadlines,
+resources, connection configuration and cron remain unchanged.
+
+[Cloudflare consumer concurrency](https://developers.cloudflare.com/queues/configuration/consumer-concurrency/)
+is enabled automatically unless capped; the existing
+[Queue-list response](https://developers.cloudflare.com/api/resources/queues/methods/list/)
+includes the live consumer cap used by this fail-closed check.
+
+Rollback disables Public publication first, then Jobs dispatch, while retaining
+the lifecycle parser, delivery key, durable outbox, approved cap1 and quarter-hour
+sweep. Raising/removing the cap requires a separate resource/capacity approval.
+With Jobs dispatch OFF, existing hints retry after60seconds and can exhaust the
+configured ten-retry budget into `lythaus-email-lifecycle-dlq-dev`. Re-enabling
+Jobs does not move those hints back. The outbox remains authoritative: its due
+queued rows are still processed by the existing sweep even with dispatch OFF.
+An expired/superseded challenge is cancelled; unknown acceptance remains terminal.
+
+For reconciliation, inspect only a bounded allowlist of the affected outbox IDs
+through existing authorized read-only database access. Read `state`,
+`next_attempt_at`, `attempt_count`, safe provider error category/code and whether
+acceptance/provider-ID evidence exists; do not retrieve delivery envelopes,
+recipients, tokens or keys. Confirm the next ordinary sweep's outcome before
+considering accelerated redrive. Never reset `processing`, failed acceptance-
+unknown, accepted/delivered or other terminal rows to queued, replace their
+challenge, or call the provider directly. The dispatch handler's due-row claim,
+account lock and challenge check remain the authority even if that read races.
+
+A separately authorized selective redrive uses the existing Cloudflare dashboard
+without changing consumers: Queues → `lythaus-email-lifecycle-dlq-dev` → Messages
+→ List previews a batch without acknowledgement. Select only recognized internal
+dispatch hints for allowlisted still-queued intents. After compatible Jobs is
+enabled and the existing live-consumer gate passes, copy each original hint's
+exact JSON into Queues → `lythaus-email-lifecycle-dev` → Messages → Send message,
+using JSON content type. Do not alter or regenerate its HMAC, ID or payload, and
+do not bulk-republish mixed provider lifecycle records. Record sanitized counts
+and outbox states rather than message bodies. On an ambiguous publish result,
+retain the DLQ record and reconcile outbox state instead of repeatedly sending.
+After confirmed publication or authoritative completed/terminal reconciliation,
+acknowledge only the individually reconciled DLQ hints through their checkboxes;
+never acknowledge the whole shared DLQ. Duplicate hints still pass through the
+same SQL claim and cannot deliberately resend a previously accepted intent.
+
+These are operator steps requiring separate approval; no redrive or cleanup is
+performed by this patch. Dashboard [message preview/acknowledgement](https://developers.cloudflare.com/queues/examples/list-messages-from-dash/)
+and [message publication](https://developers.cloudflare.com/queues/examples/send-messages-from-dash/)
+are distinct operations. [DLQ retry exhaustion](https://developers.cloudflare.com/queues/configuration/dead-letter-queues/)
+does not preserve messages indefinitely. Do not enable a pull consumer, change
+retention or request new credentials as an automatic recovery step.

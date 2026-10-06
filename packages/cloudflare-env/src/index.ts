@@ -11,6 +11,8 @@ export interface EnvBindings {
   FEED_QUEUE?: Queue;
   PRIVACY_QUEUE?: Queue;
   JOBS_COMPATIBILITY?: ServiceBinding;
+  TRANSACTIONAL_EMAIL_DISPATCH_QUEUE?: Queue;
+  TRANSACTIONAL_EMAIL_DISPATCH_ENABLED?: string;
   AUTH_EMAIL_ENVELOPE?: ServiceBinding;
   AUDIT_QUEUE?: Queue;
   NOTIFICATIONS_QUEUE?: Queue;

@@ -6,7 +6,7 @@ import { MAX_IMAGE_BYTES } from '@lythaus/media';
 import { json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, decryptField, uuidv7 } from '@lythaus/security';
 import { buildPrivacyDataPassport, decryptPrivatePassportIdentity, ensureWorkflowCreate, isCurrentContentModerationRevision, isCurrentProfileModerationRevision, legalHoldPlan, lockedAppealVote, moderationReputationSignal, parseContentModerationRevision, parseProfileModerationRevision, privacyRequestLifecyclePlan, queueRouteForEvent, reconcilePrivacyRequestPayload, reputationActivity, retentionCleanupPlan, reviewerReplacementPlan, securityAuditRetentionPlan, type PrivacyRequestPayload, type WorkflowCreateBinding } from './runtime-policy.ts';
-import { EMAIL_LIFECYCLE_QUEUE, handleTransactionalEmailLifecycleWebhook, readTransactionalEmailDeliveryEvidence, reconcileTransactionalEmailLifecycleQueueMessage, relayTransactionalEmailOutbox } from './transactional-email-runtime.ts';
+import { EMAIL_LIFECYCLE_QUEUE, handleTransactionalEmailLifecycleWebhook, processEmailLifecycleQueue, readTransactionalEmailDeliveryEvidence, relayTransactionalEmailOutbox } from './transactional-email-runtime.ts';
 import { WorkflowEntrypoint } from 'cloudflare:workers';
 import { processBetaEvent, expireBetaWork } from './authenticity-beta.ts';
 import { processAlphaEvent, expireAlphaWork } from './authenticity-alpha.ts';
@@ -319,30 +319,12 @@ interface QueueMessage {
   id: string;
   body: { eventId?: string; eventType?: string; [key: string]: unknown };
   ack(): void;
-  retry(): void;
+  retry(options?: { delaySeconds: number }): void;
 }
 
 interface QueueBatch {
   queue: string;
   messages: QueueMessage[];
-}
-
-async function processEmailLifecycleQueue(batch: QueueBatch, env: Env): Promise<void> {
-  for (const message of batch.messages) {
-    try {
-      const result = await reconcileTransactionalEmailLifecycleQueueMessage(env, message.body);
-      if (!result.valid) {
-        logEvent({ service: 'lythaus-jobs', queue: batch.queue, messageId: message.id, errorCode: 'email_lifecycle_event_invalid' });
-        message.retry();
-      } else if (!result.reconciled) {
-        logEvent({ service: 'lythaus-jobs', queue: batch.queue, messageId: message.id, errorCode: 'email_lifecycle_event_unmatched' });
-        message.retry();
-      }
-    } catch {
-      logEvent({ service: 'lythaus-jobs', queue: batch.queue, messageId: message.id, errorCode: 'email_lifecycle_reconciliation_failed' });
-      message.retry();
-    }
-  }
 }
 
 type ActivityWriteInput = Omit<ActivityEventInput, 'id' | 'createdAt'>;

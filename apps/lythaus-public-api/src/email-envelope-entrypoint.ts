@@ -1,5 +1,6 @@
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { enqueueTransactionalEmailIntent, transaction } from '@lythaus/db';
+import { publishCommittedEmailDispatch } from './auth-email-dispatch-queue.ts';
 import { decryptField, encryptField, hashAuthToken, hashPassword, hmacLookup, randomToken, uuidv7 } from '@lythaus/security';
 import { readBoundedJson } from './request-body-runtime.ts';
 import { normalizeEmailAddress } from './auth-runtime-policy.ts';
@@ -27,6 +28,7 @@ export async function handleEmailEnvelope(request: Request, env: EnvBindings, ru
     if (input.operation === 'resend' && (typeof input.userId !== 'string' || !uuid.test(input.userId))) throw new Error('invalid_request');
     if (input.displayName !== undefined && (typeof input.displayName !== 'string' || input.displayName.length > 80)) throw new Error('invalid_request');
     if (input.handle !== undefined && (typeof input.handle !== 'string' || !/^[a-zA-Z0-9_]{3,30}$/.test(input.handle))) throw new Error('invalid_request');
+    let outboxId: string | undefined;
     const result = await runTransaction(env.DB_APP_FRESH, async client => {
       const member = await client.query(`SELECT a.user_id FROM identity.admin_memberships a JOIN identity.users u ON u.id=a.user_id
         WHERE a.user_id=$1 AND a.active=true AND a.role IN ('administrator','owner') AND u.status='active'`, [input.actorId]);
@@ -61,11 +63,13 @@ export async function handleEmailEnvelope(request: Request, env: EnvBindings, ru
         WHERE user_id=$1 AND purpose IN ('invite','verification') AND state IN ('queued','processing','failed')`, [userId]);
       await client.query("INSERT INTO identity.email_verification_tokens(id,user_id,token_hash,expires_at) VALUES($1,$2,decode($3,'base64'),now()+interval '30 minutes')", [challengeId,userId,hashAuthToken(token,'verification')]);
       const envelope = await encryptField(JSON.stringify({ to: recipient, token }), deliveryKey, 'v1');
-      await enqueueTransactionalEmailIntent(client, { id:uuidv7(),userId,contactEmailUserId:userId,purpose:email?'invite':'verification',challengeId,templateVersion:'v1',deliveryEnvelopeCiphertext:envelope.ciphertext,deliveryEnvelopeEncryptionKeyVersion:'v1',correlationId:String(input.correlationId) });
+      outboxId = uuidv7();
+      await enqueueTransactionalEmailIntent(client, { id:outboxId,userId,contactEmailUserId:userId,purpose:email?'invite':'verification',challengeId,templateVersion:'v1',deliveryEnvelopeCiphertext:envelope.ciphertext,deliveryEnvelopeEncryptionKeyVersion:'v1',correlationId:String(input.correlationId) });
       await client.query('INSERT INTO identity.account_events(id,user_id,actor_id,event_type,metadata) VALUES($1,$2,$3,$4,$5::jsonb)', [uuidv7(),userId,input.actorId,email?'account_invited':'email_verification_requested',JSON.stringify({ deliveryState:'queued',reasonCode:input.reasonCode })]);
       await client.query('INSERT INTO system.audit_events(id,action,reason_code,correlation_id,metadata) VALUES($1,$2,$3,$4,$5::jsonb)', [uuidv7(),email?'identity.account_invited':'identity.email_verification_resent',input.reasonCode,input.correlationId,JSON.stringify({ actorId:input.actorId,targetId:userId,deliveryState:'queued' })]);
       return { userId, deliveryState:'queued' };
     });
+    if (result.deliveryState === 'queued') await publishCommittedEmailDispatch(env, outboxId);
     return respond({ result });
   } catch(error) {
     const code = error instanceof Error ? error.message : '';

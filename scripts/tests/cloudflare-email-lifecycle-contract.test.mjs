@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
-import { assertConsumerDeclaration, CONSUMER, LIFECYCLE_DLQ, LIFECYCLE_QUEUE, REQUIRED_EVENTS, SENDING_DOMAIN } from '../ci/provision-cloudflare-email-lifecycle.mjs';
+import { assertConsumerDeclaration, assertPromptDispatchConsumer, promptDispatchRequested, CONSUMER, LIFECYCLE_DLQ, LIFECYCLE_QUEUE, REQUIRED_EVENTS, SENDING_DOMAIN } from '../ci/provision-cloudflare-email-lifecycle.mjs';
 
 const provisioner = fs.readFileSync('scripts/ci/provision-cloudflare-email-lifecycle.mjs', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/native-workers-deploy.yml', 'utf8');
@@ -33,14 +33,76 @@ test('committed lifecycle constants and consumer declaration stay exact', () => 
   assert.equal(SENDING_DOMAIN, 'mail.lythaus.co');
   assert.deepEqual(REQUIRED_EVENTS, ['message.delivered', 'message.deferred', 'message.bounced', 'message.failed', 'message.rejected', 'message.complained']);
   assert.deepEqual(CONSUMER, {
-    queue: 'lythaus-email-lifecycle-dev', max_batch_size: 25, max_batch_timeout: 5, max_retries: 10, dead_letter_queue: 'lythaus-email-lifecycle-dlq-dev',
+    queue: 'lythaus-email-lifecycle-dev', max_batch_size: 25, max_batch_timeout: 5, max_concurrency: 1, max_retries: 10, dead_letter_queue: 'lythaus-email-lifecycle-dlq-dev',
   });
   assert.doesNotThrow(() => assertConsumerDeclaration());
 });
 
 test('Jobs consumes email lifecycle events with the committed retry and DLQ contract', () => {
-  assert.match(jobsConfig, /\{ "queue": "lythaus-email-lifecycle-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_retries": 10, "dead_letter_queue": "lythaus-email-lifecycle-dlq-dev" \}/);
+  assert.match(jobsConfig, /\{ "queue": "lythaus-email-lifecycle-dev", "max_batch_size": 25, "max_batch_timeout": 5, "max_concurrency": 1, "max_retries": 10, "dead_letter_queue": "lythaus-email-lifecycle-dlq-dev" \}/);
   assert.match(provisioner, /email_lifecycle_consumer_configuration_drift/);
   assert.match(workflow, /email-lifecycle-infrastructure\.json/);
   assert.match(workflow, /jobsWorkerVersionId/);
+});
+
+test('prompt dispatch requires paired production flags and only its approved producer binding', () => {
+  const publicConfig = { vars: { TRANSACTIONAL_EMAIL_DISPATCH_ENABLED: 'true' },
+    queues: { producers: [{ binding: 'TRANSACTIONAL_EMAIL_DISPATCH_QUEUE', queue: LIFECYCLE_QUEUE }] } };
+  const jobsConfig = { vars: { TRANSACTIONAL_EMAIL_DISPATCH_ENABLED: 'true' } };
+  assert.equal(promptDispatchRequested({}, {}), false);
+  assert.equal(promptDispatchRequested({ env: { development: publicConfig } }, { env: { development: jobsConfig } }), false);
+  assert.equal(promptDispatchRequested(publicConfig, jobsConfig), true);
+  assert.throws(() => promptDispatchRequested(publicConfig, {}), /activation_flags_mismatch/);
+  assert.throws(() => promptDispatchRequested({}, jobsConfig), /activation_flags_mismatch/);
+  for (const producers of [[], [{ binding: 'TRANSACTIONAL_EMAIL_DISPATCH_QUEUE', queue: 'unrelated-queue' }],
+    [...publicConfig.queues.producers, ...publicConfig.queues.producers]]) {
+    assert.throws(() => promptDispatchRequested({ ...publicConfig, queues: { producers } }, jobsConfig), /producer_binding_drift/);
+  }
+  assert.match(provisioner, /verifyExisting \|\|= promptDispatch/);
+  assert.match(provisioner, /if \(verifyExisting && \(init.method \?\? 'GET'\) !== 'GET'\)/);
+});
+
+test('existing Queue metadata must prove live delivery and the exact consumer before prompt activation', () => {
+  const consumer = { type: 'worker', script_name: 'lythaus-jobs-development', dead_letter_queue: LIFECYCLE_DLQ,
+    settings: { batch_size: 25, max_wait_time_ms: 5000, max_retries: 10, max_concurrency: 1 } };
+  const queue = { queue_name: LIFECYCLE_QUEUE, settings: { delivery_paused: false, delivery_delay: 0 },
+    consumers_total_count: 1, consumers: [consumer] };
+  assert.equal(assertPromptDispatchConsumer(queue).status, 'VERIFIED');
+  for (const settings of [{}, { delivery_paused: true, delivery_delay: 0 }, { delivery_paused: false, delivery_delay: 20 }]) {
+    assert.throws(() => assertPromptDispatchConsumer({ ...queue, settings }), /live_delivery_not_verified/);
+  }
+  for (const override of [{ consumers: undefined }, { consumers: [] }, { consumers_total_count: undefined },
+    { consumers_total_count: 2, consumers: [consumer, consumer] }]) {
+    assert.throws(() => assertPromptDispatchConsumer({ ...queue, ...override }), /live_consumer_not_verified/);
+  }
+  for (const override of [{ type: 'http_pull' }, { script_name: 'unrelated-worker' }, { dead_letter_queue: '' },
+    { settings: { ...consumer.settings, max_wait_time_ms: 20000 } }, { settings: { ...consumer.settings, batch_size: 10 } },
+    { settings: { ...consumer.settings, max_retries: 3 } }]) {
+    assert.throws(() => assertPromptDispatchConsumer({ ...queue, consumers: [{ ...consumer, ...override }] }), /live_consumer_drift/);
+  }
+  assert.deepEqual(Object.keys(assertPromptDispatchConsumer(queue)).sort(),
+    ['dead_letter_queue', 'deliveryDelaySeconds', 'deliveryPaused', 'max_batch_size', 'max_batch_timeout', 'max_concurrency', 'max_retries', 'queue', 'source', 'status', 'worker']);
+});
+
+test('prompt activation rejects automatic, missing, nonnumeric or excessive consumer concurrency', () => {
+  const consumer = { type: 'worker', script_name: 'lythaus-jobs-development', dead_letter_queue: LIFECYCLE_DLQ,
+    settings: { batch_size: 25, max_wait_time_ms: 5000, max_retries: 10, max_concurrency: 1 } };
+  const queue = { queue_name: LIFECYCLE_QUEUE, settings: { delivery_paused: false, delivery_delay: 0 },
+    consumers_total_count: 1, consumers: [consumer] };
+  assert.equal(assertPromptDispatchConsumer(queue).status, 'VERIFIED');
+  for (const max_concurrency of [undefined, null, 0, 2, 250, '1']) {
+    assert.throws(() => assertPromptDispatchConsumer({ ...queue,
+      consumers: [{ ...consumer, settings: { ...consumer.settings, max_concurrency } }] }), /consumer_concurrency_not_verified/);
+  }
+});
+
+test('root and development declarations must each contain exactly one capped lifecycle consumer', () => {
+  const consumer = { ...CONSUMER, max_concurrency: 1 };
+  const config = { queues: { consumers: [consumer] }, env: { development: { queues: { consumers: [consumer] } } } };
+  assert.doesNotThrow(() => assertConsumerDeclaration(config));
+  for (const consumers of [[], [consumer, consumer], [{ ...consumer, max_concurrency: undefined }],
+    [{ ...consumer, max_concurrency: null }], [{ ...consumer, max_concurrency: 2 }]]) {
+    assert.throws(() => assertConsumerDeclaration({ ...config, queues: { consumers } }), /consumer_configuration_drift/);
+    assert.throws(() => assertConsumerDeclaration({ ...config, env: { development: { queues: { consumers } } } }), /consumer_configuration_drift/);
+  }
 });

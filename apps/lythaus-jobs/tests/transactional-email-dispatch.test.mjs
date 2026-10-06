@@ -2,10 +2,12 @@ import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import test from 'node:test';
 import { encryptField, uuidv7 } from '@lythaus/security';
+import { createTransactionalEmailDispatchMessage } from '../../../packages/security/src/transactional-email-dispatch.ts';
 import {
   decryptTransactionalEmailEnvelope, emailProviderFailureCategory, handleTransactionalEmailLifecycleWebhook,
   readTransactionalEmailDeliveryEvidence, reconcileTransactionalEmailLifecycleQueueMessage,
   relayTransactionalEmailOutbox, sendTransactionalEmail, summarizeTransactionalEmailDeliveryEvidence,
+  dispatchTransactionalEmailQueueMessage,
 } from '../src/transactional-email-runtime.ts';
 
 const key=randomBytes(32).toString('base64');
@@ -19,17 +21,60 @@ async function row(overrides={}) {
   return {id:uuidv7(),user_id:uuidv7(),purpose:'verification',attempt_count:1,template_version:'v1',correlation_id:uuidv7(),
     delivery_envelope_ciphertext:envelope.ciphertext,delivery_envelope_encryption_key_version:'v1',...overrides};
 }
-function database(rows,{valid=true}={}) {
+function database(rows,{valid=true,dispatchState='provider_accepted',retryAfterSeconds=45}={}) {
   const calls=[];
   const remaining=[...rows];
   const run=async(sql,values=[])=>{
     calls.push({sql,values});
-    if(sql.includes('WITH claimable')){assert.deepEqual(values,[1]);return reply(remaining.splice(0,1));}
+    if(sql.includes('WITH claimable')){
+      assert.equal(values[0],1);
+      const index=values.length===1?0:remaining.findIndex(row=>row.id===values[1]);
+      if(values.length===2)assert.match(sql,/AND id = \$2::uuid/);
+      return reply(index<0?[]:remaining.splice(index,1));
+    }
     if(sql.includes(' AS valid'))return reply([{valid}]);
+    if(sql.includes(' AS retry_after_seconds'))return reply([{state:dispatchState,retry_after_seconds:retryAfterSeconds}]);
     return reply([],1);
   };
   return {calls,query:(_binding,sql,values)=>run(sql,values),transaction:(_binding,work)=>work({query:run})};
 }
+
+test('signed queue hint promptly dispatches only its intent and duplicate delivery cannot send again',async()=>{
+  const unrelated=await row(),target=await row(),db=database([unrelated,target]);let sends=0;
+  const hint=await createTransactionalEmailDispatchMessage(target.id,key);
+  const env={...base,TRANSACTIONAL_EMAIL_DISPATCH_ENABLED:'true',EMAIL:{send:async()=>{sends++;return {messageId:'synthetic-queued-send'};}}};
+  assert.deepEqual(await dispatchTransactionalEmailQueueMessage(env,hint,db),{retryAfterSeconds:null});
+  assert.deepEqual(await dispatchTransactionalEmailQueueMessage(env,hint,db),{retryAfterSeconds:null});
+  assert.equal(sends,1);
+  assert.ok(db.calls.filter(({sql})=>sql.includes('WITH claimable')).every(({values})=>values[1]===target.id));
+});
+
+test('unapproved or forged hints cannot query the database or send mail',async()=>{
+  const target=await row(),hint=await createTransactionalEmailDispatchMessage(target.id,key),db=database([target]);
+  for(const [env,message] of [[base,hint],[{...base,TRANSACTIONAL_EMAIL_DISPATCH_ENABLED:'true'},{...hint,signature:'0'.repeat(64)}]]) {
+    assert.deepEqual(await dispatchTransactionalEmailQueueMessage(env,message,db),{retryAfterSeconds:60});
+  }
+  assert.equal(db.calls.length,0);
+});
+
+test('delayed queue retry respects database due time and processing lease; terminal outcomes acknowledge',async()=>{
+  const hint=await createTransactionalEmailDispatchMessage(uuidv7(),key);
+  for(const [state,expected] of [['queued',45],['processing',60],['failed',null],['cancelled',null],['provider_accepted',null],['delivered',null]]) {
+    const db=database([],{dispatchState:state});
+    const env={...base,TRANSACTIONAL_EMAIL_DISPATCH_ENABLED:'true',EMAIL:{send:()=>assert.fail('Must not resend an unclaimed intent')}};
+    assert.deepEqual(await dispatchTransactionalEmailQueueMessage(env,hint,db),{retryAfterSeconds:expected});
+  }
+});
+
+test('queued transient provider failure requests a delayed retry while unknown acceptance remains terminal',async()=>{
+  for(const [error,state,expected] of [[{code:'E_INTERNAL_SERVER_ERROR'},'queued',45],[new Error('unknown acceptance'),'failed',null]]) {
+    const target=await row(),db=database([target],{dispatchState:state}),hint=await createTransactionalEmailDispatchMessage(target.id,key);
+    const env={...base,TRANSACTIONAL_EMAIL_DISPATCH_ENABLED:'true',EMAIL:{send:async()=>{throw error;}}};
+    assert.deepEqual(await dispatchTransactionalEmailQueueMessage(env,hint,db),{retryAfterSeconds:expected});
+    const failure=db.calls.find(({sql})=>sql.includes('SET state = $2'));
+    assert.equal(failure.values[1],state);
+  }
+});
 
 test('dispatcher claims once, uses the scoped envelope and scrubs only after provider acceptance',async()=>{
   const claimed=await row(),db=database([claimed]);let sends=0;

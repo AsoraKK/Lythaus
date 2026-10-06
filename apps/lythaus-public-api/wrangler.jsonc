@@ -33,6 +33,7 @@
     "MEDIA_QUARANTINE_BUCKET": "lythaus-media-quarantine-dev",
     "MEDIA_APPROVED_BUCKET": "lythaus-media-approved-dev",
     "EMAIL_PROVIDER_MODE": "cloudflare",
+    "TRANSACTIONAL_EMAIL_DISPATCH_ENABLED": "true",
     "EMAIL_FROM": "no-reply@mail.lythaus.co",
     "EMAIL_VERIFICATION_BASE_URL": "https://lythaus.co/verify-email?token=",
     "EMAIL_PASSWORD_RESET_BASE_URL": "https://lythaus.co/reset-password?token=",
@@ -66,6 +67,7 @@
   ],
   "queues": {
     "producers": [
+      { "binding": "TRANSACTIONAL_EMAIL_DISPATCH_QUEUE", "queue": "lythaus-email-lifecycle-dev" },
       { "binding": "MODERATION_QUEUE", "queue": "lythaus-moderation-dev" },
       { "binding": "FEED_QUEUE", "queue": "lythaus-feed-dev" },
       { "binding": "PRIVACY_QUEUE", "queue": "lythaus-privacy-dev" }

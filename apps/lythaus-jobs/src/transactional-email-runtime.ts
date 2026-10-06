@@ -2,6 +2,8 @@ import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { classifyEmailProviderFailure, lifecycleStateForEmailEvent, nextTransactionalEmailState, renderTransactionalEmail, type TransactionalEmailMessage, type TransactionalEmailPurpose, type TransactionalEmailState } from '@lythaus/contracts';
 import { lockAuthDelivery, query, transaction, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
 import { constantTimeEqual, decryptField } from '@lythaus/security';
+import { logEvent } from '@lythaus/observability';
+import { TRANSACTIONAL_EMAIL_DISPATCH_TYPE, verifyTransactionalEmailDispatchMessage } from '../../../packages/security/src/transactional-email-dispatch.ts';
 
 export interface TransactionalEmailRelayEnv extends EnvBindings {
   DB_JOBS_FRESH: HyperdriveBinding;
@@ -148,7 +150,7 @@ export async function sendTransactionalEmail(env: TransactionalEmailRelayEnv, me
   return { provider: 'fallback-email', messageId, acceptedAt: new Date().toISOString() };
 }
 
-async function claimTransactionalEmails(env: TransactionalEmailRelayEnv, database: EmailDatabase): Promise<ClaimedEmail[]> {
+async function claimTransactionalEmails(env: TransactionalEmailRelayEnv, database: EmailDatabase, outboxId?: string): Promise<ClaimedEmail[]> {
   return database.transaction(env.DB_JOBS_FRESH, async (client) => {
     await client.query(
       `UPDATE system.transactional_email_outbox
@@ -162,6 +164,7 @@ async function claimTransactionalEmails(env: TransactionalEmailRelayEnv, databas
          SELECT id
            FROM system.transactional_email_outbox
           WHERE state = 'queued' AND next_attempt_at <= now()
+          ${outboxId ? 'AND id = $2::uuid' : ''}
           ORDER BY created_at
           LIMIT $1
           FOR UPDATE SKIP LOCKED
@@ -175,7 +178,7 @@ async function claimTransactionalEmails(env: TransactionalEmailRelayEnv, databas
        RETURNING outbox.id, outbox.user_id, outbox.purpose,
                  outbox.delivery_envelope_ciphertext, outbox.delivery_envelope_encryption_key_version,
                  outbox.template_version, outbox.attempt_count, outbox.correlation_id`,
-      [1],
+      outboxId ? [1, outboxId] : [1],
     );
     return result.rows;
   });
@@ -249,6 +252,21 @@ export async function relayTransactionalEmailOutbox(env: TransactionalEmailRelay
   }
 }
 
+export async function dispatchTransactionalEmailQueueMessage(env: TransactionalEmailRelayEnv, body: unknown, database: EmailDatabase = emailDatabase): Promise<{ retryAfterSeconds: number | null }> {
+  if (env.TRANSACTIONAL_EMAIL_DISPATCH_ENABLED !== 'true') return { retryAfterSeconds: 60 };
+  const message = await verifyTransactionalEmailDispatchMessage(body, env.TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1 ?? '');
+  if (!message) return { retryAfterSeconds: 60 };
+  const [row] = await claimTransactionalEmails(env, database, message.outboxId);
+  if (row) await deliverClaimedEmail(env, row, database);
+  const result = await database.query<{ state: string; retry_after_seconds: number }>(env.DB_JOBS_FRESH,
+    `SELECT state,GREATEST(1,CEIL(EXTRACT(EPOCH FROM next_attempt_at-clock_timestamp())))::integer AS retry_after_seconds
+       FROM system.transactional_email_outbox WHERE id=$1`, [message.outboxId]);
+  const state = result.rows[0];
+  if (state?.state === 'queued') return { retryAfterSeconds: state.retry_after_seconds };
+  if (state?.state === 'processing') return { retryAfterSeconds: 60 };
+  return { retryAfterSeconds: null };
+}
+
 export interface TransactionalEmailLifecycleEvent {
   eventType?: string;
   type?: string;
@@ -258,6 +276,46 @@ export interface TransactionalEmailLifecycleEvent {
 }
 
 export const EMAIL_LIFECYCLE_QUEUE = 'lythaus-email-lifecycle-dev';
+
+interface EmailQueueMessage {
+  id: string;
+  body: unknown;
+  ack(): void;
+  retry(options?: { delaySeconds: number }): void;
+}
+
+export async function processEmailLifecycleQueue(
+  batch: { queue: string; messages: readonly EmailQueueMessage[] },
+  env: TransactionalEmailRelayEnv,
+  database: EmailDatabase = emailDatabase,
+): Promise<void> {
+  const isDispatch = (message: EmailQueueMessage) => recordValue(message.body)?.type === TRANSACTIONAL_EMAIL_DISPATCH_TYPE;
+  const process = async (message: EmailQueueMessage): Promise<void> => {
+    try {
+      if (recordValue(message.body)?.type === TRANSACTIONAL_EMAIL_DISPATCH_TYPE) {
+        const dispatch = await dispatchTransactionalEmailQueueMessage(env, message.body, database);
+        if (dispatch.retryAfterSeconds === null) message.ack();
+        else message.retry({ delaySeconds: dispatch.retryAfterSeconds });
+        return;
+      }
+      const result = await reconcileTransactionalEmailLifecycleQueueMessage(env, message.body, database);
+      if (!result.valid || !result.reconciled) {
+        logEvent({ service: 'lythaus-jobs', queue: batch.queue, messageId: message.id,
+          errorCode: result.valid ? 'email_lifecycle_event_unmatched' : 'email_lifecycle_event_invalid' });
+        message.retry();
+      } else message.ack();
+    } catch {
+      logEvent({ service: 'lythaus-jobs', queue: batch.queue, messageId: message.id, errorCode: 'email_lifecycle_reconciliation_failed' });
+      message.retry();
+    }
+  };
+  for (const message of batch.messages.filter(message => !isDispatch(message))) await process(message);
+  const dispatches = batch.messages.filter(isDispatch);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(2, dispatches.length) }, async () => {
+    while (next < dispatches.length) await process(dispatches[next++]);
+  }));
+}
 
 const CLOUDFLARE_LIFECYCLE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   'cf.email.sending.message.delivered': 'message.delivered',
