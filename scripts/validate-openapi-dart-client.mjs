@@ -1,4 +1,4 @@
-import { cpSync, mkdtempSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -30,6 +30,15 @@ try {
   cpSync(resolve('scripts/tests/fixtures/privacy-status-serialization.dart.txt'), join(validationPackage, 'test/privacy_status_serialization_test.dart'));
   cpSync(resolve('tests/contract/dart/community_appeal_serialization_test.dart.fixture'),
     join(validationPackage, 'test/community_appeal_serialization_test.dart'));
+  // Keep the temporary validator on the verified compatible build toolchain.
+  // analyzer 14.5 removed the contextFeatures setter used by build_runner 2.16.1.
+  const manifestPath = join(validationPackage, 'pubspec.yaml');
+  const manifest = readFileSync(manifestPath, 'utf8');
+  if (!/^  build_runner: any$/m.test(manifest)) {
+    throw new Error('generated Dart validation build_runner declaration changed');
+  }
+  writeFileSync(manifestPath, manifest.replace(/^  build_runner: any$/m,
+    '  build_runner: 2.16.1\n  analyzer: 14.4.0'));
   run(['pub', 'get']);
   run(['run', 'build_runner', 'build']);
   run(['format', '--output=none', '--set-exit-if-changed', 'test/community_appeal_serialization_test.dart']);
