@@ -64,6 +64,7 @@ const PUBLIC_ERROR_CODES = new Set([
   'news_board_not_entitled', 'notification_device_not_found',
   'notification_device_not_recorded', 'notification_not_found',
   'notification_preference_required', 'post_not_available', 'post_not_found',
+  'post_tag_limit_exceeded',
   'privacy_request_active', 'profile_not_found', 'provider_unavailable', 'rate_limit_exceeded',
   'refresh_token_invalid', 'refresh_token_required', 'refresh_token_reuse',
   'relationship_change_limit_reached', 'request_too_large', 'reset_token_invalid',

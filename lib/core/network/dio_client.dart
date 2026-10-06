@@ -73,6 +73,8 @@ class IdempotencyRetryInterceptor extends Interceptor {
   IdempotencyRetryInterceptor(this._dio, {this.maxRetries = 1});
 
   static const _retryCountExtraKey = 'lythaus.idempotency_retry_count';
+  static const disableAutomaticRetryExtraKey =
+      'lythaus.disable_idempotency_retry';
   static final _idempotencyKeyPattern = RegExp(
     r'^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$',
   );
@@ -99,7 +101,8 @@ class IdempotencyRetryInterceptor extends Interceptor {
   }
 
   bool _shouldRetry(DioException error, RequestOptions options) {
-    if (_retryCount(options) >= maxRetries ||
+    if (options.extra[disableAutomaticRetryExtraKey] == true ||
+        _retryCount(options) >= maxRetries ||
         !_hasValidIdempotencyKey(options)) {
       return false;
     }

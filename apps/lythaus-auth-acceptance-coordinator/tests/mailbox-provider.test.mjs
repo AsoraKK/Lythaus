@@ -13,7 +13,7 @@ test('bounded DNS observation requires different known providers, never exposes 
   const original=globalThis.fetch;
   try {
     globalThis.fetch=async(url,options)=>{
-      assert.ok(!url.includes('local%40'));assert.equal(options.headers.accept,'application/dns-json');assert.ok(options.signal);
+      assert.ok(!url.includes('local%40'));assert.equal(options.headers.accept,'application/dns-json');assert.equal(options.redirect,'manual');assert.ok(options.signal);
       return Response.json(dns(url.includes('first.invalid')?'smtp.google.com':'example.mail.protection.outlook.com'));
     };
     const proof=await observeMailboxProviders('local@first.invalid','local@second.invalid');
@@ -24,6 +24,23 @@ test('bounded DNS observation requires different known providers, never exposes 
     globalThis.fetch=async()=>new Response(null,{status:503});
     await assert.rejects(()=>observeMailboxProviders('local@first.invalid','other@second.invalid'),/provider_unknown/);
     globalThis.fetch=async()=>{throw new Error('private network detail');};
+    await assert.rejects(()=>observeMailboxProviders('local@first.invalid','other@second.invalid'),/^Error: acceptance_mailbox_provider_unknown$/);
+  } finally {globalThis.fetch=original;}
+});
+test('DNS redirects fail closed even with a valid provider body, and malformed responses stay sanitized',async()=>{
+  const original=globalThis.fetch;
+  try {
+    for(const status of [301,302,303,307,308]) {
+      let calls=0;
+      globalThis.fetch=async(url,options)=>{
+        calls+=1;assert.equal(options.redirect,'manual');assert.ok(url.startsWith('https://cloudflare-dns.com/dns-query?'));
+        return Response.json(dns(url.includes('first.invalid')?'smtp.google.com':'example.mail.protection.outlook.com'),
+          {status,headers:{location:'https://must-not-follow.example.invalid/'}});
+      };
+      await assert.rejects(()=>observeMailboxProviders('local@first.invalid','other@second.invalid'),/^Error: acceptance_mailbox_provider_unknown$/);
+      assert.equal(calls,2);
+    }
+    globalThis.fetch=async()=>new Response('<html>synthetic private detail</html>');
     await assert.rejects(()=>observeMailboxProviders('local@first.invalid','other@second.invalid'),/^Error: acceptance_mailbox_provider_unknown$/);
   } finally {globalThis.fetch=original;}
 });

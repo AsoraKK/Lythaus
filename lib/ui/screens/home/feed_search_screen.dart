@@ -132,29 +132,42 @@ class _FeedSearchScreenState extends ConsumerState<FeedSearchScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.all(Spacing.md),
-              child: TextField(
-                controller: controller,
-                decoration: InputDecoration(
-                  labelText: 'Search tags',
-                  helperText: 'Example: #civic',
-                  prefixIcon: const Icon(Icons.search),
-                  border: const OutlineInputBorder(),
-                  suffixIcon: controller.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          tooltip: 'Clear search',
-                          onPressed: () {
-                            setState(() {
-                              controller.clear();
-                            });
-                            _search('');
-                          },
-                        )
-                      : null,
-                ),
-                onSubmitted: _search,
-                onChanged: (_) => setState(() {}),
-                textInputAction: TextInputAction.search,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      labelText: 'Search tags',
+                      prefixIcon: const Icon(Icons.search),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: controller.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              tooltip: 'Clear search',
+                              onPressed: () {
+                                setState(() {
+                                  controller.clear();
+                                });
+                                _search('');
+                              },
+                            )
+                          : null,
+                    ),
+                    onSubmitted: _search,
+                    onChanged: (_) => setState(() {}),
+                    textInputAction: TextInputAction.search,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12, top: 4),
+                    child: Text(
+                      'Example: #civic',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             if (query.isEmpty)

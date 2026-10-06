@@ -75,7 +75,11 @@ jobs:
         run: node --test scripts/tests/file-io-security.test.mjs
       - name: Verify private auth-email service boundary in workerd
         run: node --test --test-timeout=60000 scripts/tests/private-email-binding.workerd.mjs
+      - name: Verify mailbox provider observation in workerd
+        run: node --test --test-timeout=60000 apps/lythaus-auth-acceptance-coordinator/tests/mailbox-provider.workerd.mjs
       - run: node --experimental-strip-types --test packages/security/tests/critical-security-policy.test.mjs
+      - name: Verify credential-bearing provider redirect boundaries in workerd
+        run: node --test --test-timeout=60000 scripts/tests/auth-provider-redirects.workerd.mjs
       - run: npm run test:native-architecture
       - name: Verify owner-only read-only account support
         run: node --experimental-strip-types --experimental-test-module-mocks --test packages/contracts/tests/account-support.test.mjs apps/lythaus-admin-api/tests/account-support-runtime.test.mjs apps/lythaus-admin-api/tests/account-support-handler.test.mjs
@@ -358,7 +362,9 @@ jobs:
       - name: Verify homepage optical and accessibility contracts
         run: npm run marketing:test:browser
       - name: Verify rendered email authentication controls
-        run: node --test --test-timeout=60000 apps/marketing-site/tests/auth-journey.browser.mjs
+        run: |
+          node --test --test-name-pattern='^chromium ' --test-timeout=60000 apps/marketing-site/tests/auth-journey.browser.mjs
+          node --test --test-name-pattern='^webkit ' --test-timeout=60000 apps/marketing-site/tests/auth-journey.browser.mjs
       - name: Verify protected email confirmation controls
         run: node --experimental-strip-types --test --test-timeout=60000 apps/lythaus-auth-acceptance-coordinator/tests/email-landing.browser.mjs
 

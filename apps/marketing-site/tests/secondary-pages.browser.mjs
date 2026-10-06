@@ -211,14 +211,13 @@ try {
       assert.equal(new URL(page.url()).search, '');
       assert.equal(await page.locator('meta[name="referrer"]').getAttribute('content'), 'no-referrer');
       await page.locator('[data-email-verification-submit]').click();
-      assert.equal(await page.locator('[data-email-verification-status]').innerText(), 'Passwords must match and contain 15–128 characters.');
+      assert.equal(await page.locator('[data-email-verification-status]').innerText(), 'Use a password between 15 and 128 characters.');
+      assert.equal(requests.length, 0);
+      await page.locator('#verification-password').fill('short');
+      await page.locator('[data-email-verification-submit]').click();
+      assert.equal(await page.locator('[data-email-verification-status]').innerText(), 'Use a password between 15 and 128 characters.');
       assert.equal(requests.length, 0);
       await page.locator('#verification-password').fill('fixture-only-passphrase');
-      await page.locator('#verification-password-confirmation').fill('mismatched-fixture');
-      await page.locator('[data-email-verification-submit]').click();
-      assert.equal(await page.locator('[data-email-verification-status]').innerText(), 'Passwords must match and contain 15–128 characters.');
-      assert.equal(requests.length, 0);
-      await page.locator('#verification-password-confirmation').fill('fixture-only-passphrase');
       await page.locator('[data-email-verification-submit]').click();
       await page.locator('[data-email-verification-status][data-state="success"]').waitFor();
       assert.equal(requests.length, 1);
@@ -227,7 +226,6 @@ try {
     });
     await fixtureCase('verify-invalid', theme, 'verify-email?token=fixture-token', () => ({ status: 400, body: { error: 'verification_token_invalid' } }), async ({ page, requests }) => {
       await page.locator('#verification-password').fill('fixture-only-passphrase');
-      await page.locator('#verification-password-confirmation').fill('fixture-only-passphrase');
       await page.locator('[data-email-verification-submit]').click();
       await page.locator('[data-email-verification-status][data-state="error"]').waitFor();
       assert.equal(requests.length, 1);
@@ -292,7 +290,6 @@ try {
     await fixtureCase('signup-success', theme, 'signup', () => ({ body: { state: 'verification_required' } }), async ({ page }) => {
       await page.locator('#signup-email').fill('visual-fixture@example.invalid');
       await page.locator('#signup-password').fill('fixture-only-passphrase');
-      await page.locator('#signup-password-confirmation').fill('fixture-only-passphrase');
       await page.locator('[data-signup-submit]').click();
       await page.locator('[data-signup-status][data-state="success"]').waitFor();
       assert.equal(await page.locator('[data-signup-check-email]').isVisible(), true);
