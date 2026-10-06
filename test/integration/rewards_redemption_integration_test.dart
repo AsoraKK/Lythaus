@@ -66,6 +66,37 @@ ResponseBody _redemptionResponse() => ResponseBody.fromString(
   },
 );
 
+ResponseBody _snapshotResponse({required bool redeemed}) =>
+    ResponseBody.fromString(
+      jsonEncode({
+        'subscriptionTier': 'premium',
+        'reputationLevel': 3,
+        'reputationBand': 'established',
+        'availableRewardLevels': [1, 2, 3, 4, 5],
+        'maxOptionsPerLevel': 1,
+        'redemptionStatus': 'active',
+        'fraudRiskStatus': 'normal',
+        'offers': [
+          {
+            'id': 'lvl1-privacy-basics',
+            'rewardLevel': 1,
+            'title': 'Privacy Starter Pack',
+            'description': 'Starter tools',
+            'partnerName': 'Partner A',
+            'locked': false,
+            'redeemed': redeemed,
+          },
+        ],
+        'redemptionHistory': <Map<String, dynamic>>[],
+        'affiliateDisclosure':
+            'Some reward links may include affiliate relationships.',
+      }),
+      200,
+      headers: {
+        Headers.contentTypeHeader: <String>[Headers.jsonContentType],
+      },
+    );
+
 // ---------------------------------------------------------------------------
 // Shared snapshot factory helpers
 // ---------------------------------------------------------------------------
@@ -350,6 +381,142 @@ void main() {
     expect(find.text('Unable to redeem this reward right now.'), findsNothing);
   });
 
+  testWidgets(
+    'lost response refreshes rewards and scopes manual retry keys to accounts',
+    (tester) async {
+      final loseFirstResponse = Completer<void>();
+      final requestStarted = Completer<void>();
+      final committedAccounts = <String>{};
+      final redemptionRequests = <RequestOptions>[];
+      final adapter = _RewardsAdapter((request) async {
+        final authorization = request.headers['Authorization'] as String;
+        if (request.method == 'GET' && request.path == '/rewards/me') {
+          return _snapshotResponse(
+            redeemed: committedAccounts.contains(authorization),
+          );
+        }
+        if (request.method == 'POST') {
+          redemptionRequests.add(request);
+          if (redemptionRequests.length == 1) {
+            requestStarted.complete();
+            await loseFirstResponse.future;
+            throw DioException(
+              requestOptions: request,
+              type: DioExceptionType.receiveTimeout,
+            );
+          }
+          committedAccounts.add(authorization);
+          return _redemptionResponse();
+        }
+        throw StateError('Unexpected rewards request: ${request.method}');
+      });
+      final dio = _dioWith(adapter);
+      dio.interceptors.add(IdempotencyRetryInterceptor(dio));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            _testSession.overrideWith((ref) => _user('account-a')),
+            authSessionRevisionProvider.overrideWith(
+              (ref) => AuthSessionRevision(ref.read(_testSession.notifier)),
+            ),
+            currentUserProvider.overrideWith((ref) => ref.watch(_testSession)),
+            jwtProvider.overrideWith((ref) async {
+              final user = ref.watch(currentUserProvider);
+              return user == null ? null : 'session-${user.id}';
+            }),
+            secureDioProvider.overrideWithValue(dio),
+            monthlyRewardsViewProvider.overrideWith((ref) async {
+              throw StateError('monthly fixture unavailable');
+            }),
+            monthlyReputationReportProvider.overrideWith((ref, _) async {
+              throw StateError('report fixture unavailable');
+            }),
+          ],
+          child: const MaterialApp(home: RewardsDashboardScreen()),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      await scrollToVisible(tester, find.text('Redeem'));
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(RewardsDashboardScreen)),
+      );
+      await tester.tap(find.text('Redeem'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1));
+      await tester.runAsync(
+        () => requestStarted.future.timeout(const Duration(seconds: 1)),
+      );
+
+      expect(find.text('Redeeming...'), findsOneWidget);
+      expect(redemptionRequests, hasLength(1));
+      final accountAKey = redemptionRequests.single.headers['Idempotency-Key'];
+      expect(
+        redemptionRequests.single.headers['Authorization'],
+        'Bearer session-account-a',
+      );
+
+      loseFirstResponse.complete();
+      await tester.pump(const Duration(milliseconds: 1));
+      await tester.pumpAndSettle();
+
+      expect(redemptionRequests, hasLength(1));
+      expect(
+        find.text(
+          'We could not confirm this redemption. Your rewards are refreshing; retrying will reuse this request.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Reward redeemed successfully.'), findsNothing);
+      expect(find.text('Redeem'), findsOneWidget);
+      expect(
+        adapter.requests.where(
+          (request) => request.method == 'GET' && request.path == '/rewards/me',
+        ),
+        hasLength(2),
+        reason: 'the timeout must refresh the current account snapshot',
+      );
+
+      await tester.tap(find.text('Redeem'));
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(redemptionRequests, hasLength(2));
+      expect(redemptionRequests[1].headers['Idempotency-Key'], accountAKey);
+      expect(
+        redemptionRequests[1].headers['Authorization'],
+        'Bearer session-account-a',
+      );
+      expect(find.text('Redeemed'), findsOneWidget);
+      expect(find.text('Redeem'), findsNothing);
+
+      container.read(_testSession.notifier).state = _user('account-b');
+      await tester.pumpAndSettle();
+      await scrollToVisible(tester, find.text('Redeem'));
+
+      expect(container.read(currentUserProvider)?.id, 'account-b');
+      expect(container.read(authSessionRevisionProvider), 1);
+      expect(find.text('Redeemed'), findsNothing);
+      expect(find.text('Redeem'), findsOneWidget);
+      await tester.tap(find.text('Redeem'));
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(redemptionRequests, hasLength(3));
+      expect(
+        redemptionRequests[2].headers['Authorization'],
+        'Bearer session-account-b',
+      );
+      expect(
+        redemptionRequests[2].headers['Idempotency-Key'],
+        isNot(accountAKey),
+      );
+      expect(find.text('Redeemed'), findsOneWidget);
+      expect(find.text('Redeem'), findsNothing);
+    },
+  );
+
   // -------------------------------------------------------------------------
   // Negative scenarios — Phase 3.2
   // -------------------------------------------------------------------------
@@ -502,7 +669,17 @@ void main() {
               }),
               redeemRewardProvider.overrideWith((ref, request) async {
                 redemptionCalls++;
-                throw Exception('Internal server error');
+                final options = RequestOptions(
+                  path: '/rewards/${request.rewardId}/redeem',
+                );
+                throw DioException(
+                  requestOptions: options,
+                  response: Response<dynamic>(
+                    requestOptions: options,
+                    statusCode: 400,
+                    data: {'error': 'reward_locked'},
+                  ),
+                );
               }),
             ],
             child: const MaterialApp(home: RewardsDashboardScreen()),

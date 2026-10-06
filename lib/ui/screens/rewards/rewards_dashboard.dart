@@ -95,12 +95,11 @@ class _RewardsDashboardScreenState
         return;
       }
       final errorCode = _redemptionErrorCode(error);
-      if (!_redemptionOutcomeUncertain(error, errorCode)) {
+      final outcomeUncertain = _redemptionOutcomeUncertain(error, errorCode);
+      if (!outcomeUncertain) {
         _redemptionKeys.remove(keyScope);
       }
-      if (errorCode == 'reward_already_redeemed' ||
-          errorCode == 'idempotency_outcome_unknown' ||
-          errorCode == 'idempotency_in_progress') {
+      if (outcomeUncertain || errorCode == 'reward_already_redeemed') {
         ref.invalidate(rewardsSnapshotProvider(sessionRevision));
       }
       ScaffoldMessenger.of(context).showSnackBar(
@@ -108,8 +107,7 @@ class _RewardsDashboardScreenState
           content: Text(
             errorCode == 'reward_already_redeemed'
                 ? 'This reward was already redeemed. Your rewards have been refreshed.'
-                : errorCode == 'idempotency_outcome_unknown' ||
-                      errorCode == 'idempotency_in_progress'
+                : outcomeUncertain
                 ? 'We could not confirm this redemption. Your rewards are refreshing; retrying will reuse this request.'
                 : 'Unable to redeem this reward right now.',
           ),
