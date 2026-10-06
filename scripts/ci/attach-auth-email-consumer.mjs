@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 import { captureAuthEmailQueueEvidence, consumerEvidence } from './auth-email-queue-evidence.mjs';
 import { assertPromptDispatchConsumer } from './provision-cloudflare-email-lifecycle.mjs';
 
@@ -35,7 +36,8 @@ export async function attachAuthEmailConsumer({ requestJson, apply = false, resu
     prewriteIncludedQueueAllowance: null, immediatePrewrite: null, blockedRead: null,
     mutationAttempted: false, mutationConfirmed: false, postHttpStatus: null, after: null,
     messagesRead: false, piiIncluded: false, emailsSent: false, pauseOrDelayChanged: resumeDelivery ? null : false,
-    patchHttpStatus: null, pauseSettingWriteConfirmed: false, queueLifecycleProcessingMayResume: false };
+    patchHttpStatus: null, pauseSettingWriteConfirmed: false, queueLifecycleProcessingMayResume: false,
+    otherQueueSettingsPreserved: null };
   const stop = reason => ({ ...receipt, reason });
   const read = async (url, endpoint) => {
     let response;
@@ -194,6 +196,11 @@ export async function attachAuthEmailConsumer({ requestJson, apply = false, resu
     if (!Array.isArray(afterConsumers) || afterConsumers.length !== 1) return stop('attachment_readback_not_verified');
     if (resumeDelivery && !pinnedConsumer(receipt.afterConsumerList[0])) return stop('consumer_changed_during_pause_setting_readback');
     const afterQueue = await read(queueBase, 'postwrite_queue_details');
+    if (resumeDelivery) {
+      const otherSettings = queue => Object.fromEntries(Object.entries(queue?.settings ?? {}).filter(([field]) => field !== 'delivery_paused'));
+      receipt.otherQueueSettingsPreserved = isDeepStrictEqual(otherSettings(immediate), otherSettings(afterQueue));
+      if (!receipt.otherQueueSettingsPreserved) return stop('queue_settings_changed_during_pause_setting_readback');
+    }
     receipt.after = await observe();
     if (!pinnedIdentities(receipt.after)) return stop('queue_identity_changed_during_readback');
     try { assertPromptDispatchConsumer({ ...afterQueue, consumers: afterConsumers }); }

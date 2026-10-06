@@ -84,6 +84,7 @@ function fixture(options = {}) {
       if (options.pauseUnknown && (!patched || options.patchOmissionContinues)) delete result.settings.delivery_paused;
       if (options.pauseTrue) result.settings.delivery_paused = true;
       if (patched && options.patchPauseString) result.settings.delivery_paused = 'false';
+      if (options.retentionPeriod) result.settings.message_retention_period = patched && options.patchRetentionDrift ? 345600 : options.retentionPeriod;
       if (options.pauseChanged && queueReads === 2) result.settings.delivery_paused = true;
     } else if (url.endsWith(`/workers/scripts/${a.worker}/deployments`)) {
       deploymentReads += 1;
@@ -385,6 +386,7 @@ test('approved pause setting makes one exact PATCH after rechecking safe Jobs, u
   assert.equal(receipt.postHttpStatus, null);
   assert.equal(receipt.after.status, 'VERIFIED');
   assert.equal(receipt.after.deliveryPaused, false);
+  assert.equal(receipt.otherQueueSettingsPreserved, true);
   assert.equal(receipt.currentJobs.version, a.version);
   assert.equal(receipt.currentJobs.sourceSha, a.source);
   assert.equal(receipt.immediatePrewrite.reportedConsumers, 1);
@@ -438,7 +440,7 @@ for (const options of [
 
 for (const options of [{ patchOmissionContinues: true }, { patchConsumerReplacement: true }, { patchCapDrift: true },
   { patchRejected: true }, { patchUncertain: true, patchOmissionContinues: true }, { patchQueueReplacement: true },
-  { patchDlqReplacement: true }, { patchPauseString: true }]) {
+  { patchDlqReplacement: true }, { patchPauseString: true }, { retentionPeriod: 86400, patchRetentionDrift: true }]) {
   test(`one attempted PATCH with unproven or drifted readback stays blocked without retry: ${JSON.stringify(options)}`, async () => {
     const f = resumeFixture(options);
     const receipt = await resume(f);
@@ -461,6 +463,15 @@ test('uncertain PATCH is distinguished from confirmed mutation even when strict 
   assert.equal(receipt.patchHttpStatus, null);
   assert.equal(receipt.after.deliveryPaused, false);
   assert.equal(writes(f).length, 1);
+});
+
+test('the single pause-setting PATCH preserves the existing retention setting', async () => {
+  const f = resumeFixture({ retentionPeriod: 86400 });
+  const receipt = await resume(f);
+  assert.equal(receipt.status, 'DELIVERY_FALSE_SETTING_VERIFIED');
+  assert.equal(receipt.otherQueueSettingsPreserved, true);
+  assert.equal(writes(f).length, 1);
+  assert.deepEqual(JSON.parse(writes(f)[0].body), { settings: { delivery_paused: false } });
 });
 
 test('CLI rejects combined attachment and pause-setting approvals before any provider request', () => {
