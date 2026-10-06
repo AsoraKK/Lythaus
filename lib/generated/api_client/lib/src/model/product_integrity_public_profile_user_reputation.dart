@@ -6,61 +6,52 @@
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
-part 'reputation_public_v2.g.dart';
+part 'product_integrity_public_profile_user_reputation.g.dart';
 
-/// Public reputation output contains only the approved categorical level and its label. Enforcement status, scoring pillars, policy metadata, blockers, and evaluation timestamps are owner-only.
+/// Present only for public Passport visibility and active reputation. Never contains enforcement status or evidence.
 ///
 /// Properties:
-/// * [userId]
 /// * [level]
-/// * [levelName]
+/// * [label]
 @BuiltValue()
-abstract class ReputationPublicV2 implements Built<ReputationPublicV2, ReputationPublicV2Builder> {
-  @BuiltValueField(wireName: r'userId')
-  String get userId;
-
+abstract class ProductIntegrityPublicProfileUserReputation implements Built<ProductIntegrityPublicProfileUserReputation, ProductIntegrityPublicProfileUserReputationBuilder> {
   @BuiltValueField(wireName: r'level')
   int get level;
 
-  @BuiltValueField(wireName: r'levelName')
-  String get levelName;
+  @BuiltValueField(wireName: r'label')
+  String get label;
 
-  ReputationPublicV2._();
+  ProductIntegrityPublicProfileUserReputation._();
 
-  factory ReputationPublicV2([void updates(ReputationPublicV2Builder b)]) = _$ReputationPublicV2;
+  factory ProductIntegrityPublicProfileUserReputation([void updates(ProductIntegrityPublicProfileUserReputationBuilder b)]) = _$ProductIntegrityPublicProfileUserReputation;
 
   @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(ReputationPublicV2Builder b) => b;
+  static void _defaults(ProductIntegrityPublicProfileUserReputationBuilder b) => b;
 
   @BuiltValueSerializer(custom: true)
-  static Serializer<ReputationPublicV2> get serializer => _$ReputationPublicV2Serializer();
+  static Serializer<ProductIntegrityPublicProfileUserReputation> get serializer => _$ProductIntegrityPublicProfileUserReputationSerializer();
 }
 
-class _$ReputationPublicV2Serializer implements PrimitiveSerializer<ReputationPublicV2> {
+class _$ProductIntegrityPublicProfileUserReputationSerializer implements PrimitiveSerializer<ProductIntegrityPublicProfileUserReputation> {
   @override
-  final Iterable<Type> types = const [ReputationPublicV2, _$ReputationPublicV2];
+  final Iterable<Type> types = const [ProductIntegrityPublicProfileUserReputation, _$ProductIntegrityPublicProfileUserReputation];
 
   @override
-  final String wireName = r'ReputationPublicV2';
+  final String wireName = r'ProductIntegrityPublicProfileUserReputation';
 
   Iterable<Object?> _serializeProperties(
     Serializers serializers,
-    ReputationPublicV2 object, {
+    ProductIntegrityPublicProfileUserReputation object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'userId';
-    yield serializers.serialize(
-      object.userId,
-      specifiedType: const FullType(String),
-    );
     yield r'level';
     yield serializers.serialize(
       object.level,
       specifiedType: const FullType(int),
     );
-    yield r'levelName';
+    yield r'label';
     yield serializers.serialize(
-      object.levelName,
+      object.label,
       specifiedType: const FullType(String),
     );
   }
@@ -68,7 +59,7 @@ class _$ReputationPublicV2Serializer implements PrimitiveSerializer<ReputationPu
   @override
   Object serialize(
     Serializers serializers,
-    ReputationPublicV2 object, {
+    ProductIntegrityPublicProfileUserReputation object, {
     FullType specifiedType = FullType.unspecified,
   }) {
     return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
@@ -79,20 +70,13 @@ class _$ReputationPublicV2Serializer implements PrimitiveSerializer<ReputationPu
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
     required List<Object?> serializedList,
-    required ReputationPublicV2Builder result,
+    required ProductIntegrityPublicProfileUserReputationBuilder result,
     required List<Object?> unhandled,
   }) {
     for (var i = 0; i < serializedList.length; i += 2) {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'userId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.userId = valueDes;
-          break;
         case r'level':
           final valueDes = serializers.deserialize(
             value,
@@ -100,12 +84,12 @@ class _$ReputationPublicV2Serializer implements PrimitiveSerializer<ReputationPu
           ) as int;
           result.level = valueDes;
           break;
-        case r'levelName':
+        case r'label':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(String),
           ) as String;
-          result.levelName = valueDes;
+          result.label = valueDes;
           break;
         default:
           unhandled.add(key);
@@ -116,12 +100,12 @@ class _$ReputationPublicV2Serializer implements PrimitiveSerializer<ReputationPu
   }
 
   @override
-  ReputationPublicV2 deserialize(
+  ProductIntegrityPublicProfileUserReputation deserialize(
     Serializers serializers,
     Object serialized, {
     FullType specifiedType = FullType.unspecified,
   }) {
-    final result = ReputationPublicV2Builder();
+    final result = ProductIntegrityPublicProfileUserReputationBuilder();
     final serializedList = (serialized as Iterable<Object?>).toList();
     final unhandled = <Object?>[];
     _deserializeProperties(

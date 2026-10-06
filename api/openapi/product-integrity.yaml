@@ -403,6 +403,37 @@ components:
       required: [user]
       properties:
         user: { $ref: '#/components/schemas/ProductIntegrityPrivateProfileUser' }
+    ProductIntegrityPublicProfileUser:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, trustPassportVisibility, journalistVerified, badges]
+      properties:
+        id: { type: string, format: uuid }
+        displayName: { type: string }
+        handle: { type: string, nullable: true }
+        avatarUrl: { type: string, nullable: true }
+        bio: { type: string, nullable: true }
+        trustPassportVisibility:
+          type: string
+          enum: [public_expanded, public_minimal, private]
+          description: Persisted Passport visibility preference. Private suppresses the public reputation summary.
+        reputation:
+          type: object
+          additionalProperties: false
+          required: [level, label]
+          properties:
+            level: { type: integer, minimum: 0, maximum: 5 }
+            label: { type: string }
+          description: Present only for public Passport visibility and active reputation. Never contains enforcement status or evidence.
+        journalistVerified: { type: boolean }
+        badges:
+          type: array
+          items: { type: object, additionalProperties: true }
+    ProductIntegrityPublicProfileResponse:
+      type: object
+      required: [user]
+      properties:
+        user: { $ref: '#/components/schemas/ProductIntegrityPublicProfileUser' }
 
     ReactionRequest:
       type: object
@@ -545,7 +576,17 @@ components:
         reviewReliability: { type: number }
     ReputationPublicV2:
       type: object
-      required: [userId, level, reputationLevel, levelName, reputationStatus, reputationBand, policyVersion]
+      additionalProperties: false
+      description: Public reputation output contains only the approved categorical level and its label. Enforcement status, scoring pillars, policy metadata, blockers, and evaluation timestamps are owner-only.
+      required: [userId, level, levelName]
+      properties:
+        userId: { type: string, format: uuid }
+        level: { type: integer, minimum: 0, maximum: 5 }
+        levelName: { type: string }
+    ReputationPrivateV2:
+      type: object
+      additionalProperties: false
+      required: [userId, level, reputationLevel, levelName, reputationStatus, reputationBand, policyVersion, pillars, promotionBlockers, evaluatedAt]
       properties:
         userId: { type: string, format: uuid }
         level: { type: integer, minimum: 0, maximum: 5 }
@@ -554,17 +595,11 @@ components:
         reputationStatus: { type: string, enum: [active, restricted, suspended, under_investigation] }
         reputationBand: { type: string, enum: [new, accountable, trusted, established] }
         policyVersion: { type: string, example: reputation-v2.0.0 }
-    ReputationPrivateV2:
-      allOf:
-        - $ref: '#/components/schemas/ReputationPublicV2'
-        - type: object
-          required: [pillars, promotionBlockers, evaluatedAt]
-          properties:
-            pillars: { $ref: '#/components/schemas/ReputationPillars' }
-            promotionBlockers:
-              type: array
-              items: { type: string }
-            evaluatedAt: { type: string, format: date-time, nullable: true }
+        pillars: { $ref: '#/components/schemas/ReputationPillars' }
+        promotionBlockers:
+          type: array
+          items: { type: string }
+        evaluatedAt: { type: string, format: date-time, nullable: true }
     ReputationLedgerEvent:
       type: object
       required: [id, eventType, impact, status, policyVersion, effectiveAt, createdAt]

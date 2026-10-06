@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Lythaus API
-  version: v9
+  version: v10
   description: >
     HTTP contract for the Lythaus API. The active runtime is Cloudflare Workers
     backed by PlanetScale PostgreSQL through Hyperdrive. Initial authentication
@@ -1193,10 +1193,10 @@ paths:
     get:
       operationId: usersGet
       summary: Get a public user profile
+      description: Public profile reads return approved public identity fields. Reputation is omitted when the Passport is private or reputation is not active; public reputation contains only level and label.
       tags:
         - Users
-      security:
-        - bearerAuth: []
+      security: []
       parameters:
         - name: id
           in: path
@@ -1205,11 +1205,11 @@ paths:
             type: string
       responses:
         '200':
-          description: Success
+          description: Public profile with only explicitly public fields.
           content:
             application/json:
               schema:
-                type: object
+                $ref: './product-integrity.yaml#/components/schemas/ProductIntegrityPublicProfileResponse'
         '400':
           description: Bad request
           content:
@@ -1224,6 +1224,12 @@ paths:
                 $ref: '#/components/schemas/Error'
         '403':
           description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Profile is unavailable.
           content:
             application/json:
               schema:

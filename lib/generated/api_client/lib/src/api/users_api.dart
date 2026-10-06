@@ -7,10 +7,10 @@ import 'dart:async';
 import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
-import 'package:built_value/json_object.dart';
 import 'package:lythaus_api_client/src/api_util.dart';
 import 'package:lythaus_api_client/src/model/api_error.dart';
 import 'package:lythaus_api_client/src/model/error.dart';
+import 'package:lythaus_api_client/src/model/product_integrity_public_profile_response.dart';
 import 'package:lythaus_api_client/src/model/unauthorized_error.dart';
 import 'package:lythaus_api_client/src/model/users_me_region_update200_response.dart';
 import 'package:lythaus_api_client/src/model/users_me_region_update_request.dart';
@@ -27,7 +27,7 @@ class UsersApi {
   const UsersApi(this._dio, this._serializers);
 
   /// Get a public user profile
-  ///
+  /// Public profile reads return approved public identity fields. Reputation is omitted when the Passport is private or reputation is not active; public reputation contains only level and label.
   ///
   /// Parameters:
   /// * [id]
@@ -38,9 +38,9 @@ class UsersApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [JsonObject] as data
+  /// Returns a [Future] containing a [Response] with a [ProductIntegrityPublicProfileResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<JsonObject>> usersGet({
+  Future<Response<ProductIntegrityPublicProfileResponse>> usersGet({
     required String id,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -56,13 +56,7 @@ class UsersApi {
         ...?headers,
       },
       extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'bearerAuth',
-          },
-        ],
+        'secure': <Map<String, String>>[],
         ...?extra,
       },
       validateStatus: validateStatus,
@@ -76,14 +70,14 @@ class UsersApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    JsonObject? _responseData;
+    ProductIntegrityPublicProfileResponse? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(JsonObject),
-      ) as JsonObject;
+        specifiedType: const FullType(ProductIntegrityPublicProfileResponse),
+      ) as ProductIntegrityPublicProfileResponse;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -95,7 +89,7 @@ class UsersApi {
       );
     }
 
-    return Response<JsonObject>(
+    return Response<ProductIntegrityPublicProfileResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
