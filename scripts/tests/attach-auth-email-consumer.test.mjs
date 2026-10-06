@@ -10,6 +10,10 @@ function fixture(options = {}) {
   const calls = [];
   let attached = Boolean(options.attached), consumerReads = 0, deploymentReads = 0, queueReads = 0, metricsReads = 0, inventoryReads = 0, usageReads = 0;
   const consumer = { consumer_id: '1'.repeat(32), ...structuredClone(a.body) };
+  if (options.consumerIdentityField) {
+    consumer[options.consumerIdentityField] = consumer.script_name;
+    delete consumer.script_name;
+  }
   const replacementId = '3'.repeat(32);
   const queue = (id = queueId) => ({ queue_name: a.queue, queue_id: id,
     settings: { delivery_delay: 0, delivery_paused: false },
@@ -139,6 +143,43 @@ test('existing verified attachment is not duplicated', async () => {
   const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, apply: true, now });
   assert.equal(receipt.status, 'ALREADY_ATTACHED_VERIFIED');
   assert.equal(writes(f).length, 0);
+});
+
+for (const field of ['script', 'service']) {
+  test(`read-only inspection preserves ${field} identity diagnostics and unknown pause without certifying or duplicating an attachment`, async () => {
+    const f = fixture({ attached: true, pauseUnknown: true, consumerIdentityField: field });
+    const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, now });
+    assert.equal(receipt.status, 'BLOCKED');
+    assert.equal(receipt.reason, 'existing_consumer_requires_review');
+    assert.equal(receipt.before.deliveryPaused, null);
+    assert.deepEqual(receipt.before.deliveryPausedField, { present: false, type: 'undefined' });
+    for (const consumer of [receipt.before.consumers[0], receipt.beforeConsumerList[0]]) {
+      assert.equal(consumer.expectedWorkerMatches, false);
+      assert.deepEqual(consumer.workerIdentityFields.script_name, { present: false, type: 'undefined', valueMatchesExpectedWorker: false });
+      assert.deepEqual(consumer.workerIdentityFields[field], { present: true, type: 'string', valueMatchesExpectedWorker: true });
+    }
+    assert.equal(receipt.mutationAttempted, false);
+    assert.equal(writes(f).length, 0);
+    assert.ok(f.calls.every(call => call.method === 'GET'));
+  });
+}
+
+test('confirmed attachment with unknown pause preserves both read-back shapes and exact validator reason without retry', async () => {
+  const f = fixture({ pauseUnknown: true, consumerIdentityField: 'script' });
+  const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, apply: true, now });
+  assert.equal(receipt.status, 'BLOCKED');
+  assert.equal(receipt.reason, 'attachment_or_delivery_readback_not_verified');
+  assert.equal(receipt.readbackReason, 'email_dispatch_live_delivery_not_verified');
+  assert.equal(receipt.mutationAttempted, true);
+  assert.equal(receipt.mutationConfirmed, true);
+  assert.equal(receipt.postHttpStatus, 200);
+  assert.equal(receipt.after.reportedConsumerCount, 1);
+  assert.equal(receipt.after.observedConsumerCount, 1);
+  assert.equal(receipt.after.deliveryPaused, null);
+  assert.equal(receipt.after.consumers[0].workerIdentityFields.script.valueMatchesExpectedWorker, true);
+  assert.equal(receipt.afterConsumerList[0].workerIdentityFields.script.valueMatchesExpectedWorker, true);
+  assert.equal(writes(f).length, 1);
+  assert.ok(!JSON.stringify(receipt).includes('private-fixture-marker'));
 });
 
 test('usage is refreshed with a current time window immediately before attachment and remains an estimate', async () => {

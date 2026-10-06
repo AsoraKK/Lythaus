@@ -95,11 +95,17 @@ test('auth Queue audit records exact existing delivery and consumer settings wit
   assert.equal(evidence.status, 'VERIFIED');
   assert.equal(evidence.reason, null);
   assert.equal(evidence.deliveryPaused, false);
+  assert.deepEqual(evidence.deliveryPausedField, { present: true, type: 'boolean' });
   assert.equal(evidence.deliveryDelaySeconds, 0);
   assert.equal(evidence.reportedConsumerCount, 1);
   assert.equal(evidence.observedConsumerCount, 1);
   assert.deepEqual(evidence.inventory, { complete: true, page: 1, perPage: 100, count: 3, totalCount: 3, totalPages: 1 });
   assert.deepEqual(evidence.consumers.map(({ idHash, ...value }) => value), [{ type: 'worker', expectedWorkerMatches: true,
+    workerIdentityFields: {
+      script_name: { present: true, type: 'string', valueMatchesExpectedWorker: true },
+      script: { present: false, type: 'undefined', valueMatchesExpectedWorker: false },
+      service: { present: false, type: 'undefined', valueMatchesExpectedWorker: false },
+    },
     expectedDeadLetterMatches: true, batchSize: 25, maxWaitTimeMs: 5000, maxRetries: 10, maxConcurrency: 1,
     maxConcurrencyPresent: true, maxConcurrencyType: 'number' }]);
   assert.match(evidence.lifecycleIdHash, /^sha256:[0-9a-f]{64}$/);
@@ -111,6 +117,37 @@ test('auth Queue audit records exact existing delivery and consumer settings wit
   assert.equal(evidence.messagesRead, false);
   assert.equal(evidence.mutationPerformed, false);
 });
+
+for (const field of ['script', 'service']) {
+  test(`auth Queue audit records ${field} response shape without accepting an alias or leaking its value`, async () => {
+    const queue = queueFixture();
+    queue.consumers[0][field] = 'fixture-private-marker';
+    delete queue.consumers[0].script_name;
+    const reader = queueReader(queue);
+    const evidence = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: reader.requestJson });
+    assert.equal(evidence.status, 'BLOCKED');
+    assert.equal(evidence.reason, 'email_dispatch_live_consumer_drift');
+    const consumer = evidence.consumers[0];
+    assert.equal(consumer.expectedWorkerMatches, false);
+    assert.deepEqual(consumer.workerIdentityFields.script_name, { present: false, type: 'undefined', valueMatchesExpectedWorker: false });
+    assert.deepEqual(consumer.workerIdentityFields[field], { present: true, type: 'string', valueMatchesExpectedWorker: false });
+    assert.ok(!JSON.stringify(evidence).includes('fixture-private-marker'));
+    assert.equal(evidence.mutationPerformed, false);
+  });
+}
+
+for (const pause of [undefined, null, 'false']) {
+  test(`auth Queue audit distinguishes omitted and invalid pause metadata: ${typeof pause}:${pause}`, async () => {
+    const queue = queueFixture();
+    if (pause === undefined) delete queue.settings.delivery_paused;
+    else queue.settings.delivery_paused = pause;
+    const reader = queueReader(queue);
+    const evidence = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: reader.requestJson });
+    assert.equal(evidence.status, 'BLOCKED');
+    assert.equal(evidence.deliveryPaused, null);
+    assert.deepEqual(evidence.deliveryPausedField, { present: pause !== undefined, type: pause === null ? 'null' : typeof pause });
+  });
+}
 
 for (const [label, alter, reason] of [
   ['paused', queue => { queue.settings.delivery_paused = true; }, 'live_delivery_not_verified'],

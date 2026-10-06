@@ -19,12 +19,16 @@ function apiEvidence(response) {
   };
 }
 
-function consumerEvidence(value) {
+export function consumerEvidence(value) {
   const consumer = object(value), settings = object(consumer.settings);
   return {
     idHash: hash(consumer.consumer_id),
     type: ['worker', 'http_pull'].includes(consumer.type) ? consumer.type : 'unknown',
     expectedWorkerMatches: consumer.script_name === WORKER,
+    workerIdentityFields: Object.fromEntries(['script_name', 'script', 'service'].map(field => [field, {
+      present: Object.hasOwn(consumer, field), type: consumer[field] === null ? 'null' : typeof consumer[field],
+      valueMatchesExpectedWorker: consumer[field] === WORKER,
+    }])),
     expectedDeadLetterMatches: consumer.dead_letter_queue === LIFECYCLE_DLQ,
     batchSize: number(settings.batch_size), maxWaitTimeMs: number(settings.max_wait_time_ms),
     maxRetries: number(settings.max_retries), maxConcurrency: number(settings.max_concurrency),
@@ -41,7 +45,7 @@ export async function captureAuthEmailQueueEvidence({ accountId, requestJson }) 
     api: { list: null, details: null }, lifecycleMatches: 0, deadLetterMatches: 0,
     inventory: { complete: false, page: null, perPage: null, count: null, totalCount: null, totalPages: null },
     lifecycleIdHash: null, deadLetterIdHash: null,
-    deliveryPaused: null, deliveryDelaySeconds: null, reportedConsumerCount: null, observedConsumerCount: null, consumers: [],
+    deliveryPaused: null, deliveryPausedField: null, deliveryDelaySeconds: null, reportedConsumerCount: null, observedConsumerCount: null, consumers: [],
     piiIncluded: false, messagesRead: false, mutationPerformed: false,
   };
   const stop = reason => ({ ...evidence, reason });
@@ -81,6 +85,8 @@ export async function captureAuthEmailQueueEvidence({ accountId, requestJson }) 
   const queue = object(details.body.result), settings = object(queue.settings);
   if (name(queue) !== LIFECYCLE_QUEUE || identifier(queue) !== queueId) return stop('email_dispatch_queue_details_identity_mismatch');
   evidence.deliveryPaused = typeof settings.delivery_paused === 'boolean' ? settings.delivery_paused : null;
+  evidence.deliveryPausedField = { present: Object.hasOwn(settings, 'delivery_paused'),
+    type: settings.delivery_paused === null ? 'null' : typeof settings.delivery_paused };
   evidence.deliveryDelaySeconds = number(settings.delivery_delay);
   evidence.reportedConsumerCount = number(queue.consumers_total_count);
   evidence.observedConsumerCount = Array.isArray(queue.consumers) ? queue.consumers.length : null;
