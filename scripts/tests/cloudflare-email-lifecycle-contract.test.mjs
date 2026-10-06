@@ -1,11 +1,66 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { assertConsumerDeclaration, assertPromptDispatchConsumer, promptDispatchRequested, CONSUMER, LIFECYCLE_DLQ, LIFECYCLE_QUEUE, REQUIRED_EVENTS, SENDING_DOMAIN } from '../ci/provision-cloudflare-email-lifecycle.mjs';
 
 const provisioner = fs.readFileSync('scripts/ci/provision-cloudflare-email-lifecycle.mjs', 'utf8');
 const workflow = fs.readFileSync('.github/workflows/native-workers-deploy.yml', 'utf8');
 const jobsConfig = fs.readFileSync('apps/lythaus-jobs/wrangler.jsonc', 'utf8');
+
+function exportLifecycleEvidence(evidence) {
+  const step = workflow.split('- name: ACTIVATION - Export candidate, reuse, and activation metadata')[1]?.split('\n      - name:')[0] ?? '';
+  const filter = step.match(/jq -e --arg jobs_version "\$JOBS_WORKER_VERSION_ID" '([\s\S]*?)'\s+"\$lifecycle_evidence"/)?.[1];
+  assert.ok(filter, 'Execute the actual activation metadata lifecycle validator');
+  return spawnSync('jq', ['-e', '--arg', 'jobs_version', 'synthetic-reviewed-jobs-version', filter], {
+    input: JSON.stringify(evidence), encoding: 'utf8', timeout: 10000,
+  });
+}
+
+function verifiedLifecycleEvidence() {
+  return {
+    status: 'VERIFIED', infrastructureMode: 'verify_existing',
+    subscription: {
+      enabled: true, source: 'email.sending', domain: 'mail.lythaus.co', events: [...REQUIRED_EVENTS],
+    },
+    consumer: {
+      queue: 'lythaus-email-lifecycle-dev', max_batch_size: 25, max_batch_timeout: 5,
+      max_concurrency: 1, max_retries: 10, dead_letter_queue: 'lythaus-email-lifecycle-dlq-dev',
+    },
+  };
+}
+
+test('activation metadata accepts the observed capped consumer and adds only Jobs version provenance', () => {
+  const evidence = verifiedLifecycleEvidence();
+  assert.deepEqual(evidence.consumer, CONSUMER);
+  const result = exportLifecycleEvidence(evidence);
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(JSON.parse(result.stdout), {
+    ...evidence, consumer: { ...evidence.consumer, jobsWorkerVersionId: 'synthetic-reviewed-jobs-version' },
+  });
+});
+
+test('activation metadata rejects missing or drifted consumer settings and lifecycle subscriptions', () => {
+  const evidence = verifiedLifecycleEvidence();
+  const invalid = [
+    ...[undefined, null, 0, 2, '1'].map(max_concurrency => ({
+      ...evidence, consumer: { ...evidence.consumer, max_concurrency },
+    })),
+    ...[{ queue: 'unrelated-queue' }, { max_batch_size: 10 }, { max_batch_timeout: 20 },
+      { max_retries: 3 }, { dead_letter_queue: 'unrelated-dlq' }, { unexpected_setting: true }]
+      .map(override => ({ ...evidence, consumer: { ...evidence.consumer, ...override } })),
+    ...[{ enabled: false }, { source: 'unrelated-source' }, { domain: 'unrelated.example' },
+      { events: ['message.delivered'] }]
+      .map(override => ({ ...evidence, subscription: { ...evidence.subscription, ...override } })),
+    { ...evidence, status: 'BLOCKED' },
+  ];
+  for (const fixture of invalid) {
+    const result = exportLifecycleEvidence(fixture);
+    assert.notEqual(result.status, 0, JSON.stringify(fixture));
+    assert.match(result.stderr, /email_lifecycle_evidence_invalid/);
+    assert.equal(result.stdout, '', 'Invalid evidence must not be exported');
+  }
+});
 
 test('canonical Worker deployment explicitly provisions the email lifecycle infrastructure before upload', () => {
   const provision = workflow.match(/- name: Provision and verify Cloudflare Email Sending lifecycle infrastructure[\s\S]*?(?=\n      - name: INFRASTRUCTURE - Mark verified infrastructure gate)/)?.[0] ?? '';
