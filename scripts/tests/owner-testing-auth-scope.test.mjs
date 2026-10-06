@@ -47,7 +47,12 @@ function runProvider(script, scenario, args = []) {
           secret:'synthetic-only'};
         result=url.search?(scenario==='missing-widget'?[]:[widget]):widget;
       } else if(url.pathname.endsWith('/queues')) {
-        result=[{id:'synthetic-lifecycle',queue_name:'lythaus-email-lifecycle-dev'},
+        const consumer={type:'worker',script_name:'lythaus-jobs-development',dead_letter_queue:'lythaus-email-lifecycle-dlq-dev',
+          settings:{batch_size:25,max_wait_time_ms:5000,max_retries:10,
+            max_concurrency:scenario==='automatic-concurrency'?null:scenario==='excessive-concurrency'?2:1}};
+        result=[{id:'synthetic-lifecycle',queue_name:'lythaus-email-lifecycle-dev',
+          settings:{delivery_paused:scenario==='paused-delivery',delivery_delay:scenario==='delayed-delivery'?20:0},
+          consumers_total_count:1,consumers:scenario==='missing-consumer'?[]:[consumer]},
           {id:'synthetic-dlq',queue_name:'lythaus-email-lifecycle-dlq-dev'}];
         if(scenario==='missing-queue')result=result.slice(0,1);
       } else if(url.pathname.endsWith('/event_subscriptions/subscriptions')) {
@@ -72,7 +77,7 @@ function runProvider(script, scenario, args = []) {
     assert.ok(requests.length>0);
     assert.ok(requests.every(request=>request.method==='GET'),'Owner testing must not issue provider writes');
     assert.doesNotMatch(result.stderr ?? '',/fixture_detected_provider_mutation/);
-    return { status:result.status, stderr:result.stderr, ...(result.status===0?{evidence:JSON.parse(readFileSync(output,'utf8'))}:{}) };
+    return { status:result.status, stderr:result.stderr, requests, ...(result.status===0?{evidence:JSON.parse(readFileSync(output,'utf8'))}:{}) };
   } finally { rmSync(directory,{recursive:true,force:true}); }
 }
 
@@ -92,7 +97,20 @@ test('owner testing verifies exact existing email lifecycle infrastructure with 
   const result=runProvider('scripts/ci/provision-cloudflare-email-lifecycle.mjs','matching');
   assert.equal(result.status,0,result.stderr);
   assert.equal(result.evidence.infrastructureMode,'verify_existing');
+  assert.equal(result.evidence.promptDispatchConsumer.status,'VERIFIED');
+  assert.equal(result.evidence.promptDispatchConsumer.max_concurrency,1);
 });
+for (const [scenario,reason] of [['paused-delivery','live_delivery_not_verified'],['delayed-delivery','live_delivery_not_verified'],
+  ['missing-consumer','live_consumer_not_verified'],['automatic-concurrency','consumer_concurrency_not_verified'],
+  ['excessive-concurrency','consumer_concurrency_not_verified']]) {
+  test(`owner testing refuses prompt dispatch on ${scenario} before further infrastructure reads or writes`,()=>{
+    const result=runProvider('scripts/ci/provision-cloudflare-email-lifecycle.mjs',scenario);
+    assert.notEqual(result.status,0);
+    assert.match(result.stderr,new RegExp(reason));
+    assert.equal(result.requests.length,1);
+    assert.ok(result.requests[0].path.endsWith('/queues'));
+  });
+}
 for (const [scenario,reason] of [['missing-queue','requires_existing_queue'],['missing-subscription','requires_existing_email_lifecycle_subscription'],
   ['disabled-subscription','email_lifecycle_subscription_drift'],['events-drift','email_lifecycle_subscription_drift']]) {
   test(`owner testing stops on ${scenario} before creating or patching infrastructure`,()=>{
