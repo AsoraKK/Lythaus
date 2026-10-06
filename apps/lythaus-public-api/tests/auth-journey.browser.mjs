@@ -164,7 +164,6 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     const fillSignup = async () => {
       await page.locator('#signup-email').fill(email);
       await page.locator('#signup-password').fill(password);
-      await page.locator('#signup-password-confirmation').fill(password);
     };
     await navigate('/signup','Create your account');
     await fillSignup();
@@ -181,9 +180,10 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     assert.equal(rows.length,1);
     const userId=rows[0].user_id;
     assert.equal((await sql('SELECT count(*)::int n FROM system.transactional_email_outbox WHERE contact_email_user_id=$1',[userId])).rows[0].n,1);
-    await fillSignup();
-    await page.getByRole('button',{ name:'Create account',exact:true }).click();
-    await page.locator('[data-signup-status]').filter({ hasText:'accepted' }).waitFor();
+    const beforeRepeat=calls.length;
+    await page.locator('form[data-signup-form]').evaluate(form=>form.requestSubmit());
+    await page.waitForTimeout(100);
+    assert.equal(calls.length,beforeRepeat,'Accepted signup must not submit again');
     assert.equal((await sql('SELECT count(*)::int n FROM identity.email_verification_tokens WHERE user_id=$1',[userId])).rows[0].n,1);
     await relayTransactionalEmailOutbox(env);
     const verification=mailbox.find(message=>message.to===email && message.subject.includes('Verify'));
@@ -192,12 +192,11 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     await navigate(`/verify-email#token=${verifyToken}`,'Confirm your email');
     assert.equal(new URL(page.url()).hash,'');
     await page.locator('input[name=password]').fill(password);
-    await page.locator('input[name=passwordConfirmation]').fill(password);
+    assert.equal(await page.locator('input[name=passwordConfirmation]').count(),0);
     await page.locator('button[type=submit]').click();
     await page.locator('[data-email-verification-status]').filter({ hasText:'verified' }).waitFor();
     await navigate(`/verify-email#token=${verifyToken}`,'Confirm your email');
     await page.locator('input[name=password]').fill(password);
-    await page.locator('input[name=passwordConfirmation]').fill(password);
     await page.locator('button[type=submit]').click();
     await page.locator('[data-email-verification-status]').filter({ hasText:'already used' }).waitFor();
     const enableFlutter = async targetPage => {

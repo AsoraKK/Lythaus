@@ -199,6 +199,7 @@ export function createOpenAIModerationProvider(options: OpenAIModerationProvider
           authorization: `Bearer ${options.apiKey}`,
         },
         body: JSON.stringify(payload),
+        redirect: 'manual',
         signal: controller.signal,
       });
       if (!response.ok) {

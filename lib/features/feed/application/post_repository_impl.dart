@@ -260,6 +260,13 @@ class PostRepositoryImpl implements PostRepository {
     final statusCode = response.statusCode;
     final payload = _errorPayload(e);
     final code = contentErrorCode(response.data);
+    if (code == 'post_tag_limit_exceeded') {
+      return CreatePostError(
+        message: 'This post has too many distinct tags for search. Remove some tags and try again.',
+        code: code,
+        originalError: e,
+      );
+    }
     if ((statusCode != null && statusCode >= 500) ||
         (code?.startsWith('idempotency_') ?? false)) {
       final failure = contentMutationFailure(e);

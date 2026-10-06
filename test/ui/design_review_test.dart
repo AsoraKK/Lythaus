@@ -211,7 +211,7 @@ void main() {
                 feedListProvider.overrideWith((ref) => feeds),
                 liveFeedStateProvider.overrideWith((ref, _) => _ReviewFeed()),
                 liveFeedItemsProvider.overrideWith((ref, _) async => []),
-                rewardsSnapshotProvider.overrideWith((ref) async => rewards),
+                rewardsSnapshotProvider.overrideWith((ref, _) async => rewards),
                 feedSearchProvider.overrideWith(_UnavailableSearchNotifier.new),
               ],
               child: MaterialApp(

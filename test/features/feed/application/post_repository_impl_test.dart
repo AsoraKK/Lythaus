@@ -60,6 +60,55 @@ void main() {
     expect((result as CreatePostSuccess).post.id, 'p1');
   });
 
+  test('createPost and updatePost explain the per-post tag validation', () async {
+    const message = 'This post has too many distinct tags for search. Remove some tags and try again.';
+    when(
+      () => dio.post<Map<String, dynamic>>(
+        '/api/posts',
+        data: any(named: 'data'),
+        options: any(named: 'options'),
+      ),
+    ).thenThrow(
+      DioException(
+        requestOptions: RequestOptions(path: '/api/posts'),
+        response: _response({'error': 'post_tag_limit_exceeded'}, '/api/posts', statusCode: 400),
+      ),
+    );
+
+    final create = await repo.createPost(
+      request: const CreatePostRequest(text: 'tag-heavy post'),
+      token: 't1',
+    );
+    expect(create, isA<CreatePostError>());
+    final createError = create as CreatePostError;
+    expect(createError.message, message);
+    expect(createError.code, 'post_tag_limit_exceeded');
+    expect(createError.outcomeUncertain, isFalse);
+
+    when(
+      () => dio.put<Map<String, dynamic>>(
+        '/api/posts/p1',
+        data: any(named: 'data'),
+        options: any(named: 'options'),
+      ),
+    ).thenThrow(
+      DioException(
+        requestOptions: RequestOptions(path: '/api/posts/p1'),
+        response: _response({'error': 'post_tag_limit_exceeded'}, '/api/posts/p1', statusCode: 400),
+      ),
+    );
+    final edit = await repo.updatePost(
+      postId: 'p1',
+      request: const UpdatePostRequest(text: 'tag-heavy edit', aiLabel: 'human'),
+      token: 't1',
+    );
+    expect(edit, isA<CreatePostError>());
+    final editError = edit as CreatePostError;
+    expect(editError.message, message);
+    expect(editError.code, 'post_tag_limit_exceeded');
+    expect(editError.outcomeUncertain, isFalse);
+  });
+
   test('createPost maps blocked and limit errors', () async {
     when(
       () => dio.post<Map<String, dynamic>>(
