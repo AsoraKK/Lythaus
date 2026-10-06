@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -127,8 +128,28 @@ const reviewedOpenApiDartScripts = {
 function assertSpectralAdapterReference(dependencies) {
   assert.equal(dependencies['fast-glob'], reviewedSpectralAdapter, 'Spectral must use the exact reviewed local adapter');
 }
+const reviewedImageAndQuotingPatchHashes = {
+  'package-lock.json': '4133675317c9e08caf419a8c9d395c85c3c417e5ad0f73db6a762afc7e7c1477',
+  'apps/marketing-site/package-lock.json': '1f404d3ab8de076631366520dbd0535ef7c14ca3b151f338d30ad1b11195d42e',
+};
+function canonicalMetadata(value) {
+  if (Array.isArray(value)) return value.map(canonicalMetadata);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonicalMetadata(value[key])]));
+  }
+  return value;
+}
+function assertExactImageAndQuotingPatches(current, original, filename) {
+  const paths = Object.keys(original.packages).filter(packagePath => ['node_modules/sharp', 'node_modules/shell-quote'].includes(packagePath)
+    || packagePath.startsWith('node_modules/@img/sharp-')).sort();
+  const metadata = Object.fromEntries(paths.map(packagePath => [packagePath, current.packages[packagePath]]));
+  const digest = createHash('sha256').update(JSON.stringify(canonicalMetadata(metadata))).digest('hex');
+  assert.equal(digest, reviewedImageAndQuotingPatchHashes[filename], 'Image and quoting packages must use exact reviewed security patch metadata');
+  for (const packagePath of paths) current.packages[packagePath] = original.packages[packagePath];
+}
 function assertRootToolingLockOnlyHasSecurityPatches(current = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'))) {
   const original = JSON.parse(git('show', `${upstreamBaselineSha}:package-lock.json`));
+  assertExactImageAndQuotingPatches(current, original, 'package-lock.json');
   for (const [name, version] of [['brace-expansion', '5.0.12'], ['undici', '7.29.1'], ['basic-ftp', '6.2.1']]) {
     const packagePath = `node_modules/${name}`;
     const patched = current.packages[packagePath];
@@ -161,6 +182,7 @@ const reviewedAstroPolicy = 'file:../../tools/marketing/astro-cache-policy';
 function assertMarketingLockOnlyHasSecurityPatch(current = JSON.parse(readFileSync(path.join(root, 'apps/marketing-site/package-lock.json'), 'utf8'))) {
   const filename = 'apps/marketing-site/package-lock.json';
   const original = JSON.parse(git('show', `${baselineSha}:${filename}`));
+  assertExactImageAndQuotingPatches(current, original, filename);
   assert.deepEqual(current.packages['node_modules/source-map-js'], reviewedSourceMapPatch,
     'source-map-js must use the exact reviewed security patch');
   current.packages['node_modules/source-map-js'] = original.packages['node_modules/source-map-js'];
@@ -328,6 +350,28 @@ test('reviewed tooling patches keep every other dependency frozen', () => {
   assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(changed), /Root tooling lock may change only for the reviewed security patches/);
 });
 
+test('image and quoting security exceptions reject vulnerable versions, altered registry metadata and native dependencies', () => {
+  for (const [filename, verify] of [['package-lock.json', assertRootToolingLockOnlyHasSecurityPatches],
+    ['apps/marketing-site/package-lock.json', assertMarketingLockOnlyHasSecurityPatch]]) {
+    const readLock = () => JSON.parse(readFileSync(path.join(root, filename), 'utf8'));
+    for (const [packagePath, field, value] of [
+      ['node_modules/sharp', 'version', '0.35.4'],
+      ['node_modules/sharp', 'resolved', 'https://example.invalid/sharp.tgz'],
+      ['node_modules/sharp', 'integrity', 'sha512-invalid'],
+      ['node_modules/sharp', 'license', 'AGPL-3.0'],
+      ['node_modules/@img/sharp-linux-x64', 'optionalDependencies', { '@img/sharp-libvips-linux-x64': '1.3.3' }],
+    ]) {
+      const changed = readLock(); changed.packages[packagePath][field] = value;
+      assert.throws(() => verify(changed), /exact reviewed security patch metadata/);
+    }
+    const unreviewed = readLock(); unreviewed.packages['node_modules/@img/sharp-unreviewed'] = { version: '0.35.5' };
+    assert.throws(() => verify(unreviewed), /lock may change only for/);
+  }
+  const changed = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+  changed.packages['node_modules/shell-quote'].version = '1.9.0';
+  assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(changed), /exact reviewed security patch metadata/);
+});
+
 test('Spectral security replacement rejects changed targets, metadata or resurrected vulnerable dependencies', () => {
   const readLock = () => JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
   for (const [packagePath, field, value] of [
@@ -416,7 +460,13 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
     const before = JSON.parse(git('show', `${revision}:${file}`));
     const after = JSON.parse(readFileSync(path.join(root, file), 'utf8'));
     after.scripts[script] = after.scripts[script].replace(' --experimental-strip-types', '');
+    assert.equal(after.overrides.sharp, '0.35.5', 'Image decoding must retain the exact patched sharp override');
+    before.overrides.sharp = '0.35.5';
     if (file === 'package.json') {
+      assert.deepEqual(after.overrides['concurrently@10.0.5'], { 'shell-quote': '1.11.0' }, 'Quoting must use the patched version at the actual parent');
+      assert.equal(Object.hasOwn(after.overrides, 'concurrently@10.0.3'), false, 'The stale parent selector must remain removed');
+      delete before.overrides['concurrently@10.0.3'];
+      before.overrides['concurrently@10.0.5'] = { 'shell-quote': '1.11.0' };
       for (const [name, scripts] of Object.entries(reviewedOpenApiDartScripts)) {
         assert.equal(before.scripts[name], scripts.baseline, `${name} baseline must stay pinned`);
         assert.equal(after.scripts[name], scripts.reviewed, `${name} must match the exact PR896 normalization script`);
