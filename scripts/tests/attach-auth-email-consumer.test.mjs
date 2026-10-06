@@ -147,6 +147,20 @@ test('existing verified attachment is not duplicated', async () => {
   assert.equal(writes(f).length, 0);
 });
 
+test('the observed direct script identity with explicit false pause is verified without duplicating attachment', async () => {
+  for (const apply of [false, true]) {
+    const f = fixture({ attached: true, consumerIdentityField: 'script' });
+    const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, apply, now });
+    assert.equal(receipt.status, 'ALREADY_ATTACHED_VERIFIED');
+    assert.equal(receipt.before.consumers[0].expectedWorkerMatches, true);
+    assert.equal(receipt.after.consumers[0].expectedWorkerMatches, true);
+    assert.equal(receipt.mutationAttempted, false);
+    assert.equal(receipt.mutationConfirmed, false);
+    assert.equal(writes(f).length, 0);
+    assert.ok(f.calls.every(call => call.method === 'GET'));
+  }
+});
+
 for (const field of ['script', 'service']) {
   test(`read-only inspection preserves ${field} identity diagnostics and unknown pause without certifying or duplicating an attachment`, async () => {
     const f = fixture({ attached: true, pauseUnknown: true, consumerIdentityField: field });
@@ -156,7 +170,7 @@ for (const field of ['script', 'service']) {
     assert.equal(receipt.before.deliveryPaused, null);
     assert.deepEqual(receipt.before.deliveryPausedField, { present: false, type: 'undefined' });
     for (const consumer of [receipt.before.consumers[0], receipt.beforeConsumerList[0]]) {
-      assert.equal(consumer.expectedWorkerMatches, false);
+      assert.equal(consumer.expectedWorkerMatches, field === 'script');
       assert.deepEqual(consumer.workerIdentityFields.script_name, { present: false, type: 'undefined', valueHash: null, valueMatchesExpectedWorker: false, reference: null });
       assert.equal(consumer.workerIdentityFields[field].present, true);
       assert.equal(consumer.workerIdentityFields[field].type, 'string');

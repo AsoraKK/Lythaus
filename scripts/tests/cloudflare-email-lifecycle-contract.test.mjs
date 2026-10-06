@@ -84,6 +84,35 @@ test('existing Queue metadata must prove live delivery and the exact consumer be
     ['dead_letter_queue', 'deliveryDelaySeconds', 'deliveryPaused', 'max_batch_size', 'max_batch_timeout', 'max_concurrency', 'max_retries', 'queue', 'source', 'status', 'worker']);
 });
 
+test('prompt activation accepts the observed direct script identity only with explicit delivery proof', () => {
+  const consumer = { type: 'worker', script: 'lythaus-jobs-development', dead_letter_queue: LIFECYCLE_DLQ,
+    settings: { batch_size: 25, max_wait_time_ms: 5000, max_retries: 10, max_concurrency: 1 } };
+  const queue = { queue_name: LIFECYCLE_QUEUE, settings: { delivery_paused: false, delivery_delay: 0 },
+    consumers_total_count: 1, consumers: [consumer] };
+  assert.equal(assertPromptDispatchConsumer(queue).worker, 'lythaus-jobs-development');
+  assert.throws(() => assertPromptDispatchConsumer({ ...queue, consumers: [{ ...consumer, dead_letter_queue: 'unrelated-queue' }] }), /live_consumer_drift/);
+  assert.throws(() => assertPromptDispatchConsumer({ ...queue,
+    consumers: [{ ...consumer, settings: { ...consumer.settings, max_concurrency: null } }] }), /consumer_concurrency_not_verified/);
+  for (const delivery_paused of [undefined, null, true, 'false']) {
+    assert.throws(() => assertPromptDispatchConsumer({ ...queue, settings: { delivery_delay: 0, delivery_paused } }), /live_delivery_not_verified/);
+  }
+  assert.throws(() => assertPromptDispatchConsumer({ ...queue, settings: { delivery_delay: 0 } }), /live_delivery_not_verified/);
+});
+
+test('prompt activation rejects conflicting or unresolved direct script identities', () => {
+  const consumer = { type: 'worker', script: 'lythaus-jobs-development', dead_letter_queue: LIFECYCLE_DLQ,
+    settings: { batch_size: 25, max_wait_time_ms: 5000, max_retries: 10, max_concurrency: 1 } };
+  const queue = { queue_name: LIFECYCLE_QUEUE, settings: { delivery_paused: false, delivery_delay: 0 },
+    consumers_total_count: 1, consumers: [consumer] };
+  for (const override of [{ script: 'unrelated-worker' }, { script: { name: consumer.script } }, { script: null },
+    { script_name: 'unrelated-worker' }, { script_name: null }, { service: consumer.script }, { worker: consumer.script },
+    { environment: 'production' }, { environment_name: 'development' }, { namespace: 'fixture-namespace' },
+    { type: 'http_pull' }, { script_name: consumer.script, script: 'unrelated-worker' }]) {
+    assert.throws(() => assertPromptDispatchConsumer({ ...queue, consumers: [{ ...consumer, ...override }] }), /live_consumer_drift/);
+  }
+  assert.equal(assertPromptDispatchConsumer({ ...queue, consumers: [{ ...consumer, script_name: consumer.script }] }).status, 'VERIFIED');
+});
+
 test('prompt activation rejects automatic, missing, nonnumeric or excessive consumer concurrency', () => {
   const consumer = { type: 'worker', script_name: 'lythaus-jobs-development', dead_letter_queue: LIFECYCLE_DLQ,
     settings: { batch_size: 25, max_wait_time_ms: 5000, max_retries: 10, max_concurrency: 1 } };

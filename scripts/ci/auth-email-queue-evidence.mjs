@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { assertPromptDispatchConsumer, LIFECYCLE_QUEUE, LIFECYCLE_DLQ } from './provision-cloudflare-email-lifecycle.mjs';
+import { assertPromptDispatchConsumer, resolvePromptDispatchWorker, LIFECYCLE_QUEUE, LIFECYCLE_DLQ } from './provision-cloudflare-email-lifecycle.mjs';
 
 const ACCOUNT = 'e5b7ae46e04698f507b7e4b3d4ef1af0';
 const WORKER = 'lythaus-jobs-development';
@@ -67,7 +67,7 @@ export function consumerEvidence(value) {
     idHash: hash(consumer.consumer_id),
     type: ['worker', 'http_pull'].includes(consumer.type) ? consumer.type : 'unknown',
     typeField: fieldEvidence(consumer, 'type'),
-    expectedWorkerMatches: consumer.script_name === WORKER,
+    expectedWorkerMatches: resolvePromptDispatchWorker(consumer) === WORKER,
     workerIdentityFields: Object.fromEntries(['script_name', 'script', 'service', 'worker'].map(field => [field, workerFieldEvidence(consumer, field)])),
     environmentFields: environmentEvidence(consumer), namespaceField: resourceIdentityEvidence(consumer, 'namespace'),
     pauseFields: pauseEvidence(consumer),

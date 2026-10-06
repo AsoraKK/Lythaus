@@ -114,6 +114,27 @@ test('auth Queue audit records exact existing delivery and consumer settings wit
   assert.equal(evidence.mutationPerformed, false);
 });
 
+test('auth Queue audit verifies the observed direct script identity but keeps omitted pause blocked', async () => {
+  const queue = queueFixture();
+  queue.consumers[0].script = queue.consumers[0].script_name;
+  delete queue.consumers[0].script_name;
+  for (const omitPause of [false, true]) {
+    if (omitPause) delete queue.settings.delivery_paused;
+    const reader = queueReader(queue);
+    const evidence = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: reader.requestJson });
+    assert.equal(evidence.status, omitPause ? 'BLOCKED' : 'VERIFIED');
+    assert.equal(evidence.reason, omitPause ? 'email_dispatch_live_delivery_not_verified' : null);
+    assert.equal(evidence.deliveryPaused, omitPause ? null : false);
+    for (const consumer of [evidence.listing.consumers[0], evidence.consumers[0]]) {
+      assert.equal(consumer.expectedWorkerMatches, true);
+      assert.equal(consumer.workerIdentityFields.script_name.present, false);
+      assert.equal(consumer.workerIdentityFields.script.valueMatchesExpectedWorker, true);
+    }
+    assert.equal(reader.calls.length, 2);
+    assert.equal(evidence.mutationPerformed, false);
+  }
+});
+
 test('auth Queue audit never fingerprints unknown ASCII type or environment values', async () => {
   const marker = 'fixture_token_ASCII_1234567890';
   const fingerprint = `sha256:${createHash('sha256').update(marker).digest('hex')}`;
