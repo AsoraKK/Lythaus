@@ -3,7 +3,7 @@ import test, { mock } from 'node:test';
 
 const WAITLIST_ID = '01900000-0000-7000-8000-000000000001';
 const SECOND_WAITLIST_ID = '01900000-0000-7000-8000-000000000002';
-const state = { access: 'administrator', auditWrites: [], decryptions: [], queries: [], transactionCalls: 0 };
+const state = { access: 'administrator', auditWrites: [], decryptions: [], queries: [], transactionCalls: 0, overflowSearch: false };
 
 function resetState() {
   state.access = 'administrator';
@@ -11,6 +11,7 @@ function resetState() {
   state.decryptions = [];
   state.queries = [];
   state.transactionCalls = 0;
+  state.overflowSearch = false;
 }
 
 function result(rows = [], rowCount = rows.length) {
@@ -18,7 +19,7 @@ function result(rows = [], rowCount = rows.length) {
 }
 
 function row(id, createdAt, ciphertext) {
-  return { id, email_ciphertext: ciphertext, encryption_key_version: 'v1', status: 'waiting', source: 'lythaus.co', created_at: createdAt, invited_at: null, converted_at: null, unsubscribed_at: null, retention_hold: false };
+  return { id, email_ciphertext: ciphertext, encryption_key_version: 'v1', status: 'waiting', source: 'lythaus.co', created_at: createdAt, cursor_timestamp: createdAt.replace(/(\.\d{3})Z$/u, (_match, milliseconds) => `${milliseconds}000Z`), retention_hold: false };
 }
 
 mock.module('@lythaus/db', { cache: true, namedExports: {
@@ -35,6 +36,9 @@ mock.module('@lythaus/db', { cache: true, namedExports: {
     if (sql.includes('identity.admin_memberships')) return state.access === 'nonmember'
       ? result([], 0) : result([{ user_id: '01900000-0000-7000-8000-000000000099', role: state.access }], 1);
     if (sql.includes('system.rate_limit_windows')) return result([{ request_count: 1 }], 1);
+    if (sql.includes('SELECT w.id, convert_from(w.email_ciphertext') && state.overflowSearch) {
+      return result(Array.from({ length: 1001 }, (_, index) => row(`01900000-0000-7000-8000-${String(index + 1).padStart(12, '0')}`, '2026-08-14T10:00:00.000Z', `overflow-${index}`)));
+    }
     if (sql.includes('SELECT w.id, convert_from(w.email_ciphertext')) return values.length > 1
       ? result([row(SECOND_WAITLIST_ID, '2026-08-13T10:00:00.000Z', 'ciphertext-2')])
       : result([row(WAITLIST_ID, '2026-08-14T10:00:00.000Z', 'ciphertext-1'), row(SECOND_WAITLIST_ID, '2026-08-13T10:00:00.000Z', 'ciphertext-2')]);
@@ -100,7 +104,7 @@ test('authorized waitlist handler decrypts, paginates, audits and returns only a
   assert.equal(first.status, 200);
   assert.equal(first.headers.get('cache-control'), 'private, no-store');
   const firstBody = await first.json();
-  assert.deepEqual(firstBody.items, [{ id: WAITLIST_ID, email: 'first@example.com', status: 'waiting', source: 'lythaus.co', createdAt: '2026-08-14T10:00:00.000Z', invitedAt: null, convertedAt: null, unsubscribedAt: null, retentionHold: false }]);
+  assert.deepEqual(firstBody.items, [{ id: WAITLIST_ID, email: 'first@example.com', status: 'waiting', source: 'lythaus.co', createdAt: '2026-08-14T10:00:00.000Z', retentionHold: false }]);
   assert.ok(firstBody.nextCursor);
   assert.equal(JSON.stringify(firstBody).includes('ciphertext'), false);
   assert.equal(JSON.stringify(firstBody).includes('hmac'), false);
@@ -115,6 +119,29 @@ test('authorized waitlist handler decrypts, paginates, audits and returns only a
   assert.equal(secondBody.nextCursor, null);
 });
 
+test('exact email search scans a bounded filtered page and returns no identity relation', async () => {
+  resetState();
+  const response = await worker.fetch(request('/api/admin/waitlist?limit=50&q=first%40example.com'), env());
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.deepEqual(body.items.map(item => item.email), ['first@example.com']);
+  assert.equal(body.nextCursor, null);
+  assert.equal(state.decryptions.length, 2);
+  const recordQuery = state.queries.find(entry => entry.sql.includes('SELECT w.id, convert_from(w.email_ciphertext'));
+  assert.equal(recordQuery.values[0], 1001);
+  assert.doesNotMatch(recordQuery.sql, /email_lookup_hmac|identity\.contact_emails|identity\.email_credentials/);
+});
+
+test('exact email search stops after 1,000 decrypted candidates and reports a narrowable limit', async () => {
+  resetState(); state.overflowSearch = true;
+  const response = await worker.fetch(request('/api/admin/waitlist?q=missing%40example.invalid'), env());
+  assert.equal(response.status, 422);
+  assert.equal((await response.json()).error, 'waitlist_search_limit_exceeded');
+  assert.equal(state.decryptions.length, 1000);
+  const recordQuery = state.queries.find(entry => entry.sql.includes('SELECT w.id, convert_from(w.email_ciphertext'));
+  assert.equal(recordQuery.values[0], 1001);
+});
+
 test('waitlist mutation handler rejects cross-origin and non-JSON requests before a transaction', async () => {
   resetState();
   const path = `/api/admin/waitlist/${WAITLIST_ID}/status`;
@@ -125,5 +152,18 @@ test('waitlist mutation handler rejects cross-origin and non-JSON requests befor
   const nonJson = await worker.fetch(request(path, { method: 'POST', headers: { origin: 'https://admin.lythaus.co', 'content-type': 'text/plain' }, body: JSON.stringify({ status: 'invited' }) }), env());
   assert.equal(nonJson.status, 415);
   assert.equal((await nonJson.json()).error, 'admin_mutation_content_type_invalid');
+  assert.equal(state.transactionCalls, 0);
+});
+
+test('waitlist unsubscribe cannot bypass the retention-aware purge-request route', async () => {
+  resetState();
+  const path = `/api/admin/waitlist/${WAITLIST_ID}/status`;
+  const response = await worker.fetch(request(path, {
+    method: 'POST',
+    headers: { origin: 'https://admin.lythaus.co', 'content-type': 'application/json' },
+    body: JSON.stringify({ status: 'unsubscribed', reasonCode: 'RETENTION_REVIEW', confirmation: `UNSUBSCRIBE AND REQUEST PURGE ${WAITLIST_ID}` }),
+  }), env());
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error, 'invalid_waitlist_status');
   assert.equal(state.transactionCalls, 0);
 });
