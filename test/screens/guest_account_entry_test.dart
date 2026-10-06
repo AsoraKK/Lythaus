@@ -96,6 +96,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      expect(find.bySemanticsLabel('Search tags'), findsOneWidget);
       expect(
         find.text('Tag search is temporarily unavailable.'),
         findsOneWidget,

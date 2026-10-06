@@ -23,21 +23,25 @@ const {
 
 const USER_ID = '01900000-0000-7000-8000-000000000001';
 
-test('admin user pagination accepts bounded filters and opaque cursors', () => {
-  const request = new URL(`https://admin.lythaus.co/api/admin/users?limit=100&q=person@example.com&status=pending_verification&source=email&createdAfter=2026-08-01T00:00:00Z&cursor=eyJ0aW1lc3RhbXAiOiIyMDI2LTA4LTEwVDAwOjAwOjAwLjAwMFoiLCJpZCI6IjAxOTAwMDAwLTAwMDAtNzAwMC04MDAwLTAwMDAwMDAwMDAwMSJ9`);
+test('admin user pagination accepts account fields, rejects contact/source filters, and validates opaque cursors', () => {
+  const request = new URL(`https://admin.lythaus.co/api/admin/users?limit=100&q=Member&status=active&createdAfter=2026-08-01T00:00:00Z&cursor=eyJ0aW1lc3RhbXAiOiIyMDI2LTA4LTEwVDAwOjAwOjAwLjAwMFoiLCJpZCI6IjAxOTAwMDAwLTAwMDAtNzAwMC04MDAwLTAwMDAwMDAwMDAwMSJ9`);
   const result = adminUserPageRequest(request);
   assert.equal(result.limit, 100);
-  assert.equal(result.query, 'person@example.com');
-  assert.equal(result.status, 'pending_verification');
-  assert.equal(result.source, 'email');
+  assert.equal(result.query, 'member');
+  assert.equal(result.status, 'active');
   assert.ok(result.cursor);
+  assert.throws(() => adminUserPageRequest(new URL('https://admin.lythaus.co/api/admin/users?q=person%40example.com')), /account_support_owner_required/);
+  assert.throws(() => adminUserPageRequest(new URL('https://admin.lythaus.co/api/admin/users?source=email')), /invalid_user_source_filter/);
+  assert.throws(() => adminUserPageRequest(new URL('https://admin.lythaus.co/api/admin/users?status=verified')), /invalid_user_status_filter/);
 });
 
 test('waitlist filters reject invalid values and preserve safe values', () => {
-  assert.deepEqual(adminWaitlistFilters(new URL('https://admin.lythaus.co/api/admin/waitlist?q=person%40example.com&status=waiting&source=keeper')), {
+  assert.deepEqual(adminWaitlistFilters(new URL('https://admin.lythaus.co/api/admin/waitlist?q=Person%40Example.com&status=waiting&source=keeper')), {
     query: 'person@example.com', status: 'waiting', source: 'keeper', createdAfter: null, createdBefore: null,
   });
   assert.throws(() => adminWaitlistFilters(new URL('https://admin.lythaus.co/api/admin/waitlist?status=unknown')), /invalid_waitlist_status/);
+  assert.throws(() => adminWaitlistFilters(new URL('https://admin.lythaus.co/api/admin/waitlist?q=member')), /invalid_waitlist_search/);
+  assert.throws(() => adminWaitlistFilters(new URL(`https://admin.lythaus.co/api/admin/waitlist?q=${'a'.repeat(310)}%40example.invalid`)), /invalid_waitlist_search/);
 });
 
 test('keeper mutation policy rejects unknown fields and requires exact confirmation', () => {
