@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { attachAuthEmailConsumer, AUTH_EMAIL_ATTACHMENT as a } from '../ci/attach-auth-email-consumer.mjs';
 
@@ -9,7 +10,7 @@ const dlqId = '00637c71243442cb864cd069f00d824e';
 const now = new Date('2026-10-06T10:10:00Z');
 function fixture(options = {}) {
   const calls = [];
-  let attached = Boolean(options.attached), consumerReads = 0, deploymentReads = 0, queueReads = 0, metricsReads = 0, inventoryReads = 0, usageReads = 0;
+  let attached = Boolean(options.attached), patched = false, consumerReads = 0, deploymentReads = 0, queueReads = 0, metricsReads = 0, inventoryReads = 0, usageReads = 0;
   const consumer = { consumer_id: '1'.repeat(32), ...structuredClone(a.body) };
   if (options.consumerIdentityField) {
     consumer[options.consumerIdentityField] = consumer.script_name;
@@ -35,6 +36,16 @@ function fixture(options = {}) {
       return { httpStatus: 200, body: options.usageMissing || (options.immediateUsageMissing && usageReads === 2) ? { errors: [{ message: 'private-fixture-marker' }] } : {
         data: { viewer: { accounts: [{ queueMessageOperationsAdaptiveGroups: [{ sum: { billableOperations: usageReads === 2 ? options.immediateOperations ?? options.operations ?? 31 : options.operations ?? 31 } }] }] } } } };
     }
+    if (init.method === 'PATCH') {
+      assert.equal(url, `https://api.cloudflare.com/client/v4/accounts/${a.account}/queues/${queueId}`);
+      assert.deepEqual(JSON.parse(init.body), { settings: { delivery_paused: false } });
+      if (options.patchRejected) return { httpStatus: 403, body: { success: false, errors: [{ message: 'private-fixture-marker' }] } };
+      patched = true;
+      if (options.patchConsumerReplacement) consumer.consumer_id = '2'.repeat(32);
+      if (options.patchCapDrift) consumer.settings.max_concurrency = 2;
+      if (options.patchUncertain) throw new Error('private-fixture-marker');
+      return { httpStatus: 200, body: { success: true, result: queue() } };
+    }
     if (init.method === 'POST') {
       assert.ok(url.endsWith(`/queues/${queueId}/consumers`));
       assert.deepEqual(JSON.parse(init.body), a.body);
@@ -48,15 +59,19 @@ function fixture(options = {}) {
     if (url.endsWith('/queues?per_page=100')) {
       inventoryReads += 1;
       const phase = attached ? 'after' : 'before';
-      const replacesQueue = options.prewriteQueueReplacement && inventoryReads === 3 || options.afterQueueReplacement && phase === 'after' && inventoryReads >= 3;
-      const replacesDlq = options.prewriteDlqReplacement && inventoryReads === 3 || options.afterDlqReplacement && phase === 'after' && inventoryReads >= 3;
+      const replacesQueue = options.prewriteQueueReplacement && inventoryReads === 3 || options.afterQueueReplacement && phase === 'after' && inventoryReads >= 3
+        || options.patchQueueReplacement && patched;
+      const replacesDlq = options.prewriteDlqReplacement && inventoryReads === 3 || options.afterDlqReplacement && phase === 'after' && inventoryReads >= 3
+        || options.patchDlqReplacement && patched;
       const result = [queue(replacesQueue ? replacementId : queueId), { queue_name: a.dlq, queue_id: options.wrongIdentity || replacesDlq ? '2'.repeat(32) : dlqId }];
+      if (options.pauseListingUnknown && (!patched || options.patchOmissionContinues)) delete result[0].settings.delivery_paused;
       return { httpStatus: 200, body: { success: true, result,
         result_info: { page: 1, per_page: 100, count: 2, total_count: options.partialInventory ? 101 : 2, total_pages: options.partialInventory ? 2 : 1 } } };
     }
     if (url.endsWith(`/queues/${queueId}/consumers`)) {
       consumerReads += 1;
       if (options.existingCapDrift && consumerReads === 1) consumer.settings.max_concurrency = 2;
+      if (options.resumeConsumerRace && consumerReads === 2) consumer.consumer_id = '2'.repeat(32);
       result = attached ? [consumer] : options.consumerRace && consumerReads === 2 ? [consumer] : [];
     } else if (url.endsWith(`/queues/${queueId}/metrics`)) {
       if (options.metricsDenied) return { httpStatus: 403, body: { success: false, errors: [{ code: 10000, message: 'private-fixture-marker' }] } };
@@ -66,7 +81,10 @@ function fixture(options = {}) {
     } else if (url.endsWith(`/queues/${queueId}`) || url.endsWith(`/queues/${replacementId}`)) {
       queueReads += 1;
       result = queue(url.endsWith(`/queues/${replacementId}`) ? replacementId : queueId);
-      if (options.pauseUnknown) delete result.settings.delivery_paused;
+      if (options.pauseUnknown && (!patched || options.patchOmissionContinues)) delete result.settings.delivery_paused;
+      if (options.pauseTrue) result.settings.delivery_paused = true;
+      if (patched && options.patchPauseString) result.settings.delivery_paused = 'false';
+      if (options.retentionPeriod) result.settings.message_retention_period = patched && options.patchRetentionDrift ? 345600 : options.retentionPeriod;
       if (options.pauseChanged && queueReads === 2) result.settings.delivery_paused = true;
     } else if (url.endsWith(`/workers/scripts/${a.worker}/deployments`)) {
       deploymentReads += 1;
@@ -338,6 +356,134 @@ for (const options of [{ pauseUnknown: true }, { afterCapDrift: true }]) {
   });
 }
 
+const syntheticConsumerHash = `sha256:${createHash('sha256').update('1'.repeat(32)).digest('hex')}`;
+const resumeFixture = options => fixture({ attached: true, pauseUnknown: true, pauseListingUnknown: true,
+  consumerIdentityField: 'script', ...options });
+const resume = (f, options = {}) => attachAuthEmailConsumer({ requestJson: f.requestJson, resumeDelivery: true,
+  expectedConsumerHash: syntheticConsumerHash, apply: true, now, ...options });
+
+test('pause-setting inspection verifies bounded write preconditions without treating omission as false', async () => {
+  const f = resumeFixture();
+  const receipt = await resume(f, { apply: false });
+  assert.equal(receipt.mode, 'resume_delivery');
+  assert.equal(receipt.status, 'INSPECTED_PAUSE_SETTING_PRECONDITIONS');
+  assert.equal(receipt.before.status, 'BLOCKED');
+  assert.equal(receipt.before.deliveryPaused, null);
+  assert.equal(receipt.mutationAttempted, false);
+  assert.equal(writes(f).length, 0);
+});
+
+test('approved pause setting makes one exact PATCH after rechecking safe Jobs, usage and pinned existing consumer', async () => {
+  const f = resumeFixture();
+  const refreshedAt = new Date(now.getTime() + 60000);
+  const receipt = await resume(f, { clock: () => refreshedAt });
+  assert.equal(receipt.status, 'DELIVERY_FALSE_SETTING_VERIFIED');
+  assert.equal(receipt.mutationConfirmed, true);
+  assert.equal(receipt.pauseSettingWriteConfirmed, true);
+  assert.equal(receipt.pauseOrDelayChanged, null);
+  assert.equal(receipt.queueLifecycleProcessingMayResume, true);
+  assert.equal(receipt.patchHttpStatus, 200);
+  assert.equal(receipt.postHttpStatus, null);
+  assert.equal(receipt.after.status, 'VERIFIED');
+  assert.equal(receipt.after.deliveryPaused, false);
+  assert.equal(receipt.otherQueueSettingsPreserved, true);
+  assert.equal(receipt.currentJobs.version, a.version);
+  assert.equal(receipt.currentJobs.sourceSha, a.source);
+  assert.equal(receipt.immediatePrewrite.reportedConsumers, 1);
+  assert.equal(receipt.immediatePrewrite.listedConsumers, 1);
+  assert.equal(receipt.prewriteIncludedQueueAllowance.observedAt, refreshedAt.toISOString());
+  assert.equal(receipt.prewriteIncludedQueueAllowance.noOverageGuaranteed, false);
+  assert.equal(writes(f).length, 1);
+  assert.equal(writes(f)[0].method, 'PATCH');
+  assert.ok(f.calls[f.calls.indexOf(writes(f)[0]) - 1].url.endsWith('/consumers'));
+  assert.equal(f.calls.filter(call => call.url.endsWith('/deployments')).length, 2);
+  assert.equal(f.calls.filter(call => call.url.endsWith('/graphql')).length, 2);
+  assert.ok(!f.calls.some(call => /\/messages|\/pull|\/ack/.test(call.url)));
+  assert.equal(receipt.messagesRead, false);
+  assert.equal(receipt.emailsSent, false);
+  assert.ok(!JSON.stringify(receipt).includes('private-fixture-marker'));
+});
+
+test('the real approved consumer pin cannot match a different synthetic consumer', async () => {
+  const f = resumeFixture();
+  const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, resumeDelivery: true, apply: true, now });
+  assert.equal(receipt.status, 'BLOCKED');
+  assert.equal(writes(f).length, 0);
+});
+
+test('already explicit false with the pinned consumer is verified without another PATCH', async () => {
+  const f = resumeFixture({ pauseUnknown: false, pauseListingUnknown: false });
+  const receipt = await resume(f);
+  assert.equal(receipt.status, 'ALREADY_ATTACHED_VERIFIED');
+  assert.equal(receipt.mutationAttempted, false);
+  assert.ok(f.calls.every(call => call.method === 'GET'));
+});
+
+for (const options of [
+  { attached: false }, { wrongIdentity: true }, { partialInventory: true },
+  { existingCapDrift: true }, { consumerFields: { service: a.worker } },
+  { consumerFields: { environment: 'production' } }, { consumerFields: { consumer_id: '2'.repeat(32) } },
+  { consumerFields: { dead_letter_queue: 'lythaus-other-dlq' } }, { pauseTrue: true },
+  { sourceChanged: true }, { versionRace: true }, { metricsDenied: true }, { backlogCount: 129 },
+  { immediateBacklogCount: 129 }, { immediateOperations: 999999 }, { immediateUsageMissing: true },
+  { prewriteQueueReplacement: true }, { prewriteDlqReplacement: true }, { pauseChanged: true }, { resumeConsumerRace: true },
+]) {
+  test(`pause setting rejects identity, routing, runtime, delivery or allowance drift before writing: ${JSON.stringify(options)}`, async () => {
+    const f = resumeFixture(options);
+    const receipt = await resume(f);
+    assert.equal(receipt.status, 'BLOCKED');
+    assert.equal(receipt.mutationAttempted, false);
+    assert.equal(writes(f).length, 0);
+    assert.ok(!JSON.stringify(receipt).includes('private-fixture-marker'));
+  });
+}
+
+for (const options of [{ patchOmissionContinues: true }, { patchConsumerReplacement: true }, { patchCapDrift: true },
+  { patchRejected: true }, { patchUncertain: true, patchOmissionContinues: true }, { patchQueueReplacement: true },
+  { patchDlqReplacement: true }, { patchPauseString: true }, { retentionPeriod: 86400, patchRetentionDrift: true }]) {
+  test(`one attempted PATCH with unproven or drifted readback stays blocked without retry: ${JSON.stringify(options)}`, async () => {
+    const f = resumeFixture(options);
+    const receipt = await resume(f);
+    assert.equal(receipt.status, 'BLOCKED');
+    assert.equal(receipt.mutationAttempted, true);
+    assert.equal(writes(f).length, 1);
+    assert.equal(writes(f)[0].method, 'PATCH');
+    if (options.patchOmissionContinues) assert.equal(receipt.after.deliveryPaused, null);
+    if (options.patchRejected) assert.equal(receipt.patchHttpStatus, 403);
+    assert.ok(!JSON.stringify(receipt).includes('private-fixture-marker'));
+  });
+}
+
+test('uncertain PATCH is distinguished from confirmed mutation even when strict readback proves false', async () => {
+  const f = resumeFixture({ patchUncertain: true });
+  const receipt = await resume(f);
+  assert.equal(receipt.status, 'PATCH_UNCERTAIN_READBACK_VERIFIED');
+  assert.equal(receipt.mutationConfirmed, false);
+  assert.equal(receipt.pauseSettingWriteConfirmed, false);
+  assert.equal(receipt.patchHttpStatus, null);
+  assert.equal(receipt.after.deliveryPaused, false);
+  assert.equal(writes(f).length, 1);
+});
+
+test('the single pause-setting PATCH preserves the existing retention setting', async () => {
+  const f = resumeFixture({ retentionPeriod: 86400 });
+  const receipt = await resume(f);
+  assert.equal(receipt.status, 'DELIVERY_FALSE_SETTING_VERIFIED');
+  assert.equal(receipt.otherQueueSettingsPreserved, true);
+  assert.equal(writes(f).length, 1);
+  assert.deepEqual(JSON.parse(writes(f)[0].body), { settings: { delivery_paused: false } });
+});
+
+test('CLI rejects combined attachment and pause-setting approvals before any provider request', () => {
+  const child = spawnSync(process.execPath, ['scripts/ci/attach-auth-email-consumer.mjs'], {
+    env: { PATH: process.env.PATH, AUTH_EMAIL_ATTACHMENT_APPROVED: 'true', AUTH_EMAIL_DELIVERY_RESUME_APPROVED: 'true',
+      AUTH_EMAIL_ATTACHMENT_OUTPUT: '/unwritable-synthetic-fixture/receipt.json' }, encoding: 'utf8',
+  });
+  assert.equal(child.status, 1);
+  assert.match(child.stderr, /auth_email_attachment_entrypoint_blocked/);
+  assert.equal(child.stdout, '');
+});
+
 test('workflow uses protected main, existing production context, exact source gates and serial release groups', () => {
   const workflow = fs.readFileSync('.github/workflows/auth-email-consumer-attachment.yml', 'utf8');
   for (const pattern of [/default: false/, /contents: read/, /actions: read/, /environment: production/,
@@ -345,4 +491,6 @@ test('workflow uses protected main, existing production context, exact source ga
     /lythaus-canonical-production-release/, /lythaus-production-workers/]) assert.match(workflow, pattern);
   assert.doesNotMatch(workflow, /issues: write|pull-requests: write|secrets: write|wrangler.*deploy|send_probe/);
   assert.match(workflow, /CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
+  assert.match(workflow, /resume_delivery_approved:[\s\S]*?default: false/);
+  assert.match(workflow, /AUTH_EMAIL_DELIVERY_RESUME_APPROVED: \$\{\{ inputs\.resume_delivery_approved \}\}/);
 });

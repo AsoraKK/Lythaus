@@ -8,6 +8,11 @@ on:
         required: true
         default: false
         type: boolean
+      resume_delivery_approved:
+        description: Apply one separately approved existing Queue delivery_paused false PATCH
+        required: true
+        default: false
+        type: boolean
       ci_run_id:
         description: Successful CI run for this immutable main SHA
         required: true
@@ -73,6 +78,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           AUTH_EMAIL_ATTACHMENT_APPROVED: ${{ inputs.attach_approved }}
+          AUTH_EMAIL_DELIVERY_RESUME_APPROVED: ${{ inputs.resume_delivery_approved }}
         run: node scripts/ci/attach-auth-email-consumer.mjs
       - name: Preserve sanitized receipt even when blocked
         if: always()
