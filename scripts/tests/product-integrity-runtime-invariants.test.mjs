@@ -91,10 +91,12 @@ test('all feed projections enforce publication state, relationship privacy, and 
   assert.match(comments, /social\.mutes/);
 });
 
-test('public profiles expose only active, visible, allowed profile revisions', () => {
+test('public profiles require a saved profile row and expose only visible, allowed revisions', () => {
   const profile = between(publicApi, 'async function getUserProfile', 'async function getUserInfo');
   assert.match(profile, /u\.status = 'active'/);
-  assert.match(profile, /\$3::boolean OR \(COALESCE\(p\.moderation_state, 'allowed'\) = 'allowed' AND COALESCE\(p\.public_visibility, true\)\)/);
+  assert.match(profile, /\$3::boolean OR \(p\.user_id IS NOT NULL AND COALESCE\(p\.moderation_state, 'allowed'\) = 'allowed' AND COALESCE\(p\.public_visibility, true\)\)/);
+  const summary = between(publicApi, 'async function reputationSummary', 'async function reputationLedger');
+  assert.match(summary, /AND p\.user_id IS NOT NULL/);
 });
 
 test('idempotency replay records bind a claim and fail closed on stale or ambiguous outcomes', () => {

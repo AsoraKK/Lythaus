@@ -8,7 +8,7 @@ import 'package:built_value/serializer.dart';
 
 part 'product_integrity_public_profile_user_reputation.g.dart';
 
-/// Present only for public Passport visibility and active reputation. Never contains enforcement status or evidence.
+/// Present for public Passport visibility. Never contains enforcement status or evidence.
 ///
 /// Properties:
 /// * [level]

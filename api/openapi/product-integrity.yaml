@@ -424,7 +424,7 @@ components:
           properties:
             level: { type: integer, minimum: 0, maximum: 5 }
             label: { type: string }
-          description: Present only for public Passport visibility and active reputation. Never contains enforcement status or evidence.
+          description: Present for public Passport visibility. Never contains enforcement status or evidence.
         journalistVerified: { type: boolean }
         badges:
           type: array

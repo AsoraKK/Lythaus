@@ -120,14 +120,27 @@ test('private Passport settings suppress public summary without hiding an otherw
   assert.equal('reputationLevel' in profile, false);
 });
 
-test('non-active reputation states are omitted from profile and unavailable publicly', async () => {
+test('non-active reputation states do not affect public visibility or appear in public fields', async () => {
   for (const reputationStatus of ['restricted', 'suspended', 'under_investigation']) {
-    const member = await subject({ reputationStatus, trustPassportVisibility: 'public_expanded' });
-    for (const path of publicAliases(member.id)) assert.equal((await call(path)).status, 404);
+    const member = await subject({ reputationStatus, trustPassportVisibility: 'public_expanded', level: 3 });
+    for (const path of publicAliases(member.id)) {
+      const response = await call(path);
+      assert.equal(response.status, 200, path);
+      assert.equal(response.headers.get('cache-control'), 'private, no-store');
+      const summary = await response.json();
+      assert.deepEqual(Object.keys(summary).sort(), ['level', 'levelName', 'userId']);
+      assert.equal(summary.level, 3);
+      assert.equal('reputationStatus' in summary, false);
+      assert.equal('reputationBand' in summary, false);
+      assert.equal('policyVersion' in summary, false);
+      assert.equal('pillars' in summary, false);
+      assert.equal(JSON.stringify(summary).includes(reputationStatus), false);
+    }
     const response = await call(`/api/users/${member.id}`);
     assert.equal(response.status, 200);
     const profile = (await response.json()).user;
-    assert.equal('reputation' in profile, false);
+    assert.deepEqual(Object.keys(profile.reputation).sort(), ['label', 'level']);
+    assert.equal(profile.reputation.level, 3);
     assert.equal('reputationLevel' in profile, false);
     assert.equal(JSON.stringify(profile).includes(reputationStatus), false);
   }
@@ -137,12 +150,13 @@ test('hidden, unapproved, inactive, and missing targets have no public profile o
   const hidden = await subject({ publicVisibility: false });
   const underReview = await subject({ moderationState: 'under_review' });
   const blocked = await subject({ moderationState: 'blocked' });
+  const missingProfile = await subject({ profile: false });
   const inactive = [];
   for (const accountStatus of ['suspended', 'deleted', 'locked', 'relink_required']) {
     inactive.push(await subject({ accountStatus }));
   }
   const absentId = '01900000-0000-7000-8000-000000000099';
-  for (const member of [hidden, underReview, blocked, ...inactive, { id: absentId }]) {
+  for (const member of [hidden, underReview, blocked, missingProfile, ...inactive, { id: absentId }]) {
     for (const path of publicAliases(member.id)) {
       const response = await call(path);
       assert.equal(response.status, 404, path);
@@ -153,6 +167,8 @@ test('hidden, unapproved, inactive, and missing targets have no public profile o
     assert.equal(profileResponse.status, 404, `/api/users/${member.id}`);
     assert.equal(profileResponse.headers.get('cache-control'), 'private, no-store');
   }
+  const ownerResponse = await call('/api/users/me', missingProfile);
+  assert.equal(ownerResponse.status, 200, 'missing profile rows remain visible to the authenticated owner');
 });
 
 test('authenticated owner retains detailed reputation and profile fields with private no-store caching', async () => {

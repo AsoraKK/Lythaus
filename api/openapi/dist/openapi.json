@@ -6860,7 +6860,7 @@
       "get": {
         "operationId": "usersGet",
         "summary": "Get a public user profile",
-        "description": "Public profile reads return approved public identity fields. Reputation is omitted when the Passport is private or reputation is not active; public reputation contains only level and label.",
+        "description": "Public profile reads return approved public identity fields. Reputation is omitted when the Passport is private; public reputation contains only level and label, never enforcement status.",
         "tags": [
           "Users"
         ],
@@ -16656,7 +16656,7 @@
                 "type": "string"
               }
             },
-            "description": "Present only for public Passport visibility and active reputation. Never contains enforcement status or evidence."
+            "description": "Present for public Passport visibility. Never contains enforcement status or evidence."
           },
           "journalistVerified": {
             "type": "boolean"

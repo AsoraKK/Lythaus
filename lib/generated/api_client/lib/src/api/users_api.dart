@@ -27,7 +27,7 @@ class UsersApi {
   const UsersApi(this._dio, this._serializers);
 
   /// Get a public user profile
-  /// Public profile reads return approved public identity fields. Reputation is omitted when the Passport is private or reputation is not active; public reputation contains only level and label.
+  /// Public profile reads return approved public identity fields. Reputation is omitted when the Passport is private; public reputation contains only level and label, never enforcement status.
   ///
   /// Parameters:
   /// * [id]
