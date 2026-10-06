@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { captureAuthEmailQueueEvidence } from '../ci/auth-email-queue-evidence.mjs';
 
 const source = fs.readFileSync('scripts/cloudflare/audit-account.mjs', 'utf8');
 
@@ -57,4 +58,127 @@ test('custom-domain inventory reads the Admin mapping without mutation or unrela
     assert.equal(report.adminCustomDomain.mappingVerified, service === 'lythaus-admin-api-development');
     assert.equal(report.endpointState.workerDomains.ok, true);
   }
+});
+
+const authAccount = 'e5b7ae46e04698f507b7e4b3d4ef1af0';
+const lifecycleId = '1'.repeat(32), deadLetterId = '2'.repeat(32);
+function queueFixture() {
+  return { queue_id: lifecycleId, queue_name: 'lythaus-email-lifecycle-dev',
+    settings: { delivery_paused: false, delivery_delay: 0 }, consumers_total_count: 1,
+    consumers: [{ consumer_id: '3'.repeat(32), type: 'worker', script_name: 'lythaus-jobs-development',
+      dead_letter_queue: 'lythaus-email-lifecycle-dlq-dev',
+      settings: { batch_size: 25, max_wait_time_ms: 5000, max_retries: 10, max_concurrency: 1 } }] };
+}
+function queueReader(queue = queueFixture(), listing = [queue, { queue_id: deadLetterId, queue_name: 'lythaus-email-lifecycle-dlq-dev' }]) {
+  const calls = [];
+  return { calls, requestJson: async (input, init) => {
+    const url = new URL(input);
+    assert.equal(init.method, 'GET');
+    assert.equal(url.origin, 'https://api.cloudflare.com');
+    calls.push(url.pathname + url.search);
+    if (url.pathname === `/client/v4/accounts/${authAccount}/queues` && url.search === '?per_page=100') return { httpStatus: 200, body: { success: true, result: listing } };
+    assert.equal(url.pathname, `/client/v4/accounts/${authAccount}/queues/${lifecycleId}`);
+    assert.equal(url.search, '');
+    return { httpStatus: 200, body: { success: true, result: queue } };
+  } };
+}
+
+test('auth Queue audit records exact existing delivery and consumer settings without private fields', async () => {
+  const queue = queueFixture();
+  queue.secret = queue.author_email = 'fixture-private-marker';
+  Object.assign(queue.consumers[0], { url: 'fixture-private-marker', token: 'fixture-private-marker', script_name_unused: 'fixture-private-marker' });
+  queue.consumers[0].settings.unrelated_secret = 'fixture-private-marker';
+  const reader = queueReader(queue, [queue, { queue_id: deadLetterId, queue_name: 'lythaus-email-lifecycle-dlq-dev' },
+    { queue_id: '4'.repeat(32), queue_name: 'fixture-private-marker', consumers: [{ secret: 'fixture-private-marker' }] }]);
+  const evidence = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: reader.requestJson });
+  assert.equal(evidence.status, 'VERIFIED');
+  assert.equal(evidence.reason, null);
+  assert.equal(evidence.deliveryPaused, false);
+  assert.equal(evidence.deliveryDelaySeconds, 0);
+  assert.equal(evidence.reportedConsumerCount, 1);
+  assert.equal(evidence.observedConsumerCount, 1);
+  assert.deepEqual(evidence.consumers.map(({ idHash, ...value }) => value), [{ type: 'worker', expectedWorkerMatches: true,
+    expectedDeadLetterMatches: true, batchSize: 25, maxWaitTimeMs: 5000, maxRetries: 10, maxConcurrency: 1,
+    maxConcurrencyPresent: true, maxConcurrencyType: 'number' }]);
+  assert.match(evidence.lifecycleIdHash, /^sha256:[0-9a-f]{64}$/);
+  assert.equal(reader.calls.length, 2);
+  const serialized = JSON.stringify(evidence);
+  assert.ok(!serialized.includes('fixture-private-marker'));
+  for (const id of [lifecycleId, deadLetterId, '3'.repeat(32)]) assert.ok(!serialized.includes(id));
+  assert.equal(evidence.piiIncluded, false);
+  assert.equal(evidence.messagesRead, false);
+  assert.equal(evidence.mutationPerformed, false);
+});
+
+for (const [label, alter, reason] of [
+  ['paused', queue => { queue.settings.delivery_paused = true; }, 'live_delivery_not_verified'],
+  ['delayed', queue => { queue.settings.delivery_delay = 20; }, 'live_delivery_not_verified'],
+  ['missing-settings', queue => { delete queue.settings; }, 'live_delivery_not_verified'],
+  ['missing-consumers', queue => { delete queue.consumers; }, 'live_consumer_not_verified'],
+  ['multiple-consumers', queue => { queue.consumers.push(queue.consumers[0]); queue.consumers_total_count = 2; }, 'live_consumer_not_verified'],
+  ['wrong-worker', queue => { queue.consumers[0].script_name = 'fixture-private-marker'; }, 'live_consumer_drift'],
+  ['wrong-dlq', queue => { queue.consumers[0].dead_letter_queue = 'fixture-private-marker'; }, 'live_consumer_drift'],
+  ['batch-drift', queue => { queue.consumers[0].settings.batch_size = 50; }, 'live_consumer_drift'],
+  ['timeout-drift', queue => { queue.consumers[0].settings.max_wait_time_ms = 20000; }, 'live_consumer_drift'],
+  ['retry-drift', queue => { queue.consumers[0].settings.max_retries = 3; }, 'live_consumer_drift'],
+]) {
+  test(`auth Queue audit blocks ${label} while retaining only safe observations`, async () => {
+    const queue = queueFixture(); alter(queue);
+    const reader = queueReader(queue);
+    const evidence = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: reader.requestJson });
+    assert.equal(evidence.status, 'BLOCKED');
+    assert.match(evidence.reason, new RegExp(reason));
+    assert.ok(!JSON.stringify(evidence).includes('fixture-private-marker'));
+  });
+}
+for (const cap of [undefined, null, 0, 2, '1']) {
+  test(`auth Queue audit preserves ${typeof cap}:${cap} concurrency as unverified without coercion`, async () => {
+    const queue = queueFixture();
+    if (cap === undefined) delete queue.consumers[0].settings.max_concurrency;
+    else queue.consumers[0].settings.max_concurrency = cap;
+    const reader = queueReader(queue);
+    const evidence = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: reader.requestJson });
+    assert.equal(evidence.status, 'BLOCKED');
+    assert.match(evidence.reason, /consumer_concurrency_not_verified/);
+    assert.equal(evidence.consumers[0].maxConcurrencyPresent, cap !== undefined);
+    assert.equal(evidence.consumers[0].maxConcurrencyType, cap === null ? 'null' : typeof cap);
+    assert.equal(evidence.consumers[0].maxConcurrency, typeof cap === 'number' ? cap : null);
+  });
+}
+
+test('auth Queue audit stops on denied reads and invalid identity without probing another resource', async () => {
+  const denied = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: async () => ({
+    httpStatus: 401, body: { success: false, errors: [{ code: 10000, message: 'fixture-private-marker' }, { code: 'fixture-private-marker' }] },
+  }) });
+  assert.equal(denied.status, 'BLOCKED');
+  assert.deepEqual(denied.api.list.errorCodes, [10000]);
+  assert.equal(denied.api.details, null);
+  assert.ok(!JSON.stringify(denied).includes('fixture-private-marker'));
+  const badAccount = await captureAuthEmailQueueEvidence({ accountId: 'wrong-account', requestJson: () => assert.fail('No other account may be probed') });
+  assert.match(badAccount.reason, /account_mismatch/);
+  for (const listing of [[], [queueFixture()], [queueFixture(), queueFixture(), { queue_id: deadLetterId, queue_name: 'lythaus-email-lifecycle-dlq-dev' }],
+    [{ ...queueFixture(), queue_id: '../fixture-private-marker' }, { queue_id: deadLetterId, queue_name: 'lythaus-email-lifecycle-dlq-dev' }]]) {
+    const reader = queueReader(queueFixture(), listing);
+    const result = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: reader.requestJson });
+    assert.equal(result.status, 'BLOCKED');
+    assert.equal(reader.calls.length, 1);
+    assert.ok(!JSON.stringify(result).includes('fixture-private-marker'));
+  }
+  for (const response of [{ httpStatus: 404, body: { success: false } }, { httpStatus: 200, body: { success: true, result: {} } },
+    { httpStatus: 200, body: { success: true, result: { ...queueFixture(), queue_id: '4'.repeat(32) } } }]) {
+    const reader = queueReader();
+    const result = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: (url, init) => url.includes('?') ? reader.requestJson(url, init) : response });
+    assert.equal(result.status, 'BLOCKED');
+  }
+  const unavailable = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: () => { throw new Error('fixture-private-marker'); } });
+  assert.equal(unavailable.api.list.httpStatus, null);
+  assert.ok(!JSON.stringify(unavailable).includes('fixture-private-marker'));
+});
+
+test('existing auth incident audit keeps default-off probe, production review and read-only GitHub permissions', () => {
+  const workflow = fs.readFileSync('.github/workflows/production-auth-incident-audit.yml', 'utf8');
+  assert.match(workflow, /send_probe:[\s\S]*?default: false/);
+  assert.match(workflow, /environment: production/);
+  assert.match(workflow, /contents: read/);
+  assert.doesNotMatch(workflow, /issues: write|pull-requests: write|id-token: write/);
 });

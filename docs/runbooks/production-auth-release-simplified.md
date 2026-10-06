@@ -451,6 +451,18 @@ quota through authorized read-only provider evidence before activation; previous
 screenshots and local fixtures do not prove current capacity. Do not send an
 email solely to probe capacity or request a quota/plan increase as a fallback.
 
+The existing `production-auth-incident-audit.yml` with `send_probe=false` uses
+the protected production secret context to read the approved account's Queue
+list and the resolved existing lifecycle Queue's details. Its sanitized receipt
+retains pause/delay, exact consumer counts, batching, retries, DLQ/worker matches
+and concurrency value/type/presence; identifiers are hashed and messages are
+never read. It applies the same strict consumer validator as the canonical
+pre-upload gate. Missing resources, identity drift, unreadable metadata and
+automatic/missing/excessive caps block readiness without repair. Remaining
+sending quota stays explicitly UNVERIFIED; aggregate analytics are not quota
+proof. An already dispatched audit uses its immutable original source; keep its
+approval link intact until the parent coordinates any reviewed replacement.
+
 The shared consumer reconciles the batch's provider lifecycle events before
 starting dispatch hints. Dispatch runs with at most two active operations per
 invocation, limiting simultaneous provider calls and their database transactions.

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import pg from 'pg';
 import { captureIncidentDatabaseEvidence } from './auth-incident-database-contract.mjs';
+import { captureAuthEmailQueueEvidence } from './auth-email-queue-evidence.mjs';
 
 const { Client } = pg;
 
@@ -100,6 +101,12 @@ async function captureCloudflare(report) {
     analytics: { available: false },
     arbitraryRecipientProbe: { attempted: false },
     piiIncluded: false,
+  };
+  report.cloudflare.dispatchQueue = await captureAuthEmailQueueEvidence({
+    accountId: cloudflareAccountId, requestJson: cloudflareJson,
+  });
+  report.cloudflare.remainingSendingQuota = {
+    status: 'UNVERIFIED', reason: 'account_quota_not_exposed_by_observed_endpoints',
   };
 
   const end = new Date();
@@ -214,6 +221,9 @@ try {
 
 if (report.cloudflare?.subdomainApi?.success !== true || report.cloudflare?.subdomainApi?.enabled !== true) {
   failures.push('cloudflare_sending_domain_not_enabled');
+}
+if (report.cloudflare?.dispatchQueue?.status !== 'VERIFIED') {
+  failures.push('cloudflare_dispatch_queue_not_ready');
 }
 if (sendProbe && report.cloudflare?.arbitraryRecipientProbe?.success !== true) {
   failures.push('cloudflare_arbitrary_recipient_probe_failed');

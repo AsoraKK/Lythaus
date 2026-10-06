@@ -74,6 +74,8 @@ jobs:
             echo "- PlanetScale: \`$(jq -r '.planetscale.status // "UNKNOWN"' "$report")\`"
             echo "- Cloudflare sending domain enabled: \`$(jq -r '.cloudflare.subdomainApi.enabled // false' "$report")\`"
             echo "- Cloudflare analytics available: \`$(jq -r '.cloudflare.analytics.available // false' "$report")\`"
+            echo "- Dispatch Queue readiness: \`$(jq -r '.cloudflare.dispatchQueue.status // "UNKNOWN"' "$report")\` (\`$(jq -r '.cloudflare.dispatchQueue.reason // "none"' "$report")\`)"
+            echo "- Remaining sending quota: \`$(jq -r '.cloudflare.remainingSendingQuota.status // "UNKNOWN"' "$report")\` (aggregate analytics do not establish quota)"
             echo "- Arbitrary-recipient provider probe accepted: \`$(jq -r '.cloudflare.arbitraryRecipientProbe.success // false' "$report")\`"
             echo "- Arbitrary-recipient provider HTTP status: \`$(jq -r '.cloudflare.arbitraryRecipientProbe.httpStatus // "unknown"' "$report")\`"
             echo "- Failures: \`$(jq -c '.failures // []' "$report")\`"
