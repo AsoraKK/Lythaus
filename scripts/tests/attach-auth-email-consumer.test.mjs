@@ -44,6 +44,7 @@ function fixture(options = {}) {
     }
     if (url.endsWith(`/queues/${queueId}/consumers`)) {
       consumerReads += 1;
+      if (options.existingCapDrift && consumerReads === 1) consumer.settings.max_concurrency = 2;
       result = attached ? [consumer] : options.consumerRace && consumerReads === 2 ? [consumer] : [];
     } else if (url.endsWith(`/queues/${queueId}/metrics`)) {
       if (options.metricsDenied) return { httpStatus: 403, body: { success: false, errors: [{ code: 10000, message: 'private-fixture-marker' }] } };
@@ -120,6 +121,14 @@ test('existing verified attachment is not duplicated', async () => {
   const f = fixture({ attached: true });
   const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, apply: true, now });
   assert.equal(receipt.status, 'ALREADY_ATTACHED_VERIFIED');
+  assert.equal(writes(f).length, 0);
+});
+
+test('existing attachment with newly drifted settings remains blocked and is not duplicated', async () => {
+  const f = fixture({ attached: true, existingCapDrift: true });
+  const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, apply: true, now });
+  assert.equal(receipt.status, 'BLOCKED');
+  assert.equal(receipt.reason, 'existing_consumer_requires_review');
   assert.equal(writes(f).length, 0);
 });
 

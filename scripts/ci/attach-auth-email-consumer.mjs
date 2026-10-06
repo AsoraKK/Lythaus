@@ -60,6 +60,9 @@ export async function attachAuthEmailConsumer({ requestJson, apply = false, now 
     if (!Array.isArray(consumers)) return stop('consumer_list_not_verified');
     if (consumers.length !== 0 || receipt.before.reportedConsumerCount !== 0 || receipt.before.observedConsumerCount !== 0) {
       if (consumers.length === 1 && receipt.before.status === 'VERIFIED') {
+        const existingQueue = await read(queueBase, 'existing_attachment_details');
+        try { assertPromptDispatchConsumer({ ...existingQueue, consumers }); }
+        catch { return stop('existing_consumer_requires_review'); }
         receipt.status = 'ALREADY_ATTACHED_VERIFIED';
         return receipt;
       }
