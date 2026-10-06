@@ -11,6 +11,43 @@ const validIdentifier = value => typeof value === 'string' && /^[0-9a-f]{32}$/i.
 const hash = value => validIdentifier(value) ? `sha256:${createHash('sha256').update(value).digest('hex')}` : null;
 const name = queue => queue?.queue_name ?? queue?.name;
 
+function fieldEvidence(container, field) {
+  const value = container[field];
+  return { present: Object.hasOwn(container, field),
+    type: value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value,
+    valueHash: typeof value === 'string' && value.length >= 1 && value.length <= 128 && !/[^a-zA-Z0-9_-]/.test(value)
+      ? `sha256:${createHash('sha256').update(value).digest('hex')}` : null };
+}
+
+function environmentEvidence(container) {
+  return Object.fromEntries(['environment', 'environment_name'].map(field => [field, {
+    ...fieldEvidence(container, field), matchesProduction: container[field] === 'production',
+    matchesDevelopment: container[field] === 'development',
+  }]));
+}
+
+function workerFieldEvidence(container, field) {
+  const value = container[field], reference = object(value);
+  return { ...fieldEvidence(container, field), valueMatchesExpectedWorker: value === WORKER,
+    reference: value && typeof value === 'object' && !Array.isArray(value) ? {
+      identityFields: Object.fromEntries(['name', 'id', 'script_name'].map(key => [key, {
+        ...fieldEvidence(reference, key), valueMatchesExpectedWorker: reference[key] === WORKER,
+      }])),
+      environmentFields: environmentEvidence(reference),
+    } : null };
+}
+
+function pauseEvidence(value) {
+  const container = object(value), settings = object(container.settings);
+  return Object.fromEntries([
+    ['settings.delivery_paused', settings, 'delivery_paused'], ['delivery_paused', container, 'delivery_paused'],
+    ['settings.paused', settings, 'paused'], ['paused', container, 'paused'],
+  ].map(([location, source, field]) => [location, {
+    present: Object.hasOwn(source, field), type: source[field] === null ? 'null' : Array.isArray(source[field]) ? 'array' : typeof source[field],
+    booleanValue: typeof source[field] === 'boolean' ? source[field] : null,
+  }]));
+}
+
 function apiEvidence(response) {
   const body = object(response?.body);
   return {
@@ -24,11 +61,11 @@ export function consumerEvidence(value) {
   return {
     idHash: hash(consumer.consumer_id),
     type: ['worker', 'http_pull'].includes(consumer.type) ? consumer.type : 'unknown',
+    typeField: fieldEvidence(consumer, 'type'),
     expectedWorkerMatches: consumer.script_name === WORKER,
-    workerIdentityFields: Object.fromEntries(['script_name', 'script', 'service'].map(field => [field, {
-      present: Object.hasOwn(consumer, field), type: consumer[field] === null ? 'null' : typeof consumer[field],
-      valueMatchesExpectedWorker: consumer[field] === WORKER,
-    }])),
+    workerIdentityFields: Object.fromEntries(['script_name', 'script', 'service', 'worker'].map(field => [field, workerFieldEvidence(consumer, field)])),
+    environmentFields: environmentEvidence(consumer), namespaceField: fieldEvidence(consumer, 'namespace'),
+    pauseFields: pauseEvidence(consumer),
     expectedDeadLetterMatches: consumer.dead_letter_queue === LIFECYCLE_DLQ,
     batchSize: number(settings.batch_size), maxWaitTimeMs: number(settings.max_wait_time_ms),
     maxRetries: number(settings.max_retries), maxConcurrency: number(settings.max_concurrency),
@@ -44,7 +81,7 @@ export async function captureAuthEmailQueueEvidence({ accountId, requestJson }) 
     queue: LIFECYCLE_QUEUE, expectedWorker: WORKER, expectedDeadLetterQueue: LIFECYCLE_DLQ,
     api: { list: null, details: null }, lifecycleMatches: 0, deadLetterMatches: 0,
     inventory: { complete: false, page: null, perPage: null, count: null, totalCount: null, totalPages: null },
-    lifecycleIdHash: null, deadLetterIdHash: null,
+    lifecycleIdHash: null, deadLetterIdHash: null, listing: null, pauseFields: null,
     deliveryPaused: null, deliveryPausedField: null, deliveryDelaySeconds: null, reportedConsumerCount: null, observedConsumerCount: null, consumers: [],
     piiIncluded: false, messagesRead: false, mutationPerformed: false,
   };
@@ -79,6 +116,10 @@ export async function captureAuthEmailQueueEvidence({ accountId, requestJson }) 
   if (!validIdentifier(queueId) || !validIdentifier(deadLetterId)) return stop('email_dispatch_existing_queue_identity_unverified');
   evidence.lifecycleIdHash = hash(queueId);
   evidence.deadLetterIdHash = hash(deadLetterId);
+  evidence.listing = { reportedConsumerCount: number(lifecycle[0].consumers_total_count),
+    observedConsumerCount: Array.isArray(lifecycle[0].consumers) ? lifecycle[0].consumers.length : null,
+    pauseFields: pauseEvidence(lifecycle[0]),
+    consumers: Array.isArray(lifecycle[0].consumers) ? lifecycle[0].consumers.slice(0, 2).map(consumerEvidence) : [] };
   const details = await read(`${base}/${queueId}`);
   evidence.api.details = apiEvidence(details);
   if (details?.httpStatus !== 200 || object(details?.body).success !== true) return stop('email_dispatch_queue_details_unavailable');
@@ -87,6 +128,7 @@ export async function captureAuthEmailQueueEvidence({ accountId, requestJson }) 
   evidence.deliveryPaused = typeof settings.delivery_paused === 'boolean' ? settings.delivery_paused : null;
   evidence.deliveryPausedField = { present: Object.hasOwn(settings, 'delivery_paused'),
     type: settings.delivery_paused === null ? 'null' : typeof settings.delivery_paused };
+  evidence.pauseFields = pauseEvidence(queue);
   evidence.deliveryDelaySeconds = number(settings.delivery_delay);
   evidence.reportedConsumerCount = number(queue.consumers_total_count);
   evidence.observedConsumerCount = Array.isArray(queue.consumers) ? queue.consumers.length : null;

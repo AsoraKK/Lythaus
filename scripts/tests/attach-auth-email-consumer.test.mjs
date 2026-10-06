@@ -14,6 +14,7 @@ function fixture(options = {}) {
     consumer[options.consumerIdentityField] = consumer.script_name;
     delete consumer.script_name;
   }
+  Object.assign(consumer, options.consumerFields ?? {});
   const replacementId = '3'.repeat(32);
   const queue = (id = queueId) => ({ queue_name: a.queue, queue_id: id,
     settings: { delivery_delay: 0, delivery_paused: false },
@@ -155,8 +156,11 @@ for (const field of ['script', 'service']) {
     assert.deepEqual(receipt.before.deliveryPausedField, { present: false, type: 'undefined' });
     for (const consumer of [receipt.before.consumers[0], receipt.beforeConsumerList[0]]) {
       assert.equal(consumer.expectedWorkerMatches, false);
-      assert.deepEqual(consumer.workerIdentityFields.script_name, { present: false, type: 'undefined', valueMatchesExpectedWorker: false });
-      assert.deepEqual(consumer.workerIdentityFields[field], { present: true, type: 'string', valueMatchesExpectedWorker: true });
+      assert.deepEqual(consumer.workerIdentityFields.script_name, { present: false, type: 'undefined', valueHash: null, valueMatchesExpectedWorker: false, reference: null });
+      assert.equal(consumer.workerIdentityFields[field].present, true);
+      assert.equal(consumer.workerIdentityFields[field].type, 'string');
+      assert.equal(consumer.workerIdentityFields[field].valueMatchesExpectedWorker, true);
+      assert.match(consumer.workerIdentityFields[field].valueHash, /^sha256:[0-9a-f]{64}$/);
     }
     assert.equal(receipt.mutationAttempted, false);
     assert.equal(writes(f).length, 0);
@@ -180,6 +184,37 @@ test('confirmed attachment with unknown pause preserves both read-back shapes an
   assert.equal(receipt.afterConsumerList[0].workerIdentityFields.script.valueMatchesExpectedWorker, true);
   assert.equal(writes(f).length, 1);
   assert.ok(!JSON.stringify(receipt).includes('private-fixture-marker'));
+});
+
+test('read-only inspection captures bounded Worker references, environments and namespace across all response representations', async () => {
+  const f = fixture({ attached: true, pauseUnknown: true, consumerIdentityField: 'script', consumerFields: {
+    script: { name: a.worker, id: a.worker, script_name: a.worker, environment: 'production', secret: 'private-fixture-marker' },
+    service: a.worker, worker: a.worker, environment: 'production', environment_name: 'development', namespace: 'fixture-namespace',
+  } });
+  const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, now });
+  assert.equal(receipt.status, 'BLOCKED');
+  assert.equal(receipt.mutationAttempted, false);
+  assert.ok(f.calls.every(call => call.method === 'GET'));
+  for (const consumer of [receipt.before.listing.consumers[0], receipt.before.consumers[0], receipt.beforeConsumerList[0]]) {
+    assert.equal(consumer.type, 'worker');
+    assert.equal(consumer.typeField.present, true);
+    assert.equal(consumer.expectedWorkerMatches, false);
+    assert.equal(consumer.workerIdentityFields.script.type, 'object');
+    assert.equal(consumer.workerIdentityFields.script.valueMatchesExpectedWorker, false);
+    assert.equal(consumer.workerIdentityFields.script.reference.identityFields.name.valueMatchesExpectedWorker, true);
+    assert.equal(consumer.workerIdentityFields.script.reference.environmentFields.environment.matchesProduction, true);
+    assert.equal(consumer.workerIdentityFields.service.valueMatchesExpectedWorker, true);
+    assert.equal(consumer.workerIdentityFields.worker.valueMatchesExpectedWorker, true);
+    assert.equal(consumer.environmentFields.environment.matchesProduction, true);
+    assert.equal(consumer.environmentFields.environment_name.matchesDevelopment, true);
+    assert.match(consumer.namespaceField.valueHash, /^sha256:[0-9a-f]{64}$/);
+  }
+  assert.equal(receipt.before.listing.pauseFields['settings.delivery_paused'].booleanValue, false);
+  assert.equal(receipt.before.pauseFields['settings.delivery_paused'].present, false);
+  assert.equal(receipt.before.deliveryPaused, null);
+  const serialized = JSON.stringify(receipt);
+  assert.ok(!serialized.includes('private-fixture-marker'));
+  assert.ok(!serialized.includes('fixture-namespace'));
 });
 
 test('usage is refreshed with a current time window immediately before attachment and remains an estimate', async () => {
