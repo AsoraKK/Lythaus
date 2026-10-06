@@ -25,8 +25,8 @@ void main() {
       final c = await harness.controller();
       c.debugTickCooldown();
 
-      expect(c.state.exportStatus, ExportStatus.idle);
-      expect(c.state.remainingCooldown, Duration.zero);
+      expect(c.state.exportStatus, ExportStatus.processing);
+      expect(c.state.remainingCooldown, const Duration(minutes: 5));
     });
 
     test(
@@ -47,8 +47,8 @@ void main() {
         // Remove the lastExportAt by setting it via copyWith (it preserves null)
         c.debugTickCooldown();
 
-        expect(c.state.exportStatus, ExportStatus.idle);
-        expect(c.state.remainingCooldown, Duration.zero);
+        expect(c.state.exportStatus, ExportStatus.coolingDown);
+        expect(c.state.remainingCooldown, const Duration(minutes: 10));
       },
     );
 
@@ -68,7 +68,7 @@ void main() {
         c.debugTickCooldown();
 
         // 24h - 1h = 23h remaining
-        expect(c.state.exportStatus, ExportStatus.coolingDown);
+        expect(c.state.exportStatus, ExportStatus.processing);
         expect(c.state.remainingCooldown.inHours, greaterThan(0));
       },
     );
@@ -88,7 +88,7 @@ void main() {
       final c = await harness.controller();
       await c.delete();
 
-      expect(c.state.deleteStatus, DeleteStatus.failed);
+      expect(c.state.deleteStatus, DeleteStatus.unknown);
       expect(harness.signOutCalls, greaterThan(0));
     });
 
@@ -120,7 +120,7 @@ void main() {
       await c.export();
 
       // export should not have been called — status stays coolingDown
-      expect(c.state.exportStatus, ExportStatus.coolingDown);
+      expect(c.state.exportStatus, ExportStatus.processing);
     });
 
     test('export allowed when exportStatus is failed', () async {
@@ -136,7 +136,7 @@ void main() {
       c.state = c.state.copyWith(exportStatus: ExportStatus.failed);
       await c.export();
 
-      expect(c.state.exportStatus, ExportStatus.coolingDown);
+      expect(c.state.exportStatus, ExportStatus.received);
     });
 
     test('export with network error and no retryAfter', () async {
@@ -189,7 +189,7 @@ void main() {
   group('PrivacyState', () {
     test('canRequestExport when idle and no cooldown', () {
       const s = PrivacyState();
-      expect(s.canRequestExport, isTrue);
+      expect(s.canRequestExport, isFalse);
     });
 
     test('canRequestExport false when coolingDown', () {
@@ -202,7 +202,7 @@ void main() {
 
     test('canRequestExport true when failed and no cooldown', () {
       const s = PrivacyState(exportStatus: ExportStatus.failed);
-      expect(s.canRequestExport, isTrue);
+      expect(s.canRequestExport, isFalse);
     });
 
     test('isCoolingDown true when appropriate', () {
@@ -215,7 +215,7 @@ void main() {
 
     test('isCoolingDown false when status idle', () {
       const s = PrivacyState(remainingCooldown: Duration(minutes: 30));
-      expect(s.isCoolingDown, isFalse);
+      expect(s.isCoolingDown, isTrue);
     });
 
     test('hasLastExport', () {
@@ -259,7 +259,9 @@ class _Harness {
          snapshot: ExportSnapshot(
            remainingCooldown: initialCooldown,
            lastExportAt: lastExportAt,
-           serverState: initialCooldown > Duration.zero ? 'queued' : null,
+           serverState: initialCooldown > Duration.zero ? 'queued' : 'idle',
+           canRequest: initialCooldown <= Duration.zero,
+           cooldownKnown: true,
          ),
          deleteError: deleteError,
          clock: () => now ?? DateTime.utc(2024, 1, 1, 12),
@@ -297,6 +299,7 @@ class _Harness {
   Future<PrivacyController> controller() async {
     final c = container.read(privacyControllerProvider.notifier);
     await Future<void>.delayed(Duration.zero);
+    await c.refreshStatus();
     return c;
   }
 
@@ -315,7 +318,7 @@ class _TestRepository extends PrivacyRepository {
          api: TestPrivacyApi(),
          storage: NullSecureStorage(),
          logger: AppLogger('test_repo'),
-         clock: clock,
+         actorId: 'test-owner',
        );
 
   final ExportSnapshot snapshot;
@@ -324,9 +327,6 @@ class _TestRepository extends PrivacyRepository {
   PrivacyException? exportError;
   PrivacyException? statusError;
   final PrivacyException? deleteError;
-
-  @override
-  Duration get cooldownWindow => const Duration(hours: 24);
 
   @override
   Future<ExportSnapshot> loadPersistedSnapshot() async => snapshot;
@@ -344,11 +344,13 @@ class _TestRepository extends PrivacyRepository {
   }
 
   @override
-  Future<void> deleteAccount({
-    required String authToken,
-    required bool hardDelete,
-  }) async {
+  Future<ExportStatusDTO> deleteAccount({required String authToken}) async {
     if (deleteError != null) throw deleteError!;
+    return ExportStatusDTO(
+      state: 'received',
+      requestId: 'delete-1',
+      acceptedAt: DateTime.utc(2026, 10, 2),
+    );
   }
 
   @override

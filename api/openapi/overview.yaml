@@ -1,0 +1,129 @@
+paths:
+  /admin/overview:
+    servers:
+      - url: https://admin-api.lythaus.co/api
+    get:
+      operationId: adminOverview
+      tags: [Admin]
+      summary: Read bounded owner-only community aggregates
+      description: Verified Access, current active owner membership and account, existing rate limits and a committed audit are required. No user identities or content are returned. UTC half-open calendar windows compare matching elapsed prior periods only. Current retained visibility and deletion state apply to both windows. Table populations above the bounded snapshot cap are unavailable, not partial totals. Empty post cohorts have no ratio. No provider polling, billing estimate or payment inference is enabled.
+      security: [{ cloudflareAccess: [] }]
+      parameters:
+        - name: period
+          in: query
+          schema: { type: string, enum: [today, mtd, ytd], default: today }
+      responses:
+        '200':
+          description: Source-backed retained-state snapshot with explicit availability and provider gaps.
+          headers:
+            Cache-Control: { schema: { type: string, enum: ['private, no-store'] } }
+            Vary: { schema: { type: string, enum: ['Origin, Authorization, Cf-Access-Jwt-Assertion'] } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOverview' }
+        '400': { description: 'Invalid, duplicate or unsupported period/filter.' }
+        '401': { description: Missing or invalid Cloudflare Access assertion. }
+        '403': { description: Current active owner access is required. }
+        '429': { description: Existing administrator rate limit exceeded. }
+        '503': { description: 'Source query, schema, permissions or audit unavailable; no stale fallback.' }
+components:
+  schemas:
+    OverviewWindow:
+      type: object
+      additionalProperties: false
+      required: [start, end]
+      properties:
+        start: { type: string, format: date-time }
+        end: { type: string, format: date-time }
+    OverviewMetric:
+      type: object
+      additionalProperties: false
+      required: [value, previous, changePercent, availability, reason, source, definition, unit]
+      properties:
+        value: { type: number, minimum: 0, nullable: true }
+        previous: { type: number, minimum: 0, nullable: true }
+        changePercent: { type: number, nullable: true, description: Unavailable for missing data or a zero prior denominator. }
+        availability: { type: string, enum: [available, unavailable] }
+        reason: { type: string, nullable: true }
+        source: { type: string }
+        definition: { type: string }
+        unit: { type: string, enum: [count, ratio] }
+    OverviewProvider:
+      type: object
+      additionalProperties: false
+      required: [enabled, status, reason, sampledAt, accruedCost, finalizedCost, currency, accountingPeriod]
+      properties:
+        enabled: { type: boolean }
+        status: { type: string, enum: [available, unavailable] }
+        reason: { type: string }
+        sampledAt: { type: string, format: date-time, nullable: true }
+        requests: { type: number, nullable: true, minimum: 0 }
+        errors: { type: number, nullable: true, minimum: 0 }
+        latencyMs: { type: number, nullable: true, minimum: 0 }
+        queues: { type: object, nullable: true, additionalProperties: true }
+        storageBytes: { type: number, nullable: true, minimum: 0 }
+        connections: { type: number, nullable: true, minimum: 0 }
+        queryLatencyMs: { type: number, nullable: true, minimum: 0 }
+        accruedCost: { type: number, nullable: true, minimum: 0, description: Accrued estimate only after attribution and currency are verified. }
+        finalizedCost: { type: number, nullable: true, minimum: 0, description: Finalized invoice amount separately from accrued estimates. }
+        currency: { type: string, nullable: true, pattern: '^[A-Z]{3}$' }
+        accountingPeriod:
+          type: object
+          nullable: true
+          additionalProperties: false
+          required: [start, end]
+          properties:
+            start: { type: string, format: date-time }
+            end: { type: string, format: date-time }
+    AdminOverview:
+      type: object
+      additionalProperties: false
+      required: [contractVersion, timezone, sampledAt, period, current, previous, comparable, coverage, cacheTtlSeconds, rowLimit, metrics, gaps, providers, correlationId]
+      properties:
+        contractVersion: { type: string, enum: [overview-v1] }
+        timezone: { type: string, enum: [UTC] }
+        sampledAt: { type: string, format: date-time }
+        period: { type: string, enum: [today, mtd, ytd] }
+        current: { $ref: '#/components/schemas/OverviewWindow' }
+        previous: { $ref: '#/components/schemas/OverviewWindow' }
+        comparable: { type: boolean }
+        coverage: { type: string, enum: [retained_current_state] }
+        cacheTtlSeconds: { type: integer, enum: [60] }
+        rowLimit: { type: integer, enum: [5000] }
+        metrics:
+          type: object
+          additionalProperties: false
+          required: [posts, comments, commentsPerPost, unansweredPosts, uniqueContributors, newRegistrations, subscriptionsFree, subscriptionsPremium, subscriptionsBlack]
+          properties:
+            posts: { $ref: '#/components/schemas/OverviewMetric' }
+            comments: { $ref: '#/components/schemas/OverviewMetric' }
+            commentsPerPost: { $ref: '#/components/schemas/OverviewMetric' }
+            unansweredPosts: { $ref: '#/components/schemas/OverviewMetric' }
+            uniqueContributors: { $ref: '#/components/schemas/OverviewMetric' }
+            newRegistrations: { $ref: '#/components/schemas/OverviewMetric' }
+            subscriptionsFree: { $ref: '#/components/schemas/OverviewMetric' }
+            subscriptionsPremium: { $ref: '#/components/schemas/OverviewMetric' }
+            subscriptionsBlack: { $ref: '#/components/schemas/OverviewMetric' }
+        gaps:
+          type: object
+          additionalProperties: false
+          required: [newVerifiedUsers, returningUsers, retentionRate, quietUsers, upgrades, cancellations, revenue, suspectedAiFlags, confirmedAiClassifications, appealOutcomes]
+          properties:
+            newVerifiedUsers: { type: string }
+            returningUsers: { type: string }
+            retentionRate: { type: string }
+            quietUsers: { type: string }
+            upgrades: { type: string }
+            cancellations: { type: string }
+            revenue: { type: string }
+            suspectedAiFlags: { type: string }
+            confirmedAiClassifications: { type: string }
+            appealOutcomes: { type: string }
+        providers:
+          type: object
+          additionalProperties: false
+          required: [cloudflare, planetscale]
+          properties:
+            cloudflare: { $ref: '#/components/schemas/OverviewProvider' }
+            planetscale: { $ref: '#/components/schemas/OverviewProvider' }
+        correlationId: { type: string }

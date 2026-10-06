@@ -126,7 +126,8 @@ void main() {
     await tester.tap(find.text('Create'));
     await tester.pump();
 
-    expect(find.text('Sign in to use this Alpha feature.'), findsOneWidget);
+    expect(find.text('Sign in to create a post.'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
     expect(find.text('Create Post'), findsNothing);
   });
 }

@@ -6,7 +6,8 @@ function PageLayout({
   children,
   headerActions = null,
   guide = {},
-  className = ''
+  className = '',
+  headingLevel = 1
 }) {
   const {
     title: guideTitle = 'What this page does',
@@ -14,6 +15,7 @@ function PageLayout({
     items = [],
     footnote = ''
   } = guide;
+  const Heading = headingLevel === 2 ? 'h2' : 'h1';
 
   return (
     <section className={['page', 'page--with-guide', className].filter(Boolean).join(' ')}>
@@ -21,7 +23,7 @@ function PageLayout({
         <div className="page-header">
           <div className="page-header-row">
             <div>
-              <h1>{title}</h1>
+              <Heading>{title}</Heading>
               {subtitle ? <p className="page-subtitle">{subtitle}</p> : null}
             </div>
             {headerActions ? (

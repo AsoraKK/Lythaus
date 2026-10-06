@@ -26,7 +26,7 @@ function historyBody(reasonCode, filters, cursor = null) {
     order: filters.order, limit: 25, cursor };
 }
 
-function AccountSupport() {
+function AccountSupport({ inWorkspace = false }) {
   const [access, setAccess] = useState('loading');
   const [email, setEmail] = useState('');
   const [reason, setReason] = useState('');
@@ -112,7 +112,7 @@ function AccountSupport() {
     loadHistory(account, reason.trim().toUpperCase(), selectedFilters, null, ++version.current);
   }
 
-  return <PageLayout title="Account support" subtitle="Owner access · exact-email lookup · read-only account review" guide={GUIDE} className="account-support">
+  return <PageLayout title="Account support" headingLevel={inWorkspace ? 2 : 1} subtitle="Owner access · exact-email lookup · read-only account review" guide={GUIDE} className="account-support">
     {access === 'loading' ? <p role="status">Checking owner access...</p> : null}
     {access === 'denied' ? <div className="notice error" role="alert">Active owner access is required for account support.</div> : null}
     {access === 'unavailable' ? <div className="notice error" role="alert">Owner access could not be checked. Reload this page to retry.</div> : null}

@@ -424,6 +424,7 @@ jobs:
           PRODUCT_INTEGRITY_ACCESS_JWKS_URL: ${{ vars.PRODUCT_INTEGRITY_ACCESS_JWKS_URL }}
           PRODUCT_INTEGRITY_EXTERNAL_BACKUP_HEALTHCHECK_URL: ${{ vars.PRODUCT_INTEGRITY_EXTERNAL_BACKUP_HEALTHCHECK_URL }}
           MATERIALIZE_PRODUCT_INTEGRITY_DEPLOY_CONFIGS: 'true'
+          OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
           CLOUDFLARE_ACCOUNT_ID: e5b7ae46e04698f507b7e4b3d4ef1af0
           CLOUDFLARE_ENVIRONMENT: production
         run: |
@@ -1076,6 +1077,8 @@ jobs:
           REQUIRE_BUDGET_MIGRATION: 'true'
           HYPERDRIVE_VERIFIED_MAIN: 'true'
           AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
+          OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          OWNER_TESTING_CANDIDATE: ${{ inputs.owner_testing_deployment && contains(steps.release_plan.outputs.changed_components_json, '"public"') }}
           PRODUCTION_WORKER_SCOPE: lythaus-public-api-development
           PRODUCTION_PUBLIC_API_BASE_URL: ${{ vars.PRODUCTION_PUBLIC_API_BASE_URL }}
           PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/public-candidate-probe.json
@@ -1100,8 +1103,12 @@ jobs:
           REQUIRE_BUDGET_MIGRATION: 'true'
           HYPERDRIVE_VERIFIED_MAIN: 'true'
           AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
+          OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          OWNER_TESTING_CANDIDATE: ${{ inputs.owner_testing_deployment && contains(steps.release_plan.outputs.changed_components_json, '"admin"') }}
           PRODUCTION_WORKER_SCOPE: lythaus-admin-api-development
           PRODUCTION_ADMIN_API_BASE_URL: ${{ vars.PRODUCTION_ADMIN_API_BASE_URL }}
+          PRODUCTION_WORKER_PREVIOUS_PUBLIC_DEPLOYMENT_PATH: ${{ runner.temp }}/production-cutover/public-before.json
+          PRODUCTION_WORKER_PREVIOUS_PUBLIC_VERSIONS_PATH: ${{ runner.temp }}/production-cutover/public-before-versions.json
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
           PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/admin-candidate-probe.json
@@ -1128,6 +1135,8 @@ jobs:
           REQUIRE_BUDGET_MIGRATION: 'true'
           HYPERDRIVE_VERIFIED_MAIN: 'true'
           AUTHENTICATED_ACCEPTANCE_PROVEN: 'false'
+          OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          OWNER_TESTING_CANDIDATE: ${{ inputs.owner_testing_deployment && contains(steps.release_plan.outputs.changed_components_json, '"jobs"') }}
           PRODUCTION_WORKER_SCOPE: lythaus-jobs-development
           PRODUCTION_JOBS_API_BASE_URL: ${{ vars.PRODUCTION_JOBS_API_BASE_URL }}
           PRODUCTION_WORKER_EVIDENCE_PATH: ${{ runner.temp }}/production-cutover/jobs-candidate-probe.json

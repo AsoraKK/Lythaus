@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 import 'package:lythaus/features/feed/domain/models.dart' as domain;
+import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/ui/components/feed_card.dart';
 import 'package:lythaus/ui/screens/home/custom_feed.dart';
@@ -22,6 +23,15 @@ class _TrendingSuccessNotifier extends TrendingFeedNotifier {
 class _TrendingErrorNotifier extends TrendingFeedNotifier {
   @override
   Future<domain.FeedResponse> build() async => throw Exception('boom');
+}
+
+class _SearchNotifier extends FeedSearchNotifier {
+  _SearchNotifier(this.responseFor);
+
+  final Future<domain.FeedResponse> Function(FeedSearchKey key) responseFor;
+
+  @override
+  Future<domain.FeedResponse> build(FeedSearchKey arg) => responseFor(arg);
 }
 
 domain.Post _post({
@@ -58,6 +68,114 @@ domain.FeedResponse _feedResponse({
 }
 
 void main() {
+  for (final surface in ['search', 'trending']) {
+    for (final trustStatus in ['under_appeal', 'verified_signals_attached']) {
+      testWidgets('$surface preserves public post identity and $trustStatus', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        tester.view.physicalSize = const Size(320, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final hasAppeal = trustStatus == 'under_appeal';
+        final post = domain.Post.fromJson({
+          'id': 'public-fixture',
+          'authorId': 'public-author',
+          'authorUsername': 'Public author',
+          'body': 'A published post.',
+          'publishedAt': '2026-10-02T00:00:00Z',
+          'visibility': 'public',
+          'moderationState': 'allowed',
+          'publicLabel': 'Human-authored',
+          'feedItemDeleted': false,
+          'trustStatus': trustStatus,
+          'timeline': {
+            'created': 'complete',
+            'mediaChecked': 'complete',
+            'moderation': 'complete',
+            if (hasAppeal) 'appeal': 'open',
+          },
+          'hasAppeal': hasAppeal,
+          'proofSignalsProvided': true,
+          'verifiedContextBadgeEligible': !hasAppeal,
+          'featuredEligible': !hasAppeal,
+        });
+        final feed = domain.FeedResponse(
+          posts: [post],
+          totalCount: 1,
+          hasMore: false,
+          page: 1,
+          pageSize: 20,
+        );
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              feedSearchProvider.overrideWith(
+                () => _SearchNotifier((_) async => feed),
+              ),
+              trendingFeedProvider.overrideWith(
+                () => _TrendingSuccessNotifier(feed),
+              ),
+            ],
+            child: MaterialApp(
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: const TextScaler.linear(2)),
+                child: child!,
+              ),
+              home: surface == 'search'
+                  ? const FeedSearchScreen()
+                  : const TrendingFeedScreen(),
+            ),
+          ),
+        );
+        final initialException = tester.takeException();
+        expect(initialException, isNull, reason: 'after initial render');
+        if (surface == 'search') {
+          await tester.enterText(find.byType(TextField), 'public');
+          await tester.testTextInput.receiveAction(TextInputAction.search);
+        }
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: 'after loading results');
+        final card = tester.widget<FeedCard>(find.byType(FeedCard));
+        final item = card.item;
+        expect(
+          [item.authorId, item.trustSummary.trustStatus],
+          ['public-author', trustStatus],
+        );
+        expect(item.feedId, surface);
+        expect(item.title, surface == 'search' ? 'Result' : 'Update');
+        expect(item.authorshipLabel, 'Human-authored');
+        expect(item.trustSummary.timeline.moderation, 'complete');
+        expect(item.trustSummary.timeline.appeal, hasAppeal ? 'open' : null);
+        expect(item.trustSummary.hasAppeal, hasAppeal);
+        expect(item.trustSummary.proofSignalsProvided, isTrue);
+        expect(item.trustSummary.verifiedContextBadgeEligible, !hasAppeal);
+        expect(item.trustSummary.featuredEligible, !hasAppeal);
+        expect(card.canEdit, isFalse);
+        expect(find.byTooltip('Post actions'), findsNothing);
+        expect(
+          find.text(hasAppeal ? 'Under appeal' : 'Verified signals attached'),
+          findsOneWidget,
+        );
+        expect(find.text('Authorship: Human-authored'), findsOneWidget);
+        await tester.ensureVisible(find.text('Trust details'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Trust details'));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: 'after expanding trust');
+        expect(
+          find.bySemanticsLabel(RegExp('^View content history')),
+          findsOneWidget,
+        );
+        semantics.dispose();
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
   testWidgets('custom feed view renders filters and items', (tester) async {
     const feed = FeedModel(
       id: 'custom-1',
@@ -164,7 +282,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          feedSearchProvider('cats').overrideWith((ref) => Future.value(feed)),
+          feedSearchProvider.overrideWith(
+            () => _SearchNotifier((_) async => feed),
+          ),
         ],
         child: const MaterialApp(home: FeedSearchScreen()),
       ),
@@ -178,13 +298,69 @@ void main() {
     expect(find.text('cats'), findsWidgets);
   });
 
+  testWidgets('feed search shows an empty state for an unknown tag', (
+    tester,
+  ) async {
+    const empty = domain.FeedResponse(
+      posts: [],
+      totalCount: 0,
+      hasMore: false,
+      page: 1,
+      pageSize: 25,
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          feedSearchProvider.overrideWith(
+            () => _SearchNotifier((_) async => empty),
+          ),
+        ],
+        child: const MaterialApp(
+          home: FeedSearchScreen(initialQuery: 'unknown'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('No results for “unknown”'), findsOneWidget);
+  });
+
+  testWidgets('feed search explains unavailable and offers retry', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          feedSearchProvider.overrideWith(
+            () => _SearchNotifier(
+              (_) => Future.error(
+                const SocialFeedException(
+                  'Tag search is temporarily unavailable.',
+                  code: 'tag_search_unavailable',
+                ),
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: FeedSearchScreen(initialQuery: 'civic')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tag search is temporarily unavailable.'), findsOneWidget);
+    expect(find.text('Retry search'), findsOneWidget);
+    await tester.tap(find.text('Retry search'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tag search is temporarily unavailable.'), findsOneWidget);
+  });
+
   testWidgets('feed search screen shows error state', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          feedSearchProvider(
-            'down',
-          ).overrideWith((ref) => Future.error(Exception('fail'))),
+          feedSearchProvider.overrideWith(
+            () => _SearchNotifier((_) => Future.error(Exception('fail'))),
+          ),
         ],
         child: const MaterialApp(home: FeedSearchScreen()),
       ),
@@ -194,7 +370,10 @@ void main() {
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
 
-    expect(find.text('Search is unavailable right now.'), findsOneWidget);
+    expect(
+      find.text('Could not load search. Please try again.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('feed search clear button resets query', (tester) async {
@@ -203,7 +382,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          feedSearchProvider('reset').overrideWith((ref) => Future.value(feed)),
+          feedSearchProvider.overrideWith(
+            () => _SearchNotifier((_) async => feed),
+          ),
         ],
         child: const MaterialApp(home: FeedSearchScreen()),
       ),

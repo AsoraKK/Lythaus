@@ -1,4 +1,4 @@
-import { databaseExpectationsFromEnv, databaseReadinessResponse, enqueueTransactionalEmailIntent, inspectDatabaseIdentity, listUserActivity, recordUserActivity, transaction, query, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
+import { databaseExpectationsFromEnv, databaseReadinessResponse, enqueueTransactionalEmailIntent, inspectDatabaseIdentity, listUserActivity, recordUserActivity, transaction, query, createSupportFeedbackRuntime, handleSupportFeedbackRequest, isSupportFeedbackPath, supportAuthentication, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { APPEAL_POLICY, PLATFORM_SAFETY_LIMITS, REPUTATION_POLICY, REWARD_ACCESS_POLICY, REWARD_CATALOG, normalizeUserTier, validateTurnstileResponse, type ActivityCategory, type ActivityEventType, type CreatePostInput, type ReputationEffect, type UserTier } from '@lythaus/contracts';
 import { createPresignedPutUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from '@lythaus/media';
@@ -12,19 +12,25 @@ import { handleAlphaApi } from './authenticity-alpha.ts';
 import { issueAuthSession, revokeAllAuthSessions, rotateAuthSession } from './auth-session-runtime.ts';
 import { lockLoginAccount, lockRefreshSession } from './auth-account-transaction.ts';
 import { expiredRefreshCookie, optionalRefreshCookie, refreshCookie, sessionTransport, sessionTransportResult, validateAuthRequestOrigin } from './auth-session-transport.ts';
-import { requireUncompromisedPassword } from './auth-password-screen.ts';
+import { passwordScreeningFailureLogFields, requireUncompromisedPassword } from './auth-password-screen.ts';
 import { claimRegistrationAddress, establishVerifiedCredential, findRecoveryUser, lockRecoveryAccount, persistRecoveryIntake, recoveryAddressReason, recoveryPlan, recoverySupportReason } from './auth-recovery-policy.ts';
 import { idempotentAuthIntake } from './auth-intake-runtime.ts';
 import { assertDistinctReactionAuthor, contentDeletionPlan, planCommentCreation, planCommentRevision, planPostPublication, planPostRevision, planReactionChange, planRelationshipMutation, replyDepth } from './content-runtime-policy.ts';
 import { assertCommentFeedItemEligibility, assertCustomFeedAvailable, assertFeedItemEligibility, assertNewsBoardItemEligibility, commentPublicLabel, entitlementsForTier, feedResponsePlan, requireNewsBoardAccess, type FeedSurface } from './feed-runtime-policy.ts';
-import { optionalPrivacyRequestType, privacyExportAccessActivity, privacyRequestPlan, requirePrivacyExportDependencies, requirePrivacyExportObject, retentionRulePlan } from './privacy-runtime-policy.ts';
+import { optionalPrivacyRequestType, privacyExportAccessActivity, privacyExportRetryAfter, privacyRequestPlan, requirePrivacyExportDependencies, requirePrivacyExportObject, retentionRulePlan } from './privacy-runtime-policy.ts';
 import { normalizeNotificationDevice, normalizeNotificationPreferences } from './notification-policy.ts';
 import { encodeCursor, enforceContentDeclaration, normalizeCustomFeedRules, pageRequest, reputationBand } from './product-policy.ts';
+import { normalizeTagSearchQuery } from './tag-search-policy.ts';
 import { readBoundedJson } from './request-body-runtime.ts';
 import { parseProfileUpdate } from './profile-runtime-policy.ts';
 import { acceptanceContextToken } from '@lythaus/contracts';
 import { createWaitlistRouteHandler } from './waitlist-handler.ts';
 import { parseWaitlistRequest, requireWaitlistSecrets, verifyWaitlistTurnstile } from './waitlist-runtime-policy.ts';
+import { communityReviewQueue, readCommunityAppeal } from '../../../packages/db/src/community-appeal-access.ts';
+import { castCommunityBallot, submitCommunityAppeal, withdrawCommunityAppeal, type CommunityBallotInput } from '../../../packages/db/src/community-appeal-mutations.ts';
+import { MONTHLY_REPUTATION_POLICY_VERSION } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
+import { recordMonthlyEmailControl } from '../../../packages/db/src/monthly-maintenance.ts';
+import { handleMonthlyReputationRead } from './monthly-reputation-routes.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -35,6 +41,12 @@ interface Env extends EnvBindings {
   JOBS_COMPATIBILITY: NonNullable<EnvBindings['JOBS_COMPATIBILITY']>;
   R2_ACCOUNT_ID: string;
   LYTHAUS_CONFIG?: NonNullable<EnvBindings['LYTHAUS_CONFIG']>;
+  COMMUNITY_APPEAL_RULES_VERSION?: string;
+  MONTHLY_REPUTATION_MAINTENANCE_RULES?: string;
+  MONTHLY_REPUTATION_SNAPSHOT_RULES?: string;
+  MONTHLY_REPUTATION_SELECTION_RULES?: string;
+  SUPPORT_FEEDBACK_ENABLED?: string;
+  SUPPORT_FEEDBACK_POLICY?: string;
 }
 
 function hasReadinessAuthorization(request: Request, env: Env): boolean {
@@ -686,6 +698,10 @@ async function verifyEmail(request: Request, env: Env): Promise<Response> {
        VALUES ($1, 'identity.email.verified', 'user', $2, $2, $3::jsonb)`,
       [sourceEventId, userId, JSON.stringify({ userId })],
     );
+    if (env.MONTHLY_REPUTATION_MAINTENANCE_RULES) {
+      await recordMonthlyEmailControl(client, { rulesVersion: env.MONTHLY_REPUTATION_MAINTENANCE_RULES,
+        sourceEventId, verificationTokenId: found.rows[0].id });
+    }
     await writeActivity(client, request, { userId }, sourceEventId, {
       eventType: 'account.email_verified', category: 'account', title: 'You verified your email',
       explanation: 'Your registered email was verified. The email address is not copied into this log.',
@@ -864,6 +880,25 @@ function response(request: Request, env: Env, body: unknown, init: ResponseInit 
 function privateResponse(request: Request, env: Env, body: unknown, init: ResponseInit = {}): Response {
   const result = response(request, env, body, init);
   result.headers.set('cache-control', 'private, no-store');
+  return result;
+}
+
+function privateTextResponse(request: Request, env: Env, body: string, init: ResponseInit = {}): Response {
+  const result = new Response(body, init);
+  const origin = corsOrigin(request, env);
+  if (origin) {
+    result.headers.set('access-control-allow-origin', origin);
+    result.headers.set('access-control-allow-credentials', 'true');
+  }
+  result.headers.set('x-correlation-id', correlationId(request));
+  result.headers.set('vary', 'Origin, Authorization');
+  result.headers.set('cache-control', 'private, no-store');
+  if (coordinatorAuthorization(request, env)
+    && request.headers.has('x-lythaus-acceptance-run-id')
+    && request.headers.has('x-lythaus-acceptance-context')) {
+    result.headers.set('x-lythaus-candidate-version', env.WORKER_VERSION.id);
+    result.headers.set('x-lythaus-candidate-release', env.WORKER_VERSION.tag);
+  }
   return result;
 }
 
@@ -2012,6 +2047,12 @@ async function createAppeal(request: Request, env: Env, user: Principal): Promis
   if (!input.caseId) throw new Error('case_id_required');
   const statement = input.statement?.normalize('NFC').trim() ?? '';
   if (!statement || statement.length > 2000) throw new Error('appeal_statement_required');
+  if (env.COMMUNITY_APPEAL_RULES_VERSION) {
+    const result = await transaction(env.DB_APP_FRESH, client => submitCommunityAppeal(client, {
+      userId: user.userId, caseId: input.caseId!, statement, rulesVersion: env.COMMUNITY_APPEAL_RULES_VERSION!,
+    }));
+    return privateResponse(request, env, result, { status: result.created ? 201 : 200 });
+  }
   const appealId = uuidv7();
   const sourceEventId = uuidv7();
   const result = await transaction(env.DB_APP_FRESH, async (client) => {
@@ -2054,6 +2095,9 @@ async function createAppeal(request: Request, env: Env, user: Principal): Promis
 }
 
 async function getAppeal(request: Request, env: Env, user: Principal, appealId: string): Promise<Response> {
+  if (env.COMMUNITY_APPEAL_RULES_VERSION && await isCommunityAppeal(env, appealId)) {
+    return privateResponse(request, env, { appeal: await transaction(env.DB_APP_FRESH, client => readCommunityAppeal(client, user.userId, appealId)) });
+  }
   const result = await query(env.DB_APP_FRESH,
     `SELECT a.id, a.case_id, a.state, a.risk_class, a.policy_version, a.created_at, a.expires_at, a.resolved_at,
             o.reviewer_panel_decision, o.final_decision, o.completed_reviewers, o.state AS outcome_state,
@@ -2068,7 +2112,19 @@ async function getAppeal(request: Request, env: Env, user: Principal, appealId: 
   return privateResponse(request, env, { appeal: result.rows[0] });
 }
 
+async function isCommunityAppeal(env: Env, appealId: string): Promise<boolean> {
+  const result = await query(env.DB_APP_FRESH, 'SELECT 1 FROM moderation.appeals WHERE id = $1 AND policy_version = $2', [appealId, MONTHLY_REPUTATION_POLICY_VERSION]);
+  return result.rowCount === 1;
+}
+
 async function submitAppealVote(request: Request, env: Env, user: Principal, appealId: string): Promise<Response> {
+  if (env.COMMUNITY_APPEAL_RULES_VERSION && await isCommunityAppeal(env, appealId)) {
+    const input = await readJson<Pick<CommunityBallotInput, 'choice' | 'reasonCode' | 'expectedRevision' | 'contextAcknowledged'>>(request, 8 * 1024);
+    const result = await transaction(env.DB_APP_FRESH, client => castCommunityBallot(client, {
+      ...input, appealId, userId: user.userId, idempotencyKey: request.headers.get('idempotency-key')?.trim() ?? '',
+    }));
+    return privateResponse(request, env, result, { status: result.created ? 201 : 200 });
+  }
   const input = await readJson<{ decision?: 'overturn' | 'uphold' }>(request, 8 * 1024);
   if (!input.decision || !['overturn', 'uphold'].includes(input.decision)) throw new Error('appeal_vote_invalid');
   const idempotencyKey = request.headers.get('idempotency-key')?.trim();
@@ -2252,6 +2308,9 @@ async function getPrivacyRequestStatus(request: Request, env: Env, user: Princip
   );
   const row = result.rows[0];
   return privateResponse(request, env, {
+    ...(requestType === 'export' ? {
+      retryAfterSeconds: privacyExportRetryAfter(row?.created_at ?? null, Date.now(), PLATFORM_SAFETY_LIMITS.exportCooldownDays),
+    } : {}),
     request: row ? {
       requestId: row.id,
       requestType: row.request_type,
@@ -2572,7 +2631,24 @@ async function getNewsBoard(request: Request, env: Env, user: Principal): Promis
 }
 
 async function discoveryFeed(request: Request, env: Env, viewer?: Principal): Promise<Response> {
-  const page = pageRequest(new URL(request.url));
+  const url = new URL(request.url);
+  const tagValues = url.searchParams.getAll('tag');
+  if (tagValues.length > 1) throw new Error('invalid_tag_search');
+  const tag = tagValues.length === 1 ? normalizeTagSearchQuery(tagValues[0]) : undefined;
+  const page = pageRequest(url);
+  if (tag !== undefined) {
+    await enforceRateLimit(request, env, 'feed:tag-search', 30);
+    // A bounded page size and statement timeout cannot bound the rows examined
+    // by an unindexed body scan. Keep tag search unavailable until a
+    // migration-backed exact-token index has passed representative-scale tests.
+    throw new Error('tag_search_unavailable');
+  }
+  const queryValues: unknown[] = [
+    viewer?.userId ?? null,
+    page.cursor?.timestamp ?? null,
+    page.cursor?.id ?? null,
+    page.limit + 1,
+  ];
   const result = await query<FeedResponseCandidate & { id: string; publishedAt: string }>(env.DB_APP_FRESH,
     `SELECT p.id, p.author_id AS "authorId", p.body, p.published_at AS "publishedAt",
             p.visibility, p.moderation_state AS "moderationState", (p.deleted_at IS NOT NULL) AS "feedItemDeleted",
@@ -2599,8 +2675,7 @@ async function discoveryFeed(request: Request, env: Env, viewer?: Principal): Pr
           AND NOT EXISTS (SELECT 1 FROM social.mutes m WHERE m.muter_id = $1 AND m.muted_id = p.author_id)
         ))
         AND ($2::timestamptz IS NULL OR (p.published_at, p.id) < ($2::timestamptz, $3::uuid))
-      ORDER BY p.published_at DESC, p.id DESC LIMIT $4`,
-    [viewer?.userId ?? null, page.cursor?.timestamp ?? null, page.cursor?.id ?? null, page.limit + 1]);
+      ORDER BY p.published_at DESC, p.id DESC LIMIT $4`, queryValues);
   assertFeedResponseCandidates(result.rows, viewer);
   const hasMore = result.rows.length > page.limit;
   const items = result.rows.slice(0, page.limit);
@@ -3089,6 +3164,24 @@ export default {
       if (url.pathname === '/api/waitlist') return await waitlistRoute(request, env);
       const rateLimit = rateLimitPlan(url.pathname);
       await enforceRateLimit(request, env, rateLimit.scope, rateLimit.limit);
+      if (isSupportFeedbackPath(url.pathname, 'member')) {
+        if (env.SUPPORT_FEEDBACK_ENABLED !== 'true') {
+          return privateResponse(request, env, { error: 'feature_disabled' }, { status: 404 });
+        }
+        const service = await createSupportFeedbackRuntime({
+          binding: env.DB_APP_FRESH,
+          policy: env.SUPPORT_FEEDBACK_POLICY,
+          authentication: supportAuthentication(env),
+          channel: 'member',
+        });
+        return await handleSupportFeedbackRequest({
+          request,
+          service,
+          channel: 'member',
+          respond: (body, status) => privateResponse(request, env, body, { status }),
+          readBody: (bodyRequest, maxBytes) => readBoundedJson(bodyRequest, maxBytes),
+        }) ?? privateResponse(request, env, { error: 'not_found' }, { status: 404 });
+      }
       const ownerItem = url.pathname.match(/^\/api\/(posts|comments)\/([^/]+)\/owner-view$/);
       if (request.method === 'GET' && ownerItem) {
         const ownerContent = await handleOwnerContentRead(request, {
@@ -3232,6 +3325,18 @@ export default {
         const user = await principal(request, env);
         return await idempotentMutation(request, env, user.userId, 'appeal.create', () => createAppeal(request, env, user));
       }
+      if (request.method === 'GET' && url.pathname === '/api/appeals/review/queue') {
+        const user = await principal(request, env);
+        if (!env.COMMUNITY_APPEAL_RULES_VERSION) throw new Error('community_appeals_unavailable');
+        return privateResponse(request, env, await transaction(env.DB_APP_FRESH, client => communityReviewQueue(client, user.userId, env.COMMUNITY_APPEAL_RULES_VERSION!)));
+      }
+      const communityWithdraw = url.pathname.match(/^\/api\/appeals\/([^/]+)\/withdraw$/);
+      if (request.method === 'POST' && communityWithdraw) {
+        const user = await principal(request, env);
+        if (!env.COMMUNITY_APPEAL_RULES_VERSION) throw new Error('community_appeals_unavailable');
+        return await idempotentMutation(request, env, user.userId, 'appeal.withdraw', async () =>
+          privateResponse(request, env, await transaction(env.DB_APP_FRESH, client => withdrawCommunityAppeal(client, communityWithdraw[1], user.userId))));
+      }
       const appeal = url.pathname.match(/^\/api\/appeals\/([^/]+)$/);
       if (request.method === 'GET' && appeal) return await getAppeal(request, env, await principal(request, env), appeal[1]);
       const appealVote = url.pathname.match(/^\/api\/appeals\/([^/]+)\/vote$/);
@@ -3245,6 +3350,23 @@ export default {
         return await idempotentMutation(request, env, user.userId, 'appeal.recuse', () => recuseAppealReview(request, env, user, appealRecusal[1]), true);
       }
       if (request.method === 'GET' && url.pathname === '/api/appeals/reviewer/assignments') return await reviewerAssignments(request, env, await principal(request, env));
+      const monthlyReportRoute = url.pathname.match(/^\/api\/reputation\/me\/reports\/monthly\/([^/]+)$/);
+      const monthlyReportCsvRoute = url.pathname.match(/^\/api\/reputation\/me\/reports\/monthly\/([^/]+)\/export\.csv$/);
+      if (request.method === 'GET' && (monthlyReportRoute || monthlyReportCsvRoute || url.pathname === '/api/rewards/me/monthly')) {
+        const monthlyReputationResponse = await handleMonthlyReputationRead(request, {
+          authenticate: async (incoming) => {
+            const user = await principal(incoming, env);
+            return { userId: user.userId };
+          },
+          transaction: (work) => transaction(env.DB_APP_FRESH, work),
+          snapshotRulesVersion: env.MONTHLY_REPUTATION_SNAPSHOT_RULES,
+          selectionRulesVersion: env.MONTHLY_REPUTATION_SELECTION_RULES,
+          respond: (body, status, headers = {}) => typeof body === 'string'
+            ? privateTextResponse(request, env, body, { status, headers })
+            : privateResponse(request, env, body, { status, headers }),
+        });
+        if (monthlyReputationResponse) return monthlyReputationResponse;
+      }
       if (request.method === 'GET' && url.pathname === '/api/reputation/me') {
         const user = await principal(request, env);
         return await reputationSummary(request, env, user.userId, true);
@@ -3363,6 +3485,7 @@ export default {
         errorCode: classified.exposedCode,
         internalErrorCode: classified.internalCode,
         route: new URL(request.url).pathname,
+        ...passwordScreeningFailureLogFields(error),
       });
       const clearCookie = new URL(request.url).pathname === '/api/auth/refresh'
         && request.headers.get('x-lythaus-auth-transport') === 'cookie-v1' && classified.status === 401;

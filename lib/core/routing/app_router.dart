@@ -3,6 +3,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lythaus/core/routing/auth_return_location.dart';
+import 'package:lythaus/ui/screens/home/feed_search_screen.dart';
+import 'package:lythaus/ui/screens/home/trending_feed_screen.dart';
+import 'package:lythaus/features/notifications/presentation/notifications_screen.dart';
+import 'package:lythaus/features/privacy/privacy_settings_screen.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
@@ -16,9 +21,12 @@ import 'package:lythaus/ui/screens/adaptive_shell.dart';
 import 'package:lythaus/ui/screens/profile/profile_screen.dart';
 import 'package:lythaus/ui/screens/profile/optional_profile_screen.dart';
 import 'package:lythaus/ui/screens/profile/settings_screen.dart';
+import 'package:lythaus/ui/screens/profile/account_security_screen.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:lythaus/features/authenticity/beta_screen.dart';
 import 'package:lythaus/features/authenticity/alpha_screen.dart';
+import 'package:lythaus/features/support/support_feedback_config.dart';
+import 'package:lythaus/features/support/presentation/support_feedback_screen.dart';
 
 /// Route name constants.
 abstract final class AppRoutes {
@@ -33,6 +41,8 @@ abstract final class AppRoutes {
   static const String notificationSettings = 'notification-settings';
   static const String rewards = 'rewards';
   static const String settings = 'settings';
+  static const String accountSecurity = 'account-security';
+  static const String supportFeedback = 'support-feedback';
 }
 
 String? resolveAppRedirect({
@@ -41,6 +51,7 @@ String? resolveAppRedirect({
   required bool isGuest,
   String? pendingCode,
   bool profileSetupRequested = false,
+  Uri? requestedUri,
 }) {
   final isLoggedIn = user != null || isGuest;
   final isOnLogin = matchedLocation == '/login';
@@ -48,21 +59,37 @@ String? resolveAppRedirect({
   final isOnStaffModeration = matchedLocation == '/moderation';
   final canReviewModeration =
       user?.role == UserRole.moderator || user?.role == UserRole.admin;
+  final explicitReturn = requestedUri?.queryParameters['returnTo'];
+  final returnTo = safeAuthReturn(explicitReturn);
 
   if (isOnInvite) {
     return null;
   }
+  if (isOnLogin && explicitReturn != null && user == null) return null;
   if (isLoggedIn && pendingCode != null && pendingCode.isNotEmpty) {
     return '/invite/$pendingCode';
   }
-  if (!isLoggedIn && !isOnLogin) return '/login';
+  if (!isLoggedIn && !isOnLogin) {
+    final destination = safeAuthReturn(requestedUri?.toString());
+    return destination == '/' ? '/login' : signInLocation(destination);
+  }
   if (matchedLocation == '/profile/setup' && user == null) return '/';
   if (user != null &&
       profileSetupRequested &&
       matchedLocation != '/profile/setup') {
-    return '/profile/setup';
+    final destination = isOnLogin
+        ? returnTo
+        : safeAuthReturn(requestedUri?.toString());
+    return destination == '/'
+        ? '/profile/setup'
+        : Uri(
+            path: '/profile/setup',
+            queryParameters: {'returnTo': destination},
+          ).toString();
   }
-  if (isLoggedIn && isOnLogin) return '/';
+  if (isLoggedIn && isOnLogin) {
+    return requestedUri?.queryParameters['entry'] == '1' ? null : returnTo;
+  }
   if (isOnStaffModeration && !canReviewModeration) return '/';
   return null;
 }
@@ -86,6 +113,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         isGuest: ref.read(guestModeProvider),
         pendingCode: ref.read(pendingInviteCodeProvider),
         profileSetupRequested: ref.read(profileSetupRequestedProvider),
+        requestedUri: state.uri,
       );
     },
     routes: [
@@ -93,13 +121,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         name: AppRoutes.login,
         path: '/login',
-        builder: (context, state) =>
-            const ReadingPane(child: AuthChoiceScreen()),
+        builder: (context, state) => ReadingPane(
+          child: AuthChoiceScreen(
+            onContinueAsGuest: () => context.go(
+              safeAuthReturn(state.uri.queryParameters['returnTo']),
+            ),
+          ),
+        ),
       ),
       GoRoute(
         name: AppRoutes.profileSetup,
         path: '/profile/setup',
-        builder: (context, state) => const OptionalProfileScreen(),
+        builder: (context, state) => OptionalProfileScreen(
+          returnTo: safeAuthReturn(state.uri.queryParameters['returnTo']),
+        ),
       ),
 
       // Invite redemption — top-level public route so anonymous users can
@@ -121,11 +156,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ).toString(),
       ),
       GoRoute(
-        name: AppRoutes.settings,
-        path: '/settings',
-        builder: (context, state) => const ReadingPane(child: SettingsScreen()),
-      ),
-      GoRoute(
         path: '/authenticity',
         builder: (context, state) => const AuthenticityPrivateAlphaScreen(),
       ),
@@ -138,13 +168,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/',
         builder: (context, state) => AdaptiveShell(
           initialIndex: switch (state.uri.queryParameters['tab']) {
-            'create' => ref.read(guestModeProvider) ? 0 : 1,
+            'create' => 1,
             'profile' => 2,
             'rewards' => 3,
             _ => 0,
           },
         ),
         routes: [
+          GoRoute(
+            path: 'search',
+            builder: (context, state) => FeedSearchScreen(
+              initialQuery: state.uri.queryParameters['q'] ?? '',
+            ),
+          ),
+          GoRoute(
+            path: 'trending',
+            builder: (context, state) => const TrendingFeedScreen(),
+          ),
+          GoRoute(
+            path: 'notifications',
+            builder: (context, state) => const NotificationsScreen(),
+          ),
           // Post detail
           GoRoute(
             name: AppRoutes.post,
@@ -177,11 +221,34 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // Notification settings
           GoRoute(
-            name: AppRoutes.notificationSettings,
-            path: 'settings/notifications',
-            builder: (context, state) => const NotificationsSettingsScreen(),
+            name: AppRoutes.settings,
+            path: 'settings',
+            builder: (context, state) =>
+                const ReadingPane(child: SettingsScreen()),
+            routes: [
+              GoRoute(
+                path: 'privacy',
+                builder: (context, state) => const PrivacySettingsScreen(),
+              ),
+              GoRoute(
+                name: AppRoutes.accountSecurity,
+                path: 'security',
+                builder: (context, state) => const AccountSecurityScreen(),
+              ),
+              GoRoute(
+                name: AppRoutes.notificationSettings,
+                path: 'notifications',
+                builder: (context, state) =>
+                    const NotificationsSettingsScreen(),
+              ),
+              if (supportFeedbackEnabled)
+                GoRoute(
+                  name: AppRoutes.supportFeedback,
+                  path: 'support',
+                  builder: (context, state) => const SupportFeedbackScreen(),
+                ),
+            ],
           ),
         ],
       ),

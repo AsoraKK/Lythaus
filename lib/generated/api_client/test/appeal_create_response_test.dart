@@ -27,5 +27,10 @@ void main() {
       // TODO
     });
 
+    // bool created
+    test('to test the property `created`', () async {
+      // TODO
+    });
+
   });
 }

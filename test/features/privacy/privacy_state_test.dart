@@ -3,15 +3,16 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('PrivacyState', () {
-    test('canRequestExport true when idle and no cooldown', () {
+    test('unknown state cannot authorize export', () {
       const state = PrivacyState();
-      expect(state.canRequestExport, isTrue);
+      expect(state.canRequestExport, isFalse);
     });
 
     test('canRequestExport true after failure when cooldown elapsed', () {
       const state = PrivacyState(
         exportStatus: ExportStatus.failed,
         remainingCooldown: Duration.zero,
+        exportAllowed: true,
       );
       expect(state.canRequestExport, isTrue);
     });

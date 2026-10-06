@@ -14,7 +14,7 @@ const user = { id: '018f0000-0000-7000-8000-000000000001', email: 'synthetic@exa
   subscription_tier: 'free', reputation_score: 0, created_at: '2026-08-01T00:00:00Z', last_login_at: '2026-08-01T00:00:00Z' };
 
 for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (const width of [1440, 390]) {
-  test(`${engineName} ${width}: optional profile partial save, skip, pending state and interruption`, async t => {
+  test(`${engineName} ${width}: optional profile partial save, skip, pending state and interruption`, { timeout: 120000 }, async t => {
     let session = false;
     let profile = { id: user.id, displayName: '', bio: '', moderationState: 'allowed', publicVisibility: true, subscriptionTier: 'free' };
     const patches = [], privateReads = [], errors = [], failedRequests = [], consoleErrors = [];
@@ -66,6 +66,13 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
           reputationStatus: 'active', reputationBand: 'new', policyVersion: 'reputation-v2.0.0',
           pillars: { accountability: 0, contribution: 0, conduct: 0, sourcing: 0, authenticity: 0, reviewReliability: 0 },
           promotionBlockers: [], evaluatedAt: null };
+      } else if (url.pathname === '/api/rewards/me/monthly') {
+        assert.ok(session);
+        assert.equal((await request.allHeaders()).authorization, 'Bearer synthetic-profile-token');
+        body = { state: 'pending', reasonCode: 'approval_unavailable', effectiveMonth: null,
+          currentLevel: null, sourceMonth: null, sourceScore: null,
+          snapshot: { state: 'unavailable', reasonCode: 'approval_unavailable' },
+          selection: { state: 'unavailable', reasonCode: 'approval_unavailable' } };
       } else if (!['/api/feed/discover', '/api/custom-feeds', '/api/subscription/status'].includes(url.pathname)) {
         status = 404; body = { error: 'route_not_found' };
       }

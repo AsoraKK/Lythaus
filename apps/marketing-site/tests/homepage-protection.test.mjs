@@ -88,6 +88,27 @@ const reviewedSpectralRemovedPackages = [
   'micromatch', 'queue-microtask', 'reusify', 'run-parallel', 'to-regex-range',
 ];
 const reviewedSpectralAdapter = 'file:tools/openapi/spectral-glob';
+const reviewedOpenApiDartScripts = {
+  'openapi:gen:dart': {
+    baseline: [
+      'node scripts/clean-openapi-dart-generated.mjs',
+      'openapi-generator-cli generate -g dart-dio -i api/openapi/dist/openapi.json -o lib/generated/api_client --additional-properties=pubName=lythaus_api_client,nullableFields=true,hideGenerationTimestamp=true',
+      'node scripts/remove-openapi-oauth-support.mjs lib/generated/api_client',
+      'node scripts/trim-trailing-whitespace.js lib/generated/api_client',
+    ].join(' && '),
+    reviewed: [
+      'node scripts/clean-openapi-dart-generated.mjs',
+      'openapi-generator-cli generate -g dart-dio -i api/openapi/dist/openapi.json -o lib/generated/api_client --additional-properties=pubName=lythaus_api_client,nullableFields=true,hideGenerationTimestamp=true',
+      'node scripts/fix-openapi-dart-nested-builder-assignment.mjs lib/generated/api_client',
+      'node scripts/remove-openapi-oauth-support.mjs lib/generated/api_client',
+      'node scripts/trim-trailing-whitespace.js lib/generated/api_client',
+    ].join(' && '),
+  },
+  'openapi:test:dart': {
+    baseline: 'node scripts/validate-openapi-dart-client.mjs',
+    reviewed: 'node --test scripts/tests/openapi-dart-nested-builder-assignment.test.mjs && node scripts/validate-openapi-dart-client.mjs',
+  },
+};
 function assertSpectralAdapterReference(dependencies) {
   assert.equal(dependencies['fast-glob'], reviewedSpectralAdapter, 'Spectral must use the exact reviewed local adapter');
 }
@@ -121,10 +142,10 @@ function assertRootToolingLockOnlyHasSecurityPatches(current = JSON.parse(readFi
   }
   assert.deepEqual(current, original, 'Root tooling lock may change only for the reviewed security patches');
 }
-function assertMarketingLockOnlyHasSecurityPatch() {
+const reviewedAstroPolicy = 'file:../../tools/marketing/astro-cache-policy';
+function assertMarketingLockOnlyHasSecurityPatch(current = JSON.parse(readFileSync(path.join(root, 'apps/marketing-site/package-lock.json'), 'utf8'))) {
   const filename = 'apps/marketing-site/package-lock.json';
   const original = JSON.parse(git('show', `${baselineSha}:${filename}`));
-  const current = JSON.parse(readFileSync(path.join(root, filename), 'utf8'));
   assert.deepEqual(current.packages['node_modules/devalue'], {
     version: '5.9.3',
     resolved: 'https://registry.npmjs.org/devalue/-/devalue-5.9.3.tgz',
@@ -132,7 +153,15 @@ function assertMarketingLockOnlyHasSecurityPatch() {
     license: 'MIT',
   }, 'devalue must use the exact reviewed security patch');
   current.packages['node_modules/devalue'] = original.packages['node_modules/devalue'];
-  assert.deepEqual(current, original, 'Marketing lock may change only for the reviewed devalue security patch');
+  assert.equal(current.packages[''].dependencies['http-cache-semantics'], reviewedAstroPolicy, 'Astro must use the exact reviewed local policy');
+  delete current.packages[''].dependencies['http-cache-semantics'];
+  assert.deepEqual(current.packages['node_modules/http-cache-semantics'], { resolved: '../../tools/marketing/astro-cache-policy', link: true },
+    'Astro must link only the exact reviewed local policy');
+  current.packages['node_modules/http-cache-semantics'] = original.packages['node_modules/http-cache-semantics'];
+  assert.deepEqual(current.packages['../../tools/marketing/astro-cache-policy'], { name: '@lythaus/astro-cache-policy', version: '1.0.0', license: 'MIT' },
+    'Astro policy lock metadata must remain exact and dependency-free');
+  delete current.packages['../../tools/marketing/astro-cache-policy'];
+  assert.deepEqual(current, original, 'Marketing lock may change only for the exact reviewed security repairs');
 }
 const authRepairPaths = new Set([
   'package.json',
@@ -155,6 +184,28 @@ const authRepairPaths = new Set([
   'packages/security/src/jwt.ts',
   'packages/security/tests/critical-security-policy.test.mjs',
 ]);
+const reviewedPrivacyStatusFiles = new Map([
+  ['apps/lythaus-public-api/src/privacy-runtime-policy.ts', '8c674c929d35c748b28579b2fdeed3ff4daac2bc'],
+  ['apps/lythaus-public-api/tests/privacy-runtime-policy.test.mjs', '5609e2acf2bcb0fc32a36cee8b0d7f5c102d497e'],
+]);
+const approvedHomepageVisualEdits = new Map([
+  ['apps/marketing-site/src/components/OpeningWordmark.astro', (source) => `${replaceExactText(
+    source,
+    '<rect x="-110" y="-140" width="1220" height="450" />',
+    '<rect x="-600" y="-500" width="2300" height="1150" />',
+    'wordmark beam clip',
+  )}\n`],
+  ['apps/marketing-site/src/styles/home-opening.css', (source) => `${replaceExactText(
+    source,
+    'width: min(100%, 980px);',
+    'width: min(50%, 490px);',
+    'hero wordmark width',
+  )}\n`],
+]);
+function replaceExactText(source, before, after, label) {
+  assert.equal(source.split(before).length - 1, 1, `The ${label} baseline must remain exact`);
+  return source.replace(before, after);
+}
 
 export function assertHomepageFrozen() {
   assert.equal(git('rev-parse', `${baselineSha}^{commit}`), baselineSha, 'Frozen baseline must be available; do not substitute HEAD');
@@ -167,7 +218,19 @@ export function assertHomepageFrozen() {
   const changed = [];
   for (const entry of entries) {
     const [metadata, filename] = entry.split('\t');
+    if (reviewedPrivacyStatusFiles.has(filename)) {
+      assert.equal(git('hash-object', `--path=${filename}`, filename), reviewedPrivacyStatusFiles.get(filename),
+        'Privacy status may change only to the exact reviewed cooldown policy and tests');
+      continue;
+    }
     if (authRepairPaths.has(filename)) continue;
+    if (approvedHomepageVisualEdits.has(filename)) {
+      const original = git('show', `${baselineSha}:${filename}`);
+      const expected = approvedHomepageVisualEdits.get(filename)(original);
+      const current = readFileSync(path.join(root, filename), 'utf8').replaceAll('\r\n', '\n');
+      assert.equal(current, expected, `${filename} may contain only the requested wordmark and beam visual fix`);
+      continue;
+    }
     if (filename === 'package-lock.json') continue;
     if (filename === 'apps/marketing-site/package-lock.json') continue;
     const expected = metadata.split(' ')[2];
@@ -188,6 +251,29 @@ export function assertHomepageFrozen() {
 
 test('homepage visual assets, build and waitlist dependencies remain frozen', () => {
   assertHomepageFrozen();
+});
+
+test('Astro security replacement rejects changed target, identity, license and unrelated dependencies', () => {
+  const readLock = () => JSON.parse(readFileSync(path.join(root, 'apps/marketing-site/package-lock.json'), 'utf8'));
+  for (const [packagePath, field, value] of [
+    ['node_modules/http-cache-semantics', 'resolved', '../../tools/unreviewed'],
+    ['node_modules/http-cache-semantics', 'link', false],
+    ['node_modules/http-cache-semantics', 'version', '4.2.0'],
+    ['../../tools/marketing/astro-cache-policy', 'name', 'http-cache-semantics'],
+    ['../../tools/marketing/astro-cache-policy', 'version', '0.0.0'],
+    ['../../tools/marketing/astro-cache-policy', 'license', 'AGPL-3.0'],
+    ['../../tools/marketing/astro-cache-policy', 'dependencies', { 'http-cache-semantics': '4.2.0' }],
+  ]) {
+    const changed = readLock();
+    changed.packages[packagePath][field] = value;
+    assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(changed), /exact reviewed local policy|metadata must remain exact/);
+  }
+  const changed = readLock();
+  changed.packages[''].dependencies['http-cache-semantics'] = 'file:../../tools/unreviewed';
+  assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(changed), /exact reviewed local policy/);
+  const unrelated = readLock();
+  unrelated.packages['node_modules/astro'].version = '7.3.5';
+  assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(unrelated), /exact reviewed security repairs/);
 });
 
 test('reviewed tooling patches reject a different version, registry URL or integrity', () => {
@@ -282,6 +368,11 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
     const after = JSON.parse(readFileSync(path.join(root, file), 'utf8'));
     after.scripts[script] = after.scripts[script].replace(' --experimental-strip-types', '');
     if (file === 'package.json') {
+      for (const [name, scripts] of Object.entries(reviewedOpenApiDartScripts)) {
+        assert.equal(before.scripts[name], scripts.baseline, `${name} baseline must stay pinned`);
+        assert.equal(after.scripts[name], scripts.reviewed, `${name} must match the exact PR896 normalization script`);
+        before.scripts[name] = scripts.reviewed;
+      }
       assert.equal(after.overrides['brace-expansion'], '5.0.12');
       assert.equal(after.overrides.undici, '7.29.1');
       assert.equal(after.overrides.miniflare.undici, '7.29.1');
@@ -298,6 +389,11 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
       assert.equal(after.overrides['fast-glob'], '$fast-glob', 'Spectral must retain the exact reviewed override');
       before.devDependencies['fast-glob'] = reviewedSpectralAdapter;
       before.overrides['fast-glob'] = '$fast-glob';
+    } else {
+      assert.equal(after.dependencies['http-cache-semantics'], reviewedAstroPolicy);
+      assert.equal(after.overrides['http-cache-semantics'], '$http-cache-semantics');
+      before.dependencies['http-cache-semantics'] = reviewedAstroPolicy;
+      before.overrides['http-cache-semantics'] = '$http-cache-semantics';
     }
     assert.deepEqual(after, before, 'Only the TypeScript test runtime flag and exact reviewed security changes may change; homepage dependencies remain frozen');
   }

@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Lythaus API",
-    "version": "v8",
+    "version": "v9",
     "description": "HTTP contract for the Lythaus API. The active runtime is Cloudflare Workers backed by PlanetScale PostgreSQL through Hyperdrive. Initial authentication is Guest plus Email only. Production releases are coordinated from one reviewed main SHA; the release manifest and provider evidence remain outside this HTTP contract.\n",
     "license": {
       "name": "MIT",
@@ -71,6 +71,14 @@
     {
       "name": "Admin",
       "description": "Lythaus admin moderation and safety operations."
+    },
+    {
+      "name": "SupportFeedback",
+      "description": "Private problem reports and suggestions submitted by authenticated members."
+    },
+    {
+      "name": "AdminSupportFeedback",
+      "description": "Owner-only private support triage, replies, evidence and closure."
     },
     {
       "name": "Privacy",
@@ -3883,7 +3891,7 @@
       "post": {
         "operationId": "appealsCreate",
         "summary": "Submit an appeal",
-        "description": "The case determines standard or high risk; the service assigns independent trained reviewers.",
+        "description": "Dispatches by the activated policy. Monthly-policy cases await safe evidence triage before timed equal-vote community review. Historical cases retain their labelled assignment policy. Unapproved community configuration returns 503.",
         "tags": [
           "Appeals"
         ],
@@ -3966,7 +3974,8 @@
     "/appeals/{id}": {
       "get": {
         "operationId": "appealsGet",
-        "summary": "Get an appeal visible to its appellant or assigned reviewer",
+        "summary": "Get a private appeal under its recorded policy",
+        "description": "Monthly-policy peers receive only safe evidence and their own ballot. Restricted cases are visible only to their appellant without an evidence preview. Live totals and voter identities are never returned. Historical assigned-reviewer access is preserved.",
         "tags": [
           "Appeals"
         ],
@@ -4009,8 +4018,8 @@
     "/appeals/{appealId}/vote": {
       "post": {
         "operationId": "appealsVote",
-        "summary": "Submit one immutable reviewer vote",
-        "description": "Only an independently assigned trained reviewer may vote. A vote is locked and cannot be changed.",
+        "summary": "Record a ballot under the case policy",
+        "description": "Monthly-policy ballots have weight one for every eligible email-verified member and use an expected revision; configured changes stop at the server deadline. Historical cases accept the original immutable assigned-reviewer vote. No live totals or other voter identities are returned.",
         "tags": [
           "Appeals"
         ],
@@ -4176,6 +4185,88 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/appeals/review/queue": {
+      "get": {
+        "operationId": "communityAppealsQueue",
+        "summary": "List private eligible community reviews",
+        "description": "Random case ordering; no selected panel, live counts, voter identities or restricted evidence. Requires approved configuration and a verified eligible account. No suitable cases returns no_case_available.",
+        "tags": [
+          "Appeals"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private eligible case queue.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityAppealQueue"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "description": "Community policy is not activated."
+          }
+        }
+      }
+    },
+    "/appeals/{appealId}/withdraw": {
+      "post": {
+        "operationId": "communityAppealsWithdraw",
+        "summary": "Withdraw an owned community appeal before closure",
+        "tags": [
+          "Appeals"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/appealId"
+          },
+          {
+            "$ref": "#/components/parameters/idempotencyKey"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Withdrawal recorded without a voting penalty.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityAppealWithdrawal"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "503": {
+            "description": "Community route is not configured."
           }
         }
       }
@@ -5263,8 +5354,8 @@
     "/feed/discover": {
       "get": {
         "operationId": "feedDiscover",
-        "summary": "List the public discovery feed",
-        "description": "Anonymous callers receive the public page. Authenticated callers additionally receive block and mute filtering.",
+        "summary": "List the public discovery feed or search a tag",
+        "description": "Anonymous callers receive the public page. Authenticated callers additionally receive block and mute filtering. Supplying tag requests exact hashtag search in chronological order; tag search currently returns unavailable until a migration-backed exact-token index passes representative-scale validation.",
         "tags": [
           "Feed"
         ],
@@ -5280,6 +5371,17 @@
           },
           {
             "$ref": "#/components/parameters/limit"
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "required": false,
+            "description": "Exact hashtag token, with an optional leading",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 65
+            }
           }
         ],
         "responses": {
@@ -5295,6 +5397,34 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "description": "Tag searches are rate limited per source address.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Tag search is unavailable until a migration-backed exact-token index is approved and validated at representative scale.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
           }
         }
       }
@@ -7631,6 +7761,118 @@
         }
       }
     },
+    "/reputation/me/reports/monthly/{sourceMonth}": {
+      "get": {
+        "operationId": "getMyMonthlyReputationReport",
+        "summary": "Read or export my monthly reputation report",
+        "description": "Returns the authenticated member's private JSON report for one calendar source month. It includes selected and omitted assigned weeks, action allowances and accepted/withheld/pending totals, monthly and quarterly email validity, fixed next-calendar-month authority, and correction history. Raw evidence identifiers and private ballots are not returned. The report may remain pending while policy or settlement gates are unresolved.",
+        "tags": [
+          "Reputation"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/monthlySourceMonth"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private monthly report or CSV download.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonthlyReputationReportResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The source month or report format is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonthlyReportError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/reputation/me/reports/monthly/{sourceMonth}/export.csv": {
+      "get": {
+        "operationId": "downloadMyMonthlyReputationReportCsv",
+        "summary": "Export my monthly reputation report as CSV",
+        "description": "Returns the authenticated member's private formula-safe CSV export for one calendar source month. Raw evidence identifiers and private ballots are omitted. The response is marked private and no-store.",
+        "tags": [
+          "Reputation"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/monthlySourceMonth"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private CSV report download.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The source month is invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonthlyReportError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
     "/reputation/me/ledger": {
       "get": {
         "operationId": "reputationLedgerGet",
@@ -8066,6 +8308,47 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/rewards/me/monthly": {
+      "get": {
+        "operationId": "getMyMonthlyRewards",
+        "summary": "Read my monthly level and reward eligibility",
+        "description": "Returns the server-owned fixed monthly level snapshot and the member's current reward selection state. Paid tier changes reward choices only, not reputation scoring. No snapshot, selection or partner state is exposed until its owner-approved configuration is available.",
+        "tags": [
+          "Rewards"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current monthly rewards view; unresolved gates are explicit pending states.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonthlyRewardsMeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
           }
         }
       }
@@ -8790,6 +9073,1700 @@
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/admin/overview": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "adminOverview",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Read bounded owner-only community aggregates",
+        "description": "Verified Access, current active owner membership and account, existing rate limits and a committed audit are required. No user identities or content are returned. UTC half-open calendar windows compare matching elapsed prior periods only. Current retained visibility and deletion state apply to both windows. Table populations above the bounded snapshot cap are unavailable, not partial totals. Empty post cohorts have no ratio. No provider polling, billing estimate or payment inference is enabled.",
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "today",
+                "mtd",
+                "ytd"
+              ],
+              "default": "today"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Source-backed retained-state snapshot with explicit availability and provider gaps.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                }
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "Origin, Authorization, Cf-Access-Jwt-Assertion"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOverview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid, duplicate or unsupported period/filter."
+          },
+          "401": {
+            "description": "Missing or invalid Cloudflare Access assertion."
+          },
+          "403": {
+            "description": "Current active owner access is required."
+          },
+          "429": {
+            "description": "Existing administrator rate limit exceeded."
+          },
+          "503": {
+            "description": "Source query, schema, permissions or audit unavailable; no stale fallback."
+          }
+        }
+      }
+    },
+    "/support/options": {
+      "servers": [
+        {
+          "url": "https://api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "supportFeedbackOptions",
+        "summary": "Read support form policy",
+        "description": "Authenticated member support options. The feature is default-off; a disabled feature returns 404. All responses are private and no-store.",
+        "tags": [
+          "SupportFeedback"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Member support categories and bounded limits",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/SupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportOptions"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportDisabledOrMissing"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/support/problems": {
+      "servers": [
+        {
+          "url": "https://api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "supportProblemList",
+        "summary": "List the member's private problem reports",
+        "tags": [
+          "SupportFeedback"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private problem report history",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/SupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberRequestPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportDisabledOrMissing"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      },
+      "post": {
+        "operationId": "supportProblemSubmit",
+        "summary": "Submit a private problem report",
+        "description": "Requires an Idempotency-Key. Evidence is not uploaded; only bounded request text is accepted. The report is visible to its submitter and authorized Lythaus owners.",
+        "tags": [
+          "SupportFeedback"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemSubmission"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Matching idempotent replay",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/SupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberMutationResult"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Report created",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/SupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberMutationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportDisabledOrMissing"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/SupportConflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/SupportTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/SupportUnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/support/problems/{requestId}": {
+      "servers": [
+        {
+          "url": "https://api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "supportProblemDetail",
+        "summary": "Read a private problem report and public messages",
+        "tags": [
+          "SupportFeedback"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          },
+          {
+            "$ref": "#/components/parameters/MessageBefore"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Request and public conversation visible only to its submitter",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/SupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/support/problems/{requestId}/messages": {
+      "servers": [
+        {
+          "url": "https://api.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "supportProblemReply",
+        "summary": "Reply to a private problem report",
+        "tags": [
+          "SupportFeedback"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Matching idempotent replay",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/SupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberMutationResult"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Reply recorded",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/SupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberMutationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/SupportConflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/SupportTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/SupportUnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/support/suggestions": {
+      "servers": [
+        {
+          "url": "https://api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "supportSuggestionList",
+        "summary": "List the member's private suggestions",
+        "tags": [
+          "SupportFeedback"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private suggestion history",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/SupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberRequestPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportDisabledOrMissing"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      },
+      "post": {
+        "operationId": "supportSuggestionSubmit",
+        "summary": "Submit a private suggestion",
+        "description": "Requires an Idempotency-Key. The suggestion is visible to its submitter and authorized Lythaus owners.",
+        "tags": [
+          "SupportFeedback"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionSubmission"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Matching idempotent replay",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/SupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberMutationResult"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Suggestion created",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/SupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberMutationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportDisabledOrMissing"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/SupportConflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/SupportTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/SupportUnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/support/suggestions/{requestId}": {
+      "servers": [
+        {
+          "url": "https://api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "supportSuggestionDetail",
+        "summary": "Read a private suggestion and public messages",
+        "tags": [
+          "SupportFeedback"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          },
+          {
+            "$ref": "#/components/parameters/MessageBefore"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Request and public conversation visible only to its submitter",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/SupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/support/suggestions/{requestId}/messages": {
+      "servers": [
+        {
+          "url": "https://api.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "supportSuggestionReply",
+        "summary": "Reply to a private suggestion",
+        "tags": [
+          "SupportFeedback"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Matching idempotent replay",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/SupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberMutationResult"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Reply recorded",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/SupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberMutationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/SupportConflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/SupportTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/SupportUnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/support/options": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "adminSupportFeedbackOptions",
+        "summary": "Read owner support workflow policy",
+        "tags": [
+          "AdminSupportFeedback"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owner workflow policy",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/SupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportOptions"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/SupportForbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportDisabledOrMissing"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/support/problems": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "adminSupportProblemQueue",
+        "summary": "Queue private problem reports for owners",
+        "tags": [
+          "AdminSupportFeedback"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owner queue. Contains private request text and submitter IDs; owner access is audited.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/SupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerRequestPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/SupportForbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportDisabledOrMissing"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/support/problems/{requestId}": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "adminSupportProblemDetail",
+        "summary": "Read owner problem report details and private triage records",
+        "tags": [
+          "AdminSupportFeedback"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          },
+          {
+            "$ref": "#/components/parameters/OwnerMessageBefore"
+          },
+          {
+            "$ref": "#/components/parameters/NoteBefore"
+          },
+          {
+            "$ref": "#/components/parameters/EvidenceBefore"
+          },
+          {
+            "$ref": "#/components/parameters/DecisionBefore"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private request, public thread and owner-only notes, evidence and decisions.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/SupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/SupportForbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/support/problems/{requestId}/messages": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "adminSupportProblemReply",
+        "summary": "Send a public owner reply",
+        "tags": [
+          "AdminSupportFeedback"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SupportMutationReplayed"
+          },
+          "201": {
+            "$ref": "#/components/responses/SupportMutationCreated"
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/SupportForbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/SupportConflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/SupportTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/SupportUnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/support/problems/{requestId}/notes": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "adminSupportProblemNote",
+        "summary": "Add a private owner note",
+        "tags": [
+          "AdminSupportFeedback"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerNoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SupportMutationReplayed"
+          },
+          "201": {
+            "$ref": "#/components/responses/SupportMutationCreated"
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/SupportForbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/SupportConflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/SupportTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/SupportUnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/support/problems/{requestId}/evidence": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "adminSupportProblemEvidence",
+        "summary": "Attach owner evidence to a problem report",
+        "description": "Evidence is a bounded description and optional reference string, not an uploaded file. Evidence IDs are scoped to this request and decisions can cite only evidence attached to it.",
+        "tags": [
+          "AdminSupportFeedback"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerEvidenceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SupportMutationReplayed"
+          },
+          "201": {
+            "$ref": "#/components/responses/SupportMutationCreated"
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/SupportForbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/SupportConflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/SupportTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/SupportUnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/support/problems/{requestId}/decision": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "adminSupportProblemDecision",
+        "summary": "Change problem report state and send its public response",
+        "description": "Allowed transitions, terminal states, reason codes, and required evidence types are validated by the server policy. Closure requires same-request evidence where the policy requires it.",
+        "tags": [
+          "AdminSupportFeedback"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerDecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SupportMutationReplayed"
+          },
+          "201": {
+            "$ref": "#/components/responses/SupportMutationCreated"
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/SupportForbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/SupportConflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/SupportTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/SupportUnsupportedMedia"
+          },
+          "422": {
+            "$ref": "#/components/responses/SupportUnprocessable"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/support/suggestions": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "adminSupportSuggestionQueue",
+        "summary": "Queue private suggestions for owners",
+        "tags": [
+          "AdminSupportFeedback"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owner queue. Contains private suggestion text and submitter IDs; owner access is audited.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/SupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerRequestPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/SupportForbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportDisabledOrMissing"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/support/suggestions/{requestId}": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "adminSupportSuggestionDetail",
+        "summary": "Read owner suggestion details and private triage records",
+        "tags": [
+          "AdminSupportFeedback"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          },
+          {
+            "$ref": "#/components/parameters/OwnerMessageBefore"
+          },
+          {
+            "$ref": "#/components/parameters/NoteBefore"
+          },
+          {
+            "$ref": "#/components/parameters/EvidenceBefore"
+          },
+          {
+            "$ref": "#/components/parameters/DecisionBefore"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private request, public thread and owner-only notes, evidence and decisions.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/SupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/SupportForbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/support/suggestions/{requestId}/messages": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "adminSupportSuggestionReply",
+        "summary": "Send a public owner reply",
+        "tags": [
+          "AdminSupportFeedback"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SupportMutationReplayed"
+          },
+          "201": {
+            "$ref": "#/components/responses/SupportMutationCreated"
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/SupportForbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/SupportConflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/SupportTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/SupportUnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/support/suggestions/{requestId}/notes": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "adminSupportSuggestionNote",
+        "summary": "Add a private owner note",
+        "tags": [
+          "AdminSupportFeedback"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerNoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SupportMutationReplayed"
+          },
+          "201": {
+            "$ref": "#/components/responses/SupportMutationCreated"
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/SupportForbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/SupportConflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/SupportTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/SupportUnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/support/suggestions/{requestId}/evidence": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "adminSupportSuggestionEvidence",
+        "summary": "Attach owner evidence to a suggestion",
+        "description": "Evidence is a bounded description and optional reference string, not an uploaded file. Evidence IDs are scoped to this request and decisions can cite only evidence attached to it.",
+        "tags": [
+          "AdminSupportFeedback"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerEvidenceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SupportMutationReplayed"
+          },
+          "201": {
+            "$ref": "#/components/responses/SupportMutationCreated"
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/SupportForbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/SupportConflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/SupportTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/SupportUnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/support/suggestions/{requestId}/decision": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "adminSupportSuggestionDecision",
+        "summary": "Change suggestion state and send its public response",
+        "description": "Allowed transitions, terminal states, reason codes, and required evidence types are validated by the server policy. Closure requires same-request evidence where the policy requires it.",
+        "tags": [
+          "AdminSupportFeedback"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerDecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SupportMutationReplayed"
+          },
+          "201": {
+            "$ref": "#/components/responses/SupportMutationCreated"
+          },
+          "400": {
+            "$ref": "#/components/responses/SupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/SupportUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/SupportForbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/SupportNotFoundOrDisabled"
+          },
+          "405": {
+            "$ref": "#/components/responses/SupportMethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/SupportConflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/SupportTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/SupportUnsupportedMedia"
+          },
+          "422": {
+            "$ref": "#/components/responses/SupportUnprocessable"
+          },
+          "429": {
+            "$ref": "#/components/responses/SupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/SupportUnavailable"
           }
         }
       }
@@ -9841,6 +11818,9 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/SafetyLimited"
           }
         }
       }
@@ -9880,6 +11860,268 @@
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/SafetyLimited"
+          }
+        }
+      }
+    },
+    "/admin/appeals/community/queue": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "adminCommunityAppealsQueue",
+        "summary": "List appeals awaiting safe triage or accountable follow-up",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Case metadata only, for active conflict-free moderation staff.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityAppealTriageQueue"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/SafetyLimited"
+          },
+          "503": {
+            "description": "Community policy is not activated."
+          }
+        }
+      }
+    },
+    "/admin/appeals/{appealId}/triage": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "adminCommunityAppealsTriage",
+        "summary": "Freeze a safe review packet or restrict a submitted appeal",
+        "description": "Active conflict-free moderation staff provide a safe text rendition and rule context. The review clock starts here. Requires approved rules and the active feature flag. This operation cannot alter a community outcome or reopen a triaged packet.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/appealId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommunityAppealTriageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Triage recorded atomically with the case event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityAppealTriageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "The review packet is already frozen."
+          },
+          "429": {
+            "$ref": "#/components/responses/SafetyLimited"
+          },
+          "503": {
+            "description": "Community policy is not activated."
+          }
+        }
+      }
+    },
+    "/admin/appeals/{appealId}/evidence": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "adminCommunityAppealsEvidence",
+        "summary": "Read frozen evidence for safe triage",
+        "description": "Active conflict-free moderation staff only. No ballots or live tally. Restricted material requires a separately approved specialist route and is refused by this endpoint.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/appealId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private frozen evidence, never a peer preview.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityAppealTriageEvidence"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/SafetyLimited"
+          },
+          "503": {
+            "description": "Community route is not configured."
+          }
+        }
+      }
+    },
+    "/admin/reputation/comments/{commentId}/context-review": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api",
+          "description": "Cloudflare Access-protected admin Worker"
+        }
+      ],
+      "post": {
+        "operationId": "adminMonthlyContextReview",
+        "summary": "Record a scoped contextual contribution review",
+        "description": "Requires a verified Cloudflare Access JWT, active owner, administrator, or moderator membership authorised for this review, and an allowed Origin. The handler binds the reviewer to the current comment, thread and parent revisions. Actor identity and rules version come from server context. evidenceReference is a caller-supplied bounded opaque string stored as supplied; the API does not validate its target or sensitivity. Do not include raw content or secrets; this value is omitted from the response. The request cannot submit points. The route remains unavailable until its separate configuration and collection gates are enabled.",
+        "tags": [
+          "Admin",
+          "Reputation"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/commentId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonthlyContextReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The same idempotent review was already recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonthlyContextReviewResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "A new scoped review was recorded with its durable result event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonthlyContextReviewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "description": "The administrator's per-actor request limit was exceeded (120 requests per minute).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonthlyContextReviewError"
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
           }
         }
       }
@@ -11195,6 +13437,11 @@
           "request"
         ],
         "properties": {
+          "retryAfterSeconds": {
+            "description": "Remaining export cooldown calculated from the server policy. Present for requestType=export; independent of the request's processing state.",
+            "type": "integer",
+            "minimum": 0
+          },
           "request": {
             "type": "object",
             "allOf": [
@@ -12678,7 +14925,7 @@
           "caseId",
           "statement"
         ],
-        "description": "The caller may appeal a resolved case for their post or comment, or an account case where the case content ID is the caller's user ID.",
+        "description": "The caller owns the challenged content. Activated monthly-policy appeals freeze a blocked or queued current post/comment decision and await safe triage. Historical policy retains its original resolved-case and account-case rules.",
         "properties": {
           "caseId": {
             "type": "string",
@@ -12696,7 +14943,6 @@
         "required": [
           "appealId",
           "state",
-          "riskClass",
           "policyVersion"
         ],
         "properties": {
@@ -12707,7 +14953,16 @@
           "state": {
             "type": "string",
             "enum": [
-              "open"
+              "submitted",
+              "triaged",
+              "open",
+              "closing",
+              "extended",
+              "resolved_allow",
+              "resolved_retain",
+              "unresolved",
+              "restricted_review",
+              "withdrawn"
             ]
           },
           "riskClass": {
@@ -12720,6 +14975,9 @@
           "policyVersion": {
             "type": "string",
             "example": "appeals-v1.0.0"
+          },
+          "created": {
+            "type": "boolean"
           }
         }
       },
@@ -12810,6 +15068,232 @@
           }
         }
       },
+      "CommunityOwnBallot": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "required": [
+          "revision",
+          "choice",
+          "reason_code",
+          "cast_at"
+        ],
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "choice": {
+            "type": "string",
+            "enum": [
+              "allow",
+              "retain",
+              "recuse",
+              "cannot_assess"
+            ]
+          },
+          "reason_code": {
+            "type": "string",
+            "enum": [
+              "rule_misapplied",
+              "rule_applies",
+              "conflict",
+              "insufficient_context"
+            ]
+          },
+          "cast_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CommunityAppealOutcome": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "required": [
+          "result",
+          "restoration"
+        ],
+        "properties": {
+          "restoration": {
+            "type": "string",
+            "enum": [
+              "not_applicable",
+              "restored",
+              "content_changed_or_deleted",
+              "independent_hold",
+              "publication_rule_hold"
+            ]
+          },
+          "result": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "policyVersion",
+              "rulesVersion",
+              "status",
+              "validBallots",
+              "allow",
+              "retain",
+              "reason"
+            ],
+            "properties": {
+              "policyVersion": {
+                "type": "string",
+                "enum": [
+                  "lythaus-monthly-rewards-2026-10-v1"
+                ]
+              },
+              "rulesVersion": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "resolved_allow",
+                  "resolved_retain",
+                  "unresolved"
+                ]
+              },
+              "validBallots": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "allow": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "retain": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "strict_majority",
+                  "tie",
+                  "no_quorum"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "CommunityAppealEvidence": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "required": [
+          "preview",
+          "ruleContext",
+          "version",
+          "evidenceHash"
+        ],
+        "properties": {
+          "preview": {
+            "type": "string",
+            "maxLength": 100000
+          },
+          "ruleContext": {
+            "type": "string",
+            "maxLength": 4000
+          },
+          "version": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "evidenceHash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      },
+      "CommunityAppealDetail": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "appealId",
+          "policyVersion",
+          "rulesVersion",
+          "state",
+          "reviewClass",
+          "opensAt",
+          "closesAt",
+          "extensions",
+          "question",
+          "ownBallot",
+          "outcome",
+          "evidence"
+        ],
+        "properties": {
+          "appealId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "policyVersion": {
+            "type": "string",
+            "enum": [
+              "lythaus-monthly-rewards-2026-10-v1"
+            ]
+          },
+          "rulesVersion": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "submitted",
+              "triaged",
+              "open",
+              "closing",
+              "extended",
+              "resolved_allow",
+              "resolved_retain",
+              "unresolved",
+              "restricted_review",
+              "withdrawn"
+            ]
+          },
+          "reviewClass": {
+            "type": "string",
+            "enum": [
+              "untriaged",
+              "standard",
+              "restricted"
+            ]
+          },
+          "opensAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "closesAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "extensions": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "question": {
+            "type": "string",
+            "enum": [
+              "Was the challenged rule correctly applied to this content version?"
+            ]
+          },
+          "ownBallot": {
+            "$ref": "#/components/schemas/CommunityOwnBallot"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/CommunityAppealOutcome"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/CommunityAppealEvidence"
+          }
+        }
+      },
       "AppealDetailResponse": {
         "type": "object",
         "required": [
@@ -12817,11 +15301,18 @@
         ],
         "properties": {
           "appeal": {
-            "$ref": "#/components/schemas/AppealDetail"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AppealDetail"
+              },
+              {
+                "$ref": "#/components/schemas/CommunityAppealDetail"
+              }
+            ]
           }
         }
       },
-      "GovernanceAppealVoteRequest": {
+      "LegacyAppealVoteRequest": {
         "type": "object",
         "additionalProperties": false,
         "required": [
@@ -12837,7 +15328,57 @@
           }
         }
       },
-      "GovernanceAppealVoteResponse": {
+      "CommunityBallotRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "choice",
+          "reasonCode",
+          "expectedRevision",
+          "contextAcknowledged"
+        ],
+        "properties": {
+          "choice": {
+            "type": "string",
+            "enum": [
+              "allow",
+              "retain",
+              "recuse",
+              "cannot_assess"
+            ]
+          },
+          "reasonCode": {
+            "type": "string",
+            "enum": [
+              "rule_misapplied",
+              "rule_applies",
+              "conflict",
+              "insufficient_context"
+            ]
+          },
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "contextAcknowledged": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "GovernanceAppealVoteRequest": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/LegacyAppealVoteRequest"
+          },
+          {
+            "$ref": "#/components/schemas/CommunityBallotRequest"
+          }
+        ]
+      },
+      "LegacyAppealVoteResponse": {
         "type": "object",
         "required": [
           "voteId",
@@ -12868,6 +15409,53 @@
             ]
           }
         }
+      },
+      "CommunityBallotResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ballotId",
+          "revision",
+          "choice",
+          "castAt",
+          "created"
+        ],
+        "properties": {
+          "ballotId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "choice": {
+            "type": "string",
+            "enum": [
+              "allow",
+              "retain",
+              "recuse",
+              "cannot_assess"
+            ]
+          },
+          "castAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created": {
+            "type": "boolean"
+          }
+        }
+      },
+      "GovernanceAppealVoteResponse": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/LegacyAppealVoteResponse"
+          },
+          {
+            "$ref": "#/components/schemas/CommunityBallotResponse"
+          }
+        ]
       },
       "AppealRecusalResponse": {
         "type": "object",
@@ -12964,6 +15552,49 @@
                 }
               }
             }
+          }
+        }
+      },
+      "CommunityAppealQueue": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "items"
+        ],
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "available",
+              "no_case_available"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/CommunityAppealDetail"
+            }
+          }
+        }
+      },
+      "CommunityAppealWithdrawal": {
+        "type": "object",
+        "required": [
+          "appealId",
+          "state"
+        ],
+        "properties": {
+          "appealId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "withdrawn"
+            ]
           }
         }
       },
@@ -14248,6 +16879,124 @@
           }
         ]
       },
+      "MonthlyReputationReportResponse": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "reportState",
+          "sourceMonth",
+          "effectiveMonth",
+          "policyVersion",
+          "levelAuthority",
+          "corrections",
+          "report"
+        ],
+        "properties": {
+          "reportState": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "shadow"
+            ]
+          },
+          "reasonCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceMonth": {
+            "type": "string",
+            "pattern": "^\\\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "effectiveMonth": {
+            "type": "string",
+            "pattern": "^\\\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "policyVersion": {
+            "type": "string"
+          },
+          "levelAuthority": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "state",
+              "effectiveMonth"
+            ],
+            "properties": {
+              "state": {
+                "type": "string"
+              },
+              "reasonCode": {
+                "type": "string",
+                "nullable": true
+              },
+              "effectiveMonth": {
+                "type": "string",
+                "nullable": true
+              },
+              "sourceMonth": {
+                "type": "string",
+                "nullable": true
+              },
+              "sourceScore": {
+                "type": "integer",
+                "nullable": true,
+                "minimum": 0,
+                "maximum": 13500
+              },
+              "level": {
+                "type": "integer",
+                "nullable": true,
+                "minimum": 1,
+                "maximum": 5
+              },
+              "levelKind": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "corrections": {
+            "type": "object",
+            "required": [
+              "sourceRevisions",
+              "effectiveSnapshots"
+            ],
+            "properties": {
+              "sourceRevisions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "effectiveSnapshots": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "report": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true
+          }
+        }
+      },
+      "MonthlyReportError": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
       "ReputationLedgerEvent": {
         "type": "object",
         "required": [
@@ -14568,6 +17317,61 @@
           },
           "removed": {
             "type": "boolean"
+          }
+        }
+      },
+      "MonthlyRewardsMeResponse": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "state",
+          "reasonCode",
+          "effectiveMonth",
+          "currentLevel",
+          "sourceMonth",
+          "sourceScore",
+          "snapshot",
+          "selection"
+        ],
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "ready"
+            ]
+          },
+          "reasonCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "effectiveMonth": {
+            "type": "string",
+            "nullable": true
+          },
+          "currentLevel": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 5
+          },
+          "sourceMonth": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceScore": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 13500
+          },
+          "snapshot": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "selection": {
+            "type": "object",
+            "additionalProperties": true
           }
         }
       },
@@ -14929,6 +17733,1382 @@
             "additionalProperties": {
               "type": "integer",
               "minimum": 0
+            }
+          }
+        }
+      },
+      "OverviewWindow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "start",
+          "end"
+        ],
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OverviewMetric": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "value",
+          "previous",
+          "changePercent",
+          "availability",
+          "reason",
+          "source",
+          "definition",
+          "unit"
+        ],
+        "properties": {
+          "value": {
+            "type": "number",
+            "minimum": 0,
+            "nullable": true
+          },
+          "previous": {
+            "type": "number",
+            "minimum": 0,
+            "nullable": true
+          },
+          "changePercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "Unavailable for missing data or a zero prior denominator."
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "source": {
+            "type": "string"
+          },
+          "definition": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "count",
+              "ratio"
+            ]
+          }
+        }
+      },
+      "OverviewProvider": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "enabled",
+          "status",
+          "reason",
+          "sampledAt",
+          "accruedCost",
+          "finalizedCost",
+          "currency",
+          "accountingPeriod"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "sampledAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "requests": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "errors": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "latencyMs": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "queues": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true
+          },
+          "storageBytes": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "connections": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "queryLatencyMs": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0
+          },
+          "accruedCost": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "description": "Accrued estimate only after attribution and currency are verified."
+          },
+          "finalizedCost": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "description": "Finalized invoice amount separately from accrued estimates."
+          },
+          "currency": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^[A-Z]{3}$"
+          },
+          "accountingPeriod": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": false,
+            "required": [
+              "start",
+              "end"
+            ],
+            "properties": {
+              "start": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "end": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      },
+      "AdminOverview": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contractVersion",
+          "timezone",
+          "sampledAt",
+          "period",
+          "current",
+          "previous",
+          "comparable",
+          "coverage",
+          "cacheTtlSeconds",
+          "rowLimit",
+          "metrics",
+          "gaps",
+          "providers",
+          "correlationId"
+        ],
+        "properties": {
+          "contractVersion": {
+            "type": "string",
+            "enum": [
+              "overview-v1"
+            ]
+          },
+          "timezone": {
+            "type": "string",
+            "enum": [
+              "UTC"
+            ]
+          },
+          "sampledAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "today",
+              "mtd",
+              "ytd"
+            ]
+          },
+          "current": {
+            "$ref": "#/components/schemas/OverviewWindow"
+          },
+          "previous": {
+            "$ref": "#/components/schemas/OverviewWindow"
+          },
+          "comparable": {
+            "type": "boolean"
+          },
+          "coverage": {
+            "type": "string",
+            "enum": [
+              "retained_current_state"
+            ]
+          },
+          "cacheTtlSeconds": {
+            "type": "integer",
+            "enum": [
+              60
+            ]
+          },
+          "rowLimit": {
+            "type": "integer",
+            "enum": [
+              5000
+            ]
+          },
+          "metrics": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "posts",
+              "comments",
+              "commentsPerPost",
+              "unansweredPosts",
+              "uniqueContributors",
+              "newRegistrations",
+              "subscriptionsFree",
+              "subscriptionsPremium",
+              "subscriptionsBlack"
+            ],
+            "properties": {
+              "posts": {
+                "$ref": "#/components/schemas/OverviewMetric"
+              },
+              "comments": {
+                "$ref": "#/components/schemas/OverviewMetric"
+              },
+              "commentsPerPost": {
+                "$ref": "#/components/schemas/OverviewMetric"
+              },
+              "unansweredPosts": {
+                "$ref": "#/components/schemas/OverviewMetric"
+              },
+              "uniqueContributors": {
+                "$ref": "#/components/schemas/OverviewMetric"
+              },
+              "newRegistrations": {
+                "$ref": "#/components/schemas/OverviewMetric"
+              },
+              "subscriptionsFree": {
+                "$ref": "#/components/schemas/OverviewMetric"
+              },
+              "subscriptionsPremium": {
+                "$ref": "#/components/schemas/OverviewMetric"
+              },
+              "subscriptionsBlack": {
+                "$ref": "#/components/schemas/OverviewMetric"
+              }
+            }
+          },
+          "gaps": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "newVerifiedUsers",
+              "returningUsers",
+              "retentionRate",
+              "quietUsers",
+              "upgrades",
+              "cancellations",
+              "revenue",
+              "suspectedAiFlags",
+              "confirmedAiClassifications",
+              "appealOutcomes"
+            ],
+            "properties": {
+              "newVerifiedUsers": {
+                "type": "string"
+              },
+              "returningUsers": {
+                "type": "string"
+              },
+              "retentionRate": {
+                "type": "string"
+              },
+              "quietUsers": {
+                "type": "string"
+              },
+              "upgrades": {
+                "type": "string"
+              },
+              "cancellations": {
+                "type": "string"
+              },
+              "revenue": {
+                "type": "string"
+              },
+              "suspectedAiFlags": {
+                "type": "string"
+              },
+              "confirmedAiClassifications": {
+                "type": "string"
+              },
+              "appealOutcomes": {
+                "type": "string"
+              }
+            }
+          },
+          "providers": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "cloudflare",
+              "planetscale"
+            ],
+            "properties": {
+              "cloudflare": {
+                "$ref": "#/components/schemas/OverviewProvider"
+              },
+              "planetscale": {
+                "$ref": "#/components/schemas/OverviewProvider"
+              }
+            }
+          },
+          "correlationId": {
+            "type": "string"
+          }
+        }
+      },
+      "SupportFeedbackPolicy": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "limits",
+          "categories",
+          "states"
+        ],
+        "properties": {
+          "limits": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "titleBytes",
+              "detailBytes",
+              "stepsBytes",
+              "contextBytes",
+              "memberMessageBytes"
+            ],
+            "properties": {
+              "titleBytes": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "detailBytes": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "stepsBytes": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "contextBytes": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "memberMessageBytes": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "categories": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "problem",
+              "suggestion"
+            ],
+            "properties": {
+              "problem": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "suggestion": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "states": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "problem",
+              "suggestion"
+            ],
+            "properties": {
+              "problem": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "suggestion": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "SupportTransition": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "from",
+          "to",
+          "terminal",
+          "reasons",
+          "evidenceTypes"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "problem",
+              "suggestion"
+            ]
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "terminal": {
+            "type": "boolean"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidenceTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "SupportOptions": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "contract",
+          "limits"
+        ],
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "contract": {
+            "$ref": "#/components/schemas/SupportFeedbackPolicy"
+          },
+          "limits": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "initial": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "problem": {
+                "type": "string"
+              },
+              "suggestion": {
+                "type": "string"
+              }
+            }
+          },
+          "transitions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupportTransition"
+            }
+          },
+          "evidenceTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "SupportError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        }
+      },
+      "MemberProblemRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "category",
+          "title",
+          "actual",
+          "expected",
+          "id",
+          "revision",
+          "state",
+          "createdAt",
+          "updatedAt",
+          "memberMessage"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "problem"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "actual": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expected": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reproductionSteps": {
+            "type": "string"
+          },
+          "appVersion": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "state": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "memberMessage": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "MemberSuggestionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "category",
+          "title",
+          "improvement",
+          "benefit",
+          "id",
+          "revision",
+          "state",
+          "createdAt",
+          "updatedAt",
+          "memberMessage"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "suggestion"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "improvement": {
+            "type": "string",
+            "minLength": 1
+          },
+          "benefit": {
+            "type": "string",
+            "minLength": 1
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "state": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "memberMessage": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "MemberSupportRequest": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/MemberProblemRequest"
+          },
+          {
+            "$ref": "#/components/schemas/MemberSuggestionRequest"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind"
+        }
+      },
+      "MemberRequestPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "nextCursor",
+          "snapshotAt"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberSupportRequest"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "snapshotAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ProblemSubmission": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "category",
+          "title",
+          "actual",
+          "expected"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "problem"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "actual": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expected": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reproductionSteps": {
+            "type": "string"
+          },
+          "appVersion": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          }
+        }
+      },
+      "MemberMutationResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "request",
+          "recordId",
+          "replayed"
+        ],
+        "properties": {
+          "request": {
+            "$ref": "#/components/schemas/MemberSupportRequest"
+          },
+          "recordId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "replayed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PublicMessage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "from",
+          "text",
+          "revision",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "from": {
+            "type": "string",
+            "enum": [
+              "member",
+              "owner"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MemberDetail": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "request",
+          "messages",
+          "nextMessageCursor"
+        ],
+        "properties": {
+          "request": {
+            "$ref": "#/components/schemas/MemberSupportRequest"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicMessage"
+            }
+          },
+          "nextMessageCursor": {
+            "type": "integer",
+            "nullable": true
+          }
+        }
+      },
+      "ReplyRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expectedRevision",
+          "message"
+        ],
+        "properties": {
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "SuggestionSubmission": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "category",
+          "title",
+          "improvement",
+          "benefit"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "suggestion"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "improvement": {
+            "type": "string",
+            "minLength": 1
+          },
+          "benefit": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "OwnerProblemRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "category",
+          "title",
+          "actual",
+          "expected",
+          "id",
+          "revision",
+          "state",
+          "createdAt",
+          "updatedAt",
+          "memberMessage",
+          "submitterId"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "problem"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "actual": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expected": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reproductionSteps": {
+            "type": "string"
+          },
+          "appVersion": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "state": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "memberMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "submitterId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "OwnerSuggestionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "category",
+          "title",
+          "improvement",
+          "benefit",
+          "id",
+          "revision",
+          "state",
+          "createdAt",
+          "updatedAt",
+          "memberMessage",
+          "submitterId"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "suggestion"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "improvement": {
+            "type": "string",
+            "minLength": 1
+          },
+          "benefit": {
+            "type": "string",
+            "minLength": 1
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "state": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "memberMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "submitterId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "OwnerSupportRequest": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/OwnerProblemRequest"
+          },
+          {
+            "$ref": "#/components/schemas/OwnerSuggestionRequest"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind"
+        }
+      },
+      "OwnerRequestPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "nextCursor",
+          "snapshotAt"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OwnerSupportRequest"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "snapshotAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PrivateNote": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "text",
+          "revision",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PrivateEvidence": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "type",
+          "description",
+          "reference",
+          "revision",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string",
+            "nullable": true
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PrivateDecision": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "fromState",
+          "toState",
+          "reason",
+          "evidenceIds",
+          "policyVersion",
+          "revision",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fromState": {
+            "type": "string"
+          },
+          "toState": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "evidenceIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "policyVersion": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OwnerPrivateRecords": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "notes",
+          "nextNoteCursor",
+          "evidence",
+          "nextEvidenceCursor",
+          "decisions",
+          "nextDecisionCursor"
+        ],
+        "properties": {
+          "notes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivateNote"
+            }
+          },
+          "nextNoteCursor": {
+            "type": "integer",
+            "nullable": true
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivateEvidence"
+            }
+          },
+          "nextEvidenceCursor": {
+            "type": "integer",
+            "nullable": true
+          },
+          "decisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrivateDecision"
+            }
+          },
+          "nextDecisionCursor": {
+            "type": "integer",
+            "nullable": true
+          }
+        }
+      },
+      "OwnerDetail": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "request",
+          "messages",
+          "nextMessageCursor",
+          "private"
+        ],
+        "properties": {
+          "request": {
+            "$ref": "#/components/schemas/OwnerSupportRequest"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicMessage"
+            }
+          },
+          "nextMessageCursor": {
+            "type": "integer",
+            "nullable": true
+          },
+          "private": {
+            "$ref": "#/components/schemas/OwnerPrivateRecords"
+          }
+        }
+      },
+      "OwnerMutationResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "request",
+          "recordId",
+          "replayed"
+        ],
+        "properties": {
+          "request": {
+            "$ref": "#/components/schemas/OwnerSupportRequest"
+          },
+          "recordId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "replayed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "OwnerNoteRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expectedRevision",
+          "text"
+        ],
+        "properties": {
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "OwnerEvidenceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expectedRevision",
+          "type",
+          "description"
+        ],
+        "properties": {
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "type": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reference": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "OwnerDecisionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expectedRevision",
+          "state",
+          "reason",
+          "memberMessage",
+          "evidenceIds"
+        ],
+        "properties": {
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "state": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "memberMessage": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidenceIds": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "format": "uuid"
             }
           }
         }
@@ -15928,6 +20108,287 @@
           }
         }
       },
+      "CommunityAppealTriageQueue": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "required": [
+                "appealId",
+                "state",
+                "reviewClass",
+                "rulesVersion"
+              ],
+              "properties": {
+                "appealId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "submitted",
+                    "restricted_review",
+                    "unresolved"
+                  ]
+                },
+                "reviewClass": {
+                  "type": "string",
+                  "enum": [
+                    "untriaged",
+                    "standard",
+                    "restricted"
+                  ]
+                },
+                "rulesVersion": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "CommunityAppealTriageRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reviewClass",
+          "reasonCode"
+        ],
+        "description": "Standard routing requires a safe text rendition and rule context. Restricted routing forbids peer evidence. Neither route can replace an already opened review packet.",
+        "properties": {
+          "reviewClass": {
+            "type": "string",
+            "enum": [
+              "standard",
+              "restricted"
+            ]
+          },
+          "safePreview": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100000
+          },
+          "ruleContext": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "reasonCode": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,79}$"
+          }
+        }
+      },
+      "CommunityAppealTriageResponse": {
+        "type": "object",
+        "required": [
+          "appealId",
+          "state",
+          "opensAt",
+          "closesAt"
+        ],
+        "properties": {
+          "appealId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "restricted_review"
+            ]
+          },
+          "opensAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "closesAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "CommunityAppealTriageEvidence": {
+        "type": "object",
+        "required": [
+          "appealId",
+          "state",
+          "challengedDecisionId",
+          "version",
+          "evidenceHash",
+          "evidence"
+        ],
+        "properties": {
+          "appealId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string"
+          },
+          "challengedDecisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "evidenceHash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "evidence": {
+            "type": "object",
+            "required": [
+              "frozen_content",
+              "classifier_evidence"
+            ],
+            "properties": {
+              "frozen_content": {
+                "type": "object",
+                "required": [
+                  "body",
+                  "declaration"
+                ],
+                "properties": {
+                  "body": {
+                    "type": "string"
+                  },
+                  "declaration": {
+                    "type": "string"
+                  }
+                }
+              },
+              "classifier_evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "MonthlyContextReviewRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rubricVersion",
+          "sourceRevisionId",
+          "threadRevisionId",
+          "parentRevisionId",
+          "decision",
+          "reasonCode",
+          "evidenceReference",
+          "expectedRevision",
+          "idempotencyKey"
+        ],
+        "properties": {
+          "rubricVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "sourceRevisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "threadRevisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parentRevisionId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "withheld",
+              "reversed"
+            ]
+          },
+          "reasonCode": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,99}$"
+          },
+          "evidenceReference": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Caller-supplied bounded opaque string stored as supplied; the API does not validate its target or sensitivity. Do not include raw content or secrets. This value is omitted from the response."
+          },
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+          }
+        }
+      },
+      "MonthlyContextReviewResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reviewId",
+          "revision",
+          "sourceEventId",
+          "created"
+        ],
+        "properties": {
+          "reviewId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sourceEventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MonthlyContextReviewError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "correlationId"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "enum": [
+              "rate_limit_exceeded"
+            ]
+          },
+          "correlationId": {
+            "type": "string"
+          }
+        }
+      },
       "ReviewerQualificationState": {
         "type": "string",
         "enum": [
@@ -16055,6 +20516,15 @@
           ]
         }
       },
+      "SupportCacheControl": {
+        "description": "Support content must never be stored in a shared or browser cache.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "private, no-store"
+          ]
+        }
+      },
       "AccountSupportCacheControl": {
         "description": "Account-support responses must not be cached.",
         "schema": {
@@ -16116,6 +20586,15 @@
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$"
         }
       },
+      "appealId": {
+        "name": "appealId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
       "limit100": {
         "name": "limit",
         "in": "query",
@@ -16125,6 +20604,109 @@
           "minimum": 1,
           "maximum": 100,
           "default": 25
+        }
+      },
+      "monthlySourceMonth": {
+        "name": "sourceMonth",
+        "in": "path",
+        "required": true,
+        "description": "Calendar source month in UTC, formatted YYYY-MM.",
+        "schema": {
+          "type": "string",
+          "pattern": "^\\\\d{4}-(0[1-9]|1[0-2])$"
+        }
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "maxLength": 2048
+        }
+      },
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_-]{1,128}$"
+        }
+      },
+      "RequestId": {
+        "name": "requestId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "MessageBefore": {
+        "name": "messageBefore",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "OwnerMessageBefore": {
+        "name": "messageBefore",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "NoteBefore": {
+        "name": "noteBefore",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "EvidenceBefore": {
+        "name": "evidenceBefore",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "DecisionBefore": {
+        "name": "decisionBefore",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "commentId": {
+        "name": "commentId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
         }
       }
     },
@@ -16271,6 +20853,252 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      },
+      "SupportBadRequest": {
+        "description": "Invalid JSON, request field, cursor or query.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/SupportCacheControl"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SupportError"
+            }
+          }
+        }
+      },
+      "SupportUnauthorized": {
+        "description": "Authenticated member session or valid Cloudflare Access assertion is required.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/SupportCacheControl"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SupportError"
+            }
+          }
+        }
+      },
+      "SupportDisabledOrMissing": {
+        "description": "Support is disabled. An enabled installation without its optional proposal schema returns 503.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/SupportCacheControl"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SupportError"
+            }
+          }
+        }
+      },
+      "SupportMethodNotAllowed": {
+        "description": "The path does not accept this HTTP method.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/SupportCacheControl"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SupportError"
+            },
+            "examples": {
+              "unsupportedMethod": {
+                "value": {
+                  "error": "method_not_allowed"
+                }
+              }
+            }
+          }
+        }
+      },
+      "SupportRateLimited": {
+        "description": "The support mutation limit was exceeded.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/SupportCacheControl"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SupportError"
+            }
+          }
+        }
+      },
+      "SupportUnavailable": {
+        "description": "Support policy, authentication, database or optional proposal schema is unavailable; no empty-success fallback is returned.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/SupportCacheControl"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SupportError"
+            }
+          }
+        }
+      },
+      "SupportConflict": {
+        "description": "The idempotency key conflicts with existing content, the request revision changed concurrently, or the request is closed.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/SupportCacheControl"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SupportError"
+            },
+            "examples": {
+              "idempotencyConflict": {
+                "value": {
+                  "error": "support_idempotency_conflict"
+                }
+              },
+              "revisionConflict": {
+                "value": {
+                  "error": "support_revision_conflict"
+                }
+              },
+              "closedRequest": {
+                "value": {
+                  "error": "support_closed"
+                }
+              }
+            }
+          }
+        }
+      },
+      "SupportTooLarge": {
+        "description": "Bounded request body exceeded the limit.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/SupportCacheControl"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SupportError"
+            }
+          }
+        }
+      },
+      "SupportUnsupportedMedia": {
+        "description": "Mutation requires application/json.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/SupportCacheControl"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SupportError"
+            }
+          }
+        }
+      },
+      "SupportNotFoundOrDisabled": {
+        "description": "Request does not exist or is not visible to this actor, or support is disabled (feature_disabled).",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/SupportCacheControl"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SupportError"
+            },
+            "examples": {
+              "notFound": {
+                "value": {
+                  "error": "support_not_found"
+                }
+              },
+              "disabled": {
+                "value": {
+                  "error": "feature_disabled"
+                }
+              }
+            }
+          }
+        }
+      },
+      "SupportForbidden": {
+        "description": "Active owner authorization and an allowed Origin on mutations are required.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/SupportCacheControl"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SupportError"
+            }
+          }
+        }
+      },
+      "SupportMutationReplayed": {
+        "description": "Matching idempotent replay.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/SupportCacheControl"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/OwnerMutationResult"
+            }
+          }
+        }
+      },
+      "SupportMutationCreated": {
+        "description": "Mutation committed.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/SupportCacheControl"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/OwnerMutationResult"
+            }
+          }
+        }
+      },
+      "SupportUnprocessable": {
+        "description": "Requested state transition or evidence requirements are not valid for the configured policy.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/SupportCacheControl"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SupportError"
             }
           }
         }

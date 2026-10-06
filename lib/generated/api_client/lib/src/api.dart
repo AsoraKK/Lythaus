@@ -10,6 +10,7 @@ import 'package:lythaus_api_client/src/auth/basic_auth.dart';
 import 'package:lythaus_api_client/src/auth/bearer_auth.dart';
 import 'package:lythaus_api_client/src/api/activity_api.dart';
 import 'package:lythaus_api_client/src/api/admin_api.dart';
+import 'package:lythaus_api_client/src/api/admin_support_feedback_api.dart';
 import 'package:lythaus_api_client/src/api/appeals_api.dart';
 import 'package:lythaus_api_client/src/api/auth_api.dart';
 import 'package:lythaus_api_client/src/api/authenticity_beta_api.dart';
@@ -27,6 +28,7 @@ import 'package:lythaus_api_client/src/api/reputation_api.dart';
 import 'package:lythaus_api_client/src/api/rewards_api.dart';
 import 'package:lythaus_api_client/src/api/social_api.dart';
 import 'package:lythaus_api_client/src/api/subscription_api.dart';
+import 'package:lythaus_api_client/src/api/support_feedback_api.dart';
 import 'package:lythaus_api_client/src/api/users_api.dart';
 import 'package:lythaus_api_client/src/api/waitlist_api.dart';
 
@@ -88,6 +90,12 @@ class LythausApiClient {
   /// by doing that all interceptors will not be executed
   AdminApi getAdminApi() {
     return AdminApi(dio, serializers);
+  }
+
+  /// Get AdminSupportFeedbackApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AdminSupportFeedbackApi getAdminSupportFeedbackApi() {
+    return AdminSupportFeedbackApi(dio, serializers);
   }
 
   /// Get AppealsApi instance, base route and serializer can be overridden by a given but be careful,
@@ -190,6 +198,12 @@ class LythausApiClient {
   /// by doing that all interceptors will not be executed
   SubscriptionApi getSubscriptionApi() {
     return SubscriptionApi(dio, serializers);
+  }
+
+  /// Get SupportFeedbackApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  SupportFeedbackApi getSupportFeedbackApi() {
+    return SupportFeedbackApi(dio, serializers);
   }
 
   /// Get UsersApi instance, base route and serializer can be overridden by a given but be careful,

@@ -8,7 +8,7 @@ import 'package:built_value/serializer.dart';
 
 part 'appeal_create_request.g.dart';
 
-/// The caller may appeal a resolved case for their post or comment, or an account case where the case content ID is the caller's user ID.
+/// The caller owns the challenged content. Activated monthly-policy appeals freeze a blocked or queued current post/comment decision and await safe triage. Historical policy retains its original resolved-case and account-case rules.
 ///
 /// Properties:
 /// * [caseId]

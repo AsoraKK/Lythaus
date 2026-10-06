@@ -33,6 +33,10 @@ import 'package:lythaus_api_client/src/model/admin_email_health.dart';
 import 'package:lythaus_api_client/src/model/admin_health.dart';
 import 'package:lythaus_api_client/src/model/admin_items.dart';
 import 'package:lythaus_api_client/src/model/admin_mutation_confirmation.dart';
+import 'package:lythaus_api_client/src/model/admin_overview.dart';
+import 'package:lythaus_api_client/src/model/admin_overview_gaps.dart';
+import 'package:lythaus_api_client/src/model/admin_overview_metrics.dart';
+import 'package:lythaus_api_client/src/model/admin_overview_providers.dart';
 import 'package:lythaus_api_client/src/model/admin_user.dart';
 import 'package:lythaus_api_client/src/model/admin_user_deletion_response.dart';
 import 'package:lythaus_api_client/src/model/admin_user_detail200_response.dart';
@@ -60,6 +64,7 @@ import 'package:lythaus_api_client/src/model/appeal_create_request.dart';
 import 'package:lythaus_api_client/src/model/appeal_create_response.dart';
 import 'package:lythaus_api_client/src/model/appeal_detail.dart';
 import 'package:lythaus_api_client/src/model/appeal_detail_response.dart';
+import 'package:lythaus_api_client/src/model/appeal_detail_response_appeal.dart';
 import 'package:lythaus_api_client/src/model/appeal_outcome.dart';
 import 'package:lythaus_api_client/src/model/appeal_recusal_response.dart';
 import 'package:lythaus_api_client/src/model/appeal_reviewer_assignments.dart';
@@ -95,6 +100,22 @@ import 'package:lythaus_api_client/src/model/comment_submission.dart';
 import 'package:lythaus_api_client/src/model/comment_update_request.dart';
 import 'package:lythaus_api_client/src/model/comment_update_response.dart';
 import 'package:lythaus_api_client/src/model/comments_owner_view200_response.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_detail.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_evidence.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_outcome.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_outcome_result.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_queue.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_triage_evidence.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_triage_evidence_evidence.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_triage_evidence_evidence_frozen_content.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_triage_queue.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_triage_queue_items_inner.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_triage_request.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_triage_response.dart';
+import 'package:lythaus_api_client/src/model/community_appeal_withdrawal.dart';
+import 'package:lythaus_api_client/src/model/community_ballot_request.dart';
+import 'package:lythaus_api_client/src/model/community_ballot_response.dart';
+import 'package:lythaus_api_client/src/model/community_own_ballot.dart';
 import 'package:lythaus_api_client/src/model/create_post_request.dart';
 import 'package:lythaus_api_client/src/model/cursor_page.dart';
 import 'package:lythaus_api_client/src/model/custom_feed.dart';
@@ -126,15 +147,31 @@ import 'package:lythaus_api_client/src/model/forbidden_error_error.dart';
 import 'package:lythaus_api_client/src/model/get_health200_response.dart';
 import 'package:lythaus_api_client/src/model/governance_appeal_vote_request.dart';
 import 'package:lythaus_api_client/src/model/governance_appeal_vote_response.dart';
+import 'package:lythaus_api_client/src/model/legacy_appeal_vote_request.dart';
+import 'package:lythaus_api_client/src/model/legacy_appeal_vote_response.dart';
 import 'package:lythaus_api_client/src/model/legacy_refresh_token_request.dart';
 import 'package:lythaus_api_client/src/model/legal_hold_create.dart';
 import 'package:lythaus_api_client/src/model/legal_hold_response.dart';
 import 'package:lythaus_api_client/src/model/media_upload_finalise_response.dart';
 import 'package:lythaus_api_client/src/model/media_upload_session_create_request.dart';
 import 'package:lythaus_api_client/src/model/media_upload_session_created.dart';
+import 'package:lythaus_api_client/src/model/member_detail.dart';
+import 'package:lythaus_api_client/src/model/member_mutation_result.dart';
+import 'package:lythaus_api_client/src/model/member_problem_request.dart';
+import 'package:lythaus_api_client/src/model/member_request_page.dart';
+import 'package:lythaus_api_client/src/model/member_suggestion_request.dart';
+import 'package:lythaus_api_client/src/model/member_support_request.dart';
 import 'package:lythaus_api_client/src/model/moderation_decision_request.dart';
 import 'package:lythaus_api_client/src/model/moderation_decision_response.dart';
 import 'package:lythaus_api_client/src/model/moderation_state.dart';
+import 'package:lythaus_api_client/src/model/monthly_context_review_error.dart';
+import 'package:lythaus_api_client/src/model/monthly_context_review_request.dart';
+import 'package:lythaus_api_client/src/model/monthly_context_review_response.dart';
+import 'package:lythaus_api_client/src/model/monthly_report_error.dart';
+import 'package:lythaus_api_client/src/model/monthly_reputation_report_response.dart';
+import 'package:lythaus_api_client/src/model/monthly_reputation_report_response_corrections.dart';
+import 'package:lythaus_api_client/src/model/monthly_reputation_report_response_level_authority.dart';
+import 'package:lythaus_api_client/src/model/monthly_rewards_me_response.dart';
 import 'package:lythaus_api_client/src/model/news_board_feed_page.dart';
 import 'package:lythaus_api_client/src/model/news_board_item.dart';
 import 'package:lythaus_api_client/src/model/news_source_metadata.dart';
@@ -148,8 +185,22 @@ import 'package:lythaus_api_client/src/model/notification_page.dart';
 import 'package:lythaus_api_client/src/model/notification_preference_update.dart';
 import 'package:lythaus_api_client/src/model/notification_preferences.dart';
 import 'package:lythaus_api_client/src/model/notification_unread_count.dart';
+import 'package:lythaus_api_client/src/model/overview_metric.dart';
+import 'package:lythaus_api_client/src/model/overview_provider.dart';
+import 'package:lythaus_api_client/src/model/overview_provider_accounting_period.dart';
+import 'package:lythaus_api_client/src/model/overview_window.dart';
 import 'package:lythaus_api_client/src/model/owner_comment.dart';
+import 'package:lythaus_api_client/src/model/owner_decision_request.dart';
+import 'package:lythaus_api_client/src/model/owner_detail.dart';
+import 'package:lythaus_api_client/src/model/owner_evidence_request.dart';
+import 'package:lythaus_api_client/src/model/owner_mutation_result.dart';
+import 'package:lythaus_api_client/src/model/owner_note_request.dart';
 import 'package:lythaus_api_client/src/model/owner_post.dart';
+import 'package:lythaus_api_client/src/model/owner_private_records.dart';
+import 'package:lythaus_api_client/src/model/owner_problem_request.dart';
+import 'package:lythaus_api_client/src/model/owner_request_page.dart';
+import 'package:lythaus_api_client/src/model/owner_suggestion_request.dart';
+import 'package:lythaus_api_client/src/model/owner_support_request.dart';
 import 'package:lythaus_api_client/src/model/pending_appeal_adjudication.dart';
 import 'package:lythaus_api_client/src/model/pending_appeal_adjudication_list.dart';
 import 'package:lythaus_api_client/src/model/personal_feed_item.dart';
@@ -164,11 +215,16 @@ import 'package:lythaus_api_client/src/model/privacy_request.dart';
 import 'package:lythaus_api_client/src/model/privacy_request_accepted.dart';
 import 'package:lythaus_api_client/src/model/privacy_request_create.dart';
 import 'package:lythaus_api_client/src/model/privacy_request_status_response.dart';
+import 'package:lythaus_api_client/src/model/private_decision.dart';
+import 'package:lythaus_api_client/src/model/private_evidence.dart';
+import 'package:lythaus_api_client/src/model/private_note.dart';
+import 'package:lythaus_api_client/src/model/problem_submission.dart';
 import 'package:lythaus_api_client/src/model/product_integrity_private_profile_response.dart';
 import 'package:lythaus_api_client/src/model/product_integrity_private_profile_user.dart';
 import 'package:lythaus_api_client/src/model/product_integrity_profile_update_request.dart';
 import 'package:lythaus_api_client/src/model/public_authorship.dart';
 import 'package:lythaus_api_client/src/model/public_authorship_label.dart';
+import 'package:lythaus_api_client/src/model/public_message.dart';
 import 'package:lythaus_api_client/src/model/rate_limit_error.dart';
 import 'package:lythaus_api_client/src/model/reaction_counts.dart';
 import 'package:lythaus_api_client/src/model/reaction_delete_response.dart';
@@ -179,6 +235,7 @@ import 'package:lythaus_api_client/src/model/refresh_token_request.dart';
 import 'package:lythaus_api_client/src/model/relation_change.dart';
 import 'package:lythaus_api_client/src/model/relation_list.dart';
 import 'package:lythaus_api_client/src/model/relation_list_items_inner.dart';
+import 'package:lythaus_api_client/src/model/reply_request.dart';
 import 'package:lythaus_api_client/src/model/reputation_ledger_event.dart';
 import 'package:lythaus_api_client/src/model/reputation_ledger_page.dart';
 import 'package:lythaus_api_client/src/model/reputation_pillars.dart';
@@ -198,6 +255,14 @@ import 'package:lythaus_api_client/src/model/storage_usage_get200_response.dart'
 import 'package:lythaus_api_client/src/model/storage_usage_get200_response_storage.dart';
 import 'package:lythaus_api_client/src/model/subscription_status.dart';
 import 'package:lythaus_api_client/src/model/subscription_status_entitlements.dart';
+import 'package:lythaus_api_client/src/model/suggestion_submission.dart';
+import 'package:lythaus_api_client/src/model/support_error.dart';
+import 'package:lythaus_api_client/src/model/support_feedback_policy.dart';
+import 'package:lythaus_api_client/src/model/support_feedback_policy_categories.dart';
+import 'package:lythaus_api_client/src/model/support_feedback_policy_limits.dart';
+import 'package:lythaus_api_client/src/model/support_options.dart';
+import 'package:lythaus_api_client/src/model/support_options_initial.dart';
+import 'package:lythaus_api_client/src/model/support_transition.dart';
 import 'package:lythaus_api_client/src/model/target_user_request.dart';
 import 'package:lythaus_api_client/src/model/unauthorized_error.dart';
 import 'package:lythaus_api_client/src/model/update_post_request.dart';
@@ -242,6 +307,10 @@ part 'serializers.g.dart';
   AdminHealth,
   AdminItems,
   AdminMutationConfirmation,
+  AdminOverview,
+  AdminOverviewGaps,
+  AdminOverviewMetrics,
+  AdminOverviewProviders,
   AdminUser,
   AdminUserDeletionResponse,
   AdminUserDetail200Response,
@@ -269,6 +338,7 @@ part 'serializers.g.dart';
   AppealCreateResponse,
   AppealDetail,
   AppealDetailResponse,
+  AppealDetailResponseAppeal,
   AppealOutcome,$AppealOutcome,
   AppealRecusalResponse,
   AppealReviewerAssignments,
@@ -304,6 +374,22 @@ part 'serializers.g.dart';
   CommentUpdateRequest,
   CommentUpdateResponse,
   CommentsOwnerView200Response,
+  CommunityAppealDetail,
+  CommunityAppealEvidence,
+  CommunityAppealOutcome,
+  CommunityAppealOutcomeResult,
+  CommunityAppealQueue,
+  CommunityAppealTriageEvidence,
+  CommunityAppealTriageEvidenceEvidence,
+  CommunityAppealTriageEvidenceEvidenceFrozenContent,
+  CommunityAppealTriageQueue,
+  CommunityAppealTriageQueueItemsInner,
+  CommunityAppealTriageRequest,
+  CommunityAppealTriageResponse,
+  CommunityAppealWithdrawal,
+  CommunityBallotRequest,
+  CommunityBallotResponse,
+  CommunityOwnBallot,
   CreatePostRequest,
   CursorPage,$CursorPage,
   CustomFeed,
@@ -335,15 +421,31 @@ part 'serializers.g.dart';
   GetHealth200Response,
   GovernanceAppealVoteRequest,
   GovernanceAppealVoteResponse,
+  LegacyAppealVoteRequest,
+  LegacyAppealVoteResponse,
   LegacyRefreshTokenRequest,
   LegalHoldCreate,
   LegalHoldResponse,
   MediaUploadFinaliseResponse,
   MediaUploadSessionCreateRequest,
   MediaUploadSessionCreated,
+  MemberDetail,
+  MemberMutationResult,
+  MemberProblemRequest,
+  MemberRequestPage,
+  MemberSuggestionRequest,
+  MemberSupportRequest,
   ModerationDecisionRequest,
   ModerationDecisionResponse,
   ModerationState,
+  MonthlyContextReviewError,
+  MonthlyContextReviewRequest,
+  MonthlyContextReviewResponse,
+  MonthlyReportError,
+  MonthlyReputationReportResponse,
+  MonthlyReputationReportResponseCorrections,
+  MonthlyReputationReportResponseLevelAuthority,
+  MonthlyRewardsMeResponse,
   NewsBoardFeedPage,
   NewsBoardItem,
   NewsSourceMetadata,
@@ -357,8 +459,22 @@ part 'serializers.g.dart';
   NotificationPreferenceUpdate,
   NotificationPreferences,
   NotificationUnreadCount,
+  OverviewMetric,
+  OverviewProvider,
+  OverviewProviderAccountingPeriod,
+  OverviewWindow,
   OwnerComment,
+  OwnerDecisionRequest,
+  OwnerDetail,
+  OwnerEvidenceRequest,
+  OwnerMutationResult,
+  OwnerNoteRequest,
   OwnerPost,
+  OwnerPrivateRecords,
+  OwnerProblemRequest,
+  OwnerRequestPage,
+  OwnerSuggestionRequest,
+  OwnerSupportRequest,
   PendingAppealAdjudication,
   PendingAppealAdjudicationList,
   PersonalFeedItem,
@@ -373,11 +489,16 @@ part 'serializers.g.dart';
   PrivacyRequestAccepted,
   PrivacyRequestCreate,
   PrivacyRequestStatusResponse,
+  PrivateDecision,
+  PrivateEvidence,
+  PrivateNote,
+  ProblemSubmission,
   ProductIntegrityPrivateProfileResponse,
   ProductIntegrityPrivateProfileUser,
   ProductIntegrityProfileUpdateRequest,
   PublicAuthorship,
   PublicAuthorshipLabel,
+  PublicMessage,
   RateLimitError,
   ReactionCounts,
   ReactionDeleteResponse,
@@ -388,6 +509,7 @@ part 'serializers.g.dart';
   RelationChange,
   RelationList,
   RelationListItemsInner,
+  ReplyRequest,
   ReputationLedgerEvent,
   ReputationLedgerPage,
   ReputationPillars,
@@ -407,6 +529,14 @@ part 'serializers.g.dart';
   StorageUsageGet200ResponseStorage,
   SubscriptionStatus,
   SubscriptionStatusEntitlements,
+  SuggestionSubmission,
+  SupportError,
+  SupportFeedbackPolicy,
+  SupportFeedbackPolicyCategories,
+  SupportFeedbackPolicyLimits,
+  SupportOptions,
+  SupportOptionsInitial,
+  SupportTransition,
   TargetUserRequest,
   UnauthorizedError,
   UpdatePostRequest,

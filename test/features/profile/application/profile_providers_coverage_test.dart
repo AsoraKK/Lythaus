@@ -67,7 +67,15 @@ class _CaptureAdapter implements HttpClientAdapter {
   ) async {
     lastRequestOptions = options;
     return ResponseBody.fromString(
-      '{}',
+      jsonEncode({
+        'user': {
+          'id': 'u1',
+          'displayName': 'Saved owner',
+          'moderationState': 'allowed',
+          'publicVisibility': true,
+          'trustPassportVisibility': 'public_expanded',
+        },
+      }),
       200,
       headers: {
         Headers.contentTypeHeader: ['application/json'],
@@ -316,12 +324,14 @@ void main() {
       dio.httpClientAdapter = adapter;
       final service = ProfilePreferencesService(dio);
 
-      await service.updateTrustPassportVisibility(
+      final saved = await service.updateTrustPassportVisibility(
         accessToken: 'token-1',
         visibility: 'public_expanded',
       );
 
       expect(adapter.lastRequestOptions?.method, 'PATCH');
+      expect(saved.user.id, 'u1');
+      expect(saved.user.trustPassportVisibility, 'public_expanded');
       expect(adapter.lastRequestOptions?.path, '/api/users/me');
       expect(
         adapter.lastRequestOptions?.headers['Authorization'],

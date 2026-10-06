@@ -63,7 +63,11 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
           if (moveFocus && message) status.focus();
         }
       };
+      const updateSubmitState = () => {
+        if (button instanceof HTMLButtonElement) button.disabled = isSubmitting || Date.now() < cooldownUntil;
+      };
       const setCooldownMessage = () => {
+        updateSubmitState();
         if (!(cooldown instanceof HTMLElement)) return;
         const seconds = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
         cooldown.textContent = seconds > 0 ? `You can request another message in ${seconds} seconds.` : '';
@@ -138,7 +142,7 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
           return;
         }
         isSubmitting = true;
-        button.disabled = true;
+        updateSubmitState();
         button.setAttribute('aria-busy', 'true');
         button.textContent = 'Sending...';
         setStatus('', 'submitting');
@@ -160,10 +164,10 @@ const emailPrefill = Astro.url.searchParams.get('email')?.trim() ?? '';
           setStatus(messageFor(error instanceof Error ? error.message : 'verification_resend_failed'), 'error');
         } finally {
           resetVerification();
-          button.setAttribute('aria-busy', 'false');
-          if (Date.now() >= cooldownUntil) button.disabled = false;
-          button.textContent = 'Resend verification email';
           isSubmitting = false;
+          button.setAttribute('aria-busy', 'false');
+          updateSubmitState();
+          button.textContent = 'Resend verification email';
         }
       });
 

@@ -8,6 +8,7 @@ import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/ui/components/trust_strip_row.dart';
 import 'package:lythaus/ui/components/receipt_drawer.dart';
 import 'package:lythaus/ui/components/authorship_disclosure.dart';
+import 'package:lythaus/ui/components/author_profile_link.dart';
 
 class FeedCard extends StatelessWidget {
   const FeedCard({
@@ -66,7 +67,17 @@ class FeedCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(item.author, style: theme.textTheme.titleSmall),
+                          if (item.authorId?.trim().isNotEmpty == true)
+                            AuthorProfileLink(
+                              userId: item.authorId!,
+                              label: item.author,
+                              textStyle: theme.textTheme.titleSmall,
+                            )
+                          else
+                            Text(
+                              item.author,
+                              style: theme.textTheme.titleSmall,
+                            ),
                           Text(
                             DateFormat.yMMMd().add_jm().format(
                               item.publishedAt.toLocal(),

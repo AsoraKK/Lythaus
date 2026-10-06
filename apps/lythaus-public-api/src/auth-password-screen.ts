@@ -1,5 +1,30 @@
 import { requirePasswordInput } from '@lythaus/contracts';
 
+export type PasswordScreeningFailureReason = 'timeout' | 'network_error' | 'http_status' | 'invalid_body';
+
+export class PasswordScreeningUnavailableError extends Error {
+  readonly reasonCode: PasswordScreeningFailureReason;
+  readonly httpStatus?: number;
+
+  constructor(
+    reasonCode: PasswordScreeningFailureReason,
+    httpStatus?: number,
+  ) {
+    super('password_screening_unavailable');
+    this.name = 'PasswordScreeningUnavailableError';
+    this.reasonCode = reasonCode;
+    if (httpStatus !== undefined) this.httpStatus = httpStatus;
+  }
+}
+
+export function passwordScreeningFailureLogFields(error: unknown): Record<string, string | number> {
+  if (!(error instanceof PasswordScreeningUnavailableError)) return {};
+  return {
+    passwordScreeningFailureReason: error.reasonCode,
+    ...(error.httpStatus === undefined ? {} : { passwordScreeningHttpStatus: error.httpStatus }),
+  };
+}
+
 export async function requireUncompromisedPassword(
   input: unknown,
   fetcher: typeof fetch = fetch,
@@ -10,36 +35,72 @@ export async function requireUncompromisedPassword(
     .map(byte => byte.toString(16).padStart(2, '0')).join('').toUpperCase();
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let deadlineExpired = false;
   try {
     const compromised = await Promise.race([
       (async () => {
-        const response = await fetcher(`https://api.pwnedpasswords.com/range/${hash.slice(0, 5)}`, {
-          method: 'GET', redirect: 'error', signal: controller.signal,
-          headers: { 'Add-Padding': 'true', 'User-Agent': 'Lythaus-password-screening' },
-        });
-        if (!response.ok) throw new Error('password_screening_unavailable');
-        const reader = response.body?.getReader();
-        if (!reader) throw new Error('password_screening_unavailable');
+        let response: Response;
+        try {
+          response = await fetcher(`https://api.pwnedpasswords.com/range/${hash.slice(0, 5)}`, {
+            method: 'GET', redirect: 'manual', signal: controller.signal,
+            headers: { 'Add-Padding': 'true', 'User-Agent': 'Lythaus-password-screening' },
+          });
+        } catch {
+          throw new PasswordScreeningUnavailableError(deadlineExpired ? 'timeout' : 'network_error');
+        }
+        if (!response.ok) throw new PasswordScreeningUnavailableError('http_status', response.status);
+        let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+        try {
+          reader = response.body?.getReader();
+        } catch {
+          throw new PasswordScreeningUnavailableError('invalid_body');
+        }
+        if (!reader) throw new PasswordScreeningUnavailableError('invalid_body');
         const decoder = new TextDecoder();
         let data = '';
         while (true) {
-          const chunk = await reader.read();
+          let chunk: ReadableStreamReadResult<Uint8Array>;
+          try {
+            chunk = await reader.read();
+          } catch {
+            throw new PasswordScreeningUnavailableError(deadlineExpired ? 'timeout' : 'network_error');
+          }
           if (chunk.done) break;
-          data += decoder.decode(chunk.value, { stream: true });
-          if (data.length > 256 * 1024) { await reader.cancel(); throw new Error('password_screening_unavailable'); }
+          try {
+            data += decoder.decode(chunk.value, { stream: true });
+          } catch {
+            throw new PasswordScreeningUnavailableError('invalid_body');
+          }
+          if (data.length > 256 * 1024) {
+            try { await reader.cancel(); } catch {}
+            throw new PasswordScreeningUnavailableError('invalid_body');
+          }
         }
-        data += decoder.decode();
+        try {
+          data += decoder.decode();
+        } catch {
+          throw new PasswordScreeningUnavailableError('invalid_body');
+        }
         const lines = data.trim().split(/\r?\n/);
-        if (!lines.length || lines.some(line => !/^[A-F0-9]{35}:\d{1,12}$/.test(line))) throw new Error('password_screening_unavailable');
+        if (!lines.length || lines.some(line => !/^[A-F0-9]{35}:\d{1,12}$/.test(line))) {
+          throw new PasswordScreeningUnavailableError('invalid_body');
+        }
         return lines.some(line => line.slice(0, 35) === hash.slice(5) && Number(line.slice(36)) > 0);
       })(),
-      new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('password_screening_unavailable')), timeoutMs); }),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          deadlineExpired = true;
+          controller.abort();
+          reject(new PasswordScreeningUnavailableError('timeout'));
+        }, timeoutMs);
+      }),
     ]);
     if (compromised) throw new Error('password_compromised');
     return password;
   } catch (error) {
     if (error instanceof Error && error.message === 'password_compromised') throw error;
-    throw new Error('password_screening_unavailable');
+    if (error instanceof PasswordScreeningUnavailableError) throw error;
+    throw new PasswordScreeningUnavailableError(deadlineExpired ? 'timeout' : 'network_error');
   } finally {
     clearTimeout(timer);
     controller.abort();

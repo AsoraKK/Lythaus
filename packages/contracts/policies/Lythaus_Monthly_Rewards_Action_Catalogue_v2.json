@@ -1,0 +1,308 @@
+{
+  "schema_version": "lythaus-monthly-rewards-task-catalogue-v2",
+  "policy_version": "lythaus-monthly-rewards-2026-10-v1",
+  "prepared_at": "2026-10-02",
+  "status": "implementation_task_sheet_not_deployed",
+  "runtime_activation_allowed": false,
+  "source_authority": "Latest owner decisions in this conversation; operational defaults require approval before activation.",
+  "supersedes": [
+    "Lythaus_Codex_Reputation_Rewards_Implementation.md",
+    "Lythaus_Rewards_Action_Catalogue.json",
+    "lythaus_rewards_model.json",
+    "prior rolling-four-week and accumulating-score proposals",
+    "new-case level-5 weighted voting and mandatory trained panel approval"
+  ],
+  "score": {
+    "minimum": 0, "maximum": 13500, "weekly_max": 2500,
+    "weekly_results_selected": 4, "monthly_max": 2500,
+    "quarterly_component_max": 1000, "spendable": false,
+    "carries_across_source_months": false, "level_age_gates": false,
+    "source_month_determines": "next_calendar_month",
+    "select_whole_week_results": true,
+    "week_selection": "highest_total_then_earlier_close_then_stable_id"
+  },
+  "levels": [
+    { "level": 1, "min_points": 0, "max_points": 999 },
+    { "level": 2, "min_points": 1000, "max_points": 2999 },
+    { "level": 3, "min_points": 3000, "max_points": 5999 },
+    { "level": 4, "min_points": 6000, "max_points": 9999 },
+    { "level": 5, "min_points": 10000, "max_points": 13500, "label": "Steward" }
+  ],
+  "weekly_cap_groups": [
+    { "id": "posts", "label": "Three qualifying human-authored posts", "max_points": 250 },
+    { "id": "own_discussion", "label": "Constructive discussion on own posts", "max_points": 150 },
+    { "id": "other_discussion", "label": "Constructive discussion on others’ posts", "max_points": 150 },
+    { "id": "reception_usefulness", "label": "Validated usefulness feedback", "max_points": 250 },
+    { "id": "reception_discussion", "label": "Constructive discussion outcome", "max_points": 250 },
+    { "id": "reception_value", "label": "Independently validated contribution value", "max_points": 250 },
+    { "id": "declaration", "label": "Accurate declarations and policy compliance", "max_points": 50 },
+    { "id": "human_authorship", "label": "Qualifying human-authored contribution bonus", "max_points": 200 },
+    { "id": "peer_review", "label": "Valid participation in peer appeals", "max_points": 250 },
+    { "id": "source_correction", "label": "Accepted sourcing and correction work", "max_points": 300 },
+    { "id": "help_accessibility", "label": "Accepted help and accessibility work", "max_points": 250 },
+    { "id": "breadth", "label": "Breadth of qualifying participation", "max_points": 150 }
+  ],
+  "monthly_cap_groups": [
+    { "id": "integrity", "label": "Account-integrity assessment", "max_points": 500 },
+    { "id": "mfa", "label": "Enforced strong authentication / 2FA maintained", "max_points": 250 },
+    { "id": "credential", "label": "Verified user-protected credential maintained", "max_points": 1000 },
+    { "id": "challenge", "label": "Successful anti-automation check", "max_points": 500 },
+    { "id": "refresher", "label": "Community and authorship policy refresher", "max_points": 250 }
+  ],
+  "quarterly_cap_groups": [{ "id": "email_control", "max_points": 1000 }],
+  "actions": [
+    {
+      "id": "weekly.three_human_posts", "label": "Create three qualifying human-authored posts",
+      "cadence": "weekly", "cap_group": "posts", "max_points_before_shared_cap": 250,
+      "rule": "One 250-point award after three distinct accepted human-authored posts; not a per-post reward.",
+      "approval": "agreed_budget_proposed_operational_rule", "breadth_family": "posts"
+    },
+    {
+      "id": "weekly.own_post_comment", "label": "Constructive top-level comment on your post",
+      "cadence": "weekly", "cap_group": "own_discussion", "max_points_before_shared_cap": 150,
+      "rule": "One validated own-post comment or meaningful follow-up; shares a single 150-point award with own-post replies. Rubric approval required.",
+      "approval": "agreed_budget_proposed_operational_rule", "breadth_family": "own_discussion"
+    },
+    {
+      "id": "weekly.own_post_reply", "label": "Constructive reply within your post",
+      "cadence": "weekly", "cap_group": "own_discussion", "max_points_before_shared_cap": 150,
+      "rule": "A valid contextual reply; shares a single 150-point weekly award with own-post comments. No obligation to reply to abuse.",
+      "approval": "agreed_budget_proposed_operational_rule", "breadth_family": "own_discussion"
+    },
+    {
+      "id": "weekly.other_post_comment", "label": "Constructive top-level comment on another member’s post",
+      "cadence": "weekly", "cap_group": "other_discussion", "max_points_before_shared_cap": 150,
+      "rule": "One validated contextual contribution; shares a single 150-point weekly award with replies on others’ posts.",
+      "approval": "agreed_budget_proposed_operational_rule", "breadth_family": "other_discussion"
+    },
+    {
+      "id": "weekly.other_post_reply", "label": "Constructive reply on another member’s post",
+      "cadence": "weekly", "cap_group": "other_discussion", "max_points_before_shared_cap": 150,
+      "rule": "One validated contextual reply; shares a single 150-point weekly award with comments on others’ posts. No obligation to agree.",
+      "approval": "agreed_budget_proposed_operational_rule", "breadth_family": "other_discussion"
+    },
+    {
+      "id": "weekly.reception.usefulness", "label": "Validated usefulness feedback",
+      "cadence": "weekly", "cap_group": "reception_usefulness", "max_points_before_shared_cap": 250,
+      "rule": "Candidate shadow rubric: at least five independent valid helpfulness judgements; helpful share &gt;=80% earns 250, &gt;=60% earns 125, otherwise zero. Insufficient evidence is not misconduct.",
+      "approval": "agreed_budget_proposed_operational_rule"
+    },
+    {
+      "id": "weekly.reception.discussion", "label": "Constructive discussion outcomes",
+      "cadence": "weekly", "cap_group": "reception_discussion", "max_points_before_shared_cap": 250,
+      "rule": "Candidate shadow rubric: 125 per independently accepted constructive conversation outcome, maximum two distinct contexts and counterparties.",
+      "approval": "agreed_budget_proposed_operational_rule", "unit_points": 125
+    },
+    {
+      "id": "weekly.reception.value", "label": "Independently validated contribution value",
+      "cadence": "weekly", "cap_group": "reception_value", "max_points_before_shared_cap": 250,
+      "rule": "Candidate shadow rubric: 125 per independently accepted useful outcome, maximum two. Derived bonus must explicitly reference evidence; not another primary contribution award.",
+      "approval": "agreed_budget_proposed_operational_rule", "unit_points": 125
+    },
+    {
+      "id": "weekly.declaration_compliance", "label": "Accurate declarations and policy compliance",
+      "cadence": "weekly", "cap_group": "declaration", "max_points_before_shared_cap": 50,
+      "rule": "Requires actual qualifying public participation and honest declarations. AI-assisted participation may qualify for compliance, never authorship.",
+      "approval": "agreed_budget_proposed_operational_rule"
+    },
+    {
+      "id": "weekly.human_authorship", "label": "Qualifying human-authored contribution bonus",
+      "cadence": "weekly", "cap_group": "human_authorship", "max_points_before_shared_cap": 200,
+      "rule": "Requires accepted human-authored participation. An honestly labelled, permitted AI-assisted item does not erase unrelated human-authorship evidence.",
+      "approval": "agreed_budget_proposed_operational_rule"
+    },
+    {
+      "id": "weekly.peer_appeal_participation", "label": "Participate in a timed peer appeal",
+      "cadence": "weekly", "cap_group": "peer_review", "max_points_before_shared_cap": 250,
+      "rule": "Candidate operational rule: one valid, context-aware final ballot earns the weekly award. No award for vote direction, winning side or repeated ballots.",
+      "approval": "agreed_budget_proposed_operational_rule", "breadth_family": "peer_review"
+    },
+    {
+      "id": "weekly.accepted_source", "label": "Accepted source contribution",
+      "cadence": "weekly", "cap_group": "source_correction", "max_points_before_shared_cap": 300,
+      "rule": "150 per distinct accepted sourcing task, maximum two across source and correction actions combined.",
+      "approval": "agreed_budget_proposed_operational_rule", "unit_points": 150, "breadth_family": "source_correction"
+    },
+    {
+      "id": "weekly.accepted_correction", "label": "Accepted correction",
+      "cadence": "weekly", "cap_group": "source_correction", "max_points_before_shared_cap": 300,
+      "rule": "150 per distinct accepted correction task, maximum two across source and correction actions combined. No manufactured-error farming.",
+      "approval": "agreed_budget_proposed_operational_rule", "unit_points": 150, "breadth_family": "source_correction"
+    },
+    {
+      "id": "weekly.accepted_help", "label": "Accepted community help",
+      "cadence": "weekly", "cap_group": "help_accessibility", "max_points_before_shared_cap": 250,
+      "rule": "125 per distinct accepted task, maximum two across help and accessibility actions combined.",
+      "approval": "agreed_budget_proposed_operational_rule", "unit_points": 125, "breadth_family": "help_accessibility"
+    },
+    {
+      "id": "weekly.accepted_accessibility", "label": "Accepted accessibility contribution",
+      "cadence": "weekly", "cap_group": "help_accessibility", "max_points_before_shared_cap": 250,
+      "rule": "125 per distinct accepted task, maximum two across help and accessibility actions combined.",
+      "approval": "agreed_budget_proposed_operational_rule", "unit_points": 125, "breadth_family": "help_accessibility"
+    },
+    {
+      "id": "weekly.breadth", "label": "Breadth of qualifying participation",
+      "cadence": "weekly", "cap_group": "breadth", "max_points_before_shared_cap": 150,
+      "rule": "Candidate default: complete four of the six substantive families; one 150-point bonus. Family alternatives are not additional categories.",
+      "approval": "agreed_budget_proposed_operational_rule"
+    },
+    {
+      "id": "monthly.account_integrity", "label": "Account-integrity assessment completed",
+      "cadence": "monthly", "cap_group": "integrity", "max_points_before_shared_cap": 500,
+      "rule": "Lythaus assessment of available provider and authenticated behavioural evidence. Missing telemetry or an outage is unknown, not automatic clearance or guilt.",
+      "approval": "agreed_budget_proposed_operational_rule"
+    },
+    {
+      "id": "monthly.mfa_maintenance", "label": "Strong authentication / 2FA maintained",
+      "cadence": "monthly", "cap_group": "mfa", "max_points_before_shared_cap": 250,
+      "rule": "Proposed default: continuous server-recorded protection throughout the calendar month, plus successful qualifying authentication evidence. A suitable multi-factor passkey can satisfy this condition.",
+      "approval": "agreed_budget_proposed_operational_rule"
+    },
+    {
+      "id": "monthly.credential_maintenance", "label": "User-protected credential maintained",
+      "cadence": "monthly", "cap_group": "credential", "max_points_before_shared_cap": 1000,
+      "rule": "Proposed default: continuously registered, unrevoked credential for the calendar month and a valid server-verified user-verification assertion. Fingerprint, face, PIN and pattern are not separate awards.",
+      "approval": "agreed_budget_proposed_operational_rule"
+    },
+    {
+      "id": "monthly.anti_automation", "label": "Successful anti-automation check",
+      "cadence": "monthly", "cap_group": "challenge", "max_points_before_shared_cap": 500,
+      "rule": "One server-validated eligible check in the source month. Existing validated challenge evidence can satisfy the award; do not reuse the consumed token.",
+      "approval": "agreed_budget_proposed_operational_rule"
+    },
+    {
+      "id": "monthly.policy_refresher", "label": "Community and authorship refresher",
+      "cadence": "monthly", "cap_group": "refresher", "max_points_before_shared_cap": 250,
+      "rule": "One accessible current-policy comprehension activity. No speed, language-polish or daily-streak criterion.",
+      "approval": "agreed_budget_proposed_operational_rule"
+    },
+    {
+      "id": "quarterly.email_control", "label": "Reverify registered email control",
+      "cadence": "quarterly", "cap_group": "email_control", "max_points_before_shared_cap": 1000,
+      "rule": "One unrevoked proof valid for three calendar months. Eligible month-end snapshots include 1,000 while it is valid. Renewal replaces validity; it never stacks points.",
+      "approval": "agreed_budget_proposed_operational_rule"
+    }
+  ],
+  "breadth": {
+    "status": "proposed_operational_default_owner_review", "points": 150,
+    "required_distinct_families": 4,
+    "families": ["posts", "own_discussion", "other_discussion", "peer_review", "source_correction", "help_accessibility"],
+    "award_count_per_week": 1, "reactions_are_families": false,
+    "security_checks_are_families": false, "appeals_mandatory": false
+  },
+  "calendar": {
+    "status": "proposed_operational_default_owner_review", "timezone": "UTC",
+    "week_start": "Monday 00:00", "week_end_exclusive": "following Monday 00:00",
+    "week_owner_month": "calendar month of the closing Sunday",
+    "cross_month_week": "assigned once; displayed with its exact date range",
+    "weekly_settlement_hours": 72, "month_settlement_hours": 72,
+    "current_level_source": "previous month confirmed snapshot", "rolling_four_weeks": false,
+    "select_best_four_within_owner_month": true,
+    "missing_weeks": "zero; no artificial catch-up or prorating",
+    "quarterly_validity": "three calendar months from verification timestamp; clamp target day at month end",
+    "quarterly_snapshot_rule": "proof valid immediately before month-end cutoff; never count a verification performed at or after cutoff"
+  },
+  "appeals": {
+    "binding": {
+      "timed_peer_session": true, "vote_weight": 1, "weight_by_reputation": false,
+      "weight_by_subscription": false, "trained_panel_required_for_standard_cases": false,
+      "routine_adjudicator_confirmation_required": false,
+      "standard_case_decision": "equal-weight community decision under the approved threshold",
+      "eligibility": "registered email-verified member; no active voting restriction; no self-vote or relevant conflict",
+      "live_counts_public": false, "private_review_only": true
+    },
+    "proposed_defaults": {
+      "requires_owner_approval": true, "initial_duration_hours": 48, "quorum": 5,
+      "quorum_is_not_panel_size": true,
+      "winning_share_rule": "strict majority of valid allow vs retain ballots; ties unresolved",
+      "extension_hours": 24, "maximum_extensions": 1,
+      "insufficient_quorum_or_tie_after_extension": "unresolved; accountable case review with explicit reason, not automatic guilt",
+      "vote_changes_before_close": true, "counted_votes_per_member_per_case": 1,
+      "standard_peer_outcome_binding": true,
+      "restricted_safety_cases": "separate restricted-review route, not a hidden override for ordinary disagreement"
+    }
+  },
+  "security": {
+    "score_not_proof_of_personhood": true, "no_raw_biometrics_or_device_pin": true,
+    "world_optional_deferred": true, "world_points_in_this_model": 0, "client_awards_points": false,
+    "minimum_friction": "reuse validated normal authentication and challenge evidence where the award conditions are met"
+  },
+  "reward_tiers": {
+    "free": { "max_effective_reward_level": 3, "selection": "one reward family total; not a monthly reset" },
+    "premium": { "max_effective_reward_level": 5, "selection": "one selected reward per earned level; not five level-five offers" },
+    "black": { "max_effective_reward_level": 5, "selection": "all eligible reward families subject to offer terms" }
+  },
+  "partner_api": {
+    "lookup_key": "member-authorised linked email plus offer",
+    "response_personal_fields": ["linked_email", "effective_reward_level"],
+    "no_member_enumeration": true, "unknown_is_not_ineligible": true,
+    "month_snapshot_not_live_progress": true, "one_time_claim_ttl_seconds": 300,
+    "recurring_fulfilment": "authorised merchant subscription and invoice-period idempotency; no new member consent every invoice"
+  },
+  "reports": {
+    "public": "policy, points catalogue, calculation method and aggregate transparency",
+    "private": "own per-action evidence references, all weekly results, selected/excluded weeks, corrections, source-month totals, next-month entitlement and partner links",
+    "other_members_private_details": false
+  },
+  "freeze": {
+    "duration_calendar_months": 6, "starts_at": "approved activation of the policy, not document creation",
+    "emergency_changes": "versioned security exception with audit and owner approval; no secret reward-weight edits"
+  },
+  "activation_gates": [
+    "owner approval of operational defaults", "migrations and exact-SHA test evidence",
+    "working security and quality evidence paths",
+    "safe equal-vote appeal process and staffing for unresolved/sensitive cases",
+    "partner agreements and privacy review", "feature flags and rollback",
+    "explicit live provider and release approvals"
+  ],
+  "reference_scenarios": [
+    {
+      "id": "best_four_five_weeks", "weekly_totals": [2200, 1800, 2450, 900, 2000],
+      "monthly_points": 2250, "quarterly_points": 1000,
+      "expected_selected_totals": [2450, 2200, 2000, 1800],
+      "expected_selected_weekly_points": 8450, "expected_source_score": 11700, "expected_next_level": 5
+    },
+    {
+      "id": "month_a_level_four", "weekly_totals": [1500, 1400, 1700, 1300, 500],
+      "monthly_points": 2000, "quarterly_points": 1000,
+      "expected_source_score": 8900, "expected_next_level": 4
+    },
+    {
+      "id": "month_b_level_five", "weekly_totals": [2250, 2200, 2300, 2400],
+      "monthly_points": 2000, "quarterly_points": 1000,
+      "expected_source_score": 12150, "expected_next_level": 5
+    },
+    {
+      "id": "maximum", "weekly_totals": [2500, 2500, 2500, 2500, 2500],
+      "monthly_points": 2500, "quarterly_points": 1000,
+      "expected_source_score": 13500, "expected_next_level": 5
+    },
+    {
+      "id": "no_reception_still_level_five", "weekly_totals": [1750, 1750, 1750, 1750],
+      "monthly_points": 2500, "quarterly_points": 1000,
+      "expected_source_score": 10500, "expected_next_level": 5
+    },
+    {
+      "id": "zero_activity_but_valid_assurance", "weekly_totals": [0, 0, 0, 0],
+      "monthly_points": 0, "quarterly_points": 1000,
+      "expected_source_score": 1000, "expected_next_level": 2
+    }
+  ],
+  "technical_references": [
+    { "id": "T1", "title": "Cloudflare Turnstile server-side validation", "url": "https://developers.cloudflare.com/turnstile/get-started/server-side-validation/" },
+    { "id": "T2", "title": "Cloudflare Turnstile mobile implementation", "url": "https://developers.cloudflare.com/turnstile/get-started/mobile-implementation/" },
+    { "id": "T3", "title": "Cloudflare bot scores and plan availability", "url": "https://developers.cloudflare.com/bots/concepts/bot-score/" },
+    { "id": "T4", "title": "Cloudflare Hyperdrive query caching", "url": "https://developers.cloudflare.com/hyperdrive/concepts/query-caching/" },
+    { "id": "T5", "title": "Cloudflare Queues delivery guarantees", "url": "https://developers.cloudflare.com/queues/reference/delivery-guarantees/" },
+    { "id": "T6", "title": "OpenAI moderation guide", "url": "https://developers.openai.com/api/docs/guides/moderation" },
+    { "id": "T7", "title": "WebAuthn Level 2, user verification and biometric privacy", "url": "https://www.w3.org/TR/webauthn-2/" }
+  ],
+  "reference_validation": {
+    "status": "passed_reference_spec_checks_only", "checks_passed": 2515,
+    "calendar_months_tested": 480, "random_score_cases": 1000,
+    "catalogue_actions": 22, "required_application_acceptance_cases": 100,
+    "application_tests_run": false, "repository_modified": false, "production_deployed": false,
+    "notes": ["Tests check the proposed arithmetic, calendar defaults and reference fixtures; not application, provider, security or database implementation."]
+  }
+}

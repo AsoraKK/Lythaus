@@ -240,10 +240,11 @@ describe('critical parameter contracts', () => {
       expect(conflict?.content?.['application/json']?.schema).toBeDefined();
       const errors = Object.values(conflict?.content?.['application/json']?.examples ?? {})
         .map((example: any) => example?.value?.error);
+      const supportMutation = operation.tags?.includes('SupportFeedback') || operation.tags?.includes('AdminSupportFeedback');
       expect(errors).toEqual(expect.arrayContaining([
-        'idempotency_key_conflict',
-        'idempotency_in_progress',
-        'idempotency_outcome_unknown',
+        ...(supportMutation
+          ? ['support_idempotency_conflict', 'support_revision_conflict', 'support_closed']
+          : ['idempotency_key_conflict', 'idempotency_in_progress', 'idempotency_outcome_unknown']),
       ]));
     }
 

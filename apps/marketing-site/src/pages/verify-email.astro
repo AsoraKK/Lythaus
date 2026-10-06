@@ -15,18 +15,20 @@ const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lyt
     <div class="auth-intro">
       <span class="pill">Lythaus account</span>
       <h1 id="verify-email-title">Confirm your email.</h1>
-      <p>Opening this page changes nothing. Choose the password you want to use, then confirm. This ensures only the mailbox owner can finish account setup, even if someone else started the registration.</p>
+      <p>Confirm your email and set the password you will use to sign in. Opening this page does not change your account. Only the mailbox owner can finish setup.</p>
 
       <form class="auth-form" data-email-verification-form data-api-base-url={publicApiBaseUrl} novalidate>
-        <label for="verification-password">Your password</label>
-        <input id="verification-password" name="password" type="password" autocomplete="new-password" maxlength="256" required aria-describedby="verification-password-note" />
-        <p class="auth-field-note" id="verification-password-note">Choose 15–128 characters. You can use the password you chose during signup. Spaces, Unicode, paste, and password managers are supported.</p>
-        <label for="verification-password-confirmation">Confirm password</label>
-        <input id="verification-password-confirmation" name="passwordConfirmation" type="password" autocomplete="new-password" maxlength="256" required aria-describedby="verification-password-note" />
-        <button class="button primary" type="submit" data-email-verification-submit>Verify email and finish setup</button>
+        <div class="auth-fields" data-email-verification-fields>
+          <label for="verification-password">Set your password</label>
+          <input id="verification-password" name="password" type="password" autocomplete="new-password" maxlength="256" required aria-describedby="verification-password-note" />
+          <p class="auth-field-note" id="verification-password-note">Choose 15–128 characters. This becomes your account password. Spaces, Unicode, paste, and password managers are supported.</p>
+          <label for="verification-password-confirmation">Confirm password</label>
+          <input id="verification-password-confirmation" name="passwordConfirmation" type="password" autocomplete="new-password" maxlength="256" required aria-describedby="verification-password-note" />
+          <button class="button primary" type="submit" data-email-verification-submit>Verify email and finish setup</button>
+        </div>
         <p class="auth-status" data-email-verification-status aria-live="polite" aria-atomic="true" role="status" tabindex="-1"></p>
         <div class="auth-actions">
-          <a class="button secondary" data-email-verification-signin href="https://app.lythaus.co/" hidden>Sign in to Lythaus</a>
+          <a class="button secondary" data-email-verification-signin href="/sign-in" hidden>Sign in to Lythaus</a>
           <a class="text-link" data-email-verification-resend href="/resend-verification" hidden>Request a new verification email</a>
         </div>
       </form>
@@ -43,6 +45,7 @@ const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lyt
       const status = form.querySelector('[data-email-verification-status]');
       const signInLink = form.querySelector('[data-email-verification-signin]');
       const resendLink = form.querySelector('[data-email-verification-resend]');
+      const fields = form.querySelector('[data-email-verification-fields]');
       const apiBaseUrl = form.dataset.apiBaseUrl?.replace(/\/$/u, '') ?? '';
       let token = '';
       let linkGeneration = 0;
@@ -58,6 +61,11 @@ const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lyt
         if (link instanceof HTMLElement) link.hidden = false;
       };
       const showInvalidState = (message) => {
+        token = '';
+        for (const input of [password, confirmation]) {
+          if (input instanceof HTMLInputElement) { input.value = ''; input.disabled = true; }
+        }
+        if (fields instanceof HTMLElement) fields.hidden = true;
         if (button instanceof HTMLButtonElement) button.disabled = true;
         showLink(resendLink);
         setStatus(message, 'error');
@@ -68,6 +76,7 @@ const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lyt
         window.history.replaceState(null, '', '/verify-email');
         linkGeneration += 1;
         isSubmitting = false;
+        if (fields instanceof HTMLElement) fields.hidden = false;
         for (const input of [password, confirmation]) {
           if (input instanceof HTMLInputElement) { input.value = ''; input.disabled = !token; }
         }
@@ -116,6 +125,7 @@ const publicApiBaseUrl = import.meta.env.PUBLIC_API_BASE_URL ?? 'https://api.lyt
           confirmation.value = '';
           password.disabled = true;
           confirmation.disabled = true;
+          if (fields instanceof HTMLElement) fields.hidden = true;
           button.textContent = 'Email verified';
           showLink(signInLink);
           setStatus('Your email is verified. You can now sign in to Lythaus.', 'success');

@@ -121,3 +121,31 @@ class RewardsSnapshot {
     );
   }
 }
+
+class MonthlyRewardsView {
+  const MonthlyRewardsView({
+    required this.state,
+    required this.reasonCode,
+    required this.effectiveMonth,
+    required this.currentLevel,
+    required this.sourceMonth,
+    required this.sourceScore,
+  });
+
+  final String state;
+  final String? reasonCode;
+  final String? effectiveMonth;
+  final int? currentLevel;
+  final String? sourceMonth;
+  final int? sourceScore;
+
+  factory MonthlyRewardsView.fromJson(Map<String, dynamic> json) =>
+      MonthlyRewardsView(
+        state: json['state'] as String? ?? 'pending',
+        reasonCode: json['reasonCode'] as String?,
+        effectiveMonth: json['effectiveMonth'] as String?,
+        currentLevel: (json['currentLevel'] as num?)?.toInt(),
+        sourceMonth: json['sourceMonth'] as String?,
+        sourceScore: (json['sourceScore'] as num?)?.toInt(),
+      );
+}

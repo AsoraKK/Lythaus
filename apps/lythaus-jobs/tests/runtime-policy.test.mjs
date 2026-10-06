@@ -237,6 +237,7 @@ test('routes every worker queue family and preserves a complete privacy data pas
     customFeeds: [{ id: 'feed-1', rules: [{ id: 'rule-1' }] }], submittedFlags: [{ id: 'flag-1' }],
     media: [{ id: 'media-1' }], provenance: [{ contentId: 'post-1' }], humanContribution: [{ contentId: 'post-1' }],
     reputationProfile: { userId: 'user-1' }, reputationEvents: [{ id: 'rep-1' }], accountabilitySignals: [{ id: 'signal-1' }],
+    monthlyReputationReports: { state: 'included', reasonCode: null, reports: [{ sourceMonth: '2026-08' }] },
     notificationPreferences: { emailEnabled: true }, notificationDevices: [{ id: 'device-1' }], activity: [{ id: 'activity-1' }],
     submittedAppeals: [{ id: 'appeal-1' }], reviewerQualification: { state: 'trained' }, appealAssignments: [{ id: 'assignment-1' }],
     appealVotes: [{ id: 'vote-1' }], appealAdjudications: [{ id: 'adjudication-1' }], appealOutcomes: [{ id: 'outcome-1' }],
@@ -247,6 +248,7 @@ test('routes every worker queue family and preserves a complete privacy data pas
   assert.deepEqual(passport.consentRecords, [{ id: 'consent-1', purpose: 'privacy', granted: true }]);
   assert.deepEqual(passport.entitlement, { subscriptionTier: 'black' });
   assert.deepEqual(passport.rewardRedemptions, [{ id: 'reward-1' }]);
+  assert.deepEqual(passport.reputation.monthlyReports, { state: 'included', reasonCode: null, reports: [{ sourceMonth: '2026-08' }] });
   assert.deepEqual(passport.accountEvents, [{ id: 'account-event-1', eventType: 'email_login' }]);
   assert.deepEqual(passport.customFeeds, [{ id: 'feed-1', rules: [{ id: 'rule-1' }] }]);
   assert.deepEqual(passport.submittedFlags, [{ id: 'flag-1' }]);

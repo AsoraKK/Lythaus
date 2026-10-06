@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import { approvedReleaseExpectation } from './product-integrity-schema-contract.mjs';
+import { authenticatedAcceptanceFlagForRelease } from './release-readiness-mode.mjs';
 
 const configPaths = [
   'apps/lythaus-public-api/wrangler.jsonc',
@@ -12,6 +13,8 @@ const releaseExpectation = approvedReleaseExpectation();
 const expectedFingerprint = releaseExpectation.fingerprint;
 const expectedRelationCount = String(releaseExpectation.relationCount);
 const materialize = process.env.MATERIALIZE_PRODUCT_INTEGRITY_DEPLOY_CONFIGS === 'true';
+const ownerTestingDeployment = process.env.OWNER_TESTING_DEPLOYMENT === 'true';
+const authenticatedAcceptanceFlag = authenticatedAcceptanceFlagForRelease(ownerTestingDeployment);
 const fingerprintPlaceholder = 'REPLACE_WITH_POST_0020_SCHEMA_FINGERPRINT';
 const relationCountPlaceholder = 'REPLACE_WITH_POST_0020_RELATION_COUNT';
 const accessTeamDomain = process.env.PRODUCT_INTEGRITY_ACCESS_TEAM_DOMAIN ?? '';
@@ -47,7 +50,7 @@ for (const configPath of configPaths) {
   let source = committedSource
     .replace(`"${fingerprintPlaceholder}"`, `"${expectedFingerprint}"`)
     .replace(`"${relationCountPlaceholder}"`, `"${expectedRelationCount}"`)
-    .replace('"AUTHENTICATED_ACCEPTANCE_PROVEN": "false"', '"AUTHENTICATED_ACCEPTANCE_PROVEN": "true"');
+    .replace('"AUTHENTICATED_ACCEPTANCE_PROVEN": "false"', `"AUTHENTICATED_ACCEPTANCE_PROVEN": "${authenticatedAcceptanceFlag}"`);
   if (configPath.includes('admin-api') || configPath.includes('auth-acceptance-coordinator')) {
     source = source
       .replace('"REPLACE_WITH_ACCESS_TEAM_DOMAIN"', JSON.stringify(accessTeamDomain))
@@ -64,7 +67,9 @@ for (const configPath of configPaths) {
   if (productionValue(source, 'EXPECTED_DATABASE_RELATION_COUNT') !== expectedRelationCount) throw new Error(`${configPath} relation-count materialization failed`);
   if (version !== requiredVersion) throw new Error(`${configPath} must require ${requiredVersion}`);
   if (budgetLedger !== 'true') throw new Error(`${configPath} must require the budget ledger`);
-  if (productionValue(source, 'AUTHENTICATED_ACCEPTANCE_PROVEN') !== 'true') throw new Error(`${configPath} acceptance materialization failed`);
+  if (productionValue(source, 'AUTHENTICATED_ACCEPTANCE_PROVEN') !== authenticatedAcceptanceFlag) {
+    throw new Error(`${configPath} acceptance materialization failed for the selected deployment mode`);
+  }
   if (/REPLACE_WITH_/.test(source.slice(0, source.indexOf('"env"')))) throw new Error(`${configPath} has an unresolved production placeholder`);
   if (materialize) fs.writeFileSync(configPath, source, 'utf8');
 }

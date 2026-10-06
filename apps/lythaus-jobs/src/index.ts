@@ -1,4 +1,4 @@
-import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, reconcileBudgetReservation, recordReputationSignal, recordUserActivity, refreshReputationProfile, reserveBudget, settleBudgetReservation, transaction, type BudgetConfig, type DatabaseClient, type HyperdriveBinding, type ReputationMutationResult } from '@lythaus/db';
+import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, reconcileBudgetReservation, recordReputationSignal, recordUserActivity, refreshReputationProfile, reserveBudget, settleBudgetReservation, transaction, supportFeedbackPrivacyIsReady, exportSupportForPrivacy, exportSupportMessagesForPrivacy, purgeSupportForPrivacy, retainSupportBatch, parseSupportServicePolicy, type BudgetConfig, type DatabaseClient, type HyperdriveBinding, type ReputationMutationResult } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { evaluateAuthenticity, type AuthenticityEvaluation } from '@lythaus/authenticity';
 import { ACTIVITY_POLICY_VERSION, APPEAL_POLICY, evaluateAppeal, selectAppealReviewers, type ActivityEventInput, type AppealReviewerCandidate, type AppealRiskClass, type AppealVote, type ReputationSignalType } from '@lythaus/contracts';
@@ -10,6 +10,16 @@ import { EMAIL_LIFECYCLE_QUEUE, handleTransactionalEmailLifecycleWebhook, readTr
 import { WorkflowEntrypoint } from 'cloudflare:workers';
 import { processBetaEvent, expireBetaWork } from './authenticity-beta.ts';
 import { processAlphaEvent, expireAlphaWork } from './authenticity-alpha.ts';
+import { deferMonthlyReputationAssessment, processMonthlyReputationAssessment, reconcileDeferredMonthlyReputation } from './monthly-reputation.ts';
+import { processMonthlyEarningEvent, reconcileMonthlyEarning } from './monthly-earning.ts';
+import { reconcileMonthlyAssembly } from './monthly-assembly.ts';
+import { processMonthlyPeerParticipation, reconcileMonthlyPeerParticipation } from './monthly-peer-participation.ts';
+import { processMonthlyRewardSnapshotEvent,reconcileMonthlyRewardSnapshots } from './monthly-reward-snapshots.ts';
+import { readMonthlyReputationReportsForPassport } from './monthly-reputation-dsr.ts';
+import { reconcileCommunityAppeals } from './community-appeals.ts';
+import { identicalCommunityAppealOverride } from '../../../packages/db/src/community-appeal-closure.ts';
+import { MONTHLY_EARNING_SOURCE_EVENTS } from '../../../packages/db/src/monthly-earning.ts';
+import { MONTHLY_REPUTATION_POLICY_VERSION } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
 import { tombstoneBetaCases, purgeBetaMedia } from '../../../packages/db/src/authenticity-beta.ts';
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 
@@ -17,6 +27,13 @@ interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
   DB_JOBS_FRESH: HyperdriveBinding;
   DB_PRIVACY_FRESH: HyperdriveBinding;
+  MONTHLY_REPUTATION_SHADOW_RULES?: string;
+  MONTHLY_REPUTATION_MAINTENANCE_RULES?: string;
+  MONTHLY_REPUTATION_PEER_PARTICIPATION_RULES?: string;
+  MONTHLY_REPUTATION_CONTEXT_RULES?: string;
+  MONTHLY_REPUTATION_SNAPSHOT_RULES?: string;
+  COMMUNITY_APPEAL_RULES_VERSION?: string;
+  SUPPORT_FEEDBACK_POLICY?: string;
   MODERATION_QUEUE?: Queue;
   FEED_QUEUE?: Queue;
   NOTIFICATIONS_QUEUE?: Queue;
@@ -35,6 +52,74 @@ interface Env extends EnvBindings {
   APPEAL_ASSIGNMENT_SECRET?: string;
 }
 
+function configuredSupportFeedbackPolicy(env: Env): unknown {
+  const serialized = env.SUPPORT_FEEDBACK_POLICY;
+  if (typeof serialized !== 'string' || serialized.length === 0 || new TextEncoder().encode(serialized).length > 32 * 1024) {
+    throw new Error('support_policy_invalid');
+  }
+  try {
+    const policy: unknown = JSON.parse(serialized);
+    parseSupportServicePolicy(policy);
+    return policy;
+  } catch {
+    throw new Error('support_policy_invalid');
+  }
+}
+
+async function exportSupportFeedbackForPrivacy(env: Env, requestId: string): Promise<unknown | undefined> {
+  if (!await supportFeedbackPrivacyIsReady(env.DB_PRIVACY_FRESH)) return undefined;
+  const policy = configuredSupportFeedbackPolicy(env);
+  return transaction(env.DB_PRIVACY_FRESH, async client => {
+    const items: Array<{ request: unknown; messages: readonly unknown[] }> = [];
+    let requestCursor: string | null = null;
+    for (let requestPage = 0; requestPage < 1_000; requestPage += 1) {
+      const page = await exportSupportForPrivacy(client, requestId, policy, requestCursor);
+      for (const item of page.items) {
+        const messages: unknown[] = [...item.messages];
+        let messageCursor: number | null = item.nextMessageCursor;
+        for (let messagePage = 0; messageCursor !== null; messagePage += 1) {
+          if (messagePage >= 1_000) throw new Error('support_privacy_export_limit');
+          const next = await exportSupportMessagesForPrivacy(client, requestId, item.request.id, policy, messageCursor, item.request.revision);
+          messages.push(...next.items);
+          if (next.nextCursor !== null && next.nextCursor <= messageCursor) throw new Error('support_privacy_export_limit');
+          messageCursor = next.nextCursor;
+        }
+        items.push(Object.freeze({ request: item.request, messages: Object.freeze(messages) }));
+      }
+      if (page.nextRequestCursor === null) return Object.freeze({ requests: Object.freeze(items) });
+      if (page.nextRequestCursor === requestCursor) throw new Error('support_privacy_export_limit');
+      requestCursor = page.nextRequestCursor;
+    }
+    throw new Error('support_privacy_export_limit');
+  });
+}
+
+async function purgeSupportFeedbackForPrivacy(env: Env, requestId: string): Promise<number> {
+  if (!await supportFeedbackPrivacyIsReady(env.DB_PRIVACY_FRESH)) return 0;
+  const policy = configuredSupportFeedbackPolicy(env);
+  return transaction(env.DB_PRIVACY_FRESH, async client => {
+    let scrubbedRecords = 0;
+    for (let batch = 0; batch < 1_000; batch += 1) {
+      const result = await purgeSupportForPrivacy(client, requestId, policy);
+      scrubbedRecords += result.scrubbedRecords;
+      if (!result.hasMore) return scrubbedRecords;
+      if (result.scrubbedRecords === 0) throw new Error('support_privacy_batch_stalled');
+    }
+    throw new Error('support_privacy_batch_limit');
+  });
+}
+
+async function recordDeletedSupportLocation(env: Env, subjectId: string): Promise<void> {
+  if (!await supportFeedbackPrivacyIsReady(env.DB_PRIVACY_FRESH)) return;
+  await query(env.DB_PRIVACY_FRESH, `
+    INSERT INTO privacy.subject_data_locations
+      (subject_id,store_type,resource_reference,entity_type,entity_id,authoritative_or_derived,retention_class,deletion_state,last_verified_at)
+    SELECT $1,'planetscale','support.requests','support_subject',$1,'authoritative','audit','retained',now()
+    WHERE EXISTS (SELECT 1 FROM support.requests WHERE submitter_id=$1)
+    ON CONFLICT (subject_id,store_type,resource_reference,entity_type,entity_key)
+    DO UPDATE SET deletion_state='retained',last_verified_at=now()`, [subjectId]);
+}
+
 async function deleteR2Prefix(bucket: NonNullable<EnvBindings['PRIVATE_EXPORTS']>, prefix: string): Promise<number> {
   let cursor: string | undefined;
   let deleted = 0;
@@ -48,6 +133,14 @@ async function deleteR2Prefix(bucket: NonNullable<EnvBindings['PRIVATE_EXPORTS']
     cursor = listed.truncated ? listed.cursor : undefined;
   } while (cursor);
   return deleted;
+}
+
+async function reconcileMonthlyReputationDataLocations(db: HyperdriveBinding, subjectId: string): Promise<void> {
+  const adapter = await query<{ available: boolean }>(db,
+    `SELECT to_regprocedure('privacy.reconcile_monthly_reputation_data_locations(uuid)') IS NOT NULL AS available`);
+  if (adapter.rows[0]?.available) {
+    await query(db, `SELECT privacy.reconcile_monthly_reputation_data_locations($1)`, [subjectId]);
+  }
 }
 
 function hasReadinessAuthorization(request: Request, env: Env): boolean {
@@ -624,6 +717,7 @@ async function processReputationSource(message: QueueMessage, env: Env, eventId:
   ].includes(eventType)) return;
   const source = await transaction(env.DB_JOBS_FRESH, (client) => canonicalOutboxEvent(client, eventId, eventType));
   const payload = source.payload;
+  if (payload.policyVersion === MONTHLY_REPUTATION_POLICY_VERSION) return;
   const correlationId = stringValue(message.body.correlationId) ?? eventId;
   const subjectUserId = stringValue(payload.authorId) ?? stringValue(payload.userId) ?? source.actor_id ?? undefined;
   if (!subjectUserId) throw new Error('reputation_subject_event_invalid');
@@ -823,6 +917,9 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
   );
   const post = postResult.rows[0];
   if (!post) return;
+  if (env.COMMUNITY_APPEAL_RULES_VERSION && await transaction(env.DB_JOBS_FRESH, client => identicalCommunityAppealOverride(client, {
+    contentType: 'post', contentId: post.id, sourceEventId: revision.sourceEventId, body: post.body, declaredCreationMode: post.declared_creation_mode,
+  }))) return;
   const inputHash = await sha256Hex(post.body);
   if (!isCurrentContentModerationRevision({
     revision,
@@ -979,6 +1076,9 @@ async function processCommentModeration(message: QueueMessage, env: Env): Promis
     );
     const row = comment.rows[0];
     if (!row) return;
+    if (env.COMMUNITY_APPEAL_RULES_VERSION && await identicalCommunityAppealOverride(client, {
+      contentType: 'comment', contentId: row.id, sourceEventId: revision.sourceEventId, body: row.body, declaredCreationMode: row.declared_creation_mode,
+    })) return;
     const bodyHash = await sha256Hex(row.body);
     if (!isCurrentContentModerationRevision({
       revision,
@@ -1621,6 +1721,14 @@ async function processMessage(message: QueueMessage, env: Env): Promise<void> {
   }
   try {
     if (eventType === 'content.post.created' || eventType === 'content.post.updated') await processPostModeration(message, env);
+    if (eventType === 'trust.monthly_assessment.requested') {
+      const assessment = await processMonthlyReputationAssessment(env, eventId);
+      if (assessment === null) {
+        await deferMonthlyReputationAssessment(env, eventId);
+        message.ack();
+        return;
+      }
+    }
     if (eventType === 'moderation.authenticity_beta.requested') await processBetaEvent(env, eventId, message.body.payload);
     if (eventType === 'moderation.authenticity_alpha.requested') await processAlphaEvent(env, eventId, message.body.payload);
     if (eventType === 'content.profile.updated') await processProfileModeration(message, env);
@@ -1671,6 +1779,10 @@ async function processMessage(message: QueueMessage, env: Env): Promise<void> {
       await processAccountStandingRefresh(message, env, eventId);
     }
     await processNotificationSource(message, env, eventId, eventType);
+    if ((MONTHLY_EARNING_SOURCE_EVENTS as readonly string[]).includes(eventType)) await processMonthlyEarningEvent(env, eventId);
+    if (eventType === 'moderation.community_appeal.resolved') await processMonthlyPeerParticipation(env, eventId);
+    if (eventType === 'trust.monthly_assessment.recorded' || eventType === 'trust.monthly_reward_snapshot.correction_approved')
+      await processMonthlyRewardSnapshotEvent(env,eventId,eventType);
     await query(env.DB_JOBS_FRESH,
       `UPDATE system.consumer_inbox SET state = 'completed', processed_at = now() WHERE consumer_name = 'lythaus-jobs' AND event_id = $1`,
       [eventId]
@@ -1703,6 +1815,8 @@ async function relayOutbox(env: Env): Promise<void> {
        SELECT id
          FROM system.outbox_events
         WHERE dispatched_at IS NULL
+          AND (event_type <> 'trust.monthly_assessment.requested'
+            OR last_error_code IS DISTINCT FROM 'monthly_reputation_shadow_paused')
           AND (attempted_at IS NULL OR attempted_at < now() - interval '5 minutes')
         ORDER BY created_at
         LIMIT 50
@@ -1895,6 +2009,12 @@ export default {
       await purgeBetaMedia(env.DB_JOBS_FRESH,env.MEDIA_QUARANTINE);
     }
     if (env.AUTHENTICITY_ALPHA_ENABLED === 'true') await expireAlphaWork(env);
+    await reconcileDeferredMonthlyReputation(env);
+    await reconcileMonthlyEarning(env);
+    await reconcileCommunityAppeals(env);
+    await reconcileMonthlyPeerParticipation(env);
+    await reconcileMonthlyAssembly(env);
+    await reconcileMonthlyRewardSnapshots(env);
     await relayTransactionalEmailOutbox(env);
     await relayOutbox(env);
     await deliverAdminOutcomeNotifications(env);
@@ -1916,6 +2036,7 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
     const requestedId = event.payload.requestId;
     const requestId = await step.do('resolve-request', async () => {
       await query(this.env.DB_PRIVACY_FRESH, `SELECT privacy.reconcile_subject_data_locations($1)`, [subjectId]);
+      await reconcileMonthlyReputationDataLocations(this.env.DB_PRIVACY_FRESH, subjectId);
       const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
         `SELECT id FROM privacy.requests WHERE id = $1 AND subject_id = $2 AND request_type = 'delete'`, [requestedId, subjectId]);
       if (!result.rows[0]) throw new Error('privacy_delete_request_not_found');
@@ -1970,6 +2091,12 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       });
       return { subjectId, state: 'blocked' };
     }
+
+    await step.do('purge-support-feedback-for-deletion', async () => {
+      await purgeSupportFeedbackForPrivacy(this.env, requestId);
+      await recordDeletedSupportLocation(this.env, subjectId);
+      return true;
+    });
 
     if (this.env.AUTHENTICITY_BETA_STORAGE_ENABLED === 'true') {
       await step.do('tombstone-private-beta',async()=>{await tombstoneBetaCases(this.env.DB_JOBS_FRESH,subjectId); return true;});
@@ -2120,7 +2247,10 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
                       'moderation.appeal_review_votes', 'moderation.appeal_adjudications',
                       'moderation.appeal_outcomes', 'moderation.appeal_outcome_effects',
                       'editorial.peer_reviews', 'editorial.publications',
-                      'privacy.requests', 'privacy.request_events', 'privacy.legal_holds'
+                      'privacy.requests', 'privacy.request_events', 'privacy.legal_holds',
+                      'trust.monthly_reputation_sources', 'trust.monthly_reputation_assessments',
+                      'trust.monthly_earning_week_revisions', 'trust.monthly_reward_snapshots',
+                      'trust.monthly_reward_snapshot_corrections', 'support.requests'
                     ) THEN 'retained'
                     ELSE 'deleted'
                   END,
@@ -2177,6 +2307,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
     if (!exportsBucket) throw new Error('private_exports_not_configured');
     const requestId = await step.do('resolve-export-request', async () => {
       await query(this.env.DB_PRIVACY_FRESH, `SELECT privacy.reconcile_subject_data_locations($1)`, [subjectId]);
+      await reconcileMonthlyReputationDataLocations(this.env.DB_PRIVACY_FRESH, subjectId);
       const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
         `SELECT id FROM privacy.requests WHERE id = $1 AND subject_id = $2 AND request_type = 'export'`, [requestedId, subjectId]);
       if (!result.rows[0]) throw new Error('privacy_export_request_not_found');
@@ -2246,6 +2377,11 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         contactEmail: contactEmailField.rows[0],
         decrypt: decryptField,
       });
+      const monthlyReputationReports = this.env.MONTHLY_REPUTATION_SNAPSHOT_RULES
+        ? await transaction(this.env.DB_JOBS_FRESH, client => readMonthlyReputationReportsForPassport(
+          client, subjectId, this.env.MONTHLY_REPUTATION_SNAPSHOT_RULES,
+        ))
+        : { state: 'unavailable', reasonCode: 'approval_unavailable', reports: [] };
       const [
         posts,
         comments,
@@ -2319,7 +2455,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         query(this.env.DB_JOBS_FRESH, `SELECT case_id, state, consent_version, review_state, created_at, updated_at, expires_at, result->>'finding' AS finding, result->'advisory'->>'status' AS advisory_status FROM moderation.authenticity_beta WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT f.id, f.case_id, f.kind, f.message, f.policy_version, f.created_at FROM moderation.authenticity_beta_feedback f JOIN moderation.authenticity_beta b ON b.case_id=f.case_id WHERE b.owner_id=$1 AND b.deleted_at IS NULL ORDER BY f.created_at`, [subjectId]),
       ]);
-      return buildPrivacyDataPassport({
+      const passport = buildPrivacyDataPassport({
         generatedAt: new Date().toISOString(),
         profile: identity.rows[0] ?? null,
         privateProfile: privateIdentity.privateProfile,
@@ -2342,6 +2478,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         humanContribution: contributions.rows,
         reputationProfile: reputationProfile.rows[0] ?? null,
         reputationEvents: reputationEvents.rows,
+        monthlyReputationReports,
         accountabilitySignals: accountabilitySignals.rows,
         notificationPreferences: notificationPreferences.rows[0] ?? null,
         notificationDevices: notificationDevices.rows,
@@ -2356,6 +2493,8 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         appealOutcomeEffects: appealOutcomeEffects.rows,
         subjectDataLocations: locations.rows,
       });
+      const supportFeedback = await exportSupportFeedbackForPrivacy(this.env, requestId);
+      return supportFeedback === undefined ? passport : Object.freeze({ ...passport, supportFeedback });
     });
 
     const completion = await step.do('store-export-and-complete-request', async () => {
@@ -2405,7 +2544,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
 }
 
 export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: string }> {
-  async run(event: WorkflowEvent<{ runId: string }>, step: WorkflowStep): Promise<{ runId: string; redactedPosts: number; deletedMedia: number; expiredActivityEvents: number; expiredAccountEvents: number; expiredSystemAuditEvents: number; expiredRateLimitWindows: number; expiredIdempotencyTombstones: number; expiredWaitlistSignups: number }> {
+  async run(event: WorkflowEvent<{ runId: string }>, step: WorkflowStep): Promise<{ runId: string; redactedPosts: number; deletedMedia: number; expiredActivityEvents: number; expiredAccountEvents: number; expiredSystemAuditEvents: number; expiredRateLimitWindows: number; expiredIdempotencyTombstones: number; expiredWaitlistSignups: number; expiredSupportRecords: number }> {
     const securityAuditRetention = securityAuditRetentionPlan();
     const securityRetentionInterval = `${securityAuditRetention.retentionDays} days`;
     const expiredActivityEvents = await step.do('purge-expired-user-activity', async () => {
@@ -2478,6 +2617,12 @@ export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: s
       });
       return deleted;
     });
+    const expiredSupportRecords = await step.do('purge-expired-support-feedback', async () => {
+      if (!await supportFeedbackPrivacyIsReady(this.env.DB_PRIVACY_FRESH)) return 0;
+      const policy = configuredSupportFeedbackPolicy(this.env);
+      const result = await transaction(this.env.DB_PRIVACY_FRESH, client => retainSupportBatch(client, policy));
+      return result.scrubbedRecords;
+    });
     const candidates = await step.do('find-retention-candidates', async () => {
       const result = await query<{ user_id: string; content_type: string; retention_period: string }>(this.env.DB_PRIVACY_FRESH,
         `SELECT user_id, content_type, retention_period::text FROM privacy.retention_rules ORDER BY created_at LIMIT 100`);
@@ -2542,7 +2687,7 @@ export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: s
       redactedPosts += result.posts;
       deletedMedia += result.media;
     }
-    return { runId: event.payload.runId, redactedPosts, deletedMedia, expiredActivityEvents, expiredAccountEvents, expiredSystemAuditEvents, expiredRateLimitWindows, expiredIdempotencyTombstones, expiredWaitlistSignups };
+    return { runId: event.payload.runId, redactedPosts, deletedMedia, expiredActivityEvents, expiredAccountEvents, expiredSystemAuditEvents, expiredRateLimitWindows, expiredIdempotencyTombstones, expiredWaitlistSignups, expiredSupportRecords };
   }
 }
 

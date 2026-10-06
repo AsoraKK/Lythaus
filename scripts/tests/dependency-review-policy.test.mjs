@@ -58,6 +58,18 @@ test('dependency review requires a lockfile for resolved dependency metadata cha
   assert.equal(dependencyGraphChanged(before, after), true);
 });
 
+test('marketing linked policy requires native coverage alongside every registry entry', () => {
+  const lock = fs.readFileSync('apps/marketing-site/package-lock.json', 'utf8');
+  const expected = resolvedDependencies('apps/marketing-site/package-lock.json', lock).map(value => ({ ...value, manifest: 'apps/marketing-site/package-lock.json' }));
+  const local = expected.find(value => value.name === '../../tools/marketing/astro-cache-policy');
+  assert.equal(local.version, '1.0.0');
+  assert.equal(expected.some(value => value.name === 'http-cache-semantics'), false);
+  const native = expected.map(value => ({ ...value, change_type: 'added' }));
+  assert.deepEqual(missingCoverage(expected, native), []);
+  assert.equal(missingCoverage(expected, native.filter(value => value.name !== local.name)).length, 1);
+  assert.equal(missingCoverage(expected, native.filter(value => value.name === local.name)).length, expected.length - 1);
+});
+
 test('local dependency review skips duplicate audits when the dependency graph is unchanged', () => {
   assert.equal(shouldRunLocalAudit({ changedNpmDependencyManifests: [], changedNpmLocks: [] }), false);
   assert.equal(shouldRunLocalAudit({ changedNpmDependencyManifests: ['package.json'], changedNpmLocks: [] }), true);

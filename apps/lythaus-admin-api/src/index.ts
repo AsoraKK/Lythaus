@@ -1,4 +1,4 @@
-import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, recordUserActivity, transaction, type HyperdriveBinding } from '@lythaus/db';
+import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, recordUserActivity, transaction, createSupportFeedbackRuntime, handleSupportFeedbackRequest, isSupportFeedbackPath, supportAuthentication, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { ACTIVITY_POLICY_VERSION, APPEAL_POLICY, encodeCursor, enforceAdminAllowPublication } from '@lythaus/contracts';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
@@ -9,7 +9,11 @@ import { readBoundedJson } from './request-body-policy.ts';
 import { handleAdminBeta } from './authenticity-beta.ts';
 import { handleAdminAlpha } from './authenticity-alpha.ts';
 import { handleAccountSupport } from './account-support-runtime.ts';
+import { handleOverview } from './overview-runtime.ts';
 import { adminWaitlistFilters, parseAdminUserId, parseReasonCode, rejectUnknownFields, requireConfirmation } from './admin-runtime-policy.ts';
+import { triageCommunityAppeal } from '../../../packages/db/src/community-appeal-mutations.ts';
+import { communityTriageQueue, readCommunityTriageEvidence } from '../../../packages/db/src/community-appeal-access.ts';
+import { handleMonthlyContextReview } from './monthly-context-review.ts';
 import { appealOutcomeAuditPlan, assertActionableModerationCase, evaluateAppealFromRecords, parseAppealAdjudicationRequest, type AppealAdjudicationRecord, type AppealVoteRecord } from './runtime-policy.ts';
 import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, parseWaitlistRetentionHoldUpdate, parseWaitlistStatusUpdate, requireWaitlistEncryptionKey, waitlistAuditMetadata, waitlistPageRequest } from './waitlist-runtime-policy.ts';
 import {
@@ -33,18 +37,29 @@ interface Env extends EnvBindings {
   DB_ADMIN_FRESH: HyperdriveBinding;
   DB_PRIVACY_FRESH: HyperdriveBinding;
   ACCESS_AUDIENCES?: string;
+  COMMUNITY_APPEAL_RULES_VERSION?: string;
+  MONTHLY_REPUTATION_CONTEXT_RULES?: string;
+  SUPPORT_FEEDBACK_ENABLED?: string;
+  SUPPORT_FEEDBACK_POLICY?: string;
 }
 
 const ADMIN_ERROR_CODES = new Set([
   'access_assertion_invalid', 'access_required', 'access_subject_missing',
   'access_verification_not_configured', 'admin_public_label_declaration_mismatch',
+  'community_appeals_unavailable', 'community_appeal_triage_not_allowed', 'community_appeal_state_conflict',
+  'community_appeal_triage_invalid', 'community_appeal_safe_evidence_required', 'community_appeal_restricted_evidence_forbidden',
+  'monthly_context_unavailable', 'monthly_context_actor_not_allowed', 'monthly_context_comment_not_found',
+  'monthly_context_request_invalid', 'monthly_context_rubric_mismatch', 'monthly_context_idempotency_reused',
+  'monthly_context_revision_conflict', 'monthly_context_rules_locked', 'monthly_context_scope_changed',
+  'monthly_context_publication_ineligible',
   'account_support_owner_required', 'account_support_unavailable', 'account_support_invalid_filter',
+  'overview_owner_required', 'overview_unavailable', 'overview_invalid_period',
   'admin_mutation_content_type_invalid', 'admin_mutation_origin_invalid', 'admin_role_required', 'admin_subject_key_not_configured',
   'auth_data_unavailable', 'auth_email_dispatch_unavailable', 'confirmation_required',
   'email_already_verified', 'email_change_requires_public_flow', 'idempotency_in_progress', 'idempotency_key_reused', 'idempotency_key_required', 'invalid_email',
   'ai_assisted_character_limit_exceeded', 'ai_generated_public_content_blocked',
   'appeal_adjudication_decision_invalid', 'appeal_adjudication_locked',
-  'appeal_adjudication_not_recorded', 'appeal_adjudicator_conflict',
+  'appeal_adjudication_list_forbidden', 'appeal_adjudication_not_recorded', 'appeal_adjudicator_conflict',
   'appeal_adjudicator_required', 'appeal_adjudicator_role_invalid',
   'appeal_adjudicator_training_required', 'appeal_already_resolved', 'appeal_not_found',
   'appeal_policy_version_unsupported', 'appeal_risk_class_invalid',
@@ -64,10 +79,12 @@ function adminError(error: unknown): { exposedCode: string; internalCode: string
   const internalCode = error instanceof Error ? error.message : 'non_error_thrown';
   const exposedCode = ADMIN_ERROR_CODES.has(internalCode) ? internalCode : 'admin_request_failed';
   const status = exposedCode === 'admin_request_failed' || exposedCode === 'appeal_adjudication_not_recorded' ? 500
-    : ['access_verification_not_configured', 'admin_subject_key_not_configured', 'waitlist_unavailable', 'account_support_unavailable'].includes(exposedCode) ? 503
+    : ['access_verification_not_configured', 'admin_subject_key_not_configured', 'waitlist_unavailable', 'account_support_unavailable', 'overview_unavailable'].includes(exposedCode) ? 503
     : ['access_required', 'access_assertion_invalid', 'access_subject_missing'].includes(exposedCode) ? 401
       : ['auth_data_unavailable', 'auth_email_dispatch_unavailable'].includes(exposedCode) ? 503
-        : ['admin_role_required', 'admin_mutation_origin_invalid', 'account_support_owner_required'].includes(exposedCode) ? 403
+        : ['admin_role_required', 'admin_mutation_origin_invalid', 'account_support_owner_required', 'overview_owner_required', 'community_appeal_triage_not_allowed', 'monthly_context_actor_not_allowed', 'appeal_adjudication_list_forbidden'].includes(exposedCode) ? 403
+          : ['community_appeals_unavailable', 'monthly_context_unavailable'].includes(exposedCode) ? 503
+            : ['community_appeal_state_conflict', 'monthly_context_idempotency_reused', 'monthly_context_revision_conflict', 'monthly_context_rules_locked', 'monthly_context_scope_changed'].includes(exposedCode) ? 409
           : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
               : ['appeal_adjudication_locked', 'appeal_already_resolved', 'email_already_verified', 'idempotency_in_progress', 'idempotency_key_reused', 'moderation_case_already_resolved', 'moderation_case_superseded', 'moderation_declaration_missing', 'user_email_exists', 'waitlist_duplicate', 'waitlist_status_transition_invalid'].includes(exposedCode) ? 409
               : exposedCode === 'request_too_large' ? 413
@@ -959,7 +976,7 @@ async function listPendingAppealAdjudications(
   env: Env,
   actor: { userId: string; role: string },
 ): Promise<Response> {
-  if (!['editorial', 'administrator', 'owner'].includes(actor.role)) throw new Error('appeal_adjudicator_required');
+  if (!['editorial', 'administrator', 'owner'].includes(actor.role)) throw new Error('appeal_adjudication_list_forbidden');
   const result = await query(env.DB_ADMIN_FRESH,
     `SELECT appeal.id AS appeal_id, appeal.case_id, appeal.risk_class, appeal.policy_version,
             appeal.created_at, appeal.expires_at, outcome.reviewer_panel_decision,
@@ -1150,6 +1167,31 @@ export default {
       }
       const actor = await requireAdmin(request, env);
       await enforceAdminRateLimit(request, env, actor.userId);
+      if (isSupportFeedbackPath(url.pathname, 'owner')) {
+        const privateSupportResponse = (body: Record<string, unknown>, status: number) => json(body, {
+          status,
+          headers: { 'x-correlation-id': id, 'cache-control': 'private, no-store' },
+        });
+        if (env.SUPPORT_FEEDBACK_ENABLED !== 'true') {
+          return cors(privateSupportResponse({ error: 'feature_disabled' }, 404));
+        }
+        if (request.method === 'POST') assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        const service = await createSupportFeedbackRuntime({
+          binding: env.DB_ADMIN_FRESH,
+          policy: env.SUPPORT_FEEDBACK_POLICY,
+          authentication: supportAuthentication(env),
+          channel: 'owner',
+        });
+        const result = await handleSupportFeedbackRequest({
+          request,
+          service,
+          channel: 'owner',
+          respond: privateSupportResponse,
+          readBody: (bodyRequest, maxBytes) => readBoundedJson(bodyRequest, maxBytes),
+        });
+        return cors(result ?? privateSupportResponse({ error: 'not_found' }, 404));
+      }
+      if (request.method === 'GET' && url.pathname === '/api/admin/overview') return cors(await handleOverview(request, env, actor, id));
       if (request.method === 'GET' && url.pathname === '/api/admin/account-support/access') return cors(await handleAccountSupport(request, env, actor, id));
       if (request.method === 'POST' && url.pathname === '/api/admin/account-support/lookup') return cors(await handleAccountSupport(request, env, actor, id));
       const accountSupportHistory = url.pathname.match(/^\/api\/admin\/account-support\/users\/([^/]+)\/history$/);
@@ -1181,6 +1223,32 @@ export default {
       if (request.method === 'GET' && url.pathname === '/api/admin/privacy/requests') {
         const result = await query(env.DB_PRIVACY_FRESH, `SELECT id, subject_id, request_type, state, created_at FROM privacy.requests ORDER BY created_at DESC LIMIT 100`);
         return cors(json({ items: result.rows }, { headers: { 'x-correlation-id': id, 'cache-control': 'private, no-store' } }));
+      }
+      const communityTriage = url.pathname.match(/^\/api\/admin\/appeals\/([^/]+)\/triage$/);
+      const contextReview = url.pathname.match(/^\/api\/admin\/reputation\/comments\/([^/]+)\/context-review$/);
+      if (request.method === 'POST' && contextReview) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await handleMonthlyContextReview(request, env, actor.userId, contextReview[1]));
+      }
+      if (request.method === 'GET' && url.pathname === '/api/admin/appeals/community/queue') {
+        if (!env.COMMUNITY_APPEAL_RULES_VERSION) throw new Error('community_appeals_unavailable');
+        return cors(json(await transaction(env.DB_ADMIN_FRESH, client => communityTriageQueue(client, actor.userId, env.COMMUNITY_APPEAL_RULES_VERSION!)),
+          { headers: { 'cache-control': 'private, no-store' } }));
+      }
+      const communityEvidence = url.pathname.match(/^\/api\/admin\/appeals\/([^/]+)\/evidence$/);
+      if (request.method === 'GET' && communityEvidence) {
+        if (!env.COMMUNITY_APPEAL_RULES_VERSION) throw new Error('community_appeals_unavailable');
+        return cors(json(await transaction(env.DB_ADMIN_FRESH, client => readCommunityTriageEvidence(client, actor.userId, communityEvidence[1])),
+          { headers: { 'cache-control': 'private, no-store' } }));
+      }
+      if (request.method === 'POST' && communityTriage) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        if (!env.COMMUNITY_APPEAL_RULES_VERSION) throw new Error('community_appeals_unavailable');
+        const input = await readBoundedJson<{ reviewClass: 'standard' | 'restricted'; safePreview?: string; ruleContext?: string; reasonCode: string }>(request, 512 * 1024);
+        const result = await transaction(env.DB_ADMIN_FRESH, client => triageCommunityAppeal(client, {
+          ...input, appealId: communityTriage[1], actorId: actor.userId,
+        }));
+        return cors(json(result, { headers: { 'cache-control': 'private, no-store' } }));
       }
       if (request.method === 'GET' && url.pathname === '/api/admin/moderation/cases') {
         return cors(json({ items: await listModerationCases(env) }, { headers: { 'x-correlation-id': id, 'cache-control': 'private, no-store' } }));

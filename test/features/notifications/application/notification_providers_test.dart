@@ -6,7 +6,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockNotificationApiService extends Mock
-    implements NotificationApiService {}
+    implements NotificationApiService {
+  @override
+  bool get isCurrentSession => true;
+}
 
 void main() {
   setUpAll(() {
@@ -279,9 +282,11 @@ void main() {
         );
         addTearDown(container.dispose);
 
-        final loadedPrefs = await container.read(
-          notificationPreferencesProvider.future,
-        );
+        container.read(preferencesControllerProvider);
+        await Future<void>.delayed(Duration.zero);
+        final loadedPrefs = container
+            .read(preferencesControllerProvider)
+            .requireValue;
         final unread = await container.read(unreadCountProvider.future);
 
         expect(loadedPrefs.userId, 'u1');

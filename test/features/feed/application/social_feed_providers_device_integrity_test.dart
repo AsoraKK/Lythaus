@@ -72,6 +72,8 @@ class _FakeFeedService implements SocialFeedRepository {
     String? cursor,
     int limit = 25,
     String? token,
+    String? tag,
+    FeedRequestCancellation? cancellation,
   }) {
     throw UnimplementedError();
   }

@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Lythaus API
-  version: v8
+  version: v9
   description: >
     HTTP contract for the Lythaus API. The active runtime is Cloudflare Workers
     backed by PlanetScale PostgreSQL through Hyperdrive. Initial authentication
@@ -48,6 +48,10 @@ tags:
     description: Moderation workflows.
   - name: Admin
     description: Lythaus admin moderation and safety operations.
+  - name: SupportFeedback
+    description: Private problem reports and suggestions submitted by authenticated members.
+  - name: AdminSupportFeedback
+    description: Owner-only private support triage, replies, evidence and closure.
   - name: Privacy
     description: User data portability and account deletion (GDPR/CCPA).
   - name: Privacy Admin
@@ -565,6 +569,10 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1appeals~1{appealId}~1recuse'
   /appeals/reviewer/assignments:
     $ref: './product-integrity.yaml#/paths/~1appeals~1reviewer~1assignments'
+  /appeals/review/queue:
+    $ref: './community-appeals.yaml#/paths/~1appeals~1review~1queue'
+  /appeals/{appealId}/withdraw:
+    $ref: './community-appeals.yaml#/paths/~1appeals~1{appealId}~1withdraw'
   /auth/refresh:
     post:
       operationId: authRefresh
@@ -1247,6 +1255,10 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1bookmarks~1{postId}'
   /reputation/me:
     $ref: './product-integrity.yaml#/paths/~1reputation~1me'
+  /reputation/me/reports/monthly/{sourceMonth}:
+    $ref: './monthly-reputation.yaml#/paths/~1reputation~1me~1reports~1monthly~1{sourceMonth}'
+  /reputation/me/reports/monthly/{sourceMonth}/export.csv:
+    $ref: './monthly-reputation.yaml#/paths/~1reputation~1me~1reports~1monthly~1{sourceMonth}~1export.csv'
   /reputation/me/ledger:
     $ref: './product-integrity.yaml#/paths/~1reputation~1me~1ledger'
   /activity:
@@ -1280,6 +1292,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UnauthorizedError'
+  /rewards/me/monthly:
+    $ref: './monthly-reputation.yaml#/paths/~1rewards~1me~1monthly'
   /rewards/{id}/redeem:
     post:
       operationId: rewardsRedeemPost
@@ -1341,6 +1355,48 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1admin~1users~1search'
   /admin/auth/summary:
     $ref: './product-integrity.yaml#/paths/~1admin~1auth~1summary'
+  /admin/overview:
+    $ref: './overview.yaml#/paths/~1admin~1overview'
+  /support/options:
+    $ref: './support-feedback.yaml#/paths/~1support~1options'
+  /support/problems:
+    $ref: './support-feedback.yaml#/paths/~1support~1problems'
+  /support/problems/{requestId}:
+    $ref: './support-feedback.yaml#/paths/~1support~1problems~1{requestId}'
+  /support/problems/{requestId}/messages:
+    $ref: './support-feedback.yaml#/paths/~1support~1problems~1{requestId}~1messages'
+  /support/suggestions:
+    $ref: './support-feedback.yaml#/paths/~1support~1suggestions'
+  /support/suggestions/{requestId}:
+    $ref: './support-feedback.yaml#/paths/~1support~1suggestions~1{requestId}'
+  /support/suggestions/{requestId}/messages:
+    $ref: './support-feedback.yaml#/paths/~1support~1suggestions~1{requestId}~1messages'
+  /admin/support/options:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1options'
+  /admin/support/problems:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1problems'
+  /admin/support/problems/{requestId}:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1problems~1{requestId}'
+  /admin/support/problems/{requestId}/messages:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1problems~1{requestId}~1messages'
+  /admin/support/problems/{requestId}/notes:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1problems~1{requestId}~1notes'
+  /admin/support/problems/{requestId}/evidence:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1problems~1{requestId}~1evidence'
+  /admin/support/problems/{requestId}/decision:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1problems~1{requestId}~1decision'
+  /admin/support/suggestions:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1suggestions'
+  /admin/support/suggestions/{requestId}:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1suggestions~1{requestId}'
+  /admin/support/suggestions/{requestId}/messages:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1suggestions~1{requestId}~1messages'
+  /admin/support/suggestions/{requestId}/notes:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1suggestions~1{requestId}~1notes'
+  /admin/support/suggestions/{requestId}/evidence:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1suggestions~1{requestId}~1evidence'
+  /admin/support/suggestions/{requestId}/decision:
+    $ref: './support-feedback.yaml#/paths/~1admin~1support~1suggestions~1{requestId}~1decision'
   /admin/email-health:
     $ref: './product-integrity.yaml#/paths/~1admin~1email-health'
   /admin/account-support/access:
@@ -1369,6 +1425,14 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1admin~1appeals~1{appealId}~1adjudications'
   /admin/appeals/pending-adjudication:
     $ref: './product-integrity.yaml#/paths/~1admin~1appeals~1pending-adjudication'
+  /admin/appeals/community/queue:
+    $ref: './community-appeals.yaml#/paths/~1admin~1appeals~1community~1queue'
+  /admin/appeals/{appealId}/triage:
+    $ref: './community-appeals.yaml#/paths/~1admin~1appeals~1{appealId}~1triage'
+  /admin/appeals/{appealId}/evidence:
+    $ref: './community-appeals.yaml#/paths/~1admin~1appeals~1{appealId}~1evidence'
+  /admin/reputation/comments/{commentId}/context-review:
+    $ref: './monthly-reputation.yaml#/paths/~1admin~1reputation~1comments~1{commentId}~1context-review'
   /admin/reviewers/{reviewerId}/qualification:
     $ref: './product-integrity.yaml#/paths/~1admin~1reviewers~1{reviewerId}~1qualification'
   /admin/users/{userId}/status:
@@ -2087,6 +2151,10 @@ components:
       type: object
       required: [request]
       properties:
+        retryAfterSeconds:
+          description: Remaining export cooldown calculated from the server policy. Present for requestType=export; independent of the request's processing state.
+          type: integer
+          minimum: 0
         request:
           type: object
           allOf:

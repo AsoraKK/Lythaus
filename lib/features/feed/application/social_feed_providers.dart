@@ -34,22 +34,12 @@ final trendingFeedProvider =
     );
 
 /// Provider for searching feeds by keyword/tag
-final feedSearchProvider = FutureProvider.family<FeedResponse, String>((
-  ref,
-  query,
-) async {
-  final feedService = ref.read(socialFeedServiceProvider);
-  final token = await ref.read(jwtProvider.future);
-  return feedService.getFeed(
-    params: FeedParams(
-      type: FeedType.notable,
-      page: 1,
-      pageSize: 20,
-      tags: [query],
-    ),
-    token: token,
-  );
-});
+typedef FeedSearchKey = ({String tag, int tokenVersion});
+
+final feedSearchProvider = AsyncNotifierProvider.autoDispose
+    .family<FeedSearchNotifier, FeedResponse, FeedSearchKey>(
+      FeedSearchNotifier.new,
+    );
 
 /// Provider for local feed
 final localFeedProvider =
@@ -198,6 +188,72 @@ class FeedNotifier extends FamilyAsyncNotifier<FeedResponse, FeedParams> {
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() => build(arg));
+  }
+}
+
+class FeedSearchNotifier
+    extends AutoDisposeFamilyAsyncNotifier<FeedResponse, FeedSearchKey> {
+  FeedRequestCancellation? _cancellation;
+  bool _loadingMore = false;
+
+  @override
+  Future<FeedResponse> build(FeedSearchKey arg) async {
+    final cancellation = FeedRequestCancellation();
+    _cancellation = cancellation;
+    ref.onDispose(cancellation.cancel);
+    final token = await ref.watch(jwtProvider.future);
+    return ref
+        .read(socialFeedServiceProvider)
+        .getDiscoverFeed(
+          tag: arg.tag,
+          token: token,
+          cancellation: cancellation,
+        );
+  }
+
+  Future<void> loadMore() async {
+    final current = state.value;
+    final cancellation = _cancellation;
+    if (_loadingMore ||
+        current == null ||
+        !current.hasMore ||
+        current.nextCursor == null ||
+        cancellation == null ||
+        cancellation.isCancelled) {
+      return;
+    }
+
+    _loadingMore = true;
+    try {
+      final token = await ref.read(jwtProvider.future);
+      final nextPage = await ref
+          .read(socialFeedServiceProvider)
+          .getDiscoverFeed(
+            tag: arg.tag,
+            cursor: current.nextCursor,
+            limit: current.pageSize,
+            token: token,
+            cancellation: cancellation,
+          );
+      if (cancellation.isCancelled) return;
+
+      final seenIds = current.posts.map((post) => post.id).toSet();
+      final uniquePosts = nextPage.posts
+          .where((post) => seenIds.add(post.id))
+          .toList(growable: false);
+      state = AsyncData(
+        FeedResponse(
+          posts: [...current.posts, ...uniquePosts],
+          totalCount: current.totalCount + uniquePosts.length,
+          hasMore: nextPage.hasMore,
+          nextCursor: nextPage.nextCursor,
+          page: current.page + 1,
+          pageSize: current.pageSize,
+        ),
+      );
+    } finally {
+      _loadingMore = false;
+    }
   }
 }
 

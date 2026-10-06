@@ -27,5 +27,30 @@ void main() {
       // TODO
     });
 
+    // String ballotId
+    test('to test the property `ballotId`', () async {
+      // TODO
+    });
+
+    // int revision
+    test('to test the property `revision`', () async {
+      // TODO
+    });
+
+    // String choice
+    test('to test the property `choice`', () async {
+      // TODO
+    });
+
+    // DateTime castAt
+    test('to test the property `castAt`', () async {
+      // TODO
+    });
+
+    // bool created
+    test('to test the property `created`', () async {
+      // TODO
+    });
+
   });
 }

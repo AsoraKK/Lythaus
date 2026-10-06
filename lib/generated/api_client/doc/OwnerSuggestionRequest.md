@@ -1,0 +1,24 @@
+# lythaus_api_client.model.OwnerSuggestionRequest
+
+## Load the model package
+```dart
+import 'package:lythaus_api_client/api.dart';
+```
+
+## Properties
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**kind** | **String** |  |
+**category** | **String** |  |
+**title** | **String** |  |
+**improvement** | **String** |  |
+**benefit** | **String** |  |
+**id** | **String** |  |
+**revision** | **int** |  |
+**state** | **String** |  |
+**createdAt** | [**DateTime**](DateTime.md) |  |
+**updatedAt** | [**DateTime**](DateTime.md) |  |
+**memberMessage** | **String** |  |
+**submitterId** | **String** |  |
+
+[[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

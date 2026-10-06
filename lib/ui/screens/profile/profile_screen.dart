@@ -3,6 +3,7 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lythaus/design_system/components/lyth_avatar.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,7 @@ import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
+import 'package:lythaus/features/rewards/application/reward_providers.dart';
 import 'package:lythaus/features/profile/application/follow_providers.dart';
 import 'package:lythaus/features/profile/application/follow_service.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
@@ -23,8 +25,10 @@ import 'package:lythaus/design_system/components/lyth_snackbar.dart';
 import 'package:lythaus/ui/components/tier_badge.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 import 'package:lythaus/ui/screens/profile/settings_screen.dart';
+import 'package:lythaus/ui/components/sign_in_required.dart';
 import 'package:lythaus/ui/screens/profile/edit_profile_screen.dart';
 import 'package:lythaus/ui/screens/profile/reputation_ledger_screen.dart';
+import 'package:lythaus/ui/screens/rewards/monthly_reputation_widgets.dart';
 import 'package:lythaus/state/providers/reputation_providers.dart';
 import 'package:lythaus/widgets/reputation_badge.dart';
 
@@ -44,8 +48,9 @@ class ProfileScreen extends ConsumerWidget {
       return ReadingPane(
         child: Scaffold(
           appBar: AppBar(title: const Text('Profile')),
-          body: const Center(
-            child: Text('Sign in to view your profile details.'),
+          body: const SignInRequired(
+            message: 'Sign in to view your profile details.',
+            returnTo: '/?tab=profile',
           ),
         ),
       );
@@ -122,6 +127,7 @@ class ProfileScreen extends ConsumerWidget {
                 if (isOwner) {
                   ref.invalidate(ownerProfileProvider);
                   ref.invalidate(reputationProvider);
+                  ref.invalidate(monthlyRewardsViewProvider);
                 }
               },
             ),
@@ -167,6 +173,10 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ],
             ),
+            if (isOwner) ...[
+              const SizedBox(height: Spacing.lg),
+              const MonthlyReputationTrackerCard(),
+            ],
             if (profile.bio?.trim().isNotEmpty == true) ...[
               const SizedBox(height: Spacing.lg),
               Text(profile.bio!, style: Theme.of(context).textTheme.bodyLarge),
@@ -224,6 +234,15 @@ class ProfileScreen extends ConsumerWidget {
                 leading: const Icon(Icons.settings_outlined),
                 title: const Text('Settings'),
                 onTap: () {
+                  final router = GoRouter.maybeOf(context);
+                  if (router != null) {
+                    router.go(
+                      GoRouterState.of(
+                        context,
+                      ).uri.replace(path: '/settings').toString(),
+                    );
+                    return;
+                  }
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => const SettingsScreen(),

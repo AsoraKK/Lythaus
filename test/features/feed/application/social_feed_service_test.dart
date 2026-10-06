@@ -116,6 +116,66 @@ void main() {
     expect(captured['includeReplies'], 'true');
   });
 
+  test(
+    'tag discovery sends the tag and preserves the API unavailable code',
+    () async {
+      when(
+        () => dio.get<Map<String, dynamic>>(
+          '/feed/discover',
+          queryParameters: any(named: 'queryParameters'),
+          options: any(named: 'options'),
+        ),
+      ).thenAnswer(
+        (_) async => _response({
+          'items': [_postJson('tagged')],
+          'nextCursor': null,
+        }, '/feed/discover'),
+      );
+
+      final feed = await service.getDiscoverFeed(tag: '#civic');
+      expect(feed.posts.single.id, 'tagged');
+      final query =
+          verify(
+                () => dio.get<Map<String, dynamic>>(
+                  '/feed/discover',
+                  queryParameters: captureAny(named: 'queryParameters'),
+                  options: any(named: 'options'),
+                ),
+              ).captured.single
+              as Map<String, dynamic>;
+      expect(query['tag'], '#civic');
+
+      final request = RequestOptions(path: '/feed/discover');
+      final apiError = DioException(
+        requestOptions: request,
+        response: Response<Map<String, dynamic>>(
+          requestOptions: request,
+          statusCode: 503,
+          data: {'error': 'tag_search_unavailable'},
+        ),
+        type: DioExceptionType.badResponse,
+      );
+      when(
+        () => dio.get<Map<String, dynamic>>(
+          '/feed/discover',
+          queryParameters: any(named: 'queryParameters'),
+          options: any(named: 'options'),
+        ),
+      ).thenThrow(apiError);
+
+      await expectLater(
+        service.getDiscoverFeed(tag: '#civic'),
+        throwsA(
+          isA<SocialFeedException>().having(
+            (error) => error.code,
+            'code',
+            'tag_search_unavailable',
+          ),
+        ),
+      );
+    },
+  );
+
   test('getFeed handles success and failure', () async {
     when(
       () => dio.get<Map<String, dynamic>>(
@@ -187,17 +247,6 @@ void main() {
   test('list feeds use shared response handler', () async {
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/feed/trending',
-        queryParameters: any(named: 'queryParameters'),
-        options: any(named: 'options'),
-      ),
-    ).thenAnswer(
-      (_) async =>
-          _response({'success': true, 'data': _feedData()}, '/feed/trending'),
-    );
-
-    when(
-      () => dio.get<Map<String, dynamic>>(
         '/feed/local',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
@@ -231,7 +280,6 @@ void main() {
           _response({'success': true, 'data': _feedData()}, '/feed/following'),
     );
 
-    final trending = await service.getTrendingFeed(page: 1, token: 't1');
     final local = await service.getLocalFeed(
       location: 'Cape Town',
       token: 't1',
@@ -239,7 +287,6 @@ void main() {
     final creators = await service.getNewCreatorsFeed(token: 't1');
     final following = await service.getFollowingFeed(token: 't1');
 
-    expect(trending.posts, hasLength(1));
     expect(local.posts, hasLength(1));
     expect(creators.posts, hasLength(1));
     expect(following.posts, hasLength(1));
@@ -350,19 +397,19 @@ void main() {
 
     when(
       () => dio.get<Map<String, dynamic>>(
-        '/feed/trending',
+        '/feed/discover',
         queryParameters: any(named: 'queryParameters'),
         options: any(named: 'options'),
       ),
     ).thenThrow(
       DioException(
-        requestOptions: RequestOptions(path: '/feed/trending'),
+        requestOptions: RequestOptions(path: '/feed/discover'),
         message: 'boom',
       ),
     );
 
     expect(
-      () => service.getTrendingFeed(),
+      () => service.getDiscoverFeed(),
       throwsA(isA<SocialFeedException>()),
     );
   });

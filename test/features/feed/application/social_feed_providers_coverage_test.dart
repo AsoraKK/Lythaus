@@ -445,18 +445,35 @@ void main() {
   });
 
   group('feedSearchProvider', () {
-    test('searches with query as tag', () async {
+    test('uses the public discovery endpoint for tag results', () async {
+      final container = createContainer();
       when(
+        () => repo.getDiscoverFeed(
+          cursor: any(named: 'cursor'),
+          limit: any(named: 'limit'),
+          token: any(named: 'token'),
+          tag: any(named: 'tag'),
+          cancellation: any(named: 'cancellation'),
+        ),
+      ).thenAnswer((_) async => _feedWith());
+      await container.read(
+        feedSearchProvider((tag: 'flutter', tokenVersion: 0)).future,
+      );
+      verify(
+        () => repo.getDiscoverFeed(
+          cursor: null,
+          limit: 25,
+          token: 'test-token',
+          tag: 'flutter',
+          cancellation: any(named: 'cancellation'),
+        ),
+      ).called(1);
+      verifyNever(
         () => repo.getFeed(
           params: any(named: 'params'),
           token: any(named: 'token'),
         ),
-      ).thenAnswer((_) async => _feedWith(posts: [_fakePost('s1')]));
-
-      final container = createContainer();
-      final result = await container.read(feedSearchProvider('flutter').future);
-
-      expect(result.posts, hasLength(1));
+      );
     });
   });
 }

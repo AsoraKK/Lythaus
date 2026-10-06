@@ -17,6 +17,9 @@ Method | HTTP request | Description
 [**adminAuthSummary**](AdminApi.md#adminauthsummary) | **GET** /admin/auth/summary | Read live authentication summary
 [**adminAuthenticityBetaRetry**](AdminApi.md#adminauthenticitybetaretry) | **POST** /admin/authenticity/cases/{caseId}/retry | Resume bounded unfinished work
 [**adminAuthenticityBetaReview**](AdminApi.md#adminauthenticitybetareview) | **POST** /admin/authenticity/cases/{caseId}/review | Record a versioned non-enforcing review
+[**adminCommunityAppealsEvidence**](AdminApi.md#admincommunityappealsevidence) | **GET** /admin/appeals/{appealId}/evidence | Read frozen evidence for safe triage
+[**adminCommunityAppealsQueue**](AdminApi.md#admincommunityappealsqueue) | **GET** /admin/appeals/community/queue | List appeals awaiting safe triage or accountable follow-up
+[**adminCommunityAppealsTriage**](AdminApi.md#admincommunityappealstriage) | **POST** /admin/appeals/{appealId}/triage | Freeze a safe review packet or restrict a submitted appeal
 [**adminEditorialPublicationsCreate**](AdminApi.md#admineditorialpublicationscreate) | **POST** /admin/editorial/publications | Publish an editorial News Board entry
 [**adminEmailHealth**](AdminApi.md#adminemailhealth) | **GET** /admin/email-health | Read transactional email health
 [**adminHealth**](AdminApi.md#adminhealth) | **GET** /admin/health | Check admin Worker health
@@ -25,6 +28,8 @@ Method | HTTP request | Description
 [**adminLegalHoldsList**](AdminApi.md#adminlegalholdslist) | **GET** /admin/privacy/legal-holds | List active and released legal holds
 [**adminModerationCasesList**](AdminApi.md#adminmoderationcaseslist) | **GET** /admin/moderation/cases | List moderation cases
 [**adminModerationDecision**](AdminApi.md#adminmoderationdecision) | **POST** /admin/moderation/cases/{caseId}/decision | Apply a moderation decision
+[**adminMonthlyContextReview**](AdminApi.md#adminmonthlycontextreview) | **POST** /admin/reputation/comments/{commentId}/context-review | Record a scoped contextual contribution review
+[**adminOverview**](AdminApi.md#adminoverview) | **GET** /admin/overview | Read bounded owner-only community aggregates
 [**adminPrivacyRequestsList**](AdminApi.md#adminprivacyrequestslist) | **GET** /admin/privacy/requests | List privacy requests
 [**adminReviewerQualificationCreate**](AdminApi.md#adminreviewerqualificationcreate) | **POST** /admin/reviewers/{reviewerId}/qualification | Set reviewer qualification state
 [**adminReviewerQualificationUpdate**](AdminApi.md#adminreviewerqualificationupdate) | **PUT** /admin/reviewers/{reviewerId}/qualification | Idempotently set reviewer qualification state
@@ -426,6 +431,143 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **adminCommunityAppealsEvidence**
+> CommunityAppealTriageEvidence adminCommunityAppealsEvidence(appealId)
+
+Read frozen evidence for safe triage
+
+Active conflict-free moderation staff only. No ballots or live tally. Restricted material requires a separately approved specialist route and is refused by this endpoint.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String appealId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.adminCommunityAppealsEvidence(appealId);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminCommunityAppealsEvidence: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **appealId** | **String**|  |
+
+### Return type
+
+[**CommunityAppealTriageEvidence**](CommunityAppealTriageEvidence.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminCommunityAppealsQueue**
+> CommunityAppealTriageQueue adminCommunityAppealsQueue()
+
+List appeals awaiting safe triage or accountable follow-up
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+
+try {
+    final response = api.adminCommunityAppealsQueue();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminCommunityAppealsQueue: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**CommunityAppealTriageQueue**](CommunityAppealTriageQueue.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminCommunityAppealsTriage**
+> CommunityAppealTriageResponse adminCommunityAppealsTriage(appealId, communityAppealTriageRequest)
+
+Freeze a safe review packet or restrict a submitted appeal
+
+Active conflict-free moderation staff provide a safe text rendition and rule context. The review clock starts here. Requires approved rules and the active feature flag. This operation cannot alter a community outcome or reopen a triaged packet.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String appealId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final CommunityAppealTriageRequest communityAppealTriageRequest = ; // CommunityAppealTriageRequest |
+
+try {
+    final response = api.adminCommunityAppealsTriage(appealId, communityAppealTriageRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminCommunityAppealsTriage: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **appealId** | **String**|  |
+ **communityAppealTriageRequest** | [**CommunityAppealTriageRequest**](CommunityAppealTriageRequest.md)|  |
+
+### Return type
+
+[**CommunityAppealTriageResponse**](CommunityAppealTriageResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **adminEditorialPublicationsCreate**
 > EditorialPublicationResponse adminEditorialPublicationsCreate(editorialPublicationCreate)
 
@@ -770,6 +912,102 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminMonthlyContextReview**
+> MonthlyContextReviewResponse adminMonthlyContextReview(commentId, monthlyContextReviewRequest)
+
+Record a scoped contextual contribution review
+
+Requires a verified Cloudflare Access JWT, active owner, administrator, or moderator membership authorised for this review, and an allowed Origin. The handler binds the reviewer to the current comment, thread and parent revisions. Actor identity and rules version come from server context. evidenceReference is a caller-supplied bounded opaque string stored as supplied; the API does not validate its target or sensitivity. Do not include raw content or secrets; this value is omitted from the response. The request cannot submit points. The route remains unavailable until its separate configuration and collection gates are enabled.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String commentId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final MonthlyContextReviewRequest monthlyContextReviewRequest = ; // MonthlyContextReviewRequest |
+
+try {
+    final response = api.adminMonthlyContextReview(commentId, monthlyContextReviewRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminMonthlyContextReview: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **commentId** | **String**|  |
+ **monthlyContextReviewRequest** | [**MonthlyContextReviewRequest**](MonthlyContextReviewRequest.md)|  |
+
+### Return type
+
+[**MonthlyContextReviewResponse**](MonthlyContextReviewResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminOverview**
+> AdminOverview adminOverview(period)
+
+Read bounded owner-only community aggregates
+
+Verified Access, current active owner membership and account, existing rate limits and a committed audit are required. No user identities or content are returned. UTC half-open calendar windows compare matching elapsed prior periods only. Current retained visibility and deletion state apply to both windows. Table populations above the bounded snapshot cap are unavailable, not partial totals. Empty post cohorts have no ratio. No provider polling, billing estimate or payment inference is enabled.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String period = period_example; // String |
+
+try {
+    final response = api.adminOverview(period);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminOverview: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **period** | **String**|  | [optional] [default to 'today']
+
+### Return type
+
+[**AdminOverview**](AdminOverview.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

@@ -10,7 +10,10 @@ import 'package:mocktail/mocktail.dart';
 import 'dart:async';
 
 class MockNotificationApiService extends Mock
-    implements NotificationApiService {}
+    implements NotificationApiService {
+  @override
+  bool get isCurrentSession => true;
+}
 
 Widget _buildTestWidget({
   required NotificationApiService api,

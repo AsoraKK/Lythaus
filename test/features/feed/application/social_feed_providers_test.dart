@@ -10,6 +10,10 @@ import 'package:lythaus/state/providers/feed_providers.dart';
 class FakeSocialFeedRepository implements SocialFeedRepository {
   int trendingCalls = 0;
   bool throwOnTrending = false;
+  final List<String?> searchedTags = [];
+  final List<String?> discoverCursors = [];
+  final List<String?> discoverTokens = [];
+  final List<FeedRequestCancellation?> discoverCancellations = [];
 
   Post _post(String id) {
     return Post(
@@ -48,7 +52,32 @@ class FakeSocialFeedRepository implements SocialFeedRepository {
     String? cursor,
     int limit = 25,
     String? token,
+    String? tag,
+    FeedRequestCancellation? cancellation,
   }) async {
+    searchedTags.add(tag);
+    discoverCursors.add(cursor);
+    discoverTokens.add(token);
+    discoverCancellations.add(cancellation);
+    if (tag != null) {
+      if (cursor == null) {
+        return FeedResponse(
+          posts: [_post('search-1')],
+          totalCount: 1,
+          hasMore: true,
+          nextCursor: 'cursor-1',
+          page: 1,
+          pageSize: limit,
+        );
+      }
+      return FeedResponse(
+        posts: [_post('search-1'), _post('search-2')],
+        totalCount: 2,
+        hasMore: false,
+        page: 2,
+        pageSize: limit,
+      );
+    }
     return _feed('discover', hasMore: cursor != null);
   }
 
@@ -302,22 +331,60 @@ void main() {
     await container.read(commentsProvider(commentParams).notifier).refresh();
   });
 
-  test('feed search and auth token providers resolve', () async {
+  test('guest tag search loads pages and removes duplicate posts', () async {
     final repo = FakeSocialFeedRepository();
     final container = ProviderContainer(
       overrides: [
         socialFeedServiceProvider.overrideWithValue(repo),
-        jwtProvider.overrideWith((ref) async => 'token'),
+        jwtProvider.overrideWith((ref) async => null),
       ],
     );
     addTearDown(container.dispose);
 
-    final search = await container.read(feedSearchProvider('tag').future);
-    expect(search.posts, hasLength(1));
+    const key = (tag: 'tag', tokenVersion: 0);
+    final initial = await container.read(feedSearchProvider(key).future);
+    expect(initial.posts.map((post) => post.id), ['search-1']);
+    expect(repo.searchedTags, ['tag']);
+    expect(repo.discoverTokens.single, isNull);
 
-    final token = await container.read(authTokenProvider.future);
-    expect(token, 'token');
+    await container.read(feedSearchProvider(key).notifier).loadMore();
+    final paged = container.read(feedSearchProvider(key)).value!;
+    expect(paged.posts.map((post) => post.id), ['search-1', 'search-2']);
+    expect(repo.discoverCursors, [null, 'cursor-1']);
+
+    container.invalidate(feedSearchProvider(key));
+    await container.pump();
+    await container.read(feedSearchProvider(key).future);
+    expect(repo.discoverCursors.last, isNull);
+    expect(repo.discoverCancellations.first?.isCancelled, isTrue);
   });
+
+  test(
+    'search identity changes with the authentication token version',
+    () async {
+      final repo = FakeSocialFeedRepository();
+      final container = ProviderContainer(
+        overrides: [
+          socialFeedServiceProvider.overrideWithValue(repo),
+          jwtProvider.overrideWith((ref) async {
+            final version = ref.watch(tokenVersionProvider);
+            return 'token-$version';
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      const oldKey = (tag: 'tag', tokenVersion: 0);
+      const newKey = (tag: 'tag', tokenVersion: 1);
+      await container.read(feedSearchProvider(oldKey).future);
+      container.read(tokenVersionProvider.notifier).state = 1;
+      await container.pump();
+      await container.read(feedSearchProvider(newKey).future);
+
+      expect(repo.discoverTokens, ['token-0', 'token-1']);
+      expect(repo.discoverCancellations.first?.isCancelled, isTrue);
+    },
+  );
 
   test('live feed provider maps posts and home feed index', () async {
     final repo = FakeSocialFeedRepository();
