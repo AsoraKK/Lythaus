@@ -17,6 +17,7 @@ for (const width of [1440, 390]) {
     const f = await passkeyFixture(t);
     const errors = [];
     const calls = [];
+    const passkeyResponses = [];
     let session = false;
     const user = { id:f.userId, email:'passkey-synthetic@example.invalid', role:'user', tier:'bronze', subscription_tier:'free', reputation_score:0, created_at:'2026-08-01T00:00:00Z', last_login_at:'2026-08-01T00:00:00Z' };
     const originalPrincipal = f.deps.principal;
@@ -54,6 +55,7 @@ for (const width of [1440, 390]) {
           const classified = classifyPublicError(error);
           response = Response.json({ error:classified.exposedCode, correlationId:'synthetic-passkey-browser' }, { status:classified.status });
         }
+        passkeyResponses.push({ path:url.pathname, status:response.status });
         if (url.pathname.endsWith('/login/verify') && response.status === 200) session = true;
         for (const [key, value] of response.headers) if (key !== 'set-cookie') headers[key] = value;
         const cookies = response.headers.getSetCookie();
@@ -189,8 +191,22 @@ for (const width of [1440, 390]) {
     await page.getByRole('button', { name:'Sign out of all sessions',exact:true }).click();
     await page.getByText(/^Signed-in account\n/).waitFor({ state:'hidden' });
     await page.getByRole('button', { name:'Sign in with a passkey',exact:true }).waitFor();
+    const passkeyLoginCallStart = calls.length;
+    const passkeyLoginResponseStart = passkeyResponses.length;
     await page.getByRole('button', { name:'Sign in with a passkey',exact:true }).click();
-    await page.getByText('No posts yet', { exact:true }).waitFor();
+    try {
+      await page.getByText('No posts yet', { exact:true }).waitFor();
+    } catch (error) {
+      console.log('PASSKEY_LOGIN_DIAGNOSTIC ' + JSON.stringify({
+        viewport:width,
+        session,
+        apiCalls:calls.slice(passkeyLoginCallStart),
+        passkeyResponses:passkeyResponses.slice(passkeyLoginResponseStart),
+        screen:await page.locator('flt-semantics').allTextContents(),
+        pageErrors:errors,
+      }));
+      throw error;
+    }
     const cookies = await context.cookies('https://api.lythaus.co');
     assert.ok(cookies.some(cookie => cookie.name === '__Host-lythaus_refresh' && cookie.httpOnly && cookie.secure && cookie.sameSite === 'Strict'));
     assert.ok(!(await page.evaluate(() => Object.keys(localStorage))).some(key => ['jwt','refreshToken','userData'].includes(key)));
