@@ -90,6 +90,13 @@ const reviewedToolingSecurityPatches = {
     engines: { node: '>= 12' },
   },
 };
+const reviewedSourceMapPatch = {
+  version: '1.2.2',
+  resolved: 'https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.2.tgz',
+  integrity: 'sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==',
+  license: 'BSD-3-Clause',
+  engines: { node: '>=0.10.0' },
+};
 const reviewedSpectralRemovedPackages = [
   '@nodelib/fs.scandir', '@nodelib/fs.stat', '@nodelib/fs.walk', 'braces', 'fastq',
   'fill-range', 'glob-parent', 'is-extglob', 'is-glob', 'is-number', 'merge2',
@@ -154,6 +161,9 @@ const reviewedAstroPolicy = 'file:../../tools/marketing/astro-cache-policy';
 function assertMarketingLockOnlyHasSecurityPatch(current = JSON.parse(readFileSync(path.join(root, 'apps/marketing-site/package-lock.json'), 'utf8'))) {
   const filename = 'apps/marketing-site/package-lock.json';
   const original = JSON.parse(git('show', `${baselineSha}:${filename}`));
+  assert.deepEqual(current.packages['node_modules/source-map-js'], reviewedSourceMapPatch,
+    'source-map-js must use the exact reviewed security patch');
+  current.packages['node_modules/source-map-js'] = original.packages['node_modules/source-map-js'];
   assert.deepEqual(current.packages['node_modules/devalue'], {
     version: '5.9.3',
     resolved: 'https://registry.npmjs.org/devalue/-/devalue-5.9.3.tgz',
@@ -294,6 +304,24 @@ test('reviewed tooling patches reject a different version, registry URL or integ
   }
 });
 
+test('source-map security patch rejects changed metadata and unrelated dependencies', () => {
+  const readLock = () => JSON.parse(readFileSync(path.join(root, 'apps/marketing-site/package-lock.json'), 'utf8'));
+  for (const [field, value] of [
+    ['version', '1.2.1'],
+    ['resolved', 'https://example.invalid/package.tgz'],
+    ['integrity', 'sha512-invalid'],
+    ['license', 'AGPL-3.0'],
+    ['engines', { node: '>=22' }],
+  ]) {
+    const changed = readLock();
+    changed.packages['node_modules/source-map-js'][field] = value;
+    assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(changed), /source-map-js must use the exact reviewed security patch/);
+  }
+  const changed = readLock();
+  changed.packages['node_modules/astro'].version = '7.3.5';
+  assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(changed), /Marketing lock may change only for the exact reviewed security repairs/);
+});
+
 test('reviewed tooling patches keep every other dependency frozen', () => {
   const changed = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
   changed.packages['node_modules/ajv'].version = '0.0.0';
@@ -400,8 +428,10 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
     } else {
       assert.equal(after.dependencies['http-cache-semantics'], reviewedAstroPolicy);
       assert.equal(after.overrides['http-cache-semantics'], '$http-cache-semantics');
+      assert.equal(after.overrides['source-map-js'], '1.2.2');
       before.dependencies['http-cache-semantics'] = reviewedAstroPolicy;
       before.overrides['http-cache-semantics'] = '$http-cache-semantics';
+      before.overrides['source-map-js'] = '1.2.2';
     }
     if (file === 'package.json') {
       assertOnlyReviewedNativeModerationTestRegistration(before, after);
