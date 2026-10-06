@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -127,8 +128,54 @@ const reviewedOpenApiDartScripts = {
 function assertSpectralAdapterReference(dependencies) {
   assert.equal(dependencies['fast-glob'], reviewedSpectralAdapter, 'Spectral must use the exact reviewed local adapter');
 }
+const reviewedImageAndQuotingPatchHashes = {
+  'package-lock.json': 'ea852c24e87d78b7ac561de93135b0cbd0efbe99ae7f480ac5f8fe283267bd33',
+  'apps/marketing-site/package-lock.json': '868d4b02354c9f1e7a0815ff5d946d7c43460eb56fa3a63d042a32ba09b071b3',
+};
+const sharpLinuxPlatforms = [
+  ['linux-arm', 'arm', 'glibc'],
+  ['linux-arm64', 'arm64', 'glibc'],
+  ['linux-ppc64', 'ppc64', 'glibc'],
+  ['linux-riscv64', 'riscv64', 'glibc'],
+  ['linux-s390x', 's390x', 'glibc'],
+  ['linux-x64', 'x64', 'glibc'],
+  ['linuxmusl-arm64', 'arm64', 'musl'],
+  ['linuxmusl-x64', 'x64', 'musl'],
+];
+function assertSharpLinuxPlatformMetadata(lock) {
+  const expectedPaths = [];
+  for (const [family, version] of [['sharp', '0.35.5'], ['sharp-libvips', '1.3.4']]) {
+    for (const [platform, cpu, libc] of sharpLinuxPlatforms) {
+      const packagePath = `node_modules/@img/${family}-${platform}`;
+      expectedPaths.push(packagePath);
+      const metadata = lock.packages[packagePath];
+      assert.deepEqual(metadata && { version: metadata.version, os: metadata.os, cpu: metadata.cpu, libc: metadata.libc },
+        { version, os: ['linux'], cpu: [cpu], libc: [libc] },
+        `${packagePath} must retain the reviewed registry Linux platform selectors`);
+    }
+  }
+  const actualPaths = Object.keys(lock.packages).filter(packagePath => packagePath.startsWith('node_modules/@img/sharp-') && packagePath.includes('-linux'));
+  assert.deepEqual(actualPaths.sort(), expectedPaths.sort(), 'Sharp Linux platform packages must remain the exact reviewed registry set');
+}
+function canonicalMetadata(value) {
+  if (Array.isArray(value)) return value.map(canonicalMetadata);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonicalMetadata(value[key])]));
+  }
+  return value;
+}
+function assertExactImageAndQuotingPatches(current, original, filename) {
+  assertSharpLinuxPlatformMetadata(current);
+  const paths = Object.keys(original.packages).filter(packagePath => ['node_modules/sharp', 'node_modules/shell-quote'].includes(packagePath)
+    || packagePath.startsWith('node_modules/@img/sharp-')).sort();
+  const metadata = Object.fromEntries(paths.map(packagePath => [packagePath, current.packages[packagePath]]));
+  const digest = createHash('sha256').update(JSON.stringify(canonicalMetadata(metadata))).digest('hex');
+  assert.equal(digest, reviewedImageAndQuotingPatchHashes[filename], 'Image and quoting packages must use exact reviewed security patch metadata');
+  for (const packagePath of paths) current.packages[packagePath] = original.packages[packagePath];
+}
 function assertRootToolingLockOnlyHasSecurityPatches(current = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'))) {
   const original = JSON.parse(git('show', `${upstreamBaselineSha}:package-lock.json`));
+  assertExactImageAndQuotingPatches(current, original, 'package-lock.json');
   for (const [name, version] of [['brace-expansion', '5.0.12'], ['undici', '7.29.1'], ['basic-ftp', '6.2.1']]) {
     const packagePath = `node_modules/${name}`;
     const patched = current.packages[packagePath];
@@ -161,6 +208,7 @@ const reviewedAstroPolicy = 'file:../../tools/marketing/astro-cache-policy';
 function assertMarketingLockOnlyHasSecurityPatch(current = JSON.parse(readFileSync(path.join(root, 'apps/marketing-site/package-lock.json'), 'utf8'))) {
   const filename = 'apps/marketing-site/package-lock.json';
   const original = JSON.parse(git('show', `${baselineSha}:${filename}`));
+  assertExactImageAndQuotingPatches(current, original, filename);
   assert.deepEqual(current.packages['node_modules/source-map-js'], reviewedSourceMapPatch,
     'source-map-js must use the exact reviewed security patch');
   current.packages['node_modules/source-map-js'] = original.packages['node_modules/source-map-js'];
@@ -328,6 +376,57 @@ test('reviewed tooling patches keep every other dependency frozen', () => {
   assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(changed), /Root tooling lock may change only for the reviewed security patches/);
 });
 
+test('Sharp Linux platform metadata matches the reviewed registry in all affected locks', () => {
+  for (const filename of ['package-lock.json', 'apps/marketing-site/package-lock.json', 'ml/datasets/tools/materialise/package-lock.json']) {
+    assertSharpLinuxPlatformMetadata(JSON.parse(readFileSync(path.join(root, filename), 'utf8')));
+  }
+});
+
+test('Sharp Linux platform metadata rejects omitted, swapped or altered registry selectors', () => {
+  for (const filename of ['package-lock.json', 'apps/marketing-site/package-lock.json', 'ml/datasets/tools/materialise/package-lock.json']) {
+    const lock = JSON.parse(readFileSync(path.join(root, filename), 'utf8'));
+    const missingAll = structuredClone(lock);
+    for (const [packagePath, metadata] of Object.entries(lock.packages)) {
+      if (!packagePath.startsWith('node_modules/@img/sharp-') || !packagePath.includes('-linux')) continue;
+      delete missingAll.packages[packagePath].libc;
+      const missing = structuredClone(lock);
+      delete missing.packages[packagePath].libc;
+      assert.throws(() => assertSharpLinuxPlatformMetadata(missing), /reviewed registry Linux platform selectors/);
+      const swapped = structuredClone(lock);
+      swapped.packages[packagePath].libc = [metadata.libc[0] === 'glibc' ? 'musl' : 'glibc'];
+      assert.throws(() => assertSharpLinuxPlatformMetadata(swapped), /reviewed registry Linux platform selectors/);
+    }
+    assert.throws(() => assertSharpLinuxPlatformMetadata(missingAll), /reviewed registry Linux platform selectors/);
+    for (const [field, value] of [['version', '0.35.4'], ['os', ['darwin']], ['cpu', ['arm64']], ['libc', 'glibc']]) {
+      const changed = structuredClone(lock);
+      changed.packages['node_modules/@img/sharp-linux-x64'][field] = value;
+      assert.throws(() => assertSharpLinuxPlatformMetadata(changed), /reviewed registry Linux platform selectors/);
+    }
+  }
+});
+
+test('image and quoting security exceptions reject vulnerable versions, altered registry metadata and native dependencies', () => {
+  for (const [filename, verify] of [['package-lock.json', assertRootToolingLockOnlyHasSecurityPatches],
+    ['apps/marketing-site/package-lock.json', assertMarketingLockOnlyHasSecurityPatch]]) {
+    const readLock = () => JSON.parse(readFileSync(path.join(root, filename), 'utf8'));
+    for (const [packagePath, field, value] of [
+      ['node_modules/sharp', 'version', '0.35.4'],
+      ['node_modules/sharp', 'resolved', 'https://example.invalid/sharp.tgz'],
+      ['node_modules/sharp', 'integrity', 'sha512-invalid'],
+      ['node_modules/sharp', 'license', 'AGPL-3.0'],
+      ['node_modules/@img/sharp-linux-x64', 'optionalDependencies', { '@img/sharp-libvips-linux-x64': '1.3.3' }],
+    ]) {
+      const changed = readLock(); changed.packages[packagePath][field] = value;
+      assert.throws(() => verify(changed), /exact reviewed security patch metadata/);
+    }
+    const unreviewed = readLock(); unreviewed.packages['node_modules/@img/sharp-unreviewed'] = { version: '0.35.5' };
+    assert.throws(() => verify(unreviewed), /lock may change only for/);
+  }
+  const changed = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+  changed.packages['node_modules/shell-quote'].version = '1.9.0';
+  assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(changed), /exact reviewed security patch metadata/);
+});
+
 test('Spectral security replacement rejects changed targets, metadata or resurrected vulnerable dependencies', () => {
   const readLock = () => JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
   for (const [packagePath, field, value] of [
@@ -416,7 +515,13 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
     const before = JSON.parse(git('show', `${revision}:${file}`));
     const after = JSON.parse(readFileSync(path.join(root, file), 'utf8'));
     after.scripts[script] = after.scripts[script].replace(' --experimental-strip-types', '');
+    assert.equal(after.overrides.sharp, '0.35.5', 'Image decoding must retain the exact patched sharp override');
+    before.overrides.sharp = '0.35.5';
     if (file === 'package.json') {
+      assert.deepEqual(after.overrides['concurrently@10.0.5'], { 'shell-quote': '1.11.0' }, 'Quoting must use the patched version at the actual parent');
+      assert.equal(Object.hasOwn(after.overrides, 'concurrently@10.0.3'), false, 'The stale parent selector must remain removed');
+      delete before.overrides['concurrently@10.0.3'];
+      before.overrides['concurrently@10.0.5'] = { 'shell-quote': '1.11.0' };
       for (const [name, scripts] of Object.entries(reviewedOpenApiDartScripts)) {
         assert.equal(before.scripts[name], scripts.baseline, `${name} baseline must stay pinned`);
         assert.equal(after.scripts[name], scripts.reviewed, `${name} must match the exact PR896 normalization script`);
