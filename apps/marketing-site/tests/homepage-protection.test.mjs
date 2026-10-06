@@ -129,9 +129,34 @@ function assertSpectralAdapterReference(dependencies) {
   assert.equal(dependencies['fast-glob'], reviewedSpectralAdapter, 'Spectral must use the exact reviewed local adapter');
 }
 const reviewedImageAndQuotingPatchHashes = {
-  'package-lock.json': '4133675317c9e08caf419a8c9d395c85c3c417e5ad0f73db6a762afc7e7c1477',
-  'apps/marketing-site/package-lock.json': '1f404d3ab8de076631366520dbd0535ef7c14ca3b151f338d30ad1b11195d42e',
+  'package-lock.json': 'ea852c24e87d78b7ac561de93135b0cbd0efbe99ae7f480ac5f8fe283267bd33',
+  'apps/marketing-site/package-lock.json': '868d4b02354c9f1e7a0815ff5d946d7c43460eb56fa3a63d042a32ba09b071b3',
 };
+const sharpLinuxPlatforms = [
+  ['linux-arm', 'arm', 'glibc'],
+  ['linux-arm64', 'arm64', 'glibc'],
+  ['linux-ppc64', 'ppc64', 'glibc'],
+  ['linux-riscv64', 'riscv64', 'glibc'],
+  ['linux-s390x', 's390x', 'glibc'],
+  ['linux-x64', 'x64', 'glibc'],
+  ['linuxmusl-arm64', 'arm64', 'musl'],
+  ['linuxmusl-x64', 'x64', 'musl'],
+];
+function assertSharpLinuxPlatformMetadata(lock) {
+  const expectedPaths = [];
+  for (const [family, version] of [['sharp', '0.35.5'], ['sharp-libvips', '1.3.4']]) {
+    for (const [platform, cpu, libc] of sharpLinuxPlatforms) {
+      const packagePath = `node_modules/@img/${family}-${platform}`;
+      expectedPaths.push(packagePath);
+      const metadata = lock.packages[packagePath];
+      assert.deepEqual(metadata && { version: metadata.version, os: metadata.os, cpu: metadata.cpu, libc: metadata.libc },
+        { version, os: ['linux'], cpu: [cpu], libc: [libc] },
+        `${packagePath} must retain the reviewed registry Linux platform selectors`);
+    }
+  }
+  const actualPaths = Object.keys(lock.packages).filter(packagePath => packagePath.startsWith('node_modules/@img/sharp-') && packagePath.includes('-linux'));
+  assert.deepEqual(actualPaths.sort(), expectedPaths.sort(), 'Sharp Linux platform packages must remain the exact reviewed registry set');
+}
 function canonicalMetadata(value) {
   if (Array.isArray(value)) return value.map(canonicalMetadata);
   if (value && typeof value === 'object') {
@@ -140,6 +165,7 @@ function canonicalMetadata(value) {
   return value;
 }
 function assertExactImageAndQuotingPatches(current, original, filename) {
+  assertSharpLinuxPlatformMetadata(current);
   const paths = Object.keys(original.packages).filter(packagePath => ['node_modules/sharp', 'node_modules/shell-quote'].includes(packagePath)
     || packagePath.startsWith('node_modules/@img/sharp-')).sort();
   const metadata = Object.fromEntries(paths.map(packagePath => [packagePath, current.packages[packagePath]]));
@@ -348,6 +374,35 @@ test('reviewed tooling patches keep every other dependency frozen', () => {
   const changed = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
   changed.packages['node_modules/ajv'].version = '0.0.0';
   assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(changed), /Root tooling lock may change only for the reviewed security patches/);
+});
+
+test('Sharp Linux platform metadata matches the reviewed registry in all affected locks', () => {
+  for (const filename of ['package-lock.json', 'apps/marketing-site/package-lock.json', 'ml/datasets/tools/materialise/package-lock.json']) {
+    assertSharpLinuxPlatformMetadata(JSON.parse(readFileSync(path.join(root, filename), 'utf8')));
+  }
+});
+
+test('Sharp Linux platform metadata rejects omitted, swapped or altered registry selectors', () => {
+  for (const filename of ['package-lock.json', 'apps/marketing-site/package-lock.json', 'ml/datasets/tools/materialise/package-lock.json']) {
+    const lock = JSON.parse(readFileSync(path.join(root, filename), 'utf8'));
+    const missingAll = structuredClone(lock);
+    for (const [packagePath, metadata] of Object.entries(lock.packages)) {
+      if (!packagePath.startsWith('node_modules/@img/sharp-') || !packagePath.includes('-linux')) continue;
+      delete missingAll.packages[packagePath].libc;
+      const missing = structuredClone(lock);
+      delete missing.packages[packagePath].libc;
+      assert.throws(() => assertSharpLinuxPlatformMetadata(missing), /reviewed registry Linux platform selectors/);
+      const swapped = structuredClone(lock);
+      swapped.packages[packagePath].libc = [metadata.libc[0] === 'glibc' ? 'musl' : 'glibc'];
+      assert.throws(() => assertSharpLinuxPlatformMetadata(swapped), /reviewed registry Linux platform selectors/);
+    }
+    assert.throws(() => assertSharpLinuxPlatformMetadata(missingAll), /reviewed registry Linux platform selectors/);
+    for (const [field, value] of [['version', '0.35.4'], ['os', ['darwin']], ['cpu', ['arm64']], ['libc', 'glibc']]) {
+      const changed = structuredClone(lock);
+      changed.packages['node_modules/@img/sharp-linux-x64'][field] = value;
+      assert.throws(() => assertSharpLinuxPlatformMetadata(changed), /reviewed registry Linux platform selectors/);
+    }
+  }
 });
 
 test('image and quoting security exceptions reject vulnerable versions, altered registry metadata and native dependencies', () => {
