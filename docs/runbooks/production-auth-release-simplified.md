@@ -458,7 +458,15 @@ retains pause/delay, exact consumer counts, batching, retries, DLQ/worker matche
 and concurrency value/type/presence; identifiers are hashed and messages are
 never read. It applies the same strict consumer validator as the canonical
 pre-upload gate. Missing resources, identity drift, unreadable metadata and
-automatic/missing/excessive caps block readiness without repair. Remaining
+automatic/missing/excessive caps block readiness without repair. Queue
+inventory must first have integer `result_info` fields proving page1
+is the only page, with matching returned/total counts and at most100 entries.
+Missing, inconsistent or multi-page metadata blocks before the Queue-details
+read; a partially returned inventory cannot establish unique resource identity.
+The [API response contract](https://developers.cloudflare.com/api/resources/queues/methods/list/)
+documents those fields; the [official SDK](https://github.com/cloudflare/cloudflare-typescript/blob/main/src/resources/queues/queues.ts)
+exposes a single-page list without page parameters, so this bounded audit does
+not invent pagination requests when completeness cannot be proven. Remaining
 sending quota stays explicitly UNVERIFIED; aggregate analytics are not quota
 proof. An already dispatched audit uses its immutable original source; keep its
 approval link intact until the parent coordinates any reviewed replacement.

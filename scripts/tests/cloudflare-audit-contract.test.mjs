@@ -76,7 +76,8 @@ function queueReader(queue = queueFixture(), listing = [queue, { queue_id: deadL
     assert.equal(init.method, 'GET');
     assert.equal(url.origin, 'https://api.cloudflare.com');
     calls.push(url.pathname + url.search);
-    if (url.pathname === `/client/v4/accounts/${authAccount}/queues` && url.search === '?per_page=100') return { httpStatus: 200, body: { success: true, result: listing } };
+    if (url.pathname === `/client/v4/accounts/${authAccount}/queues` && url.search === '?per_page=100') return { httpStatus: 200, body: { success: true, result: listing,
+      result_info: { page: 1, per_page: 100, count: listing.length, total_count: listing.length, total_pages: 1 } } };
     assert.equal(url.pathname, `/client/v4/accounts/${authAccount}/queues/${lifecycleId}`);
     assert.equal(url.search, '');
     return { httpStatus: 200, body: { success: true, result: queue } };
@@ -97,6 +98,7 @@ test('auth Queue audit records exact existing delivery and consumer settings wit
   assert.equal(evidence.deliveryDelaySeconds, 0);
   assert.equal(evidence.reportedConsumerCount, 1);
   assert.equal(evidence.observedConsumerCount, 1);
+  assert.deepEqual(evidence.inventory, { complete: true, page: 1, perPage: 100, count: 3, totalCount: 3, totalPages: 1 });
   assert.deepEqual(evidence.consumers.map(({ idHash, ...value }) => value), [{ type: 'worker', expectedWorkerMatches: true,
     expectedDeadLetterMatches: true, batchSize: 25, maxWaitTimeMs: 5000, maxRetries: 10, maxConcurrency: 1,
     maxConcurrencyPresent: true, maxConcurrencyType: 'number' }]);
@@ -173,6 +175,48 @@ test('auth Queue audit stops on denied reads and invalid identity without probin
   const unavailable = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: () => { throw new Error('fixture-private-marker'); } });
   assert.equal(unavailable.api.list.httpStatus, null);
   assert.ok(!JSON.stringify(unavailable).includes('fixture-private-marker'));
+});
+
+test('auth Queue audit requires complete bounded inventory before probing Queue details', async () => {
+  const complete = { page: 1, per_page: 100, count: 2, total_count: 2, total_pages: 1 };
+  const invalid = [undefined, {}, { ...complete, total_pages: 2 }, { ...complete, total_count: 101 },
+    { ...complete, total_count: 3, total_pages: 2 }, { ...complete, page: 2 }, { ...complete, per_page: 1 },
+    { ...complete, per_page: 101 }, { ...complete, per_page: 0 }, { ...complete, count: 1 },
+    { ...complete, total_count: -1 }, { ...complete, total_pages: 0 }];
+  for (const field of Object.keys(complete)) {
+    for (const value of [undefined, null, '1', 1.5, Infinity]) invalid.push({ ...complete, [field]: value });
+  }
+  for (const info of invalid) {
+    const reader = queueReader();
+    const result = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: async (url, init) => {
+      const response = await reader.requestJson(url, init);
+      response.body.result_info = info;
+      return response;
+    } });
+    assert.equal(result.status, 'BLOCKED');
+    assert.equal(result.reason, 'email_dispatch_queue_inventory_incomplete');
+    assert.equal(result.inventory.complete, false);
+    assert.equal(result.api.details, null);
+    assert.equal(reader.calls.length, 1);
+  }
+  const listing = [queueFixture(), { queue_id: deadLetterId, queue_name: 'lythaus-email-lifecycle-dlq-dev' },
+    ...Array.from({ length: 98 }, (_, index) => ({ queue_id: (index + 4).toString(16).padStart(32, '0'), queue_name: 'fixture-private-marker' }))];
+  const fullPage = queueReader(queueFixture(), listing);
+  const result = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: fullPage.requestJson });
+  assert.equal(result.status, 'VERIFIED');
+  assert.equal(result.inventory.totalCount, 100);
+  assert.equal(fullPage.calls.length, 2);
+  assert.ok(!JSON.stringify(result).includes('fixture-private-marker'));
+  const partialPage = queueReader(queueFixture(), listing);
+  const partial = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: async (url, init) => {
+    const response = await partialPage.requestJson(url, init);
+    response.body.result_info.total_count = 101;
+    response.body.result_info.total_pages = 2;
+    return response;
+  } });
+  assert.equal(partial.status, 'BLOCKED');
+  assert.equal(partial.reason, 'email_dispatch_queue_inventory_incomplete');
+  assert.equal(partialPage.calls.length, 1);
 });
 
 test('existing auth incident audit keeps default-off probe, production review and read-only GitHub permissions', () => {

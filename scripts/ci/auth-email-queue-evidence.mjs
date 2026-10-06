@@ -3,6 +3,7 @@ import { assertPromptDispatchConsumer, LIFECYCLE_QUEUE, LIFECYCLE_DLQ } from './
 
 const ACCOUNT = 'e5b7ae46e04698f507b7e4b3d4ef1af0';
 const WORKER = 'lythaus-jobs-development';
+const MAX_QUEUE_RESULTS = 100;
 const object = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const number = value => typeof value === 'number' && Number.isFinite(value) ? value : null;
 const identifier = queue => queue?.queue_id ?? queue?.id;
@@ -38,6 +39,7 @@ export async function captureAuthEmailQueueEvidence({ accountId, requestJson }) 
     status: 'BLOCKED', reason: null, source: 'cloudflare_queue_list_and_details', observedAt: new Date().toISOString(),
     queue: LIFECYCLE_QUEUE, expectedWorker: WORKER, expectedDeadLetterQueue: LIFECYCLE_DLQ,
     api: { list: null, details: null }, lifecycleMatches: 0, deadLetterMatches: 0,
+    inventory: { complete: false, page: null, perPage: null, count: null, totalCount: null, totalPages: null },
     lifecycleIdHash: null, deadLetterIdHash: null,
     deliveryPaused: null, deliveryDelaySeconds: null, reportedConsumerCount: null, observedConsumerCount: null, consumers: [],
     piiIncluded: false, messagesRead: false, mutationPerformed: false,
@@ -49,11 +51,21 @@ export async function captureAuthEmailQueueEvidence({ accountId, requestJson }) 
     catch { return { httpStatus: null, body: null }; }
   };
   const base = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/queues`;
-  const listing = await read(`${base}?per_page=100`);
+  const listing = await read(`${base}?per_page=${MAX_QUEUE_RESULTS}`);
   evidence.api.list = apiEvidence(listing);
   if (listing?.httpStatus !== 200 || object(listing?.body).success !== true || !Array.isArray(listing.body.result)) {
     return stop('email_dispatch_queue_list_unavailable');
   }
+  const info = object(listing.body.result_info);
+  evidence.inventory = { complete: false, page: number(info.page), perPage: number(info.per_page),
+    count: number(info.count), totalCount: number(info.total_count), totalPages: number(info.total_pages) };
+  if (![info.page, info.per_page, info.count, info.total_count, info.total_pages].every(Number.isSafeInteger)
+    || info.page !== 1 || info.total_pages !== 1 || info.per_page < 1 || info.per_page > MAX_QUEUE_RESULTS
+    || listing.body.result.length > info.per_page || info.count !== listing.body.result.length
+    || info.total_count !== listing.body.result.length) {
+    return stop('email_dispatch_queue_inventory_incomplete');
+  }
+  evidence.inventory.complete = true;
   const lifecycle = listing.body.result.filter(queue => name(queue) === LIFECYCLE_QUEUE);
   const deadLetter = listing.body.result.filter(queue => name(queue) === LIFECYCLE_DLQ);
   evidence.lifecycleMatches = lifecycle.length;

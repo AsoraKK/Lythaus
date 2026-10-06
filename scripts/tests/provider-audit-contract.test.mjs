@@ -253,6 +253,9 @@ test('actual auth incident audit records Queue facts with read-only SQL and no r
         assert.equal(method,'GET');result=[{name:'mail.lythaus.co',enabled:true,tag:'fixture-private-marker'}];
       }else if(url.pathname==='/client/v4/accounts/${authAccount}/queues'){
         assert.equal(method,'GET');result=[queue,{queue_id:'${deadLetterId}',queue_name:'lythaus-email-lifecycle-dlq-dev'}];
+        return Response.json({success:true,result,result_info:{page:1,per_page:100,count:2,
+          total_count:process.env.SYNTHETIC_QUEUE_PARTIAL==='true'?101:2,
+          total_pages:process.env.SYNTHETIC_QUEUE_PARTIAL==='true'?2:1}});
       }else if(url.pathname==='/client/v4/accounts/${authAccount}/queues/${lifecycleId}'){
         assert.equal(method,'GET');result=queue;
       }else if(url.pathname==='/client/v4/graphql'){
@@ -263,23 +266,28 @@ test('actual auth incident audit records Queue facts with read-only SQL and no r
       return Response.json({success:true,result});
     };
   `;
-  for (const cap of [1, null]) {
+  for (const [cap, partial] of [[1, false], [null, false], [1, true]]) {
+    writeFileSync(calls, '');
     const result = spawnSync(process.execPath, ['--experimental-test-module-mocks', '--import', `data:text/javascript,${encodeURIComponent(fixture)}`,
       'scripts/ci/audit-production-auth-incident.mjs'], { encoding: 'utf8', timeout: 10000, env: {
       PLANETSCALE_SCHEMA_READ_DATABASE_URL: 'postgresql://schema@fixture.invalid/postgres?sslmode=verify-full',
       CLOUDFLARE_API_TOKEN: 'fixture-private-marker', CLOUDFLARE_ACCOUNT_ID: authAccount,
       CLOUDFLARE_ZONE_ID: '7bc572c8b7cd3c00be9c655176c29382', AUTH_INCIDENT_SEND_PROBE: 'false',
       AUTH_INCIDENT_AUDIT_OUTPUT: output, SYNTHETIC_QUEUE_CAP: JSON.stringify(cap), GITHUB_SHA: 'f'.repeat(40),
+      SYNTHETIC_QUEUE_PARTIAL: String(partial),
     } });
-    assert.equal(result.status, cap === 1 ? 0 : 1, result.stderr);
+    const ready = cap === 1 && !partial;
+    assert.equal(result.status, ready ? 0 : 1, result.stderr);
     const serialized = readFileSync(output, 'utf8'), report = JSON.parse(serialized);
     assert.equal(report.mode, 'read_only');
     assert.equal(report.cloudflare.arbitraryRecipientProbe.attempted, false);
-    assert.equal(report.cloudflare.dispatchQueue.status, cap === 1 ? 'VERIFIED' : 'BLOCKED');
+    assert.equal(report.cloudflare.dispatchQueue.status, ready ? 'VERIFIED' : 'BLOCKED');
+    if (partial) assert.equal(report.cloudflare.dispatchQueue.reason, 'email_dispatch_queue_inventory_incomplete');
     assert.equal(report.cloudflare.remainingSendingQuota.status, 'UNVERIFIED');
-    assert.deepEqual(report.failures, cap === 1 ? [] : ['cloudflare_dispatch_queue_not_ready']);
+    assert.deepEqual(report.failures, ready ? [] : ['cloudflare_dispatch_queue_not_ready']);
     assert.ok(!serialized.includes('fixture-private-marker'));
     const requests = readFileSync(calls, 'utf8').trim().split('\n').map(JSON.parse);
     assert.ok(requests.every(call => call.method === 'GET' || (call.method === 'POST' && call.path === '/client/v4/graphql')));
+    assert.equal(requests.some(call => call.path === `/client/v4/accounts/${authAccount}/queues/${lifecycleId}`), !partial);
   }
 });
