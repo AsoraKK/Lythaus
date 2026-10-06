@@ -46,6 +46,7 @@ function fixture(options = {}) {
       consumerReads += 1;
       result = attached ? [consumer] : options.consumerRace && consumerReads === 2 ? [consumer] : [];
     } else if (url.endsWith(`/queues/${queueId}/metrics`)) {
+      if (options.metricsDenied) return { httpStatus: 403, body: { success: false, errors: [{ code: 10000, message: 'private-fixture-marker' }] } };
       metricsReads += 1;
       result = { backlog_count: metricsReads === 2 ? options.immediateBacklogCount ?? options.backlogCount ?? 1 : options.backlogCount ?? 1,
         backlog_bytes: options.backlogBytes ?? 256, oldest_message_timestamp_ms: 1 };
@@ -120,6 +121,15 @@ test('existing verified attachment is not duplicated', async () => {
   const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, apply: true, now });
   assert.equal(receipt.status, 'ALREADY_ATTACHED_VERIFIED');
   assert.equal(writes(f).length, 0);
+});
+
+test('denied backlog read preserves exact safe endpoint/status without private provider text', async () => {
+  const f = fixture({ metricsDenied: true });
+  const receipt = await attachAuthEmailConsumer({ requestJson: f.requestJson, apply: true, now });
+  assert.equal(receipt.status, 'BLOCKED');
+  assert.deepEqual(receipt.blockedRead, { endpoint: 'backlog_metrics', httpStatus: 403, success: false, errorCodes: [10000] });
+  assert.equal(writes(f).length, 0);
+  assert.ok(!JSON.stringify(receipt).includes('private-fixture-marker'));
 });
 
 test('uncertain POST is never retried; exact successful read-back is distinguished', async () => {

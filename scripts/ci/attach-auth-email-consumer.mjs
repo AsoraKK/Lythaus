@@ -28,13 +28,20 @@ export async function attachAuthEmailConsumer({ requestJson, apply = false, now 
   const receipt = { schemaVersion: 'lythaus-auth-email-consumer-attachment-v1', observedAt: now.toISOString(),
     mode: apply ? 'attach' : 'inspect', status: 'BLOCKED', reason: null,
     sourceSha: process.env.GITHUB_SHA ?? null, target: { queue: a.queue, worker: a.worker, deadLetterQueue: a.dlq },
-    before: null, currentJobs: null, backlog: null, includedQueueAllowance: null, immediatePrewrite: null,
+    before: null, currentJobs: null, backlog: null, includedQueueAllowance: null, immediatePrewrite: null, blockedRead: null,
     mutationAttempted: false, mutationConfirmed: false, postHttpStatus: null, after: null,
     messagesRead: false, piiIncluded: false, emailsSent: false, pauseOrDelayChanged: false };
   const stop = reason => ({ ...receipt, reason });
-  const read = async url => {
-    const response = await requestJson(url, { method: 'GET' });
-    if (response?.httpStatus !== 200 || response.body?.success !== true) throw new Error('auth_email_attachment_read_unavailable');
+  const read = async (url, endpoint) => {
+    let response;
+    try { response = await requestJson(url, { method: 'GET' }); }
+    catch { response = null; }
+    if (response?.httpStatus !== 200 || response.body?.success !== true) {
+      receipt.blockedRead = { endpoint, httpStatus: Number.isSafeInteger(response?.httpStatus) ? response.httpStatus : null,
+        success: response?.body?.success === true,
+        errorCodes: Array.isArray(response?.body?.errors) ? response.body.errors.slice(0, 5).map(error => error?.code).filter(Number.isSafeInteger) : [] };
+      throw new Error('auth_email_attachment_read_unavailable');
+    }
     return response.body.result;
   };
   const observe = () => captureAuthEmailQueueEvidence({ accountId: a.account, requestJson });
@@ -43,13 +50,13 @@ export async function attachAuthEmailConsumer({ requestJson, apply = false, now 
     if (!receipt.before.inventory.complete || receipt.before.api.details?.httpStatus !== 200
       || receipt.before.api.details?.success !== true || receipt.before.lifecycleIdHash !== a.queueHash
       || receipt.before.deadLetterIdHash !== a.dlqHash) return stop('queue_identity_not_verified');
-    const queues = await read(`${base}/queues?per_page=100`);
+    const queues = await read(`${base}/queues?per_page=100`, 'queue_inventory');
     const matches = Array.isArray(queues) ? queues.filter(queue => queue.queue_name === a.queue) : [];
     const dlqs = Array.isArray(queues) ? queues.filter(queue => queue.queue_name === a.dlq) : [];
     if (matches.length !== 1 || dlqs.length !== 1 || !identifier(matches[0].queue_id) || !identifier(dlqs[0].queue_id)) return stop('existing_queue_identity_changed');
     if (hash(matches[0].queue_id) !== a.queueHash || hash(dlqs[0].queue_id) !== a.dlqHash) return stop('existing_queue_identity_changed');
     const queueBase = `${base}/queues/${matches[0].queue_id}`;
-    const consumers = await read(`${queueBase}/consumers`);
+    const consumers = await read(`${queueBase}/consumers`, 'consumer_list');
     if (!Array.isArray(consumers)) return stop('consumer_list_not_verified');
     if (consumers.length !== 0 || receipt.before.reportedConsumerCount !== 0 || receipt.before.observedConsumerCount !== 0) {
       if (consumers.length === 1 && receipt.before.status === 'VERIFIED') {
@@ -59,17 +66,17 @@ export async function attachAuthEmailConsumer({ requestJson, apply = false, now 
       return stop('existing_consumer_requires_review');
     }
     const currentJobsMatches = async () => {
-      const deployments = await read(`${base}/workers/scripts/${a.worker}/deployments`);
+      const deployments = await read(`${base}/workers/scripts/${a.worker}/deployments`, 'current_jobs_deployments');
       const deployment = Array.isArray(deployments) ? deployments[0] : deployments?.deployments?.[0];
       const serving = deployment?.versions?.filter(version => version.percentage > 0);
       return Array.isArray(serving) && serving.length === 1 && serving[0].version_id === a.version && serving[0].percentage === 100;
     };
     if (!await currentJobsMatches()) return stop('current_jobs_version_changed');
-    const version = await read(`${base}/workers/scripts/${a.worker}/versions/${a.version}`);
+    const version = await read(`${base}/workers/scripts/${a.worker}/versions/${a.version}`, 'current_jobs_version');
     const tag = version?.metadata?.annotations?.['workers/tag'] ?? version?.annotations?.['workers/tag'];
     if (version?.id !== a.version || tag !== a.source) return stop('current_jobs_source_not_verified');
     receipt.currentJobs = { version: a.version, sourceSha: a.source, lifecycleOnlyQueueHandlerReviewed: true };
-    const metrics = await read(`${queueBase}/metrics`);
+    const metrics = await read(`${queueBase}/metrics`, 'backlog_metrics');
     if (!safeInteger(metrics?.backlog_count) || !safeInteger(metrics?.backlog_bytes)) return stop('backlog_not_verified');
     receipt.backlog = { count: metrics.backlog_count, bytes: metrics.backlog_bytes,
       oldestMessageTimestampMs: safeInteger(metrics.oldest_message_timestamp_ms) ? metrics.oldest_message_timestamp_ms : null };
@@ -95,13 +102,13 @@ export async function attachAuthEmailConsumer({ requestJson, apply = false, now 
     if (operations + additionalOperationsBound + 100000 >= 1000000) return stop('included_queue_allowance_insufficient');
     if (!apply) { receipt.status = 'INSPECTED_ATTACHMENT_READY'; return receipt; }
     if (!await currentJobsMatches()) return stop('current_jobs_version_changed_before_write');
-    const immediateMetrics = await read(`${queueBase}/metrics`);
+    const immediateMetrics = await read(`${queueBase}/metrics`, 'prewrite_backlog_metrics');
     if (!safeInteger(immediateMetrics?.backlog_count) || !safeInteger(immediateMetrics?.backlog_bytes)) return stop('backlog_not_verified_before_write');
     if (immediateMetrics.backlog_count > 128 || immediateMetrics.backlog_bytes > 16 * 128 * 1024) return stop('backlog_exceeds_reviewed_attachment_bound_before_write');
     const immediateOperationsBound = 14 * (immediateMetrics.backlog_count + Math.ceil(immediateMetrics.backlog_bytes / 64000));
     if (operations + immediateOperationsBound + 100000 >= 1000000) return stop('included_queue_allowance_insufficient_before_write');
-    const immediate = await read(queueBase);
-    const immediateConsumers = await read(`${queueBase}/consumers`);
+    const immediate = await read(queueBase, 'prewrite_queue_details');
+    const immediateConsumers = await read(`${queueBase}/consumers`, 'prewrite_consumers');
     if (immediate?.queue_name !== a.queue || immediate?.queue_id !== matches[0].queue_id
       || immediate.consumers_total_count !== 0 || !Array.isArray(immediate.consumers) || immediate.consumers.length !== 0
       || !Array.isArray(immediateConsumers) || immediateConsumers.length !== 0) return stop('consumer_or_identity_changed_before_write');
@@ -116,9 +123,9 @@ export async function attachAuthEmailConsumer({ requestJson, apply = false, now 
     receipt.postHttpStatus = created?.httpStatus ?? null;
     receipt.mutationConfirmed = created?.httpStatus === 200 && created?.body?.success === true;
     receipt.after = await observe();
-    const afterConsumers = await read(`${queueBase}/consumers`);
+    const afterConsumers = await read(`${queueBase}/consumers`, 'postwrite_consumers');
     if (!Array.isArray(afterConsumers) || afterConsumers.length !== 1) return stop('attachment_readback_not_verified');
-    const afterQueue = await read(queueBase);
+    const afterQueue = await read(queueBase, 'postwrite_queue_details');
     try { assertPromptDispatchConsumer({ ...afterQueue, consumers: afterConsumers }); }
     catch { return stop('attachment_or_delivery_readback_not_verified'); }
     if (receipt.after.status !== 'VERIFIED') return stop('canonical_attachment_readback_not_verified');
