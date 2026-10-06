@@ -3,12 +3,10 @@ import { normalizeProfileName, pageRequest, type KeysetCursor } from '@lythaus/c
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const REASON_CODE_PATTERN = /^[A-Z0-9_.:-]{2,80}$/;
 const USER_STATUS_FILTERS = new Set([
-  'verified', 'pending_verification', 'active', 'relink_required', 'suspended', 'locked', 'deleted',
+  'active', 'relink_required', 'suspended', 'locked', 'deleted',
 ]);
 
 export type AdminUserStatusFilter =
-  | 'verified'
-  | 'pending_verification'
   | 'active'
   | 'relink_required'
   | 'suspended'
@@ -20,7 +18,6 @@ export interface AdminUserPageRequest {
   cursor: KeysetCursor | null;
   query: string;
   status: AdminUserStatusFilter | null;
-  source: string | null;
   createdAfter: string | null;
   createdBefore: string | null;
 }
@@ -72,23 +69,25 @@ export function adminUserPageRequest(url: URL): AdminUserPageRequest {
   const statusValue = url.searchParams.get('status');
   const status = statusValue ? statusValue as AdminUserStatusFilter : null;
   if (status && !USER_STATUS_FILTERS.has(status)) throw new Error('invalid_user_status_filter');
-  const source = url.searchParams.get('source')?.trim() || null;
-  if (source && (source.length > 80 || !/^[a-z0-9_.:-]+$/i.test(source))) throw new Error('invalid_user_source_filter');
-  const query = url.searchParams.get('q')?.trim() ?? '';
-  if (query.length > 120) throw new Error('invalid_user_search');
+  if (url.searchParams.has('source')) throw new Error('invalid_user_source_filter');
+  const rawQuery = url.searchParams.get('q')?.trim() ?? '';
+  if (rawQuery.length > 120) throw new Error('invalid_user_search');
+  if (rawQuery.includes('@')) throw new Error('account_support_owner_required');
+  const query = rawQuery.toLowerCase();
   return {
     ...page,
     query,
     status,
-    source,
     createdAfter: parseDateFilter(url.searchParams.get('createdAfter')),
     createdBefore: parseDateFilter(url.searchParams.get('createdBefore')),
   };
 }
 
 export function adminWaitlistFilters(url: URL): AdminWaitlistFilters {
-  const query = url.searchParams.get('q')?.trim() ?? '';
-  if (query.length > 120) throw new Error('invalid_waitlist_search');
+  const rawQuery = url.searchParams.get('q')?.trim() ?? '';
+  if (rawQuery.length > 320) throw new Error('invalid_waitlist_search');
+  const query = rawQuery.normalize('NFKC').toLowerCase();
+  if (query && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(query)) throw new Error('invalid_waitlist_search');
   const statusValue = url.searchParams.get('status');
   const statuses = new Set(['waiting', 'invited', 'converted', 'unsubscribed']);
   if (statusValue && !statuses.has(statusValue)) throw new Error('invalid_waitlist_status');

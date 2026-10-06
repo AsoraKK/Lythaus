@@ -15,7 +15,7 @@ test('admin waitlist runs after Access membership authentication and uses keyset
   assert.match(worker, /addValue\(page\.cursor\.timestamp\)\}::timestamptz/);
   assert.match(worker, /addValue\(page\.cursor\.id\)\}::uuid/);
   assert.match(worker, /ORDER BY w\.created_at DESC, w\.id DESC/);
-  assert.match(worker, /const limitValue = addValue\(page\.limit \+ 1\)/);
+  assert.match(worker, /const limitValue = addValue\(filters\.query \? WAITLIST_SEARCH_MAX_CANDIDATES \+ 1 : page\.limit \+ 1\)/);
   assert.match(worker, /LIMIT \$\{limitValue\}/);
 });
 
@@ -24,6 +24,7 @@ test('admin waitlist decrypts only approved fields and audits before returning P
   assert.match(handler, /decryptField\(/);
   assert.match(handler, /marketing\.waitlist_viewed/);
   assert.match(handler, /waitlistAuditMetadata/);
+  assert.doesNotMatch(handler, /email_lookup_hmac|identity\.contact_emails|identity\.email_credentials|w\.invited_at|w\.converted_at|w\.unsubscribed_at/);
   assert.ok(handler.indexOf('INSERT INTO system.audit_events') < handler.indexOf('return json'));
   assert.doesNotMatch(handler.slice(handler.indexOf('return json')), /email_lookup_hmac|email_ciphertext|encryption_key_version/);
   assert.match(handler, /'cache-control': 'private, no-store'/);

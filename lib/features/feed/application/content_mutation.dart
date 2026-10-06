@@ -521,6 +521,8 @@ ContentMutationFailure contentMutationFailure(Object error) {
     'declared_creation_mode_required' || 'invalid_declared_creation_mode' =>
       'Choose an authorship disclosure before submitting.',
     'invalid_comment_parent' => 'This reply target is unavailable.',
+    'post_tag_limit_exceeded' =>
+      'This post has too many distinct tags for search. Remove some tags and try again.',
     'post_not_found' ||
     'post_not_available' ||
     'comment_not_found' => 'This content is unavailable.',
