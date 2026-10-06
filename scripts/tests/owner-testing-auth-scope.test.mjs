@@ -99,6 +99,16 @@ test('owner testing verifies exact existing email lifecycle infrastructure with 
   assert.equal(result.evidence.infrastructureMode,'verify_existing');
   assert.equal(result.evidence.promptDispatchConsumer.status,'VERIFIED');
   assert.equal(result.evidence.promptDispatchConsumer.max_concurrency,1);
+  const workflow=readFileSync('.github/workflows/native-workers-deploy.yml','utf8');
+  const filter=workflow.match(/jq -e --arg jobs_version "\$JOBS_WORKER_VERSION_ID" '([\s\S]*?)'\s+"\$lifecycle_evidence"/)?.[1];
+  assert.ok(filter,'Execute the activation predicate against actual generator output');
+  const exported=spawnSync('jq',['-e','--arg','jobs_version','synthetic-reviewed-jobs-version',filter],{
+    input:JSON.stringify(result.evidence),encoding:'utf8',timeout:10000,
+  });
+  assert.equal(exported.status,0,exported.stderr);
+  assert.deepEqual(JSON.parse(exported.stdout),{
+    ...result.evidence,consumer:{...result.evidence.consumer,jobsWorkerVersionId:'synthetic-reviewed-jobs-version'},
+  });
 });
 for (const [scenario,reason] of [['paused-delivery','live_delivery_not_verified'],['delayed-delivery','live_delivery_not_verified'],
   ['missing-consumer','live_consumer_not_verified'],['automatic-concurrency','consumer_concurrency_not_verified'],

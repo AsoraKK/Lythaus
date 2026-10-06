@@ -1649,6 +1649,7 @@ jobs:
                 queue: "lythaus-email-lifecycle-dev",
                 max_batch_size: 25,
                 max_batch_timeout: 5,
+                max_concurrency: 1,
                 max_retries: 10,
                 dead_letter_queue: "lythaus-email-lifecycle-dlq-dev"
               }
