@@ -9,6 +9,24 @@ const { build } = require('esbuild');
 const { Miniflare, convertV4MiniflareOptions } = require('miniflare');
 const root = fileURLToPath(new URL('../../', import.meta.url));
 
+test('native workerd signs and verifies scoped dispatch hints without external network',async()=>{
+  const bundle=await build({absWorkingDir:root,
+    stdin:{resolveDir:root,contents:`import {createTransactionalEmailDispatchMessage,verifyTransactionalEmailDispatchMessage} from './packages/security/src/transactional-email-dispatch.ts';export default {async fetch(request,env){const input=await request.json();const message=await createTransactionalEmailDispatchMessage(input.id,env.FIXTURE_KEY);return Response.json({valid:!!await verifyTransactionalEmailDispatchMessage(message,env.FIXTURE_KEY),tampered:!!await verifyTransactionalEmailDispatchMessage({...message,outboxId:input.otherId},env.FIXTURE_KEY),fields:Object.keys(message).sort()});}};`},
+    bundle:true,write:false,format:'esm',platform:'node',target:'es2022'});
+  let outbound=0;
+  const mf=new Miniflare(convertV4MiniflareOptions({workers:[{name:'dispatch-crypto',modules:true,
+    compatibilityDate:'2026-08-01',compatibilityFlags:['nodejs_compat'],
+    script:bundle.outputFiles[0].text,
+    bindings:{FIXTURE_KEY:randomBytes(32).toString('base64')},outboundService:()=>{outbound++;return new Response(null,{status:403});},
+  }]}));
+  try {
+    const response=await mf.dispatchFetch('https://fixture.invalid/sign',{method:'POST',body:JSON.stringify({id:'01900000-0000-7000-8000-000000000001',otherId:'01900000-0000-7000-8000-000000000002'})});
+    assert.equal(response.status,200);
+    assert.deepEqual(await response.json(),{valid:true,tampered:false,fields:['outboxId','signature','type']});
+    assert.equal(outbound,0);
+  }finally{await mf.dispose();}
+});
+
 test('actual Public bundle exposes private named capability only through a service binding', async () => {
   const bundle = await build({ absWorkingDir: root, entryPoints: ['apps/lythaus-public-api/src/worker.ts'],
     bundle: true, write: false, format: 'esm', platform: 'node', target: 'es2022',

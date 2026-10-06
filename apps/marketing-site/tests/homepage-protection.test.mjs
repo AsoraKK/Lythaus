@@ -376,7 +376,17 @@ test('auth repair exceptions cannot alter homepage assets or waitlist routing', 
     assert.equal(readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n').trim(), git('show', `${baselineSha}:${file}`));
   }
   for (const file of ['apps/lythaus-public-api/wrangler.jsonc', 'scripts/ci/materialize-public-waitlist-deploy.mjs']) {
-    const updated = readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n')
+    let source = readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
+    if (file === 'apps/lythaus-public-api/wrangler.jsonc') {
+      for (const approved of [
+        '    "TRANSACTIONAL_EMAIL_DISPATCH_ENABLED": "true",\n',
+        '      { "binding": "TRANSACTIONAL_EMAIL_DISPATCH_QUEUE", "queue": "lythaus-email-lifecycle-dev" },\n',
+      ]) {
+        assert.equal(source.split(approved).length, 2, 'Only the exact approved production dispatch flag and existing Queue binding may change');
+        source = source.replace(approved, '');
+      }
+    }
+    const updated = source
       .replaceAll('0020_auth_recovery_delivery', '0017_authenticity_beta')
       .replaceAll('POST_0020', 'POST_0017').replaceAll('post-0020', 'post-0017')
       .replaceAll('migration 0020', 'migration 0017')
@@ -385,9 +395,12 @@ test('auth repair exceptions cannot alter homepage assets or waitlist routing', 
     assert.equal(updated.trim(), git('show', `${upstreamBaselineSha}:${file}`));
   }
   const bindingFile = 'packages/cloudflare-env/src/index.ts';
-  assert.equal(readFileSync(path.join(root, bindingFile), 'utf8').replace(/\r\n/g, '\n')
+  const bindings = readFileSync(path.join(root, bindingFile), 'utf8').replace(/\r\n/g, '\n');
+  const dispatchBindings = '  TRANSACTIONAL_EMAIL_DISPATCH_QUEUE?: Queue;\n  TRANSACTIONAL_EMAIL_DISPATCH_ENABLED?: string;\n';
+  assert.equal(bindings.split(dispatchBindings).length, 2, 'Dispatch may add only the exact optional Queue and opt-in declarations');
+  assert.equal(bindings.replace(dispatchBindings, '')
     .replace('  AUTH_EMAIL_ENVELOPE?: ServiceBinding;\n', '').trim(), git('show', `${upstreamBaselineSha}:${bindingFile}`),
-  'Only the private Admin auth service binding type may change');
+  'Only the private Admin auth binding and exact optional dispatch declarations may change');
   assert.equal(readFileSync(path.join(root, 'apps/lythaus-public-api/src/worker.ts'), 'utf8').replace(/\r\n/g, '\n').trim(), `import { WorkerEntrypoint } from 'cloudflare:workers';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { handleEmailEnvelope } from './email-envelope-entrypoint.ts';
