@@ -8,6 +8,7 @@ const ID = '01900000-0000-7000-8000-000000000001';
 const OTHER = '01900000-0000-7000-8000-000000000002';
 const account = { id: ID, status: 'active', verificationState: 'pending_verification', verifiedAt: null, createdAt: '2026-10-01T00:00:00Z',
   updatedAt: '2026-10-01T00:00:00Z', deletedAt: null, lastSignInAt: null, activeSessionCount: 0, subscriptionTier: 'free' };
+const profile = { displayName: 'Synthetic member', bio: 'Synthetic biography', userUpdatedAt: '2026-10-01T00:00:00.000001Z', profileUpdatedAt: '2026-10-01T00:00:00.000002Z', moderationState: 'allowed' };
 const event = { id: ID, source: 'activity', eventType: 'account.registered', createdAt: '2026-10-01T00:00:00.000001Z', correlationId: 'synthetic-correlation', reasonCode: null, category: 'account', outcome: 'pending' };
 const page = (items = [event], nextCursor = null) => ({ items, nextCursor, coverage: 'partial', correlationId: 'history-correlation' });
 const fail = status => Object.assign(new Error('private-server-detail'), { status });
@@ -18,14 +19,17 @@ async function lookup() {
   fireEvent.change(screen.getByLabelText('Support reason code'), { target: { value: 'support_request' } });
   fireEvent.click(screen.getByRole('button', { name: 'Look up account' }));
 }
-async function loaded() { await lookup(); await screen.findByText('account.registered'); }
+async function loaded() { await lookup(); await screen.findByText('account.registered'); await screen.findByText(profile.displayName); }
 
 describe('AccountSupport', () => {
   beforeEach(() => {
     adminRequest.mockReset();
-    adminRequest.mockImplementation(async path => {
-      if (path === 'account-support/access') return { available: true };
+    adminRequest.mockImplementation(async (path, options) => {
+      if (path === 'account-support/access') return { available: true, profileCorrectionsAvailable: true };
       if (path === 'account-support/lookup') return { state: 'found', account, correlationId: 'lookup-correlation' };
+      if (path === `account-support/users/${ID}/profile`) return options?.method === 'PATCH'
+        ? { profile: { ...profile, displayName: options.body.displayName, bio: options.body.bio, moderationState: 'under_review' } }
+        : { profile };
       return page();
     });
   });
@@ -49,6 +53,18 @@ describe('AccountSupport', () => {
     expect(screen.queryByRole('button', { name: 'Look up account' })).not.toBeInTheDocument();
   });
 
+  it('keeps profile fields unavailable when the current database role lacks reviewed-write access', async () => {
+    adminRequest.mockImplementation(async (path, options) => {
+      if (path === 'account-support/access') return { available: true, profileCorrectionsAvailable: false };
+      if (path === 'account-support/lookup') return { state: 'found', account };
+      return page();
+    });
+    render(<AccountSupport />); await lookup(); await screen.findByText(/No profile fields were read or changed/);
+    expect(screen.getByText(/approved database access update/)).toBeInTheDocument();
+    expect(adminRequest).not.toHaveBeenCalledWith(`account-support/users/${ID}/profile`, expect.anything());
+    expect(screen.queryByRole('button', { name: 'Edit profile' })).not.toBeInTheDocument();
+  });
+
   it('rejects an unexpected access response', async () => {
     adminRequest.mockResolvedValue({}); render(<AccountSupport />);
     expect(await screen.findByRole('alert')).toHaveTextContent('Owner access could not be checked');
@@ -65,8 +81,53 @@ describe('AccountSupport', () => {
     expect(screen.queryByRole('button', { name: /Delete|Reset|Suspend|Revoke|Impersonate|Repair|Invite/ })).not.toBeInTheDocument();
   });
 
+  it('loads the profile separately from account state and points post actions to the moderation queue', async () => {
+    render(<AccountSupport />); await loaded();
+    expect(adminRequest).toHaveBeenCalledWith(`account-support/users/${ID}/profile`, { method: 'POST', body: { reasonCode: 'SUPPORT_REQUEST' } });
+    expect(screen.getByText('Synthetic member')).toBeInTheDocument();
+    expect(screen.getByText('Synthetic biography')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open moderation queue' })).toHaveAttribute('href', '/moderation');
+    expect(screen.getByText(/does not enumerate a member’s posts/)).toBeInTheDocument();
+  });
+
+  it('requires reason, review and typed confirmation before a profile correction is saved', async () => {
+    render(<AccountSupport />); await loaded();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit profile' }));
+    fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Corrected synthetic name' } });
+    fireEvent.change(screen.getByLabelText('Correction reason code'), { target: { value: 'support_request' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Review correction' }));
+    expect(await screen.findByText('Review before saving')).toBeInTheDocument();
+    expect(adminRequest).not.toHaveBeenCalledWith(`account-support/users/${ID}/profile`, expect.objectContaining({ method: 'PATCH' }));
+    const confirmation = screen.getByLabelText('Type UPDATE MEMBER PROFILE to confirm');
+    fireEvent.change(confirmation, { target: { value: 'UPDATE' } });
+    expect(screen.getByRole('button', { name: 'Save profile correction' })).toBeDisabled();
+    fireEvent.change(confirmation, { target: { value: 'UPDATE MEMBER PROFILE' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save profile correction' }));
+    await screen.findByText('Profile correction saved and queued for moderation review.');
+    expect(adminRequest).toHaveBeenCalledWith(`account-support/users/${ID}/profile`, { method: 'PATCH', body: {
+      displayName: 'Corrected synthetic name', bio: 'Synthetic biography', expectedUserUpdatedAt: profile.userUpdatedAt,
+      expectedProfileUpdatedAt: profile.profileUpdatedAt, reasonCode: 'SUPPORT_REQUEST', confirmation: 'UPDATE MEMBER PROFILE',
+    } });
+  });
+
+  it('preserves a reviewed correction after conflict and allows cancel without a write', async () => {
+    render(<AccountSupport />); await loaded();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit profile' }));
+    fireEvent.change(screen.getByLabelText('Bio'), { target: { value: 'Corrected synthetic biography' } });
+    fireEvent.change(screen.getByLabelText('Correction reason code'), { target: { value: 'SUPPORT_REQUEST' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Review correction' }));
+    fireEvent.change(screen.getByLabelText('Type UPDATE MEMBER PROFILE to confirm'), { target: { value: 'UPDATE MEMBER PROFILE' } });
+    adminRequest.mockRejectedValueOnce(fail(409));
+    fireEvent.click(screen.getByRole('button', { name: 'Save profile correction' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/changed after it was loaded/);
+    expect(screen.getByLabelText('Bio')).toHaveValue('Corrected synthetic biography');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByLabelText('Bio')).not.toBeInTheDocument();
+    expect(screen.queryByText('private-server-detail')).not.toBeInTheDocument();
+  });
+
   it.each(['not_found', 'ambiguous'])('reports %s with no account detail or history request', async state => {
-    adminRequest.mockImplementation(async path => path === 'account-support/access' ? { available: true } : { state, account: null });
+    adminRequest.mockImplementation(async path => path === 'account-support/access' ? { available: true, profileCorrectionsAvailable: true } : { state, account: null });
     render(<AccountSupport />); await lookup();
     await screen.findByText(state === 'not_found' ? 'No account matched this exact email address.' : /conflicting account records/);
     expect(adminRequest).toHaveBeenCalledTimes(2); expect(screen.queryByText('Account state')).not.toBeInTheDocument();
@@ -90,7 +151,7 @@ describe('AccountSupport', () => {
 
   it('treats history failure as unavailable instead of an empty successful history', async () => {
     adminRequest.mockImplementation(async path => {
-      if (path === 'account-support/access') return { available: true };
+      if (path === 'account-support/access') return { available: true, profileCorrectionsAvailable: true };
       if (path === 'account-support/lookup') return { state: 'found', account };
       throw fail(503);
     });
@@ -99,7 +160,7 @@ describe('AccountSupport', () => {
   });
 
   it('reports an empty history as partial and preserves missing correlation honestly', async () => {
-    adminRequest.mockImplementation(async path => path === 'account-support/access' ? { available: true } : path === 'account-support/lookup' ? { state: 'found', account } : page([]));
+    adminRequest.mockImplementation(async (path, options) => path === 'account-support/access' ? { available: true, profileCorrectionsAvailable: true } : path === 'account-support/lookup' ? { state: 'found', account } : path.endsWith('/profile') ? { profile } : page([]));
     render(<AccountSupport />); await lookup(); await screen.findByText('No recorded events matched these filters.');
     expect(screen.getByText(/does not prove that no activity occurred/)).toBeInTheDocument();
     adminRequest.mockResolvedValue(page([{ ...event, correlationId: null }])); fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }));
@@ -122,7 +183,7 @@ describe('AccountSupport', () => {
   });
 
   it('uses applied filters when paginating and appends unique source event rows', async () => {
-    adminRequest.mockImplementation(async path => path === 'account-support/access' ? { available: true } : path === 'account-support/lookup' ? { state: 'found', account } : page([event], 'next-page'));
+    adminRequest.mockImplementation(async (path, options) => path === 'account-support/access' ? { available: true, profileCorrectionsAvailable: true } : path === 'account-support/lookup' ? { state: 'found', account } : path.endsWith('/profile') ? { profile } : page([event], 'next-page'));
     render(<AccountSupport />); await loaded();
     fireEvent.change(screen.getByLabelText('History source'), { target: { value: 'audit' } });
     adminRequest.mockResolvedValue(page([{ ...event, id: OTHER, source: 'account', eventType: 'email_login', correlationId: null }]));
@@ -144,7 +205,7 @@ describe('AccountSupport', () => {
   });
 
   it('preserves the previous page when load-more fails and offers retry', async () => {
-    adminRequest.mockImplementation(async path => path === 'account-support/access' ? { available: true } : path === 'account-support/lookup' ? { state: 'found', account } : page([event], 'next-page'));
+    adminRequest.mockImplementation(async path => path === 'account-support/access' ? { available: true, profileCorrectionsAvailable: true } : path === 'account-support/lookup' ? { state: 'found', account } : path.endsWith('/profile') ? { profile } : page([event], 'next-page'));
     render(<AccountSupport />); await loaded(); adminRequest.mockRejectedValue(fail(503));
     fireEvent.click(screen.getByRole('button', { name: 'Load more history' }));
     await screen.findByText(/More history could not be loaded/);
@@ -171,7 +232,7 @@ describe('AccountSupport', () => {
 
   it('clear discards a late lookup response and removes the entered email', async () => {
     const pending = deferred();
-    adminRequest.mockImplementation(path => path === 'account-support/access' ? Promise.resolve({ available: true }) : pending.promise);
+    adminRequest.mockImplementation(path => path === 'account-support/access' ? Promise.resolve({ available: true, profileCorrectionsAvailable: true }) : pending.promise);
     render(<AccountSupport />); await lookup(); fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
     await act(async () => { pending.resolve({ state: 'found', account }); });
     expect(screen.getByLabelText('Exact email address')).toHaveValue(''); expect(screen.queryByText(ID)).not.toBeInTheDocument();
@@ -180,8 +241,9 @@ describe('AccountSupport', () => {
   it('discards late history after a different account lookup begins', async () => {
     const pending = deferred(); let historyCalls = 0;
     adminRequest.mockImplementation(async path => {
-      if (path === 'account-support/access') return { available: true };
+      if (path === 'account-support/access') return { available: true, profileCorrectionsAvailable: true };
       if (path === 'account-support/lookup') return { state: 'found', account: { ...account, id: historyCalls ? OTHER : ID } };
+      if (path.endsWith('/profile')) return { profile };
       historyCalls += 1; return historyCalls === 1 ? pending.promise : page([{ ...event, id: OTHER, eventType: 'account.email_verified' }]);
     });
     render(<AccountSupport />); await lookup(); await screen.findByText(ID);
@@ -192,13 +254,13 @@ describe('AccountSupport', () => {
   });
 
   it('rejects malformed history responses without describing them as complete', async () => {
-    adminRequest.mockImplementation(async path => path === 'account-support/access' ? { available: true } : path === 'account-support/lookup' ? { state: 'found', account } : { items: [], coverage: 'complete' });
+    adminRequest.mockImplementation(async path => path === 'account-support/access' ? { available: true, profileCorrectionsAvailable: true } : path === 'account-support/lookup' ? { state: 'found', account } : { items: [], coverage: 'complete' });
     render(<AccountSupport />); await lookup(); await screen.findByText(/History could not be loaded/);
     expect(screen.queryByText('No recorded events matched these filters.')).not.toBeInTheDocument();
   });
 
   it('hides the form when lookup loses owner access', async () => {
-    adminRequest.mockImplementation(async path => { if (path === 'account-support/access') return { available: true }; throw fail(403); });
+    adminRequest.mockImplementation(async path => { if (path === 'account-support/access') return { available: true, profileCorrectionsAvailable: true }; throw fail(403); });
     render(<AccountSupport />); await lookup(); await screen.findByText(/Active owner access is required/);
     expect(screen.queryByLabelText('Exact email address')).not.toBeInTheDocument();
   });

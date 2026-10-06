@@ -9,15 +9,23 @@ const VERSION = '01900000-0000-7000-8000-000000000088';
 const account = accountSupportSnapshot({ id: ID, status: 'active', verificationState: 'pending_verification',
   verifiedAt: null, createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-01T00:00:00Z', deletedAt: null, lastSignInAt: null,
   activeSessionCount: 0, subscriptionTier: 'free' });
-const state = { role: 'owner', active: true, member: true, auditCount: 1, exists: true, outcome: 'found', failHistory: false, reads: [] };
-function reset() { Object.assign(state, { role: 'owner', active: true, member: true, auditCount: 1, exists: true, outcome: 'found', failHistory: false, reads: [] }); }
+const state = { role: 'owner', active: true, member: true, auditCount: 1, exists: true, outcome: 'found', failHistory: false, profileCorrectionsAvailable: true, reads: [] };
+function reset() { Object.assign(state, { role: 'owner', active: true, member: true, auditCount: 1, exists: true, outcome: 'found', failHistory: false, profileCorrectionsAvailable: true, reads: [] }); }
 const result = (rows = [], rowCount = rows.length) => ({ rows, rowCount });
 async function query(sql, values = []) {
   state.reads.push({ sql, values });
   if (sql.includes('identity.admin_memberships')) return state.member && (!sql.includes("a.role = 'owner'") || state.active)
     ? result([{ user_id: OWNER_ID, role: state.role }]) : result();
+  if (sql.includes('has_schema_privilege')) return result([{ available: state.profileCorrectionsAvailable }]);
   if (sql.includes('system.rate_limit_windows')) return result([{ request_count: 1 }]);
   if (sql.startsWith('SELECT id FROM identity.users')) return state.exists ? result([{ id: ID }]) : result();
+  if (sql.includes('SELECT u.display_name, COALESCE(p.bio')) return result([{ display_name: 'Synthetic member', bio: 'Synthetic bio',
+    user_updated_at: '2026-10-01T00:00:00.000001Z', profile_updated_at: '2026-10-01T00:00:00.000002Z' }]);
+  if (sql.includes('FROM identity.users WHERE id = $1 FOR UPDATE')) return result([{ display_name: 'Synthetic member', status: 'active', deleted_at: null, user_updated_at: '2026-10-01T00:00:00.000001Z' }]);
+  if (sql.includes('FROM social.profiles WHERE user_id = $1 FOR UPDATE')) return result([{ bio: 'Synthetic bio', profile_updated_at: '2026-10-01T00:00:00.000002Z' }]);
+  if (sql.startsWith('UPDATE identity.users SET display_name')) return result([{ user_updated_at: '2026-10-02T00:00:00.000001Z' }]);
+  if (sql.startsWith('INSERT INTO social.profiles')) return result([{ profile_updated_at: '2026-10-02T00:00:00.000002Z' }]);
+  if (sql.startsWith('INSERT INTO system.outbox_events')) return result([{ id: ID }]);
   if (sql.includes('AS snapshot_at')) return result([{ snapshot_at: '2026-10-02T00:00:00.000001Z' }]);
   if (sql.includes('INSERT INTO system.audit_events')) return result([{ id: ID }], state.auditCount);
   if (sql.includes('WITH history')) { if (state.failHistory) throw new Error('password=private; reset-link'); return result(); }
@@ -42,6 +50,7 @@ function request(path = '/api/admin/account-support/lookup', body = { email: 'sy
   return new Request(`https://admin.lythaus.co${path}`, { method, headers: { origin: 'https://admin.lythaus.co', 'content-type': 'application/json', 'cf-access-jwt-assertion': 'synthetic-valid', ...headers }, ...(method !== 'GET' ? { body: JSON.stringify(body) } : {}) });
 }
 const historyPath = `/api/admin/account-support/users/${ID}/history`;
+const profilePath = `/api/admin/account-support/users/${ID}/profile`;
 
 test('worker rejects missing or invalid Access before account support reads', async () => {
   reset();
@@ -102,7 +111,7 @@ test('worker rejects oversized and unknown-field bodies without disclosing their
   }
 });
 
-test('worker support has no mutation methods and never accepts URL email lookup', async () => {
+test('worker lookup/history reject unsupported methods and never accept URL email lookup', async () => {
   for (const method of ['PATCH', 'PUT', 'DELETE', 'GET']) {
     reset(); const response = await worker.fetch(request(undefined, undefined, {}, method), env); assert.equal(response.status, 405);
     assert.equal(response.headers.get('allow'), 'POST');
@@ -111,8 +120,8 @@ test('worker support has no mutation methods and never accepts URL email lookup'
   reset(); assert.equal((await worker.fetch(request('/api/admin/account-support/lookup?email=synthetic@example.invalid'), env)).status, 404);
 });
 
-test('worker dispatches only the three documented support routes', async () => {
-  for (const path of ['/api/admin/account-support/other', `${historyPath}/extra`, '/api/admin/account-support/lookup/extra']) {
+test('worker dispatches only documented support routes', async () => {
+  for (const path of ['/api/admin/account-support/other', `${historyPath}/extra`, '/api/admin/account-support/lookup/extra', `${profilePath}/extra`]) {
     reset(); assert.equal((await worker.fetch(request(path), env)).status, 404);
     assert.equal(state.reads.length, 2);
   }
@@ -121,6 +130,56 @@ test('worker dispatches only the three documented support routes', async () => {
     assert.equal(response.status, 405); assert.equal(response.headers.get('allow'), allow);
     assert.equal(state.reads.length, 2);
   }
+});
+
+test('worker returns audited no-store profile fields and does not expose private account columns', async () => {
+  reset(); const response = await worker.fetch(request(profilePath, { reasonCode: 'SUPPORT_REQUEST' }), env);
+  assert.equal(response.status, 200); assert.equal(response.headers.get('cache-control'), 'private, no-store');
+  assert.deepEqual(await response.json(), { profile: {
+    displayName: 'Synthetic member', bio: 'Synthetic bio', userUpdatedAt: '2026-10-01T00:00:00.000001Z', profileUpdatedAt: '2026-10-01T00:00:00.000002Z'
+  }, correlationId: response.headers.get('x-correlation-id') });
+  assert.ok(!JSON.stringify(state.reads).match(/password_hash|refresh_token|email_ciphertext|secret/i));
+  const audit = state.reads.find(query => query.sql.includes('INSERT INTO system.audit_events'));
+  assert.equal(audit.values[1], OWNER_ID); assert.equal(audit.values[3], ID);
+  assert.equal(audit.values[2], 'identity.account_support_profile_viewed');
+  assert.deepEqual(JSON.parse(audit.values[6]).fields, ['display_name', 'bio']);
+});
+
+test('worker profile correction requires an owner, reason, review confirmation and current revisions', async () => {
+  reset();
+  const body = { displayName: 'Corrected synthetic member', bio: 'Corrected synthetic bio', expectedUserUpdatedAt: '2026-10-01T00:00:00.000001Z',
+    expectedProfileUpdatedAt: '2026-10-01T00:00:00.000002Z', reasonCode: 'SUPPORT_REQUEST', confirmation: 'UPDATE MEMBER PROFILE' };
+  const response = await worker.fetch(request(profilePath, body, {}, 'PATCH'), env);
+  assert.equal(response.status, 200); assert.equal(response.headers.get('cache-control'), 'private, no-store');
+  const result = await response.json();
+  assert.deepEqual(result.profile, { displayName: body.displayName, bio: body.bio, userUpdatedAt: '2026-10-02T00:00:00.000001Z',
+    profileUpdatedAt: '2026-10-02T00:00:00.000002Z', moderationState: 'under_review' });
+  assert.ok(state.reads.some(query => query.sql.startsWith('UPDATE identity.users SET display_name')));
+  const savedProfile = state.reads.find(query => query.sql.startsWith('INSERT INTO social.profiles'));
+  assert.equal(savedProfile.values[1], body.bio); assert.equal(savedProfile.values[3], body.expectedProfileUpdatedAt);
+  const outbox = state.reads.find(query => query.sql.startsWith('INSERT INTO system.outbox_events'));
+  assert.match(outbox.sql, /'content\.profile\.updated'/); assert.equal(outbox.values[1], ID); assert.equal(outbox.values[2], OWNER_ID);
+  const audit = state.reads.find(query => query.sql.includes('INSERT INTO system.audit_events'));
+  assert.equal(audit.values[1], OWNER_ID); assert.equal(audit.values[3], ID); assert.equal(audit.values[4], 'SUPPORT_REQUEST');
+  assert.equal(JSON.parse(audit.values[6]).moderationState, 'under_review');
+});
+
+test('worker denies profile correction after role change or stale revision and rejects unsafe fields', async () => {
+  const body = { bio: 'Corrected synthetic bio', expectedUserUpdatedAt: '2026-10-01T00:00:00.000001Z', expectedProfileUpdatedAt: '2026-10-01T00:00:00.000002Z',
+    reasonCode: 'SUPPORT_REQUEST', confirmation: 'UPDATE MEMBER PROFILE' };
+  reset(); state.role = 'administrator';
+  const changedRole = await worker.fetch(request(profilePath, body, {}, 'PATCH'), env);
+  assert.equal(changedRole.status, 403); assert.ok(!state.reads.some(query => query.sql.startsWith('UPDATE identity.users')));
+
+  reset(); const stale = await worker.fetch(request(profilePath, { ...body, expectedProfileUpdatedAt: '2026-09-01T00:00:00.000002Z' }, {}, 'PATCH'), env);
+  assert.equal(stale.status, 409); assert.equal((await stale.json()).error, 'account_support_profile_conflict');
+  assert.ok(!state.reads.some(query => query.sql.startsWith('UPDATE identity.users') || query.sql.startsWith('INSERT INTO system.outbox_events') || query.sql.includes('INSERT INTO system.audit_events')));
+
+  reset(); const extra = await worker.fetch(request(profilePath, { ...body, email: 'synthetic@example.invalid' }, {}, 'PATCH'), env);
+  assert.equal(extra.status, 400); assert.ok(!state.reads.some(query => query.sql.startsWith('UPDATE identity.users')));
+
+  reset(); const wrongMethod = await worker.fetch(request(profilePath, null, {}, 'DELETE'), env);
+  assert.equal(wrongMethod.status, 405); assert.equal(wrongMethod.headers.get('allow'), 'POST, PATCH');
 });
 
 test('worker empty history is explicitly partial and records the owner request', async () => {
@@ -146,6 +205,12 @@ test('worker validates date ranges, filter codes, user IDs and limits', async ()
 
 test('worker owner capability returns no account state and is denied for inactive membership', async () => {
   reset(); const response = await worker.fetch(request('/api/admin/account-support/access', null, {}, 'GET'), env);
-  assert.equal(response.status, 200); assert.deepEqual(await response.json(), { available: true });
+  assert.equal(response.status, 200); assert.deepEqual(await response.json(), { available: true, profileCorrectionsAvailable: true });
+  reset(); state.profileCorrectionsAvailable = false;
+  const unavailable = await worker.fetch(request('/api/admin/account-support/access', null, {}, 'GET'), env);
+  assert.deepEqual(await unavailable.json(), { available: true, profileCorrectionsAvailable: false });
+  const gatedProfile = await worker.fetch(request(profilePath, { reasonCode: 'SUPPORT_REQUEST' }), env);
+  assert.equal(gatedProfile.status, 503); assert.equal((await gatedProfile.json()).error, 'account_support_unavailable');
+  assert.ok(!state.reads.some(query => query.sql.includes('SELECT u.display_name, COALESCE(p.bio')));
   reset(); state.active = false; assert.equal((await worker.fetch(request('/api/admin/account-support/access', null, {}, 'GET'), env)).status, 403);
 });

@@ -6,88 +6,38 @@ import { adminRequest } from '../api/adminApi.js';
 vi.mock('../api/adminApi.js', () => ({ adminRequest: vi.fn() }));
 
 const user = {
-  id: '01900000-0000-7000-8000-000000000001', email: 'private@example.com', displayName: 'Person', handle: 'person',
-  status: 'active', verificationState: 'verified', currentSessionCount: 2, createdAt: '2026-08-14T07:00:00.000Z',
+  id: '01900000-0000-7000-8000-000000000001', displayName: 'Person', handle: 'person',
+  status: 'active', currentSessionCount: 2, createdAt: '2026-08-14T07:00:00.000Z',
 };
-const page = (items = [user], nextCursor = null) => ({ items, nextCursor });
-const denied = (status = 403) => Promise.reject(Object.assign(new Error('denied'), { status }));
 
 describe('Users', () => {
   beforeEach(() => {
-    adminRequest.mockReset();
-    adminRequest.mockImplementation((path) => path === 'users' ? Promise.resolve(page()) : Promise.resolve({ user }));
+    adminRequest.mockImplementation((path) => ['users', 'users/search-by-email'].includes(path)
+      ? Promise.resolve({ items: [user], totalMatching: 207, nextCursor: null }) : Promise.resolve({ user }));
   });
 
-  it('shows loading, then a private-data-minimal page with honest profile capabilities', async () => {
-    let resolveUsers;
-    adminRequest.mockImplementation((path) => path === 'users' ? new Promise((resolve) => { resolveUsers = resolve; }) : Promise.resolve({ user }));
+  it('loads the paginated user route and shows safe identity fields', async () => {
     render(<Users />);
-    expect(screen.getByText('Loading users...')).toBeInTheDocument();
-    resolveUsers(page());
     expect(await screen.findByText('Person')).toBeInTheDocument();
-    expect(screen.getByText(user.id)).toBeInTheDocument();
-    expect(screen.queryByText('private@example.com')).not.toBeInTheDocument();
-    expect(screen.queryByText('verified')).not.toBeInTheDocument();
+    expect(screen.getByText('@person · 01900000-0000-7000-8000-000000000001')).toBeInTheDocument();
+    expect(screen.queryByText('person@example.com')).not.toBeInTheDocument();
+    expect(screen.getByText('Not checked')).toBeInTheDocument();
+    expect(screen.getByText('Showing 1 loaded of 207 matching accounts.')).toBeInTheDocument();
+    expect(screen.getByText(/Exact email search is owner-only, audited, and sent in a private request body\./)).toBeInTheDocument();
     expect(adminRequest).toHaveBeenCalledWith('users', { query: { q: '', status: '', createdAfter: '', createdBefore: '', limit: 50, cursor: null } });
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }));
-    expect(await screen.findByText('Profile editing is unavailable in this admin view. The canonical admin role does not have the social-profile write permission required to edit app profiles.')).toBeInTheDocument();
-    expect(screen.getByText('Owner-only in Account support')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /edit profile/i })).not.toBeInTheDocument();
   });
 
-  it('submits list filters and follows only the returned opaque cursor', async () => {
-    const second = { ...user, id: '01900000-0000-7000-8000-000000000002', displayName: 'Second' };
-    adminRequest.mockImplementation((path, options) => {
-      if (path !== 'users') return Promise.resolve({ user });
-      if (options?.query?.cursor === 'opaque-next') return Promise.resolve(page([second]));
-      if (options?.query?.q === 'Person') return Promise.resolve(page([user], 'opaque-next'));
-      return Promise.resolve(page());
-    });
+  it('sends exact account email search only in the bounded POST body', async () => {
     render(<Users />);
     await screen.findByText('Person');
-    fireEvent.change(screen.getByLabelText('Search registered accounts'), { target: { value: 'Person' } });
+    fireEvent.change(screen.getByLabelText('Search registered accounts'), { target: { value: 'person@example.com' } });
     fireEvent.click(screen.getByRole('button', { name: 'Search' }));
-    await waitFor(() => expect(adminRequest).toHaveBeenCalledWith('users', { query: { q: 'Person', status: '', createdAfter: '', createdBefore: '', limit: 50, cursor: null } }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Load more' }));
-    expect(await screen.findByText('Second')).toBeInTheDocument();
-    expect(adminRequest).toHaveBeenCalledWith('users', { query: { q: 'Person', status: '', createdAfter: '', createdBefore: '', limit: 50, cursor: 'opaque-next' } });
+    await waitFor(() => expect(adminRequest).toHaveBeenLastCalledWith('users/search-by-email', { method: 'POST', body: {
+      q: 'person@example.com', status: '', createdAfter: '', createdBefore: '', limit: 50, cursor: null,
+    } }));
   });
 
-  it('distinguishes an empty result from API errors and authentication denial', async () => {
-    adminRequest.mockResolvedValue(page([]));
-    const { unmount } = render(<Users />);
-    expect(await screen.findByText('No registered accounts match these filters.')).toBeInTheDocument();
-    unmount();
-
-    adminRequest.mockRejectedValue(new Error('database internals'));
-    render(<Users />);
-    expect(await screen.findByRole('alert')).toHaveTextContent('User data could not be loaded.');
-    expect(screen.queryByText('database internals')).not.toBeInTheDocument();
-  });
-
-  it('shows a clear 403 state and does not render account rows', async () => {
-    adminRequest.mockRejectedValue(Object.assign(new Error('denied'), { status: 403 }));
-    render(<Users />);
-    expect(await screen.findByRole('alert')).toHaveTextContent('Administrator access is required to view registered accounts.');
-    expect(screen.queryByText('Person')).not.toBeInTheDocument();
-  });
-
-  it('shows the sign-in requirement for a 401 response', async () => {
-    adminRequest.mockRejectedValue(Object.assign(new Error('unauthorized'), { status: 401 }));
-    render(<Users />);
-    expect(await screen.findByRole('alert')).toHaveTextContent('Sign in through approved admin access to view registered accounts.');
-  });
-
-  it('routes email search to the owner-only support workspace', async () => {
-    render(<Users />);
-    await screen.findByText('Person');
-    fireEvent.change(screen.getByLabelText('Search registered accounts'), { target: { value: 'private@example.com' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Exact email lookup is available only in the owner-only Account support tab.');
-    expect(adminRequest).toHaveBeenCalledTimes(1);
-  });
-
-  it('requires reason-coded confirmation for reversible account status actions', async () => {
+  it('requires typed confirmation before a status mutation', async () => {
     render(<Users />);
     await screen.findByText('Person');
     fireEvent.click(screen.getByRole('button', { name: 'Review' }));

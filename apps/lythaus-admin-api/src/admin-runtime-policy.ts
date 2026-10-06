@@ -69,11 +69,9 @@ export function adminUserPageRequest(url: URL): AdminUserPageRequest {
   const statusValue = url.searchParams.get('status');
   const status = statusValue ? statusValue as AdminUserStatusFilter : null;
   if (status && !USER_STATUS_FILTERS.has(status)) throw new Error('invalid_user_status_filter');
-  if (url.searchParams.has('source')) throw new Error('invalid_user_source_filter');
-  const rawQuery = url.searchParams.get('q')?.trim() ?? '';
-  if (rawQuery.length > 120) throw new Error('invalid_user_search');
-  if (rawQuery.includes('@')) throw new Error('account_support_owner_required');
-  const query = rawQuery.toLowerCase();
+  if (url.searchParams.get('source')?.trim()) throw new Error('invalid_user_source_filter');
+  const query = url.searchParams.get('q')?.trim() ?? '';
+  if (query.includes('@') || query.length > 120) throw new Error('invalid_user_search');
   return {
     ...page,
     query,
@@ -84,10 +82,8 @@ export function adminUserPageRequest(url: URL): AdminUserPageRequest {
 }
 
 export function adminWaitlistFilters(url: URL): AdminWaitlistFilters {
-  const rawQuery = url.searchParams.get('q')?.trim() ?? '';
-  if (rawQuery.length > 320) throw new Error('invalid_waitlist_search');
-  const query = rawQuery.normalize('NFKC').toLowerCase();
-  if (query && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(query)) throw new Error('invalid_waitlist_search');
+  const query = url.searchParams.get('q')?.trim() ?? '';
+  if (query.length > 320 || (query && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(query))) throw new Error('invalid_waitlist_search');
   const statusValue = url.searchParams.get('status');
   const statuses = new Set(['waiting', 'invited', 'converted', 'unsubscribed']);
   if (statusValue && !statuses.has(statusValue)) throw new Error('invalid_waitlist_status');

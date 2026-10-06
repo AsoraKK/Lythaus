@@ -8,12 +8,12 @@ import PageLayout from '../components/PageLayout.jsx';
 
 const USERS_GUIDE = {
   title: 'Keeper account operations',
-  summary: 'Review registered account records and apply controlled, reason-coded administrative actions.',
+  summary: 'Review live account state and apply controlled, reason-coded administrative actions.',
   items: [
-    'Search by account id, display name, or handle.',
-    'Exact email lookup is owner-only under Account support; this list does not return contact addresses.',
+    'Search by id, handle, display name, or exact email address.',
     'Every mutation requires a stable policy reason and typed confirmation.',
-    'Profile editing is unavailable because the canonical admin role has no social-profile write permission.'
+    'Invited accounts choose their own password after verifying ownership.',
+    'Email changes stay in the public verification flow; Keeper never marks an address verified.'
   ],
   footnote: 'Cloudflare Access and active administrator membership are enforced by the admin API.'
 };
@@ -21,11 +21,12 @@ const USERS_GUIDE = {
 const STATUS_OPTIONS = ['', 'active', 'relink_required', 'suspended', 'locked', 'deleted'];
 
 function Users({ inWorkspace = false }) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(() => new URLSearchParams(window.location.search).get('q') || '');
   const [status, setStatus] = useState('');
   const [createdAfter, setCreatedAfter] = useState('');
   const [createdBefore, setCreatedBefore] = useState('');
   const [items, setItems] = useState([]);
+  const [matchingTotal, setMatchingTotal] = useState(null);
   const [nextCursor, setNextCursor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -44,18 +45,19 @@ function Users({ inWorkspace = false }) {
     append ? setLoadingMore(true) : setLoading(true);
     setError('');
     try {
-      const response = await adminRequest('users', { query: { q: query.trim(), status, createdAfter, createdBefore, limit: 50, cursor } });
+      const search = query.trim();
+      const page = { q: search, status, createdAfter, createdBefore, limit: 50, cursor };
+      const response = search.includes('@')
+        ? await adminRequest('users/search-by-email', { method: 'POST', body: page })
+        : await adminRequest('users', { query: page });
       const received = Array.isArray(response?.items) ? response.items : [];
+      if (!Number.isInteger(response?.totalMatching)) throw new Error('Invalid account-list response');
       setItems((current) => append ? [...current, ...received] : received);
+      setMatchingTotal(response.totalMatching);
       setNextCursor(response?.nextCursor || null);
-    } catch (requestError) {
-      if (requestError.status === 401 || requestError.status === 403) {
-        setItems([]); setNextCursor(null); setSelected(null); setDetail(null);
-        setError(requestError.status === 403 ? 'Administrator access is required to view registered accounts.' : 'Sign in through approved admin access to view registered accounts.');
-      } else {
-        if (!append) { setItems([]); setNextCursor(null); }
-        setError('User data could not be loaded.');
-      }
+    } catch {
+      if (!append) { setItems([]); setMatchingTotal(null); setNextCursor(null); }
+      setError('User data could not be loaded.');
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -71,13 +73,8 @@ function Users({ inWorkspace = false }) {
     try {
       const response = await adminRequest(`users/${encodeURIComponent(user.id)}`);
       setDetail(response?.user || user);
-    } catch (requestError) {
-      if (requestError.status === 401 || requestError.status === 403) {
-        setItems([]); setNextCursor(null); setSelected(null); setDetail(null);
-        setError(requestError.status === 403 ? 'Administrator access is required to review this account.' : 'Sign in through approved admin access to review this account.');
-      } else {
-        setDetail(user);
-      }
+    } catch {
+      setDetail(user);
     }
   };
 
@@ -150,24 +147,13 @@ function Users({ inWorkspace = false }) {
     }
   };
 
-  const submitSearch = (event) => {
-    event.preventDefault();
-    if (query.includes('@')) {
-      setItems([]);
-      setNextCursor(null);
-      setError('Exact email lookup is available only in the owner-only Account support tab.');
-      return;
-    }
-    loadUsers();
-  };
-
   return (
-    <PageLayout title={inWorkspace ? 'Account administration' : 'Users'} headingLevel={inWorkspace ? 2 : 1} subtitle="Registered accounts across all statuses. Existing administrator and owner permissions apply." guide={USERS_GUIDE}>
+    <PageLayout title={inWorkspace ? 'Account administration' : 'Users'} headingLevel={inWorkspace ? 2 : 1} subtitle="Registered app accounts. Waitlist contacts remain in the separate Waitlist list." guide={USERS_GUIDE}>
       <LythCard variant="panel">
         <div className="panel-header"><h2>Find accounts</h2><LythButton variant="ghost" type="button" onClick={() => loadUsers()} disabled={loading}>Refresh</LythButton></div>
-        <p className="muted">This list shows account identity and access state only. Exact email lookup and recorded support history remain owner-only in Account support.</p>
-        <form className="form-row" onSubmit={submitSearch}>
-          <LythInput type="text" aria-label="Search registered accounts" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search account ID, display name, or handle" />
+        <p className="muted">Includes unverified, suspended, locked and relink-required accounts. Inactivity is not an account status. Account creation alone does not establish a sign-in.</p>
+        <form className="form-row" onSubmit={(event) => { event.preventDefault(); loadUsers(); }}>
+          <LythInput type="text" aria-label="Search registered accounts" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ID, display name, handle, or exact email" />
           <select aria-label="Filter by status" value={status} onChange={(event) => setStatus(event.target.value)}>
             {STATUS_OPTIONS.map((value) => <option key={value} value={value}>{value || 'All statuses'}</option>)}
           </select>
@@ -175,19 +161,21 @@ function Users({ inWorkspace = false }) {
           <LythInput type="datetime-local" aria-label="Created before" value={createdBefore} onChange={(event) => setCreatedBefore(event.target.value)} />
           <LythButton type="submit" disabled={loading}>Search</LythButton>
         </form>
+        <p className="muted">ID, display name and handle searches match partial text. Exact email search is owner-only, audited, and sent in a private request body. This list never returns email addresses; verification state appears only when the authorized lookup supplies it.</p>
         {error ? <div className="notice error" role="alert">{error}</div> : null}
         {loading ? <p aria-live="polite">Loading users...</p> : null}
-        {!loading && !error && !items.length ? <div className="empty-state">No registered accounts match these filters.</div> : null}
+        {!loading && !error ? <p className="muted" role="status">Showing {items.length} loaded of {matchingTotal ?? 0} matching accounts.</p> : null}
+        {!loading && !error && !items.length ? <div className="empty-state">No accounts match the current search.</div> : null}
         {items.length ? (
-          <div className="data-table users-data-table" role="table" aria-label="Registered accounts">
-            <div className="data-row header" role="row"><span role="columnheader">Account</span><span role="columnheader">Status</span><span role="columnheader">Created</span><span role="columnheader">Active sessions</span><span role="columnheader">Plan</span><span role="columnheader">Actions</span></div>
-            {items.map((user) => <div key={user.id} className="data-row" role="row">
-              <span role="cell"><strong>{user.displayName || user.handle || 'User'}</strong>{user.handle ? <span className="muted">@{user.handle}</span> : null}<span className="muted user-account-id">{user.id}</span></span>
-              <span role="cell"><span className={`status-pill ${String(user.status).toLowerCase()}`}>{user.status}</span></span>
-              <span role="cell">{formatDateTime(user.createdAt)}</span>
-              <span role="cell">{user.currentSessionCount ?? 'Unknown'}</span>
-              <span role="cell">{user.subscriptionTier || 'Unknown'}</span>
-              <span role="cell"><LythButton variant="ghost" type="button" onClick={() => selectUser(user)}>Review</LythButton></span>
+          <div className="data-table">
+            <div className="data-row header"><span>Account identity</span><span>Verification</span><span>Created</span><span>Status</span><span>Sessions</span><span>Actions</span></div>
+            {items.map((user) => <div key={user.id} className="data-row">
+              <span><strong>{user.displayName || user.handle || 'User'}</strong><span className="muted">{user.handle ? `@${user.handle} · ` : ''}{user.id}</span></span>
+              <span>{user.verificationState || 'Not checked'}<span className="muted">{user.verifiedAt ? formatDateTime(user.verifiedAt) : 'Owner lookup only'}</span></span>
+              <span>{formatDateTime(user.createdAt)}</span>
+              <span><span className={`status-pill ${String(user.status).toLowerCase()}`}>{user.status}</span></span>
+              <span>{user.currentSessionCount ?? 'Unknown'}</span>
+              <span><LythButton variant="ghost" type="button" onClick={() => selectUser(user)}>Review</LythButton></span>
             </div>)}
           </div>
         ) : null}
@@ -210,16 +198,16 @@ function Users({ inWorkspace = false }) {
 
       <LythCard variant="panel">
         <div className="panel-header"><h2>Keeper actions</h2></div>
-        <div className="notice capability-unavailable" role="note">Profile editing is unavailable in this admin view. The canonical admin role does not have the social-profile write permission required to edit app profiles.</div>
         {!selected ? <div className="empty-state">Review an account to see controlled actions.</div> : (
           <>
             <div className="detail-list">
-              <div><span className="detail-label">Account ID</span><span className="user-account-id">{selected.id}</span></div>
+              <div><span className="detail-label">Account</span><span>{selected.displayName || selected.handle || 'User'} · {selected.id}</span></div>
               <div><span className="detail-label">Status</span><span className={`status-pill ${String((detail || selected).status).toLowerCase()}`}>{(detail || selected).status}</span></div>
-              <div><span className="detail-label">Plan</span><span>{detail?.subscriptionTier || selected.subscriptionTier || 'Unknown'}</span></div>
-              <div><span className="detail-label">Last sign-in or account creation</span><span>{formatDateTime(detail?.lastLoginAt || selected.lastLoginAt || selected.createdAt)}</span></div>
+              <div><span className="detail-label">Verification</span><span>{detail?.verificationState || selected.verificationState || 'Not checked'}</span></div>
+              <div><span className="detail-label">Verified</span><span>{formatDateTime(detail?.verifiedAt)}</span></div>
+              <div><span className="detail-label">Last recorded sign-in</span><span>{formatDateTime(detail?.lastLoginAt)}</span></div>
+              <div><span className="detail-label">Created</span><span>{formatDateTime(detail?.createdAt || selected.createdAt)}</span></div>
               <div><span className="detail-label">Active sessions</span><span>{detail?.currentSessionCount ?? selected.currentSessionCount ?? 'Unknown'}</span></div>
-              <div><span className="detail-label">Contact lookup</span><span>Owner-only in Account support</span></div>
             </div>
             {actionMessage ? <div className="notice" role="status">{actionMessage}</div> : null}
             {!action ? <div className="panel-actions">

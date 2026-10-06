@@ -22,12 +22,21 @@ const internal = (body, path = '/keeper-account-support/lookup', method = 'POST'
 const request = (body = { email, reasonCode: 'SUPPORT_REQUEST' }, path = '/api/admin/account-support/lookup', method = 'POST', headers = {}) => new Request(`https://admin.lythaus.co${path}`, {
   method, headers: { origin: 'https://admin.lythaus.co', 'content-type': 'application/json', ...headers }, ...(method !== 'GET' ? { body: JSON.stringify(body) } : {})
 });
-function database({ member = true, rows = [], exists = true, auditCount = 1, failure = null } = {}) {
+function database({ member = true, rows = [], exists = true, auditCount = 1, failure = null, profileUpdatedAt = '2026-10-01T00:00:00.000002Z', profileCorrectionsAvailable = true } = {}) {
+  const profileRow = { display_name: 'Synthetic member', bio: 'Synthetic bio', user_updated_at: '2026-10-01T00:00:00.000001Z',
+    profile_updated_at: profileUpdatedAt, status: 'active', deleted_at: null };
   const queries = [];
   return { queries, run: async (_binding, work) => work({ query: async (sql, values = []) => {
     queries.push({ sql, values });
     if (failure) throw new Error(failure);
     if (sql.includes('identity.admin_memberships')) return { rows: member ? [{ user_id: OWNER.userId }] : [], rowCount: member ? 1 : 0 };
+    if (sql.includes('has_schema_privilege')) return { rows: [{ available: profileCorrectionsAvailable }], rowCount: 1 };
+    if (sql.includes('SELECT u.display_name, COALESCE(p.bio')) return { rows: [{ ...profileRow }], rowCount: 1 };
+    if (sql.includes('FROM identity.users WHERE id = $1 FOR UPDATE')) return { rows: [{ ...profileRow }], rowCount: 1 };
+    if (sql.includes('FROM social.profiles WHERE user_id = $1 FOR UPDATE')) return { rows: [{ bio: profileRow.bio, profile_updated_at: profileRow.profile_updated_at }], rowCount: 1 };
+    if (sql.startsWith('UPDATE identity.users SET display_name')) return { rows: [{ user_updated_at: '2026-10-02T00:00:00.000001Z' }], rowCount: 1 };
+    if (sql.startsWith('INSERT INTO social.profiles')) return { rows: [{ profile_updated_at: '2026-10-02T00:00:00.000002Z' }], rowCount: 1 };
+    if (sql.startsWith('INSERT INTO system.outbox_events')) return { rows: [{ id: ID }], rowCount: 1 };
     if (sql.startsWith('SELECT id FROM identity.users')) return { rows: exists ? [{ id: ID }] : [], rowCount: exists ? 1 : 0 };
     if (sql.includes('AS snapshot_at')) return { rows: [{ snapshot_at: '2026-10-02T10:00:00.123456Z' }], rowCount: 1 };
     if (sql.includes('INSERT INTO system.audit_events')) return { rows: [{ id: ID }], rowCount: auditCount };
@@ -40,6 +49,7 @@ function environment(binding = async () => Response.json({ workerVersion: VERSIO
 function entry(id = ID, source = 'activity', created_at = '2026-10-01T10:00:00.000001Z') {
   return { id, source, created_at, event_type: 'account.login_succeeded', correlation_id: correlation, reason_code: null, category: 'account', outcome: 'succeeded', metadata: { password: 'private' } };
 }
+const profilePath = `/api/admin/account-support/users/${ID}/profile`;
 
 test('private lookup verifies owner, uses only HMAC equality and returns minimal state without secrets or fabricated sign-in', async () => {
   const db = database({ rows: [record] });
@@ -115,6 +125,50 @@ test('admin lookup rechecks owner after private lookup, audits before response, 
   assert.ok(!JSON.stringify(db.queries).includes(email));
 });
 
+test('owner profile read returns only editable fields and audits target and reason', async () => {
+  const db = database();
+  const response = await handleAccountSupport(request({ reasonCode: 'SUPPORT_REQUEST' }, profilePath), environment(), OWNER, correlation, db.run);
+  assert.equal(response.headers.get('cache-control'), 'private, no-store');
+  const result = await response.json();
+  assert.deepEqual(result, { profile: {
+    displayName: 'Synthetic member', bio: 'Synthetic bio', userUpdatedAt: '2026-10-01T00:00:00.000001Z', profileUpdatedAt: '2026-10-01T00:00:00.000002Z'
+  }, correlationId: correlation });
+  const audit = db.queries.at(-1);
+  assert.equal(audit.values[1], OWNER.userId); assert.equal(audit.values[2], 'identity.account_support_profile_viewed');
+  assert.equal(audit.values[3], ID); assert.equal(audit.values[4], 'SUPPORT_REQUEST');
+  assert.deepEqual(JSON.parse(audit.values[6]).fields, ['display_name', 'bio']);
+  assert.ok(!JSON.stringify(result).match(/password|token|security|role/i));
+});
+
+test('owner profile correction records reason, changes and moderation outbox', async () => {
+  const db = database();
+  const body = { displayName: 'Corrected synthetic member', bio: 'Corrected synthetic bio', expectedUserUpdatedAt: '2026-10-01T00:00:00.000001Z',
+    expectedProfileUpdatedAt: '2026-10-01T00:00:00.000002Z', reasonCode: 'SUPPORT_REQUEST', confirmation: 'UPDATE MEMBER PROFILE' };
+  const response = await handleAccountSupport(request(body, profilePath, 'PATCH'), environment(), OWNER, correlation, db.run);
+  assert.equal(response.headers.get('cache-control'), 'private, no-store');
+  assert.deepEqual(await response.json(), { profile: { displayName: body.displayName, bio: body.bio,
+    userUpdatedAt: '2026-10-02T00:00:00.000001Z', profileUpdatedAt: '2026-10-02T00:00:00.000002Z', moderationState: 'under_review' }, correlationId: correlation });
+  const profileUpdate = db.queries.find(query => query.sql.startsWith('INSERT INTO social.profiles'));
+  assert.equal(profileUpdate.values[1], body.bio); assert.equal(profileUpdate.values[3], body.expectedProfileUpdatedAt);
+  const outbox = db.queries.find(query => query.sql.startsWith('INSERT INTO system.outbox_events'));
+  assert.match(outbox.sql, /'content\.profile\.updated'/); assert.equal(outbox.values[1], ID); assert.equal(outbox.values[2], OWNER.userId);
+  assert.deepEqual(JSON.parse(outbox.values[3]).changedFields, ['display_name', 'bio']);
+  const audit = db.queries.find(query => query.sql.includes('INSERT INTO system.audit_events'));
+  assert.equal(audit.values[1], OWNER.userId); assert.equal(audit.values[3], ID); assert.equal(audit.values[4], 'SUPPORT_REQUEST');
+  assert.deepEqual(JSON.parse(audit.values[6]).changedFields, ['display_name', 'bio']);
+  assert.deepEqual(JSON.parse(audit.values[6]).before, { displayName: 'Synthetic member', bio: 'Synthetic bio' });
+  assert.deepEqual(JSON.parse(audit.values[6]).after, { displayName: body.displayName, bio: body.bio });
+});
+
+test('profile corrections reject stale revisions, unknown settings and missing confirmation', async () => {
+  const body = { bio: 'Corrected bio', expectedUserUpdatedAt: '2026-10-01T00:00:00.000001Z', expectedProfileUpdatedAt: '2026-10-01T00:00:00.000002Z',
+    reasonCode: 'SUPPORT_REQUEST', confirmation: 'UPDATE MEMBER PROFILE' };
+  await assert.rejects(handleAccountSupport(request({ ...body, expectedUserUpdatedAt: '2026-09-01T00:00:00.000001Z' }, profilePath, 'PATCH'), environment(), OWNER, correlation, database().run), /account_support_profile_conflict/);
+  await assert.rejects(handleAccountSupport(request({ ...body, confirmation: 'CONFIRM' }, profilePath, 'PATCH'), environment(), OWNER, correlation, database().run), /confirmation_required/);
+  await assert.rejects(handleAccountSupport(request({ ...body, email }, profilePath, 'PATCH'), environment(), OWNER, correlation, database().run), /unknown_field/);
+  await assert.rejects(handleAccountSupport(request({ ...body, bio: 'Synthetic bio', displayName: 'Synthetic member' }, profilePath, 'PATCH'), environment(), OWNER, correlation, database().run), /profile_update_empty/);
+});
+
 test('missing and ambiguous lookup attempts are audited with no guessed target', async () => {
   for (const state of ['not_found', 'ambiguous']) {
     const db = database();
@@ -181,8 +235,10 @@ test('support routes reject non-read methods, query-string lookup and unsafe bod
 
 test('owner access check reads no account data and requires active owner membership', async () => {
   const db = database();
-  assert.deepEqual(await (await handleAccountSupport(request({}, '/api/admin/account-support/access', 'GET'), environment(), OWNER, correlation, db.run)).json(), { available: true });
-  assert.equal(db.queries.length, 1);
+  assert.deepEqual(await (await handleAccountSupport(request({}, '/api/admin/account-support/access', 'GET'), environment(), OWNER, correlation, db.run)).json(), { available: true, profileCorrectionsAvailable: true });
+  assert.equal(db.queries.length, 2);
+  assert.match(db.queries[0].sql, /identity\.admin_memberships/);
+  assert.match(db.queries[1].sql, /has_schema_privilege/);
   await assert.rejects(handleAccountSupport(request({}, '/api/admin/account-support/access', 'GET'), environment(), OWNER, correlation, database({ member: false }).run), /account_support_owner_required/);
 });
 

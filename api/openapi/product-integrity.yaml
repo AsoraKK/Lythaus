@@ -92,6 +92,12 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiError'
+    UnsupportedMedia:
+      description: The route requires a JSON request body.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
     ServiceUnavailable:
       description: The waitlist administration service is temporarily unavailable.
       content:
@@ -909,17 +915,14 @@ components:
     AdminUser:
       type: object
       additionalProperties: false
-      required: [id, email, displayName, status, verificationState, verifiedAt, emailStatus, createdAt, currentSessionCount]
+      required: [id, displayName, status, subscriptionTier, createdAt, currentSessionCount]
       properties:
         id: { type: string, format: uuid }
-        email: { type: string, format: email, nullable: true }
         displayName: { type: string }
         handle: { type: string, nullable: true }
         status: { type: string, enum: [active, suspended, locked, relink_required, deleted] }
-        verificationState: { type: string, enum: [verified, pending_verification] }
+        verificationState: { type: string, enum: [verified, pending_verification, credential_setup_required], description: Present only when supplied by the authorized exact-email lookup. }
         verifiedAt: { type: string, format: date-time, nullable: true }
-        emailStatus: { type: string, nullable: true, description: Safe canonical relay state only; provider identifiers and raw errors are never returned. }
-        source: { type: string, nullable: true }
         subscriptionTier: { type: string, enum: [free, premium, black] }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time, nullable: true }
@@ -929,10 +932,25 @@ components:
     AdminUserPage:
       type: object
       additionalProperties: false
-      required: [items, nextCursor]
+      required: [items, totalMatching, nextCursor]
       properties:
         items: { type: array, items: { $ref: '#/components/schemas/AdminUser' } }
+        totalMatching:
+          type: integer
+          minimum: 0
+          description: Full count for the active search and filters, independent of the current keyset cursor.
         nextCursor: { type: string, nullable: true }
+    AdminUserEmailSearch:
+      type: object
+      additionalProperties: false
+      required: [q]
+      properties:
+        q: { type: string, format: email, maxLength: 320, description: 'Complete email address; exact lookup is owner-only, delegated to the existing audited private account-support lookup, and the address is never returned.' }
+        status: { type: string, enum: [active, relink_required, suspended, locked, deleted] }
+        createdAfter: { type: string, format: date-time }
+        createdBefore: { type: string, format: date-time }
+        limit: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        cursor: { type: string, minLength: 1 }
     AdminUserInvite:
       type: object
       additionalProperties: false
@@ -1021,27 +1039,21 @@ components:
         status: { type: string, enum: [waiting, invited, converted, unsubscribed] }
         source: { type: string }
         createdAt: { type: string, format: date-time }
-        invitedAt: { type: string, format: date-time, nullable: true }
-        convertedAt: { type: string, format: date-time, nullable: true }
-        unsubscribedAt: { type: string, format: date-time, nullable: true }
         retentionHold:
           type: boolean
           description: Whether a retention hold prevents automatic waitlist-record purging.
-        linkedAccount:
-          type: object
-          nullable: true
-          additionalProperties: false
-          properties:
-            id: { type: string, format: uuid }
-            status: { type: string, enum: [active, suspended, deleted, locked, relink_required] }
     WaitlistAdminResponse:
       type: object
       additionalProperties: false
-      required: [items, nextCursor, summary]
+      required: [items, totalMatching, nextCursor, summary]
       properties:
         items:
           type: array
           items: { $ref: '#/components/schemas/WaitlistAdminItem' }
+        totalMatching:
+          type: integer
+          minimum: 0
+          description: Full count for the active exact-email and other filters, independent of the current keyset cursor.
         nextCursor:
           type: string
           nullable: true
@@ -1050,9 +1062,21 @@ components:
           additionalProperties: false
           required: [totalWaiting, last7Days, last24Hours]
           properties:
-            totalWaiting: { type: integer, minimum: 0 }
+            totalWaiting: { type: integer, minimum: 0, description: Global count of records with waiting status; independent of active filters. }
             last7Days: { type: integer, minimum: 0 }
             last24Hours: { type: integer, minimum: 0 }
+    AdminWaitlistEmailSearch:
+      type: object
+      additionalProperties: false
+      required: [q]
+      properties:
+        q: { type: string, format: email, maxLength: 320, description: Complete email address; matched using keyed HMAC equality. }
+        status: { type: string, enum: [waiting, invited, converted, unsubscribed] }
+        source: { type: string, maxLength: 120 }
+        createdAfter: { type: string, format: date-time }
+        createdBefore: { type: string, format: date-time }
+        limit: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        cursor: { type: string, minLength: 1 }
     WaitlistStatusUpdate:
       type: object
       additionalProperties: false
@@ -1273,6 +1297,22 @@ paths:
       security:
         - cloudflareAccess: []
       parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { type: string, enum: [waiting, invited, converted, unsubscribed] }
+        - name: source
+          in: query
+          required: false
+          schema: { type: string, maxLength: 120 }
+        - name: createdAfter
+          in: query
+          required: false
+          schema: { type: string, format: date-time }
+        - name: createdBefore
+          in: query
+          required: false
+          schema: { type: string, format: date-time }
         - name: cursor
           in: query
           required: false
@@ -1322,6 +1362,35 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/IdempotencyConflict' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /admin/waitlist/search:
+    servers:
+      - url: https://admin.lythaus.co/api
+    post:
+      operationId: adminWaitlistSearch
+      summary: Search waitlist by exact email
+      description: Administrator-only PII access. Email is accepted only in a bounded JSON body and compared by exact equality after decrypting at most 1,000 records that match the supplied status/source/date filters. Decrypted addresses remain in memory for the request and are never placed in the URL, logged, or indexed. Names are not collected. If the filtered scan is larger, the request fails and asks the operator to narrow filters. Successful and over-limit attempts are audited without recording the address. The response is private and no-store.
+      tags: [Admin]
+      security: [{ cloudflareAccess: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminWaitlistEmailSearch' }
+      responses:
+        '200':
+          description: Decrypted waitlist rows and aggregate counts.
+          headers:
+            Cache-Control: { schema: { type: string, enum: ['private, no-store'] } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WaitlistAdminResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '413': { $ref: '#/components/responses/RequestTooLarge' }
+        '415': { $ref: '#/components/responses/UnsupportedMedia' }
+        '429': { $ref: '#/components/responses/SafetyLimited' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
   /admin/waitlist/{waitlistId}:
     servers:
@@ -1521,9 +1590,11 @@ paths:
       tags: [Admin]
       security: [{ cloudflareAccess: [] }]
       parameters:
-        - { name: q, in: query, schema: { type: string, maxLength: 120 } }
-        - { name: status, in: query, schema: { type: string, enum: [verified, pending_verification, active, relink_required, suspended, locked, deleted] } }
-        - { name: source, in: query, schema: { type: string, maxLength: 80 } }
+        - name: q
+          in: query
+          description: Partial ID, display-name, or handle search. Email search is rejected in URLs and is available through the owner-only body endpoint.
+          schema: { type: string, maxLength: 120 }
+        - { name: status, in: query, schema: { type: string, enum: [active, relink_required, suspended, locked, deleted] } }
         - { name: createdAfter, in: query, schema: { type: string, format: date-time } }
         - { name: createdBefore, in: query, schema: { type: string, format: date-time } }
         - { $ref: '#/components/parameters/cursor' }
@@ -1547,6 +1618,35 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /admin/users/search-by-email:
+    servers:
+      - url: https://admin-api.lythaus.co/api
+    post:
+      operationId: adminUsersSearchByExactEmail
+      summary: Search accounts by exact email
+      description: Owner-only exact email search. Email is accepted only in a bounded JSON body and delegated to the existing audited private account-support lookup. The response never returns the address, uses the regular safe account projection, and is private and no-store.
+      tags: [Admin]
+      security: [{ cloudflareAccess: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminUserEmailSearch' }
+      responses:
+        '200':
+          description: Private paginated user records.
+          headers:
+            Cache-Control: { schema: { type: string, enum: ['private, no-store'] } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUserPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '413': { $ref: '#/components/responses/RequestTooLarge' }
+        '415': { $ref: '#/components/responses/UnsupportedMedia' }
+        '429': { $ref: '#/components/responses/SafetyLimited' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
   /admin/users/{userId}:
     servers:

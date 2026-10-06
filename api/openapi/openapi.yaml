@@ -1345,6 +1345,8 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1admin~1audit'
   /admin/waitlist:
     $ref: './product-integrity.yaml#/paths/~1admin~1waitlist'
+  /admin/waitlist/search:
+    $ref: './product-integrity.yaml#/paths/~1admin~1waitlist~1search'
   /admin/waitlist/{waitlistId}:
     $ref: './product-integrity.yaml#/paths/~1admin~1waitlist~1{waitlistId}'
   /admin/waitlist/{waitlistId}/status:
@@ -1405,8 +1407,12 @@ paths:
     $ref: './account-support.yaml#/paths/~1admin~1account-support~1lookup'
   /admin/account-support/users/{userId}/history:
     $ref: './account-support.yaml#/paths/~1admin~1account-support~1users~1{userId}~1history'
+  /admin/account-support/users/{userId}/profile:
+    $ref: './account-support.yaml#/paths/~1admin~1account-support~1users~1{userId}~1profile'
   /admin/users:
     $ref: './product-integrity.yaml#/paths/~1admin~1users'
+  /admin/users/search-by-email:
+    $ref: './product-integrity.yaml#/paths/~1admin~1users~1search-by-email'
   /admin/users/{userId}:
     $ref: './product-integrity.yaml#/paths/~1admin~1users~1{userId}'
   /admin/users/{userId}/resend-verification:

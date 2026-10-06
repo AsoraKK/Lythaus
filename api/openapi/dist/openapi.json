@@ -8582,6 +8582,47 @@
         ],
         "parameters": [
           {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "waiting",
+                "invited",
+                "converted",
+                "unsubscribed"
+              ]
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            }
+          },
+          {
+            "name": "createdAfter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "createdBefore",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
             "name": "cursor",
             "in": "query",
             "required": false,
@@ -8683,6 +8724,79 @@
           },
           "409": {
             "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/waitlist/search": {
+      "servers": [
+        {
+          "url": "https://admin.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "adminWaitlistSearch",
+        "summary": "Search waitlist by exact email",
+        "description": "Administrator-only PII access. Email is accepted only in a bounded JSON body and compared by exact equality after decrypting at most 1,000 records that match the supplied status/source/date filters. Decrypted addresses remain in memory for the request and are never placed in the URL, logged, or indexed. Names are not collected. If the filtered scan is larger, the request fails and asks the operator to narrow filters. Successful and over-limit attempts are audited without recording the address. The response is private and no-store.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminWaitlistEmailSearch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Decrypted waitlist rows and aggregate counts.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaitlistAdminResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/SafetyLimited"
           },
           "503": {
             "$ref": "#/components/responses/ServiceUnavailable"
@@ -10815,7 +10929,7 @@
       "get": {
         "operationId": "adminAccountSupportAccess",
         "summary": "Check owner account-support access",
-        "description": "Requires verified Cloudflare Access and an active owner membership joined to an active owner account. Returns no account records. Every lookup and history request checks authorization independently.",
+        "description": "Requires verified Cloudflare Access and an active owner membership joined to an active owner account. Returns no account records. profileCorrectionsAvailable is true only when the current database role has the profile, review-outbox and audit privileges required for a complete correction. Every operation checks authorization independently.",
         "tags": [
           "Admin"
         ],
@@ -10838,7 +10952,8 @@
                   "$ref": "#/components/schemas/AccountSupportAccess"
                 },
                 "example": {
-                  "available": true
+                  "available": true,
+                  "profileCorrectionsAvailable": false
                 }
               }
             }
@@ -11086,6 +11201,161 @@
         }
       }
     },
+    "/admin/account-support/users/{userId}/profile": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "userId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "post": {
+        "operationId": "adminAccountSupportProfileRead",
+        "summary": "Read owner-support profile fields",
+        "description": "Owner-only, audited read of display name and bio. Requires Cloudflare Access, an active owner membership, an allowed Origin, a reason code and the profileCorrectionsAvailable capability. Credentials, email, roles, reputation and security settings are excluded. Responses are private and no-store.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountSupportProfileReadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Audited profile fields and optimistic-concurrency revisions.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/AccountSupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSupportProfileResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AccountSupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/AccountSupportUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/AccountSupportForbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/AccountSupportNotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/AccountSupportMethodNotAllowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/AccountSupportRequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/AccountSupportUnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/AccountSupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/AccountSupportUnavailable"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "adminAccountSupportProfileUpdate",
+        "summary": "Correct ordinary profile fields",
+        "description": "Owner-only, audited correction limited to displayName and bio. Requires a stable reason, exact typed confirmation, current user/profile revisions, Cloudflare Access, active owner membership, an allowed Origin and the profileCorrectionsAvailable capability. A correction emits the existing profile moderation event and sets moderation state to under_review. Email, credentials, roles, reputation and security settings cannot be changed. Without the required database privileges the operation fails unavailable before reading or writing profile fields.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountSupportProfileUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved profile correction awaiting existing moderation review.",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/AccountSupportCacheControl"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSupportProfileUpdateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AccountSupportBadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/AccountSupportUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/AccountSupportForbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/AccountSupportNotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/AccountSupportMethodNotAllowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/AccountSupportConflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/AccountSupportRequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/AccountSupportUnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/AccountSupportRateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/AccountSupportUnavailable"
+          }
+        }
+      }
+    },
     "/admin/users": {
       "servers": [
         {
@@ -11107,6 +11377,7 @@
           {
             "name": "q",
             "in": "query",
+            "description": "Partial ID, display-name, or handle search. Email search is rejected in URLs and is available through the owner-only body endpoint.",
             "schema": {
               "type": "string",
               "maxLength": 120
@@ -11118,22 +11389,12 @@
             "schema": {
               "type": "string",
               "enum": [
-                "verified",
-                "pending_verification",
                 "active",
                 "relink_required",
                 "suspended",
                 "locked",
                 "deleted"
               ]
-            }
-          },
-          {
-            "name": "source",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "maxLength": 80
             }
           },
           {
@@ -11224,6 +11485,79 @@
           },
           "409": {
             "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/admin/users/search-by-email": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "post": {
+        "operationId": "adminUsersSearchByExactEmail",
+        "summary": "Search accounts by exact email",
+        "description": "Owner-only exact email search. Email is accepted only in a bounded JSON body and delegated to the existing audited private account-support lookup. The response never returns the address, uses the regular safe account projection, and is private and no-store.",
+        "tags": [
+          "Admin"
+        ],
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUserEmailSearch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Private paginated user records.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "private, no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMedia"
+          },
+          "429": {
+            "$ref": "#/components/responses/SafetyLimited"
           },
           "503": {
             "$ref": "#/components/responses/ServiceUnavailable"
@@ -17446,45 +17780,9 @@
             "type": "string",
             "format": "date-time"
           },
-          "invitedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "convertedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "unsubscribedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
           "retentionHold": {
             "type": "boolean",
             "description": "Whether a retention hold prevents automatic waitlist-record purging."
-          },
-          "linkedAccount": {
-            "type": "object",
-            "nullable": true,
-            "additionalProperties": false,
-            "properties": {
-              "id": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "status": {
-                "type": "string",
-                "enum": [
-                  "active",
-                  "suspended",
-                  "deleted",
-                  "locked",
-                  "relink_required"
-                ]
-              }
-            }
           }
         }
       },
@@ -17493,6 +17791,7 @@
         "additionalProperties": false,
         "required": [
           "items",
+          "totalMatching",
           "nextCursor",
           "summary"
         ],
@@ -17502,6 +17801,11 @@
             "items": {
               "$ref": "#/components/schemas/WaitlistAdminItem"
             }
+          },
+          "totalMatching": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Full count for the active exact-email and other filters, independent of the current keyset cursor."
           },
           "nextCursor": {
             "type": "string",
@@ -17518,7 +17822,8 @@
             "properties": {
               "totalWaiting": {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0,
+                "description": "Global count of records with waiting status; independent of active filters."
               },
               "last7Days": {
                 "type": "integer",
@@ -17586,6 +17891,52 @@
               "converted",
               "unsubscribed"
             ]
+          }
+        }
+      },
+      "AdminWaitlistEmailSearch": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "q"
+        ],
+        "properties": {
+          "q": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 320,
+            "description": "Complete email address; matched using keyed HMAC equality."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "waiting",
+              "invited",
+              "converted",
+              "unsubscribed"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "createdAfter": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBefore": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 50
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1
           }
         }
       },
@@ -19178,7 +19529,8 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "available"
+          "available",
+          "profileCorrectionsAvailable"
         ],
         "properties": {
           "available": {
@@ -19186,6 +19538,10 @@
             "enum": [
               true
             ]
+          },
+          "profileCorrectionsAvailable": {
+            "type": "boolean",
+            "description": "False when required reviewed profile read/write, audit or outbox privileges are unavailable; in that state profile data is not read and corrections are rejected."
           }
         }
       },
@@ -19512,17 +19868,139 @@
         },
         "description": "Ordered by timestamp, UUID and source, preserving PostgreSQL microsecond precision. Pagination excludes records dated after the first page's boundary, including the read's own audit. Late-arriving records with older timestamps can still appear. An empty page does not establish inactivity."
       },
+      "AccountSupportProfileReadRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reasonCode"
+        ],
+        "properties": {
+          "reasonCode": {
+            "$ref": "#/components/schemas/AccountSupportReasonCode"
+          }
+        }
+      },
+      "AccountSupportProfile": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "displayName",
+          "bio",
+          "userUpdatedAt",
+          "profileUpdatedAt"
+        ],
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "bio": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "userUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "profileUpdatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "moderationState": {
+            "type": "string",
+            "enum": [
+              "under_review"
+            ],
+            "description": "Present after a saved correction."
+          }
+        }
+      },
+      "AccountSupportProfileResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "profile",
+          "correlationId"
+        ],
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/AccountSupportProfile"
+          },
+          "correlationId": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          }
+        }
+      },
+      "AccountSupportProfileUpdateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expectedUserUpdatedAt",
+          "expectedProfileUpdatedAt",
+          "reasonCode",
+          "confirmation"
+        ],
+        "minProperties": 5,
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "maxLength": 80,
+            "description": "Existing display-name normalization and validation apply."
+          },
+          "bio": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Trimmed and NFC-normalized before saving."
+          },
+          "expectedUserUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expectedProfileUpdatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "reasonCode": {
+            "$ref": "#/components/schemas/AccountSupportReasonCode"
+          },
+          "confirmation": {
+            "type": "string",
+            "enum": [
+              "UPDATE MEMBER PROFILE"
+            ]
+          }
+        }
+      },
+      "AccountSupportProfileUpdateResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "profile",
+          "correlationId"
+        ],
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/AccountSupportProfile"
+          },
+          "correlationId": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          }
+        }
+      },
       "AdminUser": {
         "type": "object",
         "additionalProperties": false,
         "required": [
           "id",
-          "email",
           "displayName",
           "status",
-          "verificationState",
-          "verifiedAt",
-          "emailStatus",
+          "subscriptionTier",
           "createdAt",
           "currentSessionCount"
         ],
@@ -19530,11 +20008,6 @@
           "id": {
             "type": "string",
             "format": "uuid"
-          },
-          "email": {
-            "type": "string",
-            "format": "email",
-            "nullable": true
           },
           "displayName": {
             "type": "string"
@@ -19557,21 +20030,14 @@
             "type": "string",
             "enum": [
               "verified",
-              "pending_verification"
-            ]
+              "pending_verification",
+              "credential_setup_required"
+            ],
+            "description": "Present only when supplied by the authorized exact-email lookup."
           },
           "verifiedAt": {
             "type": "string",
             "format": "date-time",
-            "nullable": true
-          },
-          "emailStatus": {
-            "type": "string",
-            "nullable": true,
-            "description": "Safe canonical relay state only; provider identifiers and raw errors are never returned."
-          },
-          "source": {
-            "type": "string",
             "nullable": true
           },
           "subscriptionTier": {
@@ -19612,6 +20078,7 @@
         "additionalProperties": false,
         "required": [
           "items",
+          "totalMatching",
           "nextCursor"
         ],
         "properties": {
@@ -19620,6 +20087,11 @@
             "items": {
               "$ref": "#/components/schemas/AdminUser"
             }
+          },
+          "totalMatching": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Full count for the active search and filters, independent of the current keyset cursor."
           },
           "nextCursor": {
             "type": "string",
@@ -19690,6 +20162,49 @@
           "handle": {
             "type": "string",
             "nullable": true
+          }
+        }
+      },
+      "AdminUserEmailSearch": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "q"
+        ],
+        "properties": {
+          "q": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 320,
+            "description": "Complete email address; exact lookup is owner-only, delegated to the existing audited private account-support lookup, and the address is never returned."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "relink_required",
+              "suspended",
+              "locked",
+              "deleted"
+            ]
+          },
+          "createdAfter": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBefore": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 50
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1
           }
         }
       },
@@ -20837,8 +21352,8 @@
           }
         }
       },
-      "Conflict": {
-        "description": "The requested state transition conflicts with the record's current state.",
+      "RequestTooLarge": {
+        "description": "The JSON request body exceeds the route limit.",
         "content": {
           "application/json": {
             "schema": {
@@ -20847,8 +21362,18 @@
           }
         }
       },
-      "RequestTooLarge": {
-        "description": "The JSON request body exceeds the route limit.",
+      "UnsupportedMedia": {
+        "description": "The route requires a JSON request body.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "The requested state transition conflicts with the record's current state.",
         "content": {
           "application/json": {
             "schema": {
@@ -21124,7 +21649,7 @@
         }
       },
       "AccountSupportNotFound": {
-        "description": "History account does not exist or URL parameters were supplied.",
+        "description": "Target account does not exist or URL parameters were supplied.",
         "content": {
           "application/json": {
             "schema": {
@@ -21134,16 +21659,12 @@
         }
       },
       "AccountSupportMethodNotAllowed": {
-        "description": "Only GET access, POST lookup and POST history are supported.",
+        "description": "Only GET access, POST lookup/history/profile read, and PATCH profile update are supported.",
         "headers": {
           "Allow": {
             "description": "Required method for this route.",
             "schema": {
-              "type": "string",
-              "enum": [
-                "GET",
-                "POST"
-              ]
+              "type": "string"
             }
           }
         },
@@ -21201,6 +21722,16 @@
       },
       "AccountSupportUnsupportedMedia": {
         "description": "POST requires application/json.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AccountSupportError"
+            }
+          }
+        }
+      },
+      "AccountSupportConflict": {
+        "description": "The profile changed since it was read; reload and review again.",
         "content": {
           "application/json": {
             "schema": {

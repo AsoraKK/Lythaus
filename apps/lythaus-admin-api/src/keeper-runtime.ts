@@ -1,8 +1,8 @@
 import { query, transaction, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
-import { encodeCursor } from '@lythaus/contracts';
+import { accountSupportSnapshot, encodeCursor, type AccountSupportSnapshot } from '@lythaus/contracts';
 import { json } from '@lythaus/observability';
-import { encryptField, hmacLookup, uuidv7 } from '@lythaus/security';
+import { decryptField, encryptField, hmacLookup, uuidv7 } from '@lythaus/security';
 import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, requireWaitlistEncryptionKey } from './waitlist-runtime-policy.ts';
 import { readBoundedJson } from './request-body-policy.ts';
 import {
@@ -18,6 +18,7 @@ import {
   type AdminUserPageRequest,
 } from './admin-runtime-policy.ts';
 import { dispatchKeeperEmail } from './auth-email-dispatch-adapter.ts';
+import { handleAccountSupport } from './account-support-runtime.ts';
 
 export interface KeeperEnv extends EnvBindings {
   DB_ADMIN_FRESH: HyperdriveBinding;
@@ -35,7 +36,6 @@ interface UserRecord {
   handle: string | null;
   status: string;
   created_at: string | Date;
-  cursor_timestamp?: string;
   updated_at: string | Date;
   deleted_at: string | Date | null;
   last_login_at: string | Date | null;
@@ -114,8 +114,8 @@ function mutationHeaders(correlation: string): HeadersInit {
   return { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' };
 }
 
-function userOutput(row: UserRecord): Record<string, unknown> {
-  return {
+function userOutput(row: UserRecord, exactEmailLookup?: AccountSupportSnapshot): Record<string, unknown> {
+  const output: Record<string, unknown> = {
     id: row.id,
     displayName: row.display_name,
     handle: row.handle,
@@ -127,30 +127,45 @@ function userOutput(row: UserRecord): Record<string, unknown> {
     lastLoginAt: iso(row.last_login_at),
     currentSessionCount: Number(row.current_session_count ?? 0),
   };
+  if (exactEmailLookup) {
+    output.verificationState = exactEmailLookup.verificationState;
+    output.verifiedAt = exactEmailLookup.verifiedAt;
+  }
+  return output;
 }
 
-function userQuery(page: AdminUserPageRequest): { sql: string; values: unknown[] } {
+function userQuery(page: AdminUserPageRequest, _env: KeeperEnv, exactEmailUserId: string | null): { sql: string; values: unknown[]; matchingSql: string; matchingValues: unknown[] } {
   const values: unknown[] = [];
   const conditions = ['1 = 1'];
   const add = (value: unknown): string => { values.push(value); return `$${values.length}`; };
   if (page.query) {
-    const parameter = add(page.query);
-    conditions.push(`(u.id::text = ${parameter} OR strpos(lower(u.display_name), ${parameter}) > 0 OR strpos(lower(h.handle_normalized), ${parameter}) > 0)`);
+    const pattern = `%${page.query.toLowerCase()}%`;
+    const parameter = add(pattern);
+    conditions.push(`(u.id::text = ${parameter} OR lower(u.display_name) LIKE ${parameter} OR lower(h.handle_normalized) LIKE ${parameter})`);
   }
+  if (exactEmailUserId) conditions.push(`u.id = ${add(exactEmailUserId)}::uuid`);
   if (page.status) conditions.push(`u.status = ${add(page.status)}`);
   if (page.createdAfter) conditions.push(`u.created_at >= ${add(page.createdAfter)}::timestamptz`);
   if (page.createdBefore) conditions.push(`u.created_at < ${add(page.createdBefore)}::timestamptz`);
+  const matchingConditions = [...conditions];
+  const matchingValues = [...values];
   if (page.cursor) {
     conditions.push(`(u.created_at, u.id) < (${add(page.cursor.timestamp)}::timestamptz, ${add(page.cursor.id)}::uuid)`);
   }
+  const matchingSql = `SELECT count(*)::text AS matching_total
+       FROM identity.users u
+       LEFT JOIN identity.handles h ON h.user_id = u.id
+      WHERE ${matchingConditions.join(' AND ')}`;
   return {
-    sql: `SELECT u.id, u.display_name, h.handle, u.status, u.created_at,
-                 to_char(u.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_timestamp,
+    sql: `SELECT u.id, u.display_name, h.handle, u.status,
+                 to_char(u.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at,
                  u.updated_at, u.deleted_at,
                  COALESCE((SELECT max(event.created_at) FROM identity.account_events event
                            WHERE event.user_id = u.id AND event.event_type IN ('email_login', 'google_login')), u.created_at) AS last_login_at,
                  (SELECT count(*) FROM identity.auth_sessions session
-                   WHERE session.user_id = u.id AND session.revoked_at IS NULL AND session.expires_at > now()) AS current_session_count,
+                   JOIN identity.refresh_token_families family ON family.id = session.refresh_family_id
+                   WHERE session.user_id = u.id AND session.revoked_at IS NULL AND family.revoked_at IS NULL
+                     AND session.expires_at > now()) AS current_session_count,
                  COALESCE(entitlement.subscription_tier, 'free') AS subscription_tier
             FROM identity.users u
             LEFT JOIN identity.handles h ON h.user_id = u.id
@@ -159,23 +174,64 @@ function userQuery(page: AdminUserPageRequest): { sql: string; values: unknown[]
            ORDER BY u.created_at DESC, u.id DESC
            LIMIT ${add(page.limit + 1)}`,
     values,
+    matchingSql,
+    matchingValues,
   };
 }
 
-export async function listAdminUsers(request: Request, env: KeeperEnv, actor: AdminActorLike, correlation: string, runQuery: typeof query = query): Promise<Response> {
+export async function listAdminUsers(request: Request, env: KeeperEnv, actor: AdminActorLike, correlation: string): Promise<Response> {
   requireKeeperAdmin(actor);
-  const page = adminUserPageRequest(new URL(request.url));
-  const built = userQuery(page);
-  const result = await runQuery<UserRecord>(env.DB_ADMIN_FRESH, built.sql, built.values);
+  const url = new URL(request.url);
+  let exactEmailLookup: AccountSupportSnapshot | null = null;
+  let exactEmailSearch = false;
+  if (request.method === 'GET' && url.searchParams.get('q')?.includes('@')) throw new Error('invalid_user_search');
+  if (request.method === 'POST') {
+    if (url.search) throw new Error('invalid_user_search');
+    const body = rejectUnknownFields(await readBoundedJson(request, 4096), ['q', 'status', 'createdAfter', 'createdBefore', 'limit', 'cursor']);
+    if (typeof body.q !== 'string' || !body.q.trim().includes('@')) throw new Error('invalid_user_search');
+    const email = normalizeEmail(body.q);
+    exactEmailSearch = true;
+    const origin = new URL(request.url).origin;
+    const lookupHeaders = new Headers({ origin, 'content-type': 'application/json' });
+    const workerOverrides = request.headers.get('Cloudflare-Workers-Version-Overrides');
+    if (workerOverrides) lookupHeaders.set('Cloudflare-Workers-Version-Overrides', workerOverrides);
+    const lookupRequest = new Request(`${origin}/api/admin/account-support/lookup`, {
+      method: 'POST', headers: lookupHeaders,
+      body: JSON.stringify({ email, reasonCode: 'ACCOUNT_EMAIL_SEARCH' }),
+    });
+    const lookupResponse = await handleAccountSupport(lookupRequest, env, actor, correlation);
+    const lookupBody = await lookupResponse.json() as Record<string, unknown>;
+    if (!lookupResponse.ok) throw new Error(typeof lookupBody.error === 'string' ? lookupBody.error : 'account_support_unavailable');
+    if (!['found', 'not_found', 'ambiguous'].includes(String(lookupBody.state))) throw new Error('account_support_unavailable');
+    if (lookupBody.state === 'found') exactEmailLookup = accountSupportSnapshot(lookupBody.account);
+    for (const key of ['status', 'createdAfter', 'createdBefore', 'limit', 'cursor'] as const) {
+      const value = body[key];
+      if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value));
+    }
+  }
+  const page = adminUserPageRequest(url);
+  if (request.method === 'POST' && !exactEmailSearch) throw new Error('invalid_user_search');
+  if (exactEmailSearch && !exactEmailLookup) {
+    return json({ items: [], totalMatching: 0, nextCursor: null }, { headers: mutationHeaders(correlation) });
+  }
+  const built = userQuery(page, env, exactEmailLookup?.id ?? null);
+  const [result, matchingResult] = await Promise.all([
+    query<UserRecord>(env.DB_ADMIN_FRESH, built.sql, built.values),
+    query<{ matching_total: string }>(env.DB_ADMIN_FRESH, built.matchingSql, built.matchingValues),
+  ]);
   const hasMore = result.rows.length > page.limit;
   const rows = result.rows.slice(0, page.limit);
-  const items = rows.map((row: UserRecord) => userOutput(row));
+  const items = rows.map((row: UserRecord) => userOutput(row, exactEmailLookup?.id === row.id ? exactEmailLookup : undefined));
   const tail = rows.at(-1);
-  await runQuery(env.DB_ADMIN_FRESH,
+  await query(env.DB_ADMIN_FRESH,
     `INSERT INTO system.audit_events (id, actor_id, action, target_type, reason_code, correlation_id, metadata)
      VALUES ($1, $2, 'identity.users_viewed', 'user_collection', 'USERS_LIST_VIEW', $3, $4::jsonb)`,
-    [uuidv7(), actor.userId, correlation, JSON.stringify({ returnedRowCount: items.length, requestedLimit: page.limit, hasCursor: Boolean(page.cursor), hasMore })]);
-  return json({ items, nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.cursor_timestamp!, id: tail.id }) : null }, { headers: mutationHeaders(correlation) });
+    [uuidv7(), actor.userId, correlation, JSON.stringify({ returnedRowCount: items.length, requestedLimit: page.limit, hasCursor: Boolean(page.cursor), hasMore, exactEmailSearch })]);
+  return json({
+    items,
+    totalMatching: Number(matchingResult.rows[0]?.matching_total ?? 0),
+    nextCursor: hasMore && tail ? encodeCursor({ timestamp: String(tail.created_at), id: tail.id }) : null,
+  }, { headers: mutationHeaders(correlation) });
 }
 
 export async function getAdminUser(_request: Request, env: KeeperEnv, actor: AdminActorLike, rawUserId: string, correlation: string): Promise<Response> {
@@ -184,7 +240,10 @@ export async function getAdminUser(_request: Request, env: KeeperEnv, actor: Adm
   const result = await query<UserRecord>(env.DB_ADMIN_FRESH,
     `SELECT u.id, u.display_name, h.handle, u.status, u.created_at, u.updated_at, u.deleted_at,
             COALESCE((SELECT max(event.created_at) FROM identity.account_events event WHERE event.user_id = u.id AND event.event_type IN ('email_login', 'google_login')), u.created_at) AS last_login_at,
-            (SELECT count(*) FROM identity.auth_sessions session WHERE session.user_id = u.id AND session.revoked_at IS NULL AND session.expires_at > now()) AS current_session_count,
+            (SELECT count(*) FROM identity.auth_sessions session
+              JOIN identity.refresh_token_families family ON family.id = session.refresh_family_id
+             WHERE session.user_id = u.id AND session.revoked_at IS NULL AND family.revoked_at IS NULL
+               AND session.expires_at > now()) AS current_session_count,
             COALESCE(entitlement.subscription_tier, 'free') AS subscription_tier
        FROM identity.users u
        LEFT JOIN identity.handles h ON h.user_id = u.id
@@ -192,18 +251,46 @@ export async function getAdminUser(_request: Request, env: KeeperEnv, actor: Adm
       WHERE u.id = $1`, [userId]);
   const row = result.rows[0];
   if (!row) throw new Error('user_not_found');
+  const activity = await query<{ event_type: string; created_at: string | Date }>(env.DB_ADMIN_FRESH,
+      `SELECT event_type, created_at FROM identity.account_events WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`, [userId]);
   await query(env.DB_ADMIN_FRESH,
     `INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id)
      VALUES ($1, $2, 'identity.user_viewed', 'user', $3, 'USER_DETAIL_VIEW', $4)`,
     [uuidv7(), actor.userId, userId, correlation]);
   return json({
     user: userOutput(row),
+    activity: activity.rows.map((event) => ({ eventType: event.event_type, occurredAt: iso(event.created_at) })),
   }, { headers: mutationHeaders(correlation) });
 }
 
-export async function patchAdminUser(_request: Request, _env: KeeperEnv, actor: AdminActorLike, _rawUserId: string, _correlation: string): Promise<Response> {
+export async function patchAdminUser(request: Request, env: KeeperEnv, actor: AdminActorLike, rawUserId: string, correlation: string): Promise<Response> {
   requireKeeperAdmin(actor);
-  throw new Error('profile_editing_unavailable');
+  const userId = parseAdminUserId(rawUserId);
+  const input = objectBody(await readBoundedJson(request));
+  rejectUnknownFields(input, ['displayName', 'handle', 'reasonCode', 'confirmation']);
+  const reasonCode = parseReasonCode(input.reasonCode);
+  requireConfirmation(input.confirmation, 'UPDATE PROFILE');
+  if (input.email !== undefined) throw new Error('email_change_requires_public_flow');
+  const displayName = input.displayName === undefined ? undefined : parseDisplayName(input.displayName);
+  const handle = input.handle === undefined ? undefined : parseHandle(input.handle);
+  if (displayName === undefined && handle === undefined) throw new Error('unknown_field');
+  const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
+    const current = await client.query<{ display_name: string; handle: string | null }>(
+      `SELECT u.display_name, h.handle FROM identity.users u LEFT JOIN identity.handles h ON h.user_id = u.id WHERE u.id = $1 FOR UPDATE`, [userId]);
+    if (!current.rows[0]) throw new Error('user_not_found');
+    const before = current.rows[0];
+    if (displayName !== undefined) await client.query(`UPDATE identity.users SET display_name = $1, updated_at = now() WHERE id = $2`, [displayName, userId]);
+    if (handle !== undefined) await client.query(
+      `INSERT INTO identity.handles (user_id, handle, handle_normalized) VALUES ($1, $2, lower($2))
+       ON CONFLICT (user_id) DO UPDATE SET handle = EXCLUDED.handle, handle_normalized = EXCLUDED.handle_normalized, updated_at = now()`, [userId, handle]);
+    const after = { displayName: displayName ?? before.display_name, handle: handle ?? before.handle };
+    await client.query(
+      `INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
+       VALUES ($1, $2, 'identity.user_profile_changed', 'user', $3, $4, $5, $6::jsonb)`,
+      [uuidv7(), actor.userId, userId, reasonCode, correlation, JSON.stringify({ before: { displayName: before.display_name, handle: before.handle }, after })]);
+    return after;
+  });
+  return json({ userId, ...result }, { headers: mutationHeaders(correlation) });
 }
 
 export async function inviteAdminUser(request: Request, env: KeeperEnv, actor: AdminActorLike, correlation: string): Promise<Response> {
@@ -367,16 +454,16 @@ export async function updateAdminWaitlistEntry(request: Request, env: KeeperEnv,
   const input = objectBody(await readBoundedJson(request));
   rejectUnknownFields(input, ['status', 'source', 'reasonCode', 'confirmation']);
   const reasonCode = parseReasonCode(input.reasonCode);
-  requireConfirmation(input.confirmation, `UPDATE WAITLIST ${id}`);
+  requireConfirmation(input.confirmation, 'UPDATE WAITLIST');
   const source = input.source === undefined ? undefined : parseSource(input.source);
-  const status = input.status === undefined ? undefined : (typeof input.status === 'string' && ['invited', 'converted'].includes(input.status) ? input.status : (() => { throw new Error('invalid_waitlist_status'); })());
+  const status = input.status === undefined ? undefined : (typeof input.status === 'string' && ['invited', 'converted', 'unsubscribed'].includes(input.status) ? input.status : (() => { throw new Error('invalid_waitlist_status'); })());
   if (source === undefined && status === undefined) throw new Error('unknown_field');
   const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
     const current = await client.query<WaitlistRecord>(`SELECT id, status, source, consent_version, created_at, updated_at, retention_hold, convert_from(email_ciphertext, 'utf8') AS email_ciphertext, encryption_key_version FROM marketing.waitlist_signups WHERE id = $1 FOR UPDATE`, [id]);
     if (!current.rows[0]) throw new Error('waitlist_not_found');
     const row = current.rows[0];
     if (status !== undefined) assertWaitlistStatusTransition(row.status, status as never);
-    await client.query(`UPDATE marketing.waitlist_signups SET status = COALESCE($2, status), source = COALESCE($3, source), updated_at = now(), invited_at = CASE WHEN $2 = 'invited' THEN COALESCE(invited_at, now()) ELSE invited_at END, converted_at = CASE WHEN $2 = 'converted' THEN COALESCE(converted_at, now()) ELSE converted_at END, purge_after = CASE WHEN $2 = 'converted' THEN LEAST(purge_after, now() + interval '30 days') ELSE purge_after END WHERE id = $1`, [id, status ?? null, source ?? null]);
+    await client.query(`UPDATE marketing.waitlist_signups SET status = COALESCE($2, status), source = COALESCE($3, source), updated_at = now(), invited_at = CASE WHEN $2 = 'invited' THEN COALESCE(invited_at, now()) ELSE invited_at END, converted_at = CASE WHEN $2 = 'converted' THEN COALESCE(converted_at, now()) ELSE converted_at END, unsubscribed_at = CASE WHEN $2 = 'unsubscribed' THEN COALESCE(unsubscribed_at, now()) ELSE unsubscribed_at END, purge_after = CASE WHEN $2 IN ('converted', 'unsubscribed') THEN LEAST(purge_after, now() + interval '30 days') ELSE purge_after END WHERE id = $1`, [id, status ?? null, source ?? null]);
     const after = { status: status ?? row.status, source: source ?? row.source };
     await client.query(`INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata) VALUES ($1, $2, 'marketing.waitlist_changed', 'marketing.waitlist', $3, $4, $5, $6::jsonb)`, [uuidv7(), actor.userId, id, reasonCode, correlation, JSON.stringify({ before: { status: row.status, source: row.source }, after })]);
     return { id, ...after };
@@ -391,7 +478,7 @@ export async function deleteWaitlistEntry(request: Request, env: KeeperEnv, acto
   const input = objectBody(await readBoundedJson(request));
   rejectUnknownFields(input, ['reasonCode', 'confirmation']);
   const reasonCode = parseReasonCode(input.reasonCode);
-  requireConfirmation(input.confirmation, `UNSUBSCRIBE AND REQUEST PURGE ${id}`);
+  requireConfirmation(input.confirmation, `DELETE WAITLIST ${id}`);
   const idempotencyScope = `admin.waitlist.delete:${id}`;
   const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
     const replay = await claimKeeperIdempotency(client, idempotencyScope, idempotencyKey, actor.userId);
@@ -400,7 +487,7 @@ export async function deleteWaitlistEntry(request: Request, env: KeeperEnv, acto
     if (!current.rows[0]) throw new Error('waitlist_not_found');
     await client.query(`UPDATE marketing.waitlist_signups SET status = 'unsubscribed', unsubscribed_at = COALESCE(unsubscribed_at, now()), purge_after = CASE WHEN retention_hold THEN purge_after ELSE LEAST(purge_after, now() + interval '30 days') END, updated_at = now() WHERE id = $1`, [id]);
     const response = { id, status: 'unsubscribed', purgeBlockedByRetentionHold: current.rows[0].retention_hold };
-    await client.query(`INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata) VALUES ($1, $2, 'marketing.waitlist_unsubscribe_requested', 'marketing.waitlist', $3, $4, $5, $6::jsonb)`, [uuidv7(), actor.userId, id, reasonCode, correlation, JSON.stringify({ previousStatus: current.rows[0].status, retentionHold: current.rows[0].retention_hold })]);
+    await client.query(`INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata) VALUES ($1, $2, 'marketing.waitlist_deleted', 'marketing.waitlist', $3, $4, $5, $6::jsonb)`, [uuidv7(), actor.userId, id, reasonCode, correlation, JSON.stringify({ previousStatus: current.rows[0].status, retentionHold: current.rows[0].retention_hold })]);
     await finalizeKeeperIdempotency(client, idempotencyScope, idempotencyKey, actor.userId, response);
     return response;
   });

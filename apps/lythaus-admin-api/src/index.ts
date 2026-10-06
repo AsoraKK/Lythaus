@@ -15,7 +15,7 @@ import { triageCommunityAppeal } from '../../../packages/db/src/community-appeal
 import { communityTriageQueue, readCommunityTriageEvidence } from '../../../packages/db/src/community-appeal-access.ts';
 import { handleMonthlyContextReview } from './monthly-context-review.ts';
 import { appealOutcomeAuditPlan, assertActionableModerationCase, evaluateAppealFromRecords, parseAppealAdjudicationRequest, type AppealAdjudicationRecord, type AppealVoteRecord } from './runtime-policy.ts';
-import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, parseWaitlistRetentionHoldUpdate, parseWaitlistStatusUpdate, requireWaitlistEncryptionKey, waitlistAuditMetadata, waitlistPageRequest, WAITLIST_SEARCH_MAX_CANDIDATES } from './waitlist-runtime-policy.ts';
+import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, parseWaitlistRetentionHoldUpdate, parseWaitlistStatusUpdate, requireWaitlistEncryptionKey, waitlistAuditMetadata, waitlistPageRequest } from './waitlist-runtime-policy.ts';
 import {
   createWaitlistEntry,
   deleteWaitlistEntry,
@@ -52,7 +52,7 @@ const ADMIN_ERROR_CODES = new Set([
   'monthly_context_request_invalid', 'monthly_context_rubric_mismatch', 'monthly_context_idempotency_reused',
   'monthly_context_revision_conflict', 'monthly_context_rules_locked', 'monthly_context_scope_changed',
   'monthly_context_publication_ineligible',
-  'account_support_owner_required', 'account_support_unavailable', 'account_support_invalid_filter',
+  'account_support_owner_required', 'account_support_unavailable', 'account_support_invalid_filter', 'account_support_profile_conflict',
   'overview_owner_required', 'overview_unavailable', 'overview_invalid_period',
   'admin_mutation_content_type_invalid', 'admin_mutation_origin_invalid', 'admin_role_required', 'admin_subject_key_not_configured',
   'auth_data_unavailable', 'auth_email_dispatch_unavailable', 'confirmation_required',
@@ -65,14 +65,14 @@ const ADMIN_ERROR_CODES = new Set([
   'appeal_policy_version_unsupported', 'appeal_risk_class_invalid',
   'appeal_subject_not_found', 'appeal_vote_decision_invalid', 'appeal_vote_level_invalid',
   'appeal_vote_qualification_invalid', 'appeal_vote_weight_invalid',
-  'invalid_account_status', 'invalid_date_filter', 'invalid_display_name', 'invalid_editorial_publication', 'invalid_handle', 'invalid_json',
+  'invalid_account_status', 'invalid_bio', 'invalid_date_filter', 'invalid_display_name', 'invalid_editorial_publication', 'invalid_handle', 'invalid_json',
   'invalid_cursor', 'invalid_page_limit', 'invalid_waitlist_id', 'invalid_waitlist_retention_hold', 'invalid_waitlist_status',
   'invalid_legal_hold', 'invalid_moderation_outcome', 'invalid_public_label', 'invalid_source',
   'invalid_subscription_tier', 'invalid_user_id', 'invalid_user_search', 'invalid_user_source_filter', 'invalid_user_status_filter',
-  'invalid_waitlist_search', 'invalid_waitlist_source', 'legal_hold_not_found',
+  'invalid_waitlist_search', 'invalid_waitlist_source', 'waitlist_search_scope_too_large', 'legal_hold_not_found',
   'moderation_case_already_resolved', 'moderation_case_not_found', 'moderation_declaration_missing',
   'moderation_case_superseded', 'rate_limit_exceeded', 'reason_code_required',
-  'profile_editing_unavailable', 'request_too_large', 'reviewer_qualification_state_invalid', 'unknown_field', 'user_email_exists', 'user_not_found', 'waitlist_duplicate', 'waitlist_not_found', 'waitlist_search_limit_exceeded', 'waitlist_status_transition_invalid', 'waitlist_unavailable',
+  'profile_update_empty', 'request_too_large', 'reviewer_qualification_state_invalid', 'unknown_field', 'user_email_exists', 'user_not_found', 'waitlist_duplicate', 'waitlist_not_found', 'waitlist_status_transition_invalid', 'waitlist_unavailable',
 ]);
 
 function adminError(error: unknown): { exposedCode: string; internalCode: string; status: number } {
@@ -82,13 +82,12 @@ function adminError(error: unknown): { exposedCode: string; internalCode: string
     : ['access_verification_not_configured', 'admin_subject_key_not_configured', 'waitlist_unavailable', 'account_support_unavailable', 'overview_unavailable'].includes(exposedCode) ? 503
     : ['access_required', 'access_assertion_invalid', 'access_subject_missing'].includes(exposedCode) ? 401
       : ['auth_data_unavailable', 'auth_email_dispatch_unavailable'].includes(exposedCode) ? 503
-        : ['admin_role_required', 'admin_mutation_origin_invalid', 'account_support_owner_required', 'overview_owner_required', 'community_appeal_triage_not_allowed', 'monthly_context_actor_not_allowed', 'appeal_adjudication_list_forbidden', 'profile_editing_unavailable'].includes(exposedCode) ? 403
+        : ['admin_role_required', 'admin_mutation_origin_invalid', 'account_support_owner_required', 'overview_owner_required', 'community_appeal_triage_not_allowed', 'monthly_context_actor_not_allowed', 'appeal_adjudication_list_forbidden'].includes(exposedCode) ? 403
           : ['community_appeals_unavailable', 'monthly_context_unavailable'].includes(exposedCode) ? 503
             : ['community_appeal_state_conflict', 'monthly_context_idempotency_reused', 'monthly_context_revision_conflict', 'monthly_context_rules_locked', 'monthly_context_scope_changed'].includes(exposedCode) ? 409
           : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
-              : ['appeal_adjudication_locked', 'appeal_already_resolved', 'email_already_verified', 'idempotency_in_progress', 'idempotency_key_reused', 'moderation_case_already_resolved', 'moderation_case_superseded', 'moderation_declaration_missing', 'user_email_exists', 'waitlist_duplicate', 'waitlist_status_transition_invalid'].includes(exposedCode) ? 409
-              : exposedCode === 'waitlist_search_limit_exceeded' ? 422
-                : exposedCode === 'request_too_large' ? 413
+              : ['account_support_profile_conflict', 'appeal_adjudication_locked', 'appeal_already_resolved', 'email_already_verified', 'idempotency_in_progress', 'idempotency_key_reused', 'moderation_case_already_resolved', 'moderation_case_superseded', 'moderation_declaration_missing', 'user_email_exists', 'waitlist_duplicate', 'waitlist_status_transition_invalid'].includes(exposedCode) ? 409
+              : exposedCode === 'request_too_large' ? 413
                 : exposedCode === 'admin_mutation_content_type_invalid' ? 415
                 : exposedCode === 'rate_limit_exceeded' ? 429 : 400;
   return { exposedCode, internalCode, status };
@@ -147,64 +146,134 @@ interface WaitlistRow {
   encryption_key_version: string;
   status: string;
   source: string;
-  created_at: string | Date;
-  cursor_timestamp: string;
+  created_at: string;
   retention_hold: boolean;
 }
 
-export async function listWaitlist(request: Request, env: Env, actor: AdminActor, correlation: string, runQuery: typeof query = query): Promise<Response> {
+const WAITLIST_EMAIL_SEARCH_SCAN_LIMIT = 1000;
+
+async function listWaitlist(request: Request, env: Env, actor: AdminActor, correlation: string): Promise<Response> {
   assertWaitlistAdminRole(actor.role);
   const encryptionKey = requireWaitlistEncryptionKey(env.PII_ENCRYPTION_KEY_V1);
-  const url = new URL(request.url);
-  const filters = adminWaitlistFilters(url);
-  const page = waitlistPageRequest(url);
-  if (filters.query && page.cursor) throw new Error('invalid_cursor');
-  const values: unknown[] = [];
-  const addValue = (value: unknown): string => { values.push(value); return `$${values.length}`; };
+  const sourceUrl = new URL(request.url);
+  let filtersUrl = sourceUrl;
+  if (request.method === 'GET' && sourceUrl.searchParams.has('q')) throw new Error('invalid_waitlist_search');
+  if (request.method === 'POST') {
+    if (sourceUrl.search) throw new Error('invalid_waitlist_search');
+    assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+    const body = rejectUnknownFields(await readBoundedJson(request, 4096), ['q', 'status', 'source', 'createdAfter', 'createdBefore', 'limit', 'cursor']);
+    filtersUrl = new URL(sourceUrl);
+    for (const key of ['q', 'status', 'source', 'createdAfter', 'createdBefore', 'limit', 'cursor'] as const) {
+      const value = body[key];
+      if (value !== undefined && value !== null && value !== '') filtersUrl.searchParams.set(key, String(value));
+    }
+  }
+  const filters = adminWaitlistFilters(filtersUrl);
+  const page = waitlistPageRequest(filtersUrl);
+  const matchingValues: unknown[] = [];
+  const addMatchingValue = (value: unknown): string => { matchingValues.push(value); return `$${matchingValues.length}`; };
   const conditions = ['1 = 1'];
-  if (filters.status) conditions.push(`w.status = ${addValue(filters.status)}`);
-  if (filters.source) conditions.push(`w.source = ${addValue(filters.source)}`);
-  if (filters.createdAfter) conditions.push(`w.created_at >= ${addValue(filters.createdAfter)}::timestamptz`);
-  if (filters.createdBefore) conditions.push(`w.created_at < ${addValue(filters.createdBefore)}::timestamptz`);
-  if (page.cursor) conditions.push(`(w.created_at, w.id) < (${addValue(page.cursor.timestamp)}::timestamptz, ${addValue(page.cursor.id)}::uuid)`);
-  const limitValue = addValue(filters.query ? WAITLIST_SEARCH_MAX_CANDIDATES + 1 : page.limit + 1);
-  const [records, summaryResult] = await Promise.all([
-    runQuery<WaitlistRow>(env.DB_ADMIN_FRESH,
-      `SELECT w.id, convert_from(w.email_ciphertext, 'utf8') AS email_ciphertext,
-              w.encryption_key_version, w.status, w.source, w.created_at,
-              to_char(w.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_timestamp,
-              w.retention_hold
-         FROM marketing.waitlist_signups w
-        WHERE ${conditions.join(' AND ')}
-        ORDER BY w.created_at DESC, w.id DESC
-        LIMIT ${limitValue}`,
-      values),
-    runQuery<{ total_waiting: string; last_7_days: string; last_24_hours: string }>(env.DB_ADMIN_FRESH,
+  if (filters.status) conditions.push(`w.status = ${addMatchingValue(filters.status)}`);
+  if (filters.source) conditions.push(`w.source = ${addMatchingValue(filters.source)}`);
+  if (filters.createdAfter) conditions.push(`w.created_at >= ${addMatchingValue(filters.createdAfter)}::timestamptz`);
+  if (filters.createdBefore) conditions.push(`w.created_at < ${addMatchingValue(filters.createdBefore)}::timestamptz`);
+  const matchingConditions = [...conditions];
+  const [records, summaryResult, matchingResult] = await Promise.all([
+    filters.query
+      ? query<WaitlistRow>(env.DB_ADMIN_FRESH,
+        `SELECT w.id, convert_from(w.email_ciphertext, 'utf8') AS email_ciphertext,
+                w.encryption_key_version, w.status, w.source,
+                to_char(w.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at,
+                w.retention_hold
+           FROM marketing.waitlist_signups w
+          WHERE ${matchingConditions.join(' AND ')}
+          ORDER BY w.created_at DESC, w.id DESC
+          LIMIT $${matchingValues.length + 1}`,
+        [...matchingValues, WAITLIST_EMAIL_SEARCH_SCAN_LIMIT + 1])
+      : query<WaitlistRow>(env.DB_ADMIN_FRESH,
+        `SELECT w.id, convert_from(w.email_ciphertext, 'utf8') AS email_ciphertext,
+                w.encryption_key_version, w.status, w.source,
+                to_char(w.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at,
+                w.retention_hold
+           FROM marketing.waitlist_signups w
+          WHERE ${[...conditions, ...(page.cursor ? [`(w.created_at, w.id) < ($${matchingValues.length + 1}::timestamptz, $${matchingValues.length + 2}::uuid)`] : [])].join(' AND ')}
+          ORDER BY w.created_at DESC, w.id DESC
+          LIMIT $${matchingValues.length + (page.cursor ? 3 : 1)}`,
+        [...matchingValues, ...(page.cursor ? [page.cursor.timestamp, page.cursor.id] : []), page.limit + 1]),
+    query<{ total_waiting: string; last_7_days: string; last_24_hours: string }>(env.DB_ADMIN_FRESH,
       `SELECT count(id) FILTER (WHERE status = 'waiting')::text AS total_waiting,
               count(id) FILTER (WHERE created_at >= now() - interval '7 days')::text AS last_7_days,
               count(id) FILTER (WHERE created_at >= now() - interval '24 hours')::text AS last_24_hours
          FROM marketing.waitlist_signups`),
+    filters.query ? Promise.resolve({ rows: [{ matching_total: '0' }] }) : query<{ matching_total: string }>(env.DB_ADMIN_FRESH,
+      `SELECT count(id)::text AS matching_total
+         FROM marketing.waitlist_signups w
+        WHERE ${matchingConditions.join(' AND ')}`,
+      matchingValues),
   ]);
-  const decryptedCandidates = filters.query ? await Promise.all(records.rows.slice(0, WAITLIST_SEARCH_MAX_CANDIDATES).map(async row => ({
-    row,
-    email: await decryptField({ ciphertext: row.email_ciphertext, encryptionKeyVersion: row.encryption_key_version }, encryptionKey),
-  }))) : null;
-  const searchMatch = decryptedCandidates?.find(candidate => candidate.email.normalize('NFKC').trim().toLowerCase() === filters.query);
-  if (filters.query && !searchMatch && records.rows.length > WAITLIST_SEARCH_MAX_CANDIDATES) throw new Error('waitlist_search_limit_exceeded');
-  const hasMore = filters.query ? false : records.rows.length > page.limit;
-  const selectedRows = filters.query ? (searchMatch ? [searchMatch.row] : []) : records.rows.slice(0, page.limit);
-  const items = await Promise.all(selectedRows.map(async (row: WaitlistRow) => {
-    return {
-      id: row.id,
-      email: searchMatch?.row.id === row.id ? searchMatch.email : await decryptField({ ciphertext: row.email_ciphertext, encryptionKeyVersion: row.encryption_key_version }, encryptionKey),
-      status: row.status,
-      source: row.source,
-      createdAt: new Date(row.created_at).toISOString(),
-      retentionHold: row.retention_hold,
-    };
-  }));
+  let candidateRows = records.rows;
+  let totalMatching = Number(matchingResult.rows[0]?.matching_total ?? 0);
+  const decryptedById = new Map<string, string>();
+  if (filters.query) {
+    if (candidateRows.length > WAITLIST_EMAIL_SEARCH_SCAN_LIMIT) {
+      await query(env.DB_ADMIN_FRESH,
+        `INSERT INTO system.audit_events
+           (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
+         VALUES ($1, $2, 'marketing.waitlist_viewed', 'marketing.waitlist', NULL, 'WAITLIST_LIST_VIEW', $3, $4::jsonb)`,
+        [uuidv7(), actor.userId, correlation, JSON.stringify({ ...waitlistAuditMetadata({
+          returnedRowCount: 0, requestedLimit: page.limit, hasCursor: page.cursor !== null, hasMore: true,
+        }), hasSearch: true, searchScopeTooLarge: true, scanLimit: WAITLIST_EMAIL_SEARCH_SCAN_LIMIT })]);
+      throw new Error('waitlist_search_scope_too_large');
+    }
+    const normalizedQuery = filters.query.normalize('NFKC').trim().toLowerCase();
+    const matchingIds: string[] = [];
+    for (const row of candidateRows) {
+      const email = await decryptField({ ciphertext: row.email_ciphertext, encryptionKeyVersion: row.encryption_key_version }, encryptionKey);
+      if (email.normalize('NFKC').trim().toLowerCase() === normalizedQuery) {
+        matchingIds.push(row.id);
+        decryptedById.set(row.id, email);
+      }
+    }
+    totalMatching = matchingIds.length;
+    if (!matchingIds.length) candidateRows = [];
+    else {
+      const values: unknown[] = [matchingIds];
+      const pageConditions = ['w.id = ANY($1::uuid[])'];
+      const addPageValue = (value: unknown): string => { values.push(value); return `$${values.length}`; };
+      if (filters.status) pageConditions.push(`w.status = ${addPageValue(filters.status)}`);
+      if (filters.source) pageConditions.push(`w.source = ${addPageValue(filters.source)}`);
+      if (filters.createdAfter) pageConditions.push(`w.created_at >= ${addPageValue(filters.createdAfter)}::timestamptz`);
+      if (filters.createdBefore) pageConditions.push(`w.created_at < ${addPageValue(filters.createdBefore)}::timestamptz`);
+      if (page.cursor) {
+        const timestamp = addPageValue(page.cursor.timestamp);
+        const id = addPageValue(page.cursor.id);
+        pageConditions.push(`(w.created_at, w.id) < (${timestamp}::timestamptz, ${id}::uuid)`);
+      }
+      const pageLimit = addPageValue(page.limit + 1);
+      candidateRows = (await query<WaitlistRow>(env.DB_ADMIN_FRESH,
+        `SELECT w.id, convert_from(w.email_ciphertext, 'utf8') AS email_ciphertext,
+                w.encryption_key_version, w.status, w.source,
+                to_char(w.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at,
+                w.retention_hold
+           FROM marketing.waitlist_signups w
+          WHERE ${pageConditions.join(' AND ')}
+          ORDER BY w.created_at DESC, w.id DESC
+          LIMIT ${pageLimit}`,
+        values)).rows;
+    }
+  }
+  const hasMore = candidateRows.length > page.limit;
+  const selectedRows = candidateRows.slice(0, page.limit);
+  const items = await Promise.all(selectedRows.map(async (row: WaitlistRow) => ({
+    id: row.id,
+    email: decryptedById.get(row.id) ?? await decryptField({ ciphertext: row.email_ciphertext, encryptionKeyVersion: row.encryption_key_version }, encryptionKey),
+    status: row.status,
+    source: row.source,
+    createdAt: new Date(row.created_at).toISOString(),
+    retentionHold: row.retention_hold,
+  })));
   const tail = selectedRows.at(-1);
-  await runQuery(env.DB_ADMIN_FRESH,
+  await query(env.DB_ADMIN_FRESH,
     `INSERT INTO system.audit_events
        (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
      VALUES ($1, $2, 'marketing.waitlist_viewed', 'marketing.waitlist', NULL, 'WAITLIST_LIST_VIEW', $3, $4::jsonb)`,
@@ -216,7 +285,8 @@ export async function listWaitlist(request: Request, env: Env, actor: AdminActor
     }), hasSearch: Boolean(filters.query), statusFilter: filters.status, sourceFilter: filters.source })]);
   return json({
     items,
-    nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.cursor_timestamp, id: tail.id }) : null,
+    totalMatching,
+    nextCursor: hasMore && tail ? encodeCursor({ timestamp: tail.created_at, id: tail.id }) : null,
     summary: {
       totalWaiting: Number(summaryResult.rows[0]?.total_waiting ?? 0),
       last7Days: Number(summaryResult.rows[0]?.last_7_days ?? 0),
@@ -231,7 +301,7 @@ async function updateWaitlistStatus(request: Request, env: Env, actor: AdminActo
   const input = rejectUnknownFields(await readBoundedJson(request), ['status', 'reasonCode', 'confirmation']);
   const status = parseWaitlistStatusUpdate(input);
   const reasonCode = parseReasonCode(input.reasonCode);
-  requireConfirmation(input.confirmation, `UPDATE WAITLIST STATUS ${id} TO ${status.toUpperCase()}`);
+  requireConfirmation(input.confirmation, 'UPDATE WAITLIST STATUS');
   const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
     const current = await client.query<{ status: string }>(
       `SELECT status FROM marketing.waitlist_signups WHERE id = $1 FOR UPDATE`, [id]);
@@ -245,7 +315,8 @@ async function updateWaitlistStatus(request: Request, env: Env, actor: AdminActo
                 updated_at = now(),
                 invited_at = CASE WHEN $2 = 'invited' THEN COALESCE(invited_at, now()) ELSE invited_at END,
                 converted_at = CASE WHEN $2 = 'converted' THEN COALESCE(converted_at, now()) ELSE converted_at END,
-                purge_after = CASE WHEN $2 = 'converted'
+                unsubscribed_at = CASE WHEN $2 = 'unsubscribed' THEN COALESCE(unsubscribed_at, now()) ELSE unsubscribed_at END,
+                purge_after = CASE WHEN $2 IN ('converted', 'unsubscribed')
                   THEN LEAST(purge_after, now() + interval '30 days') ELSE purge_after END
           WHERE id = $1`, [id, status]);
     }
@@ -266,7 +337,7 @@ async function updateWaitlistRetentionHold(request: Request, env: Env, actor: Ad
   const input = rejectUnknownFields(await readBoundedJson(request), ['active', 'reasonCode', 'confirmation']);
   const active = parseWaitlistRetentionHoldUpdate(input);
   const reasonCode = parseReasonCode(input.reasonCode);
-  requireConfirmation(input.confirmation, `${active ? 'PLACE' : 'RELEASE'} RETENTION HOLD ${id}`);
+  requireConfirmation(input.confirmation, active ? 'PLACE RETENTION HOLD' : 'RELEASE RETENTION HOLD');
   const result = await transaction(env.DB_ADMIN_FRESH, async (client) => {
     const updated = await client.query<{ id: string; retention_hold: boolean }>(
       `UPDATE marketing.waitlist_signups
@@ -1184,8 +1255,9 @@ export default {
       if (request.method === 'GET' && url.pathname === '/api/admin/account-support/access') return cors(await handleAccountSupport(request, env, actor, id));
       if (request.method === 'POST' && url.pathname === '/api/admin/account-support/lookup') return cors(await handleAccountSupport(request, env, actor, id));
       const accountSupportHistory = url.pathname.match(/^\/api\/admin\/account-support\/users\/([^/]+)\/history$/);
+      const accountSupportProfile = url.pathname.match(/^\/api\/admin\/account-support\/users\/([^/]+)\/profile$/);
       if (request.method === 'POST' && accountSupportHistory) return cors(await handleAccountSupport(request, env, actor, id));
-      if (url.pathname === '/api/admin/account-support/access' || url.pathname === '/api/admin/account-support/lookup' || accountSupportHistory) {
+      if (url.pathname === '/api/admin/account-support/access' || url.pathname === '/api/admin/account-support/lookup' || accountSupportHistory || accountSupportProfile) {
         return cors(await handleAccountSupport(request, env, actor, id));
       }
       if (request.method === 'GET' && url.pathname === '/api/admin/authenticity/cases') return cors(await handleAdminBeta(request, env, actor));
@@ -1249,6 +1321,7 @@ export default {
         return cors(json({ items: result.rows }, { headers: { 'x-correlation-id': id, 'cache-control': 'private, no-store' } }));
       }
       if (request.method === 'GET' && url.pathname === '/api/admin/waitlist') return cors(await listWaitlist(request, env, actor, id));
+      if (request.method === 'POST' && url.pathname === '/api/admin/waitlist/search') return cors(await listWaitlist(request, env, actor, id));
       if (request.method === 'POST' && url.pathname === '/api/admin/waitlist') {
         assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
         return cors(await createWaitlistEntry(request, keeperEnv, actor, id));
@@ -1274,6 +1347,10 @@ export default {
       }
       if (request.method === 'GET' && url.pathname === '/api/admin/users/search') return cors(await searchUsers(request, env));
       if (request.method === 'GET' && url.pathname === '/api/admin/users') return cors(await listAdminUsers(request, keeperEnv, actor, id));
+      if (request.method === 'POST' && url.pathname === '/api/admin/users/search-by-email') {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await listAdminUsers(request, keeperEnv, actor, id));
+      }
       if (request.method === 'POST' && url.pathname === '/api/admin/users') {
         assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
         return cors(await inviteAdminUser(request, keeperEnv, actor, id));

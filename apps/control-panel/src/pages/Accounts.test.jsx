@@ -26,7 +26,7 @@ describe('Accounts workspace', () => {
         { id: 'registered-pending', status: 'active', verificationState: 'pending_verification', displayName: 'Unverified member' },
         { id: 'registered-suspended', status: 'suspended', displayName: 'Suspended member' },
         { id: 'registered-locked', status: 'locked', displayName: 'Locked member', currentSessionCount: 0 },
-      ], nextCursor: null });
+      ], totalMatching: 3, nextCursor: null });
       return Promise.reject(new Error('Unexpected test route'));
     });
   });
