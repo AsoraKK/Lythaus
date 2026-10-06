@@ -15,9 +15,11 @@ Method | HTTP request | Description
 
 
 # **usersGet**
-> JsonObject usersGet(id)
+> ProductIntegrityPublicProfileResponse usersGet(id)
 
 Get a public user profile
+
+Public profile reads return approved public identity fields. Reputation is omitted when the Passport is private; public reputation contains only level and label, never enforcement status.
 
 ### Example
 ```dart
@@ -42,11 +44,11 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**JsonObject**](JsonObject.md)
+[**ProductIntegrityPublicProfileResponse**](ProductIntegrityPublicProfileResponse.md)
 
 ### Authorization
 
-[bearerAuth](../README.md#bearerAuth)
+No authorization required
 
 ### HTTP request headers
 

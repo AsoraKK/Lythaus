@@ -1390,7 +1390,7 @@ async function getUserProfile(request: Request, env: Env, userId: string, privat
        LEFT JOIN trust.reputation_profiles r ON r.user_id = u.id
        LEFT JOIN identity.user_entitlements entitlement ON entitlement.user_id = u.id
       WHERE u.id = $1 AND u.status = 'active'
-        AND ($3::boolean OR (COALESCE(p.moderation_state, 'allowed') = 'allowed' AND COALESCE(p.public_visibility, true)))`, [userId, REPUTATION_POLICY.version, privateView]);
+        AND ($3::boolean OR (p.user_id IS NOT NULL AND COALESCE(p.moderation_state, 'allowed') = 'allowed' AND COALESCE(p.public_visibility, true)))`, [userId, REPUTATION_POLICY.version, privateView]);
   const profile = result.rows[0] as {
     id: string;
     display_name: string;
@@ -1406,8 +1406,12 @@ async function getUserProfile(request: Request, env: Env, userId: string, privat
     moderation_state: string;
     public_visibility: boolean;
   } | undefined;
-  if (!profile) throw new Error('profile_not_found');
+  if (!profile) {
+    if (!privateView) return privateResponse(request, env, { error: 'not_found' }, { status: 404 });
+    throw new Error('profile_not_found');
+  }
   const level = Number(profile.reputation_level);
+  const levelName = REPUTATION_POLICY.levels.find((candidate) => candidate.level === level)?.name ?? 'New';
   const body: { user: Record<string, unknown> } = {
     user: {
       id: profile.id,
@@ -1416,27 +1420,27 @@ async function getUserProfile(request: Request, env: Env, userId: string, privat
       avatarUrl: null,
       bio: profile.bio,
       trustPassportVisibility: profile.trust_passport_visibility,
-      reputationLevel: level,
-      reputation: {
-        level,
-        label: REPUTATION_POLICY.levels.find((candidate) => candidate.level === level)?.name ?? 'New',
-        band: reputationBand(level),
-        status: profile.reputation_status,
-        policyVersion: profile.reputation_policy_version,
-      },
       journalistVerified: false,
       badges: [],
     },
   };
   if (privateView) {
+    body.user.reputationLevel = level;
+    body.user.reputation = {
+      level,
+      label: levelName,
+      band: reputationBand(level),
+      status: profile.reputation_status,
+      policyVersion: profile.reputation_policy_version,
+    };
     body.user.subscriptionTier = normalizeUserTier(profile.subscription_tier);
     body.user.accountabilityIdentityDeclared = profile.accountability_identity_declared;
     body.user.moderationState = profile.moderation_state;
     body.user.publicVisibility = profile.public_visibility;
+  } else if (profile.trust_passport_visibility !== 'private') {
+    body.user.reputation = { level, label: levelName };
   }
-  const output = privateView ? privateResponse(request, env, body) : response(request, env, body);
-  if (!privateView) output.headers.set('cache-control', 'public, max-age=30, s-maxage=30');
-  return output;
+  return privateResponse(request, env, body);
 }
 
 async function getUserInfo(request: Request, env: Env, userId: string): Promise<Response> {
@@ -2926,6 +2930,28 @@ async function notificationDevices(request: Request, env: Env, user: Principal):
 }
 
 async function reputationSummary(request: Request, env: Env, userId: string, privateView: boolean): Promise<Response> {
+  if (!privateView) {
+    const visible = await query<{ user_id: string; current_level: number }>(env.DB_APP_FRESH,
+      `SELECT u.id AS user_id, COALESCE(r.current_level, 0)::integer AS current_level
+         FROM identity.users u
+         LEFT JOIN social.profiles p ON p.user_id = u.id
+         LEFT JOIN trust.reputation_profiles r ON r.user_id = u.id
+        WHERE u.id = $1 AND u.status = 'active'
+          AND p.user_id IS NOT NULL
+          AND COALESCE(p.moderation_state, 'allowed') = 'allowed'
+          AND COALESCE(p.public_visibility, true)
+          AND COALESCE(p.trust_passport_visibility, 'public_minimal') IN ('public_minimal', 'public_expanded')`, [userId]);
+    const publicProfile = visible.rows[0];
+    if (!publicProfile) return privateResponse(request, env, { error: 'not_found' }, { status: 404 });
+    const level = Number(publicProfile.current_level);
+    const levelName = REPUTATION_POLICY.levels.find((candidate) => candidate.level === level)?.name ?? 'New';
+    return privateResponse(request, env, {
+      userId: publicProfile.user_id,
+      level,
+      levelName,
+    });
+  }
+
   const result = await query<{
     current_level: number;
     policy_version: string;
@@ -2967,7 +2993,7 @@ async function reputationSummary(request: Request, env: Env, userId: string, pri
     promotionBlockers: profile?.promotion_blockers ?? [],
     evaluatedAt: profile?.evaluated_at ?? null,
   });
-  return privateView ? privateResponse(request, env, payload) : response(request, env, payload);
+  return privateResponse(request, env, payload);
 }
 
 async function reputationLedger(request: Request, env: Env, user: Principal): Promise<Response> {
