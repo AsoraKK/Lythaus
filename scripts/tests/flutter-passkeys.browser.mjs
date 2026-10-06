@@ -130,12 +130,12 @@ for (const width of [1440, 390]) {
       await field.pressSequentially(value, { delay:10 });
       assert.equal(await field.inputValue(), value);
     }
-    async function emailLogin() {
+    async function emailLogin({ expectFeed = true } = {}) {
       await enter(page.getByRole('textbox', { name:'Email',exact:true }), user.email);
       const password = page.locator('input[type=password]');
       await enter(password, fixturePassword);
       await password.press('Enter');
-      await page.getByText('No posts yet', { exact:true }).waitFor();
+      if (expectFeed) await page.getByText('No posts yet', { exact:true }).waitFor();
     }
     async function security() {
       await capture('feed');
@@ -195,7 +195,7 @@ for (const width of [1440, 390]) {
     const passkeyLoginResponseStart = passkeyResponses.length;
     await page.getByRole('button', { name:'Sign in with a passkey',exact:true }).click();
     try {
-      await page.getByText('No posts yet', { exact:true }).waitFor();
+      await page.getByText(/^Signed-in account\npasskey-synthetic@example\.invalid$/).waitFor();
     } catch (error) {
       console.log('PASSKEY_LOGIN_DIAGNOSTIC ' + JSON.stringify({
         viewport:width,
@@ -207,10 +207,11 @@ for (const width of [1440, 390]) {
       }));
       throw error;
     }
+    await page.getByText(/^Passkeys\nAdd, verify/).waitFor();
+    await capture('passkey-login');
     const cookies = await context.cookies('https://api.lythaus.co');
     assert.ok(cookies.some(cookie => cookie.name === '__Host-lythaus_refresh' && cookie.httpOnly && cookie.secure && cookie.sameSite === 'Strict'));
     assert.ok(!(await page.evaluate(() => Object.keys(localStorage))).some(key => ['jwt','refreshToken','userData'].includes(key)));
-    await security();
     await page.getByText(/^Passkeys\nAdd, verify/).click();
     await page.getByText(/^Signed-in account\n/).waitFor({ state:'hidden' });
     await page.getByRole('button', { name:'Remove passkey',exact:true }).click();
@@ -219,7 +220,9 @@ for (const width of [1440, 390]) {
     await page.getByRole('button', { name:'Sign in with email',exact:true }).waitFor();
     assert.equal((await f.control.query('SELECT count(*)::int AS count FROM identity.passkey_credentials WHERE user_id=$1 AND revoked_at IS NULL', [f.userId])).rows[0].count, 0);
     assert.equal((await f.control.query('SELECT count(*)::int AS count FROM identity.auth_sessions WHERE user_id=$1 AND revoked_at IS NULL', [f.userId])).rows[0].count, 0);
-    await emailLogin();
+    await emailLogin({ expectFeed:false });
+    await page.getByText(/^Signed-in account\npasskey-synthetic@example\.invalid$/).waitFor();
+    await capture('email-fallback');
     assert.ok(calls.includes('/api/auth/passkeys/login/verify'));
     assert.ok(calls.includes('/api/auth/passkeys/maintenance/verify'));
     assert.ok(calls.filter(call => call === '/api/users/me').length >= 2);
