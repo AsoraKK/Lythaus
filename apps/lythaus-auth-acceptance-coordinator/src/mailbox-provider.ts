@@ -26,7 +26,7 @@ export async function observeMailboxProviders(primary: string, resend: string) {
     let response: Response;
     try {
       response = await fetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=MX`, {
-        headers: { accept: 'application/dns-json' }, redirect: 'error', signal: AbortSignal.timeout(5000),
+        headers: { accept: 'application/dns-json' }, redirect: 'manual', signal: AbortSignal.timeout(5000),
       });
       if (!response.ok) throw new Error('unavailable');
       return classifyMailboxMx(await response.json());

@@ -11,6 +11,7 @@ import {
   requireWaitlistEncryptionKey,
   waitlistAuditMetadata,
   waitlistPageRequest,
+  WAITLIST_SEARCH_MAX_CANDIDATES,
 } from '../src/waitlist-runtime-policy.ts';
 
 const cursor = { timestamp: '2026-08-14T07:00:00.000Z', id: '01900000-0000-7000-8000-000000000001' };
@@ -33,6 +34,7 @@ test('uses stable descending keyset pagination with default 50 and maximum 100',
 });
 
 test('requires only the PII decryption key and emits PII-free audit metadata', () => {
+  assert.equal(WAITLIST_SEARCH_MAX_CANDIDATES, 1000);
   assert.equal(requireWaitlistEncryptionKey('encryption-key'), 'encryption-key');
   assert.throws(() => requireWaitlistEncryptionKey(undefined), /waitlist_unavailable/);
   assert.deepEqual(waitlistAuditMetadata({ returnedRowCount: 50, requestedLimit: 50, hasCursor: true, hasMore: true }), {
@@ -47,9 +49,11 @@ test('validates status changes, UUIDs and retention holds without accepting arbi
   assert.equal(parseWaitlistId(cursor.id), cursor.id);
   assert.throws(() => parseWaitlistId('not-a-uuid'), /invalid_waitlist_id/);
   assert.equal(parseWaitlistStatusUpdate({ status: 'invited' }), 'invited');
+  assert.throws(() => parseWaitlistStatusUpdate({ status: 'unsubscribed' }), /invalid_waitlist_status/);
   assert.throws(() => parseWaitlistStatusUpdate({ status: 'waiting' }), /invalid_waitlist_status/);
   assert.doesNotThrow(() => assertWaitlistStatusTransition('waiting', 'invited'));
   assert.doesNotThrow(() => assertWaitlistStatusTransition('invited', 'converted'));
+  assert.throws(() => assertWaitlistStatusTransition('waiting', 'unsubscribed'), /waitlist_status_transition_invalid/);
   assert.throws(() => assertWaitlistStatusTransition('converted', 'invited'), /waitlist_status_transition_invalid/);
   assert.equal(parseWaitlistRetentionHoldUpdate({ active: true }), true);
   assert.throws(() => parseWaitlistRetentionHoldUpdate({ active: 'true' }), /invalid_waitlist_retention_hold/);
