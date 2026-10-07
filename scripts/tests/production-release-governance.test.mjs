@@ -682,6 +682,16 @@ test('candidate probes pin the production database role contract and name mismat
   assert.match(readFileSync('scripts/ci/probe-production-workers.mjs', 'utf8'), /structural identity probe failed: \$\{mismatches\.join\('\,'\)\}/);
 });
 
+test('Public candidate probe supplies captured deployment and source provenance for bounded recovery', () => {
+  const start = workersWorkflow.indexOf('- name: Probe public candidate');
+  const end = workersWorkflow.indexOf('\n      - name:', start + 1);
+  const publicProbe = workersWorkflow.slice(start, end === -1 ? undefined : end);
+  assert.match(publicProbe, /export PRODUCTION_WORKER_VERSION_ID="\$PUBLIC_WORKER_VERSION_ID"/);
+  assert.match(publicProbe, /export PRODUCTION_WORKER_PREVIOUS_DEPLOYMENT_PATH="\$RUNNER_TEMP\/production-cutover\/public-before\.json"/);
+  assert.match(publicProbe, /export PRODUCTION_WORKER_PREVIOUS_VERSIONS_PATH="\$RUNNER_TEMP\/production-cutover\/public-before-versions\.json"/);
+  assert.match(publicProbe, /node scripts\/ci\/probe-production-workers\.mjs/);
+});
+
 test('admin candidate probe authenticates the Access-protected API route', () => {
   const probe = readFileSync('scripts/ci/probe-production-workers.mjs', 'utf8');
   assert.match(probe, /CF-Access-Client-Id/);

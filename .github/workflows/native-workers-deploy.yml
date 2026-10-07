@@ -1089,6 +1089,8 @@ jobs:
           echo 'RELEASE_FAILURE_MESSAGE=Public candidate readiness or runtime probe failed' >> "$GITHUB_ENV"
           export PRODUCTION_WORKER_VERSION_ID="$PUBLIC_WORKER_VERSION_ID"
           export EXPECTED_WORKER_SOURCE_SHA="$PUBLIC_WORKER_SOURCE_SHA"
+          export PRODUCTION_WORKER_PREVIOUS_DEPLOYMENT_PATH="$RUNNER_TEMP/production-cutover/public-before.json"
+          export PRODUCTION_WORKER_PREVIOUS_VERSIONS_PATH="$RUNNER_TEMP/production-cutover/public-before-versions.json"
           node scripts/ci/probe-production-workers.mjs
       - name: Probe admin candidate without production traffic (CANDIDATE gate)
         if: contains(steps.release_plan.outputs.changed_components_json, '"admin"')

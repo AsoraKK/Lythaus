@@ -222,6 +222,15 @@ function assertReadiness(body, target, { knownPreviousServingVersion = false, pr
 function previousServingVersions() {
   const suppliedPaths = [previousDeploymentPath, previousVersionsPath, previousPublicDeploymentPath, previousPublicVersionsPath];
   if (suppliedPaths.every((value) => !value)) return { admin: [], public: [] };
+  if (requestedWorker === 'lythaus-public-api-development') {
+    if (!previousDeploymentPath || !previousVersionsPath || previousPublicDeploymentPath || previousPublicVersionsPath) {
+      throw new Error('Public propagation retries require only exact Public predeployment snapshot paths');
+    }
+    return { admin: [], public: parseProductionDeploymentState(
+      fs.readFileSync(previousDeploymentPath, 'utf8'),
+      fs.readFileSync(previousVersionsPath, 'utf8'),
+    ).serving };
+  }
   if (requestedWorker !== 'lythaus-admin-api-development' || suppliedPaths.some((value) => !value)) {
     throw new Error('Admin propagation retries require exact Admin and Public predeployment snapshot paths');
   }
@@ -245,9 +254,10 @@ async function fetchCandidateReadiness(base, target, previousVersions) {
     observation.attempt = attempt;
     writeEvidence();
     if (body.workerVersionId === expectedWorkerVersionId && body.releaseTag === expectedWorkerSourceSha) return body;
-    const previousVersion = target.worker === 'lythaus-admin-api-development'
-      && body.service === 'lythaus-admin-api'
-      && previousVersions.admin.some(({ versionId, sourceSha }) => body.workerVersionId === versionId && body.releaseTag === sourceSha);
+    const isAdmin = target.worker === 'lythaus-admin-api-development';
+    const capturedServingVersions = isAdmin ? previousVersions.admin : previousVersions.public;
+    const previousVersion = body.service === (isAdmin ? 'lythaus-admin-api' : 'lythaus-public-api')
+      && capturedServingVersions.some(({ versionId, sourceSha }) => body.workerVersionId === versionId && body.releaseTag === sourceSha);
     if (!previousVersion) throw new Error(`${target.worker} probe did not execute the exact reviewed Worker version`);
     assertReadiness(body, target, { knownPreviousServingVersion: true, previousPublicVersions: previousVersions.public });
     if (attempt > propagationDelays.length) {
