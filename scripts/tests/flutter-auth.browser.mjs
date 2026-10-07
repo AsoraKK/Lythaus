@@ -55,7 +55,14 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
       }
       return route.fulfill({status,headers,contentType:'application/json',body:JSON.stringify(body)});
     });
-    const browser=await engine.launch({headless:true,proxy:{server:fixture.proxy}});
+    let browser;
+    try {
+      browser=await engine.launch({headless:true,proxy:{server:fixture.proxy},
+        ...(name==='webkit'&&process.env.WEBKIT_EXECUTABLE?{executablePath:process.env.WEBKIT_EXECUTABLE}:{})});
+    } catch(error) {
+      await fixture.close();
+      throw error;
+    }
     const context=await browser.newContext({viewport:{width,height:1000},serviceWorkers:'block',ignoreHTTPSErrors:true});
     await installFlutterEngineFonts(context);
     const page=await context.newPage();page.setDefaultTimeout(15000);
