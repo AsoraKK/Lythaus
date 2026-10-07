@@ -131,6 +131,7 @@ test(
         };
         let postsMode = 'empty';
         let postErrorsRemaining = 0;
+        let ownerProfileReadDelay = 0;
         const apiCalls = [];
         const runtimeErrors = [];
         const ownerPostsCalls = [];
@@ -205,6 +206,9 @@ test(
             body = { state: 'signed_out' };
           } else if (requestUrl.pathname === '/api/users/me') {
             status = session ? 200 : 401;
+            if (request.method() === 'GET' && ownerProfileReadDelay > 0) {
+              await new Promise((resolve) => setTimeout(resolve, ownerProfileReadDelay));
+            }
             if (request.method() === 'PATCH' && status === 200) {
               const patch = request.postDataJSON();
               if (patch.presentationPreferences) {
@@ -376,6 +380,19 @@ test(
             await activate();
           }
 
+          async function waitForSavedPreferences() {
+            await page.getByRole('switch', {
+              name: /Left-handed mode/,
+              checked: true,
+              disabled: false,
+            }).waitFor();
+            await page.getByRole('switch', {
+              name: /Swipe between profile tabs/,
+              checked: false,
+              disabled: false,
+            }).waitFor();
+          }
+
           async function enter(field, value) {
             await field.click();
             await page.evaluate(
@@ -499,6 +516,7 @@ test(
           await openApp('/settings');
           await page.getByRole('button', { name: 'Continue as guest', exact: true }).click();
           await guestLeft.scrollIntoViewIfNeeded();
+          await waitForSavedPreferences();
           assert.equal(await guestLeft.isChecked(), true);
           assert.equal(await guestSwipe.isChecked(), false);
           await screenshot('guest-reopened-preferences');
@@ -708,8 +726,11 @@ test(
           assert.equal(ownProfile.presentationPreferences.leftHandedMode, true);
           assert.equal(ownProfile.presentationPreferences.horizontalSwipeEnabled, false);
           await screenshot('settings-saved-preferences');
+          // Reopening must wait for saved account choices, including a slow read.
+          ownerProfileReadDelay = 250;
           await openApp('/settings?tab=profile&profileTab=posts');
           await leftHanded.scrollIntoViewIfNeeded();
+          await waitForSavedPreferences();
           assert.equal(await leftHanded.isChecked(), true);
           assert.equal(await swipeTabs.isChecked(), false);
           await moveHeadingNearTop('Trust Passport visibility');
@@ -729,6 +750,7 @@ test(
           configResults.push({
             theme,
             viewport: size.name,
+            ownerProfileReloadDelayMs: ownerProfileReadDelay,
             ownerPostsRequests: ownerPostsCalls.length,
             ownerPostQueries: ownerPostsCalls.map(({ cursor, state }) => ({
               cursor,
