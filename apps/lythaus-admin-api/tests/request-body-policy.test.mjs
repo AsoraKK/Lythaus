@@ -55,3 +55,37 @@ test('rejects malformed or empty JSON deterministically', async () => {
     /invalid_json/,
   );
 });
+
+test('rejects non-object JSON before admin handlers consume it', async () => {
+  for (const body of ['null', '[]', '[{}]', 'true', 'false', '0', '"synthetic"']) {
+    await assert.rejects(
+      readBoundedJson(new Request('https://admin-api.lythaus.co/test', { method: 'POST', body })),
+      /invalid_json/,
+      body,
+    );
+  }
+  assert.deepEqual(await readBoundedJson(new Request('https://admin-api.lythaus.co/test', {
+    method: 'POST', body: '{}',
+  })), {});
+});
+
+test('rejects invalid UTF-8 instead of changing admin input during decoding', async () => {
+  const encoder = new TextEncoder();
+  for (const invalid of [Uint8Array.of(0xff), Uint8Array.of(0xc3), Uint8Array.of(0xc0, 0xaf)]) {
+    const body = new Uint8Array([
+      ...encoder.encode('{"reason":"'), ...invalid, ...encoder.encode('"}'),
+    ]);
+    await assert.rejects(
+      readBoundedJson(new Request('https://admin-api.lythaus.co/test', { method: 'POST', body })),
+      /invalid_json/,
+    );
+  }
+  const bytes = encoder.encode('{"reason":"Café 東京"}');
+  const body = new ReadableStream({
+    start(controller) {
+      for (const byte of bytes) controller.enqueue(Uint8Array.of(byte));
+      controller.close();
+    },
+  });
+  assert.deepEqual(await readBoundedJson({ headers: new Headers(), body }), { reason: 'Café 東京' });
+});
