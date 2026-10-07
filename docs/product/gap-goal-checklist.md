@@ -1,6 +1,6 @@
 # Product gap goal checklist
 
-WP00/WP02 source refresh: 2026-10-07. Actual main is `f757d35a3263f86f817ea09fd76368bd1f6a8e01`. PR [#921](https://github.com/AsoraKK/Lythaus/pull/921) began at `cc464bd9f2ae0f7866094cb14dc625f05c3b86e0`; current main was merged without conflicts (`eb0142ca100be7837e2bb43ac86284b144954c3c`). It remains draft and unmerged under the prior ready/merge boundary. Final candidate/check identities belong in the exact-head review packet; older green checks are not assigned to a new candidate.
+WP00/WP02 source refresh: 2026-10-07. Actual main is `8f9293fd7ee1bb54382101c04955dff4be7d5499`. PR [#921](https://github.com/AsoraKK/Lythaus/pull/921) began at `cc464bd9f2ae0f7866094cb14dc625f05c3b86e0`; initial main refresh `eb0142ca100be7837e2bb43ac86284b144954c3c` and subsequent PR942/main refresh `13093e177f490d2380ab8afe38d8cfc016b3dfdc` merged without conflicts. It remains draft and unmerged under the prior ready/merge boundary. Final candidate/check identities belong in the exact-head review packet; older green checks are not assigned to a new candidate.
 
 Implementation, tests, merge, deployment, activation and owner acceptance are separate states. Release102 deployment facts below are supplied coordinator evidence for main f757d35a, not an independent provider inspection by this lane. The baseline is deployed but owner uncertified; authentication UAT remains pending October10.
 

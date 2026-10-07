@@ -135,7 +135,7 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
     await Promise.all([page.getByText('No posts yet',{exact:true}).waitFor(),secondTab.getByText('No posts yet',{exact:true}).waitFor()]);
     assert.equal(maximumRefreshInFlight,1,'Same-origin tabs must serialize refresh instead of racing a rotating cookie');
     if(width<700)await page.getByRole('button',{name:/^Profile(?:\b|$)/}).click();
-    await page.getByRole('button',{name:'Settings',exact:true}).click();
+    await page.getByRole('button',{name:/^Settings(?:\b|$)/}).click();
     await page.waitForURL(url=>url.pathname==='/settings');
     await page.getByText('Account security',{exact:true}).click();
     await page.waitForURL(url=>url.pathname==='/settings/security');
@@ -156,7 +156,7 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
     await page.mouse.move(width-20,900);
     await page.getByRole('button',{name:'Back',exact:true}).click();
     await page.waitForURL(url=>url.pathname==='/'&&(width>=700||url.searchParams.get('tab')==='profile'));
-    await page.getByRole('button',{name:'Settings',exact:true}).click();
+    await page.getByRole('button',{name:/^Settings(?:\b|$)/}).click();
     await page.waitForURL(url=>url.pathname==='/settings');
     await page.getByText('Account security',{exact:true}).click();
     await page.waitForURL(url=>url.pathname==='/settings/security');
