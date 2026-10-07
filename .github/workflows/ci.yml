@@ -190,7 +190,7 @@ jobs:
           npm --prefix apps/control-panel run preview -- --host 127.0.0.1 --port 5183 --strictPort > /tmp/activity-preview.log 2>&1 &
           activity_preview_pid=$!
           trap 'kill "$activity_preview_pid" 2>/dev/null || true' EXIT
-          for attempt in $(seq 1 30); do
+          for _attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:5183/ > /dev/null; then break; fi
             sleep 1
           done
