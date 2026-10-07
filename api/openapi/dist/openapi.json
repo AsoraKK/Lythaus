@@ -18533,6 +18533,7 @@
               "contextBytes",
               "memberMessageBytes"
             ],
+            "description": "Optional character limits count Unicode scalar values after trimming. UTF-8 byte limits remain independently enforced.",
             "properties": {
               "titleBytes": {
                 "type": "integer",
@@ -18551,6 +18552,22 @@
                 "minimum": 1
               },
               "memberMessageBytes": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "titleCharacters": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "detailCharacters": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "stepsCharacters": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "memberMessageCharacters": {
                 "type": "integer",
                 "minimum": 1
               }
@@ -18780,6 +18797,10 @@
           "memberMessage": {
             "type": "string",
             "nullable": true
+          },
+          "closed": {
+            "type": "boolean",
+            "description": "Whether new replies are closed for this request."
           }
         }
       },
@@ -18844,6 +18865,10 @@
           "memberMessage": {
             "type": "string",
             "nullable": true
+          },
+          "closed": {
+            "type": "boolean",
+            "description": "Whether new replies are closed for this request."
           }
         }
       },
@@ -18857,7 +18882,11 @@
           }
         ],
         "discriminator": {
-          "propertyName": "kind"
+          "propertyName": "kind",
+          "mapping": {
+            "problem": "#/components/schemas/MemberProblemRequest",
+            "suggestion": "#/components/schemas/MemberSuggestionRequest"
+          }
         }
       },
       "MemberRequestPage": {
@@ -19135,6 +19164,10 @@
             "type": "string",
             "nullable": true
           },
+          "closed": {
+            "type": "boolean",
+            "description": "Whether new replies are closed for this request."
+          },
           "submitterId": {
             "type": "string",
             "format": "uuid"
@@ -19204,6 +19237,10 @@
             "type": "string",
             "nullable": true
           },
+          "closed": {
+            "type": "boolean",
+            "description": "Whether new replies are closed for this request."
+          },
           "submitterId": {
             "type": "string",
             "format": "uuid"
@@ -19220,7 +19257,11 @@
           }
         ],
         "discriminator": {
-          "propertyName": "kind"
+          "propertyName": "kind",
+          "mapping": {
+            "problem": "#/components/schemas/OwnerProblemRequest",
+            "suggestion": "#/components/schemas/OwnerSuggestionRequest"
+          }
         }
       },
       "OwnerRequestPage": {
