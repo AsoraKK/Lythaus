@@ -191,10 +191,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               value: settings.leftHandedMode,
               onChanged: (_) => controller.toggleLeftHanded(),
             ),
-            SwitchListTile(
-              title: const Text('Haptics'),
-              value: settings.hapticsEnabled,
-              onChanged: (_) => controller.toggleHaptics(),
+            const ListTile(
+              title: Text('Haptics'),
+              subtitle: Text(
+                'Haptic feedback is not available in this app yet.',
+              ),
             ),
             const Divider(height: Spacing.xl),
             Text(

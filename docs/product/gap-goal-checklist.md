@@ -15,7 +15,7 @@ Implementation, tests, merge, deployment, activation and owner acceptance are se
 
 ## Exact profile dependencies
 
-- **P01 preferences:** handedness/swipe/haptics last only while the app is open; the UI says so. The [decision packet](profile-preference-authority-decision.md) recommends device-local persistence with unchanged defaults, no schema/API change. New storage authority is pending. Passport visibility remains server saved through `/api/users/me`.
+- **P01 preferences:** handedness/profile swipe last only while the app is open; the UI says so. The [decision packet](profile-preference-authority-decision.md) recommends device-local persistence with unchanged defaults, no schema/API change. Haptics has no runtime consumer and is explicitly unavailable. New storage authority is pending. Passport visibility remains server saved through `/api/users/me`.
 - **P02 handles:** `identity.handles` and owner reads exist; reservation/rename/history/reuse rules and an owner rename API are incomplete.
 - **P03 avatars:** `social.profiles.avatar_object_id` exists; current projection returns `avatarUrl: null`. Owner attachment, moderation, serving/cache, DSR and resource policy are incomplete.
 - **P04 collections:** individual follow status/POST/DELETE exist; follower/following endpoints and pagination/visibility policies are absent. Known-ID owner comments are not a profile list. Public author-post collections and parent-aware comment lists need explicit contracts/privacy/cost decisions. Tabs show unavailable, never fabricated empty data.

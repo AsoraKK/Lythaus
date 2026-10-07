@@ -38,20 +38,29 @@ void main() {
       SwitchListTile,
       'Left-handed mode (mirror nav)',
     );
-    final hapticsTile = find.widgetWithText(SwitchListTile, 'Haptics');
+    final swipeTile = find.widgetWithText(
+      SwitchListTile,
+      'Swipe between profile tabs',
+    );
 
     expect(tester.widget<SwitchListTile>(leftHandedTile).value, isFalse);
-    expect(tester.widget<SwitchListTile>(hapticsTile).value, isTrue);
+    expect(tester.widget<SwitchListTile>(swipeTile).value, isTrue);
 
     await tester.tap(leftHandedTile);
-    await tester.ensureVisible(hapticsTile);
+    await tester.ensureVisible(swipeTile);
     await tester.pumpAndSettle();
-    await tester.tap(hapticsTile);
+    await tester.tap(swipeTile);
     await tester.pumpAndSettle();
 
     final state = container.read(settingsProvider);
     expect(state.leftHandedMode, isTrue);
-    expect(state.hapticsEnabled, isFalse);
+    expect(state.horizontalSwipeEnabled, isFalse);
+    expect(state.hapticsEnabled, isTrue);
+    expect(find.widgetWithText(SwitchListTile, 'Haptics'), findsNothing);
+    expect(
+      find.text('Haptic feedback is not available in this app yet.'),
+      findsOneWidget,
+    );
     expect(
       find.text('Sign in to manage what others see on your Trust Passport.'),
       findsOneWidget,

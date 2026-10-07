@@ -6,9 +6,9 @@ Current `settingsProvider` holds handedness, horizontal swipe and haptics in mem
 
 ## Recommended minimum
 
-Persist only handedness, horizontal swipe and haptics on the current device using the existing local-preferences dependency. Keep the current defaults. Let guests use the same device controls. Retain them on signout and account switching so the device's accessibility choices remain usable. Do not sync them between devices; do not migrate or store Passport visibility, notifications, consent, account identity or other private settings in this store. Existing server-saved preferences retain their current authority.
+Persist only handedness and profile horizontal swipe on the current device using the existing local-preferences dependency. Keep the current defaults. Let guests use the same device controls. Retain them on signout and account switching so the device's accessibility choices remain usable. Do not sync them between devices; do not migrate or store Passport visibility, notifications, consent, account identity or other private settings in this store. Existing server-saved preferences retain their current authority. Haptics has no current runtime consumer or feedback implementation; its inert switch is replaced with an unavailable explanation, and it is excluded from the persistence proposal until a real implementation/policy is commissioned. Its existing model default is unchanged.
 
-This option requires **no server endpoint, schema, migration, grant or provider resource**. Store only three booleans with a versioned local key and clear recovery behavior for an absent or corrupt store. A later device-local implementation would test write failure, reload/restart, guest/member switches, defaults, upgrade and unavailable storage; it must not report a failed write as saved.
+This option requires **no server endpoint, schema, migration, grant or provider resource**. Store only two booleans with a versioned local key and clear recovery behavior for an absent or corrupt store. A later device-local implementation would test write failure, reload/restart, guest/member switches, defaults, upgrade and unavailable storage; it must not report a failed write as saved.
 
 ## Exact decision needed
 
