@@ -1,27 +1,22 @@
 import {
-  MONTHLY_REPUTATION_CATALOGUE_HASH, MONTHLY_REPUTATION_POLICY_VERSION,
   nextReputationMonth, reputationInstant, requireSourceMonth,
 } from './monthly-reputation-policy.ts';
+import {
+  QUARTERLY_CALENDAR_AMENDMENT_VERSION, QUARTERLY_CALENDAR_APPROVED_AT, QUARTERLY_PREVIEW_CONFIGURATION,
+  quarterlyPreviewReady, previewUtcQuarterlyWindow, previewQuarterlyCompletion,
+  type QuarterlyPreviewConfiguration,
+} from './monthly-quarterly-policy.ts';
 
-export const SUGGESTION_CALENDAR_AMENDMENT_VERSION = 'accepted-useful-suggestion-calendar-quarter-2026-10-07-v2';
-export const SUGGESTION_CALENDAR_APPROVED_AT = '2026-10-07T18:15:47.000Z';
+export const SUGGESTION_CALENDAR_AMENDMENT_VERSION = QUARTERLY_CALENDAR_AMENDMENT_VERSION;
+export const SUGGESTION_CALENDAR_APPROVED_AT = QUARTERLY_CALENDAR_APPROVED_AT;
 
-export interface SuggestionPreviewConfiguration {
-  runtimeActivationAllowed: false;
-  policyVersion: typeof MONTHLY_REPUTATION_POLICY_VERSION;
-  catalogueHash: typeof MONTHLY_REPUTATION_CATALOGUE_HASH;
-  amendmentVersion: typeof SUGGESTION_CALENDAR_AMENDMENT_VERSION;
-  prospectiveFrom: string | null;
+export interface SuggestionPreviewConfiguration extends QuarterlyPreviewConfiguration {
   rubricVersion: string | null;
   authorityVersion: string | null;
 }
 
 export const SUGGESTION_PREVIEW_CONFIGURATION: Readonly<SuggestionPreviewConfiguration> = Object.freeze({
-  runtimeActivationAllowed: false,
-  policyVersion: MONTHLY_REPUTATION_POLICY_VERSION,
-  catalogueHash: MONTHLY_REPUTATION_CATALOGUE_HASH,
-  amendmentVersion: SUGGESTION_CALENDAR_AMENDMENT_VERSION,
-  prospectiveFrom: null, rubricVersion: null, authorityVersion: null,
+  ...QUARTERLY_PREVIEW_CONFIGURATION, rubricVersion: null, authorityVersion: null,
 });
 
 export interface SuggestionAcceptanceRevision {
@@ -58,25 +53,12 @@ function requireUuid(value: string): void {
 }
 
 export function previewUtcSuggestionWindow(acceptedAt: string) {
-  reputationInstant(acceptedAt);
-  const completionMonth = requireSourceMonth(acceptedAt.slice(0, 7));
-  const year = Number(completionMonth.slice(0, 4));
-  const month = Number(completionMonth.slice(5));
-  const firstMonth = Math.floor((month - 1) / 3) * 3 + 1;
-  const quarterStartsAt = `${year}-${String(firstMonth).padStart(2, '0')}-01T00:00:00.000Z`;
-  const finalMonth = `${year}-${String(firstMonth + 2).padStart(2, '0')}`;
-  const quarterEndsAt = `${nextReputationMonth(finalMonth)}-01T00:00:00.000Z`;
-  const sourceMonths = Array.from({ length: firstMonth + 3 - month }, (_, offset) => {
-    const sourceMonth = `${year}-${String(month + offset).padStart(2, '0')}`;
-    return Object.freeze({ sourceMonth, effectiveMonth: nextReputationMonth(sourceMonth) });
-  });
-  return Object.freeze({ calendarBasis: 'UTC-preview' as const, completionMonth, quarterStartsAt,
-    quarterEndsAt, sourceMonths: Object.freeze(sourceMonths) });
+  return previewUtcQuarterlyWindow(acceptedAt);
 }
 
 type PreviewReason = 'configuration_pending' | 'no_accepted_evidence' | 'evidence_pending'
   | 'not_in_qualifying_month' | 'reversed' | 'correction_timing_pending'
-  | 'concurrent_selection_pending' | 'qualification_candidate_allocation_pending';
+  | 'source_not_closed' | 'concurrent_selection_pending' | 'qualification_candidate_activation_pending';
 
 export function previewSuggestionQualification(input: {
   subjectUserId: string;
@@ -92,25 +74,14 @@ export function previewSuggestionQualification(input: {
   const result = (reason: PreviewReason) => Object.freeze({
     amendmentVersion: SUGGESTION_CALENDAR_AMENDMENT_VERSION,
     sourceMonth: input.sourceMonth, effectiveMonth, reason,
-    qualifies: reason === 'qualification_candidate_allocation_pending',
+    qualifies: reason === 'qualification_candidate_activation_pending',
     confirmedSuggestionPoints: 150 as const, appliedPoints: 0 as const,
     runtimeActivationAllowed: false as const,
   });
   const configuration = input.configuration;
-  if (configuration.runtimeActivationAllowed !== false
-    || configuration.policyVersion !== MONTHLY_REPUTATION_POLICY_VERSION
-    || configuration.catalogueHash !== MONTHLY_REPUTATION_CATALOGUE_HASH
-    || configuration.amendmentVersion !== SUGGESTION_CALENDAR_AMENDMENT_VERSION) {
-    throw new Error('suggestion_preview_configuration_invalid');
-  }
-  if (configuration.prospectiveFrom === null || !configuration.rubricVersion || !configuration.authorityVersion) {
+  if (!quarterlyPreviewReady(configuration, evaluatedAt) || !configuration.rubricVersion || !configuration.authorityVersion) {
     return result('configuration_pending');
   }
-  const prospectiveFrom = reputationInstant(configuration.prospectiveFrom);
-  if (prospectiveFrom < reputationInstant(SUGGESTION_CALENDAR_APPROVED_AT)) {
-    throw new Error('suggestion_preview_cutover_not_prospective');
-  }
-  if (evaluation < prospectiveFrom) return result('configuration_pending');
   if (!Array.isArray(input.revisions)) throw new Error('suggestion_evidence_invalid');
   const events = new Map<string, string>();
   const histories = new Map<string, SuggestionAcceptanceRevision[]>();
@@ -162,9 +133,10 @@ export function previewSuggestionQualification(input: {
       }
     }
     if (first.decision !== 'accepted') { pending.add('evidence_pending'); continue; }
-    const window = previewUtcSuggestionWindow(first.decidedAt);
-    if (reputationInstant(first.decidedAt) < prospectiveFrom
-      || !window.sourceMonths.some(month => month.sourceMonth === input.sourceMonth)) continue;
+    const qualification = previewQuarterlyCompletion({ sourceMonth: input.sourceMonth,
+      completion: { completedAt: first.decidedAt, revokedAt: null }, configuration }, evaluatedAt);
+    if (qualification.reason === 'source_not_closed') pending.add('source_not_closed');
+    if (!qualification.qualifies) continue;
     if (history.some(event => !event.useful || !event.independentlyReviewed || !event.manipulationScreened
       || event.competingAward !== 'none')) { pending.add('evidence_pending'); continue; }
     if (history.slice(1).some(event => event.decision === 'accepted')) {
@@ -178,11 +150,11 @@ export function previewSuggestionQualification(input: {
     }
     candidates += 1;
   }
-  for (const reason of ['evidence_pending', 'correction_timing_pending'] as const) {
+  for (const reason of ['evidence_pending', 'correction_timing_pending', 'source_not_closed'] as const) {
     if (pending.has(reason)) return result(reason);
   }
   if (candidates > 1 || (candidates > 0 && reversed)) return result('concurrent_selection_pending');
-  if (candidates === 1) return result('qualification_candidate_allocation_pending');
+  if (candidates === 1) return result('qualification_candidate_activation_pending');
   if (reversed) return result('reversed');
   return result(histories.size ? 'not_in_qualifying_month' : 'no_accepted_evidence');
 }
