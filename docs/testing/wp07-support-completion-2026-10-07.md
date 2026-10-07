@@ -92,8 +92,11 @@ used: its declared short-lived credential creation is outside this task's
 no-new-credentials boundary. Production role privileges remain unknown.
 The older AGENTS branch/table snapshot is historical and was not substituted.
 
-Canonical validation reports 20 migration files and 102 launch tables through
-0020. The existing local proposal is outside the automatic manifest and refuses
+The bounded `validate-migration-baseline.mjs` reports 20 required migration
+files through 0019 and 102 required table assertions. The canonical
+`loadApprovedMigrations` fixture loads 21 approved files, 0000 through 0020.
+Neither count establishes the current live catalog or production grants.
+The existing local proposal is outside the automatic manifest and refuses
 databases not named `lythaus_support_test%`. It contains six support tables,
 nine explicit indexes and three SECURITY DEFINER functions. UUIDs are supplied
 by the application, with no new database UUID default/function.
@@ -174,7 +177,7 @@ must use the committed exact candidate head reported to parent.
 | Support PG17 service/runtime/Workers | 35 passed, 0 failed/skipped | Node 22.23.3; PG 17.11, loopback-only disposable database, exact canonical migration bytes + existing local proposal + restricted roles. |
 | Owner support component/router/config | 10 passed in 3 files | Lock-pinned Vitest 4.1.11; console `npm ci --ignore-scripts --no-audit` with task-local npm cache. |
 | Console build | PASS | Vite 7.3.6; production default-off build. |
-| Native typecheck; migration baseline; retired-provider validation; whitespace | PASS | TypeScript 5.5.4; 20 migrations/102 launch tables; `git diff --check`. |
+| Native typecheck; bounded migration baseline; retired-provider validation; whitespace | PASS | TypeScript 5.5.4; validator checks 20 files through 0019/102 required table assertions; canonical PG fixture loads 21 files through 0020; `git diff --check`. |
 | Rendered owner console | PASS at 1440×900 and 390×844 | Playwright 1.62.0, system Chromium 151.0.7922.173, synthetic local intercepted APIs; Browser plugin unavailable. |
 | Page identity/nonblank/framework/keyboard | PASS | Title/URL, meaningful queues/detail, no overlay, keyboard kind switching/reply, status update. |
 | Private detail after role loss | PASS | Synthetic 403 clears queue/selection/private notes/reply controls. |
