@@ -8,6 +8,7 @@ import pg from 'pg';
 import { generateKeyPair, exportJWK, exportPKCS8, jwtVerify, SignJWT } from 'jose';
 import { hmacLookup, signAccessToken, uuidv7 } from '../../security/src/index.ts';
 import { loadApprovedMigrations } from '../../../scripts/ci/planetscale-migration-manifest.mjs';
+import { registerSupportCompletionCases } from './support-feedback-completion.postgres.mjs';
 
 const supplied=process.env.SUPPORT_LOCAL_PG_URL;
 if(!supplied)throw new Error('support_tests_require_disposable_local_pg17');
@@ -618,6 +619,8 @@ test('supplied policy is strict, immutable and has no default business/award con
   const accessor=policy();Object.defineProperty(accessor,'transitions',{enumerable:true,get(){throw new Error('PRIVATE_SENTINEL');}});assert.throws(()=>parseSupportServicePolicy(accessor),e=>e.message==='support_policy_invalid');
   const impossible=policy();impossible.limits.privateItems=1;impossible.transitions[1].evidenceTypes=['verification','usefulness'];assert.throws(()=>parseSupportServicePolicy(impossible),e=>e.message==='support_policy_invalid');
 });
+registerSupportCompletionCases({ test, assert, fixture, policy, problem, suggestion, database: () => control, publicWorker, workerEnvironment, invokeWorker });
+
 test('canonical support proposal, rollback and privacy-locator suite passes in a separate disposable PG17 process',async t=>{
   const childEnv={...process.env,SUPPORT_LOCAL_PG_URL:supplied};delete childEnv.NODE_TEST_CONTEXT;
   const result=await promisify(execFile)(process.execPath,['--experimental-strip-types','--test','--test-reporter=tap','packages/db/tests/support-feedback-canonical.postgres.mjs'],
@@ -626,4 +629,13 @@ test('canonical support proposal, rollback and privacy-locator suite passes in a
   assert.ok(Number.isSafeInteger(counts.tests)&&counts.tests>0);assert.equal(counts.pass,counts.tests);
   for(const name of ['fail','cancelled','skipped','todo'])assert.equal(counts[name],0);
   t.diagnostic(`canonical proposal child: ${counts.tests} passed, 0 failed/cancelled/skipped/todo`);
+});
+test('native support Jobs Workflows pass in a separate disposable PG17 process',async t=>{
+  const childEnv={...process.env,SUPPORT_LOCAL_PG_URL:supplied};delete childEnv.NODE_TEST_CONTEXT;
+  const result=await promisify(execFile)(process.execPath,['--experimental-strip-types','--test','--test-reporter=tap','apps/lythaus-jobs/tests/support-workflows.postgres.mjs'],
+    {cwd:root,env:childEnv,timeout:60000,maxBuffer:1024*1024});
+  const counts=Object.fromEntries([...result.stdout.matchAll(/^# (tests|pass|fail|cancelled|skipped|todo) (\d+)$/gm)].map(([,name,value])=>[name,Number(value)]));
+  assert.ok(Number.isSafeInteger(counts.tests)&&counts.tests>0);assert.equal(counts.pass,counts.tests);
+  for(const name of ['fail','cancelled','skipped','todo'])assert.equal(counts[name],0);
+  t.diagnostic(`native support Workflow child: ${counts.tests} passed, 0 failed/cancelled/skipped/todo`);
 });

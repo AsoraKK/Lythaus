@@ -1,19 +1,37 @@
 # S01: private support policy decision
 
-7 October 2026. Recommendation version: `support_pending_v1`, **pending**, not
-configured or owner-approved. Source baseline: main
+Updated 7 October 2026. **Partially approved; activation remains gated.** Parent
+reports Kyle's “Happy with this” at 10:09:36 UTC against its 07:54:53 recommendation
+in source thread `01a0f327-a7ab-771d-a745-2172db8580e6`. This approves distinct
+bugs/suggestions, review and needs-information flows, resolved/accepted,
+declined/duplicate outcomes, titles up to 160 characters, explanations/replies
+up to 2,000, five new tickets per hour and twenty per day per member with separate
+reply limits, and closed ticket text deletion after thirty days unless held.
+The exact reply rates, audit retention, deletion safeguards/hold authority and
+F01 are **not approved** by that receipt. No production policy version,
+configuration, DDL, activation or notifications are approved by inference.
+
+`applyApprovedSupportCompletionLimits` composes only the approved numerical
+values with a complete explicitly supplied candidate. It has no reply, owner,
+audit or taxonomy defaults. Character counts use Unicode scalar values after
+trimming; byte and HTTP bounds remain independent. The implementation and
+current requirements matrix are in
+[the completion packet](../testing/support-feedback-completion-2026-10-07.md).
+
+The following is the **historical PR947 fixture inventory**, recommendation
+version `support_pending_v1`; it is not the newly approved production policy.
+Its source baseline is main
 `2477c001d9f5a93865f00664c6369ced8da7b5ec`; the complete PG fixture is
 `packages/db/tests/support-feedback.postgres.mjs`, version `local_fixture_v1`.
 Production defaults do not exist in source: a supplied serialized policy is
 required. Other unit/UI fixtures use different values. The values below are the
 tested pending baseline, not a report of live configuration.
 
-**Recommendation:** confirm the narrow categories, reachable flows and technical
-bounds below for beta planning. For production closed-content retention, prefer
-30 days after closure, subject to Kyle/privacy-owner review; 90 days is a longer
-alternative. Neither is configured or approved for support. The one-hour value
-accelerates disposable tests only and is not a proposed production option. Keep
-support, notifications and points OFF.
+The original fixture remains unchanged so the earlier reviewed evidence is
+reproducible. New synthetic completion cases exercise the approved states and
+limits. The one-hour fixture age accelerates disposable tests only. The thirty-day
+direction is now approved; executing deletion still needs the separate safeguards
+and privacy review. Support, notifications and points remain OFF.
 
 | Existing tested value | Rationale and recommended disposition |
 | --- | --- |
@@ -32,7 +50,7 @@ Engineering also enforces a 32 KiB HTTP/policy envelope and a 128-character ASCI
 idempotency key. Those are existing parser bounds. Deployment flags, real grants,
 cache/binding acceptance and production migration application are separate gates.
 
-## Proposed production closed-content options
+## Historical retention comparison
 
 The [waitlist runbook](../runbooks/waitlist-release.md#waitlist-retention)
 explicitly records an approved product policy: remove converted/withdrawn
@@ -43,15 +61,15 @@ user-deleted content purge within 30 days and moderation cases through closure
 plus 90 days. It is a policy precedent; this packet supplies no separate support
 approval or fresh approval receipt for that copy.
 
-| Proposed option, not approved | Basis and tradeoff |
+| Option and current status | Basis and tradeoff |
 | --- | --- |
-| **30 days after closure — recommended for routine beta support** | Extends the approved finished-record waitlist pattern to a new purpose only after review. Limits retained ticket prose and private notes while allowing a month for verification/follow-up. Older reproductions and suggestion context become unavailable sooner. |
+| **30 days after closure — direction approved 7 October 10:09:36 UTC** | Limits retained ticket prose and private notes while allowing a month for verification/follow-up. Older reproductions and suggestion context become unavailable sooner. Deletion safeguards and hold authority remain gated. |
 | **90 days after closure** | Uses the public closed-moderation-case duration as a comparison, not authority to classify every support ticket as moderation. Allows longer regression investigation and follow-up, but keeps all associated support content longer. Choose only with a documented need and support-specific approval. |
 
 The current support policy has one global closed-content age. Either duration
 can be represented (2,592,000 or 7,776,000 seconds); a routine-30/exception-90 split
 would need an explicit classification/expiry contract and further implementation.
-Neither option ages open tickets; review stale open cases without automatically
+The thirty-day rule does not age open tickets; review stale open cases without automatically
 closing them. Deletion requests continue through the existing approved privacy
 workflow rather than waiting for the closure deadline. An active subject hold
 blocks support scrub, with placement/release authority still to be designated.
@@ -60,9 +78,9 @@ Decide audit/tombstone treatment separately from ticket prose. `deleteAudit: tru
 removes linked support audits when content is scrubbed; `false` retains them. The
 existing [365-day generic audit cleanup](../../apps/lythaus-jobs/src/index.ts) is
 source behavior, not a support-specific approval or a 365-day ticket-body option.
-Its hold predicate covers actor columns/user targets, but not support's metadata
-actor/submitter and request-target associations. Parent must serialize that Jobs
-gap before relying on retained support audit expiry. The adapter does not age
+The completion candidate now adds support metadata actor/submitter hold
+associations, tested through native Workflows. Parent review and serial integration
+remain required; no support-specific audit duration is inferred. The adapter does not age
 content-free request tombstones, which still carry a submitter ID. Their finite
 expiry or approved pseudonymized disposition needs a separate decision and
 implementation. Do not infer indefinite retention from the current adapter.
@@ -78,17 +96,17 @@ Deleted requests containing any residual member-visible decision text are also
 registered as present. A deletion timestamp alone does not prove their content
 was scrubbed; the real-PG regression checks the proposed completion count.
 
-Kyle/privacy-owner review must settle the support purpose/duration, audit and
+Kyle/privacy-owner review must settle the remaining audit and
 tombstone identity/expiry treatment, owner-contribution disposition, hold
 authority and corresponding user-facing notice. These are necessary policy and
-privacy/legal review inputs; the durations above are product proposals, not
+privacy/legal review inputs; the thirty-day direction is a product approval, not
 statutory deadlines or a claim of compliance.
 
-One question for parent to present after sharing the values/options above:
-
-> Confirm these categories, flows and limits for beta; choose 30 days after closure
-> (recommended) or 90 days for support content; and designate the privacy owner to
-> settle audit/tombstone expiry, owner-contribution treatment and hold authority?
+Parent's remaining decision request is limited to exact reply/owner rates,
+taxonomy/reason/evidence rules, audit/tombstone expiry and identity disposition,
+owner-contribution deletion, contributor hold safeguards and hold authority.
+Do not ask Kyle to reconfirm the already-approved numerical values or thirty-day
+direction. Synthetic reason and quota fixtures are not production choices.
 
 An answer approves the specified policy choices only. It does not activate
 support, authorize production DDL or notification sends, or settle F01's optional

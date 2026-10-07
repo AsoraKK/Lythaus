@@ -77,7 +77,7 @@ async function exportSupport(client: DatabaseClient, requestId: unknown, supplie
   for(const row of rows.rows.slice(0,p.privacy.batch)) {
     if(row.policy_version!==p.version)throw new Error('support_policy_version_mismatch');
     const request=projectMemberSupportRequest({...row.submission,id:row.id,submitterId:subject,revision:row.revision,state:row.state,
-      createdAt:row.createdAt,updatedAt:row.updatedAt,memberMessage:row.member_message},subject,p.contract);
+      createdAt:row.createdAt,updatedAt:row.updatedAt,memberMessage:row.member_message,closed:Boolean(row.closed_at)},subject,p.contract);
     const messages=await client.query(`SELECT id,author_role,body,revision,${TIME('created_at')} AS "createdAt" FROM support.messages WHERE request_id=$1 AND revision<=$3 ORDER BY revision LIMIT $2`,[row.id,p.limits.messages+1,row.revision]);
     const page=messages.rows.slice(0,p.limits.messages);
     items.push(Object.freeze({request,messages:Object.freeze(page.map(m=>Object.freeze({id:m.id,from:m.author_role,text:m.body,revision:m.revision,createdAt:m.createdAt}))),

@@ -12,13 +12,21 @@ import 'package:lythaus/features/support/support_feedback_config.dart';
 const _requestId = '018f0000-0000-7000-8000-000000000001';
 
 class _FakeSupportFeedbackClient implements SupportFeedbackClient {
-  _FakeSupportFeedbackClient(this.label, {this.deferNextList = false});
+  _FakeSupportFeedbackClient(
+    this.label, {
+    this.deferNextList = false,
+    this.approvedLimits = false,
+    this.closed = false,
+  });
 
   final String label;
   bool deferNextList;
+  final bool approvedLimits;
+  final bool closed;
   bool _current = true;
   Completer<Map<String, dynamic>>? _pendingList;
   final List<String> listedKinds = <String>[];
+  final List<int> listedLimits = <int>[];
   final List<Map<String, dynamic>> submissions = <Map<String, dynamic>>[];
   final List<String> submissionKeys = <String>[];
   final List<String> replies = <String>[];
@@ -46,11 +54,23 @@ class _FakeSupportFeedbackClient implements SupportFeedbackClient {
   Future<Map<String, dynamic>> getOptions() async => <String, dynamic>{
     'version': 'test_v1',
     'contract': <String, dynamic>{
+      if (approvedLimits)
+        'limits': <String, dynamic>{
+          'titleBytes': 1024,
+          'detailBytes': 8192,
+          'stepsBytes': 8192,
+          'memberMessageBytes': 8192,
+          'titleCharacters': 160,
+          'detailCharacters': 2000,
+          'stepsCharacters': 2000,
+          'memberMessageCharacters': 2000,
+        },
       'categories': <String, dynamic>{
         'problem': <String>['display'],
         'suggestion': <String>['navigation'],
       },
     },
+    'limits': <String, dynamic>{'page': 3},
   };
 
   @override
@@ -60,6 +80,7 @@ class _FakeSupportFeedbackClient implements SupportFeedbackClient {
     String? cursor,
   }) {
     listedKinds.add(kind);
+    listedLimits.add(limit);
     if (deferNextList) {
       deferNextList = false;
       _pendingList = Completer<Map<String, dynamic>>();
@@ -129,10 +150,101 @@ class _FakeSupportFeedbackClient implements SupportFeedbackClient {
         'createdAt': '2026-10-01T12:00:00Z',
         'updatedAt': '2026-10-01T12:00:00Z',
         'memberMessage': null,
+        'closed': closed,
       };
 }
 
 void main() {
+  testWidgets(
+    'approved Unicode title limits reject oversize text before invoking the API and respect configured pages',
+    (tester) async {
+      final client = _FakeSupportFeedbackClient(
+        'Synthetic member',
+        approvedLimits: true,
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [supportFeedbackClientProvider.overrideWithValue(client)],
+          child: const MaterialApp(home: SupportFeedbackScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(client.listedLimits, <int>[3]);
+      expect(find.text('Up to 160 characters.'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).at(0), '😀' * 161);
+      await tester.enterText(find.byType(TextField).at(1), 'Synthetic actual');
+      await tester.enterText(
+        find.byType(TextField).at(2),
+        'Synthetic expected',
+      );
+      await tester.scrollUntilVisible(
+        find.text('Send private report'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Send private report'));
+      await tester.pumpAndSettle();
+      expect(client.submissions, isEmpty);
+      expect(
+        find.text('Shorten the request text to the limits shown.'),
+        findsOneWidget,
+      );
+      await tester.drag(find.byType(ListView), const Offset(0, 1600));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).at(0), '😀' * 160);
+      await tester.scrollUntilVisible(
+        find.text('Send private report'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Send private report'));
+      await tester.pumpAndSettle();
+      expect(client.submissions.single['title'], '😀' * 160);
+    },
+  );
+
+  testWidgets(
+    'closed private requests show their history and disable replies',
+    (tester) async {
+      final client = _FakeSupportFeedbackClient(
+        'Synthetic closed',
+        closed: true,
+        approvedLimits: true,
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [supportFeedbackClientProvider.overrideWithValue(client)],
+          child: const MaterialApp(home: SupportFeedbackScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Synthetic closed problem'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.drag(find.byType(ListView), const Offset(0, -180));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Synthetic closed problem'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Send reply'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Send reply'),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(find.text('This request is closed.'), findsOneWidget);
+      expect(client.replies, isEmpty);
+    },
+  );
+
   test('feature is default-off in the member build', () {
     expect(supportFeedbackEnabled, isFalse);
   });

@@ -30,11 +30,18 @@ function byteLength(value) {
   return new TextEncoder().encode(value).length;
 }
 
+function textCounter(value, bytes, characters) {
+  return characters === undefined ? `${byteLength(value)} / ${bytes} UTF-8 bytes`
+    : `${[...value.trim()].length} / ${characters} characters`;
+}
+
 function validOptions(value) {
   const requiredServiceLimits = ['page', 'messages', 'privateItems', 'messageBytes', 'noteBytes', 'evidenceBytes', 'referenceBytes'];
   return value && typeof value.version === 'string'
     && value.contract?.categories?.problem?.length && value.contract?.categories?.suggestion?.length
     && Number.isSafeInteger(value.contract?.limits?.memberMessageBytes) && value.contract.limits.memberMessageBytes > 0
+    && ['titleCharacters', 'detailCharacters', 'stepsCharacters', 'memberMessageCharacters'].every(key =>
+      value.contract.limits[key] === undefined || (Number.isSafeInteger(value.contract.limits[key]) && value.contract.limits[key] > 0))
     && requiredServiceLimits.every(key => Number.isSafeInteger(value.limits?.[key]) && value.limits[key] > 0)
     && Array.isArray(value.transitions) && Array.isArray(value.evidenceTypes);
 }
@@ -80,7 +87,10 @@ function SupportFeedback() {
   const hasEveryRequiredEvidence = (selectedTransition?.evidenceTypes ?? [])
     .every(type => selectedDecisionEvidence.some(item => item.type === type));
   const publicMessageLimit = Math.min(options?.limits?.messageBytes ?? 1, options?.contract?.limits?.memberMessageBytes ?? 1);
-  const fitsBytes = (value, limit) => byteLength(value) <= limit;
+  const publicCharacterLimit = options?.contract?.limits?.memberMessageCharacters;
+  const detailCharacterLimit = options?.contract?.limits?.detailCharacters;
+  const fitsBytes = (value, limit, characters) => byteLength(value) <= limit
+    && (characters === undefined || [...value.trim()].length <= characters);
 
   useEffect(() => {
     let active = true;
@@ -261,22 +271,23 @@ function SupportFeedback() {
             {detail.request.kind === 'problem' ? <div className="support-content-grid"><section><h3>What happened</h3><p>{detail.request.actual}</p></section><section><h3>Expected behavior</h3><p>{detail.request.expected}</p></section>{detail.request.reproductionSteps ? <section><h3>Reproduction steps</h3><p>{detail.request.reproductionSteps}</p></section> : null}</div> : <div className="support-content-grid"><section><h3>Suggested change</h3><p>{detail.request.improvement}</p></section><section><h3>Expected benefit</h3><p>{detail.request.benefit}</p></section></div>}
             <section className="support-section"><h3>Member conversation</h3>
               {!detail.messages.length ? <p className="muted">No messages recorded.</p> : <ol className="support-messages">{detail.messages.map(item => <li key={item.id}><strong>{item.from === 'owner' ? 'Support' : 'Member'} · {time(item.createdAt)}</strong><p>{item.text}</p></li>)}</ol>}
-              <label className="support-field"><span>Reply to member</span><textarea aria-label="Reply to member" rows="3" maxLength={publicMessageLimit} disabled={busy} value={reply} onChange={event => setReply(event.target.value)} /><small>{byteLength(reply)} / {publicMessageLimit} UTF-8 bytes</small></label>
-              <LythButton disabled={busy || !reply.trim() || !fitsBytes(reply, publicMessageLimit)} onClick={() => mutate('Reply saved.', { expectedRevision: detail.request.revision, message: reply.trim() }, 'messages')}>{busy ? 'Saving…' : 'Send reply'}</LythButton>
+              <label className="support-field"><span>Reply to member</span><textarea aria-label="Reply to member" rows="3" maxLength={publicCharacterLimit === undefined ? publicMessageLimit : undefined} disabled={busy || detail.request.closed === true} value={reply} onChange={event => setReply(event.target.value)} /><small>{textCounter(reply, publicMessageLimit, publicCharacterLimit)}</small></label>
+              {detail.request.closed === true && <p>This request is closed.</p>}
+              <LythButton disabled={busy || detail.request.closed === true || !reply.trim() || !fitsBytes(reply, publicMessageLimit, publicCharacterLimit)} onClick={() => mutate('Reply saved.', { expectedRevision: detail.request.revision, message: reply.trim() }, 'messages')}>{busy ? 'Saving…' : 'Send reply'}</LythButton>
             </section>
             <section className="support-section"><h3>Owner-only notes</h3>
               {!detail.private.notes.length ? <p className="muted">No private notes recorded.</p> : <ul>{detail.private.notes.map(item => <li key={item.id}><p>{item.text}</p><span>{time(item.createdAt)}</span></li>)}</ul>}
-              <label className="support-field"><span>Internal note</span><textarea aria-label="Internal note" rows="3" maxLength={options.limits.noteBytes} disabled={busy} value={note} onChange={event => setNote(event.target.value)} /><small>{byteLength(note)} / {options.limits.noteBytes} UTF-8 bytes</small></label>
-              <LythButton variant="secondary" disabled={busy || !note.trim() || !fitsBytes(note, options.limits.noteBytes)} onClick={() => mutate('Private note saved.', { expectedRevision: detail.request.revision, text: note.trim() }, 'notes')}>Save private note</LythButton>
+              <label className="support-field"><span>Internal note</span><textarea aria-label="Internal note" rows="3" maxLength={detailCharacterLimit === undefined ? options.limits.noteBytes : undefined} disabled={busy} value={note} onChange={event => setNote(event.target.value)} /><small>{textCounter(note, options.limits.noteBytes, detailCharacterLimit)}</small></label>
+              <LythButton variant="secondary" disabled={busy || !note.trim() || !fitsBytes(note, options.limits.noteBytes, detailCharacterLimit)} onClick={() => mutate('Private note saved.', { expectedRevision: detail.request.revision, text: note.trim() }, 'notes')}>Save private note</LythButton>
             </section>
             <section className="support-section"><h3>Verification evidence</h3>
               {!detail.private.evidence.length ? <p className="muted">No verification evidence recorded.</p> : <ul>{detail.private.evidence.map(item => <li key={item.id}><p><strong>{readable(item.type)}</strong> · {item.description}</p>{item.reference ? <p className="support-reference">{item.reference}</p> : null}<span>{time(item.createdAt)}</span></li>)}</ul>}
               <div className="support-evidence-form">
                 <label className="support-field"><span>Evidence type</span><select aria-label="Evidence type" disabled={busy} value={evidenceType} onChange={event => setEvidenceType(event.target.value)}><option value="">Choose type</option>{options.evidenceTypes.map(value => <option value={value} key={value}>{readable(value)}</option>)}</select></label>
-                <label className="support-field"><span>Evidence description</span><textarea aria-label="Evidence description" rows="2" maxLength={options.limits.evidenceBytes} disabled={busy} value={evidenceDescription} onChange={event => setEvidenceDescription(event.target.value)} /><small>{byteLength(evidenceDescription)} / {options.limits.evidenceBytes} UTF-8 bytes</small></label>
-                <label className="support-field"><span>Evidence reference (optional)</span><input aria-label="Evidence reference (optional)" maxLength={options.limits.referenceBytes} disabled={busy} value={evidenceReference} onChange={event => setEvidenceReference(event.target.value)} /><small>{byteLength(evidenceReference)} / {options.limits.referenceBytes} UTF-8 bytes</small></label>
+                <label className="support-field"><span>Evidence description</span><textarea aria-label="Evidence description" rows="2" maxLength={detailCharacterLimit === undefined ? options.limits.evidenceBytes : undefined} disabled={busy} value={evidenceDescription} onChange={event => setEvidenceDescription(event.target.value)} /><small>{textCounter(evidenceDescription, options.limits.evidenceBytes, detailCharacterLimit)}</small></label>
+                <label className="support-field"><span>Evidence reference (optional)</span><input aria-label="Evidence reference (optional)" maxLength={options.limits.referenceBytes} disabled={busy} value={evidenceReference} onChange={event => setEvidenceReference(event.target.value)} /><small>{evidenceType === 'duplicate_reference' ? 'A different canonical request ID of the same kind is required.' : `${byteLength(evidenceReference)} / ${options.limits.referenceBytes} UTF-8 bytes`}</small></label>
               </div>
-              <LythButton variant="secondary" disabled={busy || !evidenceType || !evidenceDescription.trim() || !fitsBytes(evidenceDescription, options.limits.evidenceBytes) || !fitsBytes(evidenceReference, options.limits.referenceBytes)} onClick={() => mutate('Evidence recorded.', { expectedRevision: detail.request.revision, type: evidenceType, description: evidenceDescription.trim(), ...(evidenceReference.trim() ? { reference: evidenceReference.trim() } : {}) }, 'evidence')}>Record evidence</LythButton>
+              <LythButton variant="secondary" disabled={busy || !evidenceType || !evidenceDescription.trim() || !fitsBytes(evidenceDescription, options.limits.evidenceBytes, detailCharacterLimit) || !fitsBytes(evidenceReference, options.limits.referenceBytes)} onClick={() => mutate('Evidence recorded.', { expectedRevision: detail.request.revision, type: evidenceType, description: evidenceDescription.trim(), ...(evidenceReference.trim() ? { reference: evidenceReference.trim() } : {}) }, 'evidence')}>Record evidence</LythButton>
             </section>
             <section className="support-section"><h3>Decision</h3>
               {!transitions.length ? <p className="muted">No configured decision is available from this state.</p> : <>
@@ -284,8 +295,8 @@ function SupportFeedback() {
                 {selectedTransition?.evidenceTypes?.length ? <fieldset className="support-evidence-select"><legend>Evidence required for this decision</legend>
                   {!decisionEvidence.length ? <p className="muted">Record matching verification evidence before this decision can be saved.</p> : decisionEvidence.map(item => <label key={item.id}><input type="checkbox" disabled={busy} checked={selectedEvidence.includes(item.id)} onChange={event => setSelectedEvidence(values => event.target.checked ? [...values, item.id] : values.filter(value => value !== item.id))} />{readable(item.type)} · {item.description}</label>)}
                 </fieldset> : null}
-                <label className="support-field"><span>Message shown to the member</span><textarea aria-label="Message shown to the member" rows="3" maxLength={publicMessageLimit} disabled={busy} value={decisionMessage} onChange={event => setDecisionMessage(event.target.value)} /><small>{byteLength(decisionMessage)} / {publicMessageLimit} UTF-8 bytes</small></label>
-                <LythButton disabled={busy || !selectedTransition || !decisionMessage.trim() || !fitsBytes(decisionMessage, publicMessageLimit) || !hasEveryRequiredEvidence} onClick={() => mutate('Decision saved.', { expectedRevision: detail.request.revision, state: selectedTransition.to, reason: selectedDecision.reason, memberMessage: decisionMessage.trim(), evidenceIds: selectedDecisionEvidence.map(item => item.id) }, 'decision')}>Save decision</LythButton>
+                <label className="support-field"><span>Message shown to the member</span><textarea aria-label="Message shown to the member" rows="3" maxLength={publicCharacterLimit === undefined ? publicMessageLimit : undefined} disabled={busy} value={decisionMessage} onChange={event => setDecisionMessage(event.target.value)} /><small>{textCounter(decisionMessage, publicMessageLimit, publicCharacterLimit)}</small></label>
+                <LythButton disabled={busy || !selectedTransition || !decisionMessage.trim() || !fitsBytes(decisionMessage, publicMessageLimit, publicCharacterLimit) || !hasEveryRequiredEvidence} onClick={() => mutate('Decision saved.', { expectedRevision: detail.request.revision, state: selectedTransition.to, reason: selectedDecision.reason, memberMessage: decisionMessage.trim(), evidenceIds: selectedDecisionEvidence.map(item => item.id) }, 'decision')}>Save decision</LythButton>
               </>}
             </section>
           </> : null}

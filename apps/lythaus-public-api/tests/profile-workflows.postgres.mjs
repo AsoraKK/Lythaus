@@ -141,7 +141,8 @@ test('native full export and delete use private preferences, R2, canonical grant
   const successfulSteps = fixture.steps.slice(stepStart).filter(s => s.state === 'succeeded').map(s => s.name);
   assert.deepEqual(successfulSteps, ['resolve-request', 'lock-account-and-revoke-sessions', 'evaluate-legal-holds',
     'purge-support-feedback-for-deletion', 'tombstone-private-beta', 'wait-private-beta-upload-expiry', 'purge-private-beta',
-    'redact-authoritative-content', 'reset-presentation-preferences', 'purge-media-and-mark-locator', 'complete-request-and-tombstone']);
+    'redact-authoritative-content', 'reset-presentation-preferences', 'purge-media-and-mark-locator',
+    'verify-support-deletion-locations', 'complete-request-and-tombstone']);
   assert.ok(fixture.statements.some(s => s.role === 'lythaus_privacy' && s.values[0] === subjectId && s.text.includes('SET presentation_left_handed = false')));
   await completed('delete', deleted);
   assert.deepEqual(await preferences(subjectId), defaults);

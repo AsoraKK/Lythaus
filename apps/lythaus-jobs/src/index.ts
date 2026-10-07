@@ -23,6 +23,7 @@ import { MONTHLY_REPUTATION_POLICY_VERSION } from '../../../packages/contracts/s
 import { tombstoneBetaCases, purgeBetaMedia } from '../../../packages/db/src/authenticity-beta.ts';
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 import { presentationPreferencesIdentityExportQuery, resetPresentationPreferences, validatedPresentationPreferencesIdentity } from './runtime-policy.ts';
+import { reconcileSupportPrivacyDeletionLocations } from '../../../packages/db/src/support-feedback-privacy-runtime.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -2250,11 +2251,18 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       return objects.rows.length + uploads.rows.length + deletedExports;
     });
 
+    await step.do('verify-support-deletion-locations', async () => {
+      const pending = await transaction(this.env.DB_PRIVACY_FRESH, client => reconcileSupportPrivacyDeletionLocations(client, subjectId));
+      if (pending > 0) throw new Error('support_privacy_deletion_pending');
+      return true;
+    });
+
     await step.do('complete-request-and-tombstone', async () => {
       const evidence = new TextEncoder().encode(`${subjectId}:${requestId}:${new Date().toISOString()}`);
       const digest = await crypto.subtle.digest('SHA-256', evidence);
       const evidenceHash = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, '0')).join('');
       await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
+        if (await reconcileSupportPrivacyDeletionLocations(client, subjectId) > 0) throw new Error('support_privacy_deletion_pending');
         await client.query(`INSERT INTO privacy.deletion_tombstones (subject_id, evidence_hash) VALUES ($1, $2) ON CONFLICT (subject_id) DO UPDATE SET completed_at = now(), evidence_hash = EXCLUDED.evidence_hash`, [subjectId, evidenceHash]);
         await client.query(
           `INSERT INTO privacy.subject_data_locations
@@ -2570,6 +2578,8 @@ export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: s
                  AND (
                    hold.subject_id = audit_event.actor_id
                    OR (audit_event.target_type = 'user' AND audit_event.target_id = hold.subject_id)
+                   OR (audit_event.action LIKE 'support.%' AND hold.subject_id::text IN
+                     (audit_event.metadata->>'subjectId', audit_event.metadata->>'actorId'))
                  )
             )
           RETURNING audit_event.id`,
@@ -2584,7 +2594,7 @@ export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: s
       return result.rowCount ?? 0;
     });
     const expiredIdempotencyTombstones = await step.do('purge-anonymized-idempotency-tombstones', async () => {
-      const result = await query<{ scope: string }>(this.env.DB_JOBS_FRESH,
+      const result = await query<{ scope: string }>(this.env.DB_PRIVACY_FRESH,
         `DELETE FROM system.idempotency_keys
           WHERE actor_id IS NULL
             AND COALESCE(response ->> 'state', '') <> 'completed'
