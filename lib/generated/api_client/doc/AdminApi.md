@@ -201,7 +201,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **adminAppealsAdjudicate**
-> AppealAdjudicationResponse adminAppealsAdjudicate(appealId, appealAdjudicationRequest)
+> AppealAdjudicationResponse adminAppealsAdjudicate(origin, appealId, appealAdjudicationRequest)
 
 Record a trained editorial appeal adjudication
 
@@ -216,11 +216,12 @@ import 'package:lythaus_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
 
 final api = LythausApiClient().getAdminApi();
+final String origin = origin_example; // String | Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
 final String appealId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final AppealAdjudicationRequest appealAdjudicationRequest = {"decision":"uphold","reasonCode":"APPEAL.PANEL_CONFIRMED"}; // AppealAdjudicationRequest |
 
 try {
-    final response = api.adminAppealsAdjudicate(appealId, appealAdjudicationRequest);
+    final response = api.adminAppealsAdjudicate(origin, appealId, appealAdjudicationRequest);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AdminApi->adminAppealsAdjudicate: $e\n');
@@ -231,6 +232,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **origin** | **String**| Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it. | [default to 'https://admin.lythaus.co']
  **appealId** | **String**|  |
  **appealAdjudicationRequest** | [**AppealAdjudicationRequest**](AppealAdjudicationRequest.md)|  |
 
@@ -569,7 +571,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **adminEditorialPublicationsCreate**
-> EditorialPublicationResponse adminEditorialPublicationsCreate(editorialPublicationCreate)
+> EditorialPublicationResponse adminEditorialPublicationsCreate(origin, editorialPublicationCreate)
 
 Publish an editorial News Board entry
 
@@ -582,10 +584,11 @@ import 'package:lythaus_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
 
 final api = LythausApiClient().getAdminApi();
+final String origin = origin_example; // String | Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
 final EditorialPublicationCreate editorialPublicationCreate = ; // EditorialPublicationCreate |
 
 try {
-    final response = api.adminEditorialPublicationsCreate(editorialPublicationCreate);
+    final response = api.adminEditorialPublicationsCreate(origin, editorialPublicationCreate);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AdminApi->adminEditorialPublicationsCreate: $e\n');
@@ -596,6 +599,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **origin** | **String**| Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it. | [default to 'https://admin.lythaus.co']
  **editorialPublicationCreate** | [**EditorialPublicationCreate**](EditorialPublicationCreate.md)|  |
 
 ### Return type
@@ -698,7 +702,7 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **adminLegalHoldsClear**
-> LegalHoldResponse adminLegalHoldsClear(holdId)
+> LegalHoldResponse adminLegalHoldsClear(origin, holdId, requestBody)
 
 Clear a legal hold
 
@@ -711,10 +715,12 @@ import 'package:lythaus_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
 
 final api = LythausApiClient().getAdminApi();
+final String origin = origin_example; // String | Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
 final String holdId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final BuiltMap<String, JsonObject> requestBody = {}; // BuiltMap<String, JsonObject> | Optional JSON object; clearing uses holdId and does not require a body. The JSON Content-Type header is required even when the body is absent.
 
 try {
-    final response = api.adminLegalHoldsClear(holdId);
+    final response = api.adminLegalHoldsClear(origin, holdId, requestBody);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AdminApi->adminLegalHoldsClear: $e\n');
@@ -725,7 +731,9 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **origin** | **String**| Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it. | [default to 'https://admin.lythaus.co']
  **holdId** | **String**|  |
+ **requestBody** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md)| Optional JSON object; clearing uses holdId and does not require a body. The JSON Content-Type header is required even when the body is absent. | [optional]
 
 ### Return type
 
@@ -737,13 +745,13 @@ Name | Type | Description  | Notes
 
 ### HTTP request headers
 
- - **Content-Type**: Not defined
+ - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **adminLegalHoldsCreate**
-> LegalHoldResponse adminLegalHoldsCreate(legalHoldCreate)
+> LegalHoldResponse adminLegalHoldsCreate(origin, legalHoldCreate)
 
 Place a legal hold
 
@@ -756,10 +764,11 @@ import 'package:lythaus_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
 
 final api = LythausApiClient().getAdminApi();
+final String origin = origin_example; // String | Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
 final LegalHoldCreate legalHoldCreate = ; // LegalHoldCreate |
 
 try {
-    final response = api.adminLegalHoldsCreate(legalHoldCreate);
+    final response = api.adminLegalHoldsCreate(origin, legalHoldCreate);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AdminApi->adminLegalHoldsCreate: $e\n');
@@ -770,6 +779,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **origin** | **String**| Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it. | [default to 'https://admin.lythaus.co']
  **legalHoldCreate** | [**LegalHoldCreate**](LegalHoldCreate.md)|  |
 
 ### Return type
@@ -870,7 +880,7 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **adminModerationDecision**
-> ModerationDecisionResponse adminModerationDecision(caseId, moderationDecisionRequest)
+> ModerationDecisionResponse adminModerationDecision(origin, caseId, moderationDecisionRequest)
 
 Apply a moderation decision
 
@@ -883,11 +893,12 @@ import 'package:lythaus_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
 
 final api = LythausApiClient().getAdminApi();
+final String origin = origin_example; // String | Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
 final String caseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final ModerationDecisionRequest moderationDecisionRequest = ; // ModerationDecisionRequest |
 
 try {
-    final response = api.adminModerationDecision(caseId, moderationDecisionRequest);
+    final response = api.adminModerationDecision(origin, caseId, moderationDecisionRequest);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AdminApi->adminModerationDecision: $e\n');
@@ -898,6 +909,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **origin** | **String**| Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it. | [default to 'https://admin.lythaus.co']
  **caseId** | **String**|  |
  **moderationDecisionRequest** | [**ModerationDecisionRequest**](ModerationDecisionRequest.md)|  |
 
@@ -1054,7 +1066,7 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **adminReviewerQualificationCreate**
-> ReviewerQualificationResponse adminReviewerQualificationCreate(reviewerId, reviewerQualificationUpdateRequest)
+> ReviewerQualificationResponse adminReviewerQualificationCreate(origin, reviewerId, reviewerQualificationUpdateRequest)
 
 Set reviewer qualification state
 
@@ -1069,11 +1081,12 @@ import 'package:lythaus_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
 
 final api = LythausApiClient().getAdminApi();
+final String origin = origin_example; // String | Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
 final String reviewerId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest = ; // ReviewerQualificationUpdateRequest |
 
 try {
-    final response = api.adminReviewerQualificationCreate(reviewerId, reviewerQualificationUpdateRequest);
+    final response = api.adminReviewerQualificationCreate(origin, reviewerId, reviewerQualificationUpdateRequest);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AdminApi->adminReviewerQualificationCreate: $e\n');
@@ -1084,6 +1097,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **origin** | **String**| Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it. | [default to 'https://admin.lythaus.co']
  **reviewerId** | **String**|  |
  **reviewerQualificationUpdateRequest** | [**ReviewerQualificationUpdateRequest**](ReviewerQualificationUpdateRequest.md)|  |
 
@@ -1103,7 +1117,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **adminReviewerQualificationUpdate**
-> ReviewerQualificationResponse adminReviewerQualificationUpdate(reviewerId, reviewerQualificationUpdateRequest)
+> ReviewerQualificationResponse adminReviewerQualificationUpdate(origin, reviewerId, reviewerQualificationUpdateRequest)
 
 Idempotently set reviewer qualification state
 
@@ -1116,11 +1130,12 @@ import 'package:lythaus_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
 
 final api = LythausApiClient().getAdminApi();
+final String origin = origin_example; // String | Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
 final String reviewerId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest = ; // ReviewerQualificationUpdateRequest |
 
 try {
-    final response = api.adminReviewerQualificationUpdate(reviewerId, reviewerQualificationUpdateRequest);
+    final response = api.adminReviewerQualificationUpdate(origin, reviewerId, reviewerQualificationUpdateRequest);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AdminApi->adminReviewerQualificationUpdate: $e\n');
@@ -1131,6 +1146,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **origin** | **String**| Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it. | [default to 'https://admin.lythaus.co']
  **reviewerId** | **String**|  |
  **reviewerQualificationUpdateRequest** | [**ReviewerQualificationUpdateRequest**](ReviewerQualificationUpdateRequest.md)|  |
 
@@ -1485,7 +1501,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **adminUsersStatusUpdate**
-> AccountStatusResponse adminUsersStatusUpdate(userId, accountStatusUpdate)
+> AccountStatusResponse adminUsersStatusUpdate(origin, userId, accountStatusUpdate)
 
 Update account status
 
@@ -1498,11 +1514,12 @@ import 'package:lythaus_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
 
 final api = LythausApiClient().getAdminApi();
+final String origin = origin_example; // String | Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
 final String userId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final AccountStatusUpdate accountStatusUpdate = ; // AccountStatusUpdate |
 
 try {
-    final response = api.adminUsersStatusUpdate(userId, accountStatusUpdate);
+    final response = api.adminUsersStatusUpdate(origin, userId, accountStatusUpdate);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AdminApi->adminUsersStatusUpdate: $e\n');
@@ -1513,6 +1530,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **origin** | **String**| Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it. | [default to 'https://admin.lythaus.co']
  **userId** | **String**|  |
  **accountStatusUpdate** | [**AccountStatusUpdate**](AccountStatusUpdate.md)|  |
 
@@ -1532,7 +1550,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **adminUsersTierUpdate**
-> AccountTierResponse adminUsersTierUpdate(userId, accountTierUpdate)
+> AccountTierResponse adminUsersTierUpdate(origin, userId, accountTierUpdate)
 
 Update subscription tier
 
@@ -1545,11 +1563,12 @@ import 'package:lythaus_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
 
 final api = LythausApiClient().getAdminApi();
+final String origin = origin_example; // String | Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
 final String userId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final AccountTierUpdate accountTierUpdate = ; // AccountTierUpdate |
 
 try {
-    final response = api.adminUsersTierUpdate(userId, accountTierUpdate);
+    final response = api.adminUsersTierUpdate(origin, userId, accountTierUpdate);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AdminApi->adminUsersTierUpdate: $e\n');
@@ -1560,6 +1579,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **origin** | **String**| Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it. | [default to 'https://admin.lythaus.co']
  **userId** | **String**|  |
  **accountTierUpdate** | [**AccountTierUpdate**](AccountTierUpdate.md)|  |
 

@@ -65,7 +65,7 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **adminReviewerQualificationCreate**
-> ReviewerQualificationResponse adminReviewerQualificationCreate(reviewerId, reviewerQualificationUpdateRequest)
+> ReviewerQualificationResponse adminReviewerQualificationCreate(origin, reviewerId, reviewerQualificationUpdateRequest)
 
 Set reviewer qualification state
 
@@ -80,11 +80,12 @@ import 'package:lythaus_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
 
 final api = LythausApiClient().getAppealsApi();
+final String origin = origin_example; // String | Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
 final String reviewerId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest = ; // ReviewerQualificationUpdateRequest |
 
 try {
-    final response = api.adminReviewerQualificationCreate(reviewerId, reviewerQualificationUpdateRequest);
+    final response = api.adminReviewerQualificationCreate(origin, reviewerId, reviewerQualificationUpdateRequest);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AppealsApi->adminReviewerQualificationCreate: $e\n');
@@ -95,6 +96,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **origin** | **String**| Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it. | [default to 'https://admin.lythaus.co']
  **reviewerId** | **String**|  |
  **reviewerQualificationUpdateRequest** | [**ReviewerQualificationUpdateRequest**](ReviewerQualificationUpdateRequest.md)|  |
 
@@ -114,7 +116,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **adminReviewerQualificationUpdate**
-> ReviewerQualificationResponse adminReviewerQualificationUpdate(reviewerId, reviewerQualificationUpdateRequest)
+> ReviewerQualificationResponse adminReviewerQualificationUpdate(origin, reviewerId, reviewerQualificationUpdateRequest)
 
 Idempotently set reviewer qualification state
 
@@ -127,11 +129,12 @@ import 'package:lythaus_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
 
 final api = LythausApiClient().getAppealsApi();
+final String origin = origin_example; // String | Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
 final String reviewerId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest = ; // ReviewerQualificationUpdateRequest |
 
 try {
-    final response = api.adminReviewerQualificationUpdate(reviewerId, reviewerQualificationUpdateRequest);
+    final response = api.adminReviewerQualificationUpdate(origin, reviewerId, reviewerQualificationUpdateRequest);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling AppealsApi->adminReviewerQualificationUpdate: $e\n');
@@ -142,6 +145,7 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **origin** | **String**| Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it. | [default to 'https://admin.lythaus.co']
  **reviewerId** | **String**|  |
  **reviewerQualificationUpdateRequest** | [**ReviewerQualificationUpdateRequest**](ReviewerQualificationUpdateRequest.md)|  |
 

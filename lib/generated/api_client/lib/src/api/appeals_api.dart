@@ -115,6 +115,7 @@ class AppealsApi {
   /// Compatibility method for the idempotent qualification update. Reviewer training remains separate from reputation level.
   ///
   /// Parameters:
+  /// * [origin] - Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
   /// * [reviewerId]
   /// * [reviewerQualificationUpdateRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -127,6 +128,7 @@ class AppealsApi {
   /// Returns a [Future] containing a [Response] with a [ReviewerQualificationResponse] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<ReviewerQualificationResponse>> adminReviewerQualificationCreate({
+    String origin = 'https://admin.lythaus.co',
     required String reviewerId,
     required ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest,
     CancelToken? cancelToken,
@@ -140,6 +142,7 @@ class AppealsApi {
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
+        r'Origin': origin,
         ...?headers,
       },
       extra: <String, dynamic>{
@@ -219,6 +222,7 @@ class AppealsApi {
   ///
   ///
   /// Parameters:
+  /// * [origin] - Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
   /// * [reviewerId]
   /// * [reviewerQualificationUpdateRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -231,6 +235,7 @@ class AppealsApi {
   /// Returns a [Future] containing a [Response] with a [ReviewerQualificationResponse] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<ReviewerQualificationResponse>> adminReviewerQualificationUpdate({
+    String origin = 'https://admin.lythaus.co',
     required String reviewerId,
     required ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest,
     CancelToken? cancelToken,
@@ -244,6 +249,7 @@ class AppealsApi {
     final _options = Options(
       method: r'PUT',
       headers: <String, dynamic>{
+        r'Origin': origin,
         ...?headers,
       },
       extra: <String, dynamic>{

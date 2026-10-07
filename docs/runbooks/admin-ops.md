@@ -11,21 +11,35 @@ direct requests are for approved incident response or automation only.
 - Start from an approved Cloudflare Access session. Where the Worker accepts an
   admin JWT, use only the short-lived, approved principal for that session; do
   not place tokens in shell history, tickets, screenshots, or logs.
-- Use the existing admin origin, `https://admin-api.lythaus.co/api`, and retain
-  the returned correlation ID with the incident record.
+- Submit admin mutations through the approved same-origin Control Panel at
+  `https://admin.lythaus.co/api/admin/*`. The request must carry an `Origin`
+  matching both its URL origin and `CORS_ALLOWED_ORIGINS`, plus
+  `Content-Type: application/json` (including bodyless legal-hold clearing).
+  Direct callers must meet the same admission contract. Missing or untrusted
+  origins return `403`; a missing or non-JSON content type returns `415`.
+  Retain the returned correlation ID with the incident record.
 - Admin responses contain sensitive operational data. Preserve
   `Cache-Control: private, no-store`; do not cache, replay, or forward a
   response through a shared proxy.
 - Every write requires the contract's reason code or request body and must be
-  reconciled against the audit stream. Stop on `401`, `403`, `400`, or an
+  reconciled against the audit stream. Stop on `401`, `403`, `400`, `415`, or an
   unexpected response rather than retrying an unchanged request.
 - Retired admin and public-voting namespaces, direct appeal overrides, timed
   appeal resolution, and public voting are prohibited.
 
 ## Live operations
 
-The following 17 operations are the complete supported admin surface. Paths in
-this table are relative to `https://admin-api.lythaus.co/api`.
+Generated Dart clients share the Public API base URL by default. Create an
+Admin client with
+`LythausApiClient(basePathOverride: 'https://admin.lythaus.co/api')` before
+using its Admin methods. The mutation Origin argument defaults to the approved
+admin origin. Legal-hold clearing keeps its optional body and sends the required
+JSON media type when that body is omitted. Approved Access authorization is
+still required.
+
+The following operations document the legal-hold, moderation, account, and
+read-only admin surface. Paths in this table are relative to
+`https://admin.lythaus.co/api`.
 
 | Method | Path | Operational use |
 | --- | --- | --- |

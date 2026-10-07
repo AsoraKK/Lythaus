@@ -23,13 +23,20 @@ async function sql(text, values = [], role) {
   } finally { await client.end(); }
 }
 const aggregate = () => sql(OVERVIEW_AGGREGATE_SQL, [scope.current.start, scope.current.end, scope.previous.start, scope.previous.end, 5001], 'lythaus_admin');
-const runTransaction = (reads, failAudit = false) => async (_binding, work) => {
+const runTransaction = (reads, failAudit = false, clockOffsetSeconds = 0, sourceTimeout = false) => async (_binding, work) => {
   const client = new pg.Client({ connectionString, ssl: false }); await client.connect();
   try {
     await client.query('SET ROLE lythaus_admin'); await client.query('BEGIN');
     const result = await work({ query: async (text, values) => {
       reads.push(text);
       if (failAudit && text.includes('INSERT INTO system.audit_events')) await client.query('SET LOCAL ROLE lythaus_runtime');
+      if (sourceTimeout && text.startsWith('WITH')) {
+        await client.query("SET LOCAL statement_timeout = '1ms'");
+        await client.query('SELECT pg_sleep(0.01)');
+      }
+      if (clockOffsetSeconds && text.includes('SELECT current_timestamp AS sampled_at')) {
+        return client.query(text.replace('current_timestamp AS sampled_at', "current_timestamp + ($2::double precision * interval '1 second') AS sampled_at"), [...values, clockOffsetSeconds]);
+      }
       return client.query(text, values);
     } });
     await client.query('COMMIT'); return result;
@@ -97,7 +104,7 @@ test('real restricted-role aggregates reconcile exact records, exclusions, cohor
   assert.ok(!ids.some(id => JSON.stringify(data).includes(id)));
 });
 
-test('query plan bounds each primary scan before filters and uses bounded keyed author lookups', async () => {
+test('query plan bounds each primary scan before filters and uses bounded keyed author lookups', async t => {
   const explained = await sql(`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${OVERVIEW_AGGREGATE_SQL}`, [scope.current.start, scope.current.end, scope.previous.start, scope.previous.end, 5001], 'lythaus_admin');
   const plan = explained.rows[0]['QUERY PLAN'][0];
   function nodes(node) { return [node, ...(node.Plans ?? []).flatMap(nodes)]; }
@@ -105,6 +112,9 @@ test('query plan bounds each primary scan before filters and uses bounded keyed 
   assert.ok(limits.length >= 6);
   assert.ok(limits.every(node => node['Actual Rows'] <= 5001));
   assert.ok(plan['Execution Time'] < 1500);
+  t.diagnostic(JSON.stringify({ fixture: 'synthetic small retained population', executionMs: plan['Execution Time'],
+    sharedHitBlocks: plan.Plan['Shared Hit Blocks'], sharedReadBlocks: plan.Plan['Shared Read Blocks'],
+    limitRows: limits.map(node => node['Actual Rows']) }));
 });
 
 test('deletion revises retained historical comparisons and never relabels them as a durable event ledger', async () => {
@@ -137,7 +147,37 @@ test('actual transactions recheck current owner on cached reads and commit audit
   assert.equal((await audits()).rows[0].n, 2);
 });
 
-test('populations above the cap produce unavailable totals within the bounded query budget', async () => {
+test('restricted-role transactions use database sample age when the Worker clock remains within its cache TTL', async () => {
+  const reads = [], binding = { DB_ADMIN_FRESH: {} }, at = Date.now();
+  const read = offset => handleOverview(new Request('https://admin.lythaus.co/api/admin/overview'), binding, owner,
+    uuidv7(), runTransaction(reads, false, offset), at);
+  const first = await (await read(0)).json();
+  const expired = await (await read(61)).json();
+  assert.ok(Date.parse(expired.sampledAt) - Date.parse(first.sampledAt) >= 61000);
+  assert.equal(reads.filter(text => text.startsWith('WITH')).length, 2);
+  const backwards = await (await read(-1)).json();
+  assert.ok(Date.parse(backwards.sampledAt) < Date.parse(expired.sampledAt));
+  assert.equal(reads.filter(text => text.startsWith('WITH')).length, 3);
+  const cached = await (await read(-1)).json();
+  assert.equal(cached.sampledAt, backwards.sampledAt);
+  assert.equal(reads.filter(text => text.startsWith('WITH')).length, 3);
+  const audit = await sql(`SELECT metadata FROM system.audit_events
+    WHERE actor_id = $1 AND metadata->>'sampledAt' = $2 ORDER BY created_at`, [owner.userId, backwards.sampledAt], 'lythaus_admin');
+  assert.deepEqual(audit.rows.map(row => row.metadata.cached), [false, true]);
+});
+
+test('PostgreSQL cancellation after database-clock expiry returns unavailable without disclosing a stale sample or committing a view audit', async () => {
+  const reads = [], binding = { DB_ADMIN_FRESH: {} }, at = Date.now();
+  const count = async () => (await sql("SELECT count(*)::integer AS n FROM system.audit_events WHERE actor_id = $1 AND action = 'operations.overview_viewed'", [owner.userId])).rows[0].n;
+  await handleOverview(new Request('https://admin.lythaus.co/api/admin/overview'), binding, owner, uuidv7(), runTransaction(reads), at);
+  const beforeFailure = await count();
+  await assert.rejects(handleOverview(new Request('https://admin.lythaus.co/api/admin/overview'), binding, owner,
+    uuidv7(), runTransaction(reads, false, 61, true), at), { message: 'overview_unavailable' });
+  assert.equal(await count(), beforeFailure);
+  assert.equal(reads.filter(text => text.startsWith('WITH')).length, 2);
+});
+
+test('populations above the cap produce unavailable totals within the bounded query budget', async t => {
   const extra = Array.from({ length: 5001 }, () => uuidv7());
   try {
     await sql("INSERT INTO identity.users (id, created_at) SELECT id, '2001-10-02T01:00:00Z'::timestamptz FROM unnest($1::uuid[]) id", [extra]);
@@ -145,6 +185,11 @@ test('populations above the cap produce unavailable totals within the bounded qu
     await sql("INSERT INTO content.comments (id, post_id, author_id, body, declared_creation_mode, moderation_state, created_at) SELECT id, $2, $3, 'Synthetic cap fixture', 'human', 'allowed', '2001-10-02T03:00:00Z'::timestamptz FROM unnest($1::uuid[]) id", [extra, posts[2], ids[0]]);
     const data = overviewSnapshot(scope, (await aggregate()).rows);
     for (const item of Object.values(data.metrics)) { assert.equal(item.value, null); assert.equal(item.reason, 'snapshot_row_limit'); }
+    const explained = await sql(`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${OVERVIEW_AGGREGATE_SQL}`, [scope.current.start, scope.current.end, scope.previous.start, scope.previous.end, 5001], 'lythaus_admin');
+    const plan = explained.rows[0]['QUERY PLAN'][0];
+    assert.ok(plan['Execution Time'] < 1500);
+    t.diagnostic(JSON.stringify({ fixture: 'synthetic 5001 additional rows in each source', executionMs: plan['Execution Time'],
+      sharedHitBlocks: plan.Plan['Shared Hit Blocks'], sharedReadBlocks: plan.Plan['Shared Read Blocks'] }));
   } finally {
     await sql('DELETE FROM content.comments WHERE id = ANY($1::uuid[])', [extra]);
     await sql('DELETE FROM content.posts WHERE id = ANY($1::uuid[])', [extra]);

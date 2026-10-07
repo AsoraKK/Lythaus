@@ -1,5 +1,14 @@
 components:
   parameters:
+    adminMutationOrigin:
+      name: Origin
+      in: header
+      required: true
+      description: Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
+      schema:
+        type: string
+        format: uri
+        default: https://admin.lythaus.co
     cursor:
       name: cursor
       in: query
@@ -43,6 +52,18 @@ components:
         type: string
         pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$'
   responses:
+    AdminMutationForbidden:
+      description: Admin authorization or configured same-origin request admission failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    AdminMutationUnsupportedMediaType:
+      description: Content-Type must be application/json, including a request without a body.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
     BadRequest:
       description: The request could not be validated or a domain invariant prevented it.
       content:
@@ -1707,10 +1728,14 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     post:
       operationId: adminLegalHoldsCreate
+      servers:
+        - url: https://admin.lythaus.co/api
       summary: Place a legal hold
       tags: [Admin]
       security:
         - cloudflareAccess: []
+      parameters:
+        - $ref: '#/components/parameters/adminMutationOrigin'
       requestBody:
         required: true
         content:
@@ -1728,9 +1753,13 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/AdminMutationForbidden'
+        '415':
+          $ref: '#/components/responses/AdminMutationUnsupportedMediaType'
   /admin/privacy/legal-holds/{holdId}/clear:
     servers:
-      - url: https://admin-api.lythaus.co/api
+      - url: https://admin.lythaus.co/api
     post:
       operationId: adminLegalHoldsClear
       summary: Clear a legal hold
@@ -1738,10 +1767,20 @@ paths:
       security:
         - cloudflareAccess: []
       parameters:
+        - $ref: '#/components/parameters/adminMutationOrigin'
         - name: holdId
           in: path
           required: true
           schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        description: Optional JSON object; clearing uses holdId and does not require a body. The JSON Content-Type header is required even when the body is absent.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+            example: {}
       responses:
         '200':
           description: Legal hold cleared.
@@ -1751,17 +1790,23 @@ paths:
                 $ref: '#/components/schemas/LegalHoldResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/AdminMutationForbidden'
+        '415':
+          $ref: '#/components/responses/AdminMutationUnsupportedMediaType'
         '404':
           $ref: '#/components/responses/NotFound'
   /admin/editorial/publications:
     servers:
-      - url: https://admin-api.lythaus.co/api
+      - url: https://admin.lythaus.co/api
     post:
       operationId: adminEditorialPublicationsCreate
       summary: Publish an editorial News Board entry
       tags: [Admin]
       security:
         - cloudflareAccess: []
+      parameters:
+        - $ref: '#/components/parameters/adminMutationOrigin'
       requestBody:
         required: true
         content:
@@ -1779,9 +1824,13 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/AdminMutationForbidden'
+        '415':
+          $ref: '#/components/responses/AdminMutationUnsupportedMediaType'
   /admin/moderation/cases/{caseId}/decision:
     servers:
-      - url: https://admin-api.lythaus.co/api
+      - url: https://admin.lythaus.co/api
     post:
       operationId: adminModerationDecision
       summary: Apply a moderation decision
@@ -1789,6 +1838,7 @@ paths:
       security:
         - cloudflareAccess: []
       parameters:
+        - $ref: '#/components/parameters/adminMutationOrigin'
         - name: caseId
           in: path
           required: true
@@ -1810,9 +1860,13 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/AdminMutationForbidden'
+        '415':
+          $ref: '#/components/responses/AdminMutationUnsupportedMediaType'
   /admin/appeals/{appealId}/adjudications:
     servers:
-      - url: https://admin-api.lythaus.co/api
+      - url: https://admin.lythaus.co/api
         description: Cloudflare Access-protected admin Worker
     post:
       operationId: adminAppealsAdjudicate
@@ -1826,6 +1880,7 @@ paths:
       security:
         - cloudflareAccess: []
       parameters:
+        - $ref: '#/components/parameters/adminMutationOrigin'
         - name: appealId
           in: path
           required: true
@@ -1866,6 +1921,10 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/AdminMutationForbidden'
+        '415':
+          $ref: '#/components/responses/AdminMutationUnsupportedMediaType'
         '429':
           $ref: '#/components/responses/SafetyLimited'
   /admin/appeals/pending-adjudication:
@@ -1893,7 +1952,7 @@ paths:
           $ref: '#/components/responses/SafetyLimited'
   /admin/reviewers/{reviewerId}/qualification:
     servers:
-      - url: https://admin-api.lythaus.co/api
+      - url: https://admin.lythaus.co/api
     post:
       operationId: adminReviewerQualificationCreate
       summary: Set reviewer qualification state
@@ -1902,6 +1961,7 @@ paths:
       security:
         - cloudflareAccess: []
       parameters:
+        - $ref: '#/components/parameters/adminMutationOrigin'
         - name: reviewerId
           in: path
           required: true
@@ -1924,7 +1984,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          $ref: '#/components/responses/AdminMutationForbidden'
+        '415':
+          $ref: '#/components/responses/AdminMutationUnsupportedMediaType'
     put:
       operationId: adminReviewerQualificationUpdate
       summary: Idempotently set reviewer qualification state
@@ -1932,6 +1994,7 @@ paths:
       security:
         - cloudflareAccess: []
       parameters:
+        - $ref: '#/components/parameters/adminMutationOrigin'
         - name: reviewerId
           in: path
           required: true
@@ -1954,10 +2017,12 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          $ref: '#/components/responses/AdminMutationForbidden'
+        '415':
+          $ref: '#/components/responses/AdminMutationUnsupportedMediaType'
   /admin/users/{userId}/status:
     servers:
-      - url: https://admin-api.lythaus.co/api
+      - url: https://admin.lythaus.co/api
     post:
       operationId: adminUsersStatusUpdate
       summary: Update account status
@@ -1965,6 +2030,7 @@ paths:
       security:
         - cloudflareAccess: []
       parameters:
+        - $ref: '#/components/parameters/adminMutationOrigin'
         - name: userId
           in: path
           required: true
@@ -1986,9 +2052,13 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/AdminMutationForbidden'
+        '415':
+          $ref: '#/components/responses/AdminMutationUnsupportedMediaType'
   /admin/users/{userId}/tier:
     servers:
-      - url: https://admin-api.lythaus.co/api
+      - url: https://admin.lythaus.co/api
     post:
       operationId: adminUsersTierUpdate
       summary: Update subscription tier
@@ -1996,6 +2066,7 @@ paths:
       security:
         - cloudflareAccess: []
       parameters:
+        - $ref: '#/components/parameters/adminMutationOrigin'
         - name: userId
           in: path
           required: true
@@ -2017,6 +2088,10 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/AdminMutationForbidden'
+        '415':
+          $ref: '#/components/responses/AdminMutationUnsupportedMediaType'
 
   /reputation/me:
     get:

@@ -20,14 +20,14 @@ void main() {
     //
     // Compatibility method for the idempotent qualification update. Reviewer training remains separate from reputation level.
     //
-    //Future<ReviewerQualificationResponse> adminReviewerQualificationCreate(String reviewerId, ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest) async
+    //Future<ReviewerQualificationResponse> adminReviewerQualificationCreate(String origin, String reviewerId, ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest) async
     test('test adminReviewerQualificationCreate', () async {
       // TODO
     });
 
     // Idempotently set reviewer qualification state
     //
-    //Future<ReviewerQualificationResponse> adminReviewerQualificationUpdate(String reviewerId, ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest) async
+    //Future<ReviewerQualificationResponse> adminReviewerQualificationUpdate(String origin, String reviewerId, ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest) async
     test('test adminReviewerQualificationUpdate', () async {
       // TODO
     });

@@ -7,11 +7,14 @@ const sample = '2026-10-02T12:00:00Z';
 const at = Date.parse(sample);
 function fixture() {
   const env = { DB_ADMIN_FRESH: {} }, reads = [];
-  const state = { active: true, role: 'owner', sampledAt: sample, audit: true, fail: false };
+  const state = { active: true, role: 'owner', userId: owner.userId, sampledAt: sample, audit: true, fail: false };
   const run = (_binding, work) => work({ query: async (sql, values) => {
     reads.push({ sql, values });
     if (sql.startsWith('SET ')) return { rows: [], rowCount: null };
-    if (sql.includes('identity.admin_memberships')) return { rows: state.active && state.role === 'owner' ? [{ sampled_at: state.sampledAt }] : [], rowCount: state.active && state.role === 'owner' ? 1 : 0 };
+    if (sql.includes('identity.admin_memberships')) {
+      const allowed = state.active && state.role === 'owner' && values[0] === state.userId;
+      return { rows: allowed ? [{ sampled_at: state.sampledAt }] : [], rowCount: allowed ? 1 : 0 };
+    }
     if (sql.startsWith('WITH')) {
       if (state.fail) throw new Error('password=synthetic-private; token=synthetic-private');
       return { rows: ['current', 'previous'].map(window => ({ window, post_rows: 0, comment_rows: 0, user_rows: 0, posts: 0, comments: 0,
@@ -77,6 +80,53 @@ test('expired, backward-clock and calendar-boundary cache entries are recomputed
   f.state.sampledAt = '2026-10-03T00:00:00Z';
   await f.call('', owner, at + 1);
   assert.equal(f.reads.filter(x => x.sql.startsWith('WITH')).length, 5);
+});
+
+test('the fresh database clock expires samples at the TTL even while the Worker clock considers the cache fresh', async () => {
+  for (const period of ['today', 'mtd', 'ytd']) {
+    const f = fixture(); await f.call(`?period=${period}`);
+    f.state.sampledAt = new Date(at + 59999).toISOString();
+    await f.call(`?period=${period}`, owner, at + 1000);
+    assert.equal(f.reads.filter(x => x.sql.startsWith('WITH')).length, 1);
+    f.state.sampledAt = new Date(at + 60000).toISOString();
+    const data = await (await f.call(`?period=${period}`, owner, at + 2000)).json();
+    assert.equal(data.sampledAt, f.state.sampledAt);
+    assert.equal(f.reads.filter(x => x.sql.startsWith('WITH')).length, 2);
+    assert.equal(JSON.parse(f.reads.at(-1).values.at(-1)).cached, false);
+  }
+});
+
+test('a database clock moving backwards invalidates a future-dated cache sample', async () => {
+  const f = fixture(); await f.call();
+  f.state.sampledAt = new Date(at - 1).toISOString();
+  const data = await (await f.call('', owner, at + 1000)).json();
+  assert.equal(data.sampledAt, f.state.sampledAt);
+  assert.equal(f.reads.filter(x => x.sql.startsWith('WITH')).length, 2);
+});
+
+test('failed database-clock expiry recomputation discloses no cached sample and records no successful view', async () => {
+  const f = fixture(); await f.call();
+  f.state.sampledAt = new Date(at + 61000).toISOString(); f.state.fail = true;
+  await assert.rejects(f.call('', owner, at + 1000), { message: 'overview_unavailable' });
+  assert.equal(f.reads.filter(x => x.sql.includes('INSERT')).length, 1);
+  f.state.fail = false;
+  assert.equal((await (await f.call('', owner, at + 2000)).json()).sampledAt, f.state.sampledAt);
+  assert.equal(f.reads.filter(x => x.sql.startsWith('WITH')).length, 3);
+});
+
+test('switching owners rechecks the current account while cached aggregates and separate bindings expose no identities', async () => {
+  const f = fixture(); await f.call();
+  const other = { ...owner, userId: '01900000-0000-7000-8000-000000000100' };
+  await assert.rejects(f.call('', other, at + 1000), /overview_owner_required/);
+  f.state.userId = other.userId;
+  const data = await (await f.call('', other, at + 2000)).json();
+  assert.equal(f.reads.filter(x => x.sql.startsWith('WITH')).length, 1);
+  assert.equal(f.reads.at(-1).values[1], other.userId);
+  for (const actor of [owner, other]) assert.ok(!JSON.stringify(data).includes(actor.userId));
+  await assert.rejects(f.call('', owner, at + 3000), /overview_owner_required/);
+  const separate = fixture();
+  await separate.call();
+  assert.equal(separate.reads.filter(x => x.sql.startsWith('WITH')).length, 1);
 });
 
 test('failed audit and raw query errors fail closed with a safe unavailable code', async () => {
