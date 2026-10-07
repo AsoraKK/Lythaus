@@ -232,8 +232,10 @@ BEGIN
          located.retention,located.state,CASE WHEN subject_held THEN 'active' ELSE 'none' END,now()
     FROM (
       SELECT 'support.requests' AS resource,'support_request' AS entity,r.id,
-             CASE WHEN r.deleted_at IS NULL THEN 'support_pending_v1' ELSE 'audit' END AS retention,
-             CASE WHEN r.deleted_at IS NULL THEN 'present' ELSE 'retained' END AS state
+             CASE WHEN r.deleted_at IS NOT NULL AND r.submission IS NULL AND r.member_message IS NULL
+                  THEN 'audit' ELSE 'support_pending_v1' END AS retention,
+             CASE WHEN r.deleted_at IS NOT NULL AND r.submission IS NULL AND r.member_message IS NULL
+                  THEN 'retained' ELSE 'present' END AS state
         FROM support.requests r WHERE r.submitter_id=p_subject_id
       UNION ALL
       SELECT 'support.messages','support_message',m.id,'support_pending_v1','present'

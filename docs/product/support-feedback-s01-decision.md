@@ -74,6 +74,9 @@ completed deletion. Decide whether those contributions are redacted/anonymized
 or retained under an explicitly approved rule. The serialized Jobs integration
 must block a success receipt while disposition is unresolved; this package does
 not silently delete another member's history or invent retention authority.
+Deleted requests containing any residual member-visible decision text are also
+registered as present. A deletion timestamp alone does not prove their content
+was scrubbed; the real-PG regression checks the proposed completion count.
 
 Kyle/privacy-owner review must settle the support purpose/duration, audit and
 tombstone identity/expiry treatment, owner-contribution disposition, hold

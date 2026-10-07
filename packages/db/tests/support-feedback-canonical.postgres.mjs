@@ -101,6 +101,11 @@ async function fixture(t,custom=policy()) {
   return {member,other,owner,admin,subject,adminSubject,ids,service,memberRequest,ownerRequest,submit,privacyRequest,reconcile,policy:custom};
 }
 const rejected=(work,code)=>assert.rejects(work,e=>e.message===code);
+async function pendingSupport(subject) {
+  return transaction('lythaus_privacy')(async c=>(await c.query(`SELECT count(*)::integer AS pending
+    FROM privacy.subject_data_locations WHERE subject_id=$1 AND store_type='planetscale' AND deletion_state='present'
+      AND (resource_reference LIKE 'support.%' OR entity_type IN ('support_audit','support_intent','support_idempotency'))`,[subject])).rows[0].pending);
+}
 async function catalog(client=control) {
   return (await client.query(`SELECT jsonb_build_object(
     'relations',(SELECT jsonb_agg(to_jsonb(c) ORDER BY c.oid) FROM pg_class c WHERE c.relnamespace='support'::regnamespace),
@@ -292,6 +297,33 @@ test('residual private children and actor-only data remain present; no false del
   const memberDelete=await f.privacyRequest('delete');await transaction('lythaus_privacy')(c=>purgeSupportForPrivacy(c,memberDelete,f.policy));
   const residual=uuidv7();await control.query('INSERT INTO support.notes(id,request_id,author_id,body,revision) VALUES($1,$2,$3,$4,9)',[residual,id,f.owner,'PRIVATE_SENTINEL injected disposable residual']);
   const rows=await f.reconcile();assert.ok(rows.some(r=>r.entity_id===residual&&r.deletion_state==='present'));
+  assert.equal(await pendingSupport(f.member),1);
+});
+test('a deleted request with residual member-visible text blocks completion until the text is actually cleared',async t=>{
+  const f=await fixture(t),id=(await f.submit()).request.id;await f.submit(problem(),f.other);
+  const peerBefore=await f.reconcile(f.other),requestId=await f.privacyRequest('delete');
+  await transaction('lythaus_privacy')(c=>purgeSupportForPrivacy(c,requestId,f.policy));
+  assert.ok((await f.reconcile()).some(r=>r.entity_id===id&&r.deletion_state==='retained'&&r.retention_class==='audit'));
+  assert.equal(await pendingSupport(f.member),0);
+  await control.query('UPDATE support.requests SET member_message=$2 WHERE id=$1',[id,'PRIVATE_SENTINEL synthetic residual decision text']);
+  const stored=(await control.query('SELECT submission,deleted_at,member_message FROM support.requests WHERE id=$1',[id])).rows[0];
+  assert.equal(stored.submission,null);assert.ok(stored.deleted_at);assert.ok(stored.member_message);
+  const rows=await f.reconcile();assert.ok(rows.some(r=>r.entity_id===id&&r.deletion_state==='present'&&r.retention_class==='support_pending_v1'));
+  assert.equal(await pendingSupport(f.member),1);assert.deepEqual(await f.reconcile(),rows);assert.ok(!JSON.stringify(rows).includes('PRIVATE_SENTINEL'));
+  await control.query("INSERT INTO privacy.legal_holds(id,subject_id,reason) VALUES($1,$2,'synthetic residual-content hold')",[uuidv7(),f.member]);
+  assert.ok((await f.reconcile()).some(r=>r.entity_id===id&&r.deletion_state==='present'&&r.legal_hold_state==='active'));
+  assert.equal(await pendingSupport(f.member),1);
+  await control.query(rollback);await control.query(rollback);
+  try{
+    assert.ok((await f.reconcile()).some(r=>r.entity_id===id&&r.deletion_state==='present'&&r.legal_hold_state==='active'));
+    assert.equal(await pendingSupport(f.member),1);
+    assert.equal((await control.query('SELECT member_message FROM support.requests WHERE id=$1',[id])).rows[0].member_message,stored.member_message);
+  }finally{await control.query(restore);}
+  assert.deepEqual(await f.reconcile(f.other),peerBefore);
+  await control.query('UPDATE privacy.legal_holds SET active=false WHERE subject_id=$1',[f.member]);
+  await control.query('UPDATE support.requests SET member_message=NULL WHERE id=$1',[id]);
+  assert.ok((await f.reconcile()).some(r=>r.entity_id===id&&r.deletion_state==='retained'&&r.retention_class==='audit'&&r.legal_hold_state==='none'));
+  assert.equal(await pendingSupport(f.member),0);
 });
 test('capability rollback preserves content, holds and reconciler; privacy scrub still works and intake grants can be restored',async t=>{
   const f=await fixture(t),id=(await f.submit()).request.id;
