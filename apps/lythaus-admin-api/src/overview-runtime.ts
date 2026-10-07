@@ -131,7 +131,9 @@ export async function handleOverview(request: Request, env: OverviewEnv, actor: 
       const scope = overviewScope(period, new Date(owner.rows[0].sampled_at));
       const cache = snapshots.get(env.DB_ADMIN_FRESH) ?? new Map();
       const cached = cache.get(period);
-      const useCache = cached && now >= cached.at && now - cached.at < OVERVIEW_CACHE_SECONDS * 1000 && cached.snapshot.current.start === scope.current.start;
+      const sampleAge = cached ? Date.parse(scope.current.end) - Date.parse(cached.snapshot.sampledAt) : NaN;
+      const useCache = cached && now >= cached.at && now - cached.at < OVERVIEW_CACHE_SECONDS * 1000
+        && sampleAge >= 0 && sampleAge < OVERVIEW_CACHE_SECONDS * 1000 && cached.snapshot.current.start === scope.current.start;
       const result = useCache ? cached.snapshot : overviewSnapshot(scope, (await client.query(OVERVIEW_AGGREGATE_SQL,
         [scope.current.start, scope.current.end, scope.previous.start, scope.previous.end, OVERVIEW_ROW_LIMIT + 1])).rows);
       const audit = await client.query(`INSERT INTO system.audit_events (id, actor_id, action, target_type, reason_code, correlation_id, metadata)
