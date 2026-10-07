@@ -55,11 +55,21 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
       }
       return route.fulfill({status,headers,contentType:'application/json',body:JSON.stringify(body)});
     });
-    const browser=await engine.launch({headless:true,proxy:{server:fixture.proxy}});
+    let browser;
+    try {
+      browser=await engine.launch({headless:true,proxy:{server:fixture.proxy},
+        ...(name==='webkit'&&process.env.WEBKIT_EXECUTABLE?{executablePath:process.env.WEBKIT_EXECUTABLE}:{})});
+    } catch(error) {
+      await fixture.close();
+      throw error;
+    }
     const context=await browser.newContext({viewport:{width,height:1000},serviceWorkers:'block',ignoreHTTPSErrors:true});
     await installFlutterEngineFonts(context);
     const page=await context.newPage();page.setDefaultTimeout(15000);
-    t.after(async()=>{try{if(!complete&&!page.isClosed())t.diagnostic(JSON.stringify({calls,errors,failedRequests,url:page.url(),screen:await page.locator('flt-semantics').allTextContents(),buttons:await page.getByRole('button').evaluateAll(nodes=>nodes.map(node=>({text:node.textContent,label:node.getAttribute('aria-label'),title:node.getAttribute('title')}))),storageKeys:await page.evaluate(()=>Object.keys(localStorage))}));}finally{await browser.close();await fixture.close();}});
+    t.after(async()=>{try{if(!complete&&!page.isClosed()){
+      if(process.env.AUTH_QA_DIR){await mkdir(process.env.AUTH_QA_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.AUTH_QA_DIR,`flutter-${name}-${width}-failure.png`)});}
+      t.diagnostic(JSON.stringify({calls,errors,failedRequests,url:page.url(),screen:await page.locator('flt-semantics').allTextContents(),buttons:await page.getByRole('button').evaluateAll(nodes=>nodes.map(node=>({text:node.textContent,label:node.getAttribute('aria-label'),title:node.getAttribute('title')}))),storageKeys:await page.evaluate(()=>Object.keys(localStorage))}));
+    }}finally{await browser.close();await fixture.close();}});
     page.on('pageerror',error=>errors.push(error.message));
     page.on('requestfailed',request=>{
       const url=new URL(request.url()),error=request.failure()?.errorText;
