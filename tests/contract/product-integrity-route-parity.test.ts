@@ -243,7 +243,7 @@ describe('product-integrity OpenAPI parity', () => {
     expect(spec.components.schemas.ModerationState.enum).toContain('under_review');
   });
 
-  test('canonical authorship and reputation schemas exclude retired public states', () => {
+  test('public reputation is categorical while enforcement details remain owner-only', () => {
     expect(spec.components.schemas.CreatePostRequest.properties.declaredCreationMode.enum).toEqual([
       'human',
       'ai_assisted',
@@ -257,16 +257,28 @@ describe('product-integrity OpenAPI parity', () => {
       'human',
       'assisted',
     ]);
-    expect(productIntegritySpec.components.schemas.ReputationPublicV2.properties.reputationBand.enum).toEqual([
+    const publicReputation = productIntegritySpec.components.schemas.ReputationPublicV2;
+    expect(publicReputation.additionalProperties).toBe(false);
+    expect(Object.keys(publicReputation.properties).sort()).toEqual(['level', 'levelName', 'userId']);
+    expect(publicReputation.properties.reputationStatus).toBeUndefined();
+    expect(publicReputation.properties.reputationBand).toBeUndefined();
+    expect(publicReputation.properties.policyVersion).toBeUndefined();
+    const privateReputation = productIntegritySpec.components.schemas.ReputationPrivateV2;
+    expect(privateReputation.properties.reputationStatus.enum).toEqual(['active', 'restricted', 'suspended', 'under_investigation']);
+    expect(privateReputation.properties.reputationBand.enum).toEqual([
       'new',
       'accountable',
       'trusted',
       'established',
     ]);
-    expect(productIntegritySpec.components.schemas.ReputationPublicV2.properties.level).toMatchObject({
+    expect(publicReputation.properties.level).toMatchObject({
       minimum: 0,
       maximum: 5,
     });
+    const publicProfile = productIntegritySpec.components.schemas.ProductIntegrityPublicProfileUser;
+    expect(publicProfile.additionalProperties).toBe(false);
+    expect(Object.keys(publicProfile.properties.reputation.properties).sort()).toEqual(['label', 'level']);
+    expect(spec.info.version).toBe('v10');
   });
 
   test('private accountability and governance outbox contracts do not disclose sensitive fields', () => {

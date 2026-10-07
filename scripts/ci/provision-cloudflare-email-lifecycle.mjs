@@ -93,6 +93,19 @@ export function promptDispatchRequested(publicConfig, jobsConfig) {
   return true;
 }
 
+export function resolvePromptDispatchWorker(consumer) {
+  const expected = 'lythaus-jobs-development';
+  if (!consumer || consumer.type !== 'worker') return null;
+  const present = field => Object.hasOwn(consumer, field);
+  if (['service', 'worker'].some(present)) return null;
+  if (present('script_name')) {
+    return consumer.script_name === expected && (!present('script') || consumer.script === expected) ? expected : null;
+  }
+  if (!present('script') || consumer.script !== expected
+    || ['environment', 'environment_name', 'namespace'].some(present)) return null;
+  return expected;
+}
+
 export function assertPromptDispatchConsumer(queue) {
   if (queueName(queue) !== LIFECYCLE_QUEUE || queue.settings?.delivery_paused !== false
     || queue.settings?.delivery_delay !== 0) throw new Error('email_dispatch_live_delivery_not_verified');
@@ -101,7 +114,8 @@ export function assertPromptDispatchConsumer(queue) {
     throw new Error('email_dispatch_live_consumer_not_verified');
   }
   const consumer = consumers[0];
-  if (consumer.type !== 'worker' || consumer.script_name !== 'lythaus-jobs-development'
+  const worker = resolvePromptDispatchWorker(consumer);
+  if (worker === null
     || consumer.dead_letter_queue !== LIFECYCLE_DLQ || consumer.settings?.batch_size !== CONSUMER.max_batch_size
     || consumer.settings?.max_wait_time_ms !== CONSUMER.max_batch_timeout * 1000
     || consumer.settings?.max_retries !== CONSUMER.max_retries) throw new Error('email_dispatch_live_consumer_drift');
@@ -109,7 +123,7 @@ export function assertPromptDispatchConsumer(queue) {
     throw new Error('email_dispatch_live_consumer_concurrency_not_verified');
   }
   return { status: 'VERIFIED', source: 'existing_queue_list_response', queue: LIFECYCLE_QUEUE,
-    deliveryPaused: false, deliveryDelaySeconds: 0, worker: consumer.script_name, ...CONSUMER };
+    deliveryPaused: false, deliveryDelaySeconds: 0, worker, ...CONSUMER };
 }
 
 async function cloudflare(pathname, init = {}) {

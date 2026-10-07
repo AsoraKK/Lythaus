@@ -227,6 +227,9 @@ doc/ProblemSubmission.md
 doc/ProductIntegrityPrivateProfileResponse.md
 doc/ProductIntegrityPrivateProfileUser.md
 doc/ProductIntegrityProfileUpdateRequest.md
+doc/ProductIntegrityPublicProfileResponse.md
+doc/ProductIntegrityPublicProfileUser.md
+doc/ProductIntegrityPublicProfileUserReputation.md
 doc/PublicAuthorship.md
 doc/PublicAuthorshipLabel.md
 doc/PublicMessage.md
@@ -538,6 +541,9 @@ lib/src/model/problem_submission.dart
 lib/src/model/product_integrity_private_profile_response.dart
 lib/src/model/product_integrity_private_profile_user.dart
 lib/src/model/product_integrity_profile_update_request.dart
+lib/src/model/product_integrity_public_profile_response.dart
+lib/src/model/product_integrity_public_profile_user.dart
+lib/src/model/product_integrity_public_profile_user_reputation.dart
 lib/src/model/public_authorship.dart
 lib/src/model/public_authorship_label.dart
 lib/src/model/public_message.dart
@@ -828,6 +834,9 @@ test/problem_submission_test.dart
 test/product_integrity_private_profile_response_test.dart
 test/product_integrity_private_profile_user_test.dart
 test/product_integrity_profile_update_request_test.dart
+test/product_integrity_public_profile_response_test.dart
+test/product_integrity_public_profile_user_reputation_test.dart
+test/product_integrity_public_profile_user_test.dart
 test/public_authorship_label_test.dart
 test/public_authorship_test.dart
 test/public_message_test.dart

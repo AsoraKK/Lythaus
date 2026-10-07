@@ -54,7 +54,7 @@ jobs:
       - name: Validate production release contract
         run: npm run validate:production-release-contract
       - name: Validate read-only Cloudflare audit contract
-        run: node --test scripts/tests/cloudflare-audit-contract.test.mjs
+        run: node --test scripts/tests/cloudflare-audit-contract.test.mjs scripts/tests/attach-auth-email-consumer.test.mjs
       - name: Validate read-only GitHub controls audit contract
         run: node --test scripts/tests/github-controls-audit.test.mjs
 

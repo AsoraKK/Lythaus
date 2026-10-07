@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -95,11 +96,12 @@ test('auth Queue audit records exact existing delivery and consumer settings wit
   assert.equal(evidence.status, 'VERIFIED');
   assert.equal(evidence.reason, null);
   assert.equal(evidence.deliveryPaused, false);
+  assert.deepEqual(evidence.deliveryPausedField, { present: true, type: 'boolean' });
   assert.equal(evidence.deliveryDelaySeconds, 0);
   assert.equal(evidence.reportedConsumerCount, 1);
   assert.equal(evidence.observedConsumerCount, 1);
   assert.deepEqual(evidence.inventory, { complete: true, page: 1, perPage: 100, count: 3, totalCount: 3, totalPages: 1 });
-  assert.deepEqual(evidence.consumers.map(({ idHash, ...value }) => value), [{ type: 'worker', expectedWorkerMatches: true,
+  assert.deepEqual(evidence.consumers.map(({ idHash, typeField, workerIdentityFields, environmentFields, namespaceField, pauseFields, ...value }) => value), [{ type: 'worker', expectedWorkerMatches: true,
     expectedDeadLetterMatches: true, batchSize: 25, maxWaitTimeMs: 5000, maxRetries: 10, maxConcurrency: 1,
     maxConcurrencyPresent: true, maxConcurrencyType: 'number' }]);
   assert.match(evidence.lifecycleIdHash, /^sha256:[0-9a-f]{64}$/);
@@ -111,6 +113,189 @@ test('auth Queue audit records exact existing delivery and consumer settings wit
   assert.equal(evidence.messagesRead, false);
   assert.equal(evidence.mutationPerformed, false);
 });
+
+test('auth Queue audit verifies the observed direct script identity but keeps omitted pause blocked', async () => {
+  const queue = queueFixture();
+  queue.consumers[0].script = queue.consumers[0].script_name;
+  delete queue.consumers[0].script_name;
+  for (const omitPause of [false, true]) {
+    if (omitPause) delete queue.settings.delivery_paused;
+    const reader = queueReader(queue);
+    const evidence = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: reader.requestJson });
+    assert.equal(evidence.status, omitPause ? 'BLOCKED' : 'VERIFIED');
+    assert.equal(evidence.reason, omitPause ? 'email_dispatch_live_delivery_not_verified' : null);
+    assert.equal(evidence.deliveryPaused, omitPause ? null : false);
+    for (const consumer of [evidence.listing.consumers[0], evidence.consumers[0]]) {
+      assert.equal(consumer.expectedWorkerMatches, true);
+      assert.equal(consumer.workerIdentityFields.script_name.present, false);
+      assert.equal(consumer.workerIdentityFields.script.valueMatchesExpectedWorker, true);
+    }
+    assert.equal(reader.calls.length, 2);
+    assert.equal(evidence.mutationPerformed, false);
+  }
+});
+
+test('auth Queue audit never fingerprints unknown ASCII type or environment values', async () => {
+  const marker = 'fixture_token_ASCII_1234567890';
+  const fingerprint = `sha256:${createHash('sha256').update(marker).digest('hex')}`;
+  const queue = queueFixture();
+  Object.assign(queue.consumers[0], { type: marker, environment: marker, environment_name: marker,
+    script: { name: 'lythaus-jobs-development', environment: marker, environment_name: marker } });
+  const reader = queueReader(queue);
+  const evidence = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: reader.requestJson });
+  assert.equal(evidence.status, 'BLOCKED');
+  assert.equal(evidence.reason, 'email_dispatch_live_consumer_drift');
+  for (const consumer of [evidence.listing.consumers[0], evidence.consumers[0]]) {
+    assert.equal(consumer.type, 'unknown');
+    assert.deepEqual(consumer.typeField, { present: true, type: 'string' });
+    for (const fields of [consumer.environmentFields, consumer.workerIdentityFields.script.reference.environmentFields]) {
+      for (const field of Object.values(fields)) assert.deepEqual(field, {
+        present: true, type: 'string', matchesProduction: false, matchesDevelopment: false,
+      });
+    }
+    assert.match(consumer.workerIdentityFields.script.reference.identityFields.name.valueHash, /^sha256:[0-9a-f]{64}$/);
+  }
+  const serialized = JSON.stringify(evidence);
+  assert.ok(!serialized.includes(marker));
+  assert.ok(!serialized.includes(fingerprint));
+  assert.equal(reader.calls.length, 2);
+  assert.equal(evidence.mutationPerformed, false);
+});
+
+for (const field of ['script', 'service']) {
+  test(`auth Queue audit records ${field} response shape without accepting an alias or leaking its value`, async () => {
+    const queue = queueFixture();
+    queue.consumers[0][field] = 'fixture-private-marker';
+    delete queue.consumers[0].script_name;
+    const reader = queueReader(queue);
+    const evidence = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: reader.requestJson });
+    assert.equal(evidence.status, 'BLOCKED');
+    assert.equal(evidence.reason, 'email_dispatch_live_consumer_drift');
+    const consumer = evidence.consumers[0];
+    assert.equal(consumer.expectedWorkerMatches, false);
+    assert.deepEqual(consumer.workerIdentityFields.script_name, { present: false, type: 'undefined', valueHash: null, valueMatchesExpectedWorker: false, reference: null });
+    assert.equal(consumer.workerIdentityFields[field].present, true);
+    assert.equal(consumer.workerIdentityFields[field].type, 'string');
+    assert.equal(consumer.workerIdentityFields[field].valueMatchesExpectedWorker, false);
+    assert.match(consumer.workerIdentityFields[field].valueHash, /^sha256:[0-9a-f]{64}$/);
+    assert.ok(!JSON.stringify(evidence).includes('fixture-private-marker'));
+    assert.equal(evidence.mutationPerformed, false);
+  });
+}
+
+for (const pause of [undefined, null, 'false']) {
+  test(`auth Queue audit distinguishes omitted and invalid pause metadata: ${typeof pause}:${pause}`, async () => {
+    const queue = queueFixture();
+    if (pause === undefined) delete queue.settings.delivery_paused;
+    else queue.settings.delivery_paused = pause;
+    const reader = queueReader(queue);
+    const evidence = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: reader.requestJson });
+    assert.equal(evidence.status, 'BLOCKED');
+    assert.equal(evidence.deliveryPaused, null);
+    assert.deepEqual(evidence.deliveryPausedField, { present: pause !== undefined, type: pause === null ? 'null' : typeof pause });
+  });
+}
+
+test('auth Queue audit keeps list and detail representations distinct without accepting listing-only pause or identity metadata', async () => {
+  const queue = queueFixture();
+  const listed = structuredClone(queue);
+  listed.consumers[0].script = listed.consumers[0].script_name;
+  listed.consumers[0].environment = 'production';
+  delete listed.consumers[0].script_name;
+  queue.consumers[0].service = queue.consumers[0].script_name;
+  queue.consumers[0].environment = 'development';
+  delete queue.consumers[0].script_name;
+  delete queue.settings.delivery_paused;
+  const reader = queueReader(queue, [listed, { queue_id: deadLetterId, queue_name: 'lythaus-email-lifecycle-dlq-dev' }]);
+  const evidence = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: reader.requestJson });
+  assert.equal(evidence.status, 'BLOCKED');
+  assert.equal(evidence.deliveryPaused, null);
+  assert.equal(evidence.listing.pauseFields['settings.delivery_paused'].booleanValue, false);
+  assert.equal(evidence.pauseFields['settings.delivery_paused'].present, false);
+  assert.equal(evidence.listing.consumers[0].workerIdentityFields.script.valueMatchesExpectedWorker, true);
+  assert.equal(evidence.consumers[0].workerIdentityFields.service.valueMatchesExpectedWorker, true);
+  assert.equal(evidence.listing.consumers[0].environmentFields.environment.matchesProduction, true);
+  assert.equal(evidence.consumers[0].environmentFields.environment.matchesDevelopment, true);
+  assert.equal(evidence.listing.consumers[0].workerIdentityFields.script.valueHash, evidence.consumers[0].workerIdentityFields.service.valueHash);
+  assert.equal(reader.calls.length, 2);
+});
+
+test('auth Queue audit records alternative pause locations and consumer pause fields without coercing them into canonical readiness', async () => {
+  const queue = queueFixture();
+  delete queue.settings.delivery_paused;
+  queue.delivery_paused = false;
+  queue.paused = false;
+  queue.settings.paused = false;
+  queue.consumers[0].delivery_paused = true;
+  queue.consumers[0].settings.delivery_paused = 'false';
+  queue.consumers[0].paused = null;
+  queue.consumers[0].settings.paused = [];
+  const evidence = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: queueReader(queue).requestJson });
+  assert.equal(evidence.status, 'BLOCKED');
+  assert.equal(evidence.deliveryPaused, null);
+  for (const location of ['delivery_paused', 'paused', 'settings.paused']) assert.equal(evidence.pauseFields[location].booleanValue, false);
+  const consumer = evidence.consumers[0];
+  assert.equal(consumer.pauseFields.delivery_paused.booleanValue, true);
+  assert.equal(consumer.pauseFields['settings.delivery_paused'].type, 'string');
+  assert.equal(consumer.pauseFields['settings.delivery_paused'].booleanValue, null);
+  assert.equal(consumer.pauseFields.paused.type, 'null');
+  assert.equal(consumer.pauseFields['settings.paused'].type, 'array');
+  assert.equal(consumer.pauseFields['settings.paused'].booleanValue, null);
+});
+
+test('auth Queue audit redacts invalid or oversized identity/environment values and limits object reference depth', async () => {
+  const queue = queueFixture();
+  const consumer = queue.consumers[0];
+  delete consumer.script_name;
+  consumer.script = ['fixture-private-marker'];
+  consumer.service = 'x'.repeat(129);
+  consumer.worker = { name: 'https://fixture-private-marker.invalid', id: ['fixture-private-marker'],
+    script_name: { name: 'fixture-private-marker' }, environment: 'fixture-private-marker@example.invalid',
+    environment_name: null, secret: 'fixture-private-marker' };
+  consumer.environment = null;
+  consumer.environment_name = 123;
+  consumer.namespace = 'fixture-private-marker@example.invalid';
+  consumer.type = 'x'.repeat(129);
+  const evidence = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: queueReader(queue).requestJson });
+  assert.equal(evidence.status, 'BLOCKED');
+  const observed = evidence.consumers[0];
+  assert.equal(observed.type, 'unknown');
+  assert.deepEqual(observed.typeField, { present: true, type: 'string' });
+  assert.equal(observed.workerIdentityFields.script.type, 'array');
+  assert.equal(observed.workerIdentityFields.script.reference, null);
+  assert.equal(observed.workerIdentityFields.service.valueHash, null);
+  assert.equal(observed.workerIdentityFields.worker.reference.identityFields.name.valueHash, null);
+  assert.equal(observed.workerIdentityFields.worker.reference.identityFields.script_name.type, 'object');
+  assert.equal(observed.environmentFields.environment.type, 'null');
+  assert.equal(observed.environmentFields.environment_name.type, 'number');
+  assert.equal(observed.namespaceField.valueHash, null);
+  assert.ok(!JSON.stringify(evidence).includes('fixture-private-marker'));
+  assert.ok(!JSON.stringify(evidence).includes('x'.repeat(129)));
+});
+
+test('auth Queue audit bounds diagnostic snapshots while preserving the actual multiple-consumer count', async () => {
+  const queue = queueFixture();
+  queue.consumers = Array.from({ length: 20 }, () => structuredClone(queue.consumers[0]));
+  queue.consumers_total_count = 20;
+  const evidence = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: queueReader(queue).requestJson });
+  assert.equal(evidence.status, 'BLOCKED');
+  assert.equal(evidence.observedConsumerCount, 20);
+  assert.equal(evidence.listing.observedConsumerCount, 20);
+  assert.equal(evidence.consumers.length, 2);
+  assert.equal(evidence.listing.consumers.length, 2);
+});
+
+for (const [label, value] of [['empty', ''], ['newline', 'private-marker\n'], ['carriage-return', 'private-marker\r'],
+  ['non-ASCII', 'private-markér'], ['oversized', 'x'.repeat(129)]]) {
+  test(`auth Queue audit never hashes invalid resource-name strings: ${label}`, async () => {
+    const queue = queueFixture();
+    queue.consumers[0].environment = value;
+    queue.consumers[0].namespace = value;
+    const evidence = await captureAuthEmailQueueEvidence({ accountId: authAccount, requestJson: queueReader(queue).requestJson });
+    assert.equal(Object.hasOwn(evidence.consumers[0].environmentFields.environment, 'valueHash'), false);
+    assert.equal(evidence.consumers[0].namespaceField.valueHash, null);
+  });
+}
 
 for (const [label, alter, reason] of [
   ['paused', queue => { queue.settings.delivery_paused = true; }, 'live_delivery_not_verified'],

@@ -1,0 +1,89 @@
+name: Auth email consumer attachment
+
+on:
+  workflow_dispatch:
+    inputs:
+      attach_approved:
+        description: Apply Kyle's exact approved existing Queue-to-Jobs attachment
+        required: true
+        default: false
+        type: boolean
+      resume_delivery_approved:
+        description: Apply one separately approved existing Queue delivery_paused false PATCH
+        required: true
+        default: false
+        type: boolean
+      ci_run_id:
+        description: Successful CI run for this immutable main SHA
+        required: true
+        type: string
+      codeql_run_id:
+        description: Successful CodeQL run for this immutable main SHA
+        required: true
+        type: string
+      dependency_review_run_id:
+        description: Successful dependency review run for this immutable main SHA
+        required: true
+        type: string
+      secret_scan_run_id:
+        description: Successful secret scan run for this immutable main SHA
+        required: true
+        type: string
+      historical_reconciliation_run_id:
+        description: Successful historical reconciliation for this immutable main SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: lythaus-canonical-production-release
+  cancel-in-progress: false
+
+jobs:
+  attachment:
+    name: Inspect or attach exactly one auth email consumer
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    concurrency:
+      group: lythaus-production-workers
+      cancel-in-progress: false
+    env:
+      AUTH_EMAIL_ATTACHMENT_OUTPUT: .artifacts/auth-email-attachment/receipt.json
+      REF_PROTECTED: ${{ github.ref_protected }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Verify protected immutable main and exact source gates
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.sha }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+          CODEQL_RUN_ID: ${{ inputs.codeql_run_id }}
+          DEPENDENCY_REVIEW_RUN_ID: ${{ inputs.dependency_review_run_id }}
+          SECRET_SCAN_RUN_ID: ${{ inputs.secret_scan_run_id }}
+          HISTORICAL_RECONCILIATION_RUN_ID: ${{ inputs.historical_reconciliation_run_id }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test "$REF_PROTECTED" = 'true'
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          node scripts/ci/verify-exact-release-evidence.mjs
+      - name: Inspect or apply the separately approved exact attachment
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          AUTH_EMAIL_ATTACHMENT_APPROVED: ${{ inputs.attach_approved }}
+          AUTH_EMAIL_DELIVERY_RESUME_APPROVED: ${{ inputs.resume_delivery_approved }}
+        run: node scripts/ci/attach-auth-email-consumer.mjs
+      - name: Preserve sanitized receipt even when blocked
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: auth-email-consumer-attachment-${{ github.sha }}
+          path: .artifacts/auth-email-attachment
+          if-no-files-found: warn

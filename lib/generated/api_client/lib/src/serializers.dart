@@ -224,6 +224,9 @@ import 'package:lythaus_api_client/src/model/problem_submission.dart';
 import 'package:lythaus_api_client/src/model/product_integrity_private_profile_response.dart';
 import 'package:lythaus_api_client/src/model/product_integrity_private_profile_user.dart';
 import 'package:lythaus_api_client/src/model/product_integrity_profile_update_request.dart';
+import 'package:lythaus_api_client/src/model/product_integrity_public_profile_response.dart';
+import 'package:lythaus_api_client/src/model/product_integrity_public_profile_user.dart';
+import 'package:lythaus_api_client/src/model/product_integrity_public_profile_user_reputation.dart';
 import 'package:lythaus_api_client/src/model/public_authorship.dart';
 import 'package:lythaus_api_client/src/model/public_authorship_label.dart';
 import 'package:lythaus_api_client/src/model/public_message.dart';
@@ -500,6 +503,9 @@ part 'serializers.g.dart';
   ProductIntegrityPrivateProfileResponse,
   ProductIntegrityPrivateProfileUser,
   ProductIntegrityProfileUpdateRequest,
+  ProductIntegrityPublicProfileResponse,
+  ProductIntegrityPublicProfileUser,
+  ProductIntegrityPublicProfileUserReputation,
   PublicAuthorship,
   PublicAuthorshipLabel,
   PublicMessage,
@@ -518,7 +524,7 @@ part 'serializers.g.dart';
   ReputationLedgerPage,
   ReputationPillars,
   ReputationPrivateV2,
-  ReputationPublicV2,$ReputationPublicV2,
+  ReputationPublicV2,
   ReviewerQualificationResponse,
   ReviewerQualificationState,
   ReviewerQualificationUpdateRequest,
@@ -576,7 +582,6 @@ Serializers serializers = (_$serializers.toBuilder()
       ..add(AppealOutcome.serializer)
       ..add(CursorPage.serializer)
       ..add(PrivacyRequest.serializer)
-      ..add(ReputationPublicV2.serializer)
       ..add(const OneOfSerializer())
       ..add(const AnyOfSerializer())
       ..add(const DateSerializer())

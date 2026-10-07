@@ -1,24 +1,19 @@
 import 'package:test/test.dart';
 import 'package:lythaus_api_client/lythaus_api_client.dart';
 
-// tests for ReputationPublicV2
+// tests for ProductIntegrityPublicProfileUserReputation
 void main() {
-  final instance = ReputationPublicV2Builder();
+  final instance = ProductIntegrityPublicProfileUserReputationBuilder();
   // TODO add properties to the builder and call build()
 
-  group(ReputationPublicV2, () {
-    // String userId
-    test('to test the property `userId`', () async {
-      // TODO
-    });
-
+  group(ProductIntegrityPublicProfileUserReputation, () {
     // int level
     test('to test the property `level`', () async {
       // TODO
     });
 
-    // String levelName
-    test('to test the property `levelName`', () async {
+    // String label
+    test('to test the property `label`', () async {
       // TODO
     });
 
