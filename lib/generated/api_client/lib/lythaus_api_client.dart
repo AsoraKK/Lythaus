@@ -239,6 +239,8 @@ export 'package:lythaus_api_client/src/model/private_decision.dart';
 export 'package:lythaus_api_client/src/model/private_evidence.dart';
 export 'package:lythaus_api_client/src/model/private_note.dart';
 export 'package:lythaus_api_client/src/model/problem_submission.dart';
+export 'package:lythaus_api_client/src/model/product_integrity_presentation_preferences.dart';
+export 'package:lythaus_api_client/src/model/product_integrity_presentation_preferences_update.dart';
 export 'package:lythaus_api_client/src/model/product_integrity_private_profile_response.dart';
 export 'package:lythaus_api_client/src/model/product_integrity_private_profile_user.dart';
 export 'package:lythaus_api_client/src/model/product_integrity_profile_update_request.dart';

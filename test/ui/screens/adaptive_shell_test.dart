@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lythaus/ui/screens/profile/settings_screen.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class _StaticLiveFeedNotifier extends LiveFeedController {
   _StaticLiveFeedNotifier(List<FeedItem> items)
@@ -61,6 +62,7 @@ List<Override> _baseOverrides({bool guest = false}) => [
 ];
 
 void main() {
+  setUp(() => FlutterSecureStorage.setMockInitialValues({}));
   group('AdaptiveShell', () {
     for (final outcome in ['opened', 'unavailable', 'exception']) {
       testWidgets('desktop Help handles $outcome without losing rewards', (

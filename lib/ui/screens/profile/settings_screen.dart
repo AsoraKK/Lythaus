@@ -9,7 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
-import 'package:lythaus/state/providers/settings_providers.dart';
+import 'package:lythaus/features/profile/presentation/presentation_preferences_section.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 import 'package:lythaus/features/notifications/presentation/notifications_settings_screen.dart';
 import 'package:lythaus/features/notifications/presentation/notifications_screen.dart';
@@ -39,8 +39,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(settingsProvider);
-    final controller = ref.read(settingsProvider.notifier);
     final currentUser = ref.watch(currentUserProvider);
     ref.listen(authSessionRevisionProvider, (previous, next) {
       if (previous != next) {
@@ -176,27 +174,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 },
               ),
             const Divider(height: Spacing.xl),
-            Text('Preferences', style: Theme.of(context).textTheme.titleLarge),
-            const Text(
-              'These controls apply while the app is open. They reset when it restarts.',
-            ),
-            SwitchListTile(
-              title: const Text('Swipe between profile tabs'),
-              subtitle: const Text('Tabs remain available when swipe is off.'),
-              value: settings.horizontalSwipeEnabled,
-              onChanged: (_) => controller.toggleSwipeEnabled(),
-            ),
-            SwitchListTile(
-              title: const Text('Left-handed mode (mirror nav)'),
-              value: settings.leftHandedMode,
-              onChanged: (_) => controller.toggleLeftHanded(),
-            ),
-            const ListTile(
-              title: Text('Haptics'),
-              subtitle: Text(
-                'Haptic feedback is not available in this app yet.',
-              ),
-            ),
+            const PresentationPreferencesSection(),
             const Divider(height: Spacing.xl),
             Text(
               'Public profile',

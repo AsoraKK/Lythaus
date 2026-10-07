@@ -49,12 +49,17 @@ class OwnerPost {
     final creationMode = json['declaredCreationMode'];
     final moderationState = json['moderationState'];
     final visibility = json['visibility'];
-    if (id is! String || id.isEmpty ||
-        authorId is! String || authorId.isEmpty ||
+    if (id is! String ||
+        id.isEmpty ||
+        authorId is! String ||
+        authorId.isEmpty ||
         body is! String ||
-        creationMode is! String || !_postCreationValues.contains(creationMode) ||
-        moderationState is! String || !_postReviewValues.contains(moderationState) ||
-        visibility is! String || !_postVisibilityValues.contains(visibility)) {
+        creationMode is! String ||
+        !_postCreationValues.contains(creationMode) ||
+        moderationState is! String ||
+        !_postReviewValues.contains(moderationState) ||
+        visibility is! String ||
+        !_postVisibilityValues.contains(visibility)) {
       throw const FormatException('Invalid owner post');
     }
     return OwnerPost(
@@ -100,10 +105,12 @@ class OwnerPostsPage {
       throw const FormatException('Invalid owner posts page');
     }
     return OwnerPostsPage(
-      items: rawItems.map((item) {
-        if (item is! Map) throw const FormatException('Invalid owner post');
-        return OwnerPost.fromJson(Map<String, dynamic>.from(item));
-      }).toList(growable: false),
+      items: rawItems
+          .map((item) {
+            if (item is! Map) throw const FormatException('Invalid owner post');
+            return OwnerPost.fromJson(Map<String, dynamic>.from(item));
+          })
+          .toList(growable: false),
       nextCursor: rawCursor as String?,
     );
   }
@@ -161,6 +168,8 @@ class OwnerPostsTimeline {
     items: items,
     nextCursor: nextCursor,
     isLoadingMore: isLoadingMore ?? this.isLoadingMore,
-    loadMoreError: clearLoadMoreError ? null : loadMoreError ?? this.loadMoreError,
+    loadMoreError: clearLoadMoreError
+        ? null
+        : loadMoreError ?? this.loadMoreError,
   );
 }

@@ -361,6 +361,18 @@ export function securityAuditRetentionPlan(): { retentionDays: 365 } {
   return { retentionDays: 365 };
 }
 
+export const presentationPreferencesIdentityExportQuery = `SELECT id, display_name, status, created_at, deleted_at,
+  CASE WHEN to_jsonb(u) ?& ARRAY['presentation_left_handed', 'presentation_profile_swipe', 'presentation_preferences_version']
+    THEN jsonb_build_object('leftHandedMode', to_jsonb(u)->'presentation_left_handed',
+      'horizontalSwipeEnabled', to_jsonb(u)->'presentation_profile_swipe',
+      'version', to_jsonb(u)->'presentation_preferences_version')
+    ELSE NULL END AS presentation_preferences
+  FROM identity.users u WHERE id = $1`;
+
+export const presentationPreferencesResetQuery = `UPDATE identity.users
+  SET presentation_left_handed = false, presentation_profile_swipe = true,
+    presentation_preferences_version = 1 WHERE id = $1`;
+
 export function buildPrivacyDataPassport(input: {
   generatedAt: string;
   profile: unknown;

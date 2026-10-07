@@ -224,6 +224,8 @@ doc/PrivateDecision.md
 doc/PrivateEvidence.md
 doc/PrivateNote.md
 doc/ProblemSubmission.md
+doc/ProductIntegrityPresentationPreferences.md
+doc/ProductIntegrityPresentationPreferencesUpdate.md
 doc/ProductIntegrityPrivateProfileResponse.md
 doc/ProductIntegrityPrivateProfileUser.md
 doc/ProductIntegrityProfileUpdateRequest.md
@@ -538,6 +540,8 @@ lib/src/model/private_decision.dart
 lib/src/model/private_evidence.dart
 lib/src/model/private_note.dart
 lib/src/model/problem_submission.dart
+lib/src/model/product_integrity_presentation_preferences.dart
+lib/src/model/product_integrity_presentation_preferences_update.dart
 lib/src/model/product_integrity_private_profile_response.dart
 lib/src/model/product_integrity_private_profile_user.dart
 lib/src/model/product_integrity_profile_update_request.dart
@@ -831,6 +835,8 @@ test/private_decision_test.dart
 test/private_evidence_test.dart
 test/private_note_test.dart
 test/problem_submission_test.dart
+test/product_integrity_presentation_preferences_test.dart
+test/product_integrity_presentation_preferences_update_test.dart
 test/product_integrity_private_profile_response_test.dart
 test/product_integrity_private_profile_user_test.dart
 test/product_integrity_profile_update_request_test.dart

@@ -474,6 +474,8 @@ Class | Method | HTTP request | Description
  - [PrivateEvidence](doc/PrivateEvidence.md)
  - [PrivateNote](doc/PrivateNote.md)
  - [ProblemSubmission](doc/ProblemSubmission.md)
+ - [ProductIntegrityPresentationPreferences](doc/ProductIntegrityPresentationPreferences.md)
+ - [ProductIntegrityPresentationPreferencesUpdate](doc/ProductIntegrityPresentationPreferencesUpdate.md)
  - [ProductIntegrityPrivateProfileResponse](doc/ProductIntegrityPrivateProfileResponse.md)
  - [ProductIntegrityPrivateProfileUser](doc/ProductIntegrityPrivateProfileUser.md)
  - [ProductIntegrityProfileUpdateRequest](doc/ProductIntegrityProfileUpdateRequest.md)

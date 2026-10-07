@@ -12,17 +12,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class _MockDio extends Mock implements Dio {}
 
 void main() {
+  setUp(() => FlutterSecureStorage.setMockInitialValues({}));
   setUpAll(() {
     registerFallbackValue(RequestOptions(path: '/api/users/me'));
     registerFallbackValue(Options());
     registerFallbackValue(CancelToken());
   });
 
-  testWidgets('SettingsScreen toggles local preferences', (tester) async {
+  testWidgets('SettingsScreen saves separate guest preferences explicitly', (
+    tester,
+  ) async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
@@ -50,6 +54,12 @@ void main() {
     await tester.ensureVisible(swipeTile);
     await tester.pumpAndSettle();
     await tester.tap(swipeTile);
+    await tester.pumpAndSettle();
+
+    expect(container.read(settingsProvider).leftHandedMode, isFalse);
+    final save = find.text('Save preferences');
+    await tester.ensureVisible(save);
+    await tester.tap(save);
     await tester.pumpAndSettle();
 
     final state = container.read(settingsProvider);

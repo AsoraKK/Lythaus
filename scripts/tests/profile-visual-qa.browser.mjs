@@ -127,6 +127,7 @@ test(
           moderationState: 'allowed',
           publicVisibility: true,
           subscriptionTier: 'free',
+          presentationPreferences: { leftHandedMode: false, horizontalSwipeEnabled: true, version: 1 },
         };
         let postsMode = 'empty';
         let postErrorsRemaining = 0;
@@ -205,7 +206,18 @@ test(
           } else if (requestUrl.pathname === '/api/users/me') {
             status = session ? 200 : 401;
             if (request.method() === 'PATCH' && status === 200) {
-              ownProfile = { ...ownProfile, ...request.postDataJSON() };
+              const patch = request.postDataJSON();
+              if (patch.presentationPreferences) {
+                assert.equal(patch.presentationPreferences.expectedVersion, ownProfile.presentationPreferences.version);
+                assert.ok(requestHeaders['idempotency-key']);
+                ownProfile.presentationPreferences = {
+                  leftHandedMode: patch.presentationPreferences.leftHandedMode,
+                  horizontalSwipeEnabled: patch.presentationPreferences.horizontalSwipeEnabled,
+                  version: ownProfile.presentationPreferences.version + 1,
+                };
+              } else {
+                ownProfile = { ...ownProfile, ...patch };
+              }
             }
             body = status === 200
               ? { user: ownProfile }
@@ -466,6 +478,28 @@ test(
             return page.getByRole('group', { name: new RegExp(escaped) });
           }
 
+          await openApp('/settings');
+          await page.getByRole('button', { name: 'Continue as guest', exact: true }).click();
+          const guestLeft = page.getByRole('switch', { name: /Left-handed mode/ });
+          const guestSwipe = page.getByRole('switch', { name: /Swipe between profile tabs/ });
+          await guestLeft.scrollIntoViewIfNeeded();
+          await guestLeft.click();
+          await guestSwipe.scrollIntoViewIfNeeded();
+          await guestSwipe.click();
+          const guestSave = page.getByRole('button', { name: 'Save preferences', exact: true });
+          await guestSave.scrollIntoViewIfNeeded();
+          await guestSave.click();
+          await page.locator('flt-semantics').getByText('Saved on this device for guest use.', { exact: true }).waitFor();
+          await screenshot('guest-saved-preferences');
+          await openApp('/settings');
+          await page.getByRole('button', { name: 'Continue as guest', exact: true }).click();
+          await guestLeft.scrollIntoViewIfNeeded();
+          assert.equal(await guestLeft.isChecked(), true);
+          assert.equal(await guestSwipe.isChecked(), false);
+          await screenshot('guest-reopened-preferences');
+          assert.equal(apiCalls.filter(({ path: requestPath, method }) => requestPath === '/api/users/me' && method === 'PATCH').length, 0);
+          assert.equal(ownProfile.presentationPreferences.leftHandedMode, false);
+          assert.equal(ownProfile.presentationPreferences.horizontalSwipeEnabled, true);
           await openApp();
           await signIn();
           const profileTab = page
@@ -652,9 +686,27 @@ test(
           const privacyBox = await page.getByRole('button', { name: /Privacy and your data/ }).boundingBox();
           assert.ok(securityBox && privacyBox && securityBox.y < privacyBox.y);
           await screenshot('settings-account-first');
-          const temporaryPreferences = page.getByText('These controls apply while the app is open. They reset when it restarts.', { exact: true });
-          await temporaryPreferences.scrollIntoViewIfNeeded();
-          await temporaryPreferences.waitFor();
+          const savedPreferences = page.getByText('Save these choices to your account for signed-in devices.');
+          await savedPreferences.scrollIntoViewIfNeeded();
+          await savedPreferences.waitFor();
+          const leftHanded = page.getByRole('switch', { name: /Left-handed mode/ });
+          await leftHanded.scrollIntoViewIfNeeded();
+          await leftHanded.click();
+          const swipeTabs = page.getByRole('switch', { name: /Swipe between profile tabs/ });
+          await swipeTabs.scrollIntoViewIfNeeded();
+          await swipeTabs.click();
+          assert.equal(ownProfile.presentationPreferences.leftHandedMode, false);
+          const savePreferences = page.getByRole('button', { name: 'Save preferences', exact: true });
+          await savePreferences.scrollIntoViewIfNeeded();
+          await savePreferences.click();
+          await page.locator('flt-semantics').getByText('Saved to your account.', { exact: true }).waitFor();
+          assert.equal(ownProfile.presentationPreferences.leftHandedMode, true);
+          assert.equal(ownProfile.presentationPreferences.horizontalSwipeEnabled, false);
+          await screenshot('settings-saved-preferences');
+          await openApp('/settings?tab=profile&profileTab=posts');
+          await leftHanded.scrollIntoViewIfNeeded();
+          assert.equal(await leftHanded.isChecked(), true);
+          assert.equal(await swipeTabs.isChecked(), false);
           await moveHeadingNearTop('Trust Passport visibility');
           const privateOption = page.getByRole('checkbox', { name: 'Private', exact: true });
           await privateOption.scrollIntoViewIfNeeded();
@@ -737,7 +789,7 @@ test(
         2,
       ),
     );
-    const expectedCaptures = selectedThemes.length * selectedSizes.length * 13;
+    const expectedCaptures = selectedThemes.length * selectedSizes.length * 16;
     assert.equal(captures.length, expectedCaptures, 'Every profile state screenshot must be captured');
     assert.deepEqual(
       configResults.flatMap(({ errors }) => errors),

@@ -16628,6 +16628,28 @@
           }
         }
       },
+      "ProductIntegrityPresentationPreferences": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "required": [
+          "leftHandedMode",
+          "horizontalSwipeEnabled",
+          "version"
+        ],
+        "properties": {
+          "leftHandedMode": {
+            "type": "boolean"
+          },
+          "horizontalSwipeEnabled": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
       "ProductIntegrityPrivateProfileUser": {
         "type": "object",
         "required": [
@@ -16660,6 +16682,16 @@
           "publicVisibility": {
             "type": "boolean",
             "description": "Owner visibility preference. A true value does not publish an under-review or blocked profile."
+          },
+          "presentationPreferences": {
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductIntegrityPresentationPreferences"
+              }
+            ],
+            "nullable": true,
+            "description": "Private account preferences, absent or null when schema storage is unavailable. Never returned by the public profile endpoint."
           },
           "handle": {
             "type": "string",
@@ -16725,6 +16757,28 @@
           }
         }
       },
+      "ProductIntegrityPresentationPreferencesUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "leftHandedMode",
+          "horizontalSwipeEnabled",
+          "expectedVersion"
+        ],
+        "properties": {
+          "leftHandedMode": {
+            "type": "boolean"
+          },
+          "horizontalSwipeEnabled": {
+            "type": "boolean"
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483646
+          }
+        }
+      },
       "ProductIntegrityProfileUpdateRequest": {
         "type": "object",
         "additionalProperties": false,
@@ -16754,6 +16808,14 @@
             "maxLength": 160,
             "nullable": true,
             "description": "Private encrypted accountability name. It is never returned by profile or activity APIs."
+          },
+          "presentationPreferences": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductIntegrityPresentationPreferencesUpdate"
+              }
+            ],
+            "description": "Private account presentation choices. Send this field alone; it does not change profile publication or Passport visibility. Requires the approved preference schema. Conflicts return 409; unavailable storage returns 503."
           }
         }
       },

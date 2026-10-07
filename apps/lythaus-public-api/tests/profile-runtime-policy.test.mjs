@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { normalizeProfileName, isDisallowedProfileName } from '../../../packages/contracts/src/profile-name-policy.ts';
 import { parseDisplayName } from '../../lythaus-admin-api/src/admin-runtime-policy.ts';
-import { parseProfileUpdate } from '../src/profile-runtime-policy.ts';
+import { parseProfileUpdate, readPresentationPreferences } from '../src/profile-runtime-policy.ts';
 
 const fixtures = JSON.parse(readFileSync(new URL('../../../packages/contracts/fixtures/profile-name-policy.json', import.meta.url), 'utf8'));
 for (const { value, valid } of fixtures) {
@@ -36,6 +36,23 @@ test('profile patches accept independent optional fields without inventing omitt
   for (const trustPassportVisibility of ['private', 'public_minimal', 'public_expanded']) {
     assert.deepEqual(parseProfileUpdate({ trustPassportVisibility }), { trustPassportVisibility });
   }
+});
+
+test('presentation choices require two booleans and an optimistic version, independently of public fields', () => {
+  const presentationPreferences = { leftHandedMode: true, horizontalSwipeEnabled: false, expectedVersion: 2 };
+  assert.deepEqual(parseProfileUpdate({ presentationPreferences }), { presentationPreferences });
+  for (const value of [null, [], {}, { ...presentationPreferences, extra: true },
+    { ...presentationPreferences, leftHandedMode: 1 }, { ...presentationPreferences, horizontalSwipeEnabled: 'false' },
+    ...[undefined, null, 0, -1, 1.5, '2', 2147483647].map(expectedVersion => ({ ...presentationPreferences, expectedVersion }))]) {
+    assert.throws(() => parseProfileUpdate({ presentationPreferences: value }), /invalid_profile_update/);
+  }
+  assert.throws(() => parseProfileUpdate({ presentationPreferences, bio: 'Cannot mix scopes' }), /invalid_profile_update/);
+  assert.deepEqual(readPresentationPreferences({ leftHandedMode: false, horizontalSwipeEnabled: true, version: 1 }),
+    { leftHandedMode: false, horizontalSwipeEnabled: true, version: 1 });
+  for (const value of [null, {}, { leftHandedMode: false, horizontalSwipeEnabled: true, version: 0 },
+    { leftHandedMode: false, horizontalSwipeEnabled: true, version: 1.5 },
+    { leftHandedMode: false, horizontalSwipeEnabled: true, version: '1' },
+    { leftHandedMode: false, horizontalSwipeEnabled: null, version: 1 }]) assert.equal(readPresentationPreferences(value), null);
 });
 
 test('profile patches reject malformed shapes, unrecognized fields, passwords and invalid optional fields', () => {
