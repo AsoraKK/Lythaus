@@ -14,8 +14,11 @@ The parent reserved exactly these implementation paths:
 - `apps/lythaus-jobs/src/monthly-reputation.ts`
 - `apps/lythaus-jobs/tests/monthly-reputation.postgres.mjs`
 
+The parent later reserved one narrow fixture accommodation in
+`apps/lythaus-jobs/tests/monthly-reputation-report.cases.mjs`: keep the new
+catalogue CHECK and retain the real reader's corrupt-hash rejection assertion.
 This separate evidence note is the only additional authored document. Assembly,
-snapshots, private report adapters/routes/exports, OpenAPI/generated clients,
+snapshots, production private report adapters/routes/exports, OpenAPI/generated clients,
 barrels/dispatchers, DSR/reconciler, migration registry/roles/grants, CI and locks
 are untouched. Support-qualified acceptance remains support-owned.
 
@@ -102,7 +105,7 @@ implemented; unreserved integrations remain explicitly pending.
 | I06: independent evidence and reversal | Extra client points/wrong subject/reviewer/authority refuse; countercausal reversal refuses; closing-month unresolved correction returns null; duplicate/reordered February reversal agrees | Qualified producer/rubric/replacement/correction timing remain pending |
 | I07: same-policy correction/reselection | Source supersedes FK rejects mixed policy; real v1 correction after v2; tied fifth-week correction reselects whole week with CAS | V2 snapshot/dependent-award integration unreserved; legacy snapshot/reward suites run |
 | I08: disabled/missing schema/context/policy | Actual legacy schema, temporarily unavailable policy column, missing fixture context and disabled/v2 flags admit nothing | No operational activation setting |
-| I09: private report/API/CSV | Existing legacy suites run unchanged; no new report/export contract is emitted | Canonical API/analytics-owned v2 wiring unimplemented |
+| I09: private report/API/CSV | Existing legacy suite retains real reader corruption rejection using a controlled read boundary; database rejects the attempted bad hash and its CHECK remains validated | No new report/export contract; canonical API/analytics-owned v2 wiring unimplemented |
 | I10: privacy and membership | Runtime role cannot read either policy's source/assessment; admission omits private proof/reviewer fields; inherited all-plan earning tests pass | Public restrained level unchanged; no paid earning gate |
 | I11: erasure/races | Missing/deleted/wrong account refusal; actual account-delete race leaves no source; privacy source deletion cascades both versions' assessments | Passport/privacy reconciler integration unreserved |
 | I12: quiescence/history | Removing the fixture context prevents preparation; ordinary runtime retains v1 operation; prepared history and existing level profile remain unchanged | No destructive downgrade or active policy change |
@@ -133,20 +136,25 @@ branches, with 100% functions. Policy coverage suite: **56 passed, zero
 failed/skipped**. Native typecheck and whitespace pass.
 
 Broader existing PG17 coverage suites: earning 12, contextual 20, appeals 26,
-renewal/assembly 20, snapshots 19 passed with zero failures/skips. Rewards/report
-initial result is 63 passed / 1 failed / zero skipped: its deliberate catalogue
-corruption fixture is now stopped by the new CHECK before the report assertion.
-The report-owned fixture is outside the four-path reservation; authorization
-for the following minimal accommodation is pending. No production code change
-or weakened constraint is proposed to hide the failure.
+renewal/assembly 20, snapshots 19 and rewards/report 64 passed with zero
+failures/skips. Together with the focused suite: **180 passed, zero failed/skipped**.
+The initial rewards/report run reproduced one fixture incompatibility: the
+new catalogue CHECK prevents the fixture from storing a deliberately corrupt
+hash before the reader can inspect it.
 
-Proposed fixture-only accommodation in
-`apps/lythaus-jobs/tests/monthly-reputation-report.cases.mjs`: capture
-`pg_get_constraintdef` for `monthly_reputation_source_policy_catalogue_v2`, drop
-it alongside the fixture's already-disabled immutable trigger, and restore/
-validate the exact constraint after restoring the correct catalogue hash in its
-finally block. This deliberately manufactured corruption stays inside the
-existing explicit disposable-database guard. The file is not edited here yet.
+The parent authorized a bounded fixture accommodation in
+`apps/lythaus-jobs/tests/monthly-reputation-report.cases.mjs`. With the existing
+fixture's update trigger temporarily disabled, the test now asserts SQLSTATE
+23514 from `monthly_reputation_source_policy_catalogue_v2`. It then invokes the
+real private report reader inside a real PostgreSQL transaction. A query wrapper
+passes every query to PostgreSQL and changes only the first real source row's
+catalogue hash at the read boundary. The original
+`monthly_report_source_integrity_failed` assertion remains intact. The test
+also proves that the boundary was exercised, the stored hash is unchanged and
+the catalogue CHECK is still validated. No CHECK is dropped or weakened, no
+production report code changes, and no corrupt row is persisted. The existing
+disposable-database guard, lineage corruption and missing-assembly assertions
+remain in place.
 
 Required full exact-head CI and parent independent review precede serialized
 merge. These local results do not substitute for them; current CI status belongs
