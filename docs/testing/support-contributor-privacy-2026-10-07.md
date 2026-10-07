@@ -4,8 +4,9 @@ This dependent draft starts from reviewed PR950 at
 `04b22c38c8f1e0ad6ec0d7a8f8c7d65c1d978c62`. PR950 and PR947 are preserved.
 Parent owns independent review, shared-file integration and strict-main checks.
 No merge, deployment, provider mutation, policy activation or notification send
-is part of this package. Release102 and the support/tag-search OFF state remain
-the last reported deployment; this package makes no new live-state claim.
+is part of this package. Live release identity requires the coordinator's
+current receipt, which has not been read in this lane; this source/testing
+packet makes no live-state claim. The earlier Release102 assumption is removed.
 
 ## Concrete gaps and supported source changes
 
