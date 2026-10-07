@@ -83,6 +83,14 @@ https://developers.cloudflare.com/workers/versions-and-deployments/version-overr
 This evidence is consistent with propagation, not proof of it. Do not retry the
 whole release blindly or change routing based on an unverified mapping.
 
+The Public candidate probe uses the same five-attempt bound and 2/4/6/8-second
+delays when a healthy response identifies a positive-traffic Public version and
+exact source tag from its captured predeployment snapshots. Prior responses are
+retry evidence only; success still requires the exact Public candidate and its
+full readiness contract. Unknown, missing, zero-traffic or wrong-source identities,
+schema/role failures and HTTP rejection stop immediately. A persistent captured
+prior version exhausts the bound and triggers rollback.
+
 Failed owner-testing releases still publish their canonical manifest and integrity
 digest. A rolled-back release retains `ROLLED_BACK`, the original failure domains
 and `NO-GO`; only a completed owner-test activation and smoke can report
