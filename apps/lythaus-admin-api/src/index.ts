@@ -1299,25 +1299,47 @@ export default {
         assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
         return cors(await deleteAdminUser(request, keeperEnv, actor, deleteUser[1], id));
       }
-      if (url.pathname === '/api/admin/privacy/legal-holds' && ['GET', 'POST'].includes(request.method)) return cors(await legalHolds(request, env, actor, id));
+      if (url.pathname === '/api/admin/privacy/legal-holds' && ['GET', 'POST'].includes(request.method)) {
+        if (request.method === 'POST') assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await legalHolds(request, env, actor, id));
+      }
       const legalHoldClear = url.pathname.match(/^\/api\/admin\/privacy\/legal-holds\/([^/]+)\/clear$/);
-      if (request.method === 'POST' && legalHoldClear) return cors(await clearLegalHold(env, actor, legalHoldClear[1], id));
-      if (request.method === 'POST' && url.pathname === '/api/admin/editorial/publications') return cors(await publishEditorial(request, env, actor, id));
+      if (request.method === 'POST' && legalHoldClear) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await clearLegalHold(env, actor, legalHoldClear[1], id));
+      }
+      if (request.method === 'POST' && url.pathname === '/api/admin/editorial/publications') {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await publishEditorial(request, env, actor, id));
+      }
       const moderation = url.pathname.match(/^\/api\/admin\/moderation\/cases\/([^/]+)\/decision$/);
-      if (request.method === 'POST' && moderation) return cors(await decideModeration(request, env, actor, moderation[1], id));
+      if (request.method === 'POST' && moderation) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await decideModeration(request, env, actor, moderation[1], id));
+      }
       const appealAdjudication = url.pathname.match(/^\/api\/admin\/appeals\/([^/]+)\/adjudications$/);
-      if (request.method === 'POST' && appealAdjudication) return cors(await adjudicateAppeal(request, env, actor, appealAdjudication[1], id));
+      if (request.method === 'POST' && appealAdjudication) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await adjudicateAppeal(request, env, actor, appealAdjudication[1], id));
+      }
       if (request.method === 'GET' && url.pathname === '/api/admin/appeals/pending-adjudication') {
         return cors(await listPendingAppealAdjudications(env, actor));
       }
       const reviewerQualification = url.pathname.match(/^\/api\/admin\/reviewers\/([^/]+)\/qualification$/);
       if ((request.method === 'PUT' || request.method === 'POST') && reviewerQualification) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
         return cors(await updateReviewerQualification(request, env, actor, reviewerQualification[1], id));
       }
       const accountStatus = url.pathname.match(/^\/api\/admin\/users\/([^/]+)\/status$/);
-      if (request.method === 'POST' && accountStatus) return cors(await updateAccountStatus(request, env, actor, accountStatus[1], id));
+      if (request.method === 'POST' && accountStatus) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await updateAccountStatus(request, env, actor, accountStatus[1], id));
+      }
       const accountTier = url.pathname.match(/^\/api\/admin\/users\/([^/]+)\/tier$/);
-      if (request.method === 'POST' && accountTier) return cors(await setUserTier(request, env, actor, accountTier[1], id));
+      if (request.method === 'POST' && accountTier) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        return cors(await setUserTier(request, env, actor, accountTier[1], id));
+      }
       return cors(json({ error: 'not_found', correlationId: id }, { status: 404 }));
     } catch (error) {
       const classified = adminError(error);
