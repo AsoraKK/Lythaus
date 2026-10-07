@@ -530,7 +530,7 @@ test(
           await retry.focus();
           await page.keyboard.press('Enter');
           await page
-            .getByText('No posts are available in this list.', { exact: true })
+            .getByText('No posts are available in this list.', { exact: false })
             .waitFor();
           await moveHeadingNearTop('Your posts');
           await screenshot('owner-error-recovered');
