@@ -439,7 +439,7 @@ class _OwnerPostsSection extends ConsumerWidget {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
         child: Text(
-          'You have not posted yet. Your posts will appear here after you share them.',
+          'No posts are available in this list.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),

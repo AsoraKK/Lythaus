@@ -14,12 +14,10 @@ final ownerPostsServiceProvider = Provider<OwnerPostsService>((ref) {
   return OwnerPostsService(ref.watch(secureDioProvider));
 });
 
-final ownerPostsTimelineProvider =
-    AsyncNotifierProvider.autoDispose.family<
-      OwnerPostsController,
-      OwnerPostsTimeline,
-      OwnerPostsKey
-    >(OwnerPostsController.new);
+final ownerPostsTimelineProvider = AsyncNotifierProvider.autoDispose
+    .family<OwnerPostsController, OwnerPostsTimeline, OwnerPostsKey>(
+      OwnerPostsController.new,
+    );
 
 class OwnerPostsService {
   OwnerPostsService(this._dio);
@@ -50,9 +48,12 @@ class OwnerPostsController
 
   @override
   Future<OwnerPostsTimeline> build(OwnerPostsKey key) async {
+    ++_requestRevision;
     final revision = ref.watch(authSessionRevisionProvider);
     final user = ref.watch(currentUserProvider);
-    if (user == null || user.id != key.userId || revision != key.sessionRevision) {
+    if (user == null ||
+        user.id != key.userId ||
+        revision != key.sessionRevision) {
       throw StateError('Sign in to view your private posts');
     }
     final page = await _fetchPage(null);
@@ -87,21 +88,14 @@ class OwnerPostsController
 
   Future<void> refresh() async {
     if (!_sessionMatches()) return;
-    final requestRevision = ++_requestRevision;
     state = const AsyncLoading();
+    // Rebuild through Riverpod so it detaches any older initial build future,
+    // disposes its request callbacks, and owns the current error/data result.
+    ref.invalidateSelf();
     try {
-      final page = await _fetchPage(null);
-      if (!_sessionMatches() || requestRevision != _requestRevision) return;
-      state = AsyncData(
-        OwnerPostsTimeline(items: page.items, nextCursor: page.nextCursor),
-      );
-    } catch (error, stackTrace) {
-      if (!_sessionMatches() ||
-          requestRevision != _requestRevision ||
-          (error is DioException && CancelToken.isCancel(error))) {
-        return;
-      }
-      state = AsyncError(error, stackTrace);
+      await future;
+    } catch (_) {
+      // The current build publishes its own failure for the retry UI.
     }
   }
 
@@ -120,7 +114,11 @@ class OwnerPostsController
       if (token == null || token.isEmpty) throw StateError('Session expired');
       final page = await ref
           .read(ownerPostsServiceProvider)
-          .getPage(accessToken: token, cursor: cursor, cancelToken: cancelToken);
+          .getPage(
+            accessToken: token,
+            cursor: cursor,
+            cancelToken: cancelToken,
+          );
       if (!_sessionMatches()) throw StateError('Profile session changed');
       if (page.items.any((post) => post.authorId != arg.userId)) {
         throw const FormatException('Owner posts do not match the session');

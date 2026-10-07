@@ -483,7 +483,7 @@ test(
           await screenshot('owner-comments-unavailable');
           await page.getByRole('tab', { name: /^Posts/ }).click();
           await moveHeadingNearTop('Your posts');
-          assert.ok((await profileText()).includes('You have not posted yet.'));
+          assert.ok((await profileText()).includes('No posts are available in this list.'));
           await screenshot('owner-empty');
 
           postsMode = 'populated';
@@ -530,7 +530,7 @@ test(
           await retry.focus();
           await page.keyboard.press('Enter');
           await page
-            .getByText('You have not posted yet.', { exact: false })
+            .getByText('No posts are available in this list.', { exact: true })
             .waitFor();
           await moveHeadingNearTop('Your posts');
           await screenshot('owner-error-recovered');

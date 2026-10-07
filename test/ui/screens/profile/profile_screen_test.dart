@@ -97,6 +97,24 @@ class _FakeOwnerPostsService extends OwnerPostsService {
   }
 }
 
+class _PendingOwnerPostsService extends _FakeOwnerPostsService {
+  final pending = <Completer<OwnerPostsPage>>[];
+  final cancelTokens = <CancelToken?>[];
+
+  @override
+  Future<OwnerPostsPage> getPage({
+    required String accessToken,
+    String? cursor,
+    CancelToken? cancelToken,
+  }) {
+    requests++;
+    cancelTokens.add(cancelToken);
+    final response = Completer<OwnerPostsPage>();
+    pending.add(response);
+    return response.future;
+  }
+}
+
 OwnerPost _post({
   required String id,
   required String body,
@@ -409,6 +427,57 @@ void main() {
       expect(find.text('Visible to followers.'), findsNothing);
     });
 
+    testWidgets('toolbar refresh wins over a slower initial post request', (
+      tester,
+    ) async {
+      final service = _PendingOwnerPostsService();
+      await tester.pumpWidget(
+        _buildApp(
+          overrides: [
+            currentUserProvider.overrideWithValue(_fakeAuthUser),
+            ownerProfileProvider.overrideWith(
+              (ref) async => _ownerProfile(_fakeUser),
+            ),
+            ownerPostsServiceProvider.overrideWithValue(service),
+            jwtProvider.overrideWith((ref) async => 'tok'),
+            reputationProvider.overrideWith(
+              (ref) async => _fakeReputationState,
+            ),
+          ],
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.widgetWithText(Tab, 'Posts'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pump();
+      expect(service.pending, hasLength(1));
+
+      await tester.tap(find.byTooltip('Refresh profile'));
+      await tester.pump();
+      await tester.pump();
+      expect(service.pending, hasLength(2));
+      expect(service.cancelTokens.first!.isCancelled, isTrue);
+      service.pending[1].complete(
+        OwnerPostsPage(
+          items: [_post(id: 'new-refresh', body: 'New refresh post')],
+          nextCursor: null,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('New refresh post').hitTestable(), findsOneWidget);
+
+      service.pending[0].complete(
+        OwnerPostsPage(
+          items: [_post(id: 'old-initial', body: 'Older initial post')],
+          nextCursor: null,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('New refresh post').hitTestable(), findsOneWidget);
+      expect(find.text('Older initial post'), findsNothing);
+    });
+
     testWidgets('post timeline recovers from a load error', (tester) async {
       final service = _FakeOwnerPostsService(failuresRemaining: 1);
       await tester.pumpWidget(
@@ -439,12 +508,7 @@ void main() {
       );
       await tester.tap(find.text('Retry posts'));
       await tester.pumpAndSettle();
-      expect(
-        find.text(
-          'You have not posted yet. Your posts will appear here after you share them.',
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('No posts are available in this list.'), findsOneWidget);
       expect(service.requests, 2);
     });
 
