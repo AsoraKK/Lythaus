@@ -381,13 +381,14 @@ const presentationPreferencesStorageState = `CASE
   ELSE 'incomplete' END`;
 
 export const presentationPreferencesIdentityExportQuery = `${presentationPreferencesStorageCatalog}
-  SELECT id, display_name, status, created_at, deleted_at,
+  SELECT u.id, u.display_name, u.status, u.created_at, u.deleted_at, profile.bio,
     ${presentationPreferencesStorageState} AS presentation_preferences_storage_state,
     CASE WHEN storage.column_count = 0 THEN NULL ELSE jsonb_build_object(
       'leftHandedMode', to_jsonb(u)->'presentation_left_handed',
       'horizontalSwipeEnabled', to_jsonb(u)->'presentation_profile_swipe',
       'version', to_jsonb(u)->'presentation_preferences_version') END AS presentation_preferences
-  FROM identity.users u CROSS JOIN presentation_storage storage WHERE id = $1`;
+  FROM identity.users u CROSS JOIN presentation_storage storage
+  LEFT JOIN social.profiles profile ON profile.user_id = u.id WHERE u.id = $1`;
 
 export const presentationPreferencesStorageStateQuery = `${presentationPreferencesStorageCatalog}
   SELECT ${presentationPreferencesStorageState} AS presentation_preferences_storage_state

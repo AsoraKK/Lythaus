@@ -40,6 +40,14 @@ test('presentation privacy accepts absent/ready storage and rejects incomplete o
     /presentation_preferences_storage_incomplete/);
 });
 
+test('private export projection preserves stored biography text and null', () => {
+  for (const bio of ['Saved biography\nwith Unicode: Zoë 🌱', '', null]) {
+    const identity = validatedPresentationPreferencesIdentity({ id: 'synthetic', bio,
+      presentation_preferences_storage_state: 'absent', presentation_preferences: null });
+    assert.deepEqual(JSON.parse(JSON.stringify(identity)), { id: 'synthetic', bio, presentation_preferences: null });
+  }
+});
+
 test('presentation privacy reset skips only absent rows/storage and writes only validated ready storage', async () => {
   for (const state of [undefined, 'absent', 'ready', 'incomplete']) {
     const calls = [];

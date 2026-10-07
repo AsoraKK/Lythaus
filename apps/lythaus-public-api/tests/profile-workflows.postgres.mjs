@@ -98,6 +98,7 @@ test('native full export and delete use private preferences, R2, canonical grant
   assert.equal(object.httpMetadata.contentType, 'application/json');
   assert.equal(passport.schemaVersion, 'lythaus-data-passport-v3');
   assert.equal(passport.profile.id, subjectId);
+  assert.equal(passport.profile.bio, 'Synthetic saved biography');
   assert.deepEqual(passport.profile.presentation_preferences, { leftHandedMode: true, horizontalSwipeEnabled: false, version: 7 });
   assert.ok(!body.includes('presentation_preferences_storage_state'));
   assert.ok(!body.includes(otherId));
@@ -162,7 +163,7 @@ test('native complete workflows preserve wholly absent schema compatibility', as
   assert.equal(await exports.get(key(exported)), null);
 });
 
-test('incomplete storage stops full workflows before completion and allows repaired retry', async () => {
+test('incomplete storage stops completion and permits repaired same-request re-execution', async () => {
   await storage('incomplete');
   const subjectId = await subject();
   await sql('UPDATE identity.users SET presentation_left_handed=true WHERE id=$1', [subjectId]);
@@ -212,4 +213,47 @@ test('legal hold blocks the native deletion before preference reset and R2 purge
   assert.ok(!fixture.steps.slice(start).some(s => s.name === 'reset-presentation-preferences'));
   assert.equal((await sql('SELECT count(*)::integer AS count FROM privacy.deletion_tombstones WHERE subject_id=$1', [subjectId])).rows[0].count, 0);
   assert.equal((await sql("SELECT count(*)::integer AS count FROM feed.notifications WHERE recipient_id=$1 AND notification_type='privacy.deletion_blocked'", [subjectId])).rows[0].count, 1);
+});
+
+test('stored private and pending biographies stay owner-bound in the complete native export', async () => {
+  await storage('absent');
+  const otherId = await subject();
+  const otherBio = 'Other member’s synthetic private biography — excluded';
+  await sql("UPDATE social.profiles SET bio=$2,public_visibility=false,moderation_state='under_review' WHERE user_id=$1", [otherId, otherBio]);
+  const exports = await fixture.bucket('PRIVATE_EXPORTS');
+  for (const [state, visible] of [['under_review', true], ['under_review', false], ['blocked', false], ['allowed', false]]) {
+    const subjectId = await subject();
+    const bio = `This member’s stored biography: ${state}.\nPrivate text remains in the owner's export.`;
+    await sql('UPDATE social.profiles SET bio=$2,moderation_state=$3,public_visibility=$4 WHERE user_id=$1', [subjectId, bio, state, visible]);
+    const exported = await request(subjectId, 'export');
+    await completed('export', exported);
+    const body = await (await exports.get(key(exported))).text();
+    const passport = JSON.parse(body);
+    assert.equal(passport.profile.id, subjectId);
+    assert.equal(passport.profile.bio, bio);
+    assert.equal(passport.profile.presentation_preferences, null);
+    assert.ok(!body.includes(otherBio));
+    assert.ok(!body.includes(otherId));
+  }
+  assert.equal((await sql('SELECT bio FROM social.profiles WHERE user_id=$1', [otherId])).rows[0].bio, otherBio);
+});
+
+test('missing profile exports null biography; empty text and canonical NOT NULL remain distinct', async () => {
+  await storage('absent');
+  const subjectId = await subject();
+  await sql('DELETE FROM social.profiles WHERE user_id=$1', [subjectId]);
+  const exported = await request(subjectId, 'export');
+  await completed('export', exported);
+  const exports = await fixture.bucket('PRIVATE_EXPORTS');
+  const missing = await (await exports.get(key(exported))).json();
+  assert.equal(missing.profile.id, subjectId);
+  assert.equal(missing.profile.bio, null);
+  assert.equal(missing.privateProfile, null);
+  const emptyId = await subject();
+  await assert.rejects(sql('UPDATE social.profiles SET bio=NULL WHERE user_id=$1', [emptyId]), error => error.code === '23502');
+  assert.equal((await sql('SELECT bio FROM social.profiles WHERE user_id=$1', [emptyId])).rows[0].bio, 'Synthetic saved biography');
+  await sql("UPDATE social.profiles SET bio='' WHERE user_id=$1", [emptyId]);
+  const emptyExport = await request(emptyId, 'export');
+  await completed('export', emptyExport);
+  assert.equal((await (await exports.get(key(emptyExport))).json()).profile.bio, '');
 });
