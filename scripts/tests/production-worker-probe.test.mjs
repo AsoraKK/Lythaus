@@ -96,7 +96,13 @@ function runProbe(t, scenario, worker = 'lythaus-admin-api-development', previou
       if (scenario === 'previous-wrong-public') body.emailBinding.publicWorkerVersion = '${wrongPreviousPublicVersion}';
       if (scenario === 'previous-unverified-public') body.emailBinding.bindingVerified = false;
       if (scenario === 'previous-missing-public') delete body.emailBinding;
-      if (scenario === 'previous-wrong-service') body.service = 'lythaus-public-api';
+      if (scenario === 'previous-wrong-service') body.service = new URL(url).hostname === 'admin-api.lythaus.co'
+        ? 'lythaus-public-api' : 'lythaus-admin-api';
+      if (scenario === 'previous-missing-identity') delete body.workerVersionId;
+      if (scenario === 'previous-fingerprint') body.schemaFingerprint = 'b'.repeat(64);
+      if (scenario === 'previous-superuser') body.roleClass = 'superuser';
+      if (scenario === 'previous-branch') body.branchFingerprint = 'main';
+      if (scenario === 'previous-unhealthy') body.readiness = 'fail';
       if (scenario === 'previous-invalid-auth-state') body.readyForAuthentication = 'false';
       if (scenario === 'wrong-version') body.workerVersionId = '${wrongVersion}';
       if (scenario === 'wrong-tag') body.releaseTag = 'b'.repeat(40);
@@ -162,9 +168,9 @@ function runProbe(t, scenario, worker = 'lythaus-admin-api-development', previou
       PRODUCTION_WORKER_EVIDENCE_PATH: output, PROBE_FIXTURE_REQUESTS: requests, PROBE_FIXTURE_SCENARIO: scenario,
       PROBE_FIXTURE_DELAYS: delays,
       PRODUCTION_WORKER_PREVIOUS_DEPLOYMENT_PATH: previousState ? previousDeployment : undefined,
-      PRODUCTION_WORKER_PREVIOUS_VERSIONS_PATH: previousState ? previousVersions : undefined,
-      PRODUCTION_WORKER_PREVIOUS_PUBLIC_DEPLOYMENT_PATH: previousState ? previousPublicDeployment : undefined,
-      PRODUCTION_WORKER_PREVIOUS_PUBLIC_VERSIONS_PATH: previousState ? previousPublicVersions : undefined,
+      PRODUCTION_WORKER_PREVIOUS_VERSIONS_PATH: previousState && previousState !== 'partial-snapshot' ? previousVersions : undefined,
+      PRODUCTION_WORKER_PREVIOUS_PUBLIC_DEPLOYMENT_PATH: previousState && worker === 'lythaus-admin-api-development' ? previousPublicDeployment : undefined,
+      PRODUCTION_WORKER_PREVIOUS_PUBLIC_VERSIONS_PATH: previousState && worker === 'lythaus-admin-api-development' ? previousPublicVersions : undefined,
     },
     encoding: 'utf8',
   });
@@ -432,3 +438,97 @@ test('missing prior source provenance fails before making any network request', 
   assert.deepEqual(requests, []);
   assert.deepEqual(delays, []);
 });
+
+for (const [scenario, expectedDelays] of [
+  ['previous-then-matching', [2_000, 4_000]],
+  ['previous-at-bound', [2_000, 4_000, 6_000, 8_000]],
+]) {
+  test(`Public ${scenario} accepts only the exact candidate after healthy captured serving observations`, (t) => {
+    const { result, evidence, requests, delays } = runProbe(t, scenario, 'lythaus-public-api-development', true, true);
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(delays, expectedDelays);
+    assert.equal(evidence.status, 'pass');
+    assert.equal(evidence.readyForAuthentication, false);
+    assert.equal(evidence.workers[0].workerVersionId, version);
+    assert.equal(evidence.workers[0].releaseTag, releaseSha);
+    assert.equal(evidence.workers[0].readyForAuthentication, false);
+    const observations = evidence.requests.filter(({ path }) => path.endsWith('/database-identity'));
+    assert.equal(observations.length, expectedDelays.length + 1);
+    for (const [index, observation] of observations.slice(0, -1).entries()) {
+      assert.equal(observation.observed.workerVersionId, previousVersion);
+      assert.equal(observation.observed.releaseTag, previousSha);
+      assert.deepEqual(observation.retry, { reason: 'known_predeployment_version', nextAttempt: index + 2, delayMs: expectedDelays[index] });
+    }
+    assert.equal(observations.at(-1).observed.workerVersionId, version);
+    for (const { headers } of requests) {
+      assert.equal(headers['cloudflare-workers-version-overrides'], `lythaus-public-api-development="${version}"`);
+      assert.equal(headers['cf-access-client-secret'], undefined);
+    }
+  });
+}
+
+test('a persistent captured Public version cannot pass after five attempts or claim owner acceptance', (t) => {
+  const { result, evidence, requests, delays } = runProbe(t, 'previous-always', 'lythaus-public-api-development', true, true);
+  assert.equal(result.status, 1);
+  assert.match(evidence.failure, /exact reviewed Worker version after 5 bounded propagation attempts/);
+  assert.equal(evidence.readyForAuthentication, false);
+  assert.equal(evidence.workers.length, 0);
+  assert.equal(requests.length, 7);
+  assert.deepEqual(delays, [2_000, 4_000, 6_000, 8_000]);
+});
+
+for (const scenario of [
+  'previous-wrong-tag', 'previous-zero-traffic', 'previous-schema', 'previous-fingerprint',
+  'previous-superuser', 'previous-branch', 'previous-unhealthy', 'previous-wrong-service',
+  'previous-missing-identity', 'previous-invalid-auth-state',
+]) {
+  test(`Public ${scenario} fails before retry despite a captured snapshot`, (t) => {
+    const { result, evidence, requests, delays } = runProbe(t, scenario, 'lythaus-public-api-development', true, true);
+    assert.equal(result.status, 1);
+    assert.equal(evidence.workers.length, 0);
+    assert.equal(requests.length, 3);
+    assert.deepEqual(delays, []);
+    assert.equal(evidence.requests.at(-1).retry, undefined);
+  });
+}
+
+for (const scenario of ['previous-then-unauthorized', 'previous-then-unknown']) {
+  test(`Public ${scenario} stops after an unsafe subsequent observation`, (t) => {
+    const { result, evidence, requests, delays } = runProbe(t, scenario, 'lythaus-public-api-development', true, true);
+    assert.equal(result.status, 1);
+    assert.equal(evidence.workers.length, 0);
+    assert.equal(requests.length, 4);
+    assert.deepEqual(delays, [2_000]);
+    assert.equal(evidence.requests.at(-1).retry, undefined);
+  });
+}
+
+test('Public prior-version responses without a snapshot keep the observed release failure fail-closed', (t) => {
+  const { result, evidence, requests, delays } = runProbe(t, 'previous-always', 'lythaus-public-api-development');
+  assert.equal(result.status, 1);
+  assert.match(evidence.failure, /exact reviewed Worker version/);
+  assert.equal(evidence.requests.at(-1).observed.workerVersionId, previousVersion);
+  assert.equal(requests.length, 3);
+  assert.deepEqual(delays, []);
+});
+
+for (const previousState of ['missing-provenance', 'partial-snapshot']) {
+  test(`Public ${previousState} fails before any network request`, (t) => {
+    const { result, evidence, requests, delays } = runProbe(t, 'matching', 'lythaus-public-api-development', previousState);
+    assert.equal(result.status, 1);
+    assert.equal(evidence.workers.length, 0);
+    assert.deepEqual(requests, []);
+    assert.deepEqual(delays, []);
+  });
+}
+
+for (const scenario of ['wrong-version', 'wrong-tag', 'missing-version', 'missing-tag', 'unauthorized', 'forbidden', 'unavailable-exact-identity']) {
+  test(`Public ${scenario} cannot use a captured snapshot to bypass candidate or HTTP rejection`, (t) => {
+    const { result, evidence, requests, delays } = runProbe(t, scenario, 'lythaus-public-api-development', true, true);
+    assert.equal(result.status, 1);
+    assert.equal(evidence.workers.length, 0);
+    assert.equal(requests.length, 3);
+    assert.deepEqual(delays, []);
+    assert.equal(evidence.requests.at(-1).retry, undefined);
+  });
+}
