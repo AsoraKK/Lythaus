@@ -18,6 +18,10 @@ trimming; byte and HTTP bounds remain independent. The implementation and
 current requirements matrix are in
 [the completion packet](../testing/support-feedback-completion-2026-10-07.md).
 
+Submission quotas use fixed UTC hour/day buckets, not rolling windows. Boundary
+bursts are possible when the other budgets permit; no rolling-window guarantee
+is inferred from the approved numerical limits.
+
 The following is the **historical PR947 fixture inventory**, recommendation
 version `support_pending_v1`; it is not the newly approved production policy.
 Its source baseline is main
@@ -96,6 +100,14 @@ Deleted requests containing any residual member-visible decision text are also
 registered as present. A deletion timestamp alone does not prove their content
 was scrubbed; the real-PG regression checks the proposed completion count.
 
+The current exporter selects submitter-owned tickets and their member-visible
+conversation. Owner-authored replies, notes, evidence and decisions on other
+members' tickets are located but not exported; private notes/evidence/decisions
+are excluded from reporter export. Contributor export completeness and privacy
+disposition are unresolved acceptance gates alongside deletion and holds. The
+completion packet proposes a separate author-only review slice; it does not
+authorize disclosure of peer private data or invent a retention/privacy rule.
+
 Kyle/privacy-owner review must settle the remaining audit and
 tombstone identity/expiry treatment, owner-contribution disposition, hold
 authority and corresponding user-facing notice. These are necessary policy and
@@ -104,7 +116,8 @@ statutory deadlines or a claim of compliance.
 
 Parent's remaining decision request is limited to exact reply/owner rates,
 taxonomy/reason/evidence rules, audit/tombstone expiry and identity disposition,
-owner-contribution deletion, contributor hold safeguards and hold authority.
+contributor export/privacy disposition, owner-contribution deletion, contributor
+hold safeguards and hold authority.
 Do not ask Kyle to reconfirm the already-approved numerical values or thirty-day
 direction. Synthetic reason and quota fixtures are not production choices.
 

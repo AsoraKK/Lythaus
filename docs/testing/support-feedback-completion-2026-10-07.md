@@ -45,6 +45,13 @@ rechecks in its transaction before writing a tombstone, event or success. All si
 tables absent remains compatible; partial schema or missing helper/grant fails.
 No new exporter was introduced.
 
+The existing export query selects only tickets whose `submitter_id` is the
+deletion/export subject, with their member-visible conversation. Located
+owner-authored replies, notes, evidence and decisions on other members' tickets
+are not included. Private notes/evidence/decisions are excluded from the current
+reporter export. Contributor export completeness and privacy disposition remain
+acceptance gates; the tested reporter export is not a complete contributor DSR.
+
 Canonical client validation reproduced twelve failures: both generated support
 unions expected schema class names instead of the API's `problem`/`suggestion`
 values. Explicit discriminator mappings in the existing support fragment correct
@@ -61,13 +68,13 @@ The existing generic audit duration is unchanged and is not a support approval.
 | Requirement | Source and executed evidence |
 | --- | --- |
 | 160 title / 2,000 explanation and reply characters | Contract/service optional Unicode scalar limits and `support-feedback-approved-limits.ts`; three focused policy tests, PG Worker dispatch at exact astral boundaries, malformed Unicode and independent byte limits. |
-| Five/hour and twenty/day/member submissions | Existing transactional rate-limit table, separate hourly/daily scopes shared by both kinds; concurrent eight-attempt test admits five, twenty/day rejection rolls back its hourly increment, replay spends no additional quota. |
+| Five/hour and twenty/day/member submissions | Existing transactional rate-limit table, separate fixed UTC hour/day buckets shared by both kinds; concurrent eight-attempt test admits five, twenty/day rejection rolls back its hourly increment, replay spends no additional quota. These are not rolling windows: boundary bursts are possible when other budgets permit. |
 | Separate replies and atomic rollback | Explicit existing reply-window inputs retained, no approved rate invented; separate reply quota, failed audit/validation rollback and same-key retry tests. |
 | Review, needs information, resolution, acceptance, decline | Existing configurable transitions; signed-owner/real-PG flow cases require same-request evidence for terminal decisions, retain public conversation and expose no private evidence. Reasons/rubrics are explicitly synthetic. |
 | Duplicate outcome | Config requires `duplicate_reference` evidence for terminal duplicate closure. UUID reference must target another current same-kind request that is not already a duplicate. Self, mixed-kind and reverse-cycle cases reject; peer reference/identity remains owner-private. |
 | Closed states and response behavior | Safe additive `closed` projection, closed reply rejects before quota work; Flutter/console controls disable replies. HTTP errors, no-store, revision and target-bound replay retain existing behavior. |
 | Generated support client contract | Canonical bundle and pinned 7.7.0 Dart generation; 26 semantic serialization cases cover optional character bounds, four concrete DTOs and both unions for legacy/open/closed data. Existing privacy, profile and merged PR946 admin mutation fixtures remain in the same validator. |
-| Privacy completion / export | Seven native Workerd Workflow cases use real PostgreSQL 17 and canonical grants with disposable R2. They exercise absent/partial schema, exporter privacy, pending authored content, same-request retries, missing execute grant and no false tombstone/completion. |
+| Privacy completion / reporter export | Seven native Workerd Workflow cases use real PostgreSQL 17 and canonical grants with disposable R2. They exercise absent/partial schema, reporter-export privacy, pending authored content, same-request retries, missing execute grant and no false tombstone/completion. Contributor export completeness remains gated. |
 | Thirty-day closed-content direction | Approved numerical composition and native retention case distinguish 31-day closed, 29-day closed and reporter-held records. Deletion safeguards are not certified by this duration test. |
 | Legal holds | Native generic audit retention preserves held reporter and held metadata author audits; existing reporter lock/hold tests remain. Contributor-content hold scope and placement/release authority remain gates. |
 | Profile changes preserved | Six reviewed profile Workflow regressions rerun: private biography, null/empty fields, preferences, R2, absent/incomplete storage, retries and holds. |
@@ -127,7 +134,8 @@ stored records are relabelled by this package.
 ## Remaining gates and acceptance
 
 - Exact reply/owner rates, audit and content-free tombstone lifetime/disposition,
-  owner-authored contribution deletion, hold association/locking safeguards,
+  contributor export completeness/privacy disposition, owner-authored
+  contribution deletion, hold association/locking safeguards,
   placement/release authority and corresponding privacy notice need decisions.
 - The existing scrubber clears a reporter's full ticket but only deletes requests
   submitted by the deletion subject. It does not yet implement an approved
@@ -141,6 +149,31 @@ stored records are relabelled by this package.
 - Live schema/grants, binding identity/cache behavior, owner Access revocation,
   authenticated A→B switching, expiry/holds/DSR acceptance and provider notification
   authorization need their separate exact-serving-artifact evidence.
+
+## Separate contributor-export review plan
+
+This is a proposed next bounded slice, not implemented or policy-approved here.
+
+1. Review an author-only export projection for existing messages, notes, evidence
+   and decisions. Resolve the subject through the existing privacy request and
+   require each selected row's author/owner ID to match it. Keep reporter exports
+   separate so contributor access never admits another member's ticket body,
+   identity, conversation or other authors' private records.
+2. Obtain the privacy owner's field/disposition decision before selecting output:
+   authored text can itself contain peer information; private notes, evidence
+   references and duplicate target IDs need explicit inclusion/redaction rules.
+   Do not infer permission to disclose them or invent anonymization, retention
+   or legal-hold authority. Reconcile export coverage with the locator inventory.
+3. After that review, extend the existing privacy adapter and serialized Jobs
+   exporter using the existing fresh privacy binding, existing tables and bounded
+   pagination. Preserve optional wholly-absent schema behavior; reject partial
+   storage or missing access rather than issuing a falsely complete export.
+   Confirm canonical grants first; propose any required integration separately.
+4. Test actual native Workflows on disposable PG17: subject A authored records
+   on B's ticket, unrelated author C, reporter/author overlap, paging and retries,
+   missing schema/grants, and the approved hold/disposition cases. Assert exact
+   subject coverage and absence of peer identities, submissions, private records
+   and reference leaks. Independently review that slice before any activation.
 
 Rollback retains all support rows, holds, export/delete access and privacy
 helpers, while disabling intake through reviewed flags/grant withdrawal. Re-run
