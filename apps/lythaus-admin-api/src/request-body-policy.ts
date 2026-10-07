@@ -42,7 +42,9 @@ async function readBoundedBody(request: JsonBody, maxBytes: number): Promise<Uin
 export async function readBoundedJson<T>(request: JsonBody, maxBytes = DEFAULT_MAX_JSON_BYTES): Promise<T> {
   const bytes = await readBoundedBody(request, maxBytes);
   try {
-    return JSON.parse(new TextDecoder().decode(bytes)) as T;
+    const parsed: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('invalid_json');
+    return parsed as T;
   } catch {
     throw new Error('invalid_json');
   }
