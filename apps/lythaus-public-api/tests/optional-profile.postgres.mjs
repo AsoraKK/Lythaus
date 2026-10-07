@@ -3,6 +3,7 @@ import { mock, test } from 'node:test';
 import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { nativePostgresProfileFixture } from './native-postgres-worker-fixture.mjs';
+import { presentationPreferencesIdentityExportQuery, resetPresentationPreferences, validatedPresentationPreferencesIdentity } from '../../lythaus-jobs/src/runtime-policy.ts';
 import pg from 'pg';
 import { exportJWK, exportPKCS8, generateKeyPair } from 'jose';
 import * as database from '@lythaus/db';
@@ -235,4 +236,66 @@ test('proposed preferences schema supports private versioned saves, retries, gra
   } finally { await sql(readFileSync(rollback, 'utf8')); }
   assert.equal((await (await call(other, 'GET')).json()).user.presentationPreferences, null);
   assert.equal((await call(other, 'PATCH', choices)).status, 503);
+});
+
+test('privacy rejects partial columns, wrong types, nullable storage and invalid revisions without resetting retained choices', async t => {
+  const actor = await owner('Synthetic privacy boundary');
+  const runtime = await nativePostgresProfileFixture(connectionString, {
+    ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test',
+    CORS_ALLOWED_ORIGINS: env.CORS_ALLOWED_ORIGINS, JWT_PUBLIC_JWKS: env.JWT_PUBLIC_JWKS,
+  });
+  t.after(() => runtime.dispose());
+  const readPrivate = async () => withClient(async client => {
+    await client.query('SET ROLE lythaus_privacy');
+    return client.query(presentationPreferencesIdentityExportQuery, [actor.id]);
+  });
+  const resetPrivate = async () => withClient(async client => {
+    await client.query('SET ROLE lythaus_privacy');
+    await client.query('BEGIN');
+    try {
+      const reset = await resetPresentationPreferences(client, actor.id);
+      await client.query('COMMIT');
+      return reset;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    }
+  });
+  const absent = await readPrivate();
+  assert.equal(absent.rows[0].presentation_preferences_storage_state, 'absent');
+  assert.equal(validatedPresentationPreferencesIdentity(absent.rows[0]).presentation_preferences, null);
+  assert.equal(await resetPrivate(), false);
+  const nativeAbsent = await runtime.dispatchFetch('https://api.lythaus.test/fixture/export?subject=' + actor.id);
+  assert.equal(nativeAbsent.status, 200);
+  assert.equal((await nativeAbsent.json()).presentation_preferences, null);
+  const scenarios = [
+    { name: 'one stored choice', columns: 'presentation_left_handed boolean NOT NULL DEFAULT true' },
+    { name: 'two stored choices', columns: 'presentation_left_handed boolean NOT NULL DEFAULT true, presentation_profile_swipe boolean NOT NULL DEFAULT false' },
+    { name: 'wrong boolean type', columns: "presentation_left_handed text NOT NULL DEFAULT 'true', presentation_profile_swipe boolean NOT NULL DEFAULT false, presentation_preferences_version integer NOT NULL DEFAULT 1" },
+    { name: 'fractional revision type', columns: 'presentation_left_handed boolean NOT NULL DEFAULT true, presentation_profile_swipe boolean NOT NULL DEFAULT false, presentation_preferences_version numeric NOT NULL DEFAULT 1.5' },
+    { name: 'nullable boolean definition', columns: 'presentation_left_handed boolean DEFAULT true, presentation_profile_swipe boolean NOT NULL DEFAULT false, presentation_preferences_version integer NOT NULL DEFAULT 1' },
+    { name: 'invalid zero revision', columns: 'presentation_left_handed boolean NOT NULL DEFAULT true, presentation_profile_swipe boolean NOT NULL DEFAULT false, presentation_preferences_version integer NOT NULL DEFAULT 0' },
+    { name: 'null stored choice', columns: 'presentation_left_handed boolean, presentation_profile_swipe boolean NOT NULL DEFAULT false, presentation_preferences_version integer NOT NULL DEFAULT 1' },
+  ];
+  for (const scenario of scenarios) await t.test(scenario.name, async () => {
+    await sql('ALTER TABLE identity.users ADD COLUMN ' + scenario.columns.replaceAll(', ', ', ADD COLUMN '));
+    try {
+      const before = (await sql('SELECT to_jsonb(u) AS value FROM identity.users u WHERE id=$1', [actor.id])).rows[0].value;
+      const result = await readPrivate();
+      assert.equal(result.rows[0].presentation_preferences_storage_state, 'incomplete');
+      assert.throws(() => validatedPresentationPreferencesIdentity(result.rows[0]), /presentation_preferences_storage_incomplete/);
+      await assert.rejects(resetPrivate(), /presentation_preferences_storage_incomplete/);
+      for (const action of ['export', 'reset-preferences']) {
+        const rejected = await runtime.dispatchFetch('https://api.lythaus.test/fixture/' + action + '?subject=' + actor.id);
+        assert.equal(rejected.status, 503);
+        assert.equal((await rejected.json()).error, 'presentation_preferences_storage_incomplete');
+      }
+      const after = (await sql('SELECT to_jsonb(u) AS value FROM identity.users u WHERE id=$1', [actor.id])).rows[0].value;
+      assert.deepEqual(after, before, 'failed erasure must not claim or partially reset the retained choices');
+    } finally {
+      await sql('ALTER TABLE identity.users DROP COLUMN IF EXISTS presentation_left_handed, DROP COLUMN IF EXISTS presentation_profile_swipe, DROP COLUMN IF EXISTS presentation_preferences_version');
+    }
+    assert.equal(await resetPrivate(), false);
+    assert.equal(validatedPresentationPreferencesIdentity((await readPrivate()).rows[0]).presentation_preferences, null);
+  });
 });

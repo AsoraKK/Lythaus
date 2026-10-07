@@ -45,6 +45,8 @@ class SettingsController extends StateNotifier<SettingsState> {
   PresentationPreferences? _pending;
   String? _pendingKey;
 
+  PresentationPreferences? get pendingPreferences => _pending;
+
   bool _current(int operation) => mounted && operation == _operation;
 
   void clearSession() {

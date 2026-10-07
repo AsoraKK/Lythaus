@@ -245,6 +245,88 @@ void main() {
     },
   );
 
+  testWidgets(
+    'unconfirmed save reopens with the same visible choices and retries its original payload',
+    (tester) async {
+      var saved = const PresentationPreferences();
+      var attempts = 0;
+      final adapter = Adapter((request) async {
+        if (request.method == 'PATCH') {
+          attempts++;
+          if (attempts == 1) {
+            throw DioException(
+              requestOptions: request,
+              type: DioExceptionType.connectionError,
+            );
+          }
+          final input = (request.data as Map)['presentationPreferences'] as Map;
+          saved = PresentationPreferences(
+            leftHandedMode: input['leftHandedMode'] as bool,
+            horizontalSwipeEnabled: input['horizontalSwipeEnabled'] as bool,
+            version: saved.version + 1,
+          );
+        }
+        return owner('owner-a', saved);
+      });
+      final scope = container(
+        Dio(BaseOptions(baseUrl: 'https://local.invalid'))
+          ..httpClientAdapter = adapter,
+        GuestStore(),
+      );
+      addTearDown(scope.dispose);
+      Widget app() => UncontrolledProviderScope(
+        container: scope,
+        child: const MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: PresentationPreferencesSection(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      final left = find.widgetWithText(
+        SwitchListTile,
+        'Left-handed mode (mirror nav)',
+      );
+      final swipe = find.widgetWithText(
+        SwitchListTile,
+        'Swipe between profile tabs',
+      );
+      await tester.tap(left);
+      await tester.pumpAndSettle();
+      await tester.tap(swipe);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save preferences'));
+      await tester.pumpAndSettle();
+      expect(scope.read(settingsProvider).preferencesRetryPending, isTrue);
+      expect(scope.read(leftHandedModeProvider), isFalse);
+      expect(scope.read(horizontalSwipeEnabledProvider), isTrue);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      expect(tester.widget<SwitchListTile>(left).value, isTrue);
+      expect(tester.widget<SwitchListTile>(swipe).value, isFalse);
+      expect(tester.widget<SwitchListTile>(left).onChanged, isNull);
+      await tester.tap(find.text('Retry save preferences'));
+      await tester.pumpAndSettle();
+      final patches = adapter.requests
+          .where((request) => request.method == 'PATCH')
+          .toList();
+      expect(patches, hasLength(2));
+      expect(patches[1].data, patches[0].data);
+      expect(
+        patches[1].headers['Idempotency-Key'],
+        patches[0].headers['Idempotency-Key'],
+      );
+      expect(scope.read(leftHandedModeProvider), isTrue);
+      expect(scope.read(horizontalSwipeEnabledProvider), isFalse);
+      expect(scope.read(settingsProvider).preferencesVersion, 2);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   for (final brightness in Brightness.values) {
     testWidgets(
       'explicit Save/discard/reopen works at 320px and large text in $brightness',

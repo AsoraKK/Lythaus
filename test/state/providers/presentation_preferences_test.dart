@@ -205,7 +205,9 @@ void main() {
         leftHandedMode: false,
         horizontalSwipeEnabled: true,
       );
+      expect(controller.pendingPreferences, isNotNull);
       controller.clearSession();
+      expect(controller.pendingPreferences, isNull);
       expect(controller.state.preferencesOwnerId, isNull);
       expect(controller.state.leftHandedMode, isFalse);
       expect(controller.state.horizontalSwipeEnabled, isTrue);
@@ -213,6 +215,7 @@ void main() {
         const PresentationPreferences(leftHandedMode: true, version: 10),
       );
       await save;
+      expect(controller.pendingPreferences, isNull);
       expect(controller.state.leftHandedMode, isFalse);
       expect(controller.state.preferencesVersion, 1);
       expect(controller.state.preferencesMessage, isNull);

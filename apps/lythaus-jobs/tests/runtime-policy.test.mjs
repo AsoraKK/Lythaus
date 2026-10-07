@@ -22,7 +22,37 @@ import {
   securityAuditRetentionPlan,
   waitlistRetentionCleanupPlan,
   workflowCreateFailurePlan,
+  requirePresentationPreferencesStorageState,
+  validatedPresentationPreferencesIdentity,
+  resetPresentationPreferences,
 } from '../src/runtime-policy.ts';
+
+test('presentation privacy accepts absent/ready storage and rejects incomplete or unknown state', () => {
+  for (const state of ['absent', 'ready']) assert.equal(requirePresentationPreferencesStorageState(state), state);
+  for (const state of ['incomplete', 'unknown', undefined, null, true]) {
+    assert.throws(() => requirePresentationPreferencesStorageState(state), /presentation_preferences_storage_incomplete/);
+  }
+  assert.equal(validatedPresentationPreferencesIdentity(undefined), null);
+  assert.deepEqual(validatedPresentationPreferencesIdentity({ id: 'synthetic',
+    presentation_preferences_storage_state: 'absent', presentation_preferences: null }),
+  { id: 'synthetic', presentation_preferences: null });
+  assert.throws(() => validatedPresentationPreferencesIdentity({ presentation_preferences_storage_state: 'incomplete' }),
+    /presentation_preferences_storage_incomplete/);
+});
+
+test('presentation privacy reset skips only absent rows/storage and writes only validated ready storage', async () => {
+  for (const state of [undefined, 'absent', 'ready', 'incomplete']) {
+    const calls = [];
+    const client = { async query(sql, values) {
+      calls.push({ sql, values });
+      return { rows: state === undefined ? [] : [{ presentation_preferences_storage_state: state }] };
+    } };
+    if (state === 'incomplete') {
+      await assert.rejects(resetPresentationPreferences(client, 'synthetic'), /presentation_preferences_storage_incomplete/);
+    } else assert.equal(await resetPresentationPreferences(client, 'synthetic'), state === 'ready');
+    assert.equal(calls.length, state === 'ready' ? 2 : 1);
+  }
+});
 
 test('maps moderation outcomes into the exact reputation signals', () => {
   assert.equal(moderationReputationSignal('CONFIRMED_SPAM'), 'confirmed_spam');

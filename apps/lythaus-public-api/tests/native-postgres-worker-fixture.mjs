@@ -48,17 +48,22 @@ export async function nativePostgresProfileFixture(connectionString, bindings) {
     } }],
     stdin: { resolveDir: root, contents: `
       import api from './apps/lythaus-public-api/src/index.ts';
-      import { query } from '@lythaus/db';
-      import { presentationPreferencesIdentityExportQuery, presentationPreferencesResetQuery } from './apps/lythaus-jobs/src/runtime-policy.ts';
+      import { query, transaction } from '@lythaus/db';
+      import { presentationPreferencesIdentityExportQuery, resetPresentationPreferences, validatedPresentationPreferencesIdentity } from './apps/lythaus-jobs/src/runtime-policy.ts';
       export default { async fetch(request, env, ctx) {
         const url = new URL(request.url);
-        if (url.pathname === '/fixture/export') {
-          const result = await query(env.DB_PRIVACY_FRESH, presentationPreferencesIdentityExportQuery, [url.searchParams.get('subject')]);
-          return Response.json(result.rows[0]);
-        }
-        if (url.pathname === '/fixture/reset-preferences') {
-          await query(env.DB_PRIVACY_FRESH, presentationPreferencesResetQuery, [url.searchParams.get('subject')]);
-          return Response.json({ reset: true });
+        try {
+          if (url.pathname === '/fixture/export') {
+            const result = await query(env.DB_PRIVACY_FRESH, presentationPreferencesIdentityExportQuery, [url.searchParams.get('subject')]);
+            return Response.json(validatedPresentationPreferencesIdentity(result.rows[0]));
+          }
+          if (url.pathname === '/fixture/reset-preferences') {
+            const reset = await transaction(env.DB_PRIVACY_FRESH,
+              client => resetPresentationPreferences(client, url.searchParams.get('subject')));
+            return Response.json({ reset });
+          }
+        } catch (error) {
+          return Response.json({ error: error.message }, { status: 503 });
         }
         return api.fetch(request, env, ctx);
       }};

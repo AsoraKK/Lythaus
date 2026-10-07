@@ -22,7 +22,7 @@ import { MONTHLY_EARNING_SOURCE_EVENTS } from '../../../packages/db/src/monthly-
 import { MONTHLY_REPUTATION_POLICY_VERSION } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
 import { tombstoneBetaCases, purgeBetaMedia } from '../../../packages/db/src/authenticity-beta.ts';
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
-import { presentationPreferencesIdentityExportQuery, presentationPreferencesResetQuery } from './runtime-policy.ts';
+import { presentationPreferencesIdentityExportQuery, resetPresentationPreferences, validatedPresentationPreferencesIdentity } from './runtime-policy.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -2186,12 +2186,7 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
     });
 
     await step.do('reset-presentation-preferences', async () => {
-      await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
-        const presentationSchema = await client.query<{ available: boolean }>(
-          `SELECT to_jsonb(u) ?& ARRAY['presentation_left_handed', 'presentation_profile_swipe', 'presentation_preferences_version'] AS available
-             FROM identity.users u WHERE id = $1`, [subjectId]);
-        if (presentationSchema.rows[0]?.available) await client.query(presentationPreferencesResetQuery, [subjectId]);
-      });
+      await transaction(this.env.DB_PRIVACY_FRESH, client => resetPresentationPreferences(client, subjectId));
       return true;
     });
 
@@ -2359,6 +2354,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
           [subjectId],
         ),
       ]);
+      const exportedIdentity = validatedPresentationPreferencesIdentity(identity.rows[0]);
       const privateIdentity = await decryptPrivatePassportIdentity({
         encryptionKey: this.env.PII_ENCRYPTION_KEY_V1,
         privateProfile: privateProfileField.rows[0]
@@ -2450,7 +2446,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       ]);
       const passport = buildPrivacyDataPassport({
         generatedAt: new Date().toISOString(),
-        profile: identity.rows[0] ?? null,
+        profile: exportedIdentity,
         privateProfile: privateIdentity.privateProfile,
         contactEmail: privateIdentity.contactEmail,
         consentRecords: consentRecords.rows,

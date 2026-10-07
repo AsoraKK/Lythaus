@@ -47,9 +47,10 @@ class _PresentationPreferencesSectionState
         setState(() => _draft = null);
       }
     });
-    final left = _draft?.leftHandedMode ?? settings.leftHandedMode;
+    final choices = _draft ?? controller.pendingPreferences;
+    final left = choices?.leftHandedMode ?? settings.leftHandedMode;
     final swipe =
-        _draft?.horizontalSwipeEnabled ?? settings.horizontalSwipeEnabled;
+        choices?.horizontalSwipeEnabled ?? settings.horizontalSwipeEnabled;
     final busy = settings.preferencesLoading || settings.preferencesSaving;
     final editable =
         settings.preferencesAvailable &&
