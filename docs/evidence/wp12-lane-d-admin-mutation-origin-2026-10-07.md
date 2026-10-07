@@ -10,8 +10,8 @@ types return `415`. Legal-hold reads retain their existing behavior.
 
 The change calls the existing policy before each handler and preserves its
 authentication, roles, domain validation, audit and response handling. It adds no
-global dispatcher rule, configuration, provider resource, dependency, schema,
-client or CI change. The operations runbook documents the request contract,
+global dispatcher rule, configuration, provider resource, dependency, database
+schema or CI change. The operations runbook documents the request contract,
 including the explicit JSON header for bodyless hold clearing.
 
 Regression tests remain in the existing CORS policy test file already executed
@@ -34,6 +34,12 @@ declares optional JSON request content so the generated client emits its media
 type while retaining a bodyless call. Read operations and the client's global
 Public API base URL retain their existing defaults; the runbook describes the
 explicit Admin client configuration.
+
+The contract version advances from `v10` to `v11` because the required Origin
+header is a breaking request requirement. The existing hosted version gate
+continues to enforce this change. The Dart default Origin supplies the approved
+header automatically; an explicit header override still passes through the
+strict production guard.
 
 A generated Dart regression captures the actual Dio request and passes its
 URL, headers and body to the production Node guard. Synthetic responses allow
