@@ -89,4 +89,67 @@ export function registerSupportContributorCases({ test, assert, fixture, policy,
       assert.equal((await database().query('SELECT submission FROM support.requests WHERE id=$1', [id])).rows[0].submission, null);
     } finally { release.resolve(); await c.end(); }
   });
+
+  test('scrub locks an existing inactive contributor hold so activation waits until commit', async t => {
+    const f = await fixture(t), id = (await f.submit()).request.id, hold = uuidv7(), c = await connection('lythaus_privacy');
+    await f.service('owner').ownerReply(await f.ownerRequest(), 'problem', id, { expectedRevision: 1, message: 'Synthetic hold reactivation race' });
+    await database().query("INSERT INTO privacy.legal_holds(id,subject_id,reason,active,released_at) VALUES($1,$2,'Synthetic inactive contributor hold',false,now())", [hold, f.owner]);
+    const request = await f.privacyRequest('delete'), checked = gate(), release = gate();
+    const scrub = runner('lythaus_privacy', { afterSupportParticipantHoldLock: async () => { checked.resolve(); await release.promise; } })(client => purgeSupportForPrivacy(client, request, policy()));
+    let activation, activeBeforeRelease;
+    try {
+      await checked.promise;
+      activation = c.query('UPDATE privacy.legal_holds SET active=true,released_at=NULL WHERE id=$1', [hold]);
+      activation.catch(() => undefined);
+      try { await blocked(c.processID); }
+      finally { activeBeforeRelease = (await database().query('SELECT active FROM privacy.legal_holds WHERE id=$1', [hold])).rows[0].active; }
+      assert.equal(activeBeforeRelease, false);
+      release.resolve(); assert.equal((await scrub).scrubbedRecords, 1); await activation;
+      assert.equal((await database().query('SELECT active FROM privacy.legal_holds WHERE id=$1', [hold])).rows[0].active, true);
+    } finally {
+      release.resolve(); await scrub.catch(() => undefined); await activation?.catch(() => undefined);
+      const deleted = (await database().query('SELECT deleted_at IS NOT NULL AS deleted FROM support.requests WHERE id=$1', [id])).rows[0].deleted;
+      t.diagnostic(`inactive hold activation: active before scrub release=${activeBeforeRelease}, scrub deleted=${deleted}`);
+      await c.end();
+    }
+  });
+
+  test('in-flight activation and a waiting account lock defer privacy without a deadlock; committed activation blocks retry', async t => {
+    const f = await fixture(t), id = (await f.submit()).request.id, hold = uuidv7(), c = await connection('lythaus_privacy');
+    await f.service('owner').ownerReply(await f.ownerRequest(), 'problem', id, { expectedRevision: 1, message: 'Synthetic activation account cycle' });
+    await database().query("INSERT INTO privacy.legal_holds(id,subject_id,reason,active,released_at) VALUES($1,$2,'Synthetic inactive cycle hold',false,now())", [hold, f.owner]);
+    const request = await f.privacyRequest('delete'), locked = gate(), release = gate();
+    let scrub, account;
+    try {
+      await c.query('BEGIN'); await c.query('UPDATE privacy.legal_holds SET active=true,released_at=NULL WHERE id=$1', [hold]);
+      scrub = runner('lythaus_privacy', { afterSupportParticipantLock: async () => { locked.resolve(); await release.promise; } })(client => purgeSupportForPrivacy(client, request, policy()));
+      const denied = assert.rejects(scrub, /support_privacy_unavailable/); denied.catch(() => undefined);
+      await locked.promise;
+      account = c.query('SELECT id FROM identity.users WHERE id=$1 FOR SHARE', [f.owner]); account.catch(() => undefined);
+      await blocked(c.processID); release.resolve(); await denied; await account; await c.query('COMMIT');
+      assert.ok((await database().query('SELECT submission FROM support.requests WHERE id=$1', [id])).rows[0].submission);
+      await assert.rejects(() => runner('lythaus_privacy')(client => purgeSupportForPrivacy(client, request, policy())), /support_privacy_held/);
+      await database().query('UPDATE privacy.legal_holds SET active=false,released_at=now() WHERE id=$1', [hold]);
+      assert.equal((await runner('lythaus_privacy')(client => purgeSupportForPrivacy(client, request, policy()))).scrubbedRecords, 1);
+    } finally {
+      release.resolve(); await scrub?.catch(() => undefined); await account?.catch(() => undefined);
+      await c.query('ROLLBACK'); await c.end();
+    }
+  });
+
+  test('activation of an existing inactive hold after retention selection preserves its contributor content', async t => {
+    const f = await fixture(t), id = (await f.submit()).request.id, hold = uuidv7();
+    await f.service('owner').ownerReply(await f.ownerRequest(), 'problem', id, { expectedRevision: 1, message: 'Synthetic retention activation' });
+    await database().query("UPDATE support.requests SET state='resolved',closed_at=now()-interval '2 hours' WHERE id=$1", [id]);
+    await database().query("INSERT INTO privacy.legal_holds(id,subject_id,reason,active,released_at) VALUES($1,$2,'Synthetic inactive retention hold',false,now())", [hold, f.owner]);
+    const selected = gate(), release = gate();
+    const pending = runner('lythaus_privacy', { afterRetentionCandidates: async () => { selected.resolve(); await release.promise; } })(client => retainSupportBatch(client, policy()));
+    try {
+      await selected.promise; await database().query('UPDATE privacy.legal_holds SET active=true,released_at=NULL WHERE id=$1', [hold]);
+      release.resolve(); assert.deepEqual(await pending, { scrubbedRecords: 0, heldRecords: 1 });
+      assert.ok((await database().query('SELECT submission FROM support.requests WHERE id=$1', [id])).rows[0].submission);
+      await database().query('UPDATE privacy.legal_holds SET active=false,released_at=now() WHERE id=$1', [hold]);
+      assert.equal((await runner('lythaus_privacy')(client => retainSupportBatch(client, policy()))).scrubbedRecords, 1);
+    } finally { release.resolve(); await pending.catch(() => undefined); }
+  });
 }
