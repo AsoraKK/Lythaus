@@ -27,7 +27,10 @@ test('owner-only no-store summary contains bounded aggregates and safe audit met
   assert.equal(body.metrics.quiet.since, '2026-08-08T00:00:00.000Z');
   assert.equal(JSON.stringify(body).includes(actor.userId), false);
   const audit = reads.find(read => read.sql.includes('INSERT INTO system.audit_events'));
-  assert.deepEqual(JSON.parse(audit.values[2]), { contractVersion: 'activity-pilot-v1', pilotEnabled: true });
+  assert.match(audit.values[0], /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.notEqual(audit.values[0], correlation);
+  assert.equal(audit.values[2], correlation);
+  assert.deepEqual(JSON.parse(audit.values[3]), { contractVersion: 'activity-pilot-v1', pilotEnabled: true });
   assert.equal(reads.some(read => /SELECT .*FROM privacy\.account_active_days/.test(read.sql)), false);
 });
 

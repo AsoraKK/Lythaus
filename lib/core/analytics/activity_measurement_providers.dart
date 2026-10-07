@@ -39,12 +39,14 @@ class ActivityMeasurementState {
     this.loading = false,
     this.saving = false,
     this.paused = false,
+    this.withdrawalPending = false,
     this.error,
   });
   final ActivityConsentRecord? consent;
   final bool loading;
   final bool saving;
   final bool paused;
+  final bool withdrawalPending;
   final String? error;
 }
 
@@ -64,6 +66,7 @@ class ActivityMeasurementController
   final bool Function() _isCurrentSession;
   int _operation = 0;
   bool _rendering = false;
+  bool _withdrawalPending = false;
   bool get current => mounted && _isCurrentSession();
   bool get canManage => _client != null && current;
   bool get canCollect =>
@@ -72,6 +75,7 @@ class ActivityMeasurementController
       !state.paused &&
       !state.loading &&
       !state.saving &&
+      !_rendering &&
       state.consent?.pilotEnabled == true &&
       state.consent?.granted == true;
 
@@ -82,16 +86,26 @@ class ActivityMeasurementController
       consent: state.consent,
       loading: true,
       paused: state.paused,
+      withdrawalPending: _withdrawalPending,
     );
     try {
       final result = await _client!.status();
       if (!current || operation != _operation) return;
-      state = ActivityMeasurementState(consent: result);
+      _withdrawalPending = _withdrawalPending && result.granted;
+      state = ActivityMeasurementState(
+        consent: result,
+        paused: _withdrawalPending,
+        withdrawalPending: _withdrawalPending,
+        error: _withdrawalPending
+            ? 'Withdrawal is still unconfirmed. Collection remains paused here; retry withdrawal or deliberately choose to continue.'
+            : null,
+      );
     } catch (_) {
       if (current && operation == _operation) {
         state = ActivityMeasurementState(
           consent: state.consent,
           paused: true,
+          withdrawalPending: _withdrawalPending,
           error:
               'Consent status is unavailable. Activity collection is paused.',
         );
@@ -104,21 +118,25 @@ class ActivityMeasurementController
     if (!canManage || state.loading || state.saving || consent == null) return;
     if (enabled && (!collectionEnabled || !consent.pilotEnabled)) return;
     final operation = ++_operation;
+    if (!enabled) _withdrawalPending = true;
     _client!.cancelRenders();
     state = ActivityMeasurementState(
       consent: consent,
       saving: true,
       paused: true,
+      withdrawalPending: _withdrawalPending,
     );
     try {
       final result = await _client.setConsent(consent, enabled: enabled);
       if (!current || operation != _operation) return;
+      _withdrawalPending = false;
       state = ActivityMeasurementState(consent: result);
     } catch (_) {
       if (current && operation == _operation) {
         state = ActivityMeasurementState(
           consent: consent,
           paused: true,
+          withdrawalPending: _withdrawalPending,
           error: enabled
               ? 'Opt-in could not be confirmed. Activity collection is paused.'
               : 'Withdrawal could not be confirmed. This app has paused collection. Retry withdrawal; server consent may still be active on another device.',
@@ -139,6 +157,7 @@ class ActivityMeasurementController
         state = ActivityMeasurementState(
           consent: state.consent,
           paused: true,
+          withdrawalPending: _withdrawalPending,
           error:
               'Activity measurement is unavailable. Review consent to retry.',
         );

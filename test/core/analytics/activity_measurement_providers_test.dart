@@ -66,11 +66,33 @@ void main() {
       await controller.visibleForegroundRender();
       expect(client.renders, 0);
       expect(client.cancellations, 1);
+      await controller.refresh();
+      expect(controller.state.withdrawalPending, true);
+      expect(controller.state.paused, true);
+      await controller.visibleForegroundRender();
+      expect(client.renders, 0);
       client.failConsent = false;
       await controller.setConsent(false);
       expect(controller.state.consent!.granted, false);
     },
   );
+
+  test('pending withdrawal resumes only through deliberate opt-in', () async {
+    final client = PilotClient()..failConsent = true;
+    final controller = ActivityMeasurementController(
+      client: client,
+      collectionEnabled: true,
+    );
+    addTearDown(controller.dispose);
+    await Future<void>.delayed(Duration.zero);
+    await controller.setConsent(false);
+    await controller.refresh();
+    expect(controller.canCollect, false);
+    client.failConsent = false;
+    await controller.setConsent(true);
+    expect(controller.state.withdrawalPending, false);
+    expect(controller.canCollect, true);
+  });
 
   test(
     'render overlap is bounded; source failure pauses until confirmed refresh',

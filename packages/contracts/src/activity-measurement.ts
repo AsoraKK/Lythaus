@@ -5,7 +5,7 @@ export const ACTIVITY_PURPOSE = 'account_daily_activity';
 export const ACTIVITY_FLAG = 'analytics.account_daily_activity_pilot';
 export const ACTIVITY_RETENTION_DAYS = 61;
 export const ACTIVITY_ACCOUNT_LIMIT = 5000;
-export const ACTIVITY_NOTICE = 'Optional account-linked activity measurement: when you choose to take part, Lythaus records one active UTC date for your account when the app renders visibly in the foreground, including an empty feed. We use these dates to measure activity and quiet accounts within the consenting cohort. We do not record browsed URLs, viewed content or browsing history for this purpose. Activity dates expire within 61 days. You can withdraw here at any time; withdrawal removes these activity dates. Your consent decisions remain in the existing account consent record and are included in your data export.';
+export const ACTIVITY_NOTICE = 'Optional account-linked activity measurement: when you choose to take part, Lythaus records one active UTC date for your account when the app renders visibly in the foreground, including an empty feed. We use these dates to measure activity and quiet accounts within the consenting cohort. We do not record browsed URLs, viewed content or browsing history for this purpose. Activity dates stop contributing to metrics after 61 days and are removed by scheduled cleanup. You can withdraw here at any time; withdrawal stops collection and removes these dates unless an existing legal hold requires preservation. Held dates are excluded from these metrics. Your consent decisions remain in the existing account consent record and are included in your data export.';
 
 export type ActivityMetricState = 'available' | 'partial' | 'unavailable';
 export type ActivityMetric = Readonly<{

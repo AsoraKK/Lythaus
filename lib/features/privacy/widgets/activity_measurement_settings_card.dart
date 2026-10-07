@@ -52,6 +52,16 @@ class ActivityMeasurementSettingsCard extends ConsumerWidget {
             ),
           if (state.error != null)
             Semantics(liveRegion: true, child: Text(state.error!)),
+          if (state.withdrawalPending && consent?.granted == true)
+            TextButton(
+              onPressed:
+                  canChange &&
+                      controller.collectionEnabled &&
+                      consent.pilotEnabled
+                  ? () => controller.setConsent(true)
+                  : null,
+              child: const Text('Deliberately continue participating'),
+            ),
           TextButton(
             onPressed: controller.canManage && !state.loading && !state.saving
                 ? controller.refresh

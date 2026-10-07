@@ -1,4 +1,4 @@
-# Domain fragment: root refs, security registry and generated clients belong to Lane B.
+# Domain fragment integrated with the canonical root and generated clients.
 paths:
   /analytics/activity-consent:
     get:
@@ -19,7 +19,7 @@ paths:
       operationId: setActivityMeasurementConsent
       tags: [Privacy]
       summary: Explicitly grant or withdraw this account-linked purpose
-      description: Existing anonymous consent does not authorize this purpose. Withdrawal remains possible while collection is disabled and removes active dates transactionally. Existing account consent decisions remain exportable. Existing authenticated origin/CSRF and rate limits are mandatory dispatcher prerequisites.
+      description: Existing anonymous consent does not authorize this purpose. Withdrawal remains possible while collection is disabled; dates are removed transactionally unless an existing legal hold requires preservation. Held dates are excluded from metrics and collection. Activation also requires approved retention terms. Existing account consent decisions remain exportable. Existing authenticated origin/CSRF and rate limits are mandatory dispatcher prerequisites.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true

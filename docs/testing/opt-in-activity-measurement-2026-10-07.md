@@ -1,5 +1,7 @@
 # Account daily activity pilot
 
+This is historical evidence for PR955 at 68d691ec36d2f7976db636bf2b77a910e4fc4287. Its integration request and retention statements below are superseded by [the current integration candidate](activity-measurement-integration-2026-10-07.md). That candidate corrects the five review findings and records actual route/Workflow validation; this historical candidate must not be activated.
+
 Kyle approved the explicit opt-in pilot at 2026-10-07 18:15:47 UTC. This source draft is separate from PR948, whose reviewed head and immutable evidence are preserved. No production schema, grants, provider, collection, cleanup or activation is authorized by this draft.
 
 The approved grain is canonical authenticated account plus server UTC active date. A visible foreground app-render callback, including an empty feed, can create one row. Background refresh, timers, heartbeat and content browsing events cannot create activity. The browser signal is a client assertion; the server can validate authentication, purpose, revision, body shape, date and deduplication, but cannot attest physical human visibility.

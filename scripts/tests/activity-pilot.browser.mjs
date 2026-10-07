@@ -53,7 +53,7 @@ try {
         document.documentElement.dataset.theme = theme;
         document.documentElement.style.fontSize = `${scale}%`;
         const label = document.createElement('div'); label.textContent = 'LOCAL SYNTHETIC PG17 · UI TEST ONLY · NOT PRODUCTION';
-        Object.assign(label.style, { position: 'fixed', bottom: '0', left: '0', right: '0', height: '24px', fontSize: '10px', zIndex: '10000', background: '#fff', color: '#111', textAlign: 'center' }); document.body.append(label);
+        Object.assign(label.style, { position: 'fixed', bottom: '0', left: '0', right: '0', height: '24px', fontSize: '10px', zIndex: '10000', background: '#fff', color: '#111', textAlign: 'center', pointerEvents: 'none' }); document.body.append(label);
       }, { theme, scale });
       const panel = page.getByRole('heading', { name: 'Account activity pilot', exact: true }).locator('..').locator('..');
       await panel.getByText('3', { exact: true }).waitFor();

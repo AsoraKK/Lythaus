@@ -10,7 +10,8 @@ REVOKE ALL ON FUNCTION privacy.activity_measurement_installation_marker() FROM P
 CREATE TABLE privacy.activity_measurement_configuration (
   singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
   notice_version text NOT NULL CHECK (notice_version = 'activity-account-day-v1'),
-  cutover_at timestamptz
+  cutover_at timestamptz,
+  retention_terms_approved boolean NOT NULL DEFAULT false
 );
 INSERT INTO privacy.activity_measurement_configuration (notice_version) VALUES ('activity-account-day-v1');
 
@@ -24,16 +25,20 @@ CREATE TABLE privacy.activity_measurement_consents (
   CHECK (granted = (continuous_since IS NOT NULL))
 );
 
+-- Preserve held facts across a withdrawal without making them part of a new
+-- consent episode. The immutable ledger also enforces same-account ownership.
+ALTER TABLE identity.consent_records ADD CONSTRAINT activity_consent_account_identity UNIQUE (user_id, id);
 CREATE TABLE privacy.account_active_days (
   user_id uuid NOT NULL,
   active_day date NOT NULL,
   consent_id uuid NOT NULL,
   expires_at timestamptz NOT NULL,
   PRIMARY KEY (user_id, active_day),
-  FOREIGN KEY (user_id, consent_id) REFERENCES privacy.activity_measurement_consents(user_id, consent_id),
+  FOREIGN KEY (user_id, consent_id) REFERENCES identity.consent_records(user_id, id),
   CHECK (expires_at = ((active_day + 61)::timestamp AT TIME ZONE 'UTC'))
 );
 CREATE INDEX activity_measurement_consents_granted ON privacy.activity_measurement_consents(user_id) WHERE granted;
+CREATE INDEX activity_measurement_consents_withdrawn ON privacy.activity_measurement_consents(user_id) WHERE NOT granted;
 CREATE INDEX account_active_days_expiry ON privacy.account_active_days(expires_at, user_id, active_day);
 
 CREATE TABLE privacy.activity_measurement_coverage (
@@ -85,9 +90,20 @@ $$;
 CREATE FUNCTION privacy.activity_measurement_enabled() RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
   SELECT COALESCE((SELECT f.enabled AND f.policy_version = c.notice_version
-    AND c.cutover_at IS NOT NULL AND c.cutover_at <= statement_timestamp()
+    AND c.retention_terms_approved AND c.cutover_at IS NOT NULL AND c.cutover_at <= statement_timestamp()
     FROM system.feature_flags f CROSS JOIN privacy.activity_measurement_configuration c
     WHERE f.flag_key = 'analytics.account_daily_activity_pilot' AND c.singleton), false);
+$$;
+
+-- Every caller first locks identity.users FOR UPDATE. That fences new hold
+-- inserts through the subject FK; locking *all* existing rows also fences an
+-- inactive-to-active update. NOWAIT is retryable rather than a stale decision.
+CREATE FUNCTION privacy.activity_measurement_lock_holds(p_subject uuid) RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
+BEGIN
+  PERFORM id FROM privacy.legal_holds WHERE subject_id = p_subject ORDER BY id FOR SHARE NOWAIT;
+  RETURN EXISTS (SELECT 1 FROM privacy.legal_holds WHERE subject_id = p_subject AND active);
+END;
 $$;
 
 CREATE FUNCTION privacy.activity_measurement_status() RETURNS jsonb
@@ -102,12 +118,13 @@ $$;
 
 CREATE FUNCTION privacy.set_activity_measurement_consent(p_id uuid, p_granted boolean, p_revision bigint, p_epoch uuid, p_notice text) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
-DECLARE subject uuid := privacy.activity_measurement_subject(); consent privacy.activity_measurement_consents%ROWTYPE; at_time timestamptz;
+DECLARE subject uuid := privacy.activity_measurement_subject(); consent privacy.activity_measurement_consents%ROWTYPE; at_time timestamptz; held boolean;
 BEGIN
   IF p_id IS NULL OR p_granted IS NULL OR p_revision IS NULL OR p_revision < 0 OR p_revision >= 9007199254740991
     OR p_notice IS DISTINCT FROM 'activity-account-day-v1' THEN RAISE EXCEPTION 'activity_invalid_request'; END IF;
   PERFORM id FROM identity.users WHERE id = subject AND status = 'active' AND deleted_at IS NULL FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'activity_account_required'; END IF;
+  held := privacy.activity_measurement_lock_holds(subject);
   SELECT * INTO consent FROM privacy.activity_measurement_consents WHERE user_id = subject FOR UPDATE;
   IF COALESCE(consent.revision, 0) <> p_revision OR consent.consent_id IS DISTINCT FROM p_epoch THEN
     RAISE EXCEPTION 'activity_consent_revision_conflict';
@@ -117,8 +134,9 @@ BEGIN
     RAISE EXCEPTION 'activity_pilot_disabled';
   END IF;
   IF COALESCE(consent.granted, false) = p_granted THEN RETURN privacy.activity_measurement_status(); END IF;
+  IF p_granted AND held THEN RAISE EXCEPTION 'activity_privacy_held'; END IF;
   at_time := clock_timestamp();
-  DELETE FROM privacy.account_active_days WHERE user_id = subject;
+  IF NOT held THEN DELETE FROM privacy.account_active_days WHERE user_id = subject; END IF;
   INSERT INTO identity.consent_records(id, user_id, purpose, policy_version, granted, created_at)
     VALUES(p_id, subject, 'account_daily_activity', p_notice, p_granted, at_time);
   INSERT INTO privacy.activity_measurement_consents(user_id, consent_id, revision, granted, continuous_since)
@@ -137,6 +155,7 @@ DECLARE subject uuid := privacy.activity_measurement_subject(); consent privacy.
 BEGIN
   PERFORM id FROM identity.users WHERE id = subject AND status = 'active' AND deleted_at IS NULL FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'activity_account_required'; END IF;
+  IF privacy.activity_measurement_lock_holds(subject) THEN RAISE EXCEPTION 'activity_privacy_held'; END IF;
   IF NOT privacy.activity_measurement_enabled() THEN RAISE EXCEPTION 'activity_pilot_disabled'; END IF;
   IF EXISTS (SELECT 1 FROM privacy.requests WHERE subject_id = subject AND request_type = 'delete'
     AND state NOT IN ('completed', 'failed', 'cancelled')) THEN RAISE EXCEPTION 'activity_consent_required'; END IF;
@@ -171,6 +190,7 @@ BEGIN
     SELECT c.user_id, c.continuous_since, c.consent_id FROM candidates c
     JOIN identity.users u ON u.id = c.user_id
     WHERE u.status = 'active' AND u.deleted_at IS NULL AND NOT u.is_production_acceptance
+      AND NOT EXISTS (SELECT 1 FROM privacy.legal_holds h WHERE h.subject_id = c.user_id AND h.active)
   ), activity AS MATERIALIZED (
     SELECT c.user_id, c.continuous_since, EXISTS(SELECT 1 FROM privacy.account_active_days a
       WHERE a.user_id = c.user_id AND a.consent_id = c.consent_id AND a.active_day = day - 1 AND a.expires_at > at_time) AS daily,
@@ -198,15 +218,17 @@ $$;
 
 CREATE FUNCTION privacy.export_activity_measurement(p_request uuid, p_subject uuid) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
-DECLARE result jsonb;
+DECLARE result jsonb; held boolean;
 BEGIN
   IF NOT EXISTS(SELECT 1 FROM privacy.requests WHERE id = p_request AND subject_id = p_subject AND request_type = 'export'
     AND state NOT IN ('completed', 'failed', 'cancelled')) THEN RAISE EXCEPTION 'activity_privacy_request_invalid'; END IF;
-  PERFORM id FROM identity.users WHERE id = p_subject FOR SHARE;
-  SELECT jsonb_build_object('consent', (SELECT jsonb_build_object('purpose', 'account_daily_activity', 'noticeVersion', 'activity-account-day-v1',
+  PERFORM id FROM identity.users WHERE id = p_subject FOR UPDATE;
+  held := privacy.activity_measurement_lock_holds(p_subject);
+  SELECT jsonb_build_object('retentionException', CASE WHEN held THEN 'legal_hold' END,
+    'consent', (SELECT jsonb_build_object('purpose', 'account_daily_activity', 'noticeVersion', 'activity-account-day-v1',
       'granted', granted, 'revision', revision, 'continuousSince', to_char(continuous_since AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"')) FROM privacy.activity_measurement_consents WHERE user_id = p_subject),
     'activeDates', COALESCE((SELECT jsonb_agg(active_day ORDER BY active_day) FROM privacy.account_active_days
-      WHERE user_id = p_subject AND expires_at > statement_timestamp()), '[]'::jsonb)) INTO result;
+      WHERE user_id = p_subject AND (held OR expires_at > statement_timestamp())), '[]'::jsonb)) INTO result;
   RETURN result;
 END;
 $$;
@@ -218,7 +240,7 @@ BEGIN
   PERFORM id FROM identity.users WHERE id = p_subject FOR UPDATE;
   IF NOT EXISTS(SELECT 1 FROM privacy.requests WHERE id = p_request AND subject_id = p_subject AND request_type = 'delete'
     AND state NOT IN ('completed', 'failed', 'cancelled')) THEN RAISE EXCEPTION 'activity_privacy_request_invalid'; END IF;
-  IF EXISTS(SELECT 1 FROM privacy.legal_holds WHERE subject_id = p_subject AND active) THEN RAISE EXCEPTION 'activity_privacy_held'; END IF;
+  IF privacy.activity_measurement_lock_holds(p_subject) THEN RAISE EXCEPTION 'activity_privacy_held'; END IF;
   DELETE FROM privacy.account_active_days WHERE user_id = p_subject;
   GET DIAGNOSTICS removed = ROW_COUNT;
   DELETE FROM privacy.activity_measurement_consents WHERE user_id = p_subject;
@@ -232,17 +254,43 @@ $$;
 
 CREATE FUNCTION privacy.expire_activity_measurement(p_limit integer DEFAULT 500) RETURNS integer
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
-DECLARE removed integer; affected uuid[];
+DECLARE removed integer := 0; affected uuid; batch_removed integer;
 BEGIN
   IF p_limit IS NULL OR p_limit < 1 OR p_limit > 500 THEN RAISE EXCEPTION 'activity_invalid_batch'; END IF;
-  WITH expired AS (SELECT user_id, active_day FROM privacy.account_active_days
-    WHERE expires_at <= statement_timestamp() ORDER BY expires_at, user_id, active_day LIMIT p_limit FOR UPDATE SKIP LOCKED),
-  deleted AS (DELETE FROM privacy.account_active_days a USING expired e
-    WHERE a.user_id = e.user_id AND a.active_day = e.active_day RETURNING a.user_id)
-  SELECT count(*)::integer, array_agg(user_id) INTO removed, affected FROM deleted;
-  DELETE FROM privacy.subject_data_locations l
-    WHERE l.subject_id = ANY(affected) AND l.resource_reference = 'privacy.account_active_days'
-      AND NOT EXISTS (SELECT 1 FROM privacy.account_active_days a WHERE a.user_id = l.subject_id);
+  -- Accounts precede dates in every mutation's lock order. Candidate dates and
+  -- total deletions are bounded; active holds are excluded and rechecked under
+  -- locks. A racing activation raises 55P03 and rolls back the complete batch.
+  FOR affected IN
+    WITH expired_candidates AS MATERIALIZED (
+      SELECT a.user_id, a.active_day, a.expires_at FROM privacy.account_active_days a
+      WHERE a.expires_at <= statement_timestamp()
+        AND NOT EXISTS (SELECT 1 FROM privacy.legal_holds h WHERE h.subject_id = a.user_id AND h.active)
+      ORDER BY a.expires_at, a.user_id, a.active_day LIMIT p_limit
+    ), withdrawn_candidates AS MATERIALIZED (
+      SELECT a.user_id, a.active_day, a.expires_at FROM privacy.activity_measurement_consents c
+      JOIN privacy.account_active_days a ON a.user_id = c.user_id
+      WHERE NOT c.granted AND NOT EXISTS (SELECT 1 FROM privacy.legal_holds h WHERE h.subject_id = c.user_id AND h.active)
+      ORDER BY c.user_id, a.active_day LIMIT p_limit
+    ), candidates AS MATERIALIZED (
+      SELECT user_id FROM (SELECT * FROM expired_candidates UNION SELECT * FROM withdrawn_candidates) pending
+      ORDER BY expires_at, user_id, active_day LIMIT p_limit
+    ) SELECT u.id FROM identity.users u
+      WHERE u.id IN (SELECT user_id FROM candidates) ORDER BY u.id FOR UPDATE SKIP LOCKED
+  LOOP
+    IF NOT privacy.activity_measurement_lock_holds(affected) THEN
+      WITH expired AS (SELECT active_day FROM privacy.account_active_days
+        WHERE user_id = affected AND (expires_at <= statement_timestamp()
+          OR EXISTS (SELECT 1 FROM privacy.activity_measurement_consents c WHERE c.user_id = affected AND NOT c.granted))
+        ORDER BY active_day LIMIT (p_limit - removed) FOR UPDATE SKIP LOCKED)
+      DELETE FROM privacy.account_active_days a USING expired e WHERE a.user_id = affected AND a.active_day = e.active_day;
+      GET DIAGNOSTICS batch_removed = ROW_COUNT;
+      removed := removed + batch_removed;
+      DELETE FROM privacy.subject_data_locations l
+        WHERE l.subject_id = affected AND l.resource_reference = 'privacy.account_active_days'
+          AND NOT EXISTS (SELECT 1 FROM privacy.account_active_days a WHERE a.user_id = affected);
+    END IF;
+    EXIT WHEN removed >= p_limit;
+  END LOOP;
   RETURN removed;
 END;
 $$;
@@ -250,7 +298,7 @@ $$;
 REVOKE ALL ON FUNCTION privacy.activity_measurement_subject(), privacy.activity_measurement_enabled(), privacy.activity_measurement_status(),
   privacy.set_activity_measurement_consent(uuid,boolean,bigint,uuid,text), privacy.record_activity_measurement_day(bigint,uuid), privacy.activity_measurement_aggregate(),
   privacy.export_activity_measurement(uuid,uuid), privacy.purge_activity_measurement(uuid,uuid), privacy.expire_activity_measurement(integer),
-  privacy.reconcile_activity_measurement_locations(uuid) FROM PUBLIC;
+  privacy.reconcile_activity_measurement_locations(uuid), privacy.activity_measurement_lock_holds(uuid) FROM PUBLIC;
 GRANT USAGE ON SCHEMA privacy TO lythaus_runtime, lythaus_admin, lythaus_privacy;
 GRANT EXECUTE ON FUNCTION privacy.activity_measurement_status(), privacy.set_activity_measurement_consent(uuid,boolean,bigint,uuid,text),
   privacy.record_activity_measurement_day(bigint,uuid) TO lythaus_runtime;

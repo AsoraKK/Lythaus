@@ -59,7 +59,7 @@ export function activitySummary(value: unknown): ActivitySummary {
     enabled: row.enabled === true, capacityExceeded, quiet, window,
   });
   return { contractVersion: 'activity-pilot-v1', enabled: row.enabled, sampledAt, timezone: 'UTC', source: 'privacy.account_active_days',
-    population: 'Retained active non-acceptance accounts continuously opted in for the complete metric window. Excludes nonconsenting accounts, new consent episodes and missing pre-cutover history. Cohorts differ by window; public contributors are a separate population.',
+    population: 'Retained active non-acceptance accounts continuously opted in for the complete metric window. Excludes held accounts, nonconsenting accounts, new consent episodes and missing pre-cutover history. Cohorts differ by window; public contributors are a separate population.',
     windowBasis: 'completed_utc_days', retentionDays: ACTIVITY_RETENTION_DAYS, accountLimit: ACTIVITY_ACCOUNT_LIMIT,
     metrics: { dau: metric('1', windows.dau), wau: metric('7', windows.wau), mau: metric('30', windows.mau), quiet: metric('60', windows.quiet, true) } };
 }

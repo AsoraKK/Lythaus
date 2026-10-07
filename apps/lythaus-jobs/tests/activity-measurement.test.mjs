@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { activityMeasurementPrivacyExport, activityMeasurementPrivacyDelete, activityMeasurementPrivacyReconcile, activityMeasurementRetentionBatch } from '../src/activity-measurement.ts';
+import { activityMeasurementPrivacyExport, activityMeasurementPrivacyDelete, activityMeasurementPrivacyReconcile, activityMeasurementRetentionBatch, activityMeasurementRetentionCleanup } from '../src/activity-measurement.ts';
 import { activityPrivacyReadiness, expireActivityMeasurement } from '../../../packages/db/src/activity-measurement-privacy.ts';
 
 const subject = '019a0f00-0000-7000-8000-000000000001';
@@ -22,8 +22,9 @@ test('privacy hooks use only subject-bound purpose functions, not profile/suppor
 test('retention is a bounded existing-workflow hook with no new scheduler or scan', async () => {
   reads.length = 0;
   assert.equal(await activityMeasurementRetentionBatch({}, run), 0);
-  assert.deepEqual(reads[1].values, [500]);
-  assert.match(reads[1].sql, /expire_activity_measurement/);
+  assert.deepEqual(reads[2].values, [500]);
+  assert.match(reads[2].sql, /expire_activity_measurement/);
+  assert.equal(reads[0].sql, "SET LOCAL statement_timeout = '1500ms'");
   for (const limit of [0, 501, 1.5]) await assert.rejects(() => expireActivityMeasurement({}, limit), /activity_invalid_batch/);
 });
 
@@ -36,6 +37,16 @@ test('optional pilot absence is explicit; partial schema and rollback fail close
   }
 });
 
+test('bounded cleanup drains committed batches and signals backlog or contention for retry', async () => {
+  let calls = 0;
+  assert.equal(await activityMeasurementRetentionCleanup({}, async () => ++calls === 3 ? 2 : 500), 1002);
+  assert.equal(calls, 3);
+  calls = 0;
+  await assert.rejects(() => activityMeasurementRetentionCleanup({}, async () => { calls++; return 500; }), /activity_retention_backlog/);
+  assert.equal(calls, 20);
+  await assert.rejects(() => activityMeasurementRetentionCleanup({}, async () => { throw new Error('55P03'); }), /55P03/);
+});
+
 test('privacy hook errors propagate rather than silently claiming complete export/delete', async () => {
   await assert.rejects(() => activityMeasurementPrivacyExport({}, requestId, subject, async () => { throw new Error('unavailable'); }), /unavailable/);
   await assert.rejects(() => activityMeasurementPrivacyDelete({}, requestId, 'other', run), /activity_privacy_subject_invalid/);
@@ -44,7 +55,7 @@ test('privacy hook errors propagate rather than silently claiming complete expor
 test('reconciliation is purpose-local and malformed retention results fail closed', async () => {
   reads.length = 0;
   await activityMeasurementPrivacyReconcile({}, subject, run);
-  assert.deepEqual(reads[1].values, [subject]);
-  assert.match(reads[1].sql, /reconcile_activity_measurement_locations/);
+  assert.deepEqual(reads[2].values, [subject]);
+  assert.match(reads[2].sql, /reconcile_activity_measurement_locations/);
   for (const removed of [-1, 501, 1.5, null]) await assert.rejects(() => expireActivityMeasurement({ query: async () => ({ rows: [{ removed }] }) }), /activity_privacy_unavailable/);
 });

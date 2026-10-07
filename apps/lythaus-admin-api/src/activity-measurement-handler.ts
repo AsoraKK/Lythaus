@@ -1,4 +1,5 @@
 import { transaction } from '@lythaus/db';
+import { uuidv7 } from '@lythaus/security';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { bindActivityActor, readActivitySummary } from '../../../packages/db/src/activity-measurement.ts';
 
@@ -15,9 +16,9 @@ export async function handleActivityMeasurementSummary(request: Request, env: Pi
       await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
       await bindActivityActor(client, actor.userId);
       const result = await readActivitySummary(client);
-      await client.query(`INSERT INTO system.audit_events(id, actor_user_id, action, target_type, correlation_id, metadata)
-        VALUES($1,$2,'admin.activity_measurement_read','community',$1,$3::jsonb)`,
-      [correlationId, actor.userId, JSON.stringify({ contractVersion: result.contractVersion, pilotEnabled: result.enabled })]);
+      await client.query(`INSERT INTO system.audit_events(id, actor_id, action, target_type, correlation_id, metadata)
+        VALUES($1,$2,'admin.activity_measurement_read','community',$3,$4::jsonb)`,
+      [uuidv7(), actor.userId, correlationId, JSON.stringify({ contractVersion: result.contractVersion, pilotEnabled: result.enabled })]);
       return result;
     });
     return respond(summary);

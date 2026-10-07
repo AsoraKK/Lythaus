@@ -42,7 +42,7 @@ export async function handleActivityMeasurement(request: Request, env: EnvBindin
     const message = error instanceof Error ? error.message : '';
     const status: Record<string, number> = { activity_invalid_request: 400, invalid_json: 400, request_too_large: 413,
       unsupported_content_type: 415, activity_account_required: 401, activity_account_scope_changed: 409,
-      activity_consent_revision_conflict: 409, activity_consent_required: 409, activity_pilot_disabled: 409 };
+      activity_consent_revision_conflict: 409, activity_consent_required: 409, activity_pilot_disabled: 409, activity_privacy_held: 409 };
     return respond({ error: Object.hasOwn(status, message) ? message : 'activity_source_unavailable' }, status[message] ?? 503);
   }
 }

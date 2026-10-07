@@ -7,6 +7,7 @@ import { uuidv7 } from '@lythaus/security';
 import { bindActivityActor, activitySummary } from '../src/activity-measurement.ts';
 import { activityPrivacyReadiness } from '../src/activity-measurement-privacy.ts';
 import { handleActivityMeasurement, activityAccountScope } from '../../../apps/lythaus-public-api/src/activity-measurement-handler.ts';
+import { handleActivityMeasurementSummary } from '../../../apps/lythaus-admin-api/src/activity-measurement-handler.ts';
 import { ACTIVITY_NOTICE_VERSION } from '../../contracts/src/activity-measurement.ts';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
@@ -56,6 +57,11 @@ const withdraw = async id => {
 };
 const record = (id, consent, timezone) => asActor(id, 'SELECT privacy.record_activity_measurement_day($1,$2) AS value', [consent.revision, consent.epoch], 'lythaus_runtime', timezone);
 const aggregate = async () => activitySummary((await asActor(owner, 'SELECT privacy.activity_measurement_aggregate() AS value', [], 'lythaus_admin')).rows[0].value);
+const adminTransaction = async (_binding, work) => {
+  const c = await client('lythaus_admin');
+  try { await c.query('BEGIN'); const result = await work(c); await c.query('COMMIT'); return result; }
+  catch (error) { await c.query('ROLLBACK'); throw error; } finally { await c.end(); }
+};
 const setFlag = enabled => sql("UPDATE system.feature_flags SET enabled=$1 WHERE flag_key='analytics.account_daily_activity_pilot'", [enabled]);
 let currentA, currentB;
 let applied = false;
@@ -73,6 +79,7 @@ before(async () => {
 
 after(async () => {
   if (!applied) return;
+  await sql('DELETE FROM system.audit_events WHERE actor_id=$1', [owner]);
   await sql('DELETE FROM privacy.account_active_days WHERE user_id=ANY($1::uuid[])', [ids]);
   await sql('DELETE FROM privacy.activity_measurement_consents WHERE user_id=ANY($1::uuid[])', [ids]);
   await sql('DELETE FROM identity.consent_records WHERE user_id=ANY($1::uuid[])', [ids]);
@@ -103,6 +110,8 @@ test('legacy anonymous consent does not authorize account-day collection', async
   await sql("INSERT INTO identity.consent_records(id,user_id,purpose,policy_version,granted) VALUES($1,$2,'anonymous_usage','legacy',true)", [uuidv7(), userA]);
   await sql("UPDATE privacy.activity_measurement_configuration SET cutover_at=now()-interval '90 days'");
   await setFlag(true);
+  await assert.rejects(() => grant(userA), /activity_pilot_disabled/, 'owner retention approval is a separate disabled activation gate');
+  await sql('UPDATE privacy.activity_measurement_configuration SET retention_terms_approved=true');
   await assert.rejects(() => record(userA, { revision: 1, epoch: uuidv7() }), /activity_consent_required/);
   currentA = await grant(userA); currentB = await grant(userB);
   assert.equal(currentA.granted, true);
@@ -210,6 +219,52 @@ test('expiry filters export and bounded physical cleanup leaves unexpired activi
     VALUES($1,(now() AT TIME ZONE 'UTC')::date-1,$2,now()+interval '62 days')`, [userA, currentA.epoch]), error => error.code === '23514');
 });
 
+test('all cleanup paths fence hold activation, preserve held dates and exclude held accounts', async () => {
+  const subject = makeId(), holdId = uuidv7(), exportId = uuidv7();
+  await sql('INSERT INTO identity.users(id) VALUES($1)', [subject]);
+  const consent = await grant(subject); await record(subject, consent);
+  await sql(`INSERT INTO privacy.account_active_days(user_id,active_day,consent_id,expires_at)
+    SELECT $1,(now() AT TIME ZONE 'UTC')::date-61,$2,((now() AT TIME ZONE 'UTC')::date::timestamp AT TIME ZONE 'UTC')`, [subject, consent.epoch]);
+  await sql("INSERT INTO privacy.legal_holds(id,subject_id,reason,active) VALUES($1,$2,'Synthetic cleanup hold',false)", [holdId,subject]);
+  const activating = await client();
+  try {
+    await activating.query('BEGIN');
+    await activating.query('UPDATE privacy.legal_holds SET active=true WHERE id=$1', [holdId]);
+    for (const operation of [() => record(subject,consent), () => withdraw(subject),
+      () => sql('SELECT privacy.expire_activity_measurement(500)', [], 'lythaus_privacy')]) {
+      await assert.rejects(operation, error => error.code === '55P03');
+    }
+    assert.equal((await sql('SELECT count(*)::integer AS count FROM privacy.account_active_days WHERE user_id=$1', [subject])).rows[0].count, 2);
+    await activating.query('COMMIT');
+  } finally { await activating.query('ROLLBACK'); await activating.end(); }
+  await assert.rejects(() => record(subject,consent), /activity_privacy_held/);
+  assert.equal((await sql('SELECT privacy.expire_activity_measurement(500) AS removed', [], 'lythaus_privacy')).rows[0].removed, 0);
+  await sql("UPDATE privacy.activity_measurement_consents SET continuous_since=now()-interval '90 days' WHERE user_id=$1", [subject]);
+  const raw = (await asActor(owner, 'SELECT privacy.activity_measurement_aggregate() AS value', [], 'lythaus_admin')).rows[0].value;
+  assert.equal(raw.periods['1'].cohortSize, 0, 'the only mature account is held and excluded');
+  await sql("INSERT INTO privacy.requests(id,subject_id,request_type) VALUES($1,$2,'export')", [exportId,subject]);
+  const heldExport = (await sql('SELECT privacy.export_activity_measurement($1,$2) AS value', [exportId,subject], 'lythaus_privacy')).rows[0].value;
+  assert.equal(heldExport.retentionException, 'legal_hold'); assert.equal(heldExport.activeDates.length, 2);
+  assert.equal((await withdraw(subject)).granted, false);
+  assert.equal((await sql('SELECT count(*)::integer AS count FROM privacy.account_active_days WHERE user_id=$1', [subject])).rows[0].count, 2);
+  await assert.rejects(() => grant(subject), /activity_privacy_held/);
+  await sql('UPDATE privacy.legal_holds SET active=false WHERE id=$1', [holdId]);
+  assert.equal((await sql('SELECT privacy.expire_activity_measurement(500) AS removed', [], 'lythaus_privacy')).rows[0].removed, 2, 'release also disposes of unexpired withdrawn dates');
+  const next = await grant(subject);
+  assert.notEqual(next.epoch, consent.epoch);
+  assert.equal((await sql('SELECT count(*)::integer AS count FROM privacy.account_active_days WHERE user_id=$1', [subject])).rows[0].count, 0);
+});
+
+test('account lock fences a newly inserted legal hold through the canonical subject FK', async () => {
+  const subject = makeId(); await sql('INSERT INTO identity.users(id) VALUES($1)', [subject]);
+  const locked = await client(), insertion = await client();
+  try {
+    await locked.query('BEGIN'); await locked.query('SELECT id FROM identity.users WHERE id=$1 FOR UPDATE', [subject]);
+    await insertion.query("SET lock_timeout='100ms'");
+    await assert.rejects(() => insertion.query("INSERT INTO privacy.legal_holds(id,subject_id,reason) VALUES($1,$2,'Synthetic FK fence')", [uuidv7(),subject]), error => error.code === '55P03');
+  } finally { await locked.query('ROLLBACK'); await locked.end(); await insertion.end(); }
+});
+
 test('synthetic metric fixtures cover sealed boundaries, continuous cohorts, missing history and zero', async () => {
   const cases = [[1,90,false,'active'], [7,90,false,'active'], [30,90,false,'active'], [60,90,false,'active'], [61,90,false,'active'], [1,4,false,'active'], [1,90,true,'active'], [1,90,false,'suspended']];
   for (const [dayAge, consentAge, acceptance, statusValue] of cases) {
@@ -246,6 +301,39 @@ test('synthetic metric fixtures cover sealed boundaries, continuous cohorts, mis
   const plan = (await asActor(owner, 'EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) SELECT privacy.activity_measurement_aggregate()', [], 'lythaus_admin')).rows[0]['QUERY PLAN'][0];
   assert.ok(plan['Execution Time'] < 1500);
   console.log(JSON.stringify({ fixture: 'synthetic_local_pg17', aggregateExecutionMs: plan['Execution Time'], accountLimit: 5000, maxRetainedDaysPerAccount: 61 }));
+});
+
+test('restricted admin handler commits canonical private audit with non-UUID and repeated correlation', async () => {
+  for (const correlation of ['synthetic-readable-correlation', 'synthetic-readable-correlation', uuidv7()]) {
+    const response = await handleActivityMeasurementSummary(new Request('https://synthetic.invalid/api/admin/activity-measurement'),
+      { DB_ADMIN_FRESH: {} }, { userId: owner, role: 'owner' }, correlation, adminTransaction);
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).contractVersion, 'activity-pilot-v1');
+  }
+  const rows = (await sql("SELECT id,actor_id,correlation_id,metadata FROM system.audit_events WHERE actor_id=$1 AND action='admin.activity_measurement_read'", [owner])).rows;
+  assert.equal(rows.length, 3);
+  assert.equal(new Set(rows.map(row => row.id)).size, 3);
+  assert.equal(rows.filter(row => row.correlation_id === 'synthetic-readable-correlation').length, 2);
+  for (const row of rows) assert.deepEqual(row.metadata, { contractVersion: 'activity-pilot-v1', pilotEnabled: true });
+});
+
+test('purge cannot erase data while an existing inactive hold is activating', async () => {
+  const subject = makeId(), holdId = uuidv7(), requestId = uuidv7();
+  await sql('INSERT INTO identity.users(id) VALUES($1)', [subject]);
+  const consent = await grant(subject); await record(subject, consent);
+  await sql("INSERT INTO privacy.requests(id,subject_id,request_type) VALUES($1,$2,'delete')", [requestId, subject]);
+  await sql("INSERT INTO privacy.legal_holds(id,subject_id,reason,active) VALUES($1,$2,'Synthetic activating hold',false)", [holdId, subject]);
+  const activating = await client();
+  try {
+    await activating.query('BEGIN'); await activating.query('UPDATE privacy.legal_holds SET active=true WHERE id=$1', [holdId]);
+    await assert.rejects(() => sql('SELECT privacy.purge_activity_measurement($1,$2)', [requestId, subject], 'lythaus_privacy'),
+      error => error.code === '55P03' || /activity_privacy_held/.test(error.message));
+    assert.equal((await sql('SELECT count(*)::integer AS count FROM privacy.account_active_days WHERE user_id=$1', [subject])).rows[0].count, 1);
+    await activating.query('COMMIT');
+    await assert.rejects(() => sql('SELECT privacy.purge_activity_measurement($1,$2)', [requestId, subject], 'lythaus_privacy'), /activity_privacy_held/);
+  } finally { await activating.query('ROLLBACK'); await activating.end(); }
+  await sql('UPDATE privacy.legal_holds SET active=false WHERE id=$1', [holdId]);
+  assert.equal((await sql('SELECT privacy.purge_activity_measurement($1,$2) AS removed', [requestId, subject], 'lythaus_privacy')).rows[0].removed, 1);
 });
 
 test('capacity excess is unavailable, owner revocation is enforced and no raw identities escape', async () => {

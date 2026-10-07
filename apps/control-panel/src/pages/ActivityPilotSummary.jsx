@@ -34,7 +34,7 @@ export default function ActivityPilotSummary({ enabled = import.meta.env.VITE_AC
     const timer = setTimeout(() => setNow(Date.now()), Math.max(1, evidence.expiresAt - Date.now()));
     return () => clearTimeout(timer);
   }, [evidence?.fresh, evidence?.expiresAt]);
-  return <LythCard variant="panel">
+  return <LythCard variant="panel" className="activity-pilot">
     <div className="panel-header"><h2>Account activity pilot</h2>
       {enabled ? <LythButton type="button" variant="ghost" onClick={load} disabled={loading}>Refresh pilot</LythButton> : null}
     </div>
@@ -42,7 +42,7 @@ export default function ActivityPilotSummary({ enabled = import.meta.env.VITE_AC
     {!enabled ? <p>Pilot integration is disabled in this build. No measured pilot counts are available.</p> : null}
     {loading ? <p role="status">Loading pilot source…</p> : null}
     {error ? <p role="alert">{error}</p> : null}
-    {evidence ? <><p className="muted">Sampled {evidence.sampledAt} · {evidence.fresh ? 'Fresh' : 'Stale'} · Completed UTC days · 61-day retention</p><p>{evidence.population}</p></> : null}
+    {evidence ? <><p className="muted">Sampled {evidence.sampledAt} · {evidence.fresh ? 'Fresh' : 'Stale'} · Completed UTC days · 61-day metric eligibility; existing holds preserve excluded dates</p><p>{evidence.population}</p></> : null}
     <div className="overview-grid">{Object.entries(pilotLabels).map(([key, label]) => <article className="overview-metric" key={key}>
       <h3>{label}</h3><strong className="kpi-value">{evidence?.metrics[key]?.text || 'Unavailable'}</strong>
       <p>{evidence?.metrics[key]?.explanation || 'No verified pilot source.'}</p>

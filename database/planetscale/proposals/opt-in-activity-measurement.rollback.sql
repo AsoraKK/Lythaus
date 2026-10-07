@@ -12,8 +12,10 @@ DROP FUNCTION privacy.set_activity_measurement_consent(uuid,boolean,bigint,uuid,
 DROP FUNCTION privacy.activity_measurement_status();
 DROP FUNCTION privacy.activity_measurement_enabled();
 DROP FUNCTION privacy.activity_measurement_subject();
+DROP FUNCTION privacy.activity_measurement_lock_holds(uuid);
 DROP FUNCTION privacy.reconcile_activity_measurement_locations(uuid);
 DROP TABLE privacy.account_active_days;
+ALTER TABLE identity.consent_records DROP CONSTRAINT activity_consent_account_identity;
 DROP TABLE privacy.activity_measurement_consents;
 DROP TABLE privacy.activity_measurement_coverage;
 DROP TABLE privacy.activity_measurement_configuration;
