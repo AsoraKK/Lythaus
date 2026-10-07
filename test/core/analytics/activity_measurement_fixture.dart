@@ -24,8 +24,9 @@ class PilotClient implements ActivityMeasurementClient {
   @override
   Future<ActivityConsentRecord> status() async {
     reads++;
-    if (failStatus)
+    if (failStatus) {
       throw const ActivityMeasurementFailure('source_unavailable');
+    }
     return consent;
   }
 
@@ -35,8 +36,9 @@ class PilotClient implements ActivityMeasurementClient {
     required bool enabled,
   }) async {
     choices.add(enabled);
-    if (failConsent)
+    if (failConsent) {
       throw const ActivityMeasurementFailure('source_unavailable');
+    }
     if (pendingConsent != null) return pendingConsent!.future;
     consent = ActivityConsentRecord(
       pilotEnabled: current.pilotEnabled,
@@ -51,8 +53,9 @@ class PilotClient implements ActivityMeasurementClient {
   @override
   Future<String> recordForegroundRender(ActivityConsentRecord current) async {
     renders++;
-    if (failRender)
+    if (failRender) {
       throw const ActivityMeasurementFailure('source_unavailable');
+    }
     return pendingRender?.future ?? Future.value('2026-10-07');
   }
 
