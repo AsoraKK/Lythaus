@@ -1,14 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import test, { before, after } from 'node:test';
+import test, { before, after, mock } from 'node:test';
+import { createServer } from 'node:http';
 import pg from 'pg';
 import { generateKeyPair, exportJWK, exportPKCS8, jwtVerify, SignJWT } from 'jose';
 import { hmacLookup, signAccessToken, uuidv7 } from '../../security/src/index.ts';
 import { loadApprovedMigrations } from '../../../scripts/ci/planetscale-migration-manifest.mjs';
-import { supportAuthentication } from '../src/support-feedback-auth.ts';
-import { createSupportService } from '../src/support-feedback.ts';
-import { parseSupportServicePolicy } from '../src/support-feedback-policy.ts';
-import { exportSupportForPrivacy, exportSupportMessagesForPrivacy, purgeSupportForPrivacy, retainSupportBatch, loadSupportNotificationCandidate } from '../src/support-feedback-privacy.ts';
 
 const supplied=process.env.SUPPORT_LOCAL_PG_URL;
 if(!supplied)throw new Error('support_tests_require_disposable_local_pg17');
@@ -16,7 +13,46 @@ const url=new URL(supplied);
 if(!['localhost','127.0.0.1','[::1]'].includes(url.hostname)||!/^\/lythaus_support_test/.test(url.pathname))throw new Error('support_tests_refuse_nonlocal_database');
 const root=process.cwd(),database=`lythaus_support_test_${uuidv7().replaceAll('-','')}`;
 const local=new URL(url);local.pathname=`/${database}`;
-let control,privateKey,publicKey,jwks;
+let control,privateKey,publicKey,jwks,jwksServer,jwksUrl;
+const workerFixture={supportQueries:0,failAudit:false};
+class LocalHyperdriveClient extends pg.Client {
+  constructor(config) {
+    const binding=new URL(config.connectionString);
+    if(binding.hostname!=='support-fixture.hyperdrive.local'||binding.pathname!==`/${database}`
+      ||!['lythaus_runtime','lythaus_admin','lythaus_privacy'].includes(binding.username))throw new Error('support_worker_tests_refuse_nonfixture_binding');
+    super({connectionString:local.toString(),ssl:false});this.fixtureRole=binding.username;
+  }
+  async connect() {
+    await super.connect();await super.query(`SET ROLE ${this.fixtureRole}`);await super.query("SET statement_timeout='7s'");
+    if(workerFixture.failAudit)await super.query("SET support_fixture.fail_audit='on'");
+  }
+  query(...args) {
+    if(typeof args[0]==='string'&&args[0].includes('support.'))workerFixture.supportQueries+=1;
+    return super.query(...args);
+  }
+}
+mock.module('pg',{cache:true,defaultExport:pg,namedExports:{Client:LocalHyperdriveClient}});
+const {supportAuthentication}=await import('../src/support-feedback-auth.ts');
+const {createSupportService}=await import('../src/support-feedback.ts');
+const {parseSupportServicePolicy}=await import('../src/support-feedback-policy.ts');
+const {supportFeedbackSchemaReady}=await import('../src/support-feedback-runtime.ts');
+const {supportFeedbackPrivacySchemaState,supportFeedbackPrivacyIsReady}=await import('../src/support-feedback-privacy-runtime.ts');
+const {exportSupportForPrivacy,exportSupportMessagesForPrivacy,purgeSupportForPrivacy,retainSupportBatch,loadSupportNotificationCandidate}=await import('../src/support-feedback-privacy.ts');
+const {default:publicWorker}=await import('../../../apps/lythaus-public-api/src/index.ts');
+const {default:adminWorker}=await import('../../../apps/lythaus-admin-api/src/index.ts');
+const fixtureBinding=role=>({connectionString:`postgresql://${role}@support-fixture.hyperdrive.local/${database}?sslmode=disable`});
+function workerEnvironment(custom=policy()) {
+  return {EXPECTED_HOSTNAMES:'local-fixture.example.invalid',CORS_ALLOWED_ORIGINS:'https://local-fixture.example.invalid',
+    JWT_PUBLIC_JWKS:jwks,ACCESS_JWKS_URL:jwksUrl,ACCESS_AUDIENCES:'local-owner',ACCESS_TEAM_DOMAIN:'local-fixture.example.invalid',
+    ACCESS_SUBJECT_HMAC_KEY:'local-fixture-secret',DB_APP_FRESH:fixtureBinding('lythaus_runtime'),DB_ADMIN_FRESH:fixtureBinding('lythaus_admin'),
+    SUPPORT_FEEDBACK_ENABLED:'true',SUPPORT_FEEDBACK_POLICY:JSON.stringify(custom)};
+}
+async function invokeWorker(worker,proof,path,env,body) {
+  const headers=new Headers(proof.headers);headers.set('origin','https://local-fixture.example.invalid');
+  if(body!==undefined)headers.set('content-type','application/json');
+  return worker.fetch(new Request(`https://local-fixture.example.invalid${path}`,{method:body===undefined?'GET':'POST',headers,
+    body:body===undefined?undefined:JSON.stringify(body)}),env);
+}
 const policy=()=>({version:'local_fixture_v1',contract:{limits:{titleBytes:128,detailBytes:512,stepsBytes:256,contextBytes:64,memberMessageBytes:256},
   categories:{problem:['display','account'],suggestion:['navigation']},states:{problem:['submitted','investigating','resolved'],suggestion:['submitted','accepted','declined']}},
   initial:{problem:'submitted',suggestion:'submitted'},evidenceTypes:['verification','usefulness'],
@@ -81,8 +117,12 @@ before(async()=>{
     IF current_setting('support_fixture.fail_scrub',true)='on' THEN RAISE EXCEPTION 'PRIVATE_SENTINEL'; END IF; RETURN OLD; END $$;
     CREATE TRIGGER fixture_scrub_failure BEFORE DELETE ON support.notes FOR EACH ROW EXECUTE FUNCTION support.fixture_scrub_failure();`);
   ({privateKey,publicKey}=await generateKeyPair('ES256',{extractable:true}));const publicJwk=await exportJWK(publicKey);publicJwk.kid='local-fixture';jwks=JSON.stringify({keys:[publicJwk]});
+  jwksServer=createServer((_request,response)=>{response.writeHead(200,{'content-type':'application/json'});response.end(jwks);});
+  await new Promise((resolve,reject)=>{jwksServer.once('error',reject);jwksServer.listen(0,'127.0.0.1',resolve);});
+  jwksUrl=`http://127.0.0.1:${jwksServer.address().port}/certs`;
 });
 after(async()=>{
+  if(jwksServer)await new Promise(resolve=>jwksServer.close(resolve));
   if(control)await control.end();const c=new pg.Client({connectionString:url.toString(),ssl:false});await c.connect();
   await c.query('SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname=$1',[database]);await c.query(`DROP DATABASE ${database}`);await c.end();
 });
@@ -122,6 +162,133 @@ test('restricted roles, definer ownership and direct private-table/lock denial a
     for(const role of ['lythaus_runtime','lythaus_jobs','lythaus_privacy'])assert.equal((await control.query('SELECT has_function_privilege($1,$2,\'EXECUTE\') AS allowed',[role,signature])).rows[0].allowed,false);
   }
   const c=await connection('lythaus_runtime');try{await assert.rejects(c.query('SELECT * FROM support.notes'),e=>e.code==='42501');await assert.rejects(c.query('SELECT support.lock_owner(NULL)'),e=>e.code==='42501');}finally{await c.end();}
+});
+
+test('invoked Workers keep both destinations off without touching support and load valid-policy options through real restricted readiness',async t=>{
+  const f=await fixture(t),env=workerEnvironment();
+  for(const [worker,proof,prefix] of [[publicWorker,await f.memberRequest(),'/api/support'],[adminWorker,await f.ownerRequest(),'/api/admin/support']]) {
+    for(const destination of ['options','problems?limit=3','suggestions?limit=3']) {
+      workerFixture.supportQueries=0;
+      const response=await invokeWorker(worker,proof,`${prefix}/${destination}`,{...env,SUPPORT_FEEDBACK_ENABLED:'false'});
+      assert.equal(response.status,404);assert.equal(response.headers.get('cache-control'),'private, no-store');
+      assert.deepEqual(await response.json(),{error:'feature_disabled'});assert.equal(workerFixture.supportQueries,0);
+    }
+    const response=await invokeWorker(worker,proof,`${prefix}/options`,env);
+    assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'private, no-store');
+    const options=await response.json();assert.equal(options.version,policy().version);
+    assert.equal(Object.hasOwn(options,'transitions'),worker===adminWorker);
+  }
+  assert.equal(await supportFeedbackSchemaReady(env.DB_APP_FRESH,'member'),true);
+  assert.equal(await supportFeedbackSchemaReady(env.DB_ADMIN_FRESH,'owner'),true);
+  assert.equal(await supportFeedbackPrivacyIsReady(fixtureBinding('lythaus_privacy')),true);
+});
+
+test('invoked Worker submission, replay, queues, private triage and member replies use the existing PG engine and fresh identities',async t=>{
+  const f=await fixture(t),env=workerEnvironment(),proof=await f.memberRequest(),ownerProof=await f.ownerRequest();
+  const response=await invokeWorker(publicWorker,proof,'/api/support/problems',env,problem());
+  assert.equal(response.status,201);const created=await response.json(),ticket=created.request.id;
+  const replay=await invokeWorker(publicWorker,proof,'/api/support/problems',env,problem());
+  assert.equal(replay.status,200);assert.equal((await replay.json()).request.id,ticket);
+  const ideaResponse=await invokeWorker(publicWorker,await f.memberRequest(),'/api/support/suggestions',env,suggestion());
+  assert.equal(ideaResponse.status,201);const idea=(await ideaResponse.json()).request.id;
+  for(const [path,expected] of [['problems',ticket],['suggestions',idea]]) {
+    const history=await invokeWorker(publicWorker,proof,`/api/support/${path}?limit=3`,env);
+    assert.deepEqual((await history.json()).items.map(item=>item.id),[expected]);
+    const queue=await invokeWorker(adminWorker,ownerProof,`/api/admin/support/${path}?limit=3`,env);
+    assert.equal(queue.status,200);assert.deepEqual((await queue.json()).items.map(item=>item.id),[expected]);
+  }
+  for(const [otherProof,path] of [[await f.memberRequest(f.other),`problems/${ticket}`],[proof,`suggestions/${ticket}`]]) {
+    const denied=await invokeWorker(publicWorker,otherProof,`/api/support/${path}`,env);
+    assert.equal(denied.status,404);assert.deepEqual(await denied.json(),{error:'support_not_found'});
+  }
+  const note=await invokeWorker(adminWorker,await f.ownerRequest(),`/api/admin/support/problems/${ticket}/notes`,env,{expectedRevision:1,text:'PRIVATE_SENTINEL owner note'});
+  assert.equal(note.status,201);
+  const evidence=await invokeWorker(adminWorker,await f.ownerRequest(),`/api/admin/support/problems/${ticket}/evidence`,env,{expectedRevision:2,type:'verification',description:'PRIVATE_SENTINEL evidence'});
+  assert.equal(evidence.status,201);
+  const ownerReply=await invokeWorker(adminWorker,await f.ownerRequest(),`/api/admin/support/problems/${ticket}/messages`,env,{expectedRevision:3,message:'Synthetic public owner reply'});
+  assert.equal(ownerReply.status,201);
+  const memberReply=await invokeWorker(publicWorker,await f.memberRequest(),`/api/support/problems/${ticket}/messages`,env,{expectedRevision:4,message:'Synthetic member response'});
+  assert.equal(memberReply.status,201);
+  const detail=await invokeWorker(publicWorker,proof,`/api/support/problems/${ticket}`,env);
+  assert.equal(detail.status,200);assert.equal(detail.headers.get('cache-control'),'private, no-store');
+  const memberDetail=await detail.json();assert.equal(memberDetail.messages.length,2);
+  assert.ok(!JSON.stringify(memberDetail).includes('PRIVATE_SENTINEL'));assert.ok(!JSON.stringify(memberDetail).includes(f.owner));
+  const adminDenied=await invokeWorker(adminWorker,await f.ownerRequest(f.adminSubject),'/api/admin/support/options',env);
+  assert.equal(adminDenied.status,403);assert.deepEqual(await adminDenied.json(),{error:'support_owner_required'});
+  await control.query('UPDATE identity.users SET token_version=2 WHERE id=$1',[f.member]);
+  const stale=await invokeWorker(publicWorker,proof,`/api/support/problems/${ticket}`,env);
+  assert.equal(stale.status,401);assert.deepEqual(await stale.json(),{error:'support_authentication_required'});
+  await control.query('UPDATE identity.admin_memberships SET active=false WHERE user_id=$1',[f.owner]);
+  const revoked=await invokeWorker(adminWorker,ownerProof,`/api/admin/support/problems/${ticket}`,env);
+  assert.equal(revoked.status,403);const revokedBody=await revoked.json();assert.equal(revokedBody.error,'admin_role_required');assert.ok(typeof revokedBody.correlationId==='string');
+});
+
+test('invoked Worker validation, revisions, quota and audit rollback produce honest HTTP outcomes and a retry commits once',async t=>{
+  const custom=policy();custom.limits.memberMutations=2;
+  const f=await fixture(t,custom),env=workerEnvironment(custom),proof=await f.memberRequest();
+  for(const invalid of [{...problem(),attachments:['synthetic']},{...problem(),kind:'suggestion'}]) {
+    const rejected=await invokeWorker(publicWorker,proof,'/api/support/problems',env,invalid);
+    assert.equal(rejected.status,400);
+  }
+  workerFixture.failAudit=true;
+  let failed;
+  try{failed=await invokeWorker(publicWorker,proof,'/api/support/problems',env,problem());}finally{workerFixture.failAudit=false;}
+  assert.equal(failed.status,503);assert.deepEqual(await failed.json(),{error:'support_unavailable'});
+  assert.equal((await control.query('SELECT count(*)::int AS n FROM support.requests WHERE submitter_id=$1',[f.member])).rows[0].n,0);
+  assert.equal((await control.query('SELECT count(*)::int AS n FROM system.idempotency_keys WHERE actor_id=$1',[f.member])).rows[0].n,0);
+  const retry=await invokeWorker(publicWorker,proof,'/api/support/problems',env,problem());assert.equal(retry.status,201);const ticket=(await retry.json()).request.id;
+  const reply=await invokeWorker(publicWorker,await f.memberRequest(),`/api/support/problems/${ticket}/messages`,env,{expectedRevision:1,message:'Synthetic second mutation'});
+  assert.equal(reply.status,201);
+  const conflict=await invokeWorker(publicWorker,await f.memberRequest(),`/api/support/problems/${ticket}/messages`,env,{expectedRevision:1,message:'Synthetic stale revision'});
+  assert.equal(conflict.status,409);assert.deepEqual(await conflict.json(),{error:'support_revision_conflict'});
+  const limited=await invokeWorker(publicWorker,await f.memberRequest(),`/api/support/problems/${ticket}/messages`,env,{expectedRevision:2,message:'Synthetic quota rejection'});
+  assert.equal(limited.status,429);assert.deepEqual(await limited.json(),{error:'support_rate_limited'});
+  assert.equal((await control.query('SELECT count(*)::int AS n FROM system.outbox_events WHERE aggregate_id=$1',[ticket])).rows[0].n,2);
+});
+
+test('real schema and grant gaps stop invoked Workers and make privacy retry; wholly absent support remains optional',async t=>{
+  const f=await fixture(t),env=workerEnvironment(),privacyBinding=fixtureBinding('lythaus_privacy');
+  await control.query('REVOKE INSERT ON support.operation_refs FROM lythaus_runtime');
+  try {
+    const unavailable=await invokeWorker(publicWorker,await f.memberRequest(),'/api/support/options',env);
+    assert.equal(unavailable.status,503);assert.deepEqual(await unavailable.json(),{error:'support_unavailable'});
+  } finally {await control.query('GRANT INSERT ON support.operation_refs TO lythaus_runtime');}
+  await control.query('REVOKE SELECT ON privacy.legal_holds FROM lythaus_privacy');
+  try {
+    assert.equal(await supportFeedbackPrivacySchemaState(privacyBinding),'incomplete');
+    await assert.rejects(supportFeedbackPrivacyIsReady(privacyBinding),{message:'support_privacy_schema_unavailable'});
+  } finally {await control.query('GRANT SELECT ON privacy.legal_holds TO lythaus_privacy');}
+  await control.query('ALTER TABLE support.notes RENAME TO notes_wp07_hidden');
+  try {
+    const unavailable=await invokeWorker(adminWorker,await f.ownerRequest(),'/api/admin/support/options',env);
+    assert.equal(unavailable.status,503);assert.deepEqual(await unavailable.json(),{error:'support_unavailable'});
+    assert.equal(await supportFeedbackPrivacySchemaState(privacyBinding),'incomplete');
+    await assert.rejects(supportFeedbackPrivacyIsReady(privacyBinding),{message:'support_privacy_schema_unavailable'});
+  } finally {await control.query('ALTER TABLE support.notes_wp07_hidden RENAME TO notes');}
+  await control.query('ALTER SCHEMA support RENAME TO support_wp07_hidden');
+  try {
+    assert.equal(await supportFeedbackPrivacySchemaState(privacyBinding),'absent');assert.equal(await supportFeedbackPrivacyIsReady(privacyBinding),false);
+    const unavailable=await invokeWorker(publicWorker,await f.memberRequest(),'/api/support/options',env);
+    assert.equal(unavailable.status,503);assert.deepEqual(await unavailable.json(),{error:'support_unavailable'});
+  } finally {await control.query('ALTER SCHEMA support_wp07_hidden RENAME TO support');}
+});
+
+test('explicit synthetic retained-audit policy scrubs content, markers and intents while preserving only existing minimal audits',async t=>{
+  const custom=policy();custom.privacy.deleteAudit=false;
+  const f=await fixture(t,custom),ticket=(await f.submit()).request.id;
+  await f.service('owner').ownerNote(await f.ownerRequest(),'problem',ticket,{expectedRevision:1,text:'PRIVATE_SENTINEL retained-policy note'});
+  const audits=await control.query('SELECT audit_id FROM support.operation_refs WHERE request_id=$1 ORDER BY audit_id',[ticket]);
+  const deletion=await f.privacyRequest('delete');
+  const result=await runner('lythaus_privacy')(client=>purgeSupportForPrivacy(client,deletion,custom));
+  assert.deepEqual(result,{scrubbedRecords:1,hasMore:false});
+  const retained=await control.query('SELECT id,metadata FROM system.audit_events WHERE id=ANY($1::uuid[]) ORDER BY id',[audits.rows.map(row=>row.audit_id)]);
+  assert.deepEqual(retained.rows.map(row=>row.id),audits.rows.map(row=>row.audit_id));
+  assert.ok(!JSON.stringify(retained.rows).includes('PRIVATE_SENTINEL'));
+  const tombstone=(await control.query('SELECT submission,member_message,deleted_at FROM support.requests WHERE id=$1',[ticket])).rows[0];
+  assert.equal(tombstone.submission,null);assert.equal(tombstone.member_message,null);assert.ok(tombstone.deleted_at);
+  for(const table of ['messages','notes','evidence','decisions','operation_refs'])assert.equal((await control.query(`SELECT count(*)::int AS n FROM support.${table} WHERE request_id=$1`,[ticket])).rows[0].n,0);
+  assert.equal((await control.query('SELECT count(*)::int AS n FROM system.idempotency_keys WHERE actor_id=ANY($1::uuid[])',[[f.member,f.owner]])).rows[0].n,0);
+  assert.equal((await control.query('SELECT count(*)::int AS n FROM system.outbox_events WHERE aggregate_id=$1',[ticket])).rows[0].n,0);
 });
 test('distinct submissions persist without client identities, privileges or mixed kinds',async t=>{
   const f=await fixture(t);const a=await f.submit(),b=await f.submit(suggestion());assert.equal(a.request.kind,'problem');assert.equal(b.request.kind,'suggestion');

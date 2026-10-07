@@ -2,7 +2,7 @@
 
 ## Scope and sequencing
 
-Staged after Accounts on 2026-10-02 from Kyle's voice-call follow-up. PR910 now contains a bounded default-off support slice integrated with the public/admin dispatchers, OpenAPI/generated client, privacy jobs and Flutter member route. Its owner console and member UI remain disabled unless their independent feature flags are explicitly enabled. There is no production migration, notification delivery, reward or public-homepage change. Parent controls integration, activation and release. Astra policy reconciliation remains required before any reward integration.
+Staged after Accounts on 2026-10-02 from Kyle's voice-call follow-up. PR909 and PR910 are merged: PR910 merged on 2026-10-04 at `28eb5803872bb053a728c6ce31213f59b81f02ad`. The bounded default-off support slice is integrated with the public/admin dispatchers, OpenAPI/generated client, privacy jobs and Flutter member route. Its owner console and member UI remain disabled unless their independent feature flags are explicitly enabled. The coordinator reports the source included in release102 at `f757d35a3263f86f817ea09fd76368bd1f6a8e01`, with support OFF; deployment does not establish activation or owner acceptance. WP07 makes no production support migration, notification delivery, reward or public-homepage change. Parent controls integration, activation and release. F01 reconciliation remains required before any reward integration. See the [WP07 inventory and activation packet](../testing/wp07-support-completion-2026-10-07.md).
 
 Two separate private support flows and forms:
 
@@ -70,7 +70,7 @@ Reversal is a new audited event referencing the original acceptance/award, never
 
 ## Reviewable increments after Accounts
 
-1. PR909 is merged into current main. PR910's service branch is rebased directly onto main and remains open for parent review before its merge; it contains services, API/OpenAPI/client, privacy integration, both UIs and scoped CI.
+1. PR909 and PR910 are merged into main. Preserve their services, API/OpenAPI/client, privacy integration, both UIs and scoped CI. WP07 adds bounded runtime test evidence and corrects stale documentation; independent review of its exact candidate remains a separate gate.
 2. Resolve approved production schema/grants, privacy locators/completion, retention, legal-hold and rollback gates. Run final Worker authorization, no-store, audit, query-bound, navigation and responsive/accessibility acceptance at the exact release head.
 3. Add configured notifications only after transport, preferences, dedupe and dispatch-time privacy checks are approved. Add no suggestion award until Rewards approves the 150-point quarterly policy boundaries and budget; keep bugs unrewarded by inference.
 

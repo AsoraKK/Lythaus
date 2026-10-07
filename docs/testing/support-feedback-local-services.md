@@ -1,8 +1,10 @@
 # Private problem and suggestion services: local implementation
 
-PR910 is the open draft support slice, rebased onto current main
-`95fd4c67e1a0a2fc5496cf74efc81b8be25b4790` after PR909 merged its private DTO
-contract into that branch. It includes the default-off
+PR909 and PR910 are merged support foundations. Current metadata read on
+2026-10-07 records PR910 head `582059ef902b9cb87519ca8b9816fc9f3c1e1ddd`,
+merge `28eb5803872bb053a728c6ce31213f59b81f02ad`, and merge time
+2026-10-04 16:04:30 UTC. WP07 starts from main
+`8f9293fd7ee1bb54382101c04955dff4be7d5499`. PR910 includes the default-off
 member and owner API routes, OpenAPI and generated client, Flutter settings route,
 owner console route, privacy-job adapters, isolated PostgreSQL proposal and
 support-scoped PG17 workflow. This uses the existing support service engine; it
@@ -14,18 +16,20 @@ proposal tables. Normal account and privacy paths continue when every optional
 support table is absent. If any support table is present but a required privacy
 relation or grant is missing, export, deletion and retention fail and retry.
 The SQL stays outside the automatic production migration
-manifest. Nothing is deployed or activated; no production DDL, provider changes,
-notification delivery, point awards or public-homepage edits are included.
+manifest. The coordinator reports support source included in deployed release102
+at `f757d35a3263f86f817ea09fd76368bd1f6a8e01`, with support OFF and owner
+acceptance pending. WP07 makes no deployment or activation; no production DDL,
+provider changes, notification delivery, point awards or public-homepage edits
+are included. See the [WP07 inventory and activation packet](wp07-support-completion-2026-10-07.md).
 
 ## Ownership and integration boundaries
 
 PR903 is merged into current main at
 `1dc02174dbc70e685960d33767e6dd9722aa34fa`; its canonical release run
 `37153418668` succeeded, while owner testing remains uncertified. PR909 remains
-the support contract dependency; PR910 preserves its base branch and draft
-identity. Parent controls the main merge, activation and release. This draft
-contains source-level route, privacy and UI tests, not live Worker binding or
-production-provider acceptance.
+the merged support contract dependency. Parent controls WP07 review, integration,
+activation and release. The candidate contains source-level route, privacy and
+UI evidence, not live Worker binding or production-provider acceptance.
 
 Canonical migrations and the existing runtime contain no general private
 problem/suggestion store. An authorized read-only production catalog check
@@ -140,7 +144,7 @@ and deduplicate through the existing inbox/notification infrastructure.
 Run from the repository root with Node24 and a disposable local PostgreSQL17:
 
 ```sh
-SUPPORT_LOCAL_PG_URL="$LOCAL_SUPPORT_TEST_URL" node --experimental-strip-types \
+SUPPORT_LOCAL_PG_URL="$LOCAL_SUPPORT_TEST_URL" node --experimental-strip-types --experimental-test-module-mocks \
   --experimental-test-coverage '--test-coverage-include=**/db/src/support-feedback*.ts' \
   --test --test-isolation=none packages/db/tests/support-feedback.postgres.mjs
 node --experimental-strip-types --test --test-isolation=none \
@@ -152,8 +156,15 @@ node --experimental-strip-types --experimental-test-module-mocks \
 npm run typecheck:native
 ```
 
-This workspace has no Flutter/Dart or PostgreSQL 17 tools, so CI is the
-verification source for those suites. The scoped workflow runs support
+The WP07 workspace runs disposable PostgreSQL 17 and Node 22/24 locally, including
+the actual Public/Admin Worker fetch methods, runtime factory, readiness SQL,
+HTTP adapter and existing service against restricted roles. Only the test's
+`pg.Client` maps explicitly named synthetic Hyperdrive bindings to loopback;
+TLS policy and production adapters are unchanged. Access signatures are verified
+against an ephemeral loopback JWKS server. The repaired runtime fixture supplies
+serialized valid policy and asserts readiness was called; the old test never
+reached readiness. Flutter/Dart is unavailable locally, so current-candidate
+Flutter checks remain not run until CI supplies them. The scoped workflow runs support
 contract/HTTP/runtime and routing tests, native typecheck, the isolated support
 service suite against real PostgreSQL 17, owner-console tests/build, Flutter
 format/analyze/widget/settings/route tests, and generated Dart client parity.
@@ -161,8 +172,8 @@ The repository's separate Native PlanetScale PostgreSQL 17 workflow validates
 its full baseline and PG suites. Use the linked runs in PR910 for exact-head
 results. `git diff --check` is run locally before each commit. These checks do
 not prove live Hyperdrive writes, deployed Worker routing, external provider
-state, or actual notification delivery; no browser acceptance beyond the
-control-panel component/router tests is claimed.
+state, or actual notification delivery. Local browser evidence is explicitly
+synthetic and does not establish owner acceptance.
 
 The URL must point to loopback and a `lythaus_support_test` database. The suite
 creates a per-run disposable database, verifies PG17, loads the exact pinned
@@ -185,10 +196,10 @@ proposal independently refuses database names outside this local test prefix.
 
 ## Gates before activation
 
-1. PR909 merged at its exact reviewed head as `95fd4c67e1a0a2fc5496cf74efc81b8be25b4790`;
-   PR910's service branch has been rebased and retargeted onto current main and
-   remains open for parent review before its merge. PR906 and PR896 are also
-   merged on current main; PR896's new rewards remain disabled in release94.
+1. PR909 merged as `95fd4c67e1a0a2fc5496cf74efc81b8be25b4790` and PR910
+   merged as `28eb5803872bb053a728c6ce31213f59b81f02ad`. WP07 independent
+   candidate review remains pending through parent. PR906 and PR896 are also
+   merged on main; monthly proposal activation remains separately gated.
 2. Approve and reconcile the support SQL proposal against the exact production
    schema, least-privilege role grants, function ownership, query/index costs,
    audit retention and rollback. It remains outside the automatic migration
