@@ -15,7 +15,7 @@ assert.ok(['127.0.0.1','localhost'].includes(supplied.hostname));
 assert.ok(supplied.pathname.startsWith('/lythaus_auth_test') || (process.env.GITHUB_ACTIONS === 'true' && supplied.pathname === '/postgres'));
 const name = 'lythaus_auth_test_activity_integration_' + uuidv7().replaceAll('-','');
 const local = new URL(supplied); local.pathname = '/' + name;
-let control, bootstrap, publicApi, adminApi, workflow, jwksServer, created = false;
+let control, bootstrap, publicApi, adminApi, jobsApi, workflow, jwksServer, created = false;
 let privateKey, privateKeyPem, jwks, accessToken;
 const keyId = 'synthetic-activity-integration', accessSubject = 'synthetic-activity-owner';
 const hmacKey = randomBytes(32).toString('base64');
@@ -40,6 +40,7 @@ before(async () => {
     ACCESS_TEAM_DOMAIN: 'synthetic-access.invalid' };
   publicApi = await nativePostgresActivityFixture(local.toString(),'public',bindings);
   adminApi = await nativePostgresActivityFixture(local.toString(),'admin',bindings);
+  jobsApi = await nativePostgresActivityFixture(local.toString(),'jobs',bindings);
   workflow = await nativePostgresPrivacyWorkflowFixture(local.toString());
   for (const id of [actorA,actorB,owner]) await sql('INSERT INTO identity.users(id) VALUES($1)',[id]);
   await sql("INSERT INTO identity.admin_memberships(user_id,access_subject_hmac,role,active) VALUES($1,decode($2,'base64'),'owner',true)",[owner,hmacLookup(accessSubject,hmacKey)]);
@@ -47,7 +48,7 @@ before(async () => {
     .setAudience('synthetic-activity-admin').setIssuer('https://synthetic-access.invalid').setIssuedAt().setExpirationTime('1h').sign(privateKey);
 });
 after(async () => {
-  await publicApi?.dispose(); await adminApi?.dispose(); await workflow?.dispose();
+  await publicApi?.dispose(); await adminApi?.dispose(); await jobsApi?.dispose(); await workflow?.dispose();
   if (jwksServer) await new Promise(resolve => jwksServer.close(resolve));
   await control?.end();
   if (created) await bootstrap.query(`DROP DATABASE ${name}`);
@@ -70,6 +71,24 @@ const renderBody = state => ({signal:'foreground_app_render',consentRevision:sta
 async function privacyRequest(subjectId, kind) {
   const requestId=uuidv7(); await sql('INSERT INTO privacy.requests(id,subject_id,request_type) VALUES($1,$2,$3)',[requestId,subjectId,kind]);
   return {subjectId,requestId};
+}
+
+async function scheduledProbe() {
+  const id = uuidv7();
+  await sql(`INSERT INTO system.outbox_events(id,event_type,aggregate_type,aggregate_id,payload)
+    VALUES($1,'synthetic.activity.scheduler_probe','synthetic_fixture',$2,'{}'::jsonb)`, [id,uuidv7()]);
+  return id;
+}
+
+async function failedScheduledTick() {
+  const result = await jobsApi.scheduled().then(value => ({ value }), error => ({ error }));
+  assert.ok(result.error || (typeof result.value?.outcome === 'string' && result.value.outcome !== 'ok'),
+    'Activity failure must be reported by the actual scheduled event');
+}
+
+async function assertProbeRelayed(id) {
+  assert.ok((await sql('SELECT dispatched_at FROM system.outbox_events WHERE id=$1',[id])).rows[0].dispatched_at,
+    'Independent outbox work must complete despite activity failure');
 }
 
 test('native Workflow uninstalled pilot is explicitly not collected and does not break profile export',async()=>{
@@ -172,10 +191,39 @@ test('native delete blocks active holds and fails safely during activation, then
   assert.equal((await sql('SELECT count(*)::integer AS count FROM privacy.account_active_days WHERE user_id=$1',[subject])).rows[0].count,0);
 });
 
+test('actual native scheduler isolates hold contention and backlog while completing independent work, then retries',async()=>{
+  await sql(readFileSync('database/planetscale/proposals/monthly_reputation_shadow.sql','utf8'));
+  const subject=uuidv7(),hold=uuidv7(); await sql('INSERT INTO identity.users(id) VALUES($1)',[subject]);
+  const consent=await choice(subject,true);
+  await sql(`INSERT INTO privacy.account_active_days(user_id,active_day,consent_id,expires_at)
+    SELECT $1,(now() AT TIME ZONE 'UTC')::date-61,$2,((now() AT TIME ZONE 'UTC')::date::timestamp AT TIME ZONE 'UTC')`,[subject,consent.epoch]);
+  await sql("INSERT INTO privacy.legal_holds(id,subject_id,reason,active) VALUES($1,$2,'Synthetic scheduled hold race',false)",[hold,subject]);
+  const activating=new pg.Client({connectionString:local.toString(),ssl:false}); await activating.connect();
+  try {
+    await activating.query('BEGIN'); await activating.query('UPDATE privacy.legal_holds SET active=true WHERE id=$1',[hold]);
+    const probe=await scheduledProbe();
+    await failedScheduledTick(); await assertProbeRelayed(probe);
+    assert.equal((await sql('SELECT count(*)::integer AS count FROM privacy.account_active_days WHERE user_id=$1',[subject])).rows[0].count,1);
+  } finally {await activating.query('ROLLBACK');await activating.end();}
+  assert.equal((await jobsApi.scheduled()).outcome,'ok');
+  assert.equal((await sql('SELECT count(*)::integer AS count FROM privacy.account_active_days WHERE user_id=$1',[subject])).rows[0].count,0);
+  await sql(`INSERT INTO privacy.account_active_days(user_id,active_day,consent_id,expires_at)
+    SELECT $1,day,$2,((day+61)::timestamp AT TIME ZONE 'UTC')
+    FROM (SELECT (now() AT TIME ZONE 'UTC')::date-age AS day FROM generate_series(62,10461) age) pending`,[subject,consent.epoch]);
+  const probe=await scheduledProbe();
+  await failedScheduledTick(); await assertProbeRelayed(probe);
+  assert.equal((await sql('SELECT count(*)::integer AS count FROM privacy.account_active_days WHERE user_id=$1',[subject])).rows[0].count,400);
+  assert.equal((await jobsApi.scheduled()).outcome,'ok');
+  assert.equal((await sql('SELECT count(*)::integer AS count FROM privacy.account_active_days WHERE user_id=$1',[subject])).rows[0].count,0);
+  assert.ok(jobsApi.statements.some(item=>item.role==='lythaus_jobs' && item.text.includes('system.outbox_events')));
+});
+
 test('native privacy workflows fail closed on partial installation and do not publish an incomplete export',async()=>{
   const subject=uuidv7(); await sql('INSERT INTO identity.users(id) VALUES($1)',[subject]);
   const params=await privacyRequest(subject,'export');
   await sql('DROP FUNCTION privacy.expire_activity_measurement(integer)');
   const result=await workflow.run('export',params); assert.equal(result.status,'errored',JSON.stringify(result));
   assert.equal((await sql('SELECT count(*)::integer AS count FROM privacy.export_manifests WHERE request_id=$1',[params.requestId])).rows[0].count,0);
+  const probe=await scheduledProbe();
+  await failedScheduledTick(); await assertProbeRelayed(probe);
 });

@@ -10,7 +10,7 @@ export async function nativePostgresActivityFixture(connectionString, kind, bind
   const target = new URL(connectionString);
   assert.ok(['127.0.0.1', 'localhost'].includes(target.hostname));
   assert.match(target.pathname, /^\/lythaus_auth_test_activity_integration_[a-f0-9]+$/);
-  assert.ok(['public', 'admin'].includes(kind));
+  assert.ok(['public', 'admin', 'jobs'].includes(kind));
   const require = createRequire(new URL('../../../node_modules/wrangler/package.json', import.meta.url));
   const { build } = require('esbuild');
   const { Miniflare, convertV4MiniflareOptions } = require('miniflare');
@@ -46,13 +46,14 @@ export async function nativePostgresActivityFixture(connectionString, kind, bind
         ` + original.slice(end) };
       });
     } }],
-    stdin: { resolveDir: root, contents: `export { default } from './apps/lythaus-${kind}-api/src/index.ts';` },
+    stdin: { resolveDir: root, contents: `export { default } from './apps/lythaus-${kind}${kind === 'jobs' ? '' : '-api'}/src/index.ts';` },
   });
   const runtime = new Miniflare(convertV4MiniflareOptions({ workers: [{
     name: `activity-${kind}-local`, modules: true, script: bundle.outputFiles[0].text,
     compatibilityDate: '2026-07-27', compatibilityFlags: ['nodejs_compat'],
     bindings: { ...bindings, DB_APP_FRESH: { role: 'lythaus_runtime' }, DB_ADMIN_FRESH: { role: 'lythaus_admin' },
       DB_PRIVACY_FRESH: { role: 'lythaus_privacy' }, DB_JOBS_FRESH: { role: 'lythaus_jobs' } },
+    ...(kind === 'jobs' ? { queueProducers: { AUDIT_QUEUE: 'activity-synthetic-audit' } } : {}),
     serviceBindings: { DISPOSABLE_POSTGRES: async request => {
       const input = await request.json();
       const temporary = !input.transactionId;
@@ -85,7 +86,9 @@ export async function nativePostgresActivityFixture(connectionString, kind, bind
       }
     } },
   }] }));
-  return { statements, dispatchFetch: (...args) => runtime.dispatchFetch(...args), async dispose() {
+  return { statements, dispatchFetch: (...args) => runtime.dispatchFetch(...args),
+    async scheduled() { return (await runtime.getWorker()).scheduled({ cron: '*/15 * * * *' }); },
+    async dispose() {
     await runtime.dispose(); await Promise.all([...clients.values()].map(({ client }) => client.end())); clients.clear();
   } };
 }

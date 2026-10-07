@@ -40,3 +40,17 @@ export async function activityMeasurementRetentionCleanup(binding: HyperdriveBin
   }
   throw new Error('activity_retention_backlog');
 }
+
+export async function activityMeasurementScheduledWork(
+  binding: HyperdriveBinding,
+  independentWork: () => Promise<void>,
+  cleanup = activityMeasurementRetentionCleanup,
+): Promise<void> {
+  const results = await Promise.allSettled([
+    Promise.resolve().then(() => cleanup(binding)),
+    Promise.resolve().then(independentWork),
+  ]);
+  const failures = results.flatMap(result => result.status === 'rejected' ? [result.reason] : []);
+  if (failures.length === 1) throw failures[0];
+  if (failures.length > 1) throw new AggregateError(failures, 'scheduled_work_failed');
+}

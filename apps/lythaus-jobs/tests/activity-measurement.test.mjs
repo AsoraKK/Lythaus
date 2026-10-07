@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { activityMeasurementPrivacyExport, activityMeasurementPrivacyDelete, activityMeasurementPrivacyReconcile, activityMeasurementRetentionBatch, activityMeasurementRetentionCleanup } from '../src/activity-measurement.ts';
+import { activityMeasurementPrivacyExport, activityMeasurementPrivacyDelete, activityMeasurementPrivacyReconcile, activityMeasurementRetentionBatch, activityMeasurementRetentionCleanup, activityMeasurementScheduledWork } from '../src/activity-measurement.ts';
 import { activityPrivacyReadiness, expireActivityMeasurement } from '../../../packages/db/src/activity-measurement-privacy.ts';
 
 const subject = '019a0f00-0000-7000-8000-000000000001';
@@ -58,4 +58,34 @@ test('reconciliation is purpose-local and malformed retention results fail close
   assert.deepEqual(reads[2].values, [subject]);
   assert.match(reads[2].sql, /reconcile_activity_measurement_locations/);
   for (const removed of [-1, 501, 1.5, null]) await assert.rejects(() => expireActivityMeasurement({ query: async () => ({ rows: [{ removed }] }) }), /activity_privacy_unavailable/);
+});
+
+test('activity failures do not prevent independent scheduled work and still reject the tick', async () => {
+  for (const code of ['55P03', 'activity_privacy_schema_incomplete', 'activity_retention_backlog']) {
+    const failure = new Error(code);
+    const work = [];
+    await assert.rejects(() => activityMeasurementScheduledWork({}, async () => {
+      await Promise.resolve(); work.push('monthly');
+      await Promise.resolve(); work.push('outbox');
+    }, async () => { throw failure; }), error => error === failure);
+    assert.deepEqual(work, ['monthly', 'outbox']);
+  }
+});
+
+test('both scheduled groups settle and neither failure is swallowed', async () => {
+  const monthlyFailure = new Error('synthetic_monthly_failure');
+  const activityFailure = new Error('55P03');
+  let settled = false;
+  await assert.rejects(() => activityMeasurementScheduledWork({}, async () => {
+    await Promise.resolve(); settled = true; throw monthlyFailure;
+  }, async () => { throw activityFailure; }), error => error instanceof AggregateError
+    && error.message === 'scheduled_work_failed'
+    && error.errors[0] === activityFailure && error.errors[1] === monthlyFailure);
+  assert.equal(settled, true);
+  let cleaned = false;
+  await assert.rejects(() => activityMeasurementScheduledWork({}, () => { throw monthlyFailure; }, async () => {
+    cleaned = true; return 0;
+  }), error => error === monthlyFailure);
+  assert.equal(cleaned, true);
+  await activityMeasurementScheduledWork({}, async () => undefined, async () => 0);
 });
