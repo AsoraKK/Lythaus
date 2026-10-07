@@ -14,6 +14,17 @@ import {
   SUGGESTION_CALENDAR_AMENDMENT_VERSION, SUGGESTION_CALENDAR_APPROVED_AT, SUGGESTION_PREVIEW_CONFIGURATION,
   previewUtcSuggestionWindow, previewSuggestionQualification,
 } from '../src/monthly-suggestion-policy.ts';
+import {
+  QUARTERLY_CALENDAR_AMENDMENT_VERSION, QUARTERLY_CALENDAR_APPROVED_AT, QUARTERLY_PREVIEW_CONFIGURATION,
+  QUARTERLY_ALLOCATION_GATE, quarterlyPreviewReady, previewUtcQuarterlyWindow,
+  previewQuarterlyCompletion, previewQuarterlyEmailQualification,
+} from '../src/monthly-quarterly-policy.ts';
+import {
+  PROSPECTIVE_REPUTATION_POLICY_VERSION, PROSPECTIVE_REPUTATION_CATALOGUE_HASH,
+  PROSPECTIVE_REPUTATION_ALLOCATION_VERSION, PROSPECTIVE_REPUTATION_ALLOCATION_APPROVED_AT,
+  PROSPECTIVE_REPUTATION_REPORT_LIMITS, PROSPECTIVE_REPUTATION_BANDS, PROSPECTIVE_REPUTATION_CONFIGURATION,
+  prospectiveReputationLevelForScore, previewProspectiveMonthlyReputation,
+} from '../src/monthly-reputation-prospective.ts';
 
 const rawCatalogue = readFileSync(new URL('../policies/Lythaus_Monthly_Rewards_Action_Catalogue_v2.json', import.meta.url));
 const catalogue = JSON.parse(rawCatalogue);
@@ -232,10 +243,10 @@ const suggestionPreview = (revisions = [suggestionRevision()], patch = {}, evalu
 const suggestionReversal = (patch = {}) => suggestionRevision({ eventId: id(106), revision: 2,
   predecessorEventId: id(101), decision: 'reversed', decidedAt: '2027-02-15T00:00:00.000Z', ...patch });
 
-test('F01-Q01: prospective v2 records owner calendar timing without activating or rewriting v1/email', () => {
+test('F01-Q01: historical v2 records the earlier suggestion-only scope without rewriting v1', () => {
   const amendment = JSON.parse(readFileSync(new URL('../policies/Lythaus_Monthly_Rewards_Suggestion_Amendment_v2.json', import.meta.url)));
-  assert.equal(amendment.amendment_id, SUGGESTION_CALENDAR_AMENDMENT_VERSION);
-  assert.ok(amendment.source_authority.includes(SUGGESTION_CALENDAR_APPROVED_AT));
+  assert.equal(amendment.amendment_id, 'accepted-useful-suggestion-calendar-quarter-2026-10-07-v2');
+  assert.ok(amendment.source_authority.includes('2026-10-07T18:15:47.000Z'));
   assert.equal(amendment.base_policy_version, MONTHLY_REPUTATION_POLICY_VERSION);
   assert.equal(amendment.base_catalogue_sha256, createHash('sha256').update(rawCatalogue).digest('hex'));
   assert.equal(amendment.previous_amendment_id, 'accepted-useful-suggestion-2026-10-02-v1');
@@ -368,4 +379,257 @@ test('F01-Q07: wrong subjects, self review, client points, malformed and causall
   assert.equal(Object.hasOwn(suggestionPreview(), 'privateEvidenceId'), false);
   assert.equal(Object.hasOwn(suggestionPreview(), 'reviewerUserId'), false);
   assert.equal(Object.hasOwn(suggestionPreview(), 'contributionId'), false);
+});
+
+const quarterlyConfiguration = { ...QUARTERLY_PREVIEW_CONFIGURATION, prospectiveFrom: '2027-01-01T00:00:00.000Z' };
+const quarterlyCompletion = (completedAt, sourceMonth, patch = {}, evaluatedAt = '2030-01-01T00:00:00.000Z') =>
+  previewQuarterlyCompletion({ sourceMonth, completion: { completedAt, revokedAt: null }, configuration: quarterlyConfiguration, ...patch }, evaluatedAt);
+const emailReceipt = (patch = {}) => ({ id: id(201), subjectUserId: id(103), performedAt: '2027-03-31T23:59:59.999Z',
+  revokedAt: null, facts: { kind: 'email_control', emailVersion: id(202) }, ...patch });
+const emailPreview = (evidence = [emailReceipt()], sourceMonth = '2027-03', patch = {}, evaluatedAt = '2030-01-01T00:00:00.000Z') =>
+  previewQuarterlyEmailQualification({ subjectUserId: id(103), sourceMonth, evidence, configuration: quarterlyConfiguration, ...patch }, evaluatedAt);
+
+test('QALL-01: v3 preserves its timing-only checkpoint; current allocation is confirmed but activation stays blocked', () => {
+  const amendment = JSON.parse(readFileSync(new URL('../policies/Lythaus_Monthly_Rewards_Quarterly_Amendment_v3.json', import.meta.url)));
+  assert.equal(amendment.amendment_id, QUARTERLY_CALENDAR_AMENDMENT_VERSION);
+  assert.equal(SUGGESTION_CALENDAR_AMENDMENT_VERSION, QUARTERLY_CALENDAR_AMENDMENT_VERSION);
+  assert.equal(SUGGESTION_CALENDAR_APPROVED_AT, QUARTERLY_CALENDAR_APPROVED_AT);
+  assert.ok(amendment.source_authority.includes(QUARTERLY_CALENDAR_APPROVED_AT));
+  assert.equal(amendment.confirmed.scope, 'every_quarterly_scoring_component');
+  assert.deepEqual(amendment.confirmed.remaining_months_by_completion_position, [3, 2, 1]);
+  assert.equal(amendment.constraints.old_proofs_and_reports_rewritten, false);
+  assert.equal(amendment.constraints.security_proof_freshness_and_sensitive_action_authorization_unchanged, true);
+  assert.equal(amendment.runtime_activation_allowed, false);
+  assert.equal(amendment.integration.consumer_wired, false);
+  assert.equal(amendment.unresolved.quarterly_allowance_allocation, null);
+  assert.equal(amendment.incentive_assessment.proven_optimality, false);
+  assert.equal(amendment.incentive_assessment.cap_change_approved, false);
+  assert.equal(QUARTERLY_ALLOCATION_GATE.combinedNominalAllowance, 1150);
+  assert.equal(QUARTERLY_ALLOCATION_GATE.unresolvedExcess, 0);
+  assert.equal(QUARTERLY_ALLOCATION_GATE.approvedQuarterlyMaximum, 1150);
+  assert.equal(QUARTERLY_ALLOCATION_GATE.approvedSourceMaximum, 13650);
+  assert.equal(QUARTERLY_ALLOCATION_GATE.existingSourceMaximum, 13500);
+  assert.throws(() => calculateMonthlyReputation({ ...monthlyInput(), quarterlyPoints: 1150 }, now), /quarterly/);
+  assert.equal(calculateMonthlyReputation({ ...monthlyInput([2500, 2500, 2500, 2500]), monthlyPoints: 2500 }, now).sourceScore, 13500);
+  assert.equal(suggestionPreview().appliedPoints, 0);
+  assert.equal(emailPreview().appliedPoints, 0);
+});
+
+test('QALL-02: email and suggestion use one window for each completion position in every calendar quarter', () => {
+  for (const year of [2027, 2028]) for (const first of [1, 4, 7, 10]) for (let position = 0; position < 3; position += 1) {
+    const completedAt = `${year}-${String(first + position).padStart(2, '0')}-15T12:34:56.789Z`;
+    const common = previewUtcQuarterlyWindow(completedAt);
+    assert.deepEqual(previewUtcSuggestionWindow(completedAt), common);
+    assert.equal(common.sourceMonths.length, 3 - position);
+    for (const month of common.sourceMonths) {
+      const completed = quarterlyCompletion(completedAt, month.sourceMonth);
+      const email = emailPreview([emailReceipt({ performedAt: completedAt })], month.sourceMonth);
+      const suggestion = suggestionPreview([suggestionRevision({ performedAt: completedAt, decidedAt: completedAt })],
+        { sourceMonth: month.sourceMonth });
+      assert.equal(completed.qualifies, true);
+      assert.equal(email.qualifies, true);
+      assert.equal(suggestion.qualifies, true);
+      assert.equal(email.validUntil, common.quarterEndsAt);
+      assert.equal(email.effectiveMonth, month.effectiveMonth);
+      assert.equal(email.confirmedAllowance, 1000);
+      assert.equal(email.appliedPoints, 0);
+    }
+    const nextQuarterMonth = common.quarterEndsAt.slice(0, 7);
+    assert.equal(quarterlyCompletion(completedAt, nextQuarterMonth).reason, 'scoring_quarter_expired');
+    assert.equal(emailPreview([emailReceipt({ performedAt: completedAt })], nextQuarterMonth).renewalRequired, true);
+  }
+  assert.equal(quarterlyCompletion('2028-02-29T23:59:59.999Z', '2028-02').validUntil, '2028-04-01T00:00:00.000Z');
+  assert.equal(quarterlyCompletion('2027-03-31T23:59:59.999Z', '2027-03').qualifies, true);
+  assert.equal(quarterlyCompletion('2027-04-01T00:00:00.000Z', '2027-03').reason, 'completed_after_source_cutoff');
+  assert.equal(quarterlyCompletion('2027-04-01T00:00:00.000Z', '2027-04').qualifies, true);
+});
+
+test('QALL-03: a still-valid old email proof cannot qualify a new scoring quarter or earlier month', () => {
+  const receipt = emailReceipt();
+  const legacy = { subjectUserId: receipt.subjectUserId, emailVersion: receipt.facts.emailVersion,
+    verifiedAt: receipt.performedAt, revokedAt: null };
+  assert.equal(proposedQuarterlyEmailComponent({ subjectUserId: id(103), emailVersion: id(202),
+    sourceCutoff: '2027-05-01T00:00:00.000Z', proof: legacy }).points, 1000);
+  const newQuarter = emailPreview([receipt], '2027-04');
+  assert.equal(newQuarter.qualifies, false);
+  assert.equal(newQuarter.reason, 'scoring_quarter_expired');
+  assert.equal(newQuarter.validUntil, '2027-04-01T00:00:00.000Z');
+  assert.equal(newQuarter.renewalRequired, true);
+  assert.equal(emailPreview([receipt], '2027-02').reason, 'completion_required');
+  assert.equal(emailPreview([], '2027-04', { securityCredentialVerified: true, securityVerifiedAt: receipt.performedAt }).qualifies, false);
+  const renewed = emailReceipt({ id: id(203), performedAt: '2027-05-15T00:00:00.000Z', facts: { kind: 'email_control', emailVersion: id(204) } });
+  for (const [month, expected] of [['2027-04', false], ['2027-05', true], ['2027-06', true], ['2027-07', false]]) {
+    assert.equal(emailPreview([renewed, receipt], month).qualifies, expected);
+  }
+  const previousSnapshot = emailPreview([receipt], '2027-03', {}, '2027-04-01T00:00:00.000Z');
+  assert.equal(previousSnapshot.effectiveMonth, '2027-04');
+  assert.deepEqual(emailPreview([renewed, receipt], '2027-03'), previousSnapshot);
+  assert.deepEqual(legacy, { subjectUserId: id(103), emailVersion: id(202), verifiedAt: receipt.performedAt, revokedAt: null });
+});
+
+test('QALL-04: common scoring respects prospective cutover, closing cutoff and causal revocations', () => {
+  assert.equal(quarterlyPreviewReady(QUARTERLY_PREVIEW_CONFIGURATION, now), false);
+  assert.equal(quarterlyCompletion('2027-01-15T00:00:00.000Z', '2027-01', {}, '2027-01-20T00:00:00.000Z').reason, 'source_not_closed');
+  assert.equal(suggestionPreview(undefined, {}, '2027-01-20T00:00:00.000Z').reason, 'source_not_closed');
+  assert.equal(quarterlyCompletion('2027-01-15T00:00:00.000Z', '2027-01', {}, '2027-02-01T00:00:00.000Z').qualifies, true);
+  assert.equal(quarterlyCompletion(QUARTERLY_CALENDAR_APPROVED_AT, '2026-10').reason, 'completion_before_cutover');
+  assert.equal(quarterlyCompletion('2027-01-15T00:00:00.000Z', '2027-01', {
+    completion: { completedAt: '2027-01-15T00:00:00.000Z', revokedAt: '2027-01-31T23:59:59.999Z' } }).reason, 'revoked_at_source_cutoff');
+  assert.equal(quarterlyCompletion('2027-01-15T00:00:00.000Z', '2027-01', {
+    completion: { completedAt: '2027-01-15T00:00:00.000Z', revokedAt: '2027-02-01T00:00:00.000Z' } }).qualifies, true);
+  for (const patch of [{ runtimeActivationAllowed: true }, { policyVersion: 'old' }, { catalogueHash: 'wrong' },
+    { amendmentVersion: 'accepted-useful-suggestion-calendar-quarter-2026-10-07-v2' },
+    { prospectiveFrom: '2026-10-07T20:00:02.999Z' }]) {
+    assert.throws(() => quarterlyPreviewReady({ ...quarterlyConfiguration, ...patch }, '2030-01-01T00:00:00.000Z'));
+  }
+  assert.throws(() => quarterlyPreviewReady(null, now));
+  for (const completion of [{ completedAt: '2031-01-01T00:00:00.000Z', revokedAt: null },
+    { completedAt: '2027-01-15T00:00:00.000Z', revokedAt: '2027-01-14T00:00:00.000Z' },
+    { completedAt: '2027-01-15T00:00:00.000Z', revokedAt: '2031-01-01T00:00:00.000Z' }]) {
+    assert.throws(() => quarterlyCompletion(completion.completedAt, '2027-01', { completion }), /causality/);
+  }
+  assert.equal(emailPreview([], '2027-01', { configuration: QUARTERLY_PREVIEW_CONFIGURATION }).reason, 'configuration_pending');
+  assert.equal(emailPreview([emailReceipt({ performedAt: QUARTERLY_CALENDAR_APPROVED_AT })], '2027-01').renewalRequired, true);
+});
+
+test('QALL-05: private canonical receipt adapter dedupes retries, filters later completions and rejects forgery', () => {
+  const receipt = emailReceipt();
+  const renewal = emailReceipt({ id: id(203), performedAt: '2027-05-01T00:00:00.000Z', facts: { kind: 'email_control', emailVersion: id(204) } });
+  const inputBefore = JSON.stringify([receipt, renewal]);
+  assert.deepEqual(emailPreview([receipt, receipt]), emailPreview([receipt]));
+  assert.deepEqual(emailPreview([receipt, renewal], '2027-03'), emailPreview([renewal, receipt], '2027-03'));
+  assert.equal(JSON.stringify([receipt, renewal]), inputBefore);
+  assert.equal(emailPreview([{ ...receipt, facts: { kind: 'policy_refresher', policyVersion: 'synthetic' } }]).reason, 'completion_required');
+  for (const patch of [{ subjectUserId: id(999) }, { id: 'bad' }, { performedAt: '2031-01-01T00:00:00.000Z' },
+    { revokedAt: '2027-03-01T00:00:00.000Z' }, { revokedAt: '2031-01-01T00:00:00.000Z' },
+    { facts: { kind: 'email_control', emailVersion: 'bad' } },
+    { facts: { kind: 'email_control', emailVersion: id(202), points: 1000 } }]) {
+    assert.throws(() => emailPreview([emailReceipt(patch)]));
+  }
+  assert.throws(() => emailPreview([receipt, { ...receipt, performedAt: '2027-03-30T00:00:00.000Z' }]), /conflict/);
+  assert.throws(() => emailPreview([null]));
+  assert.throws(() => emailPreview(null));
+  assert.throws(() => emailPreview([], '2027-01', { subjectUserId: 'bad' }));
+  for (const privateKey of ['id', 'emailVersion', 'subjectUserId', 'emailBindingDigest', 'tokenHash']) assert.equal(Object.hasOwn(emailPreview(), privateKey), false);
+});
+
+const prospectiveConfiguration = { ...PROSPECTIVE_REPUTATION_CONFIGURATION, ...suggestionConfiguration, firstSourceMonth: '2027-01' };
+const prospectivePreview = (sourceMonth = '2027-01', patch = {}, evaluatedAt = '2030-01-01T00:00:00.000Z') =>
+  previewProspectiveMonthlyReputation({ subjectUserId: id(103), source: monthlyInput([2500, 2500, 2500, 2500], sourceMonth),
+    emailEvidence: [emailReceipt({ performedAt: '2027-01-20T00:00:00.000Z' })], suggestionRevisions: [suggestionRevision()],
+    configuration: prospectiveConfiguration, ...patch }, evaluatedAt);
+
+test('V2-01: approved additive catalogue delta pins immutable v1 and extends only prospective maxima', () => {
+  const bytes = readFileSync(new URL('../policies/Lythaus_Monthly_Rewards_Action_Catalogue_v3.json', import.meta.url));
+  const delta = JSON.parse(bytes);
+  const allocation = JSON.parse(readFileSync(new URL('../policies/Lythaus_Monthly_Rewards_Allocation_Amendment_v4.json', import.meta.url)));
+  assert.equal(createHash('sha256').update(bytes).digest('hex'), PROSPECTIVE_REPUTATION_CATALOGUE_HASH);
+  assert.equal(delta.inherited_catalogue_sha256, MONTHLY_REPUTATION_CATALOGUE_HASH);
+  assert.equal(delta.inherited_action_count, catalogue.actions.length);
+  assert.equal(delta.total_action_count, 23);
+  assert.equal(delta.additional_actions.length, 1);
+  assert.equal(delta.additional_actions[0].id, 'quarterly.accepted_suggestion');
+  assert.equal(delta.additional_actions[0].optional, true);
+  assert.equal(delta.existing_action_awards_unchanged, true);
+  assert.equal(delta.policy_version, PROSPECTIVE_REPUTATION_POLICY_VERSION);
+  assert.equal(allocation.amendment_id, PROSPECTIVE_REPUTATION_ALLOCATION_VERSION);
+  assert.ok(allocation.source_authority.includes(PROSPECTIVE_REPUTATION_ALLOCATION_APPROVED_AT));
+  assert.equal(allocation.confirmed.quarterly_maximum, 1150);
+  assert.equal(allocation.confirmed.source_month_maximum, 13650);
+  assert.equal(allocation.runtime_activation_allowed, false);
+  assert.equal(allocation.constraints.incentive_optimality_empirically_proven, false);
+  assert.equal(delta.quarterly_cap_groups.reduce((sum, group) => sum + group.max_points, 0), 1150);
+  assert.deepEqual(PROSPECTIVE_REPUTATION_BANDS, delta.levels.map(level => ({ level: level.level, minimum: level.min_points, maximum: level.max_points })));
+  assert.deepEqual(PROSPECTIVE_REPUTATION_BANDS.slice(0, 4), MONTHLY_REPUTATION_BANDS.slice(0, 4));
+  assert.equal(MONTHLY_REPUTATION_BANDS[4].maximum, 13500);
+  assert.equal(PROSPECTIVE_REPUTATION_REPORT_LIMITS.maximumSourceMonth, delta.source_month_maximum);
+});
+
+test('V2-02: reuse whole-week selection and unchanged awards; max 13650 is a disabled versioned report preview', () => {
+  const source = { ...monthlyInput([2500, 2500, 2500, 2500], '2027-01'), monthlyPoints: 2500 };
+  const result = prospectivePreview('2027-01', { source });
+  const calculation = result.proposedCalculation;
+  assert.equal(result.policyVersion, PROSPECTIVE_REPUTATION_POLICY_VERSION);
+  assert.equal(result.inheritedValidationPolicyVersion, MONTHLY_REPUTATION_POLICY_VERSION);
+  assert.equal(result.mode, 'proposal_preview');
+  assert.equal(result.appliedPoints, 0);
+  assert.equal(result.runtimeActivationAllowed, false);
+  assert.equal(calculation.weeklyPoints, 10000);
+  assert.equal(calculation.monthlyPoints, 2500);
+  assert.equal(calculation.emailPoints, 1000);
+  assert.equal(calculation.suggestionPoints, 150);
+  assert.equal(calculation.quarterlyPoints, 1150);
+  assert.equal(calculation.sourceScore, 13650);
+  assert.equal(calculation.level, 5);
+  assert.equal(calculation.effectiveMonth, '2027-02');
+  assert.equal(result.reportLimits.quarterlyMaximumPoints, 1150);
+  assert.equal(result.reportLimits.maximumSourceMonth, 13650);
+  assert.equal(calculateMonthlyReputation(source, '2030-01-01T00:00:00.000Z').sourceScore, 13500);
+  assert.ok(Object.isFrozen(calculation));
+  for (const plan of ['free', 'premium', 'black']) {
+    assert.deepEqual(prospectivePreview('2027-01', { source: { ...source, plan, accountAgeDays: 0 } }), result);
+  }
+});
+
+test('V2-03: quarterly recurrence once per eligible source month; optional feedback and new-quarter renewal do not stack', () => {
+  for (const month of ['2027-01', '2027-02', '2027-03']) {
+    const result = prospectivePreview(month);
+    assert.equal(result.proposedCalculation.quarterlyPoints, 1150);
+    assert.equal(result.proposedCalculation.effectiveMonth, nextReputationMonth(month));
+  }
+  const expired = prospectivePreview('2027-04');
+  assert.equal(expired.proposedCalculation.quarterlyPoints, 0);
+  assert.equal(expired.proposedCalculation.level, 5);
+  assert.equal(prospectivePreview('2027-01', { suggestionRevisions: [] }).proposedCalculation.quarterlyPoints, 1000);
+  assert.equal(prospectivePreview('2027-01', { emailEvidence: [] }).proposedCalculation.quarterlyPoints, 150);
+  assert.equal(prospectivePreview('2027-01', { emailEvidence: [], suggestionRevisions: [] }).proposedCalculation.quarterlyPoints, 0);
+  const retried = prospectivePreview('2027-01', { suggestionRevisions: [suggestionRevision(), suggestionRevision()] });
+  assert.equal(retried.proposedCalculation.suggestionPoints, 150);
+  const conflict = prospectivePreview('2027-01', { suggestionRevisions: [suggestionRevision(), suggestionRevision({ eventId: id(301), contributionId: id(302) })] });
+  assert.equal(conflict.reason, 'quarterly_evidence_pending');
+  assert.equal(conflict.proposedCalculation, null);
+  const snapshot = prospectivePreview('2027-03', {}, '2027-04-01T00:00:00.000Z');
+  assert.deepEqual(prospectivePreview('2027-03'), snapshot);
+  const late = prospectivePreview('2027-02', { suggestionRevisions: [suggestionRevision({ decidedAt: '2027-03-01T00:00:00.000Z' })] });
+  assert.equal(late.proposedCalculation.suggestionPoints, 0);
+});
+
+test('V2-04: inherited deterministic ties/correction reselection and causal reversal remain enforced', () => {
+  const source = monthlyInput([2000, 2000, 2000, 2000, 2000], '2027-01');
+  const result = prospectivePreview('2027-01', { source });
+  assert.deepEqual(result.proposedCalculation.selectedWeekIds, [id(1), id(2), id(3), id(4)]);
+  assert.deepEqual(prospectivePreview('2027-01', { source: { ...source, weeks: [...source.weeks].reverse() } }), result);
+  const corrected = structuredClone(source); Object.assign(corrected.weeks[0], { revision: 2, points: 500, state: 'corrected' });
+  assert.deepEqual(prospectivePreview('2027-01', { source: corrected }).proposedCalculation.selectedWeekIds, [id(2), id(3), id(4), id(5)]);
+  assert.equal(result.proposedCalculation.weeks[0].points, 2000);
+  const reversed = prospectivePreview('2027-02', { suggestionRevisions: [suggestionRevision(), suggestionReversal()] });
+  assert.equal(reversed.proposedCalculation.suggestionPoints, 0);
+  assert.equal(prospectivePreview('2027-01', { suggestionRevisions: [suggestionRevision(), suggestionReversal()] }).proposedCalculation, null);
+  assert.throws(() => prospectivePreview('2027-01', { suggestionRevisions: [suggestionRevision(), suggestionReversal({ decidedAt: '2027-01-19T00:00:00.000Z' })] }), /causality/);
+  assert.throws(() => prospectivePreview('2027-01', { emailEvidence: [emailReceipt({ subjectUserId: id(999) })] }), /scope/);
+});
+
+test('V2-05: default/unsupported/retroactive configuration cannot produce a scored or active snapshot', () => {
+  assert.equal(prospectivePreview('2027-01', { configuration: PROSPECTIVE_REPUTATION_CONFIGURATION }).reason, 'configuration_pending');
+  for (const patch of [{ prospectiveFrom: null }, { firstSourceMonth: null }, { rubricVersion: null }, { authorityVersion: null }]) {
+    assert.equal(prospectivePreview('2027-01', { configuration: { ...prospectiveConfiguration, ...patch } }).proposedCalculation, null);
+  }
+  assert.equal(prospectivePreview('2026-12').reason, 'policy_not_effective_for_source_month');
+  for (const patch of [{ runtimeActivationAllowed: true }, { scoringPolicyVersion: MONTHLY_REPUTATION_POLICY_VERSION },
+    { scoringCatalogueHash: MONTHLY_REPUTATION_CATALOGUE_HASH }, { scoringAmendmentVersion: 'v3' },
+    { prospectiveFrom: '2026-10-07T20:12:30.999Z' }, { firstSourceMonth: '2026-12' }, { firstSourceMonth: 'bad' }]) {
+    assert.throws(() => prospectivePreview('2027-01', { configuration: { ...prospectiveConfiguration, ...patch } }));
+  }
+  assert.throws(() => prospectivePreview('2027-01', { configuration: null }));
+  assert.throws(() => prospectivePreview('2027-01', { source: { ...monthlyInput([], '2027-01'), monthlyPoints: 2501 } }));
+  assert.throws(() => prospectivePreview('2027-01', {}, '2027-01-31T23:59:59.999Z'), /not_closed/);
+  assert.equal(prospectivePreview('2027-01', { configuration: { ...prospectiveConfiguration, prospectiveFrom: '2031-01-01T00:00:00.000Z', firstSourceMonth: '2031-01' } }).proposedCalculation, null);
+});
+
+test('V2-06: all prospective score thresholds hold through 13650; old validator still stops at 13500', () => {
+  for (let score = 0; score <= 13650; score += 1) {
+    assert.equal(prospectiveReputationLevelForScore(score), score < 1000 ? 1 : score < 3000 ? 2 : score < 6000 ? 3 : score < 10000 ? 4 : 5);
+  }
+  for (const score of [-1, 13651, 0.5, NaN, Infinity, '1000']) assert.throws(() => prospectiveReputationLevelForScore(score));
+  assert.throws(() => reputationLevelForMonthlyScore(13501));
 });
