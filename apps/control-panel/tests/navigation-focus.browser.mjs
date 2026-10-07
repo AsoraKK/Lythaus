@@ -18,12 +18,14 @@ assert.equal(pageTarget.protocol, 'http:');
 assert.ok(['localhost', '127.0.0.1'].includes(pageTarget.hostname), 'Navigation fixtures require a local frontend');
 const engine = process.env.CONTROL_PANEL_NAVIGATION_BROWSER || 'chromium';
 assert.ok(['chromium', 'webkit'].includes(engine));
-const cases = [[390, 200], [390, 100], [320, 100], [320, 200], [600, 100], [600, 200], [768, 100], [768, 200], [900, 100], [900, 200], [901, 100], [901, 200], [1440, 100], [1440, 200]];
+const cases = [[390, 200], [390, 100], [320, 100], [320, 200], [600, 100], [600, 200], [768, 100], [768, 200], [900, 100], [900, 200], [901, 100], [901, 200], [1440, 100], [1440, 200]]
+  .flatMap(([width, scale]) => ['light', 'dark'].map(theme => [width, scale, theme]));
 const scenarios = [];
 const sourceHead = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
 const cssSha256 = createHash('sha256').update(await readFile(`${root}/apps/control-panel/src/styles.css`)).digest('hex');
 const overviewCssSha256 = createHash('sha256').update(await readFile(`${root}/apps/control-panel/src/pages/overview.css`)).digest('hex');
-const receipt = { sourceHead, cssSha256, overviewCssSha256, browser: engine, browserPath: 'Browser plugin not available; existing locked Playwright', flow: 'Overview -> Tab/Shift+Tab controls -> period/Refresh/definitions -> all activity-card text -> navigation links -> Flags -> Overview', fixture: 'Disposable local PostgreSQL17 + real Worker dispatcher + restricted admin transaction adapter; other operational services explicitly unavailable', scenarios, framing: 'All PNGs use ordinary width×900 viewport; no resized element screenshots or hidden navigation. A 24px synthetic watermark is excluded from visibility assertions.' };
+const tokensCssSha256 = createHash('sha256').update(await readFile(`${root}/apps/control-panel/src/styles/tokens.css`)).digest('hex');
+const receipt = { sourceHead, cssSha256, overviewCssSha256, tokensCssSha256, baseUrl, browser: engine, browserPath: 'Browser plugin not available; existing locked Playwright', flow: 'Overview -> Tab/Shift+Tab controls -> period/Refresh/definitions -> all activity-card text -> navigation links -> Flags -> Overview', fixture: 'Disposable local PostgreSQL17 + real Worker dispatcher + restricted admin transaction adapter; other operational services explicitly unavailable', scenarios, themeVerification: 'Explicit html data-theme and browser colorScheme; computed root color-scheme/surface/foreground tokens and actual body/panel/select colors checked initially, after scrolling and after Flags/Overview round trip', framing: 'All PNGs use ordinary width×900 viewport; no resized element screenshots or hidden navigation. A verified 24px synthetic watermark is excluded from visibility assertions.' };
 const require = createRequire(`${root}/package.json`);
 const { default: pg } = await import(pathToFileURL(require.resolve('pg')));
 const { chromium, webkit } = require('playwright');
@@ -88,15 +90,16 @@ try {
 
 
   const browser = await ({ chromium, webkit }[engine]).launch({ headless: true }); browsers.push(browser);
-  for (const [width, scale] of cases) {
+  for (const [width, scale, theme] of cases) {
     // Each independent viewport has its own real authorized synthetic owner. Keep
     // the production rate limiter enabled; never reset counters during a case.
     const actor = uuidv7(), subject = `local-synthetic-owner-${actor}`; actors.push(actor);
     await sql('INSERT INTO identity.users (id, is_production_acceptance) VALUES ($1, true)', [actor]);
     await sql("INSERT INTO identity.admin_memberships (user_id, access_subject_hmac, role) VALUES ($1, $2, 'owner')", [actor, createHmac('sha256', subjectKey).update(subject).digest()]);
     const token = await new SignJWT({ sub: subject }).setProtectedHeader({ alg: 'RS256', kid: jwk.kid }).setAudience('local-synthetic-admin').setIssuedAt().setExpirationTime('10m').sign(privateKey);
-    const record = { width, height: 900, scale, checks: [], cards: [], sourceResponses: [] }; scenarios.push(record);
-    const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: 'reduce', colorScheme: width >= 768 ? 'dark' : 'light' });
+    const record = { width, height: 900, scale, theme, checks: [], cards: [], sourceResponses: [] }; scenarios.push(record);
+    const capturePrefix = `${output}/${width}-${scale}-${theme}`;
+    const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: 'reduce', colorScheme: theme });
     const page = await context.newPage();
     page.on('pageerror', error => pageErrors.push(error.message));
     page.on('console', message => { browserLogs.push(message.text()); if (['error', 'warning'].includes(message.type())) consoleErrors.push(message.text()); });
@@ -123,21 +126,38 @@ try {
       assert.equal(await page.locator('vite-error-overlay').count(), 0);
       assert.equal(await lowerBound(page).textContent(), 'At least 2');
       await assertIncomplete(page);
-      await page.evaluate(scale => {
+      await page.evaluate(({ scale, theme }) => {
+        document.documentElement.dataset.theme = theme;
         document.documentElement.style.fontSize = `${scale}%`;
         const label = document.createElement('div'); label.id = 'synthetic-evidence-label';
-        label.textContent = `LOCAL SYNTHETIC FIXTURES — ${innerWidth}×900 — ${scale}% text`;
+        label.textContent = `LOCAL SYNTHETIC · ${theme} · ${innerWidth}×900 · ${scale}%`;
         label.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99;background:#fff;color:#111;font:700 11px/14px sans-serif;padding:4px;border:1px solid #111';
         document.body.append(label);
-      }, scale);
+      }, { scale, theme });
       const frame = () => page.evaluate(() => {
         const nav = document.querySelector('header.nav');
         const rect = nav.getBoundingClientRect();
+        const rootStyle = getComputedStyle(document.documentElement);
         return { scrollY, navTop: rect.top, navBottom: rect.bottom, navPosition: getComputedStyle(nav).position,
           rootFontPixels: parseFloat(getComputedStyle(document.documentElement).fontSize),
+          appTheme: document.documentElement.dataset.theme, colorScheme: rootStyle.colorScheme,
+          surfaceToken: rootStyle.getPropertyValue('--surface').trim(), onSurfaceToken: rootStyle.getPropertyValue('--on-surface').trim(),
+          bodyColor: getComputedStyle(document.body).color,
+          panelBackground: getComputedStyle(document.querySelector('.overview .lyth-card--panel')).backgroundColor,
+          selectBackground: getComputedStyle(document.querySelector('.overview-controls select')).backgroundColor,
+          watermarkHeight: document.querySelector('#synthetic-evidence-label').getBoundingClientRect().height,
           noHorizontalOverflow: document.documentElement.scrollWidth <= innerWidth,
           navigationPresent: getComputedStyle(nav).display !== 'none' && getComputedStyle(nav).visibility !== 'hidden' };
       });
+      const assertTheme = state => {
+        assert.equal(state.appTheme, theme);
+        assert.equal(state.colorScheme, theme);
+        assert.equal(state.surfaceToken, theme === 'light' ? '#f2f5f7' : '#0b1115');
+        assert.equal(state.onSurfaceToken, theme === 'light' ? '#12202a' : '#ecf2f5');
+        assert.equal(state.bodyColor, theme === 'light' ? 'rgb(18, 32, 42)' : 'rgb(236, 242, 245)');
+        assert.equal(state.panelBackground, theme === 'light' ? 'rgb(232, 238, 242)' : 'rgb(18, 27, 34)');
+        assert.equal(state.selectBackground, theme === 'light' ? 'rgb(242, 245, 247)' : 'rgb(11, 17, 21)');
+      };
       const visibleFocus = async label => {
         const state = await page.evaluate(() => {
           const element = document.activeElement, rect = element.getBoundingClientRect();
@@ -151,13 +171,15 @@ try {
             ownsCenter: !!hit && (hit === element || element.contains(hit)), ownsProbes, centerHit: hit?.tagName };
         });
         record.checks.push({ label, focus: state });
-        await page.screenshot({ path: `${output}/${width}-${scale}-focus.png`, fullPage: false });
+        await page.screenshot({ path: `${capturePrefix}-focus.png`, fullPage: false });
         assert.ok(state.inViewport && state.ownsCenter && state.ownsProbes, `${width}×900 ${scale}%: ${label} keyboard focus must be visible; ${JSON.stringify(state)}`);
       };
       record.initial = await frame();
+      assertTheme(record.initial);
+      assert.equal(record.initial.watermarkHeight, 24);
       assert.equal(record.initial.rootFontPixels, 16 * scale / 100);
       assert.ok(record.initial.noHorizontalOverflow && record.initial.navigationPresent);
-      await page.screenshot({ path: `${output}/${width}-${scale}-initial.png`, fullPage: false });
+      await page.screenshot({ path: `${capturePrefix}-initial.png`, fullPage: false });
       const navigation = page.getByRole('navigation').getByRole('link');
       const expected = ['Overview', 'Flags', 'Appeals', 'Authenticity beta', 'Accounts', 'Waitlist', 'Audit', 'Auth acceptance'];
       assert.deepEqual(await navigation.allTextContents(), expected);
@@ -170,7 +192,7 @@ try {
       await page.keyboard.press('Tab'); await page.waitForTimeout(90);
       assert.ok(await period.evaluate(element => element === document.activeElement));
       await visibleFocus('Reporting period');
-      await page.screenshot({ path: `${output}/${width}-${scale}-period.png`, fullPage: false });
+      await page.screenshot({ path: `${capturePrefix}-period.png`, fullPage: false });
       await page.keyboard.press('Shift+Tab'); await page.waitForTimeout(90);
       assert.equal(await page.evaluate(() => document.activeElement.textContent), 'Auth acceptance');
       await visibleFocus('Backward to navigation');
@@ -213,7 +235,7 @@ try {
           const visible = line => line.top >= state.navBottom + 2 && line.bottom <= state.bottom - 2 && line.left >= 0 && line.right <= width && line.ownsCenter;
           state.lines.forEach((line, i) => { if (visible(line)) witnessed.add(i); });
           if (!captured && state.primary.every(visible)) {
-            await page.screenshot({ path: `${output}/${width}-${scale}-card-${index + 1}.png`, fullPage: false }); captured = true;
+            await page.screenshot({ path: `${capturePrefix}-card-${index + 1}.png`, fullPage: false }); captured = true;
           }
           const pending = state.lines.findIndex((_line, i) => !witnessed.has(i));
           if (pending === -1) break;
@@ -225,6 +247,7 @@ try {
         record.cards.push({ name, textRects: total, witnessed: witnessed.size, headingValueCapturedTogether: captured });
       }
       record.scrolled = await frame();
+      assertTheme(record.scrolled);
       if (width <= 900) assert.ok(record.scrolled.navBottom < 0, 'Stacked navigation must naturally scroll away');
       else { assert.equal(record.scrolled.navPosition, 'sticky'); assert.equal(record.scrolled.navTop, 0); }
       await page.keyboard.press('Control+Home'); await page.waitForTimeout(180);
@@ -240,7 +263,9 @@ try {
       assert.equal(await lowerBound(page).textContent(), 'At least 2');
       await assertIncomplete(page);
       record.menuRoundTrip = true;
-      assert.ok((await frame()).noHorizontalOverflow);
+      record.returned = await frame();
+      assertTheme(record.returned);
+      assert.ok(record.returned.noHorizontalOverflow);
       assert.ok(record.sourceResponses.length < 120);
       assert.ok(record.sourceResponses.every(response => response.status === 200));
       const rates = await sql('SELECT request_count FROM system.rate_limit_windows WHERE subject_hash = encode(sha256(convert_to($1,\'UTF8\')),\'hex\')', [`admin:${actor}`]);
@@ -252,7 +277,7 @@ try {
       record.horizontalOffenders = await page.evaluate(() => [...document.querySelectorAll('body *')]
         .filter(element => element.getBoundingClientRect().right > innerWidth + 1)
         .map(element => ({ tag: element.tagName, class: element.className, right: element.getBoundingClientRect().right, text: element.textContent.slice(0, 80) })).slice(0, 20));
-      await page.screenshot({ path: `${output}/${width}-${scale}-failure.png`, fullPage: false });
+      await page.screenshot({ path: `${capturePrefix}-failure.png`, fullPage: false });
       throw error;
     } finally {
       await context.close();
