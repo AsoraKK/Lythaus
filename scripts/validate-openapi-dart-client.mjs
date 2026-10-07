@@ -11,6 +11,7 @@ const dart = process.platform === 'win32' ? 'dart.bat' : 'dart';
 function run(arguments_) {
   const result = spawnSync(dart, arguments_, {
     cwd: validationPackage,
+    env: { ...process.env, LYTHAUS_ADMIN_MUTATION_GUARD: resolve('scripts/tests/admin-mutation-sdk-guard.mjs') },
     encoding: 'utf8',
     stdio: 'inherit',
     shell: process.platform === 'win32',
@@ -30,6 +31,8 @@ try {
   cpSync(resolve('scripts/tests/fixtures/privacy-status-serialization.dart.txt'), join(validationPackage, 'test/privacy_status_serialization_test.dart'));
   cpSync(resolve('tests/contract/dart/community_appeal_serialization_test.dart.fixture'),
     join(validationPackage, 'test/community_appeal_serialization_test.dart'));
+  cpSync(resolve('tests/contract/dart/admin_mutation_admission_test.dart.fixture'),
+    join(validationPackage, 'test/admin_mutation_admission_test.dart'));
   // Keep the temporary validator on the verified compatible build toolchain.
   // analyzer 14.5 removed the contextFeatures setter used by build_runner 2.16.1.
   const manifestPath = join(validationPackage, 'pubspec.yaml');
@@ -41,7 +44,7 @@ try {
     '  build_runner: 2.16.1\n  analyzer: 14.4.0'));
   run(['pub', 'get']);
   run(['run', 'build_runner', 'build']);
-  run(['format', '--output=none', '--set-exit-if-changed', 'test/community_appeal_serialization_test.dart']);
+  run(['format', '--output=none', '--set-exit-if-changed', 'test/community_appeal_serialization_test.dart', 'test/admin_mutation_admission_test.dart']);
   run(['analyze', '--no-fatal-warnings']);
   run(['test', '--reporter', 'compact']);
 } finally {

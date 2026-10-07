@@ -3300,7 +3300,7 @@
     "/admin/users/{userId}/tier": {
       "servers": [
         {
-          "url": "https://admin-api.lythaus.co/api"
+          "url": "https://admin.lythaus.co/api"
         }
       ],
       "post": {
@@ -3315,6 +3315,9 @@
           }
         ],
         "parameters": [
+          {
+            "$ref": "#/components/parameters/adminMutationOrigin"
+          },
           {
             "name": "userId",
             "in": "path",
@@ -3351,6 +3354,12 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/AdminMutationForbidden"
+          },
+          "415": {
+            "$ref": "#/components/responses/AdminMutationUnsupportedMediaType"
           }
         }
       }
@@ -11552,6 +11561,11 @@
       },
       "post": {
         "operationId": "adminLegalHoldsCreate",
+        "servers": [
+          {
+            "url": "https://admin.lythaus.co/api"
+          }
+        ],
         "summary": "Place a legal hold",
         "tags": [
           "Admin"
@@ -11559,6 +11573,11 @@
         "security": [
           {
             "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/adminMutationOrigin"
           }
         ],
         "requestBody": {
@@ -11587,6 +11606,12 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/AdminMutationForbidden"
+          },
+          "415": {
+            "$ref": "#/components/responses/AdminMutationUnsupportedMediaType"
           }
         }
       }
@@ -11594,7 +11619,7 @@
     "/admin/privacy/legal-holds/{holdId}/clear": {
       "servers": [
         {
-          "url": "https://admin-api.lythaus.co/api"
+          "url": "https://admin.lythaus.co/api"
         }
       ],
       "post": {
@@ -11610,6 +11635,9 @@
         ],
         "parameters": [
           {
+            "$ref": "#/components/parameters/adminMutationOrigin"
+          },
+          {
             "name": "holdId",
             "in": "path",
             "required": true,
@@ -11619,6 +11647,19 @@
             }
           }
         ],
+        "requestBody": {
+          "required": false,
+          "description": "Optional JSON object; clearing uses holdId and does not require a body. The JSON Content-Type header is required even when the body is absent.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "example": {}
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Legal hold cleared.",
@@ -11633,8 +11674,14 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/AdminMutationForbidden"
+          },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "415": {
+            "$ref": "#/components/responses/AdminMutationUnsupportedMediaType"
           }
         }
       }
@@ -11642,7 +11689,7 @@
     "/admin/editorial/publications": {
       "servers": [
         {
-          "url": "https://admin-api.lythaus.co/api"
+          "url": "https://admin.lythaus.co/api"
         }
       ],
       "post": {
@@ -11654,6 +11701,11 @@
         "security": [
           {
             "cloudflareAccess": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/adminMutationOrigin"
           }
         ],
         "requestBody": {
@@ -11682,6 +11734,12 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/AdminMutationForbidden"
+          },
+          "415": {
+            "$ref": "#/components/responses/AdminMutationUnsupportedMediaType"
           }
         }
       }
@@ -11689,7 +11747,7 @@
     "/admin/moderation/cases/{caseId}/decision": {
       "servers": [
         {
-          "url": "https://admin-api.lythaus.co/api"
+          "url": "https://admin.lythaus.co/api"
         }
       ],
       "post": {
@@ -11704,6 +11762,9 @@
           }
         ],
         "parameters": [
+          {
+            "$ref": "#/components/parameters/adminMutationOrigin"
+          },
           {
             "name": "caseId",
             "in": "path",
@@ -11740,6 +11801,12 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/AdminMutationForbidden"
+          },
+          "415": {
+            "$ref": "#/components/responses/AdminMutationUnsupportedMediaType"
           }
         }
       }
@@ -11747,7 +11814,7 @@
     "/admin/appeals/{appealId}/adjudications": {
       "servers": [
         {
-          "url": "https://admin-api.lythaus.co/api",
+          "url": "https://admin.lythaus.co/api",
           "description": "Cloudflare Access-protected admin Worker"
         }
       ],
@@ -11764,6 +11831,9 @@
           }
         ],
         "parameters": [
+          {
+            "$ref": "#/components/parameters/adminMutationOrigin"
+          },
           {
             "name": "appealId",
             "in": "path",
@@ -11825,6 +11895,12 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/AdminMutationForbidden"
+          },
+          "415": {
+            "$ref": "#/components/responses/AdminMutationUnsupportedMediaType"
           },
           "429": {
             "$ref": "#/components/responses/SafetyLimited"
@@ -12136,7 +12212,7 @@
     "/admin/reviewers/{reviewerId}/qualification": {
       "servers": [
         {
-          "url": "https://admin-api.lythaus.co/api"
+          "url": "https://admin.lythaus.co/api"
         }
       ],
       "post": {
@@ -12154,6 +12230,9 @@
         ],
         "parameters": [
           {
+            "$ref": "#/components/parameters/adminMutationOrigin"
+          },
+          {
             "name": "reviewerId",
             "in": "path",
             "required": true,
@@ -12191,7 +12270,10 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "$ref": "#/components/responses/Forbidden"
+            "$ref": "#/components/responses/AdminMutationForbidden"
+          },
+          "415": {
+            "$ref": "#/components/responses/AdminMutationUnsupportedMediaType"
           }
         }
       },
@@ -12209,6 +12291,9 @@
         ],
         "parameters": [
           {
+            "$ref": "#/components/parameters/adminMutationOrigin"
+          },
+          {
             "name": "reviewerId",
             "in": "path",
             "required": true,
@@ -12246,7 +12331,10 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "$ref": "#/components/responses/Forbidden"
+            "$ref": "#/components/responses/AdminMutationForbidden"
+          },
+          "415": {
+            "$ref": "#/components/responses/AdminMutationUnsupportedMediaType"
           }
         }
       }
@@ -12254,7 +12342,7 @@
     "/admin/users/{userId}/status": {
       "servers": [
         {
-          "url": "https://admin-api.lythaus.co/api"
+          "url": "https://admin.lythaus.co/api"
         }
       ],
       "post": {
@@ -12269,6 +12357,9 @@
           }
         ],
         "parameters": [
+          {
+            "$ref": "#/components/parameters/adminMutationOrigin"
+          },
           {
             "name": "userId",
             "in": "path",
@@ -12305,6 +12396,12 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/AdminMutationForbidden"
+          },
+          "415": {
+            "$ref": "#/components/responses/AdminMutationUnsupportedMediaType"
           }
         }
       }
@@ -20675,6 +20772,17 @@
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$"
         }
       },
+      "adminMutationOrigin": {
+        "name": "Origin",
+        "in": "header",
+        "required": true,
+        "description": "Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.",
+        "schema": {
+          "type": "string",
+          "format": "uri",
+          "default": "https://admin.lythaus.co"
+        }
+      },
       "requiredIdempotencyKey": {
         "name": "Idempotency-Key",
         "in": "header",
@@ -20856,6 +20964,26 @@
                   "correlationId": "01K1LYTHAUSIDEMPOTENCY0003"
                 }
               }
+            }
+          }
+        }
+      },
+      "AdminMutationForbidden": {
+        "description": "Admin authorization or configured same-origin request admission failed.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      },
+      "AdminMutationUnsupportedMediaType": {
+        "description": "Content-Type must be application/json, including a request without a body.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
             }
           }
         }

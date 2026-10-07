@@ -8,6 +8,8 @@ import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
 import 'dart:typed_data';
+import 'package:built_collection/built_collection.dart';
+import 'package:built_value/json_object.dart';
 import 'package:lythaus_api_client/src/api_util.dart';
 import 'package:lythaus_api_client/src/model/account_status_response.dart';
 import 'package:lythaus_api_client/src/model/account_status_update.dart';
@@ -367,6 +369,7 @@ class AdminApi {
   /// This never auto-resolves an appeal. The shared governance policy evaluates the independently assigned reviewer quorum and then requires one trained adjudicator for standard risk or two for high risk. The outcome is applied only when the returned status is resolved.
   ///
   /// Parameters:
+  /// * [origin] - Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
   /// * [appealId]
   /// * [appealAdjudicationRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -379,6 +382,7 @@ class AdminApi {
   /// Returns a [Future] containing a [Response] with a [AppealAdjudicationResponse] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<AppealAdjudicationResponse>> adminAppealsAdjudicate({
+    String origin = 'https://admin.lythaus.co',
     required String appealId,
     required AppealAdjudicationRequest appealAdjudicationRequest,
     CancelToken? cancelToken,
@@ -392,6 +396,7 @@ class AdminApi {
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
+        r'Origin': origin,
         ...?headers,
       },
       extra: <String, dynamic>{
@@ -1105,6 +1110,7 @@ class AdminApi {
   ///
   ///
   /// Parameters:
+  /// * [origin] - Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
   /// * [editorialPublicationCreate]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
@@ -1116,6 +1122,7 @@ class AdminApi {
   /// Returns a [Future] containing a [Response] with a [EditorialPublicationResponse] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<EditorialPublicationResponse>> adminEditorialPublicationsCreate({
+    String origin = 'https://admin.lythaus.co',
     required EditorialPublicationCreate editorialPublicationCreate,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1128,6 +1135,7 @@ class AdminApi {
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
+        r'Origin': origin,
         ...?headers,
       },
       extra: <String, dynamic>{
@@ -1367,7 +1375,9 @@ class AdminApi {
   ///
   ///
   /// Parameters:
+  /// * [origin] - Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
   /// * [holdId]
+  /// * [requestBody] - Optional JSON object; clearing uses holdId and does not require a body. The JSON Content-Type header is required even when the body is absent.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1378,7 +1388,9 @@ class AdminApi {
   /// Returns a [Future] containing a [Response] with a [LegalHoldResponse] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<LegalHoldResponse>> adminLegalHoldsClear({
+    String origin = 'https://admin.lythaus.co',
     required String holdId,
+    BuiltMap<String, JsonObject>? requestBody,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -1390,6 +1402,7 @@ class AdminApi {
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
+        r'Origin': origin,
         ...?headers,
       },
       extra: <String, dynamic>{
@@ -1403,11 +1416,31 @@ class AdminApi {
         ],
         ...?extra,
       },
+      contentType: 'application/json',
       validateStatus: validateStatus,
     );
 
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(BuiltMap, [FullType(String), FullType(JsonObject)]);
+      _bodyData = requestBody == null ? null : _serializers.serialize(requestBody, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
     final _response = await _dio.request<Object>(
       _path,
+      data: _bodyData,
       options: _options,
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,
@@ -1449,6 +1482,7 @@ class AdminApi {
   ///
   ///
   /// Parameters:
+  /// * [origin] - Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
   /// * [legalHoldCreate]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
@@ -1460,6 +1494,7 @@ class AdminApi {
   /// Returns a [Future] containing a [Response] with a [LegalHoldResponse] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<LegalHoldResponse>> adminLegalHoldsCreate({
+    String origin = 'https://admin.lythaus.co',
     required LegalHoldCreate legalHoldCreate,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1472,6 +1507,7 @@ class AdminApi {
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
+        r'Origin': origin,
         ...?headers,
       },
       extra: <String, dynamic>{
@@ -1711,6 +1747,7 @@ class AdminApi {
   ///
   ///
   /// Parameters:
+  /// * [origin] - Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
   /// * [caseId]
   /// * [moderationDecisionRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -1723,6 +1760,7 @@ class AdminApi {
   /// Returns a [Future] containing a [Response] with a [ModerationDecisionResponse] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<ModerationDecisionResponse>> adminModerationDecision({
+    String origin = 'https://admin.lythaus.co',
     required String caseId,
     required ModerationDecisionRequest moderationDecisionRequest,
     CancelToken? cancelToken,
@@ -1736,6 +1774,7 @@ class AdminApi {
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
+        r'Origin': origin,
         ...?headers,
       },
       extra: <String, dynamic>{
@@ -2086,6 +2125,7 @@ class AdminApi {
   /// Compatibility method for the idempotent qualification update. Reviewer training remains separate from reputation level.
   ///
   /// Parameters:
+  /// * [origin] - Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
   /// * [reviewerId]
   /// * [reviewerQualificationUpdateRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -2098,6 +2138,7 @@ class AdminApi {
   /// Returns a [Future] containing a [Response] with a [ReviewerQualificationResponse] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<ReviewerQualificationResponse>> adminReviewerQualificationCreate({
+    String origin = 'https://admin.lythaus.co',
     required String reviewerId,
     required ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest,
     CancelToken? cancelToken,
@@ -2111,6 +2152,7 @@ class AdminApi {
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
+        r'Origin': origin,
         ...?headers,
       },
       extra: <String, dynamic>{
@@ -2190,6 +2232,7 @@ class AdminApi {
   ///
   ///
   /// Parameters:
+  /// * [origin] - Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
   /// * [reviewerId]
   /// * [reviewerQualificationUpdateRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -2202,6 +2245,7 @@ class AdminApi {
   /// Returns a [Future] containing a [Response] with a [ReviewerQualificationResponse] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<ReviewerQualificationResponse>> adminReviewerQualificationUpdate({
+    String origin = 'https://admin.lythaus.co',
     required String reviewerId,
     required ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest,
     CancelToken? cancelToken,
@@ -2215,6 +2259,7 @@ class AdminApi {
     final _options = Options(
       method: r'PUT',
       headers: <String, dynamic>{
+        r'Origin': origin,
         ...?headers,
       },
       extra: <String, dynamic>{
@@ -2946,6 +2991,7 @@ class AdminApi {
   ///
   ///
   /// Parameters:
+  /// * [origin] - Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
   /// * [userId]
   /// * [accountStatusUpdate]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -2958,6 +3004,7 @@ class AdminApi {
   /// Returns a [Future] containing a [Response] with a [AccountStatusResponse] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<AccountStatusResponse>> adminUsersStatusUpdate({
+    String origin = 'https://admin.lythaus.co',
     required String userId,
     required AccountStatusUpdate accountStatusUpdate,
     CancelToken? cancelToken,
@@ -2971,6 +3018,7 @@ class AdminApi {
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
+        r'Origin': origin,
         ...?headers,
       },
       extra: <String, dynamic>{
@@ -3050,6 +3098,7 @@ class AdminApi {
   ///
   ///
   /// Parameters:
+  /// * [origin] - Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
   /// * [userId]
   /// * [accountTierUpdate]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -3062,6 +3111,7 @@ class AdminApi {
   /// Returns a [Future] containing a [Response] with a [AccountTierResponse] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<AccountTierResponse>> adminUsersTierUpdate({
+    String origin = 'https://admin.lythaus.co',
     required String userId,
     required AccountTierUpdate accountTierUpdate,
     CancelToken? cancelToken,
@@ -3075,6 +3125,7 @@ class AdminApi {
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
+        r'Origin': origin,
         ...?headers,
       },
       extra: <String, dynamic>{

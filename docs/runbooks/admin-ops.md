@@ -29,6 +29,14 @@ direct requests are for approved incident response or automation only.
 
 ## Live operations
 
+Generated Dart clients share the Public API base URL by default. Create an
+Admin client with
+`LythausApiClient(basePathOverride: 'https://admin.lythaus.co/api')` before
+using its Admin methods. The mutation Origin argument defaults to the approved
+admin origin. Legal-hold clearing keeps its optional body and sends the required
+JSON media type when that body is omitted. Approved Access authorization is
+still required.
+
 The following operations document the legal-hold, moderation, account, and
 read-only admin surface. Paths in this table are relative to
 `https://admin.lythaus.co/api`.

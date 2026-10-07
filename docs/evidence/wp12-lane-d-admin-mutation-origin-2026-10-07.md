@@ -1,6 +1,6 @@
 # WP12 Lane D: Admin request admission verification
 
-Base: `9e9ddc16e7399fd545f942524b3bd8dfed83cef4`.
+Refreshed base: `8b4058108da3ef519b801ae4dae60ed2e1f39909`.
 
 The Admin dispatcher now consistently applies its existing same-origin JSON
 request policy to legal-hold writes, editorial publication, moderation decisions,
@@ -27,6 +27,18 @@ legal-hold GET, cache policy and preflight behavior. A separate local workerd
 test executes the production guard itself. It does not execute the entire
 dispatcher, real Access verification, or database transactions. No live provider
 request or mutation is part of these tests.
+
+The canonical mutation operations declare the matching Admin server, required
+Origin with its production default, and 403/415 admission responses. Hold clearing
+declares optional JSON request content so the generated client emits its media
+type while retaining a bodyless call. Read operations and the client's global
+Public API base URL retain their existing defaults; the runbook describes the
+explicit Admin client configuration.
+
+A generated Dart regression captures the actual Dio request and passes its
+URL, headers and body to the production Node guard. Synthetic responses allow
+successful bodyless/default JSON calls and denied bad-origin/host/media cases
+to be verified without Access credentials or database work.
 
 The PR review packet records the exact committed head and final test counts.
 The bounded 44-module critical coverage manifest and thresholds are unchanged;
