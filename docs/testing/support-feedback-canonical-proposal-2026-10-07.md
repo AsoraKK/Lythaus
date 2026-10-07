@@ -126,6 +126,17 @@ function/owner grants and failed reconciliation must retry. The existing Jobs
 blanket update would otherwise mark still-present owner contributions deleted.
 Actual Jobs Workflow integration/execution is not implemented or certified here.
 
+The existing generic audit cleanup uses 365 days and checks holds only through
+`audit_event.actor_id` or a `user` target. Invoked support audit creation stores
+member actor/submitter IDs in metadata; owner audit targets are `support_request`.
+Consequently the generic predicate does not cover those support hold associations.
+This is a source-traced gap, not a new Jobs runtime test or production finding.
+Parent/Lane B must serialize support-provenance-aware hold checks (including
+metadata actors and actual request submitters) while preserving optional-schema
+behavior before relying on retained support audit expiry. No Jobs edit is made.
+The adapter also leaves submitter-linked tombstones without an age purge; S01
+must approve their finite expiry/pseudonymized disposition separately.
+
 ## Rollback and acceptance
 
 Coordinator first disables new intake/UI exposure under the separate release
