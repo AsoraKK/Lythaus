@@ -22,6 +22,7 @@ import 'package:lythaus/features/profile/application/follow_service.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
 import 'package:lythaus/features/profile/domain/owner_profile.dart';
 import 'package:lythaus/features/profile/domain/owner_post.dart';
+import 'package:lythaus/features/profile/presentation/profile_tab_view.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
 import 'package:lythaus/design_system/components/lyth_button.dart';
@@ -141,160 +142,195 @@ class ProfileScreen extends ConsumerWidget {
                     userId: profile.id,
                     sessionRevision: ref.read(authSessionRevisionProvider),
                   );
-                  ref
-                      .read(ownerPostsTimelineProvider(key).notifier)
-                      .refresh();
+                  ref.read(ownerPostsTimelineProvider(key).notifier).refresh();
                 }
               },
             ),
           ],
         ),
-        body: ListView(
-          padding: const EdgeInsets.all(Spacing.lg),
-          children: [
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final avatar = LythAvatar(
-                  name: profile.displayName.isEmpty
-                      ? profile.handleLabel ?? 'Member'
-                      : profile.displayName,
-                  imageUrl: profile.avatarUrl,
-                );
-                final details = Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      profile.displayName,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (profile.handleLabel case final handleLabel?) ...[
-                      const SizedBox(height: Spacing.xs),
-                      Text(
-                        handleLabel,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: Spacing.xs),
-                    TierBadge(label: 'Subscription: ${profile.tier}'),
-                    if (isOwner) ...[
-                      const SizedBox(height: Spacing.xs),
-                      _ReputationStateBadge(),
-                    ],
-                  ],
-                );
-
-                if (constraints.maxWidth < 240) {
-                  return Column(
+        body: ProfileTabView(
+          key: ValueKey(
+            '${profile.id}:${ref.watch(authSessionRevisionProvider)}',
+          ),
+          overview: ListView(
+            key: PageStorageKey('profile-overview-${profile.id}'),
+            padding: const EdgeInsets.all(Spacing.lg),
+            children: [
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final avatar = LythAvatar(
+                    name: profile.displayName.isEmpty
+                        ? profile.handleLabel ?? 'Member'
+                        : profile.displayName,
+                    imageUrl: profile.avatarUrl,
+                  );
+                  final details = Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      avatar,
-                      const SizedBox(height: Spacing.md),
-                      details,
+                      Text(
+                        profile.displayName,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (profile.handleLabel case final handleLabel?) ...[
+                        const SizedBox(height: Spacing.xs),
+                        Text(
+                          handleLabel,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
+                      if (isOwner) ...[
+                        const SizedBox(height: Spacing.xs),
+                        TierBadge(label: 'Subscription: ${profile.tier}'),
+                        const SizedBox(height: Spacing.xs),
+                        _ReputationStateBadge(),
+                      ],
                     ],
                   );
-                }
 
-                return Row(
-                  children: [
-                    avatar,
-                    const SizedBox(width: Spacing.md),
-                    Expanded(child: details),
-                  ],
-                );
-              },
-            ),
-            if (isOwner) ...[
-              const SizedBox(height: Spacing.lg),
-              const MonthlyReputationTrackerCard(),
-            ],
-            if (profile.bio?.trim().isNotEmpty == true) ...[
-              const SizedBox(height: Spacing.lg),
-              Text(profile.bio!, style: Theme.of(context).textTheme.bodyLarge),
-            ],
-            if (isOwner) ...[
-              if (profile.bio?.trim().isNotEmpty != true) ...[
+                  if (constraints.maxWidth < 240) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        avatar,
+                        const SizedBox(height: Spacing.md),
+                        details,
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      avatar,
+                      const SizedBox(width: Spacing.md),
+                      Expanded(child: details),
+                    ],
+                  );
+                },
+              ),
+              if (profile.bio?.trim().isNotEmpty == true) ...[
                 const SizedBox(height: Spacing.lg),
-                const _ProfileCompletionGuide(),
+                Text(
+                  profile.bio!,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ],
+              if (isOwner) ...[
+                if (profile.bio?.trim().isNotEmpty != true) ...[
+                  const SizedBox(height: Spacing.lg),
+                  const _ProfileCompletionGuide(),
+                ],
+              ],
+              if (!isOwner && currentUser != null) ...[
+                const SizedBox(height: Spacing.lg),
+                _FollowSection(
+                  profileId: profile.id,
+                  currentUserId: currentUser.id,
+                ),
               ],
               const SizedBox(height: Spacing.lg),
-              _OwnerPostsSection(userId: profile.id),
-            ],
-            if (!isOwner && currentUser != null) ...[
-              const SizedBox(height: Spacing.lg),
-              _FollowSection(
-                profileId: profile.id,
-                currentUserId: currentUser.id,
-              ),
-            ],
-            const SizedBox(height: Spacing.lg),
-            if (isOwner) ...[
-              if (owner != null && owner.hasDetails) Text(owner.statusMessage),
-              const Divider(),
-              ListTile(
-                leading: const Icon(Icons.edit_outlined),
-                title: Text(
-                  owner?.hasDetails == false
-                      ? 'Complete your profile'
-                      : 'Edit profile',
-                ),
-                subtitle: const Text(
-                  'Optional — add or update your details at any time',
-                ),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => EditProfileScreen(profile: owner!),
-                  ),
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.insights_outlined),
-                title: const Text('Activity & Audit Log'),
-                subtitle: const Text('Private reputation and account activity'),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const ReputationLedgerScreen(),
-                  ),
-                ),
-              ),
-              if (canModerate)
+              if (isOwner) ...[
+                if (owner != null && owner.hasDetails)
+                  Text(owner.statusMessage),
+                const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.shield_outlined),
-                  title: const Text('Moderation hub'),
+                  leading: const Icon(Icons.settings_outlined),
+                  title: const Text('Settings'),
+                  subtitle: const Text('Security, privacy and notifications'),
                   onTap: () {
+                    final router = GoRouter.maybeOf(context);
+                    if (router != null) {
+                      router.go(
+                        GoRouterState.of(
+                          context,
+                        ).uri.replace(path: '/settings').toString(),
+                      );
+                      return;
+                    }
                     Navigator.of(context).push(
                       MaterialPageRoute<void>(
-                        builder: (_) => const ModerationConsoleScreen(),
+                        builder: (_) => const SettingsScreen(),
                       ),
                     );
                   },
                 ),
-              ListTile(
-                leading: const Icon(Icons.settings_outlined),
-                title: const Text('Settings'),
-                onTap: () {
-                  final router = GoRouter.maybeOf(context);
-                  if (router != null) {
-                    router.go(
-                      GoRouterState.of(
-                        context,
-                      ).uri.replace(path: '/settings').toString(),
-                    );
-                    return;
-                  }
-                  Navigator.of(context).push(
+                ListTile(
+                  leading: const Icon(Icons.edit_outlined),
+                  title: Text(
+                    owner?.hasDetails == false
+                        ? 'Complete your profile'
+                        : 'Edit profile',
+                  ),
+                  subtitle: const Text(
+                    'Optional — add or update your details at any time',
+                  ),
+                  onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => const SettingsScreen(),
+                      builder: (_) => EditProfileScreen(profile: owner!),
                     ),
-                  );
-                },
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.insights_outlined),
+                  title: const Text('Activity & Audit Log'),
+                  subtitle: const Text(
+                    'Private reputation and account activity',
+                  ),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ReputationLedgerScreen(),
+                    ),
+                  ),
+                ),
+                if (canModerate)
+                  ListTile(
+                    leading: const Icon(Icons.shield_outlined),
+                    title: const Text('Moderation hub'),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const ModerationConsoleScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                const SizedBox(height: Spacing.lg),
+                const MonthlyReputationTrackerCard(),
+              ],
+              const SizedBox(height: Spacing.lg),
+            ],
+          ),
+          posts: ListView(
+            key: PageStorageKey('profile-posts-${profile.id}'),
+            padding: const EdgeInsets.all(Spacing.lg),
+            children: [
+              if (isOwner)
+                _OwnerPostsSection(userId: profile.id)
+              else
+                const LythEmptyState(
+                  icon: Icons.article_outlined,
+                  title: 'Member post lists are unavailable',
+                  subtitle: 'Published posts can be read in Discover.',
+                ),
+            ],
+          ),
+          comments: ListView(
+            key: PageStorageKey('profile-comments-${profile.id}'),
+            padding: const EdgeInsets.all(Spacing.lg),
+            children: const [
+              LythEmptyState(
+                icon: Icons.chat_bubble_outline,
+                title: 'Profile comment lists are unavailable',
+                subtitle: 'Comments remain available on posts you can view.',
               ),
             ],
-            const SizedBox(height: Spacing.lg),
-          ],
+          ),
         ),
       ),
     );
@@ -357,10 +393,7 @@ class _OwnerPostsSection extends ConsumerWidget {
     final currentUserId = ref.watch(currentUserProvider)?.id;
     final sessionRevision = ref.watch(authSessionRevisionProvider);
     if (currentUserId != userId) return const SizedBox.shrink();
-    final key = OwnerPostsKey(
-      userId: userId,
-      sessionRevision: sessionRevision,
-    );
+    final key = OwnerPostsKey(userId: userId, sessionRevision: sessionRevision);
     final postsState = ref.watch(ownerPostsTimelineProvider(key));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -378,7 +411,9 @@ class _OwnerPostsSection extends ConsumerWidget {
           error: (error, stackTrace) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Unable to load your posts. Your profile is still available.'),
+              const Text(
+                'Unable to load your posts. Your profile is still available.',
+              ),
               TextButton.icon(
                 onPressed: () => ref
                     .read(ownerPostsTimelineProvider(key).notifier)
@@ -432,8 +467,8 @@ class _OwnerPostsSection extends ConsumerWidget {
               onPressed: timeline.isLoadingMore
                   ? null
                   : () => ref
-                      .read(ownerPostsTimelineProvider(key).notifier)
-                      .loadMore(),
+                        .read(ownerPostsTimelineProvider(key).notifier)
+                        .loadMore(),
               icon: timeline.isLoadingMore
                   ? const SizedBox.square(
                       dimension: 16,
@@ -460,8 +495,12 @@ class _OwnerPostCard extends StatelessWidget {
   final OwnerPost post;
 
   String get _visibilityDescription {
-    if (post.isPending) return 'Only you can see this while it is under review.';
-    if (post.publishedAt == null) return 'Approved; publication is not confirmed yet.';
+    if (post.isPending) {
+      return 'Only you can see this while it is under review.';
+    }
+    if (post.publishedAt == null) {
+      return 'Approved; publication is not confirmed yet.';
+    }
     if (post.visibility == 'private') return 'Only you can see this.';
     if (post.visibility == 'followers') return 'Visible to followers.';
     return 'Published.';
@@ -484,9 +523,9 @@ class _OwnerPostCard extends StatelessWidget {
             children: [
               Chip(label: Text(post.statusLabel)),
               Text(
-                MaterialLocalizations.of(context).formatShortDate(
-                  post.createdAt.toLocal(),
-                ),
+                MaterialLocalizations.of(
+                  context,
+                ).formatShortDate(post.createdAt.toLocal()),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -632,10 +671,7 @@ class _FollowSectionState extends ConsumerState<_FollowSection> {
     ref.invalidate(followStatusProvider(widget.profileId));
   }
 
-  Future<void> _toggleFollow(
-    BuildContext context,
-    FollowStatus status,
-  ) async {
+  Future<void> _toggleFollow(BuildContext context, FollowStatus status) async {
     if (_busy || ref.read(currentUserProvider)?.id != widget.currentUserId) {
       return;
     }

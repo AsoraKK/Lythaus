@@ -136,9 +136,7 @@ Future<void> _pumpProfileAtViewport(
     ProviderScope(
       overrides: [
         currentUserProvider.overrideWithValue(_fakeAuthUser),
-        ownerPostsServiceProvider.overrideWithValue(
-          _FakeOwnerPostsService(),
-        ),
+        ownerPostsServiceProvider.overrideWithValue(_FakeOwnerPostsService()),
         ownerProfileProvider.overrideWith(
           (ref) async => _ownerProfile(_fakeUser),
         ),
@@ -147,9 +145,9 @@ Future<void> _pumpProfileAtViewport(
       ],
       child: MaterialApp(
         builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: TextScaler.linear(textScale),
-          ),
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
         home: const ProfileScreen(),
@@ -169,7 +167,12 @@ Future<void> _scrollTo(WidgetTester tester, Finder target) async {
   await tester.scrollUntilVisible(
     target,
     280,
-    scrollable: find.byType(Scrollable).first,
+    scrollable: find
+        .descendant(
+          of: find.byType(ListView).first,
+          matching: find.byType(Scrollable),
+        )
+        .first,
   );
 }
 
@@ -307,10 +310,7 @@ void main() {
     });
 
     testWidgets('keeps identity readable when narrow', (tester) async {
-      await _pumpProfileAtViewport(
-        tester,
-        physicalSize: const Size(195, 422),
-      );
+      await _pumpProfileAtViewport(tester, physicalSize: const Size(195, 422));
 
       expect(find.text('Profile'), findsOneWidget);
       expect(find.text('Jane Doe'), findsOneWidget);
@@ -382,14 +382,22 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      expect(
+        find.textContaining('A short bio can add context'),
+        findsOneWidget,
+      );
+      await tester.tap(find.widgetWithText(Tab, 'Posts'));
+      await tester.pumpAndSettle();
       expect(find.text('Your posts'), findsOneWidget);
       expect(find.text('Published'), findsOneWidget);
       expect(find.text('Awaiting review'), findsOneWidget);
       expect(find.text('Load more posts'), findsOneWidget);
-      expect(find.textContaining('A short bio can add context'), findsOneWidget);
       await tester.ensureVisible(find.text('A private post under review'));
       expect(find.text('A private post under review'), findsOneWidget);
-      expect(find.text('Only you can see this while it is under review.'), findsOneWidget);
+      expect(
+        find.text('Only you can see this while it is under review.'),
+        findsOneWidget,
+      );
       await tester.ensureVisible(
         find.text('Approved; publication is not confirmed yet.'),
       );
@@ -421,10 +429,22 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Unable to load your posts. Your profile is still available.'), findsOneWidget);
+      await tester.tap(find.widgetWithText(Tab, 'Posts'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'Unable to load your posts. Your profile is still available.',
+        ),
+        findsOneWidget,
+      );
       await tester.tap(find.text('Retry posts'));
       await tester.pumpAndSettle();
-      expect(find.text('You have not posted yet. Your posts will appear here after you share them.'), findsOneWidget);
+      expect(
+        find.text(
+          'You have not posted yet. Your posts will appear here after you share them.',
+        ),
+        findsOneWidget,
+      );
       expect(service.requests, 2);
     });
 
@@ -577,6 +597,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('Private Person'), findsWidgets);
+      expect(find.textContaining('Subscription:'), findsNothing);
+      expect(find.text('Settings'), findsNothing);
+      expect(find.text('Edit profile'), findsNothing);
       expect(find.text('Your posts'), findsNothing);
       expect(find.textContaining('Trust Passport'), findsNothing);
       expect(find.text('Reputation'), findsNothing);

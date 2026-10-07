@@ -117,9 +117,7 @@ void main() {
       ProviderScope(
         overrides: [
           currentUserProvider.overrideWith((ref) => user),
-          ownerPostsServiceProvider.overrideWithValue(
-            _FakeOwnerPostsService(),
-          ),
+          ownerPostsServiceProvider.overrideWithValue(_FakeOwnerPostsService()),
           ownerProfileProvider.overrideWith(
             (ref) => Future.value(_ownerProfile(profile)),
           ),
@@ -142,7 +140,12 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('Settings'),
       280,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView).first,
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
     expect(find.text('Settings'), findsOneWidget);
   });
@@ -221,9 +224,7 @@ void main() {
           ).overrideWith((ref) => Future.value(profile)),
           followServiceProvider.overrideWith((ref) => followService),
           followStatusProvider(profile.id).overrideWith(
-            (ref) => Future.value(
-              const FollowStatus(following: false),
-            ),
+            (ref) => Future.value(const FollowStatus(following: false)),
           ),
           jwtProvider.overrideWith((ref) async => 'token'),
           analyticsClientProvider.overrideWithValue(
@@ -282,9 +283,7 @@ void main() {
           ).overrideWith((ref) => Future.value(profile)),
           followServiceProvider.overrideWith((ref) => followService),
           followStatusProvider(profile.id).overrideWith(
-            (ref) => Future.value(
-              const FollowStatus(following: false),
-            ),
+            (ref) => Future.value(const FollowStatus(following: false)),
           ),
           jwtProvider.overrideWith((ref) async => null),
         ],

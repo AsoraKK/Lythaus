@@ -2,11 +2,10 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:lythaus/data/mock/mock_settings.dart';
 import 'package:lythaus/state/models/settings.dart';
 
 class SettingsController extends StateNotifier<SettingsState> {
-  SettingsController() : super(defaultSettings);
+  SettingsController() : super(const SettingsState());
 
   void toggleLeftHanded() {
     state = state.copyWith(leftHandedMode: !state.leftHandedMode);

@@ -44,6 +44,8 @@ void main() {
     expect(tester.widget<SwitchListTile>(hapticsTile).value, isTrue);
 
     await tester.tap(leftHandedTile);
+    await tester.ensureVisible(hapticsTile);
+    await tester.pumpAndSettle();
     await tester.tap(hapticsTile);
     await tester.pumpAndSettle();
 

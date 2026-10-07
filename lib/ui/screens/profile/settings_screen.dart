@@ -71,20 +71,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           children: [
             Text('Account', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: Spacing.sm),
-            if (currentUser != null)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.image_search_outlined),
-                title: const Text('Private authenticity alpha'),
-                subtitle: const Text(
-                  'Safety, SAFE-A, forensic evidence, and bounded visual explanations',
-                ),
-                onTap: () => Navigator.of(context).push(
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.security_outlined),
+              title: const Text('Account security'),
+              onTap: () {
+                final router = GoRouter.maybeOf(context);
+                if (router != null) {
+                  router.go(
+                    GoRouterState.of(
+                      context,
+                    ).uri.replace(path: '/settings/security').toString(),
+                  );
+                  return;
+                }
+                Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => const AuthenticityPrivateAlphaScreen(),
+                    builder: (_) => const AccountSecurityScreen(),
                   ),
-                ),
-              ),
+                );
+              },
+            ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.notifications_none),
@@ -168,29 +175,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   );
                 },
               ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.security_outlined),
-              title: const Text('Account security'),
-              onTap: () {
-                final router = GoRouter.maybeOf(context);
-                if (router != null) {
-                  router.go(
-                    GoRouterState.of(
-                      context,
-                    ).uri.replace(path: '/settings/security').toString(),
-                  );
-                  return;
-                }
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const AccountSecurityScreen(),
-                  ),
-                );
-              },
-            ),
             const Divider(height: Spacing.xl),
             Text('Preferences', style: Theme.of(context).textTheme.titleLarge),
+            const Text(
+              'These controls apply while the app is open. They reset when it restarts.',
+            ),
+            SwitchListTile(
+              title: const Text('Swipe between profile tabs'),
+              subtitle: const Text('Tabs remain available when swipe is off.'),
+              value: settings.horizontalSwipeEnabled,
+              onChanged: (_) => controller.toggleSwipeEnabled(),
+            ),
             SwitchListTile(
               title: const Text('Left-handed mode (mirror nav)'),
               value: settings.leftHandedMode,
@@ -261,6 +256,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const Divider(height: Spacing.xl),
+            if (currentUser != null) ...[
+              Text(
+                'Experimental',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.image_search_outlined),
+                title: const Text('Private authenticity alpha'),
+                subtitle: const Text(
+                  'Availability depends on your approved access.',
+                ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AuthenticityPrivateAlphaScreen(),
+                  ),
+                ),
+              ),
+              const Divider(height: Spacing.xl),
+            ],
             ListTile(
               leading: const Icon(Icons.help_outline),
               title: const Text('Help and support'),

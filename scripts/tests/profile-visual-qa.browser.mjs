@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 import { installFlutterEngineFonts } from './flutter-engine-font-fixture.mjs';
 import { localAuthBrowserServer } from './local-auth-browser-server.mjs';
 
@@ -98,6 +98,9 @@ const sizes = [
   { name: 'desktop', width: 1440, height: 960 },
 ];
 const themes = ['light', 'dark'];
+const engineName = process.env.PROFILE_VISUAL_ENGINE ?? 'chromium';
+assert.ok(['chromium', 'webkit'].includes(engineName));
+const engine = engineName === 'webkit' ? webkit : chromium;
 const selectedSizes = sizes.filter(({ name }) =>
   (process.env.PROFILE_VISUAL_VIEWPORTS ?? 'mobile,desktop').split(',').includes(name),
 );
@@ -233,7 +236,7 @@ test(
                 displayName: publicMember.displayName,
                 bio: publicMember.bio,
                 handle: publicMember.handle,
-                subscriptionTier: publicMember.subscriptionTier,
+                reputation: { level: 1, label: 'New' },
               },
             };
           } else if (requestUrl.pathname === `/api/users/${hiddenMember.id}`) {
@@ -310,7 +313,7 @@ test(
           launchOptions.executablePath = process.env.PROFILE_VISUAL_CHROMIUM_PATH;
           launchOptions.args = ['--no-sandbox', '--disable-dev-shm-usage'];
         }
-        const browser = await chromium.launch(launchOptions);
+        const browser = await engine.launch(launchOptions);
         browserVersion ??= browser.version();
         let context;
 
@@ -394,31 +397,6 @@ test(
             await profileTab.click();
             await page.getByRole('button', { name: /^Edit profile(?:\b|$)/ })
               .waitFor({ timeout: 90000 });
-            await page.mouse.move(size.width / 2, size.height * 0.6);
-            for (let attempt = 0; attempt < 8; attempt += 1) {
-              if (
-                (await page.getByText('Your posts', { exact: false }).count()) > 0
-              ) {
-                return;
-              }
-              await page.mouse.wheel(0, 420);
-              await page.waitForTimeout(100);
-            }
-            t.diagnostic(
-              JSON.stringify({
-                route: page.url(),
-                size,
-                visibleSemantics: await page.locator('flt-semantics').allTextContents(),
-                ownerPostsCalls,
-                recentApiCalls: apiCalls.slice(-12),
-              }),
-            );
-            await page.screenshot({
-              path: path.join(output, `profile-debug-${theme}-${size.name}.png`),
-              animations: 'disabled',
-              scale: 'css',
-            });
-            await page.getByText('Your posts', { exact: false }).waitFor();
           }
 
           async function moveHeadingNearTop(text) {
@@ -499,6 +477,11 @@ test(
           await page.mouse.wheel(0, -size.height * 8);
           await page.waitForTimeout(150);
           await screenshot('owner-empty-top');
+          await page.getByRole('tab', { name: /^Comments/ }).click();
+          await page.getByText('Profile comment lists are unavailable', { exact: false }).waitFor();
+          await page.waitForURL(url => new URL(url.hash.startsWith('#/') ? url.hash.slice(1) : url.pathname + url.search, url.origin).searchParams.get('profileTab') === 'comments');
+          await screenshot('owner-comments-unavailable');
+          await page.getByRole('tab', { name: /^Posts/ }).click();
           await moveHeadingNearTop('Your posts');
           assert.ok((await profileText()).includes('You have not posted yet.'));
           await screenshot('owner-empty');
@@ -564,8 +547,14 @@ test(
           const publicText = await profileText();
           assert.doesNotMatch(
             publicText,
-            /Your posts|Edit profile|Activity & Audit Log|PRIVATE_PROFILE_SENTINEL|Garden planning notes|watering rota|Draft planting schedule|private reminder|profile-owner@example\.invalid|Followers\s*[:=]\s*\d+|Following\s*[:=]\s*\d+/i,
+            /Subscription:|Your posts|Edit profile|Activity & Audit Log|PRIVATE_PROFILE_SENTINEL|Garden planning notes|watering rota|Draft planting schedule|private reminder|profile-owner@example\.invalid|Followers\s*[:=]\s*\d+|Following\s*[:=]\s*\d+/i,
           );
+          await page.getByRole('tab', { name: /^Posts/ }).click();
+          await page.getByText('Member post lists are unavailable', { exact: false }).waitFor();
+          await page.getByRole('tab', { name: /^Comments/ }).click();
+          await page.getByText('Profile comment lists are unavailable', { exact: false }).waitFor();
+          assert.equal(ownerPostsCalls.length, ownerCallCount);
+          await page.getByRole('tab', { name: /^Overview/ }).click();
           assert.equal(ownerPostsCalls.length, ownerCallCount);
           await screenshot('other-profile-public');
           const otherProfileUrl = page.url();
@@ -588,7 +577,8 @@ test(
           assert.equal(ownerPostsCalls.length, ownerCallCountAfterBack);
           await screenshot('other-profile-private-hidden');
 
-          await openApp('/?tab=profile');
+          await openApp('/?tab=profile&profileTab=posts');
+          await page.waitForURL(url => new URL(url.hash.startsWith('#/') ? url.hash.slice(1) : url.pathname + url.search, url.origin).searchParams.get('profileTab') === 'posts');
           await moveHeadingNearTop('Your posts');
           postsMode = 'populated';
           await page.getByRole('button', { name: 'Refresh profile' }).click();
@@ -600,7 +590,7 @@ test(
           await page.waitForTimeout(300);
           await screenshot('owner-populated-large-text-top', 'device');
           const largeTextTopContent = await profileText();
-          assert.ok(largeTextTopContent.includes(owner.displayName));
+          assert.ok(largeTextTopContent.includes(firstPage[0].body));
           const zoomViewport = await page.evaluate(() => ({
             width: window.innerWidth,
             height: window.innerHeight,
@@ -654,6 +644,31 @@ test(
           );
           await screenshot('owner-populated-large-text-200', 'device');
 
+          await page.setViewportSize({ width: size.width, height: size.height });
+          await openApp('/settings?tab=profile&profileTab=posts');
+          const security = page.getByRole('button', { name: 'Account security', exact: true });
+          await security.waitFor();
+          const securityBox = await security.boundingBox();
+          const privacyBox = await page.getByRole('button', { name: /Privacy and your data/ }).boundingBox();
+          assert.ok(securityBox && privacyBox && securityBox.y < privacyBox.y);
+          await screenshot('settings-account-first');
+          const temporaryPreferences = page.getByText('These controls apply while the app is open. They reset when it restarts.', { exact: true });
+          await temporaryPreferences.scrollIntoViewIfNeeded();
+          await temporaryPreferences.waitFor();
+          await moveHeadingNearTop('Trust Passport visibility');
+          const privateOption = page.getByRole('checkbox', { name: 'Private', exact: true });
+          await privateOption.scrollIntoViewIfNeeded();
+          await privateOption.click();
+          await page.getByText('Profile visibility saved.', { exact: true }).waitFor();
+          assert.equal(ownProfile.trustPassportVisibility, 'private');
+          await screenshot('settings-saved-visibility');
+          await openApp('/settings?tab=profile&profileTab=posts');
+          await moveHeadingNearTop('Trust Passport visibility');
+          await privateOption.scrollIntoViewIfNeeded();
+          await privateOption.waitFor();
+          assert.equal(ownProfile.trustPassportVisibility, 'private');
+          assert.equal(await privateOption.isChecked(), true);
+
           configResults.push({
             theme,
             viewport: size.name,
@@ -688,6 +703,13 @@ test(
               })
               .map(({ method, path: requestPath }) => `${method} ${requestPath}`),
           });
+        } catch (error) {
+          const failedPage = context?.pages()[0];
+          if (failedPage) {
+            t.diagnostic(JSON.stringify({ route: failedPage.url(), semantics: await failedPage.locator('flt-semantics').allTextContents() }));
+            await failedPage.screenshot({ path: path.join(output, `failure-${theme}-${size.name}.png`) });
+          }
+          throw error;
         } finally {
           await context?.close();
           await browser.close();
@@ -702,7 +724,7 @@ test(
         {
           sourceCommit: process.env.QA_COMMIT ?? null,
           syntheticOnly: true,
-          browser: 'Chromium',
+          browser: engineName,
           browserVersion,
           screenshots: captures,
           configurations: configResults,
@@ -715,7 +737,7 @@ test(
         2,
       ),
     );
-    const expectedCaptures = selectedThemes.length * selectedSizes.length * 10;
+    const expectedCaptures = selectedThemes.length * selectedSizes.length * 13;
     assert.equal(captures.length, expectedCaptures, 'Every profile state screenshot must be captured');
     assert.deepEqual(
       configResults.flatMap(({ errors }) => errors),
