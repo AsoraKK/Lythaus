@@ -77,7 +77,8 @@ The existing generic audit duration is unchanged and is not a support approval.
 
 The main support PG umbrella invokes the canonical and native Workflow suites as
 bounded child processes and verifies positive pass counts with zero failures,
-cancellations, skips or todos. This uses existing support CI without editing it.
+cancellations, skips or todos. The existing scoped CI focused command now also
+invokes the three approved-limits tests, matching the 36-case local command.
 The separate native profile regression is local evidence unless its hosted job
 also runs it. Node Worker dispatch uses the existing disposable PostgreSQL
 transport; native Workflow tests bundle the actual Jobs entrypoints into Workerd
@@ -98,11 +99,17 @@ Lane A to run `npm run openapi:bundle` and `npm run openapi:gen:dart` from the
 canonical root. Only seven support model/doc/test groups change in the generated
 client. Semantic bundle comparison finds eleven additive support-schema paths;
 all operation paths, profile schemas and admin schemas are unchanged. The root
-OpenAPI file, shared indexes, Public/Admin dispatchers, CI and shell/router/profile
+OpenAPI file, shared indexes, Public/Admin dispatchers and shell/router/profile
 UI are unchanged. The existing temporary Dart validator includes the new support
 fixture and preserves the reviewed privacy/profile and admin header fixtures.
 Final generation repeatability, build-runner, formatting, analyzer and semantic
 test receipts belong to the final exact head in the draft PR/handoff.
+
+PR950 remains dependent on reviewed PR921. Its profile-branch target triggers
+only the four scoped/native checks; their success does not satisfy strict main
+requirements. After PR921 merges and this draft is rebased/retargeted through
+parent coordination, full main-required CI must run and pass on that final
+integration head before merge. No branch-protection bypass is authorized.
 
 After independent review, parent must map actual roles/bindings, reconcile the
 proposal with the next numbered migration/manifest/verifier and review production
