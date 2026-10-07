@@ -378,9 +378,14 @@ test(
 
           async function enter(field, value) {
             await field.click();
+            await page.evaluate(
+              () => new Promise((resolve) =>
+                requestAnimationFrame(() => requestAnimationFrame(resolve)),
+              ),
+            );
             await field.press('ControlOrMeta+A');
             await field.press('Backspace');
-            if (value) await field.pressSequentially(value, { delay: 5 });
+            if (value) await field.pressSequentially(value, { delay: 20 });
             assert.equal(await field.inputValue(), value);
           }
 
