@@ -38,7 +38,7 @@ void main() {
     //
     // This never auto-resolves an appeal. The shared governance policy evaluates the independently assigned reviewer quorum and then requires one trained adjudicator for standard risk or two for high risk. The outcome is applied only when the returned status is resolved.
     //
-    //Future<AppealAdjudicationResponse> adminAppealsAdjudicate(String appealId, AppealAdjudicationRequest appealAdjudicationRequest) async
+    //Future<AppealAdjudicationResponse> adminAppealsAdjudicate(String origin, String appealId, AppealAdjudicationRequest appealAdjudicationRequest) async
     test('test adminAppealsAdjudicate', () async {
       // TODO
     });
@@ -104,7 +104,7 @@ void main() {
 
     // Publish an editorial News Board entry
     //
-    //Future<EditorialPublicationResponse> adminEditorialPublicationsCreate(EditorialPublicationCreate editorialPublicationCreate) async
+    //Future<EditorialPublicationResponse> adminEditorialPublicationsCreate(String origin, EditorialPublicationCreate editorialPublicationCreate) async
     test('test adminEditorialPublicationsCreate', () async {
       // TODO
     });
@@ -127,14 +127,14 @@ void main() {
 
     // Clear a legal hold
     //
-    //Future<LegalHoldResponse> adminLegalHoldsClear(String holdId) async
+    //Future<LegalHoldResponse> adminLegalHoldsClear(String origin, String holdId, { BuiltMap<String, JsonObject> requestBody }) async
     test('test adminLegalHoldsClear', () async {
       // TODO
     });
 
     // Place a legal hold
     //
-    //Future<LegalHoldResponse> adminLegalHoldsCreate(LegalHoldCreate legalHoldCreate) async
+    //Future<LegalHoldResponse> adminLegalHoldsCreate(String origin, LegalHoldCreate legalHoldCreate) async
     test('test adminLegalHoldsCreate', () async {
       // TODO
     });
@@ -155,7 +155,7 @@ void main() {
 
     // Apply a moderation decision
     //
-    //Future<ModerationDecisionResponse> adminModerationDecision(String caseId, ModerationDecisionRequest moderationDecisionRequest) async
+    //Future<ModerationDecisionResponse> adminModerationDecision(String origin, String caseId, ModerationDecisionRequest moderationDecisionRequest) async
     test('test adminModerationDecision', () async {
       // TODO
     });
@@ -189,14 +189,14 @@ void main() {
     //
     // Compatibility method for the idempotent qualification update. Reviewer training remains separate from reputation level.
     //
-    //Future<ReviewerQualificationResponse> adminReviewerQualificationCreate(String reviewerId, ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest) async
+    //Future<ReviewerQualificationResponse> adminReviewerQualificationCreate(String origin, String reviewerId, ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest) async
     test('test adminReviewerQualificationCreate', () async {
       // TODO
     });
 
     // Idempotently set reviewer qualification state
     //
-    //Future<ReviewerQualificationResponse> adminReviewerQualificationUpdate(String reviewerId, ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest) async
+    //Future<ReviewerQualificationResponse> adminReviewerQualificationUpdate(String origin, String reviewerId, ReviewerQualificationUpdateRequest reviewerQualificationUpdateRequest) async
     test('test adminReviewerQualificationUpdate', () async {
       // TODO
     });
@@ -252,14 +252,14 @@ void main() {
 
     // Update account status
     //
-    //Future<AccountStatusResponse> adminUsersStatusUpdate(String userId, AccountStatusUpdate accountStatusUpdate) async
+    //Future<AccountStatusResponse> adminUsersStatusUpdate(String origin, String userId, AccountStatusUpdate accountStatusUpdate) async
     test('test adminUsersStatusUpdate', () async {
       // TODO
     });
 
     // Update subscription tier
     //
-    //Future<AccountTierResponse> adminUsersTierUpdate(String userId, AccountTierUpdate accountTierUpdate) async
+    //Future<AccountTierResponse> adminUsersTierUpdate(String origin, String userId, AccountTierUpdate accountTierUpdate) async
     test('test adminUsersTierUpdate', () async {
       // TODO
     });
