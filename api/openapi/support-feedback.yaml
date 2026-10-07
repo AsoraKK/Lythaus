@@ -394,7 +394,7 @@ components:
     SupportOptions: { type: object, additionalProperties: false, required: [version, contract, limits], properties: { version: { type: string }, contract: { $ref: '#/components/schemas/SupportFeedbackPolicy' }, limits: { type: object, additionalProperties: { type: integer, minimum: 1 } }, initial: { type: object, additionalProperties: false, properties: { problem: { type: string }, suggestion: { type: string } } }, transitions: { type: array, items: { $ref: '#/components/schemas/SupportTransition' } }, evidenceTypes: { type: array, items: { type: string } } } }
     ProblemSubmission: { type: object, additionalProperties: false, required: [kind, category, title, actual, expected], properties: { kind: { type: string, enum: [problem] }, category: { type: string, pattern: '^[a-z][a-z0-9_-]{0,63}$' }, title: { type: string, minLength: 1 }, actual: { type: string, minLength: 1 }, expected: { type: string, minLength: 1 }, reproductionSteps: { type: string }, appVersion: { type: string }, platform: { type: string } } }
     SuggestionSubmission: { type: object, additionalProperties: false, required: [kind, category, title, improvement, benefit], properties: { kind: { type: string, enum: [suggestion] }, category: { type: string, pattern: '^[a-z][a-z0-9_-]{0,63}$' }, title: { type: string, minLength: 1 }, improvement: { type: string, minLength: 1 }, benefit: { type: string, minLength: 1 } } }
-    MemberSupportRequest: { oneOf: [{ $ref: '#/components/schemas/MemberProblemRequest' }, { $ref: '#/components/schemas/MemberSuggestionRequest' }], discriminator: { propertyName: kind } }
+    MemberSupportRequest: { oneOf: [{ $ref: '#/components/schemas/MemberProblemRequest' }, { $ref: '#/components/schemas/MemberSuggestionRequest' }], discriminator: { propertyName: kind, mapping: { problem: '#/components/schemas/MemberProblemRequest', suggestion: '#/components/schemas/MemberSuggestionRequest' } } }
     MemberProblemRequest:
       type: object
       additionalProperties: false
@@ -432,7 +432,7 @@ components:
         updatedAt: { type: string, format: date-time }
         memberMessage: { type: string, nullable: true }
         closed: { type: boolean, description: Whether new replies are closed for this request. }
-    OwnerSupportRequest: { oneOf: [{ $ref: '#/components/schemas/OwnerProblemRequest' }, { $ref: '#/components/schemas/OwnerSuggestionRequest' }], discriminator: { propertyName: kind } }
+    OwnerSupportRequest: { oneOf: [{ $ref: '#/components/schemas/OwnerProblemRequest' }, { $ref: '#/components/schemas/OwnerSuggestionRequest' }], discriminator: { propertyName: kind, mapping: { problem: '#/components/schemas/OwnerProblemRequest', suggestion: '#/components/schemas/OwnerSuggestionRequest' } } }
     OwnerProblemRequest:
       type: object
       additionalProperties: false

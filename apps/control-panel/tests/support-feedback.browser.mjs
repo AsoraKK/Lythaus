@@ -27,6 +27,8 @@ test('rendered support queues and closed replies work at desktop and mobile widt
       const page = await browser.newPage({ viewport });
       const errors = [], calls = [];
       page.on('pageerror', error => errors.push(error.message));
+      page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+      await page.route('https://fonts.googleapis.com/**', route => route.fulfill({ status: 200, contentType: 'text/css', body: '' }));
       await page.route('**/api/admin/**', async route => {
         const request = route.request(), path = new URL(request.url()).pathname;
         calls.push({ path, method: request.method() });

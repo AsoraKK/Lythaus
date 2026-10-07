@@ -1,7 +1,7 @@
 # WP07 support completion candidate
 
 Evidence date: 7 October 2026. Lane A, `codex/wp07-support-beta`; independent
-review and serial integration are parent-owned. Candidate SHA and final exact-head
+review and release integration are parent-owned. Candidate SHA and final exact-head
 receipts are recorded in the draft PR and handoff, avoiding a self-referential
 commit identifier in this file.
 
@@ -45,6 +45,11 @@ rechecks in its transaction before writing a tombstone, event or success. All si
 tables absent remains compatible; partial schema or missing helper/grant fails.
 No new exporter was introduced.
 
+Canonical client validation reproduced twelve failures: both generated support
+unions expected schema class names instead of the API's `problem`/`suggestion`
+values. Explicit discriminator mappings in the existing support fragment correct
+that seam through the pinned generator, without editing generated code by hand.
+
 The existing generic retention Workflow also needed its idempotency-tombstone
 query to use the existing fresh privacy binding: Jobs' column-level grants cannot
 read the required fields. This correction adds no grants. Support audit cleanup
@@ -61,12 +66,13 @@ The existing generic audit duration is unchanged and is not a support approval.
 | Review, needs information, resolution, acceptance, decline | Existing configurable transitions; signed-owner/real-PG flow cases require same-request evidence for terminal decisions, retain public conversation and expose no private evidence. Reasons/rubrics are explicitly synthetic. |
 | Duplicate outcome | Config requires `duplicate_reference` evidence for terminal duplicate closure. UUID reference must target another current same-kind request that is not already a duplicate. Self, mixed-kind and reverse-cycle cases reject; peer reference/identity remains owner-private. |
 | Closed states and response behavior | Safe additive `closed` projection, closed reply rejects before quota work; Flutter/console controls disable replies. HTTP errors, no-store, revision and target-bound replay retain existing behavior. |
+| Generated support client contract | Canonical bundle and pinned 7.7.0 Dart generation; 26 semantic serialization cases cover optional character bounds, four concrete DTOs and both unions for legacy/open/closed data. Existing privacy, profile and merged PR946 admin mutation fixtures remain in the same validator. |
 | Privacy completion / export | Seven native Workerd Workflow cases use real PostgreSQL 17 and canonical grants with disposable R2. They exercise absent/partial schema, exporter privacy, pending authored content, same-request retries, missing execute grant and no false tombstone/completion. |
 | Thirty-day closed-content direction | Approved numerical composition and native retention case distinguish 31-day closed, 29-day closed and reporter-held records. Deletion safeguards are not certified by this duration test. |
 | Legal holds | Native generic audit retention preserves held reporter and held metadata author audits; existing reporter lock/hold tests remain. Contributor-content hold scope and placement/release authority remain gates. |
 | Profile changes preserved | Six reviewed profile Workflow regressions rerun: private biography, null/empty fields, preferences, R2, absent/incomplete storage, retries and holds. |
 | Member/session/pagination UI | Seven widget cases include 160 astral characters, oversized text before API, configured page size, closed requests, kind separation, cancellation and account switching; existing service paging/revision tests retained. |
-| Rendered owner queues | Chromium 1280×900 and 390×844: actual route/title, keyboard selection, character limits, closed suggestion history, no horizontal overflow or page errors; four synthetic screenshots. Existing owner unit mutations remain covered. |
+| Rendered owner queues | Chromium 1280×900 and 390×844: actual route/title, keyboard selection, character limits, closed suggestion history, no horizontal overflow, console errors or page errors; four synthetic screenshots. External font CSS is stubbed to use local fallback fonts. Existing owner unit mutations remain covered. |
 | No automatic points or notifications | Accepted/declined flows emit only existing prose-free `support.workflow.changed` fields. No rewards code, score, notification provider, mail send or production flag changes. F01 remains pending. |
 
 The main support PG umbrella invokes the canonical and native Workflow suites as
@@ -80,17 +86,23 @@ Hyperdrive or provider acceptance.
 
 ## Serial integration and forward packet
 
-Shared source changes are only Jobs `src/index.ts`, the existing disposable
-Workflow fixture, and one expected-step update in the profile Workflow test.
+Shared source changes are Jobs `src/index.ts`, the existing disposable
+Workflow fixture, and one expected-step update in the profile Workflow test,
+plus the parent-authorized canonical bundle/client and Dart validator integration.
 Support-owned API fragment adds four optional policy character fields and the
-optional `closed` property to all member/owner request shapes.
+optional `closed` property to all member/owner request shapes, with explicit kind
+discriminator mappings for both unions.
 
-Parent must serialize `npm run openapi:bundle` and `npm run openapi:gen:dart`
-from the canonical root, then apply the repository's normal generated Dart
-build-runner/format checks. Root/bundle/generated paths and shared indexes,
-Public/Admin dispatchers, CI, shell/router/profile UI were not edited here.
-The bundle and generated client in this candidate deliberately remain PR921's
-reviewed versions; contract parity is an outstanding integration check, not green.
+After Lane B became idle and its reviewed head was frozen, parent authorized
+Lane A to run `npm run openapi:bundle` and `npm run openapi:gen:dart` from the
+canonical root. Only seven support model/doc/test groups change in the generated
+client. Semantic bundle comparison finds eleven additive support-schema paths;
+all operation paths, profile schemas and admin schemas are unchanged. The root
+OpenAPI file, shared indexes, Public/Admin dispatchers, CI and shell/router/profile
+UI are unchanged. The existing temporary Dart validator includes the new support
+fixture and preserves the reviewed privacy/profile and admin header fixtures.
+Final generation repeatability, build-runner, formatting, analyzer and semantic
+test receipts belong to the final exact head in the draft PR/handoff.
 
 After independent review, parent must map actual roles/bindings, reconcile the
 proposal with the next numbered migration/manifest/verifier and review production
