@@ -11,10 +11,10 @@ const { supportFeedbackSchemaReady, createSupportFeedbackRuntime } = await impor
 const { supportFeedbackPrivacyIsReady, supportFeedbackPrivacySchemaState } = await import('../src/support-feedback-privacy-runtime.ts');
 const policy = { version: 'fixture_v1', contract: {
   limits: { titleBytes: 32, detailBytes: 32, stepsBytes: 32, contextBytes: 32, memberMessageBytes: 32 },
-  categories: { problem: ['other'], suggestion: ['other'] }, states: { problem: ['new'], suggestion: ['new'] },
+  categories: { problem: ['other'], suggestion: ['other'] }, states: { problem: ['new', 'closed'], suggestion: ['new', 'closed'] },
 }, initial: { problem: 'new', suggestion: 'new' }, transitions: [
-  { kind: 'problem', from: 'new', to: 'closed', terminal: true, reasons: ['done'], evidenceTypes: [] },
-  { kind: 'suggestion', from: 'new', to: 'closed', terminal: true, reasons: ['done'], evidenceTypes: [] },
+  { kind: 'problem', from: 'new', to: 'closed', terminal: true, reasons: ['done'], evidenceTypes: ['verification'] },
+  { kind: 'suggestion', from: 'new', to: 'closed', terminal: true, reasons: ['done'], evidenceTypes: ['verification'] },
 ], evidenceTypes: ['verification'], limits: {
   page: 10, messages: 10, privateItems: 10, messageBytes: 32, noteBytes: 32,
   evidenceBytes: 32, referenceBytes: 32, rateWindowSeconds: 60, memberMutations: 10, ownerMutations: 10,
@@ -71,7 +71,35 @@ test('privacy readiness requires the support, identity lock, legal-hold and scru
 });
 
 test('enabled runtime treats an absent optional proposal schema as unavailable', async () => {
-  const runtime = await createSupportFeedbackRuntime({ binding: {}, policy, authentication: { member: async () => ({}), owner: async () => '' },
-    channel: 'member', ready: async () => false });
+  let readinessCalls = 0;
+  const runtime = await createSupportFeedbackRuntime({ binding: {}, policy: JSON.stringify(policy), authentication: { member: async () => ({}), owner: async () => '' },
+    channel: 'member', ready: async () => { readinessCalls += 1; return false; } });
   assert.equal(runtime, null);
+  assert.equal(readinessCalls, 1);
+});
+
+test('valid serialized policy reaches readiness and creates both runtime channels without authenticating', async () => {
+  for (const channel of ['member', 'owner']) {
+    const binding = {}, calls = [];
+    const runtime = await createSupportFeedbackRuntime({ binding, policy: JSON.stringify(policy),
+      authentication: { member: async () => assert.fail('No request yet'), owner: async () => assert.fail('No request yet') },
+      channel, ready: async (...args) => { calls.push(args); return true; } });
+    assert.deepEqual(calls, [[binding, channel]]);
+    assert.equal(typeof runtime?.supportOptions, 'function');
+    assert.equal(typeof runtime?.submit, 'function');
+    assert.equal(typeof runtime?.ownerDecision, 'function');
+  }
+});
+
+test('runtime fails closed on readiness exceptions and rejects missing, oversized or invalid policies before database access', async () => {
+  let readinessCalls = 0;
+  const input = { binding: {}, authentication: { member: async () => ({}), owner: async () => '' }, channel: 'member',
+    ready: async () => { readinessCalls += 1; throw new Error('PRIVATE_SENTINEL'); } };
+  assert.equal(await createSupportFeedbackRuntime({ ...input, policy: JSON.stringify(policy) }), null);
+  assert.equal(readinessCalls, 1);
+  for (const invalid of [undefined, policy, '', '{', ' '.repeat(32 * 1024 + 1),
+    JSON.stringify({ ...policy, initial: { problem: 'unknown', suggestion: 'new' } })]) {
+    assert.equal(await createSupportFeedbackRuntime({ ...input, policy: invalid }), null);
+  }
+  assert.equal(readinessCalls, 1);
 });
