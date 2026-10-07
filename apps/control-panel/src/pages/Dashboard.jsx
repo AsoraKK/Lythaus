@@ -4,6 +4,7 @@ import { adminRequest } from '../api/adminApi.js';
 import PageLayout from '../components/PageLayout.jsx';
 import LythButton from '../components/LythButton.jsx';
 import LythCard from '../components/LythCard.jsx';
+import ActivityPilotSummary from './ActivityPilotSummary.jsx';
 import './overview.css';
 
 const GUIDE = {
@@ -124,6 +125,7 @@ function Dashboard() {
       {community ? <p className="muted">Window: {timestamp(community.current?.start)} to {timestamp(community.current?.end)} (end exclusive). {community.comparable ? `Prior: ${timestamp(community.previous?.start)} to ${timestamp(community.previous?.end)}.` : 'The prior calendar period is shorter than the current elapsed window; comparison is unavailable.'}</p> : null}
       <div className="overview-grid">{Object.entries(COMMUNITY).map(([key, label]) => <Metric key={key} label={label} metric={community?.metrics?.[key]} fresh={fresh} comparable={community?.comparable} />)}</div>
     </LythCard>
+    <ActivityPilotSummary />
     <LythCard variant="panel"><h2>Current account entitlements</h2><p className="muted">Free, Premium and Black are current account entitlements. Payment, upgrades, cancellations and revenue require payment records.</p>
       <div className="overview-grid">{Object.entries(SUBSCRIPTIONS).map(([key, label]) => <Metric key={key} label={label} metric={community?.metrics?.[key]} fresh={fresh} comparable={false} />)}</div>
     </LythCard>
