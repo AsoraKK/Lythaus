@@ -1,4 +1,5 @@
 import { query, type DatabaseClient, type HyperdriveBinding } from './index.ts';
+import { reconcileSupportLocationHoldFacts } from './support-feedback-contributor-privacy.ts';
 
 const PRIVACY_ACCESS_SQL = `
   SELECT
@@ -81,6 +82,7 @@ export async function reconcileSupportPrivacyDeletionLocations(client: DatabaseC
     if (relations.rows.every(row => row.present === false)) return 0;
     if (!relations.rows.every(row => row.present === true)) throw new Error('support_privacy_schema_unavailable');
     await client.query('SELECT privacy.reconcile_support_subject_data_locations($1)', [subjectId]);
+    await reconcileSupportLocationHoldFacts(client, subjectId);
     const result = await client.query(`SELECT count(*)::integer AS pending FROM privacy.subject_data_locations
       WHERE subject_id=$1 AND store_type='planetscale' AND deletion_state='present'
       AND (resource_reference LIKE 'support.%' OR entity_type IN ('support_audit','support_intent','support_idempotency'))`, [subjectId]);
