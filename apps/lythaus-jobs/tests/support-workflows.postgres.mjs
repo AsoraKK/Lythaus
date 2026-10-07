@@ -5,6 +5,9 @@ import test, { before, after } from 'node:test';
 import pg from 'pg';
 import { uuidv7 } from '@lythaus/security';
 import { applyApprovedSupportCompletionLimits } from '../../../packages/db/src/support-feedback-approved-limits.ts';
+import { exportOwnSupportContributionsForPrivacy } from '../../../packages/db/src/support-feedback-contributor-privacy.ts';
+import { reconcileSupportPrivacyDeletionLocations } from '../../../packages/db/src/support-feedback-privacy-runtime.ts';
+import { requirePrivacyExportDependencies } from '../../lythaus-public-api/src/privacy-runtime-policy.ts';
 import { loadApprovedMigrations } from '../../../scripts/ci/planetscale-migration-manifest.mjs';
 import { nativePostgresPrivacyWorkflowFixture } from '../../lythaus-public-api/tests/native-postgres-workflow-fixture.mjs';
 
@@ -65,6 +68,18 @@ async function assertPending(params) {
   assert.notEqual(row.state, 'completed'); assert.equal(row.completed_at, null);
   assert.equal((await control.query("SELECT count(*)::integer AS count FROM privacy.request_events WHERE request_id=$1 AND event_type='completed'", [params.requestId])).rows[0].count, 0);
   assert.equal((await control.query('SELECT count(*)::integer AS count FROM privacy.deletion_tombstones WHERE subject_id=$1', [params.subjectId])).rows[0].count, 0);
+}
+async function privacy(work) {
+  const client = new pg.Client({ connectionString: local.toString(), ssl: false }); await client.connect();
+  try {
+    await client.query('SET ROLE lythaus_privacy'); await client.query('BEGIN');
+    const result = await work(client); await client.query('COMMIT'); return result;
+  } catch (error) { await client.query('ROLLBACK'); throw error; }
+  finally { await client.end(); }
+}
+async function assertNoExportCompletion(params) {
+  await assertPending(params);
+  assert.equal((await control.query('SELECT count(*)::integer AS count FROM privacy.export_manifests WHERE request_id=$1', [params.requestId])).rows[0].count, 0);
 }
 
 test('native account deletion remains operational when every optional support table is absent', async () => {
@@ -157,4 +172,98 @@ test('native account privacy fails closed with partial support schema and retrie
     assert.equal((await fixture.run('delete', params)).status, 'errored'); await assertPending(params);
   } finally { await control.query('ALTER TABLE support.notes_fixture_incomplete RENAME TO notes'); }
   assert.equal((await fixture.run('delete', params)).status, 'complete');
+});
+
+test('same-author metadata export is complete, bounded and context-free across all four contribution types', async () => {
+  const author = await subject(), peer = await subject(), unrelated = await subject(), id = await ticket(peer), own = await ticket(author);
+  const ids = Array.from({ length: 5 }, () => uuidv7());
+  await control.query("INSERT INTO support.messages(id,request_id,author_id,author_role,body,revision) VALUES($1,$2,$3,'owner',$4,2)", [ids[0], id, author, `PRIVATE_PEER_REPLY ${peer}`]);
+  await control.query("INSERT INTO support.notes(id,request_id,author_id,body,revision) VALUES($1,$2,$3,$4,3)", [ids[1], id, author, `PRIVATE_PEER_NOTE ${peer}`]);
+  await control.query("INSERT INTO support.evidence(id,request_id,author_id,evidence_type,description,reference,revision) VALUES($1,$2,$3,'verification','PRIVATE_EVIDENCE',$4,4)", [ids[2], id, author, peer]);
+  await control.query("INSERT INTO support.decisions(id,request_id,actor_id,from_state,to_state,reason_code,evidence_ids,policy_version,revision) VALUES($1,$2,$3,'submitted','resolved','PRIVATE_REASON',$4::uuid[],$5,5)", [ids[3], id, author, [ids[2]], policy.version]);
+  await control.query("INSERT INTO support.notes(id,request_id,author_id,body,revision) VALUES($1,$2,$3,'PRIVATE_OWN_NOTE',2)", [ids[4], own, author]);
+  await control.query("INSERT INTO support.notes(id,request_id,author_id,body,revision) VALUES($1,$2,$3,'PRIVATE_UNRELATED_NOTE',6)", [uuidv7(), id, unrelated]);
+  await control.query("INSERT INTO support.messages(id,request_id,author_id,author_role,body,revision) VALUES($1,$2,$3,'member','Synthetic own reporter message',3)", [uuidv7(), own, author]);
+  const params = await request(author, 'export'), page1 = await privacy(c => exportOwnSupportContributionsForPrivacy(c, params.requestId, author, policy));
+  assert.equal(page1.items.length, 3); assert.ok(page1.nextCursor);
+  const newer = uuidv7();
+  await control.query("INSERT INTO support.notes(id,request_id,author_id,body,revision) VALUES($1,$2,$3,'PRIVATE_NEWER_NOTE',7)", [newer, id, author]);
+  const page2 = await privacy(c => exportOwnSupportContributionsForPrivacy(c, params.requestId, author, policy, page1.nextCursor));
+  assert.equal(page2.items.length, 2); assert.equal(page2.nextCursor, null);
+  const items = [...page1.items, ...page2.items];
+  assert.deepEqual(items.map(item => item.id).sort(), ids.sort());
+  assert.equal(new Set(items.map(item => item.id)).size, 5);
+  for (const item of items) assert.deepEqual(Object.keys(item).sort(), ['content', 'createdAt', 'id', 'type']);
+  const serialized = JSON.stringify([page1, page2]);
+  for (const forbidden of [peer, unrelated, id, own, 'PRIVATE_', 'verification', 'resolved']) assert.ok(!serialized.includes(forbidden), forbidden);
+  assert.ok(items.every(item => item.content === 'withheld_pending_privacy_review'));
+  await assert.rejects(() => privacy(c => exportOwnSupportContributionsForPrivacy(c, params.requestId, peer, policy)), /support_privacy_invalid/);
+  const otherRequest = await request(author, 'export');
+  await assert.rejects(() => privacy(c => exportOwnSupportContributionsForPrivacy(c, otherRequest.requestId, author, policy, page1.nextCursor)), /support_privacy_invalid/);
+  for (const cursor of ['{', '[]', JSON.stringify({ ...JSON.parse(page1.nextCursor), subjectId: peer }),
+    JSON.stringify({ ...JSON.parse(page1.nextCursor), afterId: 'ffffffff-ffff-7fff-bfff-ffffffffffff' })]) {
+    await assert.rejects(() => privacy(c => exportOwnSupportContributionsForPrivacy(c, params.requestId, author, policy, cursor)), /support_privacy_invalid/);
+  }
+});
+
+test('native contributor export stays pending before R2, manifest or success until text visibility is resolved', async () => {
+  const author = await subject(), peer = await subject(), id = await ticket(peer);
+  await control.query("INSERT INTO support.notes(id,request_id,author_id,body,revision) VALUES($1,$2,$3,'PRIVATE_PENDING_CONTRIBUTOR',2)", [uuidv7(), id, author]);
+  const params = await request(author, 'export'), status = await fixture.run('export', params);
+  assert.equal(status.status, 'errored', JSON.stringify(status)); assert.ok(JSON.stringify(status).includes('support_privacy_export_pending'));
+  await assertNoExportCompletion(params);
+  assert.equal(await (await fixture.bucket('PRIVATE_EXPORTS')).get(`exports/${author}/${params.requestId}.json`), null);
+  assert.equal((await control.query("SELECT count(*)::integer AS count FROM trust.user_activity_events WHERE user_id=$1 AND event_type='privacy.export_generated'", [author])).rows[0].count, 0);
+});
+
+test('native reporter deletion preserves held contributor rows and reconciles the associated hold', async () => {
+  const author = await subject(), peer = await subject(), id = await ticket(peer), note = uuidv7();
+  await control.query("INSERT INTO support.notes(id,request_id,author_id,body,revision) VALUES($1,$2,$3,'PRIVATE_HELD_CONTRIBUTOR',2)", [note, id, author]);
+  const hold = uuidv7(); await control.query("INSERT INTO privacy.legal_holds(id,subject_id,reason) VALUES($1,$2,'Synthetic contributor hold')", [hold, author]);
+  const exported = await request(author, 'export');
+  assert.equal((await privacy(c => exportOwnSupportContributionsForPrivacy(c, exported.requestId, author, policy))).items[0].id, note);
+  const params = await request(peer, 'delete'), status = await fixture.run('delete', params);
+  assert.equal(status.status, 'errored', JSON.stringify(status)); assert.ok(JSON.stringify(status).includes('support_privacy_held'));
+  await assertPending(params); assert.ok((await control.query('SELECT submission FROM support.requests WHERE id=$1', [id])).rows[0].submission);
+  await privacy(c => reconcileSupportPrivacyDeletionLocations(c, peer));
+  assert.equal((await control.query("SELECT legal_hold_state FROM privacy.subject_data_locations WHERE subject_id=$1 AND resource_reference='support.notes' AND entity_id=$2", [peer, note])).rows[0].legal_hold_state, 'active');
+  await control.query('UPDATE privacy.legal_holds SET active=false,released_at=now() WHERE id=$1', [hold]);
+  assert.equal((await fixture.run('delete', params)).status, 'complete');
+  assert.equal((await control.query('SELECT count(*)::integer AS count FROM support.notes WHERE id=$1', [note])).rows[0].count, 0);
+});
+
+test('native export rejects wrong subject, missing support grants and partial storage without completion', async () => {
+  const author = await subject(), peer = await subject(), params = await request(author, 'export');
+  await ticket(author);
+  assert.equal((await fixture.run('export', { subjectId: peer, requestId: params.requestId })).status, 'errored');
+  await assertNoExportCompletion(params);
+  await control.query('REVOKE EXECUTE ON FUNCTION privacy.reconcile_support_subject_data_locations(uuid) FROM lythaus_privacy');
+  try {
+    const status = await fixture.run('export', params); assert.equal(status.status, 'errored');
+    assert.ok(JSON.stringify(status).includes('support_privacy_schema_unavailable')); await assertNoExportCompletion(params);
+  } finally { await control.query('GRANT EXECUTE ON FUNCTION privacy.reconcile_support_subject_data_locations(uuid) TO lythaus_privacy'); }
+  await control.query('REVOKE SELECT ON support.notes FROM lythaus_privacy');
+  try { assert.equal((await fixture.run('export', params)).status, 'errored'); await assertNoExportCompletion(params); }
+  finally { await control.query('GRANT SELECT ON support.notes TO lythaus_privacy'); }
+  await control.query('ALTER TABLE support.notes RENAME TO notes_fixture_export_incomplete');
+  try { assert.equal((await fixture.run('export', params)).status, 'errored'); await assertNoExportCompletion(params); }
+  finally { await control.query('ALTER TABLE support.notes_fixture_export_incomplete RENAME TO notes'); }
+  assert.equal((await fixture.run('export', params)).status, 'complete');
+});
+
+test('native export database failure leaves no accessible manifest and same-request retries commit once', async () => {
+  const author = await subject(), params = await request(author, 'export'); await ticket(author);
+  await control.query(`CREATE FUNCTION public.support_fixture_fail_export() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.request_id='${params.requestId}'::uuid THEN RAISE EXCEPTION 'synthetic_support_export_failure'; END IF; RETURN NEW; END $$;
+    CREATE TRIGGER support_fixture_fail_export BEFORE INSERT ON privacy.export_manifests FOR EACH ROW EXECUTE FUNCTION public.support_fixture_fail_export()`);
+  try {
+    assert.equal((await fixture.run('export', params)).status, 'errored'); await assertNoExportCompletion(params);
+    const bucket = await fixture.bucket('PRIVATE_EXPORTS');
+    assert.ok(await bucket.get(`exports/${author}/${params.requestId}.json`));
+    assert.throws(() => requirePrivacyExportDependencies({ manifest: null, storage: bucket }), /export_not_found/);
+  } finally { await control.query('DROP TRIGGER support_fixture_fail_export ON privacy.export_manifests; DROP FUNCTION public.support_fixture_fail_export()'); }
+  for (let retry = 0; retry < 2; retry++) assert.equal((await fixture.run('export', params)).status, 'complete');
+  assert.equal((await control.query('SELECT count(*)::integer AS count FROM privacy.export_manifests WHERE request_id=$1', [params.requestId])).rows[0].count, 1);
+  assert.equal((await control.query("SELECT count(*)::integer AS count FROM privacy.request_events WHERE request_id=$1 AND event_type='completed'", [params.requestId])).rows[0].count, 1);
+  assert.equal((await control.query("SELECT count(*)::integer AS count FROM trust.user_activity_events WHERE user_id=$1 AND event_type='privacy.export_generated'", [author])).rows[0].count, 1);
 });
