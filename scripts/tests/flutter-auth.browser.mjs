@@ -50,7 +50,22 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
       else if(url.pathname.endsWith('/auth/logout')){session=false;headers['set-cookie']='__Host-lythaus_refresh=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0';body={state:'signed_out'};}
       else if(url.pathname===`/api/users/${user.id}`)body={user:{id:user.id,displayName:'Synthetic acceptance',trustPassportVisibility:'private',reputationScore:0}};
       else if(url.pathname==='/api/users/me')body={user:{id:user.id,displayName:'Synthetic acceptance',trustPassportVisibility:'private',moderationState:'allowed',publicVisibility:false,reputationScore:0}};
-      else if(!['/api/feed/discover','/api/subscription/status','/api/custom-feeds','/api/users/me/reputation','/api/reputation/me'].includes(url.pathname)){
+      else if(url.pathname==='/api/reputation/me'){
+        assert.ok(session);
+        assert.match(requestHeaders.authorization,/^Bearer local-(?:access|refreshed)-fixture$/);
+        body={userId:user.id,level:0,reputationLevel:0,levelName:'New',
+          reputationStatus:'active',reputationBand:'new',policyVersion:'reputation-v2.0.0',
+          pillars:{accountability:0,contribution:0,conduct:0,sourcing:0,authenticity:0,reviewReliability:0},
+          promotionBlockers:[],evaluatedAt:null};
+      } else if(url.pathname==='/api/rewards/me/monthly'){
+        assert.ok(session);
+        assert.match(requestHeaders.authorization,/^Bearer local-(?:access|refreshed)-fixture$/);
+        await new Promise(resolve=>setTimeout(resolve,150));
+        body={state:'pending',reasonCode:'approval_unavailable',effectiveMonth:null,
+          currentLevel:null,sourceMonth:null,sourceScore:null,
+          snapshot:{state:'unavailable',reasonCode:'approval_unavailable'},
+          selection:{state:'unavailable',reasonCode:'approval_unavailable'}};
+      } else if(!['/api/feed/discover','/api/subscription/status','/api/custom-feeds','/api/users/me/reputation'].includes(url.pathname)){
         status=404;body={error:'route_not_found'};
       }
       return route.fulfill({status,headers,contentType:'application/json',body:JSON.stringify(body)});
@@ -82,6 +97,14 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
       await target.goto('https://app.lythaus.co'+route);
       await target.locator('flt-semantics-placeholder').waitFor({timeout:60000});
       await target.locator('flt-semantics-placeholder').evaluate(node=>node.click());
+    }
+    async function openSettingsFromReadyProfile() {
+      if(width<700){
+        await page.getByLabel(/Reputation New, new, active/).waitFor();
+        await page.getByLabel(/^Monthly level pending/).waitFor();
+      }
+      await page.getByRole('button',{name:'Settings',exact:true}).click();
+      await page.waitForURL(url=>url.pathname==='/settings');
     }
     await openApp();
     await page.getByRole('button',{name:'Sign in with email',exact:true}).waitFor({timeout:60000});
@@ -135,8 +158,7 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
     await Promise.all([page.getByText('No posts yet',{exact:true}).waitFor(),secondTab.getByText('No posts yet',{exact:true}).waitFor()]);
     assert.equal(maximumRefreshInFlight,1,'Same-origin tabs must serialize refresh instead of racing a rotating cookie');
     if(width<700)await page.getByRole('button',{name:/^Profile(?:\b|$)/}).click();
-    await page.getByRole('button',{name:'Settings',exact:true}).click();
-    await page.waitForURL(url=>url.pathname==='/settings');
+    await openSettingsFromReadyProfile();
     await page.getByText('Account security',{exact:true}).click();
     await page.waitForURL(url=>url.pathname==='/settings/security');
     await page.getByRole('button',{name:'Sign out of all sessions',exact:true}).waitFor();
@@ -150,16 +172,17 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
     await openApp(securityLocation.pathname+securityLocation.search);
     await page.waitForURL(url=>url.pathname==='/settings/security');
     await page.getByRole('button',{name:'Sign out of all sessions',exact:true}).waitFor();
-    await page.getByRole('button',{name:'Back',exact:true}).click();
-    await page.waitForURL(url=>url.pathname==='/settings');
-    await page.getByText('Preferences',{exact:true}).waitFor();
-    await page.mouse.move(width-20,900);
-    await page.getByRole('button',{name:'Back',exact:true}).click();
-    await page.waitForURL(url=>url.pathname==='/'&&(width>=700||url.searchParams.get('tab')==='profile'));
-    await page.getByRole('button',{name:'Settings',exact:true}).click();
-    await page.waitForURL(url=>url.pathname==='/settings');
-    await page.getByText('Account security',{exact:true}).click();
-    await page.waitForURL(url=>url.pathname==='/settings/security');
+    for(let revisit=0;revisit<2;revisit++){
+      await page.getByRole('button',{name:'Back',exact:true}).click();
+      await page.waitForURL(url=>url.pathname==='/settings');
+      await page.getByText('Preferences',{exact:true}).waitFor();
+      await page.mouse.move(width-20,900);
+      await page.getByRole('button',{name:'Back',exact:true}).click();
+      await page.waitForURL(url=>url.pathname==='/'&&(width>=700||url.searchParams.get('tab')==='profile'));
+      await openSettingsFromReadyProfile();
+      await page.getByText('Account security',{exact:true}).click();
+      await page.waitForURL(url=>url.pathname==='/settings/security');
+    }
     signingOut=true;
     const logoutReply=page.waitForResponse(response=>response.url()==='https://api.lythaus.co/api/auth/logout'
       &&response.request().method()==='POST'&&response.status()===200);
