@@ -175,9 +175,10 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
               const SizedBox(height: 12),
               TextField(
                 controller: _title,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Title',
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
+                  helperText: _characterHint('titleCharacters'),
                 ),
                 textInputAction: TextInputAction.next,
               ),
@@ -185,9 +186,10 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
               if (_kind == 'problem') ...<Widget>[
                 TextField(
                   controller: _firstDetail,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'What happened?',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
+                    helperText: _characterHint('detailCharacters'),
                   ),
                   minLines: 2,
                   maxLines: 5,
@@ -195,9 +197,10 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: _secondDetail,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'What did you expect?',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
+                    helperText: _characterHint('detailCharacters'),
                   ),
                   minLines: 2,
                   maxLines: 5,
@@ -205,9 +208,10 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: _reproductionSteps,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Steps to reproduce (optional)',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
+                    helperText: _characterHint('stepsCharacters'),
                   ),
                   minLines: 2,
                   maxLines: 5,
@@ -215,9 +219,10 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
               ] else ...<Widget>[
                 TextField(
                   controller: _firstDetail,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'What would you improve?',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
+                    helperText: _characterHint('detailCharacters'),
                   ),
                   minLines: 2,
                   maxLines: 5,
@@ -225,9 +230,10 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: _secondDetail,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Who would this help, and how?',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
+                    helperText: _characterHint('detailCharacters'),
                   ),
                   minLines: 2,
                   maxLines: 5,
@@ -349,16 +355,24 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
           ),
         TextField(
           controller: _reply,
-          decoration: const InputDecoration(
+          enabled: request['closed'] != true,
+          decoration: InputDecoration(
             labelText: 'Reply privately',
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
+            helperText: request['closed'] == true
+                ? 'This request is closed.'
+                : _characterHint('memberMessageCharacters'),
           ),
           minLines: 2,
           maxLines: 5,
         ),
         const SizedBox(height: 8),
         FilledButton(
-          onPressed: _busy || id is! String || revision is! int
+          onPressed:
+              _busy ||
+                  request['closed'] == true ||
+                  id is! String ||
+                  revision is! int
               ? null
               : _sendReply,
           child: const Text('Send reply'),
@@ -375,16 +389,18 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
       _error = null;
     });
     try {
-      final results = await Future.wait(<Future<Map<String, dynamic>>>[
-        client.getOptions(),
-        client.list(kind: _kind, limit: _pageSize),
-      ]);
+      final options = await client.getOptions();
       if (!_current(client, epoch)) return;
-      final items = _maps(results[1]['items']);
+      final history = await client.list(
+        kind: _kind,
+        limit: _historyLimit(options),
+      );
+      if (!_current(client, epoch)) return;
+      final items = _maps(history['items']);
       setState(() {
-        _options = results[0];
+        _options = options;
         _history = items;
-        _nextCursor = _nullableString(results[1]['nextCursor']);
+        _nextCursor = _nullableString(history['nextCursor']);
         _loading = false;
         _loadingHistory = false;
         _error = null;
@@ -411,7 +427,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
     try {
       final result = await client.list(
         kind: _kind,
-        limit: _pageSize,
+        limit: _historyLimit(_options),
         cursor: append ? _nextCursor : null,
       );
       if (!_current(client, epoch)) return;
@@ -529,6 +545,18 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
       setState(() => _error = 'Complete the required fields before sending.');
       return;
     }
+    if (!_fitsField(title, 'titleBytes', 'titleCharacters') ||
+        !_fitsField(first, 'detailBytes', 'detailCharacters') ||
+        !_fitsField(second, 'detailBytes', 'detailCharacters') ||
+        (_reproductionSteps.text.trim().isNotEmpty &&
+            !_fitsField(
+              _reproductionSteps.text.trim(),
+              'stepsBytes',
+              'stepsCharacters',
+            ))) {
+      setState(() => _error = 'Shorten the request text to the limits shown.');
+      return;
+    }
     final body = <String, dynamic>{
       'category': category,
       'title': title,
@@ -592,6 +620,15 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
     final message = _reply.text.trim();
     if (id is! String || revision is! int || message.isEmpty) {
       setState(() => _error = 'Write a reply before sending.');
+      return;
+    }
+    if (request['closed'] == true ||
+        !_fitsField(message, 'memberMessageBytes', 'memberMessageCharacters')) {
+      setState(
+        () => _error = request['closed'] == true
+            ? 'This request is closed.'
+            : 'Shorten your reply to the limit shown.',
+      );
       return;
     }
     final signature = '$id:$revision:$message';
@@ -663,6 +700,30 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
     final categories = _categories;
     if (categories.isEmpty) return null;
     return categories.contains(_category) ? _category : categories.first;
+  }
+
+  int _historyLimit(Map<String, dynamic>? options) {
+    final limit = _asMap(options?['limits'])['page'];
+    if (limit == null) return _pageSize;
+    if (limit is! int || limit < 1 || limit > 100) {
+      throw const FormatException('Invalid support page limit');
+    }
+    return limit < _pageSize ? limit : _pageSize;
+  }
+
+  Map<String, dynamic> get _fieldLimits =>
+      _asMap(_asMap(_options?['contract'])['limits']);
+
+  String? _characterHint(String field) {
+    final maximum = _fieldLimits[field];
+    return maximum is int && maximum > 0 ? 'Up to $maximum characters.' : null;
+  }
+
+  bool _fitsField(String value, String bytes, String characters) {
+    final byteLimit = _fieldLimits[bytes];
+    final characterLimit = _fieldLimits[characters];
+    return (byteLimit is! int || utf8.encode(value).length <= byteLimit) &&
+        (characterLimit is! int || value.runes.length <= characterLimit);
   }
 
   static Map<String, dynamic> _asMap(Object? value) =>

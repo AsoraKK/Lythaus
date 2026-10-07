@@ -1,4 +1,4 @@
-import { query, type HyperdriveBinding } from './index.ts';
+import { query, type DatabaseClient, type HyperdriveBinding } from './index.ts';
 
 const PRIVACY_ACCESS_SQL = `
   SELECT
@@ -70,4 +70,22 @@ export async function supportFeedbackPrivacyIsReady(binding: HyperdriveBinding):
   if (state === 'absent') return false;
   if (state !== 'ready') throw new Error('support_privacy_schema_unavailable');
   return true;
+}
+
+export async function reconcileSupportPrivacyDeletionLocations(client: DatabaseClient, subjectId: string): Promise<number> {
+  try {
+    const relations = await client.query(`SELECT to_regclass(name) IS NOT NULL AS present
+      FROM unnest($1::text[]) AS name`, [['support.requests', 'support.messages', 'support.notes',
+      'support.evidence', 'support.decisions', 'support.operation_refs']]);
+    if (relations.rows.length !== 6) throw new Error('support_privacy_schema_unavailable');
+    if (relations.rows.every(row => row.present === false)) return 0;
+    if (!relations.rows.every(row => row.present === true)) throw new Error('support_privacy_schema_unavailable');
+    await client.query('SELECT privacy.reconcile_support_subject_data_locations($1)', [subjectId]);
+    const result = await client.query(`SELECT count(*)::integer AS pending FROM privacy.subject_data_locations
+      WHERE subject_id=$1 AND store_type='planetscale' AND deletion_state='present'
+      AND (resource_reference LIKE 'support.%' OR entity_type IN ('support_audit','support_intent','support_idempotency'))`, [subjectId]);
+    const pending = result.rows[0]?.pending;
+    if (!Number.isSafeInteger(pending) || pending < 0) throw new Error('support_privacy_schema_unavailable');
+    return pending;
+  } catch { throw new Error('support_privacy_schema_unavailable'); }
 }
