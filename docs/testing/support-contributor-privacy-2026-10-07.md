@@ -37,11 +37,23 @@ is neither erased by a guessed policy nor falsely marked deleted.
 Reporter scrub and closed-content retention now check all contributors plus
 trusted, target-bound audit/outbox/replay actors before deletion. Identity row
 locks conflict with legal-hold INSERT's real foreign-key lock, and existing
-hold rows are locked through the scrub. Contributor locks use `NOWAIT`: an owner
+hold rows, including inactive ones, are locked through the scrub before their
+active state is inspected. Contributor account and hold locks use `NOWAIT`: an owner
 replay can already hold its account while waiting for the reporter account;
 contention therefore rolls privacy back with `support_privacy_unavailable`
 instead of introducing a lock cycle. The same request can retry after that
 transaction finishes. An active hold produces `support_privacy_held`.
+
+Independent review identified an inactive-hold activation race in initial head
+`88c28467a36f8331121319289cb09c490e3b43d3`: updating only `active` does not
+reacquire the parent identity foreign-key lock. A real PG17 regression against
+that guard failed because activation committed after its hold query but before
+scrub, then scrub erased the record. The fix locks all existing participant
+hold rows in ID order and tests `active` only after locking. The regression
+uses the existing privacy role, which is the Admin legal-hold code's binding;
+it adds no activation endpoint, grant or hold authority. Inactive holds still
+permit scrub. Competing activation/account-lock cycles defer without waiting
+for a deadlock victim, and the exact request retries after contention or release.
 
 Retention filters held contributors before choosing a reporter, avoiding queue
 starvation. A hold committed after selection preserves the held suffix; only
@@ -80,12 +92,14 @@ this document. Parent must serialize those three Jobs changes with Lane C.
 
 Relevant commands are the existing scoped support contract/policy/HTTP/runtime
 suite plus `privacy-runtime-policy.test.mjs` (41 cases), native typecheck, the
-support PG17 umbrella (49 cases, including 17 canonical and 12 native Workflow
-child cases), and the three existing Flutter privacy native-contract,
+support PG17 umbrella (52 cases; separate 17-case canonical and 12-case native
+Workflow child suites), and the three existing Flutter privacy native-contract,
 action-boundary and session-isolation files (32 cases). The new PG cases use
 synthetic data and restricted canonical roles in disposable local databases.
 They cover all four row types, audit/replay-only authors, both hold-placement
-orders, post-selection retention holds, cross-subject/cursor denial, missing
+orders, inactive-hold activation through commit, activation/account-lock
+contention and retry, post-selection retention holds/activation,
+cross-subject/cursor denial, missing
 helper/grants, partial schema, storage-before-database failure, inaccessible
 orphan export and exact-request retry. Native tests use fresh Workflow
 instances; they do not certify same-instance checkpoint replay or live providers.

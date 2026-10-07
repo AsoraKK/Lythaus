@@ -33,9 +33,9 @@ export async function lockSupportScrubParticipants(client: DatabaseClient, reque
   if (!requestIds.length) return;
   const subjects = await client.query<{ id: string }>(`SELECT actor.id FROM identity.users actor
     WHERE actor.id IN (${participantSubjects('$1::uuid[]')}) ORDER BY actor.id FOR UPDATE NOWAIT`, [requestIds]);
-  const holds = await client.query(`SELECT id FROM privacy.legal_holds
-    WHERE subject_id=ANY($1::uuid[]) AND active FOR SHARE`, [subjects.rows.map(row => row.id)]);
-  if (holds.rows.length) throw new Error('support_privacy_held');
+  const holds = await client.query<{ id: string; active: boolean }>(`SELECT id,active FROM privacy.legal_holds
+    WHERE subject_id=ANY($1::uuid[]) ORDER BY id FOR SHARE NOWAIT`, [subjects.rows.map(row => row.id)]);
+  if (holds.rows.some(row => row.active)) throw new Error('support_privacy_held');
 }
 
 export async function reconcileSupportLocationHoldFacts(client: DatabaseClient, subjectId: string): Promise<void> {
