@@ -2262,7 +2262,8 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
               authoritative_or_derived, retention_class, deletion_state, last_verified_at)
            VALUES ($1, 'planetscale', 'privacy.deletion_tombstones', 'deletion_tombstone', $1,
              'authoritative', 'audit', 'retained', now())
-           ON CONFLICT DO UPDATE SET deletion_state = 'retained', last_verified_at = now()`,
+           ON CONFLICT (subject_id, store_type, resource_reference, entity_type, entity_key)
+           DO UPDATE SET deletion_state = 'retained', last_verified_at = now()`,
           [subjectId],
         );
         await client.query(`UPDATE privacy.requests SET state = 'completed', completed_at = now() WHERE id = $1`, [requestId]);
