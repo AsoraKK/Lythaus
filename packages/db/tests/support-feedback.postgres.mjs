@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test, { before, after, mock } from 'node:test';
 import { createServer } from 'node:http';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import pg from 'pg';
 import { generateKeyPair, exportJWK, exportPKCS8, jwtVerify, SignJWT } from 'jose';
 import { hmacLookup, signAccessToken, uuidv7 } from '../../security/src/index.ts';
@@ -615,4 +617,13 @@ test('supplied policy is strict, immutable and has no default business/award con
   for(const value of [undefined,{}, {...policy(),awardPoints:150}, {...policy(),limits:{...policy().limits,page:101}}, {...policy(),privacy:{...policy().privacy,retentionSeconds:0}}])assert.throws(()=>parseSupportServicePolicy(value),e=>e.message==='support_policy_invalid');
   const accessor=policy();Object.defineProperty(accessor,'transitions',{enumerable:true,get(){throw new Error('PRIVATE_SENTINEL');}});assert.throws(()=>parseSupportServicePolicy(accessor),e=>e.message==='support_policy_invalid');
   const impossible=policy();impossible.limits.privateItems=1;impossible.transitions[1].evidenceTypes=['verification','usefulness'];assert.throws(()=>parseSupportServicePolicy(impossible),e=>e.message==='support_policy_invalid');
+});
+test('canonical support proposal, rollback and privacy-locator suite passes in a separate disposable PG17 process',async t=>{
+  const childEnv={...process.env,SUPPORT_LOCAL_PG_URL:supplied};delete childEnv.NODE_TEST_CONTEXT;
+  const result=await promisify(execFile)(process.execPath,['--experimental-strip-types','--test','--test-reporter=tap','packages/db/tests/support-feedback-canonical.postgres.mjs'],
+    {cwd:root,env:childEnv,timeout:60000,maxBuffer:1024*1024});
+  const counts=Object.fromEntries([...result.stdout.matchAll(/^# (tests|pass|fail|cancelled|skipped|todo) (\d+)$/gm)].map(([,name,value])=>[name,Number(value)]));
+  assert.ok(Number.isSafeInteger(counts.tests)&&counts.tests>0);assert.equal(counts.pass,counts.tests);
+  for(const name of ['fail','cancelled','skipped','todo'])assert.equal(counts[name],0);
+  t.diagnostic(`canonical proposal child: ${counts.tests} passed, 0 failed/cancelled/skipped/todo`);
 });
