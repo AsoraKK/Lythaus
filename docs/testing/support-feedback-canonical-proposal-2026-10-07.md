@@ -92,6 +92,12 @@ rows. These boundaries are tested through the proposed canonical wrapper.
 `support_pending_v1` is an explicitly pending classification with no duration or
 new retention-rule row. Actual content-free deleted requests and surviving
 minimal support audit rows use the existing `audit`/`retained` representation.
+Request classification requires `deleted_at` set and both submission and
+member-visible message cleared before using `audit`/`retained`. A deleted parent
+with residual decision text remains `support_pending_v1`/`present` and contributes
+to the proposed Jobs pending count. Its new real-PG regression failed against
+the prior classification, then passed after this correction; it also covers
+retry stability, active hold state, peer isolation and repeated capability rollback.
 Residual private children remain `present`, including on a deleted parent. The
 existing submitter-only scrubber leaves actor-only contributions present; that
 policy/source seam is evidenced rather than hidden.
@@ -173,9 +179,9 @@ and all passed with zero failed/cancelled/skipped/todo, and reports a compact
 receipt. This supplies hosted coverage without modifying shared CI. Its initial
 empty-child-output issue was detected and fixed before accepting the result.
 
-Current local evidence: 16 canonical cases passed; the umbrella has 36 top-level
-tests (the original 35 plus child invocation), with the 16 child cases separately
-verified. Do not double-count the wrapper as another 16. Final committed-head
+Current local evidence: 17 canonical cases passed; the umbrella has 36 top-level
+tests (the original 35 plus child invocation), with the 17 child cases separately
+verified. Do not double-count the wrapper as another 17. Final committed-head
 focused/PG17/typecheck/hygiene results and hosted status are in the handoff.
 
 The existing Worker/runtime tests still use the original local proposal. The new
