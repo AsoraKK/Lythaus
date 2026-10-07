@@ -659,7 +659,7 @@ test(
           const privateOption = page.getByRole('checkbox', { name: 'Private', exact: true });
           await privateOption.scrollIntoViewIfNeeded();
           await privateOption.click();
-          await page.getByText('Profile visibility saved.', { exact: true }).waitFor();
+          await page.locator('flt-semantics').getByText('Profile visibility saved.', { exact: true }).waitFor();
           assert.equal(ownProfile.trustPassportVisibility, 'private');
           await screenshot('settings-saved-visibility');
           await openApp('/settings?tab=profile&profileTab=posts');
