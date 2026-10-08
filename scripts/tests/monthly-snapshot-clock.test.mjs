@@ -107,6 +107,18 @@ test('A failed create still records its cidfile and permits ID-only cleanup', as
     assert.deepEqual(fake.removed, [owner.records[0].id]); assert.equal(fake.containers.size, 0);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
+test('Cleanup reports an unresolved create without guessing a container name or scanning Docker', async () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), 'lythaus-clock-unit-'));
+  try {
+    const calls = [], owner = new DisposableContainers(directory, 'unix:///var/run/docker.sock', async (_executable, args) => {
+      calls.push(args); return { code: 1, stderr: 'synthetic create without a persisted ID' };
+    });
+    await assert.rejects(owner.create('unknown'), /without a persisted ID/);
+    await assert.rejects(owner.removeAll(), error => error.errors.some(cause => /unrecorded_creation/.test(cause.message)));
+    assert.equal(calls.length, 1); assert.equal(calls[0][0], 'create');
+    assert.equal(owner.records.length, 0); assert.equal(owner.creations.length, 1);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
 test('Cleanup refuses a foreign ownership label instead of removing an unrelated container', async () => {
   const directory = mkdtempSync(path.join(os.tmpdir(), 'lythaus-clock-unit-'));
   try {

@@ -190,6 +190,8 @@ export class DisposableContainers {
       } catch (error) { record.state = 'cleanup_failed'; record.error = error.message; failures.push(error); }
       this.save();
     }
+    if (this.creations.some(creation => !this.records.some(record => record.profile === creation.profile)))
+      failures.push(new Error('monthly_clock_cleanup_unrecorded_creation'));
     if (failures.length) throw new AggregateError(failures, 'monthly_clock_cleanup_failed');
   }
 }
