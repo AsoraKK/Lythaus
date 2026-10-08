@@ -27,7 +27,8 @@ test('Inherited database targets, client clock injection and remote Docker are r
   for (const key of ['PLANETSCALE_PG17_TEST_DATABASE_URL', 'DATABASE_URL', 'PGHOST', 'PGPASSWORD', 'PGSERVICE',
     'NODE_OPTIONS', 'LD_PRELOAD', 'FAKETIME', 'FAKETIME_NO_CACHE'])
     assert.throws(() => validateEnvironment({ [key]: 'synthetic-forbidden-value' }), /inherited_environment_refused/);
-  for (const env of [{ DOCKER_HOST: 'tcp://127.0.0.1:2375' }, { DOCKER_HOST: 'ssh://database.example.invalid' }, { DOCKER_CONTEXT: 'production' }])
+  for (const env of [{ DOCKER_HOST: 'tcp://127.0.0.1:2375' }, { DOCKER_HOST: 'ssh://database.example.invalid' },
+    { DOCKER_HOST: 'unix:///run/production.sock' }, { DOCKER_CONTEXT: 'production' }])
     assert.throws(() => validateEnvironment(env), /remote_docker_refused/);
   assert.equal(validateEnvironment({}), 'unix:///var/run/docker.sock');
 });

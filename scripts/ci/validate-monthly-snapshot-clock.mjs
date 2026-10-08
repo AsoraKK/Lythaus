@@ -50,7 +50,7 @@ export function validateEnvironment(env) {
     if (env[key]) throw new Error(`monthly_clock_inherited_environment_refused:${key}`);
   if (env.DOCKER_CONTEXT && env.DOCKER_CONTEXT !== 'default') throw new Error('monthly_clock_remote_docker_refused');
   const endpoint = env.DOCKER_HOST || 'unix:///var/run/docker.sock';
-  if (!/^unix:\/\/\/(?:var\/run|run)\/[A-Za-z0-9_./-]+\.sock$/.test(endpoint)) throw new Error('monthly_clock_remote_docker_refused');
+  if (endpoint !== 'unix:///var/run/docker.sock') throw new Error('monthly_clock_remote_docker_refused');
   return endpoint;
 }
 export function publicDownloadEnvironment(env) {
