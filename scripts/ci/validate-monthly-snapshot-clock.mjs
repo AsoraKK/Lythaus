@@ -158,11 +158,12 @@ async function failureCleanupControls(owner, manifest) {
 }
 async function postgres(owner, profile, library) {
   const extras = ['--publish', '127.0.0.1::5432', '--env', 'TZ=UTC', '--env', 'POSTGRES_DB=lythaus_monthly_test',
-    '--env', 'POSTGRES_HOST_AUTH_METHOD=trust', '--env', 'PGDATA=/tmp/pgdata', '--env', 'PGHOST=/tmp'];
+    '--env', 'POSTGRES_HOST_AUTH_METHOD=trust', '--env', 'PGDATA=/tmp/pgdata',
+    '--tmpfs', '/var/run/postgresql:rw,nosuid,nodev,uid=999,gid=999,mode=3775'];
   if (profile !== 'control') extras.push('--mount', `type=bind,src=${library},dst=/opt/lythaus-libfaketime.so.1,readonly`,
     '--env', 'LD_PRELOAD=/opt/lythaus-libfaketime.so.1', '--env', `FAKETIME=@${CLOCK_TEST_PINS[profile]}`,
     '--env', 'FAKETIME_DONT_FAKE_MONOTONIC=1', '--env', 'FAKETIME_DISABLE_SHM=1', '--env', 'FAKETIME_NO_CACHE=1');
-  const id = await owner.create(profile, extras, ['postgres', '-c', 'unix_socket_directories=/tmp']);
+  const id = await owner.create(profile, extras, ['postgres']);
   requireSuccess(await owner.docker(['start', id]), 'monthly_clock_postgres_start');
   const container = await owner.inspect(id);
   assert.equal(container.HostConfig.Privileged, false);
@@ -170,15 +171,19 @@ async function postgres(owner, profile, library) {
   assert.deepEqual(container.HostConfig.CapDrop, ['ALL']);
   assert.ok(container.HostConfig.SecurityOpt.includes('no-new-privileges'));
   for (let attempt = 0; attempt < 60; attempt++) {
-    if ((await owner.docker(['exec', id, 'env', '-u', 'LD_PRELOAD', '-u', 'FAKETIME', 'pg_isready', '-h', '/tmp', '-U', 'postgres', '-d', 'lythaus_monthly_test'])).code === 0)
+    if ((await owner.docker(['exec', id, 'env', '-u', 'LD_PRELOAD', '-u', 'FAKETIME',
+      'psql', '-h', '127.0.0.1', '-U', 'postgres', '-d', 'lythaus_monthly_test', '-At', '-c', 'SELECT 1'])).code === 0)
       return { id, url: localDatabaseUrl(requireSuccess(await owner.docker(['port', id, '5432/tcp']), 'monthly_clock_published_port')) };
+    if (!(await owner.inspect(id)).State.Running) break;
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
+  await owner.docker(['logs', id], { stdoutFile: path.join(owner.directory, `${profile}-startup.log`),
+    stderrFile: path.join(owner.directory, `${profile}-startup.stderr.log`) });
   throw new Error('monthly_clock_postgres_not_ready');
 }
 async function sql(owner, id, text) {
   return requireSuccess(await owner.docker(['exec', id, 'env', '-u', 'LD_PRELOAD', '-u', 'FAKETIME',
-    'psql', '-h', '/tmp', '-U', 'postgres', '-d', 'lythaus_monthly_test', '-At', '-v', 'ON_ERROR_STOP=1', '-c', text]), 'monthly_clock_sql_control');
+    'psql', '-h', '127.0.0.1', '-U', 'postgres', '-d', 'lythaus_monthly_test', '-At', '-v', 'ON_ERROR_STOP=1', '-c', text]), 'monthly_clock_sql_control');
 }
 async function library(owner, directory) {
   const archive = path.join(directory, 'libfaketime.deb');
