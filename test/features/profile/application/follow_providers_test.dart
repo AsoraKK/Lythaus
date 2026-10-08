@@ -73,42 +73,45 @@ void main() {
     expect(status.followedBy, isTrue);
   });
 
-  test('follow status cache is rebound when the signed-in account changes', () async {
-    final service = MockFollowService();
-    when(
-      () => service.getStatus(
-        targetUserId: 'target',
-        accessToken: 'token-owner-a',
-        cancelToken: any(named: 'cancelToken'),
-      ),
-    ).thenAnswer((_) async => const FollowStatus(following: true));
-    when(
-      () => service.getStatus(
-        targetUserId: 'target',
-        accessToken: 'token-owner-b',
-        cancelToken: any(named: 'cancelToken'),
-      ),
-    ).thenAnswer((_) async => const FollowStatus(following: false));
-
-    final container = ProviderContainer(
-      overrides: [
-        currentUserProvider.overrideWith((ref) => ref.watch(_session)),
-        authSessionRevisionProvider.overrideWith(
-          (ref) => AuthSessionRevision(ref.read(_session.notifier)),
+  test(
+    'follow status cache is rebound when the signed-in account changes',
+    () async {
+      final service = MockFollowService();
+      when(
+        () => service.getStatus(
+          targetUserId: 'target',
+          accessToken: 'token-owner-a',
+          cancelToken: any(named: 'cancelToken'),
         ),
-        jwtProvider.overrideWith(
-          (ref) async => 'token-${ref.watch(_session)?.id}',
+      ).thenAnswer((_) async => const FollowStatus(following: true));
+      when(
+        () => service.getStatus(
+          targetUserId: 'target',
+          accessToken: 'token-owner-b',
+          cancelToken: any(named: 'cancelToken'),
         ),
-        followServiceProvider.overrideWith((ref) => service),
-      ],
-    );
-    addTearDown(container.dispose);
-    final provider = followStatusProvider('target');
-    final subscription = container.listen(provider, (_, _) {});
-    addTearDown(subscription.close);
+      ).thenAnswer((_) async => const FollowStatus(following: false));
 
-    expect((await container.read(provider.future)).following, isTrue);
-    container.read(_session.notifier).state = _owner('owner-b');
-    expect((await container.read(provider.future)).following, isFalse);
-  });
+      final container = ProviderContainer(
+        overrides: [
+          currentUserProvider.overrideWith((ref) => ref.watch(_session)),
+          authSessionRevisionProvider.overrideWith(
+            (ref) => AuthSessionRevision(ref.read(_session.notifier)),
+          ),
+          jwtProvider.overrideWith(
+            (ref) async => 'token-${ref.watch(_session)?.id}',
+          ),
+          followServiceProvider.overrideWith((ref) => service),
+        ],
+      );
+      addTearDown(container.dispose);
+      final provider = followStatusProvider('target');
+      final subscription = container.listen(provider, (_, _) {});
+      addTearDown(subscription.close);
+
+      expect((await container.read(provider.future)).following, isTrue);
+      container.read(_session.notifier).state = _owner('owner-b');
+      expect((await container.read(provider.future)).following, isFalse);
+    },
+  );
 }

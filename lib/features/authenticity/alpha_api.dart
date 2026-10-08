@@ -26,19 +26,19 @@ final privateAlphaApiProvider = Provider<PrivateAlphaApi>((ref) {
 
 class PrivateAlphaApi {
   PrivateAlphaApi(this._dio, this._token, {Dio Function()? uploadClient})
-      : _uploadClient = uploadClient ?? _newUploadClient;
+    : _uploadClient = uploadClient ?? _newUploadClient;
 
   final Dio _dio;
   final Future<String?> Function() _token;
   final Dio Function() _uploadClient;
 
   static Dio _newUploadClient() => Dio(
-        BaseOptions(
-          connectTimeout: const Duration(seconds: 15),
-          sendTimeout: const Duration(minutes: 2),
-          receiveTimeout: const Duration(seconds: 30),
-        ),
-      );
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 15),
+      sendTimeout: const Duration(minutes: 2),
+      receiveTimeout: const Duration(seconds: 30),
+    ),
+  );
 
   Future<Map<String, dynamic>> request(
     String suffix, {

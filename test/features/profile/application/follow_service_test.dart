@@ -73,13 +73,15 @@ void main() {
 
     expect(result.targetUserId, 'u1');
     expect(result.created, isTrue);
-    final options = verify(
-      () => dio.post<Map<String, dynamic>>(
-        '/api/users/u1/follow',
-        cancelToken: null,
-        options: captureAny(named: 'options'),
-      ),
-    ).captured.single as Options;
+    final options =
+        verify(
+              () => dio.post<Map<String, dynamic>>(
+                '/api/users/u1/follow',
+                cancelToken: null,
+                options: captureAny(named: 'options'),
+              ),
+            ).captured.single
+            as Options;
     expect(options.headers?['Idempotency-Key'], 'follow-create-key');
   });
 

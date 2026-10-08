@@ -134,7 +134,10 @@ void main() {
     );
     expect(failure.code, 'post_tag_limit_exceeded');
     expect(failure.uncertain, isFalse);
-    expect(failure.message, 'This post has too many distinct tags for search. Remove some tags and try again.');
+    expect(
+      failure.message,
+      'This post has too many distinct tags for search. Remove some tags and try again.',
+    );
   });
 
   test('post submit locks before token lookup and freezes the draft', () async {
