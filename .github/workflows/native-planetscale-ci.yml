@@ -208,30 +208,37 @@ jobs:
 
   settled-clock:
     name: Monthly snapshots isolated settled clock
+    if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       LYTHAUS_EXPECTED_CHECKOUT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        if: ${{ !cancelled() }}
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        if: ${{ !cancelled() }}
         with:
           node-version: 22.23.3
           cache: npm
       - name: Verify exact checkout before test preparation
+        if: ${{ !cancelled() }}
         run: test "$(git rev-parse HEAD)" = "$LYTHAUS_EXPECTED_CHECKOUT_SHA"
       - run: npm ci --ignore-scripts --no-audit
+        if: ${{ !cancelled() }}
       - name: Validate SHA, target, TAP and cleanup controls
         id: clock-controls
-        env:
-          LYTHAUS_MONTHLY_CLOCK_INTERRUPTION_TESTS: '1'
-        run: node --test --test-reporter=tap scripts/tests/monthly-snapshot-clock.test.mjs
+        if: ${{ !cancelled() }}
+        run: >-
+          exec node scripts/ci/validate-monthly-snapshot-clock.mjs
+          --expected-sha "$LYTHAUS_EXPECTED_CHECKOUT_SHA" --interruption-controls
       - name: Prove premature refusal and settled positive snapshots
         id: clock-profile
+        if: ${{ !cancelled() }}
         run: >-
-          node scripts/ci/validate-monthly-snapshot-clock.mjs
+          exec node scripts/ci/validate-monthly-snapshot-clock.mjs
           --expected-sha "$LYTHAUS_EXPECTED_CHECKOUT_SHA"
       - name: Clean only recorded interruption-test resources
         if: always() && steps.clock-controls.outputs.evidence_directory != ''

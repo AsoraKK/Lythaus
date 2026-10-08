@@ -40,7 +40,7 @@ export class Interruption {
   get exitCode() { return this.received === 'SIGINT' ? 130 : this.received === 'SIGTERM' ? 143 : undefined; }
 }
 
-export async function command(executable, args, { cwd = root, env = safeEnvironment(), stdoutFile, stderrFile, timeout = 180000, signal } = {}) {
+export async function command(executable, args, { cwd = root, env = safeEnvironment(), stdoutFile, stderrFile, timeout = 180000, signal, killGraceMilliseconds = 1000 } = {}) {
   signal?.throwIfAborted();
   for (const file of [stdoutFile, stderrFile]) if (file && !existsSync(file)) writeFileSync(file, '');
   return await new Promise((resolve, reject) => {
@@ -60,7 +60,7 @@ export async function command(executable, args, { cwd = root, env = safeEnvironm
     const stop = () => {
       if (stopping) return;
       stopping = true; kill('SIGTERM');
-      escalation = setTimeout(() => { kill('SIGKILL'); escalation = undefined; finish(); }, 1000);
+      escalation = setTimeout(() => { kill('SIGKILL'); escalation = undefined; finish(); }, killGraceMilliseconds);
     };
     const timer = setTimeout(() => { timedOut = true; stop(); }, timeout);
     signal?.addEventListener('abort', stop, { once: true });
@@ -340,7 +340,7 @@ export async function cleanupEvidenceRun(directory, expectedSha, endpoint = vali
       await owner.removeAll({ deadline }); owners.push({ runId, containers: owner.records });
     } catch (error) { failures.push(error); }
   }
-  manifest.cleanupFallback = { complete: failures.length === 0, owners, clock: new Date().toISOString(),
+  manifest.cleanupFallback = { complete: failures.length === 0, owners, clock: new Date().toISOString(), originalOutcome: manifest.outcome,
     errors: failures.map(error => error.message) };
   writeFileSync(path.join(directory, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`); artifactChecksums(directory);
   if (failures.length) throw new AggregateError(failures, 'monthly_clock_fallback_cleanup_failed');
@@ -449,11 +449,23 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const interruption = new Interruption();
   try {
     const { values } = parseArgs({ options: { 'expected-sha': { type: 'string' }, 'artifacts-dir': { type: 'string', default: '.artifacts/monthly-snapshot-clock' },
-      'cleanup-run': { type: 'string' }, 'interruption-probe': { type: 'string' }, 'probe-directory': { type: 'string' }, 'probe-owner-id': { type: 'string' } } });
-    if (values['cleanup-run'] && values['interruption-probe']) throw new Error('monthly_clock_cli_mode_conflict');
+      'cleanup-run': { type: 'string' }, 'interruption-controls': { type: 'boolean' },
+      'interruption-probe': { type: 'string' }, 'probe-directory': { type: 'string' }, 'probe-owner-id': { type: 'string' } } });
+    if ([values['cleanup-run'], values['interruption-probe'], values['interruption-controls']].filter(Boolean).length > 1)
+      throw new Error('monthly_clock_cli_mode_conflict');
     if (values['cleanup-run']) {
       const checkout = await verifyCheckout(values['expected-sha']);
-      await cleanupEvidenceRun(values['cleanup-run'], checkout.expectedSha, checkout.endpoint);
+      const cleanup = await cleanupEvidenceRun(values['cleanup-run'], checkout.expectedSha, checkout.endpoint);
+      process.stdout.write(`Verified recorded cleanup for ${checkout.expectedSha}: ${cleanup.owners.length} owners, `
+        + `${cleanup.owners.flatMap(owner => owner.containers).length} IDs absent, original outcome ${cleanup.originalOutcome}\n`);
+    } else if (values['interruption-controls']) {
+      const checkout = await verifyCheckout(values['expected-sha']);
+      const result = await command(process.execPath, ['--test', '--test-reporter=tap', 'scripts/tests/monthly-snapshot-clock.test.mjs'],
+        { signal: interruption.signal, killGraceMilliseconds: 4000,
+          env: { ...safeEnvironment(), LYTHAUS_EXPECTED_CHECKOUT_SHA: checkout.expectedSha, LYTHAUS_MONTHLY_CLOCK_INTERRUPTION_TESTS: '1',
+            ...(process.env.GITHUB_OUTPUT ? { GITHUB_OUTPUT: process.env.GITHUB_OUTPUT } : {}) } });
+      process.stdout.write(`${result.stdout}\n`); process.stderr.write(`${result.stderr}\n`);
+      requireSuccess(result, 'monthly_clock_interruption_controls');
     } else if (values['interruption-probe']) {
       await runInterruptionProbe(values['expected-sha'], values['probe-directory'], values['probe-owner-id'], values['interruption-probe'], interruption);
     } else await runClockValidation(values['expected-sha'], values['artifacts-dir'], interruption);
