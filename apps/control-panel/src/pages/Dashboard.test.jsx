@@ -57,9 +57,21 @@ describe('Overview', () => {
     expect(within(card('Posts')).getByText('Synthetic test population definition')).toBeVisible();
   });
 
+  it('includes contributors in a labelled known-active lower bound without claiming reader coverage', async () => {
+    show();
+    await waitFor(() => expect(value('Unique contributors')).toBe('3'));
+    expect(value('Known active lower bound')).toBe('At least 3');
+    expect(value('Active members')).toBe('Unavailable');
+    expect(value('Contributor share of active members')).toBe('Unavailable');
+    expect(value('Quiet members')).toBe('Unavailable');
+    expect(within(card('Known active lower bound')).getByText(/retained public posts and comments/)).toBeInTheDocument();
+    expect(screen.getByText(/Contributors are active members; readers can be active without contributing/)).toBeInTheDocument();
+    expect(adminRequest).toHaveBeenCalledTimes(7);
+  });
+
   it('distinguishes known zero, empty cohorts, missing fields and failed sources', async () => {
     adminRequest.mockImplementation((path, options) => {
-      if (path === 'overview') return Promise.resolve(community('today', { metrics: { posts: metric(0, 0), commentsPerPost: metric(null, null, 'ratio') } }));
+      if (path === 'overview') return Promise.resolve(community('today', { metrics: { posts: metric(0, 0), uniqueContributors: metric(0, 0), commentsPerPost: metric(null, null, 'ratio') } }));
       if (path === 'audit') return Promise.reject(new Error('Synthetic unavailable source'));
       if (path === 'moderation/cases') return Promise.resolve({});
       if (path === 'appeals/pending-adjudication') return Promise.resolve({ items: [] });
@@ -69,6 +81,11 @@ describe('Overview', () => {
     show(); await waitFor(() => expect(value('Posts')).toBe('0'));
     expect(value('Comments')).toBe('Unavailable');
     expect(value('Comments per new post')).toBe('Unavailable');
+    expect(value('Known active lower bound')).toBe('At least 0');
+    expect(value('Active members')).toBe('Unavailable');
+    expect(value('Contributor share of active members')).toBe('Unavailable');
+    expect(value('Quiet members')).toBe('Unavailable');
+    expect(within(card('Known active lower bound')).getByText(/Readers remain unmeasured/)).toBeInTheDocument();
     expect(operational('Pending adjudications in loaded page')).toBe('0');
     expect(operational('Open moderation cases in loaded page')).toBe('Unavailable');
     expect(operational('Recent audit entries in loaded page')).toBe('Unavailable');
@@ -95,14 +112,17 @@ describe('Overview', () => {
     adminRequest.mockImplementation((path, options) => Promise.resolve(path === 'overview' ? community('today', overrides) : sources(path, options)));
     show(); await waitFor(() => expect(operational('Admin API')).toBe('ok'));
     expect(value('Posts')).toBe('Unavailable'); expect(value('Premium')).toBe('Unavailable');
+    expect(value('Known active lower bound')).toBe('Unavailable');
   });
 
   it('expires samples without polling or keeping old values on screen', async () => {
     vi.useFakeTimers();
     show(); await act(async () => {});
     expect(value('Posts')).toBe('2');
+    expect(value('Known active lower bound')).toBe('At least 3');
     await act(async () => { vi.advanceTimersByTime(65001); });
     expect(value('Posts')).toBe('Unavailable');
+    expect(value('Known active lower bound')).toBe('Unavailable');
     expect(operational('Open moderation cases in loaded page')).toBe('Unavailable');
     expect(adminRequest).toHaveBeenCalledTimes(7);
   });
@@ -153,23 +173,27 @@ describe('Overview', () => {
     const calls = adminRequest.mock.calls.length;
     await act(async () => { vi.advanceTimersByTime(1001); });
     expect(value('Posts')).toBe('Unavailable');
+    expect(value('Known active lower bound')).toBe('Unavailable');
     expect(adminRequest).toHaveBeenCalledTimes(calls);
   });
 
   it('discards a late earlier-period response', async () => {
     let resolveToday;
     adminRequest.mockImplementation((path, options) => path === 'overview' && options.query.period === 'today'
-      ? new Promise(resolve => { resolveToday = resolve; }) : Promise.resolve(path === 'overview' ? community(options.query.period, { metrics: { posts: metric(8) } }) : sources(path, options)));
+      ? new Promise(resolve => { resolveToday = resolve; }) : Promise.resolve(path === 'overview' ? community(options.query.period, { metrics: { posts: metric(8), uniqueContributors: metric(5) } }) : sources(path, options)));
     show(); fireEvent.change(screen.getByLabelText('Reporting period (UTC)'), { target: { value: 'mtd' } });
     await waitFor(() => expect(value('Posts')).toBe('8'));
+    expect(value('Known active lower bound')).toBe('At least 5');
     await act(async () => { resolveToday(community()); });
     expect(value('Posts')).toBe('8');
+    expect(value('Known active lower bound')).toBe('At least 5');
   });
 
   it('shows owner denial without fabricating community totals', async () => {
     adminRequest.mockImplementation((path, options) => path === 'overview' ? Promise.reject({ status: 403 }) : Promise.resolve(sources(path, options)));
     show(); await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Current active owner access'));
     expect(value('Posts')).toBe('Unavailable'); await waitFor(() => expect(operational('Admin API')).toBe('ok'));
+    expect(value('Known active lower bound')).toBe('Unavailable');
   });
 
   it('clears the displayed snapshot after access expires during refresh', async () => {
@@ -178,11 +202,23 @@ describe('Overview', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Administrator access must be checked again'));
     expect(value('Posts')).toBe('Unavailable'); expect(operational('Accounts with active status')).toBe('Unavailable');
+    expect(value('Known active lower bound')).toBe('Unavailable');
   });
 
   it('rejects incompatible version or period data instead of relabeling it', async () => {
     adminRequest.mockImplementation((path, options) => Promise.resolve(path === 'overview' ? community('ytd', { contractVersion: 'wrong' }) : sources(path, options)));
     show(); await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Community metrics are unavailable'));
     expect(value('Posts')).toBe('Unavailable');
+    expect(value('Known active lower bound')).toBe('Unavailable');
+  });
+
+  it('withholds capped contributor evidence without borrowing prior or account-status totals', async () => {
+    const capped = { ...metric(null, 2), reason: 'snapshot_row_limit' };
+    adminRequest.mockImplementation((path, options) => Promise.resolve(path === 'overview'
+      ? community('today', { metrics: { uniqueContributors: capped } }) : sources(path, options)));
+    show(); await waitFor(() => expect(operational('Accounts with active status')).toBe('3'));
+    expect(value('Known active lower bound')).toBe('Unavailable');
+    expect(value('Active members')).toBe('Unavailable');
+    expect(within(card('Known active lower bound')).getByText(/Snapshot capacity exceeded/)).toBeInTheDocument();
   });
 });

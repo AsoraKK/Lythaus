@@ -1123,6 +1123,7 @@ textarea.lyth-input {
   .nav {
     flex-direction: column;
     align-items: flex-start;
+    position: static;
   }
 
   .main {
