@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { CLOCK_TEST_PINS, DisposableContainers, localDatabaseUrl, validateEnvironment,
-  validatePositiveTap, verifyCheckout, publicDownloadEnvironment } from '../ci/validate-monthly-snapshot-clock.mjs';
+  validatePositiveTap, verifyCheckout, publicDownloadEnvironment, command } from '../ci/validate-monthly-snapshot-clock.mjs';
 
 const expectedSha = '1'.repeat(40);
 const ok = stdout => ({ code: 0, stdout, stderr: '' });
@@ -37,11 +37,19 @@ test('Database URL is constructed exclusively from an owned loopback Docker port
     assert.throws(() => localDatabaseUrl(port), /nonlocal_port_refused/);
 });
 test('Public dependency fetch cannot forward credentials, tokens or host clock injection', () => {
-  for (const proxy of ['http://user:synthetic@proxy.example.invalid', 'file:///tmp/proxy'])
+  for (const proxy of ['http://user:synthetic@proxy.example.invalid', 'file:///tmp/proxy', 'http://proxy.example.invalid/?token=synthetic'])
     assert.throws(() => publicDownloadEnvironment({ HTTPS_PROXY: proxy }), /credentialed_proxy_refused/);
   const env = publicDownloadEnvironment({ HTTPS_PROXY: 'http://127.0.0.1:8080', GITHUB_TOKEN: 'synthetic', LD_PRELOAD: 'synthetic' });
   assert.equal(env.HTTPS_PROXY, 'http://127.0.0.1:8080');
   assert.equal(env.GITHUB_TOKEN, undefined); assert.equal(env.LD_PRELOAD, undefined);
+});
+test('Successful empty-output commands still produce checksumable stdout and stderr evidence', async () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), 'lythaus-clock-unit-'));
+  try {
+    const stdoutFile = path.join(directory, 'stdout.log'), stderrFile = path.join(directory, 'stderr.log');
+    assert.equal((await command(process.execPath, ['-e', 'process.exit(0)'], { stdoutFile, stderrFile })).code, 0);
+    assert.equal(readFileSync(stdoutFile, 'utf8'), ''); assert.equal(readFileSync(stderrFile, 'utf8'), '');
+  } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 test('Positive evidence requires every expected test, all six named positive cases and zero skips', () => {
   const tap = `${Array.from({ length: 6 }, (_, index) => `ok ${index + 1} - V2 case POSITIVE: ${index}`).join('\n')}\n# tests 32\n# pass 32\n# fail 0\n# skipped 0\n`;

@@ -23,6 +23,7 @@ const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const safeEnvironment = () => ({ PATH: process.env.PATH, LANG: 'C.UTF-8', TZ: 'UTC' });
 
 export async function command(executable, args, { cwd = root, env = safeEnvironment(), stdoutFile, stderrFile, timeout = 180000 } = {}) {
+  for (const file of [stdoutFile, stderrFile]) if (file && !existsSync(file)) writeFileSync(file, '');
   return await new Promise((resolve, reject) => {
     const child = spawn(executable, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '', stderr = '', timedOut = false;
@@ -57,7 +58,7 @@ export function publicDownloadEnvironment(env) {
   for (const key of ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy']) {
     if (!env[key]) continue;
     const proxy = new URL(env[key]);
-    if (!['http:', 'https:'].includes(proxy.protocol) || proxy.username || proxy.password)
+    if (!['http:', 'https:'].includes(proxy.protocol) || proxy.username || proxy.password || proxy.search || proxy.hash || proxy.pathname !== '/')
       throw new Error('monthly_clock_credentialed_proxy_refused');
     result[key] = env[key];
   }
@@ -167,9 +168,13 @@ async function postgres(owner, profile, library) {
   requireSuccess(await owner.docker(['start', id]), 'monthly_clock_postgres_start');
   const container = await owner.inspect(id);
   assert.equal(container.HostConfig.Privileged, false);
+  assert.equal(container.HostConfig.ReadonlyRootfs, true);
   assert.equal(container.Config.User, 'postgres');
   assert.deepEqual(container.HostConfig.CapDrop, ['ALL']);
   assert.ok(container.HostConfig.SecurityOpt.includes('no-new-privileges'));
+  owner.records.find(record => record.id === id).safety = { user: container.Config.User, privileged: false,
+    readonlyRootfs: true, capabilitiesDropped: container.HostConfig.CapDrop, image: container.Config.Image, imageId: container.Image };
+  owner.save();
   for (let attempt = 0; attempt < 60; attempt++) {
     if ((await owner.docker(['exec', id, 'env', '-u', 'LD_PRELOAD', '-u', 'FAKETIME',
       'psql', '-h', '127.0.0.1', '-U', 'postgres', '-d', 'lythaus_monthly_test', '-At', '-c', 'SELECT 1'])).code === 0)
@@ -262,7 +267,7 @@ export async function runClockValidation(expectedSha, artifactRoot) {
           /snapshot_positive_profile_requires_actual_postgresql_settlement_clock/);
         const after = await sql(owner, target.id, `SELECT json_build_object('users',(SELECT count(*) FROM identity.users),
           'sources',to_regclass('trust.monthly_reputation_sources'),'snapshots',to_regclass('trust.monthly_reward_snapshots'))`);
-        assert.equal(after, before); evidence.prematureProfileRefused = true; evidence.fixtureWrites = false;
+        assert.equal(after, before); evidence.prematureProfileRefused = true; evidence.fixtureWrites = false; evidence.fixtureState = JSON.parse(after);
       } else if (profile === 'settled') {
         const positive = await nodeFixture(directory, expectedSha, profile, target.url, [...args, '--experimental-test-coverage',
           '--test-coverage-include=packages/db/src/monthly-reward-snapshots.ts', '--test-coverage-include=apps/lythaus-jobs/src/monthly-reward-snapshots.ts',
