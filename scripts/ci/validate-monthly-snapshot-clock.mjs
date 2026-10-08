@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, appendFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, appendFileSync, chmodSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -187,12 +187,14 @@ async function library(owner, directory) {
     '--proto', '=https', '--proto-redir', '=https', '--max-time', '60', '--output', archive, CLOCK_TEST_PINS.libraryUrl],
   { env: publicDownloadEnvironment(process.env), stdoutFile, stderrFile }), 'monthly_clock_library_download');
   assert.equal(sha256(readFileSync(archive)), CLOCK_TEST_PINS.packageSha256);
+  chmodSync(archive, 0o444);
   const id = await owner.create('library', ['--network', 'none', '--mount', `type=bind,src=${archive},dst=/opt/libfaketime.deb,readonly`,
     '--entrypoint', '/usr/bin/dpkg-deb'], ['--extract', '/opt/libfaketime.deb', '/tmp/library']);
   requireSuccess(await owner.docker(['start', '--attach', id], { stdoutFile, stderrFile }), 'monthly_clock_library_extract');
   const destination = path.join(directory, 'libfaketime.so.1');
   requireSuccess(await owner.docker(['cp', `${id}:/tmp/library/usr/lib/x86_64-linux-gnu/faketime/libfaketime.so.1`, destination]), 'monthly_clock_library_copy');
   assert.equal(sha256(readFileSync(destination)), CLOCK_TEST_PINS.librarySha256);
+  chmodSync(destination, 0o444);
   return destination;
 }
 async function nodeFixture(directory, expectedSha, profile, url, args, execute = command) {
