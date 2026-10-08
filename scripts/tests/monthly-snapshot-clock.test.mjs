@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { CLOCK_TEST_PINS, DisposableContainers, localDatabaseUrl, validateEnvironment,
-  validatePositiveTap, verifyCheckout } from '../ci/validate-monthly-snapshot-clock.mjs';
+  validatePositiveTap, verifyCheckout, publicDownloadEnvironment } from '../ci/validate-monthly-snapshot-clock.mjs';
 
 const expectedSha = '1'.repeat(40);
 const ok = stdout => ({ code: 0, stdout, stderr: '' });
@@ -35,6 +35,13 @@ test('Database URL is constructed exclusively from an owned loopback Docker port
   assert.equal(localDatabaseUrl('127.0.0.1:32768\n'), 'postgresql://postgres@127.0.0.1:32768/lythaus_monthly_test?sslmode=disable');
   for (const port of ['0.0.0.0:5432', 'database.example.invalid:5432', '[::]:5432', '127.0.0.1:5432\n0.0.0.0:5432', '127.0.0.1:1', '127.0.0.1:65536'])
     assert.throws(() => localDatabaseUrl(port), /nonlocal_port_refused/);
+});
+test('Public dependency fetch cannot forward credentials, tokens or host clock injection', () => {
+  for (const proxy of ['http://user:synthetic@proxy.example.invalid', 'file:///tmp/proxy'])
+    assert.throws(() => publicDownloadEnvironment({ HTTPS_PROXY: proxy }), /credentialed_proxy_refused/);
+  const env = publicDownloadEnvironment({ HTTPS_PROXY: 'http://127.0.0.1:8080', GITHUB_TOKEN: 'synthetic', LD_PRELOAD: 'synthetic' });
+  assert.equal(env.HTTPS_PROXY, 'http://127.0.0.1:8080');
+  assert.equal(env.GITHUB_TOKEN, undefined); assert.equal(env.LD_PRELOAD, undefined);
 });
 test('Positive evidence requires every expected test, all six named positive cases and zero skips', () => {
   const tap = `${Array.from({ length: 6 }, (_, index) => `ok ${index + 1} - V2 case POSITIVE: ${index}`).join('\n')}\n# tests 32\n# pass 32\n# fail 0\n# skipped 0\n`;

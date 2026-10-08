@@ -10,6 +10,8 @@ export const CLOCK_TEST_PINS = Object.freeze({
   node: 'v22.23.3',
   image: 'postgres@sha256:d74eeac9a635390a49bc21bd49fccd973de707e2a53a76ac49b552b8712ec46f',
   libraryPackage: 'libfaketime=0.9.10+2024-06-05+gba9ed5b2-0.6',
+  libraryUrl: 'https://deb.debian.org/debian/pool/main/f/faketime/libfaketime_0.9.10+2024-06-05+gba9ed5b2-0.6_amd64.deb',
+  packageSha256: '4ecb98d7f6149e4c297a5946c4fa231a1b794d203053962e295dd3a18a47f269',
   librarySha256: 'f38066cb0a4a0bb6a8955c7cb48704ae3aec1b28a8e1ad45ba3db3429050cc40',
   premature: '2026-10-08 12:00:00',
   settled: '2026-11-22 12:00:00',
@@ -49,6 +51,17 @@ export function validateEnvironment(env) {
   const endpoint = env.DOCKER_HOST || 'unix:///var/run/docker.sock';
   if (!/^unix:\/\/\/(?:var\/run|run)\/[A-Za-z0-9_./-]+\.sock$/.test(endpoint)) throw new Error('monthly_clock_remote_docker_refused');
   return endpoint;
+}
+export function publicDownloadEnvironment(env) {
+  const result = safeEnvironment();
+  for (const key of ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy']) {
+    if (!env[key]) continue;
+    const proxy = new URL(env[key]);
+    if (!['http:', 'https:'].includes(proxy.protocol) || proxy.username || proxy.password)
+      throw new Error('monthly_clock_credentialed_proxy_refused');
+    result[key] = env[key];
+  }
+  return result;
 }
 export async function verifyCheckout(expectedSha, { directory = root, env = process.env, version = process.version, execute = command } = {}) {
   if (!/^[0-9a-f]{40}$/.test(expectedSha ?? '')) throw new Error('monthly_clock_expected_sha_required');
@@ -125,13 +138,13 @@ export class DisposableContainers {
 }
 
 async function failureCleanupControls(owner, manifest) {
-  const sentinel = await owner.create('sentinel', ['--entrypoint', '/bin/true']);
+  const sentinel = await owner.create('sentinel', ['--network', 'none', '--entrypoint', '/bin/true']);
   manifest.cleanupControls = [];
   for (const stage of ['after_create', 'after_start']) {
     const nested = new DisposableContainers(owner.directory, owner.env.DOCKER_HOST);
     let injected = false;
     try {
-      const id = await nested.create(stage, ['--entrypoint', '/bin/sleep'], ['120']);
+      const id = await nested.create(stage, ['--network', 'none', '--entrypoint', '/bin/sleep'], ['120']);
       if (stage === 'after_start') requireSuccess(await nested.docker(['start', id]), 'monthly_clock_failure_control_start');
       injected = true;
       throw new Error('monthly_clock_expected_cleanup_failure');
@@ -168,11 +181,15 @@ async function sql(owner, id, text) {
     'psql', '-h', '/tmp', '-U', 'postgres', '-d', 'lythaus_monthly_test', '-At', '-v', 'ON_ERROR_STOP=1', '-c', text]), 'monthly_clock_sql_control');
 }
 async function library(owner, directory) {
-  const apt = '-o Dir::State::lists=/tmp/apt/lists -o Dir::Cache=/tmp/apt/cache -o APT::Sandbox::User=postgres';
-  const script = `mkdir -p /tmp/apt/lists/partial /tmp/apt/cache/archives/partial; cd /tmp; apt-get ${apt} update; apt-get ${apt} download ${CLOCK_TEST_PINS.libraryPackage}; dpkg-deb --extract /tmp/libfaketime_*.deb /tmp/library`;
-  const id = await owner.create('library', ['--entrypoint', '/bin/sh'], ['-ec', script]);
+  const archive = path.join(directory, 'libfaketime.deb');
   const stdoutFile = path.join(directory, 'library-install.log'), stderrFile = path.join(directory, 'library-install.stderr.log');
-  requireSuccess(await owner.docker(['start', '--attach', id], { stdoutFile, stderrFile }), 'monthly_clock_library_download');
+  requireSuccess(await command('curl', ['--disable', '--fail', '--location', '--silent', '--show-error',
+    '--proto', '=https', '--proto-redir', '=https', '--max-time', '60', '--output', archive, CLOCK_TEST_PINS.libraryUrl],
+  { env: publicDownloadEnvironment(process.env), stdoutFile, stderrFile }), 'monthly_clock_library_download');
+  assert.equal(sha256(readFileSync(archive)), CLOCK_TEST_PINS.packageSha256);
+  const id = await owner.create('library', ['--network', 'none', '--mount', `type=bind,src=${archive},dst=/opt/libfaketime.deb,readonly`,
+    '--entrypoint', '/usr/bin/dpkg-deb'], ['--extract', '/opt/libfaketime.deb', '/tmp/library']);
+  requireSuccess(await owner.docker(['start', '--attach', id], { stdoutFile, stderrFile }), 'monthly_clock_library_extract');
   const destination = path.join(directory, 'libfaketime.so.1');
   requireSuccess(await owner.docker(['cp', `${id}:/tmp/library/usr/lib/x86_64-linux-gnu/faketime/libfaketime.so.1`, destination]), 'monthly_clock_library_copy');
   assert.equal(sha256(readFileSync(destination)), CLOCK_TEST_PINS.librarySha256);
