@@ -2,6 +2,11 @@ name: Native PlanetScale PostgreSQL 17 validation
 
 on:
   workflow_dispatch:
+    inputs:
+      monthly_cancellation_control:
+        description: 'Hold the synthetic helper for a bounded cancellation test; cannot pass positive validation'
+        type: boolean
+        default: false
   pull_request:
     paths:
       - 'database/planetscale/**'
@@ -236,9 +241,13 @@ jobs:
       - name: Prove premature refusal and settled positive snapshots
         id: clock-profile
         if: ${{ !cancelled() }}
-        run: >-
-          exec node scripts/ci/validate-monthly-snapshot-clock.mjs
-          --expected-sha "$LYTHAUS_EXPECTED_CHECKOUT_SHA"
+        env:
+          MONTHLY_CANCELLATION_CONTROL: ${{ github.event_name == 'workflow_dispatch' && inputs.monthly_cancellation_control && 'true' || 'false' }}
+        run: |
+          if [ "$MONTHLY_CANCELLATION_CONTROL" = 'true' ]; then
+            exec node scripts/ci/validate-monthly-snapshot-clock.mjs --expected-sha "$LYTHAUS_EXPECTED_CHECKOUT_SHA" --cancellation-checkpoint
+          fi
+          exec node scripts/ci/validate-monthly-snapshot-clock.mjs --expected-sha "$LYTHAUS_EXPECTED_CHECKOUT_SHA"
       - name: Clean only recorded interruption-test resources
         if: always() && steps.clock-controls.outputs.evidence_directory != ''
         env:

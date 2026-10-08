@@ -372,11 +372,12 @@ export async function runInterruptionProbe(expectedSha, directory, runId, phase,
   throw failure;
 }
 
-export async function runClockValidation(expectedSha, artifactRoot, interruption) {
+export async function runClockValidation(expectedSha, artifactRoot, interruption, cancellationCheckpoint = false) {
   const execute = (executable, args, options) => command(executable, args, { ...options, signal: interruption?.signal });
   const checkout = await verifyCheckout(expectedSha, { execute });
   interruption?.signal.throwIfAborted();
-  const { directory, owner, manifest, save, register } = createEvidenceRun(checkout, artifactRoot, { signal: interruption?.signal });
+  const { directory, owner, manifest, save, register } = createEvidenceRun(checkout, artifactRoot,
+    { signal: interruption?.signal, mode: cancellationCheckpoint ? 'cancellation-control' : 'validation' });
   process.stdout.write(`Monthly snapshot clock evidence: ${directory}\n`);
   const files = ['scripts/ci/validate-monthly-snapshot-clock.mjs', 'scripts/tests/monthly-snapshot-clock.test.mjs', 'package-lock.json',
     'scripts/ci/validate-planetscale-postgres17.mjs',
@@ -405,6 +406,12 @@ export async function runClockValidation(expectedSha, artifactRoot, interruption
       const recorded = JSON.parse(await sql(owner, target.id, `SELECT json_agg(json_build_object('name',version,'checksum',checksum) ORDER BY version) FROM system.schema_migrations`));
       assert.deepEqual(recorded, migrations.map(migration => ({ name: migration.name, checksum: migration.checksum })));
       evidence.baseline = { validated: true, count: recorded.length, sha256: sha256(JSON.stringify(recorded)) };
+      if (cancellationCheckpoint && profile === 'control') {
+        manifest.cancellationCheckpoint = { ready: true, profile, containerId: target.id, timeoutMilliseconds: 60000 }; save();
+        process.stdout.write('Owned cancellation checkpoint ready; this control cannot pass positive validation\n');
+        await command(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { signal: owner.signal, timeout: 60000 });
+        throw new Error('monthly_clock_cancellation_control_not_interrupted');
+      }
       const args = ['--experimental-strip-types', '--experimental-test-module-mocks', '--test-reporter=tap'];
       if (profile === 'premature') {
         const before = await sql(owner, target.id, `SELECT json_build_object('users',(SELECT count(*) FROM identity.users),
@@ -450,8 +457,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   try {
     const { values } = parseArgs({ options: { 'expected-sha': { type: 'string' }, 'artifacts-dir': { type: 'string', default: '.artifacts/monthly-snapshot-clock' },
       'cleanup-run': { type: 'string' }, 'interruption-controls': { type: 'boolean' },
+      'cancellation-checkpoint': { type: 'boolean' },
       'interruption-probe': { type: 'string' }, 'probe-directory': { type: 'string' }, 'probe-owner-id': { type: 'string' } } });
-    if ([values['cleanup-run'], values['interruption-probe'], values['interruption-controls']].filter(Boolean).length > 1)
+    if ([values['cleanup-run'], values['interruption-probe'], values['interruption-controls'], values['cancellation-checkpoint']].filter(Boolean).length > 1)
       throw new Error('monthly_clock_cli_mode_conflict');
     if (values['cleanup-run']) {
       const checkout = await verifyCheckout(values['expected-sha']);
@@ -468,7 +476,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       requireSuccess(result, 'monthly_clock_interruption_controls');
     } else if (values['interruption-probe']) {
       await runInterruptionProbe(values['expected-sha'], values['probe-directory'], values['probe-owner-id'], values['interruption-probe'], interruption);
-    } else await runClockValidation(values['expected-sha'], values['artifacts-dir'], interruption);
+    } else await runClockValidation(values['expected-sha'], values['artifacts-dir'], interruption, values['cancellation-checkpoint']);
   } catch (error) { process.stderr.write(`${error.message}\n`); process.exitCode = interruption.exitCode ?? 1; }
   finally { process.exitCode = interruption.exitCode ?? process.exitCode; interruption.dispose(); }
 }
