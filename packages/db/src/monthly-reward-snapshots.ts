@@ -2,6 +2,8 @@ import type { Client } from 'pg';
 import { uuidv7 } from '@lythaus/security';
 import { MONTHLY_REPUTATION_CATALOGUE_HASH, MONTHLY_REPUTATION_POLICY_VERSION, nextReputationMonth, requireSourceMonth } from '../../contracts/src/monthly-reputation-policy.ts';
 import { MONTHLY_REPUTATION_DECISIONS } from '../../contracts/src/monthly-reputation-decisions.ts';
+import { PROSPECTIVE_REPUTATION_POLICY_VERSION, PROSPECTIVE_REPUTATION_CATALOGUE_HASH } from '../../contracts/src/monthly-reputation-prospective.ts';
+import { disposablePreparationAllowed, type MonthlyReputationDisposablePreparation } from './monthly-reputation.ts';
 
 export const MONTHLY_REWARD_SNAPSHOT_FLAG = 'trust.monthly_reward_snapshots';
 export const MONTHLY_REWARD_SNAPSHOT_EVENT = 'trust.monthly_reward_snapshot.recorded';
@@ -10,11 +12,13 @@ export interface MonthlyRewardSnapshotConfiguration {
   version: string; mode: 'shadow' | 'confirmed'; first_source_month: Date;
   weekly_rules_version: string; maintenance_rules_version: string;
   decision_approvals: Record<string, unknown>;
+  policy_version: string; preparation_configuration: unknown;
 }
 interface Snapshot {
   id: string; subject_user_id: string; source_month: Date; effective_month: Date;
   mode: 'shadow' | 'confirmed'; revision: number; assessment_id: string; source_id: string;
   source_revision: number; source_score: number; level: number; rules_version: string;
+  policy_version: string;
 }
 function requireUuid(value: string) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value))
@@ -24,8 +28,11 @@ async function digest(value: unknown) {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(value)));
   return Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2,'0')).join('');
 }
-export async function monthlyRewardSnapshotConfiguration(client: Client, version?: string) {
+export async function monthlyRewardSnapshotConfiguration(client: Client, version?: string, context?: MonthlyReputationDisposablePreparation) {
   if (!version) return null;
+  if (context && !await disposablePreparationAllowed(client, context)) return null;
+  const policyVersion = context ? PROSPECTIVE_REPUTATION_POLICY_VERSION : MONTHLY_REPUTATION_POLICY_VERSION;
+  const catalogueHash = context ? PROSPECTIVE_REPUTATION_CATALOGUE_HASH : MONTHLY_REPUTATION_CATALOGUE_HASH;
   const installed = await client.query<{ available: boolean }>(`SELECT
     to_regclass('trust.monthly_reputation_sources') IS NOT NULL
       AND to_regclass('trust.monthly_reputation_assemblies') IS NOT NULL
@@ -35,17 +42,29 @@ export async function monthlyRewardSnapshotConfiguration(client: Client, version
       AND to_regprocedure('trust.lock_monthly_reward_configuration()') IS NOT NULL
       AND to_regprocedure('trust.lock_monthly_reward_subject(uuid)') IS NOT NULL AS available`);
   if (!installed.rows[0]?.available) return null;
+  if (context && !(await client.query<{ available: boolean }>(`SELECT count(*) = 11 AS available
+    FROM pg_constraint WHERE convalidated AND (
+      (conrelid = to_regclass('trust.monthly_reputation_assemblies') AND conname = 'monthly_assembly_policy_report_v2')
+      OR (conrelid = to_regclass('trust.monthly_reward_snapshots')
+        AND conname IN ('monthly_reward_snapshot_caps_v2', 'monthly_reward_snapshot_supersedes_policy_v2',
+          'monthly_reward_snapshot_assessment_policy_v2', 'monthly_reward_snapshot_rules_policy_v2'))
+      OR (conrelid = to_regclass('trust.monthly_reward_snapshot_corrections')
+        AND conname IN ('monthly_reward_correction_assessment_policy_v2', 'monthly_reward_correction_rules_policy_v2', 'monthly_reward_correction_snapshot_policy_v2'))
+      OR (conrelid = to_regclass('trust.monthly_reward_snapshot_receipts')
+        AND conname IN ('monthly_reward_receipt_assessment_policy_v2', 'monthly_reward_receipt_rules_policy_v2'))
+      OR (conrelid = to_regclass('trust.monthly_reward_snapshot_rule_sets') AND conname = 'monthly_reward_rules_policy_v2'))`)).rows[0]?.available) return null;
   if (!(await client.query('SELECT 1 FROM system.feature_flags WHERE flag_key = $1 AND policy_version = $2',
     [MONTHLY_REWARD_SNAPSHOT_FLAG,MONTHLY_REPUTATION_POLICY_VERSION])).rowCount) return null;
   const flags = await client.query<{ enabled: boolean; policy_version: string }>('SELECT * FROM trust.lock_monthly_reward_configuration()');
   if (flags.rowCount !== 2 || flags.rows.some(flag => !flag.enabled || flag.policy_version !== MONTHLY_REPUTATION_POLICY_VERSION)) return null;
   const rules = (await client.query<MonthlyRewardSnapshotConfiguration>(`SELECT version,mode,first_source_month,
-    weekly_rules_version,maintenance_rules_version,decision_approvals FROM trust.monthly_reward_snapshot_rule_sets
+    weekly_rules_version,maintenance_rules_version,decision_approvals,policy_version,
+    ${context ? 'preparation_configuration' : 'NULL::jsonb AS preparation_configuration'} FROM trust.monthly_reward_snapshot_rule_sets
     WHERE version = $1 AND policy_version = $2 AND catalogue_hash = $3
       AND collection_privacy_version = 'monthly-privacy-v1' AND approved_by IS NOT NULL
       AND approved_at <= clock_timestamp() AND approval_reference IS NOT NULL`,
-  [version,MONTHLY_REPUTATION_POLICY_VERSION,MONTHLY_REPUTATION_CATALOGUE_HASH])).rows[0];
-  if (!rules || (rules.mode === 'confirmed' && MONTHLY_REPUTATION_DECISIONS.some(id =>
+  [version,policyVersion,catalogueHash])).rows[0];
+  if (!rules || (context && rules.mode !== 'shadow') || (rules.mode === 'confirmed' && MONTHLY_REPUTATION_DECISIONS.some(id =>
     typeof rules.decision_approvals[id] !== 'string' || (rules.decision_approvals[id] as string).trim().length < 1
     || (rules.decision_approvals[id] as string).length > 500))) return null;
   return rules;
@@ -58,17 +77,18 @@ async function latestSnapshot(client: Client, subjectId: string, effectiveMonth:
 interface AssessedSource {
   assessment_id: string; source_id: string; subject_user_id: string; source_month: Date;
   revision: number; source_score: number; level: number; catalogue_hash: string;
-  weekly_rules_version: string; maintenance_rules_version: string; report: { mode?: string };
+  policy_version: string; weekly_rules_version: string; maintenance_rules_version: string;
+  report: { mode?: string; preparationOnly?: boolean; preparationConfiguration?: unknown };
 }
-async function assessedSource(client: Client, assessmentId: string) {
+async function assessedSource(client: Client, assessmentId: string, policyVersion = MONTHLY_REPUTATION_POLICY_VERSION) {
   return (await client.query<AssessedSource>(`SELECT assessment.id AS assessment_id,source.id AS source_id,
     source.subject_user_id,source.source_month,source.revision,assessment.source_score,assessment.level,source.catalogue_hash,
-    assembly.weekly_rules_version,assembly.rules_version AS maintenance_rules_version,assembly.report
+    source.policy_version,assembly.weekly_rules_version,assembly.rules_version AS maintenance_rules_version,assembly.report
     FROM trust.monthly_reputation_assessments assessment
     JOIN trust.monthly_reputation_sources source ON source.id = assessment.source_id
-    JOIN trust.monthly_reputation_assemblies assembly ON assembly.source_id = source.id
+    JOIN trust.monthly_reputation_assemblies assembly ON assembly.source_id = source.id AND assembly.policy_version = source.policy_version
     WHERE assessment.id = $1 AND source.policy_version = $2 AND assessment.mode = 'shadow'`,
-  [assessmentId,MONTHLY_REPUTATION_POLICY_VERSION])).rows[0];
+  [assessmentId,policyVersion])).rows[0];
 }
 async function lockSnapshotPeriod(client: Client, subjectId: string, month: string) {
   await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`monthly-reputation:${subjectId}:${month}`]);
@@ -77,12 +97,18 @@ async function lockSnapshotPeriod(client: Client, subjectId: string, month: stri
 }
 async function validateSource(client: Client, source: AssessedSource, configuration: MonthlyRewardSnapshotConfiguration) {
   const month = source.source_month.toISOString().slice(0,7);
-  if (source.catalogue_hash !== MONTHLY_REPUTATION_CATALOGUE_HASH || source.report.mode !== 'shadow'
+  const catalogueHash = configuration.policy_version === PROSPECTIVE_REPUTATION_POLICY_VERSION
+    ? PROSPECTIVE_REPUTATION_CATALOGUE_HASH : MONTHLY_REPUTATION_CATALOGUE_HASH;
+  if (source.policy_version !== configuration.policy_version || source.catalogue_hash !== catalogueHash || source.report.mode !== 'shadow'
     || source.weekly_rules_version !== configuration.weekly_rules_version
     || source.maintenance_rules_version !== configuration.maintenance_rules_version) throw new Error('monthly_reward_source_policy_mismatch');
+  if (configuration.policy_version === PROSPECTIVE_REPUTATION_POLICY_VERSION && !(await client.query(`SELECT 1
+    FROM trust.monthly_reputation_assemblies assembly JOIN trust.monthly_reward_snapshot_rule_sets rules ON rules.version = $2
+    WHERE assembly.source_id = $1 AND assembly.report -> 'preparationConfiguration' = rules.preparation_configuration`,
+  [source.source_id, configuration.version])).rowCount) throw new Error('monthly_reward_source_policy_mismatch');
   const latest = (await client.query<{ id: string }>(`SELECT id FROM trust.monthly_reputation_sources
     WHERE subject_user_id = $1 AND source_month = $2 AND policy_version = $3 ORDER BY revision DESC LIMIT 1`,
-  [source.subject_user_id,source.source_month,MONTHLY_REPUTATION_POLICY_VERSION])).rows[0];
+  [source.subject_user_id,source.source_month,configuration.policy_version])).rows[0];
   if (latest?.id !== source.source_id) throw new Error('monthly_reward_source_superseded');
   if (!(await client.query<{ settled: boolean }>(`SELECT (($1::date + interval '1 month') AT TIME ZONE 'UTC')
       + (configuration ->> 'monthSettlementHours')::integer * interval '1 hour' <= clock_timestamp() AS settled
@@ -96,28 +122,36 @@ async function insertSnapshot(client: Client, configuration: MonthlyRewardSnapsh
   const effectiveMonth = nextReputationMonth(sourceMonth), revision = (previous?.revision ?? 0) + 1;
   await client.query(`INSERT INTO trust.monthly_reward_snapshots
     (id,subject_user_id,source_month,effective_month,rules_version,policy_version,mode,revision,supersedes_id,
-      assessment_id,source_id,source_revision,source_score,level,correction_id,source_event_id)
-    VALUES ($1,$2,$3::date,$4::date,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
-  [id,source.subject_user_id,`${sourceMonth}-01`,`${effectiveMonth}-01`,configuration.version,MONTHLY_REPUTATION_POLICY_VERSION,
+      assessment_id,source_id,source_revision,source_score,level,correction_id,source_event_id${configuration.policy_version === PROSPECTIVE_REPUTATION_POLICY_VERSION ? ',preparation_only' : ''})
+    VALUES ($1,$2,$3::date,$4::date,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16${configuration.policy_version === PROSPECTIVE_REPUTATION_POLICY_VERSION ? ',true' : ''})`,
+  [id,source.subject_user_id,`${sourceMonth}-01`,`${effectiveMonth}-01`,configuration.version,configuration.policy_version,
     configuration.mode,revision,previous?.id ?? null,source.assessment_id,source.source_id,source.revision,
     source.source_score,source.level,correctionId ?? null,sourceEventId]);
   await client.query(`INSERT INTO system.outbox_events (id,event_type,aggregate_type,aggregate_id,actor_id,payload)
     VALUES ($1,$2,'monthly_reward_snapshot',$3,$4,$5::jsonb)`,
   [eventId,MONTHLY_REWARD_SNAPSHOT_EVENT,id,source.subject_user_id,JSON.stringify({ snapshotId:id,revision,mode:configuration.mode,
-    sourceMonth,effectiveMonth,policyVersion:MONTHLY_REPUTATION_POLICY_VERSION })]);
-  return { id,revision,sourceMonth,effectiveMonth,level:source.level,sourceScore:source.source_score,mode:configuration.mode,created:true };
+    sourceMonth,effectiveMonth,policyVersion:configuration.policy_version,
+    ...preparationMetadata(configuration) })]);
+  return { id,revision,sourceMonth,effectiveMonth,level:source.level,sourceScore:source.source_score,mode:configuration.mode,created:true,
+    ...preparationMetadata(configuration) };
+}
+function preparationMetadata(configuration: MonthlyRewardSnapshotConfiguration) {
+  return configuration.policy_version === PROSPECTIVE_REPUTATION_POLICY_VERSION
+    ? { preparationOnly: true as const, runtimeActivationAllowed: false as const, appliedPoints: 0 as const } : {};
 }
 
-export async function publishMonthlyRewardSnapshot(client: Client, input: { eventId: string; rulesVersion?: string }) {
-  const configuration = await monthlyRewardSnapshotConfiguration(client,input.rulesVersion);
+export async function publishMonthlyRewardSnapshot(client: Client, input: { eventId: string; rulesVersion?: string }, context?: MonthlyReputationDisposablePreparation) {
+  const configuration = await monthlyRewardSnapshotConfiguration(client,input.rulesVersion,context);
   if (!configuration) return null;
   requireUuid(input.eventId);
-  const event = (await client.query<{ aggregate_id: string; actor_id: string; payload: { assessmentId?: string; sourceId?: string; mode?: string } }>(
+  const event = (await client.query<{ aggregate_id: string; actor_id: string; payload: { assessmentId?: string; sourceId?: string; mode?: string; policyVersion?: string; preparationOnly?: boolean } }>(
     `SELECT aggregate_id,actor_id,payload FROM system.outbox_events WHERE id = $1
       AND event_type = 'trust.monthly_assessment.recorded' AND aggregate_type = 'monthly_reputation_assessment'`,[input.eventId])).rows[0];
-  const source = event ? await assessedSource(client,event.aggregate_id) : undefined;
+  const source = event ? await assessedSource(client,event.aggregate_id,configuration.policy_version) : undefined;
   if (!event || !source || event.actor_id !== source.subject_user_id || event.payload.assessmentId !== source.assessment_id
     || event.payload.sourceId !== source.source_id || event.payload.mode !== 'shadow') throw new Error('monthly_reward_canonical_assessment_required');
+  if (context && (event.payload.policyVersion !== configuration.policy_version || event.payload.preparationOnly !== true))
+    throw new Error('monthly_reward_canonical_assessment_required');
   const month = source.source_month.toISOString().slice(0,7);
   await lockSnapshotPeriod(client,source.subject_user_id,month);
   const receipt = (await client.query<{ state: string; snapshot_id: string | null }>(
@@ -125,8 +159,10 @@ export async function publishMonthlyRewardSnapshot(client: Client, input: { even
     [input.eventId,configuration.version])).rows[0];
   if (receipt) return { state:receipt.state,id:receipt.snapshot_id,mode:configuration.mode,created:false };
   const recordReceipt = async (state: string, snapshotId: string | null) => client.query(`INSERT INTO trust.monthly_reward_snapshot_receipts
-    (event_id,rules_version,mode,subject_user_id,assessment_id,snapshot_id,state) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-    [input.eventId,configuration.version,configuration.mode,source.subject_user_id,source.assessment_id,snapshotId,state]);
+    (event_id,rules_version,mode,subject_user_id,assessment_id,snapshot_id,state${context ? ',policy_version' : ''})
+    VALUES ($1,$2,$3,$4,$5,$6,$7${context ? ',$8' : ''})`,
+    [input.eventId,configuration.version,configuration.mode,source.subject_user_id,source.assessment_id,snapshotId,state,
+      ...(context ? [configuration.policy_version] : [])]);
   const replay = (await client.query<Snapshot>('SELECT * FROM trust.monthly_reward_snapshots WHERE assessment_id = $1 AND mode = $2',
     [source.assessment_id,configuration.mode])).rows[0];
   if (replay) {
@@ -142,7 +178,8 @@ export async function publishMonthlyRewardSnapshot(client: Client, input: { even
   }
   const previous = await latestSnapshot(client,source.subject_user_id,nextReputationMonth(month),configuration.mode);
   if (previous) {
-    const state = previous.rules_version === configuration.version ? 'correction_approval_pending' : 'snapshot_policy_requires_review';
+    const state = previous.policy_version === configuration.policy_version && previous.rules_version === configuration.version
+      ? 'correction_approval_pending' : 'snapshot_policy_requires_review';
     await recordReceipt(state,previous.id);
     return { state,id:previous.id,revision:previous.revision,mode:previous.mode,created:false };
   }
@@ -154,14 +191,14 @@ export async function publishMonthlyRewardSnapshot(client: Client, input: { even
 export async function approveMonthlyRewardSnapshotCorrection(client: Client, input: {
   actorId: string; subjectId: string; snapshotId: string; assessmentId: string; rulesVersion: string;
   expectedSnapshotRevision: number; reasonCode: string; evidenceReference: string; idempotencyKey: string;
-}) {
+}, context?: MonthlyReputationDisposablePreparation) {
   for (const value of [input.actorId,input.subjectId,input.snapshotId,input.assessmentId,input.idempotencyKey]) requireUuid(value);
   if (!Number.isSafeInteger(input.expectedSnapshotRevision) || input.expectedSnapshotRevision < 1
     || !/^[a-z][a-z0-9_]{1,99}$/.test(input.reasonCode) || typeof input.evidenceReference !== 'string'
     || input.evidenceReference.trim().length < 1 || input.evidenceReference.length > 500) throw new Error('monthly_reward_correction_invalid');
-  const configuration = await monthlyRewardSnapshotConfiguration(client,input.rulesVersion);
+  const configuration = await monthlyRewardSnapshotConfiguration(client,input.rulesVersion,context);
   if (!configuration) throw new Error('monthly_reward_snapshot_unavailable');
-  const source = await assessedSource(client,input.assessmentId);
+  const source = await assessedSource(client,input.assessmentId,configuration.policy_version);
   if (!source || source.subject_user_id !== input.subjectId) throw new Error('monthly_reward_correction_scope_invalid');
   const month = source.source_month.toISOString().slice(0,7);
   await lockSnapshotPeriod(client,input.subjectId,month);
@@ -181,24 +218,26 @@ export async function approveMonthlyRewardSnapshotCorrection(client: Client, inp
   if (source.source_month < configuration.first_source_month) throw new Error('monthly_reward_correction_scope_invalid');
   const previous = await latestSnapshot(client,input.subjectId,nextReputationMonth(month),configuration.mode);
   if (previous?.id !== input.snapshotId || previous.revision !== input.expectedSnapshotRevision
-    || previous.assessment_id === input.assessmentId || previous.rules_version !== input.rulesVersion)
+    || previous.assessment_id === input.assessmentId || previous.rules_version !== input.rulesVersion
+    || previous.policy_version !== configuration.policy_version)
     throw new Error('monthly_reward_snapshot_revision_conflict');
   const id = uuidv7(), eventId = uuidv7();
   await client.query(`INSERT INTO trust.monthly_reward_snapshot_corrections
     (id,subject_user_id,snapshot_id,target_assessment_id,rules_version,actor_id,reason_code,evidence_reference,
-      idempotency_key,request_digest,source_event_id)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      idempotency_key,request_digest,source_event_id${context ? ',policy_version' : ''})
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11${context ? ',$12' : ''})`,
   [id,input.subjectId,input.snapshotId,input.assessmentId,input.rulesVersion,input.actorId,input.reasonCode,input.evidenceReference,
-    input.idempotencyKey,requestDigest,eventId]);
+    input.idempotencyKey,requestDigest,eventId,...(context ? [configuration.policy_version] : [])]);
   await client.query(`INSERT INTO system.outbox_events (id,event_type,aggregate_type,aggregate_id,actor_id,payload,created_at)
     SELECT $1,$2,'monthly_reward_snapshot_correction',id,$3,$4::jsonb,recorded_at
     FROM trust.monthly_reward_snapshot_corrections WHERE id = $5`,
-  [eventId,MONTHLY_REWARD_CORRECTION_EVENT,input.actorId,JSON.stringify({ correctionId:id,policyVersion:MONTHLY_REPUTATION_POLICY_VERSION }),id]);
-  return { id,sourceEventId:eventId,created:true };
+  [eventId,MONTHLY_REWARD_CORRECTION_EVENT,input.actorId,JSON.stringify({ correctionId:id,policyVersion:configuration.policy_version,
+    ...preparationMetadata(configuration) }),id]);
+  return { id,sourceEventId:eventId,created:true,...preparationMetadata(configuration) };
 }
 
-export async function applyMonthlyRewardSnapshotCorrection(client: Client, input: { eventId: string; rulesVersion?: string }) {
-  const configuration = await monthlyRewardSnapshotConfiguration(client,input.rulesVersion);
+export async function applyMonthlyRewardSnapshotCorrection(client: Client, input: { eventId: string; rulesVersion?: string }, context?: MonthlyReputationDisposablePreparation) {
+  const configuration = await monthlyRewardSnapshotConfiguration(client,input.rulesVersion,context);
   if (!configuration) return null;
   requireUuid(input.eventId);
   const correction = (await client.query<{ id: string; subject_user_id: string; snapshot_id: string; target_assessment_id: string }>(
@@ -208,9 +247,9 @@ export async function applyMonthlyRewardSnapshotCorrection(client: Client, input
       AND event.aggregate_id = correction.id AND event.actor_id = correction.actor_id AND event.created_at = correction.recorded_at
       AND event.payload @> jsonb_build_object('correctionId',correction.id::text,'policyVersion',$3::text)
       AND correction.rules_version = $4`,
-  [input.eventId,MONTHLY_REWARD_CORRECTION_EVENT,MONTHLY_REPUTATION_POLICY_VERSION,configuration.version])).rows[0];
+  [input.eventId,MONTHLY_REWARD_CORRECTION_EVENT,configuration.policy_version,configuration.version])).rows[0];
   if (!correction) throw new Error('monthly_reward_canonical_correction_required');
-  const source = await assessedSource(client,correction.target_assessment_id);
+  const source = await assessedSource(client,correction.target_assessment_id,configuration.policy_version);
   if (!source || source.subject_user_id !== correction.subject_user_id) throw new Error('monthly_reward_correction_scope_invalid');
   const month = source.source_month.toISOString().slice(0,7);
   await lockSnapshotPeriod(client,source.subject_user_id,month);
@@ -219,8 +258,10 @@ export async function applyMonthlyRewardSnapshotCorrection(client: Client, input
     [input.eventId,configuration.version])).rows[0];
   if (receipt) return { state:receipt.state,id:receipt.snapshot_id,mode:configuration.mode,created:false };
   const recordReceipt = async (state: string, snapshotId: string | null) => client.query(`INSERT INTO trust.monthly_reward_snapshot_receipts
-    (event_id,rules_version,mode,subject_user_id,assessment_id,snapshot_id,state) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-    [input.eventId,configuration.version,configuration.mode,source.subject_user_id,source.assessment_id,snapshotId,state]);
+    (event_id,rules_version,mode,subject_user_id,assessment_id,snapshot_id,state${context ? ',policy_version' : ''})
+    VALUES ($1,$2,$3,$4,$5,$6,$7${context ? ',$8' : ''})`,
+    [input.eventId,configuration.version,configuration.mode,source.subject_user_id,source.assessment_id,snapshotId,state,
+      ...(context ? [configuration.policy_version] : [])]);
   const replay = (await client.query<Snapshot>('SELECT * FROM trust.monthly_reward_snapshots WHERE correction_id = $1',[correction.id])).rows[0];
   if (replay) { await recordReceipt('published',replay.id); return { id:replay.id,revision:replay.revision,mode:replay.mode,created:false }; }
   try { await validateSource(client,source,configuration); } catch (error) {

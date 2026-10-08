@@ -1,17 +1,54 @@
 import type { Client } from 'pg';
 import { uuidv7 } from '@lythaus/security';
-import { MONTHLY_REPUTATION_POLICY_VERSION, nextReputationMonth, reputationInstant, requireSourceMonth, type LockedReputationWeek } from '../../contracts/src/monthly-reputation-policy.ts';
+import { MONTHLY_REPUTATION_POLICY_VERSION, nextReputationMonth, reputationInstant, requireSourceMonth,
+  type MonthlyReputationInput, type LockedReputationWeek } from '../../contracts/src/monthly-reputation-policy.ts';
 import { calculateMonthlyMaintenance } from '../../contracts/src/monthly-maintenance-policy.ts';
 import { proposedClosingSundayWeeks } from '../../contracts/src/monthly-reputation-decisions.ts';
 import { loadMonthlyEarningConfiguration, monthlyEarningSourceEvents } from './monthly-earning.ts';
 import { loadMonthlyMaintenanceConfiguration, readMonthlyMaintenanceEvidence } from './monthly-maintenance.ts';
-import { recordMonthlyReputationSource } from './monthly-reputation.ts';
+import { recordMonthlyReputationSource, recordPreparedMonthlyReputationSource, disposablePreparationAllowed,
+  type MonthlyReputationDisposablePreparation } from './monthly-reputation.ts';
+import { previewProspectiveMonthlyReputation, PROSPECTIVE_REPUTATION_POLICY_VERSION,
+  PROSPECTIVE_REPUTATION_CATALOGUE_HASH, type ProspectiveReputationConfiguration } from '../../contracts/src/monthly-reputation-prospective.ts';
+import type { SuggestionAcceptanceRevision } from '../../contracts/src/monthly-suggestion-policy.ts';
 import { requireMonthlyPeerIngestionDrained } from './monthly-peer-participation.ts';
 import { requireMonthlyContextIngestionDrained } from './monthly-context-review.ts';
 
-export async function assembleMonthlyReputation(client: Client, input: {
+interface AssemblyInput {
   subjectUserId: string; sourceMonth: string; weeklyRulesVersion: string; maintenanceRulesVersion: string; evaluatedAt: string; peerRulesVersion?: string; contextRulesVersion?: string;
-}) {
+}
+interface AssemblyPreparation {
+  configuration: ProspectiveReputationConfiguration;
+  suggestionRevisions: readonly SuggestionAcceptanceRevision[];
+  context: MonthlyReputationDisposablePreparation;
+}
+function canonicalPreparationValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalPreparationValue);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value)
+    .sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, canonicalPreparationValue(entry)]));
+  return value;
+}
+async function digest(value: unknown) {
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(value)));
+  return Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
+}
+export async function assemblePreparedMonthlyReputation(client: Client, input: AssemblyInput & {
+  configuration: ProspectiveReputationConfiguration; suggestionRevisions: readonly SuggestionAcceptanceRevision[];
+}, context?: MonthlyReputationDisposablePreparation) {
+  if (!context || !await disposablePreparationAllowed(client, context)) return null;
+  const capability = (await client.query<{ available: boolean }>(`SELECT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conrelid = to_regclass('trust.monthly_reputation_assemblies')
+      AND conname = 'monthly_assembly_policy_report_v2' AND convalidated) AS available`)).rows[0];
+  if (!capability?.available) return null;
+  const result = await assembleCanonicalMonthlyReputation(client, input, { configuration: input.configuration,
+    suggestionRevisions: input.suggestionRevisions, context });
+  return result ? { ...result, preparationOnly: true as const, runtimeActivationAllowed: false as const, appliedPoints: 0 as const } : null;
+}
+export async function assembleMonthlyReputation(client: Client, input: AssemblyInput) {
+  return assembleCanonicalMonthlyReputation(client, input);
+}
+async function assembleCanonicalMonthlyReputation(client: Client, input: AssemblyInput, preparation?: AssemblyPreparation) {
+  const policyVersion = preparation ? PROSPECTIVE_REPUTATION_POLICY_VERSION : MONTHLY_REPUTATION_POLICY_VERSION;
   requireSourceMonth(input.sourceMonth);
   const evaluated = reputationInstant(input.evaluatedAt);
   const weekly = await loadMonthlyEarningConfiguration(client, input.weeklyRulesVersion);
@@ -31,7 +68,7 @@ export async function assembleMonthlyReputation(client: Client, input: {
     `SELECT source.id, source.revision, assembly.evidence_digest, assembly.rules_version, assembly.weekly_rules_version, assembly.report
      FROM trust.monthly_reputation_sources source LEFT JOIN trust.monthly_reputation_assemblies assembly ON assembly.source_id = source.id
      WHERE source.subject_user_id = $1 AND source.source_month = $2::date AND source.policy_version = $3
-     ORDER BY source.revision DESC LIMIT 1`, [input.subjectUserId, `${input.sourceMonth}-01`, MONTHLY_REPUTATION_POLICY_VERSION])).rows[0];
+     ORDER BY source.revision DESC LIMIT 1`, [input.subjectUserId, `${input.sourceMonth}-01`, policyVersion])).rows[0];
   if (previous && (!previous.evidence_digest || previous.rules_version !== maintenance.rules.version
     || previous.weekly_rules_version !== weekly.rules.version)) throw new Error('monthly_assembly_previous_policy_requires_review');
   const periods = proposedClosingSundayWeeks(input.sourceMonth);
@@ -78,28 +115,54 @@ export async function assembleMonthlyReputation(client: Client, input: {
   const observations = await readMonthlyMaintenanceEvidence(client, input.subjectUserId, sourceCutoff);
   const maintenanceReport = calculateMonthlyMaintenance({ subjectUserId: input.subjectUserId, sourceMonth: input.sourceMonth,
     rules: maintenance.rules, evidence: observations.evidence });
-  const report = { policyVersion: MONTHLY_REPUTATION_POLICY_VERSION, mode: 'shadow', sourceMonth: input.sourceMonth,
+  const sourceInput: Omit<MonthlyReputationInput, 'quarterlyPoints'> = { policyVersion: MONTHLY_REPUTATION_POLICY_VERSION, sourceMonth: input.sourceMonth, sourceCutoff,
+    periodPolicyVersion: weekly.rules.periodPolicyVersion, weeks: locked, monthlyPoints: maintenanceReport.monthlyPoints };
+  const previewInput = preparation ? { subjectUserId: input.subjectUserId, source: sourceInput,
+    emailEvidence: observations.evidence, suggestionRevisions: preparation.suggestionRevisions,
+    configuration: preparation.configuration } : null;
+  const preview = previewInput ? previewProspectiveMonthlyReputation(previewInput, input.evaluatedAt) : null;
+  if (preparation && !preview?.proposedCalculation) return null;
+  const quarterly = preparation && preview?.proposedCalculation ? {
+    emailPoints: preview.proposedCalculation.emailPoints, suggestionPoints: preview.proposedCalculation.suggestionPoints,
+    quarterlyPoints: preview.proposedCalculation.quarterlyPoints, qualification: preview.quarterlyQualification,
+    evidenceDigest: await digest(canonicalPreparationValue({ emailEvidence: observations.evidence,
+      suggestionRevisions: [...new Map(preparation.suggestionRevisions.map(revision => [revision.eventId, revision])).values()]
+        .sort((left, right) => left.eventId.localeCompare(right.eventId)) })),
+    suggestionRevisionReferences: [...new Map(preparation.suggestionRevisions.map(revision => [revision.eventId, revision])).values()]
+      .sort((left, right) => left.eventId.localeCompare(right.eventId)).map(revision => ({ eventId: revision.eventId,
+        contributionId: revision.contributionId, revision: revision.revision, predecessorEventId: revision.predecessorEventId,
+        privateEvidenceId: revision.privateEvidenceId })),
+  } : null;
+  const report = { policyVersion, mode: 'shadow', sourceMonth: input.sourceMonth,
     sourceCutoff, rulesVersion: maintenance.rules.version, weeklyRulesVersion: weekly.rules.version,
     peerRulesVersion: peer?.version ?? null,
     contextRulesVersion: context?.version ?? null,
-    maintenance: maintenanceReport, weeks: weeks.map(week => ({ revisionId: week.id, weekId: week.week_id,
+    maintenance: preparation ? { ...maintenanceReport, actions: maintenanceReport.actions.filter(action => action.actionId.startsWith('monthly.')),
+      quarterlyPoints: 0 } : maintenanceReport, weeks: weeks.map(week => ({ revisionId: week.id, weekId: week.week_id,
       revision: week.revision, calculation: { ...week.calculation, state: week.state } })),
     missingWeeks: periods.filter(period => !locked.some(week => week.startsAt === period.startsAt)).map(period => ({ ...period,
       points: 0, reasonCode: period.endsAt <= weekly.collectFrom ? 'before_collection' : period.endsAt <= account.created_at.toISOString() ? 'before_account' : 'no_recorded_activity' })),
-    observationIds: observations.observationIds, revocationIds: observations.revocationIds };
-  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify({ locked, report })));
-  const evidenceDigest = Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
+    observationIds: observations.observationIds, revocationIds: observations.revocationIds,
+    ...(preparation ? { preparationOnly: true, runtimeActivationAllowed: false, appliedPoints: 0,
+      catalogueHash: PROSPECTIVE_REPUTATION_CATALOGUE_HASH,
+      inheritance: { weeklyPolicyVersion: MONTHLY_REPUTATION_POLICY_VERSION,
+        maintenancePolicyVersion: MONTHLY_REPUTATION_POLICY_VERSION, quarterlyPolicyVersion: policyVersion },
+      preparationConfiguration: canonicalPreparationValue(preparation.configuration), quarterly } : {}) };
+  if (preparation && previous?.report && JSON.stringify(canonicalPreparationValue((previous.report as { preparationConfiguration?: unknown }).preparationConfiguration))
+    !== JSON.stringify(canonicalPreparationValue(preparation.configuration))) throw new Error('monthly_assembly_previous_policy_requires_review');
+  const evidenceDigest = await digest(preparation ? canonicalPreparationValue({ locked, report }) : { locked, report });
   if (previous?.evidence_digest === evidenceDigest) return { sourceId: previous.id, revision: previous.revision, created: false, report: previous.report };
-  const source = await recordMonthlyReputationSource(client, { id: uuidv7(), eventId: uuidv7(), subjectUserId: input.subjectUserId,
-    expectedPreviousId: previous?.id ?? null, reasonCode: previous ? 'source_evidence_corrected' : 'closed_month_assembled', evaluatedAt: input.evaluatedAt,
-    input: { policyVersion: MONTHLY_REPUTATION_POLICY_VERSION, sourceMonth: input.sourceMonth, sourceCutoff,
-      periodPolicyVersion: weekly.rules.periodPolicyVersion, weeks: locked, monthlyPoints: maintenanceReport.monthlyPoints,
-      quarterlyPoints: maintenanceReport.quarterlyPoints } });
+  const request = { id: uuidv7(), eventId: uuidv7(), subjectUserId: input.subjectUserId,
+    expectedPreviousId: previous?.id ?? null, reasonCode: previous ? 'source_evidence_corrected' : 'closed_month_assembled', evaluatedAt: input.evaluatedAt };
+  const source = preparation && previewInput
+    ? await recordPreparedMonthlyReputationSource(client, { ...request, preview: previewInput }, preparation.context)
+    : await recordMonthlyReputationSource(client, { ...request, input: { ...sourceInput, quarterlyPoints: maintenanceReport.quarterlyPoints } });
+  if (!source) return null;
   await client.query(`INSERT INTO trust.monthly_reputation_assemblies
     (source_id, subject_user_id, source_month, rules_version, weekly_rules_version, evidence_digest,
-      week_revision_ids, observation_ids, revocation_ids, report)
-    VALUES ($1, $2, $3::date, $4, $5, $6, $7::uuid[], $8::uuid[], $9::uuid[], $10::jsonb)`,
+      week_revision_ids, observation_ids, revocation_ids, report, policy_version)
+    VALUES ($1, $2, $3::date, $4, $5, $6, $7::uuid[], $8::uuid[], $9::uuid[], $10::jsonb, $11)`,
   [source.id, input.subjectUserId, `${input.sourceMonth}-01`, maintenance.rules.version, weekly.rules.version, evidenceDigest,
-    weeks.map(week => week.id), observations.observationIds, observations.revocationIds, JSON.stringify(report)]);
+    weeks.map(week => week.id), observations.observationIds, observations.revocationIds, JSON.stringify(report), policyVersion]);
   return { sourceId: source.id, revision: source.revision, created: true, report };
 }

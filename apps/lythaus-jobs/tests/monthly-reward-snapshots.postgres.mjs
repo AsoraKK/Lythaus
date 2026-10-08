@@ -11,8 +11,12 @@ import { PROPOSED_WEEKLY_EARNING_RULES as weekly } from '../../../packages/contr
 import { PROPOSED_MONTHLY_MAINTENANCE_RULES as maintenance } from '../../../packages/contracts/src/monthly-maintenance-policy.ts';
 import { MONTHLY_REPUTATION_DECISIONS as decisions } from '../../../packages/contracts/src/monthly-reputation-decisions.ts';
 import { recordMonthlyContentEarning } from '../../../packages/db/src/monthly-earning.ts';
-import { assembleMonthlyReputation } from '../../../packages/db/src/monthly-assembly.ts';
-import { assessMonthlyReputationSource } from '../../../packages/db/src/monthly-reputation.ts';
+import { assembleMonthlyReputation,assemblePreparedMonthlyReputation } from '../../../packages/db/src/monthly-assembly.ts';
+import { assessMonthlyReputationSource,assessPreparedMonthlyReputationSource } from '../../../packages/db/src/monthly-reputation.ts';
+import { PROSPECTIVE_REPUTATION_CONFIGURATION, PROSPECTIVE_REPUTATION_POLICY_VERSION as policyV2,
+  PROSPECTIVE_REPUTATION_CATALOGUE_HASH as hashV2 } from '../../../packages/contracts/src/monthly-reputation-prospective.ts';
+import { QUARTERLY_CALENDAR_AMENDMENT_VERSION } from '../../../packages/contracts/src/monthly-quarterly-policy.ts';
+import { recordMonthlyEmailControl } from '../../../packages/db/src/monthly-maintenance.ts';
 import { monthlyRewardSnapshotConfiguration,publishMonthlyRewardSnapshot,approveMonthlyRewardSnapshotCorrection,
   applyMonthlyRewardSnapshotCorrection,readOwnMonthlyRewardSnapshot,MONTHLY_REWARD_SNAPSHOT_FLAG as flag,
   MONTHLY_REWARD_SNAPSHOT_EVENT as snapshotEvent,MONTHLY_REWARD_CORRECTION_EVENT as correctionEvent } from '../../../packages/db/src/monthly-reward-snapshots.ts';
@@ -29,7 +33,8 @@ async function tx(work,role='lythaus_jobs',timeZone='UTC'){
     await client.query('BEGIN');await client.query("SET LOCAL statement_timeout='10s'");
     await client.query("SELECT set_config('TimeZone',$1,true)",[timeZone]);
     if(role){assert.ok(['lythaus_jobs','lythaus_admin','lythaus_runtime','lythaus_privacy'].includes(role));await client.query(`SET LOCAL ROLE ${role}`);}
-    const result=await work({query:(text,values)=>{statements.push(text);return client.query(text,values);}});
+    const result=await work({connectionParameters:client.connectionParameters,
+      query:(text,values)=>{statements.push(text);return client.query(text,values);}});
     await client.query('COMMIT');return result;
   }catch(error){await client.query('ROLLBACK');throw error;}finally{await client.end();}
 }
@@ -45,7 +50,7 @@ const hooks=registerHooks({resolve(specifier,context,next){return specifier==='c
 const {default:jobs}=await import('../src/index.ts');hooks.deregister();
 const shadow='synthetic-snapshot-shadow-v1',confirmed='synthetic-snapshot-confirmed-v1';
 const env={DB_JOBS_FRESH:binding,MONTHLY_REPUTATION_SNAPSHOT_RULES:confirmed};
-let subject,reviewer,first,shadowSnapshot,confirmedSnapshot,second,correction;
+let subject,reviewer,first,shadowSnapshot,confirmedSnapshot,second,correction,historicalUpgradeEvidence;
 const publish=(eventId,rulesVersion=shadow)=>tx(client=>publishMonthlyRewardSnapshot(client,{eventId,rulesVersion}));
 const apply=(eventId,rulesVersion=confirmed)=>tx(client=>applyMonthlyRewardSnapshotCorrection(client,{eventId,rulesVersion}));
 const read=(subjectId=subject,rulesVersion=confirmed,effectiveMonth='2026-09')=>tx(client=>readOwnMonthlyRewardSnapshot(client,{subjectId,rulesVersion,effectiveMonth}),'lythaus_runtime');
@@ -85,10 +90,12 @@ async function post(author=subject,week='2026-08-03'){
     VALUES ($1,'post',$2,'resolved','synthetic-snapshot-publication',$3)`,[caseId,id,event]);
   await sql(`INSERT INTO moderation.decisions (id,case_id,outcome,public_label,policy_version,decided_by)
     VALUES ($1,$2,'allow','Human-authored','synthetic-snapshot-publication',$3)`,[uuidv7(),caseId,reviewer]);
-  await tx(client=>recordMonthlyContentEarning(client,{eventId:event,rulesVersion:weekly.version,evaluatedAt:new Date().toISOString()}));
+  await tx(async client=>recordMonthlyContentEarning(client,{eventId:event,rulesVersion:weekly.version,
+    evaluatedAt:(await sql('SELECT clock_timestamp() AS now')).rows[0].now.toISOString()}));
   return { id, event, caseId };
 }
-async function assessment(author=subject,month='2026-08',evaluatedAt=new Date().toISOString(),maintenanceVersion=maintenance.version){
+async function assessment(author=subject,month='2026-08',evaluatedAt,maintenanceVersion=maintenance.version){
+  evaluatedAt??=(await sql('SELECT clock_timestamp() AS now')).rows[0].now.toISOString();
   const assembly=await tx(client=>assembleMonthlyReputation(client,{subjectUserId:author,sourceMonth:month,
     weeklyRulesVersion:weekly.version,maintenanceRulesVersion:maintenanceVersion,evaluatedAt}));
   const requested=(await sql("SELECT id FROM system.outbox_events WHERE aggregate_id=$1 AND event_type='trust.monthly_assessment.requested'",[assembly.sourceId])).rows[0].id;
@@ -97,11 +104,15 @@ async function assessment(author=subject,month='2026-08',evaluatedAt=new Date().
   return {eventId:event,assessmentId:result.id,sourceId:assembly.sourceId,calculation:result.calculation};
 }
 before(async()=>{
+  const upgrades=[];
   for(const role of ['lythaus_jobs','lythaus_admin','lythaus_runtime'])
     if(!(await sql('SELECT has_table_privilege($1,$2,$3) AS allowed',[role,'system.feature_flags','SELECT'])).rows[0].allowed)
       grants.push(`REVOKE SELECT ON system.feature_flags FROM ${role}`);
-  for(const proposal of ['monthly_reputation_shadow','monthly_reputation_earning','monthly_reputation_maintenance','monthly_reward_snapshots'])
-    await sql(readFileSync(new URL(`../../../database/planetscale/proposals/${proposal}.sql`,import.meta.url),'utf8'));
+  for(const proposal of ['monthly_reputation_shadow','monthly_reputation_earning','monthly_reputation_maintenance','monthly_reward_snapshots']){
+    const contents=readFileSync(new URL(`../../../database/planetscale/proposals/${proposal}.sql`,import.meta.url),'utf8');
+    const marker=contents.indexOf('\n-- Disabled forward proposal');
+    if(marker>=0){await sql(contents.slice(0,marker));upgrades.push(contents.slice(marker));}else await sql(contents);
+  }
   for(const [table,rules] of [['monthly_earning_rule_sets',weekly],['monthly_maintenance_rule_sets',maintenance]]){
     const privacyColumn=table==='monthly_maintenance_rule_sets'?',collection_privacy_version':'';
     const privacyValue=table==='monthly_maintenance_rule_sets'?",'monthly-privacy-v1'":'';
@@ -113,6 +124,19 @@ before(async()=>{
   await sql("INSERT INTO system.feature_flags (flag_key,enabled,policy_version) VALUES ('trust.monthly_reputation_shadow',true,$1)",[policy]);
   for(let index=0;index<3;index++)await post();
   first=await assessment();assert.equal(first.calculation.sourceScore,500);
+  await sql('INSERT INTO system.feature_flags (flag_key,enabled,policy_version) VALUES ($1,true,$2)',[flag,policy]);
+  await configure('synthetic-upgrade-historical-v1');
+  const legacyAuthor=await person(),legacy=await assessment(legacyAuthor);
+  const snapshot=await publish(legacy.eventId,'synthetic-upgrade-historical-v1');
+  const history=async()=>({
+    source:(await sql('SELECT input,input_digest,policy_version,catalogue_hash,revision FROM trust.monthly_reputation_sources WHERE id=$1',[legacy.sourceId])).rows[0],
+    assessment:(await sql('SELECT calculation,source_score,quarterly_points,policy_version FROM trust.monthly_reputation_assessments WHERE id=$1',[legacy.assessmentId])).rows[0],
+    assembly:(await sql('SELECT report,evidence_digest,policy_version FROM trust.monthly_reputation_assemblies WHERE source_id=$1',[legacy.sourceId])).rows[0],
+    snapshot:(await sql('SELECT source_score,level,policy_version,revision,source_month,effective_month FROM trust.monthly_reward_snapshots WHERE id=$1',[snapshot.id])).rows[0],
+  });
+  const beforeUpgrade=await history();
+  for(const upgrade of upgrades)await sql(upgrade);
+  historicalUpgradeEvidence={before:beforeUpgrade,after:await history(),snapshotId:snapshot.id};
 });
 after(async()=>{
   await sql('DROP TRIGGER IF EXISTS fail_snapshot_fixture ON system.outbox_events');
@@ -140,6 +164,7 @@ after(async()=>{
   await sql('DELETE FROM system.consumer_inbox WHERE event_id IN (SELECT id FROM system.outbox_events WHERE actor_id=ANY($1::uuid[]))',[subjects]);
   await sql('DELETE FROM system.outbox_events WHERE actor_id=ANY($1::uuid[])',[subjects]);
   await sql('DELETE FROM identity.admin_memberships WHERE user_id=ANY($1::uuid[])',[subjects]);
+  await sql('DELETE FROM identity.email_credentials WHERE user_id=ANY($1::uuid[])',[subjects]);
   await sql('DELETE FROM identity.users WHERE id=ANY($1::uuid[])',[subjects]);
 });
 
@@ -150,7 +175,7 @@ test('PAR-04/REL-03: snapshot publisher is dormant without an explicit approved 
   const dormant=await person();await sql('ALTER TABLE trust.monthly_reward_snapshots RENAME TO monthly_reward_snapshots_fixture_hidden');
   await sql("UPDATE identity.users SET status='deleted',deleted_at=now() WHERE id=$1",[dormant]);
   await sql('ALTER TABLE trust.monthly_reward_snapshots_fixture_hidden RENAME TO monthly_reward_snapshots');
-  await sql('INSERT INTO system.feature_flags (flag_key,enabled,policy_version) VALUES ($1,true,$2)',[flag,policy]);
+  await sql('INSERT INTO system.feature_flags (flag_key,enabled,policy_version) VALUES ($1,true,$2) ON CONFLICT (flag_key) DO UPDATE SET enabled=true',[flag,policy]);
   await configure('synthetic-unapproved',{approved:false});assert.equal(await publish(first.eventId,'synthetic-unapproved'),null);
   await configure('synthetic-no-privacy',{privacy:null});assert.equal(await publish(first.eventId,'synthetic-no-privacy'),null);
   await configure('synthetic-bad-hash',{hash:'0'.repeat(64)});assert.equal(await publish(first.eventId,'synthetic-bad-hash'),null);
@@ -400,7 +425,8 @@ test('RPT-04/CAL-18: account status deletion preserves accepted points while an 
   await sql("UPDATE content.posts SET moderation_state='blocked' WHERE id=$1",[activeWork.id]);
   await sql(`INSERT INTO system.outbox_events (id,event_type,aggregate_type,aggregate_id,actor_id,payload)
     VALUES ($1,'moderation.content.blocked','post',$2,$3,'{}'::jsonb)`,[invalidationEvent,activeWork.id,reviewer]);
-  await tx(client=>recordMonthlyContentEarning(client,{eventId:invalidationEvent,rulesVersion:weekly.version,evaluatedAt:new Date().toISOString()}));
+  await tx(async client=>recordMonthlyContentEarning(client,{eventId:invalidationEvent,rulesVersion:weekly.version,
+    evaluatedAt:(await sql('SELECT clock_timestamp() AS now')).rows[0].now.toISOString()}));
   const invalidated=await assessment(active);assert.equal(invalidated.calculation.sourceScore,0);
   assert.ok(invalidated.calculation.sourceScore<activeSnapshot.sourceScore);
   assert.equal((await publish(invalidated.eventId,confirmed)).state,'correction_approval_pending');
@@ -445,4 +471,198 @@ test('REL-02/03: real Jobs queue defers while unconfigured and durable reconcili
   assert.ok((await reconcileMonthlyRewardSnapshots(env)).processed>0);
   assert.equal((await read(author)).state,'confirmed');assert.equal((await read(author)).sourceScore,0);
   assert.deepEqual(await reconcileMonthlyRewardSnapshots(env),{processed:0});
+});
+
+const disposable={mode:'disposable_local_pg17'};
+const preparationConfiguration={...PROSPECTIVE_REPUTATION_CONFIGURATION,
+  prospectiveFrom:'2026-10-07T20:12:31.000Z',firstSourceMonth:'2026-10',
+  rubricVersion:'synthetic-suggestion-rubric',authorityVersion:'synthetic-support-authority'};
+const preparedRules='synthetic-disabled-snapshot-v2';
+const preparePublish=(eventId,rulesVersion=preparedRules)=>tx(client=>publishMonthlyRewardSnapshot(client,{eventId,rulesVersion},disposable));
+const prepareApply=(eventId,rulesVersion=preparedRules)=>tx(client=>applyMonthlyRewardSnapshotCorrection(client,{eventId,rulesVersion},disposable));
+const prepareApprove=(patch)=>tx(client=>approveMonthlyRewardSnapshotCorrection(client,{
+  actorId:reviewer,rulesVersion:preparedRules,expectedSnapshotRevision:1,reasonCode:'synthetic_prepared_correction',
+  evidenceReference:'synthetic-support-reference',idempotencyKey:uuidv7(),...patch},disposable),'lythaus_admin');
+function suggestion(userId){return {eventId:uuidv7(),contributionId:uuidv7(),subjectUserId:userId,reviewerUserId:reviewer,
+  privateEvidenceId:uuidv7(),amendmentVersion:QUARTERLY_CALENDAR_AMENDMENT_VERSION,
+  rubricVersion:preparationConfiguration.rubricVersion,authorityVersion:preparationConfiguration.authorityVersion,
+  revision:1,predecessorEventId:null,decision:'accepted',performedAt:'2026-10-15T12:00:00.000Z',decidedAt:'2026-10-15T12:00:00.000Z',
+  useful:true,independentlyReviewed:true,manipulationScreened:true,competingAward:'none'};}
+async function preparedAssessment(author,patch={}){
+  const assembly=await tx(client=>assemblePreparedMonthlyReputation(client,{subjectUserId:author,sourceMonth:'2026-10',
+    weeklyRulesVersion:weekly.version,maintenanceRulesVersion:maintenance.version,evaluatedAt:'2027-06-01T00:00:00.000Z',
+    configuration:preparationConfiguration,suggestionRevisions:[],...patch},disposable));
+  assert.ok(assembly);
+  const requested=(await sql("SELECT id FROM system.outbox_events WHERE aggregate_id=$1 AND event_type='trust.monthly_assessment.requested'",[assembly.sourceId])).rows[0].id;
+  const result=await tx(client=>assessPreparedMonthlyReputationSource(client,{eventId:requested,assessmentId:uuidv7(),
+    resultEventId:uuidv7(),evaluatedAt:'2027-06-01T00:00:00.000Z'},disposable));
+  const event=(await sql("SELECT id FROM system.outbox_events WHERE aggregate_id=$1 AND event_type='trust.monthly_assessment.recorded'",[result.id])).rows[0].id;
+  return {eventId:event,assessmentId:result.id,sourceId:assembly.sourceId,calculation:result.calculation};
+}
+async function configurePrepared(version=preparedRules,patch={}){
+  await sql(`INSERT INTO trust.monthly_reward_snapshot_rule_sets
+    (version,policy_version,catalogue_hash,mode,status,first_source_month,weekly_rules_version,maintenance_rules_version,
+      collection_privacy_version,approved_by,approved_at,approval_reference,preparation_configuration)
+    VALUES ($1,$2,$3,$4,'pending_owner_approval',$5,$6,$7,'monthly-privacy-v1',$8,'2026-10-07T20:12:31.000Z','synthetic-only',$9::jsonb)`,
+  [version,policyV2,patch.hash??hashV2,patch.mode??'shadow',`${patch.firstSource??'2026-10'}-01`,weekly.version,
+    patch.maintenanceVersion??maintenance.version,reviewer,JSON.stringify(patch.configuration??preparationConfiguration)]);
+}
+const directPreparedSnapshot=(item,patch={})=>tx(client=>client.query(`INSERT INTO trust.monthly_reward_snapshots
+  (id,subject_user_id,source_month,effective_month,rules_version,policy_version,mode,revision,supersedes_id,
+    assessment_id,source_id,source_revision,source_score,level,correction_id,source_event_id,preparation_only)
+  SELECT $1,source.subject_user_id,source.source_month,(source.source_month+interval '1 month')::date,$2,$3,$4,$5,$6,
+    assessment.id,source.id,source.revision,$7::integer,$8::smallint,$9,$10,$11
+  FROM trust.monthly_reputation_assessments assessment JOIN trust.monthly_reputation_sources source ON source.id=assessment.source_id
+  WHERE assessment.id=$12`,[uuidv7(),patch.rulesVersion??preparedRules,patch.policyVersion??policyV2,patch.mode??'shadow',
+    patch.revision??1,patch.previous??null,patch.score??item.calculation.sourceScore,patch.level??item.calculation.level,
+    patch.correction??null,patch.event??item.eventId,patch.preparationOnly??true,item.assessmentId]),'lythaus_jobs',patch.timeZone??'UTC');
+async function canSettlePrepared(){return (await sql(`SELECT clock_timestamp() >= '2026-11-04T00:00:00.000Z'::timestamptz AS settled`)).rows[0].settled;}
+async function emailPrepared(userId){
+  const tokenId=uuidv7(),eventId=uuidv7(),performedAt='2026-10-15T12:00:00.000Z';
+  await sql(`INSERT INTO identity.email_credentials
+    (user_id,email_ciphertext,email_lookup_hmac,encryption_key_version,hmac_key_version,password_hash,verified_at)
+    VALUES ($1,decode('00','hex'),$2,'v1','v1','{}'::jsonb,$3)`,[userId,randomBytes(32),performedAt]);
+  await sql(`INSERT INTO identity.email_verification_tokens (id,user_id,token_hash,created_at,expires_at,consumed_at)
+    VALUES ($1,$2,$3,$4::timestamptz-interval '1 minute',$4::timestamptz+interval '5 minutes',$4)`,[tokenId,userId,randomBytes(32),performedAt]);
+  await sql(`INSERT INTO system.outbox_events (id,event_type,aggregate_type,aggregate_id,actor_id,payload,created_at)
+    VALUES ($1,'identity.email.verified','user',$2,$2,'{}'::jsonb,$3)`,[eventId,userId,performedAt]);
+  await tx(client=>recordMonthlyEmailControl(client,{sourceEventId:eventId,verificationTokenId:tokenId,rulesVersion:maintenance.version}),'lythaus_runtime');
+}
+
+test('V2/I01: transactional forward upgrades preserve populated v1 input/digest/report/snapshot bytes and validated identities',async()=>{
+  assert.deepEqual(historicalUpgradeEvidence.after,historicalUpgradeEvidence.before);
+  assert.equal((await sql('SELECT preparation_only FROM trust.monthly_reward_snapshots WHERE id=$1',[historicalUpgradeEvidence.snapshotId])).rows[0].preparation_only,false);
+  assert.equal((await sql(`SELECT count(*)::integer AS count FROM pg_constraint
+    WHERE conname IN ('monthly_assembly_policy_report_v2','monthly_reward_snapshot_caps_v2',
+      'monthly_reward_snapshot_supersedes_policy_v2','monthly_reward_snapshot_assessment_policy_v2',
+      'monthly_reward_snapshot_rules_policy_v2','monthly_reward_correction_assessment_policy_v2',
+      'monthly_reward_correction_rules_policy_v2','monthly_reward_correction_snapshot_policy_v2',
+      'monthly_reward_receipt_assessment_policy_v2','monthly_reward_receipt_rules_policy_v2','monthly_reward_rules_policy_v2')
+      AND convalidated`)).rows[0].count,11);
+});
+
+test('V2/I08/I12: ordinary publisher, reader and Jobs cannot enter disposable v2 preparation',async()=>{
+  await configurePrepared();const author=await person(),item=await preparedAssessment(author);
+  assert.equal(await publish(item.eventId,preparedRules),null);
+  assert.equal(await apply(item.eventId,preparedRules),null);
+  assert.equal((await read(author,preparedRules,'2026-11')).state,'unavailable');
+  assert.deepEqual(await reconcileMonthlyRewardSnapshots({...env,MONTHLY_REPUTATION_SNAPSHOT_RULES:preparedRules}),{processed:0});
+  await assert.rejects(tx(client=>publishMonthlyRewardSnapshot({...client,connectionParameters:{...client.connectionParameters,host:'database.example.invalid'}},
+    {eventId:item.eventId,rulesVersion:preparedRules},disposable)),/disposable_local_target/);
+  await sql('ALTER TABLE trust.monthly_reward_snapshots RENAME CONSTRAINT monthly_reward_snapshot_caps_v2 TO snapshot_capability_hidden');
+  try{assert.equal(await preparePublish(item.eventId),null);}finally{await sql('ALTER TABLE trust.monthly_reward_snapshots RENAME CONSTRAINT snapshot_capability_hidden TO monthly_reward_snapshot_caps_v2');}
+  for(const patch of [{mode:'confirmed'},{hash:'0'.repeat(64)},{configuration:{...preparationConfiguration,runtimeActivationAllowed:true}},
+    {configuration:{...preparationConfiguration,firstSourceMonth:null}}])
+    await assert.rejects(configurePrepared(`synthetic-invalid-${uuidv7()}`,patch),{code:'23514'});
+  await sql('UPDATE system.feature_flags SET enabled=false WHERE flag_key=$1',[flag]);
+  try{assert.equal(await preparePublish(item.eventId),null);}finally{await sql('UPDATE system.feature_flags SET enabled=true WHERE flag_key=$1',[flag]);}
+});
+
+test('V2/I04/I05: actual settlement clock admits one concurrent immutable candidate or refuses premature authority',async()=>{
+  const author=await person();await emailPrepared(author);const accepted=suggestion(author);
+  const item=await preparedAssessment(author,{suggestionRevisions:[accepted]});assert.equal(item.calculation.quarterlyPoints,1150);
+  if(!await canSettlePrepared()){
+    const results=await Promise.allSettled(Array.from({length:3},()=>preparePublish(item.eventId)));
+    assert.ok(results.every(result=>result.status==='rejected'&&/source_not_settled/.test(result.reason.message)));
+    await assert.rejects(directPreparedSnapshot(item),/provenance_required/);
+    assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshots WHERE subject_user_id=$1',[author])).rowCount,0);
+    return;
+  }
+  const results=await Promise.all(Array.from({length:3},()=>preparePublish(item.eventId)));
+  const initial=results.find(result=>result.created);assert.ok(initial);
+  assert.equal(results.filter(result=>result.created).length,1);assert.equal(initial.appliedPoints,0);
+  assert.equal(initial.effectiveMonth,'2026-11');assert.equal(initial.mode,'shadow');assert.equal(initial.runtimeActivationAllowed,false);
+  const before=(await sql('SELECT * FROM trust.monthly_reward_snapshots WHERE id=$1',[initial.id])).rows[0];
+  await preparedAssessment(author,{sourceMonth:'2027-01',suggestionRevisions:[accepted]});
+  assert.deepEqual((await sql('SELECT * FROM trust.monthly_reward_snapshots WHERE id=$1',[initial.id])).rows[0],before);
+  assert.equal((await preparePublish(item.eventId)).created,false);
+  assert.equal((await sql('SELECT 1 FROM trust.reputation_profiles WHERE user_id=$1',[author])).rowCount,0);
+  assert.equal((await read(author,preparedRules,'2026-11')).state,'unavailable');
+});
+
+test('V2/I03/I07: same-period policy collision requires review and never supersedes v1 authority',async()=>{
+  const author=await person(),legacy=await assessment(author,'2026-10','2027-06-01T00:00:00.000Z');
+  const item=await preparedAssessment(author);
+  if(!await canSettlePrepared()){
+    await assert.rejects(publish(legacy.eventId,shadow),/source_not_settled/);
+    await assert.rejects(prepareApprove({subjectId:author,snapshotId:confirmedSnapshot.id,assessmentId:item.assessmentId}),/source_not_settled/);
+    return;
+  }
+  const snapshot=await publish(legacy.eventId,shadow);
+  assert.equal((await preparePublish(item.eventId)).state,'snapshot_policy_requires_review');
+  await assert.rejects(prepareApprove({subjectId:author,snapshotId:snapshot.id,assessmentId:item.assessmentId}),/snapshot_revision_conflict/);
+  await assert.rejects(tx(client=>client.query(`INSERT INTO trust.monthly_reward_snapshot_corrections
+    (id,subject_user_id,snapshot_id,target_assessment_id,rules_version,actor_id,reason_code,evidence_reference,idempotency_key,request_digest,source_event_id,policy_version)
+    VALUES ($1,$2,$3,$4,$5,$6,'synthetic_policy_mix','synthetic',$7,repeat('0',64),$8,$9)`,
+    [uuidv7(),author,snapshot.id,item.assessmentId,shadow,reviewer,uuidv7(),uuidv7(),policyV2]),'lythaus_admin'),{code:'23503'});
+  assert.equal((await sql('SELECT policy_version FROM trust.monthly_reward_snapshots WHERE id=$1',[snapshot.id])).rows[0].policy_version,policy);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshots WHERE subject_user_id=$1',[author])).rowCount,1);
+});
+
+test('V2/I04/I07: same-policy corrections and retries retain prior snapshots and reject stale approvals',async()=>{
+  const author=await person(),initial=await preparedAssessment(author),accepted=suggestion(author);
+  if(!await canSettlePrepared()){await assert.rejects(preparePublish(initial.eventId),/source_not_settled/);return;}
+  const snapshot=await preparePublish(initial.eventId);
+  const corrected=await preparedAssessment(author,{suggestionRevisions:[accepted]});
+  assert.equal((await preparePublish(corrected.eventId)).state,'correction_approval_pending');
+  const request={subjectId:author,snapshotId:snapshot.id,assessmentId:corrected.assessmentId,idempotencyKey:uuidv7()};
+  const approvals=await Promise.all([prepareApprove(request),prepareApprove(request)]);assert.equal(approvals.filter(result=>result.created).length,1);
+  await assert.rejects(prepareApprove({...request,evidenceReference:'changed'}),/idempotency_reused/);
+  await assert.rejects(prepareApprove({...request,actorId:author,idempotencyKey:uuidv7()}),/actor_not_allowed/);
+  const applied=await Promise.all([prepareApply(approvals[0].sourceEventId),prepareApply(approvals[0].sourceEventId)]);
+  assert.equal(applied.filter(result=>result.created).length,1);
+  assert.equal(applied.find(result=>result.created).sourceScore,150);
+  const chain=(await sql('SELECT * FROM trust.monthly_reward_snapshots WHERE subject_user_id=$1 ORDER BY revision',[author])).rows;
+  assert.equal(chain.length,2);assert.equal(chain[0].source_score,0);assert.equal(chain[1].supersedes_id,snapshot.id);
+  assert.ok(chain.every(row=>row.policy_version===policyV2&&row.preparation_only&&row.mode==='shadow'));
+  await assert.rejects(prepareApprove({...request,idempotencyKey:uuidv7()}),/snapshot_revision_conflict/);
+  await assert.rejects(directPreparedSnapshot(corrected,{previous:snapshot.id,revision:2,correction:approvals[0].id,event:approvals[0].sourceEventId}),/revision_conflict/);
+});
+
+test('V2/I03/I04: forged events, policy/configuration mismatch and outbox crash cannot publish candidates',async()=>{
+  const author=await person(),item=await preparedAssessment(author),forged=uuidv7();
+  await sql(`INSERT INTO system.outbox_events (id,event_type,aggregate_type,aggregate_id,actor_id,payload)
+    VALUES ($1,'trust.monthly_assessment.recorded','monthly_reputation_assessment',$2,$3,$4::jsonb)`,
+  [forged,item.assessmentId,author,JSON.stringify({assessmentId:item.assessmentId,sourceId:item.sourceId,mode:'shadow'})]);
+  await assert.rejects(preparePublish(forged),/canonical_assessment/);
+  const changedRules='synthetic-v2-other-authority';await configurePrepared(changedRules,{configuration:{...preparationConfiguration,authorityVersion:'other-authority'}});
+  await assert.rejects(preparePublish(item.eventId,changedRules),/source_policy_mismatch/);
+  await assert.rejects(directPreparedSnapshot(item,{rulesVersion:changedRules}),/provenance_required/);
+  if(!await canSettlePrepared()){await assert.rejects(preparePublish(item.eventId),/source_not_settled/);return;}
+  await sql(`CREATE FUNCTION system.fail_snapshot_fixture() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+    IF NEW.event_type='${snapshotEvent}' THEN RAISE EXCEPTION 'synthetic snapshot interrupted';END IF;RETURN NEW;END $$;
+    CREATE TRIGGER fail_snapshot_fixture BEFORE INSERT ON system.outbox_events FOR EACH ROW EXECUTE FUNCTION system.fail_snapshot_fixture()`);
+  try{await assert.rejects(preparePublish(item.eventId),/snapshot interrupted/);}finally{await sql('DROP TRIGGER fail_snapshot_fixture ON system.outbox_events');await sql('DROP FUNCTION system.fail_snapshot_fixture()');}
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshots WHERE subject_user_id=$1',[author])).rowCount,0);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshot_receipts WHERE event_id=$1',[item.eventId])).rowCount,0);
+  assert.equal((await preparePublish(item.eventId)).created,true);
+  await assert.rejects(directPreparedSnapshot(item,{mode:'confirmed'}),/provenance_required|constraint/);
+  await assert.rejects(directPreparedSnapshot(item,{preparationOnly:false}),/provenance_required|constraint/);
+});
+
+test('V2/I05: future source stays unsettled in opposite timezones despite future evaluation and is deferred by ordinary Jobs',async()=>{
+  const now=new Date((await sql('SELECT clock_timestamp() AS now')).rows[0].now);
+  const month=now.toISOString().slice(0,7)<'2026-10'?'2026-10':now.toISOString().slice(0,7);
+  const author=await person(),item=await preparedAssessment(author,{sourceMonth:month});
+  for(const timeZone of ['Pacific/Kiritimati','Etc/GMT+12']){
+    await assert.rejects(tx(client=>publishMonthlyRewardSnapshot(client,{eventId:item.eventId,rulesVersion:preparedRules},disposable),'lythaus_jobs',timeZone),/source_not_settled/);
+    await assert.rejects(directPreparedSnapshot(item,{timeZone}),/provenance_required/);
+  }
+  assert.deepEqual(await reconcileMonthlyRewardSnapshots({...env,MONTHLY_REPUTATION_SNAPSHOT_RULES:preparedRules}),{processed:0});
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshot_receipts WHERE event_id=$1',[item.eventId])).rowCount,0);
+});
+
+test('V2/I11: deletion between source read and authorization refuses capture and erases private assembly evidence',async()=>{
+  const author=await person(),item=await preparedAssessment(author);
+  let reached,resume;const barrier=new Promise(resolve=>{reached=resolve;}),released=new Promise(resolve=>{resume=resolve;});
+  const pending=tx(client=>publishMonthlyRewardSnapshot({...client,query:async(text,values)=>{
+    const result=await client.query(text,values);
+    if(text.includes('WHERE assessment.id = $1 AND source.policy_version')){reached();await released;}
+    return result;
+  }},{eventId:item.eventId,rulesVersion:preparedRules},disposable));
+  await barrier;
+  try{await sql("UPDATE identity.users SET status='deleted',deleted_at=now() WHERE id=$1",[author]);}finally{resume();}
+  await assert.rejects(pending,/subject_unavailable/);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshots WHERE subject_user_id=$1',[author])).rowCount,0);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reputation_assemblies WHERE subject_user_id=$1',[author])).rowCount,0);
 });
