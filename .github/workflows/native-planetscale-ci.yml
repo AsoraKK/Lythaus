@@ -208,7 +208,6 @@ jobs:
 
   settled-clock:
     name: Monthly snapshots isolated settled clock
-    if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
