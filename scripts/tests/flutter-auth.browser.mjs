@@ -7,6 +7,8 @@ import { localAuthBrowserServer } from './local-auth-browser-server.mjs';
 import { installFlutterEngineFonts } from './flutter-engine-font-fixture.mjs';
 import { createAuthRequestLifecycle } from './auth-request-lifecycle.mjs';
 import './auth-request-lifecycle.test.mjs';
+import { freshOwnerReadFence } from './fresh-owner-read.mjs';
+import './fresh-owner-read.test.mjs';
 
 const build=path.resolve(process.env.AUTH_WEB_ARTIFACT_DIR??'build/web');
 assert.match(await readFile(path.join(build,'flutter_bootstrap.js'),'utf8'), /"useLocalCanvasKit":true/,
@@ -190,9 +192,20 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     const securityLocation=new URL(page.url());
     lifecycle.phase('security_reload');
     delayNextOwnerResponse=ownerResponseDelayMs>0;
+    const ownerReady=freshOwnerReadFence(page,{navigationUrl:'https://app.lythaus.co'+securityLocation.pathname+securityLocation.search,
+      ownerId:user.id,semanticReady:async()=>{
+        await page.waitForURL(url=>url.pathname==='/settings/security');
+        await page.getByRole('button',{name:'Sign out of all sessions',exact:true}).waitFor();
+        const back=page.getByRole('button',{name:'Back',exact:true});
+        await back.waitFor();
+        if(!await back.isEnabled())throw new Error('Security Back action is not ready');
+      }});
+    t.after(()=>ownerReady.dispose());
     await openApp(securityLocation.pathname+securityLocation.search);
     await page.waitForURL(url=>url.pathname==='/settings/security');
     await page.getByRole('button',{name:'Sign out of all sessions',exact:true}).waitFor();
+    await ownerReady.ready();
+    lifecycle.record('fresh_owner_body_and_semantics_ready');
     for(let revisit=0;revisit<2;revisit++){
       lifecycle.phase('security_back');
       await page.getByRole('button',{name:'Back',exact:true}).click();
