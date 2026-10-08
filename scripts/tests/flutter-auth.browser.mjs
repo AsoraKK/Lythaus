@@ -192,7 +192,7 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     const securityLocation=new URL(page.url());
     lifecycle.phase('security_reload');
     delayNextOwnerResponse=ownerResponseDelayMs>0;
-    const ownerReady=freshOwnerReadFence(page,{navigationUrl:'https://app.lythaus.co'+securityLocation.pathname+securityLocation.search,
+    const ownerReady=await freshOwnerReadFence(page,{navigationUrl:'https://app.lythaus.co'+securityLocation.pathname+securityLocation.search,
       ownerId:user.id,semanticReady:async()=>{
         await page.waitForURL(url=>url.pathname==='/settings/security');
         await page.getByRole('button',{name:'Sign out of all sessions',exact:true}).waitFor();
@@ -204,8 +204,12 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     await openApp(securityLocation.pathname+securityLocation.search);
     await page.waitForURL(url=>url.pathname==='/settings/security');
     await page.getByRole('button',{name:'Sign out of all sessions',exact:true}).waitFor();
-    await ownerReady.ready();
-    lifecycle.record('fresh_owner_body_and_semantics_ready');
+    const readiness=await ownerReady.ready();
+    lifecycle.record('fresh_owner_body_and_semantics_ready',{
+      documentNavigationStartedAtEpochMs:readiness.documentNavigationStartedAtEpochMs,
+      documentInitializedAtEpochMs:readiness.documentInitializedAtEpochMs,
+      ownerRequestStartedAtEpochMs:readiness.ownerRequestStartedAtEpochMs,
+    });
     for(let revisit=0;revisit<2;revisit++){
       lifecycle.phase('security_back');
       await page.getByRole('button',{name:'Back',exact:true}).click();

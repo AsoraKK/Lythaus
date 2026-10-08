@@ -1,7 +1,16 @@
-export function freshOwnerReadFence(page, { navigationUrl, ownerId, semanticReady, timeoutMs = 15000 }) {
+import { randomUUID } from 'node:crypto';
+
+export async function freshOwnerReadFence(page, { navigationUrl, ownerId, semanticReady, timeoutMs = 15000 }) {
   const expectedNavigation = new URL(navigationUrl).href;
   const mainFrame = page.mainFrame();
-  let documentRequest, committed = false, ownerRequest, settled = false;
+  const markerKey = '__lythausOwnerDocument_' + randomUUID();
+  // Runs only in future documents, after creation and before application scripts. Both clocks use Unix epoch milliseconds.
+  await page.addInitScript(key => {
+    Object.defineProperty(globalThis, key, { value: Object.freeze({
+      documentUrl: location.href, createdAt: performance.timeOrigin + performance.now(),
+    }) });
+  }, markerKey);
+  let documentRequest, documentEvidence, committed = false, ownerRequest, settled = false;
   let resolveResult;
   const result = new Promise(resolve => { resolveResult = resolve; });
   const cleanup = () => {
@@ -36,6 +45,9 @@ export function freshOwnerReadFence(page, { navigationUrl, ownerId, semanticRead
       fail('Security reload did not commit the expected document'); return;
     }
     committed = true;
+    documentEvidence = frame.evaluate(key => globalThis[key], markerKey).catch(() => {
+      fail('Fresh document initialization evidence could not be read');
+    });
   };
   const onFailed = request => {
     if (request === ownerRequest) fail('Fresh owner read was aborted');
@@ -57,13 +69,20 @@ export function freshOwnerReadFence(page, { navigationUrl, ownerId, semanticRead
       if (!Number.isFinite(ownerStart) || !Number.isFinite(documentStart) || ownerStart <= 0 || documentStart <= 0) {
         fail('Fresh owner read timing evidence is unavailable'); return;
       }
-      if (ownerStart < documentStart) { fail('Owner response belongs to a stale document request'); return; }
+      const initialized = await documentEvidence;
+      if (settled) return;
+      if (!initialized || initialized.documentUrl !== expectedNavigation || !Number.isFinite(initialized.createdAt)
+        || initialized.createdAt < documentStart) {
+        fail('Fresh document initialization timing evidence is unavailable'); return;
+      }
+      if (ownerStart < initialized.createdAt) { fail('Owner response belongs to a stale document request'); return; }
       const body = await response.json();
       if (settled) return;
       if (body?.user?.id !== ownerId) { fail('Fresh owner response does not match the signed-in owner'); return; }
       await semanticReady();
       if (settled) return;
-      finish(null, { response });
+      finish(null, { response, documentNavigationStartedAtEpochMs: documentStart,
+        documentInitializedAtEpochMs: initialized.createdAt, ownerRequestStartedAtEpochMs: ownerStart });
     } catch {
       fail('Fresh owner response or semantic readiness could not complete');
     }
