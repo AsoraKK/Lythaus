@@ -252,6 +252,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Install Dart formatter file discovery tool
+        run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
       - uses: ./.github/actions/flutter-setup
         with:
           flutter-version-file: .fvmrc
@@ -260,6 +262,8 @@ jobs:
       - run: flutter pub get
       - name: Check Dart formatting
         run: |
+          set -euo pipefail
+          command -v rg >/dev/null
           rg --files -g '*.dart' \
             -g '!lib/generated/api_client.dart' \
             -g '!lib/generated/api_client/**' \
