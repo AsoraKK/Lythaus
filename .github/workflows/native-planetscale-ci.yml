@@ -21,6 +21,8 @@ on:
       - 'apps/lythaus-admin-api/tests/*.postgres.mjs'
       - 'apps/lythaus-jobs/src/transactional-email-runtime.ts'
       - 'scripts/ci/validate-planetscale-postgres17.mjs'
+      - 'scripts/ci/validate-monthly-snapshot-clock.mjs'
+      - 'scripts/tests/monthly-snapshot-clock.test.mjs'
       - 'scripts/ci/validate-first-admin-bootstrap-postgres17.mjs'
       - 'scripts/ci/validate-authenticity-beta-postgres17.mjs'
       - 'scripts/ci/validate-authenticity-alpha-postgres17.mjs'
@@ -203,3 +205,40 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
         run: node --experimental-strip-types --experimental-test-module-mocks scripts/ci/validate-authenticity-alpha-postgres17.mjs
+
+  settled-clock:
+    name: Monthly snapshots isolated settled clock
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      LYTHAUS_EXPECTED_CHECKOUT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.23.3
+          cache: npm
+      - name: Verify exact checkout before test preparation
+        run: test "$(git rev-parse HEAD)" = "$LYTHAUS_EXPECTED_CHECKOUT_SHA"
+      - run: npm ci --ignore-scripts --no-audit
+      - name: Validate SHA, target, TAP and cleanup controls
+        run: node --test --test-reporter=tap scripts/tests/monthly-snapshot-clock.test.mjs
+      - name: Prove premature refusal and settled positive snapshots
+        run: >-
+          node scripts/ci/validate-monthly-snapshot-clock.mjs
+          --expected-sha "$LYTHAUS_EXPECTED_CHECKOUT_SHA"
+      - name: Upload SHA-bound synthetic clock evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: monthly-snapshot-clock-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          path: |
+            .artifacts/monthly-snapshot-clock/**/manifest.json
+            .artifacts/monthly-snapshot-clock/**/resources-*.json
+            .artifacts/monthly-snapshot-clock/**/*.tap
+            .artifacts/monthly-snapshot-clock/**/*.log
+            .artifacts/monthly-snapshot-clock/**/test-helper.mjs
+            .artifacts/monthly-snapshot-clock/**/SHA256SUMS
