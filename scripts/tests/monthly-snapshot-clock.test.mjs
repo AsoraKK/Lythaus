@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawn } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { CLOCK_TEST_PINS, DisposableContainers, localDatabaseUrl, validateEnvironment,
-  validatePositiveTap, verifyCheckout, publicDownloadEnvironment, command } from '../ci/validate-monthly-snapshot-clock.mjs';
+  validatePositiveTap, verifyCheckout, publicDownloadEnvironment, command, createEvidenceRun,
+  cleanupEvidenceRun, restoreOwner } from '../ci/validate-monthly-snapshot-clock.mjs';
 
 const expectedSha = '1'.repeat(40);
 const ok = stdout => ({ code: 0, stdout, stderr: '' });
@@ -92,7 +94,7 @@ test('Random owners record container IDs and cleanup preserves another run even 
     assert.ok(!command.args.includes('--privileged'));
     assert.equal(command.env.LD_PRELOAD, undefined); assert.equal(command.env.PGPASSWORD, undefined);
     assert.equal(JSON.parse(readFileSync(path.join(directory, `resources-${first.runId}.json`))).containers[0].id, owned);
-    await first.removeAll(); assert.deepEqual(fake.removed, [owned]); assert.ok(fake.containers.has(sentinel));
+    await first.removeAll(); await first.removeAll(); assert.deepEqual(fake.removed, [owned]); assert.ok(fake.containers.has(sentinel));
     await second.removeAll(); assert.equal(fake.containers.size, 0);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
@@ -114,3 +116,112 @@ test('Cleanup refuses a foreign ownership label instead of removing an unrelated
     assert.ok(fake.containers.has(id)); assert.equal(owner.records[0].state, 'cleanup_failed');
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
+
+test('An expired cleanup deadline preserves recorded IDs for a later bounded retry', async () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), 'lythaus-clock-unit-'));
+  try {
+    const fake = fakeDocker(), owner = new DisposableContainers(directory, 'unix:///var/run/docker.sock', fake.execute);
+    const id = await owner.create('deadline');
+    await assert.rejects(owner.removeAll({ deadline: Date.now() - 1 }), /cleanup_failed/);
+    assert.deepEqual(fake.removed, []); assert.equal(owner.records[0].state, 'cleanup_failed');
+    await owner.removeAll(); assert.deepEqual(fake.removed, [id]); assert.equal(owner.records[0].state, 'removed');
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('Fallback restores only SHA-bound registered journals and recovers an interrupted create cidfile', async () => {
+  const temporary = mkdtempSync(path.join(os.tmpdir(), 'lythaus-clock-unit-'));
+  try {
+    const scope = createEvidenceRun({ expectedSha, head: expectedSha, endpoint: 'unix:///var/run/docker.sock' }, temporary, { publishOutput: false });
+    const fake = fakeDocker(); scope.owner.execute = fake.execute;
+    const id = await scope.owner.create('partial');
+    const file = path.join(scope.directory, `resources-${scope.owner.runId}.json`);
+    const journal = JSON.parse(readFileSync(file)); journal.containers = []; writeFileSync(file, JSON.stringify(journal));
+    const restored = restoreOwner(scope.directory, scope.owner.env.DOCKER_HOST, expectedSha, scope.owner.runId, fake.execute);
+    await restored.removeAll(); await restored.removeAll(); assert.deepEqual(fake.removed, [id]);
+    assert.throws(() => restoreOwner(scope.directory, scope.owner.env.DOCKER_HOST, '2'.repeat(40), scope.owner.runId), /cleanup_target_invalid/);
+    assert.throws(() => restoreOwner(scope.directory, scope.owner.env.DOCKER_HOST, expectedSha, '00000000-0000-4000-8000-000000000000'), /owner_unregistered/);
+    const invalid = JSON.parse(readFileSync(file)); invalid.creations[0].cidfile = '../foreign.cid'; writeFileSync(file, JSON.stringify(invalid));
+    assert.throws(() => restoreOwner(scope.directory, scope.owner.env.DOCKER_HOST, expectedSha, scope.owner.runId), /journal_invalid/);
+  } finally { rmSync(temporary, { recursive: true, force: true }); }
+});
+
+test('Aborting an active command drains its process group with bounded escalation', { timeout: 10000 }, async () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), 'lythaus-clock-unit-'));
+  try {
+    const controller = new AbortController(), log = path.join(directory, 'ready.log');
+    const work = command(process.execPath, ['-e', "process.on('SIGTERM', () => {}); console.log('ready'); setInterval(() => {}, 1000)"],
+      { signal: controller.signal, stdoutFile: log });
+    const rejected = assert.rejects(work, /synthetic_interruption/);
+    await waitUntil(() => existsSync(log) && readFileSync(log, 'utf8').includes('ready'), 5000);
+    const started = Date.now(); controller.abort(new Error('synthetic_interruption')); await rejected;
+    assert.ok(Date.now() - started < 3000);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+async function waitUntil(predicate, timeout) {
+  const deadline = Date.now() + timeout;
+  while (!predicate()) {
+    if (Date.now() >= deadline) throw new Error('monthly_clock_interruption_checkpoint_timeout');
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+}
+
+test('Real helper SIGINT/SIGTERM during startup and running preserve failure status and remove only owned IDs',
+  { skip: process.env.LYTHAUS_MONTHLY_CLOCK_INTERRUPTION_TESTS !== '1', timeout: 180000 }, async () => {
+    const checkout = await verifyCheckout(process.env.LYTHAUS_EXPECTED_CHECKOUT_SHA);
+    const scope = createEvidenceRun(checkout, '.artifacts/monthly-snapshot-clock', { mode: 'interruption-regression' });
+    const { directory, owner, manifest, save, register } = scope;
+    manifest.interruptionControls = []; save();
+    let failure;
+    try {
+      const sentinel = await owner.create('regression-sentinel', ['--network', 'none', '--entrypoint', '/bin/true']);
+      for (const phase of ['startup', 'running']) for (const signal of ['SIGINT', 'SIGTERM']) {
+        const probeOwner = new DisposableContainers(directory, checkout.endpoint, command, { expectedSha: checkout.expectedSha, register });
+        const child = spawn(process.execPath, ['scripts/ci/validate-monthly-snapshot-clock.mjs', '--expected-sha', checkout.expectedSha,
+          '--interruption-probe', phase, '--probe-directory', directory, '--probe-owner-id', probeOwner.runId],
+        { env: { PATH: process.env.PATH, LANG: 'C.UTF-8', TZ: 'UTC' }, stdio: ['ignore', 'pipe', 'pipe'] });
+        let output = '', exited = false;
+        child.stdout.on('data', bytes => { output += bytes; }); child.stderr.on('data', bytes => { output += bytes; });
+        const exit = new Promise((resolve, reject) => {
+          child.on('error', reject); child.on('close', (code, received) => { exited = true; resolve({ code, signal: received }); });
+        });
+        try {
+          const log = path.join(directory, `${phase}-${probeOwner.runId}-probe.log`);
+          await waitUntil(() => {
+            assert.equal(exited, false, output);
+            return existsSync(log) && readFileSync(log, 'utf8').includes('interruptible_child_ready');
+          }, 90000);
+          const active = restoreOwner(directory, checkout.endpoint, checkout.expectedSha, probeOwner.runId);
+          assert.equal(active.records.length, 1); assert.equal((await active.inspect(active.records[0].id)).State.Running, true);
+          const started = Date.now(); assert.equal(child.kill(signal), true);
+          const result = await exit;
+          assert.equal(result.code, signal === 'SIGINT' ? 130 : 143, output); assert.equal(result.signal, null);
+          assert.ok(Date.now() - started < 35000, 'Signal cleanup must have a bounded deadline');
+          const cleaned = restoreOwner(directory, checkout.endpoint, checkout.expectedSha, probeOwner.runId);
+          assert.equal(cleaned.interruption.received, signal); assert.equal(cleaned.interruption.cleanupComplete, true);
+          assert.equal(await cleaned.inspect(cleaned.records[0].id), null);
+          await cleaned.removeAll(); await cleaned.removeAll();
+          assert.ok(await owner.inspect(sentinel), 'A probe must preserve a different recorded owner');
+          manifest.interruptionControls.push({ phase, signal, exitCode: result.code, containers: cleaned.records,
+            sentinelPreserved: true, repeatedCleanupPassed: true, durationMilliseconds: Date.now() - started }); save();
+        } finally {
+          if (!exited) { child.kill('SIGTERM'); await exit; }
+          writeFileSync(path.join(directory, `${phase}-${probeOwner.runId}-helper.log`), output);
+        }
+      }
+      const fallbackOwner = new DisposableContainers(directory, checkout.endpoint, command, { expectedSha: checkout.expectedSha, register });
+      const fallbackId = await fallbackOwner.create('fallback', ['--network', 'none', '--entrypoint', '/bin/sleep'], ['120']);
+      assert.equal((await fallbackOwner.docker(['start', fallbackId])).code, 0);
+      const args = ['scripts/ci/validate-monthly-snapshot-clock.mjs', '--expected-sha', checkout.expectedSha, '--cleanup-run', directory];
+      assert.equal((await command(process.execPath, args)).code, 0);
+      assert.equal((await command(process.execPath, args)).code, 0);
+      assert.equal(await fallbackOwner.inspect(fallbackId), null);
+      manifest.fallbackControls = { runningContainerRemoved: true, repeatedCleanupPassed: true }; manifest.outcome = 'passed';
+    } catch (error) { failure = error; manifest.outcome = 'failed'; manifest.error = error.message; }
+    finally {
+      save();
+      try { await cleanupEvidenceRun(directory, checkout.expectedSha, checkout.endpoint); }
+      catch (error) { failure ??= error; }
+    }
+    if (failure) throw failure;
+  });

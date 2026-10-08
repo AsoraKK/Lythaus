@@ -224,11 +224,31 @@ jobs:
         run: test "$(git rev-parse HEAD)" = "$LYTHAUS_EXPECTED_CHECKOUT_SHA"
       - run: npm ci --ignore-scripts --no-audit
       - name: Validate SHA, target, TAP and cleanup controls
+        id: clock-controls
+        env:
+          LYTHAUS_MONTHLY_CLOCK_INTERRUPTION_TESTS: '1'
         run: node --test --test-reporter=tap scripts/tests/monthly-snapshot-clock.test.mjs
       - name: Prove premature refusal and settled positive snapshots
+        id: clock-profile
         run: >-
           node scripts/ci/validate-monthly-snapshot-clock.mjs
           --expected-sha "$LYTHAUS_EXPECTED_CHECKOUT_SHA"
+      - name: Clean only recorded interruption-test resources
+        if: always() && steps.clock-controls.outputs.evidence_directory != ''
+        env:
+          CLOCK_EVIDENCE_DIRECTORY: ${{ steps.clock-controls.outputs.evidence_directory }}
+        run: >-
+          node scripts/ci/validate-monthly-snapshot-clock.mjs
+          --expected-sha "$LYTHAUS_EXPECTED_CHECKOUT_SHA"
+          --cleanup-run "$CLOCK_EVIDENCE_DIRECTORY"
+      - name: Clean only recorded positive-profile resources
+        if: always() && steps.clock-profile.outputs.evidence_directory != ''
+        env:
+          CLOCK_EVIDENCE_DIRECTORY: ${{ steps.clock-profile.outputs.evidence_directory }}
+        run: >-
+          node scripts/ci/validate-monthly-snapshot-clock.mjs
+          --expected-sha "$LYTHAUS_EXPECTED_CHECKOUT_SHA"
+          --cleanup-run "$CLOCK_EVIDENCE_DIRECTORY"
       - name: Upload SHA-bound synthetic clock evidence
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
