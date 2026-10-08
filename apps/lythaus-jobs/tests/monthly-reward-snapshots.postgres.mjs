@@ -39,6 +39,16 @@ async function tx(work,role='lythaus_jobs',timeZone='UTC'){
   }catch(error){await client.query('ROLLBACK');throw error;}finally{await client.end();}
 }
 const sql=(text,values)=>tx(client=>client.query(text,values),null);
+const clockProfile=process.env.LYTHAUS_MONTHLY_SNAPSHOT_CLOCK_PROFILE??'auto';
+if(!['auto','settled'].includes(clockProfile))throw new Error('snapshot_clock_profile_invalid');
+const clockEvidence=(await sql(`SELECT clock_timestamp() AS server_clock,
+  clock_timestamp() >= '2026-11-04T00:00:00.000Z'::timestamptz AS positive_settlement_available,
+  current_setting('server_version_num') AS server_version,current_database() AS database`)).rows[0];
+if(clockProfile==='settled'&&!clockEvidence.positive_settlement_available)
+  throw new Error('snapshot_positive_profile_requires_actual_postgresql_settlement_clock');
+const preparedPositiveTest=(name,work)=>test(name,{skip:!clockEvidence.positive_settlement_available
+  &&'Positive v2 settlement not exercised: actual PostgreSQL clock is before 2026-11-04; use the isolated settled profile'},work);
+const disabledPreparation={preparationOnly:true,runtimeActivationAllowed:false,appliedPoints:0};
 const binding={role:'lythaus_jobs'};
 mock.module('@lythaus/db',{namedExports:{...database,
   transaction:(binding,work)=>tx(work,binding.role,binding.timeZone),
@@ -188,6 +198,9 @@ test('PAR-04/REL-03: snapshot publisher is dormant without an explicit approved 
 test('CAL-10/12/PAR-04: real publication → monthly assembly → assessment → immutable separate shadow/confirmed next-month snapshots',async()=>{
   shadowSnapshot=await publish(first.eventId);assert.equal(shadowSnapshot.mode,'shadow');assert.equal(shadowSnapshot.sourceMonth,'2026-08');
   assert.equal(shadowSnapshot.effectiveMonth,'2026-09');assert.equal(shadowSnapshot.sourceScore,500);
+  assert.deepEqual(shadowSnapshot,{id:shadowSnapshot.id,revision:1,sourceMonth:'2026-08',effectiveMonth:'2026-09',
+    level:1,sourceScore:500,mode:'shadow',created:true});
+  assert.deepEqual(await publish(first.eventId),{state:'published',id:shadowSnapshot.id,mode:'shadow',created:false});
   const candidates=await read(subject,shadow);assert.equal(candidates.state,'shadow');assert.equal(candidates.level,1);
   assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshots WHERE mode=$1',['confirmed'])).rowCount,0);
   const [left,right]=await Promise.all([publish(first.eventId,confirmed),publish(first.eventId,confirmed)]);
@@ -236,6 +249,8 @@ test('REL-01/02: scoped correction approvals reject self, wrong member, stale CA
   await assert.rejects(approve({idempotencyKey:'forged'}),/id_invalid/);
   const key=uuidv7();const [left,right]=await Promise.all([approve({idempotencyKey:key}),approve({idempotencyKey:key})]);
   correction=left.created?left:right;assert.equal(Number(left.created)+Number(right.created),1);assert.equal(left.id,right.id);
+  assert.deepEqual(correction,{id:correction.id,sourceEventId:correction.sourceEventId,created:true});
+  assert.deepEqual(left.created?right:left,{id:correction.id,sourceEventId:correction.sourceEventId,created:false});
   for(const state of ['correction_approval_pending','snapshot_policy_requires_review','before_cutover'])
     await assert.rejects(tx(client=>client.query(`INSERT INTO trust.monthly_reward_snapshot_receipts
       (event_id,rules_version,mode,subject_user_id,assessment_id,snapshot_id,state) VALUES ($1,$2,'confirmed',$3,$4,$5,$6)`,
@@ -249,6 +264,7 @@ test('REL-01/02: scoped correction approvals reject self, wrong member, stale CA
 test('CAL-18/REL-02: approved correction applies atomically once with prior snapshots retained',async()=>{
   const [left,right]=await Promise.all([apply(correction.sourceEventId),apply(correction.sourceEventId)]);
   assert.equal(Number(left.created)+Number(right.created),1);assert.equal(left.id,right.id);
+  assert.deepEqual(left.created?right:left,{state:'published',id:left.id,mode:'confirmed',created:false});
   const result=await read();assert.equal(result.revision,2);assert.equal(result.sourceScore,1000);assert.equal(result.level,2);
   const old=(await sql('SELECT source_score,level FROM trust.monthly_reward_snapshots WHERE id=$1',[confirmedSnapshot.id])).rows[0];
   assert.equal(old.source_score,500);assert.equal(old.level,1);
@@ -513,10 +529,9 @@ const directPreparedSnapshot=(item,patch={})=>tx(client=>client.query(`INSERT IN
   SELECT $1,source.subject_user_id,source.source_month,(source.source_month+interval '1 month')::date,$2,$3,$4,$5,$6,
     assessment.id,source.id,source.revision,$7::integer,$8::smallint,$9,$10,$11
   FROM trust.monthly_reputation_assessments assessment JOIN trust.monthly_reputation_sources source ON source.id=assessment.source_id
-  WHERE assessment.id=$12`,[uuidv7(),patch.rulesVersion??preparedRules,patch.policyVersion??policyV2,patch.mode??'shadow',
+  WHERE assessment.id=$12 RETURNING id`,[uuidv7(),patch.rulesVersion??preparedRules,patch.policyVersion??policyV2,patch.mode??'shadow',
     patch.revision??1,patch.previous??null,patch.score??item.calculation.sourceScore,patch.level??item.calculation.level,
     patch.correction??null,patch.event??item.eventId,patch.preparationOnly??true,item.assessmentId]),'lythaus_jobs',patch.timeZone??'UTC');
-async function canSettlePrepared(){return (await sql(`SELECT clock_timestamp() >= '2026-11-04T00:00:00.000Z'::timestamptz AS settled`)).rows[0].settled;}
 async function emailPrepared(userId){
   const tokenId=uuidv7(),eventId=uuidv7(),performedAt='2026-10-15T12:00:00.000Z';
   await sql(`INSERT INTO identity.email_credentials
@@ -541,6 +556,11 @@ test('V2/I01: transactional forward upgrades preserve populated v1 input/digest/
       AND convalidated`)).rows[0].count,11);
 });
 
+test('V2 clock evidence: distinguish positive settlement execution from premature-clock refusal',t=>{
+  t.diagnostic(JSON.stringify({clockProfile,...clockEvidence,syntheticOnly:true,policyVersion:policyV2,...disabledPreparation}));
+  assert.ok(Number(clockEvidence.server_version)>=170000&&Number(clockEvidence.server_version)<180000);
+});
+
 test('V2/I08/I12: ordinary publisher, reader and Jobs cannot enter disposable v2 preparation',async()=>{
   await configurePrepared();const author=await person(),item=await preparedAssessment(author);
   assert.equal(await publish(item.eventId,preparedRules),null);
@@ -558,38 +578,32 @@ test('V2/I08/I12: ordinary publisher, reader and Jobs cannot enter disposable v2
   try{assert.equal(await preparePublish(item.eventId),null);}finally{await sql('UPDATE system.feature_flags SET enabled=true WHERE flag_key=$1',[flag]);}
 });
 
-test('V2/I04/I05: actual settlement clock admits one concurrent immutable candidate or refuses premature authority',async()=>{
+preparedPositiveTest('V2/I04/I05 POSITIVE: actual settlement clock admits one concurrent immutable candidate with exact replay metadata',async()=>{
   const author=await person();await emailPrepared(author);const accepted=suggestion(author);
   const item=await preparedAssessment(author,{suggestionRevisions:[accepted]});assert.equal(item.calculation.quarterlyPoints,1150);
-  if(!await canSettlePrepared()){
-    const results=await Promise.allSettled(Array.from({length:3},()=>preparePublish(item.eventId)));
-    assert.ok(results.every(result=>result.status==='rejected'&&/source_not_settled/.test(result.reason.message)));
-    await assert.rejects(directPreparedSnapshot(item),/provenance_required/);
-    assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshots WHERE subject_user_id=$1',[author])).rowCount,0);
-    return;
-  }
   const results=await Promise.all(Array.from({length:3},()=>preparePublish(item.eventId)));
   const initial=results.find(result=>result.created);assert.ok(initial);
-  assert.equal(results.filter(result=>result.created).length,1);assert.equal(initial.appliedPoints,0);
-  assert.equal(initial.effectiveMonth,'2026-11');assert.equal(initial.mode,'shadow');assert.equal(initial.runtimeActivationAllowed,false);
+  assert.equal(results.filter(result=>result.created).length,1);
+  assert.deepEqual(initial,{id:initial.id,revision:1,sourceMonth:'2026-10',effectiveMonth:'2026-11',
+    level:item.calculation.level,sourceScore:1150,mode:'shadow',created:true,...disabledPreparation});
+  const replay={state:'published',id:initial.id,mode:'shadow',created:false,...disabledPreparation};
+  for(const result of results.filter(result=>!result.created))assert.deepEqual(result,replay);
   const before=(await sql('SELECT * FROM trust.monthly_reward_snapshots WHERE id=$1',[initial.id])).rows[0];
   await preparedAssessment(author,{sourceMonth:'2027-01',suggestionRevisions:[accepted]});
   assert.deepEqual((await sql('SELECT * FROM trust.monthly_reward_snapshots WHERE id=$1',[initial.id])).rows[0],before);
-  assert.equal((await preparePublish(item.eventId)).created,false);
+  assert.deepEqual(await preparePublish(item.eventId),replay);
   assert.equal((await sql('SELECT 1 FROM trust.reputation_profiles WHERE user_id=$1',[author])).rowCount,0);
   assert.equal((await read(author,preparedRules,'2026-11')).state,'unavailable');
 });
 
-test('V2/I03/I07: same-period policy collision requires review and never supersedes v1 authority',async()=>{
+preparedPositiveTest('V2/I03/I07 POSITIVE: same-period policy collision requires review with exact disabled response metadata',async()=>{
   const author=await person(),legacy=await assessment(author,'2026-10','2027-06-01T00:00:00.000Z');
   const item=await preparedAssessment(author);
-  if(!await canSettlePrepared()){
-    await assert.rejects(publish(legacy.eventId,shadow),/source_not_settled/);
-    await assert.rejects(prepareApprove({subjectId:author,snapshotId:confirmedSnapshot.id,assessmentId:item.assessmentId}),/source_not_settled/);
-    return;
-  }
   const snapshot=await publish(legacy.eventId,shadow);
-  assert.equal((await preparePublish(item.eventId)).state,'snapshot_policy_requires_review');
+  assert.deepEqual(await preparePublish(item.eventId),{state:'snapshot_policy_requires_review',id:snapshot.id,
+    revision:1,mode:'shadow',created:false,...disabledPreparation});
+  assert.deepEqual(await preparePublish(item.eventId),{state:'snapshot_policy_requires_review',id:snapshot.id,
+    mode:'shadow',created:false,...disabledPreparation});
   await assert.rejects(prepareApprove({subjectId:author,snapshotId:snapshot.id,assessmentId:item.assessmentId}),/snapshot_revision_conflict/);
   await assert.rejects(tx(client=>client.query(`INSERT INTO trust.monthly_reward_snapshot_corrections
     (id,subject_user_id,snapshot_id,target_assessment_id,rules_version,actor_id,reason_code,evidence_reference,idempotency_key,request_digest,source_event_id,policy_version)
@@ -599,19 +613,31 @@ test('V2/I03/I07: same-period policy collision requires review and never superse
   assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshots WHERE subject_user_id=$1',[author])).rowCount,1);
 });
 
-test('V2/I04/I07: same-policy corrections and retries retain prior snapshots and reject stale approvals',async()=>{
+preparedPositiveTest('V2/I04/I07 POSITIVE: concurrent corrections and approval/application replays have exact disabled metadata',async()=>{
   const author=await person(),initial=await preparedAssessment(author),accepted=suggestion(author);
-  if(!await canSettlePrepared()){await assert.rejects(preparePublish(initial.eventId),/source_not_settled/);return;}
   const snapshot=await preparePublish(initial.eventId);
   const corrected=await preparedAssessment(author,{suggestionRevisions:[accepted]});
-  assert.equal((await preparePublish(corrected.eventId)).state,'correction_approval_pending');
+  assert.deepEqual(await preparePublish(corrected.eventId),{state:'correction_approval_pending',id:snapshot.id,
+    revision:1,mode:'shadow',created:false,...disabledPreparation});
+  assert.deepEqual(await preparePublish(corrected.eventId),{state:'correction_approval_pending',id:snapshot.id,
+    mode:'shadow',created:false,...disabledPreparation});
   const request={subjectId:author,snapshotId:snapshot.id,assessmentId:corrected.assessmentId,idempotencyKey:uuidv7()};
   const approvals=await Promise.all([prepareApprove(request),prepareApprove(request)]);assert.equal(approvals.filter(result=>result.created).length,1);
+  const approval=approvals.find(result=>result.created);
+  assert.deepEqual(approval,{id:approval.id,sourceEventId:approval.sourceEventId,created:true,...disabledPreparation});
+  const approvalReplay={...approval,created:false};
+  assert.deepEqual(approvals.find(result=>!result.created),approvalReplay);
+  assert.deepEqual(await prepareApprove(request),approvalReplay);
   await assert.rejects(prepareApprove({...request,evidenceReference:'changed'}),/idempotency_reused/);
   await assert.rejects(prepareApprove({...request,actorId:author,idempotencyKey:uuidv7()}),/actor_not_allowed/);
   const applied=await Promise.all([prepareApply(approvals[0].sourceEventId),prepareApply(approvals[0].sourceEventId)]);
   assert.equal(applied.filter(result=>result.created).length,1);
-  assert.equal(applied.find(result=>result.created).sourceScore,150);
+  const candidate=applied.find(result=>result.created);
+  assert.deepEqual(candidate,{id:candidate.id,revision:2,sourceMonth:'2026-10',effectiveMonth:'2026-11',
+    level:corrected.calculation.level,sourceScore:150,mode:'shadow',created:true,...disabledPreparation});
+  const applicationReplay={state:'published',id:candidate.id,mode:'shadow',created:false,...disabledPreparation};
+  assert.deepEqual(applied.find(result=>!result.created),applicationReplay);
+  assert.deepEqual(await prepareApply(approval.sourceEventId),applicationReplay);
   const chain=(await sql('SELECT * FROM trust.monthly_reward_snapshots WHERE subject_user_id=$1 ORDER BY revision',[author])).rows;
   assert.equal(chain.length,2);assert.equal(chain[0].source_score,0);assert.equal(chain[1].supersedes_id,snapshot.id);
   assert.ok(chain.every(row=>row.policy_version===policyV2&&row.preparation_only&&row.mode==='shadow'));
@@ -619,7 +645,7 @@ test('V2/I04/I07: same-policy corrections and retries retain prior snapshots and
   await assert.rejects(directPreparedSnapshot(corrected,{previous:snapshot.id,revision:2,correction:approvals[0].id,event:approvals[0].sourceEventId}),/revision_conflict/);
 });
 
-test('V2/I03/I04: forged events, policy/configuration mismatch and outbox crash cannot publish candidates',async()=>{
+test('V2/I03/I04: forged events and policy/configuration mismatch cannot publish candidates',async()=>{
   const author=await person(),item=await preparedAssessment(author),forged=uuidv7();
   await sql(`INSERT INTO system.outbox_events (id,event_type,aggregate_type,aggregate_id,actor_id,payload)
     VALUES ($1,'trust.monthly_assessment.recorded','monthly_reputation_assessment',$2,$3,$4::jsonb)`,
@@ -628,7 +654,10 @@ test('V2/I03/I04: forged events, policy/configuration mismatch and outbox crash 
   const changedRules='synthetic-v2-other-authority';await configurePrepared(changedRules,{configuration:{...preparationConfiguration,authorityVersion:'other-authority'}});
   await assert.rejects(preparePublish(item.eventId,changedRules),/source_policy_mismatch/);
   await assert.rejects(directPreparedSnapshot(item,{rulesVersion:changedRules}),/provenance_required/);
-  if(!await canSettlePrepared()){await assert.rejects(preparePublish(item.eventId),/source_not_settled/);return;}
+});
+
+preparedPositiveTest('V2/I04 POSITIVE: outbox interruption rolls back candidate and receipt before a successful retry',async()=>{
+  const author=await person(),item=await preparedAssessment(author);
   await sql(`CREATE FUNCTION system.fail_snapshot_fixture() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
     IF NEW.event_type='${snapshotEvent}' THEN RAISE EXCEPTION 'synthetic snapshot interrupted';END IF;RETURN NEW;END $$;
     CREATE TRIGGER fail_snapshot_fixture BEFORE INSERT ON system.outbox_events FOR EACH ROW EXECUTE FUNCTION system.fail_snapshot_fixture()`);
@@ -640,10 +669,54 @@ test('V2/I03/I04: forged events, policy/configuration mismatch and outbox crash 
   await assert.rejects(directPreparedSnapshot(item,{preparationOnly:false}),/provenance_required|constraint/);
 });
 
+test('V2 replay metadata: pre-cutover and superseded terminal responses remain explicitly disabled',async()=>{
+  const author=await person(),old=await preparedAssessment(author);
+  await preparedAssessment(author,{suggestionRevisions:[suggestion(author)]});
+  assert.deepEqual(await preparePublish(old.eventId),{state:'superseded',mode:'shadow',created:false,...disabledPreparation});
+  assert.deepEqual(await preparePublish(old.eventId),{state:'superseded',id:null,mode:'shadow',created:false,...disabledPreparation});
+  const laterRules='synthetic-v2-later-cutover';
+  await configurePrepared(laterRules,{firstSource:'2026-11',configuration:{...preparationConfiguration,firstSourceMonth:'2026-11'}});
+  assert.deepEqual(await preparePublish(old.eventId,laterRules),{state:'before_cutover',mode:'shadow',created:false,...disabledPreparation});
+  assert.deepEqual(await preparePublish(old.eventId,laterRules),{state:'before_cutover',id:null,mode:'shadow',created:false,...disabledPreparation});
+});
+
+preparedPositiveTest('V2 replay metadata POSITIVE: existing snapshot and correction lookup responses retain disabled metadata without rewriting history',async()=>{
+  const author=await person(),initial=await preparedAssessment(author);
+  const snapshotId=(await directPreparedSnapshot(initial)).rows[0].id;
+  assert.deepEqual(await preparePublish(initial.eventId),{state:'published',id:snapshotId,revision:1,
+    mode:'shadow',created:false,...disabledPreparation});
+  assert.deepEqual(await preparePublish(initial.eventId),{state:'published',id:snapshotId,
+    mode:'shadow',created:false,...disabledPreparation});
+  const alternateRules='synthetic-v2-equivalent-rules';await configurePrepared(alternateRules);
+  assert.deepEqual(await preparePublish(initial.eventId,alternateRules),{state:'snapshot_policy_requires_review',id:snapshotId,
+    revision:1,mode:'shadow',created:false,...disabledPreparation});
+  const corrected=await preparedAssessment(author,{suggestionRevisions:[suggestion(author)]});
+  const approval=await prepareApprove({subjectId:author,snapshotId,assessmentId:corrected.assessmentId});
+  const correctionId=(await directPreparedSnapshot(corrected,{previous:snapshotId,revision:2,
+    correction:approval.id,event:approval.sourceEventId})).rows[0].id;
+  const before=(await sql('SELECT * FROM trust.monthly_reward_snapshots WHERE subject_user_id=$1 ORDER BY revision',[author])).rows;
+  assert.deepEqual(await prepareApply(approval.sourceEventId),{id:correctionId,revision:2,mode:'shadow',created:false,...disabledPreparation});
+  assert.deepEqual(await prepareApply(approval.sourceEventId),{state:'published',id:correctionId,mode:'shadow',created:false,...disabledPreparation});
+  assert.deepEqual((await sql('SELECT * FROM trust.monthly_reward_snapshots WHERE subject_user_id=$1 ORDER BY revision',[author])).rows,before);
+  assert.equal((await sql('SELECT 1 FROM system.outbox_events WHERE actor_id=$1 AND event_type=$2',[author,snapshotEvent])).rowCount,0);
+});
+
+preparedPositiveTest('V2 replay metadata POSITIVE: superseded correction sources retain disabled terminal responses',async()=>{
+  const author=await person(),base=await preparedAssessment(author),snapshot=await preparePublish(base.eventId);
+  const older=await preparedAssessment(author,{suggestionRevisions:[suggestion(author)]});
+  const obsolete=await prepareApprove({subjectId:author,snapshotId:snapshot.id,assessmentId:older.assessmentId});
+  await preparedAssessment(author);
+  assert.deepEqual(await prepareApply(obsolete.sourceEventId),{state:'superseded',mode:'shadow',created:false,...disabledPreparation});
+  assert.deepEqual(await prepareApply(obsolete.sourceEventId),{state:'superseded',id:null,mode:'shadow',created:false,...disabledPreparation});
+});
+
 test('V2/I05: future source stays unsettled in opposite timezones despite future evaluation and is deferred by ordinary Jobs',async()=>{
   const now=new Date((await sql('SELECT clock_timestamp() AS now')).rows[0].now);
   const month=now.toISOString().slice(0,7)<'2026-10'?'2026-10':now.toISOString().slice(0,7);
   const author=await person(),item=await preparedAssessment(author,{sourceMonth:month});
+  const attempts=await Promise.allSettled(Array.from({length:3},()=>preparePublish(item.eventId)));
+  assert.ok(attempts.every(result=>result.status==='rejected'&&/source_not_settled/.test(result.reason.message)));
+  await assert.rejects(prepareApprove({subjectId:author,snapshotId:confirmedSnapshot.id,assessmentId:item.assessmentId}),/source_not_settled/);
   for(const timeZone of ['Pacific/Kiritimati','Etc/GMT+12']){
     await assert.rejects(tx(client=>publishMonthlyRewardSnapshot(client,{eventId:item.eventId,rulesVersion:preparedRules},disposable),'lythaus_jobs',timeZone),/source_not_settled/);
     await assert.rejects(directPreparedSnapshot(item,{timeZone}),/provenance_required/);

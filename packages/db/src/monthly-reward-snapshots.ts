@@ -157,7 +157,7 @@ export async function publishMonthlyRewardSnapshot(client: Client, input: { even
   const receipt = (await client.query<{ state: string; snapshot_id: string | null }>(
     'SELECT state,snapshot_id FROM trust.monthly_reward_snapshot_receipts WHERE event_id = $1 AND rules_version = $2',
     [input.eventId,configuration.version])).rows[0];
-  if (receipt) return { state:receipt.state,id:receipt.snapshot_id,mode:configuration.mode,created:false };
+  if (receipt) return { state:receipt.state,id:receipt.snapshot_id,mode:configuration.mode,created:false,...preparationMetadata(configuration) };
   const recordReceipt = async (state: string, snapshotId: string | null) => client.query(`INSERT INTO trust.monthly_reward_snapshot_receipts
     (event_id,rules_version,mode,subject_user_id,assessment_id,snapshot_id,state${context ? ',policy_version' : ''})
     VALUES ($1,$2,$3,$4,$5,$6,$7${context ? ',$8' : ''})`,
@@ -167,21 +167,21 @@ export async function publishMonthlyRewardSnapshot(client: Client, input: { even
     [source.assessment_id,configuration.mode])).rows[0];
   if (replay) {
     const state = replay.rules_version === configuration.version ? 'published' : 'snapshot_policy_requires_review';
-    await recordReceipt(state,replay.id); return { state,id:replay.id,revision:replay.revision,mode:replay.mode,created:false };
+    await recordReceipt(state,replay.id); return { state,id:replay.id,revision:replay.revision,mode:replay.mode,created:false,...preparationMetadata(configuration) };
   }
   if (source.source_month < configuration.first_source_month) {
-    await recordReceipt('before_cutover',null); return { state:'before_cutover' as const,mode:configuration.mode,created:false };
+    await recordReceipt('before_cutover',null); return { state:'before_cutover' as const,mode:configuration.mode,created:false,...preparationMetadata(configuration) };
   }
   try { await validateSource(client,source,configuration); } catch (error) {
     if (!(error instanceof Error) || error.message !== 'monthly_reward_source_superseded') throw error;
-    await recordReceipt('superseded',null); return { state:'superseded' as const,mode:configuration.mode,created:false };
+    await recordReceipt('superseded',null); return { state:'superseded' as const,mode:configuration.mode,created:false,...preparationMetadata(configuration) };
   }
   const previous = await latestSnapshot(client,source.subject_user_id,nextReputationMonth(month),configuration.mode);
   if (previous) {
     const state = previous.policy_version === configuration.policy_version && previous.rules_version === configuration.version
       ? 'correction_approval_pending' : 'snapshot_policy_requires_review';
     await recordReceipt(state,previous.id);
-    return { state,id:previous.id,revision:previous.revision,mode:previous.mode,created:false };
+    return { state,id:previous.id,revision:previous.revision,mode:previous.mode,created:false,...preparationMetadata(configuration) };
   }
   const snapshot = await insertSnapshot(client,configuration,source,input.eventId);
   await recordReceipt('published',snapshot.id);
@@ -212,7 +212,7 @@ export async function approveMonthlyRewardSnapshotCorrection(client: Client, inp
     [input.actorId,input.idempotencyKey])).rows[0];
   if (replay) {
     if (replay.request_digest !== requestDigest) throw new Error('monthly_reward_idempotency_reused');
-    return { id:replay.id,sourceEventId:replay.source_event_id,created:false };
+    return { id:replay.id,sourceEventId:replay.source_event_id,created:false,...preparationMetadata(configuration) };
   }
   await validateSource(client,source,configuration);
   if (source.source_month < configuration.first_source_month) throw new Error('monthly_reward_correction_scope_invalid');
@@ -256,21 +256,21 @@ export async function applyMonthlyRewardSnapshotCorrection(client: Client, input
   const receipt = (await client.query<{ state: string; snapshot_id: string | null }>(
     'SELECT state,snapshot_id FROM trust.monthly_reward_snapshot_receipts WHERE event_id = $1 AND rules_version = $2',
     [input.eventId,configuration.version])).rows[0];
-  if (receipt) return { state:receipt.state,id:receipt.snapshot_id,mode:configuration.mode,created:false };
+  if (receipt) return { state:receipt.state,id:receipt.snapshot_id,mode:configuration.mode,created:false,...preparationMetadata(configuration) };
   const recordReceipt = async (state: string, snapshotId: string | null) => client.query(`INSERT INTO trust.monthly_reward_snapshot_receipts
     (event_id,rules_version,mode,subject_user_id,assessment_id,snapshot_id,state${context ? ',policy_version' : ''})
     VALUES ($1,$2,$3,$4,$5,$6,$7${context ? ',$8' : ''})`,
     [input.eventId,configuration.version,configuration.mode,source.subject_user_id,source.assessment_id,snapshotId,state,
       ...(context ? [configuration.policy_version] : [])]);
   const replay = (await client.query<Snapshot>('SELECT * FROM trust.monthly_reward_snapshots WHERE correction_id = $1',[correction.id])).rows[0];
-  if (replay) { await recordReceipt('published',replay.id); return { id:replay.id,revision:replay.revision,mode:replay.mode,created:false }; }
+  if (replay) { await recordReceipt('published',replay.id); return { id:replay.id,revision:replay.revision,mode:replay.mode,created:false,...preparationMetadata(configuration) }; }
   try { await validateSource(client,source,configuration); } catch (error) {
     if (!(error instanceof Error) || error.message !== 'monthly_reward_source_superseded') throw error;
-    await recordReceipt('superseded',null); return { state:'superseded' as const,mode:configuration.mode,created:false };
+    await recordReceipt('superseded',null); return { state:'superseded' as const,mode:configuration.mode,created:false,...preparationMetadata(configuration) };
   }
   const previous = await latestSnapshot(client,source.subject_user_id,nextReputationMonth(month),configuration.mode);
   if (previous?.id !== correction.snapshot_id) {
-    await recordReceipt('superseded',null); return { state:'superseded' as const,mode:configuration.mode,created:false };
+    await recordReceipt('superseded',null); return { state:'superseded' as const,mode:configuration.mode,created:false,...preparationMetadata(configuration) };
   }
   const snapshot = await insertSnapshot(client,configuration,source,input.eventId,previous,correction.id);
   await recordReceipt('published',snapshot.id);
