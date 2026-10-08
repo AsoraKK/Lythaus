@@ -13,11 +13,14 @@ assert.match(await readFile(path.join(build,'flutter_bootstrap.js'),'utf8'), /"u
   'The canonical release must bundle its renderer; browser acceptance must not depend on an external CDN');
 const mime={'.html':'text/html','.css':'text/css','.js':'application/javascript','.json':'application/json','.wasm':'application/wasm','.ttf':'font/ttf','.otf':'font/otf','.png':'image/png'};
 const user={id:'018f0000-0000-7000-8000-000000000001',email:'synthetic@example.invalid',role:'user',tier:'bronze',subscription_tier:'free',reputation_score:0,created_at:'2026-08-01T00:00:00Z',last_login_at:'2026-08-01T00:00:00Z'};
-for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of [1440,390]) {
-  test(`${name} ${width}: actual Flutter release login, recovery navigation, cookie restore and logout`,{timeout:120000},async t=>{
+const scenarios=Object.entries({chromium,webkit}).flatMap(([name,engine])=>[1440,390].map(width=>({name,engine,width,ownerResponseDelayMs:0})));
+scenarios.push({name:'webkit',engine:webkit,width:390,ownerResponseDelayMs:2000});
+for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
+  test(`${name} ${width}: actual Flutter release login, recovery navigation, cookie restore and logout${ownerResponseDelayMs?' [controlled pending owner response]':''}`,{timeout:120000},async t=>{
     const lifecycle=createAuthRequestLifecycle({ownerId:user.id});
     const errors=[],calls=[],failedRequests=[];let session=false,verificationRequired=false,userinfoUnavailable=false,complete=false;
     let refreshInFlight=0,maximumRefreshInFlight=0,signingOut=false;
+    let delayNextOwnerResponse=false;
     const fixture=await localAuthBrowserServer(async route=>{
       const req=route.request(),url=new URL(req.url());
       const requestHeaders=await req.allHeaders();
@@ -72,6 +75,11 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
       } else if(!['/api/feed/discover','/api/subscription/status','/api/custom-feeds','/api/users/me/reputation'].includes(url.pathname)){
         status=404;body={error:'route_not_found'};
       }
+      if(delayNextOwnerResponse&&req.method()==='GET'&&url.pathname==='/api/users/me'){
+        delayNextOwnerResponse=false;
+        lifecycle.record('controlled_owner_response_latency',{delayMs:ownerResponseDelayMs});
+        await new Promise(resolve=>setTimeout(resolve,ownerResponseDelayMs));
+      }
       lifecycle.server(req,status);
       return route.fulfill({status,headers,contentType:'application/json',body:JSON.stringify(body)});
     });
@@ -90,7 +98,7 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
     t.after(async()=>{lifecycle.record('teardown_start');try{if(!complete&&!page.isClosed()){
       if(process.env.AUTH_QA_DIR){await mkdir(process.env.AUTH_QA_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.AUTH_QA_DIR,`flutter-${name}-${width}-failure.png`)});}
       t.diagnostic(JSON.stringify({synthetic:true,calls:calls.map(({path,method})=>({path:path.replaceAll(user.id,'{synthetic-owner}'),method})),pageErrorCount:errors.length,failedRequests:failedRequests.map(({path,method,error,expectedSignOutCancellation})=>({path:path.replaceAll(user.id,'{synthetic-owner}'),method,error:['Load request cancelled','net::ERR_ABORTED','net::ERR_FAILED'].includes(error)?error:'other_network_failure',expectedSignOutCancellation})),urlPath:new URL(page.url()).pathname}));
-    }}finally{await browser.close();await fixture.close();lifecycle.record('teardown_finished');t.diagnostic(JSON.stringify({authRequestLifecycle:{engine:name,width,head:process.env.GITHUB_SHA??'local',fixtureBase:'f0e497af4d8b5c1471e17fd4b35d0c0520a09e37',complete,...lifecycle.snapshot()}}));}});
+    }}finally{await browser.close();await fixture.close();lifecycle.record('teardown_finished');t.diagnostic(JSON.stringify({authRequestLifecycle:{engine:name,width,scenario:ownerResponseDelayMs?'controlled_pending_owner_response':'baseline',ownerResponseDelayMs,head:process.env.GITHUB_SHA??'local',fixtureBase:'f0e497af4d8b5c1471e17fd4b35d0c0520a09e37',complete,...lifecycle.snapshot()}}));}});
     page.on('pageerror',error=>errors.push(error.message));
     page.on('requestfailed',request=>{
       const url=new URL(request.url()),error=request.failure()?.errorText;
@@ -181,6 +189,7 @@ for(const [name,engine] of Object.entries({chromium,webkit})) for(const width of
     await page.getByRole('button',{name:'Sign out of all sessions',exact:true}).waitFor();
     const securityLocation=new URL(page.url());
     lifecycle.phase('security_reload');
+    delayNextOwnerResponse=ownerResponseDelayMs>0;
     await openApp(securityLocation.pathname+securityLocation.search);
     await page.waitForURL(url=>url.pathname==='/settings/security');
     await page.getByRole('button',{name:'Sign out of all sessions',exact:true}).waitFor();
