@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parse } from 'yaml';
 
@@ -17,7 +18,39 @@ export function apiFailure(status, message = '') {
   return 'API_FAILURE_UNCLASSIFIED';
 }
 
-export function resolvedDependencies(file, content) {
+function repositoryFile(file, revision) {
+  const segments = file.split('/');
+  for (let index = 1; index <= segments.length; index++) {
+    const prefix = segments.slice(0, index).join('/');
+    if (revision) {
+      const entry = git(['ls-tree', revision, '--', prefix]);
+      if (entry && !entry.startsWith(index === segments.length ? '100644 blob ' : '040000 tree ')) throw new Error(`NON_CANONICAL_LOCAL_PACKAGE_FILE:${prefix}`);
+    } else {
+      const entry = fs.lstatSync(join(process.cwd(), prefix), { throwIfNoEntry: false });
+      if (entry && (entry.isSymbolicLink() || !(index === segments.length ? entry.isFile() : entry.isDirectory()))) throw new Error(`NON_CANONICAL_LOCAL_PACKAGE_FILE:${prefix}`);
+    }
+  }
+  if (revision) return git(['ls-tree', revision, '--', file]) ? git(['show', `${revision}:${file}`]) : undefined;
+  return fs.existsSync(file) ? fs.readFileSync(file, 'utf8').trim() : undefined;
+}
+
+function canonicalLocalPackage(file, name, value, packages, revision) {
+  if (file !== 'pubspec.lock' || name !== 'lythaus_api_client' || value.source !== 'path' || value.dependency !== 'direct main' || value.description?.path !== 'build/api_client' || value.description?.relative !== true || Object.keys(value.description).sort().join(',') !== 'path,relative') throw new Error(`UNSUPPORTED_DEPENDENCY_SOURCE:${file}:${name}`);
+  const rootContent = repositoryFile('pubspec.yaml', revision);
+  const sourceContent = repositoryFile('lib/generated/api_client/pubspec.yaml', revision);
+  if (!rootContent || !sourceContent) throw new Error(`CANONICAL_LOCAL_PACKAGE_SOURCE_REQUIRED:${name}`);
+  const root = parse(rootContent);
+  const source = parse(sourceContent);
+  const declaration = root.dependencies?.[name];
+  if (declaration?.path !== 'build/api_client' || Object.keys(declaration).join(',') !== 'path' || root.dev_dependencies?.[name] || root.dependency_overrides?.[name] || source.name !== name || source.version !== value.version || typeof source.version !== 'string' || !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)*$/.test(source.version)) throw new Error(`CANONICAL_LOCAL_PACKAGE_IDENTITY_MISMATCH:${name}`);
+  if (Object.keys(source.dependency_overrides ?? {}).length || Object.entries(source.dependencies ?? {}).some(([dependency, constraint]) => typeof constraint !== 'string' || packages[dependency]?.source !== 'hosted')) throw new Error(`CANONICAL_LOCAL_PACKAGE_UNLOCKED_DEPENDENCY:${name}`);
+  const preparedContent = repositoryFile('build/api_client/pubspec.yaml', revision);
+  if (preparedContent !== undefined && preparedContent !== sourceContent) throw new Error(`CANONICAL_LOCAL_PACKAGE_PREPARATION_MISMATCH:${name}`);
+  return { ecosystem: 'pub', name, version: value.version, relationship: 'direct', source: 'path', localPath: 'build/api_client', canonicalManifest: 'lib/generated/api_client/pubspec.yaml' };
+}
+
+export function resolvedDependencies(file, content, { revision } = {}) {
+  if (revision && !/^[a-f0-9]{40}$/.test(revision)) throw new Error('EXACT_LOCAL_PACKAGE_REVISION_REQUIRED');
   if (!content) return [];
   if (file.endsWith('package-lock.json')) {
     const lock = JSON.parse(content);
@@ -29,8 +62,14 @@ export function resolvedDependencies(file, content) {
     }));
   }
   if (file.endsWith('pubspec.lock')) {
+    if (revision) repositoryFile(file, revision);
     const lock = parse(content);
+    if (!lock?.packages || typeof lock.packages !== 'object' || Array.isArray(lock.packages)) throw new Error(`UNSUPPORTED_LOCK_SCHEMA:${file}`);
+    const local = lock.packages.lythaus_api_client;
+    const declaredLocal = file === 'pubspec.lock' && revision && parse(repositoryFile('pubspec.yaml', revision) ?? '')?.dependencies?.lythaus_api_client;
+    if ((local || declaredLocal) && local?.source !== 'path') throw new Error(`UNSUPPORTED_DEPENDENCY_SOURCE:${file}:lythaus_api_client`);
     return Object.entries(lock.packages ?? {}).filter(([, value]) => value.source !== 'sdk').map(([name, value]) => {
+      if (value.source === 'path') return canonicalLocalPackage(file, name, value, lock.packages, revision);
       if (value.source !== 'hosted') throw new Error(`UNSUPPORTED_DEPENDENCY_SOURCE:${file}:${name}`);
       return { ecosystem: 'pub', name, version: value.version, integrity: value.description?.sha256, relationship: value.dependency === 'transitive' ? 'transitive' : 'direct' };
     });
@@ -54,16 +93,18 @@ export function missingCoverage(expected, changes) {
 }
 
 const git = args => execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
-function expectedChanges(base, head) {
+export function expectedChanges(base, head) {
+  comparison(base, head);
   const filesAt = sha => git(['ls-tree', '-r', '--name-only', sha]).split(/\r?\n/);
   const beforeFiles = new Set(filesAt(base));
   const headFiles = filesAt(head);
   const changed = git(['diff', '--name-only', base, head]).split(/\r?\n/);
   const files = headFiles.filter(file => changed.includes(file) && /(^|\/)(package-lock\.json|pubspec\.lock|requirements\.(txt|lock))$/.test(file));
+  if (headFiles.includes('pubspec.lock') && changed.some(file => file === 'pubspec.yaml' || file.startsWith('lib/generated/api_client/') || file === 'build' || file.startsWith('build/'))) resolvedDependencies('pubspec.lock', git(['show', `${head}:pubspec.lock`]), { revision: head });
   const changes = [];
   for (const file of files) {
-    const before = beforeFiles.has(file) ? resolvedDependencies(file, git(['show', `${base}:${file}`])) : [];
-    const after = resolvedDependencies(file, git(['show', `${head}:${file}`]));
+    const before = beforeFiles.has(file) ? resolvedDependencies(file, git(['show', `${base}:${file}`]), { revision: base }) : [];
+    const after = resolvedDependencies(file, git(['show', `${head}:${file}`]), { revision: head });
     const prior = new Set(before.map(key));
     changes.push(...after.filter(value => !prior.has(key(value))).map(value => ({ ...value, manifest: file })));
   }
@@ -74,6 +115,13 @@ function expectedChanges(base, head) {
       const after = headFiles.includes(file) ? JSON.parse(git(['show', `${head}:${file}`])) : {};
       for (const field of ['dependencies', 'devDependencies', 'optionalDependencies', 'overrides']) {
         if (JSON.stringify(before[field]) !== JSON.stringify(after[field]) && !changed.includes(file.replace(/package\.json$/, 'package-lock.json'))) throw new Error(`CHANGED_MANIFEST_WITHOUT_LOCK:${file}`);
+      }
+    }
+    if (file === 'pubspec.yaml') {
+      const before = beforeFiles.has(file) ? parse(git(['show', `${base}:${file}`])) : {};
+      const after = headFiles.includes(file) ? parse(git(['show', `${head}:${file}`])) : {};
+      for (const field of ['dependencies', 'dev_dependencies', 'dependency_overrides']) {
+        if (JSON.stringify(before[field]) !== JSON.stringify(after[field]) && !changed.includes('pubspec.lock')) throw new Error(`CHANGED_MANIFEST_WITHOUT_LOCK:${file}`);
       }
     }
   }
