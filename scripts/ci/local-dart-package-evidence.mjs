@@ -156,7 +156,7 @@ export function rejectedMutationReport(output, mutation) {
 export function assertSourceSnapshotUnchanged(identity) {
   if (git(['rev-parse', 'HEAD']) !== identity.headSha) throw new Error('SOURCE_EVIDENCE_HEAD_CHANGED');
   if (git(['diff', '--name-only', identity.headSha, '--'])) throw new Error('SOURCE_EVIDENCE_CHECKOUT_CHANGED');
-  if (git(['ls-files', '--others', '--', 'lib/generated/api_client', ...recipePaths])) throw new Error('SOURCE_EVIDENCE_UNTRACKED_INPUT');
+  if (git(['ls-files', '--others', '--', 'lib/generated/api_client', 'pubspec_overrides.yaml', ...recipePaths])) throw new Error('SOURCE_EVIDENCE_UNTRACKED_INPUT');
   if (!isDeepStrictEqual(localDartIdentity(identity.headSha), identity)) throw new Error('SOURCE_EVIDENCE_IDENTITY_MISMATCH');
 }
 

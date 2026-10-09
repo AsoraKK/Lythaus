@@ -215,6 +215,9 @@ test('reloaded mutation traces must demonstrate assertion failure and not compil
 
 test('publication snapshot rejects changed HEAD, canonical source, recipe and untracked source inputs', () => withSourceFixture(({ identity, write, commit }) => {
   assertSourceSnapshotUnchanged(identity);
+  write('pubspec_overrides.yaml', '');
+  assert.throws(() => assertSourceSnapshotUnchanged(identity), /UNTRACKED_INPUT/);
+  fs.rmSync('pubspec_overrides.yaml');
   for (const file of ['lib/generated/api_client/lib/synthetic.dart', 'tests/contract/dart/canonical_local_package_behavior_test.dart.fixture', 'scripts/validate-openapi-dart-client.mjs']) {
     const original = fs.readFileSync(file);
     write(file, Buffer.concat([original, Buffer.from('\nsynthetic concurrent change\n')]));
