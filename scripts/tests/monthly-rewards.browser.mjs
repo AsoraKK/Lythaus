@@ -13,6 +13,9 @@ const engineName = process.env.MONTHLY_REWARDS_ENGINE ?? 'chromium';
 assert.ok(['chromium', 'webkit'].includes(engineName));
 const engine = engineName === 'webkit' ? webkit : chromium;
 const csvOnly = process.env.MONTHLY_REWARDS_CSV_ONLY === '1';
+const configurations = [{ name: 'desktop-light', width: 1440, height: 960, theme: 'light' }, { name: 'mobile-dark', width: 390, height: 844, theme: 'dark' }];
+const viewportName = process.env.MONTHLY_REWARDS_VIEWPORT;
+assert.ok(!viewportName || configurations.some(config => config.name === viewportName), 'Unknown monthly browser viewport');
 const readiness = monthlyRewardsResponseReadiness();
 const owner = { id: '018f0000-0000-7000-8000-000000000011', email: 'monthly-owner@example.invalid', displayName: 'Avery Monthly', bio: 'Synthetic monthly evidence.', role: 'user', subscription_tier: 'free', reputation_score: 0, created_at: '2026-08-01T00:00:00Z', last_login_at: '2026-08-01T00:00:00Z' };
 const publicId = '018f0000-0000-7000-8000-000000000012';
@@ -25,11 +28,12 @@ const reportBody = (sourceMonth, empty) => ({ reportState: empty ? 'pending' : '
 test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, async () => {
   await mkdir(output, { recursive: true });
   const evidence = [];
-  for (const config of [{ name: 'desktop-light', width: 1440, height: 960, theme: 'light' }, { name: 'mobile-dark', width: 390, height: 844, theme: 'dark' }]) {
+  for (const config of configurations.filter(config => !viewportName || config.name === viewportName)) {
     let signedIn = false, confirmed = false, shadow = false, empty = !csvOnly, failStatus = false;
     const calls = [], errors = [], captures = [];
-    const csvChecks = [], downloads = [];
+    const csvChecks = [], downloads = [], csvRequests = [];
     let releaseCsvResponse;
+    let csvResponseClosed;
     const fixture = await localAuthBrowserServer(async (route) => {
       const request = route.request(), url = new URL(request.url()), headersIn = await request.allHeaders();
       if (url.hostname === 'app.lythaus.co') {
@@ -55,7 +59,10 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
       else if (url.pathname === '/api/rewards/me/monthly') { assert.equal(headersIn.authorization, `Bearer ${token}`); assert.equal(url.search, ''); status = failStatus ? 503 : 200; body = failStatus ? { error: 'synthetic_private_failure' } : statusBody(confirmed, shadow); }
       else if (/^\/api\/reputation\/me\/reports\/monthly\/\d{4}-\d{2}\/export\.csv$/.test(url.pathname)) {
         assert.equal(headersIn.authorization, `Bearer ${token}`); assert.equal(headersIn.accept, 'text/csv'); assert.equal(url.search, '');
-        await new Promise(resolve => { releaseCsvResponse = resolve; });
+        const csvRequest = { sourceMonth: url.pathname.split('/').at(-2), receivedAt: Date.now(), releasedAt: null, closedAt: null, completed: null };
+        csvRequests.push(csvRequest);
+        csvResponseClosed = route.responseClosed.then(result => { csvRequest.closedAt = Date.now(); csvRequest.completed = result.completed; return result; });
+        await new Promise(resolve => { releaseCsvResponse = () => { csvRequest.releasedAt ??= Date.now(); resolve(); }; });
         return route.fulfill({ status: 200, headers, contentType: 'text/csv', body: `sourceMonth,score\n${url.pathname.split('/').at(-2)},2000\n` });
       }
       else if (/^\/api\/reputation\/me\/reports\/monthly\/\d{4}-\d{2}$/.test(url.pathname)) { assert.equal(headersIn.authorization, `Bearer ${token}`); assert.equal(url.search, ''); body = reportBody(url.pathname.split('/').at(-1), empty); }
@@ -97,6 +104,8 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         await page.waitForTimeout(600);
         assert.equal(typeof releaseCsvResponse, 'function', 'CSV request reached the local TLS server');
+        csvRequests.at(-1).observedPendingAt = Date.now();
+        assert.equal(csvRequests.at(-1).closedAt, null, 'Held CSV connection is still open before response release');
         assert.equal(downloads.length, csvChecks.filter(check => check.exactServerBytes).length, 'Held response cannot download');
       }
       async function exportCsv() {
@@ -114,10 +123,11 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
       async function cancelCsv(reason, leave) {
         await beginCsv();
         const downloadCount = downloads.length;
-        const cancelled = page.waitForEvent('requestfailed', { predicate: request => request.method() === 'GET' && new URL(request.url()).pathname.endsWith('/export.csv') });
         await leave();
-        const request = await cancelled;
-        assert.match(request.failure()?.errorText ?? '', /ERR_ABORTED|Load request cancelled|cancelled|canceled/i);
+        let closeTimer;
+        const closed = await Promise.race([csvResponseClosed, new Promise((_, reject) => { closeTimer = setTimeout(() => reject(new Error('CSV client did not close its held HTTP response within 30000 ms')), 30000); })]).finally(() => clearTimeout(closeTimer));
+        assert.equal(closed.completed, false, 'Client closed held HTTP response before it completed');
+        assert.equal(csvRequests.at(-1).releasedAt, null, 'Cancellation precedes the late response');
         releaseCsvResponse();
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         await page.waitForTimeout(600);
@@ -164,7 +174,7 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
         });
         await securityTab.close();
         assert.equal(errors.length, 0, errors.join('\n'));
-        evidence.push({ config, browser: browser.version(), calls, errors, captures, csvChecks });
+        evidence.push({ config, browser: browser.version(), calls, errors, captures, csvChecks, csvRequests });
         await context.close(); continue;
       }
       confirmed = true; shadow = true;
@@ -217,7 +227,7 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
       evidence.push({ config, browser: browser.version(), calls, errors, captures, csvChecks });
       await context.close();
     } catch (error) {
-      if (page) { await page.screenshot({ path: path.join(output, `${engineName}-${config.name}-failure.png`) }).catch(() => {}); await writeFile(path.join(output, `${engineName}-${config.name}-failure.json`), JSON.stringify({ message: error.message, errors, calls, captures, content: await page.content() }, null, 2)); }
+      if (page) { await page.screenshot({ path: path.join(output, `${engineName}-${config.name}-failure.png`) }).catch(() => {}); await writeFile(path.join(output, `${engineName}-${config.name}-failure.json`), JSON.stringify({ message: error.message, errors, calls, captures, csvChecks, csvRequests, content: await page.content() }, null, 2)); }
       throw error;
     } finally { releaseCsvResponse?.(); await browser.close(); await fixture.close(); }
   }
