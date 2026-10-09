@@ -201,13 +201,12 @@ export async function readOwnMonthlyReputationReport(client: Client, input: {
     return { reportState: 'pending' as const, reasonCode: 'report_unavailable', ...base, report: null };
   }
   const revisions = (await client.query<ReportSourceRow>(`SELECT source.revision, source.reason_code, source.recorded_at,
-      source.catalogue_hash, source.input_digest, assembly.policy_version AS assembly_policy,
+      source.catalogue_hash, assembly.report, assessment.mode AS assessment_mode, assessment.calculation,
+      assessment.weekly_points, assessment.monthly_points, assessment.quarterly_points,
+      assessment.source_score, assessment.level, source.input_digest, assembly.policy_version AS assembly_policy,
       assembly.evidence_digest AS assembly_digest,
       ${context ? "assembly.report -> 'preparationConfiguration' = $4::jsonb" : 'NULL::boolean'} AS preparation_matches,
-      ${context ? 'assessment.policy_version' : 'source.policy_version'} AS assessment_policy,
-      assembly.report, assessment.mode AS assessment_mode, assessment.calculation,
-      assessment.weekly_points, assessment.monthly_points, assessment.quarterly_points,
-      assessment.source_score, assessment.level
+      ${context ? 'assessment.policy_version' : 'source.policy_version'} AS assessment_policy
     FROM trust.monthly_reputation_sources source
     LEFT JOIN trust.monthly_reputation_assemblies assembly ON assembly.source_id = source.id
     LEFT JOIN trust.monthly_reputation_assessments assessment ON assessment.source_id = source.id
