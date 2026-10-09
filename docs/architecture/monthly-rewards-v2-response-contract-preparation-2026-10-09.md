@@ -67,6 +67,38 @@ inferred from a source month or entitlement month. The database source engine
 continues to enforce completion-month through calendar-quarter-end validity,
 no earlier credit and no carry. D01–D13 defaults are not approved by this work.
 
+### Weekly period and qualification evidence validation
+
+The disabled reader retains the period convention captured in the immutable
+assessment, earning calculations and missing-period evidence. Inconsistent or
+unsupported captured conventions are rejected. It does not choose a default
+calendar or consult a newer mutable rule set. The supported configured
+`closing-sunday-utc-proposal-v1` convention is explicitly reported as
+`pending_owner_approval`; this validates its proposed geometry without approving
+D01. The existing calendar helper validates known boundaries, seven-day whole
+weeks and source-month ownership. It never reselects weeks or calculates points.
+
+Known ranges must have start strictly before end. Known identities, starts or
+ends cannot repeat across selected, omitted, missing and unassessed rows;
+complete ranges cannot overlap, and adjacent exclusive boundaries are allowed.
+The reader checks private internal week IDs before its public projection drops
+them. The DTO also checks any supplied known identity, and never emits week IDs.
+
+The existing reader projection permits missing endpoints when captured evidence
+is absent. A null start/end remains null. For partial evidence, only available
+boundaries are checked against the captured convention; dates are not filled in.
+Known dates without a captured convention fail closed. If all dates and the
+convention are unavailable, `periodPolicyVersion` remains null and
+`periodPolicyStatus` is `unavailable`; this does not assert complete geometric
+evidence or grant authority. Duplicate known IDs are still rejected with null
+dates. Fixtures use distinct known November weeks, a December/year-boundary
+case, and explicit separate missing/partial-evidence cases.
+
+Quarterly email and suggestion windows likewise require `validFrom < validUntil`
+when both are known. Null or partial validity evidence is preserved without
+inventing dates. These semantic checks run in the disabled DTO builder; the
+closed wire schema preserves the nullable evidence and explicit proposal status.
+
 ## Shared paths proposed for coordinator serialization
 
 Before any shared editing, the coordinator must allocate:

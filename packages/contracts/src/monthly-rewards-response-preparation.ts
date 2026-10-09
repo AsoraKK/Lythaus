@@ -1,6 +1,7 @@
 import { MONTHLY_REPUTATION_POLICY_VERSION, nextReputationMonth, requireSourceMonth } from './monthly-reputation-policy.ts';
 import { PROSPECTIVE_REPUTATION_POLICY_VERSION, PROSPECTIVE_REPUTATION_CATALOGUE_HASH,
   prospectiveReputationLevelForScore } from './monthly-reputation-prospective.ts';
+import { PROPOSED_CLOSING_SUNDAY_CALENDAR, proposedClosingSundayWeek } from './monthly-reputation-decisions.ts';
 
 export const MONTHLY_REWARDS_RESPONSE_PREPARATION = Object.freeze({
   responseVersion: 'monthly-rewards-response-v2-preparation' as const,
@@ -64,6 +65,46 @@ function nullableScoreLevel(score: unknown, level: unknown) {
   return scoreLevel(score, level);
 }
 
+export function validatePreparedMonthlyWeekEvidence(values: unknown[], input: {
+  sourceMonth: string; periodPolicyVersion: unknown;
+}) {
+  requireSourceMonth(input.sourceMonth);
+  const periodPolicyVersion = input.periodPolicyVersion == null ? null : text(input.periodPolicyVersion);
+  if (periodPolicyVersion !== null && periodPolicyVersion !== PROPOSED_CLOSING_SUNDAY_CALENDAR.version) invalid();
+  const identities = new Set<string>(), starts = new Set<string>(), ends = new Set<string>();
+  const periods = values.map(value => {
+    const row = object(value), startsAt = instant(row.startsAt), endsAt = instant(row.endsAt);
+    if (row.weekId != null) {
+      const id = text(row.weekId);
+      if (identities.has(id)) invalid();
+      identities.add(id);
+    }
+    if (startsAt !== null) {
+      if (starts.has(startsAt)) invalid();
+      starts.add(startsAt);
+    }
+    if (endsAt !== null) {
+      if (ends.has(endsAt)) invalid();
+      ends.add(endsAt);
+    }
+    if (startsAt !== null && endsAt !== null && startsAt >= endsAt) invalid();
+    return { startsAt, endsAt };
+  });
+  const complete = periods.filter((row): row is { startsAt: string; endsAt: string } => row.startsAt !== null && row.endsAt !== null)
+    .sort((left, right) => left.startsAt.localeCompare(right.startsAt));
+  for (let index = 1; index < complete.length; index++)
+    if (complete[index].startsAt < complete[index - 1].endsAt) invalid();
+  for (const row of periods) {
+    if (row.startsAt === null && row.endsAt === null) continue;
+    if (periodPolicyVersion === null) invalid();
+    const expected = proposedClosingSundayWeek(row.startsAt ?? new Date(Date.parse(row.endsAt!) - 1).toISOString());
+    if ((row.startsAt !== null && row.startsAt !== expected.startsAt)
+      || (row.endsAt !== null && row.endsAt !== expected.endsAt) || expected.ownerMonth !== input.sourceMonth) invalid();
+  }
+  return { periodPolicyVersion, periodPolicyStatus: periodPolicyVersion === null
+    ? 'unavailable' as const : PROPOSED_CLOSING_SUNDAY_CALENDAR.status };
+}
+
 function snapshotProjection(value: unknown, effectiveMonth: string) {
   const snapshot = object(value);
   if (snapshot.effectiveMonth !== effectiveMonth || !['unavailable', 'pending', 'shadow'].includes(snapshot.state as string)) invalid();
@@ -112,11 +153,13 @@ function qualification(value: unknown, maximum: 1_000 | 150, actionId: string) {
     || (row.renewalRequired !== null && typeof row.renewalRequired !== 'boolean')) invalid();
   const points = integer(row.points, 0, maximum);
   if (![0, maximum].includes(points) || row.qualifies !== (points === maximum)) invalid();
+  const validFrom = instant(row.validFrom), validUntil = instant(row.validUntil);
+  if (validFrom !== null && validUntil !== null && validFrom >= validUntil) invalid();
   return { actionId, maximumPoints: maximum, points, qualifies: row.qualifies,
-    reasonCode: code(row.reasonCode), validFrom: instant(row.validFrom), validUntil: instant(row.validUntil),
+    reasonCode: code(row.reasonCode), validFrom, validUntil,
     renewalRequired: row.renewalRequired as boolean | null };
 }
-function detail(value: unknown) {
+function detail(value: unknown, sourceMonth: string) {
   if (value === null) return null;
   const report = object(value); metadata(report);
   const weekly = object(report.weekly), monthly = object(report.monthly), email = object(report.quarterlyEmail),
@@ -127,8 +170,12 @@ function detail(value: unknown) {
     || monthly.maximumPoints !== 2_500 || monthly.maintenancePolicyVersion !== MONTHLY_REPUTATION_POLICY_VERSION
     || email.maximumPoints !== 1_000 || quarterly.maximumPoints !== 1_150
     || ![null, 'shadow'].includes(report.assessmentMode as null | string)) invalid();
-  const selectedWeeks = array(weekly.selectedWeeks).map(week), omittedWeeks = array(weekly.omittedWeeks).map(week),
-    missingWeeks = array(weekly.missingWeeks).map(week), unassessedWeeks = array(weekly.unassessedWeeks).map(week);
+  const selected = array(weekly.selectedWeeks), omitted = array(weekly.omittedWeeks),
+    missing = array(weekly.missingWeeks), unassessed = array(weekly.unassessedWeeks);
+  const periodConvention = validatePreparedMonthlyWeekEvidence([...selected, ...omitted, ...missing, ...unassessed],
+    { sourceMonth, periodPolicyVersion: weekly.periodPolicyVersion });
+  const selectedWeeks = selected.map(week), omittedWeeks = omitted.map(week),
+    missingWeeks = missing.map(week), unassessedWeeks = unassessed.map(week);
   if (selectedWeeks.length > 4 || selectedWeeks.some(row => row.selected !== true)
     || [...omittedWeeks, ...missingWeeks].some(row => row.selected !== false)
     || unassessedWeeks.some(row => row.selected !== null)) invalid();
@@ -153,7 +200,7 @@ function detail(value: unknown) {
     sourceRecordedAt: instant(report.sourceRecordedAt), assessmentMode: report.assessmentMode as 'shadow' | null,
     sourceDigest: digest(report.sourceDigest), assemblyEvidenceDigest: digest(report.assemblyEvidenceDigest),
     weekly: { maximumPerWeek: 2_500 as const, selectedWeekLimit: 4 as const, maximumSelectedWeeklyPoints: 10_000 as const,
-      points: weeklyPoints, earningPolicyVersion: MONTHLY_REPUTATION_POLICY_VERSION, rulesVersion: text(weekly.rulesVersion),
+      points: weeklyPoints, earningPolicyVersion: MONTHLY_REPUTATION_POLICY_VERSION, rulesVersion: text(weekly.rulesVersion), ...periodConvention,
       selectedWeeks, omittedWeeks, missingWeeks, unassessedWeeks },
     monthly: { maximumPoints: 2_500 as const, points: monthlyPoints, maintenancePolicyVersion: MONTHLY_REPUTATION_POLICY_VERSION,
       rulesVersion: text(monthly.rulesVersion), actions: array(monthly.actions).map(action) },
@@ -183,7 +230,7 @@ export function prepareMonthlyReputationReportResponse(value: unknown) {
   const sourceMonth = text(report.sourceMonth, 7); requireSourceMonth(sourceMonth);
   const effectiveMonth = nextReputationMonth(sourceMonth);
   if (report.effectiveMonth !== effectiveMonth || !['pending', 'shadow'].includes(report.reportState as string)) invalid();
-  const projectedReport = detail(report.report);
+  const projectedReport = detail(report.report, sourceMonth);
   if ((report.reportState === 'shadow') !== (projectedReport?.assessmentMode === 'shadow')) invalid();
   return { ...MONTHLY_REWARDS_RESPONSE_PREPARATION, responseKind: 'monthly_reputation_report' as const,
     reportState: report.reportState as 'pending' | 'shadow', reasonCode: code(report.reasonCode), sourceMonth, effectiveMonth,

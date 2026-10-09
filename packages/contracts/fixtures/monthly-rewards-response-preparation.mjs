@@ -1,5 +1,7 @@
 import { MONTHLY_REPUTATION_POLICY_VERSION as v1 } from '../src/monthly-reputation-policy.ts';
 import { MONTHLY_REWARDS_RESPONSE_PREPARATION as metadata } from '../src/monthly-rewards-response-preparation.ts';
+import { PROPOSED_CLOSING_SUNDAY_CALENDAR, proposedClosingSundayWeeks } from '../src/monthly-reputation-decisions.ts';
+import { nextReputationMonth } from '../src/monthly-reputation-policy.ts';
 
 const version = () => ({ policyVersion: metadata.policyVersion, catalogueHash: metadata.catalogueHash,
   dataVersion: 2, preparationOnly: true, runtimeActivationAllowed: false, appliedPoints: 0 });
@@ -8,25 +10,28 @@ export function preparedSnapshotFixture(overrides = {}) {
     sourceMonth: '2026-12', effectiveMonth: '2027-01', sourceScore: 0, level: 1, revision: 1, sourceRevision: 1,
     snapshotId: '01900000-0000-7000-8000-000000000001', ...overrides };
 }
-export function preparedReportFixture() {
+export function preparedReportFixture(sourceMonth = '2026-11') {
+  const effectiveMonth = nextReputationMonth(sourceMonth), periods = proposedClosingSundayWeeks(sourceMonth);
   const actions = [{ actionId: 'weekly.profile_access', capGroup: null, allowance: 2500, remainingInGroup: 0,
     points: 2500, accepted: 1, pending: 0, withheld: 0, state: 'accepted', reasonCode: null, evidenceCount: 1,
     validFrom: null, validUntil: null, policyVersion: v1, dataVersion: 1 }];
-  const week = (selected) => ({ ...version(), startsAt: null, endsAt: null, points: 2500, revision: 1,
-    state: 'assessed', selected, selectionReason: selected ? 'selected_best_four' : 'not_selected_best_four',
+  const week = (period, index) => ({ ...version(), startsAt: period.startsAt, endsAt: period.endsAt,
+    weekId: `synthetic-week-${index}`, points: 2500, revision: 1,
+    state: 'assessed', selected: index < 4, selectionReason: index < 4 ? 'selected_best_four' : 'not_selected_best_four',
     earningPolicyVersion: v1, rulesVersion: 'synthetic-weekly', actions: structuredClone(actions) });
   const qualified = (maximumPoints, actionId) => ({ actionId, maximumPoints, points: maximumPoints, qualifies: true,
     reasonCode: 'qualification_candidate_activation_pending', validFrom: null, validUntil: null, renewalRequired: null });
-  return { ...version(), reportState: 'shadow', reasonCode: null, sourceMonth: '2026-12', effectiveMonth: '2027-01',
-    levelAuthority: { ...preparedSnapshotFixture(), snapshotRevision: 1 },
+  const weeks = periods.map(week);
+  return { ...version(), reportState: 'shadow', reasonCode: null, sourceMonth, effectiveMonth,
+    levelAuthority: { ...preparedSnapshotFixture({sourceMonth, effectiveMonth}), snapshotRevision: 1 },
     corrections: { sourceRevisions: [{ ...version(), sourceRevision: 2, reasonCode: 'source_evidence_corrected',
       recordedAt: '2027-01-04T00:00:00.000Z', sourceScore: 13650, level: 5 }], effectiveSnapshots: [] },
     report: { ...version(), sourceRevision: 2, sourceReasonCode: 'source_evidence_corrected',
       sourceRecordedAt: '2027-01-04T00:00:00.000Z', assessmentMode: 'shadow', sourceDigest: 'a'.repeat(64),
       assemblyEvidenceDigest: 'b'.repeat(64),
       weekly: { ...version(), maximumPerWeek: 2500, selectedWeekLimit: 4, maximumSelectedWeeklyPoints: 10000,
-        points: 10000, earningPolicyVersion: v1, rulesVersion: 'synthetic-weekly', selectedWeeks: Array.from({ length: 4 }, () => week(true)),
-        omittedWeeks: [week(false)], missingWeeks: [], unassessedWeeks: [] },
+        points: 10000, earningPolicyVersion: v1, rulesVersion: 'synthetic-weekly', periodPolicyVersion: PROPOSED_CLOSING_SUNDAY_CALENDAR.version,
+        selectedWeeks: weeks.filter(week => week.selected), omittedWeeks: weeks.filter(week => !week.selected), missingWeeks: [], unassessedWeeks: [] },
       monthly: { ...version(), maximumPoints: 2500, points: 2500, maintenancePolicyVersion: v1,
         rulesVersion: 'synthetic-maintenance', actions: [] },
       quarterlyEmail: { ...version(), maximumPoints: 1000, points: 1000, evidence: qualified(1000, 'quarterly.email_control') },

@@ -1,5 +1,6 @@
 import { MONTHLY_REPUTATION_POLICY_VERSION } from './monthly-reputation-policy.ts';
 import { PROSPECTIVE_REPUTATION_BANDS } from './monthly-reputation-prospective.ts';
+import { PROPOSED_CLOSING_SUNDAY_CALENDAR } from './monthly-reputation-decisions.ts';
 import { MONTHLY_REWARDS_RESPONSE_PREPARATION } from './monthly-rewards-response-preparation.ts';
 
 type Schema = Record<string, unknown>;
@@ -41,9 +42,16 @@ const total = scored({ weeklyPoints: integer(0, 10_000), monthlyPoints: integer(
   sourceScore: integer(0, 13_650), calculatedLevel: integer(1, 5), maximumSourceMonth: constant(13_650) }, 'calculatedLevel');
 const report = closed({ sourceRevision: integer(1), sourceReasonCode: reason, sourceRecordedAt: timestamp,
   assessmentMode: { enum: ['shadow', null] }, sourceDigest: digest, assemblyEvidenceDigest: digest,
-  weekly: closed({ maximumPerWeek: constant(2_500), selectedWeekLimit: constant(4), maximumSelectedWeeklyPoints: constant(10_000),
+  weekly: { ...closed({ maximumPerWeek: constant(2_500), selectedWeekLimit: constant(4), maximumSelectedWeeklyPoints: constant(10_000),
     points: nullable(integer(0, 10_000)), earningPolicyVersion: inherited, rulesVersion: text,
+    periodPolicyVersion: nullable(constant(PROPOSED_CLOSING_SUNDAY_CALENDAR.version)),
+    periodPolicyStatus: { enum: ['unavailable', PROPOSED_CLOSING_SUNDAY_CALENDAR.status] },
     selectedWeeks: { ...list(week), maxItems: 4 }, omittedWeeks: list(week), missingWeeks: list(week), unassessedWeeks: list(week) }),
+    anyOf: [
+      { properties: { periodPolicyVersion: constant(null), periodPolicyStatus: constant('unavailable') } },
+      { properties: { periodPolicyVersion: constant(PROPOSED_CLOSING_SUNDAY_CALENDAR.version),
+        periodPolicyStatus: constant(PROPOSED_CLOSING_SUNDAY_CALENDAR.status) } },
+    ] },
   monthly: closed({ maximumPoints: constant(2_500), points: integer(0, 2_500), maintenancePolicyVersion: inherited,
     rulesVersion: text, actions: list(action) }),
   quarterlyEmail: qualification(1_000, 'quarterly.email_control'), quarterlySuggestion: qualification(150, 'quarterly.suggestion'),

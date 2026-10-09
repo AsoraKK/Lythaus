@@ -6,6 +6,7 @@ import { prepareMonthlyReputationReportResponse as reportDto, prepareMonthlyRewa
   MONTHLY_REWARDS_RESPONSE_PREPARATION as metadata } from '../src/monthly-rewards-response-preparation.ts';
 import { MONTHLY_REWARDS_RESPONSE_PREPARATION_SCHEMA as schema } from '../src/monthly-rewards-response-preparation-schema.ts';
 import { preparedReportFixture, preparedSnapshotFixture, pendingReportFixture } from '../fixtures/monthly-rewards-response-preparation.mjs';
+import { MONTHLY_REPUTATION_ACTIVATION } from '../src/monthly-reputation-decisions.ts';
 
 const ajv = new Ajv({ strict: true, allErrors: true }); addFormats(ajv);
 const validate = ajv.compile(schema);
@@ -18,8 +19,9 @@ test('v2 response preparation separates corrected progress, immutable shadow sna
   assert.equal(dto.snapshotProjection.sourceScore, 0); assert.equal(dto.snapshotProjection.sourceRevision, 1);
   assert.equal(dto.levelAuthority.sourceScore, null); assert.equal(dto.levelAuthority.level, null);
   assert.equal(dto.levelAuthority.state, 'unavailable'); assert.equal(dto.levelAuthority.reasonCode, 'activation_not_approved');
-  assert.equal(dto.effectiveMonth, '2027-01'); assert.equal(dto.report.weekly.selectedWeeks.length, 4);
+  assert.equal(dto.effectiveMonth, '2026-12'); assert.equal(dto.report.weekly.selectedWeeks.length, 4);
   assert.equal(dto.report.weekly.omittedWeeks.length, 1); assert.equal(dto.report.quarterlyTotal.maximumPoints, 1150);
+  assert.ok(!('weekId' in dto.report.weekly.selectedWeeks[0]));
   assert.equal(dto.report.quarterlySuggestion.points, 150); assert.equal(dto.report.quarterlySuggestion.validFrom, null);
   assert.equal(dto.report.quarterlySuggestion.validUntil, null); assert.equal(dto.appliedPoints, 0);
 });
@@ -77,6 +79,75 @@ test('an assembled but unassessed report preserves nullable totals and unresolve
   assert.equal(dto.report.quarterlySuggestion.validFrom, null); assert.equal(dto.levelAuthority.level, null);
 });
 
+test('distinct whole weeks follow the captured proposal convention and December rolls into January without approving D01', () => {
+  const november = reportDto(preparedReportFixture()); conforms(november);
+  assert.equal(november.report.weekly.selectedWeeks[0].startsAt, '2026-10-26T00:00:00.000Z');
+  assert.equal(november.report.weekly.selectedWeeks[0].endsAt, '2026-11-02T00:00:00.000Z');
+  assert.equal(november.report.weekly.omittedWeeks[0].startsAt, '2026-11-23T00:00:00.000Z');
+  assert.equal(november.report.weekly.periodPolicyStatus, 'pending_owner_approval');
+  const december = reportDto(preparedReportFixture('2026-12')); conforms(december);
+  assert.equal(december.effectiveMonth, '2027-01'); assert.equal(december.report.weekly.selectedWeeks.length, 4);
+  assert.ok(MONTHLY_REPUTATION_ACTIVATION.pendingDecisions.includes('D01'));
+});
+
+test('weekly preparation rejects reversed/zero/malformed ranges, wrong calendar boundaries and unknown conventions', () => {
+  for (const patch of [{ endsAt: '2026-10-25T00:00:00.000Z' }, { endsAt: '2026-10-26T00:00:00.000Z' },
+    { endsAt: '2026-11-01T00:00:00.000Z' }, { endsAt: '2026-11-03T00:00:00.000Z' },
+    { startsAt: '2026-10-27T00:00:00.000Z', endsAt: '2026-11-03T00:00:00.000Z' },
+    { startsAt: '2026-10-26T01:00:00.000Z', endsAt: '2026-11-02T01:00:00.000Z' },
+    { startsAt: '2026-10-19T00:00:00.000Z', endsAt: '2026-10-26T00:00:00.000Z' }]) {
+    const raw = preparedReportFixture(); Object.assign(raw.report.weekly.selectedWeeks[0], patch); invalid(() => reportDto(raw));
+  }
+  for (const periodPolicyVersion of [null, 'unknown', 'owner-approved-by-default']) {
+    const raw = preparedReportFixture(); raw.report.weekly.periodPolicyVersion = periodPolicyVersion; invalid(() => reportDto(raw));
+  }
+});
+
+test('weekly preparation rejects duplicate known IDs, periods and overlaps across selected, omitted and missing rows', () => {
+  const edits = [
+    row => row.report.weekly.selectedWeeks[1].weekId = row.report.weekly.selectedWeeks[0].weekId,
+    row => Object.assign(row.report.weekly.selectedWeeks[1], { startsAt: row.report.weekly.selectedWeeks[0].startsAt,
+      endsAt: row.report.weekly.selectedWeeks[0].endsAt }),
+    row => row.report.weekly.omittedWeeks[0].weekId = row.report.weekly.selectedWeeks[0].weekId,
+    row => Object.assign(row.report.weekly.selectedWeeks[1], { startsAt: '2026-10-30T00:00:00.000Z', endsAt: '2026-11-06T00:00:00.000Z' }),
+    row => row.report.weekly.missingWeeks.push({ ...row.report.weekly.selectedWeeks[0], selected: false, points: 0 }),
+  ];
+  for (const edit of edits) { const raw = preparedReportFixture(); edit(raw); invalid(() => reportDto(raw)); }
+});
+
+test('partial and unavailable reader evidence stays null without inferred dates, and known IDs still cannot repeat', () => {
+  const raw = preparedReportFixture(); raw.report.weekly.selectedWeeks[0].startsAt = null;
+  raw.report.weekly.selectedWeeks[1].endsAt = null;
+  raw.report.weekly.omittedWeeks[0].startsAt = null; raw.report.weekly.omittedWeeks[0].endsAt = null;
+  const dto = reportDto(raw); conforms(dto);
+  assert.equal(dto.report.weekly.selectedWeeks[0].startsAt, null); assert.equal(dto.report.weekly.selectedWeeks[1].endsAt, null);
+  assert.equal(dto.report.weekly.omittedWeeks[0].startsAt, null); assert.equal(dto.report.total.sourceScore, 13650);
+  for (const row of [...raw.report.weekly.selectedWeeks, ...raw.report.weekly.omittedWeeks]) {
+    row.startsAt = null; row.endsAt = null;
+  }
+  raw.report.weekly.periodPolicyVersion = null;
+  const unavailable = reportDto(raw); conforms(unavailable);
+  assert.equal(unavailable.report.weekly.periodPolicyVersion, null); assert.equal(unavailable.report.weekly.periodPolicyStatus, 'unavailable');
+  raw.report.weekly.selectedWeeks[1].weekId = raw.report.weekly.selectedWeeks[0].weekId;
+  invalid(() => reportDto(raw));
+});
+
+test('qualification validity rejects reversed or zero known windows while preserving null/partial evidence', () => {
+  for (const [pick, projected] of [[row => row.report.quarterlyEmail.evidence, row => row.report.quarterlyEmail],
+    [row => row.report.quarterlySuggestion, row => row.report.quarterlySuggestion]]) {
+    for (const validUntil of ['2026-11-15T00:00:00.000Z', '2026-11-14T00:00:00.000Z']) {
+      const raw = preparedReportFixture(); Object.assign(pick(raw), { validFrom: '2026-11-15T00:00:00.000Z', validUntil });
+      invalid(() => reportDto(raw));
+    }
+    for (const patch of [{ validFrom: null, validUntil: '2027-01-01T00:00:00.000Z' },
+      { validFrom: '2026-11-15T00:00:00.000Z', validUntil: null },
+      { validFrom: '2026-11-15T00:00:00.000Z', validUntil: '2027-01-01T00:00:00.000Z' }]) {
+      const raw = preparedReportFixture(); Object.assign(pick(raw), patch); const dto = reportDto(raw); conforms(dto);
+      const result = projected(dto); assert.equal(result.validFrom, patch.validFrom); assert.equal(result.validUntil, patch.validUntil);
+    }
+  }
+});
+
 test('integer/cap, whole-week, digest and component integrity are enforced at the response boundary', () => {
   const edits = [row => row.report.total.sourceScore = 13651, row => row.report.total.sourceScore = 13649,
     row => row.report.total.sourceScore = 13650.5, row => row.report.total.calculatedLevel = 4,
@@ -117,4 +188,6 @@ test('schema rejects legacy/unversioned output, extra properties and entitlement
   assert.equal(validate({ ...valid, snapshotProjection: { ...valid.snapshotProjection, level: 5 } }), false);
   const report = reportDto(preparedReportFixture()); report.report.quarterlySuggestion.qualifies = false;
   assert.equal(validate(report), false);
+  const inconsistent = reportDto(preparedReportFixture()); inconsistent.report.weekly.periodPolicyStatus = 'unavailable';
+  assert.equal(validate(inconsistent), false);
 });
