@@ -24,6 +24,7 @@ import { tombstoneBetaCases, purgeBetaMedia } from '../../../packages/db/src/aut
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 import { presentationPreferencesIdentityExportQuery, resetPresentationPreferences, validatedPresentationPreferencesIdentity } from './runtime-policy.ts';
 import { reconcileSupportPrivacyDeletionLocations } from '../../../packages/db/src/support-feedback-privacy-runtime.ts';
+import { exportOwnSupportContributionsForPrivacy } from '../../../packages/db/src/support-feedback-contributor-privacy.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -68,10 +69,12 @@ function configuredSupportFeedbackPolicy(env: Env): unknown {
   }
 }
 
-async function exportSupportFeedbackForPrivacy(env: Env, requestId: string): Promise<unknown | undefined> {
+async function exportSupportFeedbackForPrivacy(env: Env, requestId: string, subjectId: string): Promise<unknown | undefined> {
   if (!await supportFeedbackPrivacyIsReady(env.DB_PRIVACY_FRESH)) return undefined;
   const policy = configuredSupportFeedbackPolicy(env);
   return transaction(env.DB_PRIVACY_FRESH, async client => {
+    const contributions = await exportOwnSupportContributionsForPrivacy(client, requestId, subjectId, policy);
+    if (contributions.items.length) throw new Error('support_privacy_export_pending');
     const items: Array<{ request: unknown; messages: readonly unknown[] }> = [];
     let requestCursor: string | null = null;
     for (let requestPage = 0; requestPage < 1_000; requestPage += 1) {
@@ -2491,7 +2494,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         appealOutcomeEffects: appealOutcomeEffects.rows,
         subjectDataLocations: locations.rows,
       });
-      const supportFeedback = await exportSupportFeedbackForPrivacy(this.env, requestId);
+      const supportFeedback = await exportSupportFeedbackForPrivacy(this.env, requestId, subjectId);
       return supportFeedback === undefined ? passport : Object.freeze({ ...passport, supportFeedback });
     });
 
