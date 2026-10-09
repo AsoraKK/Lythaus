@@ -20,6 +20,7 @@ import 'package:lythaus/features/profile/domain/owner_profile.dart';
 import 'package:lythaus/state/models/reputation.dart';
 import 'package:lythaus/state/providers/reputation_providers.dart';
 import 'package:lythaus/ui/screens/profile/profile_screen.dart';
+import '../support/monthly_rewards_fixture.dart';
 
 class _MockFollowService extends Mock implements FollowService {}
 
@@ -122,6 +123,7 @@ void main() {
             (ref) => Future.value(_ownerProfile(profile)),
           ),
           jwtProvider.overrideWith((ref) async => 'synthetic-token'),
+          ...monthlyDataFixtureOverrides(),
           reputationProvider.overrideWith((ref) async => _reputationSnapshot),
         ],
         child: const MaterialApp(home: ProfileScreen()),

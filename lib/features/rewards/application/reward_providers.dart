@@ -4,11 +4,13 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lythaus_api_client/lythaus_api_client.dart' as api;
 
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/rewards/domain/reward_models.dart';
+import 'package:lythaus/features/rewards/application/monthly_api_serializers.dart';
 
 Future<(Dio, CancelToken, String)> _monthlyReadContext(
   Ref ref, {
@@ -22,7 +24,9 @@ Future<(Dio, CancelToken, String)> _monthlyReadContext(
     throw StateError('Session changed');
   }
   final user = ref.watch(currentUserProvider);
-  if (user == null) throw StateError(unauthenticatedMessage);
+  if (user == null || ref.watch(guestModeProvider)) {
+    throw StateError(unauthenticatedMessage);
+  }
   final cancelToken = CancelToken();
   final stop = session.cancelOnChange(cancelToken.cancel);
   ref.onDispose(stop);
@@ -57,30 +61,40 @@ final rewardsSnapshotProvider = FutureProvider.autoDispose
     });
 
 final monthlyRewardsViewProvider =
-    FutureProvider.autoDispose<MonthlyRewardsView>((ref) async {
+    FutureProvider.autoDispose<api.MonthlyRewardsMeResponse>((ref) async {
       final (dio, cancelToken, token) = await _monthlyReadContext(ref);
-      final response = await dio.get<Map<String, dynamic>>(
-        '/rewards/me/monthly',
-        cancelToken: cancelToken,
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
+      final response = await api.RewardsApi(dio, monthlyApiSerializers)
+          .getMyMonthlyRewards(
+            cancelToken: cancelToken,
+            headers: {'Authorization': 'Bearer $token'},
+          );
       if (cancelToken.isCancelled) throw cancelToken.cancelError!;
       final data = response.data;
       if (data == null) throw StateError('Empty monthly rewards response');
-      return MonthlyRewardsView.fromJson(data);
+      return data;
     });
 
 final monthlyReputationReportProvider = FutureProvider.autoDispose
-    .family<Map<String, dynamic>, String>((ref, sourceMonth) async {
+    .family<api.MonthlyReputationReportResponse, String>((
+      ref,
+      sourceMonth,
+    ) async {
+      if (!RegExp(r'^\d{4}-(0[1-9]|1[0-2])$').hasMatch(sourceMonth)) {
+        throw ArgumentError.value(sourceMonth, 'sourceMonth');
+      }
       final (dio, cancelToken, token) = await _monthlyReadContext(ref);
-      final response = await dio.get<Map<String, dynamic>>(
-        '/reputation/me/reports/monthly/$sourceMonth',
-        cancelToken: cancelToken,
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
+      final response = await api.ReputationApi(dio, monthlyApiSerializers)
+          .getMyMonthlyReputationReport(
+            sourceMonth: sourceMonth,
+            cancelToken: cancelToken,
+            headers: {'Authorization': 'Bearer $token'},
+          );
       if (cancelToken.isCancelled) throw cancelToken.cancelError!;
       final data = response.data;
       if (data == null) throw StateError('Empty monthly reputation report');
+      if (data.sourceMonth != sourceMonth) {
+        throw StateError('Monthly report source does not match the request');
+      }
       return data;
     });
 

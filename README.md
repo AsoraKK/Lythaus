@@ -44,6 +44,7 @@ Requirements:
 
 ```powershell
 npm ci --ignore-scripts
+node scripts/validate-openapi-dart-client.mjs --prepare-for-flutter
 flutter pub get
 npm run typecheck:native
 npm run test:native-architecture

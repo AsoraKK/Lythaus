@@ -302,6 +302,14 @@ test(
               snapshot: { state: 'unavailable', reasonCode: 'approval_unavailable' },
               selection: { state: 'unavailable', reasonCode: 'approval_unavailable' },
             };
+          } else if (/^\/api\/reputation\/me\/reports\/monthly\/\d{4}-\d{2}$/.test(requestUrl.pathname)) {
+            body = {
+              reportState: 'pending', reasonCode: 'assembly_pending',
+              sourceMonth: requestUrl.pathname.split('/').at(-1), effectiveMonth: '2026-11',
+              policyVersion: 'lythaus-monthly-rewards-2026-10-v1',
+              levelAuthority: { state: 'unavailable', reasonCode: 'approval_unavailable', effectiveMonth: null, sourceMonth: null, sourceScore: null, level: null, levelKind: null },
+              corrections: { sourceRevisions: [], effectiveSnapshots: [] }, report: null,
+            };
           } else if (
             ![
               '/api/feed/discover',

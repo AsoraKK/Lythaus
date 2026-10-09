@@ -108,6 +108,7 @@ jobs:
         env:
           SPKI_GATE: 'true'
         run: |
+          node scripts/validate-openapi-dart-client.mjs --prepare-for-flutter
           flutter pub get
           flutter test test/security/environment_spki_pin_test.dart --reporter expanded
 

@@ -14,6 +14,7 @@ import 'package:lythaus/ui/components/feed_card.dart';
 import 'package:lythaus/ui/screens/home/feed_search_screen.dart';
 import 'package:lythaus/ui/screens/profile/settings_screen.dart';
 import 'package:lythaus/ui/screens/rewards/rewards_dashboard.dart';
+import '../support/monthly_rewards_fixture.dart';
 
 class _SearchNotifier extends FeedSearchNotifier {
   _SearchNotifier(this.responseFor);
@@ -89,7 +90,10 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              currentUserProvider.overrideWithValue(null),
+              if (screen == 'rewards-error')
+                ...monthlyFixtureOverrides()
+              else
+                currentUserProvider.overrideWithValue(null),
               feedSearchProvider.overrideWith(_UnavailableSearchNotifier.new),
               rewardsSnapshotProvider.overrideWith(
                 (ref, _) => Future<RewardsSnapshot>.error(
@@ -126,6 +130,12 @@ void main() {
           expect(find.text('Authorship: Under review'), findsOneWidget);
         }
         if (screen == 'rewards-error') {
+          await tester.scrollUntilVisible(
+            find.text('Retry'),
+            250,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.pumpAndSettle();
           expect(find.text('Retry'), findsOneWidget);
           expect(find.textContaining('private fixture'), findsNothing);
           expect(find.textContaining('Reputation level: 0'), findsNothing);
