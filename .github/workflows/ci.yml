@@ -393,7 +393,14 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
       - name: Verify rendered Flutter authentication journey
-        run: node --experimental-strip-types --test --test-timeout=600000 scripts/tests/flutter-auth.browser.mjs scripts/tests/optional-profile.browser.mjs scripts/tests/guest-account-entry.browser.mjs scripts/tests/native-notifications.browser.mjs scripts/tests/privacy-requests.browser.mjs
+        run: |
+          node --test scripts/tests/auth-browser-failure-reporter.test.mjs
+          node --experimental-strip-types --test --test-timeout=600000 \
+            --test-reporter=tap --test-reporter-destination=stdout \
+            --test-reporter=./scripts/tests/auth-browser-failure-reporter.mjs --test-reporter-destination=stdout \
+            scripts/tests/flutter-auth.browser.mjs scripts/tests/optional-profile.browser.mjs \
+            scripts/tests/guest-account-entry.browser.mjs scripts/tests/native-notifications.browser.mjs \
+            scripts/tests/privacy-requests.browser.mjs
       - name: Verify monthly CSV button lifecycle
         if: ${{ !cancelled() }}
         env:
