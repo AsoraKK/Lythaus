@@ -12,6 +12,7 @@ const output = path.resolve(process.env.MONTHLY_REWARDS_QA_DIR ?? 'build/monthly
 const engineName = process.env.MONTHLY_REWARDS_ENGINE ?? 'chromium';
 assert.ok(['chromium', 'webkit'].includes(engineName));
 const engine = engineName === 'webkit' ? webkit : chromium;
+const csvOnly = process.env.MONTHLY_REWARDS_CSV_ONLY === '1';
 const readiness = monthlyRewardsResponseReadiness();
 const owner = { id: '018f0000-0000-7000-8000-000000000011', email: 'monthly-owner@example.invalid', displayName: 'Avery Monthly', bio: 'Synthetic monthly evidence.', role: 'user', subscription_tier: 'free', reputation_score: 0, created_at: '2026-08-01T00:00:00Z', last_login_at: '2026-08-01T00:00:00Z' };
 const publicId = '018f0000-0000-7000-8000-000000000012';
@@ -27,6 +28,7 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
   for (const config of [{ name: 'desktop-light', width: 1440, height: 960, theme: 'light' }, { name: 'mobile-dark', width: 390, height: 844, theme: 'dark' }]) {
     let signedIn = false, confirmed = false, shadow = false, empty = true, failStatus = false;
     const calls = [], errors = [], captures = [];
+    const csvChecks = [];
     const fixture = await localAuthBrowserServer(async (route) => {
       const request = route.request(), url = new URL(request.url()), headersIn = await request.allHeaders();
       if (url.hostname === 'app.lythaus.co') {
@@ -50,6 +52,11 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
       else if (url.pathname === `/api/users/${publicId}/follow`) { body = { userId: publicId, following: false, followedBy: false, blocked: false }; }
       else if (['/api/reputation/me', '/api/users/me/reputation'].includes(url.pathname)) { body = { userId: owner.id, level: 0, reputationLevel: 0, levelName: 'New', reputationStatus: 'active', reputationBand: 'new', policyVersion: 'reputation-v2.0.0', pillars: {}, promotionBlockers: [], evaluatedAt: null }; }
       else if (url.pathname === '/api/rewards/me/monthly') { assert.equal(headersIn.authorization, `Bearer ${token}`); assert.equal(url.search, ''); status = failStatus ? 503 : 200; body = failStatus ? { error: 'synthetic_private_failure' } : statusBody(confirmed, shadow); }
+      else if (/^\/api\/reputation\/me\/reports\/monthly\/\d{4}-\d{2}\/export\.csv$/.test(url.pathname)) {
+        assert.equal(headersIn.authorization, `Bearer ${token}`); assert.equal(headersIn.accept, 'text/csv'); assert.equal(url.search, '');
+        await new Promise(resolve => setTimeout(resolve, 600));
+        return route.fulfill({ status: 200, headers, contentType: 'text/csv', body: `sourceMonth,score\n${url.pathname.split('/').at(-2)},2000\n` });
+      }
       else if (/^\/api\/reputation\/me\/reports\/monthly\/\d{4}-\d{2}$/.test(url.pathname)) { assert.equal(headersIn.authorization, `Bearer ${token}`); assert.equal(url.search, ''); body = reportBody(url.pathname.split('/').at(-1), empty); }
       else if (url.pathname === '/api/rewards/me') { body = { subscriptionTier: 'free', reputationLevel: 0, reputationBand: 'new', availableRewardLevels: [], maxOptionsPerLevel: 0, redemptionStatus: 'pending', fraudRiskStatus: 'normal', offers: [], redemptionHistory: [], affiliateDisclosure: '' }; }
       return route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify(body) });
@@ -113,6 +120,23 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
       await waitText('Source revision 2');
       assert.match(await text(), /Cap group: profile/); assert.match(await text(), /Unknown date/); assert.match(await text(), /Source revision 2/);
       await capture('corrected-evidence');
+      const csvControl = await locate(page.getByRole('button', { name: 'Export CSV', exact: true }));
+      const downloadReady = page.waitForEvent('download');
+      await csvControl.click();
+      await page.getByRole('button', { name: 'Exporting…', exact: true }).waitFor();
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      const download = await downloadReady;
+      const csvMonth = calls.findLast(call => call.path.endsWith('/export.csv')).path.split('/').at(-2);
+      const csvBytes = await readFile(await download.path(), 'utf8');
+      assert.equal(download.suggestedFilename(), `monthly-reputation-${csvMonth}.csv`);
+      assert.equal(csvBytes, `sourceMonth,score\n${csvMonth},2000\n`);
+      csvChecks.push({ sourceMonth: csvMonth, delayMilliseconds: 600, observedPendingAcrossTwoFrames: true, exactServerBytes: true });
+      await capture('csv-export-complete');
+      if (csvOnly) {
+        assert.equal(errors.length, 0, errors.join('\n'));
+        evidence.push({ config, browser: browser.version(), calls, errors, captures, csvChecks });
+        await context.close(); continue;
+      }
       await page.setViewportSize({ width: Math.floor(config.width / 2), height: Math.floor(config.height / 2) });
       await (await locate(page.getByRole('button', { name: /Corrections/ }))).focus(); await page.keyboard.press('Tab');
       await capture('zoom-200-approximation');
@@ -138,12 +162,12 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
       await capture('signed-out-cleared');
       assert.equal(errors.length, 0, errors.join('\n'));
       assert.equal(calls.filter(call => (call.path.startsWith('/api/rewards/') || call.path.includes('/reports/monthly/')) && call.method !== 'GET').length, 0, 'No entitlement or award writes');
-      evidence.push({ config, browser: browser.version(), calls, errors, captures });
+      evidence.push({ config, browser: browser.version(), calls, errors, captures, csvChecks });
       await context.close();
     } catch (error) {
       if (page) { await page.screenshot({ path: path.join(output, `${engineName}-${config.name}-failure.png`) }).catch(() => {}); await writeFile(path.join(output, `${engineName}-${config.name}-failure.json`), JSON.stringify({ message: error.message, errors, calls, captures, content: await page.content() }, null, 2)); }
       throw error;
     } finally { await browser.close(); await fixture.close(); }
   }
-  await writeFile(path.join(output, `${engineName}-evidence.json`), JSON.stringify({ engineName, commit: process.env.QA_COMMIT ?? 'local-uncommitted-validation', evidence, limitations: ['Synthetic local TLS fixture only; no production data.', 'Browser zoom is approximated by halving CSS viewport at device-pixel ratio 2; actual 200% text scaling is covered by Flutter widget tests.', 'Reduced motion and keyboard controls are exercised; no physical screen-reader or native-device run.'] }, null, 2));
+  await writeFile(path.join(output, `${engineName}-evidence.json`), JSON.stringify({ engineName, scenario: csvOnly ? 'csv-only' : 'full', commit: process.env.QA_COMMIT ?? 'local-uncommitted-validation', evidence, limitations: ['Synthetic local TLS fixture only; no production data.', ...(csvOnly ? ['CSV-only run; owner/public navigation, zoom and sign-out are not executed in this run.'] : []), 'Browser zoom is approximated by halving CSS viewport at device-pixel ratio 2; actual 200% text scaling is covered by Flutter widget tests.', 'Reduced motion and keyboard controls are exercised; no physical screen-reader or native-device run.'] }, null, 2));
 });
