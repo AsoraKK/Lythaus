@@ -1,8 +1,8 @@
 import type { Client } from 'pg';
 import { uuidv7 } from '@lythaus/security';
-import { MONTHLY_REPUTATION_CATALOGUE_HASH, MONTHLY_REPUTATION_POLICY_VERSION, nextReputationMonth, requireSourceMonth } from '../../contracts/src/monthly-reputation-policy.ts';
+import { MONTHLY_REPUTATION_CATALOGUE_HASH, MONTHLY_REPUTATION_POLICY_VERSION, nextReputationMonth, requireSourceMonth, reputationLevelForMonthlyScore } from '../../contracts/src/monthly-reputation-policy.ts';
 import { MONTHLY_REPUTATION_DECISIONS } from '../../contracts/src/monthly-reputation-decisions.ts';
-import { PROSPECTIVE_REPUTATION_POLICY_VERSION, PROSPECTIVE_REPUTATION_CATALOGUE_HASH } from '../../contracts/src/monthly-reputation-prospective.ts';
+import { PROSPECTIVE_REPUTATION_POLICY_VERSION, PROSPECTIVE_REPUTATION_CATALOGUE_HASH, PROSPECTIVE_REPUTATION_REPORT_LIMITS, prospectiveReputationLevelForScore } from '../../contracts/src/monthly-reputation-prospective.ts';
 import { disposablePreparationAllowed, type MonthlyReputationDisposablePreparation } from './monthly-reputation.ts';
 
 export const MONTHLY_REWARD_SNAPSHOT_FLAG = 'trust.monthly_reward_snapshots';
@@ -19,6 +19,7 @@ interface Snapshot {
   mode: 'shadow' | 'confirmed'; revision: number; assessment_id: string; source_id: string;
   source_revision: number; source_score: number; level: number; rules_version: string;
   policy_version: string;
+  preparation_only?: boolean;
 }
 function requireUuid(value: string) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value))
@@ -110,11 +111,14 @@ async function validateSource(client: Client, source: AssessedSource, configurat
     WHERE subject_user_id = $1 AND source_month = $2 AND policy_version = $3 ORDER BY revision DESC LIMIT 1`,
   [source.subject_user_id,source.source_month,configuration.policy_version])).rows[0];
   if (latest?.id !== source.source_id) throw new Error('monthly_reward_source_superseded');
-  if (!(await client.query<{ settled: boolean }>(`SELECT (($1::date + interval '1 month') AT TIME ZONE 'UTC')
+  if (!await sourceMonthSettled(client, source.source_month, configuration)) throw new Error('monthly_reward_source_not_settled');
+  return month;
+}
+async function sourceMonthSettled(client: Client, sourceMonth: Date, configuration: MonthlyRewardSnapshotConfiguration) {
+  return (await client.query<{ settled: boolean }>(`SELECT (($1::date + interval '1 month') AT TIME ZONE 'UTC')
       + (configuration ->> 'monthSettlementHours')::integer * interval '1 hour' <= clock_timestamp() AS settled
     FROM trust.monthly_maintenance_rule_sets WHERE version = $2`,
-  [source.source_month,configuration.maintenance_rules_version])).rows[0]?.settled) throw new Error('monthly_reward_source_not_settled');
-  return month;
+  [sourceMonth,configuration.maintenance_rules_version])).rows[0]?.settled === true;
 }
 async function insertSnapshot(client: Client, configuration: MonthlyRewardSnapshotConfiguration, source: AssessedSource,
   sourceEventId: string, previous?: Snapshot, correctionId?: string) {
@@ -277,7 +281,16 @@ export async function applyMonthlyRewardSnapshotCorrection(client: Client, input
   return snapshot;
 }
 
-export async function readOwnMonthlyRewardSnapshot(client: Client, input: { subjectId: string; rulesVersion?: string; effectiveMonth?: string }) {
+export type MonthlyRewardSnapshotRead = {
+  reasonCode: string; effectiveMonth: string;
+  sourceMonth?: string | null; snapshotId?: string | null; revision?: number; sourceRevision?: number;
+  sourceScore?: number | null; level?: number; levelKind?: 'unassessed_default'; policyVersion?: string;
+  preparationOnly?: true; runtimeActivationAllowed?: false; appliedPoints?: 0; dataVersion?: 2;
+  catalogueHash?: string; maximumSourceMonth?: number;
+} & ({ state: 'unavailable' | 'pending' }
+  | { state: 'shadow' | 'confirmed'; sourceMonth: string; snapshotId: string; revision: number;
+    sourceRevision: number; sourceScore: number; level: number; policyVersion: string });
+export async function readOwnMonthlyRewardSnapshot(client: Client, input: { subjectId: string; rulesVersion?: string; effectiveMonth?: string }, context?: MonthlyReputationDisposablePreparation): Promise<MonthlyRewardSnapshotRead> {
   requireUuid(input.subjectId);
   let month = input.effectiveMonth ?? new Date().toISOString().slice(0,7);
   requireSourceMonth(month);
@@ -285,7 +298,7 @@ export async function readOwnMonthlyRewardSnapshot(client: Client, input: { subj
   const currentMonth = (await client.query<{ month: string }>("SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM') AS month")).rows[0].month;
   month = input.effectiveMonth ?? currentMonth;
   requireSourceMonth(month);
-  const configuration = await monthlyRewardSnapshotConfiguration(client,input.rulesVersion);
+  const configuration = await monthlyRewardSnapshotConfiguration(client,input.rulesVersion,context);
   if (!configuration) return { state:'unavailable' as const,reasonCode:'approval_unavailable',effectiveMonth:month };
   if (!(await client.query<{ allowed: boolean }>('SELECT trust.lock_monthly_reward_subject($1) AS allowed',[input.subjectId])).rows[0]?.allowed)
     throw new Error('monthly_reward_subject_unavailable');
@@ -293,14 +306,27 @@ export async function readOwnMonthlyRewardSnapshot(client: Client, input: { subj
   if (month < nextReputationMonth(configuration.first_source_month.toISOString().slice(0,7)))
     return { state:'unavailable' as const,reasonCode:'before_policy_cutover',effectiveMonth:month };
   const snapshot = await latestSnapshot(client,input.subjectId,month,configuration.mode);
-  if (snapshot && snapshot.rules_version !== configuration.version)
+  const metadata = context ? { ...preparationMetadata(configuration), dataVersion: 2 as const,
+    catalogueHash: PROSPECTIVE_REPUTATION_CATALOGUE_HASH, maximumSourceMonth: PROSPECTIVE_REPUTATION_REPORT_LIMITS.maximumSourceMonth } : {};
+  if (snapshot && (snapshot.rules_version !== configuration.version || snapshot.policy_version !== configuration.policy_version))
     return { state:'pending' as const,reasonCode:'snapshot_policy_requires_review',effectiveMonth:month };
-  if (snapshot) return { state:configuration.mode,reasonCode:'source_month_assessed',effectiveMonth:month,
+  if (snapshot) {
+    const sourceMonth = snapshot.source_month.toISOString().slice(0,7);
+    const level = context ? prospectiveReputationLevelForScore(snapshot.source_score) : reputationLevelForMonthlyScore(snapshot.source_score);
+    if (nextReputationMonth(sourceMonth) !== month || snapshot.level !== level
+      || (context && (snapshot.preparation_only !== true || snapshot.mode !== 'shadow')))
+      throw new Error('monthly_reward_snapshot_integrity_failed');
+    // Read the stored entitlement without consulting newer source revisions. A reader
+    // still cannot turn a prepared row into authority before PostgreSQL settles it.
+    if (context && !await sourceMonthSettled(client, snapshot.source_month, configuration))
+      return { state:'pending' as const,reasonCode:'settlement_pending',effectiveMonth:month,...metadata };
+    return { state:configuration.mode,reasonCode:'source_month_assessed',effectiveMonth:month,
     sourceMonth:snapshot.source_month.toISOString().slice(0,7),snapshotId:snapshot.id,revision:snapshot.revision,
     sourceRevision:snapshot.source_revision,sourceScore:snapshot.source_score,level:snapshot.level,
-    policyVersion:MONTHLY_REPUTATION_POLICY_VERSION };
+    policyVersion:configuration.policy_version,...metadata };
+  }
   const anyHistory = await client.query(`SELECT 1 FROM trust.monthly_reputation_sources WHERE subject_user_id = $1 LIMIT 1`,[input.subjectId]);
   if (anyHistory.rowCount) return { state:'pending' as const,reasonCode:'settlement_pending',effectiveMonth:month };
   return { state:'pending' as const,reasonCode:'no_previous_assessment',effectiveMonth:month,level:1,levelKind:'unassessed_default',sourceScore:null,
-    sourceMonth:null,snapshotId:null,revision:0,policyVersion:MONTHLY_REPUTATION_POLICY_VERSION };
+    sourceMonth:null,snapshotId:null,revision:0,policyVersion:configuration.policy_version,...metadata };
 }

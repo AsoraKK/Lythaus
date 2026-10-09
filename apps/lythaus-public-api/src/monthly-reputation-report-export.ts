@@ -1,3 +1,5 @@
+import { PROSPECTIVE_REPUTATION_POLICY_VERSION, PROSPECTIVE_REPUTATION_CATALOGUE_HASH } from '../../../packages/contracts/src/monthly-reputation-prospective.ts';
+
 type Row = Record<string, unknown>;
 
 const columns = [
@@ -11,6 +13,10 @@ const columns = [
   'actionReasonCode', 'evidenceCount', 'validFrom', 'validUntil', 'sourceRevision',
   'sourceReasonCode', 'recordedAt',
 ] as const;
+const preparationColumns = ['dataVersion', 'catalogueHash', 'preparationOnly', 'runtimeActivationAllowed', 'appliedPoints',
+  'emailPoints', 'suggestionPoints', 'emailMaximumPoints', 'suggestionMaximumPoints',
+  'levelPolicyVersion', 'levelDataVersion', 'levelSourceRevision', 'levelSnapshotRevision', 'sourceDigest', 'assemblyEvidenceDigest',
+  'inheritedWeeklyPolicyVersion', 'inheritedMaintenancePolicyVersion'] as const;
 
 function record(value: unknown): Row {
   return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Row : {};
@@ -82,7 +88,7 @@ function actionRow(rows: Row[], rowType: string, actionValue: unknown, report: R
     currentLevel: level.level,
     actionId: action.actionId,
     capGroup: action.capGroup,
-    allowance: action.allowance,
+    allowance: action.allowance ?? (report.policyVersion === PROSPECTIVE_REPUTATION_POLICY_VERSION ? action.maximumPoints : undefined),
     remainingInGroup: action.remainingInGroup,
     actionPoints: action.points,
     accepted: action.accepted,
@@ -96,8 +102,13 @@ function actionRow(rows: Row[], rowType: string, actionValue: unknown, report: R
   });
 }
 
-export function serializeMonthlyReputationReportCsv(value: unknown): string {
+export function serializeMonthlyReputationReportCsv(value: unknown, preparation?: { mode: 'disabled_v2_preparation' }): string {
   const report = record(value);
+  const v2 = report.policyVersion === PROSPECTIVE_REPUTATION_POLICY_VERSION;
+  if ((v2 && !preparation) || (preparation && (!v2 || preparation.mode !== 'disabled_v2_preparation'
+    || report.dataVersion !== 2 || report.catalogueHash !== PROSPECTIVE_REPUTATION_CATALOGUE_HASH
+    || report.preparationOnly !== true || report.runtimeActivationAllowed !== false || report.appliedPoints !== 0)))
+    throw new Error('monthly_report_export_preparation_required');
   const level = record(report.levelAuthority);
   const rows: Row[] = [];
   const detail = report.report === null ? null : record(report.report);
@@ -105,6 +116,8 @@ export function serializeMonthlyReputationReportCsv(value: unknown): string {
   const weekly = record(detail?.weekly);
   const monthly = record(detail?.monthly);
   const quarterly = record(detail?.quarterlyEmail);
+  const suggestion = record(detail?.quarterlySuggestion);
+  const quarterlyTotal = v2 ? record(detail?.quarterlyTotal) : quarterly;
   rows.push({
     rowType: 'summary',
     sourceMonth: report.sourceMonth,
@@ -130,8 +143,10 @@ export function serializeMonthlyReputationReportCsv(value: unknown): string {
     selectedWeekLimit: weekly.selectedWeekLimit,
     maximumSelectedWeeklyPoints: weekly.maximumSelectedWeeklyPoints,
     monthlyMaximumPoints: monthly.maximumPoints,
-    quarterlyMaximumPoints: quarterly.maximumPoints,
+    quarterlyMaximumPoints: quarterlyTotal.maximumPoints,
     maximumSourceMonth: total.maximumSourceMonth,
+    ...(v2 ? { emailPoints: quarterly.points, suggestionPoints: suggestion.points,
+      emailMaximumPoints: quarterly.maximumPoints, suggestionMaximumPoints: suggestion.maximumPoints } : {}),
   });
 
   if (detail) {
@@ -141,6 +156,7 @@ export function serializeMonthlyReputationReportCsv(value: unknown): string {
     for (const week of list(weekly.unassessedWeeks)) weekRows(rows, 'weekly_unassessed', week, report, level);
     for (const action of list(monthly.actions)) actionRow(rows, 'monthly_action', action, report, level);
     actionRow(rows, 'quarterly_email', quarterly.evidence, report, level);
+    if (v2) actionRow(rows, 'quarterly_suggestion', suggestion, report, level);
   }
   const corrections = record(report.corrections);
   for (const correctionValue of list(corrections.sourceRevisions)) {
@@ -160,5 +176,15 @@ export function serializeMonthlyReputationReportCsv(value: unknown): string {
       periodRevision: correction.revision, recordedAt: correction.recordedAt });
   }
 
-  return [columns.join(','), ...rows.map(row => columns.map(column => cell(row[column])).join(','))].join('\r\n') + '\r\n';
+  const selectedColumns: readonly string[] = v2 ? [...columns, ...preparationColumns] : columns;
+  const metadata: Row = v2 ? { dataVersion: report.dataVersion, catalogueHash: report.catalogueHash,
+    preparationOnly: true, runtimeActivationAllowed: false, appliedPoints: 0,
+    levelPolicyVersion: level.policyVersion, levelDataVersion: level.dataVersion,
+    levelSourceRevision: level.sourceRevision, levelSnapshotRevision: level.snapshotRevision,
+    sourceDigest: detail?.sourceDigest, assemblyEvidenceDigest: detail?.assemblyEvidenceDigest,
+    inheritedWeeklyPolicyVersion: weekly.earningPolicyVersion, inheritedMaintenancePolicyVersion: monthly.maintenancePolicyVersion } : {};
+  return [selectedColumns.join(','), ...rows.map(row => {
+    const versioned = { ...metadata, ...row };
+    return selectedColumns.map(column => cell(versioned[column])).join(',');
+  })].join('\r\n') + '\r\n';
 }

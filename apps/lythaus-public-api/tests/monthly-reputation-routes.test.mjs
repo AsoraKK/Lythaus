@@ -15,6 +15,7 @@ const snapshot = {
   effective_month: new Date('2026-09-01T00:00:00Z'), mode: 'confirmed', revision: 1,
   assessment_id: assessmentId, source_id: sourceId, source_revision: 1,
   source_score: 500, level: 1, rules_version: 'synthetic-snapshot-rules',
+  policy_version: MONTHLY_REPUTATION_POLICY_VERSION,
 };
 const assessment = {
   policyVersion: MONTHLY_REPUTATION_POLICY_VERSION, sourceMonth: '2026-08', effectiveMonth: '2026-09',
@@ -38,7 +39,7 @@ function reportClient({ sourceReasonCode = 'assembled' } = {}) {
         { enabled: true, policy_version: MONTHLY_REPUTATION_POLICY_VERSION },
       ], rowCount: 2 };
       if (sql.includes('SELECT version,mode,first_source_month')) return { rows: [{
-        version: 'synthetic-snapshot-rules', mode: 'confirmed', first_source_month: new Date('2026-08-01T00:00:00Z'),
+        version: 'synthetic-snapshot-rules', policy_version: MONTHLY_REPUTATION_POLICY_VERSION, mode: 'confirmed', first_source_month: new Date('2026-08-01T00:00:00Z'),
         weekly_rules_version: 'synthetic-weekly-rules', maintenance_rules_version: 'synthetic-maintenance-rules',
         decision_approvals: Object.fromEntries(MONTHLY_REPUTATION_DECISIONS.map(id => [id, 'synthetic approval'])),
       }], rowCount: 1 };
@@ -49,6 +50,7 @@ function reportClient({ sourceReasonCode = 'assembled' } = {}) {
       if (sql.includes('FROM trust.monthly_reputation_sources source')) return { rows: [{
         revision: 1, reason_code: sourceReasonCode, recorded_at: new Date('2026-09-01T00:00:00Z'),
         catalogue_hash: MONTHLY_REPUTATION_CATALOGUE_HASH, report: assembly, assessment_mode: 'shadow',
+        assembly_policy: MONTHLY_REPUTATION_POLICY_VERSION,
         calculation: assessment, weekly_points: 500, monthly_points: 0, quarterly_points: 0,
         source_score: 500, level: 1,
       }], rowCount: 1 };
@@ -193,7 +195,7 @@ test('monthly reward projections share the revision protected by the selection p
       { enabled: true, policy_version: MONTHLY_REPUTATION_POLICY_VERSION },
     ], rowCount: 2 };
     if (sql.includes('SELECT version,mode,first_source_month')) return { rows: [{
-      version: 'synthetic-snapshot-rules', mode: 'confirmed', first_source_month: new Date('2026-08-01T00:00:00Z'),
+      version: 'synthetic-snapshot-rules', policy_version: MONTHLY_REPUTATION_POLICY_VERSION, mode: 'confirmed', first_source_month: new Date('2026-08-01T00:00:00Z'),
       weekly_rules_version: 'weekly', maintenance_rules_version: 'maintenance',
       decision_approvals: Object.fromEntries(MONTHLY_REPUTATION_DECISIONS.map(id => [id, 'synthetic approval'])),
     }], rowCount: 1 };
