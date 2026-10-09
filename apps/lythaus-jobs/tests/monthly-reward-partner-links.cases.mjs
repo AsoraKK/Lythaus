@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { randomBytes,createHash } from 'node:crypto';
 import { test } from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
+import './monthly-reward-partner-rate.cases.mjs';
+import { lookupWithFullPartnerRateWindow,seedFullPartnerRateWindow } from './monthly-reward-partner-rate.fixture.mjs';
 import { uuidv7,encryptField,hmacLookup } from '@lythaus/security';
 import { inviteMonthlyPartnerLink,consentToMonthlyPartnerLink,revokeMonthlyPartnerConsent,lookupMonthlyPartnerEligibility,
   MONTHLY_REWARD_PARTNER_FLAG as flag } from '../../../packages/db/src/monthly-reward-partner-links.ts';
@@ -16,8 +18,11 @@ export function registerPartnerLinkCases(f){
     customerReference:customer,idempotencyKey:uuidv7(),rulesVersion:version,keys,...patch}));
   const accept=(patch={})=>tx(client=>consentToMonthlyPartnerLink(client,{subjectId:member,invitationToken:invitation.token,
     termsVersion:'synthetic-terms-v1',expectedRevision:0,idempotencyKey:uuidv7(),rulesVersion:version,keys,...patch}));
-  const lookup=(patch={})=>tx(client=>lookupMonthlyPartnerEligibility(client,{partnerId:partner,operatorId:operator,variantId:variant.id,email:address,
-    customerReference:customer,rulesVersion:version,keys,...patch}));
+  const lookupInput=(patch={})=>({partnerId:partner,operatorId:operator,variantId:variant.id,email:address,
+    customerReference:customer,rulesVersion:version,keys,...patch});
+  const lookup=(patch={})=>tx(client=>lookupMonthlyPartnerEligibility(client,lookupInput(patch)));
+  const limitedLookup=(patch={},options={})=>lookupWithFullPartnerRateWindow({sql,tx,partnerId:partner,operatorId:operator,limit:100,
+    lookup:client=>lookupMonthlyPartnerEligibility(client,lookupInput(patch)),...options});
   const revoke=(patch={})=>tx(client=>revokeMonthlyPartnerConsent(client,{subjectId:member,consentId:consent.id,idempotencyKey:uuidv7(),...patch}));
   async function credential(userId,email,verifiedAt='2026-07-01T00:00:00.000123Z'){
     const encrypted=await encryptField(email,keys.encryptionKey,keys.keyVersion);
@@ -120,10 +125,34 @@ export function registerPartnerLinkCases(f){
     await sql('UPDATE trust.monthly_reward_partner_operators SET active=true WHERE partner_id=$1 AND user_id=$2',[partner,operator]);
   });
   test('PAR-05/REL-02: unknown and linked lookups share a bounded persisted partner/operator rate allowance',async()=>{
-    await sql("UPDATE trust.monthly_reward_partner_rate_windows SET requests=100 WHERE partner_id=$1 AND operator_id=$2 AND starts_at=date_trunc('minute',clock_timestamp())",[partner,operator]);
-    await assert.rejects(lookup({email:'unknown@example.invalid'}),/rate_limited/);
-    await sql('DELETE FROM trust.monthly_reward_partner_rate_windows WHERE partner_id=$1 AND operator_id=$2',[partner,operator]);
+    try{
+      await assert.rejects(limitedLookup({email:'unknown@example.invalid'}),{message:'monthly_partner_rate_limited'});
+      await assert.rejects(limitedLookup({email:'synthetic-new-email@example.invalid'}),{message:'monthly_partner_rate_limited'});
+    }finally{await sql('DELETE FROM trust.monthly_reward_partner_rate_windows WHERE partner_id=$1 AND operator_id=$2',[partner,operator]);}
     assert.equal((await lookup({email:'synthetic-new-email@example.invalid'})).state,'eligible');
+  });
+  test('PAR-05/REL-02: a missing rate bucket is inserted full before the real limiter rejects',async()=>{
+    const observations=[];
+    await sql('DELETE FROM trust.monthly_reward_partner_rate_windows WHERE partner_id=$1 AND operator_id=$2',[partner,operator]);
+    assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_partner_rate_windows WHERE partner_id=$1 AND operator_id=$2',[partner,operator])).rowCount,0);
+    try{
+      await assert.rejects(limitedLookup({email:'unknown@example.invalid'},{onAttempt:row=>observations.push(row)}),{message:'monthly_partner_rate_limited'});
+      const final=observations.at(-1);assert.equal(final.seededAt,final.consumedAt);assert.equal(final.requests,101);
+      assert.ok((await sql('SELECT 1 FROM trust.monthly_reward_partner_rate_windows WHERE partner_id=$1 AND operator_id=$2 AND requests=100',[partner,operator])).rowCount>0);
+    }finally{await sql('DELETE FROM trust.monthly_reward_partner_rate_windows WHERE partner_id=$1 AND operator_id=$2',[partner,operator]);}
+  });
+  test('PAR-05/REL-02: an expired synthetic bucket proves real-clock rollover and then exact-bucket rejection',async()=>{
+    let seeds=0;const observations=[];
+    await sql('DELETE FROM trust.monthly_reward_partner_rate_windows WHERE partner_id=$1 AND operator_id=$2',[partner,operator]);
+    try{
+      await assert.rejects(limitedLookup({email:'unknown@example.invalid'},{
+        seedWindow:input=>seedFullPartnerRateWindow(sql,input,seeds++===0),onAttempt:row=>observations.push(row),
+      }),{message:'monthly_partner_rate_limited'});
+      assert.equal(observations[0].rollover,true);assert.equal(observations[0].requests,1);
+      assert.ok(observations[0].consumedAt-observations[0].seededAt>=60000);
+      const final=observations.at(-1);assert.equal(final.rollover,false);assert.equal(final.requests,101);
+      assert.ok(seeds>=2);
+    }finally{await sql('DELETE FROM trust.monthly_reward_partner_rate_windows WHERE partner_id=$1 AND operator_id=$2',[partner,operator]);}
   });
   test('REL-01/02: consent revoked between scoped candidate read and authorization cannot yield stale eligibility',async()=>{
     let reached,resume;const barrier=new Promise(resolve=>{reached=resolve;}),released=new Promise(resolve=>{resume=resolve;});
