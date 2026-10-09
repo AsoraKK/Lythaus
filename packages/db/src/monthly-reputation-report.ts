@@ -4,6 +4,7 @@ import { monthlyRewardSnapshotConfiguration, readOwnMonthlyRewardSnapshot } from
 import { PROSPECTIVE_REPUTATION_POLICY_VERSION, PROSPECTIVE_REPUTATION_CATALOGUE_HASH,
   PROSPECTIVE_REPUTATION_REPORT_LIMITS, prospectiveReputationLevelForScore } from '../../contracts/src/monthly-reputation-prospective.ts';
 import type { MonthlyReputationDisposablePreparation } from './monthly-reputation.ts';
+import { validatePreparedMonthlyWeekEvidence } from '../../contracts/src/monthly-rewards-response-preparation.ts';
 
 type JsonObject = Record<string, unknown>;
 type ReportSourceRow = {
@@ -283,6 +284,21 @@ export async function readOwnMonthlyReputationReport(client: Client, input: {
   const maintenance = projectMaintenance(assembly.maintenance);
   const selectedWeeks = weeks.filter(week => week.selected === true);
   const omittedWeeks = weeks.filter(week => week.selected === false);
+  let periodConvention: ReturnType<typeof validatePreparedMonthlyWeekEvidence> | undefined;
+  if (context) {
+    const capturedPeriodVersions = new Set([text(assessment.periodPolicyVersion),
+      ...assembledWeeks.map(week => text(object(week.calculation).periodPolicyVersion)),
+      ...array(assembly.missingWeeks).map(period => text(object(period).periodPolicyVersion))].filter(value => value !== null));
+    if (capturedPeriodVersions.size > 1) throw new Error('monthly_report_source_integrity_failed');
+    const identities = assessedWeeks.length ? assessedWeeks : assembledWeeks;
+    periodConvention = validatePreparedMonthlyWeekEvidence([...weeks.map((week, index) => ({ ...week,
+      weekId: identities[index].weekId })), ...missingWeeks], {
+      sourceMonth: input.sourceMonth, periodPolicyVersion: capturedPeriodVersions.values().next().value ?? null,
+    });
+    if (assessedWeeks.length) validatePreparedMonthlyWeekEvidence([...assembledWeeks.map(week => ({
+      ...projectWeek(undefined, week), weekId: week.weekId,
+    })), ...missingWeeks], { sourceMonth: input.sourceMonth, periodPolicyVersion: periodConvention.periodPolicyVersion });
+  }
   const quarterly = object(assembly.quarterly);
   const qualification = object(quarterly.qualification);
   if (context && (![0, PROSPECTIVE_REPUTATION_REPORT_LIMITS.emailMaximumPoints].includes(quarterly.emailPoints as number)
@@ -323,7 +339,7 @@ export async function readOwnMonthlyReputationReport(client: Client, input: {
         missingWeeks: versionedWeeks(missingWeeks),
         unassessedWeeks: assessment.weeks ? [] : versionedWeeks(weeks),
         ...metadata,
-        ...(context ? { earningPolicyVersion: MONTHLY_REPUTATION_POLICY_VERSION, rulesVersion: configuration.weekly_rules_version } : {}),
+        ...(context ? { earningPolicyVersion: MONTHLY_REPUTATION_POLICY_VERSION, rulesVersion: configuration.weekly_rules_version, ...periodConvention } : {}),
       },
       monthly: {
         maximumPoints: MONTHLY_REPUTATION_LIMITS.monthly,

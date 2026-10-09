@@ -134,6 +134,16 @@ test('prepared projection refuses fractional, mixed-policy, rebound or malformed
   const collision = await readOwnMonthlyReputationReport(preparedClient({ snapshotPolicy: v1 }), input, disposable);
   assert.equal(collision.levelAuthority.reasonCode, 'snapshot_policy_requires_review');
   assert.equal(collision.levelAuthority.sourceScore, null);
+  for (const mutate of [
+    row => { row.calculation.weeks[1].weekId = row.calculation.weeks[0].weekId; },
+    row => { row.report.weeks[1].weekId = row.report.weeks[0].weekId; },
+    row => { row.calculation.periodPolicyVersion = 'unknown'; },
+    row => { Object.assign(row.calculation.weeks[0], { startsAt: '2026-11-30T00:00:00.000Z', endsAt: '2026-11-29T00:00:00.000Z' }); },
+    row => { row.calculation.periodPolicyVersion = 'closing-sunday-utc-proposal-v1';
+      Object.assign(row.calculation.weeks[0], { startsAt: '2026-11-30T00:00:00.000Z', endsAt: '2026-12-06T00:00:00.000Z' }); },
+    row => { row.calculation.periodPolicyVersion = 'closing-sunday-utc-proposal-v1';
+      row.report.weeks[0].calculation.periodPolicyVersion = 'other'; },
+  ]) await assert.rejects(readOwnMonthlyReputationReport(preparedClient({ mutate }), input, disposable), /preparation_invalid|integrity_failed/);
 });
 
 test('prepared snapshot readers reuse the SQL settlement clock and never trust client time or latest progress', async () => {
