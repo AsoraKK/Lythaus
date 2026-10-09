@@ -1,8 +1,37 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { dependencyGraphChanged, dependencyGraphMetadata, shouldRunLocalAudit } from '../ci/dependency-review-policy.mjs';
-import { comparison, apiFailure, resolvedDependencies, missingCoverage } from '../ci/dependency-review-native.mjs';
+import { comparison, apiFailure, resolvedDependencies, missingCoverage, expectedChanges, lockedVersionSatisfies } from '../ci/dependency-review-native.mjs';
 import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { stringify } from 'yaml';
+
+function withLocalSdkFixture(run) {
+  const original = process.cwd();
+  const directory = fs.mkdtempSync(join(tmpdir(), 'lythaus-local-sdk-policy-'));
+  const root = { name: 'synthetic_app', dependencies: { lythaus_api_client: { path: 'build/api_client' } } };
+  const source = { name: 'lythaus_api_client', version: '1.0.0', dependencies: { dio: '^5.2.0' } };
+  const local = { dependency: 'direct main', description: { path: 'build/api_client', relative: true }, source: 'path', version: '1.0.0' };
+  const lock = { packages: { lythaus_api_client: local, dio: { dependency: 'transitive', source: 'hosted', version: '5.2.0' } } };
+  const write = (file, content) => {
+    fs.mkdirSync(join(directory, file, '..'), { recursive: true });
+    fs.writeFileSync(join(directory, file), typeof content === 'string' ? content : stringify(content));
+  };
+  const git = (...args) => execFileSync('git', args, { cwd: directory, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  const commit = message => { git('add', '.'); git('-c', 'user.name=Synthetic policy fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '-qm', message); return git('rev-parse', 'HEAD'); };
+  write('pubspec.yaml', root);
+  write('lib/generated/api_client/pubspec.yaml', source);
+  write('pubspec.lock', lock);
+  try {
+    process.chdir(directory);
+    return run({ directory, root, source, local, lock, write, git, commit });
+  } finally {
+    process.chdir(original);
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+}
 
 test('native comparison requires distinct exact commits and classifies actual API errors', () => {
   assert.deepEqual(comparison('a'.repeat(40), 'b'.repeat(40)), { baseSha: 'a'.repeat(40), reviewedHeadSha: 'b'.repeat(40) });
@@ -29,6 +58,198 @@ test('coverage includes direct and transitive Dart, runtime Node and every pinne
   assert.equal(missingCoverage(expected, native.map(value => ({ ...value, manifest: 'pubspec.yaml' }))).length, 8);
   assert.throws(() => resolvedDependencies('requirements.txt', 'torch>=2'));
 });
+
+test('canonical generated Dart package is explicit and still requires native coverage', () => withLocalSdkFixture(({ lock, source, write }) => {
+  const expected = resolvedDependencies('pubspec.lock', stringify(lock)).map(value => ({ ...value, manifest: 'pubspec.lock' }));
+  assert.deepEqual(expected[0], { ecosystem: 'pub', name: 'lythaus_api_client', version: '1.0.0', relationship: 'direct', source: 'path', localPath: 'build/api_client', canonicalManifest: 'lib/generated/api_client/pubspec.yaml', manifest: 'pubspec.lock' });
+  const native = expected.map(value => ({ ...value, ecosystem: 'PUB', change_type: 'added' }));
+  assert.deepEqual(missingCoverage(expected, native), []);
+  assert.deepEqual(missingCoverage(expected, native.slice(1)).map(value => value.name), ['lythaus_api_client']);
+  assert.deepEqual(missingCoverage(expected, native.slice(0, 1)).map(value => value.name), ['dio']);
+  assert.equal(missingCoverage(expected, native.map(value => ({ ...value, manifest: 'pubspec.yaml' }))).length, 2);
+  assert.equal(missingCoverage(expected, native.map(value => ({ ...value, version: '0.0.0' }))).length, 2);
+  write('build/api_client/pubspec.yaml', source);
+  assert.deepEqual(resolvedDependencies('pubspec.lock', stringify(lock)), expected.map(({ manifest, ...value }) => value));
+}));
+
+test('local Dart recognition rejects alternate paths, sources, names and lock representations', () => withLocalSdkFixture(({ lock, local }) => {
+  for (const path of ['../api_client', '/tmp/api_client', 'build/../build/api_client', './build/api_client', 'build/api_client/', 'lib/generated/api_client', 'build\\api_client', 'https://example.invalid/api_client']) {
+    assert.throws(() => resolvedDependencies('pubspec.lock', stringify({ packages: { ...lock.packages, lythaus_api_client: { ...local, description: { ...local.description, path } } } })), /UNSUPPORTED_DEPENDENCY_SOURCE/);
+  }
+  for (const value of [
+    { ...local, source: 'git' }, { ...local, source: 'unknown' }, { ...local, source: 'sdk' }, { ...local, source: 'hosted' }, { ...local, dependency: 'transitive' }, { ...local, dependency: 'direct dev' },
+    { ...local, description: { ...local.description, relative: false } }, { ...local, description: { ...local.description, relative: 'true' } },
+    { ...local, description: { ...local.description, url: 'https://example.invalid' } },
+  ]) assert.throws(() => resolvedDependencies('pubspec.lock', stringify({ packages: { ...lock.packages, lythaus_api_client: value } })), /UNSUPPORTED_DEPENDENCY_SOURCE/);
+  assert.throws(() => resolvedDependencies('nested/pubspec.lock', stringify(lock)), /UNSUPPORTED_DEPENDENCY_SOURCE/);
+  assert.throws(() => resolvedDependencies('pubspec.lock', stringify({ packages: { unknown_package: local } })), /UNSUPPORTED_DEPENDENCY_SOURCE/);
+  assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock), { revision: 'HEAD' }), /EXACT_LOCAL_PACKAGE_REVISION_REQUIRED/);
+}));
+
+test('Dart runtime versions reject non-string values without coercion', () => {
+  const coercible = { toString() { throw new Error('version coercion must never run'); } };
+  for (const version of [['5.2.0'], { version: '5.2.0' }, coercible, null, undefined, 5.2]) {
+    for (const constraint of ['^5.2.0', '5.2.0', '>=5.2.0 <6.0.0']) assert.equal(lockedVersionSatisfies(constraint, version), false);
+  }
+});
+
+test('canonical runtime constraints admit the exact lock at Dart stable version boundaries', () => withLocalSdkFixture(({ lock, source, write, commit }) => {
+  const cases = [
+    ['^900.0.0', '5.2.0', false], ['^5.2.0', '5.2.0', true], ['^5.2.0', '5.1.9', false],
+    ['^5.2.0', '5.9.9', true], ['^5.2.0', '6.0.0', false],
+    ['^0.2.3', '0.2.3', true], ['^0.2.3', '0.2.9', true], ['^0.2.3', '0.3.0', false],
+    ['^0.0.3', '0.0.3', true], ['^0.0.3', '0.0.4', true], ['^0.0.3', '0.1.0', false],
+    ['>=5.2.0 <6.0.0', '5.2.0', true], ['>=5.2.0 <6.0.0', '6.0.0', false],
+    ['>5.2.0 <=5.3.0', '5.2.0', false], ['>5.2.0 <=5.3.0', '5.3.0', true],
+    ['5.2.0', '5.2.0', true], ['5.2.0', '5.2.1', false],
+    ['any', '5.2.0', false], ['', '5.2.0', false], ['^5.2.0', '5.2.0-rc.1', false],
+    ['5.2.0 || 6.0.0', '5.2.0', false], ['^5.2.0', '5.2', false], [null, '5.2.0', false],
+    ['^5.2.0', ['5.2.0'], false], ['^5.2.0', { version: '5.2.0' }, false],
+  ];
+  execFileSync('git', ['init', '-q'], { stdio: 'ignore' });
+  for (const [constraint, version, admitted] of cases) {
+    const candidateLock = { packages: { ...lock.packages, dio: { ...lock.packages.dio, version } } };
+    write('lib/generated/api_client/pubspec.yaml', { ...source, dependencies: { dio: constraint } });
+    write('pubspec.lock', candidateLock);
+    const revision = commit(`synthetic runtime boundary ${constraint} ${version}`);
+    for (const options of [{}, { revision }]) {
+      if (admitted) assert.equal(resolvedDependencies('pubspec.lock', stringify(candidateLock), options).find(value => value.name === 'dio').version, version);
+      else assert.throws(() => resolvedDependencies('pubspec.lock', stringify(candidateLock), options), /UNLOCKED_DEPENDENCY/);
+    }
+  }
+}));
+
+test('canonical Dart source and root declaration must match the locked identity', () => withLocalSdkFixture(({ lock, root, source, write }) => {
+  for (const replacement of [
+    { ...root, dependencies: { lythaus_api_client: { path: '../outside' } } },
+    { ...root, dependencies: { lythaus_api_client: { path: 'build/api_client', git: 'https://example.invalid' } } },
+    { ...root, dependency_overrides: { lythaus_api_client: { path: 'build/api_client' } } },
+    { ...root, dev_dependencies: { lythaus_api_client: { path: 'build/api_client' } } },
+    { ...root, dependency_overrides: { lythaus_api_client: null } },
+    { ...root, dev_dependencies: { lythaus_api_client: null } },
+  ]) {
+    write('pubspec.yaml', replacement);
+    assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock)), /IDENTITY_MISMATCH/);
+  }
+  write('pubspec.yaml', root);
+  for (const replacement of [{ ...source, name: 'unknown_package' }, { ...source, version: '2.0.0' }, { ...source, version: 1 }, { ...source, version: 'unversioned' }]) {
+    write('lib/generated/api_client/pubspec.yaml', replacement);
+    assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock)), /IDENTITY_MISMATCH/);
+  }
+  for (const replacement of [
+    { ...source, dependencies: { unknown: '^1.0.0' } }, { ...source, dependencies: { dio: { path: '../dio' } } },
+    { ...source, dependencies: { dio: { git: 'https://example.invalid' } } }, { ...source, dependency_overrides: { dio: '^6.0.0' } },
+  ]) {
+    write('lib/generated/api_client/pubspec.yaml', replacement);
+    assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock)), /UNLOCKED_DEPENDENCY/);
+  }
+  write('lib/generated/api_client/pubspec.yaml', source);
+  write('build/api_client/pubspec.yaml', { ...source, dependencies: { unknown: '^1.0.0' } });
+  assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock)), /PREPARATION_MISMATCH/);
+  write('build/api_client/pubspec.yaml', '');
+  assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock)), /PREPARATION_MISMATCH/);
+  fs.rmSync('lib/generated/api_client/pubspec.yaml');
+  assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock)), /SOURCE_REQUIRED/);
+}));
+
+test('canonical local Dart rejects every effective overrides file including null and empty files', () => withLocalSdkFixture(({ lock, write }) => {
+  for (const overrides of [
+    { dependency_overrides: { lythaus_api_client: null } },
+    { dependency_overrides: { lythaus_api_client: { path: '../outside' } } },
+    { dependency_overrides: { lythaus_api_client: { git: 'https://example.invalid' } } },
+    { dependency_overrides: { dio: null } }, {}, '',
+  ]) {
+    write('pubspec_overrides.yaml', overrides);
+    assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock)), /OVERRIDES_FILE_UNSUPPORTED/);
+  }
+  fs.renameSync('pubspec_overrides.yaml', 'synthetic-override-target');
+  fs.symlinkSync('synthetic-override-target', 'pubspec_overrides.yaml');
+  assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock)), /NON_CANONICAL_LOCAL_PACKAGE_FILE/);
+}));
+
+test('native comparison rejects null root keys and effective override changes at their exact SHA', () => {
+  for (const field of ['dependency_overrides', 'dev_dependencies']) withLocalSdkFixture(({ root, write, git, commit }) => {
+    git('init', '-q');
+    const base = commit('Canonical generated package');
+    write('pubspec.yaml', { ...root, [field]: { lythaus_api_client: null } });
+    const head = commit('Synthetic null SDK declaration');
+    write('pubspec.yaml', root);
+    assert.throws(() => expectedChanges(base, head), /IDENTITY_MISMATCH/);
+  });
+  for (const overrides of [{ dependency_overrides: { lythaus_api_client: null } }, {}]) withLocalSdkFixture(({ write, git, commit }) => {
+    git('init', '-q');
+    const base = commit('Canonical generated package');
+    write('pubspec_overrides.yaml', overrides);
+    const head = commit('Synthetic effective overrides file without lock change');
+    fs.rmSync('pubspec_overrides.yaml');
+    assert.throws(() => expectedChanges(base, head), /OVERRIDES_FILE_UNSUPPORTED/);
+  });
+  withLocalSdkFixture(({ write, git, commit }) => {
+    git('init', '-q');
+    const base = commit('Canonical generated package');
+    write('synthetic-override-target', {});
+    fs.symlinkSync('synthetic-override-target', 'pubspec_overrides.yaml');
+    const head = commit('Synthetic effective overrides symlink');
+    assert.throws(() => expectedChanges(base, head), /NON_CANONICAL_LOCAL_PACKAGE_FILE/);
+  });
+});
+
+test('canonical local Dart source rejects filesystem symlinks at every source or build boundary', () => {
+  for (const target of ['pubspec.yaml', 'lib', 'lib/generated', 'lib/generated/api_client', 'lib/generated/api_client/pubspec.yaml', 'build', 'build/api_client', 'build/api_client/pubspec.yaml']) {
+    withLocalSdkFixture(({ lock, source, write }) => {
+      write('build/api_client/pubspec.yaml', source);
+      fs.renameSync(target, `${target}.synthetic-target`);
+      fs.symlinkSync(join(process.cwd(), `${target}.synthetic-target`), target);
+      assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock)), /NON_CANONICAL_LOCAL_PACKAGE_FILE/, target);
+    });
+  }
+});
+
+test('native comparison verifies each Git revision rather than the current checkout', () => withLocalSdkFixture(({ lock, root, source, write, git, commit }) => {
+  git('init', '-q');
+  write('pubspec.yaml', { ...root, dependencies: {} });
+  write('pubspec.lock', { packages: { dio: lock.packages.dio } });
+  const base = commit('Synthetic hosted base');
+  write('pubspec.yaml', root);
+  write('pubspec.lock', lock);
+  const head = commit('Canonical generated package');
+  write('pubspec.yaml', { ...root, dependencies: { lythaus_api_client: { path: '../outside' } } });
+  assert.deepEqual(expectedChanges(base, head).map(value => [value.name, value.localPath]), [['lythaus_api_client', 'build/api_client']]);
+  const invalidRoot = commit('Synthetic root mismatch without lock change');
+  assert.throws(() => expectedChanges(head, invalidRoot), /IDENTITY_MISMATCH/);
+  write('pubspec.yaml', root);
+  write('lib/generated/api_client/pubspec.yaml', { ...source, name: 'unknown_package' });
+  const invalidSource = commit('Synthetic canonical identity mismatch');
+  write('lib/generated/api_client/pubspec.yaml', source);
+  assert.throws(() => expectedChanges(head, invalidSource), /IDENTITY_MISMATCH/);
+  const restored = commit('Restore canonical package');
+  fs.renameSync('lib/generated/api_client/pubspec.yaml', 'lib/generated/api_client/source.yaml');
+  fs.symlinkSync('source.yaml', 'lib/generated/api_client/pubspec.yaml');
+  const symlink = commit('Synthetic tracked source symlink');
+  assert.throws(() => expectedChanges(restored, symlink), /NON_CANONICAL_LOCAL_PACKAGE_FILE/);
+}));
+
+test('native comparison rejects absent local lock entries and tracked lock symlinks', () => withLocalSdkFixture(({ lock, write, git, commit }) => {
+  git('init', '-q');
+  const base = commit('Canonical generated package');
+  write('pubspec.lock', { packages: { dio: lock.packages.dio } });
+  const missing = commit('Synthetic missing local lock entry');
+  assert.throws(() => expectedChanges(base, missing), /UNSUPPORTED_DEPENDENCY_SOURCE:pubspec.lock:lythaus_api_client/);
+  write('pubspec.lock', lock);
+  const restored = commit('Restore local lock entry');
+  fs.renameSync('pubspec.lock', 'synthetic-pubspec-lock-target');
+  fs.symlinkSync('synthetic-pubspec-lock-target', 'pubspec.lock');
+  const symlink = commit('Synthetic tracked lock symlink');
+  assert.throws(() => expectedChanges(restored, symlink), /NON_CANONICAL_LOCAL_PACKAGE_FILE/);
+}));
+
+test('Dart dependency declaration changes require the root lock to change', () => withLocalSdkFixture(({ root, write, git, commit }) => {
+  git('init', '-q');
+  const base = commit('Canonical generated package');
+  write('pubspec.yaml', { ...root, dependencies: { ...root.dependencies, unknown: '^1.0.0' } });
+  const head = commit('Synthetic dependency without lock');
+  assert.throws(() => expectedChanges(base, head), /CHANGED_MANIFEST_WITHOUT_LOCK:pubspec.yaml/);
+}));
 
 test('dependency review ignores package scripts and normalizes dependency ordering', () => {
   const before = { scripts: { test: 'node --test' }, dependencies: { astro: '7.1.6', zod: '4.0.0' } };
