@@ -29,6 +29,7 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
     let signedIn = false, confirmed = false, shadow = false, empty = !csvOnly, failStatus = false;
     const calls = [], errors = [], captures = [];
     const csvChecks = [];
+    let releaseCsvResponse;
     const fixture = await localAuthBrowserServer(async (route) => {
       const request = route.request(), url = new URL(request.url()), headersIn = await request.allHeaders();
       if (url.hostname === 'app.lythaus.co') {
@@ -54,7 +55,7 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
       else if (url.pathname === '/api/rewards/me/monthly') { assert.equal(headersIn.authorization, `Bearer ${token}`); assert.equal(url.search, ''); status = failStatus ? 503 : 200; body = failStatus ? { error: 'synthetic_private_failure' } : statusBody(confirmed, shadow); }
       else if (/^\/api\/reputation\/me\/reports\/monthly\/\d{4}-\d{2}\/export\.csv$/.test(url.pathname)) {
         assert.equal(headersIn.authorization, `Bearer ${token}`); assert.equal(headersIn.accept, 'text/csv'); assert.equal(url.search, '');
-        await new Promise(resolve => setTimeout(resolve, 600));
+        await new Promise(resolve => { releaseCsvResponse = resolve; });
         return route.fulfill({ status: 200, headers, contentType: 'text/csv', body: `sourceMonth,score\n${url.pathname.split('/').at(-2)},2000\n` });
       }
       else if (/^\/api\/reputation\/me\/reports\/monthly\/\d{4}-\d{2}$/.test(url.pathname)) { assert.equal(headersIn.authorization, `Bearer ${token}`); assert.equal(url.search, ''); body = reportBody(url.pathname.split('/').at(-1), empty); }
@@ -91,8 +92,11 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
         const csvControl = await locate(page.getByRole('button', { name: 'Export CSV', exact: true }));
         const downloadReady = page.waitForEvent('download');
         await csvControl.click();
-        await page.getByRole('button', { name: 'Exporting…', exact: true }).waitFor();
+        await page.getByRole('button', { name: 'Preparing CSV…', exact: true }).waitFor();
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        await page.waitForTimeout(600);
+        assert.equal(typeof releaseCsvResponse, 'function', 'CSV request reached the local TLS server');
+        releaseCsvResponse();
         const download = await downloadReady;
         const csvMonth = calls.findLast(call => call.path.endsWith('/export.csv')).path.split('/').at(-2);
         assert.equal(download.suggestedFilename(), `monthly-reputation-${csvMonth}.csv`);
@@ -171,7 +175,7 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
     } catch (error) {
       if (page) { await page.screenshot({ path: path.join(output, `${engineName}-${config.name}-failure.png`) }).catch(() => {}); await writeFile(path.join(output, `${engineName}-${config.name}-failure.json`), JSON.stringify({ message: error.message, errors, calls, captures, content: await page.content() }, null, 2)); }
       throw error;
-    } finally { await browser.close(); await fixture.close(); }
+    } finally { releaseCsvResponse?.(); await browser.close(); await fixture.close(); }
   }
   await writeFile(path.join(output, `${engineName}-evidence.json`), JSON.stringify({ engineName, scenario: csvOnly ? 'csv-only' : 'full', commit: process.env.QA_COMMIT ?? 'local-uncommitted-validation', evidence, limitations: ['Synthetic local TLS fixture only; no production data.', ...(csvOnly ? ['CSV-only run; owner/public navigation, zoom and sign-out are not executed in this run.'] : []), 'Browser zoom is approximated by halving CSS viewport at device-pixel ratio 2; actual 200% text scaling is covered by Flutter widget tests.', 'Reduced motion and keyboard controls are exercised; no physical screen-reader or native-device run.'] }, null, 2));
 });
