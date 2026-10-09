@@ -7,7 +7,9 @@ import { parse } from 'yaml';
 import { lockedVersionSatisfies } from './dependency-review-native.mjs';
 export { lockedVersionSatisfies };
 
-export const evidenceSchema = 'lythaus-canonical-dart-source-evidence-v1';
+export const evidenceSchema = 'lythaus-canonical-dart-source-evidence-v2';
+export const inputBundleSchema = 'lythaus-canonical-dart-inputs-v1';
+export const inputBundlePath = '.artifacts/canonical-sdk-contract/evidence.json';
 export const classificationPath = 'infrastructure/canonical-dart-package-approval.json';
 export const contractSuites = [
   'privacy_status_serialization_test.dart', 'community_appeal_serialization_test.dart',
@@ -151,7 +153,55 @@ export function rejectedMutationReport(output, mutation) {
   return { id: mutation.id, file: mutation.file, testName: mutation.testName, rejected: true, reportSha256: sha256(output) };
 }
 
-export function verifyLocalDartReceipt(receipt, identity, preparation) {
+export function assertSourceSnapshotUnchanged(identity) {
+  if (git(['rev-parse', 'HEAD']) !== identity.headSha) throw new Error('SOURCE_EVIDENCE_HEAD_CHANGED');
+  if (git(['diff', '--name-only', identity.headSha, '--'])) throw new Error('SOURCE_EVIDENCE_CHECKOUT_CHANGED');
+  if (git(['ls-files', '--others', '--', 'lib/generated/api_client', ...recipePaths])) throw new Error('SOURCE_EVIDENCE_UNTRACKED_INPUT');
+  if (!isDeepStrictEqual(localDartIdentity(identity.headSha), identity)) throw new Error('SOURCE_EVIDENCE_IDENTITY_MISMATCH');
+}
+
+function readInputBundle(receipt) {
+  for (const prefix of ['.artifacts', '.artifacts/canonical-sdk-contract', inputBundlePath]) {
+    const entry = fs.lstatSync(prefix, { throwIfNoEntry: false });
+    if (!entry || entry.isSymbolicLink() || !(prefix === inputBundlePath ? entry.isFile() : entry.isDirectory())) throw new Error('SOURCE_EVIDENCE_INPUT_BUNDLE_REQUIRED');
+    if (prefix === inputBundlePath && entry.size > 16 * 1024 * 1024) throw new Error('SOURCE_EVIDENCE_INPUT_BUNDLE_LIMIT');
+  }
+  const raw = fs.readFileSync(inputBundlePath, 'utf8');
+  if (sha256(raw) !== receipt.inputBundleSha256) throw new Error('SOURCE_EVIDENCE_INPUT_BUNDLE_MISMATCH');
+  const bundle = JSON.parse(raw);
+  if (bundle.schemaVersion !== inputBundleSchema || bundle.headSha !== receipt.identity.headSha || bundle.provenance !== 'unattested-local') throw new Error('SOURCE_EVIDENCE_INPUT_BUNDLE_IDENTITY_MISMATCH');
+  return bundle;
+}
+
+function validateToolchain(bundle, receipt, identity) {
+  const toolchain = bundle.toolchain;
+  if (!toolchain || typeof toolchain.manifest !== 'string' || typeof toolchain.lock !== 'string' || typeof toolchain.graph !== 'string' || sha256(toolchain.lock) !== receipt.toolchainLockSha256) throw new Error('SOURCE_EVIDENCE_TOOLCHAIN_MISMATCH');
+  const expected = parse(git(['show', `${identity.headSha}:${identity.canonicalManifest}`]));
+  expected.dependencies = Object.fromEntries(identity.dependencies.map(value => [value.name, value.version]));
+  expected.dev_dependencies.build_runner = '2.16.1';
+  expected.dev_dependencies.analyzer = '14.4.0';
+  const lock = parse(toolchain.lock);
+  const graph = JSON.parse(toolchain.graph);
+  if (!isDeepStrictEqual(parse(toolchain.manifest), expected) || graph.root !== identity.packageName || !Array.isArray(graph.packages) || graph.packages.length > 2000) throw new Error('SOURCE_EVIDENCE_TOOLCHAIN_MISMATCH');
+  const nodes = new Map(graph.packages.map(value => [value.name, value]));
+  const lockedNames = Object.keys(lock.packages ?? {}).sort();
+  if (nodes.size !== graph.packages.length || !isDeepStrictEqual([...nodes.keys()].filter(name => name !== graph.root).sort(), lockedNames)) throw new Error('SOURCE_EVIDENCE_TOOLCHAIN_MISMATCH');
+  for (const name of lockedNames) {
+    const node = nodes.get(name);
+    const entry = lock.packages[name];
+    if (entry.source !== 'hosted' || typeof entry.version !== 'string' || !/^[a-f0-9]{64}$/.test(entry.description?.sha256 ?? '') || node.version !== entry.version || node.source !== 'hosted' || !Array.isArray(node.dependencies) || node.dependencies.some(dependency => !nodes.has(dependency))) throw new Error('SOURCE_EVIDENCE_TOOLCHAIN_MISMATCH');
+  }
+  for (const [name, constraint] of Object.entries({ ...expected.dependencies, ...expected.dev_dependencies })) {
+    if (!lockedVersionSatisfies(constraint, lock.packages[name]?.version)) throw new Error('SOURCE_EVIDENCE_TOOLCHAIN_MISMATCH');
+  }
+  const root = nodes.get(graph.root);
+  const direct = Object.keys({ ...expected.dependencies, ...expected.dev_dependencies }).sort();
+  if (!root || root.source !== 'root' || !Array.isArray(root.dependencies) || !isDeepStrictEqual([...root.dependencies].sort(), direct)) throw new Error('SOURCE_EVIDENCE_TOOLCHAIN_MISMATCH');
+  const flutter = JSON.parse(git(['show', `${identity.headSha}:.fvmrc`])).flutter;
+  if (toolchain.flutter?.frameworkVersion !== flutter || toolchain.flutter.channel !== 'stable' || typeof toolchain.flutter.dartSdkVersion !== 'string' || !lockedVersionSatisfies(parse(git(['show', `${identity.headSha}:pubspec.lock`])).sdks.dart, toolchain.flutter.dartSdkVersion)) throw new Error('SOURCE_EVIDENCE_TOOLCHAIN_MISMATCH');
+}
+
+export function validateLocalDartReceiptEvidence(receipt, identity, preparation) {
   if (identity.packageName !== 'lythaus_api_client' || identity.localPath !== 'build/api_client' || identity.canonicalManifest !== 'lib/generated/api_client/pubspec.yaml') throw new Error('CANONICAL_DART_PACKAGE_IDENTITY_REQUIRED');
   if (!receipt || receipt.schemaVersion !== evidenceSchema) throw new Error('SOURCE_EVIDENCE_RECEIPT_REQUIRED');
   if (receipt.identity?.headSha !== identity.headSha) throw new Error('SOURCE_EVIDENCE_STALE_RECEIPT');
@@ -161,10 +211,27 @@ export function verifyLocalDartReceipt(receipt, identity, preparation) {
   if (!sourceMutations.every(mutation => receipt.mutations?.some(value => value.id === mutation.id && value.file === mutation.file && value.testName === mutation.testName && value.rejected === true && /^[a-f0-9]{64}$/.test(value.reportSha256 ?? '')))) throw new Error('SOURCE_EVIDENCE_MUTATION_INCOMPLETE');
   if (receipt.nativeIndexing !== 'NOT_CLAIMED' || receipt.fixtures !== 'synthetic-only' || !/^[a-f0-9]{64}$/.test(receipt.toolchainLockSha256 ?? '')) throw new Error('SOURCE_EVIDENCE_SCOPE_OR_TOOLCHAIN_MISSING');
   if (!Array.isArray(receipt.runtimePackages)) throw new Error('SOURCE_EVIDENCE_RUNTIME_GRAPH_REQUIRED');
-  const runtimeLock = { packages: Object.fromEntries(receipt.runtimePackages.map(value => [value.name, { source: 'hosted', version: value.version, description: { sha256: value.integrity } }])) };
-  const runtime = lockedRuntimePackages({ packages: receipt.runtimePackages }, runtimeLock, parse(git(['show', `${identity.headSha}:pubspec.lock`])), identity.dependencies);
+  const bundle = readInputBundle(receipt);
+  if (bundle.baseline?.exitCode !== 0 || typeof bundle.baseline.stdout !== 'string' || !isDeepStrictEqual(completedBehaviorReport(bundle.baseline.stdout), receipt.behavior)) throw new Error('SOURCE_EVIDENCE_BEHAVIOR_TRACE_MISMATCH');
+  if (!Array.isArray(bundle.mutations) || bundle.mutations.length !== sourceMutations.length || receipt.mutations.length !== sourceMutations.length) throw new Error('SOURCE_EVIDENCE_MUTATION_INCOMPLETE');
+  for (const mutation of sourceMutations) {
+    const raw = bundle.mutations.find(value => value.id === mutation.id);
+    if (!raw || !Number.isInteger(raw.exitCode) || raw.exitCode <= 0 || typeof raw.stdout !== 'string' || !isDeepStrictEqual(rejectedMutationReport(raw.stdout, mutation), receipt.mutations.find(value => value.id === mutation.id))) throw new Error('SOURCE_EVIDENCE_MUTATION_TRACE_MISMATCH');
+  }
+  const rootLock = parse(git(['show', `${identity.headSha}:pubspec.lock`]));
+  if (typeof bundle.runtimeGraph !== 'string') throw new Error('SOURCE_EVIDENCE_RUNTIME_GRAPH_REQUIRED');
+  const graph = JSON.parse(bundle.runtimeGraph);
+  const sdk = graph.packages?.find(value => value.name === identity.packageName);
+  if (graph.root !== parse(git(['show', `${identity.headSha}:pubspec.yaml`])).name || sdk?.source !== 'path' || sdk.version !== identity.version || !Array.isArray(sdk.dependencies) || !isDeepStrictEqual([...sdk.dependencies].sort(), identity.dependencies.map(value => value.name).sort())) throw new Error('SOURCE_EVIDENCE_RUNTIME_GRAPH_REQUIRED');
+  const runtime = lockedRuntimePackages(graph, rootLock, rootLock, identity.dependencies);
   if (!isDeepStrictEqual(runtime, receipt.runtimePackages)) throw new Error('SOURCE_EVIDENCE_RUNTIME_LOCK_MISMATCH');
+  validateToolchain(bundle, receipt, identity);
+  return { sourceVerification: 'LOCAL_CONSISTENCY_ONLY', coverageEligible: false, nativeIndexing: 'NOT_CLAIMED', packageName: identity.packageName, version: identity.version };
+}
+
+export function verifyLocalDartReceipt(receipt, identity, preparation) {
+  validateLocalDartReceiptEvidence(receipt, identity, preparation);
   const approvedClassification = localDartClassification(identity);
   if (!approvedClassification || approvedClassification.state !== 'approved' || approvedClassification.packageName !== 'lythaus_api_client' || approvedClassification.ownership !== 'Lythaus-first-party' || !approvedClassification.licenseExpression || !approvedClassification.approvalEvidenceRef || !isDeepStrictEqual(receipt.classification, approvedClassification)) throw new Error('OWNER_LICENSE_CLASSIFICATION_REQUIRED');
-  return { sourceVerification: 'VERIFIED_CANONICAL_COMPONENT', nativeIndexing: 'NOT_CLAIMED', packageName: identity.packageName, version: identity.version };
+  throw new Error('SOURCE_EVIDENCE_TRUSTED_PRODUCER_REQUIRED');
 }
