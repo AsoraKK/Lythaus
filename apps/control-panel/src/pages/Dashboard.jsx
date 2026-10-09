@@ -5,6 +5,7 @@ import PageLayout from '../components/PageLayout.jsx';
 import LythButton from '../components/LythButton.jsx';
 import LythCard from '../components/LythCard.jsx';
 import ActivityPilotSummary from './ActivityPilotSummary.jsx';
+import { overviewActivityEvidence } from './overview-activity.js';
 import './overview.css';
 
 const GUIDE = {
@@ -111,6 +112,7 @@ function Dashboard() {
     && Date.parse(community.current?.start) === calendarStart(period, Date.now());
   const operationsAge = Date.now() - snapshot?.fetchedAt;
   const operational = !operationsExpired && operationsAge >= 0 && operationsAge < 60000 ? snapshot : null;
+  const activity = overviewActivityEvidence(community, fresh, period);
 
   return <PageLayout title="Overview" subtitle="Community health, account entitlements and operational sources." guide={GUIDE} className="overview">
     <LythCard variant="panel">
@@ -124,6 +126,19 @@ function Dashboard() {
       {community ? <p className="muted">Sampled {timestamp(community.sampledAt)} · {fresh ? 'Fresh' : 'Stale'} · Retained current state</p> : null}
       {community ? <p className="muted">Window: {timestamp(community.current?.start)} to {timestamp(community.current?.end)} (end exclusive). {community.comparable ? `Prior: ${timestamp(community.previous?.start)} to ${timestamp(community.previous?.end)}.` : 'The prior calendar period is shorter than the current elapsed window; comparison is unavailable.'}</p> : null}
       <div className="overview-grid">{Object.entries(COMMUNITY).map(([key, label]) => <Metric key={key} label={label} metric={community?.metrics?.[key]} fresh={fresh} comparable={community?.comparable} />)}</div>
+    </LythCard>
+    <LythCard variant="panel"><h2>Members and contributors</h2>
+      <p>Contributors are active members; readers can be active without contributing. These figures use the UTC reporting window above.</p>
+      <div className="overview-grid">
+        <article className="overview-metric"><h3>Active members</h3><strong className="kpi-value">Unavailable</strong><p>{activity.activeMembers.reason}</p></article>
+        <article className="overview-metric"><h3>Known active lower bound</h3>
+          <strong className="kpi-value">{activity.knownActiveLowerBound.value === null ? 'Unavailable' : `At least ${format(activity.knownActiveLowerBound.value, 'count')}`}</strong>
+          <p>{activity.knownActiveLowerBound.reason}</p>
+          <p className="muted">This minimum includes counted contributors with admin roles. Other active members remain unmeasured.</p>
+        </article>
+        <article className="overview-metric"><h3>Contributor share of active members</h3><strong className="kpi-value">Unavailable</strong><p>{activity.contributorActiveRatio.reason}</p></article>
+        <article className="overview-metric"><h3>Quiet members</h3><strong className="kpi-value">Unavailable</strong><p>{activity.quietMembers.reason}</p></article>
+      </div>
     </LythCard>
     <ActivityPilotSummary />
     <LythCard variant="panel"><h2>Current account entitlements</h2><p className="muted">Free, Premium and Black are current account entitlements. Payment, upgrades, cancellations and revenue require payment records.</p>

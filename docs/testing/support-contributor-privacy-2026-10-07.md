@@ -106,8 +106,9 @@ orphan export and exact-request retry. Native tests use fresh Workflow
 instances; they do not certify same-instance checkpoint replay or live providers.
 Final exact-head receipts and hosted check URLs belong to the PR/handoff.
 
-Forward acceptance: independently review this exact draft; integrate PR921 then
-PR950 through parent coordination; serialize Lane C's Jobs edits; rerun the
+Forward acceptance: independently review this exact draft; PR921 is merged at
+`5786d49a408554d765e0fa02f993f7202af6b647`. Integrate the reconciled PR950 through
+parent coordination; serialize Lane C's Jobs edits; rerun the
 strict main-required checks on the final integrated SHA; reconcile canonical
 support schema/grants via PR947's explicit production packet; approve the owner
 choices above; then separately authorize production DDL/policy/deployment and
@@ -124,3 +125,16 @@ State: source implemented; local/hosted tests recorded at exact head in the
 handoff; independent review pending; merged/deployed/activated/owner-accepted
 not claimed. Full contributor-body export and contributor-only erasure remain
 policy-gated. Stop after this bounded package for the next assignment.
+
+## October 9 reconciliation
+
+The three contributor commits were replayed onto the scoped support candidate
+`574d39b3aa721b84215ff78472a5417c1bfd0694`, based on actual main
+`5786d49a408554d765e0fa02f993f7202af6b647`. This draft remains targeted at
+PR950's support branch. The contributor inventory and all-participant hold locks
+are unchanged; current main's authentication readiness helpers and tests remain
+byte-equivalent. Earlier test receipts describe their recorded historical heads;
+new exact-head receipts belong to the updated PR and handoff. Existing manual
+CI and security workflows can validate this stack without targeting it at main;
+event-specific checks that do not run must remain explicit integration gates.
+No merge, deployment, provider write, policy approval or activation is claimed.

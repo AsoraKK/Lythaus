@@ -291,6 +291,53 @@ test('CAL-05/PTS-08: after-period edits cannot earn retroactively; deleted and o
   await reconcileMonthlyEarning(env);
 });
 
+test('CAL-19/SEC-01/REL-02: an older event cannot consume a future current revision; retries retain one causal award', async () => {
+  const post = await makePost({ author: otherId, created: '2026-08-17T12:00:00.000Z', reviewed: '2026-08-18T14:00:00.000Z' });
+  const revision = uuidv7();
+  await sql(`INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload, created_at)
+    VALUES ($1, 'content.post.updated', 'post', $2, $3, '{}'::jsonb, '2026-08-18T12:00:00.000Z')`, [revision, post.id, otherId]);
+  await sql('UPDATE content.posts SET moderation_source_event_id = $2 WHERE id = $1', [post.id, revision]);
+  await sql('UPDATE moderation.cases SET source_event_id = $2 WHERE id = $1', [post.caseId, revision]);
+
+  await assert.rejects(transact(client => recordMonthlyContentEarning(client, {
+    eventId: post.source, rulesVersion: rule, evaluatedAt: '2026-08-17T18:00:00.000Z',
+  })), /source_revision_in_future/);
+  assert.equal((await sql('SELECT id FROM trust.monthly_earning_contributions WHERE source_id = $1', [post.id])).rowCount, 0);
+  assert.equal((await sql('SELECT event_id FROM trust.monthly_earning_receipts WHERE event_id = $1', [post.source])).rowCount, 0);
+  assert.equal(await latest(otherId, '2026-08-17T00:00:00.000Z'), undefined);
+
+  const delivered = await Promise.all([processMonthlyEarningEvent(env, revision), processMonthlyEarningEvent(env, revision)]);
+  assert.equal(delivered.filter(result => result.processed).length, 1);
+  const earned = await latest(otherId, '2026-08-17T00:00:00.000Z');
+  assert.equal(earned.points, 250);
+  assert.equal(earned.calculation.evidence[0].sourceRevisionId, revision);
+  const delayed = await processMonthlyEarningEvent(env, post.source);
+  assert.equal(delayed.processed, true);
+  assert.equal(delayed.created, false);
+  assert.equal((await latest(otherId, '2026-08-17T00:00:00.000Z')).revision, earned.revision);
+  assert.equal((await sql('SELECT id FROM trust.monthly_earning_evidence_revisions WHERE contribution_id = $1',
+    [earned.calculation.evidence[0].workId])).rowCount, 1);
+
+  const invalidation = uuidv7();
+  await sql(`INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload, created_at)
+    VALUES ($1, 'moderation.content.blocked', 'post', $2, $3, '{}'::jsonb, '2026-08-19T12:00:00.000Z')`, [invalidation, post.id, reviewerId]);
+  await sql("UPDATE content.posts SET moderation_state = 'blocked', moderation_source_event_id = $2 WHERE id = $1", [post.id, invalidation]);
+  await assert.rejects(transact(client => recordMonthlyContentEarning(client, {
+    eventId: post.event, rulesVersion: rule, evaluatedAt: '2026-08-18T18:00:00.000Z',
+  })), /source_revision_in_future/);
+  assert.equal((await latest(otherId, '2026-08-17T00:00:00.000Z')).revision, earned.revision);
+  assert.equal((await sql('SELECT event_id FROM trust.monthly_earning_receipts WHERE event_id = $1', [post.event])).rowCount, 0);
+  const reversed = await Promise.all([processMonthlyEarningEvent(env, invalidation), processMonthlyEarningEvent(env, invalidation)]);
+  assert.equal(reversed.filter(result => result.processed).length, 1);
+  const corrected = await latest(otherId, '2026-08-17T00:00:00.000Z');
+  assert.equal(corrected.points, 0);
+  assert.equal(corrected.week_id, earned.week_id);
+  assert.equal(corrected.state, 'corrected');
+  assert.equal(corrected.revision, earned.revision + 1);
+  assert.equal((await processMonthlyEarningEvent(env, post.event)).created, false);
+  assert.equal((await sql('SELECT points FROM trust.monthly_earning_week_revisions WHERE id = $1', [earned.id])).rows[0].points, 250);
+});
+
 test('RPT-04: privacy role can erase scoped evidence and its weekly history without exposing another member', async () => {
   await sql("UPDATE identity.users SET status = 'locked' WHERE id = $1", [userId]);
   const historical = await makePost();

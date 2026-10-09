@@ -186,3 +186,30 @@ Implemented/tested is distinct from merged, deployed, activated and owner-accept
 The numerical directions are owner-approved; the complete workflow is not
 owner-accepted or certified live. Parent must request independent exact-head
 review before the next assignment.
+
+## 9 October main reconciliation
+
+PR921 merged as main `5786d49a408554d765e0fa02f993f7202af6b647`.
+This candidate replays only the seven support commits after reviewed profile
+head `21f014ee1a7095e495127e52b2198f4498d5906c`; original PR950 head
+`04b22c38c8f1e0ad6ec0d7a8f8c7d65c1d978c62` is preserved locally. The
+profile work and subsequent auth/dependency repairs come from actual main.
+The current dashboard App, Public API dispatcher/auth policy, auth browser
+fixture, fresh-owner readiness helper/test and request-lifecycle helper/test
+remain byte-equivalent to main. No analytics activity or quarterly code is
+included in this support diff. The replay needed no conflict resolution in
+those shared files.
+
+PR950 targets main; PR954 remains a separate contributor-privacy draft stacked
+on the resulting support branch. Its legal-hold and contributor safeguards are
+required before support activation; they are not silently folded into PR950 or
+treated as approved private-field disclosure/deletion defaults.
+
+The original 7 October receipts above are historical. Current local and hosted
+exact-candidate evidence belongs to the reconciled PR handoff. The existing CI
+workflow permits manual dispatch for the stacked PR954 candidate; dispatch
+validation must identify its exact head and retain any event-specific skipped
+checks. Parent owns final independent review, main integration and the release
+freeze. No ready/merge/deployment, production schema/grants or activation is
+authorized in this lane. Only the previously approved beta numerical limits
+are composed in source; all six remaining recommendations stay unapproved.

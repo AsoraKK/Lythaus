@@ -180,6 +180,9 @@ export async function recordMonthlyContentEarning(client: Client, request: {
   const subjectId = content?.author_id ?? existing?.subject_user_id ?? retainedSubject!;
   const performedAt = existing ? iso(existing.performed_at) : content ? iso(content.created_at) : retained!.performedAt;
   if (performedAt < configuration.collectFrom) { await recordReceipt(subjectId); return { processed: true }; }
+  if (content?.revision_performed_at && iso(content.revision_performed_at) > request.evaluatedAt) {
+    throw new Error('monthly_earning_source_revision_in_future');
+  }
   const week = proposedClosingSundayWeek(performedAt);
   await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`monthly-earning:${subjectId}:${week.startsAt}`]);
   const base = (await client.query<{ id: string }>(

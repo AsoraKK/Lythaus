@@ -1,5 +1,7 @@
 # Disabled activity pilot integration candidate
 
+This document records the historical 7 October candidate and its validation. The [serialized 9 October main/support integration](activity-measurement-main-integration-2026-10-09.md) supersedes its old main/base, protected auth fixture and inherited formatter limits; the draft PR records the current exact head and validation outcomes.
+
 This candidate integrates the explicit opt-in account-day purpose and fixes all five independently reported review findings plus the independently identified scheduled-work failure boundary. It changes source and disposable synthetic tests only. The coordinator reports LIVE **103attempt2a31** and frozen main **104** at f47c11b099171d9c8173182b711b66b7e18c762f. This task changes no deployment, provider resource, production DDL/grant/credential, paid entitlement or collection flag. The existing monthly 13,500 model is unchanged.
 
 ## Exact dependency and ownership
