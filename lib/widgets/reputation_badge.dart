@@ -14,11 +14,13 @@ class ReputationBadge extends StatelessWidget {
     required this.state,
     this.size = ReputationBadgeSize.small,
     this.showLabel = false,
+    this.wrapLabel = false,
   });
 
   final ReputationState state;
   final ReputationBadgeSize size;
   final bool showLabel;
+  final bool wrapLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +77,13 @@ class ReputationBadge extends StatelessWidget {
             children: [
               Icon(icon, size: iconSize, color: color),
               SizedBox(width: context.spacing.xs),
-              Text(label, style: textStyle?.copyWith(color: color)),
+              if (wrapLabel)
+                Flexible(
+                  fit: FlexFit.loose,
+                  child: Text(label, style: textStyle?.copyWith(color: color)),
+                )
+              else
+                Text(label, style: textStyle?.copyWith(color: color)),
             ],
           ),
         ),

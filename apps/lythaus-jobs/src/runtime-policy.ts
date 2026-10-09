@@ -361,6 +361,66 @@ export function securityAuditRetentionPlan(): { retentionDays: 365 } {
   return { retentionDays: 365 };
 }
 
+const presentationPreferencesStorageCatalog = `WITH presentation_storage AS (
+  SELECT count(*) AS column_count,
+    count(*) FILTER (WHERE attnotnull AND (
+      (attname IN ('presentation_left_handed', 'presentation_profile_swipe') AND atttypid = 'boolean'::regtype)
+      OR (attname = 'presentation_preferences_version' AND atttypid = 'integer'::regtype)
+    )) AS valid_column_count
+  FROM pg_attribute WHERE attrelid = 'identity.users'::regclass AND NOT attisdropped
+    AND attname IN ('presentation_left_handed', 'presentation_profile_swipe', 'presentation_preferences_version')
+)`;
+
+const presentationPreferencesStorageState = `CASE
+  WHEN storage.column_count = 0 THEN 'absent'
+  WHEN storage.column_count = 3 AND storage.valid_column_count = 3
+    AND jsonb_typeof(to_jsonb(u)->'presentation_left_handed') = 'boolean'
+    AND jsonb_typeof(to_jsonb(u)->'presentation_profile_swipe') = 'boolean'
+    AND jsonb_typeof(to_jsonb(u)->'presentation_preferences_version') = 'number'
+    AND to_jsonb(u)->'presentation_preferences_version' > '0'::jsonb THEN 'ready'
+  ELSE 'incomplete' END`;
+
+export const presentationPreferencesIdentityExportQuery = `${presentationPreferencesStorageCatalog}
+  SELECT u.id, u.display_name, u.status, u.created_at, u.deleted_at, profile.bio,
+    ${presentationPreferencesStorageState} AS presentation_preferences_storage_state,
+    CASE WHEN storage.column_count = 0 THEN NULL ELSE jsonb_build_object(
+      'leftHandedMode', to_jsonb(u)->'presentation_left_handed',
+      'horizontalSwipeEnabled', to_jsonb(u)->'presentation_profile_swipe',
+      'version', to_jsonb(u)->'presentation_preferences_version') END AS presentation_preferences
+  FROM identity.users u CROSS JOIN presentation_storage storage
+  LEFT JOIN social.profiles profile ON profile.user_id = u.id WHERE u.id = $1`;
+
+export const presentationPreferencesStorageStateQuery = `${presentationPreferencesStorageCatalog}
+  SELECT ${presentationPreferencesStorageState} AS presentation_preferences_storage_state
+  FROM identity.users u CROSS JOIN presentation_storage storage WHERE id = $1 FOR UPDATE OF u`;
+
+export const presentationPreferencesResetQuery = `UPDATE identity.users
+  SET presentation_left_handed = false, presentation_profile_swipe = true,
+    presentation_preferences_version = 1 WHERE id = $1`;
+
+export function requirePresentationPreferencesStorageState(state: unknown): 'absent' | 'ready' {
+  if (state === 'absent' || state === 'ready') return state;
+  throw new Error('presentation_preferences_storage_incomplete');
+}
+
+export function validatedPresentationPreferencesIdentity(row: Record<string, unknown> | undefined): Record<string, unknown> | null {
+  if (!row) return null;
+  requirePresentationPreferencesStorageState(row.presentation_preferences_storage_state);
+  const { presentation_preferences_storage_state: _state, ...identity } = row;
+  return identity;
+}
+
+export async function resetPresentationPreferences(client: {
+  query(sql: string, values: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;
+}, subjectId: string): Promise<boolean> {
+  const result = await client.query(presentationPreferencesStorageStateQuery, [subjectId]);
+  if (!result.rows[0]) return false;
+  const state = requirePresentationPreferencesStorageState(result.rows[0].presentation_preferences_storage_state);
+  if (state === 'absent') return false;
+  await client.query(presentationPreferencesResetQuery, [subjectId]);
+  return true;
+}
+
 export function buildPrivacyDataPassport(input: {
   generatedAt: string;
   profile: unknown;

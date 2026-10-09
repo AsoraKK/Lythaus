@@ -94,5 +94,14 @@ void main() {
       // TODO
     });
 
+    // List my own published and pending posts
+    //
+    // Returns a private cursor-paginated timeline for the active author. Deleted, blocked, unsupported generated, or other users' posts are never returned.
+    //
+    //Future<OwnerTimelinePage> usersMePostsList({ int limit, String cursor }) async
+    test('test usersMePostsList', () async {
+      // TODO
+    });
+
   });
 }

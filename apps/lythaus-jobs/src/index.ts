@@ -22,6 +22,7 @@ import { MONTHLY_EARNING_SOURCE_EVENTS } from '../../../packages/db/src/monthly-
 import { MONTHLY_REPUTATION_POLICY_VERSION } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
 import { tombstoneBetaCases, purgeBetaMedia } from '../../../packages/db/src/authenticity-beta.ts';
 import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
+import { presentationPreferencesIdentityExportQuery, resetPresentationPreferences, validatedPresentationPreferencesIdentity } from './runtime-policy.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -2184,6 +2185,11 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       return true;
     });
 
+    await step.do('reset-presentation-preferences', async () => {
+      await transaction(this.env.DB_PRIVACY_FRESH, client => resetPresentationPreferences(client, subjectId));
+      return true;
+    });
+
     await step.do('purge-media-and-mark-locator', async () => {
       if (!this.env.MEDIA_APPROVED || !this.env.MEDIA_QUARANTINE) throw new Error('media_purge_not_configured');
       if (!this.env.PRIVATE_EXPORTS) throw new Error('private_exports_not_configured');
@@ -2256,7 +2262,8 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
               authoritative_or_derived, retention_class, deletion_state, last_verified_at)
            VALUES ($1, 'planetscale', 'privacy.deletion_tombstones', 'deletion_tombstone', $1,
              'authoritative', 'audit', 'retained', now())
-           ON CONFLICT DO UPDATE SET deletion_state = 'retained', last_verified_at = now()`,
+           ON CONFLICT (subject_id, store_type, resource_reference, entity_type, entity_key)
+           DO UPDATE SET deletion_state = 'retained', last_verified_at = now()`,
           [subjectId],
         );
         await client.query(`UPDATE privacy.requests SET state = 'completed', completed_at = now() WHERE id = $1`, [requestId]);
@@ -2303,7 +2310,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
 
     const passport = await step.do('build-data-passport', async () => {
       const [identity, locations, privateProfileField, consentRecords, contactEmailField, entitlement, rewardRedemptions, accountEvents] = await Promise.all([
-        query(this.env.DB_PRIVACY_FRESH, `SELECT id, display_name, status, created_at, deleted_at FROM identity.users WHERE id = $1`, [subjectId]),
+        query(this.env.DB_PRIVACY_FRESH, presentationPreferencesIdentityExportQuery, [subjectId]),
         query(this.env.DB_PRIVACY_FRESH, `SELECT store_type, resource_reference, entity_type, entity_id, authoritative_or_derived, retention_class, legal_hold_state, deletion_state, last_verified_at FROM privacy.subject_data_locations WHERE subject_id = $1`, [subjectId]),
         query<{ encrypted_payload: string; encryption_key_version: string }>(
           this.env.DB_PRIVACY_FRESH,
@@ -2348,6 +2355,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
           [subjectId],
         ),
       ]);
+      const exportedIdentity = validatedPresentationPreferencesIdentity(identity.rows[0]);
       const privateIdentity = await decryptPrivatePassportIdentity({
         encryptionKey: this.env.PII_ENCRYPTION_KEY_V1,
         privateProfile: privateProfileField.rows[0]
@@ -2439,7 +2447,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       ]);
       const passport = buildPrivacyDataPassport({
         generatedAt: new Date().toISOString(),
-        profile: identity.rows[0] ?? null,
+        profile: exportedIdentity,
         privateProfile: privateIdentity.privateProfile,
         contactEmail: privateIdentity.contactEmail,
         consentRecords: consentRecords.rows,

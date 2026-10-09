@@ -12,5 +12,6 @@ Name | Type | Description | Notes
 **bio** | **String** |  | [optional]
 **trustPassportVisibility** | **String** |  | [optional]
 **accountabilityName** | **String** | Private encrypted accountability name. It is never returned by profile or activity APIs. | [optional]
+**presentationPreferences** | [**ProductIntegrityPresentationPreferencesUpdate**](ProductIntegrityPresentationPreferencesUpdate.md) | Private account presentation choices. Send this field alone; it does not change profile publication or Passport visibility. Requires the approved preference schema. Conflicts return 409; unavailable storage returns 503. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
