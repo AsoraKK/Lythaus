@@ -25,6 +25,7 @@ import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 import { presentationPreferencesIdentityExportQuery, resetPresentationPreferences, validatedPresentationPreferencesIdentity } from './runtime-policy.ts';
 import { reconcileSupportPrivacyDeletionLocations } from '../../../packages/db/src/support-feedback-privacy-runtime.ts';
 import { exportOwnSupportContributionsForPrivacy } from '../../../packages/db/src/support-feedback-contributor-privacy.ts';
+import { activityMeasurementPrivacyExport, activityMeasurementPrivacyDelete, activityMeasurementPrivacyReconcile, activityMeasurementRetentionCleanup, activityMeasurementScheduledWork } from './activity-measurement.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -1991,29 +1992,31 @@ export default {
   },
 
   async scheduled(_event: unknown, env: Env): Promise<void> {
-    if (env.AUTHENTICITY_BETA_STORAGE_ENABLED === 'true') {
-      await expireBetaWork(env);
-      await purgeBetaMedia(env.DB_JOBS_FRESH,env.MEDIA_QUARANTINE);
-    }
-    if (env.AUTHENTICITY_ALPHA_ENABLED === 'true') await expireAlphaWork(env);
-    await reconcileDeferredMonthlyReputation(env);
-    await reconcileMonthlyEarning(env);
-    await reconcileCommunityAppeals(env);
-    await reconcileMonthlyPeerParticipation(env);
-    await reconcileMonthlyAssembly(env);
-    await reconcileMonthlyRewardSnapshots(env);
-    await relayTransactionalEmailOutbox(env);
-    await relayOutbox(env);
-    await deliverAdminOutcomeNotifications(env);
-    const now = new Date();
-    if (env.RETENTION_CLEANUP && now.getUTCHours() === 2 && now.getUTCMinutes() === 0) {
-      const runId = new Date().toISOString().slice(0, 10);
-      await ensureWorkflowCreate(env.RETENTION_CLEANUP, `retention-${runId}`, { runId });
-    }
-    if (env.BACKUP_VALIDATION && now.getUTCDate() === 1 && now.getUTCHours() === 3 && now.getUTCMinutes() === 0) {
-      const runId = now.toISOString().slice(0, 10);
-      await ensureWorkflowCreate(env.BACKUP_VALIDATION, `backup-validation-${runId}`, { runId });
-    }
+    await activityMeasurementScheduledWork(env.DB_PRIVACY_FRESH, async () => {
+      if (env.AUTHENTICITY_BETA_STORAGE_ENABLED === 'true') {
+        await expireBetaWork(env);
+        await purgeBetaMedia(env.DB_JOBS_FRESH,env.MEDIA_QUARANTINE);
+      }
+      if (env.AUTHENTICITY_ALPHA_ENABLED === 'true') await expireAlphaWork(env);
+      await reconcileDeferredMonthlyReputation(env);
+      await reconcileMonthlyEarning(env);
+      await reconcileCommunityAppeals(env);
+      await reconcileMonthlyPeerParticipation(env);
+      await reconcileMonthlyAssembly(env);
+      await reconcileMonthlyRewardSnapshots(env);
+      await relayTransactionalEmailOutbox(env);
+      await relayOutbox(env);
+      await deliverAdminOutcomeNotifications(env);
+      const now = new Date();
+      if (env.RETENTION_CLEANUP && now.getUTCHours() === 2 && now.getUTCMinutes() === 0) {
+        const runId = new Date().toISOString().slice(0, 10);
+        await ensureWorkflowCreate(env.RETENTION_CLEANUP, `retention-${runId}`, { runId });
+      }
+      if (env.BACKUP_VALIDATION && now.getUTCDate() === 1 && now.getUTCHours() === 3 && now.getUTCMinutes() === 0) {
+        const runId = now.toISOString().slice(0, 10);
+        await ensureWorkflowCreate(env.BACKUP_VALIDATION, `backup-validation-${runId}`, { runId });
+      }
+    });
   },
 };
 
@@ -2024,6 +2027,7 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
     const requestId = await step.do('resolve-request', async () => {
       await query(this.env.DB_PRIVACY_FRESH, `SELECT privacy.reconcile_subject_data_locations($1)`, [subjectId]);
       await reconcileMonthlyReputationDataLocations(this.env.DB_PRIVACY_FRESH, subjectId);
+      await activityMeasurementPrivacyReconcile(this.env.DB_PRIVACY_FRESH, subjectId);
       const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
         `SELECT id FROM privacy.requests WHERE id = $1 AND subject_id = $2 AND request_type = 'delete'`, [requestedId, subjectId]);
       if (!result.rows[0]) throw new Error('privacy_delete_request_not_found');
@@ -2078,6 +2082,8 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       });
       return { subjectId, state: 'blocked' };
     }
+
+    await step.do('purge-account-activity-for-deletion', () => activityMeasurementPrivacyDelete(this.env.DB_PRIVACY_FRESH, requestId, subjectId));
 
     await step.do('purge-support-feedback-for-deletion', async () => {
       await purgeSupportFeedbackForPrivacy(this.env, requestId);
@@ -2308,6 +2314,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
     const requestId = await step.do('resolve-export-request', async () => {
       await query(this.env.DB_PRIVACY_FRESH, `SELECT privacy.reconcile_subject_data_locations($1)`, [subjectId]);
       await reconcileMonthlyReputationDataLocations(this.env.DB_PRIVACY_FRESH, subjectId);
+      await activityMeasurementPrivacyReconcile(this.env.DB_PRIVACY_FRESH, subjectId);
       const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,
         `SELECT id FROM privacy.requests WHERE id = $1 AND subject_id = $2 AND request_type = 'export'`, [requestedId, subjectId]);
       if (!result.rows[0]) throw new Error('privacy_export_request_not_found');
@@ -2495,7 +2502,8 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         subjectDataLocations: locations.rows,
       });
       const supportFeedback = await exportSupportFeedbackForPrivacy(this.env, requestId, subjectId);
-      return supportFeedback === undefined ? passport : Object.freeze({ ...passport, supportFeedback });
+      const accountActivityMeasurement = await activityMeasurementPrivacyExport(this.env.DB_PRIVACY_FRESH, requestId, subjectId);
+      return Object.freeze({ ...passport, accountActivityMeasurement, ...(supportFeedback === undefined ? {} : { supportFeedback }) });
     });
 
     const completion = await step.do('store-export-and-complete-request', async () => {
@@ -2547,6 +2555,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
 export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: string }> {
   async run(event: WorkflowEvent<{ runId: string }>, step: WorkflowStep): Promise<{ runId: string; redactedPosts: number; deletedMedia: number; expiredActivityEvents: number; expiredAccountEvents: number; expiredSystemAuditEvents: number; expiredRateLimitWindows: number; expiredIdempotencyTombstones: number; expiredWaitlistSignups: number; expiredSupportRecords: number }> {
     const securityAuditRetention = securityAuditRetentionPlan();
+    await step.do('purge-expired-account-activity', () => activityMeasurementRetentionCleanup(this.env.DB_PRIVACY_FRESH));
     const securityRetentionInterval = `${securityAuditRetention.retentionDays} days`;
     const expiredActivityEvents = await step.do('purge-expired-user-activity', async () => {
       const result = await query<{ id: string }>(this.env.DB_PRIVACY_FRESH,

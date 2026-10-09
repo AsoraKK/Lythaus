@@ -139,6 +139,72 @@ jobs:
       - run: npm run validate:production-gates
       - run: node --test scripts/tests/public-waitlist-cutover.test.mjs
 
+  activity_pilot:
+    name: Disabled activity pilot integration
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lythaus_auth_test_activity_pilot
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d lythaus_auth_test_activity_pilot"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_activity_pilot
+      ACTIVITY_PILOT_FIXTURE_OUTPUT: /tmp/lythaus-activity-snapshot.json
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit
+      - run: npm run validate:planetscale-postgres17
+      - name: Verify purpose contracts and privacy hooks
+        run: >-
+          node --experimental-strip-types --experimental-test-coverage
+          --test packages/contracts/tests/activity-measurement.test.mjs
+          apps/lythaus-public-api/tests/activity-measurement-handler.test.mjs
+          apps/lythaus-admin-api/tests/activity-measurement-handler.test.mjs
+          apps/lythaus-jobs/tests/activity-measurement.test.mjs
+      - name: Verify restricted PG17 races and actual native routes and Workflows
+        run: >-
+          node --experimental-strip-types --test --test-concurrency=1 --test-timeout=120000
+          packages/db/tests/activity-measurement.postgres.mjs
+          packages/db/tests/activity-integration.postgres.mjs
+      - run: npm ci --ignore-scripts --no-audit --prefix apps/control-panel
+      - name: Build disabled-purpose synthetic visual fixture
+        env:
+          VITE_ACTIVITY_MEASUREMENT_PILOT: 'true'
+        run: npm --prefix apps/control-panel run build
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Verify labelled synthetic responsive and keyboard rendering
+        env:
+          ACTIVITY_PILOT_BROWSER_OUTPUT: build/activity-pilot-browser
+        run: |
+          set -euo pipefail
+          npm --prefix apps/control-panel run preview -- --host 127.0.0.1 --port 5183 --strictPort > /tmp/activity-preview.log 2>&1 &
+          activity_preview_pid=$!
+          trap 'kill "$activity_preview_pid" 2>/dev/null || true' EXIT
+          for _attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:5183/ > /dev/null; then break; fi
+            sleep 1
+          done
+          ACTIVITY_PILOT_BROWSER_ENGINE=chromium node scripts/tests/activity-pilot.browser.mjs
+          ACTIVITY_PILOT_BROWSER_ENGINE=webkit node scripts/tests/activity-pilot.browser.mjs
+      - name: Upload purpose-local synthetic visual evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: activity-pilot-browser-evidence
+          path: build/activity-pilot-browser
+          if-no-files-found: warn
+          retention-days: 7
+
   openapi:
     name: OpenAPI contract
     runs-on: ubuntu-latest

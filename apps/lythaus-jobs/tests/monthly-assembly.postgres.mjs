@@ -33,7 +33,7 @@ async function tx(work, role = 'lythaus_jobs') {
   } catch (error) { await client.query('ROLLBACK'); throw error; } finally { await client.end(); }
 }
 const sql = (text, values) => tx(client => client.query(text, values), null);
-const jobsBinding = { role: 'lythaus_jobs' }, runtimeBinding = { role: 'lythaus_runtime' };
+const jobsBinding = { role: 'lythaus_jobs' }, runtimeBinding = { role: 'lythaus_runtime' }, privacyBinding = { role: 'lythaus_privacy' };
 mock.module('@lythaus/db', { namedExports: { ...database,
   query: (binding, text, values) => tx(client => client.query(text, values), binding.role),
   transaction: (binding, work) => tx(work, binding.role),
@@ -48,7 +48,7 @@ mock.method(globalThis, 'fetch', async url => {
   assert.ok(String(url).startsWith('https://api.pwnedpasswords.com/range/'));
   return new Response(`${'0'.repeat(35)}:0`);
 });
-const env = { DB_JOBS_FRESH: jobsBinding, MONTHLY_REPUTATION_SHADOW_RULES: weekly.version, MONTHLY_REPUTATION_MAINTENANCE_RULES: maintenance.version };
+const env = { DB_JOBS_FRESH: jobsBinding, DB_PRIVACY_FRESH: privacyBinding, MONTHLY_REPUTATION_SHADOW_RULES: weekly.version, MONTHLY_REPUTATION_MAINTENANCE_RULES: maintenance.version };
 const users = [], posts = [], cases = [], grants = [], weeks = ['2026-07-27', '2026-08-03', '2026-08-10', '2026-08-17', '2026-08-24'];
 let subject, reviewer, empty, firstSource, emailProof;
 const flag = 'trust.monthly_reputation_shadow';
