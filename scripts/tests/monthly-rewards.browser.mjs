@@ -26,7 +26,7 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
   await mkdir(output, { recursive: true });
   const evidence = [];
   for (const config of [{ name: 'desktop-light', width: 1440, height: 960, theme: 'light' }, { name: 'mobile-dark', width: 390, height: 844, theme: 'dark' }]) {
-    let signedIn = false, confirmed = false, shadow = false, empty = true, failStatus = false;
+    let signedIn = false, confirmed = false, shadow = false, empty = !csvOnly, failStatus = false;
     const calls = [], errors = [], captures = [];
     const csvChecks = [];
     const fixture = await localAuthBrowserServer(async (route) => {
@@ -87,6 +87,20 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
         await page.waitForTimeout(100);
         const metrics = await page.evaluate(() => ({ width: innerWidth, documentWidth: document.documentElement.scrollWidth, bodyWidth: document.body.scrollWidth })); assert.ok(metrics.documentWidth <= metrics.width + 1); const filename = `${engineName}-${config.name}-${state}.png`; await page.screenshot({ path: path.join(output, filename), animations: 'disabled' }); captures.push({ filename, state, fixtureLabel: `synthetic local TLS / ${state}`, metrics });
       }
+      async function exportCsv() {
+        const csvControl = await locate(page.getByRole('button', { name: 'Export CSV', exact: true }));
+        const downloadReady = page.waitForEvent('download');
+        await csvControl.click();
+        await page.getByRole('button', { name: 'Exporting…', exact: true }).waitFor();
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        const download = await downloadReady;
+        const csvMonth = calls.findLast(call => call.path.endsWith('/export.csv')).path.split('/').at(-2);
+        assert.equal(download.suggestedFilename(), `monthly-reputation-${csvMonth}.csv`);
+        assert.equal(await readFile(await download.path(), 'utf8'), `sourceMonth,score\n${csvMonth},2000\n`);
+        csvChecks.push({ sourceMonth: csvMonth, delayMilliseconds: 600, observedPendingAcrossTwoFrames: true, exactServerBytes: true });
+        assert.equal(calls.filter(call => (call.path.startsWith('/api/rewards/') || call.path.includes('/reports/monthly/')) && call.method !== 'GET').length, 0);
+        await capture('csv-export-complete');
+      }
       await open('/rewards');
       await guestEntry();
       await page.getByRole('button', { name: 'Sign in', exact: true }).waitFor();
@@ -99,6 +113,12 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
       await page.getByText('Monthly level pending', { exact: true }).waitFor({ timeout: 90000 });
       assert.match(await text(), /projection unavailable/); assert.doesNotMatch(await text(), /Level 5 confirmed|Prospective maximum:/);
       await capture('pending-disabled');
+      if (csvOnly) {
+        await exportCsv();
+        assert.equal(errors.length, 0, errors.join('\n'));
+        evidence.push({ config, browser: browser.version(), calls, errors, captures, csvChecks });
+        await context.close(); continue;
+      }
       confirmed = true; shadow = true;
       const refresh = await locate(page.getByRole('button', { name: 'Refresh status', exact: true })); await refresh.focus(); await page.keyboard.press('Enter');
       await page.getByText('Monthly level in shadow', { exact: true }).waitFor();
@@ -120,23 +140,7 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
       await waitText('Source revision 2');
       assert.match(await text(), /Cap group: profile/); assert.match(await text(), /Unknown date/); assert.match(await text(), /Source revision 2/);
       await capture('corrected-evidence');
-      const csvControl = await locate(page.getByRole('button', { name: 'Export CSV', exact: true }));
-      const downloadReady = page.waitForEvent('download');
-      await csvControl.click();
-      await page.getByRole('button', { name: 'Exporting…', exact: true }).waitFor();
-      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-      const download = await downloadReady;
-      const csvMonth = calls.findLast(call => call.path.endsWith('/export.csv')).path.split('/').at(-2);
-      const csvBytes = await readFile(await download.path(), 'utf8');
-      assert.equal(download.suggestedFilename(), `monthly-reputation-${csvMonth}.csv`);
-      assert.equal(csvBytes, `sourceMonth,score\n${csvMonth},2000\n`);
-      csvChecks.push({ sourceMonth: csvMonth, delayMilliseconds: 600, observedPendingAcrossTwoFrames: true, exactServerBytes: true });
-      await capture('csv-export-complete');
-      if (csvOnly) {
-        assert.equal(errors.length, 0, errors.join('\n'));
-        evidence.push({ config, browser: browser.version(), calls, errors, captures, csvChecks });
-        await context.close(); continue;
-      }
+      await exportCsv();
       await page.setViewportSize({ width: Math.floor(config.width / 2), height: Math.floor(config.height / 2) });
       await (await locate(page.getByRole('button', { name: /Corrections/ }))).focus(); await page.keyboard.press('Tab');
       await capture('zoom-200-approximation');
