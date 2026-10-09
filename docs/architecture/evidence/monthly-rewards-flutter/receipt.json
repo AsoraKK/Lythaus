@@ -1,0 +1,413 @@
+{
+  "synthetic": true,
+  "baseCommit": "822d799029c22e91d249a50826441ae82e218ed1",
+  "runtimeFileSha256": {
+    "lib/features/rewards/application/reward_providers.dart": "9def10bce054cbf1939cf4a4c88ee77910e5fbb03afded72f8033da7e28e7441",
+    "lib/features/rewards/application/monthly_api_serializers.dart": "8d4024ae2d1aa3e7176848ad17b5fafb059661907dc2fd35cff2a18abb87a1fa",
+    "lib/features/rewards/domain/monthly_reputation_presentation.dart": "f2f870d3f18b958796278224908c71cf6b6967e1d4ff6294d9ae8c11333bd3a3",
+    "lib/ui/screens/rewards/monthly_reputation_widgets.dart": "b032981f86005feeaaba598797317b086f56fa708f1a98ca98c6769e5e591fa0",
+    "lib/ui/screens/rewards/rewards_dashboard.dart": "5578281074b0a37edcd18e2ea4c98cc3228f83a1b07e024cecef8a4fdba25321",
+    "scripts/tests/monthly-rewards.browser.mjs": "2dcc92c91e16a7dad710eaf94cf7d18b26a32b5c6926b146364c54fea8e32fc3"
+  },
+  "releaseArtifactSha256": "85dd8ca954787aacd4911a39abf5625131ab6a635d1ff2a7a40cd772fde226fc",
+  "selectedCaptures": [
+    "chromium-desktop-light-confirmed-disabled-methodology.png",
+    "chromium-mobile-dark-confirmed-disabled-methodology.png",
+    "webkit-mobile-dark-corrected-evidence.png",
+    "chromium-desktop-light-owner-settings-first.png",
+    "chromium-desktop-light-public-private-evidence-absent.png"
+  ],
+  "runs": [
+    {
+      "engine": "chromium",
+      "browser": "151.0.7922.34",
+      "configuration": {
+        "name": "desktop-light",
+        "width": 1440,
+        "height": 960,
+        "theme": "light"
+      },
+      "consoleErrors": [],
+      "captures": [
+        {
+          "filename": "chromium-desktop-light-guest-readonly.png",
+          "state": "guest-readonly",
+          "metrics": {
+            "width": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440
+          }
+        },
+        {
+          "filename": "chromium-desktop-light-pending-disabled.png",
+          "state": "pending-disabled",
+          "metrics": {
+            "width": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440
+          }
+        },
+        {
+          "filename": "chromium-desktop-light-confirmed-disabled-methodology.png",
+          "state": "confirmed-disabled-methodology",
+          "metrics": {
+            "width": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440
+          }
+        },
+        {
+          "filename": "chromium-desktop-light-corrected-evidence.png",
+          "state": "corrected-evidence",
+          "metrics": {
+            "width": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440
+          }
+        },
+        {
+          "filename": "chromium-desktop-light-zoom-200-approximation.png",
+          "state": "zoom-200-approximation",
+          "metrics": {
+            "width": 720,
+            "documentWidth": 720,
+            "bodyWidth": 720
+          }
+        },
+        {
+          "filename": "chromium-desktop-light-owner-settings-first.png",
+          "state": "owner-settings-first",
+          "metrics": {
+            "width": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440
+          }
+        },
+        {
+          "filename": "chromium-desktop-light-owner-tracker.png",
+          "state": "owner-tracker",
+          "metrics": {
+            "width": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440
+          }
+        },
+        {
+          "filename": "chromium-desktop-light-public-private-evidence-absent.png",
+          "state": "public-private-evidence-absent",
+          "metrics": {
+            "width": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440
+          }
+        },
+        {
+          "filename": "chromium-desktop-light-signed-out-cleared.png",
+          "state": "signed-out-cleared",
+          "metrics": {
+            "width": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440
+          }
+        }
+      ],
+      "monthlyReadCount": 8,
+      "monthlyMutationCount": 0
+    },
+    {
+      "engine": "chromium",
+      "browser": "151.0.7922.34",
+      "configuration": {
+        "name": "mobile-dark",
+        "width": 390,
+        "height": 844,
+        "theme": "dark"
+      },
+      "consoleErrors": [],
+      "captures": [
+        {
+          "filename": "chromium-mobile-dark-guest-readonly.png",
+          "state": "guest-readonly",
+          "metrics": {
+            "width": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390
+          }
+        },
+        {
+          "filename": "chromium-mobile-dark-pending-disabled.png",
+          "state": "pending-disabled",
+          "metrics": {
+            "width": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390
+          }
+        },
+        {
+          "filename": "chromium-mobile-dark-confirmed-disabled-methodology.png",
+          "state": "confirmed-disabled-methodology",
+          "metrics": {
+            "width": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390
+          }
+        },
+        {
+          "filename": "chromium-mobile-dark-corrected-evidence.png",
+          "state": "corrected-evidence",
+          "metrics": {
+            "width": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390
+          }
+        },
+        {
+          "filename": "chromium-mobile-dark-zoom-200-approximation.png",
+          "state": "zoom-200-approximation",
+          "metrics": {
+            "width": 195,
+            "documentWidth": 195,
+            "bodyWidth": 202
+          }
+        },
+        {
+          "filename": "chromium-mobile-dark-owner-settings-first.png",
+          "state": "owner-settings-first",
+          "metrics": {
+            "width": 390,
+            "documentWidth": 390,
+            "bodyWidth": 392
+          }
+        },
+        {
+          "filename": "chromium-mobile-dark-owner-tracker.png",
+          "state": "owner-tracker",
+          "metrics": {
+            "width": 390,
+            "documentWidth": 390,
+            "bodyWidth": 392
+          }
+        },
+        {
+          "filename": "chromium-mobile-dark-public-private-evidence-absent.png",
+          "state": "public-private-evidence-absent",
+          "metrics": {
+            "width": 390,
+            "documentWidth": 390,
+            "bodyWidth": 392
+          }
+        },
+        {
+          "filename": "chromium-mobile-dark-signed-out-cleared.png",
+          "state": "signed-out-cleared",
+          "metrics": {
+            "width": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390
+          }
+        }
+      ],
+      "monthlyReadCount": 8,
+      "monthlyMutationCount": 0
+    },
+    {
+      "engine": "webkit",
+      "browser": "26.5",
+      "configuration": {
+        "name": "desktop-light",
+        "width": 1440,
+        "height": 960,
+        "theme": "light"
+      },
+      "consoleErrors": [],
+      "captures": [
+        {
+          "filename": "webkit-desktop-light-guest-readonly.png",
+          "state": "guest-readonly",
+          "metrics": {
+            "width": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440
+          }
+        },
+        {
+          "filename": "webkit-desktop-light-pending-disabled.png",
+          "state": "pending-disabled",
+          "metrics": {
+            "width": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440
+          }
+        },
+        {
+          "filename": "webkit-desktop-light-confirmed-disabled-methodology.png",
+          "state": "confirmed-disabled-methodology",
+          "metrics": {
+            "width": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440
+          }
+        },
+        {
+          "filename": "webkit-desktop-light-corrected-evidence.png",
+          "state": "corrected-evidence",
+          "metrics": {
+            "width": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440
+          }
+        },
+        {
+          "filename": "webkit-desktop-light-zoom-200-approximation.png",
+          "state": "zoom-200-approximation",
+          "metrics": {
+            "width": 720,
+            "documentWidth": 720,
+            "bodyWidth": 720
+          }
+        },
+        {
+          "filename": "webkit-desktop-light-owner-settings-first.png",
+          "state": "owner-settings-first",
+          "metrics": {
+            "width": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440
+          }
+        },
+        {
+          "filename": "webkit-desktop-light-owner-tracker.png",
+          "state": "owner-tracker",
+          "metrics": {
+            "width": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440
+          }
+        },
+        {
+          "filename": "webkit-desktop-light-public-private-evidence-absent.png",
+          "state": "public-private-evidence-absent",
+          "metrics": {
+            "width": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440
+          }
+        },
+        {
+          "filename": "webkit-desktop-light-signed-out-cleared.png",
+          "state": "signed-out-cleared",
+          "metrics": {
+            "width": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440
+          }
+        }
+      ],
+      "monthlyReadCount": 8,
+      "monthlyMutationCount": 0
+    },
+    {
+      "engine": "webkit",
+      "browser": "26.5",
+      "configuration": {
+        "name": "mobile-dark",
+        "width": 390,
+        "height": 844,
+        "theme": "dark"
+      },
+      "consoleErrors": [],
+      "captures": [
+        {
+          "filename": "webkit-mobile-dark-guest-readonly.png",
+          "state": "guest-readonly",
+          "metrics": {
+            "width": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390
+          }
+        },
+        {
+          "filename": "webkit-mobile-dark-pending-disabled.png",
+          "state": "pending-disabled",
+          "metrics": {
+            "width": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390
+          }
+        },
+        {
+          "filename": "webkit-mobile-dark-confirmed-disabled-methodology.png",
+          "state": "confirmed-disabled-methodology",
+          "metrics": {
+            "width": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390
+          }
+        },
+        {
+          "filename": "webkit-mobile-dark-corrected-evidence.png",
+          "state": "corrected-evidence",
+          "metrics": {
+            "width": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390
+          }
+        },
+        {
+          "filename": "webkit-mobile-dark-zoom-200-approximation.png",
+          "state": "zoom-200-approximation",
+          "metrics": {
+            "width": 195,
+            "documentWidth": 195,
+            "bodyWidth": 210
+          }
+        },
+        {
+          "filename": "webkit-mobile-dark-owner-settings-first.png",
+          "state": "owner-settings-first",
+          "metrics": {
+            "width": 390,
+            "documentWidth": 390,
+            "bodyWidth": 398
+          }
+        },
+        {
+          "filename": "webkit-mobile-dark-owner-tracker.png",
+          "state": "owner-tracker",
+          "metrics": {
+            "width": 390,
+            "documentWidth": 390,
+            "bodyWidth": 398
+          }
+        },
+        {
+          "filename": "webkit-mobile-dark-public-private-evidence-absent.png",
+          "state": "public-private-evidence-absent",
+          "metrics": {
+            "width": 390,
+            "documentWidth": 390,
+            "bodyWidth": 398
+          }
+        },
+        {
+          "filename": "webkit-mobile-dark-signed-out-cleared.png",
+          "state": "signed-out-cleared",
+          "metrics": {
+            "width": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390
+          }
+        }
+      ],
+      "monthlyReadCount": 8,
+      "monthlyMutationCount": 0
+    }
+  ],
+  "profileRegression": "Chromium, mobile, light: passed",
+  "limitations": [
+    "Synthetic local TLS fixture only; no production data.",
+    "Browser zoom is approximated by halving CSS viewport at device-pixel ratio 2; actual 200% text scaling is covered by Flutter widget tests.",
+    "Reduced motion and keyboard controls are exercised; no physical screen-reader or native-device run."
+  ],
+  "captureTimingNote": "The final harness adds two animation frames and 100 ms before capture to wait for canvas paint; these local screenshots precede that capture-only timing improvement. Runtime files are unchanged."
+}

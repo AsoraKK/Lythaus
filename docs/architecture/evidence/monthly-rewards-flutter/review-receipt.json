@@ -1,0 +1,61 @@
+{
+  "synthetic": true,
+  "sourceHead": "6d70bd700fef6ed074d92359ab81d43daa580fc9",
+  "runtimeMatches53a8ec32": true,
+  "runtimeFileSha256": {
+    "lib/features/rewards/application/reward_providers.dart": "9def10bce054cbf1939cf4a4c88ee77910e5fbb03afded72f8033da7e28e7441",
+    "lib/features/rewards/application/monthly_api_serializers.dart": "8d4024ae2d1aa3e7176848ad17b5fafb059661907dc2fd35cff2a18abb87a1fa",
+    "lib/features/rewards/domain/monthly_reputation_presentation.dart": "f2f870d3f18b958796278224908c71cf6b6967e1d4ff6294d9ae8c11333bd3a3",
+    "lib/ui/screens/rewards/monthly_reputation_widgets.dart": "93c7d992742497b2266d420c5aa6456fb222649a15fc13236e56f4f7aacbdf28",
+    "lib/ui/screens/rewards/rewards_dashboard.dart": "5578281074b0a37edcd18e2ea4c98cc3228f83a1b07e024cecef8a4fdba25321"
+  },
+  "releaseArtifactSha256": "479297a11271246a511b385aadf3946697784256ca89aed026670ea79cb4725c",
+  "captures": [
+    {
+      "file": "review-chromium-desktop-light-v1-shadow-unconfirmed.png",
+      "testedHead": "53a8ec324332139ae4ebd09160cda289078536cd",
+      "fixtureLabel": "Synthetic reader-shaped v1 shadow snapshot; full local run later failed at owner Overview selector.",
+      "sha256": "cc1a071a3c43a0db75e00519ed194b10353ecdc0ccd0d11c36669ed69390ef91",
+      "visuallyInspected": true
+    },
+    {
+      "file": "review-webkit-mobile-dark-pending-disabled.png",
+      "testedHead": "6d70bd700fef6ed074d92359ab81d43daa580fc9",
+      "fixtureLabel": "Synthetic pending snapshot and historical v1 source assessment; mobile CSV download later timed out.",
+      "sha256": "e9a8adec93e9ec1ac2794a547712ba66d94b3564882e4da9f8b9c6c8f570944c",
+      "visuallyInspected": true
+    },
+    {
+      "file": "review-webkit-desktop-light-csv-export-complete.png",
+      "testedHead": "6d70bd700fef6ed074d92359ab81d43daa580fc9",
+      "fixtureLabel": "Synthetic CSV-only desktop assertions passed: exact server bytes, held response, two frames and 600 ms; complete engine test failed on mobile.",
+      "sha256": "b06aa48f672214e472ae4f8125b2156e1525ddaf30e4402e5fcb5d515c6d8ebc",
+      "visuallyInspected": true
+    }
+  ],
+  "ci": {
+    "head": "53a8ec324332139ae4ebd09160cda289078536cd",
+    "run": 37935689731,
+    "fullCoverage": "passed",
+    "coverageGates": "passed",
+    "completeMonthlyChromiumAndWebKit": "passed",
+    "reservedAuthenticationProbe": "failed",
+    "nativeArchitecture": "failed at dependency source review",
+    "identityEvidence": "Structured GitHub metadata; signed logs were not downloaded"
+  },
+  "local": {
+    "focusedTests": "73 passed on 53a8ec32",
+    "fullAnalysis": "No issues found on 53a8ec32",
+    "releaseBuild": "passed; runtime unchanged afterward",
+    "validatorWrapper": "4 passed",
+    "csvBrowser": "WebKit desktop assertions passed before mobile download timeout; Chromium failed during email entry. Overall CSV probes failed."
+  },
+  "limitations": [
+    "No current-head full CI pass is claimed.",
+    "CSV-only scope does not validate owner/public navigation or sign-out.",
+    "Earlier receipt.json and five original screenshots are historical development evidence.",
+    "Browser zoom is approximate; 200 percent text scaling is widget-tested.",
+    "No physical screen-reader or native-device testing.",
+    "No production data, activation, deployment, migration, grant or merge."
+  ]
+}

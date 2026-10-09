@@ -19,6 +19,7 @@ import 'package:lythaus/features/profile/domain/owner_profile.dart';
 import 'package:lythaus/state/models/reputation.dart';
 import 'package:lythaus/state/providers/reputation_providers.dart';
 import 'package:lythaus/ui/screens/profile/profile_screen.dart';
+import '../../../support/monthly_rewards_fixture.dart';
 
 const _fakeUser = PublicUser(
   id: 'user-1',
@@ -135,7 +136,7 @@ OwnerPost _post({
 
 Widget _buildApp({List<Override> overrides = const []}) {
   return ProviderScope(
-    overrides: overrides,
+    overrides: [...monthlyDataFixtureOverrides(), ...overrides],
     child: const MaterialApp(home: ProfileScreen()),
   );
 }
@@ -153,6 +154,7 @@ Future<void> _pumpProfileAtViewport(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        ...monthlyDataFixtureOverrides(),
         currentUserProvider.overrideWithValue(_fakeAuthUser),
         ownerPostsServiceProvider.overrideWithValue(_FakeOwnerPostsService()),
         ownerProfileProvider.overrideWith(
@@ -234,6 +236,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ...monthlyDataFixtureOverrides(),
             currentUserProvider.overrideWithValue(_fakeAuthUser),
             ownerPostsServiceProvider.overrideWithValue(
               _FakeOwnerPostsService(),
@@ -259,6 +262,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ...monthlyDataFixtureOverrides(),
             currentUserProvider.overrideWithValue(_fakeAuthUser),
             ownerPostsServiceProvider.overrideWithValue(
               _FakeOwnerPostsService(),
@@ -283,6 +287,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ...monthlyDataFixtureOverrides(),
             currentUserProvider.overrideWithValue(_fakeAuthUser),
             ownerPostsServiceProvider.overrideWithValue(
               _FakeOwnerPostsService(),
@@ -307,6 +312,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ...monthlyDataFixtureOverrides(),
             currentUserProvider.overrideWithValue(_fakeAuthUser),
             ownerPostsServiceProvider.overrideWithValue(
               _FakeOwnerPostsService(),
@@ -385,6 +391,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ...monthlyDataFixtureOverrides(),
             currentUserProvider.overrideWithValue(_fakeAuthUser),
             ownerProfileProvider.overrideWith(
               (ref) async => _ownerProfile(_fakeUser),
@@ -434,6 +441,7 @@ void main() {
       await tester.pumpWidget(
         _buildApp(
           overrides: [
+            ...monthlyDataFixtureOverrides(),
             currentUserProvider.overrideWithValue(_fakeAuthUser),
             ownerProfileProvider.overrideWith(
               (ref) async => _ownerProfile(_fakeUser),
@@ -483,6 +491,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ...monthlyDataFixtureOverrides(),
             currentUserProvider.overrideWithValue(_fakeAuthUser),
             ownerProfileProvider.overrideWith(
               (ref) async => _ownerProfile(_fakeUser),
@@ -518,6 +527,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ...monthlyDataFixtureOverrides(),
             currentUserProvider.overrideWithValue(_fakeAuthUser),
             ownerPostsServiceProvider.overrideWithValue(
               _FakeOwnerPostsService(),
@@ -551,6 +561,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ...monthlyDataFixtureOverrides(),
             currentUserProvider.overrideWithValue(_fakeAdminUser),
             ownerPostsServiceProvider.overrideWithValue(
               _FakeOwnerPostsService(),
@@ -581,6 +592,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ...monthlyDataFixtureOverrides(),
             currentUserProvider.overrideWithValue(_fakeAuthUser),
             ownerPostsServiceProvider.overrideWithValue(
               _FakeOwnerPostsService(),
@@ -609,6 +621,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ...monthlyDataFixtureOverrides(),
             currentUserProvider.overrideWithValue(_fakeAuthUser),
             ownerPostsServiceProvider.overrideWithValue(
               _FakeOwnerPostsService(),
@@ -635,6 +648,8 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
 
+      await tester.drag(find.byType(ListView).first, const Offset(0, 1200));
+      await tester.pumpAndSettle();
       await _scrollTo(tester, find.text('Settings'));
       await tester.tap(find.text('Settings'));
       await tester.pump();
@@ -648,6 +663,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ...monthlyDataFixtureOverrides(),
             currentUserProvider.overrideWithValue(_fakeAuthUser),
             publicUserProvider(
               'user-2',

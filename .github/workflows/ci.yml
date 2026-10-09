@@ -224,6 +224,8 @@ jobs:
           channel: stable
           cache: true
       - run: npm ci --ignore-scripts --no-audit
+      - name: Prepare canonical Dart client serializers
+        run: node scripts/validate-openapi-dart-client.mjs --prepare-for-flutter
       - run: flutter pub get
       - run: npm run openapi:lint
       - name: Spectral lint
@@ -318,6 +320,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
       - name: Install Dart formatter file discovery tool
         run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
       - uses: ./.github/actions/flutter-setup
@@ -325,6 +330,8 @@ jobs:
           flutter-version-file: .fvmrc
           channel: stable
           cache: true
+      - name: Prepare canonical Dart client serializers
+        run: node scripts/validate-openapi-dart-client.mjs --prepare-for-flutter
       - run: flutter pub get
       - name: Check Dart formatting
         run: |
@@ -371,8 +378,49 @@ jobs:
         run: node scripts/check-auth-flutter-coverage.mjs
       - name: Install authentication test browsers
         run: npx playwright install --with-deps chromium webkit
+      - name: Verify rendered private monthly rewards
+        env:
+          QA_COMMIT: ${{ github.sha }}
+        run: |
+          MONTHLY_REWARDS_ENGINE=chromium node --experimental-strip-types --test --test-timeout=600000 scripts/tests/monthly-rewards.browser.mjs
+          MONTHLY_REWARDS_ENGINE=webkit node --experimental-strip-types --test --test-timeout=600000 scripts/tests/monthly-rewards.browser.mjs
+      - name: Upload monthly rewards visual evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: monthly-rewards-browser-evidence
+          path: build/monthly-rewards-evidence
+          if-no-files-found: warn
+          retention-days: 7
       - name: Verify rendered Flutter authentication journey
-        run: node --experimental-strip-types --test --test-timeout=600000 scripts/tests/flutter-auth.browser.mjs scripts/tests/optional-profile.browser.mjs scripts/tests/guest-account-entry.browser.mjs scripts/tests/native-notifications.browser.mjs scripts/tests/privacy-requests.browser.mjs
+        run: |
+          node --test scripts/tests/auth-browser-failure-reporter.test.mjs
+          node --experimental-strip-types --test --test-timeout=600000 \
+            --test-reporter=tap --test-reporter-destination=stdout \
+            --test-reporter=./scripts/tests/auth-browser-failure-reporter.mjs --test-reporter-destination=stdout \
+            scripts/tests/flutter-auth.browser.mjs scripts/tests/optional-profile.browser.mjs \
+            scripts/tests/guest-account-entry.browser.mjs scripts/tests/native-notifications.browser.mjs \
+            scripts/tests/privacy-requests.browser.mjs
+      - name: Verify monthly CSV button lifecycle
+        if: ${{ !cancelled() }}
+        env:
+          QA_COMMIT: ${{ github.sha }}
+          MONTHLY_REWARDS_CSV_ONLY: '1'
+          MONTHLY_REWARDS_QA_DIR: build/monthly-rewards-evidence/csv-lifecycle
+        run: |
+          csv_lifecycle_status=0
+          for csv_lifecycle_engine in chromium webkit; do
+            MONTHLY_REWARDS_ENGINE="$csv_lifecycle_engine" node --experimental-strip-types --test --test-timeout=600000 scripts/tests/monthly-rewards.browser.mjs || csv_lifecycle_status=1
+          done
+          exit "$csv_lifecycle_status"
+      - name: Upload monthly CSV lifecycle evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: monthly-rewards-csv-lifecycle-evidence
+          path: build/monthly-rewards-evidence/csv-lifecycle
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload guest tag search browser evidence
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f

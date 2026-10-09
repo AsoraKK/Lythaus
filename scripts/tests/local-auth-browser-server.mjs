@@ -21,7 +21,8 @@ export async function localAuthBrowserServer(handle) {
     const request={url:()=>`https://${req.headers.host}${req.url}`,method:()=>req.method,
       allHeaders:async()=>req.headers,postData:()=>body,postDataJSON:()=>JSON.parse(body)};
     try {
-      await handle({request:()=>request,abort:async()=>res.destroy(),fulfill:async({status=200,headers={},contentType,body=''})=>{
+      const responseClosed=new Promise(resolve=>res.once('close',()=>resolve({completed:res.writableFinished})));
+      await handle({request:()=>request,responseClosed,abort:async()=>res.destroy(),fulfill:async({status=200,headers={},contentType,body=''})=>{
         res.writeHead(status,{...headers,...(contentType?{'content-type':contentType}:{})});res.end(body);
       }});
     }catch(error){res.writeHead(500).end('Synthetic fixture failed');throw error;}

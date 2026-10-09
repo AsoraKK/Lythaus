@@ -100,11 +100,16 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
       - uses: ./.github/actions/flutter-setup
         with:
           flutter-version-file: .fvmrc
           channel: stable
           cache: true
+      - name: Prepare canonical Dart client serializers
+        run: node scripts/validate-openapi-dart-client.mjs --prepare-for-flutter
       - run: flutter pub get
       - name: Check support UI formatting
         run: dart format --output=none --set-exit-if-changed lib/features/support lib/core/routing/app_router.dart lib/ui/screens/profile/settings_screen.dart test/features/support

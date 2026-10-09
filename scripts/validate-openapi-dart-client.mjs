@@ -1,4 +1,4 @@
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -7,6 +7,7 @@ const source = resolve('lib/generated/api_client');
 const temporaryRoot = mkdtempSync(join(tmpdir(), 'lythaus-openapi-dart-'));
 const validationPackage = join(temporaryRoot, 'api_client');
 const dart = process.platform === 'win32' ? 'dart.bat' : 'dart';
+const prepareForFlutter = process.argv.includes('--prepare-for-flutter');
 
 function run(arguments_) {
   const result = spawnSync(dart, arguments_, {
@@ -55,9 +56,17 @@ try {
     '  build_runner: 2.16.1\n  analyzer: 14.4.0'));
   run(['pub', 'get']);
   run(['run', 'build_runner', 'build']);
-  run(['format', '--output=none', '--set-exit-if-changed', 'test/community_appeal_serialization_test.dart', 'test/admin_mutation_admission_test.dart', 'test/support_feedback_serialization_test.dart', 'test/activity_measurement_serialization_test.dart', 'test/monthly_rewards_preparation_serialization_test.dart']);
-  run(['analyze', '--no-fatal-warnings']);
-  run(['test', '--reporter', 'compact']);
+  if (prepareForFlutter) {
+    const destination = resolve('build/api_client');
+    rmSync(destination, { recursive: true, force: true });
+    mkdirSync(destination, { recursive: true });
+    cpSync(join(source, 'pubspec.yaml'), join(destination, 'pubspec.yaml'));
+    cpSync(join(validationPackage, 'lib'), join(destination, 'lib'), { recursive: true });
+  } else {
+    run(['format', '--output=none', '--set-exit-if-changed', 'test/community_appeal_serialization_test.dart', 'test/admin_mutation_admission_test.dart', 'test/support_feedback_serialization_test.dart', 'test/activity_measurement_serialization_test.dart', 'test/monthly_rewards_preparation_serialization_test.dart']);
+    run(['analyze', '--no-fatal-warnings']);
+    run(['test', '--reporter', 'compact']);
+  }
 } finally {
   rmSync(temporaryRoot, { recursive: true, force: true });
 }
