@@ -332,11 +332,21 @@ export function restoreOwner(directory, endpoint, expectedSha, runId, execute = 
     throw new Error('monthly_clock_cleanup_journal_invalid');
   return new DisposableContainers(directory, endpoint, execute, { runId, expectedSha, journal });
 }
-export async function cleanupEvidenceRun(directory, expectedSha, endpoint = validateEnvironment(process.env), deadline = Date.now() + cleanupMilliseconds) {
+export function resumeInterruptionEvidenceRun(checkout, directory, execute = command) {
+  const manifest = readEvidenceRun(directory, checkout.expectedSha);
+  if (manifest.mode !== 'interruption-regression' || manifest.outcome !== 'running' || manifest.resourceOwners.length !== 1)
+    throw new Error('monthly_clock_controls_resume_invalid');
+  const owner = restoreOwner(directory, checkout.endpoint, checkout.expectedSha, manifest.runId, execute);
+  if (owner.records.length || owner.creations.length) throw new Error('monthly_clock_controls_owner_already_used');
+  const save = () => writeFileSync(path.join(directory, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+  const register = nested => { manifest.resourceOwners.push(nested.runId); save(); };
+  return { directory, owner, manifest, save, register };
+}
+export async function cleanupEvidenceRun(directory, expectedSha, endpoint = validateEnvironment(process.env), deadline = Date.now() + cleanupMilliseconds, execute = command) {
   const manifest = readEvidenceRun(directory, expectedSha), failures = [], owners = [];
   for (const runId of [...manifest.resourceOwners].reverse()) {
     try {
-      const owner = restoreOwner(directory, endpoint, expectedSha, runId);
+      const owner = restoreOwner(directory, endpoint, expectedSha, runId, execute);
       await owner.removeAll({ deadline }); owners.push({ runId, containers: owner.records });
     } catch (error) { failures.push(error); }
   }
@@ -345,6 +355,43 @@ export async function cleanupEvidenceRun(directory, expectedSha, endpoint = vali
   writeFileSync(path.join(directory, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`); artifactChecksums(directory);
   if (failures.length) throw new AggregateError(failures, 'monthly_clock_fallback_cleanup_failed');
   return manifest.cleanupFallback;
+}
+
+export async function runInterruptionControls(checkout, artifactRoot, interruption, execute = command, publishOutput = true) {
+  interruption.signal.throwIfAborted();
+  const { directory, manifest, save } = createEvidenceRun(checkout, artifactRoot, { mode: 'interruption-regression', publishOutput });
+  for (const file of ['scripts/ci/validate-monthly-snapshot-clock.mjs', 'scripts/tests/monthly-snapshot-clock.test.mjs', 'package-lock.json'])
+    manifest.sourceFiles[file] = sha256(readFileSync(path.join(root, file)));
+  writeFileSync(path.join(directory, 'test-helper.mjs'), readFileSync(fileURLToPath(import.meta.url))); save();
+  process.stdout.write(`Monthly snapshot interruption evidence: ${directory}\n`);
+  const stdoutFile = path.join(directory, 'interruption-controls.tap'), stderrFile = path.join(directory, 'interruption-controls.stderr.log');
+  let failure;
+  try {
+    const result = await execute(process.execPath, ['--test', '--test-reporter=tap', 'scripts/tests/monthly-snapshot-clock.test.mjs'],
+      { signal: interruption.signal, killGraceMilliseconds: 4000, stdoutFile, stderrFile,
+        env: { ...safeEnvironment(), LYTHAUS_EXPECTED_CHECKOUT_SHA: checkout.expectedSha, LYTHAUS_MONTHLY_CLOCK_INTERRUPTION_TESTS: '1',
+          LYTHAUS_MONTHLY_CLOCK_CONTROL_DIRECTORY: directory } });
+    requireSuccess(result, 'monthly_clock_interruption_controls');
+  } catch (error) { failure = error; }
+  finally {
+    const latest = readEvidenceRun(directory, checkout.expectedSha);
+    latest.outcome = interruption.received ? 'interrupted' : failure ? 'failed' : 'passed';
+    if (interruption.received) latest.interruption = { signal: interruption.received, exitCode: interruption.exitCode };
+    if (failure) latest.error = failure.message;
+    writeFileSync(path.join(directory, 'manifest.json'), `${JSON.stringify(latest, null, 2)}\n`);
+    try { await cleanupEvidenceRun(directory, checkout.expectedSha, checkout.endpoint, interruption.signal.reason?.cleanupDeadline, execute); latest.cleanupComplete = true; }
+    catch (error) { failure ??= error; latest.cleanupComplete = false; latest.cleanupError = error.message; if (!interruption.received) latest.outcome = 'failed'; }
+    latest.cleanupFallback = readEvidenceRun(directory, checkout.expectedSha).cleanupFallback;
+    latest.hostClockAfter = new Date().toISOString();
+    writeFileSync(path.join(directory, 'manifest.json'), `${JSON.stringify(latest, null, 2)}\n`);
+    if (existsSync(stdoutFile)) appendFileSync(stdoutFile, `\n# expected_checkout_sha ${checkout.expectedSha}\n# controls_outcome ${latest.outcome}\n`);
+    artifactChecksums(directory);
+  }
+  if (failure) throw failure;
+  interruption.signal.throwIfAborted();
+  process.stdout.write(existsSync(stdoutFile) ? readFileSync(stdoutFile, 'utf8') : '');
+  process.stderr.write(existsSync(stderrFile) ? readFileSync(stderrFile, 'utf8') : '');
+  return readEvidenceRun(directory, checkout.expectedSha);
 }
 
 export async function runInterruptionProbe(expectedSha, directory, runId, phase, interruption) {
@@ -468,12 +515,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
         + `${cleanup.owners.flatMap(owner => owner.containers).length} IDs absent, original outcome ${cleanup.originalOutcome}\n`);
     } else if (values['interruption-controls']) {
       const checkout = await verifyCheckout(values['expected-sha']);
-      const result = await command(process.execPath, ['--test', '--test-reporter=tap', 'scripts/tests/monthly-snapshot-clock.test.mjs'],
-        { signal: interruption.signal, killGraceMilliseconds: 4000,
-          env: { ...safeEnvironment(), LYTHAUS_EXPECTED_CHECKOUT_SHA: checkout.expectedSha, LYTHAUS_MONTHLY_CLOCK_INTERRUPTION_TESTS: '1',
-            ...(process.env.GITHUB_OUTPUT ? { GITHUB_OUTPUT: process.env.GITHUB_OUTPUT } : {}) } });
-      process.stdout.write(`${result.stdout}\n`); process.stderr.write(`${result.stderr}\n`);
-      requireSuccess(result, 'monthly_clock_interruption_controls');
+      await runInterruptionControls(checkout, values['artifacts-dir'], interruption);
     } else if (values['interruption-probe']) {
       await runInterruptionProbe(values['expected-sha'], values['probe-directory'], values['probe-owner-id'], values['interruption-probe'], interruption);
     } else await runClockValidation(values['expected-sha'], values['artifacts-dir'], interruption, values['cancellation-checkpoint']);

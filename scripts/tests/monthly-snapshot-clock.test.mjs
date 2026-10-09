@@ -6,7 +6,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { CLOCK_TEST_PINS, DisposableContainers, localDatabaseUrl, validateEnvironment,
   validatePositiveTap, verifyCheckout, publicDownloadEnvironment, command, createEvidenceRun,
-  cleanupEvidenceRun, restoreOwner } from '../ci/validate-monthly-snapshot-clock.mjs';
+  cleanupEvidenceRun, restoreOwner, resumeInterruptionEvidenceRun, runInterruptionControls } from '../ci/validate-monthly-snapshot-clock.mjs';
 
 const expectedSha = '1'.repeat(40);
 const ok = stdout => ({ code: 0, stdout, stderr: '' });
@@ -178,10 +178,42 @@ async function waitUntil(predicate, timeout) {
   }
 }
 
+test('Standalone controls finalizer cleans only its published journal after child interruption', async () => {
+  const temporary = mkdtempSync(path.join(os.tmpdir(), 'lythaus-clock-unit-'));
+  try {
+    const fake = fakeDocker(), controller = new AbortController();
+    const interruption = { signal: controller.signal, received: undefined, exitCode: undefined };
+    const checkout = { expectedSha, head: expectedSha, endpoint: 'unix:///var/run/docker.sock' };
+    const unrelated = new DisposableContainers(temporary, checkout.endpoint, fake.execute);
+    const sentinel = await unrelated.create('outside');
+    let directory, owned;
+    const execute = async (executable, args, options) => {
+      if (executable === 'docker') return await fake.execute(executable, args, options);
+      assert.equal(executable, process.execPath); assert.equal(options.killGraceMilliseconds, 4000);
+      directory = options.env.LYTHAUS_MONTHLY_CLOCK_CONTROL_DIRECTORY;
+      const scope = resumeInterruptionEvidenceRun(checkout, directory, fake.execute);
+      owned = await scope.owner.create('interrupted-suite');
+      writeFileSync(options.stdoutFile, 'TAP version 13\n'); writeFileSync(options.stderrFile, '');
+      interruption.received = 'SIGTERM'; interruption.exitCode = 143;
+      const reason = new Error('monthly_clock_interrupted:SIGTERM'); reason.cleanupDeadline = Date.now() + 30000;
+      controller.abort(reason); throw reason;
+    };
+    await assert.rejects(runInterruptionControls(checkout, temporary, interruption, execute, false), /interrupted:SIGTERM/);
+    const manifest = JSON.parse(readFileSync(path.join(directory, 'manifest.json')));
+    assert.equal(manifest.outcome, 'interrupted'); assert.equal(manifest.interruption.exitCode, 143);
+    assert.equal(manifest.cleanupComplete, true); assert.deepEqual(fake.removed, [owned]); assert.ok(fake.containers.has(sentinel));
+    await cleanupEvidenceRun(directory, expectedSha, checkout.endpoint, undefined, fake.execute);
+    assert.deepEqual(fake.removed, [owned]); assert.throws(() => resumeInterruptionEvidenceRun(checkout, directory), /resume_invalid/);
+    await unrelated.removeAll();
+  } finally { rmSync(temporary, { recursive: true, force: true }); }
+});
+
 test('Real helper SIGINT/SIGTERM during startup and running preserve failure status and remove only owned IDs',
   { skip: process.env.LYTHAUS_MONTHLY_CLOCK_INTERRUPTION_TESTS !== '1', timeout: 180000 }, async () => {
     const checkout = await verifyCheckout(process.env.LYTHAUS_EXPECTED_CHECKOUT_SHA);
-    const scope = createEvidenceRun(checkout, '.artifacts/monthly-snapshot-clock', { mode: 'interruption-regression' });
+    const scope = process.env.LYTHAUS_MONTHLY_CLOCK_CONTROL_DIRECTORY
+      ? resumeInterruptionEvidenceRun(checkout, process.env.LYTHAUS_MONTHLY_CLOCK_CONTROL_DIRECTORY)
+      : createEvidenceRun(checkout, '.artifacts/monthly-snapshot-clock', { mode: 'interruption-regression' });
     const { directory, owner, manifest, save, register } = scope;
     manifest.interruptionControls = []; save();
     let failure;
