@@ -15,8 +15,9 @@ import { QUARTERLY_PREVIEW_CONFIGURATION, QUARTERLY_CALENDAR_APPROVED_AT,
   previewUtcQuarterlyWindow, previewQuarterlyEmailQualification } from '../../../packages/contracts/src/monthly-quarterly-policy.ts';
 import { recordMonthlyEmailControl, readMonthlyMaintenanceEvidence, loadMonthlyMaintenanceConfiguration } from '../../../packages/db/src/monthly-maintenance.ts';
 import { createMonthlyEmailRenewalChallenge, consumeMonthlyEmailRenewalChallenge } from '../../../packages/db/src/monthly-email-renewal.ts';
-import { assembleMonthlyReputation } from '../../../packages/db/src/monthly-assembly.ts';
-import { assessMonthlyReputationSource } from '../../../packages/db/src/monthly-reputation.ts';
+import { assembleMonthlyReputation, assemblePreparedMonthlyReputation } from '../../../packages/db/src/monthly-assembly.ts';
+import { assessMonthlyReputationSource, assessPreparedMonthlyReputationSource } from '../../../packages/db/src/monthly-reputation.ts';
+import { PROSPECTIVE_REPUTATION_CONFIGURATION, PROSPECTIVE_REPUTATION_POLICY_VERSION as policyV2 } from '../../../packages/contracts/src/monthly-reputation-prospective.ts';
 import { recordMonthlyContentEarning } from '../../../packages/db/src/monthly-earning.ts';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
@@ -31,7 +32,8 @@ async function tx(work, role = 'lythaus_jobs') {
   try {
     await client.query('BEGIN'); await client.query("SET LOCAL statement_timeout = '10s'");
     if (role) { assert.ok(['lythaus_runtime', 'lythaus_jobs', 'lythaus_privacy'].includes(role)); await client.query(`SET LOCAL ROLE ${role}`); }
-    const result = await work({ query: (text, values) => { statements.push(text); return client.query(text, values); } });
+    const result = await work({ connectionParameters: client.connectionParameters,
+      query: (text, values) => { statements.push(text); return client.query(text, values); } });
     await client.query('COMMIT'); return result;
   } catch (error) { await client.query('ROLLBACK'); throw error; } finally { await client.end(); }
 }
@@ -78,7 +80,7 @@ async function emailFixture(userId = subject, performedAt = '2026-08-15T12:00:00
 const capture = (fixture, rulesVersion = maintenance.version) => tx(client => recordMonthlyEmailControl(client, {
   sourceEventId: fixture.eventId, verificationTokenId: fixture.tokenId, rulesVersion,
 }), 'lythaus_runtime');
-async function post(week, process = true, author = subject) {
+async function post(week, process = true, author = subject, evaluatedAt = new Date().toISOString()) {
   const id = uuidv7(), event = uuidv7(), caseId = uuidv7(); posts.push({ id, event, week }); cases.push(caseId);
   const performed = `${week}T12:00:00.000Z`;
   await sql(`INSERT INTO content.posts (id, author_id, body, declared_creation_mode, visibility, moderation_state, moderation_source_event_id, created_at)
@@ -89,7 +91,7 @@ async function post(week, process = true, author = subject) {
     VALUES ($1, 'post', $2, 'resolved', 'synthetic-acceptance', $3)`, [caseId, id, event]);
   await sql(`INSERT INTO moderation.decisions (id, case_id, outcome, public_label, policy_version, decided_by)
     VALUES ($1, $2, 'allow', 'Human-authored', 'synthetic-acceptance', $3)`, [uuidv7(), caseId, reviewer]);
-  if (process) await tx(client => recordMonthlyContentEarning(client, { eventId: event, rulesVersion: weekly.version, evaluatedAt: new Date().toISOString() }));
+  if (process) await tx(client => recordMonthlyContentEarning(client, { eventId: event, rulesVersion: weekly.version, evaluatedAt }));
   return { id, event };
 }
 before(async () => {
@@ -725,4 +727,207 @@ test('SEC-09/RPT-04: ordinary auth lifecycle skips the optional renewal table wi
   } finally {
     await sql('ALTER TABLE trust.monthly_email_renewal_challenges_absent_marker_fixture RENAME TO monthly_email_renewal_challenges');
   }
+});
+
+const disposable = { mode: 'disposable_local_pg17' };
+const preparationConfiguration = { ...PROSPECTIVE_REPUTATION_CONFIGURATION,
+  prospectiveFrom: '2026-10-07T20:12:31.000Z', firstSourceMonth: '2026-10',
+  rubricVersion: 'synthetic-suggestion-rubric', authorityVersion: 'synthetic-support-authority' };
+const prepare = (subjectUserId, patch = {}, context = disposable) => tx(client => assemblePreparedMonthlyReputation(client, {
+  subjectUserId, sourceMonth: '2026-10', weeklyRulesVersion: weekly.version, maintenanceRulesVersion: maintenance.version,
+  evaluatedAt: '2027-06-01T00:00:00.000Z', configuration: preparationConfiguration, suggestionRevisions: [], ...patch,
+}, context));
+const suggestion = (userId, decidedAt = '2026-10-15T12:00:00.000Z') => ({
+  eventId: uuidv7(), contributionId: uuidv7(), subjectUserId: userId, reviewerUserId: reviewer,
+  privateEvidenceId: uuidv7(), amendmentVersion: preparationConfiguration.amendmentVersion,
+  rubricVersion: preparationConfiguration.rubricVersion, authorityVersion: preparationConfiguration.authorityVersion,
+  revision: 1, predecessorEventId: null, decision: 'accepted', performedAt: decidedAt, decidedAt,
+  useful: true, independentlyReviewed: true, manipulationScreened: true, competingAward: 'none',
+});
+async function preparedAssessment(sourceId) {
+  const event = (await sql("SELECT id FROM system.outbox_events WHERE aggregate_id = $1 AND event_type = 'trust.monthly_assessment.requested'", [sourceId])).rows[0];
+  return tx(client => assessPreparedMonthlyReputationSource(client, { eventId: event.id, assessmentId: uuidv7(),
+    resultEventId: uuidv7(), evaluatedAt: '2027-06-01T00:00:00.000Z' }, disposable));
+}
+async function sealSyntheticFutureWeeks(userId) {
+  const rows = (await sql(`SELECT DISTINCT ON (week_start) * FROM trust.monthly_earning_week_revisions
+    WHERE subject_user_id = $1 ORDER BY week_start, revision DESC`, [userId])).rows;
+  for (const row of rows) if (row.recorded_at < new Date(row.week_start.getTime() + 7 * 86400000)) {
+    await sql(`INSERT INTO trust.monthly_earning_week_revisions
+      (id,week_id,subject_user_id,week_start,policy_version,rules_version,revision,state,points,calculation,input_digest,recorded_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,'corrected',$8,$9::jsonb,$10,$4::timestamptz + interval '10 days')`,
+    [uuidv7(),row.week_id,userId,row.week_start,policy,row.rules_version,row.revision+1,row.points,JSON.stringify(row.calculation),row.input_digest]);
+  }
+}
+
+test('V2/I08: preparation needs disposable capability and explicit complete configuration; ordinary assembly remains v1', async () => {
+  const userId = await person();
+  statements.length = 0;
+  assert.equal(await assemblePreparedMonthlyReputation({ query() { assert.fail('No context must issue no query'); } }, {}), null);
+  assert.equal(await prepare(userId, { configuration: PROSPECTIVE_REPUTATION_CONFIGURATION }), null);
+  assert.equal(await prepare(userId, { sourceMonth: '2026-09' }), null);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reputation_sources WHERE subject_user_id = $1', [userId])).rowCount, 0);
+  await assert.rejects(tx(client => assemblePreparedMonthlyReputation({ ...client,
+    connectionParameters: { ...client.connectionParameters, host: 'database.example.invalid' } }, {}, disposable)), /disposable_local_target/);
+  await sql('ALTER TABLE trust.monthly_reputation_assemblies RENAME CONSTRAINT monthly_assembly_policy_report_v2 TO assembly_capability_hidden');
+  try { assert.equal(await prepare(userId), null); }
+  finally { await sql('ALTER TABLE trust.monthly_reputation_assemblies RENAME CONSTRAINT assembly_capability_hidden TO monthly_assembly_policy_report_v2'); }
+  await sql('UPDATE system.feature_flags SET enabled = false WHERE flag_key = $1', [flag]);
+  try { assert.equal(await prepare(userId), null); }
+  finally { await sql('UPDATE system.feature_flags SET enabled = true WHERE flag_key = $1', [flag]); }
+  const legacy = await assemble(userId);
+  assert.equal(legacy.report.policyVersion, policy);
+  assert.equal(Object.hasOwn(legacy.report, 'preparationOnly'), false);
+});
+
+test('V2/I04/I06: canonical quarterly evidence digest is order-independent, duplicate-safe and immutable', async () => {
+  const userId = await person(), revision = suggestion(userId);
+  await capture(await emailFixture(userId, '2026-10-15T12:00:00.000Z'));
+  const results = await Promise.all([prepare(userId, { suggestionRevisions: [revision] }),
+    prepare(userId, { suggestionRevisions: [{ ...revision }, revision] }), prepare(userId, { suggestionRevisions: [revision] })]);
+  assert.equal(results.filter(result => result.created).length, 1);
+  assert.ok(results.every(result => result.sourceId === results[0].sourceId && result.appliedPoints === 0 && !result.runtimeActivationAllowed));
+  const initial = await preparedAssessment(results[0].sourceId);
+  assert.equal(initial.calculation.quarterlyPoints, 1150);
+  assert.equal(initial.calculation.emailPoints, 1000); assert.equal(initial.calculation.suggestionPoints, 150);
+  assert.equal(results[0].report.maintenance.quarterlyPoints, 0);
+  assert.ok(results[0].report.maintenance.actions.every(action => action.actionId.startsWith('monthly.')));
+  assert.equal(JSON.stringify(results[0].report).includes(reviewer), false);
+  const before = (await sql('SELECT input, input_digest FROM trust.monthly_reputation_sources WHERE id = $1', [results[0].sourceId])).rows[0];
+  const changed = { ...revision, privateEvidenceId: uuidv7() };
+  const corrected = await prepare(userId, { suggestionRevisions: [changed] });
+  assert.equal(corrected.revision, 2);
+  assert.notEqual(corrected.report.quarterly.evidenceDigest, results[0].report.quarterly.evidenceDigest);
+  assert.deepEqual((await sql('SELECT input, input_digest FROM trust.monthly_reputation_sources WHERE id = $1', [results[0].sourceId])).rows[0], before);
+  assert.equal((await prepare(userId, { suggestionRevisions: [changed] })).created, false);
+  await assert.rejects(prepare(userId, { configuration: { ...preparationConfiguration, rubricVersion: 'other-rubric' },
+    suggestionRevisions: [{ ...changed, rubricVersion: 'other-rubric' }] }), /previous_policy_requires_review/);
+  await assert.rejects(sql('UPDATE trust.monthly_reputation_assemblies SET evidence_digest = repeat(\'0\',64) WHERE source_id = $1', [corrected.sourceId]), /immutable/);
+});
+
+test('V2/I05: all quarterly components expire at calendar quarter/year boundaries without earlier or carried credit', async () => {
+  for (const [completion, expected] of [
+    ['2026-10-15T12:00:00.000Z', { '2026-10': 1150, '2026-11': 1150, '2026-12': 1150, '2027-01': 0 }],
+    ['2026-11-30T23:59:59.999Z', { '2026-10': 0, '2026-11': 1150, '2026-12': 1150, '2027-01': 0 }],
+    ['2026-12-31T23:59:59.999Z', { '2026-11': 0, '2026-12': 1150, '2027-01': 0 }],
+    ['2027-01-01T00:00:00.000Z', { '2026-12': 0, '2027-01': 1150, '2027-02': 1150, '2027-03': 1150, '2027-04': 0 }],
+  ]) {
+    const userId = await person(), revision = suggestion(userId, completion);
+    await capture(await emailFixture(userId, completion));
+    for (const [sourceMonth, points] of Object.entries(expected)) {
+      const result = await prepare(userId, { sourceMonth, suggestionRevisions: [revision] });
+      const assessment = await preparedAssessment(result.sourceId);
+      assert.equal(assessment.calculation.quarterlyPoints, points, `${completion} -> ${sourceMonth}`);
+      assert.equal(assessment.calculation.effectiveMonth, nextReputationMonth(sourceMonth));
+    }
+  }
+});
+
+test('V2/I06: competing, self-reviewed, malformed and unresolved closing-month corrections create no source', async () => {
+  const userId = await person(), accepted = suggestion(userId);
+  for (const patch of [{ reviewerUserId: userId }, { revision: 1.5 }, { subjectUserId: reviewer }, { points: 150 }])
+    await assert.rejects(prepare(userId, { suggestionRevisions: [{ ...accepted, ...patch }] }), /suggestion_evidence/);
+  assert.equal(await prepare(userId, { suggestionRevisions: [{ ...accepted, competingAward: 'weekly.accepted_help' }] }), null);
+  const other = suggestion(userId); assert.equal(await prepare(userId, { suggestionRevisions: [accepted, other] }), null);
+  const reversed = { ...accepted, eventId: uuidv7(), revision: 2, predecessorEventId: accepted.eventId,
+    decision: 'reversed', decidedAt: '2026-11-01T00:00:00.000Z' };
+  assert.equal(await prepare(userId, { suggestionRevisions: [reversed, accepted] }), null);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reputation_sources WHERE subject_user_id = $1', [userId])).rowCount, 0);
+  const settled = await prepare(userId, { suggestionRevisions: [{ ...reversed, decidedAt: '2026-10-31T23:59:59.999Z' }, accepted] });
+  assert.equal((await preparedAssessment(settled.sourceId)).calculation.suggestionPoints, 0);
+});
+
+test('V2/I03/I04: SQL binding rejects mixed policy/components, and failed assembly atomically rolls back its source/outbox', async () => {
+  const userId = await person(), initial = await prepare(userId);
+  const stored = (await sql('SELECT * FROM trust.monthly_reputation_assemblies WHERE source_id = $1', [initial.sourceId])).rows[0];
+  for (const report of [{ ...stored.report, policyVersion: policy }, { ...stored.report, quarterly: null },
+    { ...stored.report, quarterly: { ...stored.report.quarterly, emailPoints: '1000' } }])
+    await assert.rejects(sql(`INSERT INTO trust.monthly_reputation_assemblies
+      (source_id,subject_user_id,source_month,rules_version,weekly_rules_version,evidence_digest,week_revision_ids,observation_ids,revocation_ids,report,policy_version)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11)`,
+    [initial.sourceId,userId,stored.source_month,maintenance.version,weekly.version,stored.evidence_digest,[],[],[],JSON.stringify(report),policyV2]), /constraint|source_policy_mismatch/);
+  const isolated = await person();
+  await sql(`CREATE FUNCTION trust.fail_monthly_assembly_fixture() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN RAISE EXCEPTION 'synthetic_assembly_crash'; END; $$;
+    CREATE TRIGGER fail_monthly_assembly_fixture BEFORE INSERT ON trust.monthly_reputation_assemblies
+      FOR EACH ROW EXECUTE FUNCTION trust.fail_monthly_assembly_fixture()`);
+  try { await assert.rejects(prepare(isolated), /synthetic_assembly_crash/); }
+  finally { await sql('DROP TRIGGER fail_monthly_assembly_fixture ON trust.monthly_reputation_assemblies'); await sql('DROP FUNCTION trust.fail_monthly_assembly_fixture()'); }
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reputation_sources WHERE subject_user_id = $1', [isolated])).rowCount, 0);
+  assert.equal((await sql('SELECT 1 FROM system.outbox_events WHERE actor_id = $1', [isolated])).rowCount, 0);
+  assert.equal((await prepare(isolated)).created, true);
+});
+
+test('V2/I07: inherited fifth-week whole-total reselection preserves historical v1 and v2 assessments', async () => {
+  const userId = await person(), novemberWeeks = ['2026-10-26', '2026-11-02', '2026-11-09', '2026-11-16', '2026-11-23'];
+  for (const date of novemberWeeks) for (let count = 0; count < (date === novemberWeeks[0] ? 1 : 3); count++)
+    await post(date, true, userId, '2027-05-01T00:00:00.000Z');
+  await sealSyntheticFutureWeeks(userId);
+  const legacy = await assemble(userId, { sourceMonth: '2026-11', evaluatedAt: '2027-05-01T00:00:00.000Z' });
+  const initial = await prepare(userId, { sourceMonth: '2026-11' }), assessed = await preparedAssessment(initial.sourceId);
+  assert.equal(assessed.calculation.weeklyPoints, 2000); assert.equal(assessed.calculation.weeks[0].selected, false);
+  const ids = (await sql('SELECT id FROM content.posts WHERE author_id = $1 AND created_at::date = $2::date', [userId, novemberWeeks[1]])).rows;
+  for (const item of ids) {
+    const eventId = uuidv7(); await sql("UPDATE content.posts SET moderation_state = 'blocked' WHERE id = $1", [item.id]);
+    await sql(`INSERT INTO system.outbox_events (id,event_type,aggregate_type,aggregate_id,actor_id,payload)
+      VALUES ($1,'moderation.content.blocked','post',$2,$3,'{}'::jsonb)`, [eventId,item.id,reviewer]);
+    await tx(client => recordMonthlyContentEarning(client, { eventId, rulesVersion: weekly.version, evaluatedAt: '2027-05-01T00:00:00.000Z' }));
+  }
+  await sealSyntheticFutureWeeks(userId);
+  const corrected = await prepare(userId, { sourceMonth: '2026-11' }), revised = await preparedAssessment(corrected.sourceId);
+  assert.equal(revised.calculation.weeklyPoints, 1750); assert.equal(revised.calculation.weeks[0].selected, true);
+  assert.equal((await sql('SELECT source_score FROM trust.monthly_reputation_assessments WHERE id = $1', [assessed.id])).rows[0].source_score, 2000);
+  assert.equal((await sql('SELECT policy_version FROM trust.monthly_reputation_sources WHERE id = $1', [legacy.sourceId])).rows[0].policy_version, policy);
+});
+
+test('V2/I01/I02: inherited synthetic whole-week/month evidence reaches 13650 while historical v1 remains 13500', async () => {
+  const userId = await person(), rules = { ...maintenance, version: 'synthetic-full-maintenance-v1', integrityRubric: 'synthetic-integrity',
+    refresherPolicy: 'synthetic-refresher', capabilities: { integrity: 'reviewed_assessment', mfa: 'verified_authentication',
+      credential: 'verified_authentication', challenge: 'account_bound_turnstile', refresher: 'server_comprehension', email: 'verified_email_control' } };
+  await sql(`INSERT INTO trust.monthly_maintenance_rule_sets
+    (version,policy_version,catalogue_hash,mode,collect_from,configuration,collection_privacy_version)
+    VALUES ($1,$2,$3,'shadow','2026-07-27',$4::jsonb,'monthly-privacy-v1')`, [rules.version,policy,hash,JSON.stringify(rules)]);
+  for (const date of ['2026-10-26','2026-11-02','2026-11-09','2026-11-16','2026-11-23'])
+    await sql(`INSERT INTO trust.monthly_earning_week_revisions
+      (id,week_id,subject_user_id,week_start,policy_version,rules_version,revision,state,points,calculation,input_digest,recorded_at)
+      VALUES ($1,$2,$3,$4,$5,$6,1,'locked',2500,$7::jsonb,repeat('0',64),$4::timestamptz + interval '10 days')`,
+    [uuidv7(),uuidv7(),userId,`${date}T00:00:00.000Z`,policy,weekly.version,
+      JSON.stringify({ policyVersion: policy, rulesVersion: weekly.version, points: 2500, actions: [] })]);
+  const credentialId = uuidv7();
+  for (const facts of [{ kind:'integrity_assessment',sourceMonth:'2026-11',rubricVersion:rules.integrityRubric,status:'eligible' },
+    { kind:'protection',credentialId,protections:['mfa','credential'],expiresAt:null },
+    { kind:'authentication',credentialId,protections:['mfa','credential'] },
+    { kind:'anti_automation',provider:'turnstile',contextId:'synthetic-context',action:'synthetic-action',hostname:'synthetic.lythaus.test',accountBound:true },
+    { kind:'policy_refresher',policyVersion:rules.refresherPolicy }])
+    await sql(`INSERT INTO trust.monthly_maintenance_observations (id,subject_user_id,source_event_id,kind,performed_at,facts)
+      VALUES ($1,$2,$1,$3,$4,$5::jsonb)`, [uuidv7(),userId,facts.kind,
+      facts.kind==='protection'?'2026-11-01T00:00:00.000Z':'2026-11-15T12:00:00.000Z',JSON.stringify(facts)]);
+  await capture(await emailFixture(userId,'2026-11-15T12:00:00.000Z'));
+  const result = await prepare(userId, { sourceMonth:'2026-11',maintenanceRulesVersion:rules.version,
+    suggestionRevisions:[suggestion(userId,'2026-11-15T12:00:00.000Z')] });
+  const assessment = await preparedAssessment(result.sourceId);
+  assert.equal(assessment.calculation.weeklyPoints,10000); assert.equal(assessment.calculation.monthlyPoints,2500);
+  assert.equal(assessment.calculation.sourceScore,13650); assert.equal(assessment.calculation.level,5); assert.equal(assessment.appliedPoints,0);
+  const legacy = await assemble(userId,{sourceMonth:'2026-11',maintenanceRulesVersion:rules.version,evaluatedAt:'2027-06-01T00:00:00.000Z'});
+  const event = (await sql("SELECT id FROM system.outbox_events WHERE aggregate_id=$1 AND event_type='trust.monthly_assessment.requested'",[legacy.sourceId])).rows[0];
+  const old = await tx(client=>assessMonthlyReputationSource(client,{eventId:event.id,assessmentId:uuidv7(),resultEventId:uuidv7(),evaluatedAt:'2027-06-01T00:00:00.000Z'}));
+  assert.equal(old.calculation.sourceScore,13500); assert.equal(old.calculation.policyVersion,policy);
+});
+
+test('V2/I11: subject deletion wins a blocked assembly and clears both versions of private assembly evidence', async () => {
+  const userId = await person(); await prepare(userId); await assemble(userId);
+  const blocker = new pg.Client({ connectionString, ssl: false }); await blocker.connect(); await blocker.query('BEGIN');
+  await blocker.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [`monthly-reputation:${userId}:2026-10`]);
+  const pending = prepare(userId);
+  try {
+    for (let n = 0; n < 100; n++) {
+      if ((await sql("SELECT 1 FROM pg_stat_activity WHERE wait_event = 'advisory' AND query LIKE '%pg_advisory_xact_lock%'")).rowCount) break;
+      if (n === 99) assert.fail('Prepared assembly must wait before deletion');
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    await sql("UPDATE identity.users SET status = 'deleted', deleted_at = now() WHERE id = $1", [userId]);
+  } finally { await blocker.query('COMMIT'); await blocker.end(); }
+  assert.equal(await pending, null);
+  assert.equal((await sql('SELECT 1 FROM trust.monthly_reputation_assemblies WHERE subject_user_id = $1', [userId])).rowCount, 0);
+  assert.equal((await sql('SELECT count(DISTINCT policy_version)::integer AS count FROM trust.monthly_reputation_sources WHERE subject_user_id = $1', [userId])).rows[0].count, 2);
 });
