@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import test from 'node:test';
 import { parse, stringify } from 'yaml';
 import { coverageLedger, aggregateReview, completedBehavior, rejectedMutation, requiredCases, mutations, readRegular, inventory, projectGit, validateRuntimeGraph, validateFrozenGraph, approvedLicenseClassification } from '../ci/canonical-sdk-contract.mjs';
-import { validateTrust, validateRepositoryIdentity, validateRunContext, materializeVerifier, anchoredContext } from '../ci/canonical-sdk-bootstrap.mjs';
+import { validateTrust, validateRepositoryIdentity, validateRunContext, materializeVerifier, installVerifierDependencies, anchoredContext } from '../ci/canonical-sdk-bootstrap.mjs';
 import { containerArguments, hostedClosure } from '../ci/canonical-sdk-isolation.mjs';
 import { expectedChanges } from '../ci/dependency-review-native.mjs';
 
@@ -154,6 +154,29 @@ test('the existing dependency-review job executes the approved verifier closure 
   assert.ok(job.steps.some(step => step.id === 'bootstrap' && step.run.includes('node .trusted-main/scripts/ci/canonical-sdk-bootstrap.mjs --prepare-only')));
   assert.ok(job.steps.some(step => step.if === "always() && steps.bootstrap.outcome == 'success'" && step.run === 'node .trusted-verifier/scripts/ci/canonical-sdk-bootstrap.mjs'));
   assert.ok(!JSON.stringify(workflow).includes('checks: write'));
+});
+
+test('pinned npm install uses distinct empty config files and excludes inherited secrets and hooks', () => {
+  const directory = fs.mkdtempSync(join(tmpdir(), 'lythaus-sdk-npm-config-'));
+  try {
+    let calls = 0;
+    installVerifierDependencies(directory, { environment: { PATH: '/synthetic/path', GITHUB_TOKEN: 'synthetic-host-only', NODE_OPTIONS: '--synthetic-untrusted-hook', npm_config_registry: 'https://synthetic.invalid' }, execute: (command, args, options) => {
+      calls++;
+      assert.equal(command, 'npm'); assert.ok(args.includes('--ignore-scripts'));
+      assert.ok(args.includes('--registry=https://registry.npmjs.org'));
+      assert.deepEqual(options.env, { PATH: '/synthetic/path', CI: 'true' });
+      assert.equal(options.cwd, directory);
+      assert.equal(options.timeout, 180000);
+      const user = args.find(value => value.startsWith('--userconfig=')).split('=')[1];
+      const global = args.find(value => value.startsWith('--globalconfig=')).split('=')[1];
+      assert.notEqual(user, global);
+      for (const file of [user, global]) {
+        assert.equal(fs.readFileSync(file, 'utf8'), '');
+        assert.equal(fs.statSync(file).mode & 0o777, 0o600);
+      }
+    } });
+    assert.equal(calls, 1);
+  } finally { fs.rmSync(directory, { recursive: true, force: true }); }
 });
 
 const report = events => events.map(value => JSON.stringify(value)).join('\n') + '\n';

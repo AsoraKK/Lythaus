@@ -117,12 +117,20 @@ export function materializeVerifier(repository, context, destination) {
   return inventory;
 }
 
+export function installVerifierDependencies(destination, { execute = execFileSync, environment = process.env } = {}) {
+  const directory = join(destination, '.npm-config');
+  fs.mkdirSync(directory, { mode: 0o700 });
+  const user = join(directory, 'user.npmrc'), global = join(directory, 'global.npmrc');
+  for (const file of [user, global]) fs.writeFileSync(file, '', { flag: 'wx', mode: 0o600 });
+  execute('npm', ['ci', '--ignore-scripts', '--no-audit', '--no-fund', `--userconfig=${user}`, `--globalconfig=${global}`, '--registry=https://registry.npmjs.org', '--cache', join(destination, '.npm-cache')], { cwd: destination, env: { PATH: environment.PATH, CI: 'true' }, stdio: 'inherit', timeout: 180000 });
+}
+
 async function main() {
   const repository = resolve('.'), anchor = resolve('.trusted-main'), destination = resolve('.trusted-verifier');
   const context = await anchoredContext(repository, anchor);
   if (process.argv.includes('--prepare-only')) {
     const files = materializeVerifier(repository, context, destination);
-    execFileSync('npm', ['ci', '--ignore-scripts', '--no-audit', '--no-fund', '--userconfig=/dev/null', '--globalconfig=/dev/null', '--registry=https://registry.npmjs.org', '--cache', join(destination, '.npm-cache')], { cwd: destination, env: { PATH: process.env.PATH, CI: 'true' }, stdio: 'inherit' });
+    installVerifierDependencies(destination);
     fs.writeFileSync(join(destination, 'trusted-context.json'), JSON.stringify({ ...context, files }, null, 2) + '\n');
     return;
   }

@@ -69,6 +69,8 @@ pinned Git objects. `npm ci --ignore-scripts` installs that reviewed closure.
 The pinned workflow is included and trusted regular-file executable modes are
 preserved for the retained local tool entrypoint. Symlinks and submodules remain
 rejected.
+User and global npm configs are distinct empty private files, with a fresh cache,
+fixed public registry, lifecycle hooks disabled and only PATH/CI inherited.
 Candidate package scripts, TypeScript wire generators, and candidate checkout
 helpers are never host verdict inputs. The candidate contributes exact Git
 objects for the application manifests/lock, Flutter version, OpenAPI sources and
@@ -171,7 +173,7 @@ merge is part of this change.
 
 ## Validation and provenance
 
-Focused validation covers 38 verification/policy tests, fourteen isolation/cleanup
+Focused validation covers 39 verification/policy tests, fourteen isolation/cleanup
 tests (including eight real Docker controls), six
 existing Dart archive-license tests, and six new archive extraction tests. The
 isolated development runner passes all 57 Dart behavior cases and both assertion
