@@ -118,10 +118,50 @@ the owner Overview selector, while WebKit reached its test timeout. The isolated
 HTTP CSV probes on `6d70bd700fef6ed074d92359ab81d43daa580fc9` also did not pass
 overall. WebKit desktop passed its exact-byte CSV assertions after a response
 held across two frames and 600 ms, then mobile timed out waiting for download.
-Chromium timed out entering email before reaching CSV. These failures remain
-gates; no token injection or auth relaxation was added. Further changes after
+Chromium timed out entering email before reaching CSV. These remain historical
+failed probes; no token injection or auth relaxation was added. Further changes after
 `53a8ec32` affect the browser harness and evidence only; application runtime
 files are byte-identical. The complete final-head workflow must still finish.
+
+The owner subsequently granted narrow ownership of the authentication helper.
+Commit `3958319ed3f38b651f782df1877ccfcea14ea848` changes its pending-tracker
+locator from `getByLabel` to exact accessible rendered text. The before probe
+timed out at the old mobile locator. The after probe passes both Chromium
+1440px and 390px journeys, including two repeated Settings/Security entries,
+fresh owner-read readiness, cookie restore, cross-tab sign-out and protected
+return. All 39 negative readiness/lifecycle tests pass. No readiness fence,
+security assertion, timeout, application UI or auth source changed.
+
+Commit `42c05744b27484718a84e6fb2a5f170f6b1ac86a` starts the CSV download
+waiter immediately before releasing the held HTTP response. Its focused
+browser lifecycle matrix checks exact downloaded bytes after two frames and
+600 ms, cancellation on document disposal, and real second-tab sign-out while
+the first tab's export is pending. Late responses must cause no download or
+stale error. Widget-only disposal remains covered by the Flutter button tests.
+The workflow runs this additional matrix for desktop/mobile in both engines.
+At `da0892d2cdaa24dbe6439a88c2373f09151425a6`, the isolated WebKit mobile
+390px dark run passes all three checks with zero application/console errors.
+The positive HTTP response was held 2,675 ms. Disposal and actual cross-tab
+sign-out closed their held server responses before completion and before the
+late response release; neither downloaded bytes or showed a stale error.
+The test fixture now observes actual response closure, preserving the 30-second
+guard instead of relying on Chromium emitting a `requestfailed` event during
+document replacement. Shared TLS response observation does not alter request
+handling, authentication or readiness. The existing public-profile journey is
+unchanged. The focused Chromium desktop 1440px light check also passes all
+three cases at that same source with zero errors; its positive response was
+held 1,335 ms. The complete hosted lifecycle matrix remains a gate.
+
+CI [37944530629](https://github.com/AsoraKK/Lythaus/actions/runs/37944530629)
+at `42c05744` passes analysis, full coverage, coverage gates, release build,
+authentication coverage, and both complete monthly browser journeys. Those
+journeys include actual delayed exact-byte CSV downloads at both viewports in
+both engines. Its separate lifecycle step fails; auth is then skipped. Current
+CI sequencing places the auth journey first and collects both lifecycle engine
+outcomes afterward without masking failures. No complete final-head CI pass
+is claimed. The CLI GitHub API now returns `401 Bad credentials`; normal Git
+publication and the already installed GitHub connector still work. A new
+workflow dispatch requires restored existing CLI access or the owner's dispatch.
 
 The CSV request lifetime gap was carried forward from the dependent base.
 Its separate repair scopes a manual provider subscription to the export, closes
@@ -148,6 +188,11 @@ Their fixture labels, tested revisions, hashes, partial-run results and limits
 are in [review-receipt.json](evidence/monthly-rewards-flutter/review-receipt.json).
 The original five screenshots and `receipt.json` are historical development
 evidence; they do not establish a final-head engine pass.
+The later [mobile actual CSV download](evidence/monthly-rewards-flutter/review-webkit-mobile-dark-csv-export-verified.png)
+and [private report cleared after export/sign-out](evidence/monthly-rewards-flutter/review-webkit-mobile-dark-csv-sign-out-cleared.png)
+are inspected captures from the passing focused mobile lifecycle run.
+[lifecycle-review-receipt.json](evidence/monthly-rewards-flutter/lifecycle-review-receipt.json)
+records its transport timing, actual button results and separate hosted gates.
 The browser harness emits
 the complete capture set under `build/monthly-rewards-evidence` in CI.
 
@@ -160,21 +205,24 @@ the complete capture set under `build/monthly-rewards-evidence` in CI.
    Security validation is outside this slice's authorization and was not
    altered or bypassed. The security owner must add a reviewed representation
    and native dependency coverage for this exact repository-owned package.
+   Exact identity: `lib/generated/api_client/pubspec.yaml`, package
+   `lythaus_api_client` version `1.0.0`, SDK `>=2.15.0 <4.0.0`; the root manifest
+   and lock refer to the derived repository-owned `build/api_client` path.
+   The failing test is `coverage includes direct and transitive Dart, runtime
+   Node and every pinned Python wheel` in
+   `scripts/tests/dependency-review-policy.test.mjs`; rejection occurs in
+   `scripts/ci/dependency-review-native.mjs:34`. The separate parser owner has
+   this reproducible identity; this slice does not weaken its validation.
+   Owner steering identifies separate draft #968 at
+   `b2584899b808a9fec48c969ec53e1efebc6c0247` as its parser repair, under
+   independent review. It is not integrated here. Its separate SDK coverage
+   contract gap remains enforced and assigned to that lane.
 2. Complete exact-head CI and dependent review are required before merge.
    Draft #966's separate rate-window fixture repair is not included here.
-   The unchanged analytics-owned `flutter-auth.browser.mjs` timed out during
-   local regression validation: its mobile Settings helper waits for the
-   monthly pending tracker through `getByLabel` before clicking Settings. Flutter
-   renders the isolated static status semantics as readable text in a `span`,
-   without the previous merged node's `aria-label`; the exact DOM was inspected.
-   The pending semantics label is preserved and widget-tested. The dedicated
-   monthly harness selects the rendered text and scrolls to the owner tracker
-   below the settings-first content. This slice does not edit the reserved auth
-   probe or move the tracker ahead of settings. The desktop settings/back journey also timed out
-   in the initial concurrent run; its exact-head result remains an analytics
-   lane gate. Local full-harness WebKit launches were blocked by its host-library
-   detection; dedicated WebKit QA uses the verified scratch browser binary and
-   libraries without changing system packages.
+   The narrow auth locator repair passes local Chromium desktop/mobile and
+   preserves the settings-first layout. The hosted complete auth matrix and
+   complete HTTP CSV lifecycle matrix remain gates. Local WebKit uses the verified
+   scratch browser binary and libraries without changing system packages.
 3. A future authoritative v2 progress/projection contract and activation
    approval are required before displaying live v2 scores or projections.
    Existing `preparedResponse: null` and disabled readiness are insufficient.

@@ -1,0 +1,80 @@
+{
+  "synthetic": true,
+  "applicationRuntimeHead": "53a8ec324332139ae4ebd09160cda289078536cd",
+  "releaseArtifactSha256": "479297a11271246a511b385aadf3946697784256ca89aed026670ea79cb4725c",
+  "auth": {
+    "harnessHead": "3958319ed3f38b651f782df1877ccfcea14ea848",
+    "before": "Mobile helper timed out at getByLabel(/^Monthly level pending/).",
+    "repair": "One locator line uses exact accessible rendered status text.",
+    "after": [
+      { "engine": "chromium", "width": 1440, "completeJourney": "passed", "repeatedSettingsSecurityEntries": 2 },
+      { "engine": "chromium", "width": 390, "completeJourney": "passed", "repeatedSettingsSecurityEntries": 2 }
+    ],
+    "negativeReadinessLifecycleTests": "39 passed",
+    "assertionsReadinessAndTimeoutsPreserved": true,
+    "applicationAuthSourceChanged": false
+  },
+  "csvPositiveHostedMatrix": {
+    "head": "42c05744b27484718a84e6fb2a5f170f6b1ac86a",
+    "run": 37944530629,
+    "step": "Verify rendered private monthly rewards",
+    "result": "passed",
+    "engines": ["chromium", "webkit"],
+    "viewports": [1440, 390],
+    "actualExportButton": true,
+    "responseHeldAcrossTwoFramesAnd600Milliseconds": true,
+    "downloadedBytesEqualServerBytes": true,
+    "separateLifecycleStep": "failed; auth step was skipped",
+    "identityEvidence": "Structured GitHub metadata; no signed logs downloaded"
+  },
+  "csvMobileWireLifecycle": {
+    "head": "da0892d2cdaa24dbe6439a88c2373f09151425a6",
+    "engine": "webkit",
+    "browserVersion": "26.5",
+    "viewport": { "width": 390, "height": 844, "theme": "dark", "devicePixelRatio": 2 },
+    "result": "passed",
+    "applicationConsoleErrors": [],
+    "sourceMonth": "2026-10",
+    "positive": { "exactServerBytes": true, "heldMilliseconds": 2675, "observedPendingAcrossTwoFrames": true },
+    "documentDisposal": { "clientClosedBeforeCompletion": true, "clientClosedBeforeLateResponse": true, "noDownload": true, "noStaleError": true },
+    "crossTabSignOut": { "actualSecurityButtonAndLogoutResponse": true, "refreshCookieExpired": true, "clientClosedBeforeCompletion": true, "clientClosedBeforeLateResponse": true, "noDownload": true, "noStaleError": true },
+    "cancellationEvidence": "Real held HTTPS server response close with writableFinished=false; 30000 ms guard retained"
+  },
+  "csvChromiumDesktopWireLifecycle": {
+    "head": "da0892d2cdaa24dbe6439a88c2373f09151425a6",
+    "engine": "chromium",
+    "browserVersion": "151.0.7922.34",
+    "viewport": { "width": 1440, "height": 960, "theme": "light", "devicePixelRatio": 2 },
+    "result": "passed",
+    "applicationConsoleErrors": [],
+    "sourceMonth": "2026-10",
+    "positive": { "exactServerBytes": true, "heldMilliseconds": 1335, "observedPendingAcrossTwoFrames": true },
+    "documentDisposal": { "clientClosedBeforeCompletion": true, "clientClosedBeforeLateResponse": true, "noDownload": true, "noStaleError": true },
+    "crossTabSignOut": { "actualSecurityButtonAndLogoutResponse": true, "refreshCookieExpired": true, "clientClosedBeforeCompletion": true, "clientClosedBeforeLateResponse": true, "noDownload": true, "noStaleError": true },
+    "cancellationEvidence": "Real held HTTPS server response close with writableFinished=false; 30000 ms guard retained"
+  },
+  "captures": [
+    {
+      "file": "review-webkit-mobile-dark-csv-export-verified.png",
+      "fixtureLabel": "Synthetic v1 source report after exact-byte delayed CSV download; disabled v2 methodology.",
+      "testedHead": "da0892d2cdaa24dbe6439a88c2373f09151425a6",
+      "sha256": "ca935feffde555de1bd34d37a423258f29d1b2b59bf45fda53959c4d41471fc4",
+      "visuallyInspected": true
+    },
+    {
+      "file": "review-webkit-mobile-dark-csv-sign-out-cleared.png",
+      "fixtureLabel": "Synthetic actual cross-tab sign-out while export was held; private report cleared and no late download.",
+      "testedHead": "da0892d2cdaa24dbe6439a88c2373f09151425a6",
+      "sha256": "fd64767d4d0f685d6244d2cf6ed4e7fc1e242cf4822d10f7d046270c69094f3b",
+      "visuallyInspected": true
+    }
+  ],
+  "limits": [
+    "Focused local lifecycle passes are not a complete final-head hosted matrix pass.",
+    "Widget-only disposal is separately covered by six Flutter actual-button tests.",
+    "Earlier concurrent/locator/event-based failures remain historical failed probes.",
+    "No source UI/auth security change, new award engine, activation, production access, deployment or merge.",
+    "Separate SDK/parser and coverage repair #968 is not integrated and remains under independent review.",
+    "Final CI dispatch needs restored existing CLI access or owner dispatch; ordinary Git/installed connector access works."
+  ]
+}
