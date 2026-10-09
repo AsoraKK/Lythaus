@@ -14,6 +14,8 @@ Material classification:
   `integration_test/`.
 - Canonical current-state documentation includes `README.md`, the active ADR,
   `architecture/`, `security/`, and `runbooks/`.
+- Product implementation and release-state tracking: [product gap goal
+  checklist](product/gap-goal-checklist.md).
 - Dated files under `history/`, `evidence/`, and `reports/` are evidence or
   historical context and do not override live provider inventory.
 - Generated artifacts belong under ignored `.artifacts/` or generated contract

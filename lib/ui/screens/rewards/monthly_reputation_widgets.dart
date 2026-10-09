@@ -83,7 +83,9 @@ class _MonthlyReputationReportCardState
     setState(() => _exporting = true);
     try {
       ref.invalidate(monthlyReputationCsvProvider(_sourceMonth));
-      final bytes = await ref.read(monthlyReputationCsvProvider(_sourceMonth).future);
+      final bytes = await ref.read(
+        monthlyReputationCsvProvider(_sourceMonth).future,
+      );
       if (!mounted) return;
       final filename = 'monthly-reputation-$_sourceMonth.csv';
       final file = XFile.fromData(bytes, name: filename, mimeType: 'text/csv');
@@ -108,7 +110,11 @@ class _MonthlyReputationReportCardState
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('The monthly report could not be exported. Please try again.')),
+          const SnackBar(
+            content: Text(
+              'The monthly report could not be exported. Please try again.',
+            ),
+          ),
         );
       }
     } finally {
@@ -118,14 +124,19 @@ class _MonthlyReputationReportCardState
 
   @override
   Widget build(BuildContext context) {
-    final reportAsync = ref.watch(monthlyReputationReportProvider(_sourceMonth));
+    final reportAsync = ref.watch(
+      monthlyReputationReportProvider(_sourceMonth),
+    );
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(Spacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Your monthly report', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Your monthly report',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: Spacing.xs),
             Row(
               children: [
@@ -134,7 +145,9 @@ class _MonthlyReputationReportCardState
                   onPressed: () => _shift(-1),
                   icon: const Icon(Icons.chevron_left),
                 ),
-                Expanded(child: Text(_sourceMonth, textAlign: TextAlign.center)),
+                Expanded(
+                  child: Text(_sourceMonth, textAlign: TextAlign.center),
+                ),
                 IconButton(
                   tooltip: 'Next source month',
                   onPressed: _sourceMonth.compareTo(_currentMonth) < 0
@@ -150,9 +163,13 @@ class _MonthlyReputationReportCardState
               error: (_, __) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Your private monthly report is unavailable right now.'),
+                  const Text(
+                    'Your private monthly report is unavailable right now.',
+                  ),
                   TextButton(
-                    onPressed: () => ref.invalidate(monthlyReputationReportProvider(_sourceMonth)),
+                    onPressed: () => ref.invalidate(
+                      monthlyReputationReportProvider(_sourceMonth),
+                    ),
                     child: const Text('Retry'),
                   ),
                 ],
@@ -165,7 +182,11 @@ class _MonthlyReputationReportCardState
               child: OutlinedButton.icon(
                 onPressed: _exporting ? null : _exportCsv,
                 icon: _exporting
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Icon(Icons.download_outlined),
                 label: Text(_exporting ? 'Preparing CSV…' : 'Export CSV'),
               ),
@@ -176,7 +197,11 @@ class _MonthlyReputationReportCardState
     );
   }
 
-  Widget _reportBody(BuildContext context, WidgetRef ref, Map<String, dynamic> report) {
+  Widget _reportBody(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> report,
+  ) {
     final state = report['reportState'] as String? ?? 'pending';
     final detail = _object(report['report']);
     final total = _object(detail['total']);
@@ -197,29 +222,47 @@ class _MonthlyReputationReportCardState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (state == 'shadow')
-          const Text('This source assessment is still in shadow mode; it does not activate rewards.'),
+          const Text(
+            'This source assessment is still in shadow mode; it does not activate rewards.',
+          ),
         if (total.isNotEmpty) ...[
           const SizedBox(height: Spacing.xs),
-          Text('Source score: ${total['sourceScore']} of ${total['maximumSourceMonth']}'),
-          Text('Weekly: ${total['weeklyPoints']} · Monthly: ${total['monthlyPoints']} · Quarterly email: ${total['quarterlyPoints']}'),
+          Text(
+            'Source score: ${total['sourceScore']} of ${total['maximumSourceMonth']}',
+          ),
+          Text(
+            'Weekly: ${total['weeklyPoints']} · Monthly: ${total['monthlyPoints']} · Quarterly email: ${total['quarterlyPoints']}',
+          ),
         ],
         const SizedBox(height: Spacing.xs),
-        Text('Selected assigned weeks: ${selected.length} · Omitted: ${omitted.length}'),
-        Text('Quarterly email: ${emailEvidence['state'] ?? 'not yet valid'} · ${email['points'] ?? 0} of ${email['maximumPoints'] ?? 1000}'),
+        Text(
+          'Selected assigned weeks: ${selected.length} · Omitted: ${omitted.length}',
+        ),
+        Text(
+          'Quarterly email: ${emailEvidence['state'] ?? 'not yet valid'} · ${email['points'] ?? 0} of ${email['maximumPoints'] ?? 1000}',
+        ),
         if (actions.isNotEmpty) ...[
           const SizedBox(height: Spacing.xs),
-          Text('Monthly action evidence', style: Theme.of(context).textTheme.titleSmall),
+          Text(
+            'Monthly action evidence',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
           for (final actionValue in actions)
-            Builder(builder: (_) {
-              final action = _object(actionValue);
-              return Padding(
-                padding: const EdgeInsets.only(top: Spacing.xs),
-                child: Text('${action['actionId']}: ${action['points'] ?? 0} points · ${action['state'] ?? 'pending'} · allowance ${action['allowance'] ?? 0}'),
-              );
-            }),
+            Builder(
+              builder: (_) {
+                final action = _object(actionValue);
+                return Padding(
+                  padding: const EdgeInsets.only(top: Spacing.xs),
+                  child: Text(
+                    '${action['actionId']}: ${action['points'] ?? 0} points · ${action['state'] ?? 'pending'} · allowance ${action['allowance'] ?? 0}',
+                  ),
+                );
+              },
+            ),
         ],
         TextButton(
-          onPressed: () => ref.invalidate(monthlyReputationReportProvider(_sourceMonth)),
+          onPressed: () =>
+              ref.invalidate(monthlyReputationReportProvider(_sourceMonth)),
           child: const Text('Refresh report'),
         ),
       ],
@@ -228,7 +271,13 @@ class _MonthlyReputationReportCardState
 }
 
 class _TrackerMessage extends StatelessWidget {
-  const _TrackerMessage({required this.icon, required this.title, required this.message, this.detail, this.action});
+  const _TrackerMessage({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.detail,
+    this.action,
+  });
 
   final IconData icon;
   final String title;
@@ -240,11 +289,23 @@ class _TrackerMessage extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Row(children: [Icon(icon), const SizedBox(width: Spacing.sm), Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium))]),
+      Row(
+        children: [
+          Icon(icon),
+          const SizedBox(width: Spacing.sm),
+          Expanded(
+            child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+          ),
+        ],
+      ),
       const SizedBox(height: Spacing.xs),
       Text(message),
-      if (detail != null) ...[const SizedBox(height: Spacing.xs), Text(detail!)],
-      if (action != null) Align(alignment: Alignment.centerRight, child: action!),
+      if (detail != null) ...[
+        const SizedBox(height: Spacing.xs),
+        Text(detail!),
+      ],
+      if (action != null)
+        Align(alignment: Alignment.centerRight, child: action!),
     ],
   );
 }
@@ -255,12 +316,16 @@ Map<String, dynamic> _object(Object? value) =>
 List<dynamic> _list(Object? value) => value is List ? value : const [];
 
 String _pendingMessage(String? reason) => switch (reason) {
-      'approval_unavailable' || 'report_unavailable' => 'Monthly scoring and rewards are pending owner approval. No score or entitlement has been activated.',
-      'source_not_assembled' || 'assembly_pending' => 'This source month has not been assembled yet.',
-      'assessment_pending' => 'This source month is waiting for its server assessment.',
-      'settlement_pending' || 'confirmed_month_unavailable' => 'The fixed monthly level is waiting for settlement and review.',
-      _ => 'No server-assessed report is available for this month yet.',
-    };
+  'approval_unavailable' || 'report_unavailable' =>
+    'Monthly scoring and rewards are pending owner approval. No score or entitlement has been activated.',
+  'source_not_assembled' ||
+  'assembly_pending' => 'This source month has not been assembled yet.',
+  'assessment_pending' =>
+    'This source month is waiting for its server assessment.',
+  'settlement_pending' || 'confirmed_month_unavailable' =>
+    'The fixed monthly level is waiting for settlement and review.',
+  _ => 'No server-assessed report is available for this month yet.',
+};
 
 String _utcMonth(DateTime date) =>
     '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}';

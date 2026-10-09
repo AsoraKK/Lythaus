@@ -262,7 +262,8 @@ class PostRepositoryImpl implements PostRepository {
     final code = contentErrorCode(response.data);
     if (code == 'post_tag_limit_exceeded') {
       return CreatePostError(
-        message: 'This post has too many distinct tags for search. Remove some tags and try again.',
+        message:
+            'This post has too many distinct tags for search. Remove some tags and try again.',
         code: code,
         originalError: e,
       );

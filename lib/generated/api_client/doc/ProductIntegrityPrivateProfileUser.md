@@ -12,6 +12,7 @@ Name | Type | Description | Notes
 **displayName** | **String** |  |
 **moderationState** | **String** | Current publication review state of the saved owner profile. Only returned by the private owner endpoint. |
 **publicVisibility** | **bool** | Owner visibility preference. A true value does not publish an under-review or blocked profile. |
+**presentationPreferences** | [**ProductIntegrityPresentationPreferences**](ProductIntegrityPresentationPreferences.md) | Private account preferences, absent or null when schema storage is unavailable. Never returned by the public profile endpoint. | [optional]
 **handle** | **String** |  | [optional]
 **avatarUrl** | **String** |  | [optional]
 **bio** | **String** |  | [optional]

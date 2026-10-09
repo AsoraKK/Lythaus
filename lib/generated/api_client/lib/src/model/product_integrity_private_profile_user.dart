@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:lythaus_api_client/src/model/product_integrity_presentation_preferences.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
@@ -17,6 +18,7 @@ part 'product_integrity_private_profile_user.g.dart';
 /// * [displayName]
 /// * [moderationState] - Current publication review state of the saved owner profile. Only returned by the private owner endpoint.
 /// * [publicVisibility] - Owner visibility preference. A true value does not publish an under-review or blocked profile.
+/// * [presentationPreferences] - Private account preferences, absent or null when schema storage is unavailable. Never returned by the public profile endpoint.
 /// * [handle]
 /// * [avatarUrl]
 /// * [bio]
@@ -43,6 +45,10 @@ abstract class ProductIntegrityPrivateProfileUser implements Built<ProductIntegr
   /// Owner visibility preference. A true value does not publish an under-review or blocked profile.
   @BuiltValueField(wireName: r'publicVisibility')
   bool get publicVisibility;
+
+  /// Private account preferences, absent or null when schema storage is unavailable. Never returned by the public profile endpoint.
+  @BuiltValueField(wireName: r'presentationPreferences')
+  ProductIntegrityPresentationPreferences? get presentationPreferences;
 
   @BuiltValueField(wireName: r'handle')
   String? get handle;
@@ -120,6 +126,13 @@ class _$ProductIntegrityPrivateProfileUserSerializer implements PrimitiveSeriali
       object.publicVisibility,
       specifiedType: const FullType(bool),
     );
+    if (object.presentationPreferences != null) {
+      yield r'presentationPreferences';
+      yield serializers.serialize(
+        object.presentationPreferences,
+        specifiedType: const FullType.nullable(ProductIntegrityPresentationPreferences),
+      );
+    }
     if (object.handle != null) {
       yield r'handle';
       yield serializers.serialize(
@@ -232,6 +245,14 @@ class _$ProductIntegrityPrivateProfileUserSerializer implements PrimitiveSeriali
             specifiedType: const FullType(bool),
           ) as bool;
           result.publicVisibility = valueDes;
+          break;
+        case r'presentationPreferences':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ProductIntegrityPresentationPreferences),
+          ) as ProductIntegrityPresentationPreferences?;
+          if (valueDes == null) continue;
+          result.presentationPreferences.replace(valueDes);
           break;
         case r'handle':
           final valueDes = serializers.deserialize(

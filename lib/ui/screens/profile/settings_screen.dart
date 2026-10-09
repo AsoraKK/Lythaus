@@ -9,7 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
-import 'package:lythaus/state/providers/settings_providers.dart';
+import 'package:lythaus/features/profile/presentation/presentation_preferences_section.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 import 'package:lythaus/features/notifications/presentation/notifications_settings_screen.dart';
 import 'package:lythaus/features/notifications/presentation/notifications_screen.dart';
@@ -39,8 +39,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(settingsProvider);
-    final controller = ref.read(settingsProvider.notifier);
     final currentUser = ref.watch(currentUserProvider);
     ref.listen(authSessionRevisionProvider, (previous, next) {
       if (previous != next) {
@@ -71,20 +69,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           children: [
             Text('Account', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: Spacing.sm),
-            if (currentUser != null)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.image_search_outlined),
-                title: const Text('Private authenticity alpha'),
-                subtitle: const Text(
-                  'Safety, SAFE-A, forensic evidence, and bounded visual explanations',
-                ),
-                onTap: () => Navigator.of(context).push(
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.security_outlined),
+              title: const Text('Account security'),
+              onTap: () {
+                final router = GoRouter.maybeOf(context);
+                if (router != null) {
+                  router.go(
+                    GoRouterState.of(
+                      context,
+                    ).uri.replace(path: '/settings/security').toString(),
+                  );
+                  return;
+                }
+                Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => const AuthenticityPrivateAlphaScreen(),
+                    builder: (_) => const AccountSecurityScreen(),
                   ),
-                ),
-              ),
+                );
+              },
+            ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.notifications_none),
@@ -168,39 +173,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   );
                 },
               ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.security_outlined),
-              title: const Text('Account security'),
-              onTap: () {
-                final router = GoRouter.maybeOf(context);
-                if (router != null) {
-                  router.go(
-                    GoRouterState.of(
-                      context,
-                    ).uri.replace(path: '/settings/security').toString(),
-                  );
-                  return;
-                }
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const AccountSecurityScreen(),
-                  ),
-                );
-              },
-            ),
             const Divider(height: Spacing.xl),
-            Text('Preferences', style: Theme.of(context).textTheme.titleLarge),
-            SwitchListTile(
-              title: const Text('Left-handed mode (mirror nav)'),
-              value: settings.leftHandedMode,
-              onChanged: (_) => controller.toggleLeftHanded(),
-            ),
-            SwitchListTile(
-              title: const Text('Haptics'),
-              value: settings.hapticsEnabled,
-              onChanged: (_) => controller.toggleHaptics(),
-            ),
+            const PresentationPreferencesSection(),
             const Divider(height: Spacing.xl),
             Text(
               'Public profile',
@@ -261,6 +235,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const Divider(height: Spacing.xl),
+            if (currentUser != null) ...[
+              Text(
+                'Experimental',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.image_search_outlined),
+                title: const Text('Private authenticity alpha'),
+                subtitle: const Text(
+                  'Availability depends on your approved access.',
+                ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AuthenticityPrivateAlphaScreen(),
+                  ),
+                ),
+              ),
+              const Divider(height: Spacing.xl),
+            ],
             ListTile(
               leading: const Icon(Icons.help_outline),
               title: const Text('Help and support'),
