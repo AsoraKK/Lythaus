@@ -54,15 +54,52 @@ test('cid recovery rejects symlinks, malformed IDs and changed recorded IDs', ()
     fs.writeFileSync(join(directory, cidfile), 'container-name');
     assert.throws(() => owner.recover(), /OWNED_CONTAINER_ID_INVALID/);
     fs.writeFileSync(join(directory, cidfile), 'a'.repeat(64)); owner.recover();
-    fs.writeFileSync(join(directory, cidfile), 'b'.repeat(64));
-    assert.throws(() => owner.recover(), /OWNED_CONTAINER_ID_MISMATCH/);
+    for (const changed of ['b'.repeat(64), '', 'a'.repeat(32), 'b'.repeat(32)]) {
+      fs.writeFileSync(join(directory, cidfile), changed);
+      assert.throws(() => owner.recover(), /OWNED_CONTAINER_ID_MISMATCH/);
+    }
     fs.unlinkSync(join(directory, cidfile)); fs.symlinkSync('target', join(directory, cidfile));
     assert.throws(() => owner.recover(), /OWNED_CONTAINER_CIDFILE_INVALID/);
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
 });
 
-test('missing-cid recovery rejects arbitrary names and mismatched ownership before recording an ID', async () => {
-  for (const arbitraryName of [false, true]) {
+test('empty and partial normal cidfiles defer ID recovery without accepting malformed data', () => {
+  for (const incomplete of ['', 'a'.repeat(32)]) {
+    const directory = fs.mkdtempSync(join(tmpdir(), 'lythaus-sdk-partial-unit-'));
+    try {
+      const owner = new SdkContainers(directory), cidfile = 'synthetic.cid';
+      owner.creations.push({ cidfile });
+      fs.writeFileSync(join(directory, cidfile), incomplete); owner.recover();
+      assert.equal(owner.records.length, 0);
+      assert.equal(owner.creations[0].cidfilePrefix, incomplete);
+      owner.records.push({ id: 'a'.repeat(64), cidfile, state: 'created', recoveredFrom: 'owned-name' });
+      owner.recover();
+      fs.writeFileSync(join(directory, cidfile), 'a'.repeat(64)); owner.recover();
+      fs.writeFileSync(join(directory, cidfile), incomplete);
+      assert.throws(() => owner.recover(), /OWNED_CONTAINER_ID_MISMATCH/);
+    } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+  }
+});
+
+test('partial cidfile with a different ID prefix cannot recover or remove a name-matched container', async () => {
+  const directory = fs.mkdtempSync(join(tmpdir(), 'lythaus-sdk-prefix-unit-'));
+  const calls = [];
+  try {
+    let owner;
+    owner = new SdkContainers(directory, { execute: async args => {
+      calls.push(args);
+      return { status: 0, stdout: JSON.stringify([{ Id: 'b'.repeat(64), Name: `/${owner.creations[0].name}`, Config: { Labels: { 'co.lythaus.sdk-verifier-run': owner.runId } } }]), stderr: '' };
+    } });
+    owner.creations.push({ cidfile: 'partial.cid', name: `lythaus-sdk-${owner.runId}-0`, state: 'requested' });
+    fs.writeFileSync(join(directory, 'partial.cid'), 'a'.repeat(32));
+    await assert.rejects(owner.removeAll(), error => error.errors.some(value => value.message === 'OWNED_CONTAINER_ID_MISMATCH'));
+    assert.equal(owner.records.length, 0);
+    assert.deepEqual(calls, [['container', 'inspect', owner.creations[0].name]]);
+  } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('missing and incomplete cid recovery reject arbitrary names and mismatched ownership before recording an ID', async () => {
+  for (const [arbitraryName, contents] of [false, true].flatMap(arbitraryName => [null, '', 'a'.repeat(32)].map(contents => [arbitraryName, contents]))) {
     const directory = fs.mkdtempSync(join(tmpdir(), 'lythaus-sdk-name-unit-'));
     const calls = [];
     try {
@@ -72,6 +109,7 @@ test('missing-cid recovery rejects arbitrary names and mismatched ownership befo
         return { status: 0, stdout: JSON.stringify([{ Id: 'a'.repeat(64), Name: `/${owner.creations[0].name}`, Config: { Labels: { 'co.lythaus.sdk-verifier-run': 'different-owner' } } }]), stderr: '' };
       } });
       owner.creations.push({ cidfile: 'missing.cid', name: arbitraryName ? 'unrelated-name' : `lythaus-sdk-${owner.runId}-0`, state: 'requested' });
+      if (contents !== null) fs.writeFileSync(join(directory, 'missing.cid'), contents);
       await assert.rejects(owner.removeAll(), /OWNED_CONTAINER_CLEANUP_FAILED/);
       assert.equal(owner.records.length, 0);
       if (arbitraryName) assert.equal(calls.length, 0);
@@ -140,7 +178,7 @@ test('real disposable container denies candidate access to gates, commandfiles, 
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
 });
 
-for (const [signal, stage] of [['SIGINT', 'running'], ['SIGTERM', 'running'], ['SIGTERM', 'after-create'], ['SIGINT', 'missing-cid'], ['SIGTERM', 'missing-cid']]) {
+for (const [signal, stage] of [['SIGINT', 'running'], ['SIGTERM', 'running'], ['SIGTERM', 'after-create'], ['SIGINT', 'missing-cid'], ['SIGTERM', 'missing-cid'], ['SIGINT', 'empty-cid'], ['SIGTERM', 'empty-cid'], ['SIGINT', 'partial-cid'], ['SIGTERM', 'partial-cid']]) {
   test(`real ${signal} cancellation at ${stage} cleans recorded IDs and preserves another owner`, { skip: !realTests, timeout: 45000 }, async () => {
     const directory = fs.mkdtempSync(join(tmpdir(), 'lythaus-sdk-cancel-test-'));
     const sentinelDirectory = fs.mkdtempSync(join(tmpdir(), 'lythaus-sdk-sentinel-'));
@@ -156,6 +194,7 @@ for (const [signal, stage] of [['SIGINT', 'running'], ['SIGTERM', 'running'], ['
       const moduleUrl = new URL('../ci/canonical-sdk-containers.mjs', import.meta.url).href;
       const args = containerArguments({ ...options, command: ['-e', 'process.on("SIGTERM", () => {}); require("node:fs").writeFileSync("/work/ready", "synthetic"); setInterval(() => {}, 1000)'] });
       const probe = `
+        import fs from 'node:fs';
         import { withOwnedContainers, dockerCommand } from ${JSON.stringify(moduleUrl)};
         try {
           await withOwnedContainers(${JSON.stringify(directory)}, async owner => {
@@ -164,6 +203,12 @@ for (const [signal, stage] of [['SIGINT', 'running'], ['SIGTERM', 'running'], ['
               const actualArgs = ${JSON.stringify(stage)} === 'missing-cid' && cidIndex !== -1 ? args.filter((_, index) => index !== cidIndex && index !== cidIndex + 1) : args;
               const result = await dockerCommand(actualArgs, options);
               if (args[0] === 'create' && result.status === 0) {
+                if (['empty-cid', 'partial-cid'].includes(${JSON.stringify(stage)})) {
+                  if (cidIndex === -1) throw new Error('Actual Docker cidfile flag required');
+                  const id = fs.readFileSync(args[cidIndex + 1], 'utf8').trim();
+                  if (!/^[a-f0-9]{64}$/.test(id)) throw new Error('Actual Docker full ID required before fault injection');
+                  fs.writeFileSync(args[cidIndex + 1], ${JSON.stringify(stage)} === 'empty-cid' ? '' : id.slice(0, 32));
+                }
                 process.stdout.write('CREATED\\n');
                 await new Promise((resolve, reject) => {
                   const timer = setInterval(() => {}, 1000);
@@ -189,7 +234,11 @@ for (const [signal, stage] of [['SIGINT', 'running'], ['SIGTERM', 'running'], ['
       const nameInspection = await sentinel.docker(['container', 'inspect', creation.name], { signal: null, timeout: 5000 });
       assert.equal(nameInspection.status, 0, nameInspection.stderr);
       const createdId = JSON.parse(nameInspection.stdout)[0].Id;
-      if (stage !== 'missing-cid') assert.equal(fs.readFileSync(cidPath, 'utf8').trim(), createdId);
+      if (stage !== 'missing-cid') {
+        assert.ok(fs.lstatSync(cidPath).isFile());
+        const contents = fs.readFileSync(cidPath, 'utf8').trim();
+        assert.equal(contents, stage === 'empty-cid' ? '' : stage === 'partial-cid' ? createdId.slice(0, 32) : createdId);
+      }
       const beforeCancellation = await sentinel.inspect(createdId, { signal: null, timeout: 5000 });
       assert.equal(beforeCancellation.State.Running, stage === 'running');
       assert.equal(beforeCancellation.Config.Labels['co.lythaus.sdk-verifier-run'], creationJournal.runId);
@@ -204,7 +253,7 @@ for (const [signal, stage] of [['SIGINT', 'running'], ['SIGTERM', 'running'], ['
       for (const record of journals[0].containers) {
         assert.equal(record.state, 'removed', output);
         assert.equal(record.id, createdId);
-        if (stage === 'missing-cid') assert.equal(record.recoveredFrom, 'owned-name');
+        if (['missing-cid', 'empty-cid', 'partial-cid'].includes(stage)) assert.equal(record.recoveredFrom, 'owned-name');
         assert.equal(await sentinel.inspect(record.id, { signal: null, timeout: 5000 }), null);
       }
       assert.ok(await sentinel.inspect(sentinelId, { signal: null, timeout: 5000 }), 'another owner survives cancellation');

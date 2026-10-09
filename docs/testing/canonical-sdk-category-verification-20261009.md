@@ -89,9 +89,12 @@ the workflow command channel.
 
 Each container creation journals its unique name before the Docker request,
 plus a private cidfile and ownership label. If interruption occurs after daemon
-creation but before the cidfile write, cleanup inspects only that journaled
-run-specific name and records its full ID after verifying the name and ownership
-label. An arbitrary name or another owner's label cannot supply a cleanup ID.
+creation while the cidfile is missing, empty or contains a partial hexadecimal
+ID, cleanup inspects only that journaled run-specific name and records its full
+ID after verifying the name and ownership label. A partial cidfile must match
+that full ID's prefix. Once a complete cidfile has been observed, changing or
+truncating it is rejected. Symlinks, hardlinks, special files and malformed IDs
+remain rejected. An arbitrary name or another owner's label cannot supply a cleanup ID.
 Removal always uses a verified full ID and checks that it is absent. SIGINT and SIGTERM interrupt
 the asynchronous Docker client, escalate its owned process group after one
 second, and allow at most 30 seconds for ID cleanup. Exit codes 130 and 143 are
@@ -165,7 +168,7 @@ merge is part of this change.
 | Exact candidate data; same-version obligation | `canonical-sdk-contract.mjs`, `dependency-review-native.mjs` | Dirty checkout ignored; source-only SDK commit remains expected; nonregular Git input rejected |
 | Fixed complete recipe and tool closure | `sdk-verifier/`, `setup-canonical-sdk-tools.mjs` | Frozen lock/hash checks; complete app and generator graph tests; matched full regeneration |
 | Candidate execution isolated | `canonical-sdk-isolation.mjs` | Real container denies fixture/input writes, credentials, host processes, Docker socket and gate files |
-| Cancellation removes owned IDs only | `canonical-sdk-containers.mjs`, async isolation calls, CLI exit handling | Real SIGINT/SIGTERM running and missing-cid creation-race tests, sentinel preservation, timeout/output-limit cleanup, name/label/cid/deadline rejection |
+| Cancellation removes owned IDs only | `canonical-sdk-containers.mjs`, async isolation calls, CLI exit handling | Real SIGINT/SIGTERM running and missing/empty/partial cidfile creation-race tests, sentinel preservation, timeout/output-limit cleanup, name/label/cid/prefix/deadline rejection |
 | Complete hosted integrity and safe extraction | `sdk-verifier/cache-hosted-packages.py` | 207 real locked archives verified; six synthetic archive tests reject tamper, traversal, links and duplicate files |
 | Trusted behavior and assertion mutants | Fixed Dart fixtures, `behavior-cases.json`, fixed monthly JSON | 57 successful cases/seven suites; bearer omission and own-route mutants produce genuine named assertion failures |
 | SDK remains accounted; other native policy preserved | Native probe, receipt aggregator, license resolver | Missing hosted/linked components, warnings, severity/license failure and stale/ineligible source result all block |
@@ -173,14 +176,22 @@ merge is part of this change.
 
 ## Validation and provenance
 
-Focused validation covers 39 verification/policy tests, fourteen isolation/cleanup
-tests (including eight real Docker controls), six
+Focused validation covers 39 verification/policy tests, twenty isolation/cleanup
+tests (including twelve real Docker controls), six
 existing Dart archive-license tests, and six new archive extraction tests. The
 isolated development runner passes all 57 Dart behavior cases and both assertion
 mutants. It reports `coverageEligible: false`,
 `TRUSTED_VERIFIER_BOOTSTRAP_REQUIRED`, and `nativeIndexing: NOT_CLAIMED`.
 Focused Node coverage is reported separately from isolated execution; unapproved
 production activation and external setup are not represented as executed gates.
+
+The empty/partial cidfile controls create actual Docker containers with
+`--cidfile`, verify the daemon's full ID, then inject an empty regular file or a
+32-character ID prefix before the owner consumes it. Both SIGINT and SIGTERM
+must preserve 130/143, remove the verified owned ID within the bounded cleanup,
+and preserve a separate owner's real sentinel. This is controlled synthetic
+write-interruption fault injection, not a claim that Docker naturally produced
+a partial file during these tests.
 
 The useful preparation evidence from PR #969 is reused with provenance from
 `f78891e03be905cb83860ffc1b8d075fb546094a`: its added canonical behavior fixture,

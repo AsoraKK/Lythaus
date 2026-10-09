@@ -82,10 +82,17 @@ export class SdkContainers {
       if (!stat) continue;
       if (!stat.isFile() || stat.nlink !== 1 || stat.size > 128) throw new Error('OWNED_CONTAINER_CIDFILE_INVALID');
       const id = fs.readFileSync(file, 'utf8').trim();
-      if (!idPattern.test(id)) throw new Error('OWNED_CONTAINER_ID_INVALID');
       const previous = this.records.find(record => record.cidfile === creation.cidfile);
+      if (/^[a-f0-9]{0,63}$/.test(id)) {
+        if (creation.validCid || (previous && (previous.recoveredFrom !== 'owned-name' || !previous.id.startsWith(id)))) throw new Error('OWNED_CONTAINER_ID_MISMATCH');
+        creation.cidfileState = id ? 'partial' : 'empty';
+        creation.cidfilePrefix = id;
+        continue;
+      }
+      if (!idPattern.test(id)) throw new Error('OWNED_CONTAINER_ID_INVALID');
       if (previous && previous.id !== id) throw new Error('OWNED_CONTAINER_ID_MISMATCH');
       if (!previous) this.records.push({ id, cidfile: creation.cidfile, state: 'created' });
+      creation.validCid = id; creation.cidfileState = 'complete';
     }
     this.save();
   }
@@ -127,6 +134,7 @@ export class SdkContainers {
       if (result.status !== 0) throw new Error('OWNED_CREATION_INSPECTION_FAILED');
       const containers = JSON.parse(result.stdout), container = containers[0];
       if (containers.length !== 1 || !idPattern.test(container?.Id ?? '') || container.Name !== `/${creation.name}` || container.Config?.Labels?.[labelKey] !== this.runId) throw new Error('OWNED_CREATION_LABEL_MISMATCH');
+      if (!container.Id.startsWith(creation.cidfilePrefix ?? '')) throw new Error('OWNED_CONTAINER_ID_MISMATCH');
       this.records.push({ id: container.Id, cidfile: creation.cidfile, name: creation.name, recoveredFrom: 'owned-name', state: 'created' });
       creation.state = 'recovered'; this.save();
     }
