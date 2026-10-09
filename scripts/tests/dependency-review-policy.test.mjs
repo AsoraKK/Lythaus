@@ -111,6 +111,9 @@ test('canonical Dart source and root declaration must match the locked identity'
     assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock)), /UNLOCKED_DEPENDENCY/);
   }
   write('lib/generated/api_client/pubspec.yaml', source);
+  write('lib/generated/api_client/pubspec.yaml', { ...source, dependencies: { dio: '^900.0.0' } });
+  assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock)), /CONSTRAINT_MISMATCH/);
+  write('lib/generated/api_client/pubspec.yaml', source);
   write('build/api_client/pubspec.yaml', { ...source, dependencies: { unknown: '^1.0.0' } });
   assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock)), /PREPARATION_MISMATCH/);
   write('build/api_client/pubspec.yaml', '');

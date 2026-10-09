@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { normalizeLevelAuthorityBuilderAssignment } from '../fix-openapi-dart-nested-builder-assignment.mjs';
+import './local-dart-package-evidence.test.mjs';
 
 const generatedSerializer = `
         case r'levelAuthority':
@@ -63,7 +64,7 @@ if (!compatible) process.exit(1);
     const requests = readFileSync(calls, 'utf8').trim().split('\n').map(JSON.parse);
     assert.deepEqual(requests.map(request => request.args), [
       ['pub', 'get'], ['run', 'build_runner', 'build'],
-      ['format', '--output=none', '--set-exit-if-changed', 'test/community_appeal_serialization_test.dart', 'test/admin_mutation_admission_test.dart', 'test/support_feedback_serialization_test.dart', 'test/activity_measurement_serialization_test.dart', 'test/monthly_rewards_preparation_serialization_test.dart'],
+      ['format', '--output=none', '--set-exit-if-changed', 'test/community_appeal_serialization_test.dart', 'test/admin_mutation_admission_test.dart', 'test/support_feedback_serialization_test.dart', 'test/activity_measurement_serialization_test.dart', 'test/monthly_rewards_preparation_serialization_test.dart', 'test/canonical_local_package_behavior_test.dart'],
       ['analyze', '--no-fatal-warnings'], ['test', '--reporter', 'compact'],
     ]);
     assert.ok(requests.every(request => request.compatible));

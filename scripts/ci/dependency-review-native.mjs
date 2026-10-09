@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parse } from 'yaml';
+import { lockedVersionSatisfies } from './local-dart-package-evidence.mjs';
 
 export function comparison(base, head) {
   if (![base, head].every(value => /^[a-f0-9]{40}$/.test(value ?? '') && !/^0+$/.test(value)) || base === head) throw new Error('EXPLICIT_DISTINCT_COMMIT_SHAS_REQUIRED');
@@ -45,6 +46,9 @@ function canonicalLocalPackage(file, name, value, packages, revision) {
   if (declaration?.path !== 'build/api_client' || Object.keys(declaration).join(',') !== 'path' || Object.hasOwn(root.dev_dependencies ?? {}, name) || Object.hasOwn(root.dependency_overrides ?? {}, name) || source.name !== name || source.version !== value.version || typeof source.version !== 'string' || !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)*$/.test(source.version)) throw new Error(`CANONICAL_LOCAL_PACKAGE_IDENTITY_MISMATCH:${name}`);
   if (repositoryFile('pubspec_overrides.yaml', revision) !== undefined) throw new Error(`CANONICAL_LOCAL_PACKAGE_OVERRIDES_FILE_UNSUPPORTED:${name}`);
   if (Object.keys(source.dependency_overrides ?? {}).length || Object.entries(source.dependencies ?? {}).some(([dependency, constraint]) => typeof constraint !== 'string' || packages[dependency]?.source !== 'hosted')) throw new Error(`CANONICAL_LOCAL_PACKAGE_UNLOCKED_DEPENDENCY:${name}`);
+  for (const [dependency, constraint] of Object.entries(source.dependencies ?? {})) {
+    if (!lockedVersionSatisfies(constraint, packages[dependency].version)) throw new Error(`CANONICAL_LOCAL_PACKAGE_CONSTRAINT_MISMATCH:${name}:${dependency}`);
+  }
   const preparedContent = repositoryFile('build/api_client/pubspec.yaml', revision);
   if (preparedContent !== undefined && preparedContent !== sourceContent) throw new Error(`CANONICAL_LOCAL_PACKAGE_PREPARATION_MISMATCH:${name}`);
   return { ecosystem: 'pub', name, version: value.version, relationship: 'direct', source: 'path', localPath: 'build/api_client', canonicalManifest: 'lib/generated/api_client/pubspec.yaml' };
