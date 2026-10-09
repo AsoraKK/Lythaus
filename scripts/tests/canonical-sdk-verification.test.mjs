@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import test from 'node:test';
 import { parse, stringify } from 'yaml';
 import { coverageLedger, aggregateReview, completedBehavior, rejectedMutation, requiredCases, mutations, readRegular, inventory, projectGit, validateRuntimeGraph, validateFrozenGraph, approvedLicenseClassification } from '../ci/canonical-sdk-contract.mjs';
-import { validateTrust, validateRepositoryIdentity, validateRunContext, candidateCheckBinding, applyCandidateCheckGate, materializeVerifier, anchoredContext } from '../ci/canonical-sdk-bootstrap.mjs';
+import { validateTrust, validateRepositoryIdentity, validateRunContext, materializeVerifier, anchoredContext } from '../ci/canonical-sdk-bootstrap.mjs';
 import { containerArguments, hostedClosure } from '../ci/canonical-sdk-isolation.mjs';
 import { expectedChanges } from '../ci/dependency-review-native.mjs';
 
@@ -16,9 +16,23 @@ const hosted = { ecosystem: 'pub', name: 'dio', version: '5.9.0', manifest: 'pub
 const comparison = { reason: 'NATIVE_API_AVAILABLE', baseSha: a, reviewedHeadSha: b, expected: [sdk, hosted], missing: [sdk], snapshotWarnings: false };
 const source = { coverageEligible: true, packageName: sdk.name, version: sdk.version, localPath: sdk.localPath, sourceTreeSha: a, candidateSha: b, verifierSha: c, nativeIndexing: 'NOT_CLAIMED', classification: 'approved', verification: 'fresh-isolated-source-verification' };
 const success = { native: 'success', licenses: 'success' };
-const trust = { schemaVersion: 'lythaus-sdk-verifier-trust-v1', state: 'approved', repositoryId: 1010752912, repositoryOwnerId: 211295889, protectedRef: 'refs/heads/main', workflowPath: '.github/workflows/dependency-review.yml', job: 'canonical-sdk-verification', verifierSha: a, verifierTreeSha: b, workflowBlobSha: c, approvalEvidenceRef: 'synthetic independent review' };
+const trust = { schemaVersion: 'lythaus-sdk-verifier-trust-v1', state: 'approved', repositoryId: 1010752912, repositoryOwnerId: 211295889, protectedRef: 'refs/heads/main', workflowPath: '.github/workflows/dependency-review.yml', job: 'dependency-review', verifierSha: a, verifierTreeSha: b, workflowBlobSha: c, approvalEvidenceRef: 'synthetic independent review' };
 const repository = { id: trust.repositoryId, name: 'Lythaus', full_name: 'synthetic-owner/Lythaus', owner: { id: trust.repositoryOwnerId, login: 'synthetic-owner' } };
-const context = () => ({ repository: structuredClone(repository), environment: { HEAD_SHA: c, GITHUB_REPOSITORY: repository.full_name, GITHUB_REPOSITORY_ID: String(repository.id), GITHUB_REPOSITORY_OWNER_ID: String(repository.owner.id), GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_WORKFLOW_REF: `${repository.full_name}/${trust.workflowPath}@refs/heads/main`, GITHUB_WORKFLOW_SHA: b, GITHUB_REF: trust.protectedRef, GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '2', GITHUB_JOB: trust.job }, workflowBlobSha: c, run: { repository: { id: repository.id, full_name: repository.full_name }, head_repository: { id: repository.id, full_name: repository.full_name }, id: 12, run_attempt: 2, event: 'workflow_dispatch', head_branch: 'main', head_sha: b, workflow_id: 7 }, workflow: { id: 7, path: trust.workflowPath }, jobs: [{ name: trust.job, id: 25, run_id: 12, run_attempt: 2, head_sha: b, status: 'in_progress' }] });
+const context = (kind = 'pull_request', { base = b, head = c, workflowSha = kind === 'pull_request' ? 'd'.repeat(40) : head } = {}) => {
+  const number = 91, branch = kind === 'push' ? 'main' : 'candidate';
+  const ref = kind === 'pull_request' ? `refs/pull/${number}/merge` : `refs/heads/${branch}`;
+  const baseRecord = { ref: 'main', sha: base, repo: { id: repository.id, full_name: repository.full_name } };
+  const headRecord = { ref: branch, sha: head, repo: { id: repository.id, full_name: repository.full_name } };
+  return {
+    repository: structuredClone(repository),
+    environment: { BASE_SHA: base, HEAD_SHA: head, PR_NUMBER: kind === 'pull_request' ? String(number) : '', GITHUB_REPOSITORY: repository.full_name, GITHUB_REPOSITORY_ID: String(repository.id), GITHUB_REPOSITORY_OWNER_ID: String(repository.owner.id), GITHUB_EVENT_NAME: kind, GITHUB_WORKFLOW_REF: `${repository.full_name}/${trust.workflowPath}@${ref}`, GITHUB_WORKFLOW_SHA: workflowSha, GITHUB_SHA: workflowSha, GITHUB_REF: ref, GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '2', GITHUB_JOB: trust.job },
+    workflowBlobSha: trust.workflowBlobSha, workflowParents: [base, head],
+    run: { repository: { id: repository.id, full_name: repository.full_name }, head_repository: { id: repository.id, full_name: repository.full_name }, id: 12, run_attempt: 2, event: kind, head_branch: branch, head_sha: head, workflow_id: 7, pull_requests: kind === 'pull_request' ? [{ number, base: structuredClone(baseRecord), head: structuredClone(headRecord) }] : [] },
+    workflow: { id: 7, path: trust.workflowPath },
+    jobs: [{ name: trust.job, id: 25, run_id: 12, run_attempt: 2, head_sha: head, status: 'in_progress' }],
+    event: { repository: { id: repository.id, full_name: repository.full_name }, ...(kind === 'pull_request' ? { number, pull_request: { number, base: baseRecord, head: headRecord } } : kind === 'push' ? { ref, before: base, after: head } : { inputs: { base_sha: base, head_sha: head } }) },
+  };
+};
 
 test('category accounting keeps raw SDK omission and every other native obligation', () => {
   const ledger = coverageLedger(comparison.expected, comparison.missing);
@@ -46,7 +60,7 @@ test('bootstrap rejects unreviewed, incomplete and candidate-selected pins', () 
 test('run provenance binds repository, workflow Git blob, exact revision, run attempt and actual job', () => {
   assert.equal(validateRunContext(trust, context()).jobId, 25);
   const attacks = [
-    value => value.environment.GITHUB_EVENT_NAME = 'pull_request',
+    value => value.environment.GITHUB_EVENT_NAME = 'workflow_run',
     value => value.environment.GITHUB_WORKFLOW_REF = `${trust.repository}/${trust.workflowPath}@refs/heads/candidate`,
     value => value.environment.GITHUB_WORKFLOW_SHA = a,
     value => value.environment.GITHUB_REF = 'refs/heads/candidate',
@@ -58,8 +72,8 @@ test('run provenance binds repository, workflow Git blob, exact revision, run at
     value => value.environment.GITHUB_REPOSITORY_OWNER_ID = '103',
     value => value.run.id = 13,
     value => value.run.run_attempt = 1,
-    value => value.run.event = 'pull_request',
-    value => value.run.head_branch = 'candidate',
+    value => value.run.event = 'push',
+    value => value.run.head_branch = 'other-candidate',
     value => value.workflow.id = 8,
     value => value.workflow.path = 'fake.yml',
     value => value.workflowBlobSha = a,
@@ -77,37 +91,69 @@ test('authoritative numeric repository and owner identity reject transfers and n
   for (const value of [null, { ...repository, id: 100 }, { ...repository, name: 'other' }, { ...repository, full_name: 'other/Lythaus' }, { ...repository, owner: { ...repository.owner, id: 101 } }, { ...repository, owner: { ...repository.owner, login: 'other' } }, { ...repository, owner: { ...repository.owner, login: ['synthetic-owner'] } }]) assert.throws(() => validateRepositoryIdentity(value));
 });
 
-test('trusted dispatch evidence cannot claim a candidate-bound required check', () => {
-  const result = validateRunContext(trust, context());
-  assert.deepEqual(result.candidateCheck, { candidateSha: c, workflowCheckSha: b, runId: 12, state: 'unpublished', publicationEligible: false, reason: 'TRUSTED_CANDIDATE_CHECK_PUBLICATION_REQUIRED' });
-  assert.equal(candidateCheckBinding(b, context().run).publicationEligible, false);
-  for (const value of ['main', null, '0'.repeat(40)]) assert.throws(() => candidateCheckBinding(value, context().run));
-  assert.throws(() => candidateCheckBinding(c, { head_sha: b, id: '12' }));
+test('PR checks bind the candidate head separately from the tested merge workflow', () => {
+  const value = context(), result = validateRunContext(trust, value);
+  assert.equal(result.workflowSha, value.environment.GITHUB_WORKFLOW_SHA);
+  assert.notEqual(result.workflowSha, c);
+  assert.deepEqual(result.candidateCheck, { candidateSha: c, checkHeadSha: c, runId: 12, jobId: 25, mode: 'actions-job-result', event: 'pull_request' });
 });
 
-test('successful source verification still fails the unpublished candidate check gate', () => {
-  const binding = candidateCheckBinding(c, context().run);
-  const review = applyCandidateCheckGate({ conclusion: 'success', source: { coverageEligible: true } }, binding);
-  assert.equal(review.verificationConclusion, 'success');
-  assert.equal(review.conclusion, 'failure');
-  assert.equal(review.reason, 'TRUSTED_CANDIDATE_CHECK_PUBLICATION_REQUIRED');
-  assert.equal(applyCandidateCheckGate({ conclusion: 'failure', reason: 'NATIVE_COVERAGE_MISSING' }, binding).reason, 'NATIVE_COVERAGE_MISSING');
-  assert.throws(() => applyCandidateCheckGate({ conclusion: 'success' }, { ...binding, state: 'approved', publicationEligible: true }));
+test('main push and candidate-ref dispatch bind normal Actions results without write permissions', () => {
+  for (const kind of ['push', 'workflow_dispatch']) {
+    const result = validateRunContext(trust, context(kind));
+    assert.equal(result.candidateCheck.checkHeadSha, c);
+    assert.equal(result.workflowSha, c);
+  }
+  const differentHead = context('workflow_dispatch');
+  differentHead.run.head_sha = b; differentHead.jobs[0].head_sha = b;
+  differentHead.environment.GITHUB_SHA = b; differentHead.environment.GITHUB_WORKFLOW_SHA = b;
+  assert.throws(() => validateRunContext(trust, differentHead), /PROVENANCE/);
+  for (const kind of ['workflow_run', 'pull_request_target']) assert.throws(() => validateRunContext(trust, context(kind)), /TRIGGER/);
 });
 
-test('PR and push keep the native required check; trusted source dispatch is a separate read-only job', () => {
+test('PR event, actual run snapshot and merge parents reject cross-repository and stale candidates', () => {
+  const attacks = [
+    value => value.environment.PR_NUMBER = '92',
+    value => value.event.number = 92,
+    value => value.event.pull_request.base.ref = 'unreviewed-base',
+    value => value.event.pull_request.base.sha = a,
+    value => value.event.pull_request.head.sha = a,
+    value => value.event.pull_request.head.repo.id = 100,
+    value => value.run.pull_requests[0].head.sha = a,
+    value => value.run.pull_requests[0].base.sha = a,
+    value => value.run.pull_requests = [],
+    value => value.workflowParents.reverse(),
+    value => value.workflowParents.push(a),
+    value => value.workflowBlobSha = a,
+    value => value.event.repository.id = 100,
+  ];
+  for (const attack of attacks) { const value = context(); attack(value); assert.throws(() => validateRunContext(trust, value)); }
+});
+
+test('push and dispatch exact event inputs reject mismatched base/head and selected workflow revisions', () => {
+  for (const kind of ['push', 'workflow_dispatch']) {
+    const value = context(kind);
+    if (kind === 'push') value.event.before = a; else value.event.inputs.head_sha = a;
+    assert.throws(() => validateRunContext(trust, value), /PROVENANCE/);
+  }
+  const value = context('workflow_dispatch');
+  value.environment.GITHUB_REF = 'refs/heads/main';
+  value.environment.GITHUB_WORKFLOW_REF = `${repository.full_name}/${trust.workflowPath}@refs/heads/main`;
+  assert.throws(() => validateRunContext(trust, value), /DISPATCH/);
+});
+
+test('the existing dependency-review job executes the approved verifier closure with read-only permissions', () => {
   const workflow = parse(fs.readFileSync(new URL('../../.github/workflows/dependency-review.yml', import.meta.url), 'utf8'));
   assert.deepEqual(workflow.permissions, { contents: 'read' });
   assert.deepEqual(workflow.on.pull_request.branches, ['main']);
   assert.deepEqual(workflow.on.push.branches, ['main']);
-  const native = workflow.jobs['dependency-review'], sourceJob = workflow.jobs['canonical-sdk-verification'];
-  assert.equal(native.if, "github.event_name != 'workflow_dispatch'");
-  assert.equal(sourceJob.if, "github.event_name == 'workflow_dispatch'");
-  assert.ok(native.steps.some(step => step.id === 'native' && step.with['fail-on-severity'] === 'high' && step.with['deny-licenses'] === '${{ env.DENY_LICENSES }}'));
-  assert.ok(native.steps.some(step => step.if === 'always()' && step.run === 'node .trusted-main/scripts/ci/dependency-review-receipt.mjs'));
-  assert.ok(!native.steps.some(step => /canonical-sdk-bootstrap/.test(step.run ?? '')));
-  assert.ok(sourceJob.steps.some(step => step.id === 'bootstrap'));
-  for (const job of Object.values(workflow.jobs)) assert.equal(job.permissions, undefined);
+  assert.deepEqual(Object.keys(workflow.jobs), ['dependency-review']);
+  const job = workflow.jobs['dependency-review'];
+  assert.equal(job.if, undefined); assert.equal(job.permissions, undefined);
+  assert.ok(job.steps.some(step => step.id === 'native' && step.with['fail-on-severity'] === 'high' && step.with['deny-licenses'] === '${{ env.DENY_LICENSES }}'));
+  assert.ok(job.steps.some(step => step.id === 'bootstrap' && step.run.includes('node .trusted-main/scripts/ci/canonical-sdk-bootstrap.mjs --prepare-only')));
+  assert.ok(job.steps.some(step => step.if === "always() && steps.bootstrap.outcome == 'success'" && step.run === 'node .trusted-verifier/scripts/ci/canonical-sdk-bootstrap.mjs'));
+  assert.ok(!JSON.stringify(workflow).includes('checks: write'));
 });
 
 const report = events => events.map(value => JSON.stringify(value)).join('\n') + '\n';
@@ -213,11 +259,13 @@ test('candidate stdout is never forwarded into GitHub workflow command channels'
   assert.ok(!runner.includes('monthly-rewards-preparation-wire.mjs'));
 });
 
-test('serialized bootstrap binds real Git objects and materializes pinned recipe/npm closure', async () => {
+test('serialized bootstrap binds candidate merge objects and ignores candidate-selected verifier refs', async () => {
   const directory = fs.mkdtempSync(join(tmpdir(), 'lythaus-sdk-bootstrap-'));
+  const anchorDirectory = fs.mkdtempSync(join(tmpdir(), 'lythaus-sdk-anchor-'));
   const git = (...args) => execFileSync('git', ['-C', directory, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   const write = (path, data) => { fs.mkdirSync(join(directory, path, '..'), { recursive: true }); fs.writeFileSync(join(directory, path), data); };
   const commit = () => { git('add', '.'); git('-c', 'user.name=Synthetic verifier', '-c', 'user.email=synthetic@example.invalid', 'commit', '-qm', 'synthetic bootstrap'); return git('rev-parse', 'HEAD'); };
+  const mergeObject = (base, head) => git('-c', 'user.name=Synthetic verifier', '-c', 'user.email=synthetic@example.invalid', 'commit-tree', git('rev-parse', `${head}^{tree}`), '-p', base, '-p', head, '-m', 'synthetic merge');
   try {
     git('init', '-q');
     write('package.json', JSON.stringify({ workspaces: ['packages/synthetic'] }));
@@ -228,12 +276,20 @@ test('serialized bootstrap binds real Git objects and materializes pinned recipe
     write('scripts/ci/canonical-sdk-isolation.mjs', 'export const synthetic = true;\n');
     write('scripts/ci/sdk-verifier/prepare.mjs', 'synthetic recipe\n');
     write('tools/openapi/spectral-glob/package.json', '{"name":"synthetic-glob"}');
+    write('tools/openapi/oasdiff/bin/oasdiff.js', 'synthetic reviewed executable\n');
+    fs.chmodSync(join(directory, 'tools/openapi/oasdiff/bin/oasdiff.js'), 0o755);
     write('unrelated.txt', 'excluded candidate data');
     const verifierSha = commit();
     const approved = { ...trust, verifierSha, verifierTreeSha: git('rev-parse', `${verifierSha}^{tree}`), workflowBlobSha: git('rev-parse', `${verifierSha}:.github/workflows/dependency-review.yml`) };
     write('scripts/ci/canonical-sdk-trust.json', JSON.stringify(approved)); const anchorSha = commit();
-    const value = context();
-    value.run.head_sha = anchorSha; value.jobs[0].head_sha = anchorSha; value.environment.GITHUB_WORKFLOW_SHA = anchorSha; value.environment.HEAD_SHA = c;
+    git('worktree', 'add', '-q', '--detach', anchorDirectory, anchorSha);
+    write('unrelated.txt', 'candidate data differs from verifier'); const candidateSha = commit();
+    let value = context('pull_request', { base: anchorSha, head: candidateSha, workflowSha: mergeObject(anchorSha, candidateSha) });
+    const eventPath = join(anchorDirectory, 'synthetic-event.json');
+    value.environment.GITHUB_EVENT_PATH = eventPath;
+    value.environment.VERIFIER_SHA = candidateSha;
+    value.environment.SOURCE_VERIFIER_REF = 'refs/heads/candidate';
+    fs.writeFileSync(eventPath, JSON.stringify(value.event));
     const requests = [], fetched = [];
     const request = async path => {
       requests.push(path);
@@ -244,14 +300,26 @@ test('serialized bootstrap binds real Git objects and materializes pinned recipe
       if (path.startsWith(`repos/${repository.full_name}/actions/runs/12/attempts/2/jobs?`)) return { jobs: value.jobs, total_count: 1 };
       throw new Error('unexpected synthetic API request');
     };
-    const bound = await anchoredContext(directory, directory, { request, fetchRevision: sha => fetched.push(sha), environment: value.environment });
+    const bound = await anchoredContext(directory, anchorDirectory, { request, fetchRevision: sha => fetched.push(sha), environment: value.environment });
     assert.equal(bound.verifierSha, verifierSha); assert.equal(bound.anchorSha, anchorSha); assert.equal(bound.jobId, 25);
-    assert.deepEqual(fetched, [verifierSha, anchorSha]); assert.equal(requests.length, 5);
+    assert.equal(bound.workflowSha, value.environment.GITHUB_WORKFLOW_SHA);
+    assert.equal(bound.candidateCheck.checkHeadSha, candidateSha);
+    assert.deepEqual(fetched, [verifierSha, candidateSha, value.environment.GITHUB_WORKFLOW_SHA]); assert.equal(requests.length, 5);
     const materialized = join(directory, 'materialized');
     const files = materializeVerifier(directory, bound, materialized);
-    for (const path of ['package.json', 'package-lock.json', 'packages/synthetic/package.json', '.github/actions/flutter-setup/action.yml', 'scripts/ci/canonical-sdk-isolation.mjs', 'scripts/ci/sdk-verifier/prepare.mjs', 'tools/openapi/spectral-glob/package.json']) assert.ok(files.some(file => file.path === path));
+    for (const path of ['package.json', 'package-lock.json', 'packages/synthetic/package.json', '.github/actions/flutter-setup/action.yml', '.github/workflows/dependency-review.yml', 'scripts/ci/canonical-sdk-isolation.mjs', 'scripts/ci/sdk-verifier/prepare.mjs', 'tools/openapi/spectral-glob/package.json']) assert.ok(files.some(file => file.path === path));
+    assert.throws(() => materializeVerifier(directory, { ...bound, workflowBlobSha: a }, join(directory, 'incoherent-workflow-pin')), /TRUSTED_WORKFLOW_CLOSURE_REQUIRED/);
     assert.ok(!fs.existsSync(join(materialized, 'unrelated.txt')));
-    await assert.rejects(anchoredContext(directory, directory, { request: async path => path.startsWith('repositories/') ? repository : ({ ref: 'refs/heads/main', object: { sha: a } }), environment: value.environment }), /PROTECTED_MAIN_ANCHOR_MISMATCH/);
+    assert.equal(fs.statSync(join(materialized, 'tools/openapi/oasdiff/bin/oasdiff.js')).mode & 0o777, 0o755);
+    await assert.rejects(anchoredContext(directory, anchorDirectory, { request: async path => path.startsWith('repositories/') ? repository : ({ ref: 'refs/heads/main', object: { sha: a } }), environment: value.environment }), /PROTECTED_MAIN_ANCHOR_MISMATCH/);
     assert.throws(() => materializeVerifier(directory, { verifierSha: 'main' }, join(directory, 'invalid')));
-  } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+    write('.github/workflows/dependency-review.yml', 'name: candidate-controlled fake success\n');
+    const badHead = commit();
+    value = context('pull_request', { base: anchorSha, head: badHead, workflowSha: mergeObject(anchorSha, badHead) });
+    value.environment.GITHUB_EVENT_PATH = eventPath; fs.writeFileSync(eventPath, JSON.stringify(value.event));
+    await assert.rejects(anchoredContext(directory, anchorDirectory, { request, fetchRevision: () => {}, environment: value.environment }), /GITHUB_WORKFLOW_PROVENANCE_MISMATCH/);
+  } finally {
+    if (fs.existsSync(join(anchorDirectory, '.git'))) git('worktree', 'remove', '--force', anchorDirectory);
+    fs.rmSync(anchorDirectory, { recursive: true, force: true }); fs.rmSync(directory, { recursive: true, force: true });
+  }
 });

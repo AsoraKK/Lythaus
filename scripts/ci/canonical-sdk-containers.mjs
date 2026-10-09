@@ -94,10 +94,12 @@ export class SdkContainers {
     this.signal?.throwIfAborted();
     if (args[0] !== 'run' || args.includes('--cidfile') || args.includes('--label')) throw new Error('OWNED_CONTAINER_ARGUMENTS_REQUIRED');
     const cidfile = `sdk-${this.runId}-${this.creations.length}.cid`;
+    const name = `lythaus-sdk-${this.runId}-${this.creations.length}`;
     const create = ['create', '--cidfile', join(this.directory, cidfile), '--label', `${labelKey}=${this.runId}`, ...args.slice(1)];
     const nameIndex = create.indexOf('--name');
-    if (nameIndex !== -1) create[nameIndex + 1] = `lythaus-sdk-${this.runId}-${this.creations.length}`;
-    this.creations.push({ cidfile }); this.save();
+    if (nameIndex !== -1) create[nameIndex + 1] = name;
+    else create.splice(1, 0, '--name', name);
+    this.creations.push({ cidfile, name, state: 'requested' }); this.save();
     try {
       let result;
       try { result = await this.docker(create); } finally { this.recover(); }
@@ -116,6 +118,19 @@ export class SdkContainers {
     if (value.length !== 1 || value[0].Id !== id) throw new Error('OWNED_CONTAINER_INSPECTION_MISMATCH');
     return value[0];
   }
+  async recoverOwnedNames(options) {
+    for (const [index, creation] of this.creations.entries()) {
+      if (this.records.some(record => record.cidfile === creation.cidfile)) continue;
+      if (creation.name !== `lythaus-sdk-${this.runId}-${index}`) throw new Error('OWNED_CREATION_NAME_INVALID');
+      const result = await this.docker(['container', 'inspect', creation.name], options());
+      if (result.status !== 0 && /No such (?:container|object)/i.test(result.stderr)) { creation.state = 'absent'; this.save(); continue; }
+      if (result.status !== 0) throw new Error('OWNED_CREATION_INSPECTION_FAILED');
+      const containers = JSON.parse(result.stdout), container = containers[0];
+      if (containers.length !== 1 || !idPattern.test(container?.Id ?? '') || container.Name !== `/${creation.name}` || container.Config?.Labels?.[labelKey] !== this.runId) throw new Error('OWNED_CREATION_LABEL_MISMATCH');
+      this.records.push({ id: container.Id, cidfile: creation.cidfile, name: creation.name, recoveredFrom: 'owned-name', state: 'created' });
+      creation.state = 'recovered'; this.save();
+    }
+  }
   async removeAll() {
     const deadline = this.signal?.reason?.cleanupDeadline ?? Date.now() + cleanupMilliseconds;
     this.recover();
@@ -124,6 +139,8 @@ export class SdkContainers {
       if (Date.now() >= deadline) throw new Error('OWNED_CONTAINER_CLEANUP_DEADLINE');
       return { signal: null, timeout: Math.min(5000, deadline - Date.now()) };
     };
+    try { await this.recoverOwnedNames(options); }
+    catch (error) { failures.push(error); }
     for (const record of [...this.records].reverse().filter(record => record.state !== 'removed')) {
       try {
         const container = await this.inspect(record.id, options());
@@ -134,7 +151,7 @@ export class SdkContainers {
       } catch (error) { record.state = 'cleanup_failed'; record.error = error.message; failures.push(error); }
       this.save();
     }
-    if (this.creations.some(creation => !this.records.some(record => record.cidfile === creation.cidfile))) failures.push(new Error('OWNED_CONTAINER_CREATION_UNRECORDED'));
+    if (this.creations.some(creation => creation.state !== 'absent' && !this.records.some(record => record.cidfile === creation.cidfile))) failures.push(new Error('OWNED_CONTAINER_CREATION_UNRECORDED'));
     if (failures.length) throw new AggregateError(failures, 'OWNED_CONTAINER_CLEANUP_FAILED');
   }
 }

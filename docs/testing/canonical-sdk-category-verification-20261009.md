@@ -20,53 +20,56 @@ the dependency-review workflow blob. The bootstrap checks public read-only GitHu
 repository metadata, run, workflow, and attempt-specific job responses against
 the verified numeric repository ID and owner ID, repository name, workflow
 path, exact workflow revision, run ID, attempt, and actual job ID.
-Names alone do not establish authority. The `canonical-sdk-verification` job
-requires manual dispatch of this workflow from protected main. Candidate workflow
-runs and PR test merges cannot establish that authority. The existing
-`dependency-review` job remains on PR and main-push events with the retained
-native coverage, severity and archive-license gates. It loads host review code
-and npm manifests from protected main; candidate Git data is its comparison
-input. It does not invoke the dispatch-only bootstrap or accept a source receipt.
+Names alone do not establish authority. The existing `dependency-review` job
+runs the independently reviewed verifier directly from its approved full Git SHA
+for PRs, main pushes and candidate-ref dispatches. Protected main selects the
+pin; candidate inputs cannot select a verifier ref. The entire hosted recipe,
+imports and npm closure are materialized from that pinned tree, and the final
+host gate executes the pinned bootstrap, not a candidate checkout helper.
 
-The dispatch run's check belongs to its protected-main revision, not the supplied
-candidate SHA. Even successful source verification therefore records
-`verificationConclusion: success` separately and fails the final gate with
-`TRUSTED_CANDIDATE_CHECK_PUBLICATION_REQUIRED`. It cannot satisfy the candidate's
-required check. The PR/native gate keeps its existing name and remains closed
-when source coverage is required. Neither a skipped job nor a main check is
-claimed as candidate approval.
+For a PR, the candidate head is bound to the API run/job head SHA while the
+tested workflow is bound to the runner's merge revision and its exact approved
+workflow blob. The merge parents must be the exact base and candidate commits.
+The runner event, PR number, repository IDs, base/head refs and SHA snapshots
+must agree with the actual run metadata. Main pushes bind the exact before/after
+event; dispatch must select the exact candidate revision supplied as head input.
+A main dispatch for a different candidate SHA is rejected.
 
-With the task's `contents: read` permission, there is no API path to create a
-trusted check on a different candidate commit. GitHub's
-[Checks API](https://docs.github.com/en/rest/checks/runs#create-a-check-run)
-requires Checks write permission. Switching to
-[pull_request_target](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request_target)
-still selects the default-branch revision; letting candidate PR workflows select
-their own verdict cannot establish independent authority. Required workflow
-[rulesets](https://docs.github.com/enterprise-cloud@latest/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-workflows-to-pass-before-merging)
-are an organization/enterprise feature, not a verified existing entitlement here.
-The read-only ruleset response was empty and repository ownership is User.
-The integration was denied access to `branches/main/protection` with HTTP 403,
-`Resource not accessible by integration`; the current live check configuration
-is therefore unverified. No protection, permission, subscription or provider
-change is made. A coordinator must resolve this precise publication gate before
-activation; this PR does not invent an approval or remove a required check.
+Actions publishes the normal candidate-bound job result. No custom Checks API
+write, status override, required-workflow infrastructure or additional permission
+is needed. [GitHub documents](https://docs.github.com/en/pull-requests/reference/status-checks)
+that Actions generates checks when workflows run. The workflow keeps the
+existing job name and `contents: read` permissions and performs fresh native,
+archive-license and source gates in that same job.
+
+This uses the existing independent code-review trust boundary: the parent or
+reviewer checks the exact candidate workflow, the approved full verifier pin,
+and the actual run/attempt/job identity before accepting its result. Approval of
+the verifier alone does not approve arbitrary candidate workflow changes or a
+different job with the same name. A candidate can edit its YAML; an altered or
+bypassed workflow must not be accepted as reviewed evidence. No self-approval,
+new protection rule or invented owner decision is introduced. The previously
+denied branch-protection endpoint is not queried again.
 
 ```mermaid
 flowchart LR
-  PR[PR or main push] --> N[Existing dependency-review native gates]
-  N --> C[Existing required check]
-  M[Protected-main dispatch] --> P[Independently reviewed verifier pin]
-  P --> I[Isolated exact candidate verification]
-  I --> E[Fresh source evidence]
-  E --> B[Candidate check publication blocked]
-  B --> O[Separate coordinator authorization and enforcement gate]
+  C[Candidate dependency-review job] --> P[Protected-main approved full-SHA pin]
+  P --> V[Exact trusted verifier and recipe closure]
+  C --> D[Exact candidate Git data]
+  V --> I[Isolated SDK verification]
+  D --> I
+  I --> G[Fresh host source, native and license gates]
+  G --> A[Normal Actions result on candidate]
+  A --> R[Independent workflow, pin and run review]
 ```
 
 The host materializes the verifier's recipe, imports, preparation scripts,
 fixtures, setup code, npm lock and workspace/file-package manifests from the
-pinned Git objects. `npm ci --ignore-scripts` installs that reviewed closure;
-candidate package scripts, TypeScript wire generators, and candidate checkout
+pinned Git objects. `npm ci --ignore-scripts` installs that reviewed closure.
+The pinned workflow is included and trusted regular-file executable modes are
+preserved for the retained local tool entrypoint. Symlinks and submodules remain
+rejected.
+Candidate package scripts, TypeScript wire generators, and candidate checkout
 helpers are never host verdict inputs. The candidate contributes exact Git
 objects for the application manifests/lock, Flutter version, OpenAPI sources and
 bundle, and canonical SDK. Checkout edits do not change these objects.
@@ -82,9 +85,12 @@ cache metadata is disposable; hosted package contents and integrity files remain
 read-only. Candidate stdout is captured as bounded data and never forwarded to
 the workflow command channel.
 
-Each container creation records a private cidfile and unique ownership label.
-Cleanup uses only recovered full container IDs, verifies the ownership label,
-removes the owned ID and checks that it is absent. SIGINT and SIGTERM interrupt
+Each container creation journals its unique name before the Docker request,
+plus a private cidfile and ownership label. If interruption occurs after daemon
+creation but before the cidfile write, cleanup inspects only that journaled
+run-specific name and records its full ID after verifying the name and ownership
+label. An arbitrary name or another owner's label cannot supply a cleanup ID.
+Removal always uses a verified full ID and checks that it is absent. SIGINT and SIGTERM interrupt
 the asynchronous Docker client, escalate its owned process group after one
 second, and allow at most 30 seconds for ID cleanup. Exit codes 130 and 143 are
 preserved even if cleanup itself reports a failure. Journals retain IDs and
@@ -131,15 +137,15 @@ This PR deliberately leaves `canonical-sdk-trust.json` in
    including the previously unresolved `one_of` and `one_of_serializer`, remains
    `HOSTED_RUNTIME_LICENSE_EVIDENCE_REQUIRED`; archive presence alone is not a
    license approval. The existing denied-license policy still applies.
-5. Resolve `TRUSTED_CANDIDATE_CHECK_PUBLICATION_REQUIRED` through separately
-   authorized trusted candidate-check publication or a verified applicable
-   required-workflow mechanism. Contents-read execution cannot perform this
-   operation. Preserve every existing required check and obtain independent
-   review of any permission or protection change; none is implemented here.
-6. Dispatch source verification from protected main with distinct exact base/head
-   inputs. The fresh verifier, native action and archive-license resolver must
-   pass; successful verification alone remains unpublished candidate evidence.
-   Candidate-bound enforcement must be verified before activation is claimed.
+5. Independently review the candidate's exact workflow and approved pin. Run
+   the existing candidate-bound `dependency-review` job (PR, main push, or
+   dispatch selecting that exact candidate revision with distinct base/head
+   inputs). No verifier ref is supplied by the candidate.
+6. Require fresh source verification, native policy review and archive-license
+   gates to pass in that job. Before acceptance, the parent/reviewer verifies
+   the exact workflow blob/revision, approved verifier SHA/tree and actual
+   candidate-bound run/attempt/job result. No main-only result substitutes for
+   candidate verification.
 
 No owner/classification/license approval record is created here. Existing root,
 OpenAPI and generated metadata are preserved. The root license's vendor history
@@ -153,11 +159,11 @@ merge is part of this change.
 | Requirement | Code | Evidence |
 | --- | --- | --- |
 | Independent pin; no self-approval | `canonical-sdk-bootstrap.mjs`, pending `canonical-sdk-trust.json` | Synthetic repository/workflow/job/revision attacks; real Git bootstrap projection test |
-| Preserve PR/push check and distinguish dispatch evidence | `dependency-review.yml`, `candidateCheckBinding`, `applyCandidateCheckGate` | Trigger/job/permission regression; successful verification still fails unpublished candidate-check gate |
+| Candidate-bound read-only job; reviewed verifier pin | `dependency-review.yml`, `validateRunContext`, `anchoredContext` | PR merge/candidate distinction; exact push/dispatch inputs; real Git pin/merge projection; altered workflows and candidate-selected verifier refs rejected |
 | Exact candidate data; same-version obligation | `canonical-sdk-contract.mjs`, `dependency-review-native.mjs` | Dirty checkout ignored; source-only SDK commit remains expected; nonregular Git input rejected |
 | Fixed complete recipe and tool closure | `sdk-verifier/`, `setup-canonical-sdk-tools.mjs` | Frozen lock/hash checks; complete app and generator graph tests; matched full regeneration |
 | Candidate execution isolated | `canonical-sdk-isolation.mjs` | Real container denies fixture/input writes, credentials, host processes, Docker socket and gate files |
-| Cancellation removes owned IDs only | `canonical-sdk-containers.mjs`, async isolation calls, CLI exit handling | Real SIGINT/SIGTERM running and after-create tests, sentinel preservation, timeout/output-limit cleanup, label/cid/deadline rejection |
+| Cancellation removes owned IDs only | `canonical-sdk-containers.mjs`, async isolation calls, CLI exit handling | Real SIGINT/SIGTERM running and missing-cid creation-race tests, sentinel preservation, timeout/output-limit cleanup, name/label/cid/deadline rejection |
 | Complete hosted integrity and safe extraction | `sdk-verifier/cache-hosted-packages.py` | 207 real locked archives verified; six synthetic archive tests reject tamper, traversal, links and duplicate files |
 | Trusted behavior and assertion mutants | Fixed Dart fixtures, `behavior-cases.json`, fixed monthly JSON | 57 successful cases/seven suites; bearer omission and own-route mutants produce genuine named assertion failures |
 | SDK remains accounted; other native policy preserved | Native probe, receipt aggregator, license resolver | Missing hosted/linked components, warnings, severity/license failure and stale/ineligible source result all block |
@@ -165,8 +171,8 @@ merge is part of this change.
 
 ## Validation and provenance
 
-Focused validation covers 36 verification/policy tests, eleven isolation/cleanup
-tests (including six real Docker controls), six
+Focused validation covers 38 verification/policy tests, fourteen isolation/cleanup
+tests (including eight real Docker controls), six
 existing Dart archive-license tests, and six new archive extraction tests. The
 isolated development runner passes all 57 Dart behavior cases and both assertion
 mutants. It reports `coverageEligible: false`,
@@ -203,8 +209,9 @@ node scripts/ci/canonical-sdk-verifier.mjs --development-only --candidate <exact
 ```
 
 The development command cannot activate eligibility. Its local evidence is
-unsigned diagnostic data. A candidate-ref CI cycle can demonstrate bootstrap
-failure but cannot substitute for the later protected-main production run.
+unsigned diagnostic data. Candidate jobs remain blocked until the separately
+reviewed verifier pin and owner license/classification records are published.
+No eligible activation run or additional hosted CI is dispatched by this lane.
 Screenshots are unnecessary because this patch changes no rendered UI.
 
 The single requested hosted CI cycle ran on
@@ -216,9 +223,12 @@ checks. Its subsequent browser check lacked npm dependencies because analysis
 had failed, and the audit rollup reported those failed gates. The revised head
 is revalidated locally; another hosted cycle remains for serialized review.
 
-Independent review of head `50437504b3b1eda0414efcead8f4d0ce65d2fb92` identified
-the dispatch/required-check mismatch and missing signal cleanup. This follow-up
-separates the triggers, exposes the unresolved read-only publication gate and
-adds recorded-ID cancellation cleanup. The full exact-head SDK run and final
-coordinator CI results are recorded in PR #971; this lane does not dispatch
-another hosted cycle.
+Independent review identified the dispatch/required-check mismatch and missing
+signal cleanup. The final strategy executes the approved verifier in the existing
+candidate-bound job, with normal Actions check publication and read-only
+permissions. The follow-up also covers interruption after daemon creation with
+no cidfile: journaled-name discovery requires the ownership label, then deletion
+uses the recovered full ID. Both signals preserve their cancellation codes and
+an unrelated owner's sentinel remains present. Exact-head SDK validation and
+coordinator CI/review evidence are recorded in PR #971; this lane does not
+dispatch another hosted cycle.

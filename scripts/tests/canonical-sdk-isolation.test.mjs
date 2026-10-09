@@ -61,6 +61,25 @@ test('cid recovery rejects symlinks, malformed IDs and changed recorded IDs', ()
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
 });
 
+test('missing-cid recovery rejects arbitrary names and mismatched ownership before recording an ID', async () => {
+  for (const arbitraryName of [false, true]) {
+    const directory = fs.mkdtempSync(join(tmpdir(), 'lythaus-sdk-name-unit-'));
+    const calls = [];
+    try {
+      let owner;
+      owner = new SdkContainers(directory, { execute: async args => {
+        calls.push(args);
+        return { status: 0, stdout: JSON.stringify([{ Id: 'a'.repeat(64), Name: `/${owner.creations[0].name}`, Config: { Labels: { 'co.lythaus.sdk-verifier-run': 'different-owner' } } }]), stderr: '' };
+      } });
+      owner.creations.push({ cidfile: 'missing.cid', name: arbitraryName ? 'unrelated-name' : `lythaus-sdk-${owner.runId}-0`, state: 'requested' });
+      await assert.rejects(owner.removeAll(), /OWNED_CONTAINER_CLEANUP_FAILED/);
+      assert.equal(owner.records.length, 0);
+      if (arbitraryName) assert.equal(calls.length, 0);
+      else assert.deepEqual(calls, [['container', 'inspect', owner.creations[0].name]]);
+    } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+  }
+});
+
 test('cleanup ignores aborted work signal and refuses an expired deadline', async () => {
   const directory = fs.mkdtempSync(join(tmpdir(), 'lythaus-sdk-deadline-unit-'));
   const controller = new AbortController(), reason = new Error('synthetic cancellation'), id = 'a'.repeat(64), calls = [];
@@ -121,7 +140,7 @@ test('real disposable container denies candidate access to gates, commandfiles, 
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
 });
 
-for (const [signal, stage] of [['SIGINT', 'running'], ['SIGTERM', 'running'], ['SIGTERM', 'after-create']]) {
+for (const [signal, stage] of [['SIGINT', 'running'], ['SIGTERM', 'running'], ['SIGTERM', 'after-create'], ['SIGINT', 'missing-cid'], ['SIGTERM', 'missing-cid']]) {
   test(`real ${signal} cancellation at ${stage} cleans recorded IDs and preserves another owner`, { skip: !realTests, timeout: 45000 }, async () => {
     const directory = fs.mkdtempSync(join(tmpdir(), 'lythaus-sdk-cancel-test-'));
     const sentinelDirectory = fs.mkdtempSync(join(tmpdir(), 'lythaus-sdk-sentinel-'));
@@ -140,8 +159,10 @@ for (const [signal, stage] of [['SIGINT', 'running'], ['SIGTERM', 'running'], ['
         import { withOwnedContainers, dockerCommand } from ${JSON.stringify(moduleUrl)};
         try {
           await withOwnedContainers(${JSON.stringify(directory)}, async owner => {
-            if (${JSON.stringify(stage)} === 'after-create') owner.execute = async (args, options) => {
-              const result = await dockerCommand(args, options);
+            if (${JSON.stringify(stage)} !== 'running') owner.execute = async (args, options) => {
+              const cidIndex = args.indexOf('--cidfile');
+              const actualArgs = ${JSON.stringify(stage)} === 'missing-cid' && cidIndex !== -1 ? args.filter((_, index) => index !== cidIndex && index !== cidIndex + 1) : args;
+              const result = await dockerCommand(actualArgs, options);
               if (args[0] === 'create' && result.status === 0) {
                 process.stdout.write('CREATED\\n');
                 await new Promise((resolve, reject) => {
@@ -161,9 +182,14 @@ for (const [signal, stage] of [['SIGINT', 'running'], ['SIGTERM', 'running'], ['
       child = spawn(process.execPath, ['--input-type=module', '--eval', probe], { env: { PATH: process.env.PATH }, stdio: ['ignore', 'pipe', 'pipe'] });
       const completion = new Promise(resolve => child.on('close', (code, childSignal) => { closed = { code, signal: childSignal }; resolve(closed); }));
       child.stdout.on('data', bytes => { output += bytes; }); child.stderr.on('data', bytes => { output += bytes; });
-      await waitFor(() => stage === 'after-create' ? output.includes('CREATED') : fs.existsSync(join(directory, 'work/ready')));
+      await waitFor(() => stage !== 'running' ? output.includes('CREATED') : fs.existsSync(join(directory, 'work/ready')));
       const creationJournal = JSON.parse(fs.readFileSync(join(directory, fs.readdirSync(directory).find(file => /^containers-.*\.json$/.test(file))), 'utf8'));
-      const createdId = fs.readFileSync(join(directory, creationJournal.creations[0].cidfile), 'utf8').trim();
+      const creation = creationJournal.creations[0], cidPath = join(directory, creation.cidfile);
+      assert.equal(fs.existsSync(cidPath), stage !== 'missing-cid');
+      const nameInspection = await sentinel.docker(['container', 'inspect', creation.name], { signal: null, timeout: 5000 });
+      assert.equal(nameInspection.status, 0, nameInspection.stderr);
+      const createdId = JSON.parse(nameInspection.stdout)[0].Id;
+      if (stage !== 'missing-cid') assert.equal(fs.readFileSync(cidPath, 'utf8').trim(), createdId);
       const beforeCancellation = await sentinel.inspect(createdId, { signal: null, timeout: 5000 });
       assert.equal(beforeCancellation.State.Running, stage === 'running');
       assert.equal(beforeCancellation.Config.Labels['co.lythaus.sdk-verifier-run'], creationJournal.runId);
@@ -177,6 +203,8 @@ for (const [signal, stage] of [['SIGINT', 'running'], ['SIGTERM', 'running'], ['
       assert.equal(journals.length, 1); assert.equal(journals[0].containers.length, 1);
       for (const record of journals[0].containers) {
         assert.equal(record.state, 'removed', output);
+        assert.equal(record.id, createdId);
+        if (stage === 'missing-cid') assert.equal(record.recoveredFrom, 'owned-name');
         assert.equal(await sentinel.inspect(record.id, { signal: null, timeout: 5000 }), null);
       }
       assert.ok(await sentinel.inspect(sentinelId, { signal: null, timeout: 5000 }), 'another owner survives cancellation');
