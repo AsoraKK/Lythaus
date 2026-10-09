@@ -4,6 +4,7 @@ import { adminRequest } from '../api/adminApi.js';
 import PageLayout from '../components/PageLayout.jsx';
 import LythButton from '../components/LythButton.jsx';
 import LythCard from '../components/LythCard.jsx';
+import ActivityPilotSummary from './ActivityPilotSummary.jsx';
 import { overviewActivityEvidence } from './overview-activity.js';
 import './overview.css';
 
@@ -139,6 +140,7 @@ function Dashboard() {
         <article className="overview-metric"><h3>Quiet members</h3><strong className="kpi-value">Unavailable</strong><p>{activity.quietMembers.reason}</p></article>
       </div>
     </LythCard>
+    <ActivityPilotSummary />
     <LythCard variant="panel"><h2>Current account entitlements</h2><p className="muted">Free, Premium and Black are current account entitlements. Payment, upgrades, cancellations and revenue require payment records.</p>
       <div className="overview-grid">{Object.entries(SUBSCRIPTIONS).map(([key, label]) => <Metric key={key} label={label} metric={community?.metrics?.[key]} fresh={fresh} comparable={false} />)}</div>
     </LythCard>

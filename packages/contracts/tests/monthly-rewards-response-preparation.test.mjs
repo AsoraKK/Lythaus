@@ -7,6 +7,7 @@ import { prepareMonthlyReputationReportResponse as reportDto, prepareMonthlyRewa
 import { MONTHLY_REWARDS_RESPONSE_PREPARATION_SCHEMA as schema } from '../src/monthly-rewards-response-preparation-schema.ts';
 import { preparedReportFixture, preparedSnapshotFixture, pendingReportFixture } from '../fixtures/monthly-rewards-response-preparation.mjs';
 import { MONTHLY_REPUTATION_ACTIVATION } from '../src/monthly-reputation-decisions.ts';
+import { monthlyRewardsResponseReadiness } from '../src/monthly-rewards-response-readiness.ts';
 
 const ajv = new Ajv({ strict: true, allErrors: true }); addFormats(ajv);
 const validate = ajv.compile(schema);
@@ -218,4 +219,20 @@ test('schema rejects legacy/unversioned output, extra properties and entitlement
   assert.equal(validate(report), false);
   const inconsistent = reportDto(preparedReportFixture()); inconsistent.report.weekly.periodPolicyStatus = 'unavailable';
   assert.equal(validate(inconsistent), false);
+});
+
+test('known preparation readiness is disabled metadata, never assessed progress or authority', () => {
+  const value = monthlyRewardsResponseReadiness();
+  assert.deepEqual(value, { state: 'disabled', reasonCode: 'activation_not_approved', ...metadata });
+  assert.ok(!['sourceScore', 'sourceMonth', 'effectiveMonth', 'level', 'selection', 'snapshot'].some(key => key in value));
+});
+
+test('unknown or missing response versions have honest unavailable metadata without invented policy defaults', () => {
+  for (const version of [null, '', 'monthly-rewards-response-v3', {}, true]) {
+    assert.deepEqual(monthlyRewardsResponseReadiness(version), {
+      state: 'unavailable', reasonCode: 'response_version_unsupported', responseVersion: null,
+      policyVersion: null, catalogueHash: null, dataVersion: null, maximumSourceMonth: null,
+      preparationOnly: true, runtimeActivationAllowed: false, appliedPoints: 0,
+    });
+  }
 });

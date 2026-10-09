@@ -3,6 +3,8 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:lythaus_api_client/src/model/monthly_rewards_response_preparation.dart';
+import 'package:lythaus_api_client/src/model/monthly_response_preparation_readiness.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
@@ -21,6 +23,8 @@ part 'monthly_rewards_me_response.g.dart';
 /// * [sourceScore]
 /// * [snapshot]
 /// * [selection]
+/// * [responsePreparation]
+/// * [preparedResponse]
 @BuiltValue()
 abstract class MonthlyRewardsMeResponse implements Built<MonthlyRewardsMeResponse, MonthlyRewardsMeResponseBuilder> {
   @BuiltValueField(wireName: r'state')
@@ -47,6 +51,12 @@ abstract class MonthlyRewardsMeResponse implements Built<MonthlyRewardsMeRespons
 
   @BuiltValueField(wireName: r'selection')
   BuiltMap<String, JsonObject?> get selection;
+
+  @BuiltValueField(wireName: r'responsePreparation')
+  MonthlyResponsePreparationReadiness? get responsePreparation;
+
+  @BuiltValueField(wireName: r'preparedResponse')
+  MonthlyRewardsResponsePreparation? get preparedResponse;
 
   MonthlyRewardsMeResponse._();
 
@@ -111,6 +121,20 @@ class _$MonthlyRewardsMeResponseSerializer implements PrimitiveSerializer<Monthl
       object.selection,
       specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
     );
+    if (object.responsePreparation != null) {
+      yield r'responsePreparation';
+      yield serializers.serialize(
+        object.responsePreparation,
+        specifiedType: const FullType.nullable(MonthlyResponsePreparationReadiness),
+      );
+    }
+    if (object.preparedResponse != null) {
+      yield r'preparedResponse';
+      yield serializers.serialize(
+        object.preparedResponse,
+        specifiedType: const FullType.nullable(MonthlyRewardsResponsePreparation),
+      );
+    }
   }
 
   @override
@@ -194,6 +218,22 @@ class _$MonthlyRewardsMeResponseSerializer implements PrimitiveSerializer<Monthl
             specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
           ) as BuiltMap<String, JsonObject?>;
           result.selection.replace(valueDes);
+          break;
+        case r'responsePreparation':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(MonthlyResponsePreparationReadiness),
+          ) as MonthlyResponsePreparationReadiness?;
+          if (valueDes == null) continue;
+          result.responsePreparation.replace(valueDes);
+          break;
+        case r'preparedResponse':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(MonthlyRewardsResponsePreparation),
+          ) as MonthlyRewardsResponsePreparation?;
+          if (valueDes == null) continue;
+          result.preparedResponse.replace(valueDes);
           break;
         default:
           unhandled.add(key);

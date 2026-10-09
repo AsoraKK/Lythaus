@@ -5,10 +5,10 @@ import { setTimeout } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 
-export async function nativePostgresPrivacyWorkflowFixture(connectionString) {
+export async function nativePostgresPrivacyWorkflowFixture(connectionString, { supportPolicy } = {}) {
   const target = new URL(connectionString);
   assert.ok(['127.0.0.1', 'localhost'].includes(target.hostname));
-  assert.ok(target.pathname.startsWith('/lythaus_auth_test')
+  assert.ok(target.pathname.startsWith('/lythaus_auth_test') || target.pathname.startsWith('/lythaus_support_test_workflow_')
     || (process.env.GITHUB_ACTIONS === 'true' && target.pathname === '/postgres'));
   const require = createRequire(new URL('../../../node_modules/wrangler/package.json', import.meta.url));
   const { build } = require('esbuild');
@@ -55,7 +55,7 @@ export async function nativePostgresPrivacyWorkflowFixture(connectionString) {
       });
     } }],
     stdin: { resolveDir: root, contents: `
-      import { AccountExportWorkflow, AccountDeleteWorkflow } from './apps/lythaus-jobs/src/index.ts';
+      import { AccountExportWorkflow, AccountDeleteWorkflow, RetentionCleanupWorkflow } from './apps/lythaus-jobs/src/index.ts';
       function boundedStep(step, env, instanceId) {
         async function trace(name, state) {
           await env.FIXTURE_TRACE.fetch('https://fixture.invalid/step', {
@@ -86,6 +86,9 @@ export async function nativePostgresPrivacyWorkflowFixture(connectionString) {
       export class FixtureAccountDelete extends AccountDeleteWorkflow {
         run(event, step) { return super.run(event, boundedStep(step, this.env, event.instanceId)); }
       }
+      export class FixtureRetentionCleanup extends RetentionCleanupWorkflow {
+        run(event, step) { return super.run(event, boundedStep(step, this.env, event.instanceId)); }
+      }
       export default { async fetch() { return new Response('Disposable privacy workflow fixture'); } };
     ` },
   });
@@ -93,10 +96,12 @@ export async function nativePostgresPrivacyWorkflowFixture(connectionString) {
     name: 'profile-privacy-workflows-local', modules: true, script: bundle.outputFiles[0].text,
     compatibilityDate: '2026-07-27', compatibilityFlags: ['nodejs_compat'],
     bindings: { DB_PRIVACY_FRESH: { role: 'lythaus_privacy' }, DB_JOBS_FRESH: { role: 'lythaus_jobs' },
-      AUTHENTICITY_BETA_STORAGE_ENABLED: 'true' },
+      AUTHENTICITY_BETA_STORAGE_ENABLED: 'true',
+      ...(supportPolicy ? { SUPPORT_FEEDBACK_POLICY: JSON.stringify(supportPolicy) } : {}) },
     r2Buckets: ['PRIVATE_EXPORTS', 'MEDIA_APPROVED', 'MEDIA_QUARANTINE'],
     workflows: { ACCOUNT_EXPORT: { name: 'profile-export-local', className: 'FixtureAccountExport' },
-      ACCOUNT_DELETE: { name: 'profile-delete-local', className: 'FixtureAccountDelete' } },
+      ACCOUNT_DELETE: { name: 'profile-delete-local', className: 'FixtureAccountDelete' },
+      RETENTION_CLEANUP: { name: 'support-retention-local', className: 'FixtureRetentionCleanup' } },
     serviceBindings: {
       FIXTURE_TRACE: async request => { steps.push(await request.json()); return new Response(null, { status: 204 }); },
       DISPOSABLE_POSTGRES: async request => {
@@ -146,7 +151,8 @@ export async function nativePostgresPrivacyWorkflowFixture(connectionString) {
   return { statements, steps,
     bucket: name => runtime.getR2Bucket(name),
     async run(kind, params) {
-      const instance = await bindings[kind === 'export' ? 'ACCOUNT_EXPORT' : 'ACCOUNT_DELETE'].create({ params });
+      assert.ok(['export', 'delete', 'retention'].includes(kind));
+      const instance = await bindings[kind === 'export' ? 'ACCOUNT_EXPORT' : kind === 'delete' ? 'ACCOUNT_DELETE' : 'RETENTION_CLEANUP'].create({ params });
       const deadline = Date.now() + 30_000;
       let status;
       do {

@@ -44,9 +44,9 @@ async function tx(work, role = 'lythaus_runtime') {
   } catch (error) { await client.query('ROLLBACK'); throw error; } finally { await client.end(); }
 }
 const sql = (text, values) => tx(client => client.query(text, values), null);
-const binding = { role: 'lythaus_runtime' }, jobsBinding = { role: 'lythaus_jobs' }, adminBinding = { role: 'lythaus_admin' };
+const binding = { role: 'lythaus_runtime' }, jobsBinding = { role: 'lythaus_jobs' }, adminBinding = { role: 'lythaus_admin' }, privacyBinding = { role: 'lythaus_privacy' };
 mock.module('@lythaus/db', { namedExports: { ...database,
-  transaction: (actual, work) => { assert.ok([binding, jobsBinding, adminBinding].includes(actual)); return tx(work, actual.role); },
+  transaction: (actual, work) => { assert.ok([binding, jobsBinding, adminBinding, privacyBinding].includes(actual)); return tx(work, actual.role); },
   query: (actual, text, values) => { assert.ok([binding, jobsBinding, adminBinding].includes(actual)); return tx(client => client.query(text, values), actual.role); },
 } });
 const { default: worker } = await import('../src/index.ts');
@@ -63,7 +63,7 @@ const rules = PROPOSED_COMMUNITY_APPEAL_RULES.version, flag = 'moderation.commun
 const env = { EXPECTED_HOSTNAMES: 'api.lythaus.test', CORS_ALLOWED_ORIGINS: 'https://app.lythaus.test',
   DB_APP_FRESH: binding, COMMUNITY_APPEAL_RULES_VERSION: rules,
   JWT_PUBLIC_JWKS: JSON.stringify({ keys: [{ ...await exportJWK(publicKey), kid: keyId, alg: 'ES256', use: 'sig' }] }) };
-const jobsEnv = { DB_JOBS_FRESH: jobsBinding, COMMUNITY_APPEAL_RULES_VERSION: rules };
+const jobsEnv = { DB_JOBS_FRESH: jobsBinding, DB_PRIVACY_FRESH: privacyBinding, COMMUNITY_APPEAL_RULES_VERSION: rules };
 const adminEnv = { EXPECTED_HOSTNAMES: 'admin-api.lythaus.test', CORS_ALLOWED_ORIGINS: 'https://admin-api.lythaus.test',
   DB_ADMIN_FRESH: adminBinding, COMMUNITY_APPEAL_RULES_VERSION: rules, ACCESS_AUDIENCES: 'synthetic-community-admin',
   ACCESS_SUBJECT_HMAC_KEY: 'synthetic-community-access-subject-key', ACCESS_TEAM_DOMAIN: 'synthetic-access.lythaus.test',
@@ -755,7 +755,14 @@ test('public dispatcher invokes private monthly JSON, CSV, and rewards routes wi
   const report=await call(owner,'GET','/api/reputation/me/reports/monthly/2026-08');
   assert.equal(report.status,200,await report.clone().text());
   assert.match(report.headers.get('cache-control')??'',/private.*no-store/);
-  assert.equal((await report.json()).reportState,'pending');
+  const reportBody=await report.json();matches('MonthlyReputationReportResponse',reportBody);
+  assert.equal(reportBody.reportState,'pending');assert.equal(reportBody.preparedResponse,null);
+  assert.deepEqual(reportBody.responsePreparation,{
+    state:'disabled',reasonCode:'activation_not_approved',responseVersion:'monthly-rewards-response-v2-preparation',
+    policyVersion:'lythaus-monthly-rewards-2026-10-v2',
+    catalogueHash:'26213abccce99ee51be6c0623406c28aaa7d39ed3ea3b4ac630b7cffd859db67',
+    dataVersion:2,maximumSourceMonth:13650,preparationOnly:true,runtimeActivationAllowed:false,appliedPoints:0,
+  });
 
   const csv=await call(owner,'GET','/api/reputation/me/reports/monthly/2026-08/export.csv');
   assert.equal(csv.status,200,await csv.clone().text());
@@ -766,8 +773,10 @@ test('public dispatcher invokes private monthly JSON, CSV, and rewards routes wi
   const rewards=await call(owner,'GET','/api/rewards/me/monthly');
   assert.equal(rewards.status,200,await rewards.clone().text());
   assert.match(rewards.headers.get('cache-control')??'',/private.*no-store/);
-  assert.deepEqual(await rewards.json(),{
+  const rewardsBody=await rewards.json();matches('MonthlyRewardsMeResponse',rewardsBody);
+  assert.deepEqual(rewardsBody,{
     state:'pending',reasonCode:'approval_unavailable',effectiveMonth:null,currentLevel:null,sourceMonth:null,sourceScore:null,
     snapshot:{state:'unavailable',reasonCode:'approval_unavailable'},selection:{state:'unavailable',reasonCode:'approval_unavailable'},
+    responsePreparation:reportBody.responsePreparation,preparedResponse:null,
   });
 });

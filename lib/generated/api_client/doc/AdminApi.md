@@ -12,6 +12,7 @@ Method | HTTP request | Description
 [**adminAccountSupportAccess**](AdminApi.md#adminaccountsupportaccess) | **GET** /admin/account-support/access | Check owner account-support access
 [**adminAccountSupportHistory**](AdminApi.md#adminaccountsupporthistory) | **POST** /admin/account-support/users/{userId}/history | Read partial recorded account history
 [**adminAccountSupportLookup**](AdminApi.md#adminaccountsupportlookup) | **POST** /admin/account-support/lookup | Read minimum account state by exact email
+[**adminActivityMeasurement**](AdminApi.md#adminactivitymeasurement) | **GET** /admin/activity-measurement | Read bounded owner-only consenting-cohort activity metrics
 [**adminAppealsAdjudicate**](AdminApi.md#adminappealsadjudicate) | **POST** /admin/appeals/{appealId}/adjudications | Record a trained editorial appeal adjudication
 [**adminAppealsPendingAdjudicationList**](AdminApi.md#adminappealspendingadjudicationlist) | **GET** /admin/appeals/pending-adjudication | List pending appeal adjudications
 [**adminAuthSummary**](AdminApi.md#adminauthsummary) | **GET** /admin/auth/summary | Read live authentication summary
@@ -196,6 +197,49 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **adminActivityMeasurement**
+> ActivitySummary adminActivityMeasurement()
+
+Read bounded owner-only consenting-cohort activity metrics
+
+Verified Access, current active owner membership, existing rate limit and committed audit are mandatory. Completed UTC days only; cohorts must have continuous consent throughout each window. Nonconsenting and pre-cutover populations are not reconstructed. Quiet requires observed prior-30-day activity and no recent-30-day activity with complete 60-day coverage. No raw dates or identities; no unmatched contributor ratios. Disabled, zero-cohort, stale, capped and missing coverage states do not become measured zero.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+
+try {
+    final response = api.adminActivityMeasurement();
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminActivityMeasurement: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**ActivitySummary**](ActivitySummary.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

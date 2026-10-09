@@ -9,6 +9,16 @@
   gap: 12px;
 }
 
+.activity-pilot {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.overview .page-main {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .overview .panel-header {
   flex-wrap: wrap;
 }

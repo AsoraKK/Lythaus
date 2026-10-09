@@ -12,6 +12,7 @@ import { handleAlphaApi } from './authenticity-alpha.ts';
 import { issueAuthSession, revokeAllAuthSessions, rotateAuthSession } from './auth-session-runtime.ts';
 import { lockLoginAccount, lockRefreshSession } from './auth-account-transaction.ts';
 import { expiredRefreshCookie, optionalRefreshCookie, refreshCookie, sessionTransport, sessionTransportResult, validateAuthRequestOrigin } from './auth-session-transport.ts';
+import { handleActivityMeasurement } from './activity-measurement-handler.ts';
 import { passwordScreeningFailureLogFields, requireUncompromisedPassword } from './auth-password-screen.ts';
 import { claimRegistrationAddress, establishVerifiedCredential, findRecoveryUser, lockRecoveryAccount, persistRecoveryIntake, recoveryAddressReason, recoveryPlan, recoverySupportReason } from './auth-recovery-policy.ts';
 import { idempotentAuthIntake } from './auth-intake-runtime.ts';
@@ -3308,6 +3309,16 @@ export default {
       if (url.pathname === '/api/waitlist') return await waitlistRoute(request, env);
       const rateLimit = rateLimitPlan(url.pathname);
       await enforceRateLimit(request, env, rateLimit.scope, rateLimit.limit);
+      if (url.pathname === '/api/analytics/activity-consent' && ['GET', 'PUT'].includes(request.method)) {
+        if (request.method === 'PUT') sessionTransport(request, env.CORS_ALLOWED_ORIGINS);
+        const result = await handleActivityMeasurement(request, env, await principal(request, env));
+        return privateResponse(request, env, await result.json(), { status: result.status, headers: result.headers });
+      }
+      if (url.pathname === '/api/analytics/activity' && request.method === 'POST') {
+        sessionTransport(request, env.CORS_ALLOWED_ORIGINS);
+        const result = await handleActivityMeasurement(request, env, await principal(request, env));
+        return privateResponse(request, env, await result.json(), { status: result.status, headers: result.headers });
+      }
       if (isSupportFeedbackPath(url.pathname, 'member')) {
         if (env.SUPPORT_FEEDBACK_ENABLED !== 'true') {
           return privateResponse(request, env, { error: 'feature_disabled' }, { status: 404 });

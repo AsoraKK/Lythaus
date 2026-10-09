@@ -9246,6 +9246,216 @@
         }
       }
     },
+    "/analytics/activity-consent": {
+      "get": {
+        "operationId": "getActivityMeasurementConsent",
+        "tags": [
+          "Privacy"
+        ],
+        "summary": "Read own account-linked activity consent",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Own consent and exact notice; private no-store. Unknown schema is unavailable, never inferred as refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityConsent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Current authenticated account required."
+          },
+          "429": {
+            "description": "Existing authenticated rate limit exceeded."
+          },
+          "503": {
+            "description": "Source unavailable."
+          }
+        }
+      },
+      "put": {
+        "operationId": "setActivityMeasurementConsent",
+        "tags": [
+          "Privacy"
+        ],
+        "summary": "Explicitly grant or withdraw this account-linked purpose",
+        "description": "Existing anonymous consent does not authorize this purpose. Withdrawal remains possible while collection is disabled; dates are removed transactionally unless an existing legal hold requires preservation. Held dates are excluded from metrics and collection. Activation also requires approved retention terms. Existing account consent decisions remain exportable. Existing authenticated origin/CSRF and rate limits are mandatory dispatcher prerequisites.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivityConsentInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Committed own consent; private no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityConsent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid exact body or notice version."
+          },
+          "401": {
+            "description": "Current authenticated account required."
+          },
+          "409": {
+            "description": "Account scope or consent episode changed, or opt-in disabled. Refresh own consent."
+          },
+          "413": {
+            "description": "Body exceeds 1024 bytes."
+          },
+          "415": {
+            "description": "JSON content type required."
+          },
+          "429": {
+            "description": "Existing authenticated rate limit exceeded."
+          },
+          "503": {
+            "description": "Source unavailable; consent change unconfirmed."
+          }
+        }
+      }
+    },
+    "/analytics/activity": {
+      "post": {
+        "operationId": "recordForegroundActivityDay",
+        "tags": [
+          "Privacy"
+        ],
+        "summary": "Record one canonical account and UTC active day",
+        "description": "Authenticated visible foreground render only, including an empty feed. No background heartbeat, browsing URL, content, identity or client timestamp is accepted. Server deduplication and current consent episode checks are transactional. Signal is client-asserted visibility, not human-attention attestation. Existing authenticated origin/CSRF and rate limits are dispatcher prerequisites.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivityRenderInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Server UTC date; replay returns inserted false without per-render timestamps. Private no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "activeDay",
+                    "inserted"
+                  ],
+                  "properties": {
+                    "activeDay": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "inserted": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid exact body."
+          },
+          "401": {
+            "description": "Current authenticated account required."
+          },
+          "409": {
+            "description": "Pilot disabled, consent absent or stale account/consent episode."
+          },
+          "413": {
+            "description": "Body exceeds 1024 bytes."
+          },
+          "415": {
+            "description": "JSON content type required."
+          },
+          "429": {
+            "description": "Existing authenticated rate limit exceeded."
+          },
+          "503": {
+            "description": "Source unavailable."
+          }
+        }
+      }
+    },
+    "/admin/activity-measurement": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "adminActivityMeasurement",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Read bounded owner-only consenting-cohort activity metrics",
+        "description": "Verified Access, current active owner membership, existing rate limit and committed audit are mandatory. Completed UTC days only; cohorts must have continuous consent throughout each window. Nonconsenting and pre-cutover populations are not reconstructed. Quiet requires observed prior-30-day activity and no recent-30-day activity with complete 60-day coverage. No raw dates or identities; no unmatched contributor ratios. Disabled, zero-cohort, stale, capped and missing coverage states do not become measured zero.",
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Source-backed snapshot, private no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivitySummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No query parameters are supported."
+          },
+          "401": {
+            "description": "Valid Cloudflare Access assertion required."
+          },
+          "403": {
+            "description": "Current active owner required."
+          },
+          "429": {
+            "description": "Existing administrator rate limit exceeded."
+          },
+          "503": {
+            "description": "Query, schema, permissions or audit unavailable."
+          }
+        }
+      }
+    },
     "/support/options": {
       "servers": [
         {
@@ -12501,6 +12711,283 @@
       }
     },
     "schemas": {
+      "ActivityConsentInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "enabled",
+          "expectedRevision",
+          "expectedEpoch",
+          "accountScope",
+          "noticeVersion"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "expectedEpoch": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Null only at revision zero."
+          },
+          "accountScope": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9+/]{43}=$",
+            "description": "Server-issued purpose-specific account scope; never raw account identity."
+          },
+          "noticeVersion": {
+            "type": "string",
+            "enum": [
+              "activity-account-day-v1"
+            ]
+          }
+        }
+      },
+      "ActivityRenderInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "signal",
+          "consentRevision",
+          "consentEpoch",
+          "accountScope",
+          "noticeVersion"
+        ],
+        "properties": {
+          "signal": {
+            "type": "string",
+            "enum": [
+              "foreground_app_render"
+            ]
+          },
+          "consentRevision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "consentEpoch": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accountScope": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9+/]{43}=$"
+          },
+          "noticeVersion": {
+            "type": "string",
+            "enum": [
+              "activity-account-day-v1"
+            ]
+          }
+        }
+      },
+      "ActivityConsent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "pilotEnabled",
+          "granted",
+          "revision",
+          "epoch",
+          "continuousSince",
+          "accountScope",
+          "noticeVersion",
+          "notice",
+          "retentionDays"
+        ],
+        "properties": {
+          "pilotEnabled": {
+            "type": "boolean"
+          },
+          "granted": {
+            "type": "boolean"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "epoch": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "continuousSince": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "accountScope": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9+/]{43}=$"
+          },
+          "noticeVersion": {
+            "type": "string",
+            "enum": [
+              "activity-account-day-v1"
+            ]
+          },
+          "notice": {
+            "type": "string",
+            "description": "Exact versioned account-linked purpose and retention notice from the shared contract; clients reject notice drift."
+          },
+          "retentionDays": {
+            "type": "integer",
+            "enum": [
+              61
+            ]
+          }
+        }
+      },
+      "ActivityMetric": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "value",
+          "observedLowerBound",
+          "cohortSize",
+          "since",
+          "until",
+          "reason"
+        ],
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "available",
+              "partial",
+              "unavailable"
+            ]
+          },
+          "value": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5000,
+            "nullable": true
+          },
+          "observedLowerBound": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000,
+            "nullable": true,
+            "description": "Positive observed active count only when coverage is incomplete. Never valid for quiet."
+          },
+          "cohortSize": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5000,
+            "nullable": true
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "until": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Exclusive completed UTC-day boundary."
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ActivitySummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contractVersion",
+          "enabled",
+          "sampledAt",
+          "timezone",
+          "source",
+          "population",
+          "windowBasis",
+          "retentionDays",
+          "accountLimit",
+          "metrics"
+        ],
+        "properties": {
+          "contractVersion": {
+            "type": "string",
+            "enum": [
+              "activity-pilot-v1"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "sampledAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timezone": {
+            "type": "string",
+            "enum": [
+              "UTC"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "privacy.account_active_days"
+            ]
+          },
+          "population": {
+            "type": "string"
+          },
+          "windowBasis": {
+            "type": "string",
+            "enum": [
+              "completed_utc_days"
+            ]
+          },
+          "retentionDays": {
+            "type": "integer",
+            "enum": [
+              61
+            ]
+          },
+          "accountLimit": {
+            "type": "integer",
+            "enum": [
+              5000
+            ]
+          },
+          "metrics": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "dau",
+              "wau",
+              "mau",
+              "quiet"
+            ],
+            "properties": {
+              "dau": {
+                "$ref": "#/components/schemas/ActivityMetric"
+              },
+              "wau": {
+                "$ref": "#/components/schemas/ActivityMetric"
+              },
+              "mau": {
+                "$ref": "#/components/schemas/ActivityMetric"
+              },
+              "quiet": {
+                "$ref": "#/components/schemas/ActivityMetric"
+              }
+            }
+          }
+        }
+      },
       "WaitlistSubmission": {
         "type": "object",
         "additionalProperties": false,
@@ -17270,6 +17757,1454 @@
           }
         }
       },
+      "MonthlyResponsePreparationReadiness": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Preparation metadata only. Production v2 admission is disabled, so preparedResponse remains null. The prospective maximum is a policy ceiling, never an assessed score or entitlement. No request parameter selects this version or supplies a preparation context.",
+        "required": [
+          "state",
+          "reasonCode",
+          "responseVersion",
+          "policyVersion",
+          "catalogueHash",
+          "dataVersion",
+          "maximumSourceMonth",
+          "preparationOnly",
+          "runtimeActivationAllowed",
+          "appliedPoints"
+        ],
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "unavailable"
+            ]
+          },
+          "reasonCode": {
+            "type": "string",
+            "enum": [
+              "activation_not_approved",
+              "response_version_unsupported"
+            ]
+          },
+          "responseVersion": {
+            "type": "string",
+            "nullable": true
+          },
+          "policyVersion": {
+            "type": "string",
+            "nullable": true
+          },
+          "catalogueHash": {
+            "type": "string",
+            "nullable": true
+          },
+          "dataVersion": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 2,
+            "maximum": 2
+          },
+          "maximumSourceMonth": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 13650,
+            "maximum": 13650
+          },
+          "preparationOnly": {
+            "type": "boolean",
+            "not": {
+              "enum": [
+                false
+              ]
+            }
+          },
+          "runtimeActivationAllowed": {
+            "type": "boolean",
+            "not": {
+              "enum": [
+                true
+              ]
+            }
+          },
+          "appliedPoints": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 0
+          }
+        },
+        "anyOf": [
+          {
+            "properties": {
+              "state": {
+                "enum": [
+                  "disabled"
+                ]
+              },
+              "reasonCode": {
+                "enum": [
+                  "activation_not_approved"
+                ]
+              },
+              "responseVersion": {
+                "enum": [
+                  "monthly-rewards-response-v2-preparation"
+                ]
+              },
+              "policyVersion": {
+                "enum": [
+                  "lythaus-monthly-rewards-2026-10-v2"
+                ]
+              },
+              "catalogueHash": {
+                "enum": [
+                  "26213abccce99ee51be6c0623406c28aaa7d39ed3ea3b4ac630b7cffd859db67"
+                ]
+              },
+              "dataVersion": {
+                "enum": [
+                  2
+                ]
+              },
+              "maximumSourceMonth": {
+                "enum": [
+                  13650
+                ]
+              }
+            }
+          },
+          {
+            "properties": {
+              "state": {
+                "enum": [
+                  "unavailable"
+                ]
+              },
+              "reasonCode": {
+                "enum": [
+                  "response_version_unsupported"
+                ]
+              },
+              "responseVersion": {
+                "enum": [
+                  null
+                ]
+              },
+              "policyVersion": {
+                "enum": [
+                  null
+                ]
+              },
+              "catalogueHash": {
+                "enum": [
+                  null
+                ]
+              },
+              "dataVersion": {
+                "enum": [
+                  null
+                ]
+              },
+              "maximumSourceMonth": {
+                "enum": [
+                  null
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "MonthlyPreparedLevelAuthority": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "reasonCode",
+          "effectiveMonth",
+          "sourceMonth",
+          "sourceScore",
+          "level"
+        ],
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "unavailable"
+            ]
+          },
+          "reasonCode": {
+            "type": "string",
+            "enum": [
+              "activation_not_approved"
+            ]
+          },
+          "effectiveMonth": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "sourceMonth": {
+            "type": "string",
+            "nullable": true,
+            "not": {
+              "type": "string"
+            }
+          },
+          "sourceScore": {
+            "type": "integer",
+            "nullable": true,
+            "not": {
+              "type": "integer"
+            }
+          },
+          "level": {
+            "type": "integer",
+            "nullable": true,
+            "not": {
+              "type": "integer"
+            }
+          }
+        }
+      },
+      "MonthlyPreparedSnapshotProjection": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Fixed source-month shadow snapshot for its following calendar month. Null unavailable values are preserved; no source score or unassessed level is invented. A corrected current report does not replace this projection.",
+        "required": [
+          "state",
+          "reasonCode",
+          "effectiveMonth",
+          "sourceMonth",
+          "sourceScore",
+          "level",
+          "sourceRevision",
+          "snapshotRevision"
+        ],
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "shadow",
+              "pending",
+              "unavailable"
+            ]
+          },
+          "reasonCode": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^[a-z][a-z0-9_]{0,99}$"
+          },
+          "effectiveMonth": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "sourceMonth": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "sourceScore": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 13650
+          },
+          "level": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 5
+          },
+          "sourceRevision": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "snapshotRevision": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        },
+        "anyOf": [
+          {
+            "properties": {
+              "state": {
+                "enum": [
+                  "shadow"
+                ]
+              },
+              "sourceMonth": {
+                "type": "string"
+              },
+              "sourceScore": {
+                "type": "integer"
+              },
+              "level": {
+                "type": "integer"
+              },
+              "sourceRevision": {
+                "type": "integer"
+              },
+              "snapshotRevision": {
+                "type": "integer"
+              }
+            },
+            "anyOf": [
+              {
+                "properties": {
+                  "sourceScore": {
+                    "minimum": 0,
+                    "maximum": 999
+                  },
+                  "level": {
+                    "enum": [
+                      1
+                    ]
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "sourceScore": {
+                    "minimum": 1000,
+                    "maximum": 2999
+                  },
+                  "level": {
+                    "enum": [
+                      2
+                    ]
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "sourceScore": {
+                    "minimum": 3000,
+                    "maximum": 5999
+                  },
+                  "level": {
+                    "enum": [
+                      3
+                    ]
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "sourceScore": {
+                    "minimum": 6000,
+                    "maximum": 9999
+                  },
+                  "level": {
+                    "enum": [
+                      4
+                    ]
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "sourceScore": {
+                    "minimum": 10000,
+                    "maximum": 13650
+                  },
+                  "level": {
+                    "enum": [
+                      5
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "properties": {
+              "state": {
+                "enum": [
+                  "pending",
+                  "unavailable"
+                ]
+              },
+              "sourceMonth": {
+                "enum": [
+                  null
+                ]
+              },
+              "sourceScore": {
+                "enum": [
+                  null
+                ]
+              },
+              "level": {
+                "enum": [
+                  null
+                ]
+              },
+              "sourceRevision": {
+                "enum": [
+                  null
+                ]
+              },
+              "snapshotRevision": {
+                "enum": [
+                  null
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "MonthlyPreparedSourceCorrection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceRevision",
+          "reasonCode",
+          "recordedAt",
+          "sourceScore",
+          "level"
+        ],
+        "properties": {
+          "sourceRevision": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 9007199254740991
+          },
+          "reasonCode": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^[a-z][a-z0-9_]{0,99}$"
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "sourceScore": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 13650
+          },
+          "level": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 5
+          }
+        }
+      },
+      "MonthlyPreparedSnapshotCorrection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "revision",
+          "mode",
+          "sourceRevision",
+          "recordedAt",
+          "sourceScore",
+          "level"
+        ],
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 9007199254740991
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "shadow"
+            ]
+          },
+          "sourceRevision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "sourceScore": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 13650
+          },
+          "level": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          }
+        },
+        "anyOf": [
+          {
+            "properties": {
+              "sourceScore": {
+                "minimum": 0,
+                "maximum": 999
+              },
+              "level": {
+                "enum": [
+                  1
+                ]
+              }
+            }
+          },
+          {
+            "properties": {
+              "sourceScore": {
+                "minimum": 1000,
+                "maximum": 2999
+              },
+              "level": {
+                "enum": [
+                  2
+                ]
+              }
+            }
+          },
+          {
+            "properties": {
+              "sourceScore": {
+                "minimum": 3000,
+                "maximum": 5999
+              },
+              "level": {
+                "enum": [
+                  3
+                ]
+              }
+            }
+          },
+          {
+            "properties": {
+              "sourceScore": {
+                "minimum": 6000,
+                "maximum": 9999
+              },
+              "level": {
+                "enum": [
+                  4
+                ]
+              }
+            }
+          },
+          {
+            "properties": {
+              "sourceScore": {
+                "minimum": 10000,
+                "maximum": 13650
+              },
+              "level": {
+                "enum": [
+                  5
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "MonthlyPreparedCorrections": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceRevisions",
+          "effectiveSnapshots"
+        ],
+        "properties": {
+          "sourceRevisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MonthlyPreparedSourceCorrection"
+            }
+          },
+          "effectiveSnapshots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MonthlyPreparedSnapshotCorrection"
+            }
+          }
+        }
+      },
+      "MonthlyPreparedAction": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "actionId",
+          "capGroup",
+          "allowance",
+          "remainingInGroup",
+          "points",
+          "accepted",
+          "pending",
+          "withheld",
+          "state",
+          "reasonCode",
+          "evidenceCount",
+          "validFrom",
+          "validUntil",
+          "policyVersion",
+          "dataVersion"
+        ],
+        "properties": {
+          "actionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "capGroup": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "allowance": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 2500
+          },
+          "remainingInGroup": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 2500
+          },
+          "points": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2500
+          },
+          "accepted": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "pending": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "withheld": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "state": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "reasonCode": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^[a-z][a-z0-9_]{0,99}$"
+          },
+          "evidenceCount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "validUntil": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "policyVersion": {
+            "type": "string",
+            "enum": [
+              "lythaus-monthly-rewards-2026-10-v1"
+            ]
+          },
+          "dataVersion": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1
+          }
+        }
+      },
+      "MonthlyPreparedWeek": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Whole weekly total from the reused v1 earning engine. Known endpoints must match the explicitly captured convention and identify a distinct canonical week; missing endpoints remain null. Internal week IDs and inferred endpoints are omitted.",
+        "required": [
+          "startsAt",
+          "endsAt",
+          "points",
+          "revision",
+          "state",
+          "selected",
+          "selectionReason",
+          "earningPolicyVersion",
+          "rulesVersion",
+          "actions"
+        ],
+        "properties": {
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "points": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2500
+          },
+          "revision": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "state": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "selected": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "selectionReason": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^[a-z][a-z0-9_]{0,99}$"
+          },
+          "earningPolicyVersion": {
+            "type": "string",
+            "enum": [
+              "lythaus-monthly-rewards-2026-10-v1"
+            ]
+          },
+          "rulesVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MonthlyPreparedAction"
+            }
+          }
+        }
+      },
+      "MonthlyPreparedWeeklyProgress": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "maximumPerWeek",
+          "selectedWeekLimit",
+          "maximumSelectedWeeklyPoints",
+          "points",
+          "earningPolicyVersion",
+          "rulesVersion",
+          "periodPolicyVersion",
+          "periodPolicyStatus",
+          "selectedWeeks",
+          "omittedWeeks",
+          "missingWeeks",
+          "unassessedWeeks"
+        ],
+        "properties": {
+          "maximumPerWeek": {
+            "type": "integer",
+            "minimum": 2500,
+            "maximum": 2500
+          },
+          "selectedWeekLimit": {
+            "type": "integer",
+            "minimum": 4,
+            "maximum": 4
+          },
+          "maximumSelectedWeeklyPoints": {
+            "type": "integer",
+            "minimum": 10000,
+            "maximum": 10000
+          },
+          "points": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "earningPolicyVersion": {
+            "type": "string",
+            "enum": [
+              "lythaus-monthly-rewards-2026-10-v1"
+            ]
+          },
+          "rulesVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "periodPolicyVersion": {
+            "type": "string",
+            "nullable": true
+          },
+          "periodPolicyStatus": {
+            "type": "string",
+            "enum": [
+              "unavailable",
+              "pending_owner_approval"
+            ]
+          },
+          "selectedWeeks": {
+            "type": "array",
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/components/schemas/MonthlyPreparedWeek"
+            }
+          },
+          "omittedWeeks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MonthlyPreparedWeek"
+            }
+          },
+          "missingWeeks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MonthlyPreparedWeek"
+            }
+          },
+          "unassessedWeeks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MonthlyPreparedWeek"
+            }
+          }
+        },
+        "anyOf": [
+          {
+            "properties": {
+              "periodPolicyVersion": {
+                "enum": [
+                  null
+                ]
+              },
+              "periodPolicyStatus": {
+                "enum": [
+                  "unavailable"
+                ]
+              }
+            }
+          },
+          {
+            "properties": {
+              "periodPolicyVersion": {
+                "enum": [
+                  "closing-sunday-utc-proposal-v1"
+                ]
+              },
+              "periodPolicyStatus": {
+                "enum": [
+                  "pending_owner_approval"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "MonthlyPreparedMonthlyProgress": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "maximumPoints",
+          "points",
+          "maintenancePolicyVersion",
+          "rulesVersion",
+          "actions"
+        ],
+        "properties": {
+          "maximumPoints": {
+            "type": "integer",
+            "minimum": 2500,
+            "maximum": 2500
+          },
+          "points": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2500
+          },
+          "maintenancePolicyVersion": {
+            "type": "string",
+            "enum": [
+              "lythaus-monthly-rewards-2026-10-v1"
+            ]
+          },
+          "rulesVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MonthlyPreparedAction"
+            }
+          }
+        }
+      },
+      "MonthlyPreparedEmailQualification": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Fixed completion-month through calendar-quarter-end validity, with no earlier credit or carry. Unavailable validity evidence remains null; known windows require validFrom before validUntil.",
+        "required": [
+          "actionId",
+          "maximumPoints",
+          "points",
+          "qualifies",
+          "reasonCode",
+          "validFrom",
+          "validUntil",
+          "renewalRequired"
+        ],
+        "properties": {
+          "actionId": {
+            "type": "string",
+            "enum": [
+              "quarterly.email_control"
+            ]
+          },
+          "maximumPoints": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 1000
+          },
+          "points": {
+            "type": "integer",
+            "enum": [
+              0,
+              1000
+            ]
+          },
+          "qualifies": {
+            "type": "boolean"
+          },
+          "reasonCode": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^[a-z][a-z0-9_]{0,99}$"
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "validUntil": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "renewalRequired": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "anyOf": [
+          {
+            "properties": {
+              "points": {
+                "enum": [
+                  0
+                ]
+              },
+              "qualifies": {
+                "enum": [
+                  false
+                ]
+              }
+            }
+          },
+          {
+            "properties": {
+              "points": {
+                "enum": [
+                  1000
+                ]
+              },
+              "qualifies": {
+                "enum": [
+                  true
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "MonthlyPreparedSuggestionQualification": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Optional suggestion qualification follows the same fixed calendar-quarter validity as email. The award is 150 or zero; unavailable evidence is never inferred from the source month.",
+        "required": [
+          "actionId",
+          "maximumPoints",
+          "points",
+          "qualifies",
+          "reasonCode",
+          "validFrom",
+          "validUntil",
+          "renewalRequired"
+        ],
+        "properties": {
+          "actionId": {
+            "type": "string",
+            "enum": [
+              "quarterly.suggestion"
+            ]
+          },
+          "maximumPoints": {
+            "type": "integer",
+            "minimum": 150,
+            "maximum": 150
+          },
+          "points": {
+            "type": "integer",
+            "enum": [
+              0,
+              150
+            ]
+          },
+          "qualifies": {
+            "type": "boolean"
+          },
+          "reasonCode": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^[a-z][a-z0-9_]{0,99}$"
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "validUntil": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "renewalRequired": {
+            "type": "boolean",
+            "nullable": true
+          }
+        },
+        "anyOf": [
+          {
+            "properties": {
+              "points": {
+                "enum": [
+                  0
+                ]
+              },
+              "qualifies": {
+                "enum": [
+                  false
+                ]
+              }
+            }
+          },
+          {
+            "properties": {
+              "points": {
+                "enum": [
+                  150
+                ]
+              },
+              "qualifies": {
+                "enum": [
+                  true
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "MonthlyPreparedQuarterlyTotal": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "maximumPoints",
+          "points"
+        ],
+        "properties": {
+          "maximumPoints": {
+            "type": "integer",
+            "minimum": 1150,
+            "maximum": 1150
+          },
+          "points": {
+            "type": "integer",
+            "enum": [
+              0,
+              150,
+              1000,
+              1150
+            ]
+          }
+        }
+      },
+      "MonthlyPreparedReportTotal": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "required": [
+          "weeklyPoints",
+          "monthlyPoints",
+          "emailPoints",
+          "suggestionPoints",
+          "quarterlyPoints",
+          "sourceScore",
+          "calculatedLevel",
+          "maximumSourceMonth"
+        ],
+        "properties": {
+          "weeklyPoints": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "monthlyPoints": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2500
+          },
+          "emailPoints": {
+            "type": "integer",
+            "enum": [
+              0,
+              1000
+            ]
+          },
+          "suggestionPoints": {
+            "type": "integer",
+            "enum": [
+              0,
+              150
+            ]
+          },
+          "quarterlyPoints": {
+            "type": "integer",
+            "enum": [
+              0,
+              150,
+              1000,
+              1150
+            ]
+          },
+          "sourceScore": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 13650
+          },
+          "calculatedLevel": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "maximumSourceMonth": {
+            "type": "integer",
+            "minimum": 13650,
+            "maximum": 13650
+          }
+        },
+        "anyOf": [
+          {
+            "properties": {
+              "sourceScore": {
+                "minimum": 0,
+                "maximum": 999
+              },
+              "calculatedLevel": {
+                "enum": [
+                  1
+                ]
+              }
+            }
+          },
+          {
+            "properties": {
+              "sourceScore": {
+                "minimum": 1000,
+                "maximum": 2999
+              },
+              "calculatedLevel": {
+                "enum": [
+                  2
+                ]
+              }
+            }
+          },
+          {
+            "properties": {
+              "sourceScore": {
+                "minimum": 3000,
+                "maximum": 5999
+              },
+              "calculatedLevel": {
+                "enum": [
+                  3
+                ]
+              }
+            }
+          },
+          {
+            "properties": {
+              "sourceScore": {
+                "minimum": 6000,
+                "maximum": 9999
+              },
+              "calculatedLevel": {
+                "enum": [
+                  4
+                ]
+              }
+            }
+          },
+          {
+            "properties": {
+              "sourceScore": {
+                "minimum": 10000,
+                "maximum": 13650
+              },
+              "calculatedLevel": {
+                "enum": [
+                  5
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "MonthlyPreparedReportDetails": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "required": [
+          "sourceRevision",
+          "sourceReasonCode",
+          "sourceRecordedAt",
+          "assessmentMode",
+          "sourceDigest",
+          "assemblyEvidenceDigest",
+          "weekly",
+          "monthly",
+          "quarterlyEmail",
+          "quarterlySuggestion",
+          "quarterlyTotal",
+          "total"
+        ],
+        "properties": {
+          "sourceRevision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "sourceReasonCode": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^[a-z][a-z0-9_]{0,99}$"
+          },
+          "sourceRecordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+          },
+          "assessmentMode": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceDigest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "assemblyEvidenceDigest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "weekly": {
+            "$ref": "#/components/schemas/MonthlyPreparedWeeklyProgress"
+          },
+          "monthly": {
+            "$ref": "#/components/schemas/MonthlyPreparedMonthlyProgress"
+          },
+          "quarterlyEmail": {
+            "$ref": "#/components/schemas/MonthlyPreparedEmailQualification"
+          },
+          "quarterlySuggestion": {
+            "$ref": "#/components/schemas/MonthlyPreparedSuggestionQualification"
+          },
+          "quarterlyTotal": {
+            "$ref": "#/components/schemas/MonthlyPreparedQuarterlyTotal"
+          },
+          "total": {
+            "$ref": "#/components/schemas/MonthlyPreparedReportTotal"
+          }
+        },
+        "anyOf": [
+          {
+            "properties": {
+              "assessmentMode": {
+                "enum": [
+                  "shadow"
+                ]
+              }
+            }
+          },
+          {
+            "properties": {
+              "assessmentMode": {
+                "enum": [
+                  null
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "MonthlyReputationReportResponsePreparation": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "description": "Disabled v2 report DTO for synthetic fixture and generated-client preparation. HTTP callers cannot obtain a non-null preparedResponse. Current source progress and a fixed shadow snapshot projection remain separate; confirmed authority is unavailable. Weekly geometry uses an explicitly captured proposal that remains pending owner approval.",
+        "required": [
+          "responseVersion",
+          "policyVersion",
+          "catalogueHash",
+          "dataVersion",
+          "preparationOnly",
+          "runtimeActivationAllowed",
+          "appliedPoints",
+          "maximumSourceMonth",
+          "responseKind",
+          "reportState",
+          "reasonCode",
+          "sourceMonth",
+          "effectiveMonth",
+          "levelAuthority",
+          "snapshotProjection",
+          "corrections",
+          "report"
+        ],
+        "properties": {
+          "responseVersion": {
+            "type": "string",
+            "enum": [
+              "monthly-rewards-response-v2-preparation"
+            ]
+          },
+          "policyVersion": {
+            "type": "string",
+            "enum": [
+              "lythaus-monthly-rewards-2026-10-v2"
+            ]
+          },
+          "catalogueHash": {
+            "type": "string",
+            "pattern": "^26213abccce99ee51be6c0623406c28aaa7d39ed3ea3b4ac630b7cffd859db67$"
+          },
+          "dataVersion": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 2
+          },
+          "preparationOnly": {
+            "type": "boolean",
+            "not": {
+              "enum": [
+                false
+              ]
+            }
+          },
+          "runtimeActivationAllowed": {
+            "type": "boolean",
+            "not": {
+              "enum": [
+                true
+              ]
+            }
+          },
+          "appliedPoints": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 0
+          },
+          "maximumSourceMonth": {
+            "type": "integer",
+            "minimum": 13650,
+            "maximum": 13650
+          },
+          "responseKind": {
+            "type": "string",
+            "enum": [
+              "monthly_reputation_report"
+            ]
+          },
+          "reportState": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "shadow"
+            ]
+          },
+          "reasonCode": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^[a-z][a-z0-9_]{0,99}$"
+          },
+          "sourceMonth": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "effectiveMonth": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "levelAuthority": {
+            "$ref": "#/components/schemas/MonthlyPreparedLevelAuthority"
+          },
+          "snapshotProjection": {
+            "$ref": "#/components/schemas/MonthlyPreparedSnapshotProjection"
+          },
+          "corrections": {
+            "$ref": "#/components/schemas/MonthlyPreparedCorrections"
+          },
+          "report": {
+            "$ref": "#/components/schemas/MonthlyPreparedReportDetails"
+          }
+        }
+      },
       "MonthlyReputationReportResponse": {
         "type": "object",
         "additionalProperties": true,
@@ -17296,11 +19231,11 @@
           },
           "sourceMonth": {
             "type": "string",
-            "pattern": "^\\\\d{4}-(0[1-9]|1[0-2])$"
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
           },
           "effectiveMonth": {
             "type": "string",
-            "pattern": "^\\\\d{4}-(0[1-9]|1[0-2])$"
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
           },
           "policyVersion": {
             "type": "string"
@@ -17373,6 +19308,12 @@
             "type": "object",
             "nullable": true,
             "additionalProperties": true
+          },
+          "responsePreparation": {
+            "$ref": "#/components/schemas/MonthlyResponsePreparationReadiness"
+          },
+          "preparedResponse": {
+            "$ref": "#/components/schemas/MonthlyReputationReportResponsePreparation"
           }
         }
       },
@@ -17735,6 +19676,177 @@
           }
         }
       },
+      "MonthlyPreparedUnavailableSnapshot": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "reasonCode"
+        ],
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "unavailable"
+            ]
+          },
+          "reasonCode": {
+            "type": "string",
+            "enum": [
+              "activation_not_approved"
+            ]
+          }
+        }
+      },
+      "MonthlyPreparedUnavailableSelection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "reasonCode"
+        ],
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "unavailable"
+            ]
+          },
+          "reasonCode": {
+            "type": "string",
+            "enum": [
+              "approval_unavailable"
+            ]
+          }
+        }
+      },
+      "MonthlyRewardsResponsePreparation": {
+        "type": "object",
+        "nullable": true,
+        "additionalProperties": false,
+        "description": "Disabled v2 rewards DTO for synthetic fixtures only. Current level, source score, confirmed snapshot and reward selection remain unavailable. A shadow snapshot projection is never live eligibility and cannot be recalculated from current progress.",
+        "required": [
+          "responseVersion",
+          "policyVersion",
+          "catalogueHash",
+          "dataVersion",
+          "preparationOnly",
+          "runtimeActivationAllowed",
+          "appliedPoints",
+          "maximumSourceMonth",
+          "responseKind",
+          "state",
+          "reasonCode",
+          "effectiveMonth",
+          "currentLevel",
+          "sourceMonth",
+          "sourceScore",
+          "snapshot",
+          "selection",
+          "snapshotProjection"
+        ],
+        "properties": {
+          "responseVersion": {
+            "type": "string",
+            "enum": [
+              "monthly-rewards-response-v2-preparation"
+            ]
+          },
+          "policyVersion": {
+            "type": "string",
+            "enum": [
+              "lythaus-monthly-rewards-2026-10-v2"
+            ]
+          },
+          "catalogueHash": {
+            "type": "string",
+            "pattern": "^26213abccce99ee51be6c0623406c28aaa7d39ed3ea3b4ac630b7cffd859db67$"
+          },
+          "dataVersion": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 2
+          },
+          "preparationOnly": {
+            "type": "boolean",
+            "not": {
+              "enum": [
+                false
+              ]
+            }
+          },
+          "runtimeActivationAllowed": {
+            "type": "boolean",
+            "not": {
+              "enum": [
+                true
+              ]
+            }
+          },
+          "appliedPoints": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 0
+          },
+          "maximumSourceMonth": {
+            "type": "integer",
+            "minimum": 13650,
+            "maximum": 13650
+          },
+          "responseKind": {
+            "type": "string",
+            "enum": [
+              "monthly_rewards"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending"
+            ]
+          },
+          "reasonCode": {
+            "type": "string",
+            "enum": [
+              "activation_not_approved"
+            ]
+          },
+          "effectiveMonth": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "currentLevel": {
+            "type": "integer",
+            "nullable": true,
+            "not": {
+              "type": "integer"
+            }
+          },
+          "sourceMonth": {
+            "type": "string",
+            "nullable": true,
+            "not": {
+              "type": "string"
+            }
+          },
+          "sourceScore": {
+            "type": "integer",
+            "nullable": true,
+            "not": {
+              "type": "integer"
+            }
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/MonthlyPreparedUnavailableSnapshot"
+          },
+          "selection": {
+            "$ref": "#/components/schemas/MonthlyPreparedUnavailableSelection"
+          },
+          "snapshotProjection": {
+            "$ref": "#/components/schemas/MonthlyPreparedSnapshotProjection"
+          }
+        }
+      },
       "MonthlyRewardsMeResponse": {
         "type": "object",
         "additionalProperties": true,
@@ -17787,6 +19899,12 @@
           "selection": {
             "type": "object",
             "additionalProperties": true
+          },
+          "responsePreparation": {
+            "$ref": "#/components/schemas/MonthlyResponsePreparationReadiness"
+          },
+          "preparedResponse": {
+            "$ref": "#/components/schemas/MonthlyRewardsResponsePreparation"
           }
         }
       },
@@ -18533,6 +20651,7 @@
               "contextBytes",
               "memberMessageBytes"
             ],
+            "description": "Optional character limits count Unicode scalar values after trimming. UTF-8 byte limits remain independently enforced.",
             "properties": {
               "titleBytes": {
                 "type": "integer",
@@ -18551,6 +20670,22 @@
                 "minimum": 1
               },
               "memberMessageBytes": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "titleCharacters": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "detailCharacters": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "stepsCharacters": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "memberMessageCharacters": {
                 "type": "integer",
                 "minimum": 1
               }
@@ -18780,6 +20915,10 @@
           "memberMessage": {
             "type": "string",
             "nullable": true
+          },
+          "closed": {
+            "type": "boolean",
+            "description": "Whether new replies are closed for this request."
           }
         }
       },
@@ -18844,6 +20983,10 @@
           "memberMessage": {
             "type": "string",
             "nullable": true
+          },
+          "closed": {
+            "type": "boolean",
+            "description": "Whether new replies are closed for this request."
           }
         }
       },
@@ -18857,7 +21000,11 @@
           }
         ],
         "discriminator": {
-          "propertyName": "kind"
+          "propertyName": "kind",
+          "mapping": {
+            "problem": "#/components/schemas/MemberProblemRequest",
+            "suggestion": "#/components/schemas/MemberSuggestionRequest"
+          }
         }
       },
       "MemberRequestPage": {
@@ -19135,6 +21282,10 @@
             "type": "string",
             "nullable": true
           },
+          "closed": {
+            "type": "boolean",
+            "description": "Whether new replies are closed for this request."
+          },
           "submitterId": {
             "type": "string",
             "format": "uuid"
@@ -19204,6 +21355,10 @@
             "type": "string",
             "nullable": true
           },
+          "closed": {
+            "type": "boolean",
+            "description": "Whether new replies are closed for this request."
+          },
           "submitterId": {
             "type": "string",
             "format": "uuid"
@@ -19220,7 +21375,11 @@
           }
         ],
         "discriminator": {
-          "propertyName": "kind"
+          "propertyName": "kind",
+          "mapping": {
+            "problem": "#/components/schemas/OwnerProblemRequest",
+            "suggestion": "#/components/schemas/OwnerSuggestionRequest"
+          }
         }
       },
       "OwnerRequestPage": {
@@ -21039,7 +23198,7 @@
         "description": "Calendar source month in UTC, formatted YYYY-MM.",
         "schema": {
           "type": "string",
-          "pattern": "^\\\\d{4}-(0[1-9]|1[0-2])$"
+          "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
         }
       },
       "Limit": {

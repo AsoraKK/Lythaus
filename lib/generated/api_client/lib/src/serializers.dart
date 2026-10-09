@@ -26,8 +26,14 @@ import 'package:lythaus_api_client/src/model/account_support_lookup_request.dart
 import 'package:lythaus_api_client/src/model/account_support_lookup_response.dart';
 import 'package:lythaus_api_client/src/model/account_tier_response.dart';
 import 'package:lythaus_api_client/src/model/account_tier_update.dart';
+import 'package:lythaus_api_client/src/model/activity_consent.dart';
+import 'package:lythaus_api_client/src/model/activity_consent_input.dart';
 import 'package:lythaus_api_client/src/model/activity_event.dart';
+import 'package:lythaus_api_client/src/model/activity_metric.dart';
 import 'package:lythaus_api_client/src/model/activity_page.dart';
+import 'package:lythaus_api_client/src/model/activity_render_input.dart';
+import 'package:lythaus_api_client/src/model/activity_summary.dart';
+import 'package:lythaus_api_client/src/model/activity_summary_metrics.dart';
 import 'package:lythaus_api_client/src/model/admin_auth_summary.dart';
 import 'package:lythaus_api_client/src/model/admin_email_health.dart';
 import 'package:lythaus_api_client/src/model/admin_health.dart';
@@ -167,11 +173,30 @@ import 'package:lythaus_api_client/src/model/moderation_state.dart';
 import 'package:lythaus_api_client/src/model/monthly_context_review_error.dart';
 import 'package:lythaus_api_client/src/model/monthly_context_review_request.dart';
 import 'package:lythaus_api_client/src/model/monthly_context_review_response.dart';
+import 'package:lythaus_api_client/src/model/monthly_prepared_action.dart';
+import 'package:lythaus_api_client/src/model/monthly_prepared_corrections.dart';
+import 'package:lythaus_api_client/src/model/monthly_prepared_email_qualification.dart';
+import 'package:lythaus_api_client/src/model/monthly_prepared_level_authority.dart';
+import 'package:lythaus_api_client/src/model/monthly_prepared_monthly_progress.dart';
+import 'package:lythaus_api_client/src/model/monthly_prepared_quarterly_total.dart';
+import 'package:lythaus_api_client/src/model/monthly_prepared_report_details.dart';
+import 'package:lythaus_api_client/src/model/monthly_prepared_report_total.dart';
+import 'package:lythaus_api_client/src/model/monthly_prepared_snapshot_correction.dart';
+import 'package:lythaus_api_client/src/model/monthly_prepared_snapshot_projection.dart';
+import 'package:lythaus_api_client/src/model/monthly_prepared_source_correction.dart';
+import 'package:lythaus_api_client/src/model/monthly_prepared_suggestion_qualification.dart';
+import 'package:lythaus_api_client/src/model/monthly_prepared_unavailable_selection.dart';
+import 'package:lythaus_api_client/src/model/monthly_prepared_unavailable_snapshot.dart';
+import 'package:lythaus_api_client/src/model/monthly_prepared_week.dart';
+import 'package:lythaus_api_client/src/model/monthly_prepared_weekly_progress.dart';
 import 'package:lythaus_api_client/src/model/monthly_report_error.dart';
 import 'package:lythaus_api_client/src/model/monthly_reputation_report_response.dart';
 import 'package:lythaus_api_client/src/model/monthly_reputation_report_response_corrections.dart';
 import 'package:lythaus_api_client/src/model/monthly_reputation_report_response_level_authority.dart';
+import 'package:lythaus_api_client/src/model/monthly_reputation_report_response_preparation.dart';
+import 'package:lythaus_api_client/src/model/monthly_response_preparation_readiness.dart';
 import 'package:lythaus_api_client/src/model/monthly_rewards_me_response.dart';
+import 'package:lythaus_api_client/src/model/monthly_rewards_response_preparation.dart';
 import 'package:lythaus_api_client/src/model/news_board_feed_page.dart';
 import 'package:lythaus_api_client/src/model/news_board_item.dart';
 import 'package:lythaus_api_client/src/model/news_source_metadata.dart';
@@ -237,6 +262,7 @@ import 'package:lythaus_api_client/src/model/reaction_counts.dart';
 import 'package:lythaus_api_client/src/model/reaction_delete_response.dart';
 import 'package:lythaus_api_client/src/model/reaction_request.dart';
 import 'package:lythaus_api_client/src/model/reaction_response.dart';
+import 'package:lythaus_api_client/src/model/record_foreground_activity_day200_response.dart';
 import 'package:lythaus_api_client/src/model/refresh_session_request.dart';
 import 'package:lythaus_api_client/src/model/refresh_token_request.dart';
 import 'package:lythaus_api_client/src/model/relation_change.dart';
@@ -307,8 +333,14 @@ part 'serializers.g.dart';
   AccountSupportLookupResponse,
   AccountTierResponse,
   AccountTierUpdate,
+  ActivityConsent,
+  ActivityConsentInput,
   ActivityEvent,
+  ActivityMetric,
   ActivityPage,
+  ActivityRenderInput,
+  ActivitySummary,
+  ActivitySummaryMetrics,
   AdminAuthSummary,
   AdminEmailHealth,
   AdminHealth,
@@ -448,11 +480,30 @@ part 'serializers.g.dart';
   MonthlyContextReviewError,
   MonthlyContextReviewRequest,
   MonthlyContextReviewResponse,
+  MonthlyPreparedAction,
+  MonthlyPreparedCorrections,
+  MonthlyPreparedEmailQualification,
+  MonthlyPreparedLevelAuthority,
+  MonthlyPreparedMonthlyProgress,
+  MonthlyPreparedQuarterlyTotal,
+  MonthlyPreparedReportDetails,
+  MonthlyPreparedReportTotal,
+  MonthlyPreparedSnapshotCorrection,
+  MonthlyPreparedSnapshotProjection,
+  MonthlyPreparedSourceCorrection,
+  MonthlyPreparedSuggestionQualification,
+  MonthlyPreparedUnavailableSelection,
+  MonthlyPreparedUnavailableSnapshot,
+  MonthlyPreparedWeek,
+  MonthlyPreparedWeeklyProgress,
   MonthlyReportError,
   MonthlyReputationReportResponse,
   MonthlyReputationReportResponseCorrections,
   MonthlyReputationReportResponseLevelAuthority,
+  MonthlyReputationReportResponsePreparation,
+  MonthlyResponsePreparationReadiness,
   MonthlyRewardsMeResponse,
+  MonthlyRewardsResponsePreparation,
   NewsBoardFeedPage,
   NewsBoardItem,
   NewsSourceMetadata,
@@ -518,6 +569,7 @@ part 'serializers.g.dart';
   ReactionDeleteResponse,
   ReactionRequest,
   ReactionResponse,
+  RecordForegroundActivityDay200Response,
   RefreshSessionRequest,
   RefreshTokenRequest,
   RelationChange,

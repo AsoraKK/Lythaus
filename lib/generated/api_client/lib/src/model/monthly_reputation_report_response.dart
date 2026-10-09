@@ -3,6 +3,8 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:lythaus_api_client/src/model/monthly_reputation_report_response_preparation.dart';
+import 'package:lythaus_api_client/src/model/monthly_response_preparation_readiness.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:lythaus_api_client/src/model/monthly_reputation_report_response_corrections.dart';
 import 'package:lythaus_api_client/src/model/monthly_reputation_report_response_level_authority.dart';
@@ -23,6 +25,8 @@ part 'monthly_reputation_report_response.g.dart';
 /// * [levelAuthority]
 /// * [corrections]
 /// * [report]
+/// * [responsePreparation]
+/// * [preparedResponse]
 @BuiltValue()
 abstract class MonthlyReputationReportResponse implements Built<MonthlyReputationReportResponse, MonthlyReputationReportResponseBuilder> {
   @BuiltValueField(wireName: r'reportState')
@@ -49,6 +53,12 @@ abstract class MonthlyReputationReportResponse implements Built<MonthlyReputatio
 
   @BuiltValueField(wireName: r'report')
   BuiltMap<String, JsonObject?>? get report;
+
+  @BuiltValueField(wireName: r'responsePreparation')
+  MonthlyResponsePreparationReadiness? get responsePreparation;
+
+  @BuiltValueField(wireName: r'preparedResponse')
+  MonthlyReputationReportResponsePreparation? get preparedResponse;
 
   MonthlyReputationReportResponse._();
 
@@ -115,6 +125,20 @@ class _$MonthlyReputationReportResponseSerializer implements PrimitiveSerializer
       object.report,
       specifiedType: const FullType.nullable(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
     );
+    if (object.responsePreparation != null) {
+      yield r'responsePreparation';
+      yield serializers.serialize(
+        object.responsePreparation,
+        specifiedType: const FullType.nullable(MonthlyResponsePreparationReadiness),
+      );
+    }
+    if (object.preparedResponse != null) {
+      yield r'preparedResponse';
+      yield serializers.serialize(
+        object.preparedResponse,
+        specifiedType: const FullType.nullable(MonthlyReputationReportResponsePreparation),
+      );
+    }
   }
 
   @override
@@ -195,6 +219,22 @@ class _$MonthlyReputationReportResponseSerializer implements PrimitiveSerializer
           ) as BuiltMap<String, JsonObject?>?;
           if (valueDes == null) continue;
           result.report.replace(valueDes);
+          break;
+        case r'responsePreparation':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(MonthlyResponsePreparationReadiness),
+          ) as MonthlyResponsePreparationReadiness?;
+          if (valueDes == null) continue;
+          result.responsePreparation.replace(valueDes);
+          break;
+        case r'preparedResponse':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(MonthlyReputationReportResponsePreparation),
+          ) as MonthlyReputationReportResponsePreparation?;
+          if (valueDes == null) continue;
+          result.preparedResponse.replace(valueDes);
           break;
         default:
           unhandled.add(key);
