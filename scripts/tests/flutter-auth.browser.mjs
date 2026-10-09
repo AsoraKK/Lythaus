@@ -117,7 +117,7 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     async function openSettingsFromReadyProfile() {
       if(width<700){
         await page.getByLabel(/Reputation New, new, active/).waitFor();
-        await page.getByLabel(/^Monthly level pending/).waitFor();
+        await page.getByText('Monthly level pending',{exact:true}).waitFor();
       }
       await page.getByRole('button',{name:/^Settings(?:\b|$)/}).click();
       await page.waitForURL(url=>url.pathname==='/settings');
