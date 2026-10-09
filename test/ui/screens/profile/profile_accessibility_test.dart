@@ -167,6 +167,70 @@ void main() {
     },
   );
 
+  testWidgets('preference save announces saving instead of loading', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final pendingSave = Completer<PresentationPreferences>();
+    var saveAttempts = 0;
+    final container = ProviderContainer(
+      overrides: [
+        currentUserProvider.overrideWithValue(_owner),
+        settingsProvider.overrideWith(
+          (ref) => SettingsController(
+            ownerId: _owner.id,
+            load: () async => const PresentationPreferences(),
+            save: (preferences, key) {
+              saveAttempts++;
+              return pendingSave.future;
+            },
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: PresentationPreferencesSection(),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final swipe = find.widgetWithText(
+      SwitchListTile,
+      'Swipe between profile tabs',
+    );
+    await tester.ensureVisible(swipe);
+    await tester.tap(swipe);
+    await tester.pump();
+
+    final saveButton = find.widgetWithText(FilledButton, 'Save preferences');
+    await tester.ensureVisible(saveButton);
+    await tester.tap(saveButton);
+    await tester.pump();
+
+    final saving = find.bySemanticsLabel('Saving preferences');
+    expect(saving, findsOneWidget);
+    expect(tester.getSemantics(saving).flagsCollection.isLiveRegion, isTrue);
+    expect(find.bySemanticsLabel('Loading saved preferences'), findsNothing);
+    expect(find.text('Saving preferences…'), findsOneWidget);
+    expect(saveAttempts, 1);
+
+    pendingSave.complete(
+      const PresentationPreferences(horizontalSwipeEnabled: false),
+    );
+    await tester.pumpAndSettle();
+    semantics.dispose();
+  });
+
   testWidgets(
     'unavailable account preferences are announced and cannot be saved',
     (tester) async {

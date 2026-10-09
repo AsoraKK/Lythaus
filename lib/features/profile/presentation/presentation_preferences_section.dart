@@ -77,7 +77,9 @@ class _PresentationPreferencesSectionState
               child: Semantics(
                 container: true,
                 liveRegion: true,
-                label: 'Loading saved preferences',
+                label: settings.preferencesSaving
+                    ? 'Saving preferences'
+                    : 'Loading saved preferences',
                 child: const ExcludeSemantics(
                   child: LinearProgressIndicator(minHeight: 2),
                 ),
