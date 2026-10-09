@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:lythaus_api_client/src/model/product_integrity_presentation_preferences_update.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -16,6 +17,7 @@ part 'product_integrity_profile_update_request.g.dart';
 /// * [bio]
 /// * [trustPassportVisibility]
 /// * [accountabilityName] - Private encrypted accountability name. It is never returned by profile or activity APIs.
+/// * [presentationPreferences] - Private account presentation choices. Send this field alone; it does not change profile publication or Passport visibility. Requires the approved preference schema. Conflicts return 409; unavailable storage returns 503.
 @BuiltValue()
 abstract class ProductIntegrityProfileUpdateRequest implements Built<ProductIntegrityProfileUpdateRequest, ProductIntegrityProfileUpdateRequestBuilder> {
   /// Optional public display name. Saved edits remain private during publication review. Names are normalized and screened by the Lythaus profile-name policy.
@@ -32,6 +34,10 @@ abstract class ProductIntegrityProfileUpdateRequest implements Built<ProductInte
   /// Private encrypted accountability name. It is never returned by profile or activity APIs.
   @BuiltValueField(wireName: r'accountabilityName')
   String? get accountabilityName;
+
+  /// Private account presentation choices. Send this field alone; it does not change profile publication or Passport visibility. Requires the approved preference schema. Conflicts return 409; unavailable storage returns 503.
+  @BuiltValueField(wireName: r'presentationPreferences')
+  ProductIntegrityPresentationPreferencesUpdate? get presentationPreferences;
 
   ProductIntegrityProfileUpdateRequest._();
 
@@ -82,6 +88,13 @@ class _$ProductIntegrityProfileUpdateRequestSerializer implements PrimitiveSeria
       yield serializers.serialize(
         object.accountabilityName,
         specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.presentationPreferences != null) {
+      yield r'presentationPreferences';
+      yield serializers.serialize(
+        object.presentationPreferences,
+        specifiedType: const FullType(ProductIntegrityPresentationPreferencesUpdate),
       );
     }
   }
@@ -135,6 +148,13 @@ class _$ProductIntegrityProfileUpdateRequestSerializer implements PrimitiveSeria
           ) as String?;
           if (valueDes == null) continue;
           result.accountabilityName = valueDes;
+          break;
+        case r'presentationPreferences':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(ProductIntegrityPresentationPreferencesUpdate),
+          ) as ProductIntegrityPresentationPreferencesUpdate;
+          result.presentationPreferences.replace(valueDes);
           break;
         default:
           unhandled.add(key);

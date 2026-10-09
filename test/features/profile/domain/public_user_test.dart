@@ -13,14 +13,25 @@ void main() {
     expect(user.handleLabel, '@lythaus');
   });
 
-  test('handleLabel falls back to id token', () {
+  test('handleLabel is absent until the account has a real handle', () {
     const user = PublicUser(
       id: 'abc12345',
       displayName: 'Fallback User',
       tier: 'free',
     );
 
-    expect(user.handleLabel, '@abc123');
+    expect(user.handleLabel, isNull);
+  });
+
+  test('handleLabel adds a display prefix to a real handle', () {
+    const user = PublicUser(
+      id: 'user-123456',
+      displayName: 'Lythaus User',
+      handle: 'lythaus',
+      tier: 'free',
+    );
+
+    expect(user.handleLabel, '@lythaus');
   });
 
   test('fromJson applies defaults for optional fields', () {

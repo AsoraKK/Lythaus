@@ -20,6 +20,7 @@ Method | HTTP request | Description
 [**postsOwnerView**](PostsApi.md#postsownerview) | **GET** /posts/{postId}/owner-view | Read the author&#39;s own allowed or pending post
 [**postsReplace**](PostsApi.md#postsreplace) | **PUT** /posts/{id} | Replace editable post fields and return the post to review
 [**postsUpdate**](PostsApi.md#postsupdate) | **PATCH** /posts/{id} | Update a post with moderation and AI authenticity checks
+[**usersMePostsList**](PostsApi.md#usersmepostslist) | **GET** /users/me/posts | List my own published and pending posts
 
 
 # **commentsDelete**
@@ -509,6 +510,51 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **usersMePostsList**
+> OwnerTimelinePage usersMePostsList(limit, cursor)
+
+List my own published and pending posts
+
+Returns a private cursor-paginated timeline for the active author. Deleted, blocked, unsupported generated, or other users' posts are never returned.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getPostsApi();
+final int limit = 56; // int |
+final String cursor = cursor_example; // String |
+
+try {
+    final response = api.usersMePostsList(limit, cursor);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling PostsApi->usersMePostsList: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **limit** | **int**|  | [optional] [default to 8]
+ **cursor** | **String**|  | [optional]
+
+### Return type
+
+[**OwnerTimelinePage**](OwnerTimelinePage.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

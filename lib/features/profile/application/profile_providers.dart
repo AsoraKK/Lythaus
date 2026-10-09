@@ -8,6 +8,7 @@ import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
 import 'package:lythaus/features/profile/domain/owner_profile.dart';
+import 'package:lythaus/features/profile/domain/presentation_preferences.dart';
 import 'package:lythaus/features/profile/domain/trust_passport.dart';
 
 const Set<String> _trustPassportVisibilityValues = {
@@ -51,6 +52,32 @@ class ProfilePreferencesService {
   ProfilePreferencesService(this._dio);
 
   final Dio _dio;
+
+  Future<OwnerProfile> updatePresentationPreferences({
+    required String accessToken,
+    required PresentationPreferences preferences,
+    required String idempotencyKey,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      '/api/users/me',
+      data: {
+        'presentationPreferences': {
+          'leftHandedMode': preferences.leftHandedMode,
+          'horizontalSwipeEnabled': preferences.horizontalSwipeEnabled,
+          'expectedVersion': preferences.version,
+        },
+      },
+      cancelToken: cancelToken,
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Idempotency-Key': idempotencyKey,
+        },
+      ),
+    );
+    return OwnerProfile.fromJson(response.data ?? const {});
+  }
 
   Future<OwnerProfile> updateTrustPassportVisibility({
     required String accessToken,

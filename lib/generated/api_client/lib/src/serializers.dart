@@ -201,6 +201,8 @@ import 'package:lythaus_api_client/src/model/owner_problem_request.dart';
 import 'package:lythaus_api_client/src/model/owner_request_page.dart';
 import 'package:lythaus_api_client/src/model/owner_suggestion_request.dart';
 import 'package:lythaus_api_client/src/model/owner_support_request.dart';
+import 'package:lythaus_api_client/src/model/owner_timeline_page.dart';
+import 'package:lythaus_api_client/src/model/owner_timeline_post.dart';
 import 'package:lythaus_api_client/src/model/pending_appeal_adjudication.dart';
 import 'package:lythaus_api_client/src/model/pending_appeal_adjudication_list.dart';
 import 'package:lythaus_api_client/src/model/personal_feed_item.dart';
@@ -219,6 +221,8 @@ import 'package:lythaus_api_client/src/model/private_decision.dart';
 import 'package:lythaus_api_client/src/model/private_evidence.dart';
 import 'package:lythaus_api_client/src/model/private_note.dart';
 import 'package:lythaus_api_client/src/model/problem_submission.dart';
+import 'package:lythaus_api_client/src/model/product_integrity_presentation_preferences.dart';
+import 'package:lythaus_api_client/src/model/product_integrity_presentation_preferences_update.dart';
 import 'package:lythaus_api_client/src/model/product_integrity_private_profile_response.dart';
 import 'package:lythaus_api_client/src/model/product_integrity_private_profile_user.dart';
 import 'package:lythaus_api_client/src/model/product_integrity_profile_update_request.dart';
@@ -478,6 +482,8 @@ part 'serializers.g.dart';
   OwnerRequestPage,
   OwnerSuggestionRequest,
   OwnerSupportRequest,
+  OwnerTimelinePage,
+  OwnerTimelinePost,
   PendingAppealAdjudication,
   PendingAppealAdjudicationList,
   PersonalFeedItem,
@@ -496,6 +502,8 @@ part 'serializers.g.dart';
   PrivateEvidence,
   PrivateNote,
   ProblemSubmission,
+  ProductIntegrityPresentationPreferences,
+  ProductIntegrityPresentationPreferencesUpdate,
   ProductIntegrityPrivateProfileResponse,
   ProductIntegrityPrivateProfileUser,
   ProductIntegrityProfileUpdateRequest,

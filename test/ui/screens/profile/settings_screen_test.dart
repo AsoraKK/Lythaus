@@ -12,17 +12,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class _MockDio extends Mock implements Dio {}
 
 void main() {
+  setUp(() => FlutterSecureStorage.setMockInitialValues({}));
   setUpAll(() {
     registerFallbackValue(RequestOptions(path: '/api/users/me'));
     registerFallbackValue(Options());
     registerFallbackValue(CancelToken());
   });
 
-  testWidgets('SettingsScreen toggles local preferences', (tester) async {
+  testWidgets('SettingsScreen saves separate guest preferences explicitly', (
+    tester,
+  ) async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
@@ -38,18 +42,35 @@ void main() {
       SwitchListTile,
       'Left-handed mode (mirror nav)',
     );
-    final hapticsTile = find.widgetWithText(SwitchListTile, 'Haptics');
+    final swipeTile = find.widgetWithText(
+      SwitchListTile,
+      'Swipe between profile tabs',
+    );
 
     expect(tester.widget<SwitchListTile>(leftHandedTile).value, isFalse);
-    expect(tester.widget<SwitchListTile>(hapticsTile).value, isTrue);
+    expect(tester.widget<SwitchListTile>(swipeTile).value, isTrue);
 
     await tester.tap(leftHandedTile);
-    await tester.tap(hapticsTile);
+    await tester.ensureVisible(swipeTile);
+    await tester.pumpAndSettle();
+    await tester.tap(swipeTile);
+    await tester.pumpAndSettle();
+
+    expect(container.read(settingsProvider).leftHandedMode, isFalse);
+    final save = find.text('Save preferences');
+    await tester.ensureVisible(save);
+    await tester.tap(save);
     await tester.pumpAndSettle();
 
     final state = container.read(settingsProvider);
     expect(state.leftHandedMode, isTrue);
-    expect(state.hapticsEnabled, isFalse);
+    expect(state.horizontalSwipeEnabled, isFalse);
+    expect(state.hapticsEnabled, isTrue);
+    expect(find.widgetWithText(SwitchListTile, 'Haptics'), findsNothing);
+    expect(
+      find.text('Haptic feedback is not available in this app yet.'),
+      findsOneWidget,
+    );
     expect(
       find.text('Sign in to manage what others see on your Trust Passport.'),
       findsOneWidget,

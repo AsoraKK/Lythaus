@@ -1,17 +1,20 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:lythaus/features/profile/domain/public_user.dart';
+import 'package:lythaus/features/profile/domain/presentation_preferences.dart';
 
 class OwnerProfile {
   const OwnerProfile({
     required this.user,
     required this.moderationState,
     required this.publicVisibility,
+    this.presentationPreferences,
   });
 
   final PublicUser user;
   final String moderationState;
   final bool publicVisibility;
+  final PresentationPreferences? presentationPreferences;
 
   bool get hasDetails =>
       user.displayName.trim().isNotEmpty ||
@@ -39,6 +42,11 @@ class OwnerProfile {
       user: PublicUser.fromJson(data),
       moderationState: state,
       publicVisibility: data['publicVisibility'] as bool,
+      presentationPreferences: data['presentationPreferences'] == null
+          ? null
+          : PresentationPreferences.fromJson(
+              Map<String, dynamic>.from(data['presentationPreferences'] as Map),
+            ),
     );
   }
 }

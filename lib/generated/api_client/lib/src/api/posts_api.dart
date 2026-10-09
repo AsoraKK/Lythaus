@@ -19,6 +19,7 @@ import 'package:lythaus_api_client/src/model/create_post_request.dart';
 import 'package:lythaus_api_client/src/model/error.dart';
 import 'package:lythaus_api_client/src/model/error_response.dart';
 import 'package:lythaus_api_client/src/model/forbidden_error.dart';
+import 'package:lythaus_api_client/src/model/owner_timeline_page.dart';
 import 'package:lythaus_api_client/src/model/post.dart';
 import 'package:lythaus_api_client/src/model/post_revision_response.dart';
 import 'package:lythaus_api_client/src/model/posts_delete200_response.dart';
@@ -1082,6 +1083,95 @@ class PostsApi {
     }
 
     return Response<PostRevisionResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// List my own published and pending posts
+  /// Returns a private cursor-paginated timeline for the active author. Deleted, blocked, unsupported generated, or other users&#39; posts are never returned.
+  ///
+  /// Parameters:
+  /// * [limit]
+  /// * [cursor]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [OwnerTimelinePage] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<OwnerTimelinePage>> usersMePostsList({
+    int? limit = 8,
+    String? cursor,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/users/me/posts';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
+      if (cursor != null) r'cursor': encodeQueryParameter(_serializers, cursor, const FullType(String)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    OwnerTimelinePage? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(OwnerTimelinePage),
+      ) as OwnerTimelinePage;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<OwnerTimelinePage>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

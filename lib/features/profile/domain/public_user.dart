@@ -34,10 +34,11 @@ class PublicUser {
     this.badges = const [],
   });
 
-  /// Returns the preferred handle for display if available.
-  String get handleLabel {
-    final token = id.length >= 6 ? id.substring(0, 6) : id;
-    return handle ?? '@$token';
+  /// Returns a real account handle, when the server has one.
+  String? get handleLabel {
+    final value = handle?.trim();
+    if (value == null || value.isEmpty) return null;
+    return value.startsWith('@') ? value : '@$value';
   }
 
   factory PublicUser.fromJson(Map<String, dynamic> json) {
