@@ -27,6 +27,8 @@ The SDK remains in `expectedChanges` and `missingCoverage`; native API, severity
 
 The generated `lib/generated/api_client/test` files mostly contain empty TODO callbacks. Their large pass count is a compile/smoke result, not behavioral coverage. The source-evidence mode counts only the explicit fixture suites, records their named outcomes, and requires actual mutation assertion failures. Node tests using synthetic reports or a fake Dart process validate the receipt/command protocol only; they do not count as SDK behavior, native indexing, or license approval. No whole-package line-coverage percentage is claimed.
 
+Existing Flutter preparation runs before npm installation. Its default and `--prepare-for-flutter` paths retain Node built-in imports only; npm-backed evidence/parser modules load dynamically only in `--source-evidence` mode. An isolated CLI protocol regression copies the validator into a disposable fixture without `node_modules` or evidence modules and proves preparation still runs. Its mocked compiler is not counted as SDK behavior evidence.
+
 ```sh
 node --test scripts/tests/dependency-review-policy.test.mjs scripts/tests/openapi-dart-nested-builder-assignment.test.mjs
 node scripts/validate-openapi-dart-client.mjs

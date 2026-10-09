@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -71,6 +71,40 @@ if (!compatible) process.exit(1);
     assert.ok(requests.every(request => request.cwd !== resolve('lib/generated/api_client')));
     assert.ok(requests.every(request => !existsSync(request.cwd)), 'Temporary validation package is removed');
     assert.equal(readFileSync('lib/generated/api_client/pubspec.yaml', 'utf8'), originalManifest);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('Flutter preparation bootstraps without npm packages or source evidence modules', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lythaus-dart-bootstrap-fixture-'));
+  const calls = join(directory, 'calls.jsonl');
+  const manifest = readFileSync('lib/generated/api_client/pubspec.yaml', 'utf8');
+  try {
+    mkdirSync(join(directory, 'scripts/tests/fixtures'), { recursive: true });
+    mkdirSync(join(directory, 'lib/generated'), { recursive: true });
+    mkdirSync(join(directory, 'tests/contract/fixtures'), { recursive: true });
+    cpSync('scripts/validate-openapi-dart-client.mjs', join(directory, 'scripts/validate-openapi-dart-client.mjs'));
+    cpSync('scripts/tests/fixtures/privacy-status-serialization.dart.txt', join(directory, 'scripts/tests/fixtures/privacy-status-serialization.dart.txt'));
+    cpSync('tests/contract/dart', join(directory, 'tests/contract/dart'), { recursive: true });
+    cpSync('lib/generated/api_client', join(directory, 'lib/generated/api_client'), { recursive: true });
+    writeFileSync(join(directory, 'tests/contract/fixtures/monthly-rewards-preparation-wire.mjs'), "process.stdout.write(JSON.stringify({syntheticBootstrapFixture:true}));\n");
+    writeFileSync(join(directory, 'dart'), `#!/usr/bin/env node
+const fs = require('node:fs');
+fs.appendFileSync(${JSON.stringify(calls)}, JSON.stringify(process.argv.slice(2))+'\\n');
+if(process.argv[2]==='run') fs.writeFileSync('lib/synthetic_bootstrap.g.dart','// synthetic CLI bootstrap output\\n');
+`, { mode: 0o700 });
+    assert.equal(existsSync(join(directory, 'node_modules')), false);
+    assert.equal(existsSync(join(directory, 'scripts/ci')), false);
+    const result = spawnSync(process.execPath, ['scripts/validate-openapi-dart-client.mjs', '--prepare-for-flutter'], {
+      cwd: directory, encoding: 'utf8', timeout: 10000,
+      env: { ...process.env, PATH: `${directory}:${process.env.PATH}` },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(readFileSync(calls, 'utf8').trim().split('\n').map(JSON.parse), [['pub', 'get'], ['run', 'build_runner', 'build']]);
+    assert.equal(readFileSync(join(directory, 'build/api_client/pubspec.yaml'), 'utf8'), manifest);
+    assert.equal(readFileSync(join(directory, 'build/api_client/lib/synthetic_bootstrap.g.dart'), 'utf8'), '// synthetic CLI bootstrap output\n');
+    assert.equal(existsSync(join(directory, '.artifacts/security-run-evidence/local-dart-package.json')), false);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

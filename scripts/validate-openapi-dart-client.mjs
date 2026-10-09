@@ -4,23 +4,25 @@ import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { parse, stringify } from 'yaml';
-import { completedBehaviorReport, contractSuites, evidenceSchema, localDartClassification, localDartIdentity, lockedRuntimePackages, preparedDartIdentity, rejectedMutationReport, sourceMutations } from './ci/local-dart-package-evidence.mjs';
-import { resolvedDependencies } from './ci/dependency-review-native.mjs';
 
 const source = resolve('lib/generated/api_client');
 const dart = process.platform === 'win32' ? 'dart.bat' : 'dart';
 const prepareForFlutter = process.argv.includes('--prepare-for-flutter');
 const sourceEvidence = process.argv.includes('--source-evidence');
 let identity;
+let evidence;
+let yaml;
 if (sourceEvidence) {
   rmSync('.artifacts/security-run-evidence/local-dart-package.json', { force: true });
   if (prepareForFlutter) throw new Error('source evidence runs the behavioral contracts before preparation');
+  evidence = await import('./ci/local-dart-package-evidence.mjs');
+  yaml = await import('yaml');
+  const { resolvedDependencies } = await import('./ci/dependency-review-native.mjs');
   execFileSync('git', ['diff', '--exit-code', 'HEAD', '--'], { stdio: 'ignore' });
   const headSha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   resolvedDependencies('pubspec.lock', readFileSync('pubspec.lock', 'utf8'));
   resolvedDependencies('pubspec.lock', readFileSync('pubspec.lock', 'utf8'), { revision: headSha });
-  identity = localDartIdentity(headSha);
+  identity = evidence.localDartIdentity(headSha);
 }
 const temporaryRoot = mkdtempSync(join(tmpdir(), 'lythaus-openapi-dart-'));
 const validationPackage = join(temporaryRoot, 'api_client');
@@ -74,12 +76,12 @@ function prepareLockedConsumer() {
   execFileSync('git', ['diff', '--exit-code', 'HEAD', '--', 'pubspec.yaml', 'pubspec.lock'], { stdio: 'ignore' });
   const graph = capture(['pub', 'deps', '--json'], root);
   if (graph.status !== 0) throw new Error(`canonical runtime graph could not be resolved: ${graph.stderr}`);
-  const rootLock = parse(readFileSync('pubspec.lock', 'utf8'));
-  const runtimePackages = lockedRuntimePackages(JSON.parse(graph.stdout), rootLock, rootLock, identity.dependencies);
+  const rootLock = yaml.parse(readFileSync('pubspec.lock', 'utf8'));
+  const runtimePackages = evidence.lockedRuntimePackages(JSON.parse(graph.stdout), rootLock, rootLock, identity.dependencies);
   const directory = resolve('.artifacts/canonical-sdk-contract/test');
   rmSync(directory, { recursive: true, force: true });
   mkdirSync(directory, { recursive: true });
-  for (const file of contractSuites) cpSync(join(validationPackage, 'test', file), join(directory, file));
+  for (const file of evidence.contractSuites) cpSync(join(validationPackage, 'test', file), join(directory, file));
   const wire = join(directory, 'monthly_rewards_preparation_wire.json');
   cpSync(join(validationPackage, 'test/monthly_rewards_preparation_wire.json'), wire);
   const monthlyTest = join(directory, 'monthly_rewards_preparation_serialization_test.dart');
@@ -119,9 +121,9 @@ try {
   let validationManifest = manifest.replace(/^  build_runner: any$/m,
     '  build_runner: 2.16.1\n  analyzer: 14.4.0');
   if (sourceEvidence) {
-    const pinned = parse(validationManifest);
+    const pinned = yaml.parse(validationManifest);
     pinned.dependencies = Object.fromEntries(identity.dependencies.map(value => [value.name, value.version]));
-    validationManifest = stringify(pinned);
+    validationManifest = yaml.stringify(pinned);
   }
   writeFileSync(manifestPath, validationManifest);
   run(['pub', 'get']);
@@ -138,12 +140,12 @@ try {
       const reports = resolve('.artifacts/canonical-sdk-contract/reports');
       rmSync(reports, { recursive: true, force: true });
       mkdirSync(reports, { recursive: true });
-      const baseline = capture(['test', '--reporter', 'json', ...contractSuites.map(file => join(consumer.directory, file))], consumer.root);
+      const baseline = capture(['test', '--reporter', 'json', ...evidence.contractSuites.map(file => join(consumer.directory, file))], consumer.root);
       writeFileSync(join(reports, 'baseline.jsonl'), baseline.stdout);
       if (baseline.status !== 0) throw new Error(`canonical Dart contracts failed: ${baseline.stderr}`);
-      const behavior = completedBehaviorReport(baseline.stdout);
+      const behavior = evidence.completedBehaviorReport(baseline.stdout);
       const mutations = [];
-      for (const mutation of sourceMutations) {
+      for (const mutation of evidence.sourceMutations) {
         const path = resolve('build/api_client', mutation.file);
         const original = readFileSync(path, 'utf8');
         if (original.split(mutation.before).length !== 2) throw new Error(`source evidence mutation shape changed: ${mutation.id}`);
@@ -152,7 +154,7 @@ try {
           const result = capture(['test', '--reporter', 'json', join(consumer.directory, 'monthly_rewards_preparation_serialization_test.dart'), '--plain-name', mutation.testName], consumer.root);
           writeFileSync(join(reports, `${mutation.id}.jsonl`), result.stdout);
           if (result.status === 0) throw new Error(`source evidence mutation unexpectedly passed: ${mutation.id}`);
-          mutations.push(rejectedMutationReport(result.stdout, mutation));
+          mutations.push(evidence.rejectedMutationReport(result.stdout, mutation));
         } finally {
           writeFileSync(path, original);
         }
@@ -161,11 +163,11 @@ try {
       const directory = '.artifacts/security-run-evidence';
       mkdirSync(directory, { recursive: true });
       const receipt = {
-        schemaVersion: evidenceSchema, observedAt: new Date().toISOString(), identity,
-        preparation: preparedDartIdentity(identity), verification: 'behavior-verified',
+        schemaVersion: evidence.evidenceSchema, observedAt: new Date().toISOString(), identity,
+        preparation: evidence.preparedDartIdentity(identity), verification: 'behavior-verified',
         behavior, mutations, runtimePackages: consumer.runtimePackages, fixtures: 'synthetic-only', nativeIndexing: 'NOT_CLAIMED',
         toolchainLockSha256: createHash('sha256').update(readFileSync(join(validationPackage, 'pubspec.lock'))).digest('hex'),
-        classification: localDartClassification(identity),
+        classification: evidence.localDartClassification(identity),
       };
       writeFileSync(join(directory, 'local-dart-package.json'), JSON.stringify(receipt, null, 2) + '\n');
       process.stdout.write(`Verified ${behavior.cases.length} explicit canonical SDK behavior cases and ${mutations.length} mutation rejections; ownership/license approval remains required.\n`);
