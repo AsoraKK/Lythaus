@@ -41,6 +41,7 @@ on:
       - 'packages/contracts/policies/Lythaus_Monthly_Rewards_Action_Catalogue_v2.json'
       - 'packages/db/src/monthly-reputation.ts'
       - 'packages/db/src/monthly-reputation-report.ts'
+      - 'packages/db/tests/monthly-reputation-report-config.test.mjs'
       - 'packages/db/src/monthly-earning.ts'
       - 'packages/db/src/monthly-context*.ts'
       - 'packages/db/src/monthly-publication.ts'
@@ -183,7 +184,7 @@ jobs:
           '--test-coverage-include=packages/db/src/monthly-reputation-report.ts'
           '--test-coverage-include=apps/lythaus-public-api/src/monthly-reputation-report-export.ts'
           --test-coverage-lines=80 --test-coverage-branches=80
-          --test apps/lythaus-jobs/tests/monthly-reward-selections.postgres.mjs
+          --test apps/lythaus-jobs/tests/monthly-reward-selections.postgres.mjs packages/db/tests/monthly-reputation-report-config.test.mjs
       - name: Prove column-only incident audit grants on real PostgreSQL
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable

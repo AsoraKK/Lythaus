@@ -17,6 +17,8 @@ import { PROSPECTIVE_REPUTATION_CONFIGURATION, PROSPECTIVE_REPUTATION_POLICY_VER
   PROSPECTIVE_REPUTATION_CATALOGUE_HASH as hashV2 } from '../../../packages/contracts/src/monthly-reputation-prospective.ts';
 import { QUARTERLY_CALENDAR_AMENDMENT_VERSION } from '../../../packages/contracts/src/monthly-quarterly-policy.ts';
 import { recordMonthlyEmailControl } from '../../../packages/db/src/monthly-maintenance.ts';
+import { readOwnMonthlyReputationReport } from '../../../packages/db/src/monthly-reputation-report.ts';
+import { serializeMonthlyReputationReportCsv } from '../../lythaus-public-api/src/monthly-reputation-report-export.ts';
 import { monthlyRewardSnapshotConfiguration,publishMonthlyRewardSnapshot,approveMonthlyRewardSnapshotCorrection,
   applyMonthlyRewardSnapshotCorrection,readOwnMonthlyRewardSnapshot,MONTHLY_REWARD_SNAPSHOT_FLAG as flag,
   MONTHLY_REWARD_SNAPSHOT_EVENT as snapshotEvent,MONTHLY_REWARD_CORRECTION_EVENT as correctionEvent } from '../../../packages/db/src/monthly-reward-snapshots.ts';
@@ -49,6 +51,7 @@ if(clockProfile==='settled'&&!clockEvidence.positive_settlement_available)
 const preparedPositiveTest=(name,work)=>test(name,{skip:!clockEvidence.positive_settlement_available
   &&'Positive v2 settlement not exercised: actual PostgreSQL clock is before 2026-11-04; use the isolated settled profile'},work);
 const disabledPreparation={preparationOnly:true,runtimeActivationAllowed:false,appliedPoints:0};
+const preparedReadMetadata={...disabledPreparation,policyVersion:policyV2,dataVersion:2,catalogueHash:hashV2,maximumSourceMonth:13650};
 const binding={role:'lythaus_jobs'};
 mock.module('@lythaus/db',{namedExports:{...database,
   transaction:(binding,work)=>tx(work,binding.role,binding.timeZone),
@@ -589,9 +592,34 @@ preparedPositiveTest('V2/I04/I05 POSITIVE: actual settlement clock admits one co
   const replay={state:'published',id:initial.id,mode:'shadow',created:false,...disabledPreparation};
   for(const result of results.filter(result=>!result.created))assert.deepEqual(result,replay);
   const before=(await sql('SELECT * FROM trust.monthly_reward_snapshots WHERE id=$1',[initial.id])).rows[0];
+  const readPrepared=()=>tx(client=>readOwnMonthlyRewardSnapshot(client,{subjectId:author,rulesVersion:preparedRules,effectiveMonth:'2026-11'},disposable),'lythaus_runtime');
+  const reportPrepared=()=>tx(client=>readOwnMonthlyReputationReport(client,{subjectId:author,sourceMonth:'2026-10',snapshotRulesVersion:preparedRules},disposable),'lythaus_runtime');
+  const entitlement=await readPrepared(),report=await reportPrepared();
+  assert.equal(entitlement.sourceScore,1150);assert.equal(entitlement.policyVersion,policyV2);
+  assert.equal(entitlement.maximumSourceMonth,13650);assert.equal(entitlement.dataVersion,2);
+  assert.equal(report.effectiveMonth,'2026-11');assert.equal(report.levelAuthority.sourceScore,1150);
+  assert.equal(report.report.quarterlyEmail.points,1000);assert.equal(report.report.quarterlyEmail.maximumPoints,1000);
+  assert.equal(report.report.quarterlySuggestion.points,150);assert.equal(report.report.quarterlySuggestion.maximumPoints,150);
+  assert.equal(report.report.quarterlySuggestion.validFrom,null);assert.equal(report.report.quarterlySuggestion.validUntil,null);
+  assert.equal(report.report.quarterlyTotal.points,1150);assert.equal(report.report.quarterlyTotal.maximumPoints,1150);
+  assert.equal(report.report.total.maximumSourceMonth,13650);assert.equal(report.report.total.policyVersion,policyV2);
+  assert.equal(report.report.weekly.earningPolicyVersion,policy);assert.equal(report.report.monthly.maintenancePolicyVersion,policy);
+  assert.match(report.report.sourceDigest,/^[0-9a-f]{64}$/);assert.match(report.report.assemblyEvidenceDigest,/^[0-9a-f]{64}$/);
+  for(const privateValue of [accepted.privateEvidenceId,accepted.eventId,reviewer])assert.ok(!JSON.stringify(report).includes(privateValue));
+  assert.throws(()=>serializeMonthlyReputationReportCsv(report),/preparation_required/);
+  const csv=serializeMonthlyReputationReportCsv(report,{mode:'disabled_v2_preparation'}),lines=csv.trimEnd().split('\r\n');
+  const header=lines[0].split(','),summary=lines[1].slice(1,-1).split('\",\"');
+  for(const [column,value] of Object.entries({emailPoints:'1000',suggestionPoints:'150',quarterlyPoints:'1150',
+    quarterlyMaximumPoints:'1150',maximumSourceMonth:'13650',dataVersion:'2',runtimeActivationAllowed:'false',appliedPoints:'0'}))
+    assert.equal(summary[header.indexOf(column)],value,column);
+  assert.ok(lines.some(line=>line.startsWith('"quarterly_suggestion",')));
   await preparedAssessment(author,{sourceMonth:'2027-01',suggestionRevisions:[accepted]});
   assert.deepEqual((await sql('SELECT * FROM trust.monthly_reward_snapshots WHERE id=$1',[initial.id])).rows[0],before);
   assert.deepEqual(await preparePublish(item.eventId),replay);
+  assert.deepEqual(await readPrepared(),entitlement);assert.deepEqual(await reportPrepared(),report);
+  const futureReport=await tx(client=>readOwnMonthlyReputationReport(client,{subjectId:author,sourceMonth:'2027-01',snapshotRulesVersion:preparedRules},disposable),'lythaus_runtime');
+  assert.equal(futureReport.effectiveMonth,'2027-02');assert.equal(futureReport.levelAuthority.reasonCode,'future_month_unconfirmed');
+  assert.equal(futureReport.levelAuthority.sourceScore,null);assert.equal(futureReport.report.quarterlyTotal.points,0);
   assert.equal((await sql('SELECT 1 FROM trust.reputation_profiles WHERE user_id=$1',[author])).rowCount,0);
   assert.equal((await read(author,preparedRules,'2026-11')).state,'unavailable');
 });
@@ -611,6 +639,19 @@ preparedPositiveTest('V2/I03/I07 POSITIVE: same-period policy collision requires
     [uuidv7(),author,snapshot.id,item.assessmentId,shadow,reviewer,uuidv7(),uuidv7(),policyV2]),'lythaus_admin'),{code:'23503'});
   assert.equal((await sql('SELECT policy_version FROM trust.monthly_reward_snapshots WHERE id=$1',[snapshot.id])).rows[0].policy_version,policy);
   assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshots WHERE subject_user_id=$1',[author])).rowCount,1);
+  const mixed=await tx(client=>readOwnMonthlyReputationReport(client,{subjectId:author,sourceMonth:'2026-10',snapshotRulesVersion:preparedRules},disposable),'lythaus_runtime');
+  assert.equal(mixed.levelAuthority.reasonCode,'snapshot_policy_requires_review');assert.equal(mixed.levelAuthority.sourceScore,null);
+  assert.deepEqual(mixed.corrections.effectiveSnapshots,[]);assert.equal(mixed.report.total.policyVersion,policyV2);
+  const legacyOnly=await person();await assessment(legacyOnly,'2026-10','2027-06-01T00:00:00.000Z');
+  const preparedDefault=await tx(client=>readOwnMonthlyRewardSnapshot(client,{subjectId:legacyOnly,rulesVersion:preparedRules,effectiveMonth:'2026-11'},disposable),'lythaus_runtime');
+  assert.deepEqual(preparedDefault,{state:'pending',reasonCode:'no_previous_assessment',effectiveMonth:'2026-11',level:1,
+    levelKind:'unassessed_default',sourceScore:null,sourceMonth:null,snapshotId:null,revision:0,...preparedReadMetadata});
+  assert.deepEqual(await read(legacyOnly,shadow,'2026-11'),{state:'pending',reasonCode:'settlement_pending',effectiveMonth:'2026-11'});
+  const preparedOnly=await person();await preparedAssessment(preparedOnly);
+  assert.deepEqual(await read(preparedOnly,shadow,'2026-11'),{state:'pending',reasonCode:'no_previous_assessment',effectiveMonth:'2026-11',
+    level:1,levelKind:'unassessed_default',sourceScore:null,sourceMonth:null,snapshotId:null,revision:0,policyVersion:policy});
+  const preparedPending=await tx(client=>readOwnMonthlyRewardSnapshot(client,{subjectId:preparedOnly,rulesVersion:preparedRules,effectiveMonth:'2026-11'},disposable),'lythaus_runtime');
+  assert.deepEqual(preparedPending,{state:'pending',reasonCode:'settlement_pending',effectiveMonth:'2026-11',...preparedReadMetadata});
 });
 
 preparedPositiveTest('V2/I04/I07 POSITIVE: concurrent corrections and approval/application replays have exact disabled metadata',async()=>{
@@ -621,6 +662,9 @@ preparedPositiveTest('V2/I04/I07 POSITIVE: concurrent corrections and approval/a
     revision:1,mode:'shadow',created:false,...disabledPreparation});
   assert.deepEqual(await preparePublish(corrected.eventId),{state:'correction_approval_pending',id:snapshot.id,
     mode:'shadow',created:false,...disabledPreparation});
+  const reportPrepared=()=>tx(client=>readOwnMonthlyReputationReport(client,{subjectId:author,sourceMonth:'2026-10',snapshotRulesVersion:preparedRules},disposable),'lythaus_runtime');
+  const pending=await reportPrepared();assert.equal(pending.levelAuthority.sourceScore,0);assert.equal(pending.report.total.sourceScore,150);
+  assert.equal(pending.levelAuthority.sourceRevision,1);assert.equal(pending.report.sourceRevision,2);
   const request={subjectId:author,snapshotId:snapshot.id,assessmentId:corrected.assessmentId,idempotencyKey:uuidv7()};
   const approvals=await Promise.all([prepareApprove(request),prepareApprove(request)]);assert.equal(approvals.filter(result=>result.created).length,1);
   const approval=approvals.find(result=>result.created);
@@ -641,6 +685,11 @@ preparedPositiveTest('V2/I04/I07 POSITIVE: concurrent corrections and approval/a
   const chain=(await sql('SELECT * FROM trust.monthly_reward_snapshots WHERE subject_user_id=$1 ORDER BY revision',[author])).rows;
   assert.equal(chain.length,2);assert.equal(chain[0].source_score,0);assert.equal(chain[1].supersedes_id,snapshot.id);
   assert.ok(chain.every(row=>row.policy_version===policyV2&&row.preparation_only&&row.mode==='shadow'));
+  const completed=await reportPrepared();assert.equal(completed.levelAuthority.sourceScore,150);
+  assert.equal(completed.levelAuthority.sourceRevision,2);assert.equal(completed.levelAuthority.snapshotRevision,2);
+  assert.equal(completed.corrections.effectiveSnapshots.length,1);
+  assert.ok(completed.corrections.sourceRevisions.every(row=>row.policyVersion===policyV2&&row.dataVersion===2));
+  assert.ok(completed.corrections.effectiveSnapshots.every(row=>row.policyVersion===policyV2&&row.dataVersion===2));
   await assert.rejects(prepareApprove({...request,idempotencyKey:uuidv7()}),/snapshot_revision_conflict/);
   await assert.rejects(directPreparedSnapshot(corrected,{previous:snapshot.id,revision:2,correction:approvals[0].id,event:approvals[0].sourceEventId}),/revision_conflict/);
 });
@@ -714,12 +763,19 @@ test('V2/I05: future source stays unsettled in opposite timezones despite future
   const now=new Date((await sql('SELECT clock_timestamp() AS now')).rows[0].now);
   const month=now.toISOString().slice(0,7)<'2026-10'?'2026-10':now.toISOString().slice(0,7);
   const author=await person(),item=await preparedAssessment(author,{sourceMonth:month});
+  const unconfigured=await tx(client=>readOwnMonthlyRewardSnapshot(client,{subjectId:author,effectiveMonth:item.calculation.effectiveMonth},disposable),'lythaus_runtime');
+  assert.deepEqual(unconfigured,{state:'unavailable',reasonCode:'approval_unavailable',effectiveMonth:item.calculation.effectiveMonth,...preparedReadMetadata});
   const attempts=await Promise.allSettled(Array.from({length:3},()=>preparePublish(item.eventId)));
   assert.ok(attempts.every(result=>result.status==='rejected'&&/source_not_settled/.test(result.reason.message)));
   await assert.rejects(prepareApprove({subjectId:author,snapshotId:confirmedSnapshot.id,assessmentId:item.assessmentId}),/source_not_settled/);
   for(const timeZone of ['Pacific/Kiritimati','Etc/GMT+12']){
     await assert.rejects(tx(client=>publishMonthlyRewardSnapshot(client,{eventId:item.eventId,rulesVersion:preparedRules},disposable),'lythaus_jobs',timeZone),/source_not_settled/);
     await assert.rejects(directPreparedSnapshot(item,{timeZone}),/provenance_required/);
+    const report=await tx(client=>readOwnMonthlyReputationReport(client,{subjectId:author,sourceMonth:month,snapshotRulesVersion:preparedRules},disposable),'lythaus_runtime',timeZone);
+    assert.equal(report.effectiveMonth,item.calculation.effectiveMonth);assert.equal(report.levelAuthority.reasonCode,'future_month_unconfirmed');
+    assert.equal(report.levelAuthority.sourceScore,null);
+    const direct=await tx(client=>readOwnMonthlyRewardSnapshot(client,{subjectId:author,rulesVersion:preparedRules,effectiveMonth:item.calculation.effectiveMonth},disposable),'lythaus_runtime',timeZone);
+    assert.deepEqual(direct,{state:'pending',reasonCode:'future_month_unconfirmed',effectiveMonth:item.calculation.effectiveMonth,...preparedReadMetadata});
   }
   assert.deepEqual(await reconcileMonthlyRewardSnapshots({...env,MONTHLY_REPUTATION_SNAPSHOT_RULES:preparedRules}),{processed:0});
   assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshot_receipts WHERE event_id=$1',[item.eventId])).rowCount,0);
@@ -738,4 +794,5 @@ test('V2/I11: deletion between source read and authorization refuses capture and
   await assert.rejects(pending,/subject_unavailable/);
   assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshots WHERE subject_user_id=$1',[author])).rowCount,0);
   assert.equal((await sql('SELECT 1 FROM trust.monthly_reputation_assemblies WHERE subject_user_id=$1',[author])).rowCount,0);
+  await assert.rejects(tx(client=>readOwnMonthlyReputationReport(client,{subjectId:author,sourceMonth:'2026-10',snapshotRulesVersion:preparedRules},disposable),'lythaus_runtime'),/subject_unavailable/);
 });
