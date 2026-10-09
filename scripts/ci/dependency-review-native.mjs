@@ -42,7 +42,8 @@ function canonicalLocalPackage(file, name, value, packages, revision) {
   const root = parse(rootContent);
   const source = parse(sourceContent);
   const declaration = root.dependencies?.[name];
-  if (declaration?.path !== 'build/api_client' || Object.keys(declaration).join(',') !== 'path' || root.dev_dependencies?.[name] || root.dependency_overrides?.[name] || source.name !== name || source.version !== value.version || typeof source.version !== 'string' || !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)*$/.test(source.version)) throw new Error(`CANONICAL_LOCAL_PACKAGE_IDENTITY_MISMATCH:${name}`);
+  if (declaration?.path !== 'build/api_client' || Object.keys(declaration).join(',') !== 'path' || Object.hasOwn(root.dev_dependencies ?? {}, name) || Object.hasOwn(root.dependency_overrides ?? {}, name) || source.name !== name || source.version !== value.version || typeof source.version !== 'string' || !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)*$/.test(source.version)) throw new Error(`CANONICAL_LOCAL_PACKAGE_IDENTITY_MISMATCH:${name}`);
+  if (repositoryFile('pubspec_overrides.yaml', revision) !== undefined) throw new Error(`CANONICAL_LOCAL_PACKAGE_OVERRIDES_FILE_UNSUPPORTED:${name}`);
   if (Object.keys(source.dependency_overrides ?? {}).length || Object.entries(source.dependencies ?? {}).some(([dependency, constraint]) => typeof constraint !== 'string' || packages[dependency]?.source !== 'hosted')) throw new Error(`CANONICAL_LOCAL_PACKAGE_UNLOCKED_DEPENDENCY:${name}`);
   const preparedContent = repositoryFile('build/api_client/pubspec.yaml', revision);
   if (preparedContent !== undefined && preparedContent !== sourceContent) throw new Error(`CANONICAL_LOCAL_PACKAGE_PREPARATION_MISMATCH:${name}`);
@@ -100,7 +101,7 @@ export function expectedChanges(base, head) {
   const headFiles = filesAt(head);
   const changed = git(['diff', '--name-only', base, head]).split(/\r?\n/);
   const files = headFiles.filter(file => changed.includes(file) && /(^|\/)(package-lock\.json|pubspec\.lock|requirements\.(txt|lock))$/.test(file));
-  if (headFiles.includes('pubspec.lock') && changed.some(file => file === 'pubspec.yaml' || file.startsWith('lib/generated/api_client/') || file === 'build' || file.startsWith('build/'))) resolvedDependencies('pubspec.lock', git(['show', `${head}:pubspec.lock`]), { revision: head });
+  if (headFiles.includes('pubspec.lock') && changed.some(file => file === 'pubspec.yaml' || file === 'pubspec_overrides.yaml' || file.startsWith('lib/generated/api_client/') || file === 'build' || file.startsWith('build/'))) resolvedDependencies('pubspec.lock', git(['show', `${head}:pubspec.lock`]), { revision: head });
   const changes = [];
   for (const file of files) {
     const before = beforeFiles.has(file) ? resolvedDependencies(file, git(['show', `${base}:${file}`]), { revision: base }) : [];

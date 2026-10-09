@@ -92,6 +92,8 @@ test('canonical Dart source and root declaration must match the locked identity'
     { ...root, dependencies: { lythaus_api_client: { path: 'build/api_client', git: 'https://example.invalid' } } },
     { ...root, dependency_overrides: { lythaus_api_client: { path: 'build/api_client' } } },
     { ...root, dev_dependencies: { lythaus_api_client: { path: 'build/api_client' } } },
+    { ...root, dependency_overrides: { lythaus_api_client: null } },
+    { ...root, dev_dependencies: { lythaus_api_client: null } },
   ]) {
     write('pubspec.yaml', replacement);
     assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock)), /IDENTITY_MISMATCH/);
@@ -116,6 +118,48 @@ test('canonical Dart source and root declaration must match the locked identity'
   fs.rmSync('lib/generated/api_client/pubspec.yaml');
   assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock)), /SOURCE_REQUIRED/);
 }));
+
+test('canonical local Dart rejects every effective overrides file including null and empty files', () => withLocalSdkFixture(({ lock, write }) => {
+  for (const overrides of [
+    { dependency_overrides: { lythaus_api_client: null } },
+    { dependency_overrides: { lythaus_api_client: { path: '../outside' } } },
+    { dependency_overrides: { lythaus_api_client: { git: 'https://example.invalid' } } },
+    { dependency_overrides: { dio: null } }, {}, '',
+  ]) {
+    write('pubspec_overrides.yaml', overrides);
+    assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock)), /OVERRIDES_FILE_UNSUPPORTED/);
+  }
+  fs.renameSync('pubspec_overrides.yaml', 'synthetic-override-target');
+  fs.symlinkSync('synthetic-override-target', 'pubspec_overrides.yaml');
+  assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock)), /NON_CANONICAL_LOCAL_PACKAGE_FILE/);
+}));
+
+test('native comparison rejects null root keys and effective override changes at their exact SHA', () => {
+  for (const field of ['dependency_overrides', 'dev_dependencies']) withLocalSdkFixture(({ root, write, git, commit }) => {
+    git('init', '-q');
+    const base = commit('Canonical generated package');
+    write('pubspec.yaml', { ...root, [field]: { lythaus_api_client: null } });
+    const head = commit('Synthetic null SDK declaration');
+    write('pubspec.yaml', root);
+    assert.throws(() => expectedChanges(base, head), /IDENTITY_MISMATCH/);
+  });
+  for (const overrides of [{ dependency_overrides: { lythaus_api_client: null } }, {}]) withLocalSdkFixture(({ write, git, commit }) => {
+    git('init', '-q');
+    const base = commit('Canonical generated package');
+    write('pubspec_overrides.yaml', overrides);
+    const head = commit('Synthetic effective overrides file without lock change');
+    fs.rmSync('pubspec_overrides.yaml');
+    assert.throws(() => expectedChanges(base, head), /OVERRIDES_FILE_UNSUPPORTED/);
+  });
+  withLocalSdkFixture(({ write, git, commit }) => {
+    git('init', '-q');
+    const base = commit('Canonical generated package');
+    write('synthetic-override-target', {});
+    fs.symlinkSync('synthetic-override-target', 'pubspec_overrides.yaml');
+    const head = commit('Synthetic effective overrides symlink');
+    assert.throws(() => expectedChanges(base, head), /NON_CANONICAL_LOCAL_PACKAGE_FILE/);
+  });
+});
 
 test('canonical local Dart source rejects filesystem symlinks at every source or build boundary', () => {
   for (const target of ['pubspec.yaml', 'lib', 'lib/generated', 'lib/generated/api_client', 'lib/generated/api_client/pubspec.yaml', 'build', 'build/api_client', 'build/api_client/pubspec.yaml']) {
