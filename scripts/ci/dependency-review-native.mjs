@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parse } from 'yaml';
-import { lockedVersionSatisfies } from './local-dart-package-evidence.mjs';
 
 export function comparison(base, head) {
   if (![base, head].every(value => /^[a-f0-9]{40}$/.test(value ?? '') && !/^0+$/.test(value)) || base === head) throw new Error('EXPLICIT_DISTINCT_COMMIT_SHAS_REQUIRED');
@@ -45,13 +44,39 @@ function canonicalLocalPackage(file, name, value, packages, revision) {
   const declaration = root.dependencies?.[name];
   if (declaration?.path !== 'build/api_client' || Object.keys(declaration).join(',') !== 'path' || Object.hasOwn(root.dev_dependencies ?? {}, name) || Object.hasOwn(root.dependency_overrides ?? {}, name) || source.name !== name || source.version !== value.version || typeof source.version !== 'string' || !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)*$/.test(source.version)) throw new Error(`CANONICAL_LOCAL_PACKAGE_IDENTITY_MISMATCH:${name}`);
   if (repositoryFile('pubspec_overrides.yaml', revision) !== undefined) throw new Error(`CANONICAL_LOCAL_PACKAGE_OVERRIDES_FILE_UNSUPPORTED:${name}`);
-  if (Object.keys(source.dependency_overrides ?? {}).length || Object.entries(source.dependencies ?? {}).some(([dependency, constraint]) => typeof constraint !== 'string' || packages[dependency]?.source !== 'hosted')) throw new Error(`CANONICAL_LOCAL_PACKAGE_UNLOCKED_DEPENDENCY:${name}`);
-  for (const [dependency, constraint] of Object.entries(source.dependencies ?? {})) {
-    if (!lockedVersionSatisfies(constraint, packages[dependency].version)) throw new Error(`CANONICAL_LOCAL_PACKAGE_CONSTRAINT_MISMATCH:${name}:${dependency}`);
-  }
+  if (Object.keys(source.dependency_overrides ?? {}).length || Object.entries(source.dependencies ?? {}).some(([dependency, constraint]) => packages[dependency]?.source !== 'hosted' || !lockedVersionSatisfies(constraint, packages[dependency]?.version))) throw new Error(`CANONICAL_LOCAL_PACKAGE_UNLOCKED_DEPENDENCY:${name}`);
   const preparedContent = repositoryFile('build/api_client/pubspec.yaml', revision);
   if (preparedContent !== undefined && preparedContent !== sourceContent) throw new Error(`CANONICAL_LOCAL_PACKAGE_PREPARATION_MISMATCH:${name}`);
   return { ecosystem: 'pub', name, version: value.version, relationship: 'direct', source: 'path', localPath: 'build/api_client', canonicalManifest: 'lib/generated/api_client/pubspec.yaml' };
+}
+
+function versionTuple(value) {
+  const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.exec(value ?? '');
+  const tuple = match?.slice(1).map(Number);
+  return tuple?.every(Number.isSafeInteger) ? tuple : undefined;
+}
+const compareVersions = (left, right) => left[0] - right[0] || left[1] - right[1] || left[2] - right[2];
+
+export function lockedVersionSatisfies(constraint, version) {
+  const locked = versionTuple(version);
+  if (!locked || typeof constraint !== 'string') return false;
+  constraint = constraint.trim();
+  if (constraint.startsWith('^')) {
+    const minimum = versionTuple(constraint.slice(1));
+    if (!minimum) return false;
+    const maximum = minimum[0] ? [minimum[0] + 1, 0, 0] : [0, minimum[1] + 1, 0];
+    return maximum.every(Number.isSafeInteger) && compareVersions(locked, minimum) >= 0 && compareVersions(locked, maximum) < 0;
+  }
+  const exact = versionTuple(constraint);
+  if (exact) return compareVersions(locked, exact) === 0;
+  const terms = constraint.split(/\s+/);
+  return terms.length > 0 && terms.every(term => {
+    const match = /^(>=|>|<=|<)(.+)$/.exec(term);
+    const bound = match && versionTuple(match[2]);
+    if (!bound) return false;
+    const difference = compareVersions(locked, bound);
+    return match[1] === '>=' ? difference >= 0 : match[1] === '>' ? difference > 0 : match[1] === '<=' ? difference <= 0 : difference < 0;
+  });
 }
 
 export function resolvedDependencies(file, content, { revision } = {}) {

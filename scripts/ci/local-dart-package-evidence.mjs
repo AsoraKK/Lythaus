@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import { join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { parse } from 'yaml';
+import { lockedVersionSatisfies } from './dependency-review-native.mjs';
+export { lockedVersionSatisfies };
 
 export const evidenceSchema = 'lythaus-canonical-dart-source-evidence-v1';
 export const classificationPath = 'infrastructure/canonical-dart-package-approval.json';
@@ -30,34 +32,6 @@ export const sourceMutations = [
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 const blobSha = value => createHash('sha1').update(`blob ${value.length}\0`).update(value).digest('hex');
 const git = args => execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
-
-function versionTuple(value) {
-  const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.exec(value ?? '');
-  const tuple = match?.slice(1).map(Number);
-  return tuple?.every(Number.isSafeInteger) ? tuple : undefined;
-}
-const compare = (left, right) => left[0] - right[0] || left[1] - right[1] || left[2] - right[2];
-
-export function lockedVersionSatisfies(constraint, version) {
-  const locked = versionTuple(version);
-  if (!locked || typeof constraint !== 'string') return false;
-  if (constraint.startsWith('^')) {
-    const minimum = versionTuple(constraint.slice(1));
-    if (!minimum) return false;
-    const maximum = minimum[0] ? [minimum[0] + 1, 0, 0] : minimum[1] ? [0, minimum[1] + 1, 0] : [0, 0, minimum[2] + 1];
-    return compare(locked, minimum) >= 0 && compare(locked, maximum) < 0;
-  }
-  const exact = versionTuple(constraint);
-  if (exact) return compare(locked, exact) === 0;
-  const terms = constraint.trim().split(/\s+/);
-  return terms.length > 0 && terms.every(term => {
-    const match = /^(>=|>|<=|<)(.+)$/.exec(term);
-    const bound = match && versionTuple(match[2]);
-    if (!bound) return false;
-    const difference = compare(locked, bound);
-    return match[1] === '>=' ? difference >= 0 : match[1] === '>' ? difference > 0 : match[1] === '<=' ? difference <= 0 : difference < 0;
-  });
-}
 
 export function lockedRuntimePackages(graph, temporaryLock, rootLock, directDependencies) {
   if (!Array.isArray(graph.packages) || graph.packages.length > 2000) throw new Error('SOURCE_EVIDENCE_RUNTIME_GRAPH_REQUIRED');

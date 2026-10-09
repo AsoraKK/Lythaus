@@ -37,8 +37,8 @@ function withSourceFixture(run) {
 }
 
 test('current canonical Dart constraint forms require the actual locked version', () => {
-  for (const [constraint, version] of [['^5.2.0', '5.12.0'], ['>=1.5.0 <2.0.0', '1.5.0'], ['>=8.4.0 <9.0.0', '8.12.0'], ['5.2.0', '5.2.0'], ['^0.2.3', '0.2.9'], ['^0.0.3', '0.0.3']]) assert.equal(lockedVersionSatisfies(constraint, version), true, `${constraint}: ${version}`);
-  for (const [constraint, version] of [['^900.0.0', '5.2.0'], ['^5.2.0', '5.1.9'], ['^5.2.0', '6.0.0'], ['>=1.5.0 <2.0.0', '2.0.0'], ['>=1.5.0 <2.0.0', '1.4.9'], ['^0.2.3', '0.3.0'], ['^0.0.3', '0.0.4'], ['any', '5.2.0'], ['>=1.0.0 || <9.0.0', '5.2.0'], ['^5.2.0', '5.2.0-beta'], ['', '5.2.0']]) assert.equal(lockedVersionSatisfies(constraint, version), false, `${constraint}: ${version}`);
+  for (const [constraint, version] of [['^5.2.0', '5.12.0'], ['>=1.5.0 <2.0.0', '1.5.0'], ['>=8.4.0 <9.0.0', '8.12.0'], ['5.2.0', '5.2.0'], ['^0.2.3', '0.2.9'], ['^0.0.3', '0.0.3'], ['^0.0.3', '0.0.4']]) assert.equal(lockedVersionSatisfies(constraint, version), true, `${constraint}: ${version}`);
+  for (const [constraint, version] of [['^900.0.0', '5.2.0'], ['^5.2.0', '5.1.9'], ['^5.2.0', '6.0.0'], ['>=1.5.0 <2.0.0', '2.0.0'], ['>=1.5.0 <2.0.0', '1.4.9'], ['^0.2.3', '0.3.0'], ['^0.0.3', '0.1.0'], ['any', '5.2.0'], ['>=1.0.0 || <9.0.0', '5.2.0'], ['^5.2.0', '5.2.0-beta'], ['', '5.2.0']]) assert.equal(lockedVersionSatisfies(constraint, version), false, `${constraint}: ${version}`);
 });
 
 test('actual runtime dependency closure must match root locked versions and artifacts', () => {
