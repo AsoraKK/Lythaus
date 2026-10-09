@@ -51,7 +51,8 @@ function canonicalLocalPackage(file, name, value, packages, revision) {
 }
 
 function versionTuple(value) {
-  const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.exec(value ?? '');
+  if (typeof value !== 'string') return undefined;
+  const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.exec(value);
   const tuple = match?.slice(1).map(Number);
   return tuple?.every(Number.isSafeInteger) ? tuple : undefined;
 }

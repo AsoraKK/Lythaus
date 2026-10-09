@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { dependencyGraphChanged, dependencyGraphMetadata, shouldRunLocalAudit } from '../ci/dependency-review-policy.mjs';
-import { comparison, apiFailure, resolvedDependencies, missingCoverage, expectedChanges } from '../ci/dependency-review-native.mjs';
+import { comparison, apiFailure, resolvedDependencies, missingCoverage, expectedChanges, lockedVersionSatisfies } from '../ci/dependency-review-native.mjs';
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -86,6 +86,13 @@ test('local Dart recognition rejects alternate paths, sources, names and lock re
   assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock), { revision: 'HEAD' }), /EXACT_LOCAL_PACKAGE_REVISION_REQUIRED/);
 }));
 
+test('Dart runtime versions reject non-string values without coercion', () => {
+  const coercible = { toString() { throw new Error('version coercion must never run'); } };
+  for (const version of [['5.2.0'], { version: '5.2.0' }, coercible, null, undefined, 5.2]) {
+    for (const constraint of ['^5.2.0', '5.2.0', '>=5.2.0 <6.0.0']) assert.equal(lockedVersionSatisfies(constraint, version), false);
+  }
+});
+
 test('canonical runtime constraints admit the exact lock at Dart stable version boundaries', () => withLocalSdkFixture(({ lock, source, write, commit }) => {
   const cases = [
     ['^900.0.0', '5.2.0', false], ['^5.2.0', '5.2.0', true], ['^5.2.0', '5.1.9', false],
@@ -97,6 +104,7 @@ test('canonical runtime constraints admit the exact lock at Dart stable version 
     ['5.2.0', '5.2.0', true], ['5.2.0', '5.2.1', false],
     ['any', '5.2.0', false], ['', '5.2.0', false], ['^5.2.0', '5.2.0-rc.1', false],
     ['5.2.0 || 6.0.0', '5.2.0', false], ['^5.2.0', '5.2', false], [null, '5.2.0', false],
+    ['^5.2.0', ['5.2.0'], false], ['^5.2.0', { version: '5.2.0' }, false],
   ];
   execFileSync('git', ['init', '-q'], { stdio: 'ignore' });
   for (const [constraint, version, admitted] of cases) {
