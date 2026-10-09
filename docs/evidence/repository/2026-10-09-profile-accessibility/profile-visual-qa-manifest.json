@@ -1,0 +1,998 @@
+{
+  "sourceCommit": "c0fbf470b3a5fda5f379c95ec538a57ff5d709f4",
+  "syntheticOnly": true,
+  "browser": "chromium",
+  "browserVersion": "151.0.7922.34",
+  "screenshots": [
+    {
+      "name": "profile-light-mobile-guest-saved-preferences.png",
+      "theme": "light",
+      "viewport": "mobile",
+      "state": "guest-saved-preferences",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 390
+      }
+    },
+    {
+      "name": "profile-light-mobile-guest-reopened-preferences.png",
+      "theme": "light",
+      "viewport": "mobile",
+      "state": "guest-reopened-preferences",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 390
+      }
+    },
+    {
+      "name": "profile-light-mobile-owner-empty-top.png",
+      "theme": "light",
+      "viewport": "mobile",
+      "state": "owner-empty-top",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 392
+      }
+    },
+    {
+      "name": "profile-light-mobile-owner-comments-unavailable.png",
+      "theme": "light",
+      "viewport": "mobile",
+      "state": "owner-comments-unavailable",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 392
+      }
+    },
+    {
+      "name": "profile-light-mobile-owner-empty.png",
+      "theme": "light",
+      "viewport": "mobile",
+      "state": "owner-empty",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 392
+      }
+    },
+    {
+      "name": "profile-light-mobile-owner-populated.png",
+      "theme": "light",
+      "viewport": "mobile",
+      "state": "owner-populated",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 392
+      }
+    },
+    {
+      "name": "profile-light-mobile-owner-populated-page-two.png",
+      "theme": "light",
+      "viewport": "mobile",
+      "state": "owner-populated-page-two",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 392
+      }
+    },
+    {
+      "name": "profile-light-mobile-owner-error.png",
+      "theme": "light",
+      "viewport": "mobile",
+      "state": "owner-error",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 392
+      }
+    },
+    {
+      "name": "profile-light-mobile-owner-error-recovered.png",
+      "theme": "light",
+      "viewport": "mobile",
+      "state": "owner-error-recovered",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 392
+      }
+    },
+    {
+      "name": "profile-light-mobile-other-profile-public.png",
+      "theme": "light",
+      "viewport": "mobile",
+      "state": "other-profile-public",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 392
+      }
+    },
+    {
+      "name": "profile-light-mobile-other-profile-private-hidden.png",
+      "theme": "light",
+      "viewport": "mobile",
+      "state": "other-profile-private-hidden",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 390
+      }
+    },
+    {
+      "name": "profile-light-mobile-owner-populated-large-text-top.png",
+      "theme": "light",
+      "viewport": "mobile",
+      "state": "owner-populated-large-text-top",
+      "screenshotScale": "device",
+      "viewportMetrics": {
+        "width": 195,
+        "height": 422,
+        "documentWidth": 195,
+        "bodyWidth": 202
+      }
+    },
+    {
+      "name": "profile-light-mobile-owner-populated-large-text-200.png",
+      "theme": "light",
+      "viewport": "mobile",
+      "state": "owner-populated-large-text-200",
+      "screenshotScale": "device",
+      "viewportMetrics": {
+        "width": 195,
+        "height": 422,
+        "documentWidth": 195,
+        "bodyWidth": 202
+      }
+    },
+    {
+      "name": "profile-light-mobile-settings-account-first.png",
+      "theme": "light",
+      "viewport": "mobile",
+      "state": "settings-account-first",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 390
+      }
+    },
+    {
+      "name": "profile-light-mobile-settings-saved-preferences.png",
+      "theme": "light",
+      "viewport": "mobile",
+      "state": "settings-saved-preferences",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 390
+      }
+    },
+    {
+      "name": "profile-light-mobile-settings-saved-visibility.png",
+      "theme": "light",
+      "viewport": "mobile",
+      "state": "settings-saved-visibility",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 390
+      }
+    },
+    {
+      "name": "profile-light-desktop-guest-saved-preferences.png",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "guest-saved-preferences",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-light-desktop-guest-reopened-preferences.png",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "guest-reopened-preferences",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-light-desktop-owner-empty-top.png",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "owner-empty-top",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-light-desktop-owner-comments-unavailable.png",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "owner-comments-unavailable",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-light-desktop-owner-empty.png",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "owner-empty",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-light-desktop-owner-populated.png",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "owner-populated",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-light-desktop-owner-populated-page-two.png",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "owner-populated-page-two",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-light-desktop-owner-error.png",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "owner-error",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-light-desktop-owner-error-recovered.png",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "owner-error-recovered",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-light-desktop-other-profile-public.png",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "other-profile-public",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-light-desktop-other-profile-private-hidden.png",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "other-profile-private-hidden",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-light-desktop-owner-populated-large-text-top.png",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "owner-populated-large-text-top",
+      "screenshotScale": "device",
+      "viewportMetrics": {
+        "width": 720,
+        "height": 480,
+        "documentWidth": 720,
+        "bodyWidth": 722
+      }
+    },
+    {
+      "name": "profile-light-desktop-owner-populated-large-text-200.png",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "owner-populated-large-text-200",
+      "screenshotScale": "device",
+      "viewportMetrics": {
+        "width": 720,
+        "height": 480,
+        "documentWidth": 720,
+        "bodyWidth": 722
+      }
+    },
+    {
+      "name": "profile-light-desktop-settings-account-first.png",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "settings-account-first",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-light-desktop-settings-saved-preferences.png",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "settings-saved-preferences",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-light-desktop-settings-saved-visibility.png",
+      "theme": "light",
+      "viewport": "desktop",
+      "state": "settings-saved-visibility",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-dark-mobile-guest-saved-preferences.png",
+      "theme": "dark",
+      "viewport": "mobile",
+      "state": "guest-saved-preferences",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 390
+      }
+    },
+    {
+      "name": "profile-dark-mobile-guest-reopened-preferences.png",
+      "theme": "dark",
+      "viewport": "mobile",
+      "state": "guest-reopened-preferences",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 390
+      }
+    },
+    {
+      "name": "profile-dark-mobile-owner-empty-top.png",
+      "theme": "dark",
+      "viewport": "mobile",
+      "state": "owner-empty-top",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 392
+      }
+    },
+    {
+      "name": "profile-dark-mobile-owner-comments-unavailable.png",
+      "theme": "dark",
+      "viewport": "mobile",
+      "state": "owner-comments-unavailable",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 392
+      }
+    },
+    {
+      "name": "profile-dark-mobile-owner-empty.png",
+      "theme": "dark",
+      "viewport": "mobile",
+      "state": "owner-empty",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 392
+      }
+    },
+    {
+      "name": "profile-dark-mobile-owner-populated.png",
+      "theme": "dark",
+      "viewport": "mobile",
+      "state": "owner-populated",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 392
+      }
+    },
+    {
+      "name": "profile-dark-mobile-owner-populated-page-two.png",
+      "theme": "dark",
+      "viewport": "mobile",
+      "state": "owner-populated-page-two",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 392
+      }
+    },
+    {
+      "name": "profile-dark-mobile-owner-error.png",
+      "theme": "dark",
+      "viewport": "mobile",
+      "state": "owner-error",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 392
+      }
+    },
+    {
+      "name": "profile-dark-mobile-owner-error-recovered.png",
+      "theme": "dark",
+      "viewport": "mobile",
+      "state": "owner-error-recovered",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 392
+      }
+    },
+    {
+      "name": "profile-dark-mobile-other-profile-public.png",
+      "theme": "dark",
+      "viewport": "mobile",
+      "state": "other-profile-public",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 392
+      }
+    },
+    {
+      "name": "profile-dark-mobile-other-profile-private-hidden.png",
+      "theme": "dark",
+      "viewport": "mobile",
+      "state": "other-profile-private-hidden",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 390
+      }
+    },
+    {
+      "name": "profile-dark-mobile-owner-populated-large-text-top.png",
+      "theme": "dark",
+      "viewport": "mobile",
+      "state": "owner-populated-large-text-top",
+      "screenshotScale": "device",
+      "viewportMetrics": {
+        "width": 195,
+        "height": 422,
+        "documentWidth": 195,
+        "bodyWidth": 202
+      }
+    },
+    {
+      "name": "profile-dark-mobile-owner-populated-large-text-200.png",
+      "theme": "dark",
+      "viewport": "mobile",
+      "state": "owner-populated-large-text-200",
+      "screenshotScale": "device",
+      "viewportMetrics": {
+        "width": 195,
+        "height": 422,
+        "documentWidth": 195,
+        "bodyWidth": 202
+      }
+    },
+    {
+      "name": "profile-dark-mobile-settings-account-first.png",
+      "theme": "dark",
+      "viewport": "mobile",
+      "state": "settings-account-first",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 390
+      }
+    },
+    {
+      "name": "profile-dark-mobile-settings-saved-preferences.png",
+      "theme": "dark",
+      "viewport": "mobile",
+      "state": "settings-saved-preferences",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 390
+      }
+    },
+    {
+      "name": "profile-dark-mobile-settings-saved-visibility.png",
+      "theme": "dark",
+      "viewport": "mobile",
+      "state": "settings-saved-visibility",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 390,
+        "height": 844,
+        "documentWidth": 390,
+        "bodyWidth": 390
+      }
+    },
+    {
+      "name": "profile-dark-desktop-guest-saved-preferences.png",
+      "theme": "dark",
+      "viewport": "desktop",
+      "state": "guest-saved-preferences",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-dark-desktop-guest-reopened-preferences.png",
+      "theme": "dark",
+      "viewport": "desktop",
+      "state": "guest-reopened-preferences",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-dark-desktop-owner-empty-top.png",
+      "theme": "dark",
+      "viewport": "desktop",
+      "state": "owner-empty-top",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-dark-desktop-owner-comments-unavailable.png",
+      "theme": "dark",
+      "viewport": "desktop",
+      "state": "owner-comments-unavailable",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-dark-desktop-owner-empty.png",
+      "theme": "dark",
+      "viewport": "desktop",
+      "state": "owner-empty",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-dark-desktop-owner-populated.png",
+      "theme": "dark",
+      "viewport": "desktop",
+      "state": "owner-populated",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-dark-desktop-owner-populated-page-two.png",
+      "theme": "dark",
+      "viewport": "desktop",
+      "state": "owner-populated-page-two",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-dark-desktop-owner-error.png",
+      "theme": "dark",
+      "viewport": "desktop",
+      "state": "owner-error",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-dark-desktop-owner-error-recovered.png",
+      "theme": "dark",
+      "viewport": "desktop",
+      "state": "owner-error-recovered",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-dark-desktop-other-profile-public.png",
+      "theme": "dark",
+      "viewport": "desktop",
+      "state": "other-profile-public",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-dark-desktop-other-profile-private-hidden.png",
+      "theme": "dark",
+      "viewport": "desktop",
+      "state": "other-profile-private-hidden",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-dark-desktop-owner-populated-large-text-top.png",
+      "theme": "dark",
+      "viewport": "desktop",
+      "state": "owner-populated-large-text-top",
+      "screenshotScale": "device",
+      "viewportMetrics": {
+        "width": 720,
+        "height": 480,
+        "documentWidth": 720,
+        "bodyWidth": 722
+      }
+    },
+    {
+      "name": "profile-dark-desktop-owner-populated-large-text-200.png",
+      "theme": "dark",
+      "viewport": "desktop",
+      "state": "owner-populated-large-text-200",
+      "screenshotScale": "device",
+      "viewportMetrics": {
+        "width": 720,
+        "height": 480,
+        "documentWidth": 720,
+        "bodyWidth": 722
+      }
+    },
+    {
+      "name": "profile-dark-desktop-settings-account-first.png",
+      "theme": "dark",
+      "viewport": "desktop",
+      "state": "settings-account-first",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-dark-desktop-settings-saved-preferences.png",
+      "theme": "dark",
+      "viewport": "desktop",
+      "state": "settings-saved-preferences",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    },
+    {
+      "name": "profile-dark-desktop-settings-saved-visibility.png",
+      "theme": "dark",
+      "viewport": "desktop",
+      "state": "settings-saved-visibility",
+      "screenshotScale": "css",
+      "viewportMetrics": {
+        "width": 1440,
+        "height": 960,
+        "documentWidth": 1440,
+        "bodyWidth": 1440
+      }
+    }
+  ],
+  "configurations": [
+    {
+      "theme": "light",
+      "viewport": "mobile",
+      "ownerProfileReloadDelayMs": 250,
+      "ownerPostsRequests": 7,
+      "ownerPostQueries": [
+        {
+          "cursor": null,
+          "state": "empty"
+        },
+        {
+          "cursor": null,
+          "state": "populated"
+        },
+        {
+          "cursor": "visual-page-2",
+          "state": "populated"
+        },
+        {
+          "cursor": null,
+          "state": "error"
+        },
+        {
+          "cursor": null,
+          "state": "empty"
+        },
+        {
+          "cursor": null,
+          "state": "empty"
+        },
+        {
+          "cursor": null,
+          "state": "populated"
+        }
+      ],
+      "errors": [],
+      "unhandledApiPaths": []
+    },
+    {
+      "theme": "light",
+      "viewport": "desktop",
+      "ownerProfileReloadDelayMs": 250,
+      "ownerPostsRequests": 7,
+      "ownerPostQueries": [
+        {
+          "cursor": null,
+          "state": "empty"
+        },
+        {
+          "cursor": null,
+          "state": "populated"
+        },
+        {
+          "cursor": "visual-page-2",
+          "state": "populated"
+        },
+        {
+          "cursor": null,
+          "state": "error"
+        },
+        {
+          "cursor": null,
+          "state": "empty"
+        },
+        {
+          "cursor": null,
+          "state": "empty"
+        },
+        {
+          "cursor": null,
+          "state": "populated"
+        }
+      ],
+      "errors": [],
+      "unhandledApiPaths": []
+    },
+    {
+      "theme": "dark",
+      "viewport": "mobile",
+      "ownerProfileReloadDelayMs": 250,
+      "ownerPostsRequests": 7,
+      "ownerPostQueries": [
+        {
+          "cursor": null,
+          "state": "empty"
+        },
+        {
+          "cursor": null,
+          "state": "populated"
+        },
+        {
+          "cursor": "visual-page-2",
+          "state": "populated"
+        },
+        {
+          "cursor": null,
+          "state": "error"
+        },
+        {
+          "cursor": null,
+          "state": "empty"
+        },
+        {
+          "cursor": null,
+          "state": "empty"
+        },
+        {
+          "cursor": null,
+          "state": "populated"
+        }
+      ],
+      "errors": [],
+      "unhandledApiPaths": []
+    },
+    {
+      "theme": "dark",
+      "viewport": "desktop",
+      "ownerProfileReloadDelayMs": 250,
+      "ownerPostsRequests": 7,
+      "ownerPostQueries": [
+        {
+          "cursor": null,
+          "state": "empty"
+        },
+        {
+          "cursor": null,
+          "state": "populated"
+        },
+        {
+          "cursor": "visual-page-2",
+          "state": "populated"
+        },
+        {
+          "cursor": null,
+          "state": "error"
+        },
+        {
+          "cursor": null,
+          "state": "empty"
+        },
+        {
+          "cursor": null,
+          "state": "empty"
+        },
+        {
+          "cursor": null,
+          "state": "populated"
+        }
+      ],
+      "errors": [],
+      "unhandledApiPaths": []
+    }
+  ],
+  "limitations": [
+    "Large-text check uses a 200% browser-zoom viewport with device-pixel ratio 2; native OS text-size and assistive-technology behavior are not covered.",
+    "No real account, live API, or production data was used."
+  ]
+}
