@@ -384,14 +384,6 @@ jobs:
         run: |
           MONTHLY_REWARDS_ENGINE=chromium node --experimental-strip-types --test --test-timeout=600000 scripts/tests/monthly-rewards.browser.mjs
           MONTHLY_REWARDS_ENGINE=webkit node --experimental-strip-types --test --test-timeout=600000 scripts/tests/monthly-rewards.browser.mjs
-      - name: Verify monthly CSV button lifecycle
-        env:
-          QA_COMMIT: ${{ github.sha }}
-          MONTHLY_REWARDS_CSV_ONLY: '1'
-          MONTHLY_REWARDS_QA_DIR: build/monthly-rewards-evidence/csv-lifecycle
-        run: |
-          MONTHLY_REWARDS_ENGINE=chromium node --experimental-strip-types --test --test-timeout=600000 scripts/tests/monthly-rewards.browser.mjs
-          MONTHLY_REWARDS_ENGINE=webkit node --experimental-strip-types --test --test-timeout=600000 scripts/tests/monthly-rewards.browser.mjs
       - name: Upload monthly rewards visual evidence
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
@@ -402,6 +394,26 @@ jobs:
           retention-days: 7
       - name: Verify rendered Flutter authentication journey
         run: node --experimental-strip-types --test --test-timeout=600000 scripts/tests/flutter-auth.browser.mjs scripts/tests/optional-profile.browser.mjs scripts/tests/guest-account-entry.browser.mjs scripts/tests/native-notifications.browser.mjs scripts/tests/privacy-requests.browser.mjs
+      - name: Verify monthly CSV button lifecycle
+        if: ${{ !cancelled() }}
+        env:
+          QA_COMMIT: ${{ github.sha }}
+          MONTHLY_REWARDS_CSV_ONLY: '1'
+          MONTHLY_REWARDS_QA_DIR: build/monthly-rewards-evidence/csv-lifecycle
+        run: |
+          csv_lifecycle_status=0
+          for csv_lifecycle_engine in chromium webkit; do
+            MONTHLY_REWARDS_ENGINE="$csv_lifecycle_engine" node --experimental-strip-types --test --test-timeout=600000 scripts/tests/monthly-rewards.browser.mjs || csv_lifecycle_status=1
+          done
+          exit "$csv_lifecycle_status"
+      - name: Upload monthly CSV lifecycle evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: monthly-rewards-csv-lifecycle-evidence
+          path: build/monthly-rewards-evidence/csv-lifecycle
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload guest tag search browser evidence
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
