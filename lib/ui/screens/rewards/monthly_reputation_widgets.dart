@@ -157,9 +157,14 @@ class _MonthlyReputationReportCardState
         !ref.read(guestModeProvider) &&
         _sourceMonth == month;
     setState(() => _exporting = true);
+    final provider = monthlyReputationCsvProvider(month);
+    ref.invalidate(provider);
+    final exportSubscription = ref.listenManual(provider, (_, _) {});
+    final stopOnSessionChange = ref
+        .read(authSessionRevisionProvider.notifier)
+        .cancelOnChange(exportSubscription.close);
     try {
-      ref.invalidate(monthlyReputationCsvProvider(month));
-      final bytes = await ref.read(monthlyReputationCsvProvider(month).future);
+      final bytes = await ref.read(provider.future);
       if (!mounted || !stillOwnsExport()) return;
       final filename = 'monthly-reputation-$month.csv';
       final file = XFile.fromData(bytes, name: filename, mimeType: 'text/csv');
@@ -194,6 +199,8 @@ class _MonthlyReputationReportCardState
         );
       }
     } finally {
+      stopOnSessionChange();
+      exportSubscription.close();
       if (mounted && ref.read(authSessionRevisionProvider) == revision) {
         setState(() => _exporting = false);
       }
