@@ -20,9 +20,48 @@ the dependency-review workflow blob. The bootstrap checks public read-only GitHu
 repository metadata, run, workflow, and attempt-specific job responses against
 the verified numeric repository ID and owner ID, repository name, workflow
 path, exact workflow revision, run ID, attempt, and actual job ID.
-Names alone do not establish authority. Eligible runs require manual dispatch
-of this workflow from protected main. Candidate workflow runs and PR test merges
-cannot establish that authority.
+Names alone do not establish authority. The `canonical-sdk-verification` job
+requires manual dispatch of this workflow from protected main. Candidate workflow
+runs and PR test merges cannot establish that authority. The existing
+`dependency-review` job remains on PR and main-push events with the retained
+native coverage, severity and archive-license gates. It loads host review code
+and npm manifests from protected main; candidate Git data is its comparison
+input. It does not invoke the dispatch-only bootstrap or accept a source receipt.
+
+The dispatch run's check belongs to its protected-main revision, not the supplied
+candidate SHA. Even successful source verification therefore records
+`verificationConclusion: success` separately and fails the final gate with
+`TRUSTED_CANDIDATE_CHECK_PUBLICATION_REQUIRED`. It cannot satisfy the candidate's
+required check. The PR/native gate keeps its existing name and remains closed
+when source coverage is required. Neither a skipped job nor a main check is
+claimed as candidate approval.
+
+With the task's `contents: read` permission, there is no API path to create a
+trusted check on a different candidate commit. GitHub's
+[Checks API](https://docs.github.com/en/rest/checks/runs#create-a-check-run)
+requires Checks write permission. Switching to
+[pull_request_target](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request_target)
+still selects the default-branch revision; letting candidate PR workflows select
+their own verdict cannot establish independent authority. Required workflow
+[rulesets](https://docs.github.com/enterprise-cloud@latest/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-workflows-to-pass-before-merging)
+are an organization/enterprise feature, not a verified existing entitlement here.
+The read-only ruleset response was empty and repository ownership is User.
+The integration was denied access to `branches/main/protection` with HTTP 403,
+`Resource not accessible by integration`; the current live check configuration
+is therefore unverified. No protection, permission, subscription or provider
+change is made. A coordinator must resolve this precise publication gate before
+activation; this PR does not invent an approval or remove a required check.
+
+```mermaid
+flowchart LR
+  PR[PR or main push] --> N[Existing dependency-review native gates]
+  N --> C[Existing required check]
+  M[Protected-main dispatch] --> P[Independently reviewed verifier pin]
+  P --> I[Isolated exact candidate verification]
+  I --> E[Fresh source evidence]
+  E --> B[Candidate check publication blocked]
+  B --> O[Separate coordinator authorization and enforcement gate]
+```
 
 The host materializes the verifier's recipe, imports, preparation scripts,
 fixtures, setup code, npm lock and workspace/file-package manifests from the
@@ -42,6 +81,16 @@ directory, Docker socket, credentials, or GitHub commandfiles. Pub's writable
 cache metadata is disposable; hosted package contents and integrity files remain
 read-only. Candidate stdout is captured as bounded data and never forwarded to
 the workflow command channel.
+
+Each container creation records a private cidfile and unique ownership label.
+Cleanup uses only recovered full container IDs, verifies the ownership label,
+removes the owned ID and checks that it is absent. SIGINT and SIGTERM interrupt
+the asynchronous Docker client, escalate its owned process group after one
+second, and allow at most 30 seconds for ID cleanup. Exit codes 130 and 143 are
+preserved even if cleanup itself reports a failure. Journals retain IDs and
+cleanup outcomes; no name-based kill, daemon-wide prune or unrelated-container
+removal is used. SIGKILL, runner loss or Docker-daemon loss cannot be caught and
+can require coordinator cleanup from the retained journal.
 
 First, the trusted recipe rebundles OpenAPI and regenerates the SDK using pinned
 Redocly/npm and OpenAPI Generator 7.7.0. The host compares the bundle and all
@@ -82,9 +131,15 @@ This PR deliberately leaves `canonical-sdk-trust.json` in
    including the previously unresolved `one_of` and `one_of_serializer`, remains
    `HOSTED_RUNTIME_LICENSE_EVIDENCE_REQUIRED`; archive presence alone is not a
    license approval. The existing denied-license policy still applies.
-5. Dispatch dependency review from protected main with distinct exact base/head
-   inputs. The fresh host verifier must succeed alongside the native action and
-   the existing archive-license resolver before aggregate eligibility succeeds.
+5. Resolve `TRUSTED_CANDIDATE_CHECK_PUBLICATION_REQUIRED` through separately
+   authorized trusted candidate-check publication or a verified applicable
+   required-workflow mechanism. Contents-read execution cannot perform this
+   operation. Preserve every existing required check and obtain independent
+   review of any permission or protection change; none is implemented here.
+6. Dispatch source verification from protected main with distinct exact base/head
+   inputs. The fresh verifier, native action and archive-license resolver must
+   pass; successful verification alone remains unpublished candidate evidence.
+   Candidate-bound enforcement must be verified before activation is claimed.
 
 No owner/classification/license approval record is created here. Existing root,
 OpenAPI and generated metadata are preserved. The root license's vendor history
@@ -98,9 +153,11 @@ merge is part of this change.
 | Requirement | Code | Evidence |
 | --- | --- | --- |
 | Independent pin; no self-approval | `canonical-sdk-bootstrap.mjs`, pending `canonical-sdk-trust.json` | Synthetic repository/workflow/job/revision attacks; real Git bootstrap projection test |
+| Preserve PR/push check and distinguish dispatch evidence | `dependency-review.yml`, `candidateCheckBinding`, `applyCandidateCheckGate` | Trigger/job/permission regression; successful verification still fails unpublished candidate-check gate |
 | Exact candidate data; same-version obligation | `canonical-sdk-contract.mjs`, `dependency-review-native.mjs` | Dirty checkout ignored; source-only SDK commit remains expected; nonregular Git input rejected |
 | Fixed complete recipe and tool closure | `sdk-verifier/`, `setup-canonical-sdk-tools.mjs` | Frozen lock/hash checks; complete app and generator graph tests; matched full regeneration |
 | Candidate execution isolated | `canonical-sdk-isolation.mjs` | Real container denies fixture/input writes, credentials, host processes, Docker socket and gate files |
+| Cancellation removes owned IDs only | `canonical-sdk-containers.mjs`, async isolation calls, CLI exit handling | Real SIGINT/SIGTERM running and after-create tests, sentinel preservation, timeout/output-limit cleanup, label/cid/deadline rejection |
 | Complete hosted integrity and safe extraction | `sdk-verifier/cache-hosted-packages.py` | 207 real locked archives verified; six synthetic archive tests reject tamper, traversal, links and duplicate files |
 | Trusted behavior and assertion mutants | Fixed Dart fixtures, `behavior-cases.json`, fixed monthly JSON | 57 successful cases/seven suites; bearer omission and own-route mutants produce genuine named assertion failures |
 | SDK remains accounted; other native policy preserved | Native probe, receipt aggregator, license resolver | Missing hosted/linked components, warnings, severity/license failure and stale/ineligible source result all block |
@@ -108,7 +165,8 @@ merge is part of this change.
 
 ## Validation and provenance
 
-Focused validation covers 33 Node tests, one real Docker boundary test, six
+Focused validation covers 36 verification/policy tests, eleven isolation/cleanup
+tests (including six real Docker controls), six
 existing Dart archive-license tests, and six new archive extraction tests. The
 isolated development runner passes all 57 Dart behavior cases and both assertion
 mutants. It reports `coverageEligible: false`,
@@ -157,3 +215,10 @@ by numeric repository/owner binding and explicit list types, preserving the
 checks. Its subsequent browser check lacked npm dependencies because analysis
 had failed, and the audit rollup reported those failed gates. The revised head
 is revalidated locally; another hosted cycle remains for serialized review.
+
+Independent review of head `50437504b3b1eda0414efcead8f4d0ce65d2fb92` identified
+the dispatch/required-check mismatch and missing signal cleanup. This follow-up
+separates the triggers, exposes the unresolved read-only publication gate and
+adds recorded-ID cancellation cleanup. The full exact-head SDK run and final
+coordinator CI results are recorded in PR #971; this lane does not dispatch
+another hosted cycle.

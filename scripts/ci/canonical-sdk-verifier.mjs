@@ -14,7 +14,7 @@ try {
   fs.writeFileSync(join(directory, 'result.json'), JSON.stringify(result, null, 2) + '\n');
   process.stdout.write(`Development mechanics verified; coverage remains ineligible. Evidence: ${directory}/result.json\n`);
 } catch (error) {
-  fs.writeFileSync(join(directory, 'failure.json'), JSON.stringify({ candidateSha, coverageEligible: false, reason: error.message }, null, 2) + '\n');
+  fs.writeFileSync(join(directory, 'failure.json'), JSON.stringify({ candidateSha, coverageEligible: false, reason: error.message, cleanupError: error.cleanupError }, null, 2) + '\n');
   process.stderr.write(`Verification stopped: ${error.message}\nEvidence: ${directory}/failure.json\n`);
-  process.exitCode = 1;
+  process.exitCode = error.exitCode ?? 1;
 }

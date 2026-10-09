@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { isDeepStrictEqual } from 'node:util';
 import { parse } from 'yaml';
+import { withOwnedContainers } from './canonical-sdk-containers.mjs';
 import { candidateIdentity, projectGit, gitFiles, inventory, readRegular, sha256, suites, mutations, completedBehavior, rejectedMutation, validateRuntimeGraph, validateFrozenGraph, approvedLicenseClassification } from './canonical-sdk-contract.mjs';
 
 export const isolationImage = 'postgres@sha256:d74eeac9a635390a49bc21bd49fccd973de707e2a53a76ac49b552b8712ec46f';
@@ -31,20 +32,6 @@ export function hostedClosure(locks) {
   return [...packages.values()].sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version));
 }
 
-function runContainer(options) {
-  const env = { PATH: '/usr/local/bin:/usr/bin:/bin' };
-  if (process.env.DOCKER_HOST) {
-    if (!/^unix:\/\/\/[a-zA-Z0-9_./-]+$/.test(process.env.DOCKER_HOST)) throw new Error('LOCAL_DOCKER_DAEMON_REQUIRED');
-    env.DOCKER_HOST = process.env.DOCKER_HOST;
-  }
-  const result = spawnSync('docker', containerArguments(options), { env, encoding: 'utf8', timeout: 600000, maxBuffer: 16 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
-  if (result.error) {
-    spawnSync('docker', ['kill', options.name], { env, stdio: 'ignore', timeout: 10000 });
-    throw new Error(`ISOLATION_EXECUTION_FAILED:${result.error.code}`);
-  }
-  return result;
-}
-
 function compareRegenerated(identity, directory) {
   const actual = inventory(directory).filter(file => file.path !== '.openapi-generator/FILES');
   const expected = identity.files.filter(file => file.path !== 'lib/generated/api_client/.openapi-generator/FILES').map(file => ({ path: file.path.slice('lib/generated/api_client/'.length), blob: file.blob }));
@@ -62,6 +49,14 @@ function comparePrepared(identity, directory) {
 }
 
 export async function runSourceVerification({ repository, candidateSha, recipe, tools, directory, trustedContext = null, archiveCache = null }) {
+  fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+  return await withOwnedContainers(directory, async owner => {
+    const result = await verifySource({ repository, candidateSha, recipe, tools, directory, trustedContext, archiveCache }, owner);
+    return { ...result, containerCleanup: { runId: owner.runId, recordedIds: owner.records.map(record => record.id), complete: owner.records.every(record => record.state === 'removed'), budgetMilliseconds: 30000 } };
+  });
+}
+
+async function verifySource({ repository, candidateSha, recipe, tools, directory, trustedContext, archiveCache }, owner) {
   const identity = candidateIdentity(repository, candidateSha);
   const inputs = join(directory, 'inputs'), work = join(directory, 'work'), cache = join(directory, 'cache');
   for (const path of [directory, inputs, work, cache]) fs.mkdirSync(path, { recursive: true, mode: 0o700 });
@@ -94,14 +89,14 @@ export async function runSourceVerification({ repository, candidateSha, recipe, 
   fs.writeFileSync(join(containerRecipe, 'package.json'), '{"private":true}\n');
   const options = { tools, inputs, work, recipe: containerRecipe, npm: join(recipe, 'node_modules'), cache, user: `${process.getuid()}:${process.getgid()}`, name: `lythaus-sdk-${process.pid}` };
   process.stdout.write('Regenerating SDK in disposable isolation.\n');
-  const regenerationRun = runContainer({ ...options, command: ['/recipe/scripts/ci/sdk-verifier/prepare.mjs', '--regenerate-only'] });
+  const regenerationRun = await owner.run(containerArguments({ ...options, command: ['/recipe/scripts/ci/sdk-verifier/prepare.mjs', '--regenerate-only'] }));
   fs.writeFileSync(join(directory, 'regeneration.stdout.txt'), regenerationRun.stdout);
   fs.writeFileSync(join(directory, 'regeneration.stderr.txt'), regenerationRun.stderr);
   if (regenerationRun.status !== 0) throw new Error(`ISOLATED_REGENERATION_FAILED:${regenerationRun.status}`);
   const regeneration = compareRegenerated(identity, join(work, 'regenerated'));
   if (!readRegular(join(work, 'bundled.json')).equals(readRegular(join(inputs, 'api/openapi/dist/openapi.json')))) throw new Error('REGENERATED_OPENAPI_BUNDLE_MISMATCH');
   process.stdout.write('Preparing matched SDK with frozen locks in disposable isolation.\n');
-  const preparation = runContainer({ ...options, command: ['/recipe/scripts/ci/sdk-verifier/prepare.mjs', '--prepare-only'] });
+  const preparation = await owner.run(containerArguments({ ...options, command: ['/recipe/scripts/ci/sdk-verifier/prepare.mjs', '--prepare-only'] }));
   fs.writeFileSync(join(directory, 'preparation.stdout.txt'), preparation.stdout);
   fs.writeFileSync(join(directory, 'preparation.stderr.txt'), preparation.stderr);
   if (preparation.status !== 0) throw new Error(`ISOLATED_PREPARATION_FAILED:${preparation.status}`);
@@ -116,13 +111,13 @@ export async function runSourceVerification({ repository, candidateSha, recipe, 
   fs.mkdirSync(fixtureDirectory);
   for (const file of [...suites, 'monthly_rewards_preparation_wire.json']) fs.copyFileSync(join(recipeDirectory, file), join(fixtureDirectory, file));
   fs.copyFileSync(join(recipeDirectory, 'analysis_options.yaml'), join(work, 'analysis_options.yaml'));
-  const analysis = runContainer({ ...options, fixtureDirectory, command: ['/recipe/scripts/ci/sdk-verifier/analyze.mjs'] });
+  const analysis = await owner.run(containerArguments({ ...options, fixtureDirectory, command: ['/recipe/scripts/ci/sdk-verifier/analyze.mjs'] }));
   fs.writeFileSync(join(directory, 'analysis.stdout.txt'), analysis.stdout);
   fs.writeFileSync(join(directory, 'analysis.stderr.txt'), analysis.stderr);
   if (analysis.status !== 0) throw new Error('TRUSTED_FIXTURE_ANALYSIS_FAILED');
   process.stdout.write('Running trusted synthetic behavior fixtures and assertion mutants.\n');
   const before = inventory(join(work, 'build/api_client/lib'));
-  const baseline = runContainer({ ...options, fixtureDirectory, command: ['/recipe/scripts/ci/sdk-verifier/behavior.mjs'] });
+  const baseline = await owner.run(containerArguments({ ...options, fixtureDirectory, command: ['/recipe/scripts/ci/sdk-verifier/behavior.mjs'] }));
   fs.writeFileSync(join(directory, 'baseline.jsonl'), baseline.stdout);
   if (baseline.status !== 0 || !isDeepStrictEqual(before, inventory(join(work, 'build/api_client/lib')))) throw new Error('BASELINE_BEHAVIOR_FAILED');
   const behavior = completedBehavior(baseline.stdout, JSON.parse(readRegular(join(recipeDirectory, 'behavior-cases.json'))));
@@ -131,7 +126,7 @@ export async function runSourceVerification({ repository, candidateSha, recipe, 
     const file = join(work, 'build/api_client', mutation.file), original = readRegular(file).toString();
     if (original.split(mutation.before).length !== 2) throw new Error('MUTATION_SOURCE_POINT_REQUIRED');
     fs.writeFileSync(file, original.replace(mutation.before, mutation.after));
-    const result = runContainer({ ...options, fixtureDirectory, command: ['/recipe/scripts/ci/sdk-verifier/behavior.mjs'] });
+    const result = await owner.run(containerArguments({ ...options, fixtureDirectory, command: ['/recipe/scripts/ci/sdk-verifier/behavior.mjs'] }));
     fs.writeFileSync(join(directory, `${mutation.id}.jsonl`), result.stdout);
     fs.writeFileSync(file, original);
     if (!Number.isInteger(result.status) || result.status <= 0 || !isDeepStrictEqual(before, inventory(join(work, 'build/api_client/lib')))) throw new Error('MUTATION_NOT_REJECTED');

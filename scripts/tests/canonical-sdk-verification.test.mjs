@@ -4,9 +4,9 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import test from 'node:test';
-import { stringify } from 'yaml';
+import { parse, stringify } from 'yaml';
 import { coverageLedger, aggregateReview, completedBehavior, rejectedMutation, requiredCases, mutations, readRegular, inventory, projectGit, validateRuntimeGraph, validateFrozenGraph, approvedLicenseClassification } from '../ci/canonical-sdk-contract.mjs';
-import { validateTrust, validateRepositoryIdentity, validateRunContext, materializeVerifier, anchoredContext } from '../ci/canonical-sdk-bootstrap.mjs';
+import { validateTrust, validateRepositoryIdentity, validateRunContext, candidateCheckBinding, applyCandidateCheckGate, materializeVerifier, anchoredContext } from '../ci/canonical-sdk-bootstrap.mjs';
 import { containerArguments, hostedClosure } from '../ci/canonical-sdk-isolation.mjs';
 import { expectedChanges } from '../ci/dependency-review-native.mjs';
 
@@ -16,9 +16,9 @@ const hosted = { ecosystem: 'pub', name: 'dio', version: '5.9.0', manifest: 'pub
 const comparison = { reason: 'NATIVE_API_AVAILABLE', baseSha: a, reviewedHeadSha: b, expected: [sdk, hosted], missing: [sdk], snapshotWarnings: false };
 const source = { coverageEligible: true, packageName: sdk.name, version: sdk.version, localPath: sdk.localPath, sourceTreeSha: a, candidateSha: b, verifierSha: c, nativeIndexing: 'NOT_CLAIMED', classification: 'approved', verification: 'fresh-isolated-source-verification' };
 const success = { native: 'success', licenses: 'success' };
-const trust = { schemaVersion: 'lythaus-sdk-verifier-trust-v1', state: 'approved', repositoryId: 1010752912, repositoryOwnerId: 211295889, protectedRef: 'refs/heads/main', workflowPath: '.github/workflows/dependency-review.yml', job: 'dependency-review', verifierSha: a, verifierTreeSha: b, workflowBlobSha: c, approvalEvidenceRef: 'synthetic independent review' };
+const trust = { schemaVersion: 'lythaus-sdk-verifier-trust-v1', state: 'approved', repositoryId: 1010752912, repositoryOwnerId: 211295889, protectedRef: 'refs/heads/main', workflowPath: '.github/workflows/dependency-review.yml', job: 'canonical-sdk-verification', verifierSha: a, verifierTreeSha: b, workflowBlobSha: c, approvalEvidenceRef: 'synthetic independent review' };
 const repository = { id: trust.repositoryId, name: 'Lythaus', full_name: 'synthetic-owner/Lythaus', owner: { id: trust.repositoryOwnerId, login: 'synthetic-owner' } };
-const context = () => ({ repository: structuredClone(repository), environment: { GITHUB_REPOSITORY: repository.full_name, GITHUB_REPOSITORY_ID: String(repository.id), GITHUB_REPOSITORY_OWNER_ID: String(repository.owner.id), GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_WORKFLOW_REF: `${repository.full_name}/${trust.workflowPath}@refs/heads/main`, GITHUB_WORKFLOW_SHA: b, GITHUB_REF: trust.protectedRef, GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '2', GITHUB_JOB: trust.job }, workflowBlobSha: c, run: { repository: { id: repository.id, full_name: repository.full_name }, head_repository: { id: repository.id, full_name: repository.full_name }, id: 12, run_attempt: 2, event: 'workflow_dispatch', head_branch: 'main', head_sha: b, workflow_id: 7 }, workflow: { id: 7, path: trust.workflowPath }, jobs: [{ name: trust.job, id: 25, run_id: 12, run_attempt: 2, head_sha: b, status: 'in_progress' }] });
+const context = () => ({ repository: structuredClone(repository), environment: { HEAD_SHA: c, GITHUB_REPOSITORY: repository.full_name, GITHUB_REPOSITORY_ID: String(repository.id), GITHUB_REPOSITORY_OWNER_ID: String(repository.owner.id), GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_WORKFLOW_REF: `${repository.full_name}/${trust.workflowPath}@refs/heads/main`, GITHUB_WORKFLOW_SHA: b, GITHUB_REF: trust.protectedRef, GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '2', GITHUB_JOB: trust.job }, workflowBlobSha: c, run: { repository: { id: repository.id, full_name: repository.full_name }, head_repository: { id: repository.id, full_name: repository.full_name }, id: 12, run_attempt: 2, event: 'workflow_dispatch', head_branch: 'main', head_sha: b, workflow_id: 7 }, workflow: { id: 7, path: trust.workflowPath }, jobs: [{ name: trust.job, id: 25, run_id: 12, run_attempt: 2, head_sha: b, status: 'in_progress' }] });
 
 test('category accounting keeps raw SDK omission and every other native obligation', () => {
   const ledger = coverageLedger(comparison.expected, comparison.missing);
@@ -75,6 +75,39 @@ test('run provenance binds repository, workflow Git blob, exact revision, run at
 test('authoritative numeric repository and owner identity reject transfers and name-only lookalikes', () => {
   assert.equal(validateRepositoryIdentity(repository).id, trust.repositoryId);
   for (const value of [null, { ...repository, id: 100 }, { ...repository, name: 'other' }, { ...repository, full_name: 'other/Lythaus' }, { ...repository, owner: { ...repository.owner, id: 101 } }, { ...repository, owner: { ...repository.owner, login: 'other' } }, { ...repository, owner: { ...repository.owner, login: ['synthetic-owner'] } }]) assert.throws(() => validateRepositoryIdentity(value));
+});
+
+test('trusted dispatch evidence cannot claim a candidate-bound required check', () => {
+  const result = validateRunContext(trust, context());
+  assert.deepEqual(result.candidateCheck, { candidateSha: c, workflowCheckSha: b, runId: 12, state: 'unpublished', publicationEligible: false, reason: 'TRUSTED_CANDIDATE_CHECK_PUBLICATION_REQUIRED' });
+  assert.equal(candidateCheckBinding(b, context().run).publicationEligible, false);
+  for (const value of ['main', null, '0'.repeat(40)]) assert.throws(() => candidateCheckBinding(value, context().run));
+  assert.throws(() => candidateCheckBinding(c, { head_sha: b, id: '12' }));
+});
+
+test('successful source verification still fails the unpublished candidate check gate', () => {
+  const binding = candidateCheckBinding(c, context().run);
+  const review = applyCandidateCheckGate({ conclusion: 'success', source: { coverageEligible: true } }, binding);
+  assert.equal(review.verificationConclusion, 'success');
+  assert.equal(review.conclusion, 'failure');
+  assert.equal(review.reason, 'TRUSTED_CANDIDATE_CHECK_PUBLICATION_REQUIRED');
+  assert.equal(applyCandidateCheckGate({ conclusion: 'failure', reason: 'NATIVE_COVERAGE_MISSING' }, binding).reason, 'NATIVE_COVERAGE_MISSING');
+  assert.throws(() => applyCandidateCheckGate({ conclusion: 'success' }, { ...binding, state: 'approved', publicationEligible: true }));
+});
+
+test('PR and push keep the native required check; trusted source dispatch is a separate read-only job', () => {
+  const workflow = parse(fs.readFileSync(new URL('../../.github/workflows/dependency-review.yml', import.meta.url), 'utf8'));
+  assert.deepEqual(workflow.permissions, { contents: 'read' });
+  assert.deepEqual(workflow.on.pull_request.branches, ['main']);
+  assert.deepEqual(workflow.on.push.branches, ['main']);
+  const native = workflow.jobs['dependency-review'], sourceJob = workflow.jobs['canonical-sdk-verification'];
+  assert.equal(native.if, "github.event_name != 'workflow_dispatch'");
+  assert.equal(sourceJob.if, "github.event_name == 'workflow_dispatch'");
+  assert.ok(native.steps.some(step => step.id === 'native' && step.with['fail-on-severity'] === 'high' && step.with['deny-licenses'] === '${{ env.DENY_LICENSES }}'));
+  assert.ok(native.steps.some(step => step.if === 'always()' && step.run === 'node .trusted-main/scripts/ci/dependency-review-receipt.mjs'));
+  assert.ok(!native.steps.some(step => /canonical-sdk-bootstrap/.test(step.run ?? '')));
+  assert.ok(sourceJob.steps.some(step => step.id === 'bootstrap'));
+  for (const job of Object.values(workflow.jobs)) assert.equal(job.permissions, undefined);
 });
 
 const report = events => events.map(value => JSON.stringify(value)).join('\n') + '\n';

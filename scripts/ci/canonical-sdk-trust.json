@@ -5,7 +5,7 @@
   "repositoryOwnerId": 211295889,
   "protectedRef": "refs/heads/main",
   "workflowPath": ".github/workflows/dependency-review.yml",
-  "job": "dependency-review",
+  "job": "canonical-sdk-verification",
   "verifierSha": null,
   "verifierTreeSha": null,
   "workflowBlobSha": null,

@@ -10,13 +10,23 @@ const git = (root, args, binary = false) => execFileSync('git', ['-C', root, ...
 
 export function validateTrust(trust, candidateSha) {
   if (trust?.schemaVersion !== 'lythaus-sdk-verifier-trust-v1' || trust.state !== 'approved' || !exact(trust.verifierSha) || !exact(trust.verifierTreeSha) || !exact(trust.workflowBlobSha) || !trust.approvalEvidenceRef) throw new Error('TRUSTED_VERIFIER_BOOTSTRAP_REQUIRED');
-  if (trust.repositoryId !== repositoryId || trust.repositoryOwnerId !== repositoryOwnerId || trust.protectedRef !== 'refs/heads/main' || trust.workflowPath !== '.github/workflows/dependency-review.yml' || trust.job !== 'dependency-review' || !exact(candidateSha) || trust.verifierSha === candidateSha) throw new Error('INDEPENDENT_VERIFIER_REQUIRED');
+  if (trust.repositoryId !== repositoryId || trust.repositoryOwnerId !== repositoryOwnerId || trust.protectedRef !== 'refs/heads/main' || trust.workflowPath !== '.github/workflows/dependency-review.yml' || trust.job !== 'canonical-sdk-verification' || !exact(candidateSha) || trust.verifierSha === candidateSha) throw new Error('INDEPENDENT_VERIFIER_REQUIRED');
   return trust;
 }
 
 export function validateRepositoryIdentity(repository) {
   if (repository?.id !== repositoryId || repository.name !== 'Lythaus' || repository.owner?.id !== repositoryOwnerId || typeof repository.owner.login !== 'string' || !/^[a-zA-Z0-9-]+$/.test(repository.owner.login) || repository.full_name !== `${repository.owner.login}/Lythaus`) throw new Error('GITHUB_REPOSITORY_PROVENANCE_MISMATCH');
   return { id: repository.id, ownerId: repository.owner.id, fullName: repository.full_name };
+}
+
+export function candidateCheckBinding(candidateSha, run) {
+  if (!exact(candidateSha) || !exact(run?.head_sha) || !Number.isSafeInteger(run.id)) throw new Error('EXACT_CANDIDATE_CHECK_BINDING_REQUIRED');
+  return { candidateSha, workflowCheckSha: run.head_sha, runId: run.id, state: 'unpublished', publicationEligible: false, reason: 'TRUSTED_CANDIDATE_CHECK_PUBLICATION_REQUIRED' };
+}
+
+export function applyCandidateCheckGate(result, candidateCheck) {
+  if (candidateCheck?.state !== 'unpublished' || candidateCheck.publicationEligible !== false || candidateCheck.reason !== 'TRUSTED_CANDIDATE_CHECK_PUBLICATION_REQUIRED') throw new Error('CANDIDATE_CHECK_PUBLICATION_STATE_REQUIRED');
+  return { ...result, verificationConclusion: result.conclusion, candidateCheck, conclusion: 'failure', reason: result.conclusion === 'success' ? candidateCheck.reason : result.reason };
 }
 
 export function validateRunContext(trust, context) {
@@ -26,7 +36,7 @@ export function validateRunContext(trust, context) {
   if (run.repository?.id !== repository.id || run.head_repository?.id !== repository.id || run.repository?.full_name !== repository.fullName || run.head_repository?.full_name !== repository.fullName || run.id !== Number(environment.GITHUB_RUN_ID) || run.run_attempt !== Number(environment.GITHUB_RUN_ATTEMPT) || run.event !== 'workflow_dispatch' || run.head_branch !== 'main' || run.head_sha !== environment.GITHUB_WORKFLOW_SHA || workflow.id !== run.workflow_id || workflow.path !== trust.workflowPath || workflowBlobSha !== trust.workflowBlobSha) throw new Error('GITHUB_WORKFLOW_PROVENANCE_MISMATCH');
   const matches = jobs.filter(job => job.name === trust.job && job.run_id === run.id && job.run_attempt === run.run_attempt && job.head_sha === run.head_sha && job.status === 'in_progress' && Number.isSafeInteger(job.id));
   if (matches.length !== 1 || environment.GITHUB_JOB !== trust.job) throw new Error('GITHUB_JOB_PROVENANCE_MISMATCH');
-  return { verifierSha: trust.verifierSha, verifierTreeSha: trust.verifierTreeSha, workflowSha: run.head_sha, workflowId: workflow.id, workflowPath: workflow.path, repository: repository.fullName, repositoryId: repository.id, repositoryOwnerId: repository.ownerId, runId: run.id, runAttempt: run.run_attempt, jobId: matches[0].id, approvalEvidenceRef: trust.approvalEvidenceRef };
+  return { verifierSha: trust.verifierSha, verifierTreeSha: trust.verifierTreeSha, workflowSha: run.head_sha, workflowId: workflow.id, workflowPath: workflow.path, repository: repository.fullName, repositoryId: repository.id, repositoryOwnerId: repository.ownerId, runId: run.id, runAttempt: run.run_attempt, jobId: matches[0].id, approvalEvidenceRef: trust.approvalEvidenceRef, candidateCheck: candidateCheckBinding(environment.HEAD_SHA, run) };
 }
 
 async function github(path) {
@@ -115,9 +125,9 @@ async function main() {
   const tools = JSON.parse(fs.readFileSync(join(destination, 'tools.json')));
   const source = await runSourceVerification({ repository, candidateSha: process.env.HEAD_SHA, recipe: destination, tools, directory: fs.mkdtempSync(join(process.env.RUNNER_TEMP, 'lythaus-sdk-')), trustedContext: context });
   const licenses = JSON.parse(fs.readFileSync(join(directory, 'licenses.json')));
-  const result = { ...comparison, trustedContext: context, source, ...aggregateReview(comparison, source, { native: process.env.NATIVE_OUTCOME, licenses: process.env.LICENSE_OUTCOME === 'success' && licenses.conclusion === 'success' ? 'success' : 'failure' }) };
+  const result = applyCandidateCheckGate({ ...comparison, trustedContext: context, source, ...aggregateReview(comparison, source, { native: process.env.NATIVE_OUTCOME, licenses: process.env.LICENSE_OUTCOME === 'success' && licenses.conclusion === 'success' ? 'success' : 'failure' }) }, context.candidateCheck);
   fs.writeFileSync(join(directory, 'run.json'), JSON.stringify(result, null, 2) + '\n');
-  if (result.conclusion !== 'success') throw new Error(`DEPENDENCY_REVIEW_INCOMPLETE:${source.reason}`);
+  if (result.conclusion !== 'success') throw new Error(`DEPENDENCY_REVIEW_INCOMPLETE:${result.reason ?? source.reason}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
@@ -125,8 +135,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   catch (error) {
     const directory = resolve('.artifacts/security-run-evidence');
     fs.mkdirSync(directory, { recursive: true });
-    fs.writeFileSync(join(directory, 'run.json'), JSON.stringify({ baseSha: process.env.BASE_SHA, candidateSha: process.env.HEAD_SHA, conclusion: 'failure', coverageEligible: false, reason: error.message }, null, 2) + '\n');
+    let previous = {};
+    try {
+      const record = JSON.parse(fs.readFileSync(join(directory, 'run.json')));
+      if (record.baseSha === process.env.BASE_SHA && (record.reviewedHeadSha ?? record.candidateSha) === process.env.HEAD_SHA) previous = record;
+    } catch {}
+    fs.writeFileSync(join(directory, 'run.json'), JSON.stringify({ ...previous, baseSha: process.env.BASE_SHA, candidateSha: process.env.HEAD_SHA, conclusion: 'failure', coverageEligible: false, reason: error.message, cleanupError: error.cleanupError }, null, 2) + '\n');
     process.stderr.write(`SDK verification stopped: ${error.message.replace(/[\r\n]/g, ' ')}\n`);
-    process.exitCode = 1;
+    process.exitCode = error.exitCode ?? 1;
   }
 }
