@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lythaus/features/rewards/application/reward_providers.dart';
 import 'package:lythaus/features/rewards/domain/reward_models.dart';
 import 'package:lythaus/ui/screens/rewards/rewards_dashboard.dart';
+import '../../../support/monthly_rewards_fixture.dart';
 
 void main() {
   final snapshot = RewardsSnapshot(
@@ -53,6 +54,7 @@ void main() {
   Widget buildDashboard({required AsyncValue<RewardsSnapshot> rewardsValue}) {
     return ProviderScope(
       overrides: [
+        ...monthlyFixtureOverrides(),
         rewardsSnapshotProvider.overrideWith(
           (ref, _) => rewardsValue.when(
             data: (d) => Future.value(d),
@@ -82,6 +84,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Lythaus Rewards'), findsOneWidget);
+      await scrollUntilText(tester, 'Your rewards status');
       expect(find.text('Your rewards status'), findsOneWidget);
       expect(find.text('Subscription tier: premium'), findsOneWidget);
     });
@@ -97,6 +100,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await scrollUntilText(tester, 'Unable to load rewards right now.');
       expect(find.text('Unable to load rewards right now.'), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
     });

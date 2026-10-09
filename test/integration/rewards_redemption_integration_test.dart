@@ -12,6 +12,7 @@ import 'package:lythaus/ui/screens/rewards/rewards_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../support/monthly_rewards_fixture.dart';
 
 final _testSession = StateProvider<User?>((ref) => null);
 
@@ -266,6 +267,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          ...monthlyFixtureOverrides(),
           rewardsSnapshotProvider.overrideWith((ref, _) async {
             fetchCount++;
             return currentSnapshot;
@@ -536,6 +538,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ...monthlyFixtureOverrides(),
             rewardsSnapshotProvider.overrideWith(
               (_, _) async => _lockedOfferSnapshot(),
             ),
@@ -575,6 +578,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              ...monthlyFixtureOverrides(),
               rewardsSnapshotProvider.overrideWith(
                 (_, _) async => _alreadyRedeemedSnapshot(),
               ),
@@ -612,6 +616,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              ...monthlyFixtureOverrides(),
               rewardsSnapshotProvider.overrideWith(
                 (_, _) async => _restrictedAccountSnapshot(),
               ),
@@ -628,6 +633,10 @@ void main() {
 
         await tester.pumpAndSettle();
 
+        await scrollToVisible(
+          tester,
+          find.text('Redemption status: restricted'),
+        );
         expect(find.text('Redemption status: restricted'), findsOneWidget);
         await scrollToVisible(
           tester,
@@ -663,6 +672,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              ...monthlyFixtureOverrides(),
               rewardsSnapshotProvider.overrideWith((ref, _) async {
                 fetchCount++;
                 return _snapshot(redeemed: false, history: const []);
@@ -719,6 +729,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              ...monthlyFixtureOverrides(),
               rewardsSnapshotProvider.overrideWith((ref, _) async {
                 fetchCount++;
                 return _snapshot(redeemed: false, history: const []);
@@ -779,6 +790,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            ...monthlyFixtureOverrides(),
             rewardsSnapshotProvider.overrideWith((ref, _) async {
               fetchCount++;
               return _snapshot(redeemed: fetchCount > 1, history: const []);

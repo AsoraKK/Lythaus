@@ -97,6 +97,7 @@ flutter precache --web
 flutter --version
 
 echo "==> Getting dependencies"
+node scripts/validate-openapi-dart-client.mjs --prepare-for-flutter
 flutter pub get
 
 echo "==> Building web release"
