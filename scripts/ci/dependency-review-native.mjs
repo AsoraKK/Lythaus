@@ -139,6 +139,10 @@ export function expectedChanges(base, head) {
     const prior = new Set(before.map(key));
     changes.push(...after.filter(value => !prior.has(key(value))).map(value => ({ ...value, manifest: file })));
   }
+  if (headFiles.includes('pubspec.lock') && changed.some(file => file.startsWith('lib/generated/api_client/') || file.startsWith('api/openapi/'))) {
+    const sdk = resolvedDependencies('pubspec.lock', git(['show', `${head}:pubspec.lock`]), { revision: head }).find(value => value.name === 'lythaus_api_client');
+    if (sdk?.source === 'path' && !changes.some(value => value.manifest === 'pubspec.lock' && value.name === sdk.name)) changes.push({ ...sdk, manifest: 'pubspec.lock', sourceChanged: true });
+  }
   for (const file of changed) {
     if (/(^|\/)(Gemfile\.lock|Podfile\.lock|.*\.gradle(?:\.kts)?|Cargo\.lock|go\.sum|poetry\.lock|uv\.lock)$/.test(file)) throw new Error(`UNSUPPORTED_COVERAGE_VERIFIER:${file}`);
     if (file.endsWith('package.json')) {
@@ -167,6 +171,7 @@ export async function main() {
     Object.assign(receipt, comparison(process.env.BASE_SHA, process.env.HEAD_SHA));
     const expected = expectedChanges(receipt.baseSha, receipt.reviewedHeadSha);
     receipt.expected = expected;
+    const canonical = value => value.ecosystem === 'pub' && value.name === 'lythaus_api_client' && value.manifest === 'pubspec.lock' && value.source === 'path' && value.localPath === 'build/api_client' && value.canonicalManifest === 'lib/generated/api_client/pubspec.yaml';
     for (let attempt = 0; attempt < 5; attempt++) {
       const changes = [];
       let warnings = false;
@@ -189,10 +194,14 @@ export async function main() {
       receipt.changes = changes;
       receipt.missing = missingCoverage(expected, changes);
       receipt.snapshotWarnings = warnings;
-      if (!warnings && receipt.missing.length === 0) break;
+      if (!warnings && receipt.missing.filter(value => !canonical(value)).length === 0) break;
       if (attempt < 4) await new Promise(resolve => setTimeout(resolve, 10000 * (attempt + 1)));
     }
     receipt.coverage = receipt.snapshotWarnings || receipt.missing.length ? 'INCOMPLETE_INDEXING_OR_UNRECOGNIZED_MANIFEST' : 'COMPLETE';
+    receipt.sourceRequired = expected.filter(canonical);
+    receipt.nativeMissing = receipt.missing.filter(value => !canonical(value));
+    receipt.nativeRequiredCoverage = receipt.snapshotWarnings || receipt.nativeMissing.length ? 'INCOMPLETE' : 'COMPLETE';
+    receipt.nativeIndexing = receipt.sourceRequired.length ? 'NOT_CLAIMED' : 'NOT_APPLICABLE';
     receipt.reason = 'NATIVE_API_AVAILABLE';
     fs.writeFileSync(`${directory}/comparison.json`, JSON.stringify(receipt, null, 2) + '\n');
   } catch (error) {

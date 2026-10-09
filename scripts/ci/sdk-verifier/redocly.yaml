@@ -1,0 +1,7 @@
+extends:
+  - recommended
+rules:
+  no-unused-components: warn
+  operation-operationId-unique: error
+  operation-2xx-response: error
+  operation-4xx-response: warn

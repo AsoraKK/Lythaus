@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "lythaus-sdk-verifier-trust-v1",
+  "state": "pending-independent-review",
+  "repositoryId": 1010752912,
+  "repositoryOwnerId": 211295889,
+  "protectedRef": "refs/heads/main",
+  "workflowPath": ".github/workflows/dependency-review.yml",
+  "job": "dependency-review",
+  "verifierSha": null,
+  "verifierTreeSha": null,
+  "workflowBlobSha": null,
+  "approvalEvidenceRef": null
+}
