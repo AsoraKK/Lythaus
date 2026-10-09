@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -246,5 +245,5 @@ void _testExport(String description, WidgetTesterCallback callback) =>
     testWidgets(
       description,
       callback,
-      variant: TargetPlatformVariant({TargetPlatform.linux}),
+      variant: const TargetPlatformVariant({TargetPlatform.linux}),
     );
