@@ -93,7 +93,7 @@ describe('Waitlist', () => {
     });
     render(<Waitlist />);
     await screen.findByText('person@example.com');
-    fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Load more waitlist contacts' }));
     await screen.findByText('second@example.com');
     expect(adminRequest).toHaveBeenLastCalledWith('waitlist', { query: { q: '', status: '', source: '', createdAfter: '', createdBefore: '', limit: 50, cursor: 'next-page' } });
   });
@@ -113,18 +113,18 @@ describe('Waitlist', () => {
 
     render(<Waitlist />);
     await screen.findByText('person@example.com');
-    fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Load more waitlist contacts' }));
     fireEvent.change(screen.getByLabelText('Search waitlist by exact email'), { target: { value: 'search@example.invalid' } });
     fireEvent.click(screen.getByRole('button', { name: 'Filter' }));
 
     await act(async () => { resolveSearch({ items: [searchResult], nextCursor: 'search-next', summary: firstPage.summary }); });
     expect(await screen.findByText('search@example.invalid')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Load more' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Load more waitlist contacts' })).toBeEnabled();
 
     await act(async () => { resolveNextPage({ items: [staleResult], nextCursor: null, summary: firstPage.summary }); });
     expect(screen.queryByText('stale@example.invalid')).not.toBeInTheDocument();
     expect(screen.getByText('search@example.invalid')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Load more' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Load more waitlist contacts' })).toBeEnabled();
   });
 
   it('submits the labelled exact-email search from the keyboard', async () => {
@@ -139,11 +139,42 @@ describe('Waitlist', () => {
     render(<Waitlist />);
     await screen.findByText('No waitlist signups yet');
     const search = screen.getByRole('textbox', { name: 'Search waitlist by exact email' });
-    await keyboard.type(search, 'keyboard@example.invalid');
-    await keyboard.keyboard('{Enter}');
+    await act(async () => {
+      await keyboard.type(search, 'keyboard@example.invalid');
+      await keyboard.keyboard('{Enter}');
+    });
 
     expect(await screen.findByText('keyboard@example.invalid')).toBeInTheDocument();
     expect(adminRequest).toHaveBeenLastCalledWith('waitlist', { query: { q: 'keyboard@example.invalid', status: '', source: '', createdAfter: '', createdBefore: '', limit: 50, cursor: null } });
+  });
+
+  it('announces page loading and keeps keyboard focus through pagination', async () => {
+    const keyboard = userEvent.setup();
+    const second = { ...firstPage.items[0], id: 'second-page', email: 'second@example.invalid' };
+    let resolveNextPage;
+    adminRequest.mockImplementation((path, options) => {
+      if (path === 'account-support/access') return ownerDenied();
+      if (path !== 'waitlist') return Promise.reject(new Error('Unexpected test route'));
+      if (options.query.cursor === 'next-page') return new Promise((resolve) => { resolveNextPage = resolve; });
+      return Promise.resolve(firstPage);
+    });
+
+    render(<Waitlist />);
+    await screen.findByText('person@example.com');
+    const loadMore = screen.getByRole('button', { name: 'Load more waitlist contacts' });
+    loadMore.focus();
+    await act(async () => { await keyboard.keyboard('{Enter}'); });
+
+    expect(loadMore).toHaveAttribute('aria-disabled', 'true');
+    expect(loadMore).toBeEnabled();
+    expect(document.activeElement).toBe(loadMore);
+    expect(screen.getByRole('status')).toHaveTextContent('Loading more waitlist contacts...');
+    expect(screen.getByRole('table', { name: 'Waitlist contacts' })).toHaveAttribute('aria-busy', 'true');
+
+    await act(async () => { resolveNextPage({ items: [second], nextCursor: null, summary: firstPage.summary }); });
+    expect(await screen.findByText('second@example.invalid')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Load more waitlist contacts' })).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(screen.getByRole('table', { name: 'Waitlist contacts' }));
   });
 
   it('updates status and a retention hold without exposing implementation detail', async () => {

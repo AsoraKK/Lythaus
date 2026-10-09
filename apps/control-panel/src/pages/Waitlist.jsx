@@ -39,6 +39,8 @@ function Waitlist() {
   const [editSource, setEditSource] = useState('');
   const [newEntry, setNewEntry] = useState({ email: '', source: 'keeper', reasonCode: '', confirmation: '' });
   const listRequestId = useRef(0);
+  const paginationFocusPending = useRef(false);
+  const listRef = useRef(null);
 
   const loadWaitlist = useCallback(async ({ cursor = null, append = false } = {}) => {
     setPendingAction(null);
@@ -80,6 +82,12 @@ function Waitlist() {
     loadWaitlist();
     return () => { listRequestId.current += 1; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (loadingMore || !paginationFocusPending.current) return;
+    paginationFocusPending.current = false;
+    if (!nextCursor) listRef.current?.focus();
+  }, [loadingMore, nextCursor]);
 
   useEffect(() => {
     let active = true;
@@ -228,10 +236,11 @@ function Waitlist() {
 
       <LythCard variant="panel" className="waitlist-table-panel">
         {loading ? <p className="waitlist-loading" role="status" aria-live="polite">Loading waitlist...</p> : null}
+        {loadingMore ? <p role="status" aria-live="polite">Loading more waitlist contacts...</p> : null}
         {error ? <div className="notice error" role="alert"><strong>{error}</strong><span>Try again. If the problem continues, check the admin API status.</span></div> : null}
         {actionMessage ? <p className="waitlist-action-error" role="status">{actionMessage}</p> : null}
         {!loading && !error && items.length === 0 ? <div className="waitlist-empty"><h2>{hasWaitlistFilters(appliedFilters) ? 'No contacts match these filters' : 'No waitlist signups yet'}</h2><p>{hasWaitlistFilters(appliedFilters) ? 'Try a different exact address or widen the selected filters.' : 'New waitlist requests will appear here.'}</p></div> : null}
-        {!loading && !error && items.length > 0 ? <div className="waitlist-table-wrap"><table className="waitlist-table"><thead><tr><th>Email</th><th>Status</th><th>Source</th><th>Joined</th><th>Existing account</th><th>Actions</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}>
+        {!loading && !error && items.length > 0 ? <div className="waitlist-table-wrap"><table ref={listRef} className="waitlist-table" aria-label="Waitlist contacts" aria-busy={loadingMore} tabIndex={-1}><thead><tr><th>Email</th><th>Status</th><th>Source</th><th>Joined</th><th>Existing account</th><th>Actions</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}>
           <td>{item.email}</td><td><span className={`waitlist-status ${String(item.status).toLowerCase()}`}>{item.status}</span><span className="muted">{item.retentionHold ? 'Retention hold active' : ''}</span></td><td>{item.source}</td><td>{formatDateTime(item.createdAt)}</td><td><AccountLinkStatus item={item} value={linkedAccounts[item.id]} access={supportAccess} busy={linkLookupBusyId === item.id} onCheck={checkAccountLink} /></td>
           <td><div className="waitlist-actions">
             <select aria-label={`Update waitlist status for ${item.email}`} value={item.status} onChange={(event) => beginAction({ ...item, nextStatus: event.target.value }, 'status', `UPDATE WAITLIST STATUS ${item.id} TO ${event.target.value.toUpperCase()}`)} disabled={loading || loadingMore || updatingId === item.id || ['converted', 'unsubscribed'].includes(item.status)}><option value={item.status}>{item.status}</option>{item.status === 'waiting' ? <option value="invited">Invited</option> : null}{['waiting', 'invited'].includes(item.status) ? <option value="converted">Converted</option> : null}</select>
@@ -240,7 +249,11 @@ function Waitlist() {
             <LythButton variant="danger" type="button" onClick={() => beginAction(item, 'delete', `UNSUBSCRIBE AND REQUEST PURGE ${item.id}`)} disabled={loading || loadingMore || updatingId === item.id}>Unsubscribe + request purge</LythButton>
           </div></td>
         </tr>)}</tbody></table></div> : null}
-        {nextCursor && !loading ? <div className="waitlist-pagination"><LythButton variant="secondary" type="button" onClick={() => loadWaitlist({ cursor: nextCursor, append: true })} disabled={loadingMore}>{loadingMore ? 'Loading...' : 'Load more'}</LythButton></div> : null}
+        {nextCursor && !loading ? <div className="waitlist-pagination"><LythButton variant="secondary" type="button" aria-label="Load more waitlist contacts" aria-disabled={loadingMore} onClick={(event) => {
+          if (loadingMore) return;
+          paginationFocusPending.current = document.activeElement === event.currentTarget;
+          loadWaitlist({ cursor: nextCursor, append: true });
+        }}>{loadingMore ? 'Loading...' : 'Load more'}</LythButton></div> : null}
       </LythCard>
 
       {pendingAction ? <LythCard variant="panel"><div className="panel-header"><h2>Confirm waitlist action</h2></div><div className="waitlist-confirmation-summary" role="note"><p><strong>Record:</strong> {pendingAction.item.email}</p><p>{waitlistActionSummary(pendingAction, editSource)}</p></div><p>Type <strong>{pendingAction.expected}</strong> to confirm this action.</p><div className="form-row">{pendingAction.operation === 'edit' ? <LythInput aria-label="Waitlist source" value={editSource} onChange={(event) => setEditSource(event.target.value)} placeholder="Source" /> : null}<LythInput aria-label="Waitlist reason code" value={reasonCode} onChange={(event) => setReasonCode(event.target.value)} placeholder="Reason code" /><LythInput aria-label="Waitlist confirmation" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} placeholder={pendingAction.expected} /><LythButton variant="danger" type="button" onClick={confirmAction} disabled={updatingId === pendingAction.item.id}>Confirm</LythButton><LythButton variant="ghost" type="button" onClick={() => { setPendingAction(null); setReasonCode(''); setConfirmation(''); }}>Cancel</LythButton></div></LythCard> : null}
