@@ -43,9 +43,9 @@ function run(arguments_) {
   }
 }
 
-function capture(arguments_) {
+function capture(arguments_, cwd = validationPackage) {
   const result = spawnSync(dart, arguments_, {
-    cwd: validationPackage,
+    cwd,
     env: { ...process.env, LYTHAUS_ADMIN_MUTATION_GUARD: resolve('scripts/tests/admin-mutation-sdk-guard.mjs') },
     encoding: 'utf8', timeout: 120000, maxBuffer: 16 * 1024 * 1024,
     shell: process.platform === 'win32', windowsHide: true,
@@ -60,6 +60,33 @@ function preparePackage() {
   mkdirSync(destination, { recursive: true });
   cpSync(join(source, 'pubspec.yaml'), join(destination, 'pubspec.yaml'));
   cpSync(join(validationPackage, 'lib'), join(destination, 'lib'), { recursive: true });
+}
+
+function prepareLockedConsumer() {
+  preparePackage();
+  const root = process.cwd();
+  const flutter = process.platform === 'win32' ? 'flutter.bat' : 'flutter';
+  const result = spawnSync(flutter, ['pub', 'get', '--enforce-lockfile'], {
+    cwd: root, encoding: 'utf8', stdio: 'inherit',
+    shell: process.platform === 'win32', windowsHide: true,
+  });
+  if (result.error || result.status !== 0) throw result.error ?? new Error('locked SDK consumer could not be resolved');
+  execFileSync('git', ['diff', '--exit-code', 'HEAD', '--', 'pubspec.yaml', 'pubspec.lock'], { stdio: 'ignore' });
+  const graph = capture(['pub', 'deps', '--json'], root);
+  if (graph.status !== 0) throw new Error(`canonical runtime graph could not be resolved: ${graph.stderr}`);
+  const rootLock = parse(readFileSync('pubspec.lock', 'utf8'));
+  const runtimePackages = lockedRuntimePackages(JSON.parse(graph.stdout), rootLock, rootLock, identity.dependencies);
+  const directory = resolve('.artifacts/canonical-sdk-contract/test');
+  rmSync(directory, { recursive: true, force: true });
+  mkdirSync(directory, { recursive: true });
+  for (const file of contractSuites) cpSync(join(validationPackage, 'test', file), join(directory, file));
+  const wire = join(directory, 'monthly_rewards_preparation_wire.json');
+  cpSync(join(validationPackage, 'test/monthly_rewards_preparation_wire.json'), wire);
+  const monthlyTest = join(directory, 'monthly_rewards_preparation_serialization_test.dart');
+  const content = readFileSync(monthlyTest, 'utf8');
+  if (content.split("'test/monthly_rewards_preparation_wire.json'").length !== 2) throw new Error('monthly wire fixture path changed');
+  writeFileSync(monthlyTest, content.replace("'test/monthly_rewards_preparation_wire.json'", JSON.stringify(wire)));
+  return { root, directory, runtimePackages };
 }
 
 try {
@@ -98,12 +125,6 @@ try {
   }
   writeFileSync(manifestPath, validationManifest);
   run(['pub', 'get']);
-  let runtimePackages;
-  if (sourceEvidence) {
-    const graph = capture(['pub', 'deps', '--json', '--no-dev']);
-    if (graph.status !== 0) throw new Error('canonical runtime graph could not be resolved');
-    runtimePackages = lockedRuntimePackages(JSON.parse(graph.stdout), parse(readFileSync(join(validationPackage, 'pubspec.lock'), 'utf8')), parse(readFileSync('pubspec.lock', 'utf8')), identity.dependencies);
-  }
   run(['run', 'build_runner', 'build']);
   if (prepareForFlutter) {
     preparePackage();
@@ -113,17 +134,18 @@ try {
     if (!sourceEvidence) {
       run(['test', '--reporter', 'compact']);
     } else {
-      const baseline = capture(['test', '--reporter', 'json', ...contractSuites.map(file => `test/${file}`)]);
+      const consumer = prepareLockedConsumer();
+      const baseline = capture(['test', '--reporter', 'json', ...contractSuites.map(file => join(consumer.directory, file))], consumer.root);
       if (baseline.status !== 0) throw new Error(`canonical Dart contracts failed: ${baseline.stderr}`);
       const behavior = completedBehaviorReport(baseline.stdout);
       const mutations = [];
       for (const mutation of sourceMutations) {
-        const path = join(validationPackage, mutation.file);
+        const path = resolve('build/api_client', mutation.file);
         const original = readFileSync(path, 'utf8');
         if (original.split(mutation.before).length !== 2) throw new Error(`source evidence mutation shape changed: ${mutation.id}`);
         try {
           writeFileSync(path, original.replace(mutation.before, mutation.after));
-          const result = capture(['test', '--reporter', 'json', 'test/monthly_rewards_preparation_serialization_test.dart', '--plain-name', mutation.testName]);
+          const result = capture(['test', '--reporter', 'json', join(consumer.directory, 'monthly_rewards_preparation_serialization_test.dart'), '--plain-name', mutation.testName], consumer.root);
           if (result.status === 0) throw new Error(`source evidence mutation unexpectedly passed: ${mutation.id}`);
           mutations.push(rejectedMutationReport(result.stdout, mutation));
         } finally {
@@ -136,7 +158,7 @@ try {
       const receipt = {
         schemaVersion: evidenceSchema, observedAt: new Date().toISOString(), identity,
         preparation: preparedDartIdentity(identity), verification: 'behavior-verified',
-        behavior, mutations, runtimePackages, fixtures: 'synthetic-only', nativeIndexing: 'NOT_CLAIMED',
+        behavior, mutations, runtimePackages: consumer.runtimePackages, fixtures: 'synthetic-only', nativeIndexing: 'NOT_CLAIMED',
         toolchainLockSha256: createHash('sha256').update(readFileSync(join(validationPackage, 'pubspec.lock'))).digest('hex'),
         classification: localDartClassification(identity),
       };

@@ -19,7 +19,7 @@ The SDK remains in `expectedChanges` and `missingCoverage`; native API, severity
 | Generated source freshness | Existing CI OpenAPI job: bundle, regenerate with pinned generator, `openapi:check:dart` | Tracked generated SDK matches the canonical OpenAPI output at the checked revision |
 | Source identity | `localDartIdentity` reads exact Git objects | Head SHA, all canonical library blob IDs and tree ID, root manifest/lock, SDK manifest, preparation script, runtime dependencies, SDK fixtures, policy guard and fixture generator are bound |
 | Preparation | Existing validator compiles in a disposable package and copies source plus built serializers into `build/api_client` | Every tracked SDK source file and original manifest must match the prepared package; the prepared library including generated parts has a separate SHA-256 digest; symlinks and substitutions are rejected |
-| Locked runtime | Source-evidence mode pins the five direct libraries, resolves the real `dart pub deps --json --no-dev` graph and checks its entire runtime closure | Every runtime package version and artifact hash must match the root lock, including transitive packages; the temporary development/toolchain lock is recorded separately |
+| Locked runtime | Source-evidence mode prepares the SDK, resolves the app with `flutter pub get --enforce-lockfile`, and traverses only the five direct runtime roots in the real `dart pub deps --json` graph | Every runtime package version and artifact hash must match the root lock, including transitive packages; the separate generator development/toolchain lock is recorded |
 | Real package behavior | `--source-evidence` runs seven explicitly named fixture suites with the real Dart runner | Monthly/calendar serialization, own-member paths and bearer auth, real admin admission guard, privacy/preferences, support/activity models, HTTP 401/403 rejection, malformed authority, cancellation and exact CSV bytes |
 | Assertion sensitivity | Temporary-copy mutations remove bearer auth or change the monthly owner route | Each must produce a named assertion failure in the real monthly HTTP fixture. Compiler/process failures and zero/placeholder-only reports are insufficient |
 | Receipt validation | `verifyLocalDartReceipt` | Missing/stale head, altered source at the same version, mismatched preparation, absent behavior/mutation proof, unapproved classification and denied/mismatched license evidence fail |
@@ -34,6 +34,8 @@ node scripts/validate-openapi-dart-client.mjs --source-evidence
 ```
 
 Source-evidence mode requires a clean tracked checkout and removes any old receipt before running. It writes `.artifacts/security-run-evidence/local-dart-package.json` only after real behavior and mutation checks pass. The exact committed head, source/recipe blobs, resolved temporary toolchain lock hash and prepared package digest are recorded. Temporary mutations are restored and the temporary validation package is removed.
+
+The generator's temporary dev graph can use newer libraries than the app lock (observed `meta 1.19.0` versus app `1.17.0`). Generator analysis remains separate from behavior proof. The named behavior fixtures and mutations execute against the prepared package through the app's enforced package configuration. Copies live only under ignored `.artifacts`; the temporary monthly wire path is changed to point at its synthetic fixture. Root package files and tracked SDK sources are unchanged.
 
 ## Ownership/license gate
 
