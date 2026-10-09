@@ -94,12 +94,15 @@ export function validatePreparedMonthlyWeekEvidence(values: unknown[], input: {
     .sort((left, right) => left.startsAt.localeCompare(right.startsAt));
   for (let index = 1; index < complete.length; index++)
     if (complete[index].startsAt < complete[index - 1].endsAt) invalid();
+  const canonicalPeriods = new Set<string>();
   for (const row of periods) {
     if (row.startsAt === null && row.endsAt === null) continue;
     if (periodPolicyVersion === null) invalid();
     const expected = proposedClosingSundayWeek(row.startsAt ?? new Date(Date.parse(row.endsAt!) - 1).toISOString());
     if ((row.startsAt !== null && row.startsAt !== expected.startsAt)
       || (row.endsAt !== null && row.endsAt !== expected.endsAt) || expected.ownerMonth !== input.sourceMonth) invalid();
+    if (canonicalPeriods.has(expected.startsAt)) invalid();
+    canonicalPeriods.add(expected.startsAt);
   }
   return { periodPolicyVersion, periodPolicyStatus: periodPolicyVersion === null
     ? 'unavailable' as const : PROPOSED_CLOSING_SUNDAY_CALENDAR.status };

@@ -132,6 +132,34 @@ test('partial and unavailable reader evidence stays null without inferred dates,
   invalid(() => reportDto(raw));
 });
 
+test('complementary partial endpoints cannot represent the same canonical week under distinct IDs', () => {
+  for (const complementary of ['selected', 'omitted', 'reversed']) {
+    const raw = preparedReportFixture(), first = raw.report.weekly.selectedWeeks[0];
+    const second = complementary === 'omitted' ? raw.report.weekly.omittedWeeks[0] : raw.report.weekly.selectedWeeks[1];
+    const startsAt = first.startsAt, endsAt = first.endsAt;
+    assert.notEqual(first.weekId, second.weekId);
+    Object.assign(first, complementary === 'reversed' ? { startsAt: null, endsAt } : { startsAt, endsAt: null });
+    Object.assign(second, complementary === 'reversed' ? { startsAt, endsAt: null } : { startsAt: null, endsAt });
+    const before = structuredClone(raw); invalid(() => reportDto(raw)); assert.deepEqual(raw, before);
+  }
+});
+
+test('distinct canonical partial weeks and unavailable periods preserve nulls and omit inferred dates or IDs', () => {
+  const raw = preparedReportFixture(), weeks = raw.report.weekly.selectedWeeks;
+  weeks[0].endsAt = null; weeks[1].startsAt = null;
+  weeks[2].startsAt = null; weeks[2].endsAt = null;
+  const before = structuredClone(raw), dto = reportDto(raw); conforms(dto);
+  assert.equal(dto.report.weekly.selectedWeeks[0].startsAt, '2026-10-26T00:00:00.000Z');
+  assert.equal(dto.report.weekly.selectedWeeks[0].endsAt, null);
+  assert.equal(dto.report.weekly.selectedWeeks[1].startsAt, null);
+  assert.equal(dto.report.weekly.selectedWeeks[1].endsAt, '2026-11-09T00:00:00.000Z');
+  assert.equal(dto.report.weekly.selectedWeeks[2].startsAt, null); assert.equal(dto.report.weekly.selectedWeeks[2].endsAt, null);
+  assert.ok(dto.report.weekly.selectedWeeks.every(row => !('weekId' in row)));
+  assert.equal(dto.report.weekly.periodPolicyStatus, 'pending_owner_approval');
+  assert.equal(dto.report.total.sourceScore, 13650); assert.equal(dto.runtimeActivationAllowed, false);
+  assert.deepEqual(raw, before);
+});
+
 test('qualification validity rejects reversed or zero known windows while preserving null/partial evidence', () => {
   for (const [pick, projected] of [[row => row.report.quarterlyEmail.evidence, row => row.report.quarterlyEmail],
     [row => row.report.quarterlySuggestion, row => row.report.quarterlySuggestion]]) {

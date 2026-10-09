@@ -81,6 +81,10 @@ weeks and source-month ownership. It never reselects weeks or calculates points.
 Known ranges must have start strictly before end. Known identities, starts or
 ends cannot repeat across selected, omitted, missing and unassessed rows;
 complete ranges cannot overlap, and adjacent exclusive boundaries are allowed.
+For any row with either endpoint known, the existing calendar helper's canonical
+week start is also checked for uniqueness internally. Complementary partial
+endpoints cannot represent the same week twice under distinct IDs. The internal
+key never fills in an unavailable endpoint or appears in the response.
 The reader checks private internal week IDs before its public projection drops
 them. The DTO also checks any supplied known identity, and never emits week IDs.
 
