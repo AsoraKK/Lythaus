@@ -17,7 +17,7 @@ const owner = { id: '018f0000-0000-7000-8000-000000000011', email: 'monthly-owne
 const publicId = '018f0000-0000-7000-8000-000000000012';
 const token = 'synthetic-monthly-token';
 const mime = { '.html': 'text/html', '.js': 'application/javascript', '.json': 'application/json', '.wasm': 'application/wasm', '.css': 'text/css', '.ttf': 'font/ttf', '.otf': 'font/otf', '.png': 'image/png', '.woff2': 'font/woff2' };
-const statusBody = (confirmed) => ({ state: 'pending', reasonCode: 'approval_unavailable', effectiveMonth: confirmed ? '2026-10' : null, currentLevel: confirmed ? 3 : null, sourceMonth: confirmed ? '2026-09' : null, sourceScore: confirmed ? 4000 : null, snapshot: { state: confirmed ? 'confirmed' : 'unavailable', policyVersion: 'lythaus-monthly-rewards-2026-10-v1', mode: 'shadow' }, selection: { state: 'unavailable', reasonCode: 'approval_unavailable' }, responsePreparation: readiness, preparedResponse: null });
+const statusBody = (confirmed, shadow) => ({ state: 'pending', reasonCode: 'approval_unavailable', effectiveMonth: confirmed ? '2026-10' : null, currentLevel: confirmed ? 3 : null, sourceMonth: confirmed ? '2026-09' : null, sourceScore: confirmed ? 4000 : null, snapshot: confirmed ? { state: shadow ? 'shadow' : 'confirmed', reasonCode: 'source_month_assessed', effectiveMonth: '2026-10', sourceMonth: '2026-09', snapshotId: '018f0000-0000-7000-8000-000000000021', revision: shadow ? 2 : 1, sourceRevision: shadow ? 2 : 1, sourceScore: 4000, level: 3, policyVersion: 'lythaus-monthly-rewards-2026-10-v1' } : { state: 'unavailable', reasonCode: 'approval_unavailable', effectiveMonth: '2026-10' }, selection: { state: 'unavailable', reasonCode: 'approval_unavailable' }, responsePreparation: readiness, preparedResponse: null });
 const action = { actionId: 'monthly.profile', capGroup: 'profile', points: null, allowance: 1000, remainingInGroup: null, accepted: 1, pending: 0, withheld: 0, state: 'pending', reasonCode: 'evidence_pending', validFrom: null, validUntil: null };
 const reportBody = (sourceMonth, empty) => ({ reportState: empty ? 'pending' : 'shadow', reasonCode: empty ? 'assembly_pending' : null, sourceMonth, effectiveMonth: '2026-11', policyVersion: 'lythaus-monthly-rewards-2026-10-v1', levelAuthority: { state: 'unavailable', reasonCode: 'approval_unavailable', effectiveMonth: null, sourceMonth: null, sourceScore: null, level: null, levelKind: null }, corrections: { sourceRevisions: empty ? [] : [{ revision: 2, sourceScore: 4500, reasonCode: 'source_corrected', recordedAt: null }], effectiveSnapshots: [] }, report: empty ? null : { sourceRevision: 2, sourceRecordedAt: null, total: { sourceScore: 2000, maximumSourceMonth: 13500 }, weekly: { points: 1000, maximumSelectedWeeklyPoints: 10000, selectedWeeks: [{ points: 1000, state: 'corrected', revision: 2, startsAt: '2026-10-01T00:00:00Z', endsAt: '2026-10-08T00:00:00Z', actions: [] }], omittedWeeks: [{ points: 500, state: 'locked', revision: 1, startsAt: null, endsAt: null, selectionReason: 'not_selected_best_four', actions: [] }] }, monthly: { points: 1000, maximumPoints: 2500, actions: [action] }, quarterlyEmail: { points: null, maximumPoints: 1000, evidence: null } }, responsePreparation: readiness, preparedResponse: null });
 
@@ -25,7 +25,7 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
   await mkdir(output, { recursive: true });
   const evidence = [];
   for (const config of [{ name: 'desktop-light', width: 1440, height: 960, theme: 'light' }, { name: 'mobile-dark', width: 390, height: 844, theme: 'dark' }]) {
-    let signedIn = false, confirmed = false, empty = true, failStatus = false;
+    let signedIn = false, confirmed = false, shadow = false, empty = true, failStatus = false;
     const calls = [], errors = [], captures = [];
     const fixture = await localAuthBrowserServer(async (route) => {
       const request = route.request(), url = new URL(request.url()), headersIn = await request.allHeaders();
@@ -49,7 +49,7 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
       else if (url.pathname === `/api/users/${publicId}`) { body = { user: { id: publicId, displayName: 'Public Monthly Member', bio: 'Public profile fixture', reputation: { level: 1, label: 'New' } } }; }
       else if (url.pathname === `/api/users/${publicId}/follow`) { body = { userId: publicId, following: false, followedBy: false, blocked: false }; }
       else if (['/api/reputation/me', '/api/users/me/reputation'].includes(url.pathname)) { body = { userId: owner.id, level: 0, reputationLevel: 0, levelName: 'New', reputationStatus: 'active', reputationBand: 'new', policyVersion: 'reputation-v2.0.0', pillars: {}, promotionBlockers: [], evaluatedAt: null }; }
-      else if (url.pathname === '/api/rewards/me/monthly') { assert.equal(headersIn.authorization, `Bearer ${token}`); assert.equal(url.search, ''); status = failStatus ? 503 : 200; body = failStatus ? { error: 'synthetic_private_failure' } : statusBody(confirmed); }
+      else if (url.pathname === '/api/rewards/me/monthly') { assert.equal(headersIn.authorization, `Bearer ${token}`); assert.equal(url.search, ''); status = failStatus ? 503 : 200; body = failStatus ? { error: 'synthetic_private_failure' } : statusBody(confirmed, shadow); }
       else if (/^\/api\/reputation\/me\/reports\/monthly\/\d{4}-\d{2}$/.test(url.pathname)) { assert.equal(headersIn.authorization, `Bearer ${token}`); assert.equal(url.search, ''); body = reportBody(url.pathname.split('/').at(-1), empty); }
       else if (url.pathname === '/api/rewards/me') { body = { subscriptionTier: 'free', reputationLevel: 0, reputationBand: 'new', availableRewardLevels: [], maxOptionsPerLevel: 0, redemptionStatus: 'pending', fraudRiskStatus: 'normal', offers: [], redemptionHistory: [], affiliateDisclosure: '' }; }
       return route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify(body) });
@@ -78,7 +78,7 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
       async function capture(state) {
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         await page.waitForTimeout(100);
-        const metrics = await page.evaluate(() => ({ width: innerWidth, documentWidth: document.documentElement.scrollWidth, bodyWidth: document.body.scrollWidth })); assert.ok(metrics.documentWidth <= metrics.width + 1); const filename = `${engineName}-${config.name}-${state}.png`; await page.screenshot({ path: path.join(output, filename), animations: 'disabled' }); captures.push({ filename, state, metrics });
+        const metrics = await page.evaluate(() => ({ width: innerWidth, documentWidth: document.documentElement.scrollWidth, bodyWidth: document.body.scrollWidth })); assert.ok(metrics.documentWidth <= metrics.width + 1); const filename = `${engineName}-${config.name}-${state}.png`; await page.screenshot({ path: path.join(output, filename), animations: 'disabled' }); captures.push({ filename, state, fixtureLabel: `synthetic local TLS / ${state}`, metrics });
       }
       await open('/rewards');
       await guestEntry();
@@ -92,8 +92,12 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
       await page.getByText('Monthly level pending', { exact: true }).waitFor({ timeout: 90000 });
       assert.match(await text(), /projection unavailable/); assert.doesNotMatch(await text(), /Level 5 confirmed|Prospective maximum:/);
       await capture('pending-disabled');
-      confirmed = true; empty = false;
+      confirmed = true; shadow = true;
       const refresh = await locate(page.getByRole('button', { name: 'Refresh status', exact: true })); await refresh.focus(); await page.keyboard.press('Enter');
+      await page.getByText('Monthly level in shadow', { exact: true }).waitFor();
+      assert.match(await text(), /not a confirmed entitlement/); assert.doesNotMatch(await text(), /Level 3 confirmed/);
+      await capture('v1-shadow-unconfirmed');
+      shadow = false; empty = false; await refresh.click();
       await page.getByText('Level 3 confirmed', { exact: true }).waitFor();
       const methodology = await locate(page.getByRole('button', { name: /Disabled v2 methodology/ })); await methodology.click();
       await waitText('Prospective maximum: 13,650');

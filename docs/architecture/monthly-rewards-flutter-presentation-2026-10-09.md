@@ -109,9 +109,30 @@ the generator's nullable-map factory is a separate upstream follow-up.
   zoom is approximated by halving the CSS viewport at DPR 2. Physical screen
   readers and native devices were not tested.
 
-Both engine journeys passed all four configurations with zero captured app or
-console errors. The existing Chromium mobile/light profile visual regression
-also passed, including Posts/Comments, settings, and saved preferences.
+At candidate `73e9b311ba38494fc05d7f514195a086e3612793`, the complete Chromium
+desktop/light and mobile/dark journeys passed with zero captured app or console
+errors. The WebKit rerun completed monthly and owner checks but failed during
+mobile session restoration before loading the public profile, showing
+“Unable to refresh your session”; that run is not a pass. Earlier complete
+WebKit journeys are historical evidence only. The existing Chromium mobile/light
+profile visual regression also passed, including Posts/Comments, settings, and
+saved preferences. Review fixes after this candidate require fresh validation.
+
+The CSV request lifetime gap was carried forward from the dependent base.
+Its separate repair scopes a manual provider subscription to the export, closes
+it synchronously on session change, and retains automatic disposal/cancellation.
+Six actual-button tests pass with delayed Dio transport: exact saved server
+bytes, error/retry, navigation, sign-out, account switching, and sign-out while
+the native save dialog is open. No global keep-alive or cancellation removal
+was introduced.
+
+Snapshot fixtures now match `readOwnMonthlyRewardSnapshot`: the snapshot state
+itself is `shadow` or `confirmed`; no `mode` field is invented. Shadow evidence
+is explicitly unconfirmed. Prepared v2 shadow values do not supply live scores
+or levels. Reader-shaped unavailable, unassessed pending, and corrected
+confirmed snapshots are also covered. The isolated legacy owner-profile test
+reproduced its coverage-run timeout before adding typed monthly read fixtures;
+its original profile/error assertions remain intact.
 
 Selected screenshots and a sanitized evidence receipt are stored in
 `docs/architecture/evidence/monthly-rewards-flutter/`. Review the

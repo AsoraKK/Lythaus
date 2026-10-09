@@ -46,8 +46,7 @@ class MonthlyReputationTrackerCard extends ConsumerWidget {
                   (key, value) => MapEntry(key, value?.value),
                 );
                 final level = view.currentLevel;
-                final confirmed =
-                    snapshot['state'] == 'confirmed' &&
+                final historicalSnapshot =
                     snapshot['policyVersion'] == historicalMonthlyPolicy &&
                     level != null &&
                     level >= 1 &&
@@ -55,6 +54,9 @@ class MonthlyReputationTrackerCard extends ConsumerWidget {
                     view.sourceScore != null &&
                     view.sourceScore! >= 0 &&
                     view.sourceScore! <= 13500;
+                final confirmed =
+                    snapshot['state'] == 'confirmed' && historicalSnapshot;
+                final shadow = snapshot['state'] == 'shadow';
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -62,21 +64,32 @@ class MonthlyReputationTrackerCard extends ConsumerWidget {
                       context,
                       confirmed
                           ? 'Level $level confirmed'
+                          : shadow
+                          ? 'Monthly level in shadow'
                           : 'Monthly level pending',
                     ),
                     Text(
                       confirmed
                           ? 'Fixed for ${evidenceMonth(view.effectiveMonth)}. Current progress cannot change this snapshot.'
-                          : _pendingMessage(view.reasonCode),
+                          : shadow
+                          ? 'Shadow source snapshot. This is not a confirmed entitlement. Rewards remain disabled.'
+                          : _pendingMessage(
+                              evidenceText(snapshot['reasonCode']) ??
+                                  view.reasonCode,
+                            ),
                     ),
-                    if (confirmed) ...[
+                    if (snapshot['state'] == 'unavailable')
+                      const Text('Snapshot unavailable.'),
+                    if (shadow && historicalSnapshot)
+                      Text('Shadow level $level · not confirmed.'),
+                    if (confirmed || (shadow && historicalSnapshot)) ...[
                       Text('Source month: ${evidenceMonth(view.sourceMonth)}'),
                       Text(
                         'Server-assessed source score: ${evidencePoints(view.sourceScore)} · historical v1 maximum 13,500.',
                       ),
-                      if (snapshot['mode'] == 'shadow')
-                        const Text(
-                          'Shadow snapshot. Rewards are not activated.',
+                      if (evidenceInteger(snapshot['revision']) != null)
+                        Text(
+                          'Snapshot revision ${evidencePoints(snapshot['revision'])} · source revision ${evidencePoints(snapshot['sourceRevision'])}.',
                         ),
                     ],
                     const SizedBox(height: Spacing.xs),
@@ -606,5 +619,13 @@ String _pendingMessage(String? reason) => switch (reason) {
     'This source month is waiting for its server assessment.',
   'settlement_pending' || 'confirmed_month_unavailable' =>
     'The fixed monthly level is waiting for settlement and review.',
+  'no_previous_assessment' =>
+    'No previous source assessment is available. The unassessed default is not a confirmed level.',
+  'before_policy_cutover' =>
+    'This month is before the approved policy cutover. No entitlement is available.',
+  'future_month_unconfirmed' =>
+    'This future month has no confirmed entitlement.',
+  'snapshot_policy_requires_review' =>
+    'The snapshot policy needs review. No confirmed entitlement is available.',
   _ => 'No server-assessed report is available for this month yet.',
 };

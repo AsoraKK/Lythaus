@@ -45,13 +45,56 @@ Map<String, Object?> monthlyStatusWire({bool confirmed = false}) => {
   'sourceScore': confirmed ? 4000 : null,
   'snapshot': {
     'state': confirmed ? 'confirmed' : 'unavailable',
-    'policyVersion': 'lythaus-monthly-rewards-2026-10-v1',
-    'mode': 'shadow',
+    'reasonCode': confirmed ? 'source_month_assessed' : 'approval_unavailable',
+    'effectiveMonth': '2026-10',
+    if (confirmed) ...{
+      'policyVersion': 'lythaus-monthly-rewards-2026-10-v1',
+      'sourceMonth': '2026-09',
+      'snapshotId': '018f0000-0000-7000-8000-000000000021',
+      'revision': 1,
+      'sourceRevision': 1,
+      'sourceScore': 4000,
+      'level': 3,
+    },
   },
   'selection': {'state': 'unavailable', 'reasonCode': 'approval_unavailable'},
   'responsePreparation': monthlyDisabledReadiness,
   'preparedResponse': null,
 };
+
+Map<String, Object?> monthlySnapshotStatusWire({
+  String state = 'shadow',
+  String policyVersion = 'lythaus-monthly-rewards-2026-10-v1',
+  int sourceScore = 4000,
+  int revision = 1,
+  int level = 3,
+}) {
+  final wire = monthlyStatusWire(confirmed: true);
+  wire['sourceScore'] = sourceScore;
+  wire['currentLevel'] = level;
+  wire['snapshot'] = {
+    'state': state,
+    'reasonCode': 'source_month_assessed',
+    'effectiveMonth': '2026-10',
+    'sourceMonth': '2026-09',
+    'snapshotId': '018f0000-0000-7000-8000-000000000021',
+    'revision': revision,
+    'sourceRevision': revision,
+    'sourceScore': sourceScore,
+    'level': level,
+    'policyVersion': policyVersion,
+    if (policyVersion == 'lythaus-monthly-rewards-2026-10-v2') ...{
+      'preparationOnly': true,
+      'runtimeActivationAllowed': false,
+      'appliedPoints': 0,
+      'dataVersion': 2,
+      'catalogueHash': monthlyDisabledReadiness['catalogueHash'],
+      'maximumSourceMonth': 13650,
+    },
+  };
+  return wire;
+}
+
 api.MonthlyRewardsMeResponse monthlyStatus({
   bool confirmed = false,
   Map<String, Object?>? wire,

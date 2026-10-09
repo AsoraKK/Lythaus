@@ -40,6 +40,134 @@ Widget _app(
 );
 
 void main() {
+  testWidgets('reader-shaped v1 shadow snapshot is explicitly unconfirmed', (
+    tester,
+  ) async {
+    final wire = monthlySnapshotStatusWire(revision: 2);
+    expect((wire['snapshot'] as Map).containsKey('mode'), false);
+    await tester.pumpWidget(
+      _app([
+        ...monthlyFixtureOverrides(),
+        monthlyRewardsViewProvider.overrideWith(
+          (ref) async => monthlyStatus(wire: wire),
+        ),
+      ]),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Monthly level in shadow'), findsOneWidget);
+    expect(find.text('Shadow level 3 · not confirmed.'), findsOneWidget);
+    expect(find.textContaining('not a confirmed entitlement'), findsOneWidget);
+    expect(find.textContaining('source score: 4,000'), findsOneWidget);
+    expect(
+      find.text('Snapshot revision 2 · source revision 2.'),
+      findsOneWidget,
+    );
+    expect(find.text('Level 3 confirmed'), findsNothing);
+  });
+  testWidgets(
+    'reader-shaped prepared v2 shadow supplies no live score or level',
+    (tester) async {
+      await tester.pumpWidget(
+        _app([
+          ...monthlyFixtureOverrides(),
+          monthlyRewardsViewProvider.overrideWith(
+            (ref) async => monthlyStatus(
+              wire: monthlySnapshotStatusWire(
+                policyVersion: 'lythaus-monthly-rewards-2026-10-v2',
+                sourceScore: 13650,
+                level: 5,
+              ),
+            ),
+          ),
+        ]),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Monthly level in shadow'), findsOneWidget);
+      expect(find.textContaining('projection unavailable'), findsOneWidget);
+      expect(find.textContaining('13,650'), findsNothing);
+      expect(find.textContaining('level 5'), findsNothing);
+      expect(find.text('Level 5 confirmed'), findsNothing);
+    },
+  );
+  for (final state in ['unavailable', 'pending']) {
+    testWidgets('reader-shaped $state snapshot has no inferred authority', (
+      tester,
+    ) async {
+      final wire = monthlyStatusWire()
+        ..['snapshot'] = {
+          'state': state,
+          'reasonCode': state == 'unavailable'
+              ? 'before_policy_cutover'
+              : 'no_previous_assessment',
+          'effectiveMonth': '2026-10',
+          if (state == 'pending') ...{
+            'level': 1,
+            'levelKind': 'unassessed_default',
+            'sourceScore': null,
+            'sourceMonth': null,
+            'snapshotId': null,
+            'revision': 0,
+            'policyVersion': 'lythaus-monthly-rewards-2026-10-v1',
+          },
+        };
+      if (state == 'pending') wire['currentLevel'] = 1;
+      await tester.pumpWidget(
+        _app([
+          ...monthlyFixtureOverrides(),
+          monthlyRewardsViewProvider.overrideWith(
+            (ref) async => monthlyStatus(wire: wire),
+          ),
+        ]),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Monthly level pending'), findsOneWidget);
+      expect(find.text('Level 1 confirmed'), findsNothing);
+      expect(find.textContaining('source score:'), findsNothing);
+      expect(
+        find.textContaining(
+          state == 'unavailable'
+              ? 'before the approved policy cutover'
+              : 'unassessed default',
+        ),
+        findsOneWidget,
+      );
+      if (state == 'unavailable') {
+        expect(find.text('Snapshot unavailable.'), findsOneWidget);
+      }
+    });
+  }
+  testWidgets(
+    'reader-shaped corrected confirmed snapshot retains fixed source',
+    (tester) async {
+      await tester.pumpWidget(
+        _app([
+          ...monthlyFixtureOverrides(),
+          monthlyRewardsViewProvider.overrideWith(
+            (ref) async => monthlyStatus(
+              wire: monthlySnapshotStatusWire(state: 'confirmed', revision: 2),
+            ),
+          ),
+          monthlyReputationReportProvider.overrideWith(
+            (ref, month) async => monthlyReport(
+              month,
+              detail: {
+                'sourceRevision': 3,
+                'total': {'sourceScore': 12000, 'maximumSourceMonth': 13500},
+              },
+            ),
+          ),
+        ]),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Level 3 confirmed'), findsOneWidget);
+      expect(find.textContaining('source score: 4,000'), findsOneWidget);
+      expect(find.textContaining('source assessment: 12,000'), findsOneWidget);
+      expect(
+        find.text('Snapshot revision 2 · source revision 2.'),
+        findsOneWidget,
+      );
+    },
+  );
   testWidgets(
     'fixture-only prepared snapshot is never used as live authority',
     (tester) async {
