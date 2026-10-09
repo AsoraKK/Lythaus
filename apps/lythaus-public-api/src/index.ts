@@ -30,7 +30,7 @@ import {
 import { maintainPostTagIndex, tagSearchCandidateScanLimit, tagSearchMaxDistinctTags } from './tag-search-indexing.ts';
 import { TAGGED_DISCOVERY_SQL } from './tag-search-query.ts';
 import { readBoundedJson } from './request-body-runtime.ts';
-import { parseProfileUpdate } from './profile-runtime-policy.ts';
+import { parseProfileUpdate, readPresentationPreferences } from './profile-runtime-policy.ts';
 import { acceptanceContextToken } from '@lythaus/contracts';
 import { createWaitlistRouteHandler } from './waitlist-handler.ts';
 import { parseWaitlistRequest, requireWaitlistSecrets, verifyWaitlistTurnstile } from './waitlist-runtime-policy.ts';
@@ -1374,6 +1374,11 @@ async function getUserProfile(request: Request, env: Env, userId: string, privat
             COALESCE(p.moderation_state, 'allowed') AS moderation_state,
             COALESCE(p.public_visibility, true) AS public_visibility,
             COALESCE(p.trust_passport_visibility, 'public_minimal') AS trust_passport_visibility,
+            CASE WHEN $3::boolean THEN jsonb_build_object(
+              'leftHandedMode', to_jsonb(u)->'presentation_left_handed',
+              'horizontalSwipeEnabled', to_jsonb(u)->'presentation_profile_swipe',
+              'version', to_jsonb(u)->'presentation_preferences_version'
+            ) END AS presentation_preferences,
             COALESCE(r.current_level, 0)::integer AS reputation_level,
             COALESCE(r.status, 'active') AS reputation_status,
             COALESCE(r.policy_version, $2) AS reputation_policy_version,
@@ -1405,6 +1410,7 @@ async function getUserProfile(request: Request, env: Env, userId: string, privat
     accountability_identity_declared: boolean;
     moderation_state: string;
     public_visibility: boolean;
+    presentation_preferences: unknown;
   } | undefined;
   if (!profile) {
     if (!privateView) return privateResponse(request, env, { error: 'not_found' }, { status: 404 });
@@ -1437,6 +1443,7 @@ async function getUserProfile(request: Request, env: Env, userId: string, privat
     body.user.accountabilityIdentityDeclared = profile.accountability_identity_declared;
     body.user.moderationState = profile.moderation_state;
     body.user.publicVisibility = profile.public_visibility;
+    body.user.presentationPreferences = readPresentationPreferences(profile.presentation_preferences);
   } else if (profile.trust_passport_visibility !== 'private') {
     body.user.reputation = { level, label: levelName };
   }
@@ -1494,6 +1501,26 @@ async function getUserInfo(request: Request, env: Env, userId: string): Promise<
 
 async function updateProfile(request: Request, env: Env, user: Principal): Promise<Response> {
   const input = parseProfileUpdate(await readJson<unknown>(request, 16 * 1024));
+  if (input.presentationPreferences) {
+    const preferences = input.presentationPreferences;
+    await transaction(env.DB_APP_FRESH, async (client) => {
+      const current = await client.query<{ preferences: unknown }>(
+        `SELECT jsonb_build_object(
+           'leftHandedMode', to_jsonb(u)->'presentation_left_handed',
+           'horizontalSwipeEnabled', to_jsonb(u)->'presentation_profile_swipe',
+           'version', to_jsonb(u)->'presentation_preferences_version'
+         ) AS preferences FROM identity.users u WHERE id = $1 AND status = 'active' FOR UPDATE`, [user.userId]);
+      if (!current.rows[0]) throw new Error('user_not_found');
+      const saved = readPresentationPreferences(current.rows[0].preferences);
+      if (!saved) throw new Error('presentation_preferences_unavailable');
+      if (saved.version !== preferences.expectedVersion) throw new Error('presentation_preferences_conflict');
+      await client.query(
+        `UPDATE identity.users SET presentation_left_handed = $1, presentation_profile_swipe = $2,
+           presentation_preferences_version = presentation_preferences_version + 1, updated_at = now()
+         WHERE id = $3`, [preferences.leftHandedMode, preferences.horizontalSwipeEnabled, user.userId]);
+    });
+    return await getUserProfile(request, env, user.userId, true);
+  }
   const { displayName, bio, accountabilityName } = input;
   const visibility = input.trustPassportVisibility;
   if (accountabilityName !== undefined && !env.PII_ENCRYPTION_KEY_V1) throw new Error('authentication_not_configured');
@@ -3300,7 +3327,7 @@ export default {
         }) ?? privateResponse(request, env, { error: 'not_found' }, { status: 404 });
       }
       const ownerItem = url.pathname.match(/^\/api\/(posts|comments)\/([^/]+)\/owner-view$/);
-      if (request.method === 'GET' && ownerItem) {
+      if (request.method === 'GET' && (ownerItem || url.pathname === '/api/users/me/posts')) {
         const ownerContent = await handleOwnerContentRead(request, {
           authenticate: () => principal(request, env),
           query: (sql, values) => query(env.DB_APP_FRESH, sql, values),

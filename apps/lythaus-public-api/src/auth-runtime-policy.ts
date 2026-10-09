@@ -65,7 +65,7 @@ const PUBLIC_ERROR_CODES = new Set([
   'notification_device_not_recorded', 'notification_not_found',
   'notification_preference_required', 'post_not_available', 'post_not_found',
   'post_tag_limit_exceeded',
-  'privacy_request_active', 'profile_not_found', 'provider_unavailable', 'rate_limit_exceeded',
+  'privacy_request_active', 'profile_not_found', 'presentation_preferences_unavailable', 'presentation_preferences_conflict', 'provider_unavailable', 'rate_limit_exceeded',
   'refresh_token_invalid', 'refresh_token_required', 'refresh_token_reuse',
   'relationship_change_limit_reached', 'request_too_large', 'reset_token_invalid',
   'reward_already_redeemed', 'reward_locked',
@@ -88,7 +88,7 @@ export function classifyPublicError(error: unknown): { exposedCode: string; inte
       : ['news_board_not_entitled', 'social_interaction_not_allowed', 'appeal_vote_not_allowed', 'appeal_recusal_not_allowed', 'auth_origin_not_allowed'].includes(exposedCode) ? 403
         : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
           : exposedCode === 'method_not_allowed' ? 405
-            : ['idempotency_key_conflict', 'idempotency_in_progress', 'idempotency_outcome_unknown', 'appeal_vote_locked', 'appeal_already_resolved', 'account_exists', 'reward_already_redeemed', 'community_appeal_closed', 'community_appeal_revision_conflict', 'community_appeal_legacy_case_pending'].includes(exposedCode) ? 409
+            : ['presentation_preferences_conflict', 'idempotency_key_conflict', 'idempotency_in_progress', 'idempotency_outcome_unknown', 'appeal_vote_locked', 'appeal_already_resolved', 'account_exists', 'reward_already_redeemed', 'community_appeal_closed', 'community_appeal_revision_conflict', 'community_appeal_legacy_case_pending'].includes(exposedCode) ? 409
             : exposedCode === 'request_too_large' ? 413
               : exposedCode === 'unsupported_content_type' ? 415
               : exposedCode === 'rate_limit_exceeded'

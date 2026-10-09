@@ -29,5 +29,11 @@ void main() {
       // TODO
     });
 
+    // Private account presentation choices. Send this field alone; it does not change profile publication or Passport visibility. Requires the approved preference schema. Conflicts return 409; unavailable storage returns 503.
+    // ProductIntegrityPresentationPreferencesUpdate presentationPreferences
+    test('to test the property `presentationPreferences`', () async {
+      // TODO
+    });
+
   });
 }

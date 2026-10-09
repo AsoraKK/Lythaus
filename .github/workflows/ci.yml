@@ -75,6 +75,8 @@ jobs:
         run: node --test scripts/tests/file-io-security.test.mjs
       - name: Verify private auth-email service boundary in workerd
         run: node --test --test-timeout=60000 scripts/tests/private-email-binding.workerd.mjs
+      - name: Verify owner profile posts in workerd
+        run: node --test --test-timeout=60000 apps/lythaus-public-api/tests/owner-content-reader.workerd.mjs
       - name: Verify mailbox provider observation in workerd
         run: node --test --test-timeout=60000 apps/lythaus-auth-acceptance-coordinator/tests/mailbox-provider.workerd.mjs
       - run: node --experimental-strip-types --test packages/security/tests/critical-security-policy.test.mjs
@@ -250,6 +252,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Install Dart formatter file discovery tool
+        run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
       - uses: ./.github/actions/flutter-setup
         with:
           flutter-version-file: .fvmrc
@@ -258,6 +262,8 @@ jobs:
       - run: flutter pub get
       - name: Check Dart formatting
         run: |
+          set -euo pipefail
+          command -v rg >/dev/null
           rg --files -g '*.dart' \
             -g '!lib/generated/api_client.dart' \
             -g '!lib/generated/api_client/**' \
@@ -307,6 +313,20 @@ jobs:
         with:
           name: guest-tag-search-browser-evidence
           path: build/guest-search-evidence
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Verify rendered member profile states
+        env:
+          AUTH_WEB_ARTIFACT_DIR: build/web
+          PROFILE_VISUAL_QA_DIR: build/profile-visual-evidence
+          QA_COMMIT: ${{ github.sha }}
+        run: node --experimental-strip-types --test --test-timeout=600000 scripts/tests/profile-visual-qa.browser.mjs
+      - name: Upload member profile visual evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: member-profile-visual-evidence
+          path: build/profile-visual-evidence
           if-no-files-found: warn
           retention-days: 7
       - name: Build content journey regression fixture

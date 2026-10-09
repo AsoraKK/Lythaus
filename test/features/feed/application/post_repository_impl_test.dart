@@ -61,7 +61,8 @@ void main() {
   });
 
   test('createPost and updatePost explain the per-post tag validation', () async {
-    const message = 'This post has too many distinct tags for search. Remove some tags and try again.';
+    const message =
+        'This post has too many distinct tags for search. Remove some tags and try again.';
     when(
       () => dio.post<Map<String, dynamic>>(
         '/api/posts',
@@ -71,7 +72,11 @@ void main() {
     ).thenThrow(
       DioException(
         requestOptions: RequestOptions(path: '/api/posts'),
-        response: _response({'error': 'post_tag_limit_exceeded'}, '/api/posts', statusCode: 400),
+        response: _response(
+          {'error': 'post_tag_limit_exceeded'},
+          '/api/posts',
+          statusCode: 400,
+        ),
       ),
     );
 
@@ -94,12 +99,19 @@ void main() {
     ).thenThrow(
       DioException(
         requestOptions: RequestOptions(path: '/api/posts/p1'),
-        response: _response({'error': 'post_tag_limit_exceeded'}, '/api/posts/p1', statusCode: 400),
+        response: _response(
+          {'error': 'post_tag_limit_exceeded'},
+          '/api/posts/p1',
+          statusCode: 400,
+        ),
       ),
     );
     final edit = await repo.updatePost(
       postId: 'p1',
-      request: const UpdatePostRequest(text: 'tag-heavy edit', aiLabel: 'human'),
+      request: const UpdatePostRequest(
+        text: 'tag-heavy edit',
+        aiLabel: 'human',
+      ),
       token: 't1',
     );
     expect(edit, isA<CreatePostError>());

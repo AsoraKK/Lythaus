@@ -29,6 +29,12 @@ void main() {
       // TODO
     });
 
+    // Private account preferences, absent or null when schema storage is unavailable. Never returned by the public profile endpoint.
+    // ProductIntegrityPresentationPreferences presentationPreferences
+    test('to test the property `presentationPreferences`', () async {
+      // TODO
+    });
+
     // String handle
     test('to test the property `handle`', () async {
       // TODO

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:dio/dio.dart';
 
 import 'package:lythaus/core/analytics/analytics_client.dart';
 import 'package:lythaus/core/analytics/analytics_event_tracker.dart';
@@ -11,6 +12,8 @@ import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/profile/application/follow_providers.dart';
 import 'package:lythaus/features/profile/application/follow_service.dart';
+import 'package:lythaus/features/profile/application/owner_posts.dart';
+import 'package:lythaus/features/profile/domain/owner_post.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
 import 'package:lythaus/features/profile/domain/owner_profile.dart';
@@ -19,6 +22,17 @@ import 'package:lythaus/state/providers/reputation_providers.dart';
 import 'package:lythaus/ui/screens/profile/profile_screen.dart';
 
 class _MockFollowService extends Mock implements FollowService {}
+
+class _FakeOwnerPostsService extends OwnerPostsService {
+  _FakeOwnerPostsService() : super(Dio());
+
+  @override
+  Future<OwnerPostsPage> getPage({
+    required String accessToken,
+    String? cursor,
+    CancelToken? cancelToken,
+  }) async => const OwnerPostsPage(items: [], nextCursor: null);
+}
 
 const _reputationSnapshot = ReputationState(
   userId: 'user-1',
@@ -62,6 +76,8 @@ OwnerProfile _ownerProfile(PublicUser user) => OwnerProfile(
 );
 
 void main() {
+  setUpAll(() => registerFallbackValue(CancelToken()));
+
   testWidgets('profile screen prompts sign in when unauthenticated', (
     tester,
   ) async {
@@ -101,9 +117,11 @@ void main() {
       ProviderScope(
         overrides: [
           currentUserProvider.overrideWith((ref) => user),
+          ownerPostsServiceProvider.overrideWithValue(_FakeOwnerPostsService()),
           ownerProfileProvider.overrideWith(
             (ref) => Future.value(_ownerProfile(profile)),
           ),
+          jwtProvider.overrideWith((ref) async => 'synthetic-token'),
           reputationProvider.overrideWith((ref) async => _reputationSnapshot),
         ],
         child: const MaterialApp(home: ProfileScreen()),
@@ -119,6 +137,16 @@ void main() {
     expect(find.text('Founding member'), findsNothing);
     expect(find.text('Reputation'), findsNothing);
     expect(find.text('Moderation hub'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('Settings'),
+      280,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView).first,
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     expect(find.text('Settings'), findsOneWidget);
   });
 
@@ -173,9 +201,18 @@ void main() {
     final tracker = _FakeAnalyticsEventTracker();
 
     when(
-      () => followService.follow(targetUserId: 'user-2', accessToken: 'token'),
+      () => followService.follow(
+        targetUserId: 'user-2',
+        accessToken: 'token',
+        idempotencyKey: any(named: 'idempotencyKey'),
+        cancelToken: any(named: 'cancelToken'),
+      ),
     ).thenAnswer(
-      (_) async => const FollowStatus(following: true, followerCount: 6),
+      (_) async => const FollowMutationResult(
+        targetUserId: 'user-2',
+        created: true,
+        removed: false,
+      ),
     );
 
     await tester.pumpWidget(
@@ -187,9 +224,7 @@ void main() {
           ).overrideWith((ref) => Future.value(profile)),
           followServiceProvider.overrideWith((ref) => followService),
           followStatusProvider(profile.id).overrideWith(
-            (ref) => Future.value(
-              const FollowStatus(following: false, followerCount: 5),
-            ),
+            (ref) => Future.value(const FollowStatus(following: false)),
           ),
           jwtProvider.overrideWith((ref) async => 'token'),
           analyticsClientProvider.overrideWithValue(
@@ -204,12 +239,16 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text('5 followers'), findsOneWidget);
     await tester.tap(find.text('Follow'));
     await tester.pump(const Duration(milliseconds: 50));
 
     verify(
-      () => followService.follow(targetUserId: 'user-2', accessToken: 'token'),
+      () => followService.follow(
+        targetUserId: 'user-2',
+        accessToken: 'token',
+        idempotencyKey: any(named: 'idempotencyKey'),
+        cancelToken: any(named: 'cancelToken'),
+      ),
     ).called(1);
     expect(tracker.loggedOnce, contains(AnalyticsEvents.firstFollow));
   });
@@ -244,9 +283,7 @@ void main() {
           ).overrideWith((ref) => Future.value(profile)),
           followServiceProvider.overrideWith((ref) => followService),
           followStatusProvider(profile.id).overrideWith(
-            (ref) => Future.value(
-              const FollowStatus(following: false, followerCount: 5),
-            ),
+            (ref) => Future.value(const FollowStatus(following: false)),
           ),
           jwtProvider.overrideWith((ref) async => null),
         ],

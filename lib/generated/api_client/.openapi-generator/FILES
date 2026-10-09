@@ -202,6 +202,8 @@ doc/OwnerProblemRequest.md
 doc/OwnerRequestPage.md
 doc/OwnerSuggestionRequest.md
 doc/OwnerSupportRequest.md
+doc/OwnerTimelinePage.md
+doc/OwnerTimelinePost.md
 doc/PendingAppealAdjudication.md
 doc/PendingAppealAdjudicationList.md
 doc/PersonalFeedItem.md
@@ -222,6 +224,8 @@ doc/PrivateDecision.md
 doc/PrivateEvidence.md
 doc/PrivateNote.md
 doc/ProblemSubmission.md
+doc/ProductIntegrityPresentationPreferences.md
+doc/ProductIntegrityPresentationPreferencesUpdate.md
 doc/ProductIntegrityPrivateProfileResponse.md
 doc/ProductIntegrityPrivateProfileUser.md
 doc/ProductIntegrityProfileUpdateRequest.md
@@ -516,6 +520,8 @@ lib/src/model/owner_problem_request.dart
 lib/src/model/owner_request_page.dart
 lib/src/model/owner_suggestion_request.dart
 lib/src/model/owner_support_request.dart
+lib/src/model/owner_timeline_page.dart
+lib/src/model/owner_timeline_post.dart
 lib/src/model/pending_appeal_adjudication.dart
 lib/src/model/pending_appeal_adjudication_list.dart
 lib/src/model/personal_feed_item.dart
@@ -534,6 +540,8 @@ lib/src/model/private_decision.dart
 lib/src/model/private_evidence.dart
 lib/src/model/private_note.dart
 lib/src/model/problem_submission.dart
+lib/src/model/product_integrity_presentation_preferences.dart
+lib/src/model/product_integrity_presentation_preferences_update.dart
 lib/src/model/product_integrity_private_profile_response.dart
 lib/src/model/product_integrity_private_profile_user.dart
 lib/src/model/product_integrity_profile_update_request.dart
@@ -805,6 +813,8 @@ test/owner_problem_request_test.dart
 test/owner_request_page_test.dart
 test/owner_suggestion_request_test.dart
 test/owner_support_request_test.dart
+test/owner_timeline_page_test.dart
+test/owner_timeline_post_test.dart
 test/pending_appeal_adjudication_list_test.dart
 test/pending_appeal_adjudication_test.dart
 test/personal_feed_item_test.dart
@@ -825,6 +835,8 @@ test/private_decision_test.dart
 test/private_evidence_test.dart
 test/private_note_test.dart
 test/problem_submission_test.dart
+test/product_integrity_presentation_preferences_test.dart
+test/product_integrity_presentation_preferences_update_test.dart
 test/product_integrity_private_profile_response_test.dart
 test/product_integrity_private_profile_user_test.dart
 test/product_integrity_profile_update_request_test.dart

@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { mock, test } from 'node:test';
 import { randomBytes } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { nativePostgresProfileFixture } from './native-postgres-worker-fixture.mjs';
+import { presentationPreferencesIdentityExportQuery, resetPresentationPreferences, validatedPresentationPreferencesIdentity } from '../../lythaus-jobs/src/runtime-policy.ts';
 import pg from 'pg';
 import { exportJWK, exportPKCS8, generateKeyPair } from 'jose';
 import * as database from '@lythaus/db';
@@ -138,4 +141,161 @@ test('owner profile requires the current session and cannot target another owner
   await sql('UPDATE identity.users SET token_version=token_version+1 WHERE id=$1', [actor.id]);
   assert.equal((await call(actor, 'PATCH', { bio: 'Stale save' })).status, 401);
   assert.equal((await call(actor, 'GET')).status, 401);
+});
+
+test('proposed preferences schema supports private versioned saves, retries, grants and rollback', { timeout: 90000 }, async () => {
+  const actor = await owner('Preference owner');
+  const other = await owner('Other preference owner');
+  const choices = { presentationPreferences: { leftHandedMode: true, horizontalSwipeEnabled: false, expectedVersion: 1 } };
+  assert.equal((await (await call(actor, 'GET')).json()).user.presentationPreferences, null);
+  const unavailable = await call(actor, 'PATCH', choices);
+  assert.equal(unavailable.status, 503);
+  assert.equal((await unavailable.json()).error, 'presentation_preferences_unavailable');
+  const proposal = new URL('../../../database/planetscale/proposals/profile-presentation-preferences.sql', import.meta.url);
+  const rollback = new URL('../../../database/planetscale/proposals/profile-presentation-preferences.rollback.sql', import.meta.url);
+  await sql(readFileSync(proposal, 'utf8'));
+  try {
+    await sql("INSERT INTO social.profiles(user_id,bio,moderation_state,trust_passport_visibility) VALUES($1,'Existing biography','allowed','public_expanded')", [actor.id]);
+    const key = uuidv7();
+    const saved = await call(actor, 'PATCH', choices, undefined, key);
+    assert.equal(saved.status, 200, await saved.clone().text());
+    const receipt = await saved.json();
+    assert.deepEqual(receipt.user.presentationPreferences, { leftHandedMode: true, horizontalSwipeEnabled: false, version: 2 });
+    assert.equal(receipt.user.moderationState, 'allowed');
+    assert.equal(receipt.user.trustPassportVisibility, 'public_expanded');
+    assert.equal(receipt.user.bio, 'Existing biography');
+    const replay = await call(actor, 'PATCH', choices, undefined, key);
+    assert.equal(replay.status, 200);
+    assert.deepEqual(await replay.json(), receipt);
+    assert.deepEqual((await (await call(actor, 'GET')).json()).user.presentationPreferences, receipt.user.presentationPreferences);
+    const conflict = await call(actor, 'PATCH', choices, undefined, uuidv7());
+    assert.equal(conflict.status, 409);
+    assert.equal((await conflict.json()).error, 'presentation_preferences_conflict');
+    assert.deepEqual((await (await call(other, 'GET')).json()).user.presentationPreferences,
+      { leftHandedMode: false, horizontalSwipeEnabled: true, version: 1 });
+    for (const reader of [null, other, actor]) {
+      const publicResponse = await call(reader, 'GET', undefined, '/api/users/' + actor.id);
+      assert.equal(publicResponse.status, 200);
+      assert.equal('presentationPreferences' in (await publicResponse.json()).user, false);
+    }
+    assert.equal((await call(null, 'PATCH', choices)).status, 401);
+    assert.equal((await call(actor, 'PATCH', { ...choices, userId: other.id })).status, 400);
+    assert.equal((await sql('SELECT id FROM system.outbox_events WHERE aggregate_id=$1', [actor.id])).rowCount, 0);
+    const concurrent = await Promise.all([false, true].map(leftHandedMode => call(actor, 'PATCH', {
+      presentationPreferences: { leftHandedMode, horizontalSwipeEnabled: true, expectedVersion: 2 },
+    }, undefined, uuidv7())));
+    assert.deepEqual(concurrent.map(response => response.status).sort(), [200, 409]);
+    assert.equal((await (await call(actor, 'GET')).json()).user.presentationPreferences.version, 3);
+    await withClient(async client => {
+      await client.query('SET ROLE lythaus_privacy');
+      const exported = await client.query(`SELECT to_jsonb(u)->'presentation_left_handed' AS left,
+        to_jsonb(u)->'presentation_profile_swipe' AS swipe FROM identity.users u WHERE id=$1`, [actor.id]);
+      assert.equal(exported.rowCount, 1);
+      await client.query('SELECT privacy.reconcile_subject_data_locations($1)', [actor.id]);
+      const locator = await client.query(`SELECT * FROM privacy.subject_data_locations
+        WHERE subject_id=$1 AND resource_reference='identity.users'`, [actor.id]);
+      assert.equal(locator.rowCount, 1);
+    });
+
+    const runtime = await nativePostgresProfileFixture(connectionString, {
+      ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test',
+      CORS_ALLOWED_ORIGINS: env.CORS_ALLOWED_ORIGINS, JWT_PUBLIC_JWKS: env.JWT_PUBLIC_JWKS,
+    });
+    try {
+      const nativeRead = await runtime.dispatchFetch('https://api.lythaus.test/api/users/me', {
+        headers: { Authorization: 'Bearer ' + actor.token },
+      });
+      assert.equal(nativeRead.status, 200, await nativeRead.clone().text());
+      assert.equal(nativeRead.headers.get('cache-control'), 'private, no-store');
+      assert.equal((await nativeRead.json()).user.presentationPreferences.version, 3);
+      const nativeSave = await runtime.dispatchFetch('https://api.lythaus.test/api/users/me', {
+        method: 'PATCH', headers: { Authorization: 'Bearer ' + actor.token,
+          'Content-Type': 'application/json', 'Idempotency-Key': uuidv7() },
+        body: JSON.stringify({ presentationPreferences: {
+          leftHandedMode: true, horizontalSwipeEnabled: false, expectedVersion: 3,
+        } }),
+      });
+      assert.equal(nativeSave.status, 200, await nativeSave.clone().text());
+      assert.deepEqual((await nativeSave.json()).user.presentationPreferences,
+        { leftHandedMode: true, horizontalSwipeEnabled: false, version: 4 });
+      assert.equal((await runtime.dispatchFetch('https://api.lythaus.test/api/users/me')).status, 401);
+      const publicRead = await runtime.dispatchFetch('https://api.lythaus.test/api/users/' + actor.id);
+      assert.equal('presentationPreferences' in (await publicRead.json()).user, false);
+      const exportResponse = await runtime.dispatchFetch('https://api.lythaus.test/fixture/export?subject=' + actor.id + '&request=' + uuidv7());
+      assert.equal(exportResponse.status, 200, await exportResponse.clone().text());
+      assert.deepEqual((await exportResponse.json()).presentation_preferences,
+        { leftHandedMode: true, horizontalSwipeEnabled: false, version: 4 });
+      const erased = await runtime.dispatchFetch('https://api.lythaus.test/fixture/reset-preferences?subject=' + actor.id);
+      assert.equal(erased.status, 200, await erased.clone().text());
+      const erasedRow = (await sql(`SELECT status, presentation_left_handed, presentation_profile_swipe,
+        presentation_preferences_version FROM identity.users WHERE id=$1`, [actor.id])).rows[0];
+      assert.deepEqual(erasedRow, { status: 'active', presentation_left_handed: false,
+        presentation_profile_swipe: true, presentation_preferences_version: 1 });
+      assert.equal((await (await call(other, 'GET')).json()).user.presentationPreferences.version, 1);
+    } finally { await runtime.dispose(); }
+  } finally { await sql(readFileSync(rollback, 'utf8')); }
+  assert.equal((await (await call(other, 'GET')).json()).user.presentationPreferences, null);
+  assert.equal((await call(other, 'PATCH', choices)).status, 503);
+});
+
+test('privacy rejects partial columns, wrong types, nullable storage and invalid revisions without resetting retained choices', async t => {
+  const actor = await owner('Synthetic privacy boundary');
+  const runtime = await nativePostgresProfileFixture(connectionString, {
+    ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test',
+    CORS_ALLOWED_ORIGINS: env.CORS_ALLOWED_ORIGINS, JWT_PUBLIC_JWKS: env.JWT_PUBLIC_JWKS,
+  });
+  t.after(() => runtime.dispose());
+  const readPrivate = async () => withClient(async client => {
+    await client.query('SET ROLE lythaus_privacy');
+    return client.query(presentationPreferencesIdentityExportQuery, [actor.id]);
+  });
+  const resetPrivate = async () => withClient(async client => {
+    await client.query('SET ROLE lythaus_privacy');
+    await client.query('BEGIN');
+    try {
+      const reset = await resetPresentationPreferences(client, actor.id);
+      await client.query('COMMIT');
+      return reset;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    }
+  });
+  const absent = await readPrivate();
+  assert.equal(absent.rows[0].presentation_preferences_storage_state, 'absent');
+  assert.equal(validatedPresentationPreferencesIdentity(absent.rows[0]).presentation_preferences, null);
+  assert.equal(await resetPrivate(), false);
+  const nativeAbsent = await runtime.dispatchFetch('https://api.lythaus.test/fixture/export?subject=' + actor.id);
+  assert.equal(nativeAbsent.status, 200);
+  assert.equal((await nativeAbsent.json()).presentation_preferences, null);
+  const scenarios = [
+    { name: 'one stored choice', columns: 'presentation_left_handed boolean NOT NULL DEFAULT true' },
+    { name: 'two stored choices', columns: 'presentation_left_handed boolean NOT NULL DEFAULT true, presentation_profile_swipe boolean NOT NULL DEFAULT false' },
+    { name: 'wrong boolean type', columns: "presentation_left_handed text NOT NULL DEFAULT 'true', presentation_profile_swipe boolean NOT NULL DEFAULT false, presentation_preferences_version integer NOT NULL DEFAULT 1" },
+    { name: 'fractional revision type', columns: 'presentation_left_handed boolean NOT NULL DEFAULT true, presentation_profile_swipe boolean NOT NULL DEFAULT false, presentation_preferences_version numeric NOT NULL DEFAULT 1.5' },
+    { name: 'nullable boolean definition', columns: 'presentation_left_handed boolean DEFAULT true, presentation_profile_swipe boolean NOT NULL DEFAULT false, presentation_preferences_version integer NOT NULL DEFAULT 1' },
+    { name: 'invalid zero revision', columns: 'presentation_left_handed boolean NOT NULL DEFAULT true, presentation_profile_swipe boolean NOT NULL DEFAULT false, presentation_preferences_version integer NOT NULL DEFAULT 0' },
+    { name: 'null stored choice', columns: 'presentation_left_handed boolean, presentation_profile_swipe boolean NOT NULL DEFAULT false, presentation_preferences_version integer NOT NULL DEFAULT 1' },
+  ];
+  for (const scenario of scenarios) await t.test(scenario.name, async () => {
+    await sql('ALTER TABLE identity.users ADD COLUMN ' + scenario.columns.replaceAll(', ', ', ADD COLUMN '));
+    try {
+      const before = (await sql('SELECT to_jsonb(u) AS value FROM identity.users u WHERE id=$1', [actor.id])).rows[0].value;
+      const result = await readPrivate();
+      assert.equal(result.rows[0].presentation_preferences_storage_state, 'incomplete');
+      assert.throws(() => validatedPresentationPreferencesIdentity(result.rows[0]), /presentation_preferences_storage_incomplete/);
+      await assert.rejects(resetPrivate(), /presentation_preferences_storage_incomplete/);
+      for (const action of ['export', 'reset-preferences']) {
+        const rejected = await runtime.dispatchFetch('https://api.lythaus.test/fixture/' + action + '?subject=' + actor.id);
+        assert.equal(rejected.status, 503);
+        assert.equal((await rejected.json()).error, 'presentation_preferences_storage_incomplete');
+      }
+      const after = (await sql('SELECT to_jsonb(u) AS value FROM identity.users u WHERE id=$1', [actor.id])).rows[0].value;
+      assert.deepEqual(after, before, 'failed erasure must not claim or partially reset the retained choices');
+    } finally {
+      await sql('ALTER TABLE identity.users DROP COLUMN IF EXISTS presentation_left_handed, DROP COLUMN IF EXISTS presentation_profile_swipe, DROP COLUMN IF EXISTS presentation_preferences_version');
+    }
+    assert.equal(await resetPrivate(), false);
+    assert.equal(validatedPresentationPreferencesIdentity((await readPrivate()).rows[0]).presentation_preferences, null);
+  });
 });

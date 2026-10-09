@@ -5,7 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('SettingsController toggles and updates state', () {
-    final container = ProviderContainer();
+    final container = ProviderContainer(
+      overrides: [settingsProvider.overrideWith((ref) => SettingsController())],
+    );
     addTearDown(container.dispose);
 
     final controller = container.read(settingsProvider.notifier);

@@ -36,9 +36,9 @@ PublicUser _fakeUser({
 List<Override> _commonOverrides(String userId) => [
   jwtProvider.overrideWith((ref) async => null),
   currentUserProvider.overrideWith((ref) => null),
-  followStatusProvider(userId).overrideWith(
-    (_) => Future.value(const FollowStatus(following: false, followerCount: 0)),
-  ),
+  followStatusProvider(
+    userId,
+  ).overrideWith((_) => Future.value(const FollowStatus(following: false))),
 ];
 
 void main() {

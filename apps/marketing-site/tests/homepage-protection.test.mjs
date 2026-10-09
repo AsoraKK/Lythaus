@@ -71,6 +71,22 @@ function assertOnlyReviewedNativeModerationTestRegistration(before, after) {
   assert.deepEqual(after, before, 'Only the native Workerd moderation regression may be registered; unrelated scripts and dependencies stay frozen');
 }
 const reviewedToolingSecurityPatches = {
+  handlebars: {
+    version: '4.7.10',
+    resolved: 'https://registry.npmjs.org/handlebars/-/handlebars-4.7.10.tgz',
+    integrity: 'sha512-P5VJMVM7qgBn6vjXMw8WG9uVI+ncf2pi72j4de4yz5ZULLj2RGqLYaKOYGsgyrViQ0tePOVlN1tDCCXXtFqXKg==',
+    dev: true,
+    license: 'MIT',
+    dependencies: {
+      minimist: '^1.2.8',
+      'neo-async': '^2.6.2',
+      'source-map': '^0.6.1',
+      wordwrap: '^1.0.0',
+    },
+    bin: { handlebars: 'bin/handlebars' },
+    engines: { node: '>=0.4.7' },
+    optionalDependencies: { 'uglify-js': '^3.1.4' },
+  },
   'fast-uri': {
     version: '3.1.8',
     resolved: 'https://registry.npmjs.org/fast-uri/-/fast-uri-3.1.8.tgz',
