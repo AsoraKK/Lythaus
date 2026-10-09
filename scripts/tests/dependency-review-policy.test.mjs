@@ -86,6 +86,31 @@ test('local Dart recognition rejects alternate paths, sources, names and lock re
   assert.throws(() => resolvedDependencies('pubspec.lock', stringify(lock), { revision: 'HEAD' }), /EXACT_LOCAL_PACKAGE_REVISION_REQUIRED/);
 }));
 
+test('canonical runtime constraints admit the exact lock at Dart stable version boundaries', () => withLocalSdkFixture(({ lock, source, write, commit }) => {
+  const cases = [
+    ['^900.0.0', '5.2.0', false], ['^5.2.0', '5.2.0', true], ['^5.2.0', '5.1.9', false],
+    ['^5.2.0', '5.9.9', true], ['^5.2.0', '6.0.0', false],
+    ['^0.2.3', '0.2.3', true], ['^0.2.3', '0.2.9', true], ['^0.2.3', '0.3.0', false],
+    ['^0.0.3', '0.0.3', true], ['^0.0.3', '0.0.4', true], ['^0.0.3', '0.1.0', false],
+    ['>=5.2.0 <6.0.0', '5.2.0', true], ['>=5.2.0 <6.0.0', '6.0.0', false],
+    ['>5.2.0 <=5.3.0', '5.2.0', false], ['>5.2.0 <=5.3.0', '5.3.0', true],
+    ['5.2.0', '5.2.0', true], ['5.2.0', '5.2.1', false],
+    ['any', '5.2.0', false], ['', '5.2.0', false], ['^5.2.0', '5.2.0-rc.1', false],
+    ['5.2.0 || 6.0.0', '5.2.0', false], ['^5.2.0', '5.2', false], [null, '5.2.0', false],
+  ];
+  execFileSync('git', ['init', '-q'], { stdio: 'ignore' });
+  for (const [constraint, version, admitted] of cases) {
+    const candidateLock = { packages: { ...lock.packages, dio: { ...lock.packages.dio, version } } };
+    write('lib/generated/api_client/pubspec.yaml', { ...source, dependencies: { dio: constraint } });
+    write('pubspec.lock', candidateLock);
+    const revision = commit(`synthetic runtime boundary ${constraint} ${version}`);
+    for (const options of [{}, { revision }]) {
+      if (admitted) assert.equal(resolvedDependencies('pubspec.lock', stringify(candidateLock), options).find(value => value.name === 'dio').version, version);
+      else assert.throws(() => resolvedDependencies('pubspec.lock', stringify(candidateLock), options), /UNLOCKED_DEPENDENCY/);
+    }
+  }
+}));
+
 test('canonical Dart source and root declaration must match the locked identity', () => withLocalSdkFixture(({ lock, root, source, write }) => {
   for (const replacement of [
     { ...root, dependencies: { lythaus_api_client: { path: '../outside' } } },
