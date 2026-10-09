@@ -70,7 +70,7 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
       async function locate(target) {
         for (let attempt = 0; attempt < 160; attempt++) {
           let direction = attempt < 80 ? 1 : -1;
-          if (await target.count()) { const box = await target.first().boundingBox(); if (box && box.y >= 64 && box.y < (await page.viewportSize()).height - 90) return target.first(); if (box) direction = box.y < 64 ? -1 : 1; }
+          if (await target.count()) { const box = await target.first().boundingBox({ timeout: 1000 }).catch(() => null); if (box && box.y >= 64 && box.y < (await page.viewportSize()).height - 90) return target.first(); if (box) direction = box.y < 64 ? -1 : 1; }
           await page.mouse.move((await page.viewportSize()).width / 2, (await page.viewportSize()).height * .7); await page.mouse.wheel(0, direction * 250); await page.waitForTimeout(80);
         }
         throw new Error('Monthly control was not reachable');
