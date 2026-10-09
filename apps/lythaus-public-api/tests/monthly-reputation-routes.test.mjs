@@ -3,6 +3,7 @@ import test from 'node:test';
 import { handleMonthlyReputationRead } from '../src/monthly-reputation-routes.ts';
 import { MONTHLY_REPUTATION_CATALOGUE_HASH, MONTHLY_REPUTATION_POLICY_VERSION } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
 import { MONTHLY_REPUTATION_DECISIONS } from '../../../packages/contracts/src/monthly-reputation-decisions.ts';
+import { MONTHLY_REWARDS_RESPONSE_PREPARATION } from '../../../packages/contracts/src/monthly-rewards-response-preparation.ts';
 
 const owner = '01900000-0000-7000-8000-000000000001';
 const other = '01900000-0000-7000-8000-000000000002';
@@ -244,4 +245,101 @@ test('unrelated paths and methods are left to the main dispatcher', async () => 
   const deps = dependencies({ authenticate: async () => assert.fail('unmatched request authenticated') });
   assert.equal(await handleMonthlyReputationRead(request('/api/rewards/me'), deps), undefined);
   assert.equal(await handleMonthlyReputationRead(request('/api/rewards/me/monthly', 'POST'), deps), undefined);
+});
+
+test('HTTP selectors cannot obtain prepared data or change v1 subject, policy, score or fixed months', async () => {
+  const client = reportClient(), deps = dependencies({ transaction: async work => work(client) });
+  const selectors = new URLSearchParams({ subjectId: other, userId: other, policyVersion: MONTHLY_REWARDS_RESPONSE_PREPARATION.policyVersion,
+    responseVersion: MONTHLY_REWARDS_RESPONSE_PREPARATION.responseVersion, preparation: 'true',
+    context: 'disposable_local_pg17', effectiveMonth: '2027-01', sourceScore: '13650', currentLevel: '5' });
+  const response = await handleMonthlyReputationRead(new Request(
+    `https://api.lythaus.test/api/reputation/me/reports/monthly/2026-08?${selectors}`, {
+      headers: { accept: 'application/vnd.lythaus.rewards.v2+json', 'x-monthly-preparation': 'true', 'x-subject-id': other },
+    }), deps);
+  const body = await response.json();
+  assert.equal(response.headers.get('cache-control'), 'private, no-store');
+  assert.equal(body.policyVersion, MONTHLY_REPUTATION_POLICY_VERSION);
+  assert.equal(body.sourceMonth, '2026-08'); assert.equal(body.effectiveMonth, '2026-09');
+  assert.equal(body.report.total.sourceScore, 500); assert.equal(body.levelAuthority.level, 1);
+  assert.equal(body.preparedResponse, null);
+  assert.deepEqual(body.responsePreparation, { state: 'disabled', reasonCode: 'activation_not_approved', ...MONTHLY_REWARDS_RESPONSE_PREPARATION });
+  assert.ok(client.calls.every(call => !call.values.includes(other)));
+  const rewards = await handleMonthlyReputationRead(request(`/api/rewards/me/monthly?${selectors}`), dependencies({
+    snapshotRulesVersion: undefined, transaction: async () => assert.fail('selectors cannot enable queries'),
+  }));
+  const rewardsBody = await rewards.json();
+  assert.equal(rewardsBody.preparedResponse, null); assert.equal(rewardsBody.sourceScore, null);
+  assert.equal(rewardsBody.currentLevel, null); assert.equal(rewardsBody.effectiveMonth, null);
+  assert.deepEqual(rewardsBody.responsePreparation, body.responsePreparation);
+  assert.equal(rewards.headers.get('cache-control'), 'private, no-store');
+});
+
+test('disabled report readiness needs no proposal schema and never fabricates progress or projected authority', async () => {
+  const deps = dependencies({ snapshotRulesVersion: undefined,
+    transaction: async work => work({ query: async () => assert.fail('unconfigured report cannot query proposal tables') }),
+  });
+  const response = await handleMonthlyReputationRead(request('/api/reputation/me/reports/monthly/2026-12'), deps);
+  const body = await response.json();
+  assert.equal(body.sourceMonth, '2026-12'); assert.equal(body.effectiveMonth, '2027-01');
+  assert.equal(body.report, null); assert.equal(body.preparedResponse, null);
+  assert.equal(body.levelAuthority.sourceScore, null); assert.equal(body.levelAuthority.level, null);
+  assert.equal(body.responsePreparation.runtimeActivationAllowed, false);
+  assert.equal(body.responsePreparation.appliedPoints, 0);
+  assert.ok(!('sourceScore' in body.responsePreparation));
+});
+
+test('fresh principals and no-store responses prevent cross-user report reuse despite forged subjects', async () => {
+  const client = reportClient(), originalQuery = client.query;
+  client.query = async (sql, values = []) => {
+    if ((sql.includes('FROM trust.monthly_reputation_sources source') || sql.includes('SELECT 1 FROM trust.monthly_reputation_sources')
+      || sql.includes('SELECT * FROM trust.monthly_reward_snapshots')
+      || sql.includes('SELECT revision, mode')) && values[0] !== owner) {
+      client.calls.push({ sql, values }); return { rows: [], rowCount: 0 };
+    }
+    return originalQuery(sql, values);
+  };
+  let authentications = 0;
+  const deps = dependencies({ authenticate: async () => ({ userId: ++authentications === 1 ? owner : other }),
+    transaction: async work => work(client) });
+  const first = await handleMonthlyReputationRead(request(`/api/reputation/me/reports/monthly/2026-08?subjectId=${other}`), deps);
+  const second = await handleMonthlyReputationRead(request(`/api/reputation/me/reports/monthly/2026-08?subjectId=${owner}`), deps);
+  assert.equal(first.status, 200); assert.equal(second.status, 200);
+  assert.equal((await first.json()).report.total.sourceScore, 500);
+  const secondBody = await second.json(); assert.equal(secondBody.report, null); assert.equal(secondBody.preparedResponse, null);
+  assert.equal(authentications, 2);
+  assert.equal(first.headers.get('cache-control'), 'private, no-store');
+  assert.equal(second.headers.get('cache-control'), 'private, no-store');
+  const ownReads = client.calls.filter(call => call.sql.includes('FROM trust.monthly_reputation_sources source'));
+  assert.deepEqual(ownReads.map(call => call.values[0]), [owner, other]);
+  assert.ok(!JSON.stringify(secondBody).includes(owner));
+});
+
+test('all matched monthly routes deny anonymous preparation requests before transactions and cache privately', async () => {
+  for (const path of ['/api/reputation/me/reports/monthly/2026-08', '/api/reputation/me/reports/monthly/2026-08/export.csv', '/api/rewards/me/monthly']) {
+    const response = await handleMonthlyReputationRead(request(`${path}?preparation=true&subjectId=${other}`), dependencies({
+      authenticate: async () => { throw new Error('authentication_required'); },
+      transaction: async () => assert.fail('unauthenticated preparation cannot read data'),
+    }));
+    assert.equal(response.status, 401); assert.equal(response.headers.get('cache-control'), 'private, no-store');
+    assert.deepEqual(await response.json(), { error: 'authentication_required' });
+  }
+});
+
+test('unknown or v2-only configuration remains unavailable to the production report reader', async () => {
+  for (const policyVersion of [MONTHLY_REWARDS_RESPONSE_PREPARATION.policyVersion, 'unknown-policy']) {
+    const calls = [], client = { async query(sql, values = []) {
+      calls.push({ sql, values });
+      if (sql.includes('to_regclass(')) return { rows: [{ available: true }], rowCount: 1 };
+      if (sql.includes('SELECT 1 FROM system.feature_flags')) return { rows: [{}], rowCount: 1 };
+      if (sql.includes('trust.lock_monthly_reward_configuration')) return { rows: [
+        { enabled: true, policy_version: policyVersion }, { enabled: true, policy_version: policyVersion },
+      ], rowCount: 2 };
+      assert.fail(`unapproved policy accessed proposal data: ${sql}`);
+    } };
+    const response = await handleMonthlyReputationRead(request('/api/reputation/me/reports/monthly/2026-08'), dependencies({ transaction: async work => work(client) }));
+    const body = await response.json(); assert.equal(body.reportState, 'pending'); assert.equal(body.reasonCode, 'report_unavailable');
+    assert.equal(body.report, null); assert.equal(body.levelAuthority.sourceScore, null); assert.equal(body.levelAuthority.level, null);
+    assert.equal(body.preparedResponse, null); assert.equal(body.responsePreparation.state, 'disabled');
+    assert.ok(calls.every(call => !call.sql.includes('FROM trust.monthly_reputation_sources')));
+  }
 });
