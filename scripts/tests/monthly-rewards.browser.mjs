@@ -28,7 +28,7 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
   for (const config of [{ name: 'desktop-light', width: 1440, height: 960, theme: 'light' }, { name: 'mobile-dark', width: 390, height: 844, theme: 'dark' }]) {
     let signedIn = false, confirmed = false, shadow = false, empty = !csvOnly, failStatus = false;
     const calls = [], errors = [], captures = [];
-    const csvChecks = [];
+    const csvChecks = [], downloads = [];
     let releaseCsvResponse;
     const fixture = await localAuthBrowserServer(async (route) => {
       const request = route.request(), url = new URL(request.url()), headersIn = await request.allHeaders();
@@ -47,7 +47,7 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
       if (url.pathname === '/api/auth/email') { signedIn = true; headers['set-cookie'] = '__Host-lythaus_refresh=' + 'e'.repeat(48) + '; Path=/; HttpOnly; Secure; SameSite=Strict'; body = { accessToken: token, expiresIn: 900, sessionTransport: 'cookie-v1' }; }
       else if (url.pathname === '/api/auth/refresh') { status = signedIn && (headersIn.cookie ?? '').includes('__Host-lythaus_refresh=') ? 200 : 401; body = status === 200 ? { accessToken: token, expiresIn: 900, sessionTransport: 'cookie-v1' } : { error: 'refresh_token_invalid' }; }
       else if (url.pathname === '/api/auth/userinfo') { status = signedIn ? 200 : 401; body = signedIn ? owner : { error: 'session_required' }; }
-      else if (url.pathname === '/api/auth/logout') { signedIn = false; body = { state: 'signed_out' }; }
+      else if (url.pathname === '/api/auth/logout') { signedIn = false; headers['set-cookie'] = '__Host-lythaus_refresh=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0'; body = { state: 'signed_out' }; }
       else if (url.pathname === '/api/users/me') { body = { user: { id: owner.id, displayName: owner.displayName, bio: owner.bio, publicVisibility: true, moderationState: 'allowed', subscriptionTier: 'free', presentationPreferences: { leftHandedMode: false, horizontalSwipeEnabled: true, version: 1 } } }; }
       else if (url.pathname === `/api/users/${publicId}`) { body = { user: { id: publicId, displayName: 'Public Monthly Member', bio: 'Public profile fixture', reputation: { level: 1, label: 'New' } } }; }
       else if (url.pathname === `/api/users/${publicId}/follow`) { body = { userId: publicId, following: false, followedBy: false, blocked: false }; }
@@ -68,12 +68,13 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
       const context = await browser.newContext({ viewport: { width: config.width, height: config.height }, deviceScaleFactor: 2, colorScheme: config.theme, reducedMotion: 'reduce', serviceWorkers: 'block', ignoreHTTPSErrors: true });
       await installFlutterEngineFonts(context);
       page = await context.newPage(); page.setDefaultTimeout(30000);
+      page.on('download', download => downloads.push(download));
       page.on('pageerror', (error) => errors.push(error.message));
       page.on('console', (message) => { if (message.type() === 'error' && !/^Failed to load resource:/.test(message.text())) errors.push(message.text()); });
       const text = () => page.locator('flt-semantics').evaluateAll(nodes => nodes.map(node => [node.textContent, node.getAttribute('aria-label')].filter(Boolean).join('\n')).join('\n'));
       const waitText = (value) => page.waitForFunction(value => [...document.querySelectorAll('flt-semantics')].some(node => node.textContent?.includes(value) || node.getAttribute('aria-label')?.includes(value)), value);
       async function enter(field, value) { await field.click(); await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))); await field.press('ControlOrMeta+A'); await field.press('Backspace'); await field.pressSequentially(value, { delay: 20 }); assert.equal(await field.inputValue(), value); }
-      async function open(route) { await page.goto(`https://app.lythaus.co${route}`); const placeholder = page.locator('flt-semantics-placeholder'); await placeholder.waitFor({ timeout: 60000 }); await placeholder.evaluate(element => element.click()); }
+      async function open(route, target = page) { await target.goto(`https://app.lythaus.co${route}`); const placeholder = target.locator('flt-semantics-placeholder'); await placeholder.waitFor({ timeout: 60000 }); await placeholder.evaluate(element => element.click()); }
       async function guestEntry() { await page.getByRole('button', { name: /^(Continue as guest|Sign in)$/ }).first().waitFor(); const guest = page.getByRole('button', { name: 'Continue as guest', exact: true }); if (await guest.count()) await guest.click(); }
       async function locate(target) {
         for (let attempt = 0; attempt < 160; attempt++) {
@@ -88,14 +89,19 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
         await page.waitForTimeout(100);
         const metrics = await page.evaluate(() => ({ width: innerWidth, documentWidth: document.documentElement.scrollWidth, bodyWidth: document.body.scrollWidth })); assert.ok(metrics.documentWidth <= metrics.width + 1); const filename = `${engineName}-${config.name}-${state}.png`; await page.screenshot({ path: path.join(output, filename), animations: 'disabled' }); captures.push({ filename, state, fixtureLabel: `synthetic local TLS / ${state}`, metrics });
       }
-      async function exportCsv() {
+      async function beginCsv() {
+        releaseCsvResponse = undefined;
         const csvControl = await locate(page.getByRole('button', { name: 'Export CSV', exact: true }));
-        const downloadReady = page.waitForEvent('download');
         await csvControl.click();
         await page.getByRole('button', { name: 'Preparing CSV…', exact: true }).waitFor();
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         await page.waitForTimeout(600);
         assert.equal(typeof releaseCsvResponse, 'function', 'CSV request reached the local TLS server');
+        assert.equal(downloads.length, csvChecks.filter(check => check.exactServerBytes).length, 'Held response cannot download');
+      }
+      async function exportCsv() {
+        await beginCsv();
+        const downloadReady = page.waitForEvent('download');
         releaseCsvResponse();
         const download = await downloadReady;
         const csvMonth = calls.findLast(call => call.path.endsWith('/export.csv')).path.split('/').at(-2);
@@ -104,6 +110,21 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
         csvChecks.push({ sourceMonth: csvMonth, delayMilliseconds: 600, observedPendingAcrossTwoFrames: true, exactServerBytes: true });
         assert.equal(calls.filter(call => (call.path.startsWith('/api/rewards/') || call.path.includes('/reports/monthly/')) && call.method !== 'GET').length, 0);
         await capture('csv-export-complete');
+      }
+      async function cancelCsv(reason, leave) {
+        await beginCsv();
+        const downloadCount = downloads.length;
+        const cancelled = page.waitForEvent('requestfailed', { predicate: request => request.method() === 'GET' && new URL(request.url()).pathname.endsWith('/export.csv') });
+        await leave();
+        const request = await cancelled;
+        assert.match(request.failure()?.errorText ?? '', /ERR_ABORTED|Load request cancelled|cancelled|canceled/i);
+        releaseCsvResponse();
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        await page.waitForTimeout(600);
+        assert.equal(downloads.length, downloadCount, 'Cancelled private response must not download');
+        assert.doesNotMatch(await text(), /could not be exported|sourceMonth,score/);
+        csvChecks.push({ reason, requestCancelled: true, lateResponseReleased: true, noDownload: true, noStaleError: true });
+        await capture(`csv-${reason}-cleared`);
       }
       await open('/rewards');
       await guestEntry();
@@ -119,6 +140,29 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
       await capture('pending-disabled');
       if (csvOnly) {
         await exportCsv();
+        await cancelCsv('document-disposal', async () => {
+          await open(`/user/${publicId}`);
+          await page.getByText('Public Monthly Member', { exact: true }).waitFor();
+          assert.doesNotMatch(await text(), /Monthly reputation|Cap group:/);
+        });
+        await open('/rewards');
+        await page.getByText('Monthly level pending', { exact: true }).waitFor();
+        const securityTab = await context.newPage(); securityTab.setDefaultTimeout(30000);
+        securityTab.on('pageerror', error => errors.push(error.message));
+        await open('/settings/security', securityTab);
+        await securityTab.getByRole('button', { name: 'Sign out of all sessions', exact: true }).waitFor();
+        await cancelCsv('cross-tab-sign-out', async () => {
+          const logoutReply = securityTab.waitForResponse(response => response.url() === 'https://api.lythaus.co/api/auth/logout' && response.request().method() === 'POST' && response.status() === 200);
+          await securityTab.getByRole('button', { name: 'Sign out of all sessions', exact: true }).click();
+          await (await logoutReply).finished();
+          await page.getByRole('button', { name: 'Sign in with email', exact: true }).waitFor();
+          await guestEntry();
+          await page.getByRole('button', { name: 'Sign in', exact: true }).waitFor();
+          assert.equal(signedIn, false);
+          assert.equal((await context.cookies('https://api.lythaus.co')).some(cookie => cookie.name === '__Host-lythaus_refresh'), false);
+          assert.doesNotMatch(await text(), /Monthly reputation|Cap group:|Preparing CSV/);
+        });
+        await securityTab.close();
         assert.equal(errors.length, 0, errors.join('\n'));
         evidence.push({ config, browser: browser.version(), calls, errors, captures, csvChecks });
         await context.close(); continue;
@@ -177,5 +221,5 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
       throw error;
     } finally { releaseCsvResponse?.(); await browser.close(); await fixture.close(); }
   }
-  await writeFile(path.join(output, `${engineName}-evidence.json`), JSON.stringify({ engineName, scenario: csvOnly ? 'csv-only' : 'full', commit: process.env.QA_COMMIT ?? 'local-uncommitted-validation', evidence, limitations: ['Synthetic local TLS fixture only; no production data.', ...(csvOnly ? ['CSV-only run; owner/public navigation, zoom and sign-out are not executed in this run.'] : []), 'Browser zoom is approximated by halving CSS viewport at device-pixel ratio 2; actual 200% text scaling is covered by Flutter widget tests.', 'Reduced motion and keyboard controls are exercised; no physical screen-reader or native-device run.'] }, null, 2));
+  await writeFile(path.join(output, `${engineName}-evidence.json`), JSON.stringify({ engineName, scenario: csvOnly ? 'csv-lifecycle' : 'full', commit: process.env.QA_COMMIT ?? 'local-uncommitted-validation', evidence, limitations: ['Synthetic local TLS fixture only; no production data.', ...(csvOnly ? ['Focused CSV lifecycle run; document disposal and real cross-tab sign-out are exercised. Widget-only disposal is separately covered by Flutter button tests; owner tracker and zoom are not executed here.'] : []), 'Browser zoom is approximated by halving CSS viewport at device-pixel ratio 2; actual 200% text scaling is covered by Flutter widget tests.', 'Reduced motion and keyboard controls are exercised; no physical screen-reader or native-device run.'] }, null, 2));
 });

@@ -384,6 +384,14 @@ jobs:
         run: |
           MONTHLY_REWARDS_ENGINE=chromium node --experimental-strip-types --test --test-timeout=600000 scripts/tests/monthly-rewards.browser.mjs
           MONTHLY_REWARDS_ENGINE=webkit node --experimental-strip-types --test --test-timeout=600000 scripts/tests/monthly-rewards.browser.mjs
+      - name: Verify monthly CSV button lifecycle
+        env:
+          QA_COMMIT: ${{ github.sha }}
+          MONTHLY_REWARDS_CSV_ONLY: '1'
+          MONTHLY_REWARDS_QA_DIR: build/monthly-rewards-evidence/csv-lifecycle
+        run: |
+          MONTHLY_REWARDS_ENGINE=chromium node --experimental-strip-types --test --test-timeout=600000 scripts/tests/monthly-rewards.browser.mjs
+          MONTHLY_REWARDS_ENGINE=webkit node --experimental-strip-types --test --test-timeout=600000 scripts/tests/monthly-rewards.browser.mjs
       - name: Upload monthly rewards visual evidence
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
