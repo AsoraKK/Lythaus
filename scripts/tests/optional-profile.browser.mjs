@@ -6,6 +6,7 @@ import { chromium, webkit } from 'playwright';
 import { localAuthBrowserServer } from './local-auth-browser-server.mjs';
 import { installFlutterEngineFonts } from './flutter-engine-font-fixture.mjs';
 import { parseProfileUpdate } from '../../apps/lythaus-public-api/src/profile-runtime-policy.ts';
+import { monthlyRewardsResponseReadiness } from '../../packages/contracts/src/monthly-rewards-response-readiness.ts';
 
 const build = path.resolve(process.env.AUTH_WEB_ARTIFACT_DIR ?? 'build/web');
 const mime = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json',
@@ -77,12 +78,27 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
           currentLevel: null, sourceMonth: null, sourceScore: null,
           snapshot: { state: 'unavailable', reasonCode: 'approval_unavailable' },
           selection: { state: 'unavailable', reasonCode: 'approval_unavailable' } };
+      } else if (/^\/api\/reputation\/me\/reports\/monthly\/\d{4}-(?:0[1-9]|1[0-2])$/.test(url.pathname)) {
+        assert.ok(session);
+        assert.equal((await request.allHeaders()).authorization, 'Bearer synthetic-profile-token');
+        assert.equal(request.method(), 'GET');
+        assert.equal(url.search, '');
+        const sourceMonth = url.pathname.slice(-7);
+        const [year, month] = sourceMonth.split('-').map(Number);
+        const effectiveMonth = `${String(year + (month === 12 ? 1 : 0)).padStart(4, '0')}-${String(month === 12 ? 1 : month + 1).padStart(2, '0')}`;
+        body = { reportState: 'pending', reasonCode: 'assembly_pending', sourceMonth, effectiveMonth,
+          policyVersion: 'lythaus-monthly-rewards-2026-10-v1',
+          levelAuthority: { state: 'unavailable', reasonCode: 'approval_unavailable', effectiveMonth: null,
+            sourceMonth: null, sourceScore: null, level: null, levelKind: null },
+          corrections: { sourceRevisions: [], effectiveSnapshots: [] }, report: null,
+          responsePreparation: monthlyRewardsResponseReadiness(), preparedResponse: null };
       } else if (!['/api/feed/discover', '/api/custom-feeds', '/api/subscription/status'].includes(url.pathname)) {
         status = 404; body = { error: 'route_not_found' };
       }
       return route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify(body) });
     });
-    const browser = await engine.launch({ headless: true, proxy: { server: fixture.proxy } });
+    const browser = await engine.launch({ headless: true, proxy: { server: fixture.proxy },
+      ...(engineName === 'webkit' && process.env.WEBKIT_EXECUTABLE ? { executablePath: process.env.WEBKIT_EXECUTABLE } : {}) });
     const context = await browser.newContext({ viewport: { width, height: 1000 }, serviceWorkers: 'block', ignoreHTTPSErrors: true });
     await installFlutterEngineFonts(context);
     let page = await context.newPage(); page.setDefaultTimeout(30000);
