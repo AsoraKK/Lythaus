@@ -135,7 +135,11 @@ try {
       run(['test', '--reporter', 'compact']);
     } else {
       const consumer = prepareLockedConsumer();
+      const reports = resolve('.artifacts/canonical-sdk-contract/reports');
+      rmSync(reports, { recursive: true, force: true });
+      mkdirSync(reports, { recursive: true });
       const baseline = capture(['test', '--reporter', 'json', ...contractSuites.map(file => join(consumer.directory, file))], consumer.root);
+      writeFileSync(join(reports, 'baseline.jsonl'), baseline.stdout);
       if (baseline.status !== 0) throw new Error(`canonical Dart contracts failed: ${baseline.stderr}`);
       const behavior = completedBehaviorReport(baseline.stdout);
       const mutations = [];
@@ -146,6 +150,7 @@ try {
         try {
           writeFileSync(path, original.replace(mutation.before, mutation.after));
           const result = capture(['test', '--reporter', 'json', join(consumer.directory, 'monthly_rewards_preparation_serialization_test.dart'), '--plain-name', mutation.testName], consumer.root);
+          writeFileSync(join(reports, `${mutation.id}.jsonl`), result.stdout);
           if (result.status === 0) throw new Error(`source evidence mutation unexpectedly passed: ${mutation.id}`);
           mutations.push(rejectedMutationReport(result.stdout, mutation));
         } finally {

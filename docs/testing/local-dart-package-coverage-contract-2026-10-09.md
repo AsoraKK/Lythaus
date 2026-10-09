@@ -33,7 +33,7 @@ node scripts/validate-openapi-dart-client.mjs
 node scripts/validate-openapi-dart-client.mjs --source-evidence
 ```
 
-Source-evidence mode requires a clean tracked checkout and removes any old receipt before running. It writes `.artifacts/security-run-evidence/local-dart-package.json` only after real behavior and mutation checks pass. The exact committed head, source/recipe blobs, resolved temporary toolchain lock hash and prepared package digest are recorded. Temporary mutations are restored and the temporary validation package is removed.
+Source-evidence mode requires a clean tracked checkout and removes any old receipt before running. It writes `.artifacts/security-run-evidence/local-dart-package.json` only after real behavior and mutation checks pass. The exact committed head, source/recipe blobs, resolved temporary toolchain lock hash and prepared package digest are recorded. Raw local Dart JSON reports are retained under ignored `.artifacts/canonical-sdk-contract/reports`, with their SHA-256 digests in the receipt. Mutation proof requires the named test's unskipped `failure` result, `isFailure: true` assertion event and unsuccessful completed run. Temporary mutations are restored and the temporary validation package is removed.
 
 The generator's temporary dev graph can use newer libraries than the app lock (observed `meta 1.19.0` versus app `1.17.0`). Generator analysis remains separate from behavior proof. The named behavior fixtures and mutations execute against the prepared package through the app's enforced package configuration. Copies live only under ignored `.artifacts`; the temporary monthly wire path is changed to point at its synthetic fixture. Root package files and tracked SDK sources are unchanged.
 

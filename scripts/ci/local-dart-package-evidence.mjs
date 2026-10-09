@@ -173,7 +173,7 @@ export function completedBehaviorReport(output) {
 export function rejectedMutationReport(output, mutation) {
   const events = output.trim().split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line));
   const target = events.find(event => event.type === 'testStart' && event.test.name === mutation.testName)?.test.id;
-  if (target === undefined || !events.some(event => event.type === 'testDone' && event.testID === target && event.result === 'error') || !events.some(event => event.type === 'error' && event.testID === target && event.error.includes('Expected:'))) throw new Error(`SOURCE_EVIDENCE_MUTATION_NOT_DEMONSTRATED:${mutation.id}`);
+  if (target === undefined || !events.some(event => event.type === 'done' && event.success === false) || !events.some(event => event.type === 'testDone' && event.testID === target && event.result === 'failure' && event.skipped === false) || !events.some(event => event.type === 'error' && event.testID === target && event.isFailure === true && typeof event.error === 'string' && event.error.includes('Expected:'))) throw new Error(`SOURCE_EVIDENCE_MUTATION_NOT_DEMONSTRATED:${mutation.id}`);
   return { id: mutation.id, file: mutation.file, testName: mutation.testName, rejected: true, reportSha256: sha256(output) };
 }
 

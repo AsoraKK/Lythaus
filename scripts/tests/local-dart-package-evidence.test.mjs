@@ -116,10 +116,15 @@ test('mutation evidence requires a named assertion failure rather than compile o
   const mutation = sourceMutations[0];
   const encode = events => events.map(value => JSON.stringify(value)).join('\n');
   const start = { type: 'testStart', test: { id: 1, name: mutation.testName } };
-  const error = { type: 'error', testID: 1, error: "Expected: 'Bearer synthetic-jwt'\nActual: null" };
-  const end = { type: 'testDone', testID: 1, result: 'error' };
-  assert.equal(rejectedMutationReport(encode([start, error, end]), mutation).rejected, true);
-  assert.throws(() => rejectedMutationReport(encode([start, { ...error, error: 'Could not compile the source' }, end]), mutation), /MUTATION_NOT_DEMONSTRATED/);
+  const error = { type: 'error', testID: 1, isFailure: true, error: "Expected: 'Bearer synthetic-jwt'\nActual: null" };
+  const end = { type: 'testDone', testID: 1, result: 'failure', skipped: false };
+  const done = { type: 'done', success: false };
+  assert.equal(rejectedMutationReport(encode([start, error, end, done]), mutation).rejected, true);
+  assert.throws(() => rejectedMutationReport(encode([start, { ...error, error: 'Could not compile the source', isFailure: false }, end, done]), mutation), /MUTATION_NOT_DEMONSTRATED/);
+  assert.throws(() => rejectedMutationReport(encode([start, { ...error, isFailure: false }, end, done]), mutation), /MUTATION_NOT_DEMONSTRATED/);
+  assert.throws(() => rejectedMutationReport(encode([start, error, { ...end, result: 'error' }, done]), mutation), /MUTATION_NOT_DEMONSTRATED/);
+  assert.throws(() => rejectedMutationReport(encode([start, error, { ...end, skipped: true }, done]), mutation), /MUTATION_NOT_DEMONSTRATED/);
+  assert.throws(() => rejectedMutationReport(encode([start, error, end]), mutation), /MUTATION_NOT_DEMONSTRATED/);
   assert.throws(() => rejectedMutationReport(encode([{ type: 'error', error: 'Process exited 1' }]), mutation), /MUTATION_NOT_DEMONSTRATED/);
 });
 
