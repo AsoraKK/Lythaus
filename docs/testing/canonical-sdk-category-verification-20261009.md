@@ -17,8 +17,9 @@ create an obligation when `lythaus_api_client` remains version `1.0.0`.
 Protected main supplies the bootstrap and approval record. That record must pin
 a different, independently reviewed verifier commit, its complete Git tree, and
 the dependency-review workflow blob. The bootstrap checks public read-only GitHub
-run, workflow, and attempt-specific job responses against the repository,
-workflow path, exact workflow revision, run ID, attempt, and actual job ID.
+repository metadata, run, workflow, and attempt-specific job responses against
+the verified numeric repository ID and owner ID, repository name, workflow
+path, exact workflow revision, run ID, attempt, and actual job ID.
 Names alone do not establish authority. Eligible runs require manual dispatch
 of this workflow from protected main. Candidate workflow runs and PR test merges
 cannot establish that authority.
@@ -51,7 +52,9 @@ Frozen generator and application locks prepare serializers and the real
 edges must agree with the locks. The SDK's 24-package application runtime closure
 is recorded separately from the generator's 67 hosted packages (68 graph nodes).
 
-Seven fixed synthetic suites run against the prepared SDK with the frozen
+Fixed fixtures pass static analysis with the retained strict project rules in
+isolation. The analyzer's home is disposable and contains no host credentials;
+analytics is disabled. Seven fixed synthetic suites run against the prepared SDK with the frozen
 application graph and a fixed 57-case catalogue. Both deliberate
 SDK mutants must produce named assertion failures; compilation/process failures
 do not count. The host checks source preservation after each execution and
@@ -105,7 +108,7 @@ merge is part of this change.
 
 ## Validation and provenance
 
-Focused validation covers 32 Node tests, one real Docker boundary test, six
+Focused validation covers 33 Node tests, one real Docker boundary test, six
 existing Dart archive-license tests, and six new archive extraction tests. The
 isolated development runner passes all 57 Dart behavior cases and both assertion
 mutants. It reports `coverageEligible: false`,
@@ -145,3 +148,12 @@ The development command cannot activate eligibility. Its local evidence is
 unsigned diagnostic data. A candidate-ref CI cycle can demonstrate bootstrap
 failure but cannot substitute for the later protected-main production run.
 Screenshots are unnecessary because this patch changes no rendered UI.
+
+The single requested hosted CI cycle ran on
+`06f00ab66ea7cf1e51386b315b395d1eefccdbac`. Dependency review stopped at the
+unpublished trusted-verifier gate. Repository CI exposed external-namespace
+branding matches and two fixture list-inference warnings; these are corrected
+by numeric repository/owner binding and explicit list types, preserving the
+checks. Its subsequent browser check lacked npm dependencies because analysis
+had failed, and the audit rollup reported those failed gates. The revised head
+is revalidated locally; another hosted cycle remains for serialized review.

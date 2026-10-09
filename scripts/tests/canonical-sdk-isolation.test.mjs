@@ -17,6 +17,7 @@ test('real disposable container denies candidate access to gates, commandfiles, 
       const fs = require('node:fs');
       const assert = require('node:assert/strict');
       assert.notEqual(process.getuid(), 0);
+      assert.equal(process.env.HOME, '/tmp/lythaus-sdk-home');
       for (const name of ['GITHUB_TOKEN', 'GITHUB_ENV', 'GITHUB_OUTPUT', 'GITHUB_PATH', 'SSH_AUTH_SOCK', 'AWS_ACCESS_KEY_ID']) assert.equal(process.env[name], undefined);
       for (const file of ['/recipe/fixed.txt', '/inputs/data.txt', '/work/test/fixed.txt']) assert.throws(() => fs.writeFileSync(file, 'synthetic tamper'), { code: 'EROFS' });
       for (const file of ['/var/run/docker.sock', '/recipe/.git', '/recipe/scripts/ci/canonical-sdk-contract.mjs', '/recipe/scripts/ci/canonical-sdk-bootstrap.mjs']) assert.equal(fs.existsSync(file), false);

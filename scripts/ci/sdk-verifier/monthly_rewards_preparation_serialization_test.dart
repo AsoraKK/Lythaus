@@ -24,7 +24,10 @@ Map<String, Object?> reportWire() => {
     'sourceScore': null,
     'level': null,
   },
-  'corrections': {'sourceRevisions': [], 'effectiveSnapshots': []},
+  'corrections': {
+    'sourceRevisions': <Object?>[],
+    'effectiveSnapshots': <Object?>[],
+  },
   'report': null,
   'responsePreparation': fixture['readiness'],
   'preparedResponse': null,

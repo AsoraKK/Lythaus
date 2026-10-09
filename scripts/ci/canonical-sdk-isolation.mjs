@@ -14,7 +14,7 @@ export function containerArguments({ tools, inputs, work, recipe, npm, cache, fi
   const args = ['run', '--rm', '--name', name, '--network', 'none', '--read-only', '--user', user, '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--pids-limit', '128', '--memory', '4g', '--cpus', '2', '--tmpfs', '/tmp:rw,nosuid,nodev,size=512m', '--tmpfs', '/pub-cache:rw,nosuid,nodev,size=512m,mode=1777', '--workdir', '/work', ...mount(tools.flutter, '/tools/flutter'), ...mount(tools.node, '/tools/node'), ...mount(tools.java, '/tools/java'), ...mount(tools.generator, '/tools/generator.jar'), ...mount(recipe, '/recipe'), ...mount(inputs, '/inputs'), ...mount(join(cache, 'hosted'), '/pub-cache/hosted'), ...mount(join(cache, 'hosted-hashes'), '/pub-cache/hosted-hashes'), ...mount(work, '/work', false)];
   if (npm) args.push(...mount(npm, '/recipe/node_modules'));
   if (fixtureDirectory) args.push(...mount(fixtureDirectory, '/work/test'));
-  args.push('--entrypoint', '/usr/bin/env', isolationImage, '-i', 'PATH=/tools/node/bin:/tools/flutter/bin/cache/dart-sdk/bin:/tools/java/bin:/usr/bin:/bin', 'LANG=C.UTF-8', 'TZ=UTC', 'FLUTTER_ROOT=/tools/flutter', 'PUB_CACHE=/pub-cache', 'LYTHAUS_ADMIN_MUTATION_GUARD=/recipe/scripts/ci/sdk-verifier/admin-mutation-sdk-guard.mjs', '/tools/node/bin/node', ...command);
+  args.push('--entrypoint', '/usr/bin/env', isolationImage, '-i', 'PATH=/tools/node/bin:/tools/flutter/bin/cache/dart-sdk/bin:/tools/java/bin:/usr/bin:/bin', 'LANG=C.UTF-8', 'TZ=UTC', 'HOME=/tmp/lythaus-sdk-home', 'CI=true', 'FLUTTER_ROOT=/tools/flutter', 'PUB_CACHE=/pub-cache', 'LYTHAUS_ADMIN_MUTATION_GUARD=/recipe/scripts/ci/sdk-verifier/admin-mutation-sdk-guard.mjs', '/tools/node/bin/node', ...command);
   return args;
 }
 
@@ -88,7 +88,7 @@ export async function runSourceVerification({ repository, candidateSha, recipe, 
   const containerRecipe = join(directory, 'container-recipe');
   fs.mkdirSync(join(containerRecipe, 'scripts/ci/sdk-verifier'), { recursive: true });
   fs.mkdirSync(join(containerRecipe, 'node_modules'));
-  const isolatedFiles = [...suites, 'monthly_rewards_preparation_wire.json', 'toolchain.pubspec.yaml', 'toolchain.pubspec.lock', 'prepare.mjs', 'behavior.mjs', 'redocly.yaml', 'admin-cors-policy.ts', 'admin-mutation-sdk-guard.mjs'];
+  const isolatedFiles = [...suites, 'monthly_rewards_preparation_wire.json', 'toolchain.pubspec.yaml', 'toolchain.pubspec.lock', 'prepare.mjs', 'behavior.mjs', 'analyze.mjs', 'analysis_options.yaml', 'redocly.yaml', 'admin-cors-policy.ts', 'admin-mutation-sdk-guard.mjs'];
   for (const file of isolatedFiles) fs.writeFileSync(join(containerRecipe, 'scripts/ci/sdk-verifier', file), readRegular(join(recipeDirectory, file)));
   for (const file of ['fix-openapi-dart-nested-builder-assignment.mjs', 'remove-openapi-oauth-support.mjs', 'trim-trailing-whitespace.js']) fs.writeFileSync(join(containerRecipe, 'scripts', file), readRegular(join(recipe, 'scripts', file)));
   fs.writeFileSync(join(containerRecipe, 'package.json'), '{"private":true}\n');
@@ -115,6 +115,11 @@ export async function runSourceVerification({ repository, candidateSha, recipe, 
   const fixtureDirectory = join(directory, 'fixtures');
   fs.mkdirSync(fixtureDirectory);
   for (const file of [...suites, 'monthly_rewards_preparation_wire.json']) fs.copyFileSync(join(recipeDirectory, file), join(fixtureDirectory, file));
+  fs.copyFileSync(join(recipeDirectory, 'analysis_options.yaml'), join(work, 'analysis_options.yaml'));
+  const analysis = runContainer({ ...options, fixtureDirectory, command: ['/recipe/scripts/ci/sdk-verifier/analyze.mjs'] });
+  fs.writeFileSync(join(directory, 'analysis.stdout.txt'), analysis.stdout);
+  fs.writeFileSync(join(directory, 'analysis.stderr.txt'), analysis.stderr);
+  if (analysis.status !== 0) throw new Error('TRUSTED_FIXTURE_ANALYSIS_FAILED');
   process.stdout.write('Running trusted synthetic behavior fixtures and assertion mutants.\n');
   const before = inventory(join(work, 'build/api_client/lib'));
   const baseline = runContainer({ ...options, fixtureDirectory, command: ['/recipe/scripts/ci/sdk-verifier/behavior.mjs'] });

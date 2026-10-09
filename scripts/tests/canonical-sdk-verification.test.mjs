@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import test from 'node:test';
 import { stringify } from 'yaml';
 import { coverageLedger, aggregateReview, completedBehavior, rejectedMutation, requiredCases, mutations, readRegular, inventory, projectGit, validateRuntimeGraph, validateFrozenGraph, approvedLicenseClassification } from '../ci/canonical-sdk-contract.mjs';
-import { validateTrust, validateRunContext, materializeVerifier, anchoredContext } from '../ci/canonical-sdk-bootstrap.mjs';
+import { validateTrust, validateRepositoryIdentity, validateRunContext, materializeVerifier, anchoredContext } from '../ci/canonical-sdk-bootstrap.mjs';
 import { containerArguments, hostedClosure } from '../ci/canonical-sdk-isolation.mjs';
 import { expectedChanges } from '../ci/dependency-review-native.mjs';
 
@@ -16,8 +16,9 @@ const hosted = { ecosystem: 'pub', name: 'dio', version: '5.9.0', manifest: 'pub
 const comparison = { reason: 'NATIVE_API_AVAILABLE', baseSha: a, reviewedHeadSha: b, expected: [sdk, hosted], missing: [sdk], snapshotWarnings: false };
 const source = { coverageEligible: true, packageName: sdk.name, version: sdk.version, localPath: sdk.localPath, sourceTreeSha: a, candidateSha: b, verifierSha: c, nativeIndexing: 'NOT_CLAIMED', classification: 'approved', verification: 'fresh-isolated-source-verification' };
 const success = { native: 'success', licenses: 'success' };
-const trust = { schemaVersion: 'lythaus-sdk-verifier-trust-v1', state: 'approved', repository: 'AsoraKK/Lythaus', protectedRef: 'refs/heads/main', workflowPath: '.github/workflows/dependency-review.yml', job: 'dependency-review', verifierSha: a, verifierTreeSha: b, workflowBlobSha: c, approvalEvidenceRef: 'synthetic independent review' };
-const context = () => ({ environment: { GITHUB_REPOSITORY: trust.repository, GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_WORKFLOW_REF: `${trust.repository}/${trust.workflowPath}@refs/heads/main`, GITHUB_WORKFLOW_SHA: b, GITHUB_REF: trust.protectedRef, GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '2', GITHUB_JOB: trust.job }, workflowBlobSha: c, run: { repository: { full_name: trust.repository }, head_repository: { full_name: trust.repository }, id: 12, run_attempt: 2, event: 'workflow_dispatch', head_branch: 'main', head_sha: b, workflow_id: 7 }, workflow: { id: 7, path: trust.workflowPath }, jobs: [{ name: trust.job, id: 25, run_id: 12, run_attempt: 2, head_sha: b, status: 'in_progress' }] });
+const trust = { schemaVersion: 'lythaus-sdk-verifier-trust-v1', state: 'approved', repositoryId: 1010752912, repositoryOwnerId: 211295889, protectedRef: 'refs/heads/main', workflowPath: '.github/workflows/dependency-review.yml', job: 'dependency-review', verifierSha: a, verifierTreeSha: b, workflowBlobSha: c, approvalEvidenceRef: 'synthetic independent review' };
+const repository = { id: trust.repositoryId, name: 'Lythaus', full_name: 'synthetic-owner/Lythaus', owner: { id: trust.repositoryOwnerId, login: 'synthetic-owner' } };
+const context = () => ({ repository: structuredClone(repository), environment: { GITHUB_REPOSITORY: repository.full_name, GITHUB_REPOSITORY_ID: String(repository.id), GITHUB_REPOSITORY_OWNER_ID: String(repository.owner.id), GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_WORKFLOW_REF: `${repository.full_name}/${trust.workflowPath}@refs/heads/main`, GITHUB_WORKFLOW_SHA: b, GITHUB_REF: trust.protectedRef, GITHUB_RUN_ID: '12', GITHUB_RUN_ATTEMPT: '2', GITHUB_JOB: trust.job }, workflowBlobSha: c, run: { repository: { id: repository.id, full_name: repository.full_name }, head_repository: { id: repository.id, full_name: repository.full_name }, id: 12, run_attempt: 2, event: 'workflow_dispatch', head_branch: 'main', head_sha: b, workflow_id: 7 }, workflow: { id: 7, path: trust.workflowPath }, jobs: [{ name: trust.job, id: 25, run_id: 12, run_attempt: 2, head_sha: b, status: 'in_progress' }] });
 
 test('category accounting keeps raw SDK omission and every other native obligation', () => {
   const ledger = coverageLedger(comparison.expected, comparison.missing);
@@ -37,7 +38,7 @@ test('no receipt, stale identity, self-selected verifier, classification and all
 
 test('bootstrap rejects unreviewed, incomplete and candidate-selected pins', () => {
   assert.equal(validateTrust(trust, c), trust);
-  for (const record of [null, { ...trust, state: 'pending-independent-review' }, { ...trust, verifierSha: 'main' }, { ...trust, verifierTreeSha: null }, { ...trust, workflowBlobSha: null }, { ...trust, approvalEvidenceRef: null }, { ...trust, repository: 'other/repository' }, { ...trust, protectedRef: 'refs/heads/candidate' }, { ...trust, workflowPath: 'fake.yml' }]) assert.throws(() => validateTrust(record, c));
+  for (const record of [null, { ...trust, state: 'pending-independent-review' }, { ...trust, verifierSha: 'main' }, { ...trust, verifierTreeSha: null }, { ...trust, workflowBlobSha: null }, { ...trust, approvalEvidenceRef: null }, { ...trust, repositoryId: 101 }, { ...trust, repositoryOwnerId: 102 }, { ...trust, protectedRef: 'refs/heads/candidate' }, { ...trust, workflowPath: 'fake.yml' }]) assert.throws(() => validateTrust(record, c));
   assert.throws(() => validateTrust(trust, a), /INDEPENDENT_VERIFIER_REQUIRED/);
   assert.throws(() => validateTrust(JSON.parse(fs.readFileSync(new URL('../ci/canonical-sdk-trust.json', import.meta.url))), c), /TRUSTED_VERIFIER_BOOTSTRAP_REQUIRED/);
 });
@@ -50,7 +51,11 @@ test('run provenance binds repository, workflow Git blob, exact revision, run at
     value => value.environment.GITHUB_WORKFLOW_SHA = a,
     value => value.environment.GITHUB_REF = 'refs/heads/candidate',
     value => value.run.repository.full_name = 'other/repository',
+    value => value.run.repository.id = 100,
     value => value.run.head_repository.full_name = 'fork/repository',
+    value => value.run.head_repository.id = 101,
+    value => value.environment.GITHUB_REPOSITORY_ID = '102',
+    value => value.environment.GITHUB_REPOSITORY_OWNER_ID = '103',
     value => value.run.id = 13,
     value => value.run.run_attempt = 1,
     value => value.run.event = 'pull_request',
@@ -65,6 +70,11 @@ test('run provenance binds repository, workflow Git blob, exact revision, run at
     value => value.jobs.push({ ...value.jobs[0], id: 26 }),
   ];
   for (const attack of attacks) { const value = context(); attack(value); assert.throws(() => validateRunContext(trust, value)); }
+});
+
+test('authoritative numeric repository and owner identity reject transfers and name-only lookalikes', () => {
+  assert.equal(validateRepositoryIdentity(repository).id, trust.repositoryId);
+  for (const value of [null, { ...repository, id: 100 }, { ...repository, name: 'other' }, { ...repository, full_name: 'other/Lythaus' }, { ...repository, owner: { ...repository.owner, id: 101 } }, { ...repository, owner: { ...repository.owner, login: 'other' } }, { ...repository, owner: { ...repository.owner, login: ['synthetic-owner'] } }]) assert.throws(() => validateRepositoryIdentity(value));
 });
 
 const report = events => events.map(value => JSON.stringify(value)).join('\n') + '\n';
@@ -194,20 +204,21 @@ test('serialized bootstrap binds real Git objects and materializes pinned recipe
     const requests = [], fetched = [];
     const request = async path => {
       requests.push(path);
-      if (path === 'git/ref/heads/main') return { ref: 'refs/heads/main', object: { sha: anchorSha } };
-      if (path === 'actions/runs/12') return value.run;
-      if (path === 'actions/workflows/7') return value.workflow;
-      if (path.startsWith('actions/runs/12/attempts/2/jobs?')) return { jobs: value.jobs, total_count: 1 };
+      if (path === `repositories/${repository.id}`) return repository;
+      if (path === `repos/${repository.full_name}/git/ref/heads/main`) return { ref: 'refs/heads/main', object: { sha: anchorSha } };
+      if (path === `repos/${repository.full_name}/actions/runs/12`) return value.run;
+      if (path === `repos/${repository.full_name}/actions/workflows/7`) return value.workflow;
+      if (path.startsWith(`repos/${repository.full_name}/actions/runs/12/attempts/2/jobs?`)) return { jobs: value.jobs, total_count: 1 };
       throw new Error('unexpected synthetic API request');
     };
     const bound = await anchoredContext(directory, directory, { request, fetchRevision: sha => fetched.push(sha), environment: value.environment });
     assert.equal(bound.verifierSha, verifierSha); assert.equal(bound.anchorSha, anchorSha); assert.equal(bound.jobId, 25);
-    assert.deepEqual(fetched, [verifierSha, anchorSha]); assert.equal(requests.length, 4);
+    assert.deepEqual(fetched, [verifierSha, anchorSha]); assert.equal(requests.length, 5);
     const materialized = join(directory, 'materialized');
     const files = materializeVerifier(directory, bound, materialized);
     for (const path of ['package.json', 'package-lock.json', 'packages/synthetic/package.json', '.github/actions/flutter-setup/action.yml', 'scripts/ci/canonical-sdk-isolation.mjs', 'scripts/ci/sdk-verifier/prepare.mjs', 'tools/openapi/spectral-glob/package.json']) assert.ok(files.some(file => file.path === path));
     assert.ok(!fs.existsSync(join(materialized, 'unrelated.txt')));
-    await assert.rejects(anchoredContext(directory, directory, { request: async () => ({ ref: 'refs/heads/main', object: { sha: a } }), environment: value.environment }), /PROTECTED_MAIN_ANCHOR_MISMATCH/);
+    await assert.rejects(anchoredContext(directory, directory, { request: async path => path.startsWith('repositories/') ? repository : ({ ref: 'refs/heads/main', object: { sha: a } }), environment: value.environment }), /PROTECTED_MAIN_ANCHOR_MISMATCH/);
     assert.throws(() => materializeVerifier(directory, { verifierSha: 'main' }, join(directory, 'invalid')));
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
 });

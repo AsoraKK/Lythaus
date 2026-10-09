@@ -4,27 +4,34 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const trustPath = 'scripts/ci/canonical-sdk-trust.json';
+const repositoryId = 1010752912, repositoryOwnerId = 211295889;
 const exact = value => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value) && !/^0+$/.test(value);
 const git = (root, args, binary = false) => execFileSync('git', ['-C', root, ...args], { encoding: binary ? null : 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
 
 export function validateTrust(trust, candidateSha) {
   if (trust?.schemaVersion !== 'lythaus-sdk-verifier-trust-v1' || trust.state !== 'approved' || !exact(trust.verifierSha) || !exact(trust.verifierTreeSha) || !exact(trust.workflowBlobSha) || !trust.approvalEvidenceRef) throw new Error('TRUSTED_VERIFIER_BOOTSTRAP_REQUIRED');
-  if (trust.repository !== 'AsoraKK/Lythaus' || trust.protectedRef !== 'refs/heads/main' || trust.workflowPath !== '.github/workflows/dependency-review.yml' || trust.job !== 'dependency-review' || !exact(candidateSha) || trust.verifierSha === candidateSha) throw new Error('INDEPENDENT_VERIFIER_REQUIRED');
+  if (trust.repositoryId !== repositoryId || trust.repositoryOwnerId !== repositoryOwnerId || trust.protectedRef !== 'refs/heads/main' || trust.workflowPath !== '.github/workflows/dependency-review.yml' || trust.job !== 'dependency-review' || !exact(candidateSha) || trust.verifierSha === candidateSha) throw new Error('INDEPENDENT_VERIFIER_REQUIRED');
   return trust;
+}
+
+export function validateRepositoryIdentity(repository) {
+  if (repository?.id !== repositoryId || repository.name !== 'Lythaus' || repository.owner?.id !== repositoryOwnerId || typeof repository.owner.login !== 'string' || !/^[a-zA-Z0-9-]+$/.test(repository.owner.login) || repository.full_name !== `${repository.owner.login}/Lythaus`) throw new Error('GITHUB_REPOSITORY_PROVENANCE_MISMATCH');
+  return { id: repository.id, ownerId: repository.owner.id, fullName: repository.full_name };
 }
 
 export function validateRunContext(trust, context) {
   const { run, workflow, jobs, environment, workflowBlobSha } = context;
-  if (environment.GITHUB_REPOSITORY !== trust.repository || environment.GITHUB_EVENT_NAME !== 'workflow_dispatch' || environment.GITHUB_WORKFLOW_REF !== `${trust.repository}/${trust.workflowPath}@refs/heads/main` || !exact(environment.GITHUB_WORKFLOW_SHA) || environment.GITHUB_REF !== trust.protectedRef) throw new Error('TRUSTED_MAIN_WORKFLOW_REQUIRED');
-  if (run.repository?.full_name !== trust.repository || run.head_repository?.full_name !== trust.repository || run.id !== Number(environment.GITHUB_RUN_ID) || run.run_attempt !== Number(environment.GITHUB_RUN_ATTEMPT) || run.event !== 'workflow_dispatch' || run.head_branch !== 'main' || run.head_sha !== environment.GITHUB_WORKFLOW_SHA || workflow.id !== run.workflow_id || workflow.path !== trust.workflowPath || workflowBlobSha !== trust.workflowBlobSha) throw new Error('GITHUB_WORKFLOW_PROVENANCE_MISMATCH');
+  const repository = validateRepositoryIdentity(context.repository);
+  if (environment.GITHUB_REPOSITORY !== repository.fullName || environment.GITHUB_REPOSITORY_ID !== String(repository.id) || environment.GITHUB_REPOSITORY_OWNER_ID !== String(repository.ownerId) || environment.GITHUB_EVENT_NAME !== 'workflow_dispatch' || environment.GITHUB_WORKFLOW_REF !== `${repository.fullName}/${trust.workflowPath}@refs/heads/main` || !exact(environment.GITHUB_WORKFLOW_SHA) || environment.GITHUB_REF !== trust.protectedRef) throw new Error('TRUSTED_MAIN_WORKFLOW_REQUIRED');
+  if (run.repository?.id !== repository.id || run.head_repository?.id !== repository.id || run.repository?.full_name !== repository.fullName || run.head_repository?.full_name !== repository.fullName || run.id !== Number(environment.GITHUB_RUN_ID) || run.run_attempt !== Number(environment.GITHUB_RUN_ATTEMPT) || run.event !== 'workflow_dispatch' || run.head_branch !== 'main' || run.head_sha !== environment.GITHUB_WORKFLOW_SHA || workflow.id !== run.workflow_id || workflow.path !== trust.workflowPath || workflowBlobSha !== trust.workflowBlobSha) throw new Error('GITHUB_WORKFLOW_PROVENANCE_MISMATCH');
   const matches = jobs.filter(job => job.name === trust.job && job.run_id === run.id && job.run_attempt === run.run_attempt && job.head_sha === run.head_sha && job.status === 'in_progress' && Number.isSafeInteger(job.id));
   if (matches.length !== 1 || environment.GITHUB_JOB !== trust.job) throw new Error('GITHUB_JOB_PROVENANCE_MISMATCH');
-  return { verifierSha: trust.verifierSha, verifierTreeSha: trust.verifierTreeSha, workflowSha: run.head_sha, workflowId: workflow.id, workflowPath: workflow.path, repository: trust.repository, runId: run.id, runAttempt: run.run_attempt, jobId: matches[0].id, approvalEvidenceRef: trust.approvalEvidenceRef };
+  return { verifierSha: trust.verifierSha, verifierTreeSha: trust.verifierTreeSha, workflowSha: run.head_sha, workflowId: workflow.id, workflowPath: workflow.path, repository: repository.fullName, repositoryId: repository.id, repositoryOwnerId: repository.ownerId, runId: run.id, runAttempt: run.run_attempt, jobId: matches[0].id, approvalEvidenceRef: trust.approvalEvidenceRef };
 }
 
 async function github(path) {
-  const response = await fetch(`https://api.github.com/repos/AsoraKK/Lythaus/${path}`, { headers: { accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28' }, signal: AbortSignal.timeout(30000) });
-  if (!response.ok) throw new Error(`READ_ONLY_GITHUB_PROVENANCE_UNAVAILABLE:${response.status}:repos/AsoraKK/Lythaus/${path}`);
+  const response = await fetch(`https://api.github.com/${path}`, { headers: { accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28' }, signal: AbortSignal.timeout(30000) });
+  if (!response.ok) throw new Error(`READ_ONLY_GITHUB_PROVENANCE_UNAVAILABLE:${response.status}:${path}`);
   const text = await response.text();
   if (Buffer.byteLength(text) > 8 * 1024 * 1024) throw new Error('GITHUB_PROVENANCE_RESPONSE_LIMIT');
   return JSON.parse(text);
@@ -33,18 +40,21 @@ async function github(path) {
 export async function anchoredContext(repository, anchor, { request = github, fetchRevision = revision => execFileSync('git', ['-C', repository, 'fetch', '--no-tags', 'origin', revision], { stdio: ['ignore', 'pipe', 'pipe'] }), environment = process.env } = {}) {
   const candidateSha = environment.HEAD_SHA;
   const anchorSha = git(anchor, ['rev-parse', 'HEAD']).trim();
-  const main = await request('git/ref/heads/main');
+  const repositoryMetadata = await request(`repositories/${repositoryId}`);
+  const identity = validateRepositoryIdentity(repositoryMetadata);
+  const prefix = `repos/${identity.fullName}/`;
+  const main = await request(`${prefix}git/ref/heads/main`);
   if (main.ref !== 'refs/heads/main' || main.object?.sha !== anchorSha) throw new Error('PROTECTED_MAIN_ANCHOR_MISMATCH');
   const trustEntry = git(anchor, ['ls-tree', anchorSha, '--', trustPath]).trim();
   if (!trustEntry.startsWith('100644 blob ')) throw new Error('TRUSTED_VERIFIER_BOOTSTRAP_REQUIRED');
   const trust = validateTrust(JSON.parse(git(anchor, ['show', `${anchorSha}:${trustPath}`])), candidateSha);
   if (!/^\d+$/.test(environment.GITHUB_RUN_ID ?? '') || !/^\d+$/.test(environment.GITHUB_RUN_ATTEMPT ?? '')) throw new Error('GITHUB_RUN_ID_REQUIRED');
-  const run = await request(`actions/runs/${environment.GITHUB_RUN_ID}`);
+  const run = await request(`${prefix}actions/runs/${environment.GITHUB_RUN_ID}`);
   if (!exact(run.head_sha) || !Number.isSafeInteger(run.workflow_id) || run.id !== Number(environment.GITHUB_RUN_ID) || run.run_attempt !== Number(environment.GITHUB_RUN_ATTEMPT)) throw new Error('GITHUB_RUN_PROVENANCE_MISMATCH');
-  const workflow = await request(`actions/workflows/${run.workflow_id}`);
+  const workflow = await request(`${prefix}actions/workflows/${run.workflow_id}`);
   const jobs = [];
   for (let page = 1; page <= 10; page++) {
-    const response = await request(`actions/runs/${run.id}/attempts/${run.run_attempt}/jobs?per_page=100&page=${page}`);
+    const response = await request(`${prefix}actions/runs/${run.id}/attempts/${run.run_attempt}/jobs?per_page=100&page=${page}`);
     if (!Array.isArray(response.jobs)) throw new Error('GITHUB_JOBS_REQUIRED');
     jobs.push(...response.jobs);
     if (jobs.length >= response.total_count) break;
@@ -60,7 +70,7 @@ export async function anchoredContext(repository, anchor, { request = github, fe
     if (!record.startsWith('100644 blob ')) throw new Error('OWNER_APPROVAL_NON_REGULAR_FILE');
     return JSON.parse(git(anchor, ['show', `${anchorSha}:${path}`]));
   };
-  return { trust, anchorSha, ownerClassification: optionalApproval('infrastructure/canonical-dart-package-approval.json'), runtimeLicenses: optionalApproval('infrastructure/canonical-dart-runtime-licenses.json'), ...validateRunContext(trust, { run, workflow, jobs, environment, workflowBlobSha: entry.split(/\s+/)[2] }) };
+  return { trust, anchorSha, ownerClassification: optionalApproval('infrastructure/canonical-dart-package-approval.json'), runtimeLicenses: optionalApproval('infrastructure/canonical-dart-runtime-licenses.json'), ...validateRunContext(trust, { repository: repositoryMetadata, run, workflow, jobs, environment, workflowBlobSha: entry.split(/\s+/)[2] }) };
 }
 
 export function materializeVerifier(repository, context, destination) {

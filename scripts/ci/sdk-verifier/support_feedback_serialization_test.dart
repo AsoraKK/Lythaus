@@ -77,10 +77,10 @@ void main() {
             if (closed != null) 'closed': closed,
             if (owner) 'submitterId': '018f0000-0000-7000-8000-000000000002',
           };
-          final decoded = standardSerializers.deserializeWith(
-            serializer,
-            wire,
-          )!;
+          final decoded = standardSerializers.deserializeWith(serializer, wire);
+          if (decoded == null) {
+            throw StateError('synthetic support fixture did not deserialize');
+          }
           final encoded =
               standardSerializers.serializeWith(serializer, decoded) as Map;
           expect(encoded, wire);

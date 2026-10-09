@@ -152,8 +152,9 @@ void main() {
         '/analytics/activity-consent',
         '/analytics/activity',
       ]);
-      for (final request in adapter.requests)
+      for (final request in adapter.requests) {
         expect(request.headers['Authorization'], 'Bearer synthetic-jwt');
+      }
       final body = adapter.requests[1].data as Map;
       expect(body['enabled'], false);
       expect(body['expectedRevision'], 0);
