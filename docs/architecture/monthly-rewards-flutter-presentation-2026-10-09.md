@@ -89,19 +89,23 @@ the generator's nullable-map factory is a separate upstream follow-up.
 
 ## Validation and evidence
 
-- Flutter 3.41.1 / Dart 3.11.0: release web build, clean analysis, and unchanged
-  formatting passed.
-- 66 focused provider, monthly widget, Rewards, redemption, responsive, and
+- Flutter 3.41.1 / Dart 3.11.0: release web build, clean full analysis, and
+  unchanged formatting passed on the reviewed runtime. The release artifact
+  SHA-256 is `479297a11271246a511b385aadf3946697784256ca89aed026670ea79cb4725c`.
+- 73 focused provider, monthly widget, CSV export, Rewards, redemption, responsive, and
   owner/public profile tests passed. They cover generated HTTP calls, account
   cancellation, malformed months, unknown policy, null values, retry, disabled
   prepared fixtures, narrow 320px layouts with actual 200% text scaling,
   keyboard focus, and reduced motion.
 - The validator wrapper's four tests passed, as did repository hygiene,
   immutable workflow pins, actionlint, and the existing coverage thresholds.
-- The first development full-suite run had 3,122 passes, five skips, and seven
-  failures in profile fixtures/scrolling and semantics-handle cleanup. Those
-  seven checks pass in the final focused run. This is not a full-suite pass;
-  the exact published head must run the complete CI suite.
+- On `53a8ec324332139ae4ebd09160cda289078536cd`, CI run
+  [37935689731](https://github.com/AsoraKK/Lythaus/actions/runs/37935689731)
+  passed the full Flutter coverage suite, coverage gates, and complete monthly
+  Chromium/WebKit journeys. It failed at the unchanged authentication probe
+  and the native dependency parser. All dependency audits passed; their
+  aggregate launch-blocker summary failed because upstream jobs failed.
+  These conclusions use structured metadata, not downloaded signed logs.
 - Local browser evidence uses the real release artifact with synthetic local
   TLS fixtures. Chromium and WebKit exercise pending/confirmed/disabled states,
   keyboard refresh, failure/retry, corrections/cap groups, owner/public privacy,
@@ -109,14 +113,15 @@ the generator's nullable-map factory is a separate upstream follow-up.
   zoom is approximated by halving the CSS viewport at DPR 2. Physical screen
   readers and native devices were not tested.
 
-At candidate `73e9b311ba38494fc05d7f514195a086e3612793`, the complete Chromium
-desktop/light and mobile/dark journeys passed with zero captured app or console
-errors. The WebKit rerun completed monthly and owner checks but failed during
-mobile session restoration before loading the public profile, showing
-“Unable to refresh your session”; that run is not a pass. Earlier complete
-WebKit journeys are historical evidence only. The existing Chromium mobile/light
-profile visual regression also passed, including Posts/Comments, settings, and
-saved preferences. Review fixes after this candidate require fresh validation.
+Local complete browser probes on `53a8ec32` did not pass: Chromium timed out at
+the owner Overview selector, while WebKit reached its test timeout. The isolated
+HTTP CSV probes on `6d70bd700fef6ed074d92359ab81d43daa580fc9` also did not pass
+overall. WebKit desktop passed its exact-byte CSV assertions after a response
+held across two frames and 600 ms, then mobile timed out waiting for download.
+Chromium timed out entering email before reaching CSV. These failures remain
+gates; no token injection or auth relaxation was added. Further changes after
+`53a8ec32` affect the browser harness and evidence only; application runtime
+files are byte-identical. The complete final-head workflow must still finish.
 
 The CSV request lifetime gap was carried forward from the dependent base.
 Its separate repair scopes a manual provider subscription to the export, closes
@@ -134,12 +139,15 @@ confirmed snapshots are also covered. The isolated legacy owner-profile test
 reproduced its coverage-run timeout before adding typed monthly read fixtures;
 its original profile/error assertions remain intact.
 
-Selected screenshots and a sanitized evidence receipt are stored in
+Current inspected, labeled screenshots and a sanitized review receipt are stored in
 `docs/architecture/evidence/monthly-rewards-flutter/`. Review the
-[mobile disabled methodology](evidence/monthly-rewards-flutter/chromium-mobile-dark-confirmed-disabled-methodology.png),
-[omitted weeks and cap evidence](evidence/monthly-rewards-flutter/webkit-mobile-dark-corrected-evidence.png),
-[settings-first owner overview](evidence/monthly-rewards-flutter/chromium-desktop-light-owner-settings-first.png),
-and [public profile](evidence/monthly-rewards-flutter/chromium-desktop-light-public-private-evidence-absent.png).
+[desktop v1 shadow, explicitly unconfirmed](evidence/monthly-rewards-flutter/review-chromium-desktop-light-v1-shadow-unconfirmed.png),
+[mobile pending snapshot and v1 source evidence](evidence/monthly-rewards-flutter/review-webkit-mobile-dark-pending-disabled.png),
+and [desktop after exact-byte CSV download](evidence/monthly-rewards-flutter/review-webkit-desktop-light-csv-export-complete.png).
+Their fixture labels, tested revisions, hashes, partial-run results and limits
+are in [review-receipt.json](evidence/monthly-rewards-flutter/review-receipt.json).
+The original five screenshots and `receipt.json` are historical development
+evidence; they do not establish a final-head engine pass.
 The browser harness emits
 the complete capture set under `build/monthly-rewards-evidence` in CI.
 
