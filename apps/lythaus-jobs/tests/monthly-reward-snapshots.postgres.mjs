@@ -51,6 +51,7 @@ if(clockProfile==='settled'&&!clockEvidence.positive_settlement_available)
 const preparedPositiveTest=(name,work)=>test(name,{skip:!clockEvidence.positive_settlement_available
   &&'Positive v2 settlement not exercised: actual PostgreSQL clock is before 2026-11-04; use the isolated settled profile'},work);
 const disabledPreparation={preparationOnly:true,runtimeActivationAllowed:false,appliedPoints:0};
+const preparedReadMetadata={...disabledPreparation,policyVersion:policyV2,dataVersion:2,catalogueHash:hashV2,maximumSourceMonth:13650};
 const binding={role:'lythaus_jobs'};
 mock.module('@lythaus/db',{namedExports:{...database,
   transaction:(binding,work)=>tx(work,binding.role,binding.timeZone),
@@ -599,6 +600,7 @@ preparedPositiveTest('V2/I04/I05 POSITIVE: actual settlement clock admits one co
   assert.equal(report.effectiveMonth,'2026-11');assert.equal(report.levelAuthority.sourceScore,1150);
   assert.equal(report.report.quarterlyEmail.points,1000);assert.equal(report.report.quarterlyEmail.maximumPoints,1000);
   assert.equal(report.report.quarterlySuggestion.points,150);assert.equal(report.report.quarterlySuggestion.maximumPoints,150);
+  assert.equal(report.report.quarterlySuggestion.validFrom,null);assert.equal(report.report.quarterlySuggestion.validUntil,null);
   assert.equal(report.report.quarterlyTotal.points,1150);assert.equal(report.report.quarterlyTotal.maximumPoints,1150);
   assert.equal(report.report.total.maximumSourceMonth,13650);assert.equal(report.report.total.policyVersion,policyV2);
   assert.equal(report.report.weekly.earningPolicyVersion,policy);assert.equal(report.report.monthly.maintenancePolicyVersion,policy);
@@ -640,6 +642,16 @@ preparedPositiveTest('V2/I03/I07 POSITIVE: same-period policy collision requires
   const mixed=await tx(client=>readOwnMonthlyReputationReport(client,{subjectId:author,sourceMonth:'2026-10',snapshotRulesVersion:preparedRules},disposable),'lythaus_runtime');
   assert.equal(mixed.levelAuthority.reasonCode,'snapshot_policy_requires_review');assert.equal(mixed.levelAuthority.sourceScore,null);
   assert.deepEqual(mixed.corrections.effectiveSnapshots,[]);assert.equal(mixed.report.total.policyVersion,policyV2);
+  const legacyOnly=await person();await assessment(legacyOnly,'2026-10','2027-06-01T00:00:00.000Z');
+  const preparedDefault=await tx(client=>readOwnMonthlyRewardSnapshot(client,{subjectId:legacyOnly,rulesVersion:preparedRules,effectiveMonth:'2026-11'},disposable),'lythaus_runtime');
+  assert.deepEqual(preparedDefault,{state:'pending',reasonCode:'no_previous_assessment',effectiveMonth:'2026-11',level:1,
+    levelKind:'unassessed_default',sourceScore:null,sourceMonth:null,snapshotId:null,revision:0,...preparedReadMetadata});
+  assert.deepEqual(await read(legacyOnly,shadow,'2026-11'),{state:'pending',reasonCode:'settlement_pending',effectiveMonth:'2026-11'});
+  const preparedOnly=await person();await preparedAssessment(preparedOnly);
+  assert.deepEqual(await read(preparedOnly,shadow,'2026-11'),{state:'pending',reasonCode:'no_previous_assessment',effectiveMonth:'2026-11',
+    level:1,levelKind:'unassessed_default',sourceScore:null,sourceMonth:null,snapshotId:null,revision:0,policyVersion:policy});
+  const preparedPending=await tx(client=>readOwnMonthlyRewardSnapshot(client,{subjectId:preparedOnly,rulesVersion:preparedRules,effectiveMonth:'2026-11'},disposable),'lythaus_runtime');
+  assert.deepEqual(preparedPending,{state:'pending',reasonCode:'settlement_pending',effectiveMonth:'2026-11',...preparedReadMetadata});
 });
 
 preparedPositiveTest('V2/I04/I07 POSITIVE: concurrent corrections and approval/application replays have exact disabled metadata',async()=>{
@@ -751,6 +763,8 @@ test('V2/I05: future source stays unsettled in opposite timezones despite future
   const now=new Date((await sql('SELECT clock_timestamp() AS now')).rows[0].now);
   const month=now.toISOString().slice(0,7)<'2026-10'?'2026-10':now.toISOString().slice(0,7);
   const author=await person(),item=await preparedAssessment(author,{sourceMonth:month});
+  const unconfigured=await tx(client=>readOwnMonthlyRewardSnapshot(client,{subjectId:author,effectiveMonth:item.calculation.effectiveMonth},disposable),'lythaus_runtime');
+  assert.deepEqual(unconfigured,{state:'unavailable',reasonCode:'approval_unavailable',effectiveMonth:item.calculation.effectiveMonth,...preparedReadMetadata});
   const attempts=await Promise.allSettled(Array.from({length:3},()=>preparePublish(item.eventId)));
   assert.ok(attempts.every(result=>result.status==='rejected'&&/source_not_settled/.test(result.reason.message)));
   await assert.rejects(prepareApprove({subjectId:author,snapshotId:confirmedSnapshot.id,assessmentId:item.assessmentId}),/source_not_settled/);
@@ -760,6 +774,8 @@ test('V2/I05: future source stays unsettled in opposite timezones despite future
     const report=await tx(client=>readOwnMonthlyReputationReport(client,{subjectId:author,sourceMonth:month,snapshotRulesVersion:preparedRules},disposable),'lythaus_runtime',timeZone);
     assert.equal(report.effectiveMonth,item.calculation.effectiveMonth);assert.equal(report.levelAuthority.reasonCode,'future_month_unconfirmed');
     assert.equal(report.levelAuthority.sourceScore,null);
+    const direct=await tx(client=>readOwnMonthlyRewardSnapshot(client,{subjectId:author,rulesVersion:preparedRules,effectiveMonth:item.calculation.effectiveMonth},disposable),'lythaus_runtime',timeZone);
+    assert.deepEqual(direct,{state:'pending',reasonCode:'future_month_unconfirmed',effectiveMonth:item.calculation.effectiveMonth,...preparedReadMetadata});
   }
   assert.deepEqual(await reconcileMonthlyRewardSnapshots({...env,MONTHLY_REPUTATION_SNAPSHOT_RULES:preparedRules}),{processed:0});
   assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshot_receipts WHERE event_id=$1',[item.eventId])).rowCount,0);

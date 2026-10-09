@@ -13,9 +13,9 @@ function clientWith(queryResult) {
   const statements = [];
   return {
     statements,
-    query: async (statement) => {
+    query: async (statement, values) => {
       statements.push(statement);
-      return queryResult(statement);
+      return queryResult(statement, values);
     },
   };
 }
@@ -54,7 +54,8 @@ test('a feature-off report checks only the existing feature flag before returnin
 
 const disposable = { mode: 'disposable_local_pg17' };
 const input = { subjectId, sourceMonth: '2026-12', snapshotRulesVersion: 'synthetic-prepared-rules' };
-function preparedClient({ settled = true, mutate = () => {}, snapshotPolicy = v2 } = {}) {
+function preparedClient({ settled = true, mutate = () => {}, policy = v2, snapshotPolicy = policy,
+  snapshotPresent = true, available = true, historyPolicies = [] } = {}) {
   const calculation = { policyVersion: v2, preparationOnly: true, sourceMonth: '2026-12', effectiveMonth: '2027-01',
     weeklyPoints: 10000, monthlyPoints: 2500, emailPoints: 1000, suggestionPoints: 150, quarterlyPoints: 1150, sourceScore: 13650, level: 5,
     weeks: Array.from({ length: 5 }, (_, index) => ({ weekId: `synthetic-${index}`, points: 2500, selected: index < 4,
@@ -72,26 +73,31 @@ function preparedClient({ settled = true, mutate = () => {}, snapshotPolicy = v2
     preparation_matches: true, report: assembly, assessment_policy: v2, assessment_mode: 'shadow', calculation,
     weekly_points: 10000, monthly_points: 2500, quarterly_points: 1150, source_score: 13650, level: 5 };
   mutate(row);
-  const client = clientWith((statement) => {
+  const client = clientWith((statement, values) => {
     if (statement.includes('current_database()')) return { rows: [{ database: 'lythaus_monthly_test', version: 170011 }] };
-    if (statement.includes('AS available')) return { rows: [{ available: true }], rowCount: 1 };
+    if (statement.includes('AS available')) return { rows: [{ available }], rowCount: 1 };
     if (statement.includes('system.feature_flags')) return { rows: [{}], rowCount: 1 };
     if (statement.includes('trust.lock_monthly_reward_configuration')) return { rows: [
       { enabled: true, policy_version: v1 }, { enabled: true, policy_version: v1 }], rowCount: 2 };
     if (statement.includes('SELECT version,mode,first_source_month')) return { rows: [{ version: input.snapshotRulesVersion,
-      mode: 'shadow', policy_version: v2, first_source_month: new Date('2026-10-01'), weekly_rules_version: 'synthetic-weekly',
+      mode: 'shadow', policy_version: policy, first_source_month: new Date('2026-10-01'), weekly_rules_version: 'synthetic-weekly',
       maintenance_rules_version: 'synthetic-maintenance', preparation_configuration: {}, decision_approvals: {} }] };
     if (statement.includes('to_char(clock_timestamp()')) return { rows: [{ month: '2027-01' }] };
     if (statement.includes('pg_advisory_xact_lock')) return { rows: [] };
     if (statement.includes('trust.lock_monthly_reward_subject')) return { rows: [{ allowed: true }] };
-    if (statement.includes('SELECT * FROM trust.monthly_reward_snapshots')) return { rows: [{ id: subjectId,
+    if (statement.includes('SELECT * FROM trust.monthly_reward_snapshots')) return { rows: snapshotPresent ? [{ id: subjectId,
       source_month: new Date('2026-12-01'), rules_version: input.snapshotRulesVersion, policy_version: snapshotPolicy,
-      source_revision: 1, revision: 1, source_score: 0, level: 1, preparation_only: true, mode: 'shadow' }] };
+      source_revision: 1, revision: 1, source_score: 0, level: 1, preparation_only: true, mode: 'shadow' }] : [] };
     if (statement.includes('AS settled')) return { rows: [{ settled }] };
     if (statement.includes('FROM trust.monthly_reputation_sources source')) return { rows: [row] };
     if (statement.includes('SELECT revision, mode')) {
       assert.ok(statement.includes('policy_version = $3'));
       return { rows: [] };
+    }
+    if (statement.includes('SELECT 1 FROM trust.monthly_reputation_sources')) {
+      assert.ok(statement.includes('policy_version = $2')); assert.deepEqual(values, [subjectId, policy]);
+      const rowCount = Number(historyPolicies.includes(policy));
+      return { rows: rowCount ? [{}] : [], rowCount };
     }
     assert.fail(`Unexpected prepared query: ${statement}`);
   });
@@ -144,4 +150,72 @@ test('prepared readers reject non-disposable targets before reading member data'
   const client = preparedClient(); client.connectionParameters.host = 'production.invalid';
   await assert.rejects(readOwnMonthlyReputationReport(client, input, disposable), /requires_disposable_local_target/);
   assert.deepEqual(client.statements, []);
+});
+
+const snapshotMetadata = { preparationOnly: true, runtimeActivationAllowed: false, appliedPoints: 0,
+  policyVersion: v2, dataVersion: 2, catalogueHash: hash, maximumSourceMonth: 13650 };
+const snapshotInput = { subjectId, rulesVersion: input.snapshotRulesVersion, effectiveMonth: '2027-01' };
+test('direct v2 pending and unavailable snapshot responses share preparation identity without fabricated authority', async () => {
+  for (const [options, patch, state, reasonCode] of [
+    [{}, { rulesVersion: undefined }, 'unavailable', 'approval_unavailable'],
+    [{ available: false }, {}, 'unavailable', 'approval_unavailable'],
+    [{}, { effectiveMonth: '2027-02' }, 'pending', 'future_month_unconfirmed'],
+    [{}, { effectiveMonth: '2026-10' }, 'unavailable', 'before_policy_cutover'],
+    [{ snapshotPolicy: v1 }, {}, 'pending', 'snapshot_policy_requires_review'],
+    [{ settled: false }, {}, 'pending', 'settlement_pending'],
+    [{ snapshotPresent: false, historyPolicies: [v2] }, {}, 'pending', 'settlement_pending'],
+  ]) {
+    const request = { ...snapshotInput, ...patch };
+    const result = await readOwnMonthlyRewardSnapshot(preparedClient(options), request, disposable);
+    assert.deepEqual(result, { state, reasonCode, effectiveMonth: request.effectiveMonth, ...snapshotMetadata });
+  }
+  const remote = preparedClient(); remote.connectionParameters.host = 'production.invalid';
+  await assert.rejects(readOwnMonthlyRewardSnapshot(remote, { ...snapshotInput, rulesVersion: undefined }, disposable), /requires_disposable_local_target/);
+  assert.deepEqual(remote.statements, []);
+});
+
+test('direct v1 snapshot response shapes remain exact without preparation fields', async () => {
+  for (const [options, patch, state, reasonCode] of [
+    [{}, { rulesVersion: undefined }, 'unavailable', 'approval_unavailable'],
+    [{ available: false }, {}, 'unavailable', 'approval_unavailable'],
+    [{}, { effectiveMonth: '2027-02' }, 'pending', 'future_month_unconfirmed'],
+    [{}, { effectiveMonth: '2026-10' }, 'unavailable', 'before_policy_cutover'],
+    [{ snapshotPolicy: v2 }, {}, 'pending', 'snapshot_policy_requires_review'],
+    [{ snapshotPresent: false, historyPolicies: [v1] }, {}, 'pending', 'settlement_pending'],
+  ]) {
+    const request = { ...snapshotInput, ...patch };
+    const result = await readOwnMonthlyRewardSnapshot(preparedClient({ policy: v1, ...options }), request);
+    assert.deepEqual(result, { state, reasonCode, effectiveMonth: request.effectiveMonth });
+  }
+  assert.deepEqual(await readOwnMonthlyRewardSnapshot(preparedClient({ policy: v1 }), snapshotInput), {
+    state: 'shadow', reasonCode: 'source_month_assessed', effectiveMonth: '2027-01', sourceMonth: '2026-12',
+    snapshotId: subjectId, revision: 1, sourceRevision: 1, sourceScore: 0, level: 1, policyVersion: v1,
+  });
+});
+
+test('history reason probes isolate both policies and retain the unassessed default response', async () => {
+  for (const [policy, context, other] of [[v1, undefined, v2], [v2, disposable, v1]]) {
+    for (const historyPolicies of [[], [other]]) {
+      const result = await readOwnMonthlyRewardSnapshot(preparedClient({ policy, snapshotPresent: false, historyPolicies }), snapshotInput, context);
+      assert.deepEqual(result, { state: 'pending', reasonCode: 'no_previous_assessment', effectiveMonth: '2027-01',
+        level: 1, levelKind: 'unassessed_default', sourceScore: null, sourceMonth: null, snapshotId: null,
+        revision: 0, policyVersion: policy, ...(context ? snapshotMetadata : {}) });
+    }
+    const result = await readOwnMonthlyRewardSnapshot(preparedClient({ policy, snapshotPresent: false, historyPolicies: [other, policy] }), snapshotInput, context);
+    assert.deepEqual(result, { state: 'pending', reasonCode: 'settlement_pending', effectiveMonth: '2027-01', ...(context ? snapshotMetadata : {}) });
+  }
+});
+
+test('nullable suggestion validity is unavailable evidence even when qualified, never an inferred quarter date', async () => {
+  const report = await readOwnMonthlyReputationReport(preparedClient(), input, disposable);
+  assert.equal(report.report.quarterlySuggestion.qualifies, true); assert.equal(report.report.quarterlySuggestion.points, 150);
+  assert.equal(report.report.quarterlySuggestion.validFrom, null); assert.equal(report.report.quarterlySuggestion.validUntil, null);
+  const csv = serializeMonthlyReputationReportCsv(report, { mode: 'disabled_v2_preparation' }).trimEnd().split('\r\n');
+  const header = csv[0].split(','), cells = csv.find(line => line.startsWith('"quarterly_suggestion",')).slice(1, -1).split('\",\"');
+  assert.equal(cells[header.indexOf('validFrom')], ''); assert.equal(cells[header.indexOf('validUntil')], '');
+  const partial = await readOwnMonthlyReputationReport(preparedClient({ mutate: row => {
+    row.report.quarterly.qualification.suggestion.validFrom = '2026-12-31T12:00:00.000Z';
+  } }), input, disposable);
+  assert.equal(partial.report.quarterlySuggestion.validFrom, '2026-12-31T12:00:00.000Z');
+  assert.equal(partial.report.quarterlySuggestion.validUntil, null); assert.equal(partial.report.quarterlySuggestion.points, 150);
 });

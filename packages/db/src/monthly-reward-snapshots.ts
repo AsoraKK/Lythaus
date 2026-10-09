@@ -139,7 +139,7 @@ async function insertSnapshot(client: Client, configuration: MonthlyRewardSnapsh
   return { id,revision,sourceMonth,effectiveMonth,level:source.level,sourceScore:source.source_score,mode:configuration.mode,created:true,
     ...preparationMetadata(configuration) };
 }
-function preparationMetadata(configuration: MonthlyRewardSnapshotConfiguration) {
+function preparationMetadata(configuration: Pick<MonthlyRewardSnapshotConfiguration, 'policy_version'>) {
   return configuration.policy_version === PROSPECTIVE_REPUTATION_POLICY_VERSION
     ? { preparationOnly: true as const, runtimeActivationAllowed: false as const, appliedPoints: 0 as const } : {};
 }
@@ -294,22 +294,26 @@ export async function readOwnMonthlyRewardSnapshot(client: Client, input: { subj
   requireUuid(input.subjectId);
   let month = input.effectiveMonth ?? new Date().toISOString().slice(0,7);
   requireSourceMonth(month);
-  if (!input.rulesVersion) return { state:'unavailable' as const,reasonCode:'approval_unavailable',effectiveMonth:month };
+  const metadata = context ? { ...preparationMetadata({ policy_version: PROSPECTIVE_REPUTATION_POLICY_VERSION }),
+    policyVersion: PROSPECTIVE_REPUTATION_POLICY_VERSION, dataVersion: 2 as const,
+    catalogueHash: PROSPECTIVE_REPUTATION_CATALOGUE_HASH, maximumSourceMonth: PROSPECTIVE_REPUTATION_REPORT_LIMITS.maximumSourceMonth } : {};
+  if (!input.rulesVersion) {
+    if (context) await disposablePreparationAllowed(client, context);
+    return { state:'unavailable' as const,reasonCode:'approval_unavailable',effectiveMonth:month,...metadata };
+  }
   const currentMonth = (await client.query<{ month: string }>("SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM') AS month")).rows[0].month;
   month = input.effectiveMonth ?? currentMonth;
   requireSourceMonth(month);
   const configuration = await monthlyRewardSnapshotConfiguration(client,input.rulesVersion,context);
-  if (!configuration) return { state:'unavailable' as const,reasonCode:'approval_unavailable',effectiveMonth:month };
+  if (!configuration) return { state:'unavailable' as const,reasonCode:'approval_unavailable',effectiveMonth:month,...metadata };
   if (!(await client.query<{ allowed: boolean }>('SELECT trust.lock_monthly_reward_subject($1) AS allowed',[input.subjectId])).rows[0]?.allowed)
     throw new Error('monthly_reward_subject_unavailable');
-  if (month > currentMonth) return { state:'pending' as const,reasonCode:'future_month_unconfirmed',effectiveMonth:month };
+  if (month > currentMonth) return { state:'pending' as const,reasonCode:'future_month_unconfirmed',effectiveMonth:month,...metadata };
   if (month < nextReputationMonth(configuration.first_source_month.toISOString().slice(0,7)))
-    return { state:'unavailable' as const,reasonCode:'before_policy_cutover',effectiveMonth:month };
+    return { state:'unavailable' as const,reasonCode:'before_policy_cutover',effectiveMonth:month,...metadata };
   const snapshot = await latestSnapshot(client,input.subjectId,month,configuration.mode);
-  const metadata = context ? { ...preparationMetadata(configuration), dataVersion: 2 as const,
-    catalogueHash: PROSPECTIVE_REPUTATION_CATALOGUE_HASH, maximumSourceMonth: PROSPECTIVE_REPUTATION_REPORT_LIMITS.maximumSourceMonth } : {};
   if (snapshot && (snapshot.rules_version !== configuration.version || snapshot.policy_version !== configuration.policy_version))
-    return { state:'pending' as const,reasonCode:'snapshot_policy_requires_review',effectiveMonth:month };
+    return { state:'pending' as const,reasonCode:'snapshot_policy_requires_review',effectiveMonth:month,...metadata };
   if (snapshot) {
     const sourceMonth = snapshot.source_month.toISOString().slice(0,7);
     const level = context ? prospectiveReputationLevelForScore(snapshot.source_score) : reputationLevelForMonthlyScore(snapshot.source_score);
@@ -325,8 +329,9 @@ export async function readOwnMonthlyRewardSnapshot(client: Client, input: { subj
     sourceRevision:snapshot.source_revision,sourceScore:snapshot.source_score,level:snapshot.level,
     policyVersion:configuration.policy_version,...metadata };
   }
-  const anyHistory = await client.query(`SELECT 1 FROM trust.monthly_reputation_sources WHERE subject_user_id = $1 LIMIT 1`,[input.subjectId]);
-  if (anyHistory.rowCount) return { state:'pending' as const,reasonCode:'settlement_pending',effectiveMonth:month };
+  const anyHistory = await client.query(`SELECT 1 FROM trust.monthly_reputation_sources
+    WHERE subject_user_id = $1 AND policy_version = $2 LIMIT 1`,[input.subjectId,configuration.policy_version]);
+  if (anyHistory.rowCount) return { state:'pending' as const,reasonCode:'settlement_pending',effectiveMonth:month,...metadata };
   return { state:'pending' as const,reasonCode:'no_previous_assessment',effectiveMonth:month,level:1,levelKind:'unassessed_default',sourceScore:null,
     sourceMonth:null,snapshotId:null,revision:0,policyVersion:configuration.policy_version,...metadata };
 }

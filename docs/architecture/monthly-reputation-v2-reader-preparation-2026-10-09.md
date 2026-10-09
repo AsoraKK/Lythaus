@@ -30,6 +30,21 @@ thresholds remain unchanged. Qualification projections contain safe reasons and
 validity windows, without private evidence, contribution, reviewer or event IDs.
 Source and assembly digests identify the saved evidence without exposing it.
 
+Direct prepared snapshot responses carry this same v2 identity and disabled
+metadata when pending or unavailable, including absent configuration, future
+months, cutover and policy-review branches. They do not invent score or authority
+fields. Default v1 responses retain their exact shapes. The history reason probe
+is scoped to the requested policy for both versions: another policy's sources
+alone cannot change `no_previous_assessment` into `settlement_pending`.
+
+Suggestion `validFrom` and `validUntil` are independently nullable evidence fields.
+`null` means the stored qualification projection does not supply that evidence
+date. It does not mean an inferred quarter start/end, indefinite validity or a
+date derived from the source/effective month or snapshot. JSON retains null and
+CSV leaves the corresponding cell empty. Consumers must present those dates as
+unavailable; a qualification or 150-point result can coexist with unavailable
+dates. This preparation does not alter approved qualification or fabricate dates.
+
 The existing CSV serializer requires the explicit `disabled_v2_preparation` option
 for a prepared v2 report. It adds version, component, denominator, inherited-policy
 and fixed-authority revision columns, using the existing escaping and formula
