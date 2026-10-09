@@ -1,0 +1,165 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:dio/dio.dart';
+import 'package:lythaus_api_client/lythaus_api_client.dart';
+import 'package:test/test.dart';
+
+const scope = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
+const epoch = '018f0000-0000-7000-8000-000000000001';
+const consentWire = <String, Object?>{
+  'pilotEnabled': false,
+  'granted': false,
+  'revision': 0,
+  'epoch': null,
+  'continuousSince': null,
+  'accountScope': scope,
+  'noticeVersion': 'activity-account-day-v1',
+  'notice': 'Synthetic exact notice',
+  'retentionDays': 61,
+};
+
+class ActivityAdapter implements HttpClientAdapter {
+  final requests = <RequestOptions>[];
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    requests.add(options);
+    return ResponseBody.fromString(
+      jsonEncode(
+        options.path.endsWith('/activity')
+            ? {'activeDay': '2026-10-07', 'inserted': false}
+            : consentWire,
+      ),
+      200,
+      headers: {
+        Headers.contentTypeHeader: ['application/json'],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+void main() {
+  test(
+    'consent enum and nullable unknown state survive canonical serialization',
+    () {
+      final result = standardSerializers.deserializeWith(
+        ActivityConsent.serializer,
+        consentWire,
+      )!;
+      expect(result.granted, false);
+      expect(result.epoch, isNull);
+      expect(result.retentionDays, ActivityConsentRetentionDaysEnum.number61);
+      final roundtrip =
+          standardSerializers.serializeWith(ActivityConsent.serializer, result)
+              as Map;
+      expect(roundtrip['retentionDays'], 61);
+      expect(roundtrip['noticeVersion'], 'activity-account-day-v1');
+      expect(roundtrip['revision'], 0);
+      expect(roundtrip['accountScope'], scope);
+    },
+  );
+
+  test(
+    'nested aggregate keeps measured zero and unavailable quiet distinct',
+    () {
+      final wire = <String, Object?>{
+        'state': 'available',
+        'value': 0,
+        'observedLowerBound': null,
+        'cohortSize': 2,
+        'since': '2026-10-06T00:00:00.000Z',
+        'until': '2026-10-07T00:00:00.000Z',
+        'reason': null,
+      };
+      final result = standardSerializers.deserializeWith(
+        ActivitySummaryMetrics.serializer,
+        {
+          'dau': wire,
+          'wau': wire,
+          'mau': wire,
+          'quiet': {
+            ...wire,
+            'state': 'unavailable',
+            'value': null,
+            'reason': 'incomplete_measurement_coverage',
+          },
+        },
+      )!;
+      expect(result.dau.value, 0);
+      expect(result.quiet.value, isNull);
+      expect(result.quiet.observedLowerBound, isNull);
+      final encoded =
+          standardSerializers.serializeWith(
+                ActivitySummaryMetrics.serializer,
+                result,
+              )
+              as Map;
+      expect((encoded['dau'] as Map)['value'], 0);
+      expect(
+        (encoded['quiet'] as Map)['reason'],
+        'incomplete_measurement_coverage',
+      );
+    },
+  );
+
+  test(
+    'generated Privacy operations send exact bodies, bearer security and actual routes',
+    () async {
+      final adapter = ActivityAdapter(),
+          dio = Dio(BaseOptions(baseUrl: LythausApiClient.basePath));
+      dio.httpClientAdapter = adapter;
+      final client = LythausApiClient(dio: dio);
+      client.setBearerAuth('bearerAuth', 'synthetic-jwt');
+      final api = client.getPrivacyApi();
+      expect((await api.getActivityMeasurementConsent()).data!.granted, false);
+      final input = standardSerializers
+          .deserializeWith(ActivityConsentInput.serializer, {
+            'enabled': false,
+            'expectedRevision': 0,
+            'expectedEpoch': null,
+            'accountScope': scope,
+            'noticeVersion': 'activity-account-day-v1',
+          })!;
+      await api.setActivityMeasurementConsent(activityConsentInput: input);
+      final render = standardSerializers
+          .deserializeWith(ActivityRenderInput.serializer, {
+            'signal': 'foreground_app_render',
+            'consentRevision': 1,
+            'consentEpoch': epoch,
+            'accountScope': scope,
+            'noticeVersion': 'activity-account-day-v1',
+          })!;
+      expect(
+        (await api.recordForegroundActivityDay(
+          activityRenderInput: render,
+        )).data!.inserted,
+        false,
+      );
+      expect(adapter.requests.map((request) => request.method), [
+        'GET',
+        'PUT',
+        'POST',
+      ]);
+      expect(adapter.requests.map((request) => request.path), [
+        '/analytics/activity-consent',
+        '/analytics/activity-consent',
+        '/analytics/activity',
+      ]);
+      for (final request in adapter.requests)
+        expect(request.headers['Authorization'], 'Bearer synthetic-jwt');
+      final body = adapter.requests[1].data as Map;
+      expect(body['enabled'], false);
+      expect(body['expectedRevision'], 0);
+      expect(body['expectedEpoch'], isNull);
+      expect(body.containsKey('expectedEpoch'), isTrue);
+      expect(body['accountScope'], scope);
+    },
+  );
+}

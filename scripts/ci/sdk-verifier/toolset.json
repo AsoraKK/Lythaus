@@ -1,0 +1,23 @@
+{
+  "nodeVersion": "22.23.3",
+  "dartVersion": "3.11.0",
+  "flutter": {
+    "version": "3.41.1",
+    "url": "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.41.1-stable.tar.xz",
+    "sha256": "68f51b1bb3728d3be5a756f23a38af1f776e05c0729dd3a91d3dcf2c20d78138",
+    "maximumBytes": 2000000000
+  },
+  "java": {
+    "version": "17.0.20.1+1",
+    "url": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.20.1%2B1/OpenJDK17U-jdk_x64_linux_hotspot_17.0.20.1_1.tar.gz",
+    "sha256": "3808d1d15e3ec6bd5b84057fb5d84c33d8a1536a258146bcea2e603fc726e08e",
+    "maximumBytes": 250000000
+  },
+  "generator": {
+    "version": "7.7.0",
+    "url": "https://repo.maven.apache.org/maven2/org/openapitools/openapi-generator-cli/7.7.0/openapi-generator-cli-7.7.0.jar",
+    "sha256": "3a757276c31d249a4f06a14651b1ff1f1a5cf46e110a70adcc4a6a2834f85561",
+    "maximumBytes": 50000000
+  },
+  "isolationImage": "postgres@sha256:d74eeac9a635390a49bc21bd49fccd973de707e2a53a76ac49b552b8712ec46f"
+}
