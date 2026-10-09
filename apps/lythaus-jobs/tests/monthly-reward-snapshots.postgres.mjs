@@ -18,6 +18,10 @@ import { PROSPECTIVE_REPUTATION_CONFIGURATION, PROSPECTIVE_REPUTATION_POLICY_VER
 import { QUARTERLY_CALENDAR_AMENDMENT_VERSION } from '../../../packages/contracts/src/monthly-quarterly-policy.ts';
 import { recordMonthlyEmailControl } from '../../../packages/db/src/monthly-maintenance.ts';
 import { readOwnMonthlyReputationReport } from '../../../packages/db/src/monthly-reputation-report.ts';
+import Ajv from 'ajv';
+import addFormats from 'ajv-formats';
+import { readOwnMonthlyReputationReportResponsePreparation, readOwnMonthlyRewardsResponsePreparation } from '../../../packages/db/src/monthly-rewards-response-preparation.ts';
+import { MONTHLY_REWARDS_RESPONSE_PREPARATION_SCHEMA } from '../../../packages/contracts/src/monthly-rewards-response-preparation-schema.ts';
 import { serializeMonthlyReputationReportCsv } from '../../lythaus-public-api/src/monthly-reputation-report-export.ts';
 import { monthlyRewardSnapshotConfiguration,publishMonthlyRewardSnapshot,approveMonthlyRewardSnapshotCorrection,
   applyMonthlyRewardSnapshotCorrection,readOwnMonthlyRewardSnapshot,MONTHLY_REWARD_SNAPSHOT_FLAG as flag,
@@ -569,6 +573,8 @@ test('V2/I08/I12: ordinary publisher, reader and Jobs cannot enter disposable v2
   assert.equal(await publish(item.eventId,preparedRules),null);
   assert.equal(await apply(item.eventId,preparedRules),null);
   assert.equal((await read(author,preparedRules,'2026-11')).state,'unavailable');
+  await assert.rejects(tx(client=>readOwnMonthlyRewardsResponsePreparation(client,
+    {subjectId:author,effectiveMonth:'2026-11',snapshotRulesVersion:preparedRules})),/requires_disposable_context/);
   assert.deepEqual(await reconcileMonthlyRewardSnapshots({...env,MONTHLY_REPUTATION_SNAPSHOT_RULES:preparedRules}),{processed:0});
   await assert.rejects(tx(client=>publishMonthlyRewardSnapshot({...client,connectionParameters:{...client.connectionParameters,host:'database.example.invalid'}},
     {eventId:item.eventId,rulesVersion:preparedRules},disposable)),/disposable_local_target/);
@@ -595,6 +601,9 @@ preparedPositiveTest('V2/I04/I05 POSITIVE: actual settlement clock admits one co
   const readPrepared=()=>tx(client=>readOwnMonthlyRewardSnapshot(client,{subjectId:author,rulesVersion:preparedRules,effectiveMonth:'2026-11'},disposable),'lythaus_runtime');
   const reportPrepared=()=>tx(client=>readOwnMonthlyReputationReport(client,{subjectId:author,sourceMonth:'2026-10',snapshotRulesVersion:preparedRules},disposable),'lythaus_runtime');
   const entitlement=await readPrepared(),report=await reportPrepared();
+  const dto=await preparedResponse(author,'2026-10','2026-11');
+  assert.equal(dto.report.snapshotProjection.sourceScore,1150);assert.equal(dto.rewards.snapshotProjection.sourceScore,1150);
+  assert.equal(dto.report.levelAuthority.level,null);assert.equal(dto.rewards.currentLevel,null);
   assert.equal(entitlement.sourceScore,1150);assert.equal(entitlement.policyVersion,policyV2);
   assert.equal(entitlement.maximumSourceMonth,13650);assert.equal(entitlement.dataVersion,2);
   assert.equal(report.effectiveMonth,'2026-11');assert.equal(report.levelAuthority.sourceScore,1150);
@@ -617,9 +626,13 @@ preparedPositiveTest('V2/I04/I05 POSITIVE: actual settlement clock admits one co
   assert.deepEqual((await sql('SELECT * FROM trust.monthly_reward_snapshots WHERE id=$1',[initial.id])).rows[0],before);
   assert.deepEqual(await preparePublish(item.eventId),replay);
   assert.deepEqual(await readPrepared(),entitlement);assert.deepEqual(await reportPrepared(),report);
+  assert.deepEqual(await preparedResponse(author,'2026-10','2026-11'),dto);
   const futureReport=await tx(client=>readOwnMonthlyReputationReport(client,{subjectId:author,sourceMonth:'2027-01',snapshotRulesVersion:preparedRules},disposable),'lythaus_runtime');
   assert.equal(futureReport.effectiveMonth,'2027-02');assert.equal(futureReport.levelAuthority.reasonCode,'future_month_unconfirmed');
   assert.equal(futureReport.levelAuthority.sourceScore,null);assert.equal(futureReport.report.quarterlyTotal.points,0);
+  const futureDto=await preparedResponse(author,'2027-01','2027-02');
+  assert.equal(futureDto.report.report.quarterlyTotal.points,0);assert.equal(futureDto.report.levelAuthority.level,null);
+  assert.equal(futureDto.rewards.snapshotProjection.reasonCode,'future_month_unconfirmed');
   assert.equal((await sql('SELECT 1 FROM trust.reputation_profiles WHERE user_id=$1',[author])).rowCount,0);
   assert.equal((await read(author,preparedRules,'2026-11')).state,'unavailable');
 });
@@ -642,6 +655,9 @@ preparedPositiveTest('V2/I03/I07 POSITIVE: same-period policy collision requires
   const mixed=await tx(client=>readOwnMonthlyReputationReport(client,{subjectId:author,sourceMonth:'2026-10',snapshotRulesVersion:preparedRules},disposable),'lythaus_runtime');
   assert.equal(mixed.levelAuthority.reasonCode,'snapshot_policy_requires_review');assert.equal(mixed.levelAuthority.sourceScore,null);
   assert.deepEqual(mixed.corrections.effectiveSnapshots,[]);assert.equal(mixed.report.total.policyVersion,policyV2);
+  const mixedDto=await preparedResponse(author,'2026-10','2026-11');
+  assert.equal(mixedDto.rewards.snapshotProjection.reasonCode,'snapshot_policy_requires_review');
+  assert.equal(mixedDto.rewards.snapshotProjection.sourceScore,null);assert.equal(mixedDto.report.levelAuthority.level,null);
   const legacyOnly=await person();await assessment(legacyOnly,'2026-10','2027-06-01T00:00:00.000Z');
   const preparedDefault=await tx(client=>readOwnMonthlyRewardSnapshot(client,{subjectId:legacyOnly,rulesVersion:preparedRules,effectiveMonth:'2026-11'},disposable),'lythaus_runtime');
   assert.deepEqual(preparedDefault,{state:'pending',reasonCode:'no_previous_assessment',effectiveMonth:'2026-11',level:1,
@@ -664,6 +680,9 @@ preparedPositiveTest('V2/I04/I07 POSITIVE: concurrent corrections and approval/a
     mode:'shadow',created:false,...disabledPreparation});
   const reportPrepared=()=>tx(client=>readOwnMonthlyReputationReport(client,{subjectId:author,sourceMonth:'2026-10',snapshotRulesVersion:preparedRules},disposable),'lythaus_runtime');
   const pending=await reportPrepared();assert.equal(pending.levelAuthority.sourceScore,0);assert.equal(pending.report.total.sourceScore,150);
+  const pendingDto=await preparedResponse(author,'2026-10','2026-11');
+  assert.equal(pendingDto.report.report.total.sourceScore,150);assert.equal(pendingDto.rewards.snapshotProjection.sourceScore,0);
+  assert.equal(pendingDto.report.snapshotProjection.sourceRevision,1);assert.equal(pendingDto.report.report.sourceRevision,2);
   assert.equal(pending.levelAuthority.sourceRevision,1);assert.equal(pending.report.sourceRevision,2);
   const request={subjectId:author,snapshotId:snapshot.id,assessmentId:corrected.assessmentId,idempotencyKey:uuidv7()};
   const approvals=await Promise.all([prepareApprove(request),prepareApprove(request)]);assert.equal(approvals.filter(result=>result.created).length,1);
@@ -690,6 +709,9 @@ preparedPositiveTest('V2/I04/I07 POSITIVE: concurrent corrections and approval/a
   assert.equal(completed.corrections.effectiveSnapshots.length,1);
   assert.ok(completed.corrections.sourceRevisions.every(row=>row.policyVersion===policyV2&&row.dataVersion===2));
   assert.ok(completed.corrections.effectiveSnapshots.every(row=>row.policyVersion===policyV2&&row.dataVersion===2));
+  const correctedDto=await preparedResponse(author,'2026-10','2026-11');
+  assert.equal(correctedDto.rewards.snapshotProjection.sourceScore,150);assert.equal(correctedDto.rewards.snapshotProjection.snapshotRevision,2);
+  assert.equal(correctedDto.report.corrections.effectiveSnapshots.length,1);assert.equal(correctedDto.rewards.currentLevel,null);
   await assert.rejects(prepareApprove({...request,idempotencyKey:uuidv7()}),/snapshot_revision_conflict/);
   await assert.rejects(directPreparedSnapshot(corrected,{previous:snapshot.id,revision:2,correction:approvals[0].id,event:approvals[0].sourceEventId}),/revision_conflict/);
 });
@@ -776,6 +798,9 @@ test('V2/I05: future source stays unsettled in opposite timezones despite future
     assert.equal(report.levelAuthority.sourceScore,null);
     const direct=await tx(client=>readOwnMonthlyRewardSnapshot(client,{subjectId:author,rulesVersion:preparedRules,effectiveMonth:item.calculation.effectiveMonth},disposable),'lythaus_runtime',timeZone);
     assert.deepEqual(direct,{state:'pending',reasonCode:'future_month_unconfirmed',effectiveMonth:item.calculation.effectiveMonth,...preparedReadMetadata});
+    const dto=await preparedResponse(author,month,item.calculation.effectiveMonth,timeZone);
+    assert.equal(dto.report.snapshotProjection.sourceScore,null);assert.equal(dto.rewards.currentLevel,null);
+    assert.equal(dto.rewards.snapshotProjection.reasonCode,'future_month_unconfirmed');
   }
   assert.deepEqual(await reconcileMonthlyRewardSnapshots({...env,MONTHLY_REPUTATION_SNAPSHOT_RULES:preparedRules}),{processed:0});
   assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshot_receipts WHERE event_id=$1',[item.eventId])).rowCount,0);
@@ -795,4 +820,20 @@ test('V2/I11: deletion between source read and authorization refuses capture and
   assert.equal((await sql('SELECT 1 FROM trust.monthly_reward_snapshots WHERE subject_user_id=$1',[author])).rowCount,0);
   assert.equal((await sql('SELECT 1 FROM trust.monthly_reputation_assemblies WHERE subject_user_id=$1',[author])).rowCount,0);
   await assert.rejects(tx(client=>readOwnMonthlyReputationReport(client,{subjectId:author,sourceMonth:'2026-10',snapshotRulesVersion:preparedRules},disposable),'lythaus_runtime'),/subject_unavailable/);
+  await assert.rejects(preparedResponse(author,'2026-10','2026-11'),/subject_unavailable/);
 });
+
+const responseAjv=new Ajv({strict:true,allErrors:true});addFormats(responseAjv);
+const validatesPreparedResponse=responseAjv.compile(MONTHLY_REWARDS_RESPONSE_PREPARATION_SCHEMA);
+async function preparedResponse(subjectId,sourceMonth,effectiveMonth,timeZone='UTC'){
+  const responses=await tx(async client=>({
+    report:await readOwnMonthlyReputationReportResponsePreparation(client,{subjectId,sourceMonth,snapshotRulesVersion:preparedRules},disposable),
+    rewards:await readOwnMonthlyRewardsResponsePreparation(client,{subjectId,effectiveMonth,snapshotRulesVersion:preparedRules},disposable),
+  }),'lythaus_runtime',timeZone);
+  for(const dto of Object.values(responses)){
+    assert.equal(validatesPreparedResponse(dto),true,JSON.stringify(validatesPreparedResponse.errors));
+    assert.equal(dto.dataVersion,2);assert.equal(dto.runtimeActivationAllowed,false);assert.equal(dto.appliedPoints,0);
+    assert.ok(!JSON.stringify(dto).includes(subjectId));
+  }
+  return responses;
+}

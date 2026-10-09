@@ -42,6 +42,10 @@ on:
       - 'packages/db/src/monthly-reputation.ts'
       - 'packages/db/src/monthly-reputation-report.ts'
       - 'packages/db/tests/monthly-reputation-report-config.test.mjs'
+      - 'packages/db/src/monthly-rewards-response-preparation.ts'
+      - 'packages/db/tests/monthly-rewards-response-preparation.test.mjs'
+      - 'packages/contracts/tests/monthly-rewards-response-preparation.test.mjs'
+      - 'packages/contracts/fixtures/monthly-rewards-response-preparation.mjs'
       - 'packages/db/src/monthly-earning.ts'
       - 'packages/db/src/monthly-context*.ts'
       - 'packages/db/src/monthly-publication.ts'
@@ -103,6 +107,14 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
         run: npm run validate:planetscale-postgres17
+      - name: Validate disabled monthly rewards response contracts and adapters
+        run: >-
+          node --experimental-strip-types --experimental-test-coverage
+          '--test-coverage-include=packages/contracts/src/monthly-rewards-response-preparation*.ts'
+          '--test-coverage-include=packages/db/src/monthly-rewards-response-preparation.ts'
+          --test-coverage-lines=80 --test-coverage-branches=80 --test
+          packages/contracts/tests/monthly-rewards-response-preparation.test.mjs
+          packages/db/tests/monthly-rewards-response-preparation.test.mjs
       - name: Prove first-admin bootstrap rollback, concurrency and closure
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
