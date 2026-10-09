@@ -142,7 +142,7 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
         await exportCsv();
         await cancelCsv('document-disposal', async () => {
           await open(`/user/${publicId}`);
-          await page.getByText('Public Monthly Member', { exact: true }).waitFor();
+          await page.getByLabel('Public Monthly Member', { exact: true }).waitFor();
           assert.doesNotMatch(await text(), /Monthly reputation|Cap group:/);
         });
         await open('/rewards');
@@ -200,7 +200,7 @@ test(`rendered private monthly rewards (${engineName})`, { timeout: 600000 }, as
       await (await locate(page.getByRole('button', { name: 'Refresh status', exact: true }))).focus();
       assert.match(await text(), /Level 3 confirmed/); await capture('owner-tracker');
       await open(`/user/${publicId}`);
-      await page.getByText('Public Monthly Member', { exact: true }).waitFor({ timeout: 90000 });
+      await page.getByLabel('Public Monthly Member', { exact: true }).waitFor({ timeout: 90000 });
       assert.doesNotMatch(await text(), /Monthly reputation|Level 3 confirmed|Cap group:|Current progress/);
       await capture('public-private-evidence-absent');
       await open('/settings');
