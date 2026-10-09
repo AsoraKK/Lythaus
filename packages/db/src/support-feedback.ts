@@ -79,16 +79,26 @@ export function createSupportService(dependencies: { authentication: SupportAuth
   function projection(row: Row, actor: string, channel: 'member'|'owner') {
     if (row.policy_version !== p.version) throw new Error('support_policy_version_mismatch');
     const input = { ...row.submission, id: row.id, submitterId: row.submitter_id, revision: row.revision, state: row.state,
-      createdAt: row.createdAt, updatedAt: row.updatedAt, memberMessage: row.member_message };
+      createdAt: row.createdAt, updatedAt: row.updatedAt, memberMessage: row.member_message, closed: Boolean(row.closed_at) };
     return channel === 'member' ? projectMemberSupportRequest(input, actor, p.contract) : projectOwnerSupportRequest(input, p.contract);
   }
-  async function rate(client: DatabaseClient, actor: string, channel: 'member'|'owner') {
+  async function rateWindow(client: DatabaseClient, actor: string, scope: string, seconds: number, maximum: number) {
     const result = await client.query(`INSERT INTO system.rate_limit_windows(scope,subject_hash,window_started_at,request_count,expires_at)
       VALUES($1,$2,to_timestamp(floor(extract(epoch FROM clock_timestamp())/$3)*$3),1,clock_timestamp()+$3*interval '1 second')
       ON CONFLICT(scope,subject_hash,window_started_at) DO UPDATE SET request_count=system.rate_limit_windows.request_count+1
       WHERE system.rate_limit_windows.request_count < $4 RETURNING request_count`,
-    [`support:${channel}`,await digest(actor),p.limits.rateWindowSeconds,channel === 'member' ? p.limits.memberMutations : p.limits.ownerMutations]);
+    [scope,await digest(actor),seconds,maximum]);
     if (result.rowCount !== 1) throw new Error('support_rate_limited');
+  }
+  async function rate(client: DatabaseClient, actor: string, channel: 'member'|'owner', operation: string) {
+    if (channel === 'member' && p.limits.submissionsPerHour !== undefined) {
+      if (operation === 'submit') {
+        await rateWindow(client, actor, 'support:member:submit:hour', 3600, p.limits.submissionsPerHour);
+        await rateWindow(client, actor, 'support:member:submit:day', 86400, p.limits.submissionsPerDay!);
+      } else await rateWindow(client, actor, 'support:member:reply', p.limits.rateWindowSeconds, p.limits.memberMutations);
+      return;
+    }
+    await rateWindow(client, actor, `support:${channel}`, p.limits.rateWindowSeconds, channel === 'member' ? p.limits.memberMutations : p.limits.ownerMutations);
   }
   async function mutate(request: Request, channel: 'member'|'owner', requestKind: unknown, requestId: unknown, operation: string, parse: () => Row,
     work: (client: DatabaseClient, actor: string, input: Row, row: Row | null) => Promise<{ row: Row; recordId?: string }>) {
@@ -112,7 +122,8 @@ export function createSupportService(dependencies: { authentication: SupportAuth
       }
       const row = requestKey ? await load(client,actor,channel,k,requestKey,true) : null;
       if (row && integer(input.expectedRevision) !== row.revision) throw new Error('support_revision_conflict');
-      await rate(client,actor,channel);
+      if (row && operation === 'reply' && row.closed_at) throw new Error('support_closed');
+      await rate(client,actor,channel,operation);
       const changed = await work(client,actor,input,row);
       const outboxId=['note','evidence'].includes(operation)?null:uuidv7();
       await audit(client,actor,operation,changed.row,channel,{}, {outboxId,scope,key});
@@ -134,10 +145,9 @@ export function createSupportService(dependencies: { authentication: SupportAuth
   }
   async function reply(request: Request, channel: 'member'|'owner', k: unknown, requestId: unknown, body: unknown) {
     return mutate(request,channel,k,requestId,'reply',() => {
-      const b=supportObject(body,['expectedRevision','message']); return { expectedRevision:integer(b.expectedRevision),message:supportText(b.message,p.limits.messageBytes) };
+      const b=supportObject(body,['expectedRevision','message']); return { expectedRevision:integer(b.expectedRevision),message:supportText(b.message,p.limits.messageBytes,p.contract.limits.memberMessageCharacters) };
     },async (client,actor,input,row) => {
-      if (row!.closed_at) throw new Error('support_closed');
-      const changed=await update(client,row!,row!.state,channel === 'owner' ? supportText(input.message,p.contract.limits.memberMessageBytes) : row!.member_message);
+      const changed=await update(client,row!,row!.state,channel === 'owner' ? supportText(input.message,p.contract.limits.memberMessageBytes,p.contract.limits.memberMessageCharacters) : row!.member_message);
       const recordId=uuidv7();
       await client.query(`INSERT INTO support.messages(id,request_id,author_id,author_role,body,revision) VALUES($1,$2,$3,$4,$5,$6)`,[recordId,changed.id,actor,channel,input.message,changed.revision]);
       return {row:changed,recordId};
@@ -210,7 +220,7 @@ export function createSupportService(dependencies: { authentication: SupportAuth
     memberReply:(request:Request,k:unknown,requestId:unknown,body:unknown)=>reply(request,'member',k,requestId,body),
     ownerReply:(request:Request,k:unknown,requestId:unknown,body:unknown)=>reply(request,'owner',k,requestId,body),
     ownerNote(request:Request,k:unknown,requestId:unknown,body:unknown) {
-      return mutate(request,'owner',k,requestId,'note',()=>{const b=supportObject(body,['expectedRevision','text']);return {expectedRevision:integer(b.expectedRevision),text:supportText(b.text,p.limits.noteBytes)};},async(client,actor,input,row)=>{
+      return mutate(request,'owner',k,requestId,'note',()=>{const b=supportObject(body,['expectedRevision','text']);return {expectedRevision:integer(b.expectedRevision),text:supportText(b.text,p.limits.noteBytes,p.contract.limits.detailCharacters)};},async(client,actor,input,row)=>{
         const changed=await update(client,row!,row!.state,row!.member_message,Boolean(row!.closed_at),false),recordId=uuidv7();
         await client.query('INSERT INTO support.notes(id,request_id,author_id,body,revision) VALUES($1,$2,$3,$4,$5)',[recordId,changed.id,actor,input.text,changed.revision]);return {row:changed,recordId};
       });
@@ -218,19 +228,26 @@ export function createSupportService(dependencies: { authentication: SupportAuth
     ownerEvidence(request:Request,k:unknown,requestId:unknown,body:unknown) {
       return mutate(request,'owner',k,requestId,'evidence',()=>{const b=supportObject(body,['expectedRevision','type','description','reference']);
         if(typeof b.type!=='string'||!p.evidenceTypes.includes(b.type))throw new Error('support_input_invalid');
-        return {expectedRevision:integer(b.expectedRevision),type:b.type,description:supportText(b.description,p.limits.evidenceBytes),reference:b.reference===undefined?null:supportText(b.reference,p.limits.referenceBytes)};
+        return {expectedRevision:integer(b.expectedRevision),type:b.type,description:supportText(b.description,p.limits.evidenceBytes,p.contract.limits.detailCharacters),
+          reference:b.type==='duplicate_reference'?id(b.reference):b.reference===undefined?null:supportText(b.reference,p.limits.referenceBytes)};
       },async(client,actor,input,row)=>{const changed=await update(client,row!,row!.state,row!.member_message,Boolean(row!.closed_at),false),recordId=uuidv7();
         await client.query('INSERT INTO support.evidence(id,request_id,author_id,evidence_type,description,reference,revision) VALUES($1,$2,$3,$4,$5,$6,$7)',[recordId,changed.id,actor,input.type,input.description,input.reference,changed.revision]);return {row:changed,recordId};});
     },
     ownerDecision(request:Request,k:unknown,requestId:unknown,body:unknown) {
       return mutate(request,'owner',k,requestId,'decision',()=>{const b=supportObject(body,['expectedRevision','state','reason','memberMessage','evidenceIds']);
         const evidenceIds=supportArray(b.evidenceIds,p.limits.privateItems).map(id).sort();if(new Set(evidenceIds).size!==evidenceIds.length)throw new Error('support_input_invalid');
-        return {expectedRevision:integer(b.expectedRevision),state:code(b.state),reason:code(b.reason),memberMessage:supportText(b.memberMessage,p.contract.limits.memberMessageBytes),evidenceIds};
+        return {expectedRevision:integer(b.expectedRevision),state:code(b.state),reason:code(b.reason),memberMessage:supportText(b.memberMessage,p.contract.limits.memberMessageBytes,p.contract.limits.memberMessageCharacters),evidenceIds};
       },async(client,actor,input,row)=>{
         const transition=p.transitions.find(t=>t.kind===row!.kind&&t.from===row!.state&&t.to===input.state&&t.reasons.includes(input.reason));
         if(!transition)throw new Error('support_transition_invalid');
-        const evidence=await client.query('SELECT evidence_type FROM support.evidence WHERE request_id=$1 AND id=ANY($2::uuid[])',[row!.id,input.evidenceIds]);
+        const evidence=await client.query('SELECT evidence_type,reference FROM support.evidence WHERE request_id=$1 AND id=ANY($2::uuid[])',[row!.id,input.evidenceIds]);
         if(evidence.rowCount!==input.evidenceIds.length||transition.evidenceTypes.some(t=>!evidence.rows.some(e=>e.evidence_type===t)))throw new Error('support_evidence_required');
+        if (transition.to === 'duplicate') {
+          const references = evidence.rows.filter(e => e.evidence_type === 'duplicate_reference');
+          if (references.length !== 1 || references[0].reference === row!.id) throw new Error('support_transition_invalid');
+          const target = await load(client, actor, 'owner', row!.kind, references[0].reference, true);
+          if (target.state === 'duplicate') throw new Error('support_transition_invalid');
+        }
         const changed=await update(client,row!,transition.to,input.memberMessage,transition.terminal),recordId=uuidv7();
         await client.query(`INSERT INTO support.decisions(id,request_id,actor_id,from_state,to_state,reason_code,evidence_ids,policy_version,revision)
           VALUES($1,$2,$3,$4,$5,$6,$7::uuid[],$8,$9)`,[recordId,changed.id,actor,row!.state,transition.to,input.reason,input.evidenceIds,p.version,changed.revision]);

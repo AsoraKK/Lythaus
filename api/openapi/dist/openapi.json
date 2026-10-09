@@ -9246,6 +9246,216 @@
         }
       }
     },
+    "/analytics/activity-consent": {
+      "get": {
+        "operationId": "getActivityMeasurementConsent",
+        "tags": [
+          "Privacy"
+        ],
+        "summary": "Read own account-linked activity consent",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Own consent and exact notice; private no-store. Unknown schema is unavailable, never inferred as refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityConsent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Current authenticated account required."
+          },
+          "429": {
+            "description": "Existing authenticated rate limit exceeded."
+          },
+          "503": {
+            "description": "Source unavailable."
+          }
+        }
+      },
+      "put": {
+        "operationId": "setActivityMeasurementConsent",
+        "tags": [
+          "Privacy"
+        ],
+        "summary": "Explicitly grant or withdraw this account-linked purpose",
+        "description": "Existing anonymous consent does not authorize this purpose. Withdrawal remains possible while collection is disabled; dates are removed transactionally unless an existing legal hold requires preservation. Held dates are excluded from metrics and collection. Activation also requires approved retention terms. Existing account consent decisions remain exportable. Existing authenticated origin/CSRF and rate limits are mandatory dispatcher prerequisites.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivityConsentInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Committed own consent; private no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityConsent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid exact body or notice version."
+          },
+          "401": {
+            "description": "Current authenticated account required."
+          },
+          "409": {
+            "description": "Account scope or consent episode changed, or opt-in disabled. Refresh own consent."
+          },
+          "413": {
+            "description": "Body exceeds 1024 bytes."
+          },
+          "415": {
+            "description": "JSON content type required."
+          },
+          "429": {
+            "description": "Existing authenticated rate limit exceeded."
+          },
+          "503": {
+            "description": "Source unavailable; consent change unconfirmed."
+          }
+        }
+      }
+    },
+    "/analytics/activity": {
+      "post": {
+        "operationId": "recordForegroundActivityDay",
+        "tags": [
+          "Privacy"
+        ],
+        "summary": "Record one canonical account and UTC active day",
+        "description": "Authenticated visible foreground render only, including an empty feed. No background heartbeat, browsing URL, content, identity or client timestamp is accepted. Server deduplication and current consent episode checks are transactional. Signal is client-asserted visibility, not human-attention attestation. Existing authenticated origin/CSRF and rate limits are dispatcher prerequisites.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivityRenderInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Server UTC date; replay returns inserted false without per-render timestamps. Private no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "activeDay",
+                    "inserted"
+                  ],
+                  "properties": {
+                    "activeDay": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "inserted": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid exact body."
+          },
+          "401": {
+            "description": "Current authenticated account required."
+          },
+          "409": {
+            "description": "Pilot disabled, consent absent or stale account/consent episode."
+          },
+          "413": {
+            "description": "Body exceeds 1024 bytes."
+          },
+          "415": {
+            "description": "JSON content type required."
+          },
+          "429": {
+            "description": "Existing authenticated rate limit exceeded."
+          },
+          "503": {
+            "description": "Source unavailable."
+          }
+        }
+      }
+    },
+    "/admin/activity-measurement": {
+      "servers": [
+        {
+          "url": "https://admin-api.lythaus.co/api"
+        }
+      ],
+      "get": {
+        "operationId": "adminActivityMeasurement",
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Read bounded owner-only consenting-cohort activity metrics",
+        "description": "Verified Access, current active owner membership, existing rate limit and committed audit are mandatory. Completed UTC days only; cohorts must have continuous consent throughout each window. Nonconsenting and pre-cutover populations are not reconstructed. Quiet requires observed prior-30-day activity and no recent-30-day activity with complete 60-day coverage. No raw dates or identities; no unmatched contributor ratios. Disabled, zero-cohort, stale, capped and missing coverage states do not become measured zero.",
+        "security": [
+          {
+            "cloudflareAccess": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Source-backed snapshot, private no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivitySummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No query parameters are supported."
+          },
+          "401": {
+            "description": "Valid Cloudflare Access assertion required."
+          },
+          "403": {
+            "description": "Current active owner required."
+          },
+          "429": {
+            "description": "Existing administrator rate limit exceeded."
+          },
+          "503": {
+            "description": "Query, schema, permissions or audit unavailable."
+          }
+        }
+      }
+    },
     "/support/options": {
       "servers": [
         {
@@ -12501,6 +12711,283 @@
       }
     },
     "schemas": {
+      "ActivityConsentInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "enabled",
+          "expectedRevision",
+          "expectedEpoch",
+          "accountScope",
+          "noticeVersion"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "expectedEpoch": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Null only at revision zero."
+          },
+          "accountScope": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9+/]{43}=$",
+            "description": "Server-issued purpose-specific account scope; never raw account identity."
+          },
+          "noticeVersion": {
+            "type": "string",
+            "enum": [
+              "activity-account-day-v1"
+            ]
+          }
+        }
+      },
+      "ActivityRenderInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "signal",
+          "consentRevision",
+          "consentEpoch",
+          "accountScope",
+          "noticeVersion"
+        ],
+        "properties": {
+          "signal": {
+            "type": "string",
+            "enum": [
+              "foreground_app_render"
+            ]
+          },
+          "consentRevision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "consentEpoch": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accountScope": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9+/]{43}=$"
+          },
+          "noticeVersion": {
+            "type": "string",
+            "enum": [
+              "activity-account-day-v1"
+            ]
+          }
+        }
+      },
+      "ActivityConsent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "pilotEnabled",
+          "granted",
+          "revision",
+          "epoch",
+          "continuousSince",
+          "accountScope",
+          "noticeVersion",
+          "notice",
+          "retentionDays"
+        ],
+        "properties": {
+          "pilotEnabled": {
+            "type": "boolean"
+          },
+          "granted": {
+            "type": "boolean"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "epoch": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "continuousSince": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "accountScope": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9+/]{43}=$"
+          },
+          "noticeVersion": {
+            "type": "string",
+            "enum": [
+              "activity-account-day-v1"
+            ]
+          },
+          "notice": {
+            "type": "string",
+            "description": "Exact versioned account-linked purpose and retention notice from the shared contract; clients reject notice drift."
+          },
+          "retentionDays": {
+            "type": "integer",
+            "enum": [
+              61
+            ]
+          }
+        }
+      },
+      "ActivityMetric": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "value",
+          "observedLowerBound",
+          "cohortSize",
+          "since",
+          "until",
+          "reason"
+        ],
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "available",
+              "partial",
+              "unavailable"
+            ]
+          },
+          "value": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5000,
+            "nullable": true
+          },
+          "observedLowerBound": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000,
+            "nullable": true,
+            "description": "Positive observed active count only when coverage is incomplete. Never valid for quiet."
+          },
+          "cohortSize": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5000,
+            "nullable": true
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "until": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Exclusive completed UTC-day boundary."
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ActivitySummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contractVersion",
+          "enabled",
+          "sampledAt",
+          "timezone",
+          "source",
+          "population",
+          "windowBasis",
+          "retentionDays",
+          "accountLimit",
+          "metrics"
+        ],
+        "properties": {
+          "contractVersion": {
+            "type": "string",
+            "enum": [
+              "activity-pilot-v1"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "sampledAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timezone": {
+            "type": "string",
+            "enum": [
+              "UTC"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "privacy.account_active_days"
+            ]
+          },
+          "population": {
+            "type": "string"
+          },
+          "windowBasis": {
+            "type": "string",
+            "enum": [
+              "completed_utc_days"
+            ]
+          },
+          "retentionDays": {
+            "type": "integer",
+            "enum": [
+              61
+            ]
+          },
+          "accountLimit": {
+            "type": "integer",
+            "enum": [
+              5000
+            ]
+          },
+          "metrics": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "dau",
+              "wau",
+              "mau",
+              "quiet"
+            ],
+            "properties": {
+              "dau": {
+                "$ref": "#/components/schemas/ActivityMetric"
+              },
+              "wau": {
+                "$ref": "#/components/schemas/ActivityMetric"
+              },
+              "mau": {
+                "$ref": "#/components/schemas/ActivityMetric"
+              },
+              "quiet": {
+                "$ref": "#/components/schemas/ActivityMetric"
+              }
+            }
+          }
+        }
+      },
       "WaitlistSubmission": {
         "type": "object",
         "additionalProperties": false,
@@ -18533,6 +19020,7 @@
               "contextBytes",
               "memberMessageBytes"
             ],
+            "description": "Optional character limits count Unicode scalar values after trimming. UTF-8 byte limits remain independently enforced.",
             "properties": {
               "titleBytes": {
                 "type": "integer",
@@ -18551,6 +19039,22 @@
                 "minimum": 1
               },
               "memberMessageBytes": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "titleCharacters": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "detailCharacters": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "stepsCharacters": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "memberMessageCharacters": {
                 "type": "integer",
                 "minimum": 1
               }
@@ -18780,6 +19284,10 @@
           "memberMessage": {
             "type": "string",
             "nullable": true
+          },
+          "closed": {
+            "type": "boolean",
+            "description": "Whether new replies are closed for this request."
           }
         }
       },
@@ -18844,6 +19352,10 @@
           "memberMessage": {
             "type": "string",
             "nullable": true
+          },
+          "closed": {
+            "type": "boolean",
+            "description": "Whether new replies are closed for this request."
           }
         }
       },
@@ -18857,7 +19369,11 @@
           }
         ],
         "discriminator": {
-          "propertyName": "kind"
+          "propertyName": "kind",
+          "mapping": {
+            "problem": "#/components/schemas/MemberProblemRequest",
+            "suggestion": "#/components/schemas/MemberSuggestionRequest"
+          }
         }
       },
       "MemberRequestPage": {
@@ -19135,6 +19651,10 @@
             "type": "string",
             "nullable": true
           },
+          "closed": {
+            "type": "boolean",
+            "description": "Whether new replies are closed for this request."
+          },
           "submitterId": {
             "type": "string",
             "format": "uuid"
@@ -19204,6 +19724,10 @@
             "type": "string",
             "nullable": true
           },
+          "closed": {
+            "type": "boolean",
+            "description": "Whether new replies are closed for this request."
+          },
           "submitterId": {
             "type": "string",
             "format": "uuid"
@@ -19220,7 +19744,11 @@
           }
         ],
         "discriminator": {
-          "propertyName": "kind"
+          "propertyName": "kind",
+          "mapping": {
+            "problem": "#/components/schemas/OwnerProblemRequest",
+            "suggestion": "#/components/schemas/OwnerSuggestionRequest"
+          }
         }
       },
       "OwnerRequestPage": {

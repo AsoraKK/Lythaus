@@ -22,6 +22,7 @@ Name | Type | Description | Notes
 **createdAt** | [**DateTime**](DateTime.md) |  |
 **updatedAt** | [**DateTime**](DateTime.md) |  |
 **memberMessage** | **String** |  |
+**closed** | **bool** | Whether new replies are closed for this request. | [optional]
 **submitterId** | **String** |  |
 **improvement** | **String** |  |
 **benefit** | **String** |  |

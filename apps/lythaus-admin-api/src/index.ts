@@ -10,6 +10,7 @@ import { handleAdminBeta } from './authenticity-beta.ts';
 import { handleAdminAlpha } from './authenticity-alpha.ts';
 import { handleAccountSupport } from './account-support-runtime.ts';
 import { handleOverview } from './overview-runtime.ts';
+import { handleActivityMeasurementSummary } from './activity-measurement-handler.ts';
 import { adminWaitlistFilters, parseAdminUserId, parseReasonCode, rejectUnknownFields, requireConfirmation } from './admin-runtime-policy.ts';
 import { triageCommunityAppeal } from '../../../packages/db/src/community-appeal-mutations.ts';
 import { communityTriageQueue, readCommunityTriageEvidence } from '../../../packages/db/src/community-appeal-access.ts';
@@ -1181,6 +1182,7 @@ export default {
         return cors(result ?? privateSupportResponse({ error: 'not_found' }, 404));
       }
       if (request.method === 'GET' && url.pathname === '/api/admin/overview') return cors(await handleOverview(request, env, actor, id));
+      if (request.method === 'GET' && url.pathname === '/api/admin/activity-measurement') return cors(await handleActivityMeasurementSummary(request, env, actor, id));
       if (request.method === 'GET' && url.pathname === '/api/admin/account-support/access') return cors(await handleAccountSupport(request, env, actor, id));
       if (request.method === 'POST' && url.pathname === '/api/admin/account-support/lookup') return cors(await handleAccountSupport(request, env, actor, id));
       const accountSupportHistory = url.pathname.match(/^\/api\/admin\/account-support\/users\/([^/]+)\/history$/);

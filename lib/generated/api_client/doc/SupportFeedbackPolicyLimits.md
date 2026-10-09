@@ -13,5 +13,9 @@ Name | Type | Description | Notes
 **stepsBytes** | **int** |  |
 **contextBytes** | **int** |  |
 **memberMessageBytes** | **int** |  |
+**titleCharacters** | **int** |  | [optional]
+**detailCharacters** | **int** |  | [optional]
+**stepsCharacters** | **int** |  | [optional]
+**memberMessageCharacters** | **int** |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

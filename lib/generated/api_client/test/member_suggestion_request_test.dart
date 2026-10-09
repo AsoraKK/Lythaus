@@ -62,5 +62,11 @@ void main() {
       // TODO
     });
 
+    // Whether new replies are closed for this request.
+    // bool closed
+    test('to test the property `closed`', () async {
+      // TODO
+    });
+
   });
 }

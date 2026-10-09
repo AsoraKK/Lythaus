@@ -76,6 +76,7 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminAccountSupportAccess**](doc/AdminApi.md#adminaccountsupportaccess) | **GET** /admin/account-support/access | Check owner account-support access
 [*AdminApi*](doc/AdminApi.md) | [**adminAccountSupportHistory**](doc/AdminApi.md#adminaccountsupporthistory) | **POST** /admin/account-support/users/{userId}/history | Read partial recorded account history
 [*AdminApi*](doc/AdminApi.md) | [**adminAccountSupportLookup**](doc/AdminApi.md#adminaccountsupportlookup) | **POST** /admin/account-support/lookup | Read minimum account state by exact email
+[*AdminApi*](doc/AdminApi.md) | [**adminActivityMeasurement**](doc/AdminApi.md#adminactivitymeasurement) | **GET** /admin/activity-measurement | Read bounded owner-only consenting-cohort activity metrics
 [*AdminApi*](doc/AdminApi.md) | [**adminAppealsAdjudicate**](doc/AdminApi.md#adminappealsadjudicate) | **POST** /admin/appeals/{appealId}/adjudications | Record a trained editorial appeal adjudication
 [*AdminApi*](doc/AdminApi.md) | [**adminAppealsPendingAdjudicationList**](doc/AdminApi.md#adminappealspendingadjudicationlist) | **GET** /admin/appeals/pending-adjudication | List pending appeal adjudications
 [*AdminApi*](doc/AdminApi.md) | [**adminAuthSummary**](doc/AdminApi.md#adminauthsummary) | **GET** /admin/auth/summary | Read live authentication summary
@@ -213,9 +214,12 @@ Class | Method | HTTP request | Description
 [*PostsApi*](doc/PostsApi.md) | [**postsReplace**](doc/PostsApi.md#postsreplace) | **PUT** /posts/{id} | Replace editable post fields and return the post to review
 [*PostsApi*](doc/PostsApi.md) | [**postsUpdate**](doc/PostsApi.md#postsupdate) | **PATCH** /posts/{id} | Update a post with moderation and AI authenticity checks
 [*PostsApi*](doc/PostsApi.md) | [**usersMePostsList**](doc/PostsApi.md#usersmepostslist) | **GET** /users/me/posts | List my own published and pending posts
+[*PrivacyApi*](doc/PrivacyApi.md) | [**getActivityMeasurementConsent**](doc/PrivacyApi.md#getactivitymeasurementconsent) | **GET** /analytics/activity-consent | Read own account-linked activity consent
 [*PrivacyApi*](doc/PrivacyApi.md) | [**privacyRequestCreate**](doc/PrivacyApi.md#privacyrequestcreate) | **POST** /privacy/requests | Submit an asynchronous privacy request
 [*PrivacyApi*](doc/PrivacyApi.md) | [**privacyRequestExportDownload**](doc/PrivacyApi.md#privacyrequestexportdownload) | **GET** /privacy/requests/{requestId}/export | Download my completed privacy export
 [*PrivacyApi*](doc/PrivacyApi.md) | [**privacyRequestStatus**](doc/PrivacyApi.md#privacyrequeststatus) | **GET** /privacy/requests | Get the latest privacy request status
+[*PrivacyApi*](doc/PrivacyApi.md) | [**recordForegroundActivityDay**](doc/PrivacyApi.md#recordforegroundactivityday) | **POST** /analytics/activity | Record one canonical account and UTC active day
+[*PrivacyApi*](doc/PrivacyApi.md) | [**setActivityMeasurementConsent**](doc/PrivacyApi.md#setactivitymeasurementconsent) | **PUT** /analytics/activity-consent | Explicitly grant or withdraw this account-linked purpose
 [*PrivacyApi*](doc/PrivacyApi.md) | [**storageUsageGet**](doc/PrivacyApi.md#storageusageget) | **GET** /storage/usage | Get the authenticated user&#39;s private storage ledger
 [*PrivacyApi*](doc/PrivacyApi.md) | [**usersMeRegionUpdate**](doc/PrivacyApi.md#usersmeregionupdate) | **PUT** /users/me/region | Update private region and visibility preferences
 [*PrivacyApi*](doc/PrivacyApi.md) | [**usersMeRetentionUpdate**](doc/PrivacyApi.md#usersmeretentionupdate) | **PUT** /users/me/retention | Update a private content-retention rule
@@ -279,8 +283,14 @@ Class | Method | HTTP request | Description
  - [AccountSupportLookupResponse](doc/AccountSupportLookupResponse.md)
  - [AccountTierResponse](doc/AccountTierResponse.md)
  - [AccountTierUpdate](doc/AccountTierUpdate.md)
+ - [ActivityConsent](doc/ActivityConsent.md)
+ - [ActivityConsentInput](doc/ActivityConsentInput.md)
  - [ActivityEvent](doc/ActivityEvent.md)
+ - [ActivityMetric](doc/ActivityMetric.md)
  - [ActivityPage](doc/ActivityPage.md)
+ - [ActivityRenderInput](doc/ActivityRenderInput.md)
+ - [ActivitySummary](doc/ActivitySummary.md)
+ - [ActivitySummaryMetrics](doc/ActivitySummaryMetrics.md)
  - [AdminAuthSummary](doc/AdminAuthSummary.md)
  - [AdminEmailHealth](doc/AdminEmailHealth.md)
  - [AdminHealth](doc/AdminHealth.md)
@@ -490,6 +500,7 @@ Class | Method | HTTP request | Description
  - [ReactionDeleteResponse](doc/ReactionDeleteResponse.md)
  - [ReactionRequest](doc/ReactionRequest.md)
  - [ReactionResponse](doc/ReactionResponse.md)
+ - [RecordForegroundActivityDay200Response](doc/RecordForegroundActivityDay200Response.md)
  - [RefreshSessionRequest](doc/RefreshSessionRequest.md)
  - [RefreshTokenRequest](doc/RefreshTokenRequest.md)
  - [RelationChange](doc/RelationChange.md)
