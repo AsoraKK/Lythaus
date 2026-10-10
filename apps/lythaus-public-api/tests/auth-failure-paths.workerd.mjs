@@ -27,6 +27,9 @@ const ownerPassword = 'synthetic mailbox owner password';
 const acceptedPasswordDigests = [password, ownerPassword].map(value => createHash('sha1').update(value).digest('hex').toUpperCase());
 const hmacKey = randomBytes(32).toString('base64');
 const rateLimitWindowMs = 60_000;
+const stableWindowStartOffsetMs = 1_500;
+const stableWindowHalfwayMs = 30_000;
+const stableWindowSelectionTimeoutMs = 120_000;
 const publicErrorHeaders = {
   'cache-control': 'private, no-store',
   'content-type': 'application/json; charset=utf-8',
@@ -76,21 +79,98 @@ function assertPrivacyLeakMutationsRejected(response, body, status, error, extra
   );
 }
 
-async function waitForStableRateLimitWindow(windowStart) {
-  const safeStart = windowStart + 1_500;
-  if (Date.now() < safeStart) await new Promise(resolve => setTimeout(resolve, safeStart - Date.now()));
-  const now = Date.now();
-  assert.equal(Math.floor(now / rateLimitWindowMs) * rateLimitWindowMs, windowStart, 'fixture starts inside the intended minute bucket');
-  assert.ok(now - windowStart >= 1_000 && now - windowStart < 30_000, 'fixture leaves at least half a minute for the threshold proof');
-  return windowStart;
+function stableRateLimitWindowStart(now) {
+  const currentWindowStart = Math.floor(now / rateLimitWindowMs) * rateLimitWindowMs;
+  return now - currentWindowStart >= stableWindowHalfwayMs
+    ? currentWindowStart + rateLimitWindowMs
+    : currentWindowStart;
 }
 
-async function chooseStableRateLimitWindow() {
-  const now = Date.now();
-  let windowStart = Math.floor(now / rateLimitWindowMs) * rateLimitWindowMs;
-  if (now - windowStart > 30_000) windowStart += rateLimitWindowMs;
-  return waitForStableRateLimitWindow(windowStart);
+async function waitForStableRateLimitWindow(windowStart, {
+  now = Date.now,
+  elapsedNow = () => performance.now(),
+  sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)),
+  deadline = elapsedNow() + stableWindowSelectionTimeoutMs,
+  maxAttempts = 8,
+} = {}) {
+  let candidate = windowStart;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const observedAt = now();
+    if (elapsedNow() >= deadline) break;
+    const observedWindowStart = Math.floor(observedAt / rateLimitWindowMs) * rateLimitWindowMs;
+    if (candidate < observedWindowStart) candidate = observedWindowStart;
+    if (observedAt - candidate >= stableWindowHalfwayMs) {
+      candidate = Math.max(candidate + rateLimitWindowMs, observedWindowStart + rateLimitWindowMs);
+      continue;
+    }
+
+    const safeStart = candidate + stableWindowStartOffsetMs;
+    if (observedAt < safeStart) {
+      await sleep(Math.min(safeStart - observedAt, deadline - elapsedNow()));
+    }
+
+    const confirmedAt = now();
+    if (elapsedNow() >= deadline) break;
+    const confirmedWindowStart = Math.floor(confirmedAt / rateLimitWindowMs) * rateLimitWindowMs;
+    const elapsedInCandidate = confirmedAt - candidate;
+    if (confirmedWindowStart === candidate
+      && elapsedInCandidate >= 1_000
+      && elapsedInCandidate < stableWindowHalfwayMs) {
+      return candidate;
+    }
+
+    // The clock or event loop crossed the candidate's safe range; select again from the latest reading.
+    candidate = Math.max(candidate + rateLimitWindowMs, confirmedWindowStart);
+  }
+  throw new Error('fixture could not enter a stable rate-limit window before its bounded deadline');
 }
+
+async function chooseStableRateLimitWindow(options = {}) {
+  const now = options.now ?? Date.now;
+  return waitForStableRateLimitWindow(stableRateLimitWindowStart(now()), options);
+}
+
+test('rate-limit window selection handles the midpoint race and is bounded', async () => {
+  assert.equal(stableRateLimitWindowStart(29_999), 0);
+  assert.equal(stableRateLimitWindowStart(30_000), rateLimitWindowMs);
+
+  let fakeNow = 29_999;
+  let fakeElapsed = 0;
+  let nowCalls = 0;
+  const sleeps = [];
+  const selected = await chooseStableRateLimitWindow({
+    now: () => {
+      nowCalls += 1;
+      if (nowCalls === 3) fakeNow = 30_001;
+      return fakeNow;
+    },
+    elapsedNow: () => fakeElapsed,
+    sleep: async milliseconds => {
+      sleeps.push(milliseconds);
+      fakeNow += milliseconds;
+      fakeElapsed += milliseconds;
+    },
+    deadline: 120_000,
+  });
+  assert.equal(selected, rateLimitWindowMs, 'a missed midpoint window is reselected after the clock crosses 30 seconds');
+  assert.deepEqual(sleeps, [rateLimitWindowMs + stableWindowStartOffsetMs - 30_001]);
+
+  let timedOutAt = 0;
+  let timedOutElapsed = 0;
+  await assert.rejects(
+    waitForStableRateLimitWindow(0, {
+      now: () => timedOutAt,
+      elapsedNow: () => timedOutElapsed,
+      sleep: async milliseconds => {
+        timedOutAt += milliseconds + stableWindowHalfwayMs;
+        timedOutElapsed += milliseconds + stableWindowHalfwayMs;
+      },
+      deadline: 10_000,
+    }),
+    /bounded deadline/,
+    'selection stops at its caller-supplied deadline when every candidate is missed',
+  );
+});
 
 const databaseStub = `
 import { env } from 'cloudflare:workers';
@@ -287,9 +367,10 @@ describe('Public API authentication failures in native Workerd', { timeout: 180_
     assert.equal(fixture.providerCounts().denied, 0, 'the Worker made no unrecognized or live provider request');
   });
 
-  test('the Public Worker enforces ten auth requests and resets at the minute boundary', { timeout: 150_000 }, async () => {
+  test('the Public Worker enforces ten auth requests and resets at the minute boundary', { timeout: 180_000 }, async () => {
     const ip = fixture.rateLimitIp();
-    const firstWindowStart = await chooseStableRateLimitWindow();
+    const selectionDeadline = performance.now() + stableWindowSelectionTimeoutMs;
+    const firstWindowStart = await chooseStableRateLimitWindow({ deadline: selectionDeadline });
     const proofStartedAt = Date.now();
     for (let index = 0; index < 10; index += 1) {
       const response = await fixture.request('/api/auth/email', {
@@ -311,7 +392,7 @@ describe('Public API authentication failures in native Workerd', { timeout: 180_
       { windowStartedAt: firstWindowStart, requestCount: 10 },
     ], 'the eleventh request is rejected in the same exact UTC minute bucket');
 
-    const nextWindowStart = await waitForStableRateLimitWindow(firstWindowStart + rateLimitWindowMs);
+    const nextWindowStart = await waitForStableRateLimitWindow(firstWindowStart + rateLimitWindowMs, { deadline: selectionDeadline });
     const afterBoundary = await fixture.request('/api/auth/email', {
       mode: 'login', email: 'not-an-email', password: 'synthetic login input',
     }, { ip });
