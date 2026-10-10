@@ -32,6 +32,8 @@ function Users({ inWorkspace = false }) {
   const [error, setError] = useState('');
   const [selected, setSelected] = useState(null);
   const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
   const [action, setAction] = useState(null);
   const [reasonCode, setReasonCode] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -40,17 +42,26 @@ function Users({ inWorkspace = false }) {
   const [invite, setInvite] = useState({ email: '', displayName: '', handle: '', reasonCode: '', confirmation: '' });
   const [inviteMessage, setInviteMessage] = useState('');
   const listRequestId = useRef(0);
+  const detailRequestId = useRef(0);
+  const actionInFlight = useRef(false);
   const paginationFocusPending = useRef(false);
   const listRef = useRef(null);
 
   const clearListForAccessDenial = useCallback((message) => {
     listRequestId.current += 1;
+    detailRequestId.current += 1;
     setLoading(false);
     setLoadingMore(false);
     setItems([]);
     setNextCursor(null);
     setSelected(null);
     setDetail(null);
+    setDetailLoading(false);
+    setDetailError('');
+    setAction(null);
+    setReasonCode('');
+    setConfirmation('');
+    setActionMessage('');
     setError(message);
   }, []);
 
@@ -83,7 +94,7 @@ function Users({ inWorkspace = false }) {
 
   useEffect(() => {
     loadUsers();
-    return () => { listRequestId.current += 1; };
+    return () => { listRequestId.current += 1; detailRequestId.current += 1; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -92,23 +103,37 @@ function Users({ inWorkspace = false }) {
     if (!nextCursor) listRef.current?.focus();
   }, [loadingMore, nextCursor]);
 
-  const selectUser = async (user) => {
+  const selectUser = async (user, message = '') => {
+    const requestId = ++detailRequestId.current;
     setSelected(user);
     setDetail(null);
-    setActionMessage('');
+    setDetailLoading(true);
+    setDetailError('');
+    setAction(null);
+    setReasonCode('');
+    setConfirmation('');
+    setActionMessage(message);
     try {
       const response = await adminRequest(`users/${encodeURIComponent(user.id)}`);
-      setDetail(response?.user || user);
+      if (requestId !== detailRequestId.current) return;
+      if (response?.user?.id !== user.id || !STATUS_OPTIONS.includes(response.user.status) || !response.user.status) throw new Error('invalid_account_detail');
+      setDetail(response.user);
     } catch (requestError) {
+      if (requestId !== detailRequestId.current) return;
       if (requestError.status === 401 || requestError.status === 403) {
         clearListForAccessDenial(requestError.status === 403 ? 'Administrator access is required to review this account.' : 'Sign in through approved admin access to review this account.');
       } else {
-        setDetail(user);
+        setDetailError('Account details could not be loaded.');
+      }
+    } finally {
+      if (requestId === detailRequestId.current) {
+        setDetailLoading(false);
       }
     }
   };
 
   const beginAction = (nextAction) => {
+    if (!detail || detailLoading || detailError || actionBusy) return;
     setAction(nextAction);
     setReasonCode('');
     setConfirmation('');
@@ -116,7 +141,8 @@ function Users({ inWorkspace = false }) {
   };
 
   const runAction = async () => {
-    if (!selected || !action) return;
+    if (!selected || !action || detail?.id !== selected.id || detailLoading || detailError || actionBusy || actionInFlight.current) return;
+    const requestId = detailRequestId.current;
     const normalizedReason = reasonCode.trim().toUpperCase();
     if (!/^[A-Z0-9_.:-]{2,80}$/.test(normalizedReason)) {
       setActionMessage('A stable policy reason code is required.');
@@ -131,6 +157,7 @@ function Users({ inWorkspace = false }) {
       setActionMessage(`Type ${expected} to confirm this action.`);
       return;
     }
+    actionInFlight.current = true;
     setActionBusy(true);
     setActionMessage('');
     try {
@@ -144,14 +171,24 @@ function Users({ inWorkspace = false }) {
         const statusValue = action === 'reactivate' ? 'active' : action === 'suspend' ? 'suspended' : 'locked';
         await adminRequest(`users/${selected.id}/status`, { method: 'POST', body: { status: statusValue, reasonCode: normalizedReason, confirmation } });
       }
-      setActionMessage('Action recorded.');
-      setAction(null);
-      setConfirmation('');
+      if (requestId !== detailRequestId.current) return;
       await loadUsers();
-      await selectUser({ ...selected, status: action === 'reactivate' ? 'active' : action === 'suspend' ? 'suspended' : action === 'lock' ? 'locked' : selected.status });
-    } catch {
-      setActionMessage('The requested account action could not be completed.');
+      if (requestId !== detailRequestId.current) return;
+      await selectUser(selected, 'Action recorded.');
+    } catch (requestError) {
+      if (requestId !== detailRequestId.current) return;
+      if (requestError.status === 401 || requestError.status === 403) {
+        clearListForAccessDenial(requestError.status === 403 ? 'Administrator access is required to change this account.' : 'Sign in through approved admin access to change this account.');
+      } else {
+        setDetail(null);
+        setAction(null);
+        setReasonCode('');
+        setConfirmation('');
+        setDetailError('Account details need to be refreshed.');
+        setActionMessage('The requested account action could not be confirmed. Refresh account details before retrying.');
+      }
     } finally {
+      actionInFlight.current = false;
       setActionBusy(false);
     }
   };
@@ -245,20 +282,22 @@ function Users({ inWorkspace = false }) {
           <>
             <div className="detail-list">
               <div><span className="detail-label">Account ID</span><span className="user-account-id">{selected.id}</span></div>
-              <div><span className="detail-label">Status</span><span className={`status-pill ${String((detail || selected).status).toLowerCase()}`}>{(detail || selected).status}</span></div>
-              <div><span className="detail-label">Plan</span><span>{detail?.subscriptionTier || selected.subscriptionTier || 'Unknown'}</span></div>
-              <div><span className="detail-label">Last sign-in or account creation</span><span>{formatDateTime(detail?.lastLoginAt || selected.lastLoginAt || selected.createdAt)}</span></div>
-              <div><span className="detail-label">Active sessions</span><span>{detail?.currentSessionCount ?? selected.currentSessionCount ?? 'Unknown'}</span></div>
+              <div><span className="detail-label">Status</span><span className={`status-pill ${String(detail?.status || 'unknown').toLowerCase()}`}>{detail?.status || 'Unknown'}</span></div>
+              <div><span className="detail-label">Plan</span><span>{detail?.subscriptionTier || 'Unknown'}</span></div>
+              <div><span className="detail-label">Last sign-in or account creation</span><span>{detail ? formatDateTime(detail.lastLoginAt || detail.createdAt) : 'Unknown'}</span></div>
+              <div><span className="detail-label">Active sessions</span><span>{detail?.currentSessionCount ?? 'Unknown'}</span></div>
               <div><span className="detail-label">Contact lookup</span><span>Owner-only in Account support</span></div>
             </div>
+            {detailLoading ? <div className="notice" role="status">Loading account details...</div> : null}
+            {detailError ? <div className="notice error" role="alert">{detailError} <LythButton variant="secondary" type="button" onClick={() => selectUser(selected)} disabled={actionBusy}>Retry account details</LythButton></div> : null}
             {actionMessage ? <div className="notice" role="status">{actionMessage}</div> : null}
             {!action ? <div className="panel-actions">
-              <LythButton variant="danger" type="button" onClick={() => beginAction('suspend')}>Suspend</LythButton>
-              <LythButton variant="secondary" type="button" onClick={() => beginAction('reactivate')}>Reactivate</LythButton>
-              <LythButton variant="danger" type="button" onClick={() => beginAction('lock')}>Lock</LythButton>
-              <LythButton variant="ghost" type="button" onClick={() => beginAction('resend')}>Resend verification</LythButton>
-              <LythButton variant="ghost" type="button" onClick={() => beginAction('revoke')}>Revoke sessions</LythButton>
-              <LythButton variant="danger" type="button" onClick={() => beginAction('delete')}>Delete</LythButton>
+              <LythButton variant="danger" type="button" onClick={() => beginAction('suspend')} disabled={!detail || detailLoading || actionBusy}>Suspend</LythButton>
+              <LythButton variant="secondary" type="button" onClick={() => beginAction('reactivate')} disabled={!detail || detailLoading || actionBusy}>Reactivate</LythButton>
+              <LythButton variant="danger" type="button" onClick={() => beginAction('lock')} disabled={!detail || detailLoading || actionBusy}>Lock</LythButton>
+              <LythButton variant="ghost" type="button" onClick={() => beginAction('resend')} disabled={!detail || detailLoading || actionBusy}>Resend verification</LythButton>
+              <LythButton variant="ghost" type="button" onClick={() => beginAction('revoke')} disabled={!detail || detailLoading || actionBusy}>Revoke sessions</LythButton>
+              <LythButton variant="danger" type="button" onClick={() => beginAction('delete')} disabled={!detail || detailLoading || actionBusy}>Delete</LythButton>
             </div> : (
               <div className="form-grid">
                 <label className="field"><span className="field-label">Reason code</span><LythInput value={reasonCode} onChange={(event) => setReasonCode(event.target.value)} placeholder="SECURITY_REMEDIATION" /></label>
