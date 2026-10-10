@@ -49,6 +49,12 @@ jobs:
         env:
           SHELLCHECK_OPTS: -e SC2086 -e SC2126
         run: ./bin/actionlint -color
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked workflow parser dependencies
+        run: npm ci --ignore-scripts --no-audit
       - name: Require immutable action pins
         run: npm run validate:workflow-action-pins
       - name: Verify Flutter SDK cache isolation and fallback

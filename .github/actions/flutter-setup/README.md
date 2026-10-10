@@ -33,8 +33,10 @@ downloading/extracting Flutter 3.41.1 despite `cache: true`.
 
 The maximum gross opportunity from those two steps is 116 seconds per full CI
 run. Assuming warm restores plus verification take 15–30 seconds each, the
-estimated net saving is 56–86 seconds per full run, or 93–143 minutes per
-100 full runs. This estimate excludes initial main cache uploads, cache
+estimated SDK setup saving is 56–86 seconds per full run, or 93–143 minutes per
+100 full runs. Net CI savings must subtract Workflow lint's added lockfile-based
+npm setup for the existing YAML parser; use its measured step timings when
+assessing the result. This estimate excludes initial main cache uploads, cache
 eviction, and the unchanged extra SDK installation inside `cf-pages-build.sh`.
 Warm GitHub restore timings require a post-integration main cache and must be
 measured before treating these estimates as realized savings.
@@ -52,7 +54,9 @@ monthly total.
 `node --test scripts/tests/flutter-sdk-cache.test.mjs scripts/tests/workflow-action-pins.test.mjs`
 covers cold/warm setup, disabled caching, incomplete and mismatched restores,
 failed-download retry, version changes, invalid input, main-only cache writes,
-and immutable pins in workflows and composite actions.
+and immutable pins in workflows and recursively discovered composite actions.
+The existing `yaml` dependency parses quoted/commented references and aliases,
+ignores shell-script text, and rejects malformed YAML or non-string references.
 
 To stop SDK cache use, set callers' `cache` input to `false`. Reverting this PR
 restores the previous setup implementation. Existing cache entries can expire
