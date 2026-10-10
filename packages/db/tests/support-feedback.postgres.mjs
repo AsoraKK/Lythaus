@@ -10,6 +10,7 @@ import { hmacLookup, signAccessToken, uuidv7 } from '../../security/src/index.ts
 import { loadApprovedMigrations } from '../../../scripts/ci/planetscale-migration-manifest.mjs';
 import { registerSupportCompletionCases } from './support-feedback-completion.postgres.mjs';
 import { registerSupportContributorCases } from './support-feedback-contributors.postgres.mjs';
+import { registerSupportLifecycleCases } from './support-feedback-lifecycle.postgres.mjs';
 
 const supplied=process.env.SUPPORT_LOCAL_PG_URL;
 if(!supplied)throw new Error('support_tests_require_disposable_local_pg17');
@@ -77,7 +78,7 @@ function runner(role,options={}) {
   return async work=>{
     const c=await connection(role);const query=c.query.bind(c);
     if(options.onClient)options.onClient(c);
-    if(options.afterOwnerLock||options.afterSubjectLock||options.afterSupportParticipantLock||options.afterSupportParticipantHoldLock||options.afterCandidates||options.afterRetentionCandidates||options.captureQuery)c.query=async(...args)=>{const result=await query(...args);if(options.captureQuery)options.captureQuery(args,result);if(options.afterOwnerLock&&typeof args[0]==='string'&&args[0].includes('SELECT support.lock_owner'))await options.afterOwnerLock(c);if(options.afterSubjectLock&&typeof args[0]==='string'&&args[0]==='SELECT id FROM identity.users WHERE id=$1 FOR UPDATE')await options.afterSubjectLock(c);if(options.afterSupportParticipantLock&&typeof args[0]==='string'&&args[0].includes('ORDER BY actor.id FOR UPDATE'))await options.afterSupportParticipantLock(c);if(options.afterSupportParticipantHoldLock&&typeof args[0]==='string'&&args[0].includes('FROM privacy.legal_holds')&&args[0].includes('WHERE subject_id=ANY($1::uuid[])'))await options.afterSupportParticipantHoldLock(c);if(options.afterCandidates&&typeof args[0]==='string'&&args[0].includes('ORDER BY r.created_at DESC,r.id DESC LIMIT $6'))await options.afterCandidates(c);if(options.afterRetentionCandidates&&typeof args[0]==='string'&&args[0].startsWith('WITH next_subject'))await options.afterRetentionCandidates(c);return result;};
+    if(options.afterOwnerLock||options.afterSubjectLock||options.afterSupportParticipantLock||options.afterSupportParticipantHoldLock||options.afterCandidates||options.afterRetentionCandidates||options.captureQuery)c.query=async(...args)=>{const result=await query(...args);if(options.captureQuery)await options.captureQuery(args,result);if(options.afterOwnerLock&&typeof args[0]==='string'&&args[0].includes('SELECT support.lock_owner'))await options.afterOwnerLock(c);if(options.afterSubjectLock&&typeof args[0]==='string'&&args[0]==='SELECT id FROM identity.users WHERE id=$1 FOR UPDATE')await options.afterSubjectLock(c);if(options.afterSupportParticipantLock&&typeof args[0]==='string'&&args[0].includes('ORDER BY actor.id FOR UPDATE'))await options.afterSupportParticipantLock(c);if(options.afterSupportParticipantHoldLock&&typeof args[0]==='string'&&args[0].includes('FROM privacy.legal_holds')&&args[0].includes('WHERE subject_id=ANY($1::uuid[])'))await options.afterSupportParticipantHoldLock(c);if(options.afterCandidates&&typeof args[0]==='string'&&args[0].includes('ORDER BY r.created_at DESC,r.id DESC LIMIT $6'))await options.afterCandidates(c);if(options.afterRetentionCandidates&&typeof args[0]==='string'&&args[0].startsWith('WITH next_subject'))await options.afterRetentionCandidates(c);return result;};
     try {await c.query('BEGIN');if(options.failOutbox)await c.query("SET LOCAL support_fixture.fail_outbox='on'");if(options.failCommit)await c.query("SET LOCAL support_fixture.fail_commit='on'");if(options.failAudit)await c.query("SET LOCAL support_fixture.fail_audit='on'");if(options.failScrub)await c.query("SET LOCAL support_fixture.fail_scrub='on'");
       const value=await work(c);await c.query('COMMIT');return value;
     } catch(error){await c.query('ROLLBACK').catch(()=>undefined);throw error;}finally{await c.end();}
@@ -626,6 +627,8 @@ test('supplied policy is strict, immutable and has no default business/award con
 });
 registerSupportCompletionCases({ test, assert, fixture, policy, problem, suggestion, database: () => control, publicWorker, workerEnvironment, invokeWorker });
 registerSupportContributorCases({ test, assert, fixture, policy, database: () => control, runner, connection, blocked, gate, purgeSupportForPrivacy, retainSupportBatch });
+registerSupportLifecycleCases({ test, assert, fixture, policy, problem, suggestion, database: () => control, runner, blocked, gate,
+  publicWorker, adminWorker, workerEnvironment, invokeWorker, retainSupportBatch });
 
 test('canonical support proposal, rollback and privacy-locator suite passes in a separate disposable PG17 process',async t=>{
   const childEnv={...process.env,SUPPORT_LOCAL_PG_URL:supplied};delete childEnv.NODE_TEST_CONTEXT;
