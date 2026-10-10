@@ -14,6 +14,8 @@ import 'package:lythaus/widgets/security_widgets.dart';
 import 'package:lythaus/features/privacy/privacy_settings_screen.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
 import 'package:lythaus/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
+import 'package:lythaus/features/support/presentation/support_feedback_screen.dart';
+import 'package:lythaus/features/support/support_feedback_config.dart';
 
 export 'package:lythaus/design_system/theme/lyth_theme.dart' show LythausTheme;
 
@@ -471,7 +473,15 @@ class _LythausDrawer extends ConsumerWidget {
               title: const Text('Help & Support'),
               onTap: () {
                 Navigator.pop(context);
-                _showComingSoon(context, 'Help & Support');
+                if (supportFeedbackEnabled) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const SupportFeedbackScreen(),
+                    ),
+                  );
+                } else {
+                  _showComingSoon(context, 'Help & Support');
+                }
               },
             ),
             const Divider(),

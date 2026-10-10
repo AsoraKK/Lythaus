@@ -43,6 +43,8 @@ abstract final class AppRoutes {
   static const String settings = 'settings';
   static const String accountSecurity = 'account-security';
   static const String supportFeedback = 'support-feedback';
+  static const String supportProblem = 'support-problem';
+  static const String supportSuggestion = 'support-suggestion';
 }
 
 String? resolveAppRedirect({
@@ -246,7 +248,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 GoRoute(
                   name: AppRoutes.supportFeedback,
                   path: 'support',
-                  builder: (context, state) => const SupportFeedbackScreen(),
+                  builder: (context, state) =>
+                      const SupportFeedbackScreen(initialKind: 'problem'),
+                ),
+              if (supportFeedbackEnabled)
+                GoRoute(
+                  name: AppRoutes.supportProblem,
+                  path: 'support/problems',
+                  builder: (context, state) =>
+                      const SupportFeedbackScreen(initialKind: 'problem'),
+                ),
+              if (supportFeedbackEnabled)
+                GoRoute(
+                  name: AppRoutes.supportSuggestion,
+                  path: 'support/suggestions',
+                  builder: (context, state) =>
+                      const SupportFeedbackScreen(initialKind: 'suggestion'),
                 ),
             ],
           ),
