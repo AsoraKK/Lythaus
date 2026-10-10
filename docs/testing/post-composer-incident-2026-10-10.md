@@ -7,7 +7,8 @@ Owner hands-on acceptance remains scheduled for Sunday 11 October.
 
 ## Baseline and deployment evidence
 
-- Fetched `AsoraKK/Lythaus` main: `dba135ca3720b1311c5ec3d1d9e00ab7a67a568d`.
+- Fetched [the canonical Lythaus repository](https://github.com/AsoraKK/Lythaus/)
+  main: `dba135ca3720b1311c5ec3d1d9e00ab7a67a568d`.
   PRs #975–#978 are already present; their fixes are unchanged.
 - Reviewed open PRs before editing. Profile own-content collections/contracts
   belong to the separate profile lane. PR #983 owns Comments dispatcher work.
@@ -21,7 +22,7 @@ Owner hands-on acceptance remains scheduled for Sunday 11 October.
   proof of every currently served component.
 - Public API health returned production/ok. Public web `version.json` reported
   version 1.0/build 1 without a commit SHA.
-- `gh run download 38032738217 --repo AsoraKK/Lythaus --name
+- In that repository, `gh run download 38032738217 --name
   lythaus-release-manifest-d3b52ccd43d71493549d01b81c494a2d1c9647b5`
   failed with GitHub artifact-storage HTTP 403. The operation was stopped.
 - Read-only Cloudflare GET of
@@ -191,6 +192,9 @@ on root navigation as expected; initial browser runs failed on test locator
 strictness/feedback lookup and a local connection reset; an initial native queue
 test had an incorrect relay-error expectation/untargeted injected failure. Those
 test harness errors were corrected without weakening product or policy gates.
+The first PR head also failed the CI naming guard because this report used the
+bare repository owner/name. The report now uses the canonical repository link;
+the existing guard remains unchanged.
 
 Unrun: live provider/callback/queue inspection after denied access, live user
 submissions, live DDL, a complete real admin-decision browser journey, a positive
