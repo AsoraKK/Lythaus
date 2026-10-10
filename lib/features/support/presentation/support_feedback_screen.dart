@@ -396,6 +396,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
   }
 
   bool get _hasDraft =>
+      _category != null ||
       _title.text.isNotEmpty ||
       _firstDetail.text.isNotEmpty ||
       _secondDetail.text.isNotEmpty ||
@@ -862,6 +863,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
       setState(() {
         _busy = false;
         _pendingMessage = null;
+        _category = null;
         _selectedRequest = request;
         _detail = null;
         _loadingDetail = false;

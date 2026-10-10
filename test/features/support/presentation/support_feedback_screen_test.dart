@@ -87,8 +87,8 @@ class _FakeSupportFeedbackClient implements SupportFeedbackClient {
             'memberMessageCharacters': 2000,
           },
         'categories': <String, dynamic>{
-          'problem': <String>['display'],
-          'suggestion': <String>['navigation'],
+          'problem': <String>['display', 'performance'],
+          'suggestion': <String>['navigation', 'accessibility'],
         },
       },
       'limits': <String, dynamic>{'page': 3},
@@ -993,6 +993,39 @@ void main() {
     );
     expect(client.listedKinds, contains('suggestion'));
   });
+
+  testWidgets(
+    'switching request type confirms before clearing a category choice',
+    (tester) async {
+      final client = _FakeSupportFeedbackClient('Synthetic category switch');
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [supportFeedbackClientProvider.overrideWithValue(client)],
+          child: const MaterialApp(home: SupportFeedbackScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('performance'));
+      await tester.pumpAndSettle();
+      expect(find.text('performance'), findsOneWidget);
+
+      await tester.tap(find.text('Feedback and suggestions'));
+      await tester.pumpAndSettle();
+      expect(find.text('Switch request type?'), findsOneWidget);
+      await tester.tap(find.text('Stay with draft'));
+      await tester.pumpAndSettle();
+      expect(find.text('performance'), findsOneWidget);
+
+      await tester.tap(find.text('Feedback and suggestions'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Discard and switch'));
+      await tester.pumpAndSettle();
+      expect(find.text('What would you improve?'), findsOneWidget);
+      expect(find.text('performance'), findsNothing);
+    },
+  );
 
   testWidgets('disposing the screen cancels pending API work', (tester) async {
     final client = _FakeSupportFeedbackClient(
