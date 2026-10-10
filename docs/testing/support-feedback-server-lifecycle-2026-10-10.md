@@ -77,8 +77,8 @@ quarter rule is outside this slice; no award implementation or policy change is
 made. Support and rewards remain disabled; no provider resource, credential,
 live migration, live user mutation, merge or deployment occurs.
 
-GitHub denied `GET /repos/AsoraKK/Lythaus/branches/main/protection/required_status_checks`
-with HTTP 403, `Resource not accessible by integration`. That operation stopped;
+GitHub denied `GET /repos/{owner}/{repo}/branches/main/protection/required_status_checks`
+for the canonical repository with HTTP 403, `Resource not accessible by integration`. That operation stopped;
 the required-context configuration is unknown. Visible checks can still be
 monitored against the exact PR head without substituting another protection
 access route.
