@@ -145,12 +145,12 @@ void main() {
       expect(refreshButton.tooltip, 'Refresh profile');
       expect(refreshButton.hasAction(SemanticsAction.tap), isTrue);
 
-      final settingsButton = find.byTooltip('Settings');
+      final settingsButton = find.byTooltip('Open settings');
       expect(settingsButton, findsOneWidget);
       final settingsButtonSemantics = tester
           .getSemantics(settingsButton)
           .getSemanticsData();
-      expect(settingsButtonSemantics.tooltip, 'Settings');
+      expect(settingsButtonSemantics.tooltip, 'Open settings');
       expect(settingsButtonSemantics.hasAction(SemanticsAction.tap), isTrue);
 
       final settings = find.widgetWithText(ListTile, 'Settings');

@@ -139,7 +139,7 @@ class ProfileScreen extends ConsumerWidget {
             if (isOwner)
               IconButton(
                 icon: const Icon(Icons.settings_outlined),
-                tooltip: 'Settings',
+                tooltip: 'Open settings',
                 onPressed: () => _openSettings(context),
               ),
             IconButton(

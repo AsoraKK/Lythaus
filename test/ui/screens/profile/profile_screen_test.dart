@@ -362,12 +362,12 @@ void main() {
       await _pumpProfileAtViewport(tester, physicalSize: const Size(390, 844));
 
       expect(tester.takeException(), isNull, reason: 'initial profile render');
-      expect(find.byTooltip('Settings'), findsOneWidget);
+      expect(find.byTooltip('Open settings'), findsOneWidget);
       for (final tab in ['Posts', 'Comments']) {
         await tester.tap(find.widgetWithText(Tab, tab));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull, reason: '$tab tab render');
-        expect(find.byTooltip('Settings'), findsOneWidget);
+        expect(find.byTooltip('Open settings'), findsOneWidget);
       }
     });
 
@@ -678,7 +678,7 @@ void main() {
       expect(find.text('Private Person'), findsWidgets);
       expect(find.textContaining('Subscription:'), findsNothing);
       expect(find.text('Settings'), findsNothing);
-      expect(find.byTooltip('Settings'), findsNothing);
+      expect(find.byTooltip('Open settings'), findsNothing);
       expect(find.text('Edit profile'), findsNothing);
       expect(find.text('Your posts'), findsNothing);
       expect(find.textContaining('Trust Passport'), findsNothing);
