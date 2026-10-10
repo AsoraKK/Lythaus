@@ -150,6 +150,9 @@ class OwnerPostsTimeline {
   bool get hasMore => nextCursor != null;
 
   OwnerPostsTimeline append(OwnerPostsPage page) {
+    if (page.nextCursor != null && page.nextCursor == nextCursor) {
+      throw const FormatException('Post pagination did not advance');
+    }
     final posts = <String, OwnerPost>{for (final post in items) post.id: post};
     for (final post in page.items) {
       posts.putIfAbsent(post.id, () => post);

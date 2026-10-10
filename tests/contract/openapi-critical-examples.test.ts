@@ -214,6 +214,26 @@ describe('critical response examples', () => {
 });
 
 describe('critical parameter contracts', () => {
+  test('private owner comment pages validate pending replies and reject foreign-body extras', () => {
+    const content = getResponseContent('/users/me/comments', 'get', '200');
+    const comment = {
+      id: '0192c000-0000-7000-8000-000000000001',
+      authorId: '0192c000-0000-7000-8000-000000000002',
+      postId: '0192c000-0000-7000-8000-000000000003',
+      parentId: '0192c000-0000-7000-8000-000000000004',
+      depth: 1, body: 'Synthetic pending reply',
+      declaredCreationMode: 'human', moderationState: 'under_review', deleted: false,
+      createdAt: '2026-10-10T10:00:00Z', updatedAt: '2026-10-10T10:00:00Z',
+    };
+    const page = { items: [comment], nextCursor: null, correlationId: 'synthetic-request' };
+    expectValidSchema(content.schema, page, 'GET /users/me/comments pending reply');
+    const validate = ajv.compile(deref(content.schema));
+    expect(validate({ ...page, items: [{ ...comment, parentBody: 'Foreign parent body' }] })).toBe(false);
+    expect(validate({ ...page, items: [{ ...comment, moderationState: 'blocked' }] })).toBe(false);
+    expect(validate({ ...page, items: [{ ...comment, deleted: true }] })).toBe(false);
+    expectValidSchema(content.schema, { items: [], nextCursor: null }, 'GET /users/me/comments empty');
+    expect(getOperation('/users/me/comments', 'get').security).toEqual([{ bearerAuth: [] }]);
+  });
   test('feed query fixtures stay schema-valid', () => {
     expectValidSchema(getParameterSchema('/feed', 'get', 'cursor', 'query'), 'first', 'GET /feed cursor');
     expectValidSchema(getParameterSchema('/feed', 'get', 'limit', 'query'), 20, 'GET /feed limit');
