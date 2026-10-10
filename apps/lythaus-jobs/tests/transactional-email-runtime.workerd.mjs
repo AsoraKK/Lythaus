@@ -51,8 +51,9 @@ test('native Jobs email fallback rejects redirects before forwarding message con
             return Response.json({ accepted: true, messageId: accepted.messageId });
           } catch (error) {
             const category = emailProviderFailureCategory(error).category;
-            const deliveryState = nextTransactionalEmailState({ category, attemptCount: 1 }).state;
-            return Response.json({ accepted: false, category, deliveryState }, { status: 503 });
+            const retry = nextTransactionalEmailState({ category, attemptCount: 1 });
+            return Response.json({ accepted: false, status: error.status, category,
+              deliveryState: retry.state, retryScheduled: retry.nextAttemptAt !== null }, { status: 503 });
           }
         }};
       `,
@@ -60,6 +61,7 @@ test('native Jobs email fallback rejects redirects before forwarding message con
   });
 
   const calls = [];
+  let scenario;
   const miniflare = new Miniflare(convertV4MiniflareOptions({
     workers: [{
       name: 'jobs-email-fallback',
@@ -76,7 +78,10 @@ test('native Jobs email fallback rejects redirects before forwarding message con
           body: await request.clone().text(),
         });
         if (url.href === providerUrl) {
-          return new Response(null, { status: 307, headers: { location: redirectUrl } });
+          return Response.json({ code: scenario.providerCode }, {
+            status: scenario.status,
+            headers: scenario.redirect ? { location: redirectUrl } : {},
+          });
         }
         if (url.href === redirectUrl) return Response.json({ messageId: 'synthetic-redirected-acceptance' });
         throw new Error('unexpected synthetic outbound URL');
@@ -85,21 +90,45 @@ test('native Jobs email fallback rejects redirects before forwarding message con
   }));
 
   try {
-    const response = await miniflare.dispatchFetch('https://jobs.test/');
-    const result = await response.json();
-    const targets = calls.filter(call => call.url === redirectUrl);
-    assert.equal(targets.length, 0, JSON.stringify({
-      redirectTargetCalls: targets.length,
-      redirectedMessageContainsRecipient: targets.some(call => call.body.includes('synthetic@example.invalid')),
-      redirectedMessageContainsProof: targets.some(call => call.body.includes('synthetic-proof')),
-      accepted: result.accepted,
-      messageId: result.messageId,
-    }));
-    assert.equal(response.status, 503);
-    assert.deepEqual(result, { accepted: false, category: 'unknown', deliveryState: 'failed' });
-    assert.equal(calls.filter(call => call.url === providerUrl).length, 1);
-    assert.ok(calls[0].body.includes('synthetic@example.invalid'));
-    assert.ok(calls[0].body.includes('synthetic-proof'));
+    const scenarios = [
+      ...[301, 302, 303, 307, 308].map(status => ({
+        status,
+        providerCode: 'E_RATE_LIMIT_EXCEEDED',
+        redirect: true,
+        category: 'unknown',
+        deliveryState: 'failed',
+        retryScheduled: false,
+      })),
+      { status: 429, providerCode: 'E_RATE_LIMIT_EXCEEDED', redirect: false,
+        category: 'transient', deliveryState: 'queued', retryScheduled: true },
+      { status: 503, providerCode: 'E_INTERNAL_SERVER_ERROR', redirect: false,
+        category: 'transient', deliveryState: 'queued', retryScheduled: true },
+    ];
+    for (const item of scenarios) {
+      scenario = item;
+      calls.length = 0;
+      const response = await miniflare.dispatchFetch('https://jobs.test/');
+      const result = await response.json();
+      const targets = calls.filter(call => call.url === redirectUrl);
+      assert.equal(targets.length, 0, JSON.stringify({
+        status: item.status,
+        redirectTargetCalls: targets.length,
+        redirectedMessageContainsRecipient: targets.some(call => call.body.includes('synthetic@example.invalid')),
+        redirectedMessageContainsProof: targets.some(call => call.body.includes('synthetic-proof')),
+        result,
+      }));
+      assert.equal(response.status, 503, `status ${item.status}`);
+      assert.deepEqual(result, {
+        accepted: false,
+        status: item.status,
+        category: item.category,
+        deliveryState: item.deliveryState,
+        retryScheduled: item.retryScheduled,
+      }, `status ${item.status}`);
+      assert.equal(calls.filter(call => call.url === providerUrl).length, 1, `status ${item.status}`);
+      assert.ok(calls[0].body.includes('synthetic@example.invalid'));
+      assert.ok(calls[0].body.includes('synthetic-proof'));
+    }
   } finally {
     await miniflare.dispose();
   }

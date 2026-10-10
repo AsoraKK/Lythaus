@@ -16,12 +16,15 @@ verification proof, then treated the target's synthetic message ID as provider
 acceptance. The regression failed with `redirectTargetCalls: 1`, both synthetic
 values present, and `accepted: true`.
 
-`transactional-email-runtime.ts` now sets `redirect: 'manual'`. The same native
-regression observes no request at the redirect target. The 307 is reported as
-an unknown failure and maps to terminal `failed`, preserving the existing
-no-retry behavior when provider acceptance is uncertain. Existing explicit
-provider outages (such as 429/5xx) remain transient; permanent 4xx handling is
-unchanged.
+`transactional-email-runtime.ts` now sets `redirect: 'manual'`. A follow-up
+matrix exposed a second failure boundary: the adapter parsed a 3xx response
+body before rejecting the status, allowing its `E_RATE_LIMIT_EXCEEDED` code to
+override the 3xx status and schedule a retry. The adapter now rejects every 3xx
+before parsing its body and records `E_DELIVERY_ACCEPTANCE_UNKNOWN`. The native
+matrix verifies 301, 302, 303, 307 and 308 are terminal `failed` outcomes with
+no retry scheduled and no target call. Genuine 429 with
+`E_RATE_LIMIT_EXCEEDED` and 503 with `E_INTERNAL_SERVER_ERROR` remain transient
+and queued; permanent 4xx handling is unchanged.
 
 ## Runtime evidence and scope
 
@@ -40,10 +43,14 @@ slice does not add a separate workerd invocation of the full Admin Worker.
 
 ## Verification
 
-- Before repair: the new workerd regression fails because the redirect target
-  receives the recipient and verification proof and its response is accepted.
-- After repair: the combined native workerd set passes **9/9 tests**, including
-  the new redirect regression.
+- Before the first repair: workerd followed the synthetic 307, forwarded the
+  recipient and proof, and accepted the target response.
+- Before the second repair: workerd did not call the redirect target, but a 301
+  response with `E_RATE_LIMIT_EXCEEDED` was classified transient and queued.
+- After both repairs: the redirect matrix passes all seven provider statuses;
+  the broader focused workerd batch passes **9/9 test cases** across seven
+  files. The pair registered in `test:native-architecture` is **2/2 cases**:
+  the Jobs redirect matrix and moderation redirect test.
 - Jobs transactional-email runtime and dispatch unit tests pass **23/23**.
 - `npm run typecheck:native` passes.
 

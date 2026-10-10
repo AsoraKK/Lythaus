@@ -142,6 +142,9 @@ export async function sendTransactionalEmail(env: TransactionalEmailRelayEnv, me
   } catch {
     throw new EmailProviderFailure(undefined, 'E_DELIVERY_ACCEPTANCE_UNKNOWN');
   }
+  if (response.status >= 300 && response.status < 400) {
+    throw new EmailProviderFailure(response.status, 'E_DELIVERY_ACCEPTANCE_UNKNOWN');
+  }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new EmailProviderFailure(response.status, errorResponseCode(payload));
   const messageId = payload && typeof payload === 'object' && typeof (payload as { messageId?: unknown }).messageId === 'string'
