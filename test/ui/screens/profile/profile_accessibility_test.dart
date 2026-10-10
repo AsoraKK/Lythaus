@@ -141,11 +141,17 @@ void main() {
 
       final refresh = find.byTooltip('Refresh profile');
       expect(refresh, findsOneWidget);
-      final refreshButton = tester
-          .getSemantics(find.byType(IconButton).first)
-          .getSemanticsData();
+      final refreshButton = tester.getSemantics(refresh).getSemanticsData();
       expect(refreshButton.tooltip, 'Refresh profile');
       expect(refreshButton.hasAction(SemanticsAction.tap), isTrue);
+
+      final settingsButton = find.byTooltip('Open settings');
+      expect(settingsButton, findsOneWidget);
+      final settingsButtonSemantics = tester
+          .getSemantics(settingsButton)
+          .getSemanticsData();
+      expect(settingsButtonSemantics.tooltip, 'Open settings');
+      expect(settingsButtonSemantics.hasAction(SemanticsAction.tap), isTrue);
 
       final settings = find.widgetWithText(ListTile, 'Settings');
       await tester.scrollUntilVisible(

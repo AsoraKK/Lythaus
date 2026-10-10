@@ -7,8 +7,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:lythaus/design_system/index.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/profile/application/owner_posts.dart';
@@ -19,6 +20,7 @@ import 'package:lythaus/features/profile/domain/owner_profile.dart';
 import 'package:lythaus/state/models/reputation.dart';
 import 'package:lythaus/state/providers/reputation_providers.dart';
 import 'package:lythaus/ui/screens/profile/profile_screen.dart';
+import '../../../golden_test_utils.dart';
 
 const _fakeUser = PublicUser(
   id: 'user-1',
@@ -115,6 +117,16 @@ class _PendingOwnerPostsService extends _FakeOwnerPostsService {
   }
 }
 
+class _CountingNavigatorObserver extends NavigatorObserver {
+  int pushCount = 0;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    pushCount++;
+    super.didPush(route, previousRoute);
+  }
+}
+
 OwnerPost _post({
   required String id,
   required String body,
@@ -144,6 +156,8 @@ Future<void> _pumpProfileAtViewport(
   WidgetTester tester, {
   required Size physicalSize,
   double textScale = 1,
+  ThemeData? theme,
+  List<NavigatorObserver> observers = const [],
 }) async {
   tester.view.physicalSize = physicalSize;
   tester.view.devicePixelRatio = 1;
@@ -162,6 +176,8 @@ Future<void> _pumpProfileAtViewport(
         reputationProvider.overrideWith((ref) async => _fakeReputationState),
       ],
       child: MaterialApp(
+        theme: theme,
+        navigatorObservers: observers,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(
             context,
@@ -195,9 +211,7 @@ Future<void> _scrollTo(WidgetTester tester, Finder target) async {
 }
 
 void main() {
-  setUpAll(() {
-    GoogleFonts.config.allowRuntimeFetching = false;
-  });
+  setUpAll(loadFontsForGoldenTests);
 
   // ── No user signed in ──────────────────────────────────────────────────────
   group('No signed-in user', () {
@@ -354,6 +368,149 @@ void main() {
       );
       expect(find.text('Subscription: silver'), findsOneWidget);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('profile toolbar fits 195 logical px with 2x text', (
+      tester,
+    ) async {
+      await _pumpProfileAtViewport(
+        tester,
+        physicalSize: const Size(195, 422),
+        textScale: 2,
+        theme: LythausTheme.light(),
+      );
+
+      expect(find.text('Profile'), findsOneWidget);
+      expect(find.byTooltip('Profile actions'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await expectLater(
+        find.byType(AppBar).first,
+        matchesGoldenFile('goldens/profile_app_bar_195_2x_text.png'),
+      );
+    });
+
+    testWidgets('compact toolbar exposes Settings before Refresh', (
+      tester,
+    ) async {
+      await _pumpProfileAtViewport(
+        tester,
+        physicalSize: const Size(195, 422),
+        textScale: 2,
+      );
+
+      expect(find.byTooltip('Profile actions'), findsOneWidget);
+      await tester.tap(find.byTooltip('Profile actions'));
+      await tester.pumpAndSettle();
+
+      final openSettings = find.text('Open settings');
+      final refreshProfile = find.text('Refresh profile');
+      expect(openSettings, findsOneWidget);
+      expect(refreshProfile, findsOneWidget);
+      expect(
+        tester.getTopLeft(openSettings).dy,
+        lessThan(tester.getTopLeft(refreshProfile).dy),
+      );
+
+      await tester.tap(openSettings);
+      await tester.pumpAndSettle();
+      expect(find.text('Account'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('fallback settings ignores repeated activation and backs out', (
+      tester,
+    ) async {
+      final observer = _CountingNavigatorObserver();
+      await _pumpProfileAtViewport(
+        tester,
+        physicalSize: const Size(390, 844),
+        observers: [observer],
+      );
+
+      final settingsButton = find.ancestor(
+        of: find.byTooltip('Open settings'),
+        matching: find.byType(IconButton),
+      );
+      final openSettings = tester.widget<IconButton>(settingsButton).onPressed!;
+      openSettings();
+      openSettings();
+      await tester.pumpAndSettle();
+
+      expect(observer.pushCount, 2, reason: 'home plus one settings push');
+      expect(find.text('Account'), findsOneWidget);
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Open settings'), findsOneWidget);
+      expect(find.text('Account'), findsNothing);
+
+      tester.widget<IconButton>(settingsButton).onPressed!();
+      await tester.pumpAndSettle();
+      expect(observer.pushCount, 3, reason: 'guard clears after Back');
+      expect(find.text('Account'), findsOneWidget);
+    });
+
+    testWidgets('GoRouter settings navigation preserves profile query', (
+      tester,
+    ) async {
+      Uri? settingsUri;
+      final router = GoRouter(
+        initialLocation: '/?tab=profile&source=home-feed',
+        routes: [
+          GoRoute(path: '/', builder: (_, _) => const ProfileScreen()),
+          GoRoute(
+            path: '/settings',
+            builder: (_, state) {
+              settingsUri = state.uri;
+              return const Scaffold(body: Text('Settings destination'));
+            },
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            currentUserProvider.overrideWithValue(_fakeAuthUser),
+            ownerPostsServiceProvider.overrideWithValue(
+              _FakeOwnerPostsService(),
+            ),
+            ownerProfileProvider.overrideWith(
+              (ref) async => _ownerProfile(_fakeUser),
+            ),
+            jwtProvider.overrideWith((ref) async => 'tok'),
+            reputationProvider.overrideWith(
+              (ref) async => _fakeReputationState,
+            ),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Open settings'));
+      await tester.pumpAndSettle();
+
+      expect(settingsUri?.path, '/settings');
+      expect(settingsUri?.queryParameters, {
+        'tab': 'profile',
+        'source': 'home-feed',
+      });
+    });
+
+    testWidgets('owner settings stay available on every profile tab', (
+      tester,
+    ) async {
+      await _pumpProfileAtViewport(tester, physicalSize: const Size(390, 844));
+
+      expect(tester.takeException(), isNull, reason: 'initial profile render');
+      expect(find.byTooltip('Open settings'), findsOneWidget);
+      for (final tab in ['Posts', 'Comments']) {
+        await tester.tap(find.widgetWithText(Tab, tab));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: '$tab tab render');
+        expect(find.byTooltip('Open settings'), findsOneWidget);
+      }
     });
 
     testWidgets('shows honest published and pending posts with pagination', (
@@ -663,6 +820,7 @@ void main() {
       expect(find.text('Private Person'), findsWidgets);
       expect(find.textContaining('Subscription:'), findsNothing);
       expect(find.text('Settings'), findsNothing);
+      expect(find.byTooltip('Open settings'), findsNothing);
       expect(find.text('Edit profile'), findsNothing);
       expect(find.text('Your posts'), findsNothing);
       expect(find.textContaining('Trust Passport'), findsNothing);
