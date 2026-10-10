@@ -212,6 +212,16 @@ class _FakeSupportFeedbackClient implements SupportFeedbackClient {
     pending.complete(_mutation('problem', id: replyRequestIds.last));
   }
 
+  void failDeferredReply() {
+    final pending = _pendingReply;
+    if (pending == null || pending.isCompleted) {
+      throw StateError('No deferred reply is pending');
+    }
+    pending.completeError(
+      const SupportFeedbackApiException(503, 'support_unavailable'),
+    );
+  }
+
   Map<String, dynamic> _mutation(
     String kind, {
     String id = _requestId,
@@ -251,6 +261,10 @@ class _FakeSupportFeedbackClient implements SupportFeedbackClient {
 class _TwoRequestReplyClient extends _FakeSupportFeedbackClient {
   _TwoRequestReplyClient() : super('Synthetic reply race');
 
+  final List<String> detailRequestIds = <String>[];
+  Completer<Map<String, dynamic>>? _pendingTwoRequestList;
+  String? _pendingTwoRequestListKind;
+
   @override
   Future<Map<String, dynamic>> list({
     required String kind,
@@ -259,14 +273,31 @@ class _TwoRequestReplyClient extends _FakeSupportFeedbackClient {
   }) async {
     listedKinds.add(kind);
     listedLimits.add(limit);
-    return <String, dynamic>{
-      'items': <Map<String, dynamic>>[
-        _request(kind, id: _requestId, title: 'First reply history row'),
-        _request(kind, id: _secondRequestId, title: 'Second reply history row'),
-      ],
-      'nextCursor': null,
-      'snapshotAt': '2026-10-10T12:00:00Z',
-    };
+    if (deferNextList) {
+      deferNextList = false;
+      _pendingTwoRequestList = Completer<Map<String, dynamic>>();
+      _pendingTwoRequestListKind = kind;
+      return _pendingTwoRequestList!.future;
+    }
+    return _twoRequestHistory(kind);
+  }
+
+  Map<String, dynamic> _twoRequestHistory(String kind) => <String, dynamic>{
+    'items': <Map<String, dynamic>>[
+      _request(kind, id: _requestId, title: 'First reply history row'),
+      _request(kind, id: _secondRequestId, title: 'Second reply history row'),
+    ],
+    'nextCursor': null,
+    'snapshotAt': '2026-10-10T12:00:00Z',
+  };
+
+  void completeDeferredList() {
+    final pending = _pendingTwoRequestList;
+    final kind = _pendingTwoRequestListKind;
+    if (pending == null || pending.isCompleted || kind == null) {
+      throw StateError('No deferred history list is pending');
+    }
+    pending.complete(_twoRequestHistory(kind));
   }
 
   @override
@@ -274,18 +305,78 @@ class _TwoRequestReplyClient extends _FakeSupportFeedbackClient {
     required String kind,
     required String requestId,
     int? messageBefore,
-  }) async => <String, dynamic>{
-    'request': _request(
-      kind,
-      id: requestId,
-      title: requestId == _requestId
-          ? 'First reply history row'
-          : 'Second reply history row',
-      revision: requestRevision,
+  }) async {
+    detailRequestIds.add(requestId);
+    return <String, dynamic>{
+      'request': _request(
+        kind,
+        id: requestId,
+        title: requestId == _requestId
+            ? 'First reply history row'
+            : 'Second reply history row',
+        revision: requestRevision,
+      ),
+      'messages': <Map<String, dynamic>>[],
+      'nextMessageCursor': null,
+    };
+  }
+}
+
+Future<void> _selectReplyHistoryRow(
+  WidgetTester tester,
+  String title, {
+  bool confirmDiscard = false,
+}) async {
+  final row = find.descendant(
+    of: find.byType(ListTile),
+    matching: find.text(title),
+  );
+  await tester.scrollUntilVisible(
+    row,
+    300,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.tap(row);
+  await tester.pumpAndSettle();
+  if (confirmDiscard) {
+    expect(find.text('Discard and switch'), findsOneWidget);
+    await tester.tap(find.text('Discard and switch'));
+    await tester.pumpAndSettle();
+  }
+}
+
+Future<void> _startDeferredReplyAndSwitchToSecond(
+  WidgetTester tester,
+  _TwoRequestReplyClient client,
+) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [supportFeedbackClientProvider.overrideWithValue(client)],
+      child: const MaterialApp(home: SupportFeedbackScreen()),
     ),
-    'messages': <Map<String, dynamic>>[],
-    'nextMessageCursor': null,
-  };
+  );
+  await tester.pumpAndSettle();
+  await _selectReplyHistoryRow(tester, 'First reply history row');
+  await tester.scrollUntilVisible(
+    find.text('Reply privately'),
+    300,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.enterText(find.byType(TextField).last, 'First thread reply');
+  client.deferNextReply = true;
+  await tester.scrollUntilVisible(
+    find.text('Send reply'),
+    300,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.tap(find.text('Send reply'));
+  await tester.pump();
+  expect(client.replyRequestIds, <String>[_requestId]);
+  await _selectReplyHistoryRow(
+    tester,
+    'Second reply history row',
+    confirmDiscard: true,
+  );
 }
 
 class _RacingDetailClient extends _FakeSupportFeedbackClient {
@@ -1027,6 +1118,158 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'late reply success refreshes the same request after returning with no draft',
+    (tester) async {
+      final client = _TwoRequestReplyClient();
+      await _startDeferredReplyAndSwitchToSecond(tester, client);
+      await _selectReplyHistoryRow(tester, 'First reply history row');
+      await tester.scrollUntilVisible(
+        find.text('Reply privately'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(
+        tester.widget<TextField>(find.byType(TextField).last).controller!.text,
+        isEmpty,
+      );
+
+      client.completeDeferredReply();
+      await tester.pumpAndSettle();
+
+      expect(client.detailRequestIds, <String>[
+        _requestId,
+        _secondRequestId,
+        _requestId,
+        _requestId,
+      ]);
+      expect(client.listedKinds, <String>['problem', 'problem']);
+      expect(
+        tester.widget<TextField>(find.byType(TextField).last).controller!.text,
+        isEmpty,
+      );
+      expect(
+        find.text('Your reply was added to the private history.'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Your newer draft is still here.'),
+        findsNothing,
+      );
+    },
+  );
+
+  testWidgets(
+    'late reply success refreshes the same request and preserves a newer draft',
+    (tester) async {
+      final client = _TwoRequestReplyClient();
+      await _startDeferredReplyAndSwitchToSecond(tester, client);
+      await _selectReplyHistoryRow(tester, 'First reply history row');
+      await tester.scrollUntilVisible(
+        find.text('Reply privately'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.enterText(
+        find.byType(TextField).last,
+        'New draft on the returned request',
+      );
+
+      client.deferNextList = true;
+      client.completeDeferredReply();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(client.listedKinds, <String>['problem', 'problem']);
+      await tester.scrollUntilVisible(
+        find.text('Send reply'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      final sendReply = find.widgetWithText(FilledButton, 'Send reply');
+      expect(tester.widget<FilledButton>(sendReply).onPressed, isNull);
+      await tester.scrollUntilVisible(
+        find.text('Send private report'),
+        -300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      final sendReport = find.ancestor(
+        of: find.text('Send private report'),
+        matching: find.byWidgetPredicate(
+          (widget) => widget is ButtonStyleButton,
+        ),
+      );
+      expect(tester.widget<ButtonStyleButton>(sendReport).onPressed, isNull);
+
+      client.completeDeferredList();
+      await tester.pumpAndSettle();
+
+      expect(client.detailRequestIds, <String>[
+        _requestId,
+        _secondRequestId,
+        _requestId,
+        _requestId,
+      ]);
+      expect(client.listedKinds, <String>['problem', 'problem']);
+      expect(
+        tester.widget<TextField>(find.byType(TextField).last).controller!.text,
+        'New draft on the returned request',
+      );
+      expect(
+        find.text(
+          'Your reply was added to the private history. Your newer draft is still here.',
+        ),
+        findsOneWidget,
+      );
+      expect(tester.widget<FilledButton>(sendReply).onPressed, isNotNull);
+      expect(tester.widget<ButtonStyleButton>(sendReport).onPressed, isNotNull);
+
+      await tester.tap(sendReply);
+      await tester.pumpAndSettle();
+      expect(client.replyExpectedRevisions, <int>[1, 2]);
+    },
+  );
+
+  testWidgets('late reply failure after returning keeps the current draft', (
+    tester,
+  ) async {
+    final client = _TwoRequestReplyClient();
+    await _startDeferredReplyAndSwitchToSecond(tester, client);
+    await _selectReplyHistoryRow(tester, 'First reply history row');
+    await tester.scrollUntilVisible(
+      find.text('Reply privately'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(
+      find.byType(TextField).last,
+      'Draft after returning from another request',
+    );
+
+    client.failDeferredReply();
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<TextField>(find.byType(TextField).last).controller!.text,
+      'Draft after returning from another request',
+    );
+    expect(
+      find.text(
+        'A reply could not be confirmed. Check this history before trying again.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Your reply was added to the private history.'),
+      findsNothing,
+    );
+    expect(client.detailRequestIds, <String>[
+      _requestId,
+      _secondRequestId,
+      _requestId,
+    ]);
+  });
 
   testWidgets(
     'switching kind clears detail loading and keeps the account scoped',

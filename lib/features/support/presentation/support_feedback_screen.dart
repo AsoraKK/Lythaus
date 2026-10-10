@@ -52,6 +52,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
   bool _loadingHistory = false;
   bool _loadingDetail = false;
   bool _busy = false;
+  bool _replyRefreshing = false;
   bool _allowPop = false;
   bool _confirmingLeave = false;
   bool _confirmingKindChange = false;
@@ -107,6 +108,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
         _loadingHistory = false;
         _loadingDetail = false;
         _busy = false;
+        _replyRefreshing = false;
       });
       _clearForm();
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -153,7 +155,11 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
                     ? Axis.vertical
                     : Axis.horizontal,
                 selected: <String>{_kind},
-                onSelectionChanged: _loading || _busy || _confirmingKindChange
+                onSelectionChanged:
+                    _loading ||
+                        _busy ||
+                        _replyRefreshing ||
+                        _confirmingKindChange
                     ? null
                     : (selection) {
                         if (selection.isEmpty || selection.single == _kind) {
@@ -279,7 +285,9 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
               ],
               const SizedBox(height: 12),
               FilledButton.icon(
-                onPressed: _busy || selectedCategory == null ? null : _submit,
+                onPressed: _busy || _replyRefreshing || selectedCategory == null
+                    ? null
+                    : _submit,
                 icon: const Icon(Icons.send_outlined),
                 label: Text(
                   _kind == 'problem'
@@ -486,6 +494,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
       _selectedRequest = null;
       _detail = null;
       _loadingDetail = false;
+      _replyRefreshing = false;
       _error = null;
       _historyError = null;
       _detailError = null;
@@ -586,6 +595,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
         FilledButton(
           onPressed:
               _busy ||
+                  _replyRefreshing ||
                   request['closed'] == true ||
                   id is! String ||
                   revision is! int
@@ -853,7 +863,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
   }
 
   Future<void> _submit() async {
-    if (_busy) return;
+    if (_busy || _replyRefreshing) return;
     final category = _categoryForSubmit;
     if (category == null) return;
     final first = _firstDetail.text.trim();
@@ -989,30 +999,28 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
         idempotencyKey: idempotencyKey,
       );
       validateSupportFeedbackMutationResult(result, kind: kind, requestId: id);
-      if (!_currentReplyDraft(client, epoch, id, draftVersion)) {
+      final replyDraftIsCurrent = _currentReplyDraft(
+        client,
+        epoch,
+        id,
+        draftVersion,
+      );
+      if (!replyDraftIsCurrent && !_selectedReplyRequest(client, epoch, id)) {
         _finishDetachedReply(
           client,
           epoch,
-          notice: _replyRequestId == id && _selectedRequest?['id'] == id
-              ? 'Your reply was added to the private history. Your newer draft is still here.'
-              : 'A reply to another private request was accepted. Check that request’s history.',
+          notice:
+              'A reply to another private request was accepted. Check that request’s history.',
         );
         return;
       }
-      setState(() {
-        _busy = false;
-        _pendingMessage = null;
-        _pendingReplyRequestId = null;
-        _notice = 'Your reply was added to the private history.';
-        _replyKey = null;
-        _replySignature = null;
-        _reply.clear();
-        _replyDraftVersion += 1;
-      });
-      final completedDraftVersion = _replyDraftVersion;
-      await _loadHistory();
-      if (!_currentReplyDraft(client, epoch, id, completedDraftVersion)) return;
-      await _loadDetail(request);
+      await _completeAcceptedReply(
+        client,
+        epoch,
+        id,
+        request,
+        preserveCurrentDraft: !replyDraftIsCurrent,
+      );
     } on SupportFeedbackCancelled {
       if (!_current(client, epoch)) return;
       if (!_currentReplyDraft(client, epoch, id, draftVersion)) {
@@ -1060,10 +1068,55 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
     if (!_current(client, epoch)) return;
     setState(() {
       _busy = false;
+      _replyRefreshing = false;
       _pendingMessage = null;
       _pendingReplyRequestId = null;
       _notice = notice;
     });
+  }
+
+  Future<void> _completeAcceptedReply(
+    SupportFeedbackClient client,
+    int epoch,
+    String requestId,
+    Map<String, dynamic> request, {
+    required bool preserveCurrentDraft,
+  }) async {
+    if (!_selectedReplyRequest(client, epoch, requestId)) return;
+    final hasNewerDraft = preserveCurrentDraft && _reply.text.trim().isNotEmpty;
+    setState(() {
+      _busy = false;
+      _pendingMessage = null;
+      _pendingReplyRequestId = null;
+      _replyRefreshing = true;
+      _notice = hasNewerDraft
+          ? 'Your reply was added to the private history. Your newer draft is still here.'
+          : 'Your reply was added to the private history.';
+      _replyKey = null;
+      _replySignature = null;
+      if (!preserveCurrentDraft) {
+        _reply.clear();
+        _replyDraftVersion += 1;
+      }
+    });
+    try {
+      await _refreshSelectedReplyRequest(client, epoch, requestId, request);
+    } finally {
+      if (_current(client, epoch)) {
+        setState(() => _replyRefreshing = false);
+      }
+    }
+  }
+
+  Future<void> _refreshSelectedReplyRequest(
+    SupportFeedbackClient client,
+    int epoch,
+    String requestId,
+    Map<String, dynamic> request,
+  ) async {
+    await _loadHistory();
+    if (!_selectedReplyRequest(client, epoch, requestId)) return;
+    await _loadDetail(request);
   }
 
   void _cancelPending() {
@@ -1109,6 +1162,15 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
       _selectedRequest?['id'] == requestId &&
       _replyRequestId == requestId &&
       _replyDraftVersion == draftVersion;
+
+  bool _selectedReplyRequest(
+    SupportFeedbackClient client,
+    int epoch,
+    String requestId,
+  ) =>
+      _current(client, epoch) &&
+      _selectedRequest?['id'] == requestId &&
+      _replyRequestId == requestId;
 
   List<Map<String, dynamic>> _validatedHistoryItems(
     Map<String, dynamic> result,
