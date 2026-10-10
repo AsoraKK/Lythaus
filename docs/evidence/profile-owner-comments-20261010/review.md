@@ -25,6 +25,7 @@ an unavailable placeholder. Other-member collections remain out of scope.
 | Duplicate pages / retries | In-flight guard and deduplication; repeated cursor rejection in Comments and existing Posts timelines | Controller overlap, retry, foreign response and repeated-cursor tests |
 | Truthful UI | `owner_comments_section.dart`; ProfileScreen owner wiring; Posts and Comments offline messaging | Loading, empty, error, offline, pending/reply, retry, large-text and guest/foreign widget tests |
 | Preserved tab state | `profile_tab_view.dart` keeps each tab subtree alive; existing session-keyed screen reset retained | Tab round-trip test plus existing navigation/accessibility regression tests |
+| Rendered collection and visitor isolation | Existing `profile-visual-qa.browser.mjs` now serves synthetic owner Comments | Four mobile/desktop and light/dark configurations; pagination, pending labels, preserved tab state and zero visitor owner-collection requests |
 | Generated contract compatibility | Generated CommentsApi and OwnerCommentsPage; canonical isolated validator's new serialization fixture | Real pending/nullable round-trip and operation authorization/cursor tests |
 
 Pending means **Awaiting review**. It does not authorize public publication.
@@ -48,6 +49,9 @@ Passed:
 - `flutter test --no-pub test/features/profile test/ui/screens/profile/profile_screen_test.dart test/screens/profile_screen_test.dart --reporter expanded`: 159 passed.
 - Final focused Posts/Comments controller rerun: 23 passed.
 - Focused `flutter analyze --no-pub`: no issues; changed application/test Dart format check passes.
+- Production-configured Flutter web release build passed. The existing Chromium
+  profile browser regression passed all four light/dark and mobile/desktop
+  configurations, captured 68 states, and reported no uncaught runtime errors.
 - Disposable local PostgreSQL 17 canonical migrations/grants verification on
   `lythaus_content_test_comments` and `lythaus_auth_test_comments`.
 - Existing content journey PostgreSQL regression: four passed.
@@ -70,6 +74,9 @@ Remaining evidence gates:
   inspected, and CI must pass on the final remote head before parent integration.
 
 The first UI compile/fixture/format errors were corrected; their reruns pass.
+The browser's obsolete owner Comments placeholder expectation was replaced with
+empty/populated/paginated collection assertions. Its screenshot count now includes
+the additional populated Comments state; the complete rerun passes.
 The generated client validator includes meaningful new serialization and request
 tests in addition to the generator's existing scaffold tests.
 
@@ -94,6 +101,8 @@ All screenshots render synthetic fixtures with bundled fonts:
 - [Truthful empty list](screenshots/comments-empty.png)
 - [Offline retry](screenshots/comments-offline.png)
 - [Large text](screenshots/comments-large-text.png)
+- [Chromium mobile light theme](screenshots/comments-browser-mobile-light.png)
+- [Chromium desktop dark theme](screenshots/comments-browser-desktop-dark.png)
 
 ## Provider and owner gates / rollback
 
