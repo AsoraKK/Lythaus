@@ -356,6 +356,22 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('owner settings stay available on every profile tab', (
+      tester,
+    ) async {
+      await _pumpProfileAtViewport(
+        tester,
+        physicalSize: const Size(390, 844),
+      );
+
+      expect(find.byTooltip('Settings'), findsOneWidget);
+      for (final tab in ['Posts', 'Comments']) {
+        await tester.tap(find.widgetWithText(Tab, tab));
+        await tester.pumpAndSettle();
+        expect(find.byTooltip('Settings'), findsOneWidget);
+      }
+    });
+
     testWidgets('shows honest published and pending posts with pagination', (
       tester,
     ) async {
@@ -663,6 +679,7 @@ void main() {
       expect(find.text('Private Person'), findsWidgets);
       expect(find.textContaining('Subscription:'), findsNothing);
       expect(find.text('Settings'), findsNothing);
+      expect(find.byTooltip('Settings'), findsNothing);
       expect(find.text('Edit profile'), findsNothing);
       expect(find.text('Your posts'), findsNothing);
       expect(find.textContaining('Trust Passport'), findsNothing);

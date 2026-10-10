@@ -136,6 +136,12 @@ class ProfileScreen extends ConsumerWidget {
                 : profile.displayName,
           ),
           actions: [
+            if (isOwner)
+              IconButton(
+                icon: const Icon(Icons.settings_outlined),
+                tooltip: 'Settings',
+                onPressed: () => _openSettings(context),
+              ),
             IconButton(
               icon: const Icon(Icons.refresh),
               tooltip: 'Refresh profile',
@@ -243,30 +249,16 @@ class ProfileScreen extends ConsumerWidget {
               ],
               const SizedBox(height: Spacing.lg),
               if (isOwner) ...[
-                if (owner != null && owner.hasDetails)
-                  Text(owner.statusMessage),
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.settings_outlined),
                   title: const Text('Settings'),
                   subtitle: const Text('Security, privacy and notifications'),
-                  onTap: () {
-                    final router = GoRouter.maybeOf(context);
-                    if (router != null) {
-                      router.go(
-                        GoRouterState.of(
-                          context,
-                        ).uri.replace(path: '/settings').toString(),
-                      );
-                      return;
-                    }
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const SettingsScreen(),
-                      ),
-                    );
-                  },
+                  onTap: () => _openSettings(context),
                 ),
+                if (owner != null && owner.hasDetails)
+                  Text(owner.statusMessage),
+                const Divider(),
                 ListTile(
                   leading: const Icon(Icons.edit_outlined),
                   title: Text(
@@ -340,6 +332,19 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _openSettings(BuildContext context) {
+    final router = GoRouter.maybeOf(context);
+    if (router != null) {
+      router.go(
+        GoRouterState.of(context).uri.replace(path: '/settings').toString(),
+      );
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
     );
   }
 

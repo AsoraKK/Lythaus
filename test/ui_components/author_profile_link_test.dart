@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/profile/application/profile_providers.dart';
+import 'package:lythaus/features/profile/domain/public_user.dart';
 import 'package:lythaus/ui/components/author_profile_link.dart';
+import 'package:lythaus/ui/screens/profile/profile_screen.dart';
 
 GoRouter _router({
   String initialLocation = '/search?q=%23civic',
@@ -112,5 +117,48 @@ void main() {
 
     expect(find.text('Former member'), findsOneWidget);
     expect(find.byType(TextButton), findsNothing);
+  });
+
+  testWidgets('opens the public profile and returns without a GoRouter', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWith((ref) => null),
+          jwtProvider.overrideWith((ref) async => null),
+          publicUserProvider('other-user').overrideWith(
+            (ref) async => const PublicUser(
+              id: 'other-user',
+              displayName: 'Bob',
+              tier: 'bronze',
+            ),
+          ),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: AuthorProfileLink(userId: ' other-user ', label: 'Bob'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final link = find.byTooltip('View Bob profile');
+    final openProfile = tester.widget<TextButton>(
+      find.descendant(of: link, matching: find.byType(TextButton)),
+    ).onPressed!;
+    openProfile();
+    openProfile();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ProfileScreen), findsOneWidget);
+    expect(find.text('Bob'), findsAtLeastNWidgets(1));
+    expect(tester.takeException(), isNull);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('View Bob profile'), findsOneWidget);
+    expect(find.byType(ProfileScreen), findsNothing);
   });
 }
