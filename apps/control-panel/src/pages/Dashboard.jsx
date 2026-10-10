@@ -5,7 +5,7 @@ import PageLayout from '../components/PageLayout.jsx';
 import LythButton from '../components/LythButton.jsx';
 import LythCard from '../components/LythCard.jsx';
 import ActivityPilotSummary from './ActivityPilotSummary.jsx';
-import { overviewActivityEvidence } from './overview-activity.js';
+import { overviewActivityEvidence, overviewCalendarStart, overviewSnapshotFresh } from './overview-activity.js';
 import './overview.css';
 
 const GUIDE = {
@@ -26,15 +26,8 @@ const timestamp = value => value !== null && value !== undefined && Number.isFin
 const number = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
 const format = (value, unit) => number(value) === null ? 'Unavailable' : value.toLocaleString('en-GB', { maximumFractionDigits: unit === 'ratio' ? 2 : 0 });
 const pageCount = (response, predicate = () => true) => Array.isArray(response?.items) ? response.items.filter(predicate).length : null;
-const calendarStart = (period, at) => {
-  const date = new Date(at);
-  date.setUTCHours(0, 0, 0, 0);
-  if (period === 'mtd') date.setUTCDate(1);
-  if (period === 'ytd') date.setUTCMonth(0, 1);
-  return date.getTime();
-};
 const calendarEnd = (period, at) => {
-  const date = new Date(calendarStart(period, at));
+  const date = new Date(overviewCalendarStart(period, at));
   if (period === 'today') date.setUTCDate(date.getUTCDate() + 1);
   if (period === 'mtd') date.setUTCMonth(date.getUTCMonth() + 1);
   if (period === 'ytd') date.setUTCFullYear(date.getUTCFullYear() + 1);
@@ -107,9 +100,7 @@ function Dashboard() {
       return () => clearTimeout(timer);
     }
   }, [community, period]);
-  const age = community ? Date.now() - Date.parse(community.sampledAt) : NaN;
-  const fresh = !expired && Number.isFinite(age) && age >= -5000 && age <= 65000 && community.cacheTtlSeconds === 60
-    && Date.parse(community.current?.start) === calendarStart(period, Date.now());
+  const fresh = overviewSnapshotFresh(community, period, expired);
   const operationsAge = Date.now() - snapshot?.fetchedAt;
   const operational = !operationsExpired && operationsAge >= 0 && operationsAge < 60000 ? snapshot : null;
   const activity = overviewActivityEvidence(community, fresh, period);
