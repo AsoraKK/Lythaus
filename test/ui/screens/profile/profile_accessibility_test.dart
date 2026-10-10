@@ -147,11 +147,11 @@ void main() {
 
       final settingsButton = find.byTooltip('Settings');
       expect(settingsButton, findsOneWidget);
-      final settingsSemantics = tester
+      final settingsButtonSemantics = tester
           .getSemantics(settingsButton)
           .getSemanticsData();
-      expect(settingsSemantics.tooltip, 'Settings');
-      expect(settingsSemantics.hasAction(SemanticsAction.tap), isTrue);
+      expect(settingsButtonSemantics.tooltip, 'Settings');
+      expect(settingsButtonSemantics.hasAction(SemanticsAction.tap), isTrue);
 
       final settings = find.widgetWithText(ListTile, 'Settings');
       await tester.scrollUntilVisible(
