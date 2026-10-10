@@ -1083,15 +1083,12 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
     required bool preserveCurrentDraft,
   }) async {
     if (!_selectedReplyRequest(client, epoch, requestId)) return;
-    final hasNewerDraft = preserveCurrentDraft && _reply.text.trim().isNotEmpty;
     setState(() {
       _busy = false;
       _pendingMessage = null;
       _pendingReplyRequestId = null;
       _replyRefreshing = true;
-      _notice = hasNewerDraft
-          ? 'Your reply was added to the private history. Your newer draft is still here.'
-          : 'Your reply was added to the private history.';
+      _notice = 'Your reply was added to the private history.';
       _replyKey = null;
       _replySignature = null;
       if (!preserveCurrentDraft) {

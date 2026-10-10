@@ -1202,6 +1202,18 @@ void main() {
       );
       expect(tester.widget<ButtonStyleButton>(sendReport).onPressed, isNull);
 
+      await tester.scrollUntilVisible(
+        find.text('Reply privately'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      final replyField = find.byType(TextField).last;
+      expect(tester.widget<TextField>(replyField).enabled, isTrue);
+      await tester.enterText(replyField, '');
+      await tester.pump();
+      await tester.enterText(replyField, 'Revised draft during refresh');
+      await tester.pump();
+
       client.completeDeferredList();
       await tester.pumpAndSettle();
 
@@ -1214,18 +1226,37 @@ void main() {
       expect(client.listedKinds, <String>['problem', 'problem']);
       expect(
         tester.widget<TextField>(find.byType(TextField).last).controller!.text,
-        'New draft on the returned request',
+        'Revised draft during refresh',
+      );
+      final refreshedSendReply = find.widgetWithText(
+        FilledButton,
+        'Send reply',
       );
       expect(
-        find.text(
-          'Your reply was added to the private history. Your newer draft is still here.',
-        ),
+        tester.widget<FilledButton>(refreshedSendReply).onPressed,
+        isNotNull,
+      );
+      await tester.scrollUntilVisible(
+        find.text('Send private report'),
+        -300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(tester.widget<ButtonStyleButton>(sendReport).onPressed, isNotNull);
+      expect(
+        find.text('Your reply was added to the private history.'),
         findsOneWidget,
       );
-      expect(tester.widget<FilledButton>(sendReply).onPressed, isNotNull);
-      expect(tester.widget<ButtonStyleButton>(sendReport).onPressed, isNotNull);
+      expect(
+        find.textContaining('Your newer draft is still here.'),
+        findsNothing,
+      );
 
-      await tester.tap(sendReply);
+      await tester.scrollUntilVisible(
+        find.text('Send reply'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(refreshedSendReply);
       await tester.pumpAndSettle();
       expect(client.replyExpectedRevisions, <int>[1, 2]);
     },
