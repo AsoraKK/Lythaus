@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { adminRequest } from '../api/adminApi.js';
 import { formatDateTime } from '../utils/formatters.js';
 import LythButton from '../components/LythButton.jsx';
@@ -39,30 +39,58 @@ function Users({ inWorkspace = false }) {
   const [actionBusy, setActionBusy] = useState(false);
   const [invite, setInvite] = useState({ email: '', displayName: '', handle: '', reasonCode: '', confirmation: '' });
   const [inviteMessage, setInviteMessage] = useState('');
+  const listRequestId = useRef(0);
+  const paginationFocusPending = useRef(false);
+  const listRef = useRef(null);
+
+  const clearListForAccessDenial = useCallback((message) => {
+    listRequestId.current += 1;
+    setLoading(false);
+    setLoadingMore(false);
+    setItems([]);
+    setNextCursor(null);
+    setSelected(null);
+    setDetail(null);
+    setError(message);
+  }, []);
 
   const loadUsers = useCallback(async ({ cursor = null, append = false } = {}) => {
-    append ? setLoadingMore(true) : setLoading(true);
+    const requestId = ++listRequestId.current;
+    if (append) setLoadingMore(true);
+    else { setLoading(true); setLoadingMore(false); }
     setError('');
     try {
       const response = await adminRequest('users', { query: { q: query.trim(), status, createdAfter, createdBefore, limit: 50, cursor } });
+      if (requestId !== listRequestId.current) return;
       const received = Array.isArray(response?.items) ? response.items : [];
       setItems((current) => append ? [...current, ...received] : received);
       setNextCursor(response?.nextCursor || null);
     } catch (requestError) {
+      if (requestId !== listRequestId.current) return;
       if (requestError.status === 401 || requestError.status === 403) {
-        setItems([]); setNextCursor(null); setSelected(null); setDetail(null);
-        setError(requestError.status === 403 ? 'Administrator access is required to view registered accounts.' : 'Sign in through approved admin access to view registered accounts.');
+        clearListForAccessDenial(requestError.status === 403 ? 'Administrator access is required to view registered accounts.' : 'Sign in through approved admin access to view registered accounts.');
       } else {
         if (!append) { setItems([]); setNextCursor(null); }
         setError('User data could not be loaded.');
       }
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (requestId === listRequestId.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
-  }, [createdAfter, createdBefore, query, status]);
+  }, [clearListForAccessDenial, createdAfter, createdBefore, query, status]);
 
-  useEffect(() => { loadUsers(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadUsers();
+    return () => { listRequestId.current += 1; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (loadingMore || !paginationFocusPending.current) return;
+    paginationFocusPending.current = false;
+    if (!nextCursor) listRef.current?.focus();
+  }, [loadingMore, nextCursor]);
 
   const selectUser = async (user) => {
     setSelected(user);
@@ -73,8 +101,7 @@ function Users({ inWorkspace = false }) {
       setDetail(response?.user || user);
     } catch (requestError) {
       if (requestError.status === 401 || requestError.status === 403) {
-        setItems([]); setNextCursor(null); setSelected(null); setDetail(null);
-        setError(requestError.status === 403 ? 'Administrator access is required to review this account.' : 'Sign in through approved admin access to review this account.');
+        clearListForAccessDenial(requestError.status === 403 ? 'Administrator access is required to review this account.' : 'Sign in through approved admin access to review this account.');
       } else {
         setDetail(user);
       }
@@ -153,9 +180,7 @@ function Users({ inWorkspace = false }) {
   const submitSearch = (event) => {
     event.preventDefault();
     if (query.includes('@')) {
-      setItems([]);
-      setNextCursor(null);
-      setError('Exact email lookup is available only in the owner-only Account support tab.');
+      clearListForAccessDenial('Exact email lookup is available only in the owner-only Account support tab.');
       return;
     }
     loadUsers();
@@ -164,7 +189,7 @@ function Users({ inWorkspace = false }) {
   return (
     <PageLayout title={inWorkspace ? 'Account administration' : 'Users'} headingLevel={inWorkspace ? 2 : 1} subtitle="Registered accounts across all statuses. Existing administrator and owner permissions apply." guide={USERS_GUIDE}>
       <LythCard variant="panel">
-        <div className="panel-header"><h2>Find accounts</h2><LythButton variant="ghost" type="button" onClick={() => loadUsers()} disabled={loading}>Refresh</LythButton></div>
+        <div className="panel-header"><h2>Find accounts</h2><LythButton variant="ghost" type="button" onClick={() => loadUsers()} disabled={loading}>{error ? 'Retry' : 'Refresh'}</LythButton></div>
         <p className="muted">This list shows account identity and access state only. Exact email lookup and recorded support history remain owner-only in Account support.</p>
         <form className="form-row" onSubmit={submitSearch}>
           <LythInput type="text" aria-label="Search registered accounts" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search account ID, display name, or handle" />
@@ -176,10 +201,11 @@ function Users({ inWorkspace = false }) {
           <LythButton type="submit" disabled={loading}>Search</LythButton>
         </form>
         {error ? <div className="notice error" role="alert">{error}</div> : null}
-        {loading ? <p aria-live="polite">Loading users...</p> : null}
+        {loading ? <p role="status" aria-live="polite">Loading users...</p> : null}
+        {loadingMore ? <p role="status" aria-live="polite">Loading more registered accounts...</p> : null}
         {!loading && !error && !items.length ? <div className="empty-state">No registered accounts match these filters.</div> : null}
         {items.length ? (
-          <div className="data-table users-data-table" role="table" aria-label="Registered accounts">
+          <div ref={listRef} className="data-table users-data-table" role="table" aria-label="Registered accounts" aria-busy={loadingMore} tabIndex={-1}>
             <div className="data-row header" role="row"><span role="columnheader">Account</span><span role="columnheader">Status</span><span role="columnheader">Created</span><span role="columnheader">Active sessions</span><span role="columnheader">Plan</span><span role="columnheader">Actions</span></div>
             {items.map((user) => <div key={user.id} className="data-row" role="row">
               <span role="cell"><strong>{user.displayName || user.handle || 'User'}</strong>{user.handle ? <span className="muted">@{user.handle}</span> : null}<span className="muted user-account-id">{user.id}</span></span>
@@ -187,11 +213,15 @@ function Users({ inWorkspace = false }) {
               <span role="cell">{formatDateTime(user.createdAt)}</span>
               <span role="cell">{user.currentSessionCount ?? 'Unknown'}</span>
               <span role="cell">{user.subscriptionTier || 'Unknown'}</span>
-              <span role="cell"><LythButton variant="ghost" type="button" onClick={() => selectUser(user)}>Review</LythButton></span>
+              <span role="cell"><LythButton variant="ghost" type="button" aria-label={`Review account ${user.displayName || user.handle || 'account'} (${user.id})`} onClick={() => selectUser(user)}>Review</LythButton></span>
             </div>)}
           </div>
         ) : null}
-        {nextCursor && !loading ? <LythButton variant="secondary" type="button" onClick={() => loadUsers({ cursor: nextCursor, append: true })} disabled={loadingMore}>{loadingMore ? 'Loading...' : 'Load more'}</LythButton> : null}
+        {nextCursor && !loading ? <LythButton variant="secondary" type="button" aria-label="Load more registered accounts" aria-disabled={loadingMore} onClick={(event) => {
+          if (loadingMore) return;
+          paginationFocusPending.current = document.activeElement === event.currentTarget;
+          loadUsers({ cursor: nextCursor, append: true });
+        }}>{loadingMore ? 'Loading...' : 'Load more'}</LythButton> : null}
       </LythCard>
 
       <LythCard variant="panel">
