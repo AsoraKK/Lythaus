@@ -14,6 +14,7 @@ on:
       - 'apps/lythaus-admin-api/src/account-support-runtime.ts'
       - 'apps/lythaus-admin-api/src/overview-*.ts'
       - 'apps/lythaus-public-api/tests/*.postgres.mjs'
+      - 'apps/lythaus-public-api/tests/auth-failure-paths.workerd.mjs'
       - 'apps/lythaus-auth-acceptance-coordinator/src/**'
       - 'apps/lythaus-auth-acceptance-coordinator/tests/**'
       - 'apps/lythaus-admin-api/src/auth-email-dispatch-adapter.ts'
@@ -184,7 +185,9 @@ jobs:
       - name: Prove authentication and email races on real PostgreSQL
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
-        run: node --experimental-strip-types --experimental-test-module-mocks --test --test-concurrency=1 apps/lythaus-public-api/tests/*.postgres.mjs apps/lythaus-admin-api/tests/*.postgres.mjs
+        run: |
+          node --experimental-strip-types --experimental-test-module-mocks --test --test-concurrency=1 apps/lythaus-public-api/tests/*.postgres.mjs apps/lythaus-admin-api/tests/*.postgres.mjs
+          node --test --test-timeout=90000 apps/lythaus-public-api/tests/auth-failure-paths.workerd.mjs
       - name: Enforce executable coordinator coverage on real PostgreSQL
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable

@@ -10,8 +10,10 @@ import { hashAuthToken, hmacLookup, uuidv7 } from '@lythaus/security';
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
 if (!connectionString) throw new Error('Auth Workerd fixtures require local disposable PostgreSQL 17');
 const databaseTarget = new URL(connectionString);
+const disposableDatabase = databaseTarget.pathname.startsWith('/lythaus_auth_test')
+  || (process.env.GITHUB_ACTIONS === 'true' && databaseTarget.pathname === '/postgres');
 if (!['localhost', '127.0.0.1', '::1'].includes(databaseTarget.hostname)
-  || !databaseTarget.pathname.startsWith('/lythaus_auth_test')) {
+  || !disposableDatabase) {
   throw new Error('Auth Workerd fixtures refuse non-local or non-disposable PostgreSQL databases');
 }
 
