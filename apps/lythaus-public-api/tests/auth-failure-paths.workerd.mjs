@@ -10,6 +10,7 @@ import { hashAuthToken, hmacLookup, uuidv7 } from '@lythaus/security';
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
 if (!connectionString) throw new Error('Auth Workerd fixtures require local disposable PostgreSQL 17');
 const databaseTarget = new URL(connectionString);
+// Local runs must use the auth-test database; CI may use only its disposable PostgreSQL service.
 const disposableDatabase = databaseTarget.pathname.startsWith('/lythaus_auth_test')
   || (process.env.GITHUB_ACTIONS === 'true' && databaseTarget.pathname === '/postgres');
 if (!['localhost', '127.0.0.1', '::1'].includes(databaseTarget.hostname)
@@ -25,6 +26,71 @@ const password = 'synthetic pre-verification password';
 const ownerPassword = 'synthetic mailbox owner password';
 const acceptedPasswordDigests = [password, ownerPassword].map(value => createHash('sha1').update(value).digest('hex').toUpperCase());
 const hmacKey = randomBytes(32).toString('base64');
+const rateLimitWindowMs = 60_000;
+const publicErrorHeaders = {
+  'cache-control': 'private, no-store',
+  'content-type': 'application/json; charset=utf-8',
+  'mf-content-encoding': 'gzip',
+  'transfer-encoding': 'chunked',
+  vary: 'Origin, Authorization',
+};
+
+function normalizePrivateError(response, body) {
+  assert.ok(body && typeof body === 'object' && !Array.isArray(body));
+  assert.match(body.correlationId ?? '', /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  assert.equal(response.headers.get('x-correlation-id'), body.correlationId);
+  const normalizedBody = { ...body };
+  delete normalizedBody.correlationId;
+  const normalizedHeaders = Object.fromEntries(response.headers.entries());
+  delete normalizedHeaders['x-correlation-id'];
+  return { status: response.status, body: normalizedBody, headers: normalizedHeaders };
+}
+
+function assertPrivateError(response, body, status, error, extraHeaders = {}) {
+  assert.deepEqual(normalizePrivateError(response, body), {
+    status,
+    body: { error },
+    headers: { ...publicErrorHeaders, ...extraHeaders },
+  });
+}
+
+function assertPrivacyLeakMutationsRejected(response, body, status, error, extraHeaders = {}) {
+  const mutations = [
+    { accountState: 'verified' },
+    { submittedInput: { email: 'member@example.invalid', password: 'synthetic password', turnstileToken: 'synthetic token' } },
+    { providerDetails: { status: 302, location: 'https://provider-detail.invalid/private' } },
+  ];
+  for (const mutation of mutations) {
+    assert.throws(
+      () => assertPrivateError(response, { ...body, ...mutation }, status, error, extraHeaders),
+      assert.AssertionError,
+      'unexpected account, submitted-input, or provider details must fail the complete-body assertion',
+    );
+  }
+  const leakedHeaders = new Headers(response.headers);
+  leakedHeaders.set('x-provider-details', 'synthetic upstream response');
+  assert.throws(
+    () => assertPrivateError({ status: response.status, headers: leakedHeaders }, body, status, error, extraHeaders),
+    assert.AssertionError,
+    'unexpected provider response headers must fail the complete-header assertion',
+  );
+}
+
+async function waitForStableRateLimitWindow(windowStart) {
+  const safeStart = windowStart + 1_500;
+  if (Date.now() < safeStart) await new Promise(resolve => setTimeout(resolve, safeStart - Date.now()));
+  const now = Date.now();
+  assert.equal(Math.floor(now / rateLimitWindowMs) * rateLimitWindowMs, windowStart, 'fixture starts inside the intended minute bucket');
+  assert.ok(now - windowStart >= 1_000 && now - windowStart < 30_000, 'fixture leaves at least half a minute for the threshold proof');
+  return windowStart;
+}
+
+async function chooseStableRateLimitWindow() {
+  const now = Date.now();
+  let windowStart = Math.floor(now / rateLimitWindowMs) * rateLimitWindowMs;
+  if (now - windowStart > 30_000) windowStart += rateLimitWindowMs;
+  return waitForStableRateLimitWindow(windowStart);
+}
 
 const databaseStub = `
 import { env } from 'cloudflare:workers';
@@ -53,7 +119,7 @@ export async function transaction(binding, work) {
 }
 `;
 
-describe('Public API authentication failures in native Workerd', { timeout: 90_000 }, () => {
+describe('Public API authentication failures in native Workerd', { timeout: 180_000 }, () => {
   let fixture;
   before(async () => { fixture = await createFixture(); });
   after(async () => { await fixture?.dispose(); });
@@ -70,17 +136,18 @@ describe('Public API authentication failures in native Workerd', { timeout: 90_0
     ];
 
     for (const scenario of cases) {
-      const email = `failure-${uuidv7()}@example.invalid`;
-      const key = `fixture-${uuidv7()}`;
+      const email = fixture.email('failure');
+      const key = fixture.idempotencyKey('failure');
       fixture.setProviderModes({ screening: scenario.screening, turnstile: scenario.turnstile ?? 'ok' });
       const before = fixture.providerCounts();
       const response = await fixture.request('/api/auth/email', {
         mode: 'register', email, password, turnstileToken: 'account_signup',
       }, { idempotencyKey: key });
       const body = await response.json();
-      assert.equal(response.status, scenario.expectedStatus, scenario.name);
-      assert.equal(body.error, scenario.expected, scenario.name);
-      assert.match(response.headers.get('cache-control') ?? '', /no-store/);
+      assertPrivateError(response, body, scenario.expectedStatus, scenario.expected);
+      if (scenario.name === cases[0].name) {
+        assertPrivacyLeakMutationsRejected(response, body, scenario.expectedStatus, scenario.expected);
+      }
       const after = fixture.providerCounts();
       assert.equal(after.screening - before.screening, scenario.screeningCalls, `${scenario.name}: one screening request, no redirect follow`);
       assert.equal(after.turnstile - before.turnstile, scenario.turnstileCalls, `${scenario.name}: only the expected Turnstile request`);
@@ -101,8 +168,7 @@ describe('Public API authentication failures in native Workerd', { timeout: 90_0
         const replay = await fixture.request('/api/auth/email', {
           mode: 'register', email, password, turnstileToken: 'account_signup',
         }, { idempotencyKey: key });
-        assert.equal(replay.status, 409);
-        assert.equal((await replay.json()).error, 'idempotency_outcome_unknown');
+        assertPrivateError(replay, await replay.json(), 409, 'idempotency_outcome_unknown');
         assert.deepEqual(fixture.providerCounts(), beforeReplay, 'ambiguous retry must not call either provider again');
         assert.equal(await fixture.accountCount(email), 0);
       }
@@ -111,8 +177,8 @@ describe('Public API authentication failures in native Workerd', { timeout: 90_0
 
   test('signup replay, resend replay, stale proof, verification replay, and sign-in retain contract boundaries', async () => {
     fixture.setProviderModes({ screening: 'ok', turnstile: 'ok' });
-    const email = `journey-${uuidv7()}@example.invalid`;
-    const signupKey = `signup-${uuidv7()}`;
+    const email = fixture.email('journey');
+    const signupKey = fixture.idempotencyKey('signup');
     const signup = { mode: 'register', email, password, turnstileToken: 'account_signup' };
     const signupCounts = fixture.providerCounts();
     const firstSignup = await fixture.request('/api/auth/email', signup, { idempotencyKey: signupKey });
@@ -139,23 +205,28 @@ describe('Public API authentication failures in native Workerd', { timeout: 90_0
     }
 
     const nonexistent = await fixture.request('/api/auth/email', {
-      mode: 'login', email: `unknown-${uuidv7()}@example.invalid`, password,
+      mode: 'login', email: fixture.email('unknown-login'), password,
     });
     const wrongPassword = await fixture.request('/api/auth/email', { mode: 'login', email, password: 'synthetic wrong password' });
-    assert.equal(nonexistent.status, 401);
-    assert.equal(wrongPassword.status, 401);
-    assert.equal((await nonexistent.json()).error, 'invalid_credentials');
-    assert.equal((await wrongPassword.json()).error, 'invalid_credentials');
+    const nonexistentBody = await nonexistent.json();
+    const wrongPasswordBody = await wrongPassword.json();
+    assertPrivateError(nonexistent, nonexistentBody, 401, 'invalid_credentials');
+    assertPrivateError(wrongPassword, wrongPasswordBody, 401, 'invalid_credentials');
+    assert.notEqual(nonexistentBody.correlationId, wrongPasswordBody.correlationId);
+    assert.deepEqual(
+      normalizePrivateError(nonexistent, nonexistentBody),
+      normalizePrivateError(wrongPassword, wrongPasswordBody),
+      'unknown-account and wrong-password responses have the same complete public body and headers apart from correlation ID',
+    );
     const pendingPassword = await fixture.request('/api/auth/email', { mode: 'login', email, password });
-    assert.equal(pendingPassword.status, 400);
-    assert.equal((await pendingPassword.json()).error, 'email_verification_required');
+    assertPrivateError(pendingPassword, await pendingPassword.json(), 400, 'email_verification_required');
     assert.equal(await fixture.sessionCount(user.id), 0, 'failed and pending sign-ins must not create sessions');
 
     await fixture.query(
       `UPDATE identity.email_verification_tokens SET created_at=now()-interval '31 seconds'
         WHERE user_id=$1 AND consumed_at IS NULL AND superseded_at IS NULL`, [user.id],
     );
-    const resendKey = `resend-${uuidv7()}`;
+    const resendKey = fixture.idempotencyKey('resend');
     const resend = { mode: 'resend_verification', email, turnstileToken: 'verification_resend' };
     const resendCounts = fixture.providerCounts();
     const firstResend = await fixture.request('/api/auth/email', resend, { idempotencyKey: resendKey });
@@ -184,8 +255,7 @@ describe('Public API authentication failures in native Workerd', { timeout: 90_0
 
     for (const token of [expiredToken, supersededToken]) {
       const stale = await fixture.request('/api/auth/email/verify', { token, password: ownerPassword });
-      assert.equal(stale.status, 400);
-      assert.equal((await stale.json()).error, 'verification_token_invalid');
+      assertPrivateError(stale, await stale.json(), 400, 'verification_token_invalid');
       assert.equal((await fixture.account(email)).verified_at, null, 'stale evidence cannot verify or replace the credential');
     }
 
@@ -194,20 +264,18 @@ describe('Public API authentication failures in native Workerd', { timeout: 90_0
     assert.deepEqual(await verified.json(), { state: 'verified' });
     assert.ok((await fixture.account(email)).verified_at);
     const replayedProof = await fixture.request('/api/auth/email/verify', { token: validToken, password: ownerPassword });
-    assert.equal(replayedProof.status, 400);
-    assert.equal((await replayedProof.json()).error, 'verification_token_invalid');
+    assertPrivateError(replayedProof, await replayedProof.json(), 400, 'verification_token_invalid');
     assert.equal(await fixture.sessionCount(user.id), 0, 'verification does not silently create an authenticated session');
 
     const previousPassword = await fixture.request('/api/auth/email', { mode: 'login', email, password });
-    assert.equal(previousPassword.status, 401);
-    assert.equal((await previousPassword.json()).error, 'invalid_credentials');
+    assertPrivateError(previousPassword, await previousPassword.json(), 401, 'invalid_credentials');
 
-    const loginHeaders = { idempotencyKey: `login-${uuidv7()}` };
+    const loginHeaders = { idempotencyKey: fixture.idempotencyKey('login') };
     const firstLogin = await fixture.request('/api/auth/email', { mode: 'login', email, password: ownerPassword }, loginHeaders);
-    const secondLogin = await fixture.request('/api/auth/email', { mode: 'login', email, password: ownerPassword }, loginHeaders);
     assert.equal(firstLogin.status, 200);
-    assert.equal(secondLogin.status, 200);
     const firstSession = await firstLogin.json();
+    const secondLogin = await fixture.request('/api/auth/email', { mode: 'login', email, password: ownerPassword }, loginHeaders);
+    assert.equal(secondLogin.status, 200);
     const secondSession = await secondLogin.json();
     assert.equal(typeof firstSession.accessToken, 'string');
     assert.equal(typeof firstSession.refreshToken, 'string');
@@ -219,30 +287,65 @@ describe('Public API authentication failures in native Workerd', { timeout: 90_0
     assert.equal(fixture.providerCounts().denied, 0, 'the Worker made no unrecognized or live provider request');
   });
 
-  test('the Public Worker still rejects the eleventh auth request from one IP window', async () => {
+  test('the Public Worker enforces ten auth requests and resets at the minute boundary', { timeout: 150_000 }, async () => {
     const ip = fixture.rateLimitIp();
+    const firstWindowStart = await chooseStableRateLimitWindow();
+    const proofStartedAt = Date.now();
     for (let index = 0; index < 10; index += 1) {
       const response = await fixture.request('/api/auth/email', {
         mode: 'login', email: 'not-an-email', password: 'synthetic login input',
       }, { ip });
-      assert.equal(response.status, 400, `request ${index + 1} remains inside the allowed window`);
-      assert.equal((await response.json()).error, 'invalid_email');
+      assertPrivateError(response, await response.json(), 400, 'invalid_email');
     }
     const limited = await fixture.request('/api/auth/email', {
       mode: 'login', email: 'not-an-email', password: 'synthetic login input',
     }, { ip });
-    assert.equal(limited.status, 429);
-    assert.equal((await limited.json()).error, 'rate_limit_exceeded');
+    const limitedBody = await limited.json();
+    const retryAfter = limited.headers.get('retry-after');
+    assert.match(retryAfter ?? '', /^\d+$/);
+    assert.ok(Number(retryAfter) >= 1 && Number(retryAfter) <= 60);
+    assert.ok(Math.abs(Number(retryAfter) - (60 - Math.floor(Date.now() / 1000) % 60)) <= 1);
+    assertPrivateError(limited, limitedBody, 429, 'rate_limit_exceeded', { 'retry-after': retryAfter });
+    assert.ok(Date.now() - proofStartedAt < 25_000, 'all threshold requests finish with a safe margin inside one minute bucket');
+    assert.deepEqual(await fixture.authRateLimitWindows(ip), [
+      { windowStartedAt: firstWindowStart, requestCount: 10 },
+    ], 'the eleventh request is rejected in the same exact UTC minute bucket');
+
+    const nextWindowStart = await waitForStableRateLimitWindow(firstWindowStart + rateLimitWindowMs);
+    const afterBoundary = await fixture.request('/api/auth/email', {
+      mode: 'login', email: 'not-an-email', password: 'synthetic login input',
+    }, { ip });
+    assertPrivateError(afterBoundary, await afterBoundary.json(), 400, 'invalid_email');
+    assert.deepEqual(await fixture.authRateLimitWindows(ip), [
+      { windowStartedAt: firstWindowStart, requestCount: 10 },
+      { windowStartedAt: nextWindowStart, requestCount: 1 },
+    ], 'the same IP receives a fresh ten-request bucket immediately after the minute boundary');
   });
 });
 
 async function createFixture() {
+  // CI shares its disposable database with other suites; teardown deletes only this run's exact records.
   const databaseClients = new Map();
   let transactionSequence = 0;
   let requestSequence = 0;
+  const fixtureRunId = uuidv7();
   const ipNonce = randomBytes(8).toString('hex');
+  const ipPrefix = `2001:db8:${ipNonce.slice(0, 4)}:${ipNonce.slice(4, 8)}:${ipNonce.slice(8, 12)}:${ipNonce.slice(12, 16)}`;
   const providerModes = { screening: 'ok', turnstile: 'ok' };
   const counts = { screening: 0, turnstile: 0, denied: 0 };
+  const createdEmails = new Set();
+  const createdIdempotencyKeys = new Set();
+  const rateLimitSubjects = new Map();
+  function fixtureEmail(label) {
+    const email = `${label}-${fixtureRunId}-${uuidv7()}@example.invalid`;
+    createdEmails.add(email);
+    return email;
+  }
+  function fixtureIdempotencyKey(label) {
+    const key = `auth-fixture-${fixtureRunId}-${label}-${uuidv7()}`;
+    createdIdempotencyKeys.add(key);
+    return key;
+  }
   const { privateKey, publicKey } = await generateKeyPair('ES256', { extractable: true });
   const keyId = 'native-auth-fixture';
   const publicJwk = { ...await exportJWK(publicKey), kid: keyId, use: 'sig', alg: 'ES256' };
@@ -360,9 +463,19 @@ async function createFixture() {
   return {
     setProviderModes(modes) { Object.assign(providerModes, modes); },
     providerCounts() { return { ...counts }; },
-    rateLimitIp() { return `2001:db8:${ipNonce.slice(0, 4)}:${ipNonce.slice(4, 8)}::ffff`; },
+    email: fixtureEmail,
+    idempotencyKey: fixtureIdempotencyKey,
+    rateLimitIp() { return `${ipPrefix}::ffff`; },
     async request(path, body, options = {}) {
-      const ip = options.ip ?? `2001:db8:${ipNonce.slice(0, 4)}:${ipNonce.slice(4, 8)}::${++requestSequence}`;
+      const ip = options.ip ?? `${ipPrefix}::${(++requestSequence).toString(16)}`;
+      const scope = ['/api/auth/email', '/api/auth/email/verify'].includes(path) ? `auth:${path}` : 'public-api';
+      rateLimitSubjects.set(`${scope}\u0000${ip}`, { scope, subject: ip });
+      if (path === '/api/auth/email' && typeof body?.email === 'string'
+        && ['register', 'login', 'resend_verification'].includes(body.mode)) {
+        const addressScope = `auth-address:${body.mode}`;
+        const addressLookup = hmacLookup(body.email, hmacKey);
+        rateLimitSubjects.set(`${addressScope}\u0000${addressLookup}`, { scope: addressScope, subject: addressLookup });
+      }
       const headers = new Headers({ 'content-type': 'application/json', 'cf-connecting-ip': ip });
       if (options.idempotencyKey) headers.set('idempotency-key', options.idempotencyKey);
       const response = await worker.dispatchFetch(`https://api.lythaus.test${path}`, {
@@ -406,6 +519,18 @@ async function createFixture() {
     async idempotencyCount(scope, key) {
       return Number((await query(`SELECT count(*)::int AS count FROM system.idempotency_keys WHERE scope=$1 AND key=$2`, [`auth-intake:${scope}`, key])).rows[0].count);
     },
+    async authRateLimitWindows(ip) {
+      const scope = 'auth:/api/auth/email';
+      const subjectHash = createHash('sha256').update(`${scope}:${ip}`).digest('hex');
+      const result = await query(
+        `SELECT window_started_at, request_count FROM system.rate_limit_windows
+          WHERE scope=$1 AND subject_hash=$2 ORDER BY window_started_at`, [scope, subjectHash],
+      );
+      return result.rows.map(row => ({
+        windowStartedAt: new Date(row.window_started_at).getTime(),
+        requestCount: Number(row.request_count),
+      }));
+    },
     async insertChallenge(userId, token, state) {
       const parameters = [uuidv7(), userId, hashAuthToken(token, 'verification')];
       if (state === 'expired') {
@@ -427,9 +552,78 @@ async function createFixture() {
     },
     async query(text, values) { return query(text, values); },
     async dispose() {
-      await worker.dispose();
-      await Promise.all([...databaseClients.values()].map(client => client.end()));
+      let disposalError;
+      try { await worker.dispose(); } catch (error) { disposalError = error; }
+      const closeResults = await Promise.allSettled([...databaseClients.values()].map(client => client.end()));
+      disposalError ??= closeResults.find(result => result.status === 'rejected')?.reason;
       databaseClients.clear();
+      try { await cleanupFixtureRows(); } catch (error) { disposalError ??= error; }
+      if (disposalError) throw disposalError;
     },
   };
+
+  async function cleanupFixtureRows() {
+    const cleanupClient = new pg.Client({ connectionString, ssl: false, connectionTimeoutMillis: 5000 });
+    await cleanupClient.connect();
+    try {
+      await cleanupClient.query("SET statement_timeout='5s'");
+      await cleanupClient.query('BEGIN');
+      for (const key of createdIdempotencyKeys) {
+        await cleanupClient.query('DELETE FROM system.idempotency_keys WHERE key=$1', [key]);
+        const remainingKey = await cleanupClient.query('SELECT count(*)::int AS count FROM system.idempotency_keys WHERE key=$1', [key]);
+        assert.equal(Number(remainingKey.rows[0].count), 0, 'fixture-owned idempotency evidence is removed');
+      }
+      const userIds = new Set();
+      for (const email of createdEmails) {
+        const lookup = hmacLookup(email, hmacKey);
+        const result = await cleanupClient.query(
+          `SELECT user_id FROM identity.email_credentials WHERE email_lookup_hmac=decode($1,'base64')
+           UNION SELECT user_id FROM identity.contact_emails WHERE email_lookup_hmac=decode($1,'base64')`, [lookup],
+        );
+        for (const row of result.rows) userIds.add(row.user_id);
+      }
+      const users = [...userIds];
+      if (users.length) {
+        await cleanupClient.query(
+          `DELETE FROM system.transactional_email_outbox
+            WHERE user_id=ANY($1::uuid[]) OR contact_email_user_id=ANY($1::uuid[])`, [users],
+        );
+        await cleanupClient.query(
+          `DELETE FROM trust.user_activity_events
+            WHERE user_id=ANY($1::uuid[]) OR actor_user_id=ANY($1::uuid[])`, [users],
+        );
+        await cleanupClient.query('DELETE FROM system.outbox_events WHERE actor_id=ANY($1::uuid[])', [users]);
+        await cleanupClient.query(
+          `DELETE FROM identity.account_events
+            WHERE user_id=ANY($1::uuid[]) OR actor_id=ANY($1::uuid[])`, [users],
+        );
+        await cleanupClient.query('DELETE FROM identity.auth_sessions WHERE user_id=ANY($1::uuid[])', [users]);
+        await cleanupClient.query('DELETE FROM identity.refresh_token_families WHERE user_id=ANY($1::uuid[])', [users]);
+        await cleanupClient.query('DELETE FROM identity.email_verification_tokens WHERE user_id=ANY($1::uuid[])', [users]);
+        await cleanupClient.query('DELETE FROM identity.password_reset_tokens WHERE user_id=ANY($1::uuid[])', [users]);
+        await cleanupClient.query('DELETE FROM identity.provider_links WHERE user_id=ANY($1::uuid[])', [users]);
+        await cleanupClient.query('DELETE FROM identity.user_entitlements WHERE user_id=ANY($1::uuid[])', [users]);
+        await cleanupClient.query('DELETE FROM privacy.subject_data_locations WHERE subject_id=ANY($1::uuid[])', [users]);
+        await cleanupClient.query('DELETE FROM identity.email_credentials WHERE user_id=ANY($1::uuid[])', [users]);
+        await cleanupClient.query('DELETE FROM identity.contact_emails WHERE user_id=ANY($1::uuid[])', [users]);
+        await cleanupClient.query('DELETE FROM identity.users WHERE id=ANY($1::uuid[])', [users]);
+        const remainingUsers = await cleanupClient.query('SELECT count(*)::int AS count FROM identity.users WHERE id=ANY($1::uuid[])', [users]);
+        assert.equal(Number(remainingUsers.rows[0].count), 0, 'fixture-owned synthetic accounts are removed');
+      }
+      for (const { scope, subject } of rateLimitSubjects.values()) {
+        const subjectHash = createHash('sha256').update(`${scope}:${subject}`).digest('hex');
+        await cleanupClient.query('DELETE FROM system.rate_limit_windows WHERE scope=$1 AND subject_hash=$2', [scope, subjectHash]);
+        const remainingWindow = await cleanupClient.query(
+          'SELECT count(*)::int AS count FROM system.rate_limit_windows WHERE scope=$1 AND subject_hash=$2', [scope, subjectHash],
+        );
+        assert.equal(Number(remainingWindow.rows[0].count), 0, 'fixture-owned rate-limit windows are removed');
+      }
+      await cleanupClient.query('COMMIT');
+    } catch (error) {
+      await cleanupClient.query('ROLLBACK').catch(() => undefined);
+      throw error;
+    } finally {
+      await cleanupClient.end();
+    }
+  }
 }
