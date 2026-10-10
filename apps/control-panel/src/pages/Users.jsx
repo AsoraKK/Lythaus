@@ -43,6 +43,8 @@ function Users({ inWorkspace = false }) {
   const [inviteMessage, setInviteMessage] = useState('');
   const listRequestId = useRef(0);
   const detailRequestId = useRef(0);
+  const selectedUserRef = useRef(null);
+  const accessContextId = useRef(0);
   const actionInFlight = useRef(false);
   const paginationFocusPending = useRef(false);
   const listRef = useRef(null);
@@ -50,6 +52,8 @@ function Users({ inWorkspace = false }) {
   const clearListForAccessDenial = useCallback((message) => {
     listRequestId.current += 1;
     detailRequestId.current += 1;
+    selectedUserRef.current = null;
+    accessContextId.current += 1;
     setLoading(false);
     setLoadingMore(false);
     setItems([]);
@@ -94,7 +98,7 @@ function Users({ inWorkspace = false }) {
 
   useEffect(() => {
     loadUsers();
-    return () => { listRequestId.current += 1; detailRequestId.current += 1; };
+    return () => { listRequestId.current += 1; detailRequestId.current += 1; selectedUserRef.current = null; accessContextId.current += 1; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -105,6 +109,7 @@ function Users({ inWorkspace = false }) {
 
   const selectUser = async (user, message = '') => {
     const requestId = ++detailRequestId.current;
+    selectedUserRef.current = user;
     setSelected(user);
     setDetail(null);
     setDetailLoading(true);
@@ -142,7 +147,10 @@ function Users({ inWorkspace = false }) {
 
   const runAction = async () => {
     if (!selected || !action || detail?.id !== selected.id || detailLoading || detailError || actionBusy || actionInFlight.current) return;
-    const requestId = detailRequestId.current;
+    const accountId = selected.id;
+    const contextId = accessContextId.current;
+    const isCurrentAccount = () => selectedUserRef.current?.id === accountId;
+    const isCurrentContext = () => contextId === accessContextId.current;
     const normalizedReason = reasonCode.trim().toUpperCase();
     if (!/^[A-Z0-9_.:-]{2,80}$/.test(normalizedReason)) {
       setActionMessage('A stable policy reason code is required.');
@@ -171,21 +179,31 @@ function Users({ inWorkspace = false }) {
         const statusValue = action === 'reactivate' ? 'active' : action === 'suspend' ? 'suspended' : 'locked';
         await adminRequest(`users/${selected.id}/status`, { method: 'POST', body: { status: statusValue, reasonCode: normalizedReason, confirmation } });
       }
-      if (requestId !== detailRequestId.current) return;
-      await loadUsers();
-      if (requestId !== detailRequestId.current) return;
-      await selectUser(selected, 'Action recorded.');
+      if (!isCurrentAccount()) return;
+      detailRequestId.current += 1;
+      setDetail(null);
+      setDetailLoading(true);
+      setDetailError('');
+      setAction(null);
+      setReasonCode('');
+      setConfirmation('');
+      setActionMessage(isCurrentContext() ? 'Action recorded.' : '');
+      if (isCurrentContext()) await loadUsers();
+      if (!isCurrentAccount()) return;
+      await selectUser(selectedUserRef.current, isCurrentContext() ? 'Action recorded.' : '');
     } catch (requestError) {
-      if (requestId !== detailRequestId.current) return;
-      if (requestError.status === 401 || requestError.status === 403) {
+      if (!isCurrentAccount()) return;
+      if ((requestError.status === 401 || requestError.status === 403) && isCurrentContext()) {
         clearListForAccessDenial(requestError.status === 403 ? 'Administrator access is required to change this account.' : 'Sign in through approved admin access to change this account.');
       } else {
+        detailRequestId.current += 1;
         setDetail(null);
+        setDetailLoading(false);
         setAction(null);
         setReasonCode('');
         setConfirmation('');
         setDetailError('Account details need to be refreshed.');
-        setActionMessage('The requested account action could not be confirmed. Refresh account details before retrying.');
+        setActionMessage(isCurrentContext() ? 'The requested account action could not be confirmed. Refresh account details before retrying.' : '');
       }
     } finally {
       actionInFlight.current = false;

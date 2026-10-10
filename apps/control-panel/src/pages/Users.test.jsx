@@ -447,4 +447,181 @@ describe('Users', () => {
     expect(keeper().getByRole('button', { name: 'Suspend' })).toBeDisabled();
     expect(keeper().queryByText('suspended')).not.toBeInTheDocument();
   });
+
+  it.each(['same account', 'A to B to A'])('requires a post-correction detail read after reviewing %s during a pending success', async (selection) => {
+    const second = { ...user, id: '01900000-0000-7000-8000-000000000002', displayName: 'Second', status: 'locked' };
+    let resolveAction;
+    let resolveFreshDetail;
+    let writeSettled = false;
+    adminRequest.mockImplementation((path, options) => {
+      if (path === 'users') return Promise.resolve(page([user, second]));
+      if (options?.method === 'POST') return new Promise((resolve) => { resolveAction = resolve; });
+      if (path === `users/${second.id}`) return Promise.resolve({ user: second });
+      if (writeSettled) return new Promise((resolve) => { resolveFreshDetail = resolve; });
+      return Promise.resolve({ user });
+    });
+    render(<Users />);
+    fireEvent.click(await screen.findByRole('button', { name: `Review account Person (${user.id})` }));
+    await waitFor(() => expect(keeper().getByRole('button', { name: 'Suspend' })).toBeEnabled());
+    fireEvent.click(keeper().getByRole('button', { name: 'Suspend' }));
+    fireEvent.change(screen.getByPlaceholderText('SECURITY_REMEDIATION'), { target: { value: 'ABUSE_PATTERN' } });
+    fireEvent.change(screen.getByLabelText('Type SUSPEND ACCOUNT'), { target: { value: 'SUSPEND ACCOUNT' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm action' }));
+    if (selection === 'A to B to A') {
+      fireEvent.click(screen.getByRole('button', { name: `Review account Second (${second.id})` }));
+      await waitFor(() => expect(keeper().getByText('locked')).toBeInTheDocument());
+    }
+    fireEvent.click(screen.getByRole('button', { name: `Review account Person (${user.id})` }));
+    await waitFor(() => expect(keeper().getByText('active')).toBeInTheDocument());
+    expect(keeper().getByRole('button', { name: 'Suspend' })).toBeDisabled();
+
+    await act(async () => { writeSettled = true; resolveAction({ userId: user.id, status: 'suspended' }); });
+    await waitFor(() => expect(resolveFreshDetail).toBeTypeOf('function'));
+    expect(keeper().getAllByText('Unknown')).toHaveLength(4);
+    expect(keeper().getByRole('button', { name: 'Suspend' })).toBeDisabled();
+    await act(async () => { resolveFreshDetail({ user: { ...user, status: 'suspended', currentSessionCount: 0 } }); });
+    await waitFor(() => expect(keeper().getByRole('button', { name: 'Suspend' })).toBeEnabled());
+    expect(keeper().getByText('suspended')).toBeInTheDocument();
+    expect(keeper().getByText('0')).toBeInTheDocument();
+    expect(keeper().getByText('Action recorded.')).toBeInTheDocument();
+    expect(adminRequest.mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(1);
+  });
+
+  it.each([['same account', 'before'], ['same account', 'after'], ['A to B to A', 'before'], ['A to B to A', 'after']])(
+    'invalidates details when reviewing %s and receiving the pre-correction read %s an uncertain error', async (selection, detailTiming) => {
+    const second = { ...user, id: '01900000-0000-7000-8000-000000000002', displayName: 'Second', status: 'locked' };
+    let rejectAction;
+    let resolvePreCorrectionDetail;
+    let resolveFreshDetail;
+    let detailRequests = 0;
+    let writeSettled = false;
+    adminRequest.mockImplementation((path, options) => {
+      if (path === 'users') return Promise.resolve(page([user, second]));
+      if (options?.method === 'POST') return new Promise((_, reject) => { rejectAction = reject; });
+      if (path === `users/${second.id}`) return Promise.resolve({ user: second });
+      if (writeSettled) return new Promise((resolve) => { resolveFreshDetail = resolve; });
+      if (++detailRequests > 1) return new Promise((resolve) => { resolvePreCorrectionDetail = resolve; });
+      return Promise.resolve({ user });
+    });
+    render(<Users />);
+    fireEvent.click(await screen.findByRole('button', { name: `Review account Person (${user.id})` }));
+    await waitFor(() => expect(keeper().getByRole('button', { name: 'Suspend' })).toBeEnabled());
+    fireEvent.click(keeper().getByRole('button', { name: 'Suspend' }));
+    fireEvent.change(screen.getByPlaceholderText('SECURITY_REMEDIATION'), { target: { value: 'ABUSE_PATTERN' } });
+    fireEvent.change(screen.getByLabelText('Type SUSPEND ACCOUNT'), { target: { value: 'SUSPEND ACCOUNT' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm action' }));
+    if (selection === 'A to B to A') {
+      fireEvent.click(screen.getByRole('button', { name: `Review account Second (${second.id})` }));
+      await waitFor(() => expect(keeper().getByText('locked')).toBeInTheDocument());
+    }
+    fireEvent.click(screen.getByRole('button', { name: `Review account Person (${user.id})` }));
+    await waitFor(() => expect(resolvePreCorrectionDetail).toBeTypeOf('function'));
+    if (detailTiming === 'before') {
+      await act(async () => { resolvePreCorrectionDetail({ user }); });
+      expect(keeper().getByText('active')).toBeInTheDocument();
+    }
+
+    await act(async () => { writeSettled = true; rejectAction(new Error('uncertain correction outcome')); });
+    expect(await keeper().findByRole('alert')).toHaveTextContent('Account details need to be refreshed.');
+    if (detailTiming === 'after') await act(async () => { resolvePreCorrectionDetail({ user }); });
+    expect(keeper().getAllByText('Unknown')).toHaveLength(4);
+    expect(keeper().getByRole('button', { name: 'Suspend' })).toBeDisabled();
+    fireEvent.click(keeper().getByRole('button', { name: 'Retry account details' }));
+    await waitFor(() => expect(resolveFreshDetail).toBeTypeOf('function'));
+    expect(keeper().getByRole('button', { name: 'Suspend' })).toBeDisabled();
+    await act(async () => { resolveFreshDetail({ user: { ...user, status: 'suspended', currentSessionCount: 0 } }); });
+    await waitFor(() => expect(keeper().getByRole('button', { name: 'Suspend' })).toBeEnabled());
+    expect(keeper().getByText('suspended')).toBeInTheDocument();
+    expect(adminRequest.mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(1);
+  });
+
+  it('leaves B details intact when an uncertain correction for A settles', async () => {
+    const second = { ...user, id: '01900000-0000-7000-8000-000000000002', displayName: 'Second', status: 'locked', currentSessionCount: 0 };
+    let rejectAction;
+    adminRequest.mockImplementation((path, options) => path === 'users' ? Promise.resolve(page([user, second]))
+      : options?.method === 'POST' ? new Promise((_, reject) => { rejectAction = reject; })
+        : Promise.resolve({ user: path === `users/${user.id}` ? user : second }));
+    render(<Users />);
+    fireEvent.click(await screen.findByRole('button', { name: `Review account Person (${user.id})` }));
+    await waitFor(() => expect(keeper().getByRole('button', { name: 'Suspend' })).toBeEnabled());
+    fireEvent.click(keeper().getByRole('button', { name: 'Suspend' }));
+    fireEvent.change(screen.getByPlaceholderText('SECURITY_REMEDIATION'), { target: { value: 'ABUSE_PATTERN' } });
+    fireEvent.change(screen.getByLabelText('Type SUSPEND ACCOUNT'), { target: { value: 'SUSPEND ACCOUNT' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm action' }));
+    fireEvent.click(screen.getByRole('button', { name: `Review account Second (${second.id})` }));
+    await waitFor(() => expect(keeper().getByText('locked')).toBeInTheDocument());
+
+    await act(async () => { rejectAction(new Error('uncertain A outcome')); });
+    expect(keeper().getByText(second.id)).toBeInTheDocument();
+    expect(keeper().getByText('locked')).toBeInTheDocument();
+    expect(keeper().getByText('0')).toBeInTheDocument();
+    expect(keeper().getByRole('button', { name: 'Suspend' })).toBeEnabled();
+    expect(keeper().queryByRole('alert')).not.toBeInTheDocument();
+    expect(adminRequest.mock.calls.filter(([path]) => path === `users/${user.id}`)).toHaveLength(1);
+  });
+
+  it('does not restore a cleared account selection after a pending correction succeeds', async () => {
+    let resolveAction;
+    let listRequests = 0;
+    adminRequest.mockImplementation((path, options) => path === 'users'
+      ? ++listRequests === 1 ? Promise.resolve(page()) : denied()
+      : options?.method === 'POST' ? new Promise((resolve) => { resolveAction = resolve; }) : Promise.resolve({ user }));
+    render(<Users />);
+    fireEvent.click(await screen.findByRole('button', { name: `Review account Person (${user.id})` }));
+    await waitFor(() => expect(keeper().getByRole('button', { name: 'Suspend' })).toBeEnabled());
+    fireEvent.click(keeper().getByRole('button', { name: 'Suspend' }));
+    fireEvent.change(screen.getByPlaceholderText('SECURITY_REMEDIATION'), { target: { value: 'ABUSE_PATTERN' } });
+    fireEvent.change(screen.getByLabelText('Type SUSPEND ACCOUNT'), { target: { value: 'SUSPEND ACCOUNT' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm action' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Administrator access is required to view registered accounts.');
+    await act(async () => { resolveAction({ userId: user.id, status: 'suspended' }); });
+    expect(keeper().queryByText(user.id)).not.toBeInTheDocument();
+    expect(keeper().queryByRole('button', { name: 'Suspend' })).not.toBeInTheDocument();
+    expect(adminRequest.mock.calls.filter(([path]) => path === `users/${user.id}`)).toHaveLength(1);
+  });
+
+  it.each(['success', 'permission denial'])('requires fresh A details without applying an old access context after %s', async (outcome) => {
+    let settleAction;
+    let resolveFreshDetail;
+    let listRequests = 0;
+    let writeSettled = false;
+    adminRequest.mockImplementation((path, options) => {
+      if (path === 'users') return ++listRequests === 2 ? denied() : Promise.resolve(page());
+      if (options?.method === 'POST') return new Promise((resolve, reject) => {
+        settleAction = () => outcome === 'success' ? resolve({ userId: user.id, status: 'suspended' })
+          : reject(Object.assign(new Error('old access denied'), { status: 403 }));
+      });
+      if (writeSettled) return new Promise((resolve) => { resolveFreshDetail = resolve; });
+      return Promise.resolve({ user });
+    });
+    render(<Users />);
+    fireEvent.click(await screen.findByRole('button', { name: `Review account Person (${user.id})` }));
+    await waitFor(() => expect(keeper().getByRole('button', { name: 'Suspend' })).toBeEnabled());
+    fireEvent.click(keeper().getByRole('button', { name: 'Suspend' }));
+    fireEvent.change(screen.getByPlaceholderText('SECURITY_REMEDIATION'), { target: { value: 'ABUSE_PATTERN' } });
+    fireEvent.change(screen.getByLabelText('Type SUSPEND ACCOUNT'), { target: { value: 'SUSPEND ACCOUNT' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm action' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Administrator access is required to view registered accounts.');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    fireEvent.click(await screen.findByRole('button', { name: `Review account Person (${user.id})` }));
+    await waitFor(() => expect(keeper().getByText('active')).toBeInTheDocument());
+
+    await act(async () => { writeSettled = true; settleAction(); });
+    if (outcome === 'permission denial') {
+      expect(await keeper().findByRole('alert')).toHaveTextContent('Account details need to be refreshed.');
+      fireEvent.click(keeper().getByRole('button', { name: 'Retry account details' }));
+    }
+    await waitFor(() => expect(resolveFreshDetail).toBeTypeOf('function'));
+    expect(keeper().getByText(user.id)).toBeInTheDocument();
+    expect(keeper().getAllByText('Unknown')).toHaveLength(4);
+    expect(keeper().getByRole('button', { name: 'Suspend' })).toBeDisabled();
+    expect(keeper().queryByText('Action recorded.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Administrator access is required to change this account.')).not.toBeInTheDocument();
+    const freshUser = { ...user, status: outcome === 'success' ? 'suspended' : 'active' };
+    await act(async () => { resolveFreshDetail({ user: freshUser }); });
+    await waitFor(() => expect(keeper().getByRole('button', { name: 'Suspend' })).toBeEnabled());
+    expect(keeper().getByText(freshUser.status)).toBeInTheDocument();
+  });
 });
