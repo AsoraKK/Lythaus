@@ -41,6 +41,9 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
   String? _submissionSignature;
   String? _replyKey;
   String? _replySignature;
+  String? _replyRequestId;
+  String? _pendingReplyRequestId;
+  int _replyDraftVersion = 0;
   List<Map<String, dynamic>> _history = <Map<String, dynamic>>[];
   String? _nextCursor;
   Map<String, dynamic>? _selectedRequest;
@@ -568,6 +571,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
         TextField(
           controller: _reply,
           enabled: request['closed'] != true,
+          onChanged: (_) => _replyDraftVersion += 1,
           decoration: InputDecoration(
             labelText: 'Reply privately',
             border: const OutlineInputBorder(),
@@ -695,12 +699,58 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
     if (id is! String) return;
     final client = ref.read(supportFeedbackClientProvider);
     final epoch = _epoch;
+    final previousRequestId = _selectedRequest?['id'];
+    final previousReplyRequestId = _replyRequestId;
+    final previousDraftVersion = _replyDraftVersion;
+    final previousPendingReplyRequestId = _pendingReplyRequestId;
+    final hasReplyDraftForPreviousRequest =
+        _replyRequestId == previousRequestId && _reply.text.isNotEmpty;
+    final hasPendingReplyForPreviousRequest =
+        previousPendingReplyRequestId != null &&
+        previousPendingReplyRequestId == previousRequestId;
+    if (previousRequestId != id &&
+        (hasReplyDraftForPreviousRequest ||
+            hasPendingReplyForPreviousRequest)) {
+      final discard = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Switch request?'),
+          content: Text(
+            hasPendingReplyForPreviousRequest
+                ? 'This reply is still being sent. Switching clears its draft. '
+                      'Check this request’s history before trying again.'
+                : 'Switching requests will clear this unsent reply draft.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Keep reply draft'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Discard and switch'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted ||
+          !_current(client, epoch) ||
+          discard != true ||
+          _selectedRequest?['id'] != previousRequestId ||
+          _replyRequestId != previousReplyRequestId ||
+          _replyDraftVersion != previousDraftVersion ||
+          _pendingReplyRequestId != previousPendingReplyRequestId) {
+        return;
+      }
+    }
     final generation = ++_detailGeneration;
-    final sameRequest = _selectedRequest?['id'] == id;
-    if (!sameRequest) {
+    final sameReplyRequest = _replyRequestId == id;
+    if (!sameReplyRequest) {
+      _replyDraftVersion += 1;
       _reply.clear();
       _replyKey = null;
       _replySignature = null;
+      _replyRequestId = id;
     }
     setState(() {
       _selectedRequest = request;
@@ -918,51 +968,102 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
       _replyKey = _uuid.v4();
       _replySignature = signature;
     }
+    final idempotencyKey = _replyKey!;
+    final kind = _kind;
     final client = ref.read(supportFeedbackClientProvider);
     final epoch = _epoch;
+    final draftVersion = _replyDraftVersion;
     setState(() {
       _busy = true;
       _pendingMessage = 'Sending your reply…';
+      _pendingReplyRequestId = id;
       _error = null;
       _notice = null;
     });
     try {
       final result = await client.reply(
-        kind: _kind,
+        kind: kind,
         requestId: id,
         expectedRevision: revision,
         message: message,
-        idempotencyKey: _replyKey!,
+        idempotencyKey: idempotencyKey,
       );
-      if (!_current(client, epoch)) return;
-      validateSupportFeedbackMutationResult(result, kind: _kind, requestId: id);
+      validateSupportFeedbackMutationResult(result, kind: kind, requestId: id);
+      if (!_currentReplyDraft(client, epoch, id, draftVersion)) {
+        _finishDetachedReply(
+          client,
+          epoch,
+          notice: _replyRequestId == id && _selectedRequest?['id'] == id
+              ? 'Your reply was added to the private history. Your newer draft is still here.'
+              : 'A reply to another private request was accepted. Check that request’s history.',
+        );
+        return;
+      }
       setState(() {
         _busy = false;
         _pendingMessage = null;
+        _pendingReplyRequestId = null;
         _notice = 'Your reply was added to the private history.';
         _replyKey = null;
         _replySignature = null;
         _reply.clear();
+        _replyDraftVersion += 1;
       });
+      final completedDraftVersion = _replyDraftVersion;
       await _loadHistory();
-      if (!_current(client, epoch)) return;
+      if (!_currentReplyDraft(client, epoch, id, completedDraftVersion)) return;
       await _loadDetail(request);
     } on SupportFeedbackCancelled {
-      if (_current(client, epoch)) {
-        setState(() {
-          _busy = false;
-          _pendingMessage = null;
-          _notice = 'Sending stopped. Check this history before trying again.';
-        });
-      }
-    } catch (error) {
       if (!_current(client, epoch)) return;
+      if (!_currentReplyDraft(client, epoch, id, draftVersion)) {
+        _finishDetachedReply(
+          client,
+          epoch,
+          notice: _replyRequestId == id && _selectedRequest?['id'] == id
+              ? 'Sending stopped. Check this history before trying again.'
+              : 'Sending stopped for a reply to another request. Check its history before trying again.',
+        );
+        return;
+      }
       setState(() {
         _busy = false;
         _pendingMessage = null;
+        _pendingReplyRequestId = null;
+        _notice = 'Sending stopped. Check this history before trying again.';
+      });
+    } catch (error) {
+      if (!_current(client, epoch)) return;
+      if (!_currentReplyDraft(client, epoch, id, draftVersion)) {
+        _finishDetachedReply(
+          client,
+          epoch,
+          notice: _replyRequestId == id && _selectedRequest?['id'] == id
+              ? 'A reply could not be confirmed. Check this history before trying again.'
+              : 'A reply to another request could not be confirmed. Check its history before trying again.',
+        );
+        return;
+      }
+      setState(() {
+        _busy = false;
+        _pendingMessage = null;
+        _pendingReplyRequestId = null;
         _error = _safeError(error);
       });
     }
+  }
+
+  void _finishDetachedReply(
+    SupportFeedbackClient client,
+    int epoch, {
+    required String notice,
+  }) {
+    if (!_current(client, epoch)) return;
+    setState(() {
+      _busy = false;
+      _pendingMessage = null;
+      _pendingReplyRequestId = null;
+      _notice = notice;
+    });
   }
 
   void _cancelPending() {
@@ -980,6 +1081,9 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
     _submissionSignature = null;
     _replyKey = null;
     _replySignature = null;
+    _replyRequestId = null;
+    _pendingReplyRequestId = null;
+    _replyDraftVersion += 1;
   }
 
   bool _current(SupportFeedbackClient client, int epoch) =>
@@ -994,6 +1098,17 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
       _current(client, epoch) &&
       generation == _detailGeneration &&
       _selectedRequest?['id'] == requestId;
+
+  bool _currentReplyDraft(
+    SupportFeedbackClient client,
+    int epoch,
+    String requestId,
+    int draftVersion,
+  ) =>
+      _current(client, epoch) &&
+      _selectedRequest?['id'] == requestId &&
+      _replyRequestId == requestId &&
+      _replyDraftVersion == draftVersion;
 
   List<Map<String, dynamic>> _validatedHistoryItems(
     Map<String, dynamic> result,

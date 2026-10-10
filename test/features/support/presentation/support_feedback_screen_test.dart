@@ -29,6 +29,7 @@ class _FakeSupportFeedbackClient implements SupportFeedbackClient {
   bool failNextOptions;
   bool failNextSubmit;
   bool deferNextSubmit;
+  bool deferNextReply = false;
   bool malformedNextSubmit = false;
   bool malformedNextReply = false;
   bool failNextReply = false;
@@ -37,12 +38,16 @@ class _FakeSupportFeedbackClient implements SupportFeedbackClient {
   bool _current = true;
   Completer<Map<String, dynamic>>? _pendingList;
   Completer<Map<String, dynamic>>? _pendingSubmit;
+  Completer<Map<String, dynamic>>? _pendingReply;
   final List<String> listedKinds = <String>[];
   final List<int> listedLimits = <int>[];
   final List<Map<String, dynamic>> submissions = <Map<String, dynamic>>[];
   final List<String> submissionKeys = <String>[];
   final List<String> replies = <String>[];
   final List<String> replyKeys = <String>[];
+  final List<String> replyRequestIds = <String>[];
+  final List<int> replyExpectedRevisions = <int>[];
+  int requestRevision = 1;
   int cancellations = 0;
 
   @override
@@ -58,6 +63,10 @@ class _FakeSupportFeedbackClient implements SupportFeedbackClient {
     final pendingSubmit = _pendingSubmit;
     if (pendingSubmit != null && !pendingSubmit.isCompleted) {
       pendingSubmit.completeError(const SupportFeedbackCancelled());
+    }
+    final pendingReply = _pendingReply;
+    if (pendingReply != null && !pendingReply.isCompleted) {
+      pendingReply.completeError(const SupportFeedbackCancelled());
     }
   }
 
@@ -127,7 +136,7 @@ class _FakeSupportFeedbackClient implements SupportFeedbackClient {
     required String requestId,
     int? messageBefore,
   }) async => <String, dynamic>{
-    'request': _request(kind, id: requestId),
+    'request': _request(kind, id: requestId, revision: requestRevision),
     'messages': <Map<String, dynamic>>[
       <String, dynamic>{
         'id': '018f0000-0000-7000-8000-000000000002',
@@ -174,15 +183,33 @@ class _FakeSupportFeedbackClient implements SupportFeedbackClient {
   }) async {
     replies.add(message);
     replyKeys.add(idempotencyKey);
+    replyRequestIds.add(requestId);
+    replyExpectedRevisions.add(expectedRevision);
     if (failNextReply) {
       failNextReply = false;
+      requestRevision = expectedRevision + 1;
       throw const SupportFeedbackApiException(409, 'revision_conflict');
+    }
+    if (deferNextReply) {
+      deferNextReply = false;
+      _pendingReply = Completer<Map<String, dynamic>>();
+      return _pendingReply!.future;
     }
     if (malformedNextReply) {
       malformedNextReply = false;
       return <String, dynamic>{'replayed': false};
     }
+    requestRevision = expectedRevision + 1;
     return _mutation(kind, id: requestId);
+  }
+
+  void completeDeferredReply() {
+    final pending = _pendingReply;
+    if (pending == null || pending.isCompleted) {
+      throw StateError('No deferred reply is pending');
+    }
+    requestRevision = replyExpectedRevisions.last + 1;
+    pending.complete(_mutation('problem', id: replyRequestIds.last));
   }
 
   Map<String, dynamic> _mutation(
@@ -200,6 +227,7 @@ class _FakeSupportFeedbackClient implements SupportFeedbackClient {
     String id = _requestId,
     String? title,
     Map<String, dynamic>? body,
+    int? revision,
   }) => <String, dynamic>{
     'id': id,
     'kind': kind,
@@ -210,13 +238,53 @@ class _FakeSupportFeedbackClient implements SupportFeedbackClient {
         '$label ${kind == 'problem' ? 'problem' : 'suggestion'}',
     'actual': body?['actual'] ?? 'Synthetic actual behavior.',
     'expected': body?['expected'] ?? 'Synthetic expected behavior.',
-    'revision': 1,
+    'revision': revision ?? requestRevision,
     'state': 'submitted',
     'createdAt': '2026-10-01T12:00:00Z',
     'updatedAt': '2026-10-01T12:00:00Z',
     'memberMessage': null,
     'submitterId': '018f0000-0000-7000-8000-000000000099',
     'closed': closed,
+  };
+}
+
+class _TwoRequestReplyClient extends _FakeSupportFeedbackClient {
+  _TwoRequestReplyClient() : super('Synthetic reply race');
+
+  @override
+  Future<Map<String, dynamic>> list({
+    required String kind,
+    required int limit,
+    String? cursor,
+  }) async {
+    listedKinds.add(kind);
+    listedLimits.add(limit);
+    return <String, dynamic>{
+      'items': <Map<String, dynamic>>[
+        _request(kind, id: _requestId, title: 'First reply history row'),
+        _request(kind, id: _secondRequestId, title: 'Second reply history row'),
+      ],
+      'nextCursor': null,
+      'snapshotAt': '2026-10-10T12:00:00Z',
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> detail({
+    required String kind,
+    required String requestId,
+    int? messageBefore,
+  }) async => <String, dynamic>{
+    'request': _request(
+      kind,
+      id: requestId,
+      title: requestId == _requestId
+          ? 'First reply history row'
+          : 'Second reply history row',
+      revision: requestRevision,
+    ),
+    'messages': <Map<String, dynamic>>[],
+    'nextMessageCursor': null,
   };
 }
 
@@ -782,91 +850,183 @@ void main() {
     expect(find.text('Late stale detail'), findsNothing);
   });
 
-  testWidgets('reply conflict refresh preserves the draft and retry key', (
-    tester,
-  ) async {
-    final client = _FakeSupportFeedbackClient('Synthetic reply recovery');
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [supportFeedbackClientProvider.overrideWithValue(client)],
-        child: const MaterialApp(home: SupportFeedbackScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.descendant(
-        of: find.byType(ListTile),
-        matching: find.text('Synthetic reply recovery problem'),
-      ),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(
-      find.descendant(
-        of: find.byType(ListTile),
-        matching: find.text('Synthetic reply recovery problem'),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Reply privately'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.enterText(find.byType(TextField).last, 'Reply draft');
-    client.failNextReply = true;
-    await tester.scrollUntilVisible(
-      find.text('Send reply'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Send reply'));
-    await tester.pumpAndSettle();
-    expect(
-      find.text(
-        'This request changed or is closed. Reload its history before replying.',
-      ),
-      findsOneWidget,
-    );
-    final retryKey = client.replyKeys.single;
+  testWidgets(
+    'reply conflict refresh preserves the draft and uses a revision-scoped key',
+    (tester) async {
+      final client = _FakeSupportFeedbackClient('Synthetic reply recovery');
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [supportFeedbackClientProvider.overrideWithValue(client)],
+          child: const MaterialApp(home: SupportFeedbackScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.descendant(
+          of: find.byType(ListTile),
+          matching: find.text('Synthetic reply recovery problem'),
+        ),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(
+        find.descendant(
+          of: find.byType(ListTile),
+          matching: find.text('Synthetic reply recovery problem'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Reply privately'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.enterText(find.byType(TextField).last, 'Reply draft');
+      client.failNextReply = true;
+      await tester.scrollUntilVisible(
+        find.text('Send reply'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Send reply'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'This request changed or is closed. Reload its history before replying.',
+        ),
+        findsOneWidget,
+      );
+      final conflictKey = client.replyKeys.single;
 
-    await tester.scrollUntilVisible(
-      find.descendant(
+      await tester.scrollUntilVisible(
+        find.descendant(
+          of: find.byType(ListTile),
+          matching: find.text('Synthetic reply recovery problem'),
+        ),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(
+        find.descendant(
+          of: find.byType(ListTile),
+          matching: find.text('Synthetic reply recovery problem'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Reply privately'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(
+        tester.widget<TextField>(find.byType(TextField).last).controller!.text,
+        'Reply draft',
+      );
+      await tester.scrollUntilVisible(
+        find.text('Send reply'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Send reply'));
+      await tester.pumpAndSettle();
+      expect(client.replyExpectedRevisions, <int>[1, 2]);
+      expect(client.replyKeys, hasLength(2));
+      expect(client.replyKeys.first, conflictKey);
+      expect(client.replyKeys.last, isNot(conflictKey));
+      expect(
+        find.text('Your reply was added to the private history.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'late reply completion cannot replace another request or its new draft',
+    (tester) async {
+      final client = _TwoRequestReplyClient();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [supportFeedbackClientProvider.overrideWithValue(client)],
+          child: const MaterialApp(home: SupportFeedbackScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final firstRow = find.descendant(
         of: find.byType(ListTile),
-        matching: find.text('Synthetic reply recovery problem'),
-      ),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(
-      find.descendant(
+        matching: find.text('First reply history row'),
+      );
+      await tester.scrollUntilVisible(
+        firstRow,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(firstRow);
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Reply privately'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.enterText(find.byType(TextField).last, 'First thread reply');
+      client.deferNextReply = true;
+      await tester.scrollUntilVisible(
+        find.text('Send reply'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Send reply'));
+      await tester.pump();
+      expect(client.replyRequestIds, <String>[_requestId]);
+      await tester.enterText(find.byType(TextField).last, '');
+
+      final secondRow = find.descendant(
         of: find.byType(ListTile),
-        matching: find.text('Synthetic reply recovery problem'),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Reply privately'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(
-      tester.widget<TextField>(find.byType(TextField).last).controller!.text,
-      'Reply draft',
-    );
-    await tester.scrollUntilVisible(
-      find.text('Send reply'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Send reply'));
-    await tester.pumpAndSettle();
-    expect(client.replyKeys, <String>[retryKey, retryKey]);
-    expect(
-      find.text('Your reply was added to the private history.'),
-      findsOneWidget,
-    );
-  });
+        matching: find.text('Second reply history row'),
+      );
+      await tester.scrollUntilVisible(
+        secondRow,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(secondRow);
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('This reply is still being sent.'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Discard and switch'));
+      await tester.pumpAndSettle();
+      expect(find.text('Second reply history row'), findsWidgets);
+      await tester.scrollUntilVisible(
+        find.text('Reply privately'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.enterText(
+        find.byType(TextField).last,
+        'Second thread draft',
+      );
+
+      client.completeDeferredReply();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Second reply history row'), findsWidgets);
+      expect(
+        tester.widget<TextField>(find.byType(TextField).last).controller!.text,
+        'Second thread draft',
+      );
+      expect(
+        find.text(
+          'A reply to another private request was accepted. Check that request’s history.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Your reply was added to the private history.'),
+        findsNothing,
+      );
+    },
+  );
 
   testWidgets(
     'switching kind clears detail loading and keeps the account scoped',
