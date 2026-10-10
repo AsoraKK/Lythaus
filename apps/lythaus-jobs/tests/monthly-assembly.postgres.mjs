@@ -10,6 +10,9 @@ import { uuidv7, hashAuthToken } from '@lythaus/security';
 import { MONTHLY_REPUTATION_POLICY_VERSION as policy, MONTHLY_REPUTATION_CATALOGUE_HASH as hash } from '@lythaus/contracts';
 import { PROPOSED_WEEKLY_EARNING_RULES as weekly } from '../../../packages/contracts/src/monthly-earning-policy.ts';
 import { PROPOSED_MONTHLY_MAINTENANCE_RULES as maintenance } from '../../../packages/contracts/src/monthly-maintenance-policy.ts';
+import { nextReputationMonth } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
+import { QUARTERLY_PREVIEW_CONFIGURATION, QUARTERLY_CALENDAR_APPROVED_AT,
+  previewUtcQuarterlyWindow, previewQuarterlyEmailQualification } from '../../../packages/contracts/src/monthly-quarterly-policy.ts';
 import { recordMonthlyEmailControl, readMonthlyMaintenanceEvidence, loadMonthlyMaintenanceConfiguration } from '../../../packages/db/src/monthly-maintenance.ts';
 import { createMonthlyEmailRenewalChallenge, consumeMonthlyEmailRenewalChallenge } from '../../../packages/db/src/monthly-email-renewal.ts';
 import { assembleMonthlyReputation } from '../../../packages/db/src/monthly-assembly.ts';
@@ -583,6 +586,20 @@ test('SEC-03/REL-02: concurrent renewal consumption commits one private proof an
   assert.equal(evidence.evidence[0].id, first.sourceEventId);
   const afterCredential = (await sql('SELECT password_hash, verified_at, email_lookup_hmac FROM identity.email_credentials WHERE user_id = $1', [userId])).rows[0];
   assert.deepEqual(afterCredential, before);
+  const configuration = { ...QUARTERLY_PREVIEW_CONFIGURATION, prospectiveFrom: QUARTERLY_CALENDAR_APPROVED_AT };
+  const window = previewUtcQuarterlyWindow(evidence.evidence[0].performedAt);
+  for (const month of window.sourceMonths) {
+    const preview = previewQuarterlyEmailQualification({ subjectUserId: userId, sourceMonth: month.sourceMonth,
+      evidence: evidence.evidence, configuration }, `${month.effectiveMonth}-01T00:00:00.000Z`);
+    assert.equal(preview.qualifies, true); assert.equal(preview.appliedPoints, 0);
+    assert.equal(preview.validUntil, window.quarterEndsAt);
+  }
+  const nextQuarterMonth = window.quarterEndsAt.slice(0, 7);
+  const expired = previewQuarterlyEmailQualification({ subjectUserId: userId, sourceMonth: nextQuarterMonth,
+    evidence: evidence.evidence, configuration }, `${nextReputationMonth(nextQuarterMonth)}-01T00:00:00.000Z`);
+  assert.equal(expired.qualifies, false); assert.equal(expired.reason, 'scoring_quarter_expired');
+  assert.equal(expired.renewalRequired, true); assert.equal(afterCredential.verified_at !== null, true);
+  assert.deepEqual((await tx(client => readMonthlyMaintenanceEvidence(client, userId, '9999-01-01T00:00:00.000Z'))).evidence, evidence.evidence);
   assert.equal((await sql('SELECT count(*)::int n FROM trust.monthly_maintenance_observations WHERE subject_user_id = $1', [userId])).rows[0].n, 1);
   assert.equal((await sql('SELECT count(*)::int n FROM system.outbox_events WHERE aggregate_id = $1 AND event_type = \'identity.email.renewed\'', [issued.challengeId])).rows[0].n, 1);
   assert.equal((await sql('SELECT token_hash FROM trust.monthly_email_renewal_challenges WHERE id = $1', [issued.challengeId])).rows[0].token_hash.toString('hex'), input.tokenHash);
