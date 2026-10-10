@@ -7,10 +7,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/support/application/support_feedback_api.dart';
 import 'package:lythaus/features/support/application/support_feedback_providers.dart';
+import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:uuid/uuid.dart';
 
 class SupportFeedbackScreen extends ConsumerStatefulWidget {
-  const SupportFeedbackScreen({super.key});
+  const SupportFeedbackScreen({super.key, this.initialKind = 'problem'})
+    : assert(initialKind == 'problem' || initialKind == 'suggestion');
+
+  final String initialKind;
 
   @override
   ConsumerState<SupportFeedbackScreen> createState() =>
@@ -31,12 +35,15 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
   final _reproductionSteps = TextEditingController();
   final _reply = TextEditingController();
   Map<String, dynamic>? _options;
-  String _kind = 'problem';
+  late String _kind;
   String? _category;
   String? _submissionKey;
   String? _submissionSignature;
   String? _replyKey;
   String? _replySignature;
+  String? _replyRequestId;
+  String? _pendingReplyRequestId;
+  int _replyDraftVersion = 0;
   List<Map<String, dynamic>> _history = <Map<String, dynamic>>[];
   String? _nextCursor;
   Map<String, dynamic>? _selectedRequest;
@@ -45,14 +52,26 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
   bool _loadingHistory = false;
   bool _loadingDetail = false;
   bool _busy = false;
+  bool _replyRefreshing = false;
+  bool _allowPop = false;
+  bool _confirmingLeave = false;
+  bool _confirmingKindChange = false;
   int _epoch = 0;
+  int _detailGeneration = 0;
   String? _error;
+  String? _historyError;
+  String? _detailError;
+  bool _detailErrorIsOlder = false;
   String? _notice;
+  String? _pendingMessage;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadInitial());
+    _kind = widget.initialKind;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadInitial();
+    });
   }
 
   @override
@@ -67,9 +86,11 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(supportFeedbackClientProvider);
     ref.listen<int>(authSessionRevisionProvider, (previous, next) {
       if (previous == next) return;
       _epoch += 1;
+      _detailGeneration += 1;
       setState(() {
         _options = null;
         _history = <Map<String, dynamic>>[];
@@ -78,11 +99,16 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
         _detail = null;
         _category = null;
         _error = null;
+        _historyError = null;
+        _detailError = null;
+        _detailErrorIsOlder = false;
         _notice = null;
+        _pendingMessage = null;
         _loading = true;
         _loadingHistory = false;
         _loadingDetail = false;
         _busy = false;
+        _replyRefreshing = false;
       });
       _clearForm();
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -98,7 +124,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
         : categories.first;
     final loading = _loading || _loadingHistory || _loadingDetail;
 
-    return Scaffold(
+    final page = Scaffold(
       appBar: AppBar(title: const Text('Support and feedback')),
       body: SafeArea(
         child: ListView(
@@ -109,39 +135,43 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
               'They are not public posts.',
             ),
             const SizedBox(height: 16),
-            SegmentedButton<String>(
-              segments: const <ButtonSegment<String>>[
-                ButtonSegment<String>(
-                  value: 'problem',
-                  label: Text('Report a problem'),
-                  icon: Icon(Icons.bug_report_outlined),
-                ),
-                ButtonSegment<String>(
-                  value: 'suggestion',
-                  label: Text('Feedback and suggestions'),
-                  icon: Icon(Icons.lightbulb_outline),
-                ),
-              ],
-              selected: <String>{_kind},
-              onSelectionChanged: _loading || _busy
-                  ? null
-                  : (selection) {
-                      if (selection.isEmpty || selection.single == _kind) {
-                        return;
-                      }
-                      _epoch += 1;
-                      ref.read(supportFeedbackClientProvider).cancelPending();
-                      setState(() {
-                        _kind = selection.single;
-                        _category = null;
-                        _selectedRequest = null;
-                        _detail = null;
-                        _error = null;
-                        _notice = null;
-                      });
-                      _clearForm();
-                      _loadHistory();
-                    },
+            LayoutBuilder(
+              builder: (context, constraints) => SegmentedButton<String>(
+                segments: const <ButtonSegment<String>>[
+                  ButtonSegment<String>(
+                    value: 'problem',
+                    label: Text('Report a problem'),
+                    icon: Icon(Icons.bug_report_outlined),
+                  ),
+                  ButtonSegment<String>(
+                    value: 'suggestion',
+                    label: Text('Feedback and suggestions'),
+                    icon: Icon(Icons.lightbulb_outline),
+                  ),
+                ],
+                direction:
+                    constraints.maxWidth < 520 ||
+                        MediaQuery.textScalerOf(context).scale(1) > 1.25
+                    ? Axis.vertical
+                    : Axis.horizontal,
+                selected: <String>{_kind},
+                onSelectionChanged:
+                    _loading ||
+                        _busy ||
+                        _replyRefreshing ||
+                        _confirmingKindChange
+                    ? null
+                    : (selection) {
+                        if (selection.isEmpty || selection.single == _kind) {
+                          return;
+                        }
+                        if (_hasDraft) {
+                          _confirmKindChange(selection.single);
+                        } else {
+                          _switchKind(selection.single);
+                        }
+                      },
+              ),
             ),
             const SizedBox(height: 20),
             Text(
@@ -151,11 +181,25 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
             if (_options == null && _loading)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 20),
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    semanticsLabel: 'Loading support options',
+                  ),
+                ),
               ),
-            if (_options == null && !_loading)
+            if (_options == null && !_loading) ...<Widget>[
               _UnavailableNotice(message: _error ?? _unavailableMessage),
-            if (_options != null) ...<Widget>[
+              TextButton.icon(
+                onPressed: _loading ? null : _loadInitial,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry support'),
+              ),
+            ],
+            if (_options != null && categories.isEmpty)
+              const _UnavailableNotice(
+                message: 'This request type is not available right now.',
+              ),
+            if (_options != null && categories.isNotEmpty) ...<Widget>[
               DropdownButtonFormField<String>(
                 key: ValueKey<String>('category-$_kind'),
                 initialValue: selectedCategory,
@@ -241,7 +285,9 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
               ],
               const SizedBox(height: 12),
               FilledButton.icon(
-                onPressed: _busy || selectedCategory == null ? null : _submit,
+                onPressed: _busy || _replyRefreshing || selectedCategory == null
+                    ? null
+                    : _submit,
                 icon: const Icon(Icons.send_outlined),
                 label: Text(
                   _kind == 'problem'
@@ -250,6 +296,11 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
                 ),
               ),
               if (_busy)
+                Semantics(
+                  liveRegion: true,
+                  child: Text(_pendingMessage ?? 'Sending privately…'),
+                ),
+              if (_busy)
                 TextButton(
                   onPressed: _cancelPending,
                   child: const Text('Cancel sending'),
@@ -257,7 +308,13 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
             ],
             if (_notice != null) ...<Widget>[
               const SizedBox(height: 8),
-              Text(_notice!, key: const ValueKey<String>('support-notice')),
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  _notice!,
+                  key: const ValueKey<String>('support-notice'),
+                ),
+              ),
             ],
             if (_error != null && _options != null) ...<Widget>[
               const SizedBox(height: 8),
@@ -269,25 +326,67 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
             if (_loadingHistory && _history.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    semanticsLabel: 'Loading private request history',
+                  ),
+                ),
               )
-            else if (_history.isEmpty)
+            else if (_historyError != null && _history.isEmpty) ...<Widget>[
+              _UnavailableNotice(message: _historyError!),
+              TextButton.icon(
+                onPressed: _loadingHistory ? null : _loadHistory,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry history'),
+              ),
+            ] else if (_history.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: Text('No requests in this history yet.'),
               )
             else
               ..._history.map(_historyTile),
+            if (_historyError != null && _history.isNotEmpty)
+              _UnavailableNotice(message: _historyError!),
             if (_nextCursor != null)
               OutlinedButton(
                 onPressed: _loadingHistory
                     ? null
                     : () => _loadHistory(append: true),
-                child: Text(_loadingHistory ? 'Loading…' : 'Load more history'),
+                child: Text(
+                  _loadingHistory
+                      ? 'Loading…'
+                      : _historyError == null
+                      ? 'Load more history'
+                      : 'Retry loading history',
+                ),
               ),
-            if (_selectedRequest != null && _detail != null) ...<Widget>[
+            if (_selectedRequest != null) ...<Widget>[
               const Divider(height: 32),
-              _requestDetail(context),
+              if (_detail != null)
+                _requestDetail(context)
+              else if (_loadingDetail)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      semanticsLabel: 'Loading private request details',
+                    ),
+                  ),
+                )
+              else if (_detailError != null) ...<Widget>[
+                _UnavailableNotice(message: _detailError!),
+                TextButton.icon(
+                  onPressed: _loadingDetail
+                      ? null
+                      : () {
+                          final request = _selectedRequest;
+                          if (request != null) _loadDetail(request);
+                        },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry request details'),
+                ),
+              ],
             ],
             if (loading)
               TextButton(
@@ -298,6 +397,112 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
         ),
       ),
     );
+    return PopScope(
+      canPop: _allowPop,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _confirmLeave();
+      },
+      child: ReadingPane(child: page),
+    );
+  }
+
+  bool get _hasDraft =>
+      _category != null ||
+      _title.text.isNotEmpty ||
+      _firstDetail.text.isNotEmpty ||
+      _secondDetail.text.isNotEmpty ||
+      _reproductionSteps.text.isNotEmpty ||
+      _reply.text.isNotEmpty;
+
+  Future<void> _confirmLeave() async {
+    if (_confirmingLeave || !mounted) return;
+    if (!_busy && !_hasDraft) {
+      setState(() => _allowPop = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.of(context).maybePop();
+      });
+      return;
+    }
+    _confirmingLeave = true;
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Leave support?'),
+        content: Text(
+          _busy
+              ? 'Sending may already have reached the server. If you leave, '
+                    'check your private history before trying again.'
+              : 'This draft is only on this screen and will be lost if you leave.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Stay here'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Leave'),
+          ),
+        ],
+      ),
+    );
+    _confirmingLeave = false;
+    if (leave != true || !mounted) return;
+    setState(() => _allowPop = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.of(context).maybePop();
+    });
+  }
+
+  Future<void> _confirmKindChange(String nextKind) async {
+    if (_confirmingKindChange || !mounted) return;
+    _confirmingKindChange = true;
+    setState(() {});
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Switch request type?'),
+        content: const Text(
+          'Switching request type will clear this unsent draft.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Stay with draft'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Discard and switch'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _confirmingKindChange = false);
+    if (discard == true) _switchKind(nextKind);
+  }
+
+  void _switchKind(String nextKind) {
+    _epoch += 1;
+    _detailGeneration += 1;
+    ref.read(supportFeedbackClientProvider).cancelPending();
+    setState(() {
+      _kind = nextKind;
+      _category = null;
+      _history = <Map<String, dynamic>>[];
+      _nextCursor = null;
+      _selectedRequest = null;
+      _detail = null;
+      _loadingDetail = false;
+      _replyRefreshing = false;
+      _error = null;
+      _historyError = null;
+      _detailError = null;
+      _detailErrorIsOlder = false;
+      _notice = null;
+    });
+    _clearForm();
+    _loadHistory();
   }
 
   List<String> get _categories {
@@ -348,6 +553,25 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
             ),
             subtitle: Text(_string(message['text'], '')),
           ),
+        if (_detailError != null) ...<Widget>[
+          _UnavailableNotice(message: _detailError!),
+          TextButton.icon(
+            onPressed: _loadingDetail
+                ? null
+                : _detailErrorIsOlder
+                ? _loadOlderMessages
+                : () {
+                    final selected = _selectedRequest;
+                    if (selected != null) _loadDetail(selected);
+                  },
+            icon: const Icon(Icons.refresh),
+            label: Text(
+              _detailErrorIsOlder
+                  ? 'Retry older messages'
+                  : 'Retry request details',
+            ),
+          ),
+        ],
         if (_detail?['nextMessageCursor'] is int)
           TextButton(
             onPressed: _loadingDetail ? null : _loadOlderMessages,
@@ -356,6 +580,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
         TextField(
           controller: _reply,
           enabled: request['closed'] != true,
+          onChanged: (_) => _replyDraftVersion += 1,
           decoration: InputDecoration(
             labelText: 'Reply privately',
             border: const OutlineInputBorder(),
@@ -370,6 +595,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
         FilledButton(
           onPressed:
               _busy ||
+                  _replyRefreshing ||
                   request['closed'] == true ||
                   id is! String ||
                   revision is! int
@@ -382,37 +608,58 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
   }
 
   Future<void> _loadInitial() async {
+    if (!mounted) return;
     final epoch = ++_epoch;
     final client = ref.read(supportFeedbackClientProvider);
     setState(() {
       _loading = true;
       _error = null;
+      _historyError = null;
     });
     try {
       final options = await client.getOptions();
       if (!_current(client, epoch)) return;
+      setState(() {
+        _options = options;
+        _loading = false;
+        _loadingHistory = true;
+        _historyError = null;
+      });
       final history = await client.list(
         kind: _kind,
         limit: _historyLimit(options),
       );
       if (!_current(client, epoch)) return;
-      final items = _maps(history['items']);
+      final items = _validatedHistoryItems(history, _kind);
       setState(() {
-        _options = options;
         _history = items;
         _nextCursor = _nullableString(history['nextCursor']);
-        _loading = false;
         _loadingHistory = false;
         _error = null;
+        _historyError = null;
       });
     } on SupportFeedbackCancelled {
-      if (_current(client, epoch)) setState(() => _loading = false);
+      if (!_current(client, epoch)) return;
+      setState(() {
+        _loading = false;
+        _loadingHistory = false;
+        if (_options == null) {
+          _error = 'Loading was canceled. Retry to check support availability.';
+        } else {
+          _historyError =
+              'History loading was canceled. Retry to check your private requests.';
+        }
+      });
     } catch (error) {
       if (!_current(client, epoch)) return;
       setState(() {
         _loading = false;
         _loadingHistory = false;
-        _error = _safeError(error);
+        if (_options == null) {
+          _error = _safeError(error);
+        } else {
+          _historyError = _safeError(error);
+        }
       });
     }
   }
@@ -423,6 +670,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
     setState(() {
       _loadingHistory = true;
       _error = null;
+      _historyError = null;
     });
     try {
       final result = await client.list(
@@ -431,21 +679,27 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
         cursor: append ? _nextCursor : null,
       );
       if (!_current(client, epoch)) return;
-      final items = _maps(result['items']);
+      final items = _validatedHistoryItems(result, _kind);
       setState(() {
         _history = append
             ? <Map<String, dynamic>>[..._history, ...items]
             : items;
         _nextCursor = _nullableString(result['nextCursor']);
         _loadingHistory = false;
+        _historyError = null;
       });
     } on SupportFeedbackCancelled {
-      if (_current(client, epoch)) setState(() => _loadingHistory = false);
+      if (!_current(client, epoch)) return;
+      setState(() {
+        _loadingHistory = false;
+        _historyError =
+            'History loading was canceled. Retry to check your private requests.';
+      });
     } catch (error) {
       if (!_current(client, epoch)) return;
       setState(() {
         _loadingHistory = false;
-        _error = _safeError(error);
+        _historyError = _safeError(error);
       });
     }
   }
@@ -455,35 +709,94 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
     if (id is! String) return;
     final client = ref.read(supportFeedbackClientProvider);
     final epoch = _epoch;
+    final previousRequestId = _selectedRequest?['id'];
+    final previousReplyRequestId = _replyRequestId;
+    final previousDraftVersion = _replyDraftVersion;
+    final previousPendingReplyRequestId = _pendingReplyRequestId;
+    final hasReplyDraftForPreviousRequest =
+        _replyRequestId == previousRequestId && _reply.text.isNotEmpty;
+    final hasPendingReplyForPreviousRequest =
+        previousPendingReplyRequestId != null &&
+        previousPendingReplyRequestId == previousRequestId;
+    if (previousRequestId != id &&
+        (hasReplyDraftForPreviousRequest ||
+            hasPendingReplyForPreviousRequest)) {
+      final discard = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Switch request?'),
+          content: Text(
+            hasPendingReplyForPreviousRequest
+                ? 'This reply is still being sent. Switching clears its draft. '
+                      'Check this request’s history before trying again.'
+                : 'Switching requests will clear this unsent reply draft.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Keep reply draft'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Discard and switch'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted ||
+          !_current(client, epoch) ||
+          discard != true ||
+          _selectedRequest?['id'] != previousRequestId ||
+          _replyRequestId != previousReplyRequestId ||
+          _replyDraftVersion != previousDraftVersion ||
+          _pendingReplyRequestId != previousPendingReplyRequestId) {
+        return;
+      }
+    }
+    final generation = ++_detailGeneration;
+    final sameReplyRequest = _replyRequestId == id;
+    if (!sameReplyRequest) {
+      _replyDraftVersion += 1;
+      _reply.clear();
+      _replyKey = null;
+      _replySignature = null;
+      _replyRequestId = id;
+    }
     setState(() {
       _selectedRequest = request;
       _detail = null;
       _loadingDetail = true;
+      _detailError = null;
+      _detailErrorIsOlder = false;
       _error = null;
     });
     try {
       final result = await client.detail(kind: _kind, requestId: id);
-      if (!_current(client, epoch)) return;
-      final messages = _maps(result['messages'])
+      if (!_currentDetail(client, epoch, generation, id)) return;
+      final detail = _validatedDetail(result, id, _kind);
+      final messages = _maps(detail['messages'])
         ..sort(
           (left, right) =>
               (left['revision'] as int).compareTo(right['revision'] as int),
         );
       setState(() {
-        _detail = <String, dynamic>{...result, 'messages': messages};
-        _selectedRequest = _asMap(result['request']);
+        _detail = <String, dynamic>{...detail, 'messages': messages};
+        _selectedRequest = _asMap(detail['request']);
         _loadingDetail = false;
-        _reply.clear();
-        _replyKey = null;
-        _replySignature = null;
+        _detailError = null;
       });
     } on SupportFeedbackCancelled {
-      if (_current(client, epoch)) setState(() => _loadingDetail = false);
-    } catch (error) {
-      if (!_current(client, epoch)) return;
+      if (!_currentDetail(client, epoch, generation, id)) return;
       setState(() {
         _loadingDetail = false;
-        _error = _safeError(error);
+        _detailError =
+            'Loading was canceled. Retry to check this private request.';
+      });
+    } catch (error) {
+      if (!_currentDetail(client, epoch, generation, id)) return;
+      setState(() {
+        _loadingDetail = false;
+        _detailError = _safeError(error);
       });
     }
   }
@@ -493,18 +806,25 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
     final id = request['id'];
     final cursor = _detail?['nextMessageCursor'];
     if (id is! String || cursor is! int) return;
+    if (_loadingDetail) return;
     final client = ref.read(supportFeedbackClientProvider);
     final epoch = _epoch;
-    setState(() => _loadingDetail = true);
+    final generation = _detailGeneration;
+    setState(() {
+      _loadingDetail = true;
+      _detailError = null;
+      _detailErrorIsOlder = false;
+    });
     try {
       final older = await client.detail(
         kind: _kind,
         requestId: id,
         messageBefore: cursor,
       );
-      if (!_current(client, epoch)) return;
+      if (!_currentDetail(client, epoch, generation, id)) return;
+      final validated = _validatedDetail(older, id, _kind);
       final currentMessages = _maps(_detail?['messages']);
-      final olderMessages = _maps(older['messages']);
+      final olderMessages = _maps(validated['messages']);
       currentMessages.sort(
         (left, right) =>
             (left['revision'] as int).compareTo(right['revision'] as int),
@@ -520,22 +840,30 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
             ...olderMessages,
             ...currentMessages,
           ],
-          'nextMessageCursor': older['nextMessageCursor'],
+          'nextMessageCursor': validated['nextMessageCursor'],
         };
         _loadingDetail = false;
+        _detailError = null;
       });
     } on SupportFeedbackCancelled {
-      if (_current(client, epoch)) setState(() => _loadingDetail = false);
-    } catch (error) {
-      if (!_current(client, epoch)) return;
+      if (!_currentDetail(client, epoch, generation, id)) return;
       setState(() {
         _loadingDetail = false;
-        _error = _safeError(error);
+        _detailError = 'Loading was canceled. Retry the older messages.';
+        _detailErrorIsOlder = true;
+      });
+    } catch (error) {
+      if (!_currentDetail(client, epoch, generation, id)) return;
+      setState(() {
+        _loadingDetail = false;
+        _detailError = _safeError(error);
+        _detailErrorIsOlder = true;
       });
     }
   }
 
   Future<void> _submit() async {
+    if (_busy || _replyRefreshing) return;
     final category = _categoryForSubmit;
     if (category == null) return;
     final first = _firstDetail.text.trim();
@@ -576,6 +904,7 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
     final epoch = _epoch;
     setState(() {
       _busy = true;
+      _pendingMessage = 'Sending your private request…';
       _error = null;
       _notice = null;
     });
@@ -586,21 +915,32 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
         idempotencyKey: _submissionKey!,
       );
       if (!_current(client, epoch)) return;
-      final request = _asMap(result['request']);
+      final accepted = validateSupportFeedbackMutationResult(
+        result,
+        kind: _kind,
+      );
+      final request = _asMap(accepted['request']);
       setState(() {
         _busy = false;
+        _pendingMessage = null;
+        _category = null;
         _selectedRequest = request;
+        _detail = null;
+        _loadingDetail = false;
+        _detailError = null;
         _notice = 'Your private request was received.';
         _submissionKey = null;
         _submissionSignature = null;
       });
       _clearForm();
       await _loadHistory();
+      if (!_current(client, epoch)) return;
       if (request['id'] is String) await _loadDetail(request);
     } on SupportFeedbackCancelled {
       if (_current(client, epoch)) {
         setState(() {
           _busy = false;
+          _pendingMessage = null;
           _notice = 'Sending stopped. Check your history before trying again.';
         });
       }
@@ -608,12 +948,14 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
       if (!_current(client, epoch)) return;
       setState(() {
         _busy = false;
+        _pendingMessage = null;
         _error = _safeError(error);
       });
     }
   }
 
   Future<void> _sendReply() async {
+    if (_busy) return;
     final request = _asMap(_detail?['request']);
     final id = request['id'];
     final revision = request['revision'];
@@ -636,45 +978,142 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
       _replyKey = _uuid.v4();
       _replySignature = signature;
     }
+    final idempotencyKey = _replyKey!;
+    final kind = _kind;
     final client = ref.read(supportFeedbackClientProvider);
     final epoch = _epoch;
+    final draftVersion = _replyDraftVersion;
     setState(() {
       _busy = true;
+      _pendingMessage = 'Sending your reply…';
+      _pendingReplyRequestId = id;
       _error = null;
       _notice = null;
     });
     try {
-      await client.reply(
-        kind: _kind,
+      final result = await client.reply(
+        kind: kind,
         requestId: id,
         expectedRevision: revision,
         message: message,
-        idempotencyKey: _replyKey!,
+        idempotencyKey: idempotencyKey,
       );
+      validateSupportFeedbackMutationResult(result, kind: kind, requestId: id);
+      final replyDraftIsCurrent = _currentReplyDraft(
+        client,
+        epoch,
+        id,
+        draftVersion,
+      );
+      if (!replyDraftIsCurrent && !_selectedReplyRequest(client, epoch, id)) {
+        _finishDetachedReply(
+          client,
+          epoch,
+          notice:
+              'A reply to another private request was accepted. Check that request’s history.',
+        );
+        return;
+      }
+      await _completeAcceptedReply(
+        client,
+        epoch,
+        id,
+        request,
+        preserveCurrentDraft: !replyDraftIsCurrent,
+      );
+    } on SupportFeedbackCancelled {
       if (!_current(client, epoch)) return;
+      if (!_currentReplyDraft(client, epoch, id, draftVersion)) {
+        _finishDetachedReply(
+          client,
+          epoch,
+          notice: _replyRequestId == id && _selectedRequest?['id'] == id
+              ? 'Sending stopped. Check this history before trying again.'
+              : 'Sending stopped for a reply to another request. Check its history before trying again.',
+        );
+        return;
+      }
       setState(() {
         _busy = false;
-        _notice = 'Your reply was added to the private history.';
-        _replyKey = null;
-        _replySignature = null;
-        _reply.clear();
+        _pendingMessage = null;
+        _pendingReplyRequestId = null;
+        _notice = 'Sending stopped. Check this history before trying again.';
       });
-      await _loadHistory();
-      await _loadDetail(request);
-    } on SupportFeedbackCancelled {
-      if (_current(client, epoch)) {
-        setState(() {
-          _busy = false;
-          _notice = 'Sending stopped. Check this history before trying again.';
-        });
-      }
     } catch (error) {
       if (!_current(client, epoch)) return;
+      if (!_currentReplyDraft(client, epoch, id, draftVersion)) {
+        _finishDetachedReply(
+          client,
+          epoch,
+          notice: _replyRequestId == id && _selectedRequest?['id'] == id
+              ? 'A reply could not be confirmed. Check this history before trying again.'
+              : 'A reply to another request could not be confirmed. Check its history before trying again.',
+        );
+        return;
+      }
       setState(() {
         _busy = false;
+        _pendingMessage = null;
+        _pendingReplyRequestId = null;
         _error = _safeError(error);
       });
     }
+  }
+
+  void _finishDetachedReply(
+    SupportFeedbackClient client,
+    int epoch, {
+    required String notice,
+  }) {
+    if (!_current(client, epoch)) return;
+    setState(() {
+      _busy = false;
+      _replyRefreshing = false;
+      _pendingMessage = null;
+      _pendingReplyRequestId = null;
+      _notice = notice;
+    });
+  }
+
+  Future<void> _completeAcceptedReply(
+    SupportFeedbackClient client,
+    int epoch,
+    String requestId,
+    Map<String, dynamic> request, {
+    required bool preserveCurrentDraft,
+  }) async {
+    if (!_selectedReplyRequest(client, epoch, requestId)) return;
+    setState(() {
+      _busy = false;
+      _pendingMessage = null;
+      _pendingReplyRequestId = null;
+      _replyRefreshing = true;
+      _notice = 'Your reply was added to the private history.';
+      _replyKey = null;
+      _replySignature = null;
+      if (!preserveCurrentDraft) {
+        _reply.clear();
+        _replyDraftVersion += 1;
+      }
+    });
+    try {
+      await _refreshSelectedReplyRequest(client, epoch, requestId, request);
+    } finally {
+      if (_current(client, epoch)) {
+        setState(() => _replyRefreshing = false);
+      }
+    }
+  }
+
+  Future<void> _refreshSelectedReplyRequest(
+    SupportFeedbackClient client,
+    int epoch,
+    String requestId,
+    Map<String, dynamic> request,
+  ) async {
+    await _loadHistory();
+    if (!_selectedReplyRequest(client, epoch, requestId)) return;
+    await _loadDetail(request);
   }
 
   void _cancelPending() {
@@ -687,14 +1126,109 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
     _secondDetail.clear();
     _reproductionSteps.clear();
     _reply.clear();
+    _pendingMessage = null;
     _submissionKey = null;
     _submissionSignature = null;
     _replyKey = null;
     _replySignature = null;
+    _replyRequestId = null;
+    _pendingReplyRequestId = null;
+    _replyDraftVersion += 1;
   }
 
   bool _current(SupportFeedbackClient client, int epoch) =>
       mounted && epoch == _epoch && client.isCurrentSession;
+
+  bool _currentDetail(
+    SupportFeedbackClient client,
+    int epoch,
+    int generation,
+    String requestId,
+  ) =>
+      _current(client, epoch) &&
+      generation == _detailGeneration &&
+      _selectedRequest?['id'] == requestId;
+
+  bool _currentReplyDraft(
+    SupportFeedbackClient client,
+    int epoch,
+    String requestId,
+    int draftVersion,
+  ) =>
+      _current(client, epoch) &&
+      _selectedRequest?['id'] == requestId &&
+      _replyRequestId == requestId &&
+      _replyDraftVersion == draftVersion;
+
+  bool _selectedReplyRequest(
+    SupportFeedbackClient client,
+    int epoch,
+    String requestId,
+  ) =>
+      _current(client, epoch) &&
+      _selectedRequest?['id'] == requestId &&
+      _replyRequestId == requestId;
+
+  List<Map<String, dynamic>> _validatedHistoryItems(
+    Map<String, dynamic> result,
+    String kind,
+  ) {
+    final rawItems = result['items'];
+    final cursor = result['nextCursor'];
+    if (rawItems is! List ||
+        (cursor != null && cursor is! String) ||
+        result['snapshotAt'] is! String) {
+      throw const FormatException('Invalid support history response');
+    }
+    final items = <Map<String, dynamic>>[];
+    for (final value in rawItems) {
+      if (value is! Map) {
+        throw const FormatException('Invalid support history item');
+      }
+      final item = _asMap(value);
+      if (item['id'] is! String ||
+          (item['id'] as String).isEmpty ||
+          item['kind'] != kind ||
+          item['title'] is! String ||
+          item['state'] is! String ||
+          item['category'] is! String) {
+        throw const FormatException('Invalid support history item');
+      }
+      items.add(item);
+    }
+    return items;
+  }
+
+  Map<String, dynamic> _validatedDetail(
+    Map<String, dynamic> result,
+    String requestId,
+    String kind,
+  ) {
+    final request = _asMap(result['request']);
+    final rawMessages = result['messages'];
+    final cursor = result['nextMessageCursor'];
+    if (request['id'] != requestId ||
+        request['kind'] != kind ||
+        request['revision'] is! int ||
+        request['title'] is! String ||
+        rawMessages is! List ||
+        (cursor != null && cursor is! int)) {
+      throw const FormatException('Invalid support request details');
+    }
+    for (final value in rawMessages) {
+      if (value is! Map) {
+        throw const FormatException('Invalid support message');
+      }
+      final message = _asMap(value);
+      if (message['id'] is! String ||
+          message['from'] is! String ||
+          message['text'] is! String ||
+          message['revision'] is! int) {
+        throw const FormatException('Invalid support message');
+      }
+    }
+    return <String, dynamic>{...result, 'request': request};
+  }
 
   String? get _categoryForSubmit {
     final categories = _categories;
@@ -756,6 +1290,12 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
       if (error.statusCode == 429) {
         return 'Support actions are temporarily limited. Try again later.';
       }
+      if (error.statusCode == 404 && error.code == 'feature_disabled') {
+        return 'Support is not available right now.';
+      }
+      if (error.statusCode == 404) {
+        return 'This private request is no longer available.';
+      }
     }
     return _unavailableMessage;
   }
@@ -769,6 +1309,9 @@ class _UnavailableNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 12),
-    child: Text(message, key: const ValueKey<String>('support-unavailable')),
+    child: Semantics(
+      liveRegion: true,
+      child: Text(message, key: const ValueKey<String>('support-unavailable')),
+    ),
   );
 }
