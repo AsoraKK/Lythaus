@@ -73,7 +73,14 @@ class ProfileScreen extends ConsumerWidget {
       loading: () => ReadingPane(
         child: Scaffold(
           appBar: AppBar(title: const Text('Profile')),
-          body: const Center(child: CircularProgressIndicator()),
+          body: Semantics(
+            container: true,
+            liveRegion: true,
+            label: 'Loading profile',
+            child: const ExcludeSemantics(
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ),
         ),
       ),
       error: (error, stack) => ReadingPane(

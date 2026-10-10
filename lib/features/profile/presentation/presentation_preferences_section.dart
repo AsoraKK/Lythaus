@@ -72,9 +72,18 @@ class _PresentationPreferencesSectionState
                 : 'Save these choices on this device for guest use. Account choices stay separate.',
           ),
           if (busy)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: Spacing.sm),
-              child: LinearProgressIndicator(minHeight: 2),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
+              child: Semantics(
+                container: true,
+                liveRegion: true,
+                label: settings.preferencesSaving
+                    ? 'Saving preferences'
+                    : 'Loading saved preferences',
+                child: const ExcludeSemantics(
+                  child: LinearProgressIndicator(minHeight: 2),
+                ),
+              ),
             ),
           SwitchListTile(
             title: const Text('Swipe between profile tabs'),
