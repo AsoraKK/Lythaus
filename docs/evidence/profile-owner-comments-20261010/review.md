@@ -18,8 +18,8 @@ an unavailable placeholder. Other-member collections remain out of scope.
 | Requirement | Code | Verification |
 | --- | --- | --- |
 | Private own-comment collection | `owner-content-reader.ts`: `ownerCommentsQuery` and existing reader handler; OpenAPI `usersMeCommentsList` / `OwnerCommentsPage` | Reader tests; local PostgreSQL runtime-role test; canonical schema test |
-| JWT subject ownership / guest exclusion | Existing injected principal; SQL binds actor as `$1`, presenter verifies comment author | Guest/foreign-body unit cases; actual Worker tests awaiting route guard |
-| Visibility, moderation and deletion | Existing `assertFeedItemEligibility`, parent visibility/follow/block/public-label rules; allowed or pending owned comments only; active comment/post authors | Candidate rejection cases; local SQL deletion/block tests; Worker follow-revocation test awaiting route guard |
+| JWT subject ownership / guest exclusion | Existing injected principal; SQL binds actor as `$1`, presenter verifies comment author | Guest/foreign-body unit cases; actual Worker token revocation, guest rejection and author isolation tests |
+| Visibility, moderation and deletion | Existing `assertFeedItemEligibility`, parent visibility/follow/block/public-label rules; allowed or pending owned comments only; active comment/post authors | Candidate rejection cases; local SQL deletion/block tests; actual Worker follow, block, deletion and inactive-author access revocation tests |
 | Cursor pagination | Existing bounded 8/default, 20/max parser; descending microsecond timestamp plus UUID tie-break; limit plus one | Unit cursor/validation cases; real PostgreSQL same-timestamp/concurrent reads |
 | Account switch / late responses | `owner_comments.dart`: session revision keys, cancellation, author response validation and request revision fence | Controller tests cover account switch, late success/error, refresh overlap and disposal |
 | Duplicate pages / retries | In-flight guard and deduplication; repeated cursor rejection in Comments and existing Posts timelines | Controller overlap, retry, foreign response and repeated-cursor tests |
@@ -44,45 +44,44 @@ Passed:
 - `npm run openapi:test:dart`: four verifier tests plus 1,568 generated-package
   tests passed, including the two meaningful new owner Comments tests.
 - Full critical production coverage gate: 44 modules, 13 required categories.
+- Affected native architecture aggregate after dispatcher integration: 315 passed.
 - `flutter test --no-pub test/features/profile test/ui/screens/profile/profile_screen_test.dart test/screens/profile_screen_test.dart --reporter expanded`: 159 passed.
 - Final focused Posts/Comments controller rerun: 23 passed.
 - Focused `flutter analyze --no-pub`: no issues; changed application/test Dart format check passes.
 - Disposable local PostgreSQL 17 canonical migrations/grants verification on
   `lythaus_content_test_comments` and `lythaus_auth_test_comments`.
 - Existing content journey PostgreSQL regression: four passed.
+- Owner reader plus workerd aggregate after dispatcher integration: 15 passed.
+- All three Comments PostgreSQL cases passed, including actual Worker routing,
+  authentication, cursor pagination, accessible parent filtering and revoked access.
+- Canonical contract aggregate: 70 passed; 17 staging cases skipped.
 - Isolated Comments handler against actual PostgreSQL with `SET ROLE lythaus_runtime`:
   pagination, concurrent cursor reads, foreign/deleted/blocked/private exclusions,
   immediate deletion and block changes passed.
 
-Current gate:
+Remaining evidence gates:
 
-- Canonical contract tests: 69 passed, 17 staging cases skipped, one route-parity
-  failure because the reserved dispatcher guard does not admit Comments.
-- Two actual Worker-to-PostgreSQL Comments tests return 404 at that same guard.
-  These are retained as integration checks and are not bypassed.
 - Main's required-status-check configuration read returned
   `403 Resource not accessible by integration`. That operation stopped.
+- Protection configuration remains unverified. Normal PR-visible checks may be
+  inspected, and CI must pass on the final remote head before parent integration.
 
 The first UI compile/fixture/format errors were corrected; their reruns pass.
 The generated client validator includes meaningful new serialization and request
 tests in addition to the generator's existing scaffold tests.
 
-## Routing ownership handoff
+## Authorized routing integration
 
-The parent was asked to grant this lane ownership of the shared guard before
-editing `apps/lythaus-public-api/src/index.ts`. Pending that answer, the file is
-untouched. The exact required guard change is:
+The parent granted ownership of the minimal public Worker Comments GET guard and
+corresponding contract-parity tests. `apps/lythaus-public-api/src/index.ts` now
+admits only GET `/api/users/me/comments` through the existing owner reader,
+principal validation, fresh Hyperdrive query and private response path.
+All existing routes and authentication checks remain intact.
 
-```diff
--      if (request.method === 'GET' && (ownerItem || url.pathname === '/api/users/me/posts')) {
-+      if (request.method === 'GET' && (ownerItem || url.pathname === '/api/users/me/posts' || url.pathname === '/api/users/me/comments')) {
-```
-
-The canonical route-parity test then needs its public route-count assertion
-updated from 127 to 128 and `GET /users/me/comments` added to required routes.
-After serialized parent ownership, rerun contract parity and all three cases in
-`apps/lythaus-public-api/tests/owner-comments.postgres.mjs`.
-This draft is not end-to-end complete or merge-ready before that gate passes.
+The route-parity test requires `GET /users/me/comments` and verifies 128 public
+routes and the existing 64 admin routes. The full contract aggregate and all three
+`owner-comments.postgres.mjs` cases pass. No composer/submission dispatch changes
+are included.
 
 ## Screenshots
 
