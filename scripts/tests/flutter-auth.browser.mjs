@@ -115,11 +115,13 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
       await target.locator('flt-semantics-placeholder').evaluate(node=>node.click());
     }
     async function openSettingsFromReadyProfile() {
+      await page.getByRole('button',{name:/^Profile(?:\b|$)/}).click();
       if(width<700){
         await page.getByLabel(/Reputation New, new, active/).waitFor();
         await page.getByLabel(/^Monthly level pending/).waitFor();
       }
-      await page.getByRole('button',{name:/^Settings(?:\b|$)/}).click();
+      await page.getByRole('button',{name:'Open settings',exact:true}).waitFor();
+      await page.getByRole('button',{name:'Open settings',exact:true}).click();
       await page.waitForURL(url=>url.pathname==='/settings');
     }
     await openApp();
@@ -175,7 +177,6 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     await Promise.all([openApp(),openApp('/',secondTab)]);
     await Promise.all([page.getByText('No posts yet',{exact:true}).waitFor(),secondTab.getByText('No posts yet',{exact:true}).waitFor()]);
     assert.equal(maximumRefreshInFlight,1,'Same-origin tabs must serialize refresh instead of racing a rotating cookie');
-    if(width<700)await page.getByRole('button',{name:/^Profile(?:\b|$)/}).click();
     lifecycle.phase('settings_entry');
     await openSettingsFromReadyProfile();
     await page.getByText('Account security',{exact:true}).click();

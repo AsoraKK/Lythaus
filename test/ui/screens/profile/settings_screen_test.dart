@@ -5,6 +5,7 @@ import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
 import 'package:lythaus/features/profile/domain/owner_profile.dart';
+import 'package:lythaus/features/support/support_feedback_config.dart';
 import 'package:lythaus/state/providers/settings_providers.dart';
 import 'package:lythaus/ui/screens/profile/settings_screen.dart';
 import 'package:dio/dio.dart';
@@ -23,6 +24,69 @@ void main() {
     registerFallbackValue(Options());
     registerFallbackValue(CancelToken());
   });
+
+  testWidgets(
+    'authenticated Settings expose distinct private support entry points',
+    (tester) async {
+      final user = User(
+        id: 'u-support',
+        email: 'support@lythaus.app',
+        role: UserRole.user,
+        tier: UserTier.bronze,
+        reputationScore: 0,
+        createdAt: DateTime(2025, 1, 1),
+        lastLoginAt: DateTime(2025, 1, 2),
+      );
+      final source = StateController<Object?>(user);
+      addTearDown(source.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authSessionRevisionProvider.overrideWith(
+              (ref) => AuthSessionRevision(source),
+            ),
+            currentUserProvider.overrideWithValue(user),
+            ownerProfileProvider.overrideWith(
+              (ref) async => OwnerProfile(
+                user: PublicUser(
+                  id: user.id,
+                  displayName: 'Synthetic support member',
+                  tier: 'free',
+                  trustPassportVisibility: 'private',
+                ),
+                moderationState: 'active',
+                publicVisibility: false,
+              ),
+            ),
+          ],
+          child: const MaterialApp(home: SettingsScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Report a problem'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.scrollUntilVisible(
+        find.text('Feedback and suggestions'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Report a problem'), findsOneWidget);
+      expect(find.text('Feedback and suggestions'), findsOneWidget);
+      expect(
+        find.text('Send a private bug report and follow its history'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Share a private idea and follow its history'),
+        findsOneWidget,
+      );
+    },
+    skip: !supportFeedbackEnabled,
+  );
 
   testWidgets('SettingsScreen saves separate guest preferences explicitly', (
     tester,
