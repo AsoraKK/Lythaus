@@ -562,7 +562,7 @@ class _ReputationStateBadge extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final reputation = ref.watch(reputationProvider);
     final compact =
-        MediaQuery.sizeOf(context).width < 360 ||
+        MediaQuery.sizeOf(context).width < 400 ||
         MediaQuery.textScalerOf(context).scale(1) >= 1.8;
     return reputation.when(
       data: (state) => ReputationBadge(

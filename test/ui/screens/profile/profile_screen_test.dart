@@ -361,10 +361,12 @@ void main() {
     ) async {
       await _pumpProfileAtViewport(tester, physicalSize: const Size(390, 844));
 
+      expect(tester.takeException(), isNull, reason: 'initial profile render');
       expect(find.byTooltip('Settings'), findsOneWidget);
       for (final tab in ['Posts', 'Comments']) {
         await tester.tap(find.widgetWithText(Tab, tab));
         await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: '$tab tab render');
         expect(find.byTooltip('Settings'), findsOneWidget);
       }
     });
