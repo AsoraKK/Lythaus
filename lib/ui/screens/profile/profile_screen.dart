@@ -38,6 +38,8 @@ import 'package:lythaus/ui/screens/rewards/monthly_reputation_widgets.dart';
 import 'package:lythaus/state/providers/reputation_providers.dart';
 import 'package:lythaus/widgets/reputation_badge.dart';
 
+enum _ProfileToolbarAction { openSettings, refresh }
+
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key, this.userId});
 
@@ -117,6 +119,7 @@ class ProfileScreen extends ConsumerWidget {
   }) {
     final currentUser = ref.read(currentUserProvider);
     final isOwner = currentUser != null && currentUser.id == profile.id;
+    final compactToolbar = MediaQuery.sizeOf(context).width < 240;
     final canModerate =
         isOwner &&
         (currentUser.role == UserRole.moderator ||
@@ -125,11 +128,25 @@ class ProfileScreen extends ConsumerWidget {
       _logProfileComplete(ref, profile, currentUser.id);
     }
 
+    void refreshProfile() {
+      ref.invalidate(publicUserProvider(profile.id));
+      if (isOwner) {
+        ref.invalidate(ownerProfileProvider);
+        ref.invalidate(reputationProvider);
+        ref.invalidate(monthlyRewardsViewProvider);
+        final key = OwnerPostsKey(
+          userId: profile.id,
+          sessionRevision: ref.read(authSessionRevisionProvider),
+        );
+        ref.read(ownerPostsTimelineProvider(key).notifier).refresh();
+      }
+    }
+
     return ReadingPane(
       child: Scaffold(
         appBar: AppBar(
           title: Text(
-            MediaQuery.sizeOf(context).width < 240
+            compactToolbar
                 ? 'Profile'
                 : profile.displayName.isEmpty
                 ? 'Your profile'
@@ -137,28 +154,40 @@ class ProfileScreen extends ConsumerWidget {
           ),
           actions: [
             if (isOwner)
+              if (compactToolbar)
+                PopupMenuButton<_ProfileToolbarAction>(
+                  tooltip: 'Profile actions',
+                  onSelected: (action) {
+                    switch (action) {
+                      case _ProfileToolbarAction.openSettings:
+                        _openSettings(context);
+                      case _ProfileToolbarAction.refresh:
+                        refreshProfile();
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: _ProfileToolbarAction.openSettings,
+                      child: Text('Open settings'),
+                    ),
+                    PopupMenuItem(
+                      value: _ProfileToolbarAction.refresh,
+                      child: Text('Refresh profile'),
+                    ),
+                  ],
+                )
+              else
+                IconButton(
+                  icon: const Icon(Icons.settings_outlined),
+                  tooltip: 'Open settings',
+                  onPressed: () => _openSettings(context),
+                ),
+            if (!isOwner || !compactToolbar)
               IconButton(
-                icon: const Icon(Icons.settings_outlined),
-                tooltip: 'Open settings',
-                onPressed: () => _openSettings(context),
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Refresh profile',
+                onPressed: refreshProfile,
               ),
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              tooltip: 'Refresh profile',
-              onPressed: () {
-                ref.invalidate(publicUserProvider(profile.id));
-                if (isOwner) {
-                  ref.invalidate(ownerProfileProvider);
-                  ref.invalidate(reputationProvider);
-                  ref.invalidate(monthlyRewardsViewProvider);
-                  final key = OwnerPostsKey(
-                    userId: profile.id,
-                    sessionRevision: ref.read(authSessionRevisionProvider),
-                  );
-                  ref.read(ownerPostsTimelineProvider(key).notifier).refresh();
-                }
-              },
-            ),
           ],
         ),
         body: ProfileTabView(
@@ -341,6 +370,9 @@ class ProfileScreen extends ConsumerWidget {
       router.go(
         GoRouterState.of(context).uri.replace(path: '/settings').toString(),
       );
+      return;
+    }
+    if (ModalRoute.of(context)?.isCurrent == false) {
       return;
     }
     Navigator.of(
