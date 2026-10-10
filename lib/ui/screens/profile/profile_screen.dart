@@ -343,9 +343,9 @@ class ProfileScreen extends ConsumerWidget {
       );
       return;
     }
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
   }
 
   void _logProfileComplete(WidgetRef ref, PublicUser profile, String userId) {

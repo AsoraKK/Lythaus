@@ -359,10 +359,7 @@ void main() {
     testWidgets('owner settings stay available on every profile tab', (
       tester,
     ) async {
-      await _pumpProfileAtViewport(
-        tester,
-        physicalSize: const Size(390, 844),
-      );
+      await _pumpProfileAtViewport(tester, physicalSize: const Size(390, 844));
 
       expect(find.byTooltip('Settings'), findsOneWidget);
       for (final tab in ['Posts', 'Comments']) {

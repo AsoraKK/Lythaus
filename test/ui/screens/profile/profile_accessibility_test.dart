@@ -141,9 +141,7 @@ void main() {
 
       final refresh = find.byTooltip('Refresh profile');
       expect(refresh, findsOneWidget);
-      final refreshButton = tester
-          .getSemantics(refresh)
-          .getSemanticsData();
+      final refreshButton = tester.getSemantics(refresh).getSemanticsData();
       expect(refreshButton.tooltip, 'Refresh profile');
       expect(refreshButton.hasAction(SemanticsAction.tap), isTrue);
 

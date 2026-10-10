@@ -145,9 +145,11 @@ void main() {
     await tester.pumpAndSettle();
 
     final link = find.byTooltip('View Bob profile');
-    final openProfile = tester.widget<TextButton>(
-      find.descendant(of: link, matching: find.byType(TextButton)),
-    ).onPressed!;
+    final openProfile = tester
+        .widget<TextButton>(
+          find.descendant(of: link, matching: find.byType(TextButton)),
+        )
+        .onPressed!;
     openProfile();
     openProfile();
     await tester.pumpAndSettle();
