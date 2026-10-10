@@ -33,7 +33,7 @@ export function registerSupportLifecycleCases({ test, assert, fixture, policy, p
       assert.equal(await systemCount('outbox_events', 'aggregate_id', row.id), 2);
     }
     const hash = createHash('sha256').update(f.member).digest('hex');
-    assert.equal((await database().query("SELECT request_count FROM system.rate_limit_windows WHERE scope='support:member' AND subject_hash=$1", [hash])).rows[0].request_count, 4);
+    assert.equal((await database().query("SELECT sum(request_count)::int AS total FROM system.rate_limit_windows WHERE scope='support:member' AND subject_hash=$1", [hash])).rows[0].total, 4);
     assert.equal((await database().query('SELECT count(*)::int AS n FROM support.requests WHERE submitter_id=$1', [f.member])).rows[0].n, 2);
   });
 
@@ -57,7 +57,7 @@ export function registerSupportLifecycleCases({ test, assert, fixture, policy, p
     }
     for (const [actor, channel, expected] of [[f.member, 'member', 6], [f.owner, 'owner', 6]]) {
       const hash = createHash('sha256').update(actor).digest('hex');
-      assert.equal((await database().query('SELECT request_count FROM system.rate_limit_windows WHERE scope=$1 AND subject_hash=$2', [`support:${channel}`, hash])).rows[0].request_count, expected);
+      assert.equal((await database().query('SELECT sum(request_count)::int AS total FROM system.rate_limit_windows WHERE scope=$1 AND subject_hash=$2', [`support:${channel}`, hash])).rows[0].total, expected);
     }
   });
 
