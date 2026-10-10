@@ -134,6 +134,7 @@ export async function sendTransactionalEmail(env: TransactionalEmailRelayEnv, me
   try {
     response = await fetch(env.EMAIL_PROVIDER_URL, {
       method: 'POST',
+      redirect: 'manual',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${env.EMAIL_PROVIDER_TOKEN}` },
       body: JSON.stringify({ from: env.EMAIL_FROM, to: message.to, subject: message.subject, html: message.html, text: message.text }),
       signal: AbortSignal.timeout(20_000),
