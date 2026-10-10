@@ -51,6 +51,8 @@ jobs:
         run: ./bin/actionlint -color
       - name: Require immutable action pins
         run: npm run validate:workflow-action-pins
+      - name: Verify Flutter SDK cache isolation and fallback
+        run: node --test scripts/tests/flutter-sdk-cache.test.mjs scripts/tests/workflow-action-pins.test.mjs
       - name: Validate production release contract
         run: npm run validate:production-release-contract
       - name: Validate read-only Cloudflare audit contract

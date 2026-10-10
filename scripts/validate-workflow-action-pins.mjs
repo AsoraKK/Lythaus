@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ACTION_REF_PATTERN = /^\s*-\s+uses:\s*([^\s#]+)\s*$/gm;
+const ACTION_REF_PATTERN = /^\s*(?:-\s+)?uses:\s*([^\s#]+)\s*$/gm;
 
 export function findUnpinnedActions(source, file = '<workflow>') {
   const failures = [];
@@ -23,10 +23,24 @@ export function collectWorkflowActionPinFailures(root = process.cwd()) {
   const files = fs.readdirSync(workflowsDir)
     .filter((file) => file.endsWith('.yml') || file.endsWith('.yaml'))
     .sort();
-  return files.flatMap((file) => findUnpinnedActions(
+  const failures = files.flatMap((file) => findUnpinnedActions(
     fs.readFileSync(path.join(workflowsDir, file), 'utf8'),
     `.github/workflows/${file}`,
   ));
+  const actionsDir = path.join(root, '.github', 'actions');
+  if (fs.existsSync(actionsDir)) {
+    for (const directory of fs.readdirSync(actionsDir, { withFileTypes: true })) {
+      if (!directory.isDirectory()) continue;
+      for (const file of ['action.yml', 'action.yaml']) {
+        const actionPath = path.join(actionsDir, directory.name, file);
+        if (fs.existsSync(actionPath)) failures.push(...findUnpinnedActions(
+          fs.readFileSync(actionPath, 'utf8'),
+          `.github/actions/${directory.name}/${file}`,
+        ));
+      }
+    }
+  }
+  return failures;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
