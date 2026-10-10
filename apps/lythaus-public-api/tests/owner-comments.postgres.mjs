@@ -10,7 +10,8 @@ import { handleOwnerContentRead } from '../src/owner-content-reader.ts';
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
 const target = new URL(connectionString ?? 'file:///missing');
 assert.ok(['127.0.0.1', 'localhost'].includes(target.hostname));
-assert.ok(target.pathname.startsWith('/lythaus_auth_test'));
+assert.ok(target.pathname.startsWith('/lythaus_auth_test')
+  || (process.env.GITHUB_ACTIONS === 'true' && target.pathname === '/postgres'));
 const sql = async (text, values) => {
   const client = new pg.Client({ connectionString, ssl: false });
   await client.connect();

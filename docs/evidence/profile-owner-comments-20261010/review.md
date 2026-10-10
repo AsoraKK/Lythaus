@@ -55,6 +55,9 @@ Passed:
 - All three Comments PostgreSQL cases passed, including actual Worker routing,
   authentication, cursor pagination, accessible parent filtering and revoked access.
 - Canonical contract aggregate: 70 passed; 17 staging cases skipped.
+- Exact CI public/admin PostgreSQL aggregate reproduced locally with
+  `GITHUB_ACTIONS=true` and its disposable local `/postgres` target: 133 passed.
+  The same target without CI context is rejected before database work.
 - Isolated Comments handler against actual PostgreSQL with `SET ROLE lythaus_runtime`:
   pagination, concurrent cursor reads, foreign/deleted/blocked/private exclusions,
   immediate deletion and block changes passed.
