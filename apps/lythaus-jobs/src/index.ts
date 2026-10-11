@@ -1070,7 +1070,7 @@ async function processCommentModeration(message: QueueMessage, env: Env): Promis
       `INSERT INTO system.audit_events
          (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
        VALUES ($1, $2, 'moderation.comment.review_requested', 'comment', $3,
-               'PUBLIC_COMMENT_REVIEW', $1::text, '{}'::jsonb)
+               'PUBLIC_COMMENT_REVIEW', $1::uuid::text, '{}'::jsonb)
        ON CONFLICT (id) DO NOTHING
        RETURNING id`,
       [eventId, row.author_id, revision.contentId],

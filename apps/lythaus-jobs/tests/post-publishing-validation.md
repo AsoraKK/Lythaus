@@ -99,12 +99,15 @@ queue, community appeal/triage/ballot, author edit, Jobs and reconciliation
 handlers exercise both comment-lock arrival orders. The old queued case is
 synthetic fixture input adjudicated through the real Admin handler. Closure
 does not acquire a case lock before the comment and cannot publish a stale
-revision. The actual Jobs comment path currently fails its audit INSERT with
-PG17 42P08 (parameter $1 inferred as both UUID and text), rolling back its
-detector and retrying before case supersession. This is a separate existing
-pipeline blocker, not a state guard or proof of complete comment acceptance.
-No comment-handler SQL, grants or policy was changed. Once that audit error is
-fixed, both full comment supersession races must be revalidated independently.
+revision. Before the correction, actual Jobs comment review failed its audit
+INSERT with PG17 42P08: `$1` was used as UUID `system.audit_events.id` and also
+cast to text for `correlation_id`. The corrected statement anchors the parameter
+as UUID before converting it to text. PG17 now records the audit row, detector,
+superseded prior case and queued case in one successful handler transaction;
+the audit UUID/correlation value equals the source event, and the inbox records
+completion. Duplicate delivery creates no second audit, detector or case.
+No casts were added to fixtures; no grants or policy changed. Both full comment
+supersession races are exercised after the correction.
 
 ## Evidence and publication authority
 
@@ -141,7 +144,7 @@ holds; keep this PR blocked from operational deployment and public activation.
 | Withholding and privacy | Human/assisted pass/review/block/unknown fixture responses retain owner-private no-store review, guest/cross-user exclusion, null publication time and no publication events |
 | No unqualified authority | Typed assessment binding tests and unchanged return-only safety tests; safety success never enables publication |
 | Appeal concurrency | Real scheduled community closure in both race orders; historical current-block and stale-source exclusions with an explicit local-only grant prerequisite |
-| Post-only lock scope | Two real stale comment-appeal/revision interleavings assert no new case-before-comment lock, stale-publication denial and honest retry/rollback for the existing 42P08 audit blocker |
+| Post-only lock scope and comment audit | Two real stale comment-appeal/revision interleavings assert no new case-before-comment lock, stale-publication denial and successful audited review with duplicate-delivery idempotency |
 | Required acceptance isolation | Canonical and proposed suites remain separate; proposed runs reject any skip, failure, cancellation, todo or empty summary; both entry points reject unsafe targets before connecting and clean only owned databases on SIGINT/SIGTERM |
 
 The Workerd fixture imports the actual production transaction implementation and

@@ -468,10 +468,17 @@ async function revisedCommentAppeal() {
   const comment = await submitted.json();
   const original = (await client.query(`SELECT id AS "eventId",event_type AS "eventType",payload FROM system.outbox_events
     WHERE aggregate_id=$1 AND event_type='content.comment.created'`, [comment.commentId])).rows[0];
-  const caseId = uuidv7();
-  await client.query(`INSERT INTO moderation.cases(id,content_type,content_id,state,policy_version,source_event_id)
-    VALUES($1,'comment',$2,'open','evaluation-only-v1',$3)`, [caseId, comment.commentId, original.eventId]);
-  const queued = await decision(caseId); assert.equal(queued.status, 200, await queued.clone().text());
+  assert.deepEqual(await deliver({ event: original }), { ack: 1, retry: 0 });
+  const caseRecord = (await client.query(`SELECT c.id,c.state,d.outcome,d.policy_version,d.decided_by FROM moderation.cases c
+    JOIN moderation.decisions d ON d.case_id=c.id WHERE c.content_type='comment' AND c.content_id=$1 AND c.source_event_id=$2`,
+    [comment.commentId, original.eventId])).rows[0];
+  assert.ok(caseRecord); assert.equal(caseRecord.state, 'open'); assert.equal(caseRecord.outcome, 'queue');
+  assert.equal(caseRecord.policy_version, 'evaluation-only-v1'); assert.equal(caseRecord.decided_by, null);
+  const audit = (await client.query(`SELECT id,correlation_id FROM system.audit_events
+    WHERE action='moderation.comment.review_requested' AND target_id=$1 AND correlation_id=$2`, [comment.commentId, original.eventId])).rows[0];
+  assert.deepEqual(audit, { id: original.eventId, correlation_id: original.eventId });
+  assert.equal((await client.query('SELECT state FROM system.consumer_inbox WHERE event_id=$1', [original.eventId])).rows[0].state, 'completed');
+  const caseId = caseRecord.id;
   const appeal = await communityCaseAppeal(parent, caseId);
   const revised = await call(`/api/comments/${comment.commentId}`, { body: 'Synthetic revised queued comment', declaredCreationMode: 'human' },
     { authorization: 'Bearer ' + parent.token }, 'PUT');
@@ -481,7 +488,7 @@ async function revisedCommentAppeal() {
   return { commentId: comment.commentId, original, event, ...appeal };
 }
 
-for (const first of ['jobs', 'closure']) test(`real stale comment appeal and revision: ${first} starts first; post-only lock change preserves comment order and exposes audit SQL blocker`, requiresAccountLock, async () => {
+for (const first of ['jobs', 'closure']) test(`real comment review and stale community appeal: ${first} locks first without deadlock, retry or stale publication`, requiresAccountLock, async () => {
   const item = await revisedCommentAppeal(), held = Promise.withResolvers(), resume = Promise.withResolvers(), waiting = Promise.withResolvers();
   const start = fixture.sqlErrors.length, statements = fixture.statements.length;
   let job, closure, closureTransaction;
@@ -503,22 +510,25 @@ for (const first of ['jobs', 'closure']) test(`real stale comment appeal and rev
     await blocked(await Promise.race([waiting.promise, (first === 'jobs' ? closure : job).then(() => { throw new Error('Second handler did not wait on the comment lock'); })]));
     resume.resolve(); const [reply, response] = await Promise.all([job, closure]);
     assert.deepEqual(fixture.sqlErrors.slice(start).filter(error => error.code === '40P01'), [], 'comment/case inversion diagnostics');
-    assert.deepEqual(reply, { ack: 0, retry: 1 }, 'the existing comment audit SQL error must remain an honest retry, not accepted moderation');
-    assert.ok(fixture.sqlErrors.slice(start).some(error => error.code === '42P08' && error.text.includes("'moderation.comment.review_requested'")));
+    assert.deepEqual(reply, { ack: 1, retry: 0 });
+    assert.ok(!fixture.sqlErrors.slice(start).some(error => error.code === '42P08'));
     assert.ok(!fixture.statements.slice(statements).some(row => row.transactionId === closureTransaction && row.text.includes('ORDER BY id FOR UPDATE')),
       'the post lane must not introduce a case-before-comment lock');
-    assert.ok(!fixture.statements.slice(statements).some(row => row.text.includes('UPDATE moderation.cases') && row.text.includes("content_type = 'comment'")),
-      'the current real Jobs handler is blocked before case supersession; no complete comment acceptance is claimed');
     assert.deepEqual(await response.json(), { processed: 1 });
     const outcome = (await client.query('SELECT restoration FROM moderation.community_appeal_outcomes WHERE appeal_id=$1', [item.appealId])).rows[0];
     assert.equal(outcome.restoration, 'content_changed_or_deleted');
     const stored = (await client.query('SELECT body,moderation_state,moderation_source_event_id FROM content.comments WHERE id=$1', [item.commentId])).rows[0];
     assert.deepEqual(stored, { body: 'Synthetic revised queued comment', moderation_state: 'under_review', moderation_source_event_id: item.event.eventId });
-    assert.equal((await client.query('SELECT state FROM moderation.cases WHERE id=$1', [item.caseId])).rows[0].state, 'open');
+    const oldCase = (await client.query('SELECT state FROM moderation.cases WHERE id=$1', [item.caseId])).rows[0];
+    assert.equal(oldCase.state, 'superseded');
+    const newCase = (await client.query(`SELECT c.id,c.state,d.outcome FROM moderation.cases c JOIN moderation.decisions d ON d.case_id=c.id
+      WHERE c.content_type='comment' AND c.content_id=$1 AND c.source_event_id=$2`, [item.commentId, item.event.eventId])).rows[0];
+    assert.deepEqual(newCase, { id: newCase.id, state: 'open', outcome: 'queue' });
+    assert.ok(newCase.id);
     assert.equal((await client.query("SELECT count(*)::integer AS n FROM system.outbox_events WHERE aggregate_id=$1 AND event_type='content.comment.published'", [item.commentId])).rows[0].n, 0);
-    assert.equal((await client.query('SELECT count(*)::integer AS n FROM moderation.detector_runs WHERE content_id=$1 AND source_event_id=$2', [item.commentId, item.event.eventId])).rows[0].n, 0);
+    assert.equal((await client.query('SELECT count(*)::integer AS n FROM moderation.detector_runs WHERE content_id=$1 AND source_event_id=$2', [item.commentId, item.event.eventId])).rows[0].n, 1);
   } finally { resume.resolve(); fixture.afterSql = undefined; fixture.duringSql = undefined; await Promise.allSettled([job, closure]); }
-  assert.deepEqual(await deliver(item), { ack: 0, retry: 1 });
+  assert.deepEqual(await deliver(item), { ack: 1, retry: 0 });
   const retriedClosure = await call('/fixture/community-reconcile', {}); assert.deepEqual(await retriedClosure.json(), { processed: 0 });
-  assert.equal((await client.query('SELECT count(*)::integer AS n FROM moderation.detector_runs WHERE content_id=$1 AND source_event_id=$2', [item.commentId, item.event.eventId])).rows[0].n, 0);
+  assert.equal((await client.query('SELECT count(*)::integer AS n FROM moderation.detector_runs WHERE content_id=$1 AND source_event_id=$2', [item.commentId, item.event.eventId])).rows[0].n, 1);
 });
