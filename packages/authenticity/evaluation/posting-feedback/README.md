@@ -60,6 +60,19 @@ the offline evaluation process; it is not a transactional production revision,
 receipt, retry, queue or publication implementation. Do not feed arbitrary or live
 receipts into its synthetic provenance envelope.
 
+The separate [database ledger proposal](database-ledger-proposal.md) adds an
+inactive adapter design and comment-only SQL proposal. It is not imported by Jobs
+and does not make provider calls. Its PostgreSQL integration test is opt-in and
+uses only a local disposable `postgres:17` Docker container with synthetic
+responses:
+
+```sh
+RUN_POSTING_FEEDBACK_PG_TESTS=1 node --experimental-strip-types --test packages/authenticity/evaluation/posting-feedback/database-ledger.test.mjs
+```
+
+Without the environment flag, the database test is skipped; no shared CI or
+runtime wiring is changed by this proposal.
+
 See [the owner report](../../../../docs/testing/moderation-authenticity-evaluation-2026-10-11.md)
 and [the unexecuted live evaluation plan](evaluation-plan.json). The separately
 allocated `posting-feedback-evaluation.yml` workflow runs scoped typing, all three
