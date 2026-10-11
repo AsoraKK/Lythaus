@@ -55,6 +55,16 @@ components:
         deleted: { type: boolean, enum: [false] }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    OwnerCommentsPage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/OwnerComment' }
+        nextCursor: { type: string, nullable: true }
+        correlationId: { type: string }
   headers:
     PrivateCache:
       description: Author-only responses must not be stored in shared or browser caches.
@@ -80,6 +90,38 @@ components:
         application/json:
           schema: { $ref: './product-integrity.yaml#/components/schemas/ApiError' }
 paths:
+  /users/me/comments:
+    get:
+      operationId: usersMeCommentsList
+      summary: List my own comments and replies
+      description: Private newest-first cursor collection bound to the active JWT subject. Returns only the author's non-deleted allowed or pending human or AI-assisted comments on currently accessible allowed posts, using existing post visibility, authorship, follow, block and public-label rules. Deleted, blocked or inactive content and foreign bodies are excluded. Parent comment bodies are never returned.
+      tags: [Comments]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 20, default: 8 }
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string, maxLength: 512 }
+      responses:
+        '200':
+          description: Current author's accessible comments, including their own items awaiting review.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/PrivateCache' }
+            Vary: { $ref: '#/components/headers/PrivateVary' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnerCommentsPage' }
+        '400':
+          description: Invalid page size or cursor.
+          content:
+            application/json:
+              schema: { $ref: './product-integrity.yaml#/components/schemas/ApiError' }
+        '401': { $ref: '#/components/responses/OwnerUnauthorized' }
+        '429': { $ref: './product-integrity.yaml#/components/responses/SafetyLimited' }
   /users/me/posts:
     get:
       operationId: usersMePostsList
