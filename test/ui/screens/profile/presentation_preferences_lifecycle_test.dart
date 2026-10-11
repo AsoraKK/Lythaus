@@ -104,6 +104,243 @@ Finder preferenceSwitch(String title) =>
     find.widgetWithText(SwitchListTile, title);
 
 void main() {
+  for (final saveDraft in [true, false]) {
+    testWidgets(
+      'repeated refresh preserves both edited fields until ${saveDraft ? 'Save' : 'Discard'} resets intent',
+      (tester) async {
+        var saved = const PresentationPreferences();
+        final adapter = Adapter((request) async {
+          if (request.method == 'PATCH') {
+            final input =
+                (request.data as Map)['presentationPreferences'] as Map;
+            saved = PresentationPreferences(
+              leftHandedMode: input['leftHandedMode'] as bool,
+              horizontalSwipeEnabled: input['horizontalSwipeEnabled'] as bool,
+              version: saved.version + 1,
+            );
+          }
+          return owner('owner-a', saved);
+        });
+        final scope = container(
+          Dio(BaseOptions(baseUrl: 'https://local.invalid'))
+            ..httpClientAdapter = adapter,
+          GuestStore(),
+        );
+        addTearDown(scope.dispose);
+        await tester.pumpWidget(preferencesApp(scope));
+        await tester.pumpAndSettle();
+        final left = preferenceSwitch('Left-handed mode (mirror nav)');
+        final swipe = preferenceSwitch('Swipe between profile tabs');
+        final save = find.widgetWithText(FilledButton, 'Save preferences');
+        final discard = find.text('Discard preference changes');
+        final reads = adapter.requests.length;
+        await tester.tap(left);
+        await tester.pumpAndSettle();
+        await tester.tap(swipe);
+        await tester.pumpAndSettle();
+        for (final server in [
+          const PresentationPreferences(leftHandedMode: true, version: 2),
+          const PresentationPreferences(version: 3),
+        ]) {
+          saved = server;
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.inactive,
+          );
+          tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          );
+          await tester.pumpAndSettle();
+          expect(tester.widget<SwitchListTile>(left).value, isTrue);
+          expect(tester.widget<SwitchListTile>(swipe).value, isFalse);
+          expect(scope.read(leftHandedModeProvider), server.leftHandedMode);
+          expect(scope.read(horizontalSwipeEnabledProvider), isTrue);
+          expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
+          expect(discard, findsOneWidget);
+          expect(
+            find.text(
+              'Saved choices changed on another device. Your edits are preserved; review the choices before saving.',
+            ),
+            findsOneWidget,
+          );
+        }
+        expect(adapter.requests.length, reads + 2);
+        expect(
+          adapter.requests.every((request) => request.method == 'GET'),
+          isTrue,
+        );
+        await tester.ensureVisible(saveDraft ? save : discard);
+        await tester.tap(saveDraft ? save : discard);
+        await tester.pumpAndSettle();
+        final patches = adapter.requests
+            .where((request) => request.method == 'PATCH')
+            .toList();
+        expect(patches, hasLength(saveDraft ? 1 : 0));
+        if (saveDraft) {
+          expect(patches.single.data, {
+            'presentationPreferences': {
+              'leftHandedMode': true,
+              'horizontalSwipeEnabled': false,
+              'expectedVersion': 3,
+            },
+          });
+        }
+        expect(tester.widget<SwitchListTile>(left).value, saved.leftHandedMode);
+        expect(
+          tester.widget<SwitchListTile>(swipe).value,
+          saved.horizontalSwipeEnabled,
+        );
+        expect(tester.widget<FilledButton>(save).onPressed, isNull);
+        expect(discard, findsNothing);
+        await tester.ensureVisible(swipe);
+        await tester.tap(swipe);
+        await tester.pumpAndSettle();
+        final editedSwipe = !saved.horizontalSwipeEnabled;
+        saved = PresentationPreferences(
+          leftHandedMode: !saved.leftHandedMode,
+          horizontalSwipeEnabled: saved.horizontalSwipeEnabled,
+          version: saved.version + 1,
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pumpAndSettle();
+        expect(tester.widget<SwitchListTile>(left).value, saved.leftHandedMode);
+        expect(tester.widget<SwitchListTile>(swipe).value, editedSwipe);
+        expect(
+          adapter.requests.where((request) => request.method == 'PATCH'),
+          hasLength(saveDraft ? 1 : 0),
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final editLeft in [true, false]) {
+    testWidgets(
+      'same-value convergence retains ${editLeft ? 'handedness' : 'swipe'} intent and explicit reset actions',
+      (tester) async {
+        var saved = const PresentationPreferences();
+        final adapter = Adapter((request) async {
+          if (request.method == 'PATCH') {
+            final input =
+                (request.data as Map)['presentationPreferences'] as Map;
+            saved = PresentationPreferences(
+              leftHandedMode: input['leftHandedMode'] as bool,
+              horizontalSwipeEnabled: input['horizontalSwipeEnabled'] as bool,
+              version: saved.version + 1,
+            );
+          }
+          return owner('owner-a', saved);
+        });
+        final scope = container(
+          Dio(BaseOptions(baseUrl: 'https://local.invalid'))
+            ..httpClientAdapter = adapter,
+          GuestStore(),
+        );
+        addTearDown(scope.dispose);
+        await tester.pumpWidget(preferencesApp(scope));
+        await tester.pumpAndSettle();
+        final left = preferenceSwitch('Left-handed mode (mirror nav)');
+        final swipe = preferenceSwitch('Swipe between profile tabs');
+        final save = find.widgetWithText(FilledButton, 'Save preferences');
+        final discard = find.text('Discard preference changes');
+        final reads = adapter.requests.length;
+        await tester.tap(editLeft ? left : swipe);
+        await tester.pumpAndSettle();
+        saved = PresentationPreferences(
+          leftHandedMode: editLeft,
+          horizontalSwipeEnabled: editLeft,
+          version: 2,
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pumpAndSettle();
+        expect(tester.widget<SwitchListTile>(left).value, saved.leftHandedMode);
+        expect(
+          tester.widget<SwitchListTile>(swipe).value,
+          saved.horizontalSwipeEnabled,
+        );
+        expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
+        expect(discard, findsOneWidget);
+        saved = PresentationPreferences(
+          leftHandedMode: !editLeft,
+          horizontalSwipeEnabled: !editLeft,
+          version: 3,
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pumpAndSettle();
+        expect(tester.widget<SwitchListTile>(left).value, isTrue);
+        expect(tester.widget<SwitchListTile>(swipe).value, isFalse);
+        expect(scope.read(leftHandedModeProvider), saved.leftHandedMode);
+        expect(
+          scope.read(horizontalSwipeEnabledProvider),
+          saved.horizontalSwipeEnabled,
+        );
+        saved = const PresentationPreferences(
+          leftHandedMode: true,
+          horizontalSwipeEnabled: false,
+          version: 4,
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pumpAndSettle();
+        expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
+        expect(discard, findsOneWidget);
+        expect(adapter.requests.length, reads + 3);
+        expect(
+          adapter.requests.every((request) => request.method == 'GET'),
+          isTrue,
+        );
+        await tester.ensureVisible(editLeft ? save : discard);
+        await tester.tap(editLeft ? save : discard);
+        await tester.pumpAndSettle();
+        expect(tester.widget<FilledButton>(save).onPressed, isNull);
+        expect(discard, findsNothing);
+        final patches = adapter.requests
+            .where((request) => request.method == 'PATCH')
+            .toList();
+        expect(patches, hasLength(editLeft ? 1 : 0));
+        if (editLeft) {
+          expect(patches.single.data, {
+            'presentationPreferences': {
+              'leftHandedMode': true,
+              'horizontalSwipeEnabled': false,
+              'expectedVersion': 4,
+            },
+          });
+        }
+        saved = PresentationPreferences(version: saved.version + 1);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pumpAndSettle();
+        expect(tester.widget<SwitchListTile>(left).value, isFalse);
+        expect(tester.widget<SwitchListTile>(swipe).value, isTrue);
+        expect(tester.widget<FilledButton>(save).onPressed, isNull);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   for (final editLeft in [true, false]) {
     for (final serverChanged in [false, true]) {
       testWidgets(

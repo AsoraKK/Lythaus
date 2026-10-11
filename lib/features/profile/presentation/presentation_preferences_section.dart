@@ -18,6 +18,14 @@ class PresentationPreferencesSection extends ConsumerStatefulWidget {
 class _PresentationPreferencesSectionState
     extends ConsumerState<PresentationPreferencesSection> {
   PresentationPreferences? _draft;
+  bool _leftEdited = false;
+  bool _swipeEdited = false;
+
+  void _clearDraft() {
+    _draft = null;
+    _leftEdited = false;
+    _swipeEdited = false;
+  }
 
   @override
   void initState() {
@@ -43,7 +51,7 @@ class _PresentationPreferencesSectionState
           (previous?.preferencesSaving == true &&
               !next.preferencesSaving &&
               !next.preferencesRetryPending)) {
-        setState(() => _draft = null);
+        setState(_clearDraft);
       } else if (previous != null &&
           previous.preferencesLoading &&
           !next.preferencesLoading &&
@@ -52,11 +60,10 @@ class _PresentationPreferencesSectionState
         final draft = _draft!;
         setState(
           () => _draft = PresentationPreferences(
-            leftHandedMode: draft.leftHandedMode != previous.leftHandedMode
+            leftHandedMode: _leftEdited
                 ? draft.leftHandedMode
                 : next.leftHandedMode,
-            horizontalSwipeEnabled:
-                draft.horizontalSwipeEnabled != previous.horizontalSwipeEnabled
+            horizontalSwipeEnabled: _swipeEdited
                 ? draft.horizontalSwipeEnabled
                 : next.horizontalSwipeEnabled,
             version: draft.version,
@@ -74,6 +81,8 @@ class _PresentationPreferencesSectionState
         !busy &&
         !settings.preferencesRetryPending;
     final dirty =
+        _leftEdited ||
+        _swipeEdited ||
         left != settings.leftHandedMode ||
         swipe != settings.horizontalSwipeEnabled;
     return Semantics(
@@ -107,26 +116,28 @@ class _PresentationPreferencesSectionState
             subtitle: const Text('Tabs remain available when swipe is off.'),
             value: swipe,
             onChanged: editable
-                ? (value) => setState(
-                    () => _draft = PresentationPreferences(
+                ? (value) => setState(() {
+                    _swipeEdited = true;
+                    _draft = PresentationPreferences(
                       leftHandedMode: left,
                       horizontalSwipeEnabled: value,
-                      version: settings.preferencesVersion,
-                    ),
-                  )
+                      version: _draft?.version ?? settings.preferencesVersion,
+                    );
+                  })
                 : null,
           ),
           SwitchListTile(
             title: const Text('Left-handed mode (mirror nav)'),
             value: left,
             onChanged: editable
-                ? (value) => setState(
-                    () => _draft = PresentationPreferences(
+                ? (value) => setState(() {
+                    _leftEdited = true;
+                    _draft = PresentationPreferences(
                       leftHandedMode: value,
                       horizontalSwipeEnabled: swipe,
-                      version: settings.preferencesVersion,
-                    ),
-                  )
+                      version: _draft?.version ?? settings.preferencesVersion,
+                    );
+                  })
                 : null,
           ),
           if (settings.preferencesMessage != null)
@@ -168,14 +179,14 @@ class _PresentationPreferencesSectionState
               ),
               if (dirty && !settings.preferencesRetryPending && !busy)
                 TextButton(
-                  onPressed: () => setState(() => _draft = null),
+                  onPressed: () => setState(_clearDraft),
                   child: const Text('Discard preference changes'),
                 ),
               TextButton(
                 onPressed: busy
                     ? null
                     : () {
-                        setState(() => _draft = null);
+                        setState(_clearDraft);
                         controller.reload();
                       },
                 child: const Text('Reload saved preferences'),
