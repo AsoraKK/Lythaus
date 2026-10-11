@@ -1,6 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { nativeWorkerDeploymentFailures, nativeWorkerSelectionFailures } from './native-worker-config-policy.mjs';
+
+const selectionFailures = nativeWorkerSelectionFailures(process.env, process.argv.slice(2));
+if (selectionFailures.length) throw new Error(selectionFailures.join('; '));
 
 const root = process.cwd();
 const configs = [
@@ -29,6 +33,14 @@ const expectedNames = {
 for (const relative of configs) {
   const file = path.join(root, relative);
   const source = fs.readFileSync(file, 'utf8');
+  if (generatedTypes.some(([config]) => config === relative)) {
+    try {
+      failures.push(...nativeWorkerDeploymentFailures(JSON.parse(source), relative)
+        .map((failure) => `${relative}: ${failure}`));
+    } catch {
+      failures.push(`${relative}: native Worker configuration must be valid JSON`);
+    }
+  }
   const production = source.slice(0, source.indexOf('"env"') === -1 ? source.length : source.indexOf('"env"'));
   if (!/"workers_dev"\s*:\s*false/.test(source)) failures.push(`${relative}: production workers_dev must be false`);
   if (!/"preview_urls"\s*:\s*false/.test(source)) failures.push(`${relative}: production preview_urls must be false`);
