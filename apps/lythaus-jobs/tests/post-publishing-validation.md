@@ -84,17 +84,21 @@ disabled capability proposal is outside this PR and has not been executed.
 
 ## Requirement mapping
 
+Current-head operational persistence cases are explicitly capability-skipped.
+The matrix distinguishes current fallback/helper coverage from persistence
+controls validated at the preceding head; skips do not certify those controls.
+
 | Requirement | Code | Verifiable coverage |
 | --- | --- | --- |
 | Canonical source and actor | `readPostPublishingSnapshot` | Absent source, source actor/payload mutations before/during inference; API JWT.sub author path. |
 | Revision/body/declaration binding | Snapshot checks and typed assessment bindings | Submit/revise, stale old delivery, changed body; each component/policy/Safety binding field mismatch. |
 | Privacy/deletion authority | `lockActiveAccount`, locked snapshot | Actual existing-role helper refuses locked/deleted/suspended/missing users; privacy account restriction wins a lock race. Jobs fallback makes no model call/write. |
 | Account-lock atomicity | One client/transaction; COMMIT command verification | Lost connection during post-lock wait/apply, after write/before COMMIT and aborted COMMIT roll back evidence and reject success. Original split-transaction failures are preserved as superseded evidence. |
-| Human and pending case authority | Ordered case lock, latest decision identity and provenance checks | Real admin same-policy queue before/during inference without detector evidence; existing undecided case remains unchanged. |
-| Case conflict atomicity | Throw on late case INSERT conflict | Real PostgreSQL conflict rolls back detector/declaration writes and retries; real admin case/post race has no `40P01`. |
-| Independent holds and appeal scope | Before/after hold and identical-override checks | Independent queue/block and peer override before/during inference; unchanged appeal evidence fingerprint. |
+| Human and pending case authority | Ordered case lock, latest decision identity and provenance checks | Current real admin queue before inference and undecided case pass. During-inference guard passed at 429b1566; currently capability-skipped. |
+| Case conflict atomicity | Throw on late case INSERT conflict | Actual conflict rollback and real admin race without `40P01` passed at 429b1566; both currently capability-skipped. |
+| Independent holds and appeal scope | Before/after hold and identical-override checks | Current before-inference queue/block/override coverage passes; during-inference persistence races remain capability-skipped. |
 | No implied authority | `assessPostPublishing`, existing review-only writes | Human and AI-assisted pass/review/block/unknown feedback; policy ALLOW/REVIEW/BLOCK/NOT_RUN; unavailable/uncertain/malformed stages. |
-| Idempotency/recovery | Existing inbox, uniqueness and budget guards | Concurrent duplicate delivery; rollback during apply; failure after apply; repeated failures through configured retry horizon with one synthetic model invocation. |
+| Idempotency/recovery | Existing inbox, uniqueness and budget guards | Current duplicate delivery/retry horizon makes zero model calls or evidence writes and never completes unavailable work. Operational apply/after-apply cases are capability-skipped. Shared-helper interruption/retry cases pass using the existing admin role. |
 | Honest owner status | Existing owner-view and declaration persistence | Owner-only private/no-store `under_review`, guest read 404, null publication time and no publication events. |
 | Privacy/provider scope | Return-only assessment; outbound-denied fixture | No Safety persistence or new provider request; existing 93-case safety-preparation regression includes denial and sanitized-log checks. |
 
@@ -178,7 +182,7 @@ Acceptance-lane CI wiring for these new focused commands is still required.
   fanout. It proposes a coherent withheld/owner-test/public boundary for parent
   allocation. No global release guard or live flag change is implemented here.
 
-Rollback is a normal revert of all three draft commits as one reviewed change,
+Rollback is a normal revert of all draft commits as one reviewed change,
 with no schema, grant, resource or flag rollback. Reverting only the fallback
 commit recreates the unsafe split transaction and is inappropriate. Full revert
 restores the approved base and its earlier review guards; it does not activate
