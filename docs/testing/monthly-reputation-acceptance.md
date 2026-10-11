@@ -3,7 +3,12 @@
 Historical source baseline: `8c4261402dd370b4c57e082cf0fc16b41927f7db`. Policy:
 `lythaus-monthly-rewards-2026-10-v1`. This is the complete set of 100 required
 acceptance cases from the October task sheet, not a claim that 100 tests pass.
-Owner decisions D01–D13 and runtime activation remain pending. The catalogue's
+This dated matrix preserves the v1 candidate's test evidence; later owner
+decisions are recorded in the [current policy authority](../policy/current-policy-authority.md).
+The 7 October calendar-quarter-end rule supersedes rolling validity for all
+prospective quarterly awards, remaining months only and no earlier retroactive
+credit. Earlier rolling-validity tests do not establish acceptance of that rule.
+Operational defaults and runtime activation remain separate. The catalogue's
 embedded reference-validation counts are not execution evidence for this branch.
 
 ## Current exact-head status — 4 October 2026
@@ -175,7 +180,7 @@ is applied.
 | CAL-14 | Every threshold neighbour 999/1,000, 2,999/3,000, 5,999/6,000 and 9,999/10,000 maps correctly. | M / MT | Unit verified; live earning not integrated |
 | CAL-15 | No age, plan, World or old pillar gate changes the new score-derived level. | M / MT | Unit verified; live earning not integrated |
 | CAL-16 | Email proof expiry at the exact cutoff and a new proof after cutoff are handled correctly. | D, H, B / MT, HT, BT, BR | Actual initial verification/paused capture/revocation and historical cutoff verified; disabled renewal transaction covers one-use, replay, expiry, binding change, pause and erasure. Public API/delivery and D08 approval remain pending |
-| CAL-17 | Calendar-month addition handles 29/30/31-day dates without unapproved 90-day substitution. | D, H / MT, HT | Calendar validity candidate verified; D08 activation pending |
+| CAL-17 | Historical v1 calendar-month addition handles 29/30/31-day dates without unapproved 90-day substitution. | D, H / MT, HT | Historical candidate verified; superseded prospective quarterly expiry needs its own implementation/acceptance, not just activation |
 | CAL-18 | A weekly correction reselects all candidates; the previous fifth can enter the chosen four. | M, E, B, S / MT, ET, BT, ST | Real independent invalidation reassembles and reselects the fifth; approved scoped snapshot correction retains old reports/levels; obsolete approval drains durably |
 | CAL-19 | On-time evidence approved late retains its performance period and audited correction path. | M, E, B, X / MT, ET, BT, XT | Late scoped acceptance retains original week; actual assembly refuses undrained/mismatched contextual configuration and drains the stored version; specialist acceptance pending |
 | CAL-20 | End-of-month job replay, overlap and restart cannot publish duplicate entitlements. | P, J, B, S / PT, BT, ST | Atomic assembly and separate snapshot queue/reconciliation replay, concurrent publication and outbox rollback verified; partner claim consumer and activation pending |

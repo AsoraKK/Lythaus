@@ -1,7 +1,12 @@
 # Lythaus Community Guidelines
 
 > **Effective date**: February 2026  
-> **Last updated**: 2026-08-11
+> **Repository authority reconciled**: 2026-10-11; policy activation remains separate.
+
+Public posting remains withheld until the complete publishing pipeline is
+validated. These guidelines do not announce activation. The [current policy
+authority](../../policy/current-policy-authority.md) distinguishes new and
+historical appeal policies.
 
 Welcome to Lythaus — a platform built on authenticity, respect, and human connection. These guidelines help keep our community a safe and meaningful space for everyone.
 
@@ -57,23 +62,23 @@ Submissions may receive automated evidence at submission:
 
 ### Independent Appeal Review
 
-When you appeal a moderation decision:
+New standard appeals use timed, private community review. Every eligible member
+has one equal vote; there is no fixed trained panel, Level 5 weighting or routine
+Editorial confirmation. Subscription does not change eligibility or vote weight.
+Timing, quorum and activation must be approved separately before this process is
+available. Ballots and private evidence are not public.
 
-1. Five independently assigned trained reviewers consider the appeal.
-2. Known related-account groups may occupy at most one reviewer seat, and reviewers must recuse from conflicts.
-3. Submitted reviews are immutable. All five valid reviews and a weighted majority of at least 60% are required.
-4. At most one trained Level 5 reviewer may receive weight two; subscription never changes eligibility or weight.
-5. A trained Editorial or journalist adjudicator must confirm the panel result; high-risk cases require two adjudicators.
+Historical `appeals-v1.0.0` cases retain their original five trained reviewers,
+weighted majority and required trained adjudication. A new policy does not
+silently replace the policy recorded on an existing appeal.
 
 ### Adjudication
 
-Authorised adjudicators can:
-
-- Confirm a complete reviewer-panel result when qualified and conflict-free.
-- Record immutable adjudication, outcome, activity, notification, and audit evidence.
-- Escalate disagreement or insufficient-review states without inventing an outcome.
-
-Appeals are not resolved by public voting, a timer, a moderator override, or an administrator override.
+Restricted legal/safety cases and unresolved outcomes require accountable
+handling. Conflicts, ties or insufficient participation cannot be turned into
+an invented outcome. No moderator or administrator override bypasses safety.
+Historical adjudication requirements remain specific to that policy; approved
+new standard outcomes do not require routine Editorial confirmation.
 
 ---
 
@@ -84,10 +89,12 @@ If your content is flagged or blocked:
 1. You'll see a clear explanation on your post (including whether the decision was automated).
 2. Tap **"Appeal this decision"** to submit your case.
 3. Provide context — explain why you believe the decision was incorrect.
-4. Independently assigned trained reviewers and the required trained adjudicator(s) will review your appeal.
+4. Your appeal follows its recorded policy version and the applicable review process.
 5. You'll be notified of the outcome.
 
-**False positive?** Explain why the recorded decision is incorrect and provide relevant context. No appeal type bypasses independence, quorum, or adjudication requirements.
+**False positive?** Explain why the recorded decision is incorrect and provide
+relevant context. No appeal type bypasses its independence, quorum, safety or
+version-specific review requirements.
 
 ---
 
