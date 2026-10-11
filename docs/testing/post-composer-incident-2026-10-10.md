@@ -14,7 +14,15 @@ Owner hands-on acceptance remains scheduled for Sunday 11 October.
   `f40c5b6b9840ff8e96ac03f9aa4c6320b931aa5e` (#979). A normal merge produced
   `e8848145e996ee3311c8dfc4e898ccbe7ba8a3e8` with no conflicts. Its two admin UI
   changes remain owned by that merged PR; this slice's production composer
-  change is unchanged. The PR still contains the same six scoped changed paths.
+  change is unchanged. That initial refresh retained the same six scoped changed paths.
+- The final approved refresh includes main
+  `88ffc079d95797485bce33617e2a7e3545ef7e0b` (Profile Comments #983), merged
+  normally at `eac3fa78eb915ea5c0d0e05cc027e5212698f8d6` without conflicts.
+  Its parents are incident head `049eb28ca5fcb9065474b390dc9652c58d2ee4e0`
+  and that main SHA. Profile/contracts/dispatcher changes are inherited from main
+  and are absent from this slice's scoped diff. Parent explicitly allocated the
+  narrow shared `scripts/tests/local-auth-browser-server.mjs` abort fix as the
+  seventh path; production composer code is unchanged.
 - Reviewed open PRs before editing. Profile own-content collections/contracts
   belong to the separate profile lane. PR #983 owns Comments dispatcher work.
   This slice changes neither those files nor routing, contracts, migrations,
@@ -78,6 +86,27 @@ field is compared pixel-for-pixel and through the replay payload. These tests do
 not certify an unfocused web accessibility input's value, physical native-device
 gestures, or every possible dirty-composer tab-history combination.
 
+## Shared loopback fixture abort regression
+
+Two full release-browser runs at `049eb28` each completed the dirty-Back product
+assertions and screenshot but failed with uncaught `read ECONNRESET`. The shared
+HTTPS fixture read request bodies outside its error boundary. Aborting a request
+while that read was active rejected the async server callback.
+
+The parent-approved seventh-path fix handles only an incoming request that is
+already aborted and has `ECONNRESET` while its body is being read. Other read errors
+are rethrown; unexpected product handler errors remain fatal. Host allowlisting,
+body-size limits, API response assertions and browser console checks are unchanged.
+It creates no successful receipt and does not route an incomplete body to the API.
+
+Two regressions live in the existing
+`scripts/tests/post-composer-navigation.browser.mjs`: `local loopback fixture
+handles an aborted request reset` and `local loopback fixture keeps unexpected
+handler failures fatal`. Each runs an isolated child process against the real
+fixture. The first asserts zero handler invocations and a clean exit; the second
+requires exit 1 with the exact synthetic unexpected-handler error. Both passed.
+The full command now has seven browser scenarios plus these two fixture tests.
+
 ## Existing moderation path and its limits
 
 1. `post_creation_providers.dart` freezes the body/disclosure and saves the
@@ -131,7 +160,7 @@ owner acceptance. **Gap/gate** means this slice does not implement or approve it
 | AI-assisted images/video and generated public publication prohibited; private feedback allowed only under existing gates (A1/A3) | Content policy; private authenticity-alpha; media disabled | Policy tests; private-alpha/provider fixtures are synthetic. No activation or certified live detector/media acceptance. |
 | Per-post Public/Followers/Close Friends/Only Me (P1/P2 owner approval) | DB visibility has public/followers/private; composer request has no audience field; create currently uses existing public default | Gap: complete four-audience composition/enforcement is absent. Preserve default; membership/default/retroactivity remain unapproved. No contract/default invented here. Private row guards remain authoritative. |
 | Optional evidence/sources, corrections and no false proof claim (S1 owner implementation context; specific S2/D2 UI details are supporting proposals) | Composer proof tiles; `CreatePostRequest.toJson` sends only body/declaration/geoScope; detail trust timeline | Gap: tile values are not submitted/persisted by this contract. No source attestation success is claimed. Existing edit→new revision/source event and stale evidence tests covered. Source/correction schema and policy need owner/contract coordination. |
-| Detail, comments, one-level replies and edit/delete under current policy (S1; canonical contracts) | `post_detail_screen.dart`, `comment_thread_screen.dart`, public content handlers/OpenAPI | Existing post/comment journey/widget tests and PG suite cover owner edits/deletes, pending exclusion, reply policy, tombstones and retry. Comments dispatcher availability is PR #983's separate gate; this slice does not fix that shared file. |
+| Detail, comments, one-level replies and edit/delete under current policy (S1; canonical contracts) | `post_detail_screen.dart`, `comment_thread_screen.dart`, public content handlers/OpenAPI | Existing post/comment journey/widget tests and PG suite cover owner edits/deletes, pending exclusion, reply policy, tombstones and retry. Comments dispatcher and own-comment collection are inherited from merged PR #983. Combined profile/browser/CI checks cover that integration; this slice does not redo those shared files. |
 | Existing reaction semantics; historical like/dislike proposal R2; later hide public totals/no per-click earnings M1 | Existing `features/reactions`, `post_actions`, server reaction uniqueness/activity policy | Existing reaction and action tests passed. Gap: current UI still exposes reaction totals; vocabulary differs from historical like/dislike. No new reaction or popularity algorithm introduced; public-total reconciliation belongs to a separate approved slice. |
 | Correct author-profile links (S1/canonical) | UUID author ID → public profile route, active/private profile guards | #976 is already merged; existing profile/route code inspected, not redone. Profile collections/contracts remain profile-lane owned. |
 | Own edits/deletes and public privacy after edits | Content revision/outbox handler, owner-view, client mutation journal | Existing PG journey covers edit/delete/idempotency; new native stale event test does not call detector after revision change. Real public GET excludes pending and other users cannot use owner-view. |
@@ -273,3 +302,203 @@ deployment verification remains a release gate; do not retry the previously
 denied artifact/deployment endpoints. Qualified authorship detection and proof
 attestation are separate follow-on decisions, rather than inferred from trained
 safety scores.
+
+## Detailed post safety evidence adapter plan
+
+This complete plan is committed for parent allocation after incident integration.
+Provider/storage facts were inspected at `049eb28` and remain unchanged in the
+final combined tree with main `88ffc079`. The adapter is a separate implementation;
+none of its code, hooks, configuration or activation is part of this incident PR.
+
+### Intended result and boundaries
+
+Prepare a server-side adapter that can evaluate a canonical post revision using
+the existing supported OpenAI moderation provider and return explicitly typed
+safety evidence. The adapter is disabled unless explicitly selected by injected
+configuration. Its preparation tests use synthetic inputs and an outbound-blocked
+native Workerd runtime with disposable PostgreSQL.
+
+Safety evidence answers whether the provider flagged supported safety categories.
+It does not establish human authorship, authentic origin, source accuracy, proof
+attestation, moderation clearance, public eligibility or rewards eligibility.
+An unflagged provider `ALLOW` is evidence only. It must not publish a post, clear
+`review_required`, relabel an author, remove a hold or emit an earnings event.
+Flagged evidence must not automatically create guilt or a new blocking policy.
+Unknown means no usable provider finding, with existing publication state retained.
+
+Preserve the ordinary post path's `evaluation-only-v1` status and existing server
+authority. Existing private authenticity-alpha, beta, media, reward and appeal
+activation gates remain as configured. A private-alpha provider implementation
+does not authorize sending ordinary public-post text to that provider.
+
+### Verified source foundation
+
+| Source at the combined incident head | Existing behavior relevant to this plan |
+| --- | --- |
+| `packages/authenticity/src/openai-moderation.ts` | `createOpenAIModerationProvider` supports text/image/frame calls, injected `fetchImpl`, timeout and sanitized failure evidence. It returns `ALLOW`, configured flagged handling, or `PROVIDER_FAILURE`. Redirects are manual. |
+| `packages/authenticity/src/research-config.ts` | Existing supported model is `omni-moderation-latest`. No replacement model, endpoint or new service is proposed. |
+| `packages/authenticity/src/moderation.ts` | Typed provider evidence distinguishes `SUCCESS` and `PROVIDER_FAILURE`, with nullable flags and explicit failure categories. `isLive: true` on the factory is a type marker, not proof of live configuration or execution. |
+| `apps/lythaus-jobs/src/authenticity-alpha.ts` | Private alpha already uses this provider with explicit `REVIEW` handling. Its authorization/gate does not transfer to ordinary posts. |
+| `apps/lythaus-jobs/src/index.ts` | `processPostModeration` currently uses generic Workers AI evaluation, checks current revision before and after the call, and records evaluation-only review evidence. An existing provider/source-event row prevents repeated evaluation. |
+| `apps/lythaus-jobs/src/runtime-policy.ts` | `parseContentModerationRevision` requires the queue source event, declaration and SHA-256 body hash; `isCurrentContentModerationRevision` requires matching current content, revision, declaration, hash, live row and `under_review`. |
+| `database/planetscale/migrations/0002_core_tables.sql` and `0012_product_integrity_v2.sql` | Detector rows require a non-null model version and JSON signal. A partial unique index enforces `(provider, source_event_id)`; cases have separate content/source and one-open-content constraints. |
+| `packages/db/src/community-appeal-access.ts` | `communityClassifierEvidence` currently includes all detector rows for a content revision in its evidence fingerprint. A new safety row would alter that fingerprint. |
+| `packages/db/src/community-appeal-closure.ts` | `identicalCommunityAppealOverride` matches revision/content/evidence fingerprints. Restoration separately checks independent `block`/`queue` decisions and publication rules. |
+| `packages/db/src/monthly-earning.ts` | Eligibility uses canonical revision and authoritative moderation decisions. The adapter must not fabricate a qualifying decision or publication event. |
+| `packages/authenticity/tests/openai-moderation.workerd.mjs` | Existing native provider fixture verifies redirect refusal with a synthetic credential and endpoint. Reuse this pattern, without allowing live outbound traffic. |
+| `apps/lythaus-jobs/tests/post-moderation-fixture.mjs` | Existing native API/Jobs fixture restricts database host/name and roles, blocks external fetches and supplies synthetic model replies. Reuse through an isolated new test harness where possible. |
+
+These are repository facts. Production bindings, provider health and actual
+served SHAs remain unverified. Previously denied release-artifact and Cloudflare
+deployment reads must not be retried or bypassed.
+
+### Proposed ownership and files
+
+First implementation allocation should be limited to new
+`apps/lythaus-jobs/src/post-safety-evidence.ts` and
+`apps/lythaus-jobs/tests/post-safety-evidence.workerd.mjs`. If the harness needs a
+separate helper, allocate a new `post-safety-evidence-fixture.mjs` rather than
+changing the incident fixture without coordination.
+
+No production import/call from `apps/lythaus-jobs/src/index.ts` is part of the
+preparation slice. Parent owns allocation of that later hook. No OpenAPI/public
+contract, generated bindings, resource registry, workflow or migration edits are
+needed for pure adapter preparation. Any persistence/consumer adjustment that
+cannot stay in the new module requires a separate parent file-ownership decision.
+
+The existing provider module is reused unchanged. Its normal-post timeout,
+flagged-result policy and provider selection remain explicit configuration
+decisions; its existing 15-second factory default is not silently approved as a
+new normal-post product default. No feature-flag name or live binding is invented.
+Provider payload/admission limits and budget handling need explicit approval;
+the factory's zero cost estimate is not evidence of free production usage.
+
+### Adapter shape and revision flow
+
+1. Accept typed dependencies: canonical revision loader, current authoritative
+   decision/hold reader, injected provider, explicit disabled-by-default selection,
+   clock/hash implementation, and an optional evidence commit dependency that is
+   unavailable until persistence semantics are allocated.
+2. Validate the event through the existing revision parser. The original source
+   event identifies the content revision; retry delivery IDs do not replace it.
+   Load content server-side using Jobs authority. Never accept client-provided
+   body, author, moderation state or hash as authoritative.
+3. Hash the exact canonical body using existing SHA-256 semantics, and match
+   content ID, source event, declaration and body hash. Missing/deleted/edited
+   content or terminal state returns an explicit skipped/stale outcome before a
+   provider call. A revision hash is an integrity correlate, not authorship proof.
+4. Check identical scoped peer overrides and independent safety/publication holds.
+   Protected state returns an explicit protected outcome; it does not suppress or
+   remove a hold. Avoid writing evidence that invalidates an existing override.
+5. Disabled/absent selection returns disabled and performs zero provider calls
+   and zero evidence writes. Enabled test configuration still uses only the
+   injected synthetic provider/fetch. Missing/unusable dependencies return unknown,
+   never a mock success.
+6. Invoke `analyseText` once for that adapter attempt. Preserve the existing
+   provider's strict model/schema validation and sanitized error categories. No
+   raw response body, JWT, API key, text or exception containing text is logged.
+7. Normalize into an internal result union such as disabled, stale, protected,
+   duplicate, evidence or unknown. Keep delivery state separate from provider
+   status; these are proposed internal values, not new public API/moderation states.
+   Successful evidence retains provider/model, flagged boolean, category metadata,
+   source-event/content/body-hash correlation and evaluation-only applicability.
+8. Reload and rehash under a short DB transaction before any allocated commit.
+   Recheck deletion, revision, declaration, authoritative decisions and protected
+   scope after the asynchronous provider call. Late results for edited/deleted or
+   newly held content return stale/protected and cannot affect current content.
+   Do not hold a DB transaction/row lock open during a network provider call.
+9. A permissible commit can only persist correlated evidence; it cannot update
+   publication state, declarations, cases/decisions, appeal overrides, reputation,
+   activity rewards or outbox publication events. Pure preparation can return
+   evidence without persistence if the shared-consumer constraints are unresolved.
+
+### Persistence, duplication and recovery gates
+
+The existing detector table can technically store another provider's JSON evidence,
+but reusing it is not automatically safe. Parent must allocate and approve a
+purpose namespace plus consumer behavior before any production persistence.
+Do not reuse `lythaus-authenticity-ai`, overwrite its signal, or place safety data
+in the canonical authorship declaration fields. Model provenance must be real;
+missing model information is unknown, not a fabricated model version.
+
+The appeal fingerprint reader is unfiltered. Adding a row—even an evaluation-only
+safety row—changes its digest. Required preparation tests must demonstrate this
+interaction. Until an approved persistence design preserves scoped overrides,
+return protected/no-write for relevant scope and leave production storage unhooked.
+If a consumer filter or separate store is necessary, parent coordinates that
+follow-on allocation; preparation must not invent a schema/migration to evade it.
+
+The provider/source-event unique constraint can ensure one durable evidence row,
+using a distinct approved safety-purpose namespace and atomic conflict handling.
+It cannot alone guarantee only one external provider call: concurrent attempts can
+call the provider before either commits. Tests must distinguish those guarantees.
+Existing queue-inbox ownership and cost admission need a deliberate later hook;
+the ordinary evaluation's early duplicate return must not silently prevent safety
+evaluation or pretend that safety evaluation ran. No long-lived DB lock or new
+lease schema is introduced in preparation.
+
+Unknown provider results must not become terminal success or consume the only
+success evidence slot in a way that makes recovery impossible. Return typed
+unknown and preserve pending state; diagnostic persistence, attempt identity,
+lease recovery, retryability, maximum attempts, deadline and rescan cadence remain
+explicit owner/configuration gates. Today the ordinary evaluation can acknowledge
+manual-review evidence after an outage; this plan does not claim that it already
+performs recovery retries. Synthetic unknown→success attempts can verify adapter
+semantics without activating an automatic retry loop.
+
+### Proposed synthetic acceptance matrix
+
+| Scenario | Required assertions |
+| --- | --- |
+| Absent/disabled selection | No factory/network invocation, DB evidence write or state/event change. |
+| Valid unflagged text response | Correlated safety evidence returned; no claim of human authorship, publication or rewards; existing post remains pending. |
+| Valid flagged response | Flag metadata retained as evidence; no automatic block/guilt or new threshold. |
+| Missing credential/dependency | Explicit unknown with safe category; no external call or fabricated decision. |
+| Timeout, rejection, network failure | Explicit unknown; abort observed where supported; pending state retained; sanitized diagnostics only. |
+| 401/403/429/5xx, redirect | Correct failure category; redirect target is never requested; no credential forwarding. |
+| Malformed JSON/schema/model mismatch | Unknown rather than unflagged success; no partial unsafe commit. |
+| Malformed event/hash/declaration | Validation rejects before provider; canonical content remains unchanged. |
+| Stale event before call | Zero provider calls; explicit stale; no evidence for current revision. |
+| Edit/delete/account status or terminal decision during call | Revalidation fences late response; current state and evidence remain unchanged. |
+| Completed duplicate delivery | Existing correlated receipt returned/duplicate outcome; no new durable row or authoritative state change. |
+| Concurrent delivery | One durable evidence commit; loser handled explicitly. Provider-call count recorded truthfully, not falsely asserted exactly-once without a lease. |
+| Unknown then successful explicit retry | Same original revision correlation; unknown does not impersonate success or permanently exclude usable evidence. No automatic retry policy assumed. |
+| Identical scoped peer overturn | Existing override/fingerprint preserved; protected/no-write until approved store semantics; no reopen/republish. |
+| Independent safety hold | Hold remains effective for safe, flagged, unknown and late responses; no authoritative decision/declaration mutation. |
+| Private, cross-user and guest paths | Provider input is server-authorized synthetic content; no new client endpoint or cross-user read; existing public-read isolation remains unchanged. |
+| Existing ordinary evaluation | Its provider row, `evaluation-only-v1`, declaration and pending publication status remain intact; safety cannot masquerade as that completed evaluation. |
+| Sensitive-data logging | No synthetic token/key/body in emitted logs; only allowed metadata/error categories. |
+
+Run the new native Workerd tests against disposable local PG with runtime/Jobs
+roles, bounded SQL timeouts and hard outbound denial. Also rerun the existing
+OpenAI native redirect fixture, ordinary post-moderation workerd tests, runtime
+revision tests, scoped community-appeal tests and relevant admin/Jobs integrity
+tests. Run native typecheck, lint/architecture/resource/config validators and
+exact-head CI. Record pass/fail/skip/unrun precisely; no live-provider claim is
+derived from injected responses.
+
+### Sequence and release decisions
+
+1. Parent reviews/allocates the two-file preparation slice and confirms its
+   evaluation-only boundary. Confirm supported text scope, future persistence
+   ownership and required safety-versus-authorship consumer separation.
+2. Implement the isolated adapter with disabled selection and injected dependencies;
+   add the synthetic acceptance cases. Keep production Jobs imports/hooks unchanged.
+3. Review persistence feasibility and its explicit fingerprint/unknown-recovery
+   constraints. If unresolved, ship only preparation code/tests and report the
+   blocked production integration plainly.
+4. Create a separately reviewed draft PR after local validation; verify remote
+   head and monitor exact-head CI. No merge/deploy/activation by that lane.
+5. Parent separately approves hook ownership, ordinary-post provider/data-sharing
+   authorization, binding/credential handling, budget admission, timeout/retry
+   configuration, evidence retention and any enforcement-policy change. No new
+   paid resource or credential is introduced by preparation.
+6. Authorized owner/provider verification must establish actual deployed SHAs,
+   gates, bindings, queue/provider health and final-state handling before a live
+   posting/detection claim. Previously denied operations remain stopped. Owner
+   hands-on acceptance is separate from synthetic developer validation.
+
+Rollback of preparation is a reviewed revert of its new adapter/tests. A later
+allocated hook needs its own reviewed disable/revert procedure, preserving
+existing pending posts, evidence, safety holds and appeal decisions. No rollback
+may delete/relabel live content or silently publish pending posts.

@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { test } from 'node:test';
+import { promisify } from 'node:util';
 import pg from 'pg';
 import { chromium } from 'playwright';
 import { generateKeyPair, exportJWK, exportPKCS8 } from 'jose';
@@ -28,6 +30,59 @@ const scenarios = broken ? [{ width: 390, mode: 'pending', dark: false }] : [
   { width: 390, mode: 'dirty-back', dark: false },
   { width: 390, mode: 'ack-back', dark: true },
 ];
+
+const probeLoopback = promisify(execFile);
+const loopbackProbe = `
+  import assert from 'node:assert/strict';
+  import net from 'node:net';
+  import tls from 'node:tls';
+  import { once } from 'node:events';
+  const { localAuthBrowserServer } = await import(process.argv[1]);
+  const unexpected = process.argv[2] === 'unexpected';
+  let handled = 0;
+  const fixture = await localAuthBrowserServer(async route => {
+    handled++;
+    assert.equal(route.request().url(), 'https://app.lythaus.co/aborted');
+    if (unexpected) throw new Error('synthetic_unexpected_handler_failure');
+    await route.fulfill({ body: 'synthetic' });
+  });
+  const connection = net.connect(Number(new URL(fixture.proxy).port), '127.0.0.1');
+  connection.on('error', () => {});
+  await once(connection, 'connect');
+  connection.write('CONNECT app.lythaus.co:443 HTTP/1.1\\r\\nHost: app.lythaus.co\\r\\n\\r\\n');
+  const [response] = await once(connection, 'data');
+  assert.match(response.toString(), /^HTTP\\/1\\.1 200 /);
+  const secure = tls.connect({ socket: connection, servername: 'app.lythaus.co', rejectUnauthorized: false });
+  secure.on('error', () => {});
+  await once(secure, 'secureConnect');
+  secure.write('POST /aborted HTTP/1.1\\r\\nHost: app.lythaus.co\\r\\nContent-Length: '
+    + (unexpected ? 5 : 1000) + '\\r\\n\\r\\nhello');
+  if (!unexpected) {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    secure.destroy();
+  }
+  await new Promise(resolve => setTimeout(resolve, 150));
+  await fixture.close();
+  assert.equal(handled, 0, 'An incomplete aborted body must never reach the product handler');
+  console.log('synthetic_aborted_request_handled');
+`;
+const loopbackModule = new URL('./local-auth-browser-server.mjs', import.meta.url).href;
+
+test('local loopback fixture handles an aborted request reset', { timeout: 10_000 }, async () => {
+  const result = await probeLoopback(process.execPath,
+    ['--input-type=module', '--eval', loopbackProbe, loopbackModule, 'abort']);
+  assert.equal(result.stdout.trim(), 'synthetic_aborted_request_handled');
+  assert.equal(result.stderr, '');
+});
+
+test('local loopback fixture keeps unexpected handler failures fatal', { timeout: 10_000 }, async () => {
+  await assert.rejects(probeLoopback(process.execPath,
+    ['--input-type=module', '--eval', loopbackProbe, loopbackModule, 'unexpected']), error => {
+    assert.equal(error.code, 1);
+    assert.match(error.stderr, /synthetic_unexpected_handler_failure/);
+    return true;
+  });
+});
 
 for (const { width, mode, dark } of scenarios) test(
   `${width} ${mode}: routed release Flutter composer with native Workerd and PostgreSQL`,
