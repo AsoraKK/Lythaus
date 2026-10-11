@@ -165,10 +165,10 @@ the additional provenance and CI regressions below.
 | Syntax, documentation security, whitespace and tracked-file hygiene | Passed locally |
 | Repository secret scan | Pinned Gitleaks 8.18.0 subsequently installed by the existing script; 1,833 commits scanned, no leaks found. Initial absence did not count as a pass |
 | PostgreSQL 17 proposal ledger | Disposable local PostgreSQL 17 test passed with synthetic responses. It validates separate-connection run/sample races, writer/reader/retention grant boundaries and schema usage, malformed partial modality preservation, category-insert atomic rollback, and lost acknowledgements after committed run/attempt/result statements. It does not establish production role, DB, provider or transaction-wrapper behavior. |
-| Browser / Flutter analyze | Unrun: no UI or Dart changes; no browser or mobile acceptance claimed |
+| Release 110 Dart journey test / Flutter analyze | Unrun after merge because the Flutter SDK is unavailable in this environment; release 110 includes comment-thread UI and journey-test changes |
 | Real provider measurements, checkpoint inference, licensed labelled corpus, costs | Unrun/unauthorized; zero live calls, zero added paid resources; no empirical band qualification |
 | Release manifest, production auth, actual public posting | Unrun/uncertified. Do not retry prior denied operations or infer from unrelated successful reads |
-| Remote SHA / current-head checks / requiredness | Draft #992; final handoff binds later checks to exact remote head. Head `7c146a0793c521af7f97f070bdcc6edbe5229f14` job-step metadata identified retirement scan failures in both hygiene/native jobs; type freshness passed. Fresh job-log downloads returned 403 and were not retried or fetched by another route. Prior protection 403 means requiredness is not re-certified here |
+| Remote SHA / current-head checks / requiredness | Draft PR #997 received independent source clearance at `8c535535e0c099c5bb51ade9eb5dc6e9457efeda`; this branch now merges release 110 main `d286890d42907f05065e47af3139f4fe96efac3e` without changing the approved ledger/collector blobs. Current-head checks and requiredness remain unverified: prior check/job/artifact and protection reads returned 403 and are not retried. |
 
 The [machine-readable plan](../../packages/authenticity/evaluation/posting-feedback/evaluation-plan.json)
 defines the exact future gate: owner-approved provider/model/modalities, rights and

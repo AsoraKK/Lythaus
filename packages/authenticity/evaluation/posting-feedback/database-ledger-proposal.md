@@ -1,7 +1,12 @@
 # Moderation feedback database ledger proposal
 
-**Status: inactive proposal.** This module is not imported by Jobs, does not call
-the provider, and has no scheduler or activation switch. The SQL is a disabled
+**Status: source-cleared, inactive proposal in draft PR #997.** Independent
+source clearance was issued for head `8c535535e0c099c5bb51ade9eb5dc6e9457efeda`.
+Release 110 main at `d286890d42907f05065e47af3139f4fe96efac3e` is now merged into
+the proposal branch with the cleared ledger and collector blobs preserved. This
+source clearance does not authorize a provider run, production schema change, or
+feature activation. This module is not imported by Jobs, does not call the
+provider, and has no scheduler or activation switch. The SQL is a disabled
 comment-only proposal outside the canonical migration directory. Local tests use
 disposable PostgreSQL 17 only.
 
