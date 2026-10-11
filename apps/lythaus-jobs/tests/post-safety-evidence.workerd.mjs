@@ -189,6 +189,20 @@ for (const category of documentedCategories) test(`documented category ${categor
   assert.deepEqual(await unchangedState(post), state);
 });
 
+for (const category of ['illicit', 'illicit/violent']) for (const layer of ['response', 'analysis']) {
+  test(`nullable ${category} in provider ${layer} remains explicit unknown without changing pending state`, async () => {
+    const post = await created(), state = await unchangedState(post), calls = fixture.calls.length;
+    const reply = await attempt(post, { scenario: (layer === 'response' ? 'nullable:' : 'nullable_analysis:') + category });
+    assert.deepEqual(reply.result, { state: 'unknown', persisted: false, analyseTextCalls: 1, errorCategory: 'UNEXPECTED_SCHEMA',
+      ...(layer === 'response' ? { httpStatus: 200 } : {}),
+    });
+    assert.deepEqual(reply.diagnostic, { factoryCalls: 1, hashCalls: 2, loads: 2, aborted: false });
+    assert.equal(fixture.calls.length, calls + 1, 'one synthetic transport request, no retry or fabricated success');
+    assert.ok(!JSON.stringify(reply).includes(post.body)); assert.ok(!fixture.logs.join('\n').includes(post.body));
+    assert.deepEqual(await unchangedState(post), state);
+  });
+}
+
 const malformedMetadata = ['token_category', 'body_category', 'future_category', 'empty_maps', 'partial_maps', 'inconsistent_flag', 'unsupported_input_type',
   ...['categories', 'category_scores', 'category_applied_input_types'].flatMap(field =>
     ['empty_', 'missing_', 'token_', 'replaced_'].map(prefix => prefix + field))];

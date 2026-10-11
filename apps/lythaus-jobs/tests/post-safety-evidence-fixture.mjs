@@ -77,6 +77,12 @@ export async function postSafetyEvidenceFixture(connectionString) {
               const analysis = await provider.analyseText(value);
               return { ...analysis, modelVersion: null, rawResponse: 'synthetic-secret-body-token' };
             }};
+            if (input.scenario?.startsWith('nullable_analysis:')) return { async analyseText(value) {
+              const analysis = await provider.analyseText(value);
+              return { ...analysis, providerEvidence: { ...analysis.providerEvidence, categories: {
+                ...analysis.providerEvidence.categories, [input.scenario.slice('nullable_analysis:'.length)]: null,
+              }} };
+            }};
             return provider;
           },
         };
@@ -156,6 +162,7 @@ export async function postSafetyEvidenceFixture(connectionString) {
           category_scores: Object.fromEntries(categories.map(category => [category, flagged && category === flaggedCategory ? 0.9 : 0.01])),
           category_applied_input_types: Object.fromEntries(categories.map(category => [category, ['text']])) }] };
         const result = response.results[0];
+        if (scenario?.startsWith('nullable:')) result.categories[scenario.slice('nullable:'.length)] = null;
         if (scenario === 'token_category' || scenario === 'body_category' || scenario === 'future_category') {
           const key = scenario === 'body_category' ? body.input : scenario === 'future_category' ? 'future-safety-category' : 'synthetic-secret-body-token';
           result.categories[key] = false; result.category_scores[key] = 0; result.category_applied_input_types[key] = ['text'];

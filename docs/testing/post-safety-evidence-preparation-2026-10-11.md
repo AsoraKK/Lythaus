@@ -48,7 +48,9 @@ No logger, evidence writer, publication/declaration/decision mutator or automati
 retry exists in the adapter. Returned failures contain only allowlisted categories
 and validated HTTP status; raw exception/response/error diagnostic strings are
 discarded. Success requires all 13 documented category names in all three maps,
-typed scores and category-specific supported input-type metadata.
+boolean category flags, typed scores and category-specific supported input-type
+metadata. This accepted subset does not cover every documented response variant:
+nullable illicit categories fail closed to explicit unknown as described below.
 Provider identity/model/schema and result consistency must
 match the supported factory before successful evidence is returned.
 
@@ -86,7 +88,7 @@ All rows below refer to the new Workerd suite unless noted.
 | Safe/flagged evidence without authoritative decision | `normalize`, evidence-only union | Correlation/category/result asserted; pending declarations, decisions, provenance, events, reputation and activity unchanged; explicit BLOCK also remains evidence |
 | Timeout/network/rejection/401/403/429/5xx/redirect | Existing supported provider plus sanitized normalization | Abort observed; correct failure categories; redirect target never called; unknown and no persistence |
 | Malformed JSON/schema/model/score/metadata/analysis | Existing parser plus evidence checks | Unknown; no fabricated model or unflagged success; sensitive error values discarded |
-| Documented semantic category schema | Complete category allowlist, category-specific modalities, aggregate flag check and reconstruction by known names | Every documented category retained; unknown/token/body-like keys, empty/partial/mismatched maps, unsupported modalities and inconsistent flag return sanitized unknown |
+| Accepted semantic category subset | Complete category-name allowlist, boolean flags, category-specific modalities, aggregate flag check and reconstruction by known names | Every documented category with boolean flags retained; nullable illicit categories, unknown/token/body-like keys, empty/partial/mismatched maps, unsupported modalities and inconsistent flag return sanitized unknown |
 | Event/revision/declaration/hash/server authority | Existing revision helpers, persisted event and exact hash comparison | Malformed and forged event fields rejected before factory; canonical body used even with forged body/author/state; decomposed Unicode hashed without renormalization |
 | Changes before/during call | `checked('before'/'after')` | Edit/revision/declaration/soft-delete/account restriction/account deletion/terminal/hold/override fences; late unreadable/missing protection data unknown |
 | Scoped peer override and independent hold | Required protection snapshot | Identical digest preserved; hypothetical insert demonstrates incompatibility; independent decision remains; restored post never reopened/republished |
@@ -105,7 +107,7 @@ no migration, grant or feature flag file is changed.
 
 | Check | Exact result |
 | --- | --- |
-| New post safety Workerd acceptance, after semantic review repair | 89 passed on Node 22; 0 failed/cancelled/skipped/todo |
+| New post safety Workerd acceptance, after semantic and nullable compatibility review repairs | 93 passed on Node 22; 0 failed/cancelled/skipped/todo |
 | Existing ordinary post Workerd | 5 passed; 0 failed/cancelled/skipped/todo |
 | Existing OpenAI Workerd redirect + Jobs revision/runtime + admin adjudication | 18 passed; 0 failed/cancelled/skipped/todo |
 | Existing community appeal PostgreSQL | 26 passed; 0 failed/cancelled/skipped/todo |
@@ -121,7 +123,11 @@ Initial acceptance: 51 passed, 2 failed (invalid synthetic actor FK and outbound
 HTTP-error assertion). Both fixture issues were corrected; subsequent acceptance
 passed 53, then initial expanded acceptance passed 56 on Node 24 and Node 22.
 Review repair acceptance passes 87, then 89 after category-specific modality
-coverage. No gates were weakened. The ordinary, community-appeal, product and
+coverage. Nullable compatibility acceptance initially passed 91 with 2 new
+fixture assertion failures: transport schema rejection retains sanitized HTTP
+status 200. Correcting those expectations yields 93 passed, 0 failed/cancelled/
+skipped/todo on another fresh disposable baseline. Provider/revision/admin 18 and
+typecheck also pass again. No production checks were weakened. The ordinary, community-appeal, product and
 private-alpha totals above are initial preparation results; provider/revision/admin
 18, architecture 315, typecheck, configuration, scope, registry, gateway and
 retired-provider checks were rerun successfully for the semantic repair.
@@ -155,7 +161,7 @@ release dispatch, production DDL or deployment is performed.
 
 Independent review found that identifier syntax did not establish a legitimate
 category: arbitrary raw keys and empty maps could survive the original adapter.
-The supported semantic schema is verified against the public
+The accepted category-name set is verified against the public
 [OpenAI Create moderation API reference](https://developers.openai.com/api/reference/resources/moderations/methods/create)
 on 11 October 2026. The adapter requires the documented complete 13-name set in
 each map, finite bounded scores, category-specific text/image metadata, and a
@@ -163,6 +169,16 @@ flag that agrees with the category flags. Output maps are rebuilt from known
 names. Missing, added or substituted names return `UNEXPECTED_SCHEMA`; future
 provider schema changes require an explicit review rather than partial filtering
 or unflagged success. The shared provider module is unchanged.
+
+The generic reference permits `null` for `illicit` and `illicit/violent` category
+flags. The unchanged shared provider requires booleans, and the adapter preserves
+that narrower accepted subset. Either nullable flag returns explicit
+`UNEXPECTED_SCHEMA` unknown; it is never converted to false or ALLOW. Dedicated
+synthetic regressions exercise each nullable flag both in the transport response
+and in injected provider analysis, independently testing the provider and adapter
+guards with pending state unchanged and no persistence. This is a compatibility
+limitation, not complete support for every documented response variant. Broadening
+the shared provider requires separate coordination and is outside this slice.
 
 The fixture now returns complete documented maps. Added native regressions cover
 every documented category, arbitrary token keys in each map, a canonical body-like
