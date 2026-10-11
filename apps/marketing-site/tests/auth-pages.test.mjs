@@ -100,7 +100,7 @@ test('auth pages expose accessible status and password-policy guidance', () => {
 
 test('production reset links target the user-facing reset page', () => {
   assert.match(workerConfig, /"EMAIL_PASSWORD_RESET_BASE_URL": "https:\/\/lythaus\.co\/reset-password\?token="/);
-  assert.match(workerConfig, /"EMAIL_PASSWORD_RESET_BASE_URL": "http:\/\/localhost:4321\/reset-password\?token="/);
+  assert.deepEqual(JSON.parse(workerConfig).env, {}, 'Password recovery has no hosted development override');
 });
 
 test('signup keeps its existing reverify action', () => {
