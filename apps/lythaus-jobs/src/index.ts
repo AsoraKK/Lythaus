@@ -26,6 +26,7 @@ import { presentationPreferencesIdentityExportQuery, resetPresentationPreference
 import { reconcileSupportPrivacyDeletionLocations } from '../../../packages/db/src/support-feedback-privacy-runtime.ts';
 import { exportOwnSupportContributionsForPrivacy } from '../../../packages/db/src/support-feedback-contributor-privacy.ts';
 import { activityMeasurementPrivacyExport, activityMeasurementPrivacyDelete, activityMeasurementPrivacyReconcile, activityMeasurementRetentionCleanup, activityMeasurementScheduledWork } from './activity-measurement.ts';
+import { assessPostPublishing, readPostPublishingSnapshot, withPostPublishingAccountLock } from './post-publishing.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -889,37 +890,12 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
     payload: message.body.payload ?? message.body,
     contentIdField: 'postId',
   });
-  const postResult = await query<{
-    id: string;
-    author_id: string;
-    body: string;
-    declared_creation_mode: 'human' | 'ai_assisted' | 'ai_generated';
-    moderation_state: string;
-    deleted_at: string | null;
-    moderation_source_event_id: string | null;
-  }>(
-    env.DB_JOBS_FRESH,
-    `SELECT id, author_id, body, declared_creation_mode, moderation_state, deleted_at, moderation_source_event_id
-       FROM content.posts
-      WHERE id = $1 AND deleted_at IS NULL`, [revision.contentId]
-  );
-  const post = postResult.rows[0];
-  if (!post) return;
-  if (env.COMMUNITY_APPEAL_RULES_VERSION && await transaction(env.DB_JOBS_FRESH, client => identicalCommunityAppealOverride(client, {
-    contentType: 'post', contentId: post.id, sourceEventId: revision.sourceEventId, body: post.body, declaredCreationMode: post.declared_creation_mode,
-  }))) return;
+  const snapshot = await transaction(env.DB_JOBS_FRESH, client => readPostPublishingSnapshot(client, {
+    revision, eventType: message.body.eventType, communityAppealsEnabled: Boolean(env.COMMUNITY_APPEAL_RULES_VERSION), hashBody: sha256Hex,
+  }));
+  if (snapshot.state !== 'current') return;
+  const post = snapshot.post;
   const inputHash = await sha256Hex(post.body);
-  if (!isCurrentContentModerationRevision({
-    revision,
-    canonical: {
-      contentId: post.id,
-      sourceEventId: post.moderation_source_event_id,
-      declaredCreationMode: post.declared_creation_mode,
-      bodyHash: inputHash,
-      moderationState: post.moderation_state,
-      deletedAt: post.deleted_at,
-    },
-  })) return;
   const prior = await query(env.DB_JOBS_FRESH,
     `SELECT 1 FROM moderation.detector_runs WHERE provider = $1 AND source_event_id = $2 LIMIT 1`,
     [AUTHENTICITY_PROVIDER, revision.sourceEventId]);
@@ -927,42 +903,27 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
   const { evaluation, modelExecuted, latencyMs } = await runAuthenticityEvaluation(env, {
     kind: 'text', content: post.body, contentId: revision.contentId, declaredCreationMode: post.declared_creation_mode,
   });
+  const assessment = assessPostPublishing({
+    revision, safety: { state: 'disabled', persisted: false, analyseTextCalls: 0 },
+    stages: { provenance: { state: 'unavailable' }, specialist: { state: 'unavailable' }, behaviour: { state: 'unavailable' },
+      reasoning: modelExecuted ? { state: 'result', revision, componentVersion: evaluation.modelId, outcome: 'review' } : { state: 'unavailable' } },
+    policy: { revision, policyVersion: AUTHENTICITY_POLICY, thresholdVersion: null, outcome: 'NOT_RUN' },
+  });
+  logEvent({ service: 'lythaus-jobs', event: 'post_publishing_withheld', eventId: revision.sourceEventId,
+    state: assessment.state, reasonCodes: assessment.reasonCodes, publicationEligible: assessment.publicationEligible });
   const modelVersion = evaluation.modelId;
   const responseHash = await sha256Hex(JSON.stringify(evaluation));
   const detectedContentClass = evaluation.signals[0]?.category ?? null;
   const declarationConflict = post.declared_creation_mode === 'human'
     && evaluation.signals.some((item) => /(^|[_:-])(ai|generated|synthetic)([_:-]|$)/i.test(item.category));
   const signal = JSON.stringify(evaluation);
-  const applied = await transaction(env.DB_JOBS_FRESH, async (client) => {
-    const locked = await client.query<{
-      id: string;
-      author_id: string;
-      body: string;
-      declared_creation_mode: 'human' | 'ai_assisted' | 'ai_generated';
-      moderation_state: string;
-      deleted_at: string | null;
-      moderation_source_event_id: string | null;
-    }>(
-      `SELECT id, author_id, body, declared_creation_mode, moderation_state, deleted_at, moderation_source_event_id
-         FROM content.posts
-        WHERE id = $1 AND deleted_at IS NULL
-        FOR UPDATE`,
-      [revision.contentId],
-    );
-    const lockedPost = locked.rows[0];
-    if (!lockedPost) return false;
-    const lockedInputHash = await sha256Hex(lockedPost.body);
-    if (!isCurrentContentModerationRevision({
-      revision,
-      canonical: {
-        contentId: lockedPost.id,
-        sourceEventId: lockedPost.moderation_source_event_id,
-        declaredCreationMode: lockedPost.declared_creation_mode,
-        bodyHash: lockedInputHash,
-        moderationState: lockedPost.moderation_state,
-        deletedAt: lockedPost.deleted_at,
-      },
-    })) return false;
+  const applied = await withPostPublishingAccountLock(env.DB_PRIVACY_FRESH, post.author_id, () => transaction(env.DB_JOBS_FRESH, async (client) => {
+    const locked = await readPostPublishingSnapshot(client, {
+      revision, eventType: message.body.eventType, communityAppealsEnabled: Boolean(env.COMMUNITY_APPEAL_RULES_VERSION),
+      hashBody: sha256Hex, lock: true, expectedAuthorId: post.author_id,
+    });
+    if (locked.state !== 'current') return false;
+    const lockedPost = locked.post;
     const detectorRun = await client.query<{ id: string }>(
       `INSERT INTO moderation.detector_runs (id, content_type, content_id, provider, model_version, signal, source_event_id)
        VALUES ($1, 'post', $2, $3, $4, $5::jsonb, $6)
@@ -1017,7 +978,7 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
       createdAt: new Date().toISOString(),
     });
     return true;
-  });
+  }));
   if (!applied || !modelExecuted) return;
   await recordAiEvidence(env, {
     caseId: revision.contentId,

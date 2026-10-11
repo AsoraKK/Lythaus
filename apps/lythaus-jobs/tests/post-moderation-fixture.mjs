@@ -12,8 +12,10 @@ export async function postModerationFixture(connectionString, bindings) {
   const { build } = require('esbuild');
   const { Miniflare, convertV4MiniflareOptions } = require('miniflare');
   const root = fileURLToPath(new URL('../../../', import.meta.url));
-  const clients = new Map(), deliveries = [];
+  const clients = new Map(), deliveries = [], statements = [];
   let sequence = 0, modelCalls = 0, failModel = false, failQueue = false;
+  let duringModel, duringSql, failSql, modelResponse = { riskScore: 0.1,
+    signals: [{ category: 'synthetic_evidence', confidence: 0.5, rationale: 'Local fixture only' }] };
   const bundle = await build({ absWorkingDir: root, bundle: true, write: false,
     format: 'esm', platform: 'node', target: 'es2022', external: ['cloudflare:workers'],
     banner: { js: "import { createRequire } from 'node:module'; const require = createRequire('file:///fixture.mjs');" },
@@ -93,9 +95,9 @@ export async function postModerationFixture(connectionString, bindings) {
     serviceBindings: {
       FIXTURE_MODEL: async () => {
         modelCalls++;
+        if (duringModel) await duringModel();
         if (failModel) return new Response(null, { status: 503 });
-        return Response.json({ response: JSON.stringify({ riskScore: 0.1,
-          signals: [{ category: 'synthetic_evidence', confidence: 0.5, rationale: 'Local fixture only' }] }) });
+        return Response.json({ response: JSON.stringify(modelResponse) });
       },
       FIXTURE_QUEUE: async request => {
         const delivery = await request.json();
@@ -122,6 +124,12 @@ export async function postModerationFixture(connectionString, bindings) {
             return Response.json({ transactionId });
           }
           if (input.action === 'query') {
+            statements.push({ text: input.text, role: input.role, transactionId: input.transactionId });
+            if (duringSql) await duringSql(input);
+            if (failSql && input.text.includes(failSql.match) && failSql.remaining > 0) {
+              failSql.remaining--;
+              throw new Error('synthetic_interrupted_database_write');
+            }
             const result = await client.query(input.text, input.values);
             return Response.json({ rows: result.rows, rowCount: result.rowCount });
           }
@@ -138,8 +146,11 @@ export async function postModerationFixture(connectionString, bindings) {
       },
     },
   }] }));
-  return { deliveries, get modelCalls() { return modelCalls; },
+  return { deliveries, statements, get modelCalls() { return modelCalls; },
     set failModel(value) { failModel = value; }, set failQueue(value) { failQueue = value; },
+    set duringModel(value) { duringModel = value; }, set failSql(value) { failSql = value; },
+    set duringSql(value) { duringSql = value; },
+    set modelResponse(value) { modelResponse = value; },
     dispatchFetch: (...args) => runtime.dispatchFetch(...args),
     async dispose() {
       await runtime.dispose();
