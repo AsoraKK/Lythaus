@@ -167,8 +167,10 @@ test('native complete workflows preserve wholly absent schema compatibility', as
 test('incomplete storage stops completion and permits repaired same-request re-execution', async () => {
   await storage('incomplete');
   const subjectId = await subject();
+  const exportSubjectId = await subject();
   await sql('UPDATE identity.users SET presentation_left_handed=true WHERE id=$1', [subjectId]);
-  const exported = await request(subjectId, 'export');
+  await sql('UPDATE identity.users SET presentation_left_handed=true WHERE id=$1', [exportSubjectId]);
+  const exported = await request(exportSubjectId, 'export');
   const exports = await fixture.bucket('PRIVATE_EXPORTS');
   const exportStatus = await fixture.run('export', exported);
   assert.equal(exportStatus.status, 'errored', JSON.stringify(exportStatus));
@@ -188,6 +190,8 @@ test('incomplete storage stops completion and permits repaired same-request re-e
   assert.equal((await sql('SELECT status FROM identity.users WHERE id=$1', [subjectId])).rows[0].status, 'deleted');
   await storage('ready');
   await savePreferences(subjectId);
+  await savePreferences(exportSubjectId);
+  assert.equal((await sql('SELECT status FROM identity.users WHERE id=$1', [exportSubjectId])).rows[0].status, 'active');
   await completed('export', exported);
   assert.equal((await (await exports.get(key(exported))).json()).profile.presentation_preferences.version, 7);
   await completed('delete', deleted);

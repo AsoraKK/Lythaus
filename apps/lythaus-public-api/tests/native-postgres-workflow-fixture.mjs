@@ -5,7 +5,7 @@ import { setTimeout } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 
-export async function nativePostgresPrivacyWorkflowFixture(connectionString, { supportPolicy } = {}) {
+export async function nativePostgresPrivacyWorkflowFixture(connectionString, { supportPolicy, onStep, afterQuery } = {}) {
   const target = new URL(connectionString);
   assert.ok(['127.0.0.1', 'localhost'].includes(target.hostname));
   assert.ok(target.pathname.startsWith('/lythaus_auth_test') || target.pathname.startsWith('/lythaus_support_test_workflow_')
@@ -103,7 +103,11 @@ export async function nativePostgresPrivacyWorkflowFixture(connectionString, { s
       ACCOUNT_DELETE: { name: 'profile-delete-local', className: 'FixtureAccountDelete' },
       RETENTION_CLEANUP: { name: 'support-retention-local', className: 'FixtureRetentionCleanup' } },
     serviceBindings: {
-      FIXTURE_TRACE: async request => { steps.push(await request.json()); return new Response(null, { status: 204 }); },
+      FIXTURE_TRACE: async request => {
+        const trace = await request.json(); steps.push(trace);
+        await onStep?.(trace);
+        return new Response(null, { status: 204 });
+      },
       DISPOSABLE_POSTGRES: async request => {
         const input = await request.json();
         const temporary = !input.transactionId;
@@ -130,6 +134,7 @@ export async function nativePostgresPrivacyWorkflowFixture(connectionString, { s
             statements.push(statement);
             try {
               const result = await client.query(input.text, input.values);
+              await afterQuery?.(input, result);
               return Response.json({ rows: result.rows, rowCount: result.rowCount });
             } catch (error) { statement.error = error.message; throw error; }
           }

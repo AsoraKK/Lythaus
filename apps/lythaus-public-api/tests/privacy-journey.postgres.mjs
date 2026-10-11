@@ -158,3 +158,33 @@ test('download requires the current owner, completion and an unexpired manifest 
   assert.equal((await call(actor, 'GET', '?requestType=export')).status, 401);
   assert.equal((await call(actor, 'GET', '/' + id + '/export')).status, 401);
 });
+
+test('anonymous, missing-object and provider-failed downloads never record success; the owner can retry', async () => {
+  const actor = await owner(), id = await request(actor, 'completed');
+  const bytes = Buffer.from(JSON.stringify({ syntheticOwner: actor.id }));
+  const hash = createHash('sha256').update(bytes).digest('hex'), objectKey = 'synthetic/missing/' + id;
+  await sql(`INSERT INTO privacy.export_manifests(id,request_id,object_key,package_hash,expires_at)
+    VALUES($1,$2,$3,$4,now()+interval '1 day')`, [uuidv7(), id, objectKey, hash]);
+  const before = storageReads.length;
+  assert.equal((await call(null, 'GET', '/' + id + '/export')).status, 401);
+  assert.equal(storageReads.length, before);
+  const missing = await call(actor, 'GET', '/' + id + '/export');
+  assert.equal(missing.status, 503);
+  assert.equal((await missing.json()).error, 'export_unavailable');
+  const original = env.PRIVATE_EXPORTS.get;
+  env.PRIVATE_EXPORTS.get = async () => { throw new Error('SYNTHETIC_PRIVATE_PROVIDER_DETAIL'); };
+  try {
+    const failed = await call(actor, 'GET', '/' + id + '/export');
+    assert.equal(failed.status, 500);
+    const body = await failed.text();
+    assert.equal(JSON.parse(body).error, 'request_failed');
+    assert.ok(!body.includes('SYNTHETIC_PRIVATE_PROVIDER_DETAIL'));
+    assert.match(failed.headers.get('cache-control'), /private.*no-store/);
+  } finally { env.PRIVATE_EXPORTS.get = original; }
+  assert.equal((await sql("SELECT id FROM trust.user_activity_events WHERE user_id=$1 AND event_type='privacy.export_accessed'", [actor.id])).rowCount, 0);
+  objects.set(objectKey, { body: bytes, httpEtag: 'synthetic', httpMetadata: { contentType: 'application/json' } });
+  const retry = await call(actor, 'GET', '/' + id + '/export');
+  assert.equal(retry.status, 200);
+  assert.deepEqual(Buffer.from(await retry.arrayBuffer()), bytes);
+  assert.equal((await sql("SELECT id FROM trust.user_activity_events WHERE user_id=$1 AND event_type='privacy.export_accessed'", [actor.id])).rowCount, 1);
+});

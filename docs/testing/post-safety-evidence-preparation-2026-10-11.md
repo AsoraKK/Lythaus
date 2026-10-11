@@ -2,15 +2,18 @@
 
 ## Scope and source verification
 
-Base: fetched `origin/main` at
+Original preparation base: fetched `origin/main` at
 `9940561f7de9f0dbcc6e107b74558c1c97d8c4d7` (incident PR #984).
 Read the root `AGENTS.md`, `README.md`, resource registry, canonical declaration
 and moderation contracts, revision helpers, detector/case migrations and grants,
 Jobs flags, appeal readers/closure, native fixtures, and the full
 [committed detailed plan](post-composer-incident-2026-10-10.md#detailed-post-safety-evidence-adapter-plan).
 No nested `AGENTS.md` or `.agents/skills/SKILL.md` exists in the selected workspace.
-Open work was checked: #985 owns export publication, #986 notification lifecycle,
-#981 CI caching, and #974 transactional-email redirects. Those paths are untouched.
+Initial open work was checked: #985 export publication, #986 notification lifecycle,
+#981 CI caching, and #974 transactional-email redirects. The final current-main
+refresh below incorporates the already merged #985 and #981 changes; this slice
+does not edit their paths relative to that main. Notification #986 remains draft
+and is not incorporated or marked ready here.
 
 Only four new paths belong to this slice:
 
@@ -27,7 +30,7 @@ OpenAI provider unchanged, using synthetic credentials and internal service
 bindings under native Workerd. No real credential is read or introduced.
 
 **Wired:** no production import, route, queue consumer or provider binding.
-**Externally verified:** none; local synthetic acceptance only.
+**Production provider/deployment externally verified:** none; synthetic acceptance only.
 **Activated:** none. Existing ordinary `evaluation-only-v1`, alpha/beta, media,
 appeal, authenticity enforcement and reward gates are unchanged.
 
@@ -201,6 +204,42 @@ explicit. The guard and allowlist are unchanged. All five workflow hygiene
 commands pass locally: repository entropy, active naming, documentation secrets,
 repository secret scan and retired-provider references. This documentation-only
 repair does not change the adapter or acceptance behavior.
+
+## Final current-main refresh
+
+The authorized normal refresh combines reviewed preparation
+`aaa5ae5c83730cd995fd45c1802ce9316d238038` with fetched main
+`5dcc7b513fad79960a42038b137a70c4087f51d6`. Main contains #985's guarded export
+publication and #981's SDK cache correction. The merge applies without conflict;
+the three adapter/fixture/test files are byte-identical to the reviewed preparation.
+Only this scoped evidence document adds refresh results. The final merge commit
+has those exact first and second parents; its resulting SHA is recorded in the
+PR description and handoff after commit and remote verification.
+
+Combined native suites run on Node `v22.23.3`, using fresh disposable canonical
+PostgreSQL 17 databases for safety, ordinary moderation, privacy and community
+appeals. The earlier monthly fixture database is retained under a renamed local
+test name. No database guard, proposal, grant or production input is changed.
+
+| Combined validation | Exact result |
+| --- | --- |
+| Safety preparation Workerd | 93 passed |
+| Ordinary post moderation Workerd | 5 passed |
+| Provider redirect / revision / admin appeal | 18 passed |
+| Community appeal PostgreSQL integrity | 26 passed |
+| Merged export Workflow / privacy journey / full-DSR Workflows | 27 passed |
+| Native architecture | 315 passed |
+| Product integrity / product contracts | 21 / 10 passed |
+| Private-alpha gates | 22 passed |
+| Merged Flutter cache / action-pin regressions | 24 passed |
+
+All listed suites have zero failures, cancellations, skips and todos. All four
+fresh PostgreSQL baseline/grant checks pass. Native typecheck, four Worker configs,
+three generated type files, scope, resource registry, migrations, action pins,
+gateway paths, Hyperdrive manifest and all five repository hygiene checks pass.
+Diff checks pass. Hosted checks for the earlier preparation head do not validate
+this refreshed commit; the final exact-head CI outcome belongs in the PR/handoff.
+No requested live provider/deployment/activation evidence is inferred from CI.
 
 ## Remaining decisions, stopped scope and rollback
 
