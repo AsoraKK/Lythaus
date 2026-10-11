@@ -11,6 +11,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 import 'package:lythaus/design_system/components/lyth_snackbar.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
@@ -44,7 +45,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   final _textController = TextEditingController();
   final _focusNode = FocusNode();
   bool _policyReminderShown = false;
-  final GlobalKey<TooltipState> _policyTooltipKey = GlobalKey<TooltipState>();
+  GlobalKey<TooltipState> _policyTooltipKey = GlobalKey<TooltipState>();
 
   @override
   void initState() {
@@ -94,6 +95,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
     // Listen for successful post creation
     ref.listen<PostCreationState>(postCreationProvider, (previous, next) {
+      if (next.result != null && next.result != previous?.result) {
+        _dismissPolicyReminder();
+      }
       if (_textController.text != next.text) {
         _textController.value = TextEditingValue(
           text: next.text,
@@ -489,14 +493,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     final state = ref.read(postCreationProvider);
     if (state.isSubmitting) return;
     if (state.errorResult?.outcomeUncertain == true) {
-      Navigator.of(context).pop();
+      _leaveComposer();
       return;
     }
     if (state.text.isNotEmpty && !state.isSuccess) {
       _showDiscardDialog(context);
     } else {
       ref.read(postCreationProvider.notifier).reset();
-      Navigator.of(context).pop();
+      _leaveComposer();
     }
   }
 
@@ -574,7 +578,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         }
                         ref.read(postCreationProvider.notifier).reset();
                         Navigator.of(dialogContext).pop();
-                        Navigator.of(context).pop();
+                        _leaveComposer();
                       },
                 child: Text(saving ? 'Discarding…' : 'Discard'),
               ),
@@ -605,7 +609,36 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
     // Reset and close
     ref.read(postCreationProvider.notifier).reset();
-    Navigator.of(context).pop(result.post);
+    _leaveComposer(result.post);
+  }
+
+  void _leaveComposer([Object? result]) {
+    if (ModalRoute.of(context)?.isCurrent != true ||
+        !TickerMode.valuesOf(context).enabled) {
+      return;
+    }
+    _dismissPolicyReminder();
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop(result);
+      return;
+    }
+    final router = GoRouter.maybeOf(context);
+    if (router != null) {
+      final uri = GoRouterState.of(context).uri;
+      router.go(
+        Uri(
+          path: '/',
+          queryParameters: {...uri.queryParameters, 'tab': 'discover'},
+        ).toString(),
+      );
+    }
+  }
+
+  void _dismissPolicyReminder() {
+    // Recreate the tooltip to remove its overlay even when the retained
+    // composer becomes inactive and its dismissal animation cannot tick.
+    setState(() => _policyTooltipKey = GlobalKey<TooltipState>());
   }
 
   Future<void> _editProofValue({
