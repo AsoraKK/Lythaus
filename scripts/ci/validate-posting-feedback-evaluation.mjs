@@ -18,7 +18,7 @@ export async function validatePostingFeedbackEvaluation({ expectedHead, ci = fal
   const commands = [
     [resolve(root, 'node_modules/typescript/bin/tsc'), '-p', `${directory}/tsconfig.json`, '--noEmit'],
     ['--experimental-strip-types', '--test', `${directory}/harness.test.mjs`, `${directory}/workerd.test.mjs`,
-      `${directory}/ci.test.mjs`],
+      `${directory}/ci.test.mjs`, `${directory}/collector.test.mjs`],
   ];
   for (const command of commands) {
     const result = spawnSync(process.execPath, command, { cwd: root, stdio: 'inherit' });
