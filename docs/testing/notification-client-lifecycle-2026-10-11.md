@@ -69,15 +69,16 @@ reset cursor history, and a new authentication session gets a new controller.
 
 ## Validation
 
-At the final production source and initial 18 rendered cases:
+At the committed production and test source (`92ded7e9`), including all 20
+new rendered cases:
 
-- `bash scripts/test-with-coverage.sh`: 3,202 PASS, six existing skips,
+- `bash scripts/test-with-coverage.sh`: 3,204 PASS, six existing skips,
   zero failures; total coverage 88.77%.
 - `bash scripts/check_coverage_gates.sh`: PASS, total/P1/P2/P3 gates intact
   (88.77%/89%/91%/86%). No baselines were changed.
 
-At the final test source, including two additional failed-read/unknown-link
-cases and deterministic icon loading:
+Focused checks, including failed-read/unknown-link cases and deterministic
+icon loading:
 
 - `flutter test --no-pub test/features/notifications test/core/routing/deeplink_router_test.dart test/screens/guest_account_entry_test.dart --reporter expanded`:
   134 PASS, zero failures/skips, including 20 new rendered mobile/desktop cases.
@@ -118,12 +119,19 @@ not part of the source change.
 
 ## Remaining gates and rollback
 
-GitHub denied `GET /repos/AsoraKK/Lythaus/branches/main/protection` with HTTP403
-`Resource not accessible by integration`. That operation was stopped without
-another route to obtain protected settings. The parent must certify the
+GitHub denied the main branch-protection read with HTTP403
+`Resource not accessible by integration`. A CI job-log download also returned
+HTTP403. Both operations stopped without another route to obtain the denied
+content. Available job metadata and local reproduction identified an evidence-
+document naming failure; its wording was corrected without changing the gate.
+The parent must certify the
 required-check set and coordinate independent review and serialized integration.
 Draft head, verified remote SHA and exact-head CI results belong in the PR
 handoff; historical main or earlier-head checks do not certify the draft.
+Main advanced to `bc57edf59f843346f965ce66d719dc3c9c424283` (#982 profile
+settings) after this branch was based on `88ffc079`. Its four changed paths
+do not overlap this slice. Parent integration and combined-head validation
+remain pending.
 
 Native notification payloads currently provide a generic title/type/entity ID
 without a destination or post preview. Existing compatible deep links remain
