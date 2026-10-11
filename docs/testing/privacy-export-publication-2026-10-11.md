@@ -47,6 +47,12 @@ picked up by the existing Public Worker `*.postgres.mjs` CI glob. Retried runs
 use fresh Workflow instances for the same request; same-instance platform
 checkpoint replay is not certified by this fixture.
 
+The existing full-DSR repair fixture in `profile-workflows.postgres.mjs` now
+uses distinct active export and deletion subjects. Previously it expected an
+export retry to succeed for the subject its deletion had already marked deleted.
+Both same-request retries and all deletion assertions remain; the export retry
+also explicitly checks its subject is active.
+
 ## Local validation
 
 Node `v24.19.0`; disposable PostgreSQL `17.11`; no live provider data or objects.
@@ -59,6 +65,8 @@ No routing, contracts, migrations, grants, CI workflows or flags change.
   after that reproduction.
 - After correction: **8/8** new native Workflow regressions pass.
 - Privacy journey, including the new download failure/retry fixture: **11/11** pass.
+- After the full-DSR fixture correction, the combined privacy export, privacy
+  journey and full-DSR suites pass **25/25**, including all six full-DSR cases.
 - Existing monthly report route tests, including CSV formula injection,
   owner isolation and disabled/unavailable truthfulness: **9/9** pass.
 - Public privacy and Jobs runtime policy tests: **19/19** pass.
@@ -75,6 +83,15 @@ No routing, contracts, migrations, grants, CI workflows or flags change.
   Worker type files.
 - Flutter analyze/unit/rendered browser tests: unrun locally; Flutter SDK is
   absent and this slice changes no UI. No screenshots apply.
+- A broader local Public/Admin `*.postgres.mjs` run reports **95 passes / 4
+  failures**: community appeals and three tag-search files reject this
+  privacy-named disposable database, requiring monthly/content names locally.
+  Those guards remain intact; the valid scoped 25-case command passes.
+- First hosted PostgreSQL run at `c9e8e05ab65c40a8fab78221dee47e7da501842a`
+  passed the new eight regressions but failed the older full-DSR fixture's
+  deleted-subject export-success assertion. The active/deletion subject split
+  above corrects that fixture while keeping the production guard and deletion
+  assertions. [Initial run](https://github.com/AsoraKK/Lythaus/actions/runs/38100184677).
 
 ## Integration and rollback gates
 
