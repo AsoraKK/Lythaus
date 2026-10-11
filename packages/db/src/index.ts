@@ -10,6 +10,21 @@ export interface DatabaseEnv {
   connection: HyperdriveBinding;
 }
 
+async function executeTransaction<T>(client: Client, work: (client: Client) => Promise<T>): Promise<T> {
+  try {
+    await client.query('BEGIN');
+    const result = await work(client);
+    const committed = await client.query('COMMIT');
+    if (committed.command !== 'COMMIT') throw new Error('database_transaction_commit_not_confirmed');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => undefined);
+    throw error;
+  }
+}
+
+export { accountRowLockAvailable, lockActiveAccount } from './account-fence.ts';
+
 export { enqueueTransactionalEmailIntent, lockAuthDelivery, type TransactionalEmailOutboxInput, type TransactionalEmailPurpose } from './transactional-email.ts';
 export { supportFeedbackSchemaReady, createSupportFeedbackRuntime } from './support-feedback-runtime.ts';
 export { supportFeedbackPrivacyIsReady, supportFeedbackPrivacySchemaState, type SupportFeedbackPrivacySchemaState } from './support-feedback-privacy-runtime.ts';
@@ -47,13 +62,7 @@ export async function transaction<T>(
   const client = new Client({ connectionString });
   await client.connect();
   try {
-    await client.query('BEGIN');
-    const result = await work(client);
-    await client.query('COMMIT');
-    return result;
-  } catch (error) {
-    await client.query('ROLLBACK').catch(() => undefined);
-    throw error;
+    return await executeTransaction(client, work);
   } finally {
     await client.end();
   }

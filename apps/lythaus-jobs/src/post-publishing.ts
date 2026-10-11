@@ -1,4 +1,4 @@
-import { transaction, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
+import type { DatabaseClient } from '@lythaus/db';
 import { isUuidV7 } from '../../../packages/authenticity/src/uuid.ts';
 import { identicalCommunityAppealOverride } from '../../../packages/db/src/community-appeal-closure.ts';
 import type { PostSafetyOutcome } from './post-safety-evidence.ts';
@@ -20,16 +20,6 @@ export type PostPublishingSnapshot =
   | { state: 'current'; post: PublishingPost }
   | { state: 'stale'; reason: 'invalid_event' | 'revision_changed' | 'account_inactive' | 'source_event_mismatch' | 'author_changed' }
   | { state: 'protected'; reason: 'scoped_peer_override' | 'independent_hold' };
-
-export async function withPostPublishingAccountLock(binding: HyperdriveBinding, authorId: string, work: () => Promise<boolean>): Promise<boolean> {
-  return transaction(binding, async client => {
-    const account = (await client.query<{ status: string; deleted_at: string | null }>(
-      `SELECT status, deleted_at FROM identity.users WHERE id = $1 FOR SHARE`, [authorId],
-    )).rows[0];
-    if (!account || account.status !== 'active' || account.deleted_at !== null) return false;
-    return work();
-  });
-}
 
 export async function readPostPublishingSnapshot(client: DatabaseClient, input: {
   revision: ContentModerationRevision;

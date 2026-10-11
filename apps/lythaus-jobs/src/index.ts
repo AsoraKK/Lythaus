@@ -26,7 +26,8 @@ import { presentationPreferencesIdentityExportQuery, resetPresentationPreference
 import { reconcileSupportPrivacyDeletionLocations } from '../../../packages/db/src/support-feedback-privacy-runtime.ts';
 import { exportOwnSupportContributionsForPrivacy } from '../../../packages/db/src/support-feedback-contributor-privacy.ts';
 import { activityMeasurementPrivacyExport, activityMeasurementPrivacyDelete, activityMeasurementPrivacyReconcile, activityMeasurementRetentionCleanup, activityMeasurementScheduledWork } from './activity-measurement.ts';
-import { assessPostPublishing, readPostPublishingSnapshot, withPostPublishingAccountLock } from './post-publishing.ts';
+import { assessPostPublishing, readPostPublishingSnapshot } from './post-publishing.ts';
+import { accountRowLockAvailable, lockActiveAccount } from '@lythaus/db';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -900,6 +901,11 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
     `SELECT 1 FROM moderation.detector_runs WHERE provider = $1 AND source_event_id = $2 LIMIT 1`,
     [AUTHENTICITY_PROVIDER, revision.sourceEventId]);
   if (prior.rowCount !== 0) return;
+  if (!await transaction(env.DB_JOBS_FRESH, accountRowLockAvailable)) {
+    logEvent({ service: 'lythaus-jobs', event: 'post_publishing_withheld', eventId: revision.sourceEventId,
+      state: 'unknown', reasonCodes: ['account_lock_capability_unavailable'], publicationEligible: false });
+    throw new Error('post_review_account_fence_unavailable');
+  }
   const { evaluation, modelExecuted, latencyMs } = await runAuthenticityEvaluation(env, {
     kind: 'text', content: post.body, contentId: revision.contentId, declaredCreationMode: post.declared_creation_mode,
   });
@@ -917,7 +923,10 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
   const declarationConflict = post.declared_creation_mode === 'human'
     && evaluation.signals.some((item) => /(^|[_:-])(ai|generated|synthetic)([_:-]|$)/i.test(item.category));
   const signal = JSON.stringify(evaluation);
-  const applied = await withPostPublishingAccountLock(env.DB_PRIVACY_FRESH, post.author_id, () => transaction(env.DB_JOBS_FRESH, async (client) => {
+  const applied = await transaction(env.DB_JOBS_FRESH, async (client) => {
+    const account = await lockActiveAccount(client, post.author_id);
+    if (account === 'unavailable') throw new Error('post_review_account_fence_unavailable');
+    if (account !== 'locked') return false;
     const locked = await readPostPublishingSnapshot(client, {
       revision, eventType: message.body.eventType, communityAppealsEnabled: Boolean(env.COMMUNITY_APPEAL_RULES_VERSION),
       hashBody: sha256Hex, lock: true, expectedAuthorId: post.author_id,
@@ -978,7 +987,7 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
       createdAt: new Date().toISOString(),
     });
     return true;
-  }));
+  });
   if (!applied || !modelExecuted) return;
   await recordAiEvidence(env, {
     caseId: revision.contentId,

@@ -1,20 +1,28 @@
 # Ordinary post publishing integration boundary
 
-**Review remains blocked on account-lock atomicity.** Follow-up tests terminate
-the idle privacy connection during a Jobs lock wait or apply, and restrict the
-account after lock loss. The separate Jobs transaction can still commit stale
-review evidence. An aborted privacy transaction can likewise roll back at its
-outer COMMIT after the inner Jobs commit. These are active failing regressions,
-not accepted limitations. No deployment or merge is appropriate until the
-account lock and review writes share one transaction under a narrowly approved
-database capability. No privilege expansion or shared schema edit is made here.
+**Blocked draft: operational account-lock capability and global publication
+acceptance remain unavailable.** The unsafe split privacy/Jobs transaction is
+removed. Canonical Jobs has SELECT but no UPDATE on identity.users, so PostgreSQL
+denies its required FOR SHARE lock (42501). Jobs now retries before inference or
+evidence persistence when that capability is unavailable. No privilege, grant,
+schema, migration, binding or live flag is changed.
+
+Where existing privileges permit the lock, `lockActiveAccount` and all review
+writes run on one Jobs transaction/client. The shared transaction helper rejects
+a COMMIT response whose command is ROLLBACK. Actual PG17/Workerd helper tests use
+the existing admin role to validate lock loss during wait/apply and aborted
+COMMIT; those three regressions pass. This is helper acceptance, not evidence
+that the canonical Jobs role can execute an operational review. The original
+three failing split-transaction regressions and logs remain preserved at head
+429b1566c20cea648180689abdddc44b9c156e12 and in the external handoff artifacts.
 
 This Jobs change binds ordinary post review work to the canonical outbox event,
 actor, declaration, body hash and active account. The same checks run before
-evaluation and again under the content lock before persistence. The existing
-privacy connection holds a shared account-row lock during the Jobs transaction;
-the Jobs role does not acquire new identity privileges. That split connection
-is unsafe on lock loss, as noted above. No provider call runs inside these locks.
+evaluation and again under the account/case/content locks before persistence.
+No separate privacy connection is used for ordinary post review. A preflight
+checks direct row-lock capability before any model call; the final transaction
+checks it again and holds the actual account row lock before any review write.
+No provider call runs inside these locks.
 
 Confirmed fixes from review: human admin queue decisions are retained even when
 their inherited policy is `evaluation-only-v1`. Exempting an automatic queue now
@@ -31,10 +39,12 @@ Every assessment is return-only and evaluation-only, with publication, Discovery
 and reputation eligibility fixed to false. Missing, uncertain, malformed or
 mismatched component outcomes remain explicit. No threshold is selected here.
 
-Ordinary Jobs supplies unavailable provenance, specialist and behaviour stages,
+The bounded assessment path supplies unavailable provenance, specialist and behaviour stages,
 disabled Safety, and `NOT_RUN` policy authority. GPT-OSS supplies review evidence
 only. The existing review persistence remains `evaluation-only-v1`, a queued
-case and `Under review` declaration. Assessment/Safety data are not inserted into
+case and `Under review` declaration when the account fence is available. With
+canonical Jobs privileges it retries, persists no review evidence, and retains
+the honest private `under_review` owner status. Assessment/Safety data are not inserted into
 detector signals, provenance or appeal fingerprints. Existing provider scope,
 retention, budget admission, retry horizon, inbox claims and outbox relay remain
 in place.
@@ -67,8 +77,10 @@ uses synthetic SQL setup and does not certify the admin handler.
 Open work was inventoried through repository-scoped PR search. Prospective
 monthly v2 work (#953, #956, #958, #961, #963–#971), private-alpha hardening (#886)
 and research detector PRs remain separate. This change edits only Jobs source,
-focused fixtures, tests and this validation note. No shared contracts, policies,
-schemas, migrations, Wrangler files, generated Worker types or CI are edited.
+focused fixtures/tests, this note and the narrowly allocated shared DB account
+fence/transaction helper. No shared contracts, policies, schemas, migrations,
+grants, Wrangler files, generated Worker types or CI are edited. The separate
+disabled capability proposal is outside this PR and has not been executed.
 
 ## Requirement mapping
 
@@ -76,8 +88,8 @@ schemas, migrations, Wrangler files, generated Worker types or CI are edited.
 | --- | --- | --- |
 | Canonical source and actor | `readPostPublishingSnapshot` | Absent source, source actor/payload mutations before/during inference; API JWT.sub author path. |
 | Revision/body/declaration binding | Snapshot checks and typed assessment bindings | Submit/revise, stale old delivery, changed body; each component/policy/Safety binding field mismatch. |
-| Privacy/deletion authority | `withPostPublishingAccountLock`, locked snapshot | Locked/deleted account, deleted post before/during inference; concurrent privacy/account and admin/post row-lock races. |
-| Account-lock atomicity (blocked) | Split privacy and Jobs transactions | Three active failures: lost privacy connection during post-lock wait/apply, and idle privacy abort followed by outer COMMIT rollback. Stale detector writes persist; this is not accepted. |
+| Privacy/deletion authority | `lockActiveAccount`, locked snapshot | Actual existing-role helper refuses locked/deleted/suspended/missing users; privacy account restriction wins a lock race. Jobs fallback makes no model call/write. |
+| Account-lock atomicity | One client/transaction; COMMIT command verification | Lost connection during post-lock wait/apply, after write/before COMMIT and aborted COMMIT roll back evidence and reject success. Original split-transaction failures are preserved as superseded evidence. |
 | Human and pending case authority | Ordered case lock, latest decision identity and provenance checks | Real admin same-policy queue before/during inference without detector evidence; existing undecided case remains unchanged. |
 | Case conflict atomicity | Throw on late case INSERT conflict | Real PostgreSQL conflict rolls back detector/declaration writes and retries; real admin case/post race has no `40P01`. |
 | Independent holds and appeal scope | Before/after hold and identical-override checks | Independent queue/block and peer override before/during inference; unchanged appeal evidence fingerprint. |
@@ -111,18 +123,24 @@ PLANETSCALE_PG17_TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:55439/postgre
   apps/lythaus-jobs/tests/post-publishing-review.workerd.mjs
 ```
 
-The final focused publishing suite has 34 passing cases; ordinary moderation has
-5, and safety preparation has 93. Focused unit/runtime/product/authenticity and
-security checks pass 82 tests. Native architecture passes 315; product runtime
-invariants pass 21. Typecheck, native Worker configuration, native scope,
+Current canonical-role publishing coverage has 13 passes and 21 explicit
+capability skips; ordinary moderation has 4 passes and 1 capability skip; safety
+preparation has 92 passes and 1 operational Jobs capability skip. Focused assessment/runtime/authenticity/security tests
+pass; exact counts are in the handoff logs. Native architecture passes 315;
+product runtime invariants pass 21. Shared DB connection tests pass 6 and identity
+tests pass 7. Typecheck, native Worker configuration, native scope,
 retired-provider scan, canonical migration validation and diff checks pass.
 OpenAPI lint passes with two existing warnings (`EmailAuthRequest` required
 property and `PrivacyRequestAccepted` allOf). Contract tests pass 70 and skip 17
 in one existing skipped suite; skips are not passes.
 
-The additional real-handler review suite has **5 passes and 3 active failures**.
-The failures establish unsafe split-transaction account-lock atomicity and block
-merge/deployment. Normal-path successes above do not override this evidence.
+The additional review/fence suite has **14 passes and 3 capability skips** with
+no active failure. It validates the Jobs no-persistence fallback and existing-role
+single-transaction helper, including the three previously failing interruption
+scenarios. Skipped operational Jobs paths remain blocked, not implicitly passed.
+Normal paths at the previous head passed 34/5/93, but those counts do not certify
+operational review at the new head after the approved fallback. The draft remains
+blocked on capability and complete publication acceptance.
 The synthetic Access JWKS response exercises the actual admin authorization
 handler without external network requests; it does not certify production auth.
 Gitleaks passes with no leaks. No denied remote read is retried.
@@ -146,13 +164,12 @@ Acceptance-lane CI wiring for these new focused commands is still required.
 - Outage deadlines, retry/re-evaluation authority and permitted budgets require
   owner decisions. Existing budgets and queue retries are preserved; no new
   timeouts, fallbacks, paid resources or spend limits are selected.
-- Review the account/privacy-lock -> ordered-case-lock -> content-lock order and the extra local
-  database round trips. The two transactions are not a distributed atomic
-  transaction: the privacy transaction only holds a row lock; all review writes
-  are atomic in the Jobs transaction. Duplicate-delivery guards cannot make
-  those two transactions atomic: connection-loss/outer-abort tests fail and
-  block approval. Parent allocation for a single-transaction lock capability is
-  required; repeating liveness checks would still leave a race at commit.
+- Review the account-lock -> ordered-case-lock -> content-lock order, permission
+  preflight and shared COMMIT-command check. Canonical Jobs review remains
+  unavailable; no role substitution or broad identity UPDATE grant is used.
+  A separate unexecuted lock-only function proposal lists the exact capability
+  delta and reconciles existing prospective monthly functions. Parent must
+  review/allocate any capability integration and grant/migration separately.
 - Parent review must serialize merges/releases and validate admin/appeal
   publication paths. Source review, release deployment, production authentication
   certification, detector qualification and feature activation are separate.
@@ -161,7 +178,9 @@ Acceptance-lane CI wiring for these new focused commands is still required.
   fanout. It proposes a coherent withheld/owner-test/public boundary for parent
   allocation. No global release guard or live flag change is implemented here.
 
-Rollback is a normal revert of this Jobs commit after parent review, with no
-schema, grant, resource or flag rollback. Revert restores the earlier review
-guards; it does not activate any publishing feature. Implemented and locally
-tested only; not merged, deployed, activated or publicly launched.
+Rollback is a normal revert of all three draft commits as one reviewed change,
+with no schema, grant, resource or flag rollback. Reverting only the fallback
+commit recreates the unsafe split transaction and is inappropriate. Full revert
+restores the approved base and its earlier review guards; it does not activate
+publishing. Implemented and locally tested only; operational capability remains
+blocked. Not merged, deployed, activated or publicly launched.

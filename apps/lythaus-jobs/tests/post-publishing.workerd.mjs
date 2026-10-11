@@ -6,9 +6,10 @@ import { generateKeyPair, exportJWK, exportPKCS8 } from 'jose';
 import { signAccessToken, uuidv7 } from '@lythaus/security';
 import { communityClassifierEvidence, communityDigest } from '../../../packages/db/src/community-appeal-access.ts';
 import { identicalCommunityAppealOverride } from '../../../packages/db/src/community-appeal-closure.ts';
-import { postModerationFixture } from './post-moderation-fixture.mjs';
+import { postModerationFixture, postReviewTestOptions } from './post-moderation-fixture.mjs';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
+const requiresAccountLock = await postReviewTestOptions(connectionString);
 const target = new URL(connectionString ?? 'file:///missing');
 assert.ok(['127.0.0.1', 'localhost'].includes(target.hostname));
 assert.match(target.pathname, /^\/lythaus_auth_test_post_publishing_[a-f0-9]+$/);
@@ -88,7 +89,7 @@ async function override(item) {
 }
 
 for (const mode of ['human', 'ai_assisted']) for (const outcome of ['pass', 'review', 'block', 'unknown']) {
-  test(`${mode} submission with ${outcome} evaluation remains private review with no publication authority`, async () => {
+  test(`${mode} submission with ${outcome} evaluation remains private review with no publication authority`, requiresAccountLock, async () => {
     const item = await created(mode);
     fixture.modelResponse = { recommendation: outcome, riskScore: outcome === 'pass' ? 0 : 1,
       signals: [{ category: 'synthetic_' + outcome, confidence: 1, rationale: 'Synthetic feedback only' }] };
@@ -106,7 +107,7 @@ for (const mode of ['human', 'ai_assisted']) for (const outcome of ['pass', 'rev
   });
 }
 for (const timing of ['before', 'during']) for (const mutation of ['locked', 'deleted_account', 'deleted_post', 'body', 'source_actor', 'source_payload', 'independent_queue', 'independent_block', 'peer_override']) {
-  test(`${mutation} ${timing} inference fences late review evidence and preserves authority`, async () => {
+  test(`${mutation} ${timing} inference fences late review evidence and preserves authority`, timing === 'during' ? requiresAccountLock : {}, async () => {
     const item = await created(), calls = fixture.modelCalls;
     let identical;
     const mutate = async () => {
@@ -135,8 +136,8 @@ test('revised submissions bind new event and body hash while stale delivery is i
   assert.deepEqual(await deliver(item.event), { ack: 1, retry: 0 }); assert.equal(fixture.modelCalls, calls);
   const event = (await client.query(`SELECT id AS "eventId",event_type AS "eventType",payload FROM system.outbox_events
     WHERE aggregate_id=$1 AND event_type='content.post.updated'`, [item.post.id])).rows[0];
-  assert.deepEqual(await deliver(event), { ack: 1, retry: 0 });
-  assert.equal((await rows({ ...item, event })).detectors, 1); await pending(item);
+  assert.deepEqual(await deliver(event), requiresAccountLock.skip ? { ack: 0, retry: 1 } : { ack: 1, retry: 0 });
+  assert.equal((await rows({ ...item, event })).detectors, requiresAccountLock.skip ? 0 : 1); await pending(item);
 });
 test('forged delivery cannot use a valid post revision with an absent canonical source event', async () => {
   const item = await created(), eventId = uuidv7(), calls = fixture.modelCalls;
@@ -144,7 +145,7 @@ test('forged delivery cannot use a valid post revision with an absent canonical 
   assert.deepEqual(await deliver({ ...item.event, eventId, payload: { ...item.event.payload, sourceEventId: eventId } }), { ack: 1, retry: 0 });
   assert.equal(fixture.modelCalls, calls); assert.equal((await rows(item)).detectors, 0); await pending(item);
 });
-test('interrupted apply rolls back detector, declaration, case, provenance and activity; retry is bounded by existing budget', async () => {
+test('interrupted apply rolls back detector, declaration, case, provenance and activity; retry is bounded by existing budget', requiresAccountLock, async () => {
   const item = await created(), calls = fixture.modelCalls;
   fixture.failSql = { match: 'INSERT INTO moderation.cases', remaining: 1 };
   assert.deepEqual(await deliver(item.event), { ack: 0, retry: 1 });
@@ -152,12 +153,12 @@ test('interrupted apply rolls back detector, declaration, case, provenance and a
   assert.deepEqual(await deliver(item.event), { ack: 1, retry: 0 });
   assert.equal(fixture.modelCalls, calls + 1); assert.equal((await rows(item)).cases, 1); await pending(item);
 });
-test('interruption after applied review retries without duplicating records or provider calls', async () => {
+test('interruption after applied review retries without duplicating records or provider calls', requiresAccountLock, async () => {
   const item = await created(), calls = fixture.modelCalls;
   fixture.failSql = { match: "UPDATE system.consumer_inbox SET state = 'completed'", remaining: 1 };
   assert.deepEqual(await deliver(item.event), { ack: 0, retry: 1 });
   assert.deepEqual(await deliver(item.event), { ack: 1, retry: 0 });
-  assert.equal(fixture.modelCalls, calls + 1);
+  assert.equal(fixture.modelCalls, calls + (requiresAccountLock.skip ? 0 : 1));
   const state = await rows(item); assert.deepEqual([state.detectors, state.cases, state.provenance, state.activity], [1, 1, 1, 1]); await pending(item);
 });
 test('configured retry horizon exhaustion never publishes or fabricates a terminal moderation decision', async () => {
@@ -168,17 +169,23 @@ test('configured retry horizon exhaustion never publishes or fabricates a termin
   fixture.failSql = { match: 'INSERT INTO moderation.cases', remaining: retries + 1 };
   for (let attempt = 0; attempt <= retries; attempt++) assert.deepEqual(await deliver(item.event), { ack: 0, retry: 1 });
   fixture.failSql = undefined;
-  assert.equal(fixture.modelCalls, calls + 1);
+  assert.equal(fixture.modelCalls, calls + (requiresAccountLock.skip ? 0 : 1));
   const state = await rows(item); assert.deepEqual([state.detectors, state.cases, state.inbox], [0, 0, 0]); await pending(item);
 });
-test('concurrent duplicate decisions persist one review and preserve null publication state', async () => {
+test('concurrent duplicate delivery preserves unavailable account-fence retry and null publication state', async () => {
   const item = await created();
   const replies = await Promise.all([deliver(item.event), deliver(item.event)]);
+  if (requiresAccountLock.skip) {
+    assert.ok(replies.every(reply => reply.retry === 1));
+    assert.deepEqual(await deliver(item.event), { ack: 0, retry: 1 });
+    const state = await rows(item); assert.deepEqual([state.detectors, state.cases, state.provenance, state.activity], [0, 0, 0, 0]);
+    await pending(item); return;
+  }
   assert.ok(replies.some(reply => reply.ack === 1));
   assert.deepEqual(await deliver(item.event), { ack: 1, retry: 0 });
   const state = await rows(item); assert.deepEqual([state.detectors, state.cases, state.provenance, state.activity], [1, 1, 1, 1]); await pending(item);
 });
-for (const boundary of ['account', 'post']) test(`concurrent ${boundary} decision wins the lock before late Jobs persistence`, async () => {
+for (const boundary of ['account', 'post']) test(`concurrent ${boundary} decision wins the lock before late Jobs persistence`, requiresAccountLock, async () => {
   const item = await created(), connection = new pg.Client({ connectionString, ssl: false });
   await connection.connect();
   const waiting = Promise.withResolvers();

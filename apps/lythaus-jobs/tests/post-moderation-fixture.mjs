@@ -4,6 +4,18 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 
+export async function postReviewTestOptions(connectionString) {
+  const target = new URL(connectionString);
+  assert.ok(['localhost', '127.0.0.1'].includes(target.hostname));
+  assert.match(target.pathname, /^\/lythaus_auth_test_post_[a-z0-9_]+$/);
+  const client = new pg.Client({ connectionString, ssl: false }); await client.connect();
+  try {
+    await client.query('SET ROLE lythaus_jobs');
+    const { available } = (await client.query("SELECT has_table_privilege(current_user,'identity.users','SELECT') AND has_any_column_privilege(current_user,'identity.users','UPDATE') AS available")).rows[0];
+    return { skip: available ? false : 'Jobs identity row-lock capability unavailable; no grant changes authorized' };
+  } finally { await client.end(); }
+}
+
 export async function postModerationFixture(connectionString, bindings) {
   const target = new URL(connectionString);
   assert.ok(['localhost', '127.0.0.1'].includes(target.hostname));
@@ -40,11 +52,10 @@ export async function postModerationFixture(connectionString, bindings) {
           }
           export async function transaction(binding, work) {
             const { transactionId } = await fixtureSql({ action: 'begin', role: binding.role });
+            const client = { query: (text, values = []) => fixtureSql({ action: 'query', transactionId, text, values }) };
             try {
-              const result = await work({ query: (text, values = []) => fixtureSql({ action: 'query', transactionId, text, values }) });
-              await fixtureSql({ action: 'commit', transactionId });
-              return result;
-            } catch (error) { await fixtureSql({ action: 'rollback', transactionId }); throw error; }
+              return await executeTransaction(client, work);
+            } finally { await fixtureSql({ action: 'close', transactionId }); }
           }
         ` + original.slice(end) };
       });
@@ -53,6 +64,7 @@ export async function postModerationFixture(connectionString, bindings) {
       import api from './apps/lythaus-public-api/src/index.ts';
       import jobs from './apps/lythaus-jobs/src/index.ts';
       import admin from './apps/lythaus-admin-api/src/index.ts';
+      import { transaction, lockActiveAccount } from './packages/db/src/index.ts';
       export default { async fetch(request, env, ctx) {
         const path = new URL(request.url).pathname;
         env.AI = { async run() {
@@ -66,6 +78,20 @@ export async function postModerationFixture(connectionString, bindings) {
           await jobs.queue({ queue: 'lythaus-moderation-dev', messages: [{ id: body.eventId,
             body, ack() { ack++; }, retry() { retry++; } }] }, env);
           return Response.json({ ack, retry });
+        }
+        if (path === '/fixture/account-transaction') {
+          const body = await request.json();
+          try {
+            const result = await transaction(env.DB_ADMIN_FRESH, async client => {
+              const state = await lockActiveAccount(client, body.authorId);
+              if (state !== 'locked') return { state };
+              await client.query('SELECT id FROM content.posts WHERE id=$1 FOR UPDATE', [body.postId]);
+              await client.query("INSERT INTO moderation.detector_runs(id,content_type,content_id,provider,model_version,signal,source_event_id) VALUES($1,'post',$2,'synthetic-account-fence','synthetic-v1','{}',$3)",
+                [body.detectorId, body.postId, body.eventId]);
+              return { state: 'applied' };
+            });
+            return Response.json(result);
+          } catch { return Response.json({ state: 'interrupted' }, { status: 503 }); }
         }
         if (path === '/fixture/relay') {
           for (const name of ['MODERATION_QUEUE', 'AUDIT_QUEUE', 'FEED_QUEUE', 'NOTIFICATIONS_QUEUE'])
@@ -127,7 +153,6 @@ export async function postModerationFixture(connectionString, bindings) {
           }
           assert.ok(client);
           if (input.action === 'begin') {
-            await client.query('BEGIN');
             const transactionId = String(++sequence);
             clients.set(transactionId, client);
             return Response.json({ transactionId });
@@ -141,15 +166,14 @@ export async function postModerationFixture(connectionString, bindings) {
               throw new Error('synthetic_interrupted_database_write');
             }
             const result = await client.query(input.text, input.values);
-            if (afterSql) await afterSql(diagnostic);
-            return Response.json({ rows: result.rows, rowCount: result.rowCount });
+            if (afterSql) await afterSql({ ...diagnostic, command: result.command });
+            return Response.json({ rows: result.rows, rowCount: result.rowCount, command: result.command });
           }
-          assert.ok(['commit', 'rollback'].includes(input.action));
-          await client.query(input.action === 'commit' ? 'COMMIT' : 'ROLLBACK');
+          assert.equal(input.action, 'close');
           return Response.json({ completed: true });
         } catch (error) { sqlErrors.push({ role: client?.fixtureRole, code: error.code }); return Response.json({ error: error.message }, { status: 500 }); }
         finally {
-          if ((temporary && input.action !== 'begin') || ['commit', 'rollback'].includes(input.action)) {
+          if ((temporary && input.action !== 'begin') || input.action === 'close') {
             clients.delete(input.transactionId);
             await client?.end();
           }
@@ -176,6 +200,14 @@ export async function postModerationFixture(connectionString, bindings) {
       const selected = [...clients.values()].filter(client => client.fixtureRole === 'lythaus_privacy');
       assert.equal(selected.length, 1);
       await assert.rejects(selected[0].query('SELECT 1/0'), error => error.code === '22012');
+    },
+    async interruptTransaction(role, abort = false) {
+      const selected = [...clients.values()].filter(client => client.fixtureRole === role);
+      assert.equal(selected.length, 1);
+      if (abort) return assert.rejects(selected[0].query('SELECT 1/0'), error => error.code === '22012');
+      const control = new pg.Client({ connectionString, ssl: false }); await control.connect();
+      try { await control.query('SELECT pg_terminate_backend($1)', [selected[0].processID]); }
+      finally { await control.end(); }
     },
     dispatchFetch: (...args) => runtime.dispatchFetch(...args),
     async dispose() {
