@@ -36,8 +36,15 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   final ScrollController _scrollController = ScrollController();
   final Set<String> _pending = {};
   bool _markingAll = false;
-  int get _sessionEpoch =>
-      ref.read(authSessionRevisionProvider.notifier).revision;
+  bool _opening = false;
+  ModalRoute<dynamic>? _route;
+  Animation<double>? _coverAnimation;
+  int _navigationEpoch = 0;
+  ({int session, int token})? _scheduledReload;
+  ({int session, int token}) get _sessionEpoch => (
+    session: ref.read(authSessionRevisionProvider.notifier).revision,
+    token: ref.read(tokenVersionProvider),
+  );
 
   @override
   void initState() {
@@ -53,7 +60,26 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != _route) {
+      _coverAnimation?.removeStatusListener(_onCover);
+      _route = route;
+      _coverAnimation = route?.secondaryAnimation;
+      _coverAnimation?.addStatusListener(_onCover);
+      ++_navigationEpoch;
+    }
+    if (route?.isCurrent != true) ++_navigationEpoch;
+  }
+
+  void _onCover(AnimationStatus status) {
+    if (status != AnimationStatus.dismissed) ++_navigationEpoch;
+  }
+
+  @override
   void dispose() {
+    _coverAnimation?.removeStatusListener(_onCover);
     _scrollController.dispose();
     super.dispose();
   }
@@ -86,17 +112,15 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final epoch = _sessionEpoch;
     if (_pending.contains(notification.id)) return false;
     setState(() => _pending.add(notification.id));
-    await ref
+    final read = await ref
         .read(notificationsControllerProvider.notifier)
         .markAsRead(notification.id);
     if (!mounted || epoch != _sessionEpoch) return false;
     setState(() => _pending.remove(notification.id));
-    final read = ref
-        .read(notificationsControllerProvider)
-        .notifications
-        .any((item) => item.id == notification.id && item.read);
     if (!read && !_markingAll) {
-      _message('Could not mark this notification as read. Please try again.');
+      _message(
+        'Could not confirm this notification was read. Please try again.',
+      );
     }
     return read;
   }
@@ -105,16 +129,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final epoch = _sessionEpoch;
     if (_pending.contains(notification.id)) return;
     setState(() => _pending.add(notification.id));
-    await ref
+    final dismissed = await ref
         .read(notificationsControllerProvider.notifier)
         .dismiss(notification.id);
     if (!mounted || epoch != _sessionEpoch) return;
     setState(() => _pending.remove(notification.id));
-    if (ref
-        .read(notificationsControllerProvider)
-        .notifications
-        .any((item) => item.id == notification.id)) {
-      _message('Could not dismiss this notification. Please try again.');
+    if (!dismissed) {
+      _message('Could not confirm dismissal. Please refresh or try again.');
     }
   }
 
@@ -142,38 +163,54 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Future<void> _handleTap(models.Notification notification) async {
+    if (_opening || _pending.contains(notification.id)) return;
+    _opening = true;
     final epoch = _sessionEpoch;
-    if (!notification.read) {
-      await _markAsRead(notification);
+    final navigationEpoch = _navigationEpoch;
+    final route = ModalRoute.of(context);
+    try {
+      if (!notification.read) await _markAsRead(notification);
+      if (!mounted ||
+          epoch != _sessionEpoch ||
+          navigationEpoch != _navigationEpoch ||
+          route?.isCurrent != true ||
+          ref.read(notificationsControllerProvider).authRequired) {
+        return;
+      }
+      final link = notification.deeplink;
+      if (link == null || !DeeplinkRouter.canNavigate(link)) {
+        _message('This notification has no available destination.');
+        return;
+      }
+      await DeeplinkRouter.navigate(context, link);
+    } finally {
+      if (mounted && epoch == _sessionEpoch) _opening = false;
     }
+  }
 
-    if (!mounted || epoch != _sessionEpoch) return;
-    final link = notification.deeplink;
-    if (link == null || !DeeplinkRouter.canNavigate(link)) {
-      _message('This notification has no available destination.');
+  void _onSessionChanged() {
+    setState(() {
+      _pending.clear();
+      _markingAll = false;
+      _opening = false;
+    });
+    final epoch = _sessionEpoch;
+    if (ref.read(currentUserProvider) == null || _scheduledReload == epoch) {
       return;
     }
-    await DeeplinkRouter.navigate(context, link);
+    _scheduledReload = epoch;
+    Future.microtask(() {
+      if (_scheduledReload == epoch) _scheduledReload = null;
+      if (mounted && epoch == _sessionEpoch) {
+        ref.read(notificationsControllerProvider.notifier).loadNotifications();
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(authSessionRevisionProvider, (_, next) {
-      setState(() {
-        _pending.clear();
-        _markingAll = false;
-      });
-      final epoch = _sessionEpoch;
-      if (ref.read(currentUserProvider) != null) {
-        Future.microtask(() {
-          if (mounted && epoch == _sessionEpoch) {
-            ref
-                .read(notificationsControllerProvider.notifier)
-                .loadNotifications();
-          }
-        });
-      }
-    });
+    ref.listen(authSessionRevisionProvider, (_, _) => _onSessionChanged());
+    ref.listen(tokenVersionProvider, (_, _) => _onSessionChanged());
     if (ref.watch(guestModeProvider)) return _signIn();
     final state = ref.watch(notificationsControllerProvider);
     if (state.authRequired) return _signIn();
@@ -241,19 +278,25 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                         : Column(
                                             children: [
                                               if (state.hasError)
-                                                const Text(
-                                                  'Could not load more notifications. Your loaded notifications are still available.',
+                                                Text(
+                                                  state.loadMoreFailed
+                                                      ? 'Could not load more notifications. Your loaded notifications are still available.'
+                                                      : 'Could not refresh notifications. Your loaded notifications are still available.',
                                                 ),
                                               LythButton.secondary(
                                                 label: state.hasError
                                                     ? 'Retry loading'
                                                     : 'Load more',
-                                                onPressed: () => ref
-                                                    .read(
-                                                      notificationsControllerProvider
-                                                          .notifier,
-                                                    )
-                                                    .loadMore(),
+                                                onPressed:
+                                                    state.hasError &&
+                                                        !state.loadMoreFailed
+                                                    ? _handleRefresh
+                                                    : () => ref
+                                                          .read(
+                                                            notificationsControllerProvider
+                                                                .notifier,
+                                                          )
+                                                          .loadMore(),
                                               ),
                                             ],
                                           ),
