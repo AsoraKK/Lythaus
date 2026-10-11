@@ -51,6 +51,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   int _loadEpoch = 0;
   int _mutationEpoch = 0;
   int _sessionEpoch = 0;
+  bool _deferredInitialReload = false;
   late String _actor;
   String get _createScope => 'comment-create:$_actor:${widget.postId}';
   bool _restoring = false;
@@ -84,6 +85,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         ++_mutationEpoch;
         ++_sessionEpoch;
         ++_draftVersion;
+        _deferredInitialReload = false;
         _actor = next ?? 'session';
         _composerController.clear();
         _locallySubmitted.clear();
@@ -203,7 +205,12 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   }
 
   Future<void> _loadInitial() async {
-    if (!mounted || _isSubmitting) return;
+    if (!mounted) return;
+    if (_isSubmitting) {
+      _deferredInitialReload = true;
+      return;
+    }
+    _deferredInitialReload = false;
     final epoch = ++_loadEpoch;
     final mutationEpoch = _mutationEpoch;
     setState(() {
@@ -244,7 +251,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       }
       if (!mounted || epoch != _loadEpoch) return;
       if (mutationEpoch != _mutationEpoch) {
-        unawaited(_loadInitial());
+        _requestInitialReload();
         return;
       }
       _locallySubmitted.removeAll(page.items.map((comment) => comment.id));
@@ -264,7 +271,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     } on DioException catch (error) {
       if (!mounted || epoch != _loadEpoch) return;
       if (mutationEpoch != _mutationEpoch) {
-        unawaited(_loadInitial());
+        _requestInitialReload();
         return;
       }
       setState(() {
@@ -275,7 +282,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     } catch (_) {
       if (!mounted || epoch != _loadEpoch) return;
       if (mutationEpoch != _mutationEpoch) {
-        unawaited(_loadInitial());
+        _requestInitialReload();
         return;
       }
       setState(() {
@@ -284,6 +291,18 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _retryAction = _loadInitial;
       });
     }
+  }
+
+  void _requestInitialReload() {
+    if (!mounted) return;
+    _deferredInitialReload = true;
+    _drainDeferredInitialReload();
+  }
+
+  void _drainDeferredInitialReload() {
+    if (!mounted || !_deferredInitialReload || _isSubmitting) return;
+    _deferredInitialReload = false;
+    unawaited(_loadInitial());
   }
 
   Future<void> _loadMore() async {
@@ -396,6 +415,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
           token.isEmpty ||
           (ref.read(currentUserProvider)?.id ?? 'session') != actor) {
         setState(() => _isSubmitting = false);
+        _drainDeferredInitialReload();
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Sign in to comment.')));
@@ -460,6 +480,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _locallySubmitted.add(created.id);
         _comments = _mergeComments(_comments, [created]);
       });
+      _drainDeferredInitialReload();
     } catch (error) {
       final failure = contentMutationFailure(error);
       if (attempt != null) {
@@ -476,6 +497,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _errorMessage = failure.message;
         _retryAction = _submitComment;
       });
+      _drainDeferredInitialReload();
     }
   }
 
@@ -615,6 +637,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _locallySubmitted.remove(comment.id);
         if (_replyTarget?.id == comment.id) _replyTarget = null;
       });
+      _drainDeferredInitialReload();
     } catch (error) {
       final failure = contentMutationFailure(error);
       if (attempt != null) {
@@ -629,6 +652,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _errorMessage = failure.message;
         _retryAction = () => _deleteComment(comment, ask: false);
       });
+      _drainDeferredInitialReload();
     }
   }
 
@@ -727,12 +751,14 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _errorMessage = failure.message;
         _retryAction = () => _retryDeletedComment(saved);
       });
+      _drainDeferredInitialReload();
     } finally {
       if (mounted &&
           actor == _actor &&
           epoch == _sessionEpoch &&
           _isSubmitting) {
         setState(() => _isSubmitting = false);
+        _drainDeferredInitialReload();
       }
     }
   }

@@ -130,6 +130,7 @@ Future<void> _pump(
   WidgetTester tester,
   _Adapter adapter, {
   String? actor = 'owner',
+  StateProvider<User?>? mutableActorProvider,
   bool feed = false,
   MemoryContentRecoveryStorage? storage,
   bool canSubmit = true,
@@ -148,8 +149,12 @@ Future<void> _pump(
         ),
         secureDioProvider.overrideWithValue(dio),
         postRepositoryProvider.overrideWithValue(PostRepositoryImpl(dio)),
-        currentUserProvider.overrideWithValue(
-          actor == null ? null : _user(actor),
+        currentUserProvider.overrideWith(
+          (ref) => mutableActorProvider == null
+              ? actor == null
+                    ? null
+                    : _user(actor)
+              : ref.watch(mutableActorProvider),
         ),
         jwtProvider.overrideWith(
           (ref) async => actor == null ? null : 'synthetic-token',
@@ -201,6 +206,17 @@ Future<void> _openComments(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> _pumpUntil(
+  WidgetTester tester,
+  bool Function() condition, {
+  String reason = 'Timed out waiting for widget state',
+}) async {
+  for (var i = 0; i < 60 && !condition(); i++) {
+    await tester.pump(const Duration(milliseconds: 20));
+  }
+  expect(condition(), isTrue, reason: reason);
+}
+
 Future<void> _draft(
   WidgetTester tester,
   String text, {
@@ -209,6 +225,18 @@ Future<void> _draft(
   await tester.enterText(find.byType(TextField), text);
   await tester.tap(find.widgetWithText(ChoiceChip, disclosure));
   await tester.pumpAndSettle();
+}
+
+Future<void> _sendSyntheticComment(WidgetTester tester, String text) async {
+  await tester.enterText(find.byType(TextField), text);
+  await tester.pump();
+  await tester.tap(find.widgetWithText(ChoiceChip, 'Human-authored'));
+  await tester.pump();
+  await _pumpUntil(
+    tester,
+    () => find.text('Draft saved on this device.').evaluate().isNotEmpty,
+  );
+  await tester.tap(find.byIcon(Icons.send));
 }
 
 void main() {
@@ -917,6 +945,217 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  for (final secondMutationFails in [false, true]) {
+    testWidgets('synthetic stale initial read reloads after a second mutation '
+        '${secondMutationFails ? 'fails' : 'succeeds'}', (tester) async {
+      final initialRead = Completer<ResponseBody>();
+      final secondWrite = Completer<ResponseBody>();
+      var commentReads = 0;
+      var writes = 0;
+      final adapter = _Adapter((request) async {
+        if (request.method == 'GET' &&
+            request.path.endsWith('/comments') &&
+            request.queryParameters['cursor'] == null) {
+          commentReads++;
+          if (commentReads == 1) return initialRead.future;
+          return _response({
+            'items': [
+              _comment('first'),
+              if (!secondMutationFails) _comment('second'),
+            ],
+          });
+        }
+        if (request.method == 'POST') {
+          writes++;
+          if (writes == 1) {
+            return _response({
+              'id': 'first',
+              ..._body(request),
+              'moderationState': 'under_review',
+            }, 201);
+          }
+          return secondWrite.future;
+        }
+        return _response({'items': <Object>[]});
+      });
+
+      await _pump(tester, adapter);
+      await tester.tap(find.text('Open comments'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await _pumpUntil(
+        tester,
+        () =>
+            find.byType(TextField).evaluate().isNotEmpty &&
+            find.text('Restoring draft…').evaluate().isEmpty &&
+            tester
+                    .widget<FilledButton>(
+                      find.widgetWithIcon(FilledButton, Icons.send),
+                    )
+                    .onPressed !=
+                null,
+      );
+
+      await _sendSyntheticComment(tester, 'First synthetic send');
+      await _pumpUntil(
+        tester,
+        () {
+          final input = tester.widget<TextField>(find.byType(TextField));
+          final send = tester.widget<FilledButton>(
+            find.widgetWithIcon(FilledButton, Icons.send),
+          );
+          return writes == 1 &&
+              input.controller!.text.isEmpty &&
+              send.onPressed != null;
+        },
+        reason:
+            'First write did not finish: writes=$writes, '
+            'input=${tester.widget<TextField>(find.byType(TextField)).controller!.text}, '
+            'sendDisabled=${tester.widget<FilledButton>(find.widgetWithIcon(FilledButton, Icons.send)).onPressed == null}, '
+            'restoring=${find.text('Restoring draft…').evaluate().isNotEmpty}, '
+            'signInNotice=${find.text('Sign in to comment.').evaluate().isNotEmpty}, '
+            'errorBanner=${find.byType(MaterialBanner).evaluate().isNotEmpty}, '
+            'requests=${adapter.requests.map((request) => request.method).toList()}',
+      );
+
+      await _sendSyntheticComment(tester, 'Second synthetic send');
+      await _pumpUntil(tester, () => writes == 2);
+      expect(commentReads, 1);
+
+      initialRead.complete(
+        _response({
+          'items': [_comment('first')],
+        }),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 20));
+      expect(
+        commentReads,
+        1,
+        reason: 'The fresh read must wait for the active second mutation.',
+      );
+
+      if (secondMutationFails) {
+        secondWrite.complete(
+          _response({
+            'error': {'code': 'INTERNAL_ERROR', 'message': 'Synthetic failure'},
+          }, 503),
+        );
+      } else {
+        secondWrite.complete(
+          _response({
+            'id': 'second',
+            'body': 'Second synthetic send',
+            'declaredCreationMode': 'human',
+            'moderationState': 'under_review',
+          }, 201),
+        );
+      }
+
+      await _pumpUntil(tester, () => commentReads == 2);
+      await tester.pumpAndSettle();
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('Comment first'), findsOneWidget);
+      expect(
+        find.text('Comment second'),
+        secondMutationFails ? findsNothing : findsOneWidget,
+      );
+      expect(commentReads, 2, reason: 'The deferred refresh must run once.');
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('synthetic deferred refresh stays scoped to the active account', (
+    tester,
+  ) async {
+    final actorProvider = StateProvider<User?>((ref) => _user());
+    final initialRead = Completer<ResponseBody>();
+    final secondWrite = Completer<ResponseBody>();
+    var commentReads = 0;
+    var writes = 0;
+    final adapter = _Adapter((request) async {
+      if (request.method == 'GET' &&
+          request.path.endsWith('/comments') &&
+          request.queryParameters['cursor'] == null) {
+        commentReads++;
+        if (commentReads == 1) return initialRead.future;
+        return _response({'items': <Object>[]});
+      }
+      if (request.method == 'POST') {
+        writes++;
+        if (writes == 1) {
+          return _response({
+            'id': 'first',
+            ..._body(request),
+            'moderationState': 'under_review',
+          }, 201);
+        }
+        return secondWrite.future;
+      }
+      return _response({'items': <Object>[]});
+    });
+
+    await _pump(tester, adapter, mutableActorProvider: actorProvider);
+    await tester.tap(find.text('Open comments'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await _pumpUntil(
+      tester,
+      () =>
+          find.byType(TextField).evaluate().isNotEmpty &&
+          find.text('Restoring draft…').evaluate().isEmpty,
+    );
+
+    await _sendSyntheticComment(tester, 'First synthetic send');
+    await _pumpUntil(tester, () => writes == 1);
+    await _pumpUntil(
+      tester,
+      () => tester
+          .widget<TextField>(find.byType(TextField))
+          .controller!
+          .text
+          .isEmpty,
+    );
+    await _sendSyntheticComment(tester, 'Second synthetic send');
+    await _pumpUntil(tester, () => writes == 2);
+
+    initialRead.complete(
+      _response({
+        'items': [_comment('first')],
+      }),
+    );
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(CommentThreadScreen)),
+    );
+    container.read(actorProvider.notifier).state = _user('new-actor');
+    await tester.pump();
+    await _pumpUntil(tester, () => commentReads == 2);
+    await tester.pumpAndSettle();
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    secondWrite.complete(
+      _response({
+        'id': 'second',
+        'body': 'Second synthetic send',
+        'declaredCreationMode': 'human',
+        'moderationState': 'under_review',
+      }, 201),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Comment first'), findsNothing);
+    expect(find.text('Comment second'), findsNothing);
+    expect(
+      commentReads,
+      2,
+      reason: 'Account change must discard the old queue.',
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('stale pagination cannot overwrite a newer refresh', (
     tester,
