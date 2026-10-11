@@ -103,22 +103,23 @@ test('case conflict after review preflight rolls back preceding evidence and dec
 const fenced = item => call('/fixture/account-transaction', { authorId: item.author, postId: item.post.id,
   eventId: item.event.eventId, detectorId: uuidv7() });
 
-test('canonical Jobs role cannot row-lock identity and safely retries without inference or evidence', async () => {
+test('canonical Jobs cannot directly lock identity; absent EXECUTE safely retries without inference or evidence', async () => {
   const item = await created(), calls = fixture.modelCalls, start = fixture.statements.length;
-  assert.ok(requiresAccountLock.skip, 'canonical Jobs role has no identity UPDATE grant');
   const role = new pg.Client({ connectionString, ssl: false }); await role.connect();
   try {
-    await role.query('SET ROLE lythaus_jobs');
+    await role.query('SET SESSION AUTHORIZATION lythaus_jobs');
     await assert.rejects(role.query('SELECT id FROM identity.users WHERE id=$1 FOR SHARE', [item.author]), error => error.code === '42501');
   } finally { await role.end(); }
-  assert.deepEqual(await deliver(item), { ack: 0, retry: 1 });
+  if (!requiresAccountLock.skip) await client.query('REVOKE EXECUTE ON FUNCTION trust.lock_active_post_review_author(uuid,uuid,uuid) FROM lythaus_jobs');
+  try { assert.deepEqual(await deliver(item), { ack: 0, retry: 1 }); }
+  finally { if (!requiresAccountLock.skip) await client.query('GRANT EXECUTE ON FUNCTION trust.lock_active_post_review_author(uuid,uuid,uuid) TO lythaus_jobs'); }
   assert.equal(await records(item), 0); assert.equal(fixture.modelCalls, calls);
   assert.ok(!fixture.statements.slice(start).some(row => row.role === 'lythaus_privacy' || row.text.includes('INSERT INTO moderation.detector_runs')));
   const inbox = await client.query('SELECT state FROM system.consumer_inbox WHERE event_id=$1', [item.event.eventId]);
   assert.equal(inbox.rowCount, 0, 'unavailable work must remain recoverable rather than completed');
 });
 
-test('single-transaction account fence applies atomically with existing admin capabilities in a synthetic helper fixture', async () => {
+test('single-transaction author fence applies atomically with only proposed Jobs EXECUTE in a synthetic helper fixture', requiresAccountLock, async () => {
   const item = await created(), response = await fenced(item);
   assert.equal(response.status, 200); assert.deepEqual(await response.json(), { state: 'applied' });
   assert.equal(await records(item), 1);
@@ -126,31 +127,31 @@ test('single-transaction account fence applies atomically with existing admin ca
   assert.deepEqual(state, { moderation_state: 'under_review', published_at: null });
 });
 
-for (const restriction of ['locked', 'deleted', 'suspended', 'deleted_at', 'missing']) test(`single-transaction account fence refuses ${restriction} authority without evidence`, async () => {
+for (const restriction of ['locked', 'deleted', 'suspended', 'deleted_at', 'missing']) test(`single-transaction account fence refuses ${restriction} authority without evidence`, requiresAccountLock, async () => {
   const item = await created();
   if (restriction === 'missing') item.author = uuidv7();
   else if (restriction === 'deleted_at') await client.query('UPDATE identity.users SET deleted_at=now() WHERE id=$1', [item.author]);
   else await client.query('UPDATE identity.users SET status=$2 WHERE id=$1', [item.author, restriction]);
   const response = await fenced(item);
-  assert.equal(response.status, 200); assert.deepEqual(await response.json(), { state: 'inactive' });
+  assert.equal(response.status, 200); assert.deepEqual(await response.json(), { state: 'ineligible' });
   assert.equal(await records(item), 0);
 });
 
-test('existing privacy decision wins the account lock before single-transaction evidence', async () => {
+test('existing privacy decision wins the account lock before single-transaction evidence', requiresAccountLock, async () => {
   const item = await created(), blocker = new pg.Client({ connectionString, ssl: false }), reached = Promise.withResolvers();
   await blocker.connect(); let delivery;
   try {
     await blocker.query('BEGIN'); await blocker.query('SET LOCAL ROLE lythaus_privacy');
     await blocker.query('SELECT id FROM identity.users WHERE id=$1 FOR UPDATE', [item.author]);
-    fixture.duringSql = input => { if (input.role === 'lythaus_admin' && input.text.includes('identity.users WHERE id = $1 FOR SHARE')) reached.resolve(input.backendPid); };
+    fixture.duringSql = input => { if (input.role === 'lythaus_jobs' && input.text.startsWith('SELECT trust.lock_active_post_review_author(')) reached.resolve(input.backendPid); };
     delivery = fenced(item); await blocked(await reached.promise);
     await blocker.query("UPDATE identity.users SET status='locked' WHERE id=$1", [item.author]); await blocker.query('COMMIT');
-    const response = await delivery; assert.equal(response.status, 200); assert.deepEqual(await response.json(), { state: 'inactive' });
+    const response = await delivery; assert.equal(response.status, 200); assert.deepEqual(await response.json(), { state: 'ineligible' });
     assert.equal(await records(item), 0);
   } finally { fixture.duringSql = undefined; await blocker.query('ROLLBACK'); await blocker.end(); if (delivery) await delivery; }
 });
 
-for (const phase of ['wait', 'apply']) test(`loss of the single account/write connection during ${phase} prevents stale deleted-account review commit`, async () => {
+for (const phase of ['wait', 'apply']) test(`loss of the single account/write connection during ${phase} prevents stale deleted-account review commit`, requiresAccountLock, async () => {
   const item = await created(), reached = Promise.withResolvers();
   const blocker = new pg.Client({ connectionString, ssl: false }); await blocker.connect();
   let delivery, interrupted = false;
@@ -159,17 +160,17 @@ for (const phase of ['wait', 'apply']) test(`loss of the single account/write co
       await blocker.query('BEGIN'); await blocker.query('SELECT id FROM content.posts WHERE id=$1 FOR UPDATE', [item.post.id]);
     }
     fixture.duringSql = async input => {
-      if (input.role !== 'lythaus_admin') return;
+      if (input.role !== 'lythaus_jobs') return;
       if (phase === 'wait' && input.text.includes('FROM content.posts WHERE id=$1 FOR UPDATE')) reached.resolve(input.backendPid);
       if (phase === 'apply' && input.text.includes('INSERT INTO moderation.detector_runs')) {
-        await fixture.interruptTransaction('lythaus_admin');
+        await fixture.interruptTransaction('lythaus_jobs');
         interrupted = true;
         await client.query("UPDATE identity.users SET status='deleted',deleted_at=now() WHERE id=$1", [item.author]);
       }
     };
     delivery = fenced(item);
     if (phase === 'wait') {
-      await blocked(await reached.promise); await fixture.interruptTransaction('lythaus_admin');
+      await blocked(await reached.promise); await fixture.interruptTransaction('lythaus_jobs');
       interrupted = true;
       await client.query("UPDATE identity.users SET status='deleted',deleted_at=now() WHERE id=$1", [item.author]);
       await blocker.query('COMMIT');
@@ -181,13 +182,13 @@ for (const phase of ['wait', 'apply']) test(`loss of the single account/write co
   } finally { fixture.duringSql = undefined; await blocker.query('ROLLBACK'); await blocker.end(); if (delivery) await delivery; }
 });
 
-test('idle single account/write transaction abort and COMMIT rollback cannot leave stale evidence or report success', async () => {
+test('idle single account/write transaction abort and COMMIT rollback cannot leave stale evidence or report success', requiresAccountLock, async () => {
   const item = await created();
   let aborted = false, commitCommand;
   fixture.afterSql = async input => {
-    if (input.role === 'lythaus_admin' && input.text === 'COMMIT') commitCommand = input.command;
-    if (input.role === 'lythaus_admin' && input.text.includes('INSERT INTO moderation.detector_runs')) {
-      await fixture.interruptTransaction('lythaus_admin', true);
+    if (input.role === 'lythaus_jobs' && input.text === 'COMMIT') commitCommand = input.command;
+    if (input.role === 'lythaus_jobs' && input.text.includes('INSERT INTO moderation.detector_runs')) {
+      await fixture.interruptTransaction('lythaus_jobs', true);
       aborted = true;
       await client.query("UPDATE identity.users SET status='locked' WHERE id=$1", [item.author]);
     }
@@ -199,12 +200,12 @@ test('idle single account/write transaction abort and COMMIT rollback cannot lea
   assert.equal(aborted, true); assert.equal(commitCommand, 'ROLLBACK', 'real PostgreSQL must report the aborted COMMIT as ROLLBACK');
 });
 
-test('connection loss after the write but before COMMIT rolls back evidence and safely retries the same detector id', async () => {
+test('connection loss after the write but before COMMIT rolls back evidence and safely retries the same detector id', requiresAccountLock, async () => {
   const item = await created(), body = { authorId: item.author, postId: item.post.id, eventId: item.event.eventId, detectorId: uuidv7() };
   let interrupted = false;
   fixture.afterSql = async input => {
-    if (input.role === 'lythaus_admin' && input.text.includes('INSERT INTO moderation.detector_runs')) {
-      fixture.afterSql = undefined; await fixture.interruptTransaction('lythaus_admin'); interrupted = true;
+    if (input.role === 'lythaus_jobs' && input.text.includes('INSERT INTO moderation.detector_runs')) {
+      fixture.afterSql = undefined; await fixture.interruptTransaction('lythaus_jobs'); interrupted = true;
     }
   };
   let response;

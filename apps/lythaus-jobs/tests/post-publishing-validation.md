@@ -1,190 +1,160 @@
-# Ordinary post publishing integration boundary
+# Ordinary post review caller integration
 
-**Blocked draft: operational account-lock capability and global publication
-acceptance remain unavailable.** The unsafe split privacy/Jobs transaction is
-removed. Canonical Jobs has SELECT but no UPDATE on identity.users, so PostgreSQL
-denies its required FOR SHARE lock (42501). Jobs now retries before inference or
-evidence persistence when that capability is unavailable. No privilege, grant,
-schema, migration, binding or live flag is changed.
+**Blocked draft: production role mapping, capability approval and complete
+publication acceptance remain unresolved.** This is code and disposable-fixture
+integration, not an operational deployment or public-posting authorization.
 
-Where existing privileges permit the lock, `lockActiveAccount` and all review
-writes run on one Jobs transaction/client. The shared transaction helper rejects
-a COMMIT response whose command is ROLLBACK. Actual PG17/Workerd helper tests use
-the existing admin role to validate lock loss during wait/apply and aborted
-COMMIT; those three regressions pass. This is helper acceptance, not evidence
-that the canonical Jobs role can execute an operational review. The original
-three failing split-transaction regressions and logs remain preserved at head
-429b1566c20cea648180689abdddc44b9c156e12 and in the external handoff artifacts.
+## Source and capability boundary
 
-This Jobs change binds ordinary post review work to the canonical outbox event,
-actor, declaration, body hash and active account. The same checks run before
-evaluation and again under the account/case/content locks before persistence.
-No separate privacy connection is used for ordinary post review. A preflight
-checks direct row-lock capability before any model call; the final transaction
-checks it again and holds the actual account row lock before any review write.
-No provider call runs inside these locks.
+Current main `3e2ab2ac5b021429c8adb4021ff1c1e0c6b54174` was merged normally.
+It includes reviewed #993 transaction confirmation and idle-error handling,
+#990 declaration/grapheme admission, #992 offline evaluation and #994 bounded
+collector preparation. This branch reuses #993's transaction implementation
+unchanged, adding only the account-fence exports. Client journey, configuration,
+policy, shared contracts, migration baseline and CI files are outside this delta.
 
-Confirmed fixes from review: human admin queue decisions are retained even when
-their inherited policy is `evaluation-only-v1`. Exempting an automatic queue now
-requires null `decided_by`, the expected policy, an existing review-only Jobs
-detector run and matching provenance. A same-source case with no decision/evidence
-is conservatively retained. Cases are locked in ID order before the post, matching
-the real admin case-then-post handler. A late case-insert conflict throws and
-rolls back all earlier declaration/evidence changes.
+Canonical Jobs cannot UPDATE or directly FOR SHARE identity.users. The caller
+instead checks EXECUTE on the exact signature
+`trust.lock_active_post_review_author(uuid,uuid,uuid)`, then requires literal
+boolean true from that function. Missing function/EXECUTE is unavailable, with no
+inference, evidence persistence or completed consumer inbox; existing queue retry
+and budget policies remain in force. False/NULL qualification is ineligible.
 
-`assessPostPublishing` consumes explicit Safety outcomes, independently versioned
-provenance/specialist/behaviour/reasoning outcomes and a revision-bound policy
-input. `pass`, `review`, `block` and `unknown` describe evaluation assessments.
-Every assessment is return-only and evaluation-only, with publication, Discovery
-and reputation eligibility fixed to false. Missing, uncertain, malformed or
-mismatched component outcomes remain explicit. No threshold is selected here.
+The exact disabled proposal is retained only as
+`tests/fixtures/post-review-author-lock.disabled.sql`, pinned to SHA256
+`39f13c0b1cf962545659b033e7b740ca47da1f1d836d38fd087f91851dbbf336`.
+Its complete execution rolls back. It contains neither production owner mapping
+nor an EXECUTE grant, and is absent from the approved migration manifest.
+A fixture installer runs only against a generated loopback PG17 database,
+demonstrates rollback first, then installs the same definition there using
+existing local lythaus_migrations and only signature-scoped Jobs EXECUTE.
+It asserts Jobs has no account UPDATE and runtime/admin/privacy lack EXECUTE.
+No new cluster role/membership, production DDL/grant, credential or binding exists.
 
-The bounded assessment path supplies unavailable provenance, specialist and behaviour stages,
-disabled Safety, and `NOT_RUN` policy authority. GPT-OSS supplies review evidence
-only. The existing review persistence remains `evaluation-only-v1`, a queued
-case and `Under review` declaration when the account fence is available. With
-canonical Jobs privileges it retries, persists no review evidence, and retains
-the honest private `under_review` owner status. Assessment/Safety data are not inserted into
-detector signals, provenance or appeal fingerprints. Existing provider scope,
-retention, budget admission, retry horizon, inbox claims and outbox relay remain
-in place.
+The generated production role resembling Jobs remains unverified against the
+actual DB_JOBS_FRESH/Hyperdrive login. The inspected ownership candidate is not a
+vetted restricted owner. Neither is substituted into application or fixture SQL.
+Exact owner/grantee identities and separate persistent capability approval are
+required before operational deployment. Installing the function does not grant
+publication authority or validate authentication/detection.
 
-## Inventory and publication gate
+## Transaction sequence and recovery
 
-| Component | Existing implementation and authority |
+1. Read canonical source/post/author/body/declaration and existing holds/overrides.
+2. Complete a short Jobs capability-probe transaction with the exact post, source
+   event and expected author. Confirm COMMIT and close before any model call.
+   The probe releases its author lock; it is not the authoritative write fence.
+3. Run existing budget-admitted evaluation outside those locks. Missing qualified
+   provenance, specialist, behavioural or policy evidence remains unavailable.
+4. On one final Jobs client/transaction, invoke the function again, lock cases in
+   ID order, then lock the post. Freshly verify outbox type/aggregate/actor/payload,
+   source event, author status/deletion/identity, body hash, declaration, moderation
+   state, deleted content, independent human holds and scoped appeal override.
+5. Write detector, declaration, case, queued decision, provenance and activity as
+   one review bundle. A late case conflict rolls back preceding writes. Confirm
+   COMMIT; complete inbox processing separately through existing idempotency logic.
+
+The function locks only the author; its post qualification is a statement
+snapshot. Cases/post/source/body/hold checks must follow under the final locks.
+No privacy connection or Admin substitution supplies the review authority.
+
+#993 classifies lost COMMIT acknowledgement as unknown and never automatically
+replays its callback. A lost preflight acknowledgement prevents inference;
+a lost final acknowledgement may leave a durable complete bundle. Same-event
+retry checks existing detector/inbox uniqueness and reconciles that bundle
+without duplicate review records or another provider call.
+
+EXECUTE revocation after a final transaction has already admitted the function
+does not reliably cancel that admitted call. Actual PG17 fixtures establish this
+limit: the admitted review may commit, while a fresh Jobs session is denied.
+Revocation during inference is detected by the fresh final transaction and
+leaves no review bundle. Capability withdrawal/rollback must remove application
+dependence and drain admitted transactions before revocation; no instantaneous
+ACL cancellation, new deadline or outage policy is claimed.
+
+## Evidence and publication authority
+
+GPT-OSS's ordinary path remains `evaluation-only-v1`, recommending review.
+`assessPostPublishing` consumes typed, revision-bound component and policy inputs
+and returns pass/review/block/unknown assessments only. Safety preparation stays
+disabled, return-only and persisted:false. No assessment/Safety data is inserted
+into detector signals, provenance or appeal fingerprints; retention/provider
+scope is unchanged. No numerical enforcement threshold is selected.
+
+No qualified ordinary-post text-authorship or behavioural detector is connected.
+Image SAFE/provenance research components have separate private eligibility
+gates. Reasoning, low scores and Safety ALLOW cannot prove human authorship or
+authorize public visibility.
+
+Submit/revise remains under_review with null publication time and a pending
+declaration. Ordinary Jobs always records queue/review and never emits public
+publication authority. Manual allow, historical/community restoration,
+Editorial and public projection/fanout still require the separately allocated
+global release guard in `publication-release-guard-proposal.md`. #990 admission
+is not that global guard. Preserve historical case versions and independent
+holds; keep this PR blocked from operational deployment and public activation.
+
+## Requirements to tests
+
+| Requirement | Actual focused evidence |
 | --- | --- |
-| Disclosure | `packages/contracts/src/content-policy.ts`: human/AI-assisted disclosure and deterministic content limits. |
-| Provenance | `trust.provenance_events` records existing declaration/evaluation audit; it does not prove text authorship. Image EF1/EF2 packets are separate private-alpha research components. |
-| Specialist detection | `docs/architecture/authenticity-private-alpha.md` explicitly lists text authorship as unsupported. SAFE-A is a separately gated image component; no ordinary-post text classifier is qualified or invoked. |
-| Behaviour | No qualified ordinary-post behavioural detector is connected. Reputation/participation records do not establish authorship. |
-| Reasoning | `packages/authenticity/src/index.ts` normalizes every GPT-OSS evaluation to review. Reasoning cannot supply missing classifier evidence. |
-| Safety | `post-safety-evidence.ts` remains disabled, return-only, `persisted:false`. It is not an authorship detector or publication authority. |
-| Policy | Ordinary cases retain `evaluation-only-v1`; new assessment inputs carry explicit policy/threshold versions without numerical enforcement defaults. Historical case/appeal versions are unchanged. |
+| EXECUTE-only ordinary Jobs capability | Direct account row-lock denial, missing function, absent/revoked EXECUTE, minimum fixture ACL assertions; no Admin substitute |
+| Probe releases locks before inference | Real privacy update/rollback completes during model fixture; distinct probe/final transactions and confirmed probe COMMIT |
+| Full authoritative bundle | Function -> ordered cases -> post -> six review writes -> COMMIT on one Jobs transaction |
+| Account and revision fences | Both privacy race orders; locked/suspended/relink/deleted accounts, changed author/body/declaration/source, deleted post, forged source actor/payload |
+| Independent authority | Real human admin queue before/during inference, undecided case, late case conflict rollback, case/post admin race without deadlock, identical scoped peer override |
+| Retry and uncertainty | Lost preflight/final COMMIT replies, database termination before/after writes, aborted COMMIT, duplicate delivery, apply/inbox interruptions and configured retry exhaustion |
+| Withholding and privacy | Human/assisted pass/review/block/unknown fixture responses retain owner-private no-store review, guest/cross-user exclusion, null publication time and no publication events |
+| No unqualified authority | Typed assessment binding tests and unchanged return-only safety tests; safety success never enables publication |
 
-`content.posts` is created/revised with `under_review`, null `published_at` and
-an `Under review` declaration. Public reads/feeds require allowed moderation and
-an eligible categorical declaration. Ordinary Jobs never changes the post to
-allowed or emits a publication event. This change preserves that gate for every
-new assessment outcome, including Safety ALLOW and policy ALLOW fixtures.
+The Workerd fixture imports the actual production transaction implementation and
+replaces only pg connection transport with a loopback RPC adapter. Host PostgreSQL
+sessions use SET SESSION AUTHORIZATION and assert actual current_user. It does
+not independently prove native pg.Client idle events across real Hyperdrive.
+#993's existing direct-client suite tests actual pg.Client/query and native TCP
+faults separately. The Workerd outbound service refuses external requests;
+the sole synthetic Access JWKS response is injected in-process for real admin
+handler tests. AI responses, tokens, actors and all rows are synthetic.
 
-There is no global publication-withholding switch in this lane. Existing admin
-allow decisions and community-appeal restoration can set `allowed` and publish;
-the configured `AUTHENTICITY_ENFORCEMENT_ENABLED=false` does not gate those
-manual paths. Complete publication-pipeline acceptance must cover those routes
-before the owner permits public posting. The existing final-public-read test
-uses synthetic SQL setup and does not certify the admin handler.
+## Reproduction and remaining gates
 
-Open work was inventoried through repository-scoped PR search. Prospective
-monthly v2 work (#953, #956, #958, #961, #963–#971), private-alpha hardening (#886)
-and research detector PRs remain separate. This change edits only Jobs source,
-focused fixtures/tests, this note and the narrowly allocated shared DB account
-fence/transaction helper. No shared contracts, policies, schemas, migrations,
-grants, Wrangler files, generated Worker types or CI are edited. The separate
-disabled capability proposal is outside this PR and has not been executed.
-
-## Requirement mapping
-
-Current-head operational persistence cases are explicitly capability-skipped.
-The matrix distinguishes current fallback/helper coverage from persistence
-controls validated at the preceding head; skips do not certify those controls.
-
-| Requirement | Code | Verifiable coverage |
-| --- | --- | --- |
-| Canonical source and actor | `readPostPublishingSnapshot` | Absent source, source actor/payload mutations before/during inference; API JWT.sub author path. |
-| Revision/body/declaration binding | Snapshot checks and typed assessment bindings | Submit/revise, stale old delivery, changed body; each component/policy/Safety binding field mismatch. |
-| Privacy/deletion authority | `lockActiveAccount`, locked snapshot | Actual existing-role helper refuses locked/deleted/suspended/missing users; privacy account restriction wins a lock race. Jobs fallback makes no model call/write. |
-| Account-lock atomicity | One client/transaction; COMMIT command verification | Lost connection during post-lock wait/apply, after write/before COMMIT and aborted COMMIT roll back evidence and reject success. Original split-transaction failures are preserved as superseded evidence. |
-| Human and pending case authority | Ordered case lock, latest decision identity and provenance checks | Current real admin queue before inference and undecided case pass. During-inference guard passed at 429b1566; currently capability-skipped. |
-| Case conflict atomicity | Throw on late case INSERT conflict | Actual conflict rollback and real admin race without `40P01` passed at 429b1566; both currently capability-skipped. |
-| Independent holds and appeal scope | Before/after hold and identical-override checks | Current before-inference queue/block/override coverage passes; during-inference persistence races remain capability-skipped. |
-| No implied authority | `assessPostPublishing`, existing review-only writes | Human and AI-assisted pass/review/block/unknown feedback; policy ALLOW/REVIEW/BLOCK/NOT_RUN; unavailable/uncertain/malformed stages. |
-| Idempotency/recovery | Existing inbox, uniqueness and budget guards | Current duplicate delivery/retry horizon makes zero model calls or evidence writes and never completes unavailable work. Operational apply/after-apply cases are capability-skipped. Shared-helper interruption/retry cases pass using the existing admin role. |
-| Honest owner status | Existing owner-view and declaration persistence | Owner-only private/no-store `under_review`, guest read 404, null publication time and no publication events. |
-| Privacy/provider scope | Return-only assessment; outbound-denied fixture | No Safety persistence or new provider request; existing 93-case safety-preparation regression includes denial and sanitized-log checks. |
-
-## Reproduction
-
-Use only an explicitly local, disposable PostgreSQL 17 server. The runner creates
-randomly named test databases, validates the approved migration bytes and grants,
-runs Workerd under the existing restricted roles, then drops only its own test
-databases. The community-appeal proposal is applied only inside the focused test
-database, with a pending-owner-approval synthetic ruleset. It is not activated.
+Use a task-owned loopback PG17 control database; the runner creates a fresh
+canonical database per suite and drops only its own generated databases.
+Run proposed integration explicitly; the environment variable is test-only,
+absent from production code/configuration:
 
 ```sh
-node --experimental-strip-types --test apps/lythaus-jobs/tests/post-publishing.test.mjs
-PLANETSCALE_PG17_TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:55439/postgres \
+LYTHAUS_TEST_POST_REVIEW_CAPABILITY=proposed \
+PLANETSCALE_PG17_TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:55439/lythaus_auth_test_post_control \
   node apps/lythaus-jobs/tests/run-post-publishing-pg17.mjs \
   apps/lythaus-jobs/tests/post-publishing.workerd.mjs \
+  apps/lythaus-jobs/tests/post-publishing-review.workerd.mjs \
   apps/lythaus-jobs/tests/post-moderation.workerd.mjs \
   apps/lythaus-jobs/tests/post-safety-evidence.workerd.mjs
-npm run typecheck:native
-npm run test:product-integrity-runtime
-npm run test:native-architecture
-npm run openapi:lint
-npm run openapi:test:contract
-PLANETSCALE_PG17_TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:55439/postgres \
-  node apps/lythaus-jobs/tests/run-post-publishing-pg17.mjs \
-  apps/lythaus-jobs/tests/post-publishing-review.workerd.mjs
 ```
 
-Current canonical-role publishing coverage has 13 passes and 21 explicit
-capability skips; ordinary moderation has 4 passes and 1 capability skip; safety
-preparation has 92 passes and 1 operational Jobs capability skip. Focused assessment/runtime/authenticity/security tests
-pass; exact counts are in the handoff logs. Native architecture passes 315;
-product runtime invariants pass 21. Shared DB connection tests pass 6 and identity
-tests pass 7. Typecheck, native Worker configuration, native scope,
-retired-provider scan, canonical migration validation and diff checks pass.
-OpenAPI lint passes with two existing warnings (`EmailAuthRequest` required
-property and `PrivacyRequestAccepted` allOf). Contract tests pass 70 and skip 17
-in one existing skipped suite; skips are not passes.
+Repeat without LYTHAUS_TEST_POST_REVIEW_CAPABILITY for the canonical baseline.
+Absent-capability paths execute their negative checks; dependent operational
+cases explicitly skip. Proposed-fixture passing cases resolve local caller
+coverage only, not production capability or complete publishing acceptance.
+Exact pass/fail/skip evidence and current-head checks are recorded in the PR
+handoff. Native typing, architecture/security, existing coverage/contracts,
+canonical manifest and #993 direct-client checks remain required.
 
-The additional review/fence suite has **14 passes and 3 capability skips** with
-no active failure. It validates the Jobs no-persistence fallback and existing-role
-single-transaction helper, including the three previously failing interruption
-scenarios. Skipped operational Jobs paths remain blocked, not implicitly passed.
-Normal paths at the previous head passed 34/5/93, but those counts do not certify
-operational review at the new head after the approved fallback. The draft remains
-blocked on capability and complete publication acceptance.
-The synthetic Access JWKS response exercises the actual admin authorization
-handler without external network requests; it does not certify production auth.
-Gitleaks passes with no leaks. No denied remote read is retried.
+Preserved exploratory failures include the old unsafe split transaction and
+the initial late-ACL-revocation expectation disproved by real PostgreSQL.
+The updated test explicitly records admitted-transaction behavior and proves
+fresh-session denial instead of claiming immediate revocation.
 
-The retry-exhaustion fixture manually delivers through the configured retry
-horizon. It verifies withholding and retry signals in actual Workerd; it does
-not exercise Cloudflare's live DLQ broker. Browser/Flutter analysis, production
-providers, real user content, empirical classifier calibration, live publishing,
-production DDL/grants, remote release manifest and deployment are unrun here.
-Acceptance-lane CI wiring for these new focused commands is still required.
+Unrun/gated: verified managed Jobs/owner mapping, approved production capability,
+actual Hyperdrive/provider requests, real detector calibration, the cross-authority
+release guard and complete owner journey/public acceptance. Client journey work
+belongs to its separate lane. Safety persistence/retention/fingerprint scope,
+outage/re-evaluation authority, lock/deadline budgets and consequential defaults
+require separate owner decisions; this branch selects none.
 
-## Remaining decisions and review risks
-
-- Qualified text detector/provenance/behaviour components and calibrated,
-  versioned policy authority must be supplied and independently accepted. The
-  evaluation lane may supply typed outcomes; these synthetic tests establish no
-  empirical detection thresholds or production detector accuracy.
-- Safety persistence requires an explicit retention class/period, subject-data
-  location/export/deletion scope, provider-data authorization and a decision on
-  appeal evidence fingerprints. This change selects none of those defaults.
-- Outage deadlines, retry/re-evaluation authority and permitted budgets require
-  owner decisions. Existing budgets and queue retries are preserved; no new
-  timeouts, fallbacks, paid resources or spend limits are selected.
-- Review the account-lock -> ordered-case-lock -> content-lock order, permission
-  preflight and shared COMMIT-command check. Canonical Jobs review remains
-  unavailable; no role substitution or broad identity UPDATE grant is used.
-  A separate unexecuted lock-only function proposal lists the exact capability
-  delta and reconciles existing prospective monthly functions. Parent must
-  review/allocate any capability integration and grant/migration separately.
-- Parent review must serialize merges/releases and validate admin/appeal
-  publication paths. Source review, release deployment, production authentication
-  certification, detector qualification and feature activation are separate.
-- `publication-release-guard-proposal.md` inventories manual allow, historical
-  reversal, community restoration, editorial publication and public projection/
-  fanout. It proposes a coherent withheld/owner-test/public boundary for parent
-  allocation. No global release guard or live flag change is implemented here.
-
-Rollback is a normal revert of all draft commits as one reviewed change,
-with no schema, grant, resource or flag rollback. Reverting only the fallback
-commit recreates the unsafe split transaction and is inappropriate. Full revert
-restores the approved base and its earlier review guards; it does not activate
-publishing. Implemented and locally tested only; operational capability remains
-blocked. Not merged, deployed, activated or publicly launched.
+Rollback is a reviewed source revert retaining current main/#993 transport,
+without restoring the unsafe split transaction. Any future authorized capability
+withdrawal requires application rollback/drain and separately approved revocation
+or function DDL. No production mutation, deployment, activation or public launch
+is performed by this lane.

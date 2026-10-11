@@ -7,6 +7,7 @@ import { signAccessToken, uuidv7 } from '@lythaus/security';
 import { communityClassifierEvidence, communityDigest } from '../../../packages/db/src/community-appeal-access.ts';
 import { identicalCommunityAppealOverride } from '../../../packages/db/src/community-appeal-closure.ts';
 import { postModerationFixture, postReviewTestOptions } from './post-moderation-fixture.mjs';
+import { installProposedPostReviewCapability, postReviewAuthorLockSignature } from './post-review-author-lock-fixture.mjs';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
 const requiresAccountLock = await postReviewTestOptions(connectionString);
@@ -106,15 +107,23 @@ for (const mode of ['human', 'ai_assisted']) for (const outcome of ['pass', 'rev
     assert.match(owner.headers.get('cache-control'), /private.*no-store/); await pending(item);
   });
 }
-for (const timing of ['before', 'during']) for (const mutation of ['locked', 'deleted_account', 'deleted_post', 'body', 'source_actor', 'source_payload', 'independent_queue', 'independent_block', 'peer_override']) {
+for (const timing of ['before', 'during']) for (const mutation of ['locked', 'relink_required', 'suspended', 'deleted_account', 'deleted_post', 'body', 'declaration', 'author', 'superseded_source', 'source_actor', 'source_payload', 'independent_queue', 'independent_block', 'peer_override']) {
   test(`${mutation} ${timing} inference fences late review evidence and preserves authority`, timing === 'during' ? requiresAccountLock : {}, async () => {
     const item = await created(), calls = fixture.modelCalls;
     let identical;
     const mutate = async () => {
       if (mutation === 'locked') await client.query("UPDATE identity.users SET status='locked' WHERE id=$1", [item.author]);
+      if (mutation === 'relink_required' || mutation === 'suspended') await client.query('UPDATE identity.users SET status=$2 WHERE id=$1', [item.author, mutation]);
       if (mutation === 'deleted_account') await client.query("UPDATE identity.users SET deleted_at=now() WHERE id=$1", [item.author]);
       if (mutation === 'deleted_post') await client.query('UPDATE content.posts SET deleted_at=now() WHERE id=$1', [item.post.id]);
       if (mutation === 'body') await client.query("UPDATE content.posts SET body='Changed synthetic body' WHERE id=$1", [item.post.id]);
+      if (mutation === 'declaration') await client.query("UPDATE content.posts SET declared_creation_mode='ai_assisted' WHERE id=$1", [item.post.id]);
+      if (mutation === 'author') {
+        const replacement = uuidv7();
+        await client.query("INSERT INTO identity.users(id,status) VALUES($1,'active')", [replacement]);
+        await client.query('UPDATE content.posts SET author_id=$2 WHERE id=$1', [item.post.id, replacement]);
+      }
+      if (mutation === 'superseded_source') await client.query('UPDATE content.posts SET moderation_source_event_id=$2 WHERE id=$1', [item.post.id, uuidv7()]);
       if (mutation === 'source_actor') await client.query('UPDATE system.outbox_events SET actor_id=NULL WHERE id=$1', [item.event.eventId]);
       if (mutation === 'source_payload') await client.query("UPDATE system.outbox_events SET payload='{}' WHERE id=$1", [item.event.eventId]);
       if (mutation.startsWith('independent_')) await hold(item, mutation === 'independent_queue' ? 'queue' : 'block');
@@ -138,6 +147,149 @@ test('revised submissions bind new event and body hash while stale delivery is i
     WHERE aggregate_id=$1 AND event_type='content.post.updated'`, [item.post.id])).rows[0];
   assert.deepEqual(await deliver(event), requiresAccountLock.skip ? { ack: 0, retry: 1 } : { ack: 1, retry: 0 });
   assert.equal((await rows({ ...item, event })).detectors, requiresAccountLock.skip ? 0 : 1); await pending(item);
+});
+
+test('preflight commits before inference; final Jobs EXECUTE, ordered cases and post fence one complete review bundle', requiresAccountLock, async () => {
+  const item = await created(), start = fixture.statements.length;
+  let probe;
+  fixture.duringModel = async () => {
+    const statements = fixture.statements.slice(start);
+    probe = statements.find(row => row.text.startsWith('SELECT trust.lock_active_post_review_author('));
+    assert.ok(probe);
+    assert.ok(statements.some(row => row.transactionId === probe.transactionId && row.text === 'COMMIT'));
+    const writer = new pg.Client({ connectionString, ssl: false }); await writer.connect();
+    try {
+      await writer.query("SET lock_timeout='500ms'");
+      await writer.query('BEGIN'); await writer.query('SET LOCAL ROLE lythaus_privacy');
+      await writer.query("UPDATE identity.users SET status='locked' WHERE id=$1", [item.author]);
+      await writer.query('ROLLBACK');
+    } finally { await writer.query('ROLLBACK'); await writer.end(); }
+  };
+  try { assert.deepEqual(await deliver(item.event), { ack: 1, retry: 0 }); }
+  finally { fixture.duringModel = undefined; }
+  const statements = fixture.statements.slice(start), fences = statements.filter(row =>
+    row.text.startsWith('SELECT trust.lock_active_post_review_author('));
+  assert.equal(fences.length, 2); assert.notEqual(fences[0].transactionId, fences[1].transactionId);
+  const final = statements.filter(row => row.transactionId === fences[1].transactionId);
+  const author = final.findIndex(row => row.text.startsWith('SELECT trust.lock_active_post_review_author('));
+  const cases = final.findIndex(row => row.text.includes('ORDER BY id FOR UPDATE'));
+  const post = final.findIndex(row => row.text.includes('FOR UPDATE OF post'));
+  const write = final.findIndex(row => row.text.includes('INSERT INTO moderation.detector_runs'));
+  assert.ok(author >= 0 && author < cases && cases < post && post < write);
+  for (const table of ['moderation.detector_runs','content.content_declarations','moderation.cases',
+    'moderation.decisions','trust.provenance_events','trust.user_activity_events']) {
+    assert.ok(final.some(row => row.text.includes('INSERT INTO ' + table)), table + ' must share the authoritative transaction');
+  }
+  assert.ok(final.every(row => row.role === 'lythaus_jobs'));
+  assert.equal(final.at(-1).text, 'COMMIT');
+  assert.ok(!statements.some(row => row.text.includes('FOR SHARE') || row.role === 'lythaus_privacy'));
+  assert.deepEqual(await rows(item), { detectors: 1, cases: 1, provenance: 1, activity: 1,
+    inbox: 1, publications: 0, state: 'under_review', published_at: null });
+  await pending(item);
+});
+
+for (const restriction of ['status','deletion']) test(`privacy ${restriction} writer waits for the authoritative Jobs author fence through review COMMIT`, requiresAccountLock, async () => {
+  const item = await created(), writer = new pg.Client({ connectionString, ssl: false });
+  await writer.connect(); await writer.query('SET SESSION AUTHORIZATION lythaus_privacy');
+  const reached = Promise.withResolvers(), resume = Promise.withResolvers();
+  let invocations = 0, delivery, update;
+  fixture.afterSql = async input => {
+    if (input.text.startsWith('SELECT trust.lock_active_post_review_author(') && ++invocations === 2) {
+      reached.resolve(input.backendPid); await resume.promise;
+    }
+  };
+  try {
+    delivery = deliver(item.event); const holder = await reached.promise;
+    await writer.query('BEGIN');
+    update = writer.query(restriction === 'status' ? "UPDATE identity.users SET status='locked' WHERE id=$1"
+      : 'UPDATE identity.users SET deleted_at=now() WHERE id=$1', [item.author]);
+    const deadline = Date.now() + 4000;
+    let waits = false;
+    while (Date.now() < deadline) {
+      waits = (await client.query('SELECT $2::integer=ANY(pg_blocking_pids($1)) AS waits',
+        [writer.processID, holder])).rows[0].waits;
+      if (waits) break;
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    assert.equal(waits, true, 'privacy update must wait for the actual final author-lock holder');
+    resume.resolve(); assert.deepEqual(await delivery, { ack: 1, retry: 0 });
+    await update; await writer.query('COMMIT');
+    const state = await rows(item);
+    assert.deepEqual([state.detectors,state.cases,state.provenance,state.activity], [1,1,1,1]);
+    await pending(item);
+  } finally {
+    resume.resolve(); fixture.afterSql = undefined;
+    if (delivery) await delivery;
+    if (update) await update.catch(() => undefined);
+    await writer.query('ROLLBACK'); await writer.end();
+  }
+});
+
+test('absent proposed function leaves canonical Jobs retryable with no inference or review writes', async () => {
+  const item = await created(), calls = fixture.modelCalls;
+  if (!requiresAccountLock.skip) await client.query('DROP FUNCTION ' + postReviewAuthorLockSignature);
+  try {
+    assert.deepEqual(await deliver(item.event), { ack: 0, retry: 1 });
+    assert.equal(fixture.modelCalls, calls);
+    const state = await rows(item);
+    assert.deepEqual([state.detectors,state.cases,state.provenance,state.activity,state.inbox], [0,0,0,0,0]);
+    await pending(item);
+  } finally { if (!requiresAccountLock.skip) await installProposedPostReviewCapability(connectionString); }
+});
+
+for (const withdrawal of ['during_inference', 'before_final_call']) test(`EXECUTE withdrawal ${withdrawal} preserves fresh-session denial and records admitted-transaction limits`, requiresAccountLock, async () => {
+  const item = await created(), calls = fixture.modelCalls;
+  let invoked = 0, revoked = false;
+  const revoke = async () => {
+    await client.query('REVOKE EXECUTE ON FUNCTION ' + postReviewAuthorLockSignature + ' FROM lythaus_jobs'); revoked = true;
+    assert.equal((await client.query("SELECT has_function_privilege('lythaus_jobs',$1,'EXECUTE') AS allowed",
+      [postReviewAuthorLockSignature])).rows[0].allowed, false);
+  };
+  if (withdrawal === 'during_inference') fixture.duringModel = revoke;
+  else fixture.duringSql = async input => {
+    if (input.text.startsWith('SELECT trust.lock_active_post_review_author(') && ++invoked === 2) await revoke();
+  };
+  try {
+    const reply = await deliver(item.event);
+    assert.equal(revoked, true, 'the proposed EXECUTE withdrawal must actually execute');
+    assert.deepEqual(reply, withdrawal === 'during_inference' ? { ack: 0, retry: 1 } : { ack: 1, retry: 0 });
+    const state = await rows(item);
+    const admitted = withdrawal === 'before_final_call' ? 1 : 0;
+    assert.deepEqual([state.detectors,state.cases,state.provenance,state.activity,state.inbox],
+      [admitted,admitted,admitted,admitted,admitted]);
+    assert.equal(fixture.modelCalls, calls + 1); await pending(item);
+    const fresh = await created();
+    assert.deepEqual(await deliver(fresh.event), { ack: 0, retry: 1 });
+    assert.equal((await rows(fresh)).detectors, 0); assert.equal(fixture.modelCalls, calls + 1); await pending(fresh);
+  } finally {
+    fixture.duringModel = undefined; fixture.duringSql = undefined;
+    await client.query('GRANT EXECUTE ON FUNCTION ' + postReviewAuthorLockSignature + ' TO lythaus_jobs');
+  }
+  assert.deepEqual(await deliver(item.event), { ack: 1, retry: 0 });
+  assert.equal((await rows(item)).detectors, 1); assert.equal(fixture.modelCalls, calls + 1); await pending(item);
+});
+
+for (const phase of ['preflight','final']) test(`lost ${phase} COMMIT acknowledgement is uncertain and same-event retry reconciles durable effects`, requiresAccountLock, async () => {
+  const item = await created(), calls = fixture.modelCalls;
+  let selected, interrupted = false;
+  fixture.afterSql = input => {
+    if (input.role !== 'lythaus_jobs') return;
+    if (phase === 'preflight' && input.text.startsWith('SELECT trust.lock_active_post_review_author(')) selected ??= input.transactionId;
+    if (phase === 'final' && input.text.includes('INSERT INTO moderation.detector_runs')) selected = input.transactionId;
+    if (selected && input.transactionId === selected && input.text === 'COMMIT') {
+      interrupted = true; fixture.afterSql = undefined; throw new Error('synthetic_lost_commit_acknowledgement');
+    }
+  };
+  try { assert.deepEqual(await deliver(item.event), { ack: 0, retry: 1 }); }
+  finally { fixture.afterSql = undefined; }
+  assert.equal(interrupted, true);
+  const state = await rows(item), durable = phase === 'final' ? 1 : 0;
+  assert.deepEqual([state.detectors,state.cases,state.provenance,state.activity], [durable,durable,durable,durable]);
+  assert.equal(fixture.modelCalls, calls + durable);
+  assert.deepEqual(await deliver(item.event), { ack: 1, retry: 0 });
+  const retried = await rows(item);
+  assert.deepEqual([retried.detectors,retried.cases,retried.provenance,retried.activity], [1,1,1,1]);
+  assert.equal(fixture.modelCalls, calls + 1); await pending(item);
 });
 test('forged delivery cannot use a valid post revision with an absent canonical source event', async () => {
   const item = await created(), eventId = uuidv7(), calls = fixture.modelCalls;
@@ -196,7 +348,8 @@ for (const boundary of ['account', 'post']) test(`concurrent ${boundary} decisio
     await connection.query(`SELECT id FROM ${boundary === 'account' ? 'identity.users' : 'content.posts'} WHERE id=$1 FOR UPDATE`,
       [boundary === 'account' ? item.author : item.post.id]);
     fixture.duringSql = input => {
-      if (input.text.includes(boundary === 'account' ? 'FOR SHARE' : 'FOR UPDATE OF post')) waiting.resolve();
+      if (boundary === 'account' ? input.text.startsWith('SELECT trust.lock_active_post_review_author(')
+        : input.text.includes('FOR UPDATE OF post')) waiting.resolve();
     };
     delivery = deliver(item.event);
     await waiting.promise;

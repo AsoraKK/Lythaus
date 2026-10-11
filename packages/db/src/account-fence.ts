@@ -1,16 +1,21 @@
 import type { DatabaseClient } from './index.ts';
 
-export async function accountRowLockAvailable(client: DatabaseClient): Promise<boolean> {
-  const permission = (await client.query<{ available: boolean }>(`SELECT
-    has_table_privilege(current_user, 'identity.users', 'SELECT')
-    AND has_any_column_privilege(current_user, 'identity.users', 'UPDATE') AS available`)).rows[0];
+export async function postReviewAuthorLockAvailable(client: DatabaseClient): Promise<boolean> {
+  const permission = (await client.query<{ available: boolean }>(`SELECT COALESCE(
+    has_function_privilege(current_user,
+      to_regprocedure('trust.lock_active_post_review_author(uuid,uuid,uuid)')::oid, 'EXECUTE'), false) AS available`)).rows[0];
   return permission?.available === true;
 }
 
-export async function lockActiveAccount(client: DatabaseClient, authorId: string): Promise<'locked' | 'inactive' | 'unavailable'> {
-  if (!await accountRowLockAvailable(client)) return 'unavailable';
-  const account = (await client.query<{ status: string; deleted_at: string | null }>(
-    'SELECT status, deleted_at FROM identity.users WHERE id = $1 FOR SHARE', [authorId],
+export async function lockActivePostReviewAuthor(client: DatabaseClient, input: {
+  postId: string;
+  sourceEventId: string;
+  expectedAuthorId: string;
+}): Promise<'locked' | 'ineligible' | 'unavailable'> {
+  if (!await postReviewAuthorLockAvailable(client)) return 'unavailable';
+  const result = (await client.query<{ locked: boolean | null }>(
+    'SELECT trust.lock_active_post_review_author($1::uuid,$2::uuid,$3::uuid) AS locked',
+    [input.postId, input.sourceEventId, input.expectedAuthorId],
   )).rows[0];
-  return account?.status === 'active' && account.deleted_at === null ? 'locked' : 'inactive';
+  return result?.locked === true ? 'locked' : 'ineligible';
 }

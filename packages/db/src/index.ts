@@ -10,7 +10,7 @@ export interface DatabaseEnv {
   connection: HyperdriveBinding;
 }
 
-export { accountRowLockAvailable, lockActiveAccount } from './account-fence.ts';
+export { postReviewAuthorLockAvailable, lockActivePostReviewAuthor } from './account-fence.ts';
 
 export class DatabaseCommitUncertainError extends Error {
   readonly outcome = 'unknown';

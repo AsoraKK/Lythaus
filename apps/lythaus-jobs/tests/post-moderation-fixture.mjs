@@ -1,18 +1,22 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { installProposedPostReviewCapability } from './post-review-author-lock-fixture.mjs';
 
 export async function postReviewTestOptions(connectionString) {
   const target = new URL(connectionString);
   assert.ok(['localhost', '127.0.0.1'].includes(target.hostname));
   assert.match(target.pathname, /^\/lythaus_auth_test_post_[a-z0-9_]+$/);
+  if (process.env.LYTHAUS_TEST_POST_REVIEW_CAPABILITY === 'proposed') {
+    await installProposedPostReviewCapability(connectionString);
+  }
   const client = new pg.Client({ connectionString, ssl: false }); await client.connect();
   try {
-    await client.query('SET ROLE lythaus_jobs');
-    const { available } = (await client.query("SELECT has_table_privilege(current_user,'identity.users','SELECT') AND has_any_column_privilege(current_user,'identity.users','UPDATE') AS available")).rows[0];
-    return { skip: available ? false : 'Jobs identity row-lock capability unavailable; no grant changes authorized' };
+    await client.query('SET SESSION AUTHORIZATION lythaus_jobs');
+    const { available } = (await client.query(`SELECT COALESCE(has_function_privilege(current_user,
+      to_regprocedure('trust.lock_active_post_review_author(uuid,uuid,uuid)')::oid, 'EXECUTE'),false) AS available`)).rows[0];
+    return { skip: available ? false : 'Proposed Jobs author-lock capability absent from canonical baseline; operational approval unresolved' };
   } finally { await client.end(); }
 }
 
@@ -32,12 +36,8 @@ export async function postModerationFixture(connectionString, bindings) {
     format: 'esm', platform: 'node', target: 'es2022', external: ['cloudflare:workers'],
     banner: { js: "import { createRequire } from 'node:module'; const require = createRequire('file:///fixture.mjs');" },
     plugins: [{ name: 'local-postgres', setup(builder) {
-      builder.onLoad({ filter: /packages\/db\/src\/index\.ts$/ }, args => {
-        const original = readFileSync(args.path, 'utf8');
-        const start = original.indexOf('export async function query<');
-        const end = original.indexOf('export function assertVerifyFull(');
-        assert.ok(start > 0 && end > start);
-        return { loader: 'ts', contents: original.slice(0, start) + `
+      builder.onResolve({ filter: /^pg$/ }, () => ({ path: 'fixture-pg', namespace: 'fixture-pg' }));
+      builder.onLoad({ filter: /.*/, namespace: 'fixture-pg' }, () => ({ loader: 'js', contents: `
           import { env as fixtureEnv } from 'cloudflare:workers';
           async function fixtureSql(input) {
             const response = await fixtureEnv.DISPOSABLE_POSTGRES.fetch('https://fixture.invalid/sql', {
@@ -47,24 +47,25 @@ export async function postModerationFixture(connectionString, bindings) {
             if (!response.ok) throw new Error(result.error);
             return result;
           }
-          export async function query(binding, text, values = []) {
-            return fixtureSql({ action: 'query', role: binding.role, text, values });
+          export class Client {
+            constructor({connectionString}) { this.role = new URL(connectionString).username; }
+            on() { return this; }
+            removeListener() { return this; }
+            async connect() {
+              this.transactionId = (await fixtureSql({ action: 'begin', role: this.role })).transactionId;
+            }
+            query(text, values = []) { return fixtureSql({ action: 'query', transactionId: this.transactionId, text, values }); }
+            async end() {
+              if (this.transactionId) await fixtureSql({ action: 'close', transactionId: this.transactionId });
+            }
           }
-          export async function transaction(binding, work) {
-            const { transactionId } = await fixtureSql({ action: 'begin', role: binding.role });
-            const client = { query: (text, values = []) => fixtureSql({ action: 'query', transactionId, text, values }) };
-            try {
-              return await executeTransaction(client, work);
-            } finally { await fixtureSql({ action: 'close', transactionId }); }
-          }
-        ` + original.slice(end) };
-      });
+        ` }));
     } }],
     stdin: { resolveDir: root, contents: `
       import api from './apps/lythaus-public-api/src/index.ts';
       import jobs from './apps/lythaus-jobs/src/index.ts';
       import admin from './apps/lythaus-admin-api/src/index.ts';
-      import { transaction, lockActiveAccount } from './packages/db/src/index.ts';
+      import { transaction, lockActivePostReviewAuthor } from './packages/db/src/index.ts';
       export default { async fetch(request, env, ctx) {
         const path = new URL(request.url).pathname;
         env.AI = { async run() {
@@ -82,8 +83,10 @@ export async function postModerationFixture(connectionString, bindings) {
         if (path === '/fixture/account-transaction') {
           const body = await request.json();
           try {
-            const result = await transaction(env.DB_ADMIN_FRESH, async client => {
-              const state = await lockActiveAccount(client, body.authorId);
+            const result = await transaction(env.DB_JOBS_FRESH, async client => {
+              const state = await lockActivePostReviewAuthor(client, {
+                postId: body.postId, sourceEventId: body.eventId, expectedAuthorId: body.authorId,
+              });
               if (state !== 'locked') return { state };
               await client.query('SELECT id FROM content.posts WHERE id=$1 FOR UPDATE', [body.postId]);
               await client.query("INSERT INTO moderation.detector_runs(id,content_type,content_id,provider,model_version,signal,source_event_id) VALUES($1,'post',$2,'synthetic-account-fence','synthetic-v1','{}',$3)",
@@ -111,19 +114,21 @@ export async function postModerationFixture(connectionString, bindings) {
   const runtime = new Miniflare(convertV4MiniflareOptions({ workers: [{
     name: 'post-incident-local', modules: true, script: bundle.outputFiles[0].text,
     compatibilityDate: '2026-07-27', compatibilityFlags: ['nodejs_compat'],
-    bindings: { ...bindings, DB_APP_FRESH: { role: 'lythaus_runtime' },
-      DB_ADMIN_FRESH: { role: 'lythaus_admin' },
-      DB_JOBS_FRESH: { role: 'lythaus_jobs' }, DB_PRIVACY_FRESH: { role: 'lythaus_privacy' },
+    bindings: { ...bindings, ...Object.fromEntries([
+      ['DB_APP_FRESH','lythaus_runtime'], ['DB_ADMIN_FRESH','lythaus_admin'],
+      ['DB_JOBS_FRESH','lythaus_jobs'], ['DB_PRIVACY_FRESH','lythaus_privacy'],
+    ].map(([name, role]) => [name, { connectionString:
+      'postgresql://' + role + '@fixture.hyperdrive.local/fixture?sslmode=disable' }])),
       AUTHENTICITY_AI_ENABLED: 'true', AUTHENTICITY_ALPHA_ENABLED: 'false',
       AUTHENTICITY_BETA_ENABLED: 'false', MEDIA_UPLOADS_ENABLED: 'false',
       AUTHENTICITY_TEXT_MODEL: '@cf/openai/gpt-oss-20b', AI_GATEWAY_ID: 'lythaus-ai',
       COST_BUDGET_ENABLED: 'true', COST_BUDGET_PERIOD_PREFIX: 'synthetic-post-test',
     },
-    outboundService: request => {
+    outboundService: request => { const denied = new Error('Local fixture refuses external requests');
       if (request.url === 'https://access.synthetic.invalid/certs' && bindings.FIXTURE_ACCESS_JWKS) {
         return Response.json(JSON.parse(bindings.FIXTURE_ACCESS_JWKS));
       }
-      throw new Error('Local fixture refuses external requests');
+      throw denied;
     },
     serviceBindings: {
       FIXTURE_MODEL: async () => {
@@ -149,7 +154,8 @@ export async function postModerationFixture(connectionString, bindings) {
             client.fixtureRole = input.role;
             await client.connect();
             await client.query("SET statement_timeout='5s'");
-            await client.query('SET ROLE ' + input.role);
+            await client.query('SET SESSION AUTHORIZATION ' + input.role);
+            assert.equal((await client.query('SELECT current_user AS role')).rows[0].role, input.role);
           }
           assert.ok(client);
           if (input.action === 'begin') {

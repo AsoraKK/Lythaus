@@ -28,7 +28,7 @@ import { reconcileSupportPrivacyDeletionLocations } from '../../../packages/db/s
 import { exportOwnSupportContributionsForPrivacy } from '../../../packages/db/src/support-feedback-contributor-privacy.ts';
 import { activityMeasurementPrivacyExport, activityMeasurementPrivacyDelete, activityMeasurementPrivacyReconcile, activityMeasurementRetentionCleanup, activityMeasurementScheduledWork } from './activity-measurement.ts';
 import { assessPostPublishing, readPostPublishingSnapshot } from './post-publishing.ts';
-import { accountRowLockAvailable, lockActiveAccount } from '@lythaus/db';
+import { lockActivePostReviewAuthor } from '@lythaus/db';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -902,11 +902,14 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
     `SELECT 1 FROM moderation.detector_runs WHERE provider = $1 AND source_event_id = $2 LIMIT 1`,
     [AUTHENTICITY_PROVIDER, revision.sourceEventId]);
   if (prior.rowCount !== 0) return;
-  if (!await transaction(env.DB_JOBS_FRESH, accountRowLockAvailable)) {
+  const authorFence = { postId: revision.contentId, sourceEventId: revision.sourceEventId, expectedAuthorId: post.author_id };
+  const readiness = await transaction(env.DB_JOBS_FRESH, client => lockActivePostReviewAuthor(client, authorFence));
+  if (readiness === 'unavailable') {
     logEvent({ service: 'lythaus-jobs', event: 'post_publishing_withheld', eventId: revision.sourceEventId,
       state: 'unknown', reasonCodes: ['account_lock_capability_unavailable'], publicationEligible: false });
     throw new Error('post_review_account_fence_unavailable');
   }
+  if (readiness !== 'locked') return;
   const { evaluation, modelExecuted, latencyMs } = await runAuthenticityEvaluation(env, {
     kind: 'text', content: post.body, contentId: revision.contentId, declaredCreationMode: post.declared_creation_mode,
   });
@@ -925,7 +928,7 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
     && evaluation.signals.some((item) => /(^|[_:-])(ai|generated|synthetic)([_:-]|$)/i.test(item.category));
   const signal = JSON.stringify(evaluation);
   const applied = await transaction(env.DB_JOBS_FRESH, async (client) => {
-    const account = await lockActiveAccount(client, post.author_id);
+    const account = await lockActivePostReviewAuthor(client, authorFence);
     if (account === 'unavailable') throw new Error('post_review_account_fence_unavailable');
     if (account !== 'locked') return false;
     const locked = await readPostPublishingSnapshot(client, {
