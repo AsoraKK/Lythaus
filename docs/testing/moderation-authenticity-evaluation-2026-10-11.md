@@ -7,9 +7,11 @@ synthetic schema tests. Numeric posting thresholds remain **UNEVALUATED**.
 
 ## Source and lane
 
-Base is `49cca9caa34b34c7ded7f4842792f698be9bd41f`, the exact clean reviewed
+Original base is `49cca9caa34b34c7ded7f4842792f698be9bd41f`, the exact clean reviewed
 checkout supplied by the parent. Branch is
 `codex/moderation-authenticity-evaluation-20261011` in an isolated worktree.
+Parent-approved #988 source `ca6ff5049b89368573a1d2de16199346d3e67071`
+was integrated by an ordinary branch merge, without independent config/type edits.
 Read `AGENTS.md`, `README.md`, canonical content/moderation/authenticity contracts,
 OpenAPI, resource registry, PostgreSQL baseline/seeds, flags, adapters, private
 alpha/beta support policy and existing tests/evidence. No nested `AGENTS.md` or
@@ -150,14 +152,14 @@ the additional provenance and CI regressions below.
 
 | Check | Evidence |
 | --- | --- |
-| New offline harness, Workerd and CI suites | 20 passed: 16 Node harness, 2 native Workerd, 2 CI regression cases; no skips. Final handoff reruns after approved baseline integration |
+| New offline harness, Workerd and CI suites | 20 passed after approved baseline integration: 16 Node harness, 2 native Workerd, 2 CI regression cases; no skips |
 | Scoped tooling TypeScript and `typecheck:native` | Passed; no dependency or runtime export change |
-| Existing evaluation/beta/private-alpha/provider/content/security regression set | 39 passed, no skipped tests |
-| `test:native-architecture` | 315 passed, no skipped tests; expected negative-path fixture errors do not represent live failures |
+| Existing evaluation/beta/private-alpha/provider/content/security regression set | Original 39 passed; selected final integration regression command passed 28 cases with no skips (exact command in local validation receipt) |
+| `test:native-architecture` | Original 315 passed; 334 passed after approved configuration integration, no skips; expected negative-path fixture errors do not represent live failures |
 | `openapi:lint` | Passed with 2 inherited warnings: EmailAuthRequest required-property definition and PrivacyRequestAccepted single-member allOf |
 | `openapi:test:contract` | 70 passed; 17 live-server/auth tests skipped because live contract configuration is absent and live calls are not authorized |
 | Migration baseline / registry | 20 migration files, 102 tables and 33 resource guardrails validated statically; no live schema evidence |
-| `validate:native-workers` | Initial local npm failure was reported as stale/unverifiable; default-cache version probe reproduces `ENOENT`. With writable `npm_config_cache=/tmp/lythaus-evaluation-npm-cache` the exact pinned check passed; current-head CI also passed all 3 checks. Installed root Wrangler 4.129.1/workerd 1.20260907.1 differs from release-pinned 4.123.0/workerd 1.20260811.1, but no stale-type defect was established. Parent merged #988 at `ca6ff5049b89368573a1d2de16199346d3e67071`; integrate without independent config/type edits |
+| `validate:native-workers` | Initial local npm failure was reported as stale/unverifiable; default-cache version probe reproduces `ENOENT`. With writable `npm_config_cache=/tmp/lythaus-evaluation-npm-cache` the exact pinned check passed before and after #988 integration; prior head CI also passed all 3 checks. Root Wrangler 4.129.1/workerd 1.20260907.1 differs from release-pinned 4.123.0/workerd 1.20260811.1, but no stale-type defect was established. No independent config/type edits |
 | Native scope, provider retirement, branding | Initial scan omitted the untracked report. Current CI correctly caught its bare account handle; removed it in this lane and reran the tracked-file scan |
 | Syntax, documentation security, whitespace and tracked-file hygiene | Passed locally |
 | Repository secret scan | Pinned Gitleaks 8.18.0 subsequently installed by the existing script; 1,833 commits scanned, no leaks found. Initial absence did not count as a pass |
