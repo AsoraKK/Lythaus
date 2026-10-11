@@ -6,9 +6,13 @@
 
 ## Decision
 
+Owner reaffirmation, 11 October 2026: retain email/password for launch.
+Guest access remains read-only. This is a product decision, with runtime
+certification and activation separate; see the [current policy authority](../policy/current-policy-authority.md).
+
 The initial Lythaus authentication surface consists of:
 
-1. verified email authentication; and
+1. verified email/password authentication; and
 2. guest access for the read-only product experience.
 
 Google, Apple, World ID, Entra, Azure B2C, generic OAuth provider selection,

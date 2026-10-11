@@ -3,7 +3,15 @@
 Historical source baseline: `8c4261402dd370b4c57e082cf0fc16b41927f7db`. Policy:
 `lythaus-monthly-rewards-2026-10-v1`. This is the complete set of 100 required
 acceptance cases from the October task sheet, not a claim that 100 tests pass.
-Owner decisions D01–D13 and runtime activation remain pending. The catalogue's
+This dated matrix preserves the v1 candidate's test evidence; later owner
+decisions are recorded in the [current policy authority](../policy/current-policy-authority.md).
+The 7 October calendar-quarter-end rule supersedes rolling validity for all
+prospective quarterly awards, remaining months only and no earlier retroactive
+credit. Earlier rolling-validity tests do not establish acceptance of that rule.
+The 13,500 limits in this matrix test historical v1 only; a later approved v2
+budget requires its own version-specific acceptance evidence. Missing later
+authority in this record does not reject that decision.
+Operational defaults and runtime activation remain separate. The catalogue's
 embedded reference-validation counts are not execution evidence for this branch.
 
 ## Current exact-head status — 4 October 2026
@@ -171,11 +179,11 @@ is applied.
 | CAL-10 | The 11,700 best-four example produces L5 only in the next month. | M, P, J, S / MT, PT, ST | Exact arithmetic example unit-tested; separate server snapshot verifies next-month assignment from real publication; full example product journey pending |
 | CAL-11 | Month A 8,900 produces month B L4; month B 12,150 produces month C L5. | M, P, J, S / MT, PT, ST | Exact examples unit-tested; snapshot scope and future-month refusal verified; full two-month product journey pending |
 | CAL-12 | Current-month progress cannot upgrade/downgrade the already-confirmed current-month level. | M, P, J, S / MT, PT, ST | Server snapshot remains fixed through later activity/source correction; only independently approved correction appends history; unassessed/future/cutover states tested; UI pending |
-| CAL-13 | Maximum allowed components total 13,500; out-of-range components are rejected. | M / MT | Unit verified; live earning not integrated |
+| CAL-13 | Pinned historical v1 components total at most 13,500; v1 out-of-range inputs are rejected. | M / MT | Historical v1 unit verified; no prospective v2 budget acceptance is claimed |
 | CAL-14 | Every threshold neighbour 999/1,000, 2,999/3,000, 5,999/6,000 and 9,999/10,000 maps correctly. | M / MT | Unit verified; live earning not integrated |
 | CAL-15 | No age, plan, World or old pillar gate changes the new score-derived level. | M / MT | Unit verified; live earning not integrated |
 | CAL-16 | Email proof expiry at the exact cutoff and a new proof after cutoff are handled correctly. | D, H, B / MT, HT, BT, BR | Actual initial verification/paused capture/revocation and historical cutoff verified; disabled renewal transaction covers one-use, replay, expiry, binding change, pause and erasure. Public API/delivery and D08 approval remain pending |
-| CAL-17 | Calendar-month addition handles 29/30/31-day dates without unapproved 90-day substitution. | D, H / MT, HT | Calendar validity candidate verified; D08 activation pending |
+| CAL-17 | Historical v1 calendar-month addition handles 29/30/31-day dates without unapproved 90-day substitution. | D, H / MT, HT | Historical candidate verified; superseded prospective quarterly expiry needs its own implementation/acceptance, not just activation |
 | CAL-18 | A weekly correction reselects all candidates; the previous fifth can enter the chosen four. | M, E, B, S / MT, ET, BT, ST | Real independent invalidation reassembles and reselects the fifth; approved scoped snapshot correction retains old reports/levels; obsolete approval drains durably |
 | CAL-19 | On-time evidence approved late retains its performance period and audited correction path. | M, E, B, X / MT, ET, BT, XT | Late scoped acceptance retains original week; actual assembly refuses undrained/mismatched contextual configuration and drains the stored version; specialist acceptance pending |
 | CAL-20 | End-of-month job replay, overlap and restart cannot publish duplicate entitlements. | P, J, B, S / PT, BT, ST | Atomic assembly and separate snapshot queue/reconciliation replay, concurrent publication and outbox rollback verified; partner claim consumer and activation pending |
@@ -265,8 +273,9 @@ is applied.
 These cases support [F01 in the decision record](../architecture/monthly-reputation-2026-10.md#ticket-feedback-interface-proposal).
 The owner confirmed 150 points for one accepted, useful suggestion per quarter;
 budget placement and the source-month effect remain unresolved. MT verifies the
-versioned amendment and that an unplaced suggestion field cannot add 150 to the
-existing score or exceed 13,500. The integration cases below are additional to the
+historical v1 amendment and that its unplaced suggestion field cannot add 150 to
+the v1 score or exceed its 13,500 ceiling. This does not constrain a later approved
+v2 budget. The integration cases below are additional to the
 original 100 and are not executable tests yet. Activation remains prohibited.
 The control-panel workstream owns the ticket backend.
 
@@ -276,7 +285,7 @@ The control-panel workstream owns the ticket backend.
 | Meaningful independent acceptance under an approved rubric | One 150-point award under the approved placement; reviewer authority and conflicts verified server-side |
 | Optional participation and approved quarter boundaries | At most one awarded suggestion per quarter; continued reporting without points; no assumed reuse of D08 email validity |
 | Retry, reopen, dual classification and concurrent acceptance | One stable contribution and effective revision; no concurrent second award or double credit as accepted help/accessibility |
-| Budget and source-month placement | Original 13,500 maximum and fixed next-month level respected; no extra component or repeated monthly use without approval |
+| Budget and source-month placement | Historical v1 tests respect its 13,500 maximum and fixed next-month level; prospective versions use their own explicitly approved budget and placement |
 | Self-acceptance, spam, duplicate underlying work and reciprocal farming | Hold/rejection evidence; no points based solely on status, popularity or a shared IP |
 | Reversal before/after delivery and out-of-order revision | No resurrection or duplicate allowance; only linked points, caps and stored period revisions reconcile under the approved placement |
 | Wrong subject, unsupported rubric and missing activation approval | Reject or remain pending; no submitted points or forged event can award reputation |

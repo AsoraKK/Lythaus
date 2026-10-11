@@ -3,6 +3,11 @@
 Status: Canonical
 Owner: Kyle
 
+Follow the [current policy authority](../policy/current-policy-authority.md).
+The owner retains email/password for launch and withholds public posting until
+the complete publishing pipeline is validated. This rollout record is not
+activation, production-authentication or detection certification.
+
 | Stage | Cohort | Expected duration | Review focus |
 | --- | ---: | --- | --- |
 | `technical_alpha` | 25–50 trusted users | 1–2 weeks | Auth, feeds, posting, labels, moderation, DSR, telemetry, support |
@@ -25,8 +30,10 @@ this rollout record.
 Before expansion, the launch owner must verify the critical controls that are
 actually deployed for the candidate: registration/access handling, post and
 comment creation, reactions, media upload, authorship enforcement, custom
-feeds, News Board, reputation, the independent trained-reviewer appeal
-process, notifications, and emergency read-only mode. Any control without
+feeds, News Board, reputation, the version-specific appeal process (equal-vote
+timed community review for approved new standard cases; retained historical
+rules for old cases), restricted/unresolved accountability, notifications, and
+emergency read-only mode. Any control without
 current runtime and test evidence remains planned and blocks the associated
 stage decision.
 

@@ -4,6 +4,11 @@
 
 **Date:** 2026-08-22
 
+**Authority reconciled:** 2026-10-11. The [current policy authority](../policy/current-policy-authority.md)
+supersedes earlier prospective appeal and quarterly-validity instructions.
+Historical policy versions retain their original rules. This reconciliation
+does not certify deployment or activate policy.
+
 ## Decision
 
 Lythaus uses Cloudflare Workers as its only backend runtime and PlanetScale
@@ -31,18 +36,22 @@ a launch gate.
 - Subscription entitlements are Free, Premium, and Black. They provide one,
   two, and three custom feeds respectively; only Black receives News Board.
   Editorial is earned, merit-based, revocable, and never a subscription tier.
-- Reputation is the versioned private Level 0-5 policy with accountability,
+- Historical `reputation-v2.0.0` is the versioned private Level 0-5 policy with accountability,
   contribution, conduct, sourcing, authenticity, and review-reliability
   pillars. Promotion requires time, distributed activity, qualifying human
   contribution, pillar gates, good standing, and anti-gaming eligibility.
   Popularity, raw volume, reactions, follows, and payment cannot buy trust.
-- Appeals use five independently assigned trained reviewers. A known related
-  account group may occupy at most one seat. Votes are immutable after submit;
-  recusals replace the reviewer; all five valid reviews and a weighted majority
-  of at least 60% are required. At most one trained Level 5 reviewer may have
-  weight two. A trained Editorial or journalist adjudicator must confirm the
-  result, with two adjudicators for high-risk cases. There is no public vote,
-  timed auto-resolution, staff override, or moderator override.
+  Prospective monthly assessments have a separate policy and activation gate;
+  preserve the signed historical catalogue. All prospective quarterly awards
+  expire at calendar-quarter end, for remaining months only, with no earlier
+  retroactive credit. Do not infer a ceiling increase from suggestion points.
+- New standard appeals use timed, private community review with one equal vote
+  per eligible member. There is no fixed trained panel, Level 5 weight or routine
+  Editorial confirmation. Duration, quorum and other operating defaults need
+  separate approval. Restricted safety and unresolved cases require accountable
+  handling without fabricated consensus, staff override or safety bypass.
+  Historical `appeals-v1.0.0` cases keep their weighted trained-panel and
+  adjudication rules; do not relabel them or mix their ballots into new cases.
 - Posts, comments, replies, reactions, follows, blocks, mutes, bookmarks,
   custom feeds, flags, notifications, and privacy requests enforce ownership,
   block/mute visibility, cursor, idempotency, rate, and tier boundaries in the
@@ -75,11 +84,18 @@ private names into logs, activity metadata, or outbox payloads.
 ## Evidence boundary and launch gates
 
 This ADR governs repository architecture; it does not claim deployed readiness.
+On 11 October the owner retained email/password for launch and withheld public
+posting until the complete publishing pipeline is validated. Owner-test
+deployment and production smoke do not certify production authentication,
+detection or publishing. The supplied release-108 report and uncertified-manifest
+audit are bounded evidence; this lane has not independently verified them.
 Production launch remains NO-GO until the full migration chain is validated on
 PostgreSQL 17 and explicitly approved for `main`; exact-SHA CI is green; Worker
 deployments, bindings, Access, Turnstile, and required secrets are verified;
-private DSR export/delete/legal-hold drills pass; reviewer and adjudicator
-training and conflict operations are approved; strict feed p95 and cache
+private DSR export/delete/legal-hold drills pass; version-specific appeal
+operations, conflicts and restricted/unresolved accountability are approved;
+historical reviewer/adjudicator training remains required for old-policy cases;
+strict feed p95 and cache
 isolation are measured on release-like infrastructure; incident and rollback
 evidence is retained; and any disabled queue enablement receives explicit
 no-cost approval.
@@ -97,5 +113,8 @@ records sanitized provider and branch evidence. A missing provider capability is
 ## Supersession
 
 Active implementation, policy, runbook, OpenAPI, generated-client, and UI
-documentation must conform to this ADR. Historical records may describe retired
+documentation must conform to this ADR and later explicit owner decisions
+recorded in the current policy authority. Signed historical policies and cases
+retain their versions; configuration, migration and activation require separate
+approval. Historical records may describe retired
 architectures only when clearly stored or labelled as history.
