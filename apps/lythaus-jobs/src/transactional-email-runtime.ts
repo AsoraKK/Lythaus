@@ -134,12 +134,16 @@ export async function sendTransactionalEmail(env: TransactionalEmailRelayEnv, me
   try {
     response = await fetch(env.EMAIL_PROVIDER_URL, {
       method: 'POST',
+      redirect: 'manual',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${env.EMAIL_PROVIDER_TOKEN}` },
       body: JSON.stringify({ from: env.EMAIL_FROM, to: message.to, subject: message.subject, html: message.html, text: message.text }),
       signal: AbortSignal.timeout(20_000),
     });
   } catch {
     throw new EmailProviderFailure(undefined, 'E_DELIVERY_ACCEPTANCE_UNKNOWN');
+  }
+  if (response.status >= 300 && response.status < 400) {
+    throw new EmailProviderFailure(response.status, 'E_DELIVERY_ACCEPTANCE_UNKNOWN');
   }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new EmailProviderFailure(response.status, errorResponseCode(payload));
