@@ -1,6 +1,6 @@
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { classifyEmailProviderFailure, lifecycleStateForEmailEvent, nextTransactionalEmailState, renderTransactionalEmail, type TransactionalEmailMessage, type TransactionalEmailPurpose, type TransactionalEmailState } from '@lythaus/contracts';
-import { lockAuthDelivery, query, transaction, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
+import { checkTransactionHealth, lockAuthDelivery, query, transaction, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
 import { constantTimeEqual, decryptField } from '@lythaus/security';
 import { logEvent } from '@lythaus/observability';
 import { TRANSACTIONAL_EMAIL_DISPATCH_TYPE, verifyTransactionalEmailDispatchMessage } from '../../../packages/security/src/transactional-email-dispatch.ts';
@@ -225,9 +225,16 @@ export async function lockDeliverableEmail(client: DatabaseClient, id: string, u
 async function deliverClaimedEmail(env: TransactionalEmailRelayEnv, row: ClaimedEmail, database: EmailDatabase): Promise<void> {
   await database.transaction(env.DB_JOBS_FRESH, async client => {
   if (!await lockDeliverableEmail(client, row.id, row.user_id)) return;
+  let message: TransactionalEmailMessage;
+  try {
+    message = await messageForRow(env, row);
+  } catch (error) {
+    await markEmailFailure(client, row, error);
+    return;
+  }
+  await checkTransactionHealth(client);
   let delivery: { provider: string; messageId: string; acceptedAt: string };
   try {
-    const message = await messageForRow(env, row);
     delivery = await sendTransactionalEmail(env, message);
   } catch (error) {
     await markEmailFailure(client, row, error);
