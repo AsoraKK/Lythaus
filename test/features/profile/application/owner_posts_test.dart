@@ -113,6 +113,22 @@ ProviderContainer _container(_StubOwnerPostsService service) =>
     );
 
 void main() {
+  test('pagination rejects a repeated cursor without duplicating posts', () {
+    final timeline = OwnerPostsTimeline(
+      items: [OwnerPost.fromJson(_postJson('first', 'owner-a'))],
+      nextCursor: 'same-cursor',
+    );
+    expect(
+      () => timeline.append(
+        OwnerPostsPage(
+          items: [OwnerPost.fromJson(_postJson('second', 'owner-a'))],
+          nextCursor: 'same-cursor',
+        ),
+      ),
+      throwsFormatException,
+    );
+    expect(timeline.items.single.id, 'first');
+  });
   for (final failOlderInitial in [false, true]) {
     test(
       'refresh fences a slower initial response (error=$failOlderInitial)',

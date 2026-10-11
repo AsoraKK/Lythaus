@@ -16,6 +16,9 @@ import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/application/owner_posts.dart';
+import 'package:lythaus/features/profile/application/owner_comments.dart';
+import 'package:lythaus/features/profile/domain/owner_comment.dart';
+import 'package:lythaus/features/profile/presentation/owner_comments_section.dart';
 import 'package:lythaus/features/rewards/application/reward_providers.dart';
 import 'package:lythaus/features/profile/application/follow_providers.dart';
 import 'package:lythaus/features/profile/application/follow_service.dart';
@@ -139,6 +142,16 @@ class ProfileScreen extends ConsumerWidget {
           sessionRevision: ref.read(authSessionRevisionProvider),
         );
         ref.read(ownerPostsTimelineProvider(key).notifier).refresh();
+        ref
+            .read(
+              ownerCommentsTimelineProvider(
+                OwnerCommentsKey(
+                  userId: profile.id,
+                  sessionRevision: key.sessionRevision,
+                ),
+              ).notifier,
+            )
+            .refresh();
       }
     }
 
@@ -351,12 +364,15 @@ class ProfileScreen extends ConsumerWidget {
           comments: ListView(
             key: PageStorageKey('profile-comments-${profile.id}'),
             padding: const EdgeInsets.all(Spacing.lg),
-            children: const [
-              LythEmptyState(
-                icon: Icons.chat_bubble_outline,
-                title: 'Profile comment lists are unavailable',
-                subtitle: 'Comments remain available on posts you can view.',
-              ),
+            children: [
+              if (isOwner)
+                OwnerCommentsSection(userId: profile.id)
+              else
+                const LythEmptyState(
+                  icon: Icons.chat_bubble_outline,
+                  title: 'Profile comment lists are unavailable',
+                  subtitle: 'Comments remain available on posts you can view.',
+                ),
             ],
           ),
         ),
@@ -455,8 +471,10 @@ class _OwnerPostsSection extends ConsumerWidget {
           error: (error, stackTrace) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Unable to load your posts. Your profile is still available.',
+              Text(
+                ownerContentIsOffline(error)
+                    ? 'You appear to be offline. Connect to load your posts.'
+                    : 'Unable to load your posts. Your profile is still available.',
               ),
               TextButton.icon(
                 onPressed: () => ref
@@ -498,7 +516,9 @@ class _OwnerPostsSection extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: Spacing.xs),
             child: Text(
-              'More posts could not be loaded. Try again.',
+              ownerContentIsOffline(timeline.loadMoreError!)
+                  ? 'You appear to be offline. Connect to load more posts.'
+                  : 'More posts could not be loaded. Try again.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.error,
               ),

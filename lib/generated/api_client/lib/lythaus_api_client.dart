@@ -214,6 +214,7 @@ export 'package:lythaus_api_client/src/model/overview_provider.dart';
 export 'package:lythaus_api_client/src/model/overview_provider_accounting_period.dart';
 export 'package:lythaus_api_client/src/model/overview_window.dart';
 export 'package:lythaus_api_client/src/model/owner_comment.dart';
+export 'package:lythaus_api_client/src/model/owner_comments_page.dart';
 export 'package:lythaus_api_client/src/model/owner_decision_request.dart';
 export 'package:lythaus_api_client/src/model/owner_detail.dart';
 export 'package:lythaus_api_client/src/model/owner_evidence_request.dart';
