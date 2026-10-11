@@ -142,7 +142,8 @@ node --experimental-strip-types --test --test-concurrency=1 --test-timeout=60000
 The shared workflows are untouched; this new explicit local acceptance command
 is not yet included in CI. CI monitoring of initial head
 `9f39d19a76189e39b074c573eaa9a90e50769d3c` was stopped after HTTP 401 on
-`GET /repos/AsoraKK/Lythaus/actions/runs/38105640983/jobs?per_page=100`.
+`GET /repos/{owner}/Lythaus/actions/runs/38105640983/jobs?per_page=100`
+for the [canonical repository](https://github.com/AsoraKK/Lythaus/).
 That endpoint and alternate routes to its results are not retried. Ten jobs had
 verified success; final Flutter and dependency-audit completion remains unknown.
 Initial-head CI results do not verify the subsequent repair head. Exact-head CI
@@ -176,6 +177,14 @@ canonical actor/type/aggregate, and a final restored-event attempt succeeds.
 Thus each individual guard must reject its own mutation before provider creation.
 These repairs remain within the four preparation paths; no persistence or wiring
 is added.
+
+The repair-head repository hygiene job exposed a retired-name match in the
+literal GitHub API owner segment recorded above. Its repository identity now uses
+the permitted canonical link, while the denied run, operation and query remain
+explicit. The guard and allowlist are unchanged. All five workflow hygiene
+commands pass locally: repository entropy, active naming, documentation secrets,
+repository secret scan and retired-provider references. This documentation-only
+repair does not change the adapter or acceptance behavior.
 
 ## Remaining decisions, stopped scope and rollback
 
