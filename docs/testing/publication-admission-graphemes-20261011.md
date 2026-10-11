@@ -1,6 +1,10 @@
 # Publication admission and grapheme portability
 
 Base: `49cca9caa34b34c7ded7f4842792f698be9bd41f`.
+Approved integrated review base: `ca6ff5049b89368573a1d2de16199346d3e67071`
+(independently reviewed and merged PR988). The normal merge retained its exact
+Worker configuration/types and all four new deployment-isolation freeze tests.
+The publication lane still changes only 12 paths relative to that review base.
 Branch: `codex/publication-admission-graphemes`.
 This is synthetic local code/test evidence, not production authentication,
 detector accuracy, deployment, or publishing activation certification.
@@ -66,7 +70,7 @@ or retroactive policy/points behavior is introduced.
 | Atomic rejection and interrupted work | Existing transactions and idempotency quarantine | Exact snapshots of content/declaration/case/decision/enforcement/outbox/audit/activity/reputation tables before/after rejection; injected failure after a real content UPDATE or decision INSERT rolls back; ambiguous edit receipt rejects replay, fresh-key retry succeeds |
 | Required CI execution with isolated fresh PG17 | `scripts/ci/run-publication-pg17.mjs`, package script, existing `ci.yml` native runtime job | Sequential moderation/admission/safety suites each receive their own newly created `lythaus_auth_test_post_*` database and complete canonical baseline; loopback/control-name/URL-option guards; real SIGINT and SIGTERM cleanup preserves another owner's sentinel |
 | Existing Jobs and safety evidence | Unmodified `post-moderation.workerd.mjs` and `post-safety-evidence.workerd.mjs` | 5 ordinary pipeline tests and 93 return-only safety tests, both now invoked by the existing native CI gate |
-| Preserve homepage freeze while admitting allocated backend tests | `apps/marketing-site/tests/homepage-protection.test.mjs` | Exact declaration source/test blob pins and exact publication command; altered bytes, unrelated path/command/script/dependency negative controls; marketing suite 69/69 |
+| Preserve homepage freeze while admitting allocated backend tests | `apps/marketing-site/tests/homepage-protection.test.mjs` | Exact declaration source/test blob pins and exact publication command; altered bytes, unrelated path/command/script/dependency negative controls; marketing suite 73/73 on the combined tree (69/69 before PR988) |
 
 The new admission fixture replaces only database transport with disposable
 PostgreSQL connections under the real `lythaus_runtime`, `lythaus_admin`, and
@@ -100,7 +104,7 @@ Final runs on pinned Node 22.23.3 and disposable loopback PostgreSQL 17:
 | Shared content unit tests | 8/8; zero skips |
 | Critical production coverage gate | Passed all 44 named modules; 26 marked runtime seams (15 explicitly required seam IDs); 80% per-module line/branch minimums retained; content policy 100% lines/branches/functions |
 | Native typecheck | Passed |
-| Native architecture/security suite | 315/315; zero skips |
+| Native architecture/security suite | 334/334 after approved PR988 integration (315/315 before); zero skips |
 | Product integrity runtime invariants | 21/21 |
 | Product contract suite | 10/10 |
 | OpenAPI lint | Passed; 2 existing warnings |
@@ -111,8 +115,9 @@ Final runs on pinned Node 22.23.3 and disposable loopback PostgreSQL 17:
 | Repository hygiene, branding, docs/config secret scan | Passed |
 | Gitleaks repository scan | Passed, 1832 baseline commits scanned; candidate patch scan recorded separately at handoff |
 | Root production dependency audit | Passed gate: 0 high, 0 critical; 20 moderate findings remain |
-| Marketing / control-panel tests and builds | 69/69 marketing, 167/167 control panel; both builds pass; marketing output validates 19 routes |
+| Marketing / control-panel tests and builds | 73/73 marketing after approved PR988 integration (69/69 before), 167/167 control panel; both builds pass; marketing output validates 19 routes |
 | Local frontend browser checks | Chromium auth 23/23 and homepage 32/32; WebKit auth 23/23 and homepage 32/32; protected email confirmation 2/2; web-release cache fixture passed. Firefox homepage timed out in its first functional subtest and is not counted as passed |
+| Reviewed configuration regressions | 19/19 installed-parser tests, including successful release-pinned Wrangler 4.123.0 child suite; zero skips, both rerun on the combined tree |
 | Diff whitespace check | Passed |
 
 Early fixture iterations failed because of the post response field name,
@@ -136,6 +141,11 @@ but page creation failed after repeated `Sandbox: writing /proc/self/uid_map:
 EROFS` messages and child-process crashes. The sandbox was not disabled.
 Firefox requires separate verification in normal CI; it is not hidden as a
 skip/pass.
+
+The preceding source head `c501f4cbb0744b91ac56f74b7945f35589dbdd51` then
+passed remote Web frontends, including all browser checks, and Native Workers
+and PlanetScale. This is separate from final combined-head acceptance, which
+is recorded at handoff. The local Firefox failure remains reported.
 
 The 80% gate measures its named modules, not complete public/admin/Jobs index
 handlers. Handler evidence is the functional matrix above; this work does not
@@ -163,7 +173,8 @@ npm run test:critical-coverage
   no additional CI job, workflow, dependency, provider resource, or duplicate
   invocation of the two existing publication suites is introduced. Existing
   checks, permissions, security conditions, and action pins remain intact.
-- No product UI, migration, grant, Wrangler configuration, generated Worker type,
+- Relative to the approved PR988 review base, no product UI, migration, grant,
+  Wrangler configuration, generated Worker type,
   provider, production content, feature flag, or activation change is made.
   Flutter analyze/tests remain unrun because no Flutter code changes. Frontend
   CI browser checks are separately recorded at handoff; they use local fixtures
@@ -176,7 +187,9 @@ npm run test:critical-coverage
   a fourth isolated runner entry and its unit suite to native CI, then rerun
   all four suites at the combined reviewed SHA. Do not import its unreviewed
   runtime or reference its absent test file from this checkout's CI.
-- Rollback is a reviewed revert of this branch's two code/CI commits. It requires no DDL,
+- Rollback is a reviewed revert of the two publication code/CI commits while
+  retaining reviewed PR988; evidence-only documentation may also be reverted.
+  It requires no DDL,
   credential rotation, resource rename, or data migration. Keep publishing
   withheld through review, integration validation, and parent-controlled release.
 
