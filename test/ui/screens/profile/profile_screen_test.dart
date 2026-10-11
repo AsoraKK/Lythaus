@@ -13,6 +13,8 @@ import 'package:lythaus/design_system/index.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/profile/application/owner_posts.dart';
+import 'package:lythaus/features/profile/application/owner_comments.dart';
+import 'package:lythaus/features/profile/domain/owner_comment.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/domain/owner_post.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
@@ -99,6 +101,17 @@ class _FakeOwnerPostsService extends OwnerPostsService {
   }
 }
 
+class _FakeOwnerCommentsService extends OwnerCommentsService {
+  _FakeOwnerCommentsService() : super(Dio());
+
+  @override
+  Future<OwnerCommentsPage> getPage({
+    required String accessToken,
+    String? cursor,
+    CancelToken? cancelToken,
+  }) async => const OwnerCommentsPage(items: [], nextCursor: null);
+}
+
 class _PendingOwnerPostsService extends _FakeOwnerPostsService {
   final pending = <Completer<OwnerPostsPage>>[];
   final cancelTokens = <CancelToken?>[];
@@ -147,7 +160,12 @@ OwnerPost _post({
 
 Widget _buildApp({List<Override> overrides = const []}) {
   return ProviderScope(
-    overrides: overrides,
+    overrides: [
+      ownerCommentsServiceProvider.overrideWithValue(
+        _FakeOwnerCommentsService(),
+      ),
+      ...overrides,
+    ],
     child: const MaterialApp(home: ProfileScreen()),
   );
 }
@@ -168,6 +186,9 @@ Future<void> _pumpProfileAtViewport(
     ProviderScope(
       overrides: [
         currentUserProvider.overrideWithValue(_fakeAuthUser),
+        ownerCommentsServiceProvider.overrideWithValue(
+          _FakeOwnerCommentsService(),
+        ),
         ownerPostsServiceProvider.overrideWithValue(_FakeOwnerPostsService()),
         ownerProfileProvider.overrideWith(
           (ref) async => _ownerProfile(_fakeUser),

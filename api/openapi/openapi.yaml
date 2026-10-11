@@ -937,6 +937,8 @@ paths:
     $ref: './owner-content.yaml#/paths/~1posts~1{postId}~1owner-view'
   /users/me/posts:
     $ref: './owner-content.yaml#/paths/~1users~1me~1posts'
+  /users/me/comments:
+    $ref: './owner-content.yaml#/paths/~1users~1me~1comments'
   /comments/{commentId}/owner-view:
     $ref: './owner-content.yaml#/paths/~1comments~1{commentId}~1owner-view'
   /posts/{id}:
