@@ -302,6 +302,14 @@ function replaceExactText(source, before, after, label) {
   return source.replace(before, after);
 }
 
+export function assertOnlyHostedDevelopmentRemoval(source, frozen) {
+  assert.deepEqual(JSON.parse(source).env, {}, 'Only the explicit empty hosted environment guard is permitted');
+  const marker = frozen.indexOf('  "env": {');
+  assert.ok(marker > 0, 'Historical hosted development block must be present');
+  assert.equal(source.trim(), `${frozen.slice(0, marker)}  "env": {}\n}`,
+    'Only hosted development removal is permitted; all production configuration remains exact');
+}
+
 export function assertHomepageFrozen() {
   assert.equal(git('rev-parse', `${baselineSha}^{commit}`), baselineSha, 'Frozen baseline must be available; do not substitute HEAD');
   assert.equal(git('rev-parse', `${upstreamBaselineSha}^{commit}`), upstreamBaselineSha, 'Reviewed upstream revision must be available');
@@ -524,7 +532,9 @@ test('auth repair exceptions cannot alter homepage assets or waitlist routing', 
       .replaceAll('migration 0020', 'migration 0017')
       .replace('"main": "src/worker.ts"', '"main": "src/index.ts"')
       .replaceAll('approvedReleaseExpectation', 'approvedPost0017Expectation');
-    assert.equal(updated.trim(), git('show', `${upstreamBaselineSha}:${file}`));
+    const frozen = git('show', `${upstreamBaselineSha}:${file}`);
+    if (file === 'apps/lythaus-public-api/wrangler.jsonc') assertOnlyHostedDevelopmentRemoval(updated, frozen);
+    else assert.equal(updated.trim(), frozen);
   }
   const bindingFile = 'packages/cloudflare-env/src/index.ts';
   const bindings = readFileSync(path.join(root, bindingFile), 'utf8').replace(/\r\n/g, '\n');
@@ -591,6 +601,23 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
     }
   }
 });
+
+for (const [label, mutate] of [
+  ['disabled Turnstile', source => source.replace('"TURNSTILE_REQUIRED": "true"', '"TURNSTILE_REQUIRED": "false"')],
+  ['changed production bucket', source => source.replaceAll('lythaus-media-approved-dev', 'lythaus-fixture-unapproved')],
+  ['restored hosted alias', source => source.replace('"env": {}', '"env": {"development": {"name": "lythaus-public-api-development"}}')],
+  ['removed env guard', source => source.replace(',\n  "env": {}', '')],
+]) {
+  test(`deployment isolation freeze rejects ${label}`, () => {
+    const file = 'apps/lythaus-public-api/wrangler.jsonc';
+    const source = readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
+    const frozen = git('show', `49cca9caa34b34c7ded7f4842792f698be9bd41f:${file}`);
+    assertOnlyHostedDevelopmentRemoval(source, frozen);
+    const changed = mutate(source);
+    assert.notEqual(changed, source, 'Mutation must alter the actual configuration');
+    assert.throws(() => assertOnlyHostedDevelopmentRemoval(changed, frozen));
+  });
+}
 
 test('homepage protection permits only the exact native moderation and isolated publication registrations', () => {
   const before = {
