@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { collectWorkflowActionPinFailures, findUnpinnedActions } from '../validate-workflow-action-pins.mjs';
+import { parseDocument } from 'yaml';
 
 test('workflow action pin validator rejects mutable tags', () => {
   assert.deepEqual(
@@ -87,4 +88,28 @@ test('YAML aliases and reusable workflow references retain pin validation', () =
     '<workflow>: owner/action@v4 is not pinned to a 40-character commit SHA',
   ]);
   assert.deepEqual(findUnpinnedActions('reference: &action "owner/action@0123456789012345678901234567890123456789"\njobs:\n  build:\n    uses: *action\n'), []);
+});
+
+test('ordered-map conversion cannot hide mutable action references', () => {
+  const source = 'name: Synthetic\ndescription: Test\nruns:\n  using: composite\n  steps: !!omap\n    - uses: owner/action@v4\n';
+  const parsed = parseDocument(source);
+  assert.equal(parsed.errors.length, 0);
+  assert.ok(parsed.toJS().runs.steps instanceof Map, 'The locked parser converts this collection before ordinary object inspection');
+  assert.ok(findUnpinnedActions(source).length > 0, 'Non-core collections must fail closed before conversion');
+});
+
+test('non-core tags are rejected without assuming GitHub runner acceptance', () => {
+  for (const source of [
+    'runs:\n  steps: !!pairs\n    - uses: owner/action@v4\n',
+    'runs:\n  steps: !synthetic\n    - uses: owner/action@v4\n',
+    'metadata: !!set\n  ? uses\n',
+    'runs:\n  steps:\n    - !!binary uses: owner/action@v4\n',
+  ]) {
+    assert.ok(findUnpinnedActions(source).some(failure => /unsupported YAML tag/i.test(failure)), source);
+  }
+});
+
+test('normal YAML core tags preserve pinned, local and aliased references', () => {
+  const source = 'reference: &action !!str "owner/action@0123456789012345678901234567890123456789"\nruns: !!map\n  using: composite\n  steps: !!seq\n    - !!map\n      uses: *action\n    - uses: !!str ./local\n';
+  assert.deepEqual(findUnpinnedActions(source), []);
 });

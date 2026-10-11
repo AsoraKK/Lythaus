@@ -57,6 +57,8 @@ failed-download retry, version changes, invalid input, main-only cache writes,
 and immutable pins in workflows and recursively discovered composite actions.
 The existing `yaml` dependency parses quoted/commented references and aliases,
 ignores shell-script text, and rejects malformed YAML or non-string references.
+Only YAML core tags are allowed; the AST is checked before JavaScript conversion
+so ordered maps and other non-core tags cannot hide action references or keys.
 
 To stop SDK cache use, set callers' `cache` input to `false`. Reverting this PR
 restores the previous setup implementation. Existing cache entries can expire

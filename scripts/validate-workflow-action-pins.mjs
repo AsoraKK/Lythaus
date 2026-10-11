@@ -1,7 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseDocument } from 'yaml';
+import { parseDocument, visit } from 'yaml';
+
+const CORE_YAML_TAGS = new Set(['map', 'seq', 'str', 'null', 'bool', 'int', 'float']
+  .map(tag => `tag:yaml.org,2002:${tag}`));
 
 export function findUnpinnedActions(source, file = '<workflow>') {
   const failures = [];
@@ -9,6 +12,11 @@ export function findUnpinnedActions(source, file = '<workflow>') {
   try {
     const parsed = parseDocument(source, { uniqueKeys: true });
     if (parsed.errors.length > 0) throw parsed.errors[0];
+    visit(parsed, (_key, node) => {
+      if (node?.tag && !CORE_YAML_TAGS.has(node.tag)) {
+        throw new Error(`Unsupported YAML tag: ${node.tag}`);
+      }
+    });
     document = parsed.toJS({ maxAliasCount: 100 });
   } catch (error) {
     return [`${file}: invalid YAML: ${error.message.split('\n')[0]}`];
