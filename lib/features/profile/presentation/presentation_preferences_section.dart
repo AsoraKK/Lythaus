@@ -40,11 +40,28 @@ class _PresentationPreferencesSectionState
     final account = ref.watch(currentUserProvider) != null;
     ref.listen(settingsProvider, (previous, next) {
       if (previous?.preferencesOwnerId != next.preferencesOwnerId ||
-          (previous?.preferencesLoading == true && !next.preferencesLoading) ||
           (previous?.preferencesSaving == true &&
               !next.preferencesSaving &&
               !next.preferencesRetryPending)) {
         setState(() => _draft = null);
+      } else if (previous != null &&
+          previous.preferencesLoading &&
+          !next.preferencesLoading &&
+          next.preferencesAvailable &&
+          _draft != null) {
+        final draft = _draft!;
+        setState(
+          () => _draft = PresentationPreferences(
+            leftHandedMode: draft.leftHandedMode != previous.leftHandedMode
+                ? draft.leftHandedMode
+                : next.leftHandedMode,
+            horizontalSwipeEnabled:
+                draft.horizontalSwipeEnabled != previous.horizontalSwipeEnabled
+                ? draft.horizontalSwipeEnabled
+                : next.horizontalSwipeEnabled,
+            version: draft.version,
+          ),
+        );
       }
     });
     final choices = _draft ?? controller.pendingPreferences;
@@ -117,6 +134,16 @@ class _PresentationPreferencesSectionState
               liveRegion: true,
               child: Text(settings.preferencesMessage!),
             ),
+          if (_draft != null &&
+              _draft!.version != settings.preferencesVersion &&
+              settings.preferencesAvailable &&
+              !busy)
+            Semantics(
+              liveRegion: true,
+              child: const Text(
+                'Saved choices changed on another device. Your edits are preserved; review the choices before saving.',
+              ),
+            ),
           Wrap(
             spacing: Spacing.sm,
             runSpacing: Spacing.sm,
@@ -145,7 +172,12 @@ class _PresentationPreferencesSectionState
                   child: const Text('Discard preference changes'),
                 ),
               TextButton(
-                onPressed: busy ? null : () => controller.reload(),
+                onPressed: busy
+                    ? null
+                    : () {
+                        setState(() => _draft = null);
+                        controller.reload();
+                      },
                 child: const Text('Reload saved preferences'),
               ),
               if (!account && !settings.preferencesAvailable && !busy)
