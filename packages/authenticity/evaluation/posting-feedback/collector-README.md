@@ -60,11 +60,30 @@ manual. Authentication, rate limit, outage, timeout, interruption, malformed/sch
 errors, contradictory flags and model drift stop collection. Missing delivery is
 unknown and cannot be replayed automatically. No fallback provider/model exists.
 
-The actual entry requires a durable ledger. `local-ledger.mjs` supports an existing
-private local execution directory: exclusive probe and attempt claims precede
-requests; file and parent-directory sync precede progress; receipts use mode0600.
-It rejects concurrent/restarted probes and never recovers, deletes or overwrites
-claims. This requires a persistent filesystem with exclusive-create/fsync semantics.
+The actual entry requires a durable ledger. `local-ledger.mjs` supports Linux with
+Node22+ and accessible `/proc/self/fd`, on an independently approved persistent
+POSIX filesystem with exclusive-create and file/directory-fsync semantics. The
+existing root and any preexisting selection directory must be owned by the
+process's effective UID with exact mode0700, without special permission bits.
+The ledger refuses unsafe paths rather than changing their permissions.
+
+Every path component is opened without following symlinks. Ancestors must be
+owned by the effective UID or the filesystem-root owner and must not be group or
+world writable; a sticky directory owned by the filesystem-root owner, such as
+the system temporary directory used only by synthetic tests, is permitted.
+Descriptor-anchored child opens prevent a pathname swap from redirecting writes.
+Ownership, permissions and captured root/selection device/inode identity are
+rechecked before every attempt claim and receipt commit. New files must be
+regular, singly linked, effective-UID-owned mode0600 files; existing files or
+links are never opened or overwritten. Exclusive probe and attempt claims and
+file/parent-directory sync precede requests/progress. Handles are closed on errors.
+
+It rejects concurrent/restarted probes and never recovers or deletes claims.
+Filesystem persistence, truthful fsync semantics, mount policy and host access
+remain external hosting prerequisites, not properties certified by this preflight.
+Other processes with the same UID, the trusted ancestor owners or privileged host
+access remain trusted; permissions cannot defend against them deleting/rewriting
+the ledger. Unsupported platforms and absent proc descriptor access fail closed.
 It is **not** durable storage on an ephemeral Worker filesystem. An approved
 Cloudflare execution would need its owning lane's separately reviewed existing
 durable ledger integration; none is added here and no production write is allowed.

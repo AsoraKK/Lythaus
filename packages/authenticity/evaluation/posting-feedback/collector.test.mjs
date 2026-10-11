@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test, mock } from 'node:test';
-import { mkdtemp, readFile, readdir, stat } from 'node:fs/promises';
+import { chmod, link, mkdir, mkdtemp, open, readFile, readdir, rename, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -164,4 +164,118 @@ test('response provenance hashes exact bytes including BOM; invalid UTF8 retains
   const failed=await simulateTextProbe(await make({fetchImpl:async()=>new Response(invalid)}));
   assert.equal(failed.receipts[0].responseHash,createHash('sha256').update(invalid).digest('hex'));
   assert.equal(failed.receipts[0].schemaValid,false);assert.equal(failed.receipts[0].safetyBand,'ABSTAIN');
+});
+
+test('unsafe preexisting root and selection modes fail live preflight without requests or permission repair',async()=>{
+  const ambient=mock.method(globalThis,'fetch',()=>{throw Error('OUTBOUND_DENIED');});
+  try{
+    for(const target of ['root','selection'])for(const mode of [0o777,0o755,0o750,0o710,0o701,0o2700]){
+      const root=await mkdtemp(join(tmpdir(),'lythaus-collector-private-'));
+      const path=target==='root'?root:join(root,PROBE_SELECTION_HASH);
+      if(target==='selection')await mkdir(path,{mode:0o700});
+      await chmod(path,mode);
+      await assert.rejects(collectApprovedTextProbe(await make({ledger:createLocalReceiptLedger(root)})),/private_storage_required/);
+      assert.equal((await stat(path)).mode&0o7777,mode);assert.deepEqual(await readdir(path),[]);
+    }
+    assert.equal(ambient.mock.callCount(),0);
+  }finally{ambient.mock.restore();}
+});
+
+test('symlink roots, ancestors, selection paths and non-directories cannot redirect ledger writes',async()=>{
+  let calls=0;
+  for(const kind of ['root-link','ancestor-link','selection-link','dangling-selection','root-file','selection-file','missing-root']){
+    const base=await mkdtemp(join(tmpdir(),'lythaus-collector-links-'));
+    const target=await mkdtemp(join(tmpdir(),'lythaus-collector-target-'));
+    await writeFile(join(target,'sentinel'),'UNCHANGED',{mode:0o600});
+    let root=join(base,'root');
+    if(kind==='root-link')await symlink(target,root);
+    else if(kind==='ancestor-link'){
+      await mkdir(join(target,'private'),{mode:0o700});await symlink(target,root);root=join(root,'private');
+    }else if(kind==='root-file')await writeFile(root,'UNCHANGED',{mode:0o600});
+    else if(kind!=='missing-root'){
+      await mkdir(root,{mode:0o700});const selection=join(root,PROBE_SELECTION_HASH);
+      if(kind==='selection-file')await writeFile(selection,'UNCHANGED',{mode:0o600});
+      else await symlink(kind==='dangling-selection'?join(base,'missing'):target,selection);
+    }
+    const before=await readdir(target);
+    await assert.rejects(simulateTextProbe(await make({ledger:createLocalReceiptLedger(root),
+      fetchImpl:async()=>{calls++;throw Error('UNEXPECTED_TRANSPORT');}})),/unsafe_storage_path/);
+    assert.deepEqual(await readdir(target),before);assert.equal(await readFile(join(target,'sentinel'),'utf8'),'UNCHANGED');
+  }
+  assert.equal(calls,0);
+});
+
+test('group or world writable ancestors fail before creating a ledger',async()=>{
+  let calls=0;
+  for(const mode of [0o777,0o775]){
+    const ancestor=await mkdtemp(join(tmpdir(),'lythaus-collector-ancestor-'));
+    const root=join(ancestor,'private');await mkdir(root,{mode:0o700});await chmod(ancestor,mode);
+    await assert.rejects(simulateTextProbe(await make({ledger:createLocalReceiptLedger(root),
+      fetchImpl:async()=>{calls++;throw Error();}})),/unsafe_storage_ancestor/);
+    assert.deepEqual(await readdir(root),[]);
+  }
+  assert.equal(calls,0);
+});
+
+test('foreign ownership metadata for root, selection or ancestor is rejected before transport',async()=>{
+  let calls=0;
+  for(const kind of ['root','selection','ancestor']){
+    const ancestor=await mkdtemp(join(tmpdir(),'lythaus-collector-owner-'));
+    const root=join(ancestor,'private');await mkdir(root,{mode:0o700});
+    const selection=join(root,PROBE_SELECTION_HASH);await mkdir(selection,{mode:0o700});
+    const path=kind==='root'?root:kind==='selection'?selection:ancestor;
+    const identity=await stat(path);const handle=await open(path,'r');const prototype=Object.getPrototypeOf(handle);
+    await handle.close();const original=prototype.stat;
+    const systemUid=(await stat('/')).uid;const foreignUid=Math.max(systemUid,process.geteuid())+1;
+    const altered=mock.method(prototype,'stat',async function(...args){
+      const metadata=await original.apply(this,args);
+      return metadata.dev===identity.dev&&metadata.ino===identity.ino
+        ?Object.create(metadata,{uid:{value:foreignUid}}):metadata;
+    });
+    try{
+      await assert.rejects(simulateTextProbe(await make({ledger:createLocalReceiptLedger(root),
+        fetchImpl:async()=>{calls++;throw Error();}})),/private_storage_required|unsafe_storage_ancestor/);
+      assert.deepEqual(await readdir(selection),[]);
+    }finally{altered.mock.restore();}
+  }
+  assert.equal(calls,0);
+});
+
+test('storage mode changes, symlink swaps and inode replacements stop subsequent claims and receipt commits',async()=>{
+  for(const stage of ['claim','receipt'])for(const target of ['root','selection'])for(const change of ['mode','symlink','inode']){
+    const root=await mkdtemp(join(tmpdir(),'lythaus-collector-swap-'));
+    const redirect=await mkdtemp(join(tmpdir(),'lythaus-collector-redirect-'));let calls=0;
+    const ledger=createLocalReceiptLedger(root);
+    const mutate=async()=>{
+      const path=target==='root'?root:join(root,PROBE_SELECTION_HASH);
+      if(change==='mode')await chmod(path,0o755);
+      else{await rename(path,`${path}.original`);if(change==='symlink')await symlink(redirect,path);else await mkdir(path,{mode:0o700});}
+    };
+    if(stage==='claim'){
+      const claim=ledger.claimProbe.bind(ledger);ledger.claimProbe=async binding=>{const result=await claim(binding);await mutate();return result;};
+    }
+    await assert.rejects(simulateTextProbe(await make({ledger,fetchImpl:async()=>{
+      calls++;await mutate();return scriptedResponse({response:'ok'});
+    }})),/private_storage_required|unsafe_storage_path|storage_replaced/);
+    assert.equal(calls,stage==='claim'?0:1);assert.deepEqual(await readdir(redirect),[]);
+  }
+});
+
+test('private preexisting selection is accepted; symlink and hardlink claims or receipts are never overwritten',async()=>{
+  for(const kind of ['private','probe-symlink','attempt-hardlink','receipt-symlink']){
+    const root=await mkdtemp(join(tmpdir(),'lythaus-collector-existing-'));
+    const directory=join(root,PROBE_SELECTION_HASH);await mkdir(directory,{mode:0o700});
+    const sentinel=join(root,'sentinel');await writeFile(sentinel,'UNCHANGED',{mode:0o600});
+    if(kind==='probe-symlink')await symlink(sentinel,join(directory,'probe-started.json'));
+    if(kind==='attempt-hardlink')await link(sentinel,join(directory,`${fixtures[0].id}.started.json`));
+    if(kind==='receipt-symlink')await symlink(sentinel,join(directory,`${fixtures[0].id}.receipt.json`));
+    let calls=0;const run=simulateTextProbe(await make({ledger:createLocalReceiptLedger(root),fetchImpl:async()=>{
+      calls++;return scriptedResponse({response:'ok'});
+    }}));
+    if(kind==='probe-symlink')await assert.rejects(run,/probe_already_claimed/);
+    else if(kind==='receipt-symlink')await assert.rejects(run,/receipt_not_committed/);
+    else{const report=await run;assert.equal(report.attemptedRequests,kind==='private'?20:0);}
+    assert.equal(calls,kind==='private'?20:kind==='receipt-symlink'?1:0);
+    assert.equal(await readFile(sentinel,'utf8'),'UNCHANGED');
+  }
 });
