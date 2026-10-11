@@ -8,9 +8,10 @@ decisions are recorded in the [current policy authority](../policy/current-polic
 The 7 October calendar-quarter-end rule supersedes rolling validity for all
 prospective quarterly awards, remaining months only and no earlier retroactive
 credit. Earlier rolling-validity tests do not establish acceptance of that rule.
-The 13,500 limits in this matrix test historical v1 only; a later approved v2
-budget requires its own version-specific acceptance evidence. Missing later
-authority in this record does not reject that decision.
+The 13,500 limits in this matrix test historical v1 only. The owner-approved
+prospective v2 maximum is 13,650, preserving existing awards and adding optional
+150-point suggestion credit; recovered 7 October provenance is in the authority
+record. V2 still requires its own version-specific acceptance evidence.
 Operational defaults and runtime activation remain separate. The catalogue's
 embedded reference-validation counts are not execution evidence for this branch.
 
