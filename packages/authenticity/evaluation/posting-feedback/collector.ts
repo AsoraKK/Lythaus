@@ -84,11 +84,11 @@ interface SyntheticOptions extends CollectorOptions {
   fetchImpl: typeof fetch; now?: () => number; requestTimeoutMs?: number;
 }
 
-async function boundedBody(response: Response, signal: AbortSignal): Promise<string> {
+async function boundedBody(response: Response, signal: AbortSignal): Promise<Uint8Array> {
   const length = response.headers.get('content-length');
   if (length && Number(length) > PROBE_LIMITS.maxResponseBytes) throw new Error('collection_response_size_limit');
   const reader = response.body?.getReader();
-  if (!reader) return '';
+  if (!reader) return new Uint8Array();
   const cancel = () => { void reader.cancel().catch(() => {}); };
   signal.addEventListener('abort', cancel, { once: true });
   const chunks: Uint8Array[] = []; let size = 0;
@@ -105,7 +105,12 @@ async function boundedBody(response: Response, signal: AbortSignal): Promise<str
   finally { signal.removeEventListener('abort', cancel); }
   const bytes = new Uint8Array(size); let offset = 0;
   for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
-  return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  return bytes;
+}
+
+async function hashResponseBytes(bytes: Uint8Array): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new Uint8Array(bytes).buffer);
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 async function interruptible<T>(task: () => Promise<T>, signal: AbortSignal): Promise<T> {
@@ -146,7 +151,7 @@ async function collect(options: CollectorOptions, mode: 'ACTUAL_PROVIDER_OBSERVA
         completion = 'STOPPED_REPLAY_OR_UNCERTAIN_PRIOR_ATTEMPT'; break;
       }
       const captured = { responseHash: null as string | null, model: null as string | null,
-        httpStatus: null as number | null, failure: null as string | null,
+        httpStatus: null as number | null, failure: null as string | null, rawJsonValid: false,
         rawFeedback: { flagged: null as boolean | null, categoryFlags: {} as Record<string, boolean>,
           categoryScores: {} as Record<string, number>, appliedInputTypes: {} as Record<string, string[]> } };
       let calls = 0;
@@ -162,9 +167,10 @@ async function collect(options: CollectorOptions, mode: 'ACTUAL_PROVIDER_OBSERVA
             const response = await fetchImpl(input, { ...init, signal: requestSignal });
             captured.httpStatus = response.status;
             const body = await boundedBody(response, requestSignal);
-            captured.responseHash = await hash(body);
+            captured.responseHash = await hashResponseBytes(body);
             try {
-              const parsed = JSON.parse(body);
+              const parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body));
+              captured.rawJsonValid = true;
               if (typeof parsed?.model === 'string' && /^omni-moderation-[a-z0-9.-]{1,80}$/.test(parsed.model)) captured.model = parsed.model;
               const result = Array.isArray(parsed?.results) ? parsed.results[0] : null;
               if (typeof result?.flagged === 'boolean') captured.rawFeedback.flagged = result.flagged;
@@ -188,7 +194,7 @@ async function collect(options: CollectorOptions, mode: 'ACTUAL_PROVIDER_OBSERVA
       }) as typeof fetch;
       const analysis = await createOpenAIModerationProvider({ apiKey, fetchImpl: transport,
         timeoutMs, now, flaggedResult: 'REVIEW' }).analyseText({ caseId: fixture.id as UUIDv7, text: fixture.body });
-      const valid = strictSafetySchema(analysis); const evidence = analysis.providerEvidence;
+      const valid = captured.rawJsonValid && strictSafetySchema(analysis); const evidence = analysis.providerEvidence;
       const categories = Object.fromEntries(CATEGORIES.filter(category => typeof evidence?.categories[category] === 'boolean')
         .map(category => [category, evidence!.categories[category]]));
       const scores = Object.fromEntries(CATEGORIES.filter(category => Number.isFinite(evidence?.categoryScores[category]))

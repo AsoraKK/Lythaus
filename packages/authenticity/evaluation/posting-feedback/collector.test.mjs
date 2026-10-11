@@ -3,6 +3,7 @@ import { test, mock } from 'node:test';
 import { mkdtemp, readFile, readdir, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
 import { fixtures } from './fixtures.mjs';
 import { scriptedResponse } from './harness.ts';
 import { collectApprovedTextProbe, simulateTextProbe, assertTrustedCollectedReceipt, PROBE_SELECTION_HASH } from './collector.ts';
@@ -151,4 +152,16 @@ test('elapsed window or non-monotonic clock stops without a request',async()=>{
     let calls=0;const report=await simulateTextProbe(await make({now:()=>clock.shift()??600002,fetchImpl:async()=>{calls++;throw Error();}}));
     assert.equal(calls,0);assert.equal(report.completion,'STOPPED_INTERRUPTED_OR_WINDOW_EXPIRED');
   }
+});
+
+test('response provenance hashes exact bytes including BOM; invalid UTF8 retains its hash and abstains',async()=>{
+  const json=await scriptedResponse({response:'ok'}).text();
+  const bytes=Buffer.concat([Buffer.from([0xef,0xbb,0xbf]),Buffer.from(json)]);
+  const report=await simulateTextProbe(await make({fetchImpl:async()=>new Response(bytes)}));
+  assert.equal(report.receipts[0].responseHash,createHash('sha256').update(bytes).digest('hex'));
+  assert.equal(report.receipts[0].schemaValid,true);
+  const invalid=Buffer.from([0xff,0xfe]);
+  const failed=await simulateTextProbe(await make({fetchImpl:async()=>new Response(invalid)}));
+  assert.equal(failed.receipts[0].responseHash,createHash('sha256').update(invalid).digest('hex'));
+  assert.equal(failed.receipts[0].schemaValid,false);assert.equal(failed.receipts[0].safetyBand,'ABSTAIN');
 });
