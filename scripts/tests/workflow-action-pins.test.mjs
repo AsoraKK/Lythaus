@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { collectWorkflowActionPinFailures, findUnpinnedActions } from '../validate-workflow-action-pins.mjs';
@@ -56,6 +56,19 @@ test('nested composite actions cannot escape recursive pin discovery', t => {
   writeFileSync(path.join(root, '.github/actions/family/nested/action.yml'), 'runs:\n  using: composite\n  steps:\n    - uses: owner/nested@v4 # tag\n');
   assert.deepEqual(collectWorkflowActionPinFailures(root), [
     '.github/actions/family/nested/action.yml: owner/nested@v4 is not pinned to a 40-character commit SHA',
+  ]);
+});
+
+test('symlinked action metadata retains the previous pin check', t => {
+  const root = mkdtempSync(path.join(tmpdir(), 'lythaus-action-pins-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
+  const directory = path.join(root, '.github/actions/synthetic');
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(path.join(directory, 'metadata.yml'), 'runs:\n  using: composite\n  steps:\n    - uses: owner/symlinked@v4\n');
+  symlinkSync('metadata.yml', path.join(directory, 'action.yml'));
+  assert.deepEqual(collectWorkflowActionPinFailures(root), [
+    '.github/actions/synthetic/action.yml: owner/symlinked@v4 is not pinned to a 40-character commit SHA',
   ]);
 });
 

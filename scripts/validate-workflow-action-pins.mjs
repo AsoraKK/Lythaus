@@ -52,7 +52,7 @@ export function collectWorkflowActionPinFailures(root = process.cwd()) {
     for (const entry of entries) {
       const actionPath = path.join(directory, entry.name);
       if (entry.isDirectory()) inspectActions(actionPath);
-      else if (entry.isFile() && ['action.yml', 'action.yaml'].includes(entry.name)) {
+      else if ((entry.isFile() || entry.isSymbolicLink()) && ['action.yml', 'action.yaml'].includes(entry.name)) {
         failures.push(...findUnpinnedActions(
           fs.readFileSync(actionPath, 'utf8'),
           path.relative(root, actionPath).split(path.sep).join('/'),
