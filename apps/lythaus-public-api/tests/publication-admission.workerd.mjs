@@ -170,12 +170,14 @@ for (const kind of ['post', 'comment', 'reply']) {
         400, declaredCreationMode === 'ai_generated' ? 'ai_generated_public_content_blocked' : 'invalid_post');
     }
     const item = await create(owner, kind, { body: 'Synthetic original assisted item', declaredCreationMode: 'ai_assisted' });
-    for (const declaredCreationMode of ['', 'model_output', 'ai_generated']) {
+    for (const declaredCreationMode of [null, false, 1, {}, ['human'], '', 'model_output', 'ai_generated']) {
       await rejected(() => call(owner, 'PUT', itemPath(item), { body: 'Synthetic invalid revision', declaredCreationMode }),
         400, declaredCreationMode === 'ai_generated' ? 'ai_generated_public_content_blocked' : kind === 'post' ? 'invalid_post' : 'invalid_comment');
     }
     if (kind === 'post') {
       await rejected(() => call(owner, 'PUT', itemPath(item), { body: 'Synthetic missing fresh declaration' }), 400, 'invalid_post');
+      await rejected(() => call(owner, 'PUT', itemPath(item), { visibility: 'private', declaredCreationMode: null }), 400, 'invalid_post');
+      await rejected(() => call(owner, 'PUT', itemPath(item), { declaredCreationMode: null }), 400, 'invalid_post');
       const visibility = await call(owner, 'PUT', itemPath(item), { visibility: 'private' });
       assert.equal(visibility.status, 200, await visibility.clone().text());
       assert.equal((await visibility.json()).post.declaredCreationMode, 'ai_assisted');
@@ -183,6 +185,15 @@ for (const kind of ['post', 'comment', 'reply']) {
       const revised = await call(owner, 'PUT', itemPath(item), { body: 'Synthetic reuse of stored assisted declaration' });
       assert.equal(revised.status, 200, await revised.clone().text());
       assert.equal((await revised.json()).declaredCreationMode, 'ai_assisted');
+    }
+    for (const declaredCreationMode of ['human', 'ai_assisted']) {
+      const body = `Synthetic fresh ${declaredCreationMode} declaration`;
+      const revised = await call(owner, 'PUT', itemPath(item), { body, declaredCreationMode });
+      assert.equal(revised.status, 200, await revised.clone().text());
+      const result = await revised.json(), revision = kind === 'post' ? result.post : result;
+      assert.equal(revision.declaredCreationMode, declaredCreationMode);
+      assert.equal(revision.body, body);
+      assert.equal(revision.moderationState, 'under_review');
     }
     const table = kind === 'post' ? 'posts' : 'comments';
     if (kind === 'post') {

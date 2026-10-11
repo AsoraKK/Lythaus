@@ -27,6 +27,7 @@ const upstreamProtectedPaths = [
 ];
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const nativeModerationWorkerdTest = 'packages/authenticity/tests/openai-moderation.workerd.mjs';
+const publicationPg17Script = 'node scripts/ci/run-publication-pg17.mjs';
 const protectedPaths = [
   'apps/marketing-site/src/components/OpeningWordmark.astro',
   'apps/marketing-site/src/scripts/home-opening.js',
@@ -68,7 +69,11 @@ function assertOnlyReviewedNativeModerationTestRegistration(before, after) {
   const expected = `${before.scripts[script]} ${nativeModerationWorkerdTest}`;
   assert.equal(after.scripts[script], expected, 'Only the native Workerd moderation regression may be appended');
   before.scripts[script] = expected;
-  assert.deepEqual(after, before, 'Only the native Workerd moderation regression may be registered; unrelated scripts and dependencies stay frozen');
+  if (Object.hasOwn(after.scripts, 'test:publication:pg17')) {
+    assert.equal(after.scripts['test:publication:pg17'], publicationPg17Script, 'Publication tests must retain the exact isolated PG17 runner');
+    before.scripts['test:publication:pg17'] = publicationPg17Script;
+  }
+  assert.deepEqual(after, before, 'Only the exact native moderation and isolated publication commands may be registered; unrelated scripts and dependencies stay frozen');
 }
 const reviewedToolingSecurityPatches = {
   handlebars: {
@@ -270,6 +275,14 @@ const reviewedPrivacyStatusFiles = new Map([
   ['apps/lythaus-public-api/src/privacy-runtime-policy.ts', '8c674c929d35c748b28579b2fdeed3ff4daac2bc'],
   ['apps/lythaus-public-api/tests/privacy-runtime-policy.test.mjs', '5609e2acf2bcb0fc32a36cee8b0d7f5c102d497e'],
 ]);
+const allocatedDeclarationRepairFiles = new Map([
+  ['packages/contracts/src/content-policy.ts', '644bebca65503fa96bed03d9ba490b467c8defdd'],
+  ['packages/contracts/tests/critical-content-policy.test.mjs', 'a63ccaa4e21b8f16f61a2cde419f0221501ce7fe'],
+]);
+function assertAllocatedDeclarationRepair(filename, blob) {
+  assert.ok(allocatedDeclarationRepairFiles.has(filename), 'The publication exception covers only the two allocated declaration files');
+  assert.equal(blob, allocatedDeclarationRepairFiles.get(filename), 'Declaration portability must match the exact allocated source/test bytes');
+}
 const approvedHomepageVisualEdits = new Map([
   ['apps/marketing-site/src/components/OpeningWordmark.astro', (source) => `${replaceExactText(
     source,
@@ -300,6 +313,10 @@ export function assertHomepageFrozen() {
   const changed = [];
   for (const entry of entries) {
     const [metadata, filename] = entry.split('\t');
+    if (allocatedDeclarationRepairFiles.has(filename)) {
+      assertAllocatedDeclarationRepair(filename, git('hash-object', `--path=${filename}`, filename));
+      continue;
+    }
     if (reviewedPrivacyStatusFiles.has(filename)) {
       assert.equal(git('hash-object', `--path=${filename}`, filename), reviewedPrivacyStatusFiles.get(filename),
         'Privacy status may change only to the exact reviewed cooldown policy and tests');
@@ -575,7 +592,7 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
   }
 });
 
-test('homepage protection permits only the native moderation Workerd test registration', () => {
+test('homepage protection permits only the exact native moderation and isolated publication registrations', () => {
   const before = {
     scripts: {
       'test:native-architecture': 'node --test scripts/tests/native-architecture.test.mjs',
@@ -587,6 +604,14 @@ test('homepage protection permits only the native moderation Workerd test regist
   const reviewed = structuredClone(before);
   reviewed.scripts['test:native-architecture'] += ` ${nativeModerationWorkerdTest}`;
   assert.doesNotThrow(() => assertOnlyReviewedNativeModerationTestRegistration(structuredClone(before), reviewed));
+  reviewed.scripts['test:publication:pg17'] = publicationPg17Script;
+  assert.doesNotThrow(() => assertOnlyReviewedNativeModerationTestRegistration(structuredClone(before), reviewed));
+
+  for (const command of [publicationPg17Script + ' --skip-admission', 'node scripts/unreviewed.mjs']) {
+    const changedRunner = structuredClone(reviewed);
+    changedRunner.scripts['test:publication:pg17'] = command;
+    assert.throws(() => assertOnlyReviewedNativeModerationTestRegistration(structuredClone(before), changedRunner), assert.AssertionError);
+  }
 
   const unrelatedScript = structuredClone(reviewed);
   unrelatedScript.scripts['marketing:test'] += ' --update-snapshots';
@@ -599,6 +624,16 @@ test('homepage protection permits only the native moderation Workerd test regist
   const extraTestPath = structuredClone(reviewed);
   extraTestPath.scripts['test:native-architecture'] += ' scripts/tests/unreviewed.test.mjs';
   assert.throws(() => assertOnlyReviewedNativeModerationTestRegistration(structuredClone(before), extraTestPath), assert.AssertionError);
+});
+
+test('declaration repair exceptions reject changed bytes and every other homepage dependency path', () => {
+  for (const filename of allocatedDeclarationRepairFiles.keys()) {
+    assert.doesNotThrow(() => assertAllocatedDeclarationRepair(filename, git('hash-object', `--path=${filename}`, filename)));
+    const source = readFileSync(path.join(root, filename), 'utf8') + '\n// synthetic unrelated mutation\n';
+    const altered = execFileSync('git', ['hash-object', '--stdin'], { cwd: root, encoding: 'utf8', input: source }).trim();
+    assert.throws(() => assertAllocatedDeclarationRepair(filename, altered), assert.AssertionError);
+  }
+  assert.throws(() => assertAllocatedDeclarationRepair('apps/marketing-site/src/pages/index.astro', allocatedDeclarationRepairFiles.values().next().value), assert.AssertionError);
 });
 
 test('upstream integration preserves homepage rendering inputs and waitlist route dispatch', () => {
