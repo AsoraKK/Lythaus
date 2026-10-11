@@ -10,6 +10,11 @@ Owner hands-on acceptance remains scheduled for Sunday 11 October.
 - Fetched [the canonical Lythaus repository](https://github.com/AsoraKK/Lythaus/)
   main: `dba135ca3720b1311c5ec3d1d9e00ab7a67a568d`.
   PRs #975–#978 are already present; their fixes are unchanged.
+- Follow-up review refreshed main once to
+  `f40c5b6b9840ff8e96ac03f9aa4c6320b931aa5e` (#979). A normal merge produced
+  `e8848145e996ee3311c8dfc4e898ccbe7ba8a3e8` with no conflicts. Its two admin UI
+  changes remain owned by that merged PR; this slice's production composer
+  change is unchanged. The PR still contains the same six scoped changed paths.
 - Reviewed open PRs before editing. Profile own-content collections/contracts
   belong to the separate profile lane. PR #983 owns Comments dispatcher work.
   This slice changes neither those files nor routing, contracts, migrations,
@@ -61,6 +66,17 @@ Authentication and failure injection are synthetic. Product requests execute
 the actual public Worker and PostgreSQL queries. The baseline reproduction used
 the same main entrypoint with API/auth base URLs lacking `/api`; the repaired
 artifact uses canonical `/api` URLs. Actual post writes in both use `/api/posts`.
+
+Follow-up regressions directly cover a pending receipt after switching to the
+Profile tab, native Back at a dirty deep-linked root composer (Keep editing and
+confirmed discard), and native Back while that root submission is in flight.
+Browser Back/Forward is separately exercised from the real Create tab: an unsent
+draft retains its text/disclosure without a write, and an unconfirmed submission
+retains its frozen rendering and replays the identical body/key once explicitly
+retried. The editable restored value is checked after focus; the disabled frozen
+field is compared pixel-for-pixel and through the replay payload. These tests do
+not certify an unfocused web accessibility input's value, physical native-device
+gestures, or every possible dirty-composer tab-history combination.
 
 ## Existing moderation path and its limits
 
@@ -174,8 +190,8 @@ Local checks before PR creation:
 | Check | Result |
 | --- | --- |
 | Local canonical PG17 bootstrap / role / integrity / rollback validation | Passed; migrations through 0019, 103 relations / 102 tables. |
-| `flutter test --no-pub test/features/feed/application test/features/feed/presentation test/ui/screens/adaptive_shell_test.dart test/widgets/post_actions_test.dart test/features/reactions --reporter expanded` | 500 passed on final source, including new navigation tests. |
-| New navigation file rerun after final exit-helper change | 10 passed, including tooltip/error feedback. |
+| `flutter test --no-pub test/features/feed/application test/features/feed/presentation test/ui/screens/adaptive_shell_test.dart test/widgets/post_actions_test.dart test/features/reactions --reporter expanded` | 503 passed on the refreshed main baseline, including new navigation tests. |
+| New navigation file rerun after follow-up review | 13 passed, including direct inactive-tab and native Back tests. |
 | `flutter analyze --no-pub`; format check of changed Dart files | Passed, no issues; two files already formatted. |
 | `npm run typecheck:native` | Passed. |
 | Runtime/product policy, admin/Jobs invariants, authenticity evaluation/Omni synthetic regression files | 42 passed. |
@@ -184,7 +200,7 @@ Local checks before PR creation:
 | `npm run openapi:lint`; `npm run openapi:test:contract` | Lint passed; 69 tests passed, 17 skipped in one standard skipped suite. |
 | Native Worker configuration and resource registry validators | Passed: 4 configs/3 generated type files, 33 registered resources. |
 | Main-entrypoint release build and baseline browser reproduction | Built; one expected-broken reproduction passed with persisted pending post and white screen. |
-| Repaired main-entrypoint release browser | 4 passed: mobile pending, desktop slow repeated click/Close, mobile lost acknowledgement/retry, mobile validation error. All synthetic product API responses were checked; only injected 400/503 and initial synthetic refresh 401 were expected errors. |
+| Repaired main-entrypoint release browser | All 7 cases passed on the refreshed main baseline, including inactive-tab receipt and unsent/frozen Back/Forward recovery. Final-head rerun and SHA metadata are recorded in the PR evidence. Only injected 400/503 and initial synthetic refresh 401 are expected API errors. |
 | JavaScript syntax, `git diff --check`, repository hygiene, active branding, documentation secret hygiene, retired-provider dependency validation | Passed. |
 
 Failed exploratory runs are retained in `/tmp`: the old-source widget run fails
@@ -195,6 +211,10 @@ test harness errors were corrected without weakening product or policy gates.
 The first PR head also failed the CI naming guard because this report used the
 bare repository owner/name. The report now uses the canonical repository link;
 the existing guard remains unchanged.
+Follow-up browser attempts initially sampled the URL before the sign-in redirect
+completed and a restored accessibility input before focus; these harness
+assumptions were corrected. Retained draft rendering, disclosure, zero unintended
+writes, exact frozen replay and route preservation are asserted directly.
 
 Unrun: live provider/callback/queue inspection after denied access, live user
 submissions, live DDL, a complete real admin-decision browser journey, a positive
@@ -220,3 +240,36 @@ Rollback is a reviewed revert of this slice's composer helper and tests. There
 are no contract, schema, resource, feature-activation or persisted-state changes
 to undo. Pending posts/events created before or after a release remain governed
 by existing server policy; rollback must never relabel, republish or delete them.
+
+## Next safe detector coding slice
+
+Prepare a disabled normal-post **trained safety evidence adapter** around the
+existing `packages/authenticity/src/openai-moderation.ts` factory. Ordinary posts
+currently use the generic evaluation-only path; the trained safety adapter is
+used separately by private authenticity-alpha code. Safety evidence must remain
+distinct from authorship qualification and earnings eligibility.
+
+Suggested isolated files are `apps/lythaus-jobs/src/post-safety-evidence.ts` and
+`apps/lythaus-jobs/tests/post-safety-evidence.workerd.mjs`, using the existing local
+PG/workerd fixture. Inject the provider and explicit configuration; absent or
+disabled selection performs no provider call. Correlate evidence with the source
+event, content revision and body hash, and use existing detector evidence storage
+after confirming its unique constraints. No new schema or public contract is
+required for a preparation slice.
+
+Synthetic acceptance should cover safe/flagged evidence, timeout, unavailable or
+malformed responses, duplicate/concurrent delivery, stale revisions, and existing
+safety holds/scoped peer decisions. A safety `ALLOW` result must leave pending
+authorship/publication unchanged. Unknown provider outcomes must not become guilt
+or publication. Existing alpha, media, appeal and reward gates remain disabled.
+
+Before a production hook in `apps/lythaus-jobs/src/index.ts`, the parent must
+allocate that integration ownership and approve provider selection/binding,
+budget admission and configuration. Timeout/retry cadence and enforcement-policy
+defaults remain explicitly pending; preparation must not choose them implicitly.
+Use injected synthetic responses for all development checks, with no new key,
+paid resource, live provider read or activation. Separate authorized provider and
+deployment verification remains a release gate; do not retry the previously
+denied artifact/deployment endpoints. Qualified authorship detection and proof
+attestation are separate follow-on decisions, rather than inferred from trained
+safety scores.

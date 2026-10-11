@@ -24,6 +24,9 @@ const scenarios = broken ? [{ width: 390, mode: 'pending', dark: false }] : [
   { width: 1440, mode: 'slow', dark: true },
   { width: 390, mode: 'ack-loss', dark: true },
   { width: 390, mode: 'validation', dark: false },
+  { width: 390, mode: 'inactive', dark: false },
+  { width: 390, mode: 'dirty-back', dark: false },
+  { width: 390, mode: 'ack-back', dark: true },
 ];
 
 for (const { width, mode, dark } of scenarios) test(
@@ -46,6 +49,10 @@ for (const { width, mode, dark } of scenarios) test(
       subscription_tier: 'free', reputation_score: 0, created_at: '2026-10-01T00:00:00Z', last_login_at: '2026-10-01T00:00:00Z' };
     const errors = [], writes = [], calls = [];
     let lost = false, rejected = false;
+    let releaseSubmission;
+    const submissionHold = new Promise(resolve => { releaseSubmission = resolve; });
+    let notifySubmissionStarted;
+    const submissionStarted = new Promise(resolve => { notifySubmissionStarted = resolve; });
     const fixture = await localAuthBrowserServer(async route => {
       const request = route.request(), url = new URL(request.url());
       if (url.hostname === 'app.lythaus.co') {
@@ -71,7 +78,9 @@ for (const { width, mode, dark } of scenarios) test(
       else {
         if (request.method() === 'POST' && url.pathname === '/api/posts') {
           writes.push({ body: request.postDataJSON(), key: (await request.allHeaders())['idempotency-key'] });
+          notifySubmissionStarted();
           if (mode === 'slow') await new Promise(resolve => setTimeout(resolve, 1500));
+          if (mode === 'inactive') await submissionHold;
           if (mode === 'validation' && !rejected) {
             rejected = true;
             call.status = 400;
@@ -83,7 +92,7 @@ for (const { width, mode, dark } of scenarios) test(
           method: request.method(), headers: await request.allHeaders(),
           ...(['GET', 'HEAD'].includes(request.method()) ? {} : { body: request.postData() }),
         });
-        if (request.method() === 'POST' && url.pathname === '/api/posts' && mode === 'ack-loss' && !lost) {
+        if (request.method() === 'POST' && url.pathname === '/api/posts' && ['ack-loss', 'ack-back'].includes(mode) && !lost) {
           assert.equal(response.status, 201);
           lost = true;
           call.status = 503;
@@ -107,6 +116,11 @@ for (const { width, mode, dark } of scenarios) test(
     const page = await context.newPage(); page.setDefaultTimeout(20_000);
     const content = text => page.getByText(text, { exact: false })
       .or(page.getByLabel(text, { exact: false })).first();
+    const verifyApiResponses = () => assert.deepEqual(calls.filter(call => call.status >= 400 && !(
+      (call.path.endsWith('/auth/refresh') && call.status === 401) ||
+      (['ack-loss', 'ack-back'].includes(mode) && call.path === '/api/posts' && call.status === 503 && call.persistedStatus === 201) ||
+      (mode === 'validation' && call.path === '/api/posts' && call.status === 400)
+    )), [], 'Unexpected API HTTP failure');
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => {
       if (message.type() === 'error' && !/^Failed to load resource:/.test(message.text())) errors.push(message.text());
@@ -114,6 +128,7 @@ for (const { width, mode, dark } of scenarios) test(
     const screenshot = path.join(evidence, `${broken ? 'before' : 'after'}-${width}-${mode}.png`);
     let complete = false;
     t.after(async () => {
+      releaseSubmission();
       await mkdir(evidence, { recursive: true });
       if (!complete) await page.screenshot({ path: screenshot });
       if (!complete) t.diagnostic(JSON.stringify({
@@ -143,11 +158,47 @@ for (const { width, mode, dark } of scenarios) test(
     await page.getByRole('button', { name: 'Sign in with email', exact: true }).click();
     const create = page.getByRole('button', { name: /^Create(?:\b|$)/ });
     await create.waitFor({ timeout: 60_000 });
+    await page.waitForURL(url => url.pathname === '/');
+    const beforeCreate = page.url();
     await create.click();
     const field = page.getByRole('textbox', { name: /Your post/ });
     await field.waitFor();
     await enter(field, 'Synthetic routed submission');
     await page.getByRole('checkbox', { name: 'Human-authored', exact: true }).click();
+    async function backAndForward(frozen) {
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      const originalPixels = frozen ? await page.screenshot({ clip: await field.boundingBox() }) : null;
+      await page.goBack();
+      await page.waitForURL(beforeCreate);
+      await page.getByRole('button', { name: /^Discover(?:\b|$)/ }).first().waitFor();
+      await page.goForward();
+      await page.waitForURL(url => url.searchParams.get('tab') === 'create');
+      await field.waitFor();
+      await content('27 of 5000 characters used').waitFor();
+      if (frozen) {
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        assert.deepEqual(await page.screenshot({ clip: await field.boundingBox() }), originalPixels,
+          'Frozen draft must render the same content after Back/Forward');
+      } else {
+        await field.click();
+        await page.waitForFunction(() => [...document.querySelectorAll('textarea,input')]
+          .some(node => node.value === 'Synthetic routed submission'));
+        assert.equal(await field.inputValue(), 'Synthetic routed submission');
+      }
+      assert.equal(await field.isEnabled(), !frozen);
+      assert.equal(await page.getByRole('checkbox', { name: 'Human-authored', exact: true }).isChecked(), true);
+    }
+    if (mode === 'dirty-back') {
+      await backAndForward(false);
+      assert.equal(writes.length, 0);
+      assert.equal((await client.query('SELECT id FROM content.posts WHERE author_id=$1', [ownerId])).rowCount, 0);
+      assert.deepEqual(errors, []);
+      verifyApiResponses();
+      await mkdir(evidence, { recursive: true });
+      await page.screenshot({ path: screenshot }); complete = true;
+      t.diagnostic(JSON.stringify({ complete, synthetic: true, width, mode, screenshot, errors: errors.length }));
+      return;
+    }
     const post = page.getByRole('button', { name: 'Post', exact: true });
     await post.waitFor();
     await page.waitForFunction(node => node.getAttribute('aria-disabled') !== 'true', await post.elementHandle());
@@ -157,11 +208,22 @@ for (const { width, mode, dark } of scenarios) test(
       await page.getByRole('button', { name: 'Close composer', exact: true }).click();
       assert.equal(new URL(page.url()).searchParams.get('tab'), 'create');
     }
-    if (mode === 'ack-loss') {
+    if (mode === 'inactive') {
+      await submissionStarted;
+      await page.getByRole('button', { name: /^Profile(?:\b|$)/ }).click();
+      await page.waitForURL(url => url.searchParams.get('tab') === 'profile');
+      releaseSubmission();
+    }
+    if (['ack-loss', 'ack-back'].includes(mode)) {
       await content('The earlier submission is still unconfirmed. Retry the same request after signing in.').waitFor();
       await page.locator('flt-semantics').getByText(/^Choose Human-authored or AI-assisted before posting\./).first().waitFor({ state: 'hidden' });
       assert.equal(await field.inputValue(), 'Synthetic routed submission');
       assert.equal(await field.isEnabled(), false);
+      if (mode === 'ack-back') {
+        await backAndForward(true);
+        assert.equal(writes.length, 1);
+        await page.waitForFunction(node => node.getAttribute('aria-disabled') !== 'true', await post.elementHandle());
+      }
       await post.click();
     }
     if (mode === 'validation') {
@@ -176,8 +238,15 @@ for (const { width, mode, dark } of scenarios) test(
       assert.equal(await page.getByRole('button', { name: /^Discover(?:\b|$)/ }).count(), 0);
       assert.equal(await field.count(), 0);
     } else {
-      await page.waitForURL(url => url.pathname === '/' && url.searchParams.get('tab') === 'discover');
-      await page.getByRole('button', { name: /^Discover(?:\b|$)/ }).first().waitFor();
+      if (mode === 'inactive') {
+        await content('Post submitted. Publication checks are pending.').waitFor();
+        assert.equal(new URL(page.url()).searchParams.get('tab'), 'profile');
+        assert.equal(await field.count(), 0);
+        await page.getByRole('button', { name: /^Profile(?:\b|$)/ }).first().waitFor();
+      } else {
+        await page.waitForURL(url => url.pathname === '/' && url.searchParams.get('tab') === 'discover');
+        await page.getByRole('button', { name: /^Discover(?:\b|$)/ }).first().waitFor();
+      }
       await content('Post submitted. Publication checks are pending.').waitFor();
       await page.locator('flt-semantics').getByText(/^Choose Human-authored or AI-assisted before posting\./).first().waitFor({ state: 'hidden' });
       assert.deepEqual(errors, []);
@@ -186,13 +255,9 @@ for (const { width, mode, dark } of scenarios) test(
       assert.equal(persisted.rows[0].moderation_state, 'under_review');
       assert.equal((await client.query("SELECT id FROM system.outbox_events WHERE aggregate_id=$1 AND event_type='content.post.created'", [persisted.rows[0].id])).rowCount, 1);
     }
-    assert.equal(writes.length, mode === 'ack-loss' ? 2 : 1);
-    if (mode === 'ack-loss') assert.deepEqual(writes[0], writes[1]);
-    if (!broken) assert.deepEqual(calls.filter(call => call.status >= 400 && !(
-      (call.path.endsWith('/auth/refresh') && call.status === 401) ||
-      (mode === 'ack-loss' && call.path === '/api/posts' && call.status === 503 && call.persistedStatus === 201) ||
-      (mode === 'validation' && call.path === '/api/posts' && call.status === 400)
-    )), [], 'Unexpected API HTTP failure');
+    assert.equal(writes.length, ['ack-loss', 'ack-back'].includes(mode) ? 2 : 1);
+    if (['ack-loss', 'ack-back'].includes(mode)) assert.deepEqual(writes[0], writes[1]);
+    if (!broken) verifyApiResponses();
     await mkdir(evidence, { recursive: true });
     await page.screenshot({ path: screenshot }); complete = true;
     t.diagnostic(JSON.stringify({ complete, synthetic: true, width, mode, expectedBroken: broken, screenshot, errors: errors.length }));

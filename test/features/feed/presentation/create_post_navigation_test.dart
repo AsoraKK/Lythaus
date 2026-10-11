@@ -16,6 +16,7 @@ import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/domain/models.dart' as domain;
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/ui/screens/adaptive_shell.dart';
@@ -89,9 +90,12 @@ void main() {
                   ),
                 )
               : AdaptiveShell(
-                  initialIndex: state.uri.queryParameters['tab'] == 'create'
-                      ? 1
-                      : 0,
+                  initialIndex: switch (state.uri.queryParameters['tab']) {
+                    'create' => 1,
+                    'profile' => 2,
+                    'rewards' => 3,
+                    _ => 0,
+                  },
                 ),
         ),
       ],
@@ -107,6 +111,9 @@ void main() {
           canCreatePostProvider.overrideWithValue(true),
           jwtProvider.overrideWith((ref) async => ref.watch(_actor)?.id),
           postRepositoryProvider.overrideWithValue(repo),
+          ownerProfileProvider.overrideWith(
+            (ref) async => throw StateError('Synthetic profile unavailable'),
+          ),
           deviceIntegrityGuardProvider.overrideWithValue(guard),
           analyticsClientProvider.overrideWithValue(
             const NullAnalyticsClient(),
@@ -439,4 +446,132 @@ void main() {
     expect(find.text('Another page'), findsOneWidget);
     expect(fixture.container.read(postCreationProvider).text, isEmpty);
   });
+
+  testWidgets('late receipt preserves the active Profile tab and route', (
+    tester,
+  ) async {
+    final fixture = await setup(tester);
+    final response = Completer<CreatePostResult>();
+    when(
+      () => fixture.repo.createPost(
+        request: any(named: 'request'),
+        token: any(named: 'token'),
+      ),
+    ).thenAnswer((_) => response.future);
+    await tester.tap(find.widgetWithText(FilledButton, 'Post'));
+    await tester.pump();
+    fixture.router.go('/?tab=profile&source=synthetic');
+    await tester.pumpAndSettle();
+    expect(find.text('Unable to load profile'), findsOneWidget);
+    expect(fixture.container.read(postCreationProvider).isSubmitting, isTrue);
+    final activeRoute = fixture.router.routeInformationProvider.value.uri;
+    response.complete(_accepted('under_review'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(fixture.router.routeInformationProvider.value.uri, activeRoute);
+    expect(find.text('Unable to load profile'), findsOneWidget);
+    expect(find.byType(CreatePostScreen), findsNothing);
+    expect(fixture.container.read(postCreationProvider).text, isEmpty);
+    expect(
+      fixture.container
+          .read(contentMutationRegistryProvider)
+          .pending('post-create:owner'),
+      isNull,
+    );
+    verify(
+      () => fixture.repo.createPost(
+        request: any(named: 'request'),
+        token: any(named: 'token'),
+      ),
+    ).called(1);
+  });
+
+  testWidgets(
+    'native Back on dirty root confirms discard and preserves cancel',
+    (tester) async {
+      final fixture = await setup(tester);
+      final activeRoute = fixture.router.routeInformationProvider.value.uri;
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Discard post?'), findsOneWidget);
+      expect(fixture.router.routeInformationProvider.value.uri, activeRoute);
+      expect(
+        fixture.container.read(postCreationProvider).text,
+        'Synthetic submission',
+      );
+      await tester.tap(find.text('Keep editing'));
+      await tester.pumpAndSettle();
+      expect(find.text('Discard post?'), findsNothing);
+      expect(fixture.router.routeInformationProvider.value.uri, activeRoute);
+      expect(
+        fixture.container.read(postCreationProvider).text,
+        'Synthetic submission',
+      );
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Discard'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byType(AdaptiveShell), findsOneWidget);
+      expect(
+        fixture.router.routeInformationProvider.value.uri.queryParameters,
+        {'tab': 'discover', 'source': 'synthetic'},
+      );
+      expect(fixture.container.read(postCreationProvider).text, isEmpty);
+      verifyNever(
+        () => fixture.repo.createPost(
+          request: any(named: 'request'),
+          token: any(named: 'token'),
+        ),
+      );
+    },
+  );
+
+  testWidgets(
+    'native Back during submission preserves frozen draft and route',
+    (tester) async {
+      final fixture = await setup(tester);
+      final response = Completer<CreatePostResult>();
+      when(
+        () => fixture.repo.createPost(
+          request: any(named: 'request'),
+          token: any(named: 'token'),
+        ),
+      ).thenAnswer((_) => response.future);
+      await tester.tap(find.widgetWithText(FilledButton, 'Post'));
+      await tester.pump();
+      final activeRoute = fixture.router.routeInformationProvider.value.uri;
+      final registry = fixture.container.read(contentMutationRegistryProvider);
+      final attempt = registry.pending('post-create:owner')!;
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(find.text('Discard post?'), findsNothing);
+      expect(fixture.router.routeInformationProvider.value.uri, activeRoute);
+      expect(fixture.container.read(postCreationProvider).isSubmitting, isTrue);
+      expect(
+        fixture.container.read(postCreationProvider).text,
+        'Synthetic submission',
+      );
+      expect(registry.pending(attempt.scope)!.key, attempt.key);
+      expect(registry.pending(attempt.scope)!.payload, attempt.payload);
+      response.complete(_accepted('under_review'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(
+        fixture
+            .router
+            .routeInformationProvider
+            .value
+            .uri
+            .queryParameters['tab'],
+        'discover',
+      );
+      verify(
+        () => fixture.repo.createPost(
+          request: any(named: 'request'),
+          token: any(named: 'token'),
+        ),
+      ).called(1);
+    },
+  );
 }
