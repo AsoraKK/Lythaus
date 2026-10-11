@@ -74,7 +74,7 @@ leaves no review bundle. Capability withdrawal/rollback must remove application
 dependence and drain admitted transactions before revocation; no instantaneous
 ACL cancellation, new deadline or outage policy is claimed.
 
-Community restoration now locks every case for the content in ID order before
+Post community restoration now locks every case for the content in ID order before
 locking the post or writing its override/allow decision. The real submit,
 evaluate, block, revise, queue, appeal, triage, ballot and scheduled reconciliation
 handlers reproduce the original case/post inversion: closure held the post and
@@ -93,6 +93,18 @@ the disposable test database receives USAGE on social and SELECT of
 social.profiles(user_id, moderation_source_event_id) to exercise those cases.
 These conditional cases do not certify canonical or production historical
 adjudication. No production grant or approved migration was changed.
+
+The case-first change is explicitly post-only. Real comment create, Admin
+queue, community appeal/triage/ballot, author edit, Jobs and reconciliation
+handlers exercise both comment-lock arrival orders. The old queued case is
+synthetic fixture input adjudicated through the real Admin handler. Closure
+does not acquire a case lock before the comment and cannot publish a stale
+revision. The actual Jobs comment path currently fails its audit INSERT with
+PG17 42P08 (parameter $1 inferred as both UUID and text), rolling back its
+detector and retrying before case supersession. This is a separate existing
+pipeline blocker, not a state guard or proof of complete comment acceptance.
+No comment-handler SQL, grants or policy was changed. Once that audit error is
+fixed, both full comment supersession races must be revalidated independently.
 
 ## Evidence and publication authority
 
@@ -129,6 +141,7 @@ holds; keep this PR blocked from operational deployment and public activation.
 | Withholding and privacy | Human/assisted pass/review/block/unknown fixture responses retain owner-private no-store review, guest/cross-user exclusion, null publication time and no publication events |
 | No unqualified authority | Typed assessment binding tests and unchanged return-only safety tests; safety success never enables publication |
 | Appeal concurrency | Real scheduled community closure in both race orders; historical current-block and stale-source exclusions with an explicit local-only grant prerequisite |
+| Post-only lock scope | Two real stale comment-appeal/revision interleavings assert no new case-before-comment lock, stale-publication denial and honest retry/rollback for the existing 42P08 audit blocker |
 | Required acceptance isolation | Canonical and proposed suites remain separate; proposed runs reject any skip, failure, cancellation, todo or empty summary; both entry points reject unsafe targets before connecting and clean only owned databases on SIGINT/SIGTERM |
 
 The Workerd fixture imports the actual production transaction implementation and
