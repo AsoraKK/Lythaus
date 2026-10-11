@@ -8,6 +8,7 @@ import { constantTimeEqual, decryptField, uuidv7 } from '@lythaus/security';
 import { buildPrivacyDataPassport, decryptPrivatePassportIdentity, ensureWorkflowCreate, isCurrentContentModerationRevision, isCurrentProfileModerationRevision, legalHoldPlan, lockedAppealVote, moderationReputationSignal, parseContentModerationRevision, parseProfileModerationRevision, privacyRequestLifecyclePlan, queueRouteForEvent, reconcilePrivacyRequestPayload, reputationActivity, retentionCleanupPlan, reviewerReplacementPlan, securityAuditRetentionPlan, type PrivacyRequestPayload, type WorkflowCreateBinding } from './runtime-policy.ts';
 import { EMAIL_LIFECYCLE_QUEUE, handleTransactionalEmailLifecycleWebhook, processEmailLifecycleQueue, readTransactionalEmailDeliveryEvidence, relayTransactionalEmailOutbox } from './transactional-email-runtime.ts';
 import { WorkflowEntrypoint } from 'cloudflare:workers';
+import { storePrivateExportObject } from './privacy-export-storage.ts';
 import { processBetaEvent, expireBetaWork } from './authenticity-beta.ts';
 import { processAlphaEvent, expireAlphaWork } from './authenticity-alpha.ts';
 import { deferMonthlyReputationAssessment, processMonthlyReputationAssessment, reconcileDeferredMonthlyReputation } from './monthly-reputation.ts';
@@ -2496,7 +2497,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         if (account.rows[0]?.status !== 'active' || account.rows[0].deleted_at !== null) {
           throw new Error('privacy_export_account_unavailable');
         }
-        await exportsBucket.put(objectKey, bytes, { httpMetadata: { contentType: 'application/json' } });
+        await storePrivateExportObject(client, exportsBucket, objectKey, bytes);
         await client.query(
           `INSERT INTO privacy.export_manifests (id, request_id, object_key, package_hash, expires_at)
            VALUES ($1, $2, $3, $4, now() + interval '7 days')

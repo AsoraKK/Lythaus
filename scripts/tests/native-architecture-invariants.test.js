@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import './native-worker-config.test.mjs';
 
 const root = path.resolve(import.meta.dirname, '../..');
 const retiredBrand = ['as', 'ora'].join('');
@@ -204,13 +205,14 @@ test('launch schema and media boundary are explicit', () => {
   assert.doesNotMatch(media, /arrayBuffer\(\).*MEDIA_QUARANTINE\.put/s);
 });
 
-test('native media buckets are isolated by Wrangler environment', () => {
+test('native media buckets retain promoted production identities without hosted development aliases', () => {
   for (const relative of ['apps/lythaus-public-api/wrangler.jsonc', 'apps/lythaus-jobs/wrangler.jsonc']) {
-    const source = fs.readFileSync(path.join(root, relative), 'utf8');
-    const production = source.slice(0, source.indexOf('"env"'));
-    const development = source.slice(source.indexOf('"development"'));
-    assert.match(production, /MEDIA_(?:QUARANTINE|APPROVED)_BUCKET[^\n]*lythaus-media-(?:quarantine|approved)-dev/);
-    assert.match(development, /MEDIA_(?:QUARANTINE|APPROVED)_BUCKET[^\n]*lythaus-media-(?:quarantine|approved)-dev/);
+    const config = JSON.parse(fs.readFileSync(path.join(root, relative), 'utf8'));
+    assert.deepEqual(config.env, {});
+    for (const [binding, bucket] of [['MEDIA_QUARANTINE', 'lythaus-media-quarantine-dev'], ['MEDIA_APPROVED', 'lythaus-media-approved-dev']]) {
+      assert.equal(config.vars[`${binding}_BUCKET`], bucket);
+      assert.equal(config.r2_buckets.find((item) => item.binding === binding).bucket_name, bucket);
+    }
   }
 });
 

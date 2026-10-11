@@ -10,20 +10,21 @@ export interface DatabaseEnv {
   connection: HyperdriveBinding;
 }
 
-async function executeTransaction<T>(client: Client, work: (client: Client) => Promise<T>): Promise<T> {
-  try {
-    await client.query('BEGIN');
-    const result = await work(client);
-    const committed = await client.query('COMMIT');
-    if (committed.command !== 'COMMIT') throw new Error('database_transaction_commit_not_confirmed');
-    return result;
-  } catch (error) {
-    await client.query('ROLLBACK').catch(() => undefined);
-    throw error;
+export { accountRowLockAvailable, lockActiveAccount } from './account-fence.ts';
+
+export class DatabaseCommitUncertainError extends Error {
+  readonly outcome = 'unknown';
+
+  constructor() {
+    super('database_transaction_commit_outcome_unknown');
+    this.name = 'DatabaseCommitUncertainError';
   }
 }
 
-export { accountRowLockAvailable, lockActiveAccount } from './account-fence.ts';
+export async function checkTransactionHealth(client: DatabaseClient): Promise<void> {
+  try { await client.query('SELECT 1'); }
+  catch { throw new Error('database_transaction_unavailable'); }
+}
 
 export { enqueueTransactionalEmailIntent, lockAuthDelivery, type TransactionalEmailOutboxInput, type TransactionalEmailPurpose } from './transactional-email.ts';
 export { supportFeedbackSchemaReady, createSupportFeedbackRuntime } from './support-feedback-runtime.ts';
@@ -60,11 +61,26 @@ export async function transaction<T>(
 ): Promise<T> {
   const connectionString = verifyFullConnectionString(binding.connectionString);
   const client = new Client({ connectionString });
-  await client.connect();
+  let connectionFailed = false;
+  const onConnectionError = () => { connectionFailed = true; };
+  client.on('error', onConnectionError);
+  let begun = false;
   try {
-    return await executeTransaction(client, work);
+    await client.connect();
+    await client.query('BEGIN');
+    begun = true;
+    const result = await work(client);
+    if (connectionFailed) throw new Error('database_transaction_connection_failed');
+    const committed = await client.query('COMMIT').catch(() => { throw new DatabaseCommitUncertainError(); });
+    if (committed.command === 'ROLLBACK') throw new Error('database_transaction_rolled_back');
+    if (committed.command !== 'COMMIT') throw new DatabaseCommitUncertainError();
+    return result;
+  } catch (error) {
+    if (begun) await client.query('ROLLBACK').catch(() => undefined);
+    throw error;
   } finally {
-    await client.end();
+    try { await client.end(); }
+    finally { client.removeListener('error', onConnectionError); }
   }
 }
 
