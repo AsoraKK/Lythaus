@@ -197,6 +197,7 @@ doc/OverviewProvider.md
 doc/OverviewProviderAccountingPeriod.md
 doc/OverviewWindow.md
 doc/OwnerComment.md
+doc/OwnerCommentsPage.md
 doc/OwnerDecisionRequest.md
 doc/OwnerDetail.md
 doc/OwnerEvidenceRequest.md
@@ -522,6 +523,7 @@ lib/src/model/overview_provider.dart
 lib/src/model/overview_provider_accounting_period.dart
 lib/src/model/overview_window.dart
 lib/src/model/owner_comment.dart
+lib/src/model/owner_comments_page.dart
 lib/src/model/owner_decision_request.dart
 lib/src/model/owner_detail.dart
 lib/src/model/owner_evidence_request.dart
@@ -822,6 +824,7 @@ test/overview_provider_accounting_period_test.dart
 test/overview_provider_test.dart
 test/overview_window_test.dart
 test/owner_comment_test.dart
+test/owner_comments_page_test.dart
 test/owner_decision_request_test.dart
 test/owner_detail_test.dart
 test/owner_evidence_request_test.dart

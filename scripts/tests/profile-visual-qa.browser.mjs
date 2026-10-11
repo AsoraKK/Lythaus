@@ -93,6 +93,42 @@ const secondPage = [
   }),
 ];
 
+const commentPage = [
+  {
+    id: '01900000-0000-7000-8000-000000000005',
+    postId: firstPage[0].id,
+    authorId: owner.id,
+    parentId: null,
+    depth: 0,
+    body: 'I can bring seeds to our next garden meeting.',
+    declaredCreationMode: 'human',
+    moderationState: 'allowed',
+    deleted: false,
+    createdAt: '2026-09-28T12:00:00Z',
+    updatedAt: '2026-09-28T12:00:00Z',
+  },
+  {
+    id: '01900000-0000-7000-8000-000000000006',
+    postId: firstPage[0].id,
+    authorId: owner.id,
+    parentId: '01900000-0000-7000-8000-000000000005',
+    depth: 1,
+    body: 'My reply about the shared watering schedule is awaiting review.',
+    declaredCreationMode: 'human',
+    moderationState: 'under_review',
+    deleted: false,
+    createdAt: '2026-09-27T12:00:00Z',
+    updatedAt: '2026-09-27T12:00:00Z',
+  },
+];
+const commentSecondPage = [{
+  ...commentPage[0],
+  id: '01900000-0000-7000-8000-000000000007',
+  body: 'I also have spare tools for volunteers.',
+  createdAt: '2026-09-26T12:00:00Z',
+  updatedAt: '2026-09-26T12:00:00Z',
+}];
+
 const sizes = [
   { name: 'mobile', width: 390, height: 844 },
   { name: 'desktop', width: 1440, height: 960 },
@@ -130,11 +166,13 @@ test(
           presentationPreferences: { leftHandedMode: false, horizontalSwipeEnabled: true, version: 1 },
         };
         let postsMode = 'empty';
+        let commentsMode = 'empty';
         let postErrorsRemaining = 0;
         let ownerProfileReadDelay = 0;
         const apiCalls = [];
         const runtimeErrors = [];
         const ownerPostsCalls = [];
+        const ownerCommentsCalls = [];
 
         const fixture = await localAuthBrowserServer(async (route) => {
           const request = route.request();
@@ -245,6 +283,17 @@ test(
             } else {
               body = { items: [], nextCursor: null };
             }
+          } else if (requestUrl.pathname === '/api/users/me/comments') {
+            ownerCommentsCalls.push(entry);
+            assert.equal(requestUrl.searchParams.get('limit'), '8');
+            status = session && requestHeaders.authorization === `Bearer ${accessToken}` ? 200 : 401;
+            body = status === 401
+              ? { error: 'session_required' }
+              : commentsMode === 'populated'
+                ? requestUrl.searchParams.get('cursor') === 'visual-comments-page-2'
+                  ? { items: commentSecondPage, nextCursor: null }
+                  : { items: commentPage, nextCursor: 'visual-comments-page-2' }
+                : { items: [], nextCursor: null };
           } else if (requestUrl.pathname === `/api/users/${publicMember.id}`) {
             body = {
               user: {
@@ -535,13 +584,30 @@ test(
           await page.waitForTimeout(150);
           await screenshot('owner-empty-top');
           await page.getByRole('tab', { name: /^Comments/ }).click();
-          await page.getByText('Profile comment lists are unavailable', { exact: false }).waitFor();
+          await page.getByText('No comments are available in this list.', { exact: false }).waitFor();
           await page.waitForURL(url => new URL(url.hash.startsWith('#/') ? url.hash.slice(1) : url.pathname + url.search, url.origin).searchParams.get('profileTab') === 'comments');
-          await screenshot('owner-comments-unavailable');
+          await screenshot('owner-comments-empty');
+          commentsMode = 'populated';
+          await page.getByRole('button', { name: 'Refresh profile' }).click();
+          await postCard(commentPage[0].body).waitFor();
+          await postCard(commentPage[1].body).waitFor();
+          assert.ok((await profileText()).includes('Awaiting review'));
+          await moveHeadingNearTop('Your comments');
+          await screenshot('owner-comments-populated');
+          const loadComments = page.getByRole('button', { name: 'Load more comments', exact: true });
+          await loadComments.focus();
+          await page.keyboard.press('Enter');
+          await postCard(commentSecondPage[0].body).waitFor();
+          assert.equal(ownerCommentsCalls.at(-1)?.cursor, 'visual-comments-page-2');
+          const loadedCommentsCalls = ownerCommentsCalls.length;
           await page.getByRole('tab', { name: /^Posts/ }).click();
           await moveHeadingNearTop('Your posts');
           assert.ok((await profileText()).includes('No posts are available in this list.'));
           await screenshot('owner-empty');
+          await page.getByRole('tab', { name: /^Comments/ }).click();
+          await postCard(commentSecondPage[0].body).waitFor();
+          assert.equal(ownerCommentsCalls.length, loadedCommentsCalls);
+          await page.getByRole('tab', { name: /^Posts/ }).click();
 
           postsMode = 'populated';
           await page.getByRole('button', { name: 'Refresh profile' }).click();
@@ -593,6 +659,7 @@ test(
           await screenshot('owner-error-recovered');
 
           const ownerCallCount = ownerPostsCalls.length;
+          const ownerCommentsCallCount = ownerCommentsCalls.length;
           await openApp(`/user/${publicMember.id}`);
           await page.getByText(publicMember.displayName, { exact: true }).waitFor();
           await page.getByText(publicMember.bio, { exact: true }).waitFor();
@@ -604,13 +671,14 @@ test(
           const publicText = await profileText();
           assert.doesNotMatch(
             publicText,
-            /Subscription:|Your posts|Edit profile|Activity & Audit Log|PRIVATE_PROFILE_SENTINEL|Garden planning notes|watering rota|Draft planting schedule|private reminder|profile-owner@example\.invalid|Followers\s*[:=]\s*\d+|Following\s*[:=]\s*\d+/i,
+            /Subscription:|Your posts|Your comments|Edit profile|Activity & Audit Log|PRIVATE_PROFILE_SENTINEL|Garden planning notes|watering rota|Draft planting schedule|private reminder|seeds to our next|shared watering schedule|spare tools|profile-owner@example\.invalid|Followers\s*[:=]\s*\d+|Following\s*[:=]\s*\d+/i,
           );
           await page.getByRole('tab', { name: /^Posts/ }).click();
           await page.getByText('Member post lists are unavailable', { exact: false }).waitFor();
           await page.getByRole('tab', { name: /^Comments/ }).click();
           await page.getByText('Profile comment lists are unavailable', { exact: false }).waitFor();
           assert.equal(ownerPostsCalls.length, ownerCallCount);
+          assert.equal(ownerCommentsCalls.length, ownerCommentsCallCount);
           await page.getByRole('tab', { name: /^Overview/ }).click();
           assert.equal(ownerPostsCalls.length, ownerCallCount);
           await screenshot('other-profile-public');
@@ -752,6 +820,8 @@ test(
             viewport: size.name,
             ownerProfileReloadDelayMs: ownerProfileReadDelay,
             ownerPostsRequests: ownerPostsCalls.length,
+            ownerCommentsRequests: ownerCommentsCalls.length,
+            ownerCommentsCursors: ownerCommentsCalls.map(({ cursor }) => cursor),
             ownerPostQueries: ownerPostsCalls.map(({ cursor, state }) => ({
               cursor,
               state,
@@ -766,6 +836,7 @@ test(
                   requestPath !== '/api/auth/logout' &&
                   requestPath !== '/api/users/me' &&
                   requestPath !== '/api/users/me/posts' &&
+                  requestPath !== '/api/users/me/comments' &&
                   requestPath !== `/api/users/${publicMember.id}` &&
                   requestPath !== `/api/users/${publicMember.id}/follow` &&
                   requestPath !== `/api/users/${hiddenMember.id}` &&
@@ -816,7 +887,7 @@ test(
         2,
       ),
     );
-    const expectedCaptures = selectedThemes.length * selectedSizes.length * 16;
+    const expectedCaptures = selectedThemes.length * selectedSizes.length * 17;
     assert.equal(captures.length, expectedCaptures, 'Every profile state screenshot must be captured');
     assert.deepEqual(
       configResults.flatMap(({ errors }) => errors),
