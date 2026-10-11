@@ -1,3 +1,9 @@
+> **Historical scope:** The unchanged body below records `reputation-v2.0.0`
+> and historical `appeals-v1.0.0`, including their trained/weighted review rules.
+> It does not govern new standard appeals or prospective quarterly awards.
+> Follow the [current policy authority](current-policy-authority.md) for the
+> owner's October decisions; operational defaults and activation remain separate.
+
 # Reputation Policy v1
 
 **Status:** Partial — the versioned repository policy is present; it is not a claim that the policy has been migrated, deployed, or approved for production operation.

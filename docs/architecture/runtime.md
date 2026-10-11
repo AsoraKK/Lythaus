@@ -16,7 +16,13 @@ is evaluation evidence only: it always enters human review and never directly
 allows, blocks, removes, or publishes content. The configured monthly evaluation
 budget is US$25.
 
-Email and guest access are the only initial authentication modes. Backend
+Email/password and read-only guest access are the only initial authentication
+modes, reaffirmed by the owner on 11 October 2026. Public posting remains
+withheld until complete publishing-pipeline validation and a separate activation
+decision. Follow the [current policy authority](../policy/current-policy-authority.md)
+for new versus historical appeals and quarterly rules. The Firebase mobile
+purpose/exception inventory is [recorded separately](../security/firebase-mobile-purpose-inventory.md).
+Backend
 deployment implementation is `.github/workflows/native-workers-deploy.yml`.
 Production releases are coordinated by `.github/workflows/production-release.yml`
 from one reviewed main SHA. The generated release manifest is the cross-provider
