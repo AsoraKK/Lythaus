@@ -180,10 +180,13 @@ test('prompt activation rejects automatic, missing, nonnumeric or excessive cons
   }
 });
 
-test('root and development declarations must each contain exactly one capped lifecycle consumer', () => {
+test('top-level configuration requires one capped lifecycle consumer and rejects hosted environments', () => {
   const consumer = { ...CONSUMER, max_concurrency: 1 };
-  const config = { queues: { consumers: [consumer] }, env: { development: { queues: { consumers: [consumer] } } } };
+  const config = { queues: { consumers: [consumer] }, env: {} };
   assert.doesNotThrow(() => assertConsumerDeclaration(config));
+  for (const env of [undefined, null, [], { development: { queues: { consumers: [consumer] } } }, { production: {} }]) {
+    assert.throws(() => assertConsumerDeclaration({ ...config, env }), /consumer_configuration_drift/);
+  }
   for (const consumers of [[], [consumer, consumer], [{ ...consumer, max_concurrency: undefined }],
     [{ ...consumer, max_concurrency: null }], [{ ...consumer, max_concurrency: 2 }]]) {
     assert.throws(() => assertConsumerDeclaration({ ...config, queues: { consumers } }), /consumer_configuration_drift/);

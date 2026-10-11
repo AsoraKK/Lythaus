@@ -12,7 +12,13 @@ The canonical backend is three Cloudflare Workers backed by PlanetScale PostgreS
 
 Cloudflare R2 stores media, Queues and Workflows run asynchronous work, and Workers AI supports provider-neutral Lythaus Authenticity AI evaluation. Azure was fully deleted on 6 August 2026 and is not a runtime, deployment, recovery, or authentication fallback.
 
-Initial authentication supports Guest and Email only. Guest access is limited to read-only public browsing. Email is the canonical registered-user authentication path. Google, Apple, World ID, Entra, Azure B2C, and generic OAuth provider selection are outside the launch surface.
+Initial authentication supports Guest and Email only. Guest access is limited to read-only public browsing. Email/password is retained for launch by the owner's 11 October 2026 decision. Google, Apple, World ID, Entra, Azure B2C, and generic OAuth provider selection are outside the launch surface.
+
+Read the [current policy authority](docs/policy/current-policy-authority.md) for
+new versus historical appeals, calendar-quarter-end rewards and evidence gates.
+Public posting stays withheld until the complete publishing pipeline is validated.
+Owner-test deployment and production smoke do not certify production
+authentication, detection or publishing; activation is a separate decision.
 
 ## Repository
 
@@ -92,6 +98,8 @@ Read-only GitHub, Cloudflare, PlanetScale, and branch evidence is stored under
 ## References
 
 - [Current architecture](docs/architecture/runtime.md)
+- [Versioned policy authority](docs/policy/current-policy-authority.md)
+- [Firebase mobile purpose and unresolved exception scope](docs/security/firebase-mobile-purpose-inventory.md)
 - [Email and guest authentication decision](docs/architecture/email-guest-authentication-adr.md)
 - [Azure retirement history](docs/history/azure-retirement-2026-08-06.md)
 - [GitHub secret-removal record](docs/security/azure-github-secret-removal-2026-08-06.md)

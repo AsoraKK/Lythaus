@@ -2,6 +2,11 @@
 
 **Status:** Repository operational design / Partial deployment evidence. The exact reviewed SHA has not been verified in production.
 
+Authority reconciled 11 October 2026: [current policy authority](../policy/current-policy-authority.md).
+Reported release-108 deployment/smoke evidence does not certify production
+authentication, detection or the full publishing pipeline. Public posting
+remains withheld pending pipeline validation and separate activation approval.
+
 ## Runtime
 
 The repository designs Lythaus moderation for the native Workers architecture:
@@ -26,7 +31,23 @@ Supported outcomes are `allow`, `block`, and `queue`. `queue` keeps the case ope
 
 ## Appeals
 
-Appeals remain open until an authorised human decision resolves the linked case. Community signals are advisory and cannot directly publish or block content. The appeal lifecycle Workflow closes appeals only after the case is resolved and records the action in the audit log.
+Route appeals by their server-recorded policy version. New standard cases use
+timed, private community review with one equal vote per eligible member, no fixed
+trained panel or Level 5 weight, and no routine Editorial confirmation. Approved
+timing/quorum rules and activation are separate gates; source presence is not
+permission to enroll cases or collect ballots.
+
+Historical `appeals-v1.0.0` cases retain their weighted trained-reviewer panel and
+required adjudication. Follow the [historical admin operations](admin-ops.md)
+for those cases; never mix historical ballots into the new evaluator or migrate
+an open case by inference.
+
+Restricted legal/safety cases and unresolved outcomes require accountable
+protected handling. Ties, insufficient quorum, stale evidence, missing approval
+or unsupported versions do not become a final decision. Inspect the recorded
+policy/rules version, outcome, restoration hold and audit evidence. A new-policy
+standard outcome may resolve without Editorial confirmation, but no appeal result
+alone grants publication through a safety, privacy or publishing hold.
 
 ## Evaluation outage
 

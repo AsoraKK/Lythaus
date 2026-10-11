@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { nativeWorkerEnvironmentFailures } from '../native-worker-config-policy.mjs';
 
 const LIFECYCLE_QUEUE = 'lythaus-email-lifecycle-dev';
 const LIFECYCLE_DLQ = 'lythaus-email-lifecycle-dlq-dev';
@@ -74,12 +75,11 @@ function isExactSubscription(subscription, lifecycleQueueId, zoneId) {
 export function assertConsumerDeclaration(config = JSON.parse(
   fs.readFileSync('apps/lythaus-jobs/wrangler.jsonc', 'utf8').replace(/^\s*\/\/.*$/gm, '').replace(/,\s*([}\]])/g, '$1'),
 )) {
-  for (const declaration of [config, config.env?.development]) {
-    const consumers = declaration?.queues?.consumers;
-    const matching = Array.isArray(consumers) ? consumers.filter(consumer => consumer.queue === LIFECYCLE_QUEUE) : [];
-    if (matching.length !== 1 || Object.entries(CONSUMER).some(([key, value]) => matching[0][key] !== value)) {
-      throw new Error('email_lifecycle_consumer_configuration_drift');
-    }
+  const consumers = config.queues?.consumers;
+  const matching = Array.isArray(consumers) ? consumers.filter(consumer => consumer.queue === LIFECYCLE_QUEUE) : [];
+  if (nativeWorkerEnvironmentFailures(config).length !== 0 || matching.length !== 1
+    || Object.entries(CONSUMER).some(([key, value]) => matching[0][key] !== value)) {
+    throw new Error('email_lifecycle_consumer_configuration_drift');
   }
 }
 
