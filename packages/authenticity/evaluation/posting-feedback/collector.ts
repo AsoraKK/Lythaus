@@ -21,7 +21,7 @@ export interface CollectionGate {
 }
 
 export interface ReceiptLedger {
-  durability: 'DURABLE_LOCAL' | 'SYNTHETIC_IN_MEMORY';
+  durability: 'DURABLE_LOCAL' | 'DURABLE_DATABASE' | 'SYNTHETIC_IN_MEMORY';
   claimProbe(binding: { selectionHash: string; sourceSha: string; collectorHash: string }): Promise<boolean>;
   claimAttempt(binding: { sampleId: string; inputHash: string; revision: number }): Promise<boolean>;
   persistReceipt(receipt: CollectedReceipt): Promise<void>;
@@ -74,7 +74,8 @@ export function assertCollectionGate(gate: CollectionGate, apiKey: string, ledge
     || !/^[a-zA-Z0-9_./:-]{1,160}$/.test(gate.evidenceReference)) throw new Error('collection_zero_cost_unverified');
   if (!gate.privateDataExcluded || !gate.retentionResolved || !Number.isSafeInteger(gate.retentionDays)
     || gate.retentionDays < 1 || gate.retentionDays > 7) throw new Error('collection_data_or_retention_unresolved');
-  if (ledger.durability !== 'DURABLE_LOCAL') throw new Error('collection_durable_ledger_required');
+  if (ledger.durability !== 'DURABLE_LOCAL' && ledger.durability !== 'DURABLE_DATABASE')
+    throw new Error('collection_durable_ledger_required');
 }
 
 interface CollectorOptions {
