@@ -196,6 +196,7 @@ import 'package:lythaus_api_client/src/model/overview_provider.dart';
 import 'package:lythaus_api_client/src/model/overview_provider_accounting_period.dart';
 import 'package:lythaus_api_client/src/model/overview_window.dart';
 import 'package:lythaus_api_client/src/model/owner_comment.dart';
+import 'package:lythaus_api_client/src/model/owner_comments_page.dart';
 import 'package:lythaus_api_client/src/model/owner_decision_request.dart';
 import 'package:lythaus_api_client/src/model/owner_detail.dart';
 import 'package:lythaus_api_client/src/model/owner_evidence_request.dart';
@@ -484,6 +485,7 @@ part 'serializers.g.dart';
   OverviewProviderAccountingPeriod,
   OverviewWindow,
   OwnerComment,
+  OwnerCommentsPage,
   OwnerDecisionRequest,
   OwnerDetail,
   OwnerEvidenceRequest,
