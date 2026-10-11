@@ -33,7 +33,7 @@ function frames(startup, receive) {
 }
 
 export async function commitResponseProxy(target, mode) {
-  assert.equal(target.hostname, '127.0.0.1');
+  assert.ok(['127.0.0.1', 'localhost'].includes(target.hostname));
   assert.ok(['drop_committed_response', 'drop_before_commit'].includes(mode));
   const sockets = new Set();
   let commitSeen = false, commandObserved, responseDropped = false;

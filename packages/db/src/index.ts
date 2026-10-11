@@ -19,6 +19,11 @@ export class DatabaseCommitUncertainError extends Error {
   }
 }
 
+export async function checkTransactionHealth(client: DatabaseClient): Promise<void> {
+  try { await client.query('SELECT 1'); }
+  catch { throw new Error('database_transaction_unavailable'); }
+}
+
 export { enqueueTransactionalEmailIntent, lockAuthDelivery, type TransactionalEmailOutboxInput, type TransactionalEmailPurpose } from './transactional-email.ts';
 export { supportFeedbackSchemaReady, createSupportFeedbackRuntime } from './support-feedback-runtime.ts';
 export { supportFeedbackPrivacyIsReady, supportFeedbackPrivacySchemaState, type SupportFeedbackPrivacySchemaState } from './support-feedback-privacy-runtime.ts';
