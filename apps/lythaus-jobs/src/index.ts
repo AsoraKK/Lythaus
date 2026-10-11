@@ -2513,11 +2513,6 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       const packageHash = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, '0')).join('');
       const objectKey = `exports/${subjectId}/${requestId}.json`;
       const activityEventId = await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
-        const account = await client.query<{ status: string; deleted_at: string | null }>(
-          `SELECT status, deleted_at FROM identity.users WHERE id = $1 FOR NO KEY UPDATE`, [subjectId]);
-        if (account.rows[0]?.status !== 'active' || account.rows[0].deleted_at !== null) {
-          throw new Error('privacy_export_account_unavailable');
-        }
         const current = await client.query<{ state: string }>(
           `SELECT state FROM privacy.requests
             WHERE id = $1 AND subject_id = $2 AND request_type = 'export' FOR UPDATE`,
@@ -2525,6 +2520,11 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         if (!current.rows[0]) throw new Error('privacy_export_request_not_found');
         if (!['received', 'processing', 'completed'].includes(current.rows[0].state)) {
           throw new Error('privacy_export_request_unavailable');
+        }
+        const account = await client.query<{ status: string; deleted_at: string | null }>(
+          `SELECT status, deleted_at FROM identity.users WHERE id = $1 FOR NO KEY UPDATE`, [subjectId]);
+        if (account.rows[0]?.status !== 'active' || account.rows[0].deleted_at !== null) {
+          throw new Error('privacy_export_account_unavailable');
         }
         await exportsBucket.put(objectKey, bytes, { httpMetadata: { contentType: 'application/json' } });
         await client.query(

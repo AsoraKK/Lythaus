@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { runInNewContext } from 'node:vm';
 import { setTimeout } from 'node:timers/promises';
 import pg from 'pg';
 import { uuidv7 } from '@lythaus/security';
+import { applyApprovedSupportCompletionLimits } from '../../../packages/db/src/support-feedback-approved-limits.ts';
 import { loadApprovedMigrations } from '../../../scripts/ci/planetscale-migration-manifest.mjs';
 import { nativePostgresPrivacyWorkflowFixture } from './native-postgres-workflow-fixture.mjs';
 
@@ -13,7 +15,7 @@ if (!['localhost', '127.0.0.1'].includes(target.hostname)
   || !(target.pathname.startsWith('/lythaus_auth_test') || (process.env.GITHUB_ACTIONS === 'true' && target.pathname === '/postgres'))) {
   throw new Error('Export workflow tests require an explicitly local disposable PostgreSQL database');
 }
-const name = `lythaus_auth_test_export_${uuidv7().replaceAll('-', '')}`;
+const name = `lythaus_support_test_workflow_export_${uuidv7().replaceAll('-', '')}`;
 const local = new URL(target); local.pathname = `/${name}`;
 let control, fixture, created = false;
 async function connect() {
@@ -26,7 +28,8 @@ before(async () => {
   const bootstrap = new pg.Client({ connectionString: target.toString(), ssl: false }); await bootstrap.connect();
   try {
     assert.equal((await bootstrap.query('SHOW server_version_num')).rows[0].server_version_num.slice(0, 2), '17');
-    for (const role of ['lythaus_runtime', 'lythaus_admin', 'lythaus_jobs', 'lythaus_privacy', 'lythaus_migrations']) {
+    for (const role of ['lythaus_runtime', 'lythaus_admin', 'lythaus_jobs', 'lythaus_privacy', 'lythaus_migrations',
+      'lythaus_support_function_owner', 'lythaus_support_locator_owner']) {
       await bootstrap.query(`DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='${role}') THEN CREATE ROLE ${role} NOLOGIN; END IF; END $$`);
     }
     await bootstrap.query(`CREATE DATABASE ${name}`); created = true;
@@ -39,7 +42,7 @@ before(async () => {
 after(async () => {
   await fixture?.dispose(); await control?.end();
   if (created) {
-    assert.match(name, /^lythaus_auth_test_export_[a-f0-9]+$/);
+    assert.match(name, /^lythaus_support_test_workflow_export_[a-f0-9]+$/);
     const bootstrap = new pg.Client({ connectionString: target.toString(), ssl: false }); await bootstrap.connect();
     try { await bootstrap.query(`DROP DATABASE ${name}`); } finally { await bootstrap.end(); }
   }
@@ -130,28 +133,40 @@ test('another owner and a deletion request cannot generate an export', async () 
 });
 
 test('account deletion waits for publication and then removes the private artifact', async () => {
-  const params = await request(), lock = await connect();
+  const params = await request();
   const deleteRequest = { subjectId: params.subjectId, requestId: uuidv7() };
   await control.query("INSERT INTO privacy.requests(id,subject_id,request_type) VALUES($1,$2,'delete')", [deleteRequest.requestId, params.subjectId]);
+  const accountLocked = Promise.withResolvers(), releasePublication = Promise.withResolvers();
+  let paused = false;
+  const racing = await nativePostgresPrivacyWorkflowFixture(local.toString(), {
+    afterQuery: async input => {
+      if (!paused && input.text.includes('SELECT status, deleted_at FROM identity.users')) {
+        paused = true; accountLocked.resolve();
+        await releasePublication.promise;
+      }
+    },
+  });
+  const runs = [];
   try {
-    await lock.query('BEGIN');
-    const blocker = (await lock.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
-    await lock.query('SELECT id FROM privacy.requests WHERE id=$1 FOR NO KEY UPDATE', [params.requestId]);
-    const exporting = fixture.run('export', params);
+    runs.push(racing.run('export', params));
+    await Promise.race([accountLocked.promise, runs[0].then(status => { throw new Error(JSON.stringify(status.error)); })]);
+    runs.push(racing.run('delete', deleteRequest));
     await waitFor(async () => (await control.query(`SELECT 1 FROM pg_stat_activity
-      WHERE $1=ANY(pg_blocking_pids(pid)) AND query LIKE '%SELECT state FROM privacy.requests%'`, [blocker])).rowCount > 0);
-    const deleting = fixture.run('delete', deleteRequest);
-    await waitFor(async () => (await control.query(`SELECT 1 FROM pg_stat_activity
-      WHERE cardinality(pg_blocking_pids(pid))>0 AND query LIKE '%UPDATE identity.users SET status = ''locked''%'`)).rowCount > 0);
-    await lock.query('COMMIT');
-    const [exportStatus, deleteStatus] = await Promise.all([exporting, deleting]);
+      WHERE datname=current_database() AND cardinality(pg_blocking_pids(pid))>0
+        AND query LIKE '%UPDATE identity.users SET status = ''locked''%'`)).rowCount > 0);
+    releasePublication.resolve();
+    const [exportStatus, deleteStatus] = await Promise.all(runs);
     assert.equal(exportStatus.status, 'complete', JSON.stringify(exportStatus));
     assert.equal(deleteStatus.status, 'complete', JSON.stringify(deleteStatus));
     assert.equal((await control.query('SELECT status FROM identity.users WHERE id=$1', [params.subjectId])).rows[0].status, 'deleted');
-    assert.equal(await (await fixture.bucket('PRIVATE_EXPORTS')).get(key(params)), null);
+    assert.equal(await (await racing.bucket('PRIVATE_EXPORTS')).get(key(params)), null);
     assert.equal((await control.query('SELECT id FROM privacy.export_manifests WHERE request_id=$1', [params.requestId])).rowCount, 0);
     assert.equal((await control.query('SELECT subject_id FROM privacy.deletion_tombstones WHERE subject_id=$1', [params.subjectId])).rowCount, 1);
-  } finally { await lock.query('ROLLBACK'); await lock.end(); }
+  } finally {
+    releasePublication.resolve();
+    await Promise.allSettled(runs);
+    await racing.dispose();
+  }
 });
 
 test('a database failure after storage write leaves no downloadable manifest and supports an exact-request retry', async () => {
@@ -170,4 +185,91 @@ test('a database failure after storage write leaves no downloadable manifest and
   assert.equal(retry.status, 'complete', JSON.stringify(retry));
   assert.equal((await control.query('SELECT id FROM privacy.export_manifests WHERE request_id=$1', [params.requestId])).rowCount, 1);
   assert.equal((await control.query("SELECT id FROM privacy.request_events WHERE request_id=$1 AND event_type='completed'", [params.requestId])).rowCount, 1);
+});
+
+test('a fresh-instance retry of an expired manifest does not renew download authority', async () => {
+  const params = await request();
+  assert.equal((await fixture.run('export', params)).status, 'complete');
+  await control.query("UPDATE privacy.export_manifests SET expires_at=now()-interval '1 second' WHERE request_id=$1", [params.requestId]);
+  const original = (await control.query(`SELECT manifest.expires_at,request.completed_at
+    FROM privacy.export_manifests manifest JOIN privacy.requests request ON request.id=manifest.request_id
+    WHERE request.id=$1`, [params.requestId])).rows[0];
+  await (await fixture.bucket('PRIVATE_EXPORTS')).delete(key(params));
+  const retry = await fixture.run('export', params);
+  assert.equal(retry.status, 'complete', JSON.stringify(retry));
+  assert.ok(await (await fixture.bucket('PRIVATE_EXPORTS')).get(key(params)));
+  const repeated = (await control.query(`SELECT manifest.expires_at,request.completed_at
+    FROM privacy.export_manifests manifest JOIN privacy.requests request ON request.id=manifest.request_id
+    WHERE request.id=$1`, [params.requestId])).rows[0];
+  assert.deepEqual(repeated, original);
+  assert.equal((await control.query(`SELECT manifest.id FROM privacy.export_manifests manifest
+    JOIN privacy.requests request ON request.id=manifest.request_id
+    WHERE request.id=$1 AND request.subject_id=$2 AND request.request_type='export'
+      AND request.state='completed' AND manifest.expires_at>now()`, [params.requestId, params.subjectId])).rowCount, 0);
+  assert.equal((await control.query("SELECT id FROM privacy.request_events WHERE request_id=$1 AND event_type='completed'", [params.requestId])).rowCount, 1);
+});
+
+test('overlapping fresh instances serialize publication with a support passport for the same request', async () => {
+  const source = readFileSync('packages/db/tests/support-feedback.postgres.mjs', 'utf8');
+  const literal = source.match(/const policy=\(\)=>\(([\s\S]*?)\);\nconst problem=/)[1];
+  const candidate = JSON.parse(JSON.stringify(runInNewContext(`(${literal})`)));
+  candidate.privacy.requestStates = ['received', 'completed'];
+  const supportPolicy = applyApprovedSupportCompletionLimits(candidate);
+  await control.query(readFileSync('database/planetscale/proposals/support-feedback.canonical.sql', 'utf8'));
+  const params = await request();
+  const ticketId = uuidv7();
+  await control.query(`INSERT INTO support.requests(id,submitter_id,kind,submission,revision,state,policy_version)
+    VALUES($1,$2,'problem',$3::jsonb,1,'submitted',$4)`, [ticketId, params.subjectId,
+    JSON.stringify({ kind: 'problem', category: 'display', title: 'Synthetic overlapping export',
+      actual: 'Synthetic actual', expected: 'Synthetic expected' }), supportPolicy.version]);
+  const publicationReached = Promise.withResolvers(), releasePublication = Promise.withResolvers();
+  const supportLocked = Promise.withResolvers(), releaseSupport = Promise.withResolvers();
+  let publicationPaused = false, supportPaused = false;
+  const overlapping = await nativePostgresPrivacyWorkflowFixture(local.toString(), { supportPolicy,
+    onStep: async trace => {
+      if (!publicationPaused && trace.name === 'store-export-and-complete-request' && trace.state === 'started') {
+        publicationPaused = true;
+        publicationReached.resolve();
+        await releasePublication.promise;
+      }
+    },
+    afterQuery: async input => {
+      if (publicationPaused && !supportPaused && input.text.includes("WHERE id=$1 AND request_type='export'")
+        && input.text.includes('FOR SHARE')) {
+        supportPaused = true;
+        supportLocked.resolve();
+        await releaseSupport.promise;
+      }
+    },
+  });
+  const runs = [];
+  try {
+    runs.push(overlapping.run('export', params));
+    await Promise.race([publicationReached.promise, runs[0].then(status => { throw new Error(JSON.stringify(status.error)); })]);
+    runs.push(overlapping.run('export', params));
+    await Promise.race([supportLocked.promise, runs[1].then(status => { throw new Error(JSON.stringify(status.error)); })]);
+    releasePublication.resolve();
+    await waitFor(async () => (await control.query(`SELECT 1 FROM pg_stat_activity
+      WHERE datname=current_database() AND cardinality(pg_blocking_pids(pid))>0
+        AND query LIKE '%SELECT state FROM privacy.requests%'`)).rowCount > 0);
+    releaseSupport.resolve();
+    const statuses = await Promise.all(runs);
+    for (const status of statuses) assert.equal(status.status, 'complete', JSON.stringify({
+      statuses: statuses.map(item => ({ status: item.status, error: item.error })),
+      errors: overlapping.statements.filter(item => item.error).map(item => item.error),
+    }));
+    assert.equal(overlapping.statements.filter(item => item.error).length, 0);
+    const object = await (await overlapping.bucket('PRIVATE_EXPORTS')).get(key(params));
+    const body = await object.text();
+    assert.equal(JSON.parse(body).supportFeedback.requests[0].request.id, ticketId);
+    const manifest = (await control.query('SELECT package_hash FROM privacy.export_manifests WHERE request_id=$1', [params.requestId])).rows;
+    assert.equal(manifest.length, 1);
+    assert.equal(manifest[0].package_hash, createHash('sha256').update(body).digest('hex'));
+    assert.equal((await control.query("SELECT id FROM privacy.request_events WHERE request_id=$1 AND event_type='completed'", [params.requestId])).rowCount, 1);
+    assert.equal((await control.query("SELECT id FROM trust.user_activity_events WHERE user_id=$1 AND event_type='privacy.export_generated'", [params.subjectId])).rowCount, 1);
+  } finally {
+    releasePublication.resolve(); releaseSupport.resolve();
+    await Promise.allSettled(runs);
+    await overlapping.dispose();
+  }
 });
