@@ -12,7 +12,7 @@
     "authorshipBlockMinimum": null
   },
   "executableOfflineControls": [
-    "node --experimental-strip-types --test packages/authenticity/evaluation/posting-feedback/harness.test.mjs packages/authenticity/evaluation/posting-feedback/workerd.test.mjs",
+    "node --experimental-strip-types scripts/ci/validate-posting-feedback-evaluation.mjs",
     "node --experimental-strip-types packages/authenticity/evaluation/posting-feedback/run.mjs --output .artifacts/posting-feedback/synthetic-report.json"
   ],
   "nextMinimumLiveProbeProposal": {
@@ -29,13 +29,27 @@
     "requestsPerSample": 1,
     "automaticRetries": 0,
     "executionWindowMinutes": 10,
-    "proposedMaxTotalUsd": 1,
-    "costStatus": "NOT_APPROVED_NOT_MEASURED. The cap must be explicitly approved within existing allowed billing/resources. If the owner permits no additional usage spend, require verified included/free quota with maximum incremental spend USD 0 instead; no new paid resource or subscription.",
+    "proposedMaxIncrementalTotalUsd": 0,
+    "officialProviderPriceUsd": 0,
+    "officialPriceVerifiedAt": "2026-10-11",
+    "officialPriceSource": "https://help.openai.com/en/articles/4936833-is-the-moderation-endpoint-free-to-use",
+    "officialAuthenticationSource": "https://developers.openai.com/api/reference/overview",
+    "officialModelSource": "https://developers.openai.com/api/docs/models/omni-moderation-latest",
+    "officialDataControlsSource": "https://developers.openai.com/api/docs/guides/your-data",
+    "costStatus": "Official OpenAI moderation endpoint price is free and does not count toward monthly usage limits. This establishes provider price, not account access, project permission or zero total Worker/log/storage cost. No inference or account billing call was made. Require verified included execution/storage usage with maximum incremental total spend USD 0; no funding, top-up, new paid resource or subscription.",
+    "existingBindingVerification": "Local OpenAI environment key is absent. A name-only read of the already registered Jobs Worker secrets using the existing Cloudflare token returned HTTP 401; stopped without retry, alternate route or secret-value access. Deployed binding existence, permission and prior approval remain unverified. Do not infer them from a TypeScript optional binding or official free pricing.",
     "credentialPrerequisite": "Already approved scoped OpenAI binding. If absent or inaccessible, stop; no new credential or alternate access route is authorized.",
     "retentionProposal": "Sanitized local artifacts in mode 0600 for 7 days, then delete under the approved retention plan. Discard raw responses after validating and hashing; never retain credentials, arbitrary provider messages, raw input bodies or model rationale in result artifacts.",
     "sanitizedArtifact": "Separate actual-observation envelope: source/subset/response hashes, sample/family/revision, observed model alias, schema validity, category flags/scores/input modalities, monotonic elapsed time, status/failure, attempt count, missing snapshot and known limits. No scripted timing or synthetic response is relabelled as a real observation.",
     "authorizationStillRequired": "Explicit owner approval for this exact corpus, text transmission, provider/model, count/window, maximum spend, already approved binding and retention. The authorized collector is not implemented in this lane and none of these calls has occurred.",
     "excludedComponents": ["Workers AI general-model prompt", "SAFE-A inference", "Moondream", "GPT-OSS adviser", "public publishing", "production writes"]
+  },
+  "laterImageEvaluationSlices": {
+    "state": "PLANNING_ONLY_NOT_AUTHORIZED_NOT_EXECUTED",
+    "distinctProcessingSlices": ["camera_originals", "synthetic_originals", "recompressed_jpeg", "unknown_history_png", "hard_negatives"],
+    "lineage": "Retain originals and every derivative in one source family and one split; record processing history, generator/camera provenance and current component support separately. Unsupported history remains inconclusive.",
+    "historicalContextOnly": "Owner-provided September 29 Version 0.5 handoff reportedly recorded 0/40 synthetic detections and 8/60 negative controls flagged on a bounded JPEG slice. Its artifacts/source/model/corpus were not independently retrieved or validated here. These counts are not current accuracy evidence and are excluded from all current matrices and threshold selection.",
+    "ownerProvidedReference": "https://chatgpt.com/c/6ab976e0-ec50-83e9-bee6-d26459740e9b#message-533dd0d4-8685-4402-ad59-2b65674ef88a"
   },
   "liveCollectionPrerequisites": {
     "authorization": "Owner authorization must name the exact provider/model, modalities, rights-approved corpus hash, source SHA, existing execution resource, finite calls by component including retries, execution window and maximum total spend in USD. This task authorizes zero live calls.",

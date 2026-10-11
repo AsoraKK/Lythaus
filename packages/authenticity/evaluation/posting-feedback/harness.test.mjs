@@ -206,6 +206,42 @@ test('retries and concurrent fixture attempts remain deterministic without claim
   await assert.rejects(evaluateCorpus([fixtures[0], fixtures[1]], [left, right]), /duplicate_or_replayed/);
 });
 
+test('synthetic receipts reject coherent measurement, response-hash, failure, source and extra-field tampering', async () => {
+  const corpus = [fixtures[0], fixtures[1]];
+  const observations = await Promise.all(corpus.map(fixture => collectFixture(fixture)));
+  const network = mock.method(globalThis, 'fetch', () => { throw new Error('OUTBOUND_DENIED'); });
+  try {
+    for (const change of [
+      row => {
+        row.safety.adapterStatus = 'REVIEW'; row.safety.flagged = true;
+        row.safety.categoryFlags.harassment = true; row.safety.categoryScores.harassment = 0.85;
+        row.safety.band = 'REVIEW';
+      },
+      row => { row.provenance.responseHash = 'f'.repeat(64); },
+      row => { row.provenance.responseHash = null; },
+      row => { row.safety.failure = 'HTTP_AUTHENTICATION_FAILURE'; },
+      row => { row.safety.httpStatus = 403; },
+      row => { row.safety.latencySource = 'PROVIDER_LATENCY'; },
+      row => { row.safety.executionMs = 1; },
+      row => { row.safety.categoryScores.harassment = 0.7; },
+      row => { row.safety.explanation = 'Invented finding'; },
+      row => { row.authorship.legacyModel.normalizedRiskScore = 0.8; },
+      row => { row.authorship.missingModalities = []; },
+      row => { row.extra = undefined; },
+      row => { row.safety.rawDiagnostic = 'UNSAFE_RAW_DIAGNOSTIC'; },
+      row => { row.provenance.receiptSource = 'live'; },
+      row => { row.authority.hiddenDecision = true; },
+    ]) {
+      const altered = observations.map(clone);
+      change(altered[0]);
+      await assert.rejects(evaluateCorpus(corpus, altered), /synthetic_receipt_mismatch/);
+    }
+    const reordered = observations.map(row => Object.fromEntries(Object.entries(row).reverse()));
+    await assertObservationBindings(corpus, reordered);
+    assert.equal(network.mock.callCount(), 0);
+  } finally { network.mock.restore(); }
+});
+
 test('synthetic transport rejects arbitrary destinations and real provider endpoints', async () => {
   const transport = syntheticTransport(fixtures[0]);
   for (const endpoint of ['https://api.openai.com/v1/moderations', 'https://example.com', `${SYNTHETIC_ENDPOINT}/other`])

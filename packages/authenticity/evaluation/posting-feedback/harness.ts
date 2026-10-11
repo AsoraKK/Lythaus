@@ -7,7 +7,7 @@ import { enforceContentDeclaration } from '../../../contracts/src/content-policy
 import { isUuidV7, type UUIDv7 } from '../../src/uuid.ts';
 import { summarize, type Band } from './metrics.ts';
 
-export const HARNESS_VERSION = 'lythaus-posting-feedback-evaluation-v1';
+export const HARNESS_VERSION = 'lythaus-posting-feedback-evaluation-v2';
 export const SYNTHETIC_ENDPOINT = 'https://moderation.synthetic.invalid/v1/moderations';
 export const CATEGORIES = [
   'harassment', 'harassment/threatening', 'hate', 'hate/threatening', 'illicit', 'illicit/violent',
@@ -200,6 +200,17 @@ export async function collectFixture(fixture: Fixture, transport: typeof fetch =
 
 export type Observation = Awaited<ReturnType<typeof collectFixture>>;
 
+function exactRecordedValue(actual: unknown, expected: unknown): boolean {
+  if (actual === expected) return true;
+  if (Array.isArray(expected)) return Array.isArray(actual) && actual.length === expected.length
+    && Object.keys(actual).length === Object.keys(expected).length
+    && expected.every((value, index) => exactRecordedValue(actual[index], value));
+  if (!record(actual) || !record(expected)) return false;
+  const keys = Object.keys(expected);
+  return Object.keys(actual).length === keys.length
+    && keys.every(key => Object.hasOwn(actual, key) && exactRecordedValue(actual[key], expected[key]));
+}
+
 export async function assertObservationBindings(fixtures: readonly Fixture[], observations: readonly Observation[]): Promise<void> {
   if (observations.length !== fixtures.length) throw new Error('evaluation_incomplete_or_interrupted_collection');
   const byId = new Map(fixtures.map(fixture => [fixture.id, fixture]));
@@ -232,6 +243,12 @@ export async function assertObservationBindings(fixtures: readonly Fixture[], ob
       || observation.authorship.band !== 'ABSTAIN' || observation.authorship.qualifiedTextDetector !== false
       || JSON.stringify(observation.declaration) !== JSON.stringify(declarationResult(fixture)))
       throw new Error('evaluation_inconsistent_axes');
+    // Synthetic receipts have a known raw response. Derive the entire normalized
+    // observation again through the real adapter and reject any differing field,
+    // including the raw-body hash, failure/status/timing source and extra fields.
+    // This is not an importer or authenticity proof for future live receipts.
+    const expected = await collectFixture(fixture);
+    if (!exactRecordedValue(observation, expected)) throw new Error('evaluation_synthetic_receipt_mismatch');
   }
 }
 

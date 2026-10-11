@@ -20,11 +20,13 @@ Registry evidence is historical provider
 inventory, not a newly verified production state. No provider inventory call,
 database DDL, grant, write, credential creation, feature activation or launch occurs.
 
-The normally authorized workspace identity read returned `AsoraKK` and the open-PR
-inventory succeeded. Open work includes #886 private-alpha hardening, #844–856
-stacked research, #953/#958–971 prospective monthly-v2 work, and #974 Jobs email
-redirects. This lane incorporates none of those candidate capabilities and edits
-no runtime, existing contract, migration, flag, reward, appeal or shared CI file.
+The normally authorized workspace identity read confirmed the repository owner and the open-PR
+inventory succeeded. Existing prospective monthly-v2/research work is not duplicated.
+The current acceptance #990 edits shared `ci.yml`; Jobs #989 owns orchestration;
+configuration #988 owns configs/types and was subsequently merged by the parent.
+The new, separately allocated `posting-feedback-evaluation.yml` and validation
+script overlap none of their published paths. This lane edits no runtime,
+existing contract, migration, flag, reward, appeal or existing shared CI file.
 It reuses the existing safety and authenticity adapters for protocol testing.
 
 The parent-reported release 108 smoke and supplied uncertified-manifest audit are
@@ -131,6 +133,8 @@ All paths below are in `packages/authenticity/evaluation/posting-feedback/`.
 | Sanitized evidence and missingness | Allowlisted maps, response hash, fixed explanations | Raw provider-error message, LLM error/rationale, input body and synthetic key absent from report; malformed JSON remains unqualified |
 | Positive, negative, contradiction, outage and named drift | Scripted transport and evaluation schema | Flagged/unflagged, partial category maps, conflicting flags, 429/503/307, timeout, nullable schema, malformed response and changed response model |
 | Split/lineage integrity, replay and stale revision | `validateCorpus`, `assertObservationBindings` | Duplicate UUID/NFC/family checks; missing/duplicate/replayed row, changed revision/hash/body/labels/split and authority rejected |
+| Complete synthetic receipt provenance | `assertObservationBindings` re-derives through the real adapter from the known scripted raw response | Coherent changed finding, hash, failure/status/latency/source/explanation, legacy claims and extra fields rejected; no arbitrary live-receipt importer or cryptographic authenticity claim |
+| Automated source-head evaluation | Separate workflow and `scripts/ci/validate-posting-feedback-evaluation.mjs` | Scoped typing, three test files, report; exact PR source SHA and clean checkout required; no secrets or privileged trigger |
 | Retry, concurrency and interrupted paths | Independent fixture collection and atomic local output | Repeat/concurrent calls stay separate; no exactly-once claim. Interrupted collections fail; prior receipt preserved, failed rename cleans temp, concurrent writes produce complete JSON |
 | Error/abstention/review rates and uncertainty | `metrics.ts`, `evaluateCorpus` | Known-answer 3×4 matrices; denominators/nulls; Wilson zero-error bound; related-family interval suppression; split/slice report |
 | Preserve qualified image support and positive-only semantics | Existing `assertSafeResult`, `compileBetaResult` | Seven scripted SAFE cases; no model training, score recalibration, weight download or inference |
@@ -141,25 +145,26 @@ All paths below are in `packages/authenticity/evaluation/posting-feedback/`.
 Local Node is `v24.19.0`; existing dependency installation/lockfile is reused.
 The scoped TypeScript command includes the new tooling; the native root command
 continues to cover existing runtime. Initial scoped typing and Workerd bundling
-failed, were corrected, and the final scoped typing and 17-case suite passed.
+failed and were corrected. The first 17-case suite passed; final validation includes
+the additional provenance and CI regressions below.
 
 | Check | Evidence |
 | --- | --- |
-| New offline harness and Workerd suites | 17 passed: 15 Node cases plus 2 native Workerd cases; no skips |
+| New offline harness, Workerd and CI suites | 20 passed: 16 Node harness, 2 native Workerd, 2 CI regression cases; no skips. Final handoff reruns after approved baseline integration |
 | Scoped tooling TypeScript and `typecheck:native` | Passed; no dependency or runtime export change |
 | Existing evaluation/beta/private-alpha/provider/content/security regression set | 39 passed, no skipped tests |
 | `test:native-architecture` | 315 passed, no skipped tests; expected negative-path fixture errors do not represent live failures |
 | `openapi:lint` | Passed with 2 inherited warnings: EmailAuthRequest required-property definition and PrivacyRequestAccepted single-member allOf |
 | `openapi:test:contract` | 70 passed; 17 live-server/auth tests skipped because live contract configuration is absent and live calls are not authorized |
 | Migration baseline / registry | 20 migration files, 102 tables and 33 resource guardrails validated statically; no live schema evidence |
-| `validate:native-workers` | Failed: pinned `wrangler@4.123.0 types --check` reported all 3 generated type files stale or unverifiable. Configs and those files are byte-unchanged; this lane does not resolve their freshness or substitute another version |
-| Native scope, provider retirement, branding | Passed locally |
+| `validate:native-workers` | Initial local npm failure was reported as stale/unverifiable; default-cache version probe reproduces `ENOENT`. With writable `npm_config_cache=/tmp/lythaus-evaluation-npm-cache` the exact pinned check passed; current-head CI also passed all 3 checks. Installed root Wrangler 4.129.1/workerd 1.20260907.1 differs from release-pinned 4.123.0/workerd 1.20260811.1, but no stale-type defect was established. Parent merged #988 at `ca6ff5049b89368573a1d2de16199346d3e67071`; integrate without independent config/type edits |
+| Native scope, provider retirement, branding | Initial scan omitted the untracked report. Current CI correctly caught its bare account handle; removed it in this lane and reran the tracked-file scan |
 | Syntax, documentation security, whitespace and tracked-file hygiene | Passed locally |
 | Repository secret scan | Pinned Gitleaks 8.18.0 subsequently installed by the existing script; 1,833 commits scanned, no leaks found. Initial absence did not count as a pass |
 | PostgreSQL 17 / browser / Flutter analyze | Unrun in this lane: no persistence, UI or Dart changes; no new DB or browser acceptance claimed |
 | Real provider measurements, checkpoint inference, licensed labelled corpus, costs | Unrun/unauthorized; zero live calls, zero added paid resources; no empirical band qualification |
 | Release manifest, production auth, actual public posting | Unrun/uncertified. Do not retry prior denied operations or infer from unrelated successful reads |
-| Remote SHA / current-head checks / requiredness | Draft #992 opened and implementation head `12a31d100f93ed9515b87da5274aaf4e60a7d6d6` verified via new-branch Git read, PR metadata and exact-head check API. Security/CodeQL/dependency/workflow/mobile/pilot checks passed; repository hygiene failed with only exit-code annotation and other checks were pending. Final handoff rechecks any later head. No denied job-log read was retried; prior protection 403 means requiredness is not re-certified here |
+| Remote SHA / current-head checks / requiredness | Draft #992; final handoff binds later checks to exact remote head. Head `7c146a0793c521af7f97f070bdcc6edbe5229f14` job-step metadata identified retirement scan failures in both hygiene/native jobs; type freshness passed. Fresh job-log downloads returned 403 and were not retried or fetched by another route. Prior protection 403 means requiredness is not re-certified here |
 
 The [machine-readable plan](../../packages/authenticity/evaluation/posting-feedback/evaluation-plan.json)
 defines the exact future gate: owner-approved provider/model/modalities, rights and
@@ -180,14 +185,26 @@ The first-20 selection hash is
 `c8882fa321e8e0073a5859814dcc86287651aa2d3b9b3170b16bd009cd6e1ed6`,
 computed over the ordered fields defined in the machine-readable plan. It was
 produced locally without calls; the future collector source still needs review.
-The proposal caps total usage at **US$1 within already approved billing/resources**;
-that is neither approved spend nor measured price. If the owner allows no added
-usage spend, require verified included/free quota and an incremental **US$0** cap.
+Official pricing checked read-only on 11 October 2026 says moderation is free and
+excluded from monthly usage limits. The model page lists free-tier access and
+rate limits; API bearer authentication remains necessary. These establish public
+price/access requirements, not this project's permission or binding availability.
+Sources: [pricing](https://help.openai.com/en/articles/4936833-is-the-moderation-endpoint-free-to-use),
+[model](https://developers.openai.com/api/docs/models/omni-moderation-latest),
+[authentication](https://developers.openai.com/api/reference/overview).
+The proposal now caps **incremental total spend at US$0**, including existing
+execution/storage usage, which must be verified as included before collection.
+The local OpenAI key is absent; the existing registered Jobs binding-name read
+returned **401**, so it was stopped with no retry or secret-value access. An
+already approved binding and zero total incremental usage remain unverified.
 An existing approved scoped binding must be available; no new credential, paid
 resource or access recovery is authorized. Owner approval must explicitly cover
 the corpus, provider/model, text transmission, count/window, cost and retention.
 
-Proposed retention is sanitized local mode-0600 artifacts for **7 days**, followed
+Official [endpoint data controls](https://developers.openai.com/api/docs/guides/your-data)
+list no training use, abuse-monitoring retention or application-state retention
+for `/v1/moderations`; project-specific controls have not been inspected here.
+Proposed local retention is sanitized mode-0600 artifacts for **7 days**, followed
 by deletion under the approved plan. Discard raw responses after hashing/validation;
 record only source/subset/response hashes, binding IDs, model alias, schema,
 category flags/scores/input modalities, real monotonic elapsed time, failures,
@@ -205,6 +222,12 @@ component that does not currently exist; more calls to the general prompt or saf
 model cannot supply that missing capability. Image-origin evaluation requires the
 frozen SAFE checkpoint/runtime plus qualified support/lineage, and still cannot
 turn low SAFE into proof of human authorship. Whole-video/audio coverage is absent.
+Later image plans keep camera originals, synthetic originals, recompressed JPEG,
+unknown-history PNG and hard negatives distinct, grouping derivatives within the
+same family/split. The owner-provided September 29 handoff's bounded JPEG counts
+(0/40 synthetic detections; 8/60 negative controls flagged) are unverified historical
+context only, excluded from current matrices and thresholds; no denied history
+was accessed and no image inference or activation was added.
 
 Freeze families and calibration/holdout manifests before collection; preserve
 every attempt and unavailable component. Select any candidate bands on calibration
@@ -221,6 +244,6 @@ is needed. Public publishing still requires independent complete-pipeline review
 Review risks are limited measurement coverage, declared rather than discovered
 family lineage, unverified human scenario labels, mutable model aliases, inherited
 policy/version differences and separate live/provider/runtime/CI gates.
-Rollback removes the new evaluation directory and this document, or reverts this
+Rollback removes the new evaluation directory, isolated workflow/script and this document, or reverts this
 lane's commits through review. There is no DB, feature, deployment or provider
 rollback operation to perform.

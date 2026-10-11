@@ -1,6 +1,6 @@
 # Offline posting feedback evaluation
 
-This is evaluation tooling, with no runtime import, CI mutation, provider resource,
+This is evaluation tooling, with no runtime import, provider resource,
 credential lookup, database write or enforcement switch. Public posting remains
 withheld. The default transport returns scripted responses without calling
 ambient `fetch`; the Workerd tests intercept all outbound requests with an internal
@@ -11,7 +11,7 @@ From the repository root, using the existing root lockfile and Node 22 or later:
 ```sh
 npm ci --ignore-scripts --no-audit
 ./node_modules/.bin/tsc -p packages/authenticity/evaluation/posting-feedback/tsconfig.json --noEmit
-node --experimental-strip-types --test packages/authenticity/evaluation/posting-feedback/harness.test.mjs packages/authenticity/evaluation/posting-feedback/workerd.test.mjs
+node --experimental-strip-types scripts/ci/validate-posting-feedback-evaluation.mjs
 node --experimental-strip-types packages/authenticity/evaluation/posting-feedback/run.mjs --output .artifacts/posting-feedback/synthetic-report.json
 ```
 
@@ -51,12 +51,18 @@ thresholds. Scores and model self-confidence are uncalibrated.
 
 The internal observation validator rejects duplicate/replayed observations,
 incomplete collection, stale revisions, content/fixture/label/split mismatches,
-contradictory evidence, model identity changes and authority changes. This protects
+contradictory evidence, model identity changes and authority changes. It re-derives
+the complete observation through the real adapter from the known scripted response
+and compares every field, rejecting changed raw-response hashes, coherent edited
+findings, status/failure/timing sources and extra fields. Hashes alone do not prove
+the authenticity of an arbitrary future live receipt. This protects
 the offline evaluation process; it is not a transactional production revision,
 receipt, retry, queue or publication implementation. Do not feed arbitrary or live
 receipts into its synthetic provenance envelope.
 
 See [the owner report](../../../../docs/testing/moderation-authenticity-evaluation-2026-10-11.md)
-and [the unexecuted live evaluation plan](evaluation-plan.json). Existing CI does
-not discover these tests automatically. Allocating a CI command is separate shared
-work for the parent; successful unrelated checks cannot replace this command.
+and [the unexecuted live evaluation plan](evaluation-plan.json). The separately
+allocated `posting-feedback-evaluation.yml` workflow runs scoped typing, all three
+test files and a synthetic report on the exact PR source SHA. It uses no provider
+secrets and does not bypass any existing gate. CI rejects mismatched/missing source
+identity and a dirty checkout; its report remains an ephemeral runner artifact.
