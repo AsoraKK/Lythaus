@@ -117,6 +117,31 @@ test('bounded JSON reader errors retain client status and safe code',async()=>{
   }
 });
 
+test('support mutations reject non-JSON media before reading or dispatching a body',async()=>{
+  for(const channel of ['member','owner']){
+    const prefix=channel==='member'?'/api/support':'/api/admin/support';
+    const paths=channel==='member'?['/problems','/suggestions','/problems/id/messages']
+      :['/problems/id/messages','/suggestions/id/notes','/problems/id/evidence','/suggestions/id/decision'];
+    for(const path of paths)for(const contentType of [null,'text/plain','multipart/form-data; boundary=synthetic','application/json-patch+json']){
+      const f=service();let reads=0;
+      const {handle}=setup(f.service,async()=>{reads++;return {kind:'problem'};});
+      const headers=new Headers();if(contentType!==null)headers.set('content-type',contentType);
+      const response=await handle(new Request(`https://api.lythaus.co${prefix}${path}`,{method:'POST',headers}),channel);
+      assert.equal(response.status,415,`${channel} ${path} ${contentType}`);
+      assert.deepEqual(await response.json(),{error:'unsupported_media_type'});
+      assert.equal(response.headers.get('cache-control'),'private, no-store');
+      assert.equal(reads,0);assert.equal(f.calls.length,0);
+    }
+  }
+});
+
+test('support mutations accept JSON media with case and charset parameters',async()=>{
+  const f=service(),{handle}=setup(f.service);
+  const response=await handle(new Request('https://api.lythaus.co/api/support/problems',{method:'POST',
+    headers:{'content-type':'Application/JSON; charset=utf-8'},body:JSON.stringify({kind:'problem'})}));
+  assert.equal(response.status,201);assert.equal(f.calls[0].name,'submit');
+});
+
 test('missing policy or schema returns an honest unavailable response',async()=>{
   const {handle,calls}=setup(null);
   const response=await handle(req('GET','/api/support/problems?limit=2'));
