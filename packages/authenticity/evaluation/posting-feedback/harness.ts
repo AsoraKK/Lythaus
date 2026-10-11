@@ -88,7 +88,7 @@ function record(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function strictSafetySchema(analysis: ModerationAnalysis): boolean {
+export function strictSafetySchema(analysis: ModerationAnalysis): boolean {
   const evidence = analysis.providerEvidence;
   if (!evidence || analysis.result === 'PROVIDER_FAILURE' || evidence.status !== 'SUCCESS'
     || evidence.schemaVersion !== MODERATION_PROVIDER_EVIDENCE_SCHEMA_VERSION
@@ -106,7 +106,7 @@ function strictSafetySchema(analysis: ModerationAnalysis): boolean {
     && analysis.result === (evidence.flagged ? 'REVIEW' : 'ALLOW');
 }
 
-function declarationResult(fixture: Fixture) {
+export function declarationResult(fixture: Fixture) {
   try {
     const result = enforceContentDeclaration({ body: fixture.body, declaredCreationMode: fixture.declaration });
     return { status: 'COMPLIANT', errorCode: null, characterCount: result.characterCount, declaredLabel: result.publicLabel,

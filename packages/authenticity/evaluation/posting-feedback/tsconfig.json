@@ -1,4 +1,4 @@
 {
   "extends": "../../../../tsconfig.native.json",
-  "include": ["./harness.ts", "./metrics.ts"]
+  "include": ["./harness.ts", "./metrics.ts", "./collector.ts"]
 }
