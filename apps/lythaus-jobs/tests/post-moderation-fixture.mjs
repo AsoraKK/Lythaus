@@ -65,9 +65,16 @@ export async function postModerationFixture(connectionString, bindings) {
       import api from './apps/lythaus-public-api/src/index.ts';
       import jobs from './apps/lythaus-jobs/src/index.ts';
       import admin from './apps/lythaus-admin-api/src/index.ts';
+      import { reconcileCommunityAppeals } from './apps/lythaus-jobs/src/community-appeals.ts';
+      import { PROPOSED_COMMUNITY_APPEAL_RULES } from './packages/contracts/src/monthly-peer-appeal-policy.ts';
       import { transaction, lockActivePostReviewAuthor } from './packages/db/src/index.ts';
       export default { async fetch(request, env, ctx) {
-        const path = new URL(request.url).pathname;
+        let path = new URL(request.url).pathname;
+        if (path.startsWith('/fixture/community/api/')) {
+          env = { ...env, COMMUNITY_APPEAL_RULES_VERSION: PROPOSED_COMMUNITY_APPEAL_RULES.version };
+          const url = new URL(request.url); url.pathname = path = path.slice('/fixture/community'.length);
+          request = new Request(url, request);
+        }
         env.AI = { async run() {
           const response = await env.FIXTURE_MODEL.fetch('https://fixture.invalid/model');
           if (!response.ok) throw new Error('synthetic_provider_unavailable');
@@ -80,6 +87,9 @@ export async function postModerationFixture(connectionString, bindings) {
             body, ack() { ack++; }, retry() { retry++; } }] }, env);
           return Response.json({ ack, retry });
         }
+        if (path === '/fixture/community-reconcile') return Response.json(await reconcileCommunityAppeals({
+          ...env, COMMUNITY_APPEAL_RULES_VERSION: PROPOSED_COMMUNITY_APPEAL_RULES.version,
+        }));
         if (path === '/fixture/account-transaction') {
           const body = await request.json();
           try {
@@ -177,7 +187,7 @@ export async function postModerationFixture(connectionString, bindings) {
           }
           assert.equal(input.action, 'close');
           return Response.json({ completed: true });
-        } catch (error) { sqlErrors.push({ role: client?.fixtureRole, code: error.code }); return Response.json({ error: error.message }, { status: 500 }); }
+        } catch (error) { sqlErrors.push({ role: client?.fixtureRole, code: error.code, text: input.text }); return Response.json({ error: error.message }, { status: 500 }); }
         finally {
           if ((temporary && input.action !== 'begin') || input.action === 'close') {
             clients.delete(input.transactionId);

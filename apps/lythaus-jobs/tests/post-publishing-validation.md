@@ -11,7 +11,9 @@ It includes reviewed #993 transaction confirmation and idle-error handling,
 #990 declaration/grapheme admission, #992 offline evaluation and #994 bounded
 collector preparation. This branch reuses #993's transaction implementation
 unchanged, adding only the account-fence exports. Client journey, configuration,
-policy, shared contracts, migration baseline and CI files are outside this delta.
+policy, shared contracts and migration baseline remain outside this delta.
+The acceptance follow-up adds required CI execution and runner isolation, plus
+ordered case locking in community restoration after a reproduced PG17 deadlock.
 
 Canonical Jobs cannot UPDATE or directly FOR SHARE identity.users. The caller
 instead checks EXECUTE on the exact signature
@@ -72,6 +74,26 @@ leaves no review bundle. Capability withdrawal/rollback must remove application
 dependence and drain admitted transactions before revocation; no instantaneous
 ACL cancellation, new deadline or outage policy is claimed.
 
+Community restoration now locks every case for the content in ID order before
+locking the post or writing its override/allow decision. The real submit,
+evaluate, block, revise, queue, appeal, triage, ballot and scheduled reconciliation
+handlers reproduce the original case/post inversion: closure held the post and
+its allow-decision FK waited on Jobs' case lock, producing PG17 `40P01`.
+The pre-fix 40P01 diagnostic is preserved in local evidence. Both arrival
+orders now complete without deadlock and produce no detector for that revision.
+Restoration authority and existing source/hash/deletion/hold checks are unchanged.
+
+Historical adjudication has no demonstrated eligible inversion: a current
+human block excludes ordinary Jobs before case/post locks; an author revision
+lets Jobs proceed but the historical source guard excludes the post UPDATE.
+Real handler interleavings exercise both exclusions, retaining appeals-v1.0.0.
+Canonical local Admin grants currently deny the handler's social-schema read
+(`42501`), which is independently asserted before the concurrency cases. Only
+the disposable test database receives USAGE on social and SELECT of
+social.profiles(user_id, moderation_source_event_id) to exercise those cases.
+These conditional cases do not certify canonical or production historical
+adjudication. No production grant or approved migration was changed.
+
 ## Evidence and publication authority
 
 GPT-OSS's ordinary path remains `evaluation-only-v1`, recommending review.
@@ -106,6 +128,8 @@ holds; keep this PR blocked from operational deployment and public activation.
 | Retry and uncertainty | Lost preflight/final COMMIT replies, database termination before/after writes, aborted COMMIT, duplicate delivery, apply/inbox interruptions and configured retry exhaustion |
 | Withholding and privacy | Human/assisted pass/review/block/unknown fixture responses retain owner-private no-store review, guest/cross-user exclusion, null publication time and no publication events |
 | No unqualified authority | Typed assessment binding tests and unchanged return-only safety tests; safety success never enables publication |
+| Appeal concurrency | Real scheduled community closure in both race orders; historical current-block and stale-source exclusions with an explicit local-only grant prerequisite |
+| Required acceptance isolation | Canonical and proposed suites remain separate; proposed runs reject any skip, failure, cancellation, todo or empty summary; both entry points reject unsafe targets before connecting and clean only owned databases on SIGINT/SIGTERM |
 
 The Workerd fixture imports the actual production transaction implementation and
 replaces only pg connection transport with a loopback RPC adapter. Host PostgreSQL
@@ -122,6 +146,15 @@ Use a task-owned loopback PG17 control database; the runner creates a fresh
 canonical database per suite and drops only its own generated databases.
 Run proposed integration explicitly; the environment variable is test-only,
 absent from production code/configuration:
+
+The existing Native Workers and PlanetScale CI job runs canonical acceptance,
+then `npm run test:publication:pg17 -- --proposed`, then the typed assessment
+suite. These are unconditional failing steps, with no continue-on-error.
+The shared runner requires postgresql:, loopback, the exact disposable control
+database, and no query/fragment before connecting. The focused entry point
+delegates to that same validator, owner-tracked cleanup and signal handling.
+Required branch-protection configuration remains unverified because its earlier
+read returned 403; this wiring does not claim to have changed that setting.
 
 ```sh
 LYTHAUS_TEST_POST_REVIEW_CAPABILITY=proposed \

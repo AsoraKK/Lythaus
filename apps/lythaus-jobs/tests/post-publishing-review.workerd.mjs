@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { before, after, test } from 'node:test';
 import pg from 'pg';
 import { generateKeyPair, exportJWK, exportPKCS8, SignJWT } from 'jose';
 import { signAccessToken, uuidv7, hmacLookup } from '@lythaus/security';
 import { postModerationFixture, postReviewTestOptions } from './post-moderation-fixture.mjs';
+import { PROPOSED_COMMUNITY_APPEAL_RULES } from '../../../packages/contracts/src/monthly-peer-appeal-policy.ts';
+import { MONTHLY_REPUTATION_POLICY_VERSION } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
+import { APPEAL_POLICY } from '../../../packages/contracts/src/appeal-policy.ts';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
 const requiresAccountLock = await postReviewTestOptions(connectionString);
@@ -11,10 +15,12 @@ const target = new URL(connectionString ?? 'file:///missing');
 assert.ok(['127.0.0.1', 'localhost'].includes(target.hostname));
 assert.match(target.pathname, /^\/lythaus_auth_test_post_publishing_[a-f0-9]+$/);
 const client = new pg.Client({ connectionString, ssl: false });
-let fixture, privateKeyPem, keyId, adminToken, adminId;
+let fixture, privateKeyPem, signingKey, keyId, adminToken, adminId;
 before(async () => {
   await client.connect();
+  await client.query(readFileSync(new URL('../../../database/planetscale/proposals/community_appeals.sql', import.meta.url), 'utf8'));
   const pair = await generateKeyPair('ES256', { extractable: true });
+  signingKey = pair.privateKey;
   privateKeyPem = await exportPKCS8(pair.privateKey); keyId = 'synthetic-publishing-review';
   const jwks = JSON.stringify({ keys: [{ ...await exportJWK(pair.publicKey), kid: keyId, alg: 'ES256', use: 'sig' }] });
   adminId = uuidv7();
@@ -29,8 +35,8 @@ before(async () => {
     ACCESS_TEAM_DOMAIN: 'access.synthetic.invalid', ACCESS_AUDIENCES: 'synthetic-review', ACCESS_SUBJECT_HMAC_KEY: 'synthetic-review-key' });
 });
 after(async () => { await fixture?.dispose(); await client.end(); });
-async function call(path, body, headers = {}) {
-  return fixture.dispatchFetch('https://api.lythaus.test' + path, { method: 'POST',
+async function call(path, body, headers = {}, method = 'POST') {
+  return fixture.dispatchFetch('https://api.lythaus.test' + path, { method,
     headers: { 'content-type': 'application/json', 'idempotency-key': uuidv7(), ...headers }, body: JSON.stringify(body) });
 }
 async function created() {
@@ -42,7 +48,7 @@ async function created() {
   assert.equal(response.status, 201, await response.clone().text());
   const post = await response.json();
   const event = (await client.query('SELECT id AS "eventId",event_type AS "eventType",payload FROM system.outbox_events WHERE id=$1', [post.eventId])).rows[0];
-  return { post, author, event };
+  return { post, author, event, token };
 }
 async function deliver(item) { const response = await call('/fixture/queue', item.event); assert.equal(response.status, 200); return response.json(); }
 async function records(item) { return Number((await client.query('SELECT count(*) AS count FROM moderation.detector_runs WHERE content_id=$1', [item.post.id])).rows[0].count); }
@@ -233,4 +239,217 @@ test('real admin case-then-post handler racing Jobs case supersession completes 
     assert.equal(adminReply.status, 409, await adminReply.clone().text());
     assert.ok(!fixture.sqlErrors.some(error => error.code === '40P01'), 'case/post lock order must not deadlock');
   } finally { resume.resolve(); fixture.afterSql = undefined; fixture.duringSql = undefined; if (job) await job; if (admin) await admin; }
+});
+
+async function person(role) {
+  const id = uuidv7();
+  await client.query("INSERT INTO identity.users(id,status,display_name) VALUES($1,'active','Synthetic appeal actor')", [id]);
+  await client.query(`INSERT INTO identity.email_credentials(user_id,email_ciphertext,email_lookup_hmac,encryption_key_version,hmac_key_version,password_hash,verified_at)
+    VALUES($1,decode('00','hex'),decode($2,'hex'),'synthetic','synthetic','{}',now())`, [id, id.replaceAll('-', '')]);
+  const token = await signAccessToken({ userId: id, privateKeyPem, keyId });
+  if (!role) return { id, token };
+  await client.query(`INSERT INTO identity.admin_memberships(user_id,access_subject_hmac,role,active)
+    VALUES($1,decode($2,'base64'),$3,true)`, [id, hmacLookup(id, 'synthetic-review-key'), role]);
+  const access = await new SignJWT({}).setProtectedHeader({ alg: 'ES256', kid: keyId }).setSubject(id)
+    .setAudience('synthetic-review').setIssuer('https://access.synthetic.invalid').setIssuedAt().setExpirationTime('1h').sign(signingKey);
+  return { id, token, access };
+}
+const adminHeaders = token => ({ 'cf-access-jwt-assertion': token, origin: 'https://api.lythaus.test' });
+async function revise(item) {
+  const response = await call('/api/posts/' + item.post.id, { body: 'Synthetic revised appeal body', declaredCreationMode: 'human' },
+    { authorization: 'Bearer ' + item.token }, 'PUT');
+  assert.equal(response.status, 200, await response.clone().text());
+  item.event = (await client.query(`SELECT id AS "eventId",event_type AS "eventType",payload FROM system.outbox_events
+    WHERE aggregate_id=$1 AND event_type='content.post.updated' ORDER BY created_at DESC LIMIT 1`, [item.post.id])).rows[0];
+}
+async function evaluatedRevision(item) {
+  assert.deepEqual(await deliver(item), { ack: 1, retry: 0 });
+  const priorCase = (await client.query('SELECT id FROM moderation.cases WHERE content_id=$1 AND source_event_id=$2', [item.post.id, item.event.eventId])).rows[0].id;
+  const priorDecision = await decision(priorCase, 'block');
+  assert.equal(priorDecision.status, 200, await priorDecision.clone().text());
+  await revise(item);
+}
+async function communityQueuedAppeal(item) {
+  const caseId = await reviewCase(item), queued = await decision(caseId);
+  assert.equal(queued.status, 200, await queued.clone().text());
+  const triager = await person('moderator');
+  await client.query(`INSERT INTO moderation.community_appeal_rule_sets(version,policy_version,configuration,ballot_changes_allowed,approved_by,approved_at,approval_reference)
+    VALUES($1,$2,$3,true,$4,now(),'Synthetic disposable test only') ON CONFLICT DO NOTHING`,
+    [PROPOSED_COMMUNITY_APPEAL_RULES.version, MONTHLY_REPUTATION_POLICY_VERSION, JSON.stringify(PROPOSED_COMMUNITY_APPEAL_RULES), triager.id]);
+  await client.query(`INSERT INTO system.feature_flags(flag_key,enabled,policy_version) VALUES('moderation.community_appeals',true,$1)
+    ON CONFLICT(flag_key) DO UPDATE SET enabled=true`, [MONTHLY_REPUTATION_POLICY_VERSION]);
+  const submitted = await call('/fixture/community/api/appeals', { caseId, statement: 'Synthetic queue appeal.' }, { authorization: 'Bearer ' + item.token });
+  assert.equal(submitted.status, 201, await submitted.clone().text());
+  const { appealId } = await submitted.json();
+  const triaged = await call(`/fixture/community/api/admin/appeals/${appealId}/triage`, { reviewClass: 'standard', safePreview: 'Synthetic redacted text',
+    ruleContext: 'Synthetic rule application context.', reasonCode: 'safe_text_review' }, adminHeaders(triager.access));
+  assert.equal(triaged.status, 200, await triaged.clone().text());
+  for (let i = 0; i < PROPOSED_COMMUNITY_APPEAL_RULES.quorum; i++) {
+    const voter = await person();
+    const voted = await call(`/fixture/community/api/appeals/${appealId}/vote`, {
+      choice: 'allow', reasonCode: 'rule_misapplied', expectedRevision: 0, contextAcknowledged: true,
+    }, { authorization: 'Bearer ' + voter.token });
+    assert.equal(voted.status, 201, await voted.clone().text());
+  }
+  await client.query(`WITH deadline AS (SELECT date_trunc('milliseconds',clock_timestamp()) - interval '1 millisecond' AS closes_at)
+    UPDATE moderation.community_appeal_sessions SET closes_at=deadline.closes_at, opens_at=deadline.closes_at - interval '48 hours'
+    FROM deadline WHERE appeal_id=$1`, [appealId]);
+  return { appealId, caseId };
+}
+
+test('real community closure racing an in-flight review uses case-before-post order without a deadlock or automated evidence', requiresAccountLock, async () => {
+  const item = await created(), prepared = Promise.withResolvers(), casesHeld = Promise.withResolvers(), resume = Promise.withResolvers(), closureWaiting = Promise.withResolvers();
+  await evaluatedRevision(item);
+  const start = fixture.sqlErrors.length;
+  let job, closure, closureTransaction, probe, preparationStarted = false;
+  fixture.afterSql = async input => {
+    if (!probe && input.text.startsWith('SELECT trust.lock_active_post_review_author(')) probe = input.transactionId;
+    if (!preparationStarted && input.transactionId === probe && input.text === 'COMMIT') {
+      preparationStarted = true;
+      try { prepared.resolve(await communityQueuedAppeal(item)); }
+      catch (error) { prepared.reject(error); throw error; }
+    }
+    if (input.role === 'lythaus_jobs' && input.text.includes("WHERE content_type = 'post' AND content_id = $1 ORDER BY id FOR UPDATE")
+      && input.transactionId !== closureTransaction) { casesHeld.resolve(); await resume.promise; }
+  };
+  fixture.duringSql = input => {
+    if (input.text.includes('SELECT s.*, a.appellant_id')) closureTransaction = input.transactionId;
+    if (input.transactionId === closureTransaction && (input.text.includes('INSERT INTO moderation.decisions')
+      || input.text.includes('ORDER BY id FOR UPDATE'))) closureWaiting.resolve(input.backendPid);
+  };
+  try {
+    job = deliver(item); await prepared.promise; await casesHeld.promise;
+    closure = call('/fixture/community-reconcile', {});
+    await blocked(await Promise.race([closureWaiting.promise, closure.then(async response => {
+      throw new Error('Closure finished before reaching the case lock: ' + JSON.stringify(await response.clone().json())
+        + ' ' + JSON.stringify(fixture.sqlErrors.slice(start)));
+    })])); resume.resolve();
+    const [jobReply, closureReply] = await Promise.all([job, closure]);
+    assert.deepEqual(fixture.sqlErrors.slice(start).filter(error => error.code === '40P01'), [], 'eligible appeal/Jobs deadlock diagnostics');
+    assert.deepEqual(jobReply, { ack: 1, retry: 0 });
+    assert.equal(closureReply.status, 200); assert.deepEqual(await closureReply.json(), { processed: 1 });
+    assert.equal((await client.query('SELECT count(*)::integer AS n FROM moderation.detector_runs WHERE source_event_id=$1', [item.event.eventId])).rows[0].n, 0,
+      'the human queue and appeal authority exclude evaluation evidence for the current revision');
+    assert.equal((await client.query('SELECT moderation_state FROM content.posts WHERE id=$1', [item.post.id])).rows[0].moderation_state, 'allowed');
+    assert.ok(!fixture.sqlErrors.slice(start).some(error => error.code === '40P01'), 'real eligible closure and Jobs must not deadlock');
+  } finally {
+    resume.resolve(); fixture.duringModel = undefined; fixture.afterSql = undefined; fixture.duringSql = undefined;
+    await Promise.allSettled([job, closure]);
+  }
+});
+
+test('community closure first retains all case locks through the post reversal; waiting Jobs rechecks authority and leaves no new evidence', requiresAccountLock, async () => {
+  const item = await created(); await evaluatedRevision(item);
+  const held = Promise.withResolvers(), resume = Promise.withResolvers(), waiting = Promise.withResolvers();
+  const errors = fixture.sqlErrors.length;
+  let job, closure, probe, closureTransaction, preparationStarted = false;
+  fixture.duringSql = input => {
+    if (input.text.includes('SELECT s.*, a.appellant_id')) closureTransaction = input.transactionId;
+    if (input.transactionId !== closureTransaction && input.text.includes("WHERE content_type = 'post' AND content_id = $1 ORDER BY id FOR UPDATE")) waiting.resolve(input.backendPid);
+  };
+  fixture.afterSql = async input => {
+    if (!probe && input.text.startsWith('SELECT trust.lock_active_post_review_author(')) probe = input.transactionId;
+    if (!preparationStarted && input.transactionId === probe && input.text === 'COMMIT') {
+      preparationStarted = true;
+      await communityQueuedAppeal(item);
+      closure = call('/fixture/community-reconcile', {});
+      await Promise.race([held.promise, closure.then(async response => { throw new Error(await response.clone().text()); })]);
+    }
+    if (input.transactionId === closureTransaction && input.text.includes('FROM content.posts WHERE id = $1 FOR UPDATE')) {
+      held.resolve(); await resume.promise;
+    }
+  };
+  try {
+    job = deliver(item);
+    await blocked(await Promise.race([waiting.promise, job.then(() => { throw new Error('Jobs did not wait for community case authority'); })]));
+    resume.resolve(); const [reply, response] = await Promise.all([job, closure]);
+    assert.deepEqual(reply, { ack: 1, retry: 0 }); assert.deepEqual(await response.json(), { processed: 1 });
+    assert.equal((await client.query('SELECT count(*)::integer AS n FROM moderation.detector_runs WHERE source_event_id=$1', [item.event.eventId])).rows[0].n, 0);
+    assert.equal((await client.query('SELECT moderation_state FROM content.posts WHERE id=$1', [item.post.id])).rows[0].moderation_state, 'allowed');
+    assert.deepEqual(fixture.sqlErrors.slice(errors).filter(error => error.code === '40P01'), []);
+  } finally { resume.resolve(); fixture.afterSql = undefined; fixture.duringSql = undefined; await Promise.allSettled([job, closure]); }
+});
+
+async function historicalAppeal(item) {
+  const caseId = await reviewCase(item), blockedResponse = await decision(caseId, 'block');
+  assert.equal(blockedResponse.status, 200, await blockedResponse.clone().text());
+  const submitted = await call('/api/appeals', { caseId, statement: 'Synthetic historical rule appeal.' }, { authorization: 'Bearer ' + item.token });
+  assert.equal(submitted.status, 201, await submitted.clone().text());
+  const appeal = await submitted.json(); assert.equal(appeal.policyVersion, APPEAL_POLICY.version);
+  for (let ordinal = 1; ordinal <= APPEAL_POLICY.reviewerCount; ordinal++) {
+    const reviewer = await person();
+    await client.query(`INSERT INTO moderation.reviewer_qualifications(user_id,state,policy_version,trained_at)
+      VALUES($1,'trained',$2,now())`, [reviewer.id, APPEAL_POLICY.version]);
+    await client.query(`INSERT INTO moderation.appeal_assignments(id,appeal_id,reviewer_id,assignment_ordinal,level_snapshot,
+      qualification_snapshot,vote_weight_snapshot,random_rank_hash,conflict_checked,policy_version)
+      VALUES($1,$2,$3,$4,1,'trained',1,$5,true,$6)`, [uuidv7(), appeal.appealId, reviewer.id, ordinal, 'a'.repeat(64), APPEAL_POLICY.version]);
+    const vote = await call(`/api/appeals/${appeal.appealId}/vote`, { decision: 'overturn' }, { authorization: 'Bearer ' + reviewer.token });
+    assert.equal(vote.status, 201, await vote.clone().text());
+  }
+  const editorial = await person('editorial');
+  await client.query(`INSERT INTO moderation.reviewer_qualifications(user_id,state,policy_version,trained_at)
+    VALUES($1,'trained',$2,now())`, [editorial.id, APPEAL_POLICY.version]);
+  return { caseId, appealId: appeal.appealId, editorial };
+}
+const adjudicate = appeal => call(`/api/admin/appeals/${appeal.appealId}/adjudications`, {
+  decision: 'overturn', reasonCode: 'SYNTHETIC_HISTORICAL_REVIEW',
+}, adminHeaders(appeal.editorial.access));
+
+test('canonical historical adjudication exposes its existing social-schema privilege blocker; only this owned fixture receives bounded grants', async () => {
+  const item = await created(), appeal = await historicalAppeal(item), start = fixture.sqlErrors.length;
+  assert.equal((await client.query("SELECT has_schema_privilege('lythaus_admin','social','USAGE') AS allowed")).rows[0].allowed, false);
+  const response = await adjudicate(appeal); assert.equal(response.status, 500, await response.clone().text());
+  assert.ok(fixture.sqlErrors.slice(start).some(error => error.code === '42501' && error.text.includes('LEFT JOIN social.profiles')));
+  assert.equal((await client.query('SELECT count(*)::integer AS n FROM moderation.appeal_adjudications WHERE appeal_id=$1', [appeal.appealId])).rows[0].n, 0);
+  await client.query('GRANT USAGE ON SCHEMA social TO lythaus_admin');
+  await client.query('GRANT SELECT (user_id,moderation_source_event_id) ON social.profiles TO lythaus_admin');
+});
+
+test('historical current-version reversal holds the post while the human block excludes Jobs before any case lock', requiresAccountLock, async () => {
+  const item = await created(), appeal = await historicalAppeal(item), postHeld = Promise.withResolvers(), resume = Promise.withResolvers();
+  const start = fixture.statements.length, errors = fixture.sqlErrors.length, calls = fixture.modelCalls;
+  let admin;
+  fixture.afterSql = async input => {
+    if (input.role === 'lythaus_admin' && input.text.includes('UPDATE content.posts')) { postHeld.resolve(); await resume.promise; }
+  };
+  try {
+    admin = adjudicate(appeal);
+    await Promise.race([postHeld.promise, admin.then(async response => { throw new Error(await response.clone().text()); })]);
+    assert.deepEqual(await deliver(item), { ack: 1, retry: 0 });
+    assert.equal(fixture.modelCalls, calls); assert.equal(await records(item), 0);
+    const jobs = fixture.statements.slice(start).filter(row => row.role === 'lythaus_jobs');
+    assert.ok(!jobs.some(row => row.text.includes('ORDER BY id FOR UPDATE') || row.text.includes('FOR UPDATE OF post')),
+      'the committed human block excludes Jobs before its competing case/post locks');
+    resume.resolve(); const response = await admin; assert.equal(response.status, 200, await response.clone().text());
+    const stored = (await client.query('SELECT policy_version,state FROM moderation.appeals WHERE id=$1', [appeal.appealId])).rows[0];
+    assert.deepEqual(stored, { policy_version: APPEAL_POLICY.version, state: 'resolved' });
+    assert.ok(!fixture.sqlErrors.slice(errors).some(error => error.code === '40P01'));
+  } finally { resume.resolve(); fixture.afterSql = undefined; await Promise.allSettled([admin]); }
+});
+
+test('historical stale-version adjudication waits on the case FK without taking the current post lock or reversing the revision', requiresAccountLock, async () => {
+  const item = await created(), appeal = await historicalAppeal(item);
+  await revise(item);
+  const held = Promise.withResolvers(), resume = Promise.withResolvers(), waiting = Promise.withResolvers();
+  const start = fixture.statements.length, errors = fixture.sqlErrors.length;
+  let job, admin;
+  fixture.afterSql = async input => {
+    if (input.role === 'lythaus_jobs' && input.text.includes('ORDER BY id FOR UPDATE')) { held.resolve(); await resume.promise; }
+  };
+  fixture.duringSql = input => {
+    if (input.role === 'lythaus_admin' && input.text.includes('INSERT INTO moderation.enforcement_events')) waiting.resolve(input.backendPid);
+  };
+  try {
+    job = deliver(item); await Promise.race([held.promise, job.then(() => { throw new Error('Jobs did not reach the current revision case lock'); })]);
+    admin = adjudicate(appeal);
+    await blocked(await Promise.race([waiting.promise, admin.then(async response => { throw new Error(await response.clone().text()); })]));
+    resume.resolve(); const [reply, response] = await Promise.all([job, admin]);
+    assert.deepEqual(reply, { ack: 1, retry: 0 }); assert.equal(response.status, 200, await response.clone().text());
+    assert.ok(!fixture.statements.slice(start).some(row => row.role === 'lythaus_admin' && row.text.includes('UPDATE content.posts')),
+      'historical source-version authority cannot take or reverse the current revision');
+    assert.equal((await client.query("SELECT count(*)::integer AS n FROM moderation.appeal_outcome_effects WHERE appeal_id=$1 AND effect_type='content_reversal'", [appeal.appealId])).rows[0].n, 0);
+    assert.deepEqual((await client.query('SELECT moderation_state,published_at FROM content.posts WHERE id=$1', [item.post.id])).rows[0],
+      { moderation_state: 'under_review', published_at: null });
+    assert.equal(await records(item), 1); assert.ok(!fixture.sqlErrors.slice(errors).some(error => error.code === '40P01'));
+  } finally { resume.resolve(); fixture.afterSql = undefined; fixture.duringSql = undefined; await Promise.allSettled([job, admin]); }
 });
