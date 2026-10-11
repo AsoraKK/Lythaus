@@ -1896,7 +1896,9 @@ async function updatePost(request: Request, env: Env, user: Principal, postId: s
     });
     const declaration = enforceContentDeclaration({
       body: revision.bodyUpdated ? input.body : current.rows[0].body,
-      declaredCreationMode: input.declaredCreationMode ?? current.rows[0].declared_creation_mode,
+      declaredCreationMode: input.declaredCreationMode === undefined
+        ? current.rows[0].declared_creation_mode
+        : input.declaredCreationMode,
     });
     if (tagSearchMaintenanceEnabled && revision.bodyUpdated) {
       enforcePostTagLimit(declaration.body, maxDistinctTags);

@@ -106,6 +106,7 @@
     "authenticity:geometry-fixture": "node scripts/authenticity/create-geometry-occlusion-fixture.mjs",
     "test:product-contracts": "node --experimental-strip-types --test packages/contracts/tests/product-policy.test.mjs",
     "test:product-integrity-runtime": "node --test scripts/tests/product-integrity-runtime-invariants.test.mjs",
+    "test:publication:pg17": "node scripts/ci/run-publication-pg17.mjs",
     "test:critical-coverage": "node scripts/critical-coverage-gate.mjs",
     "ml:thermal-qualify": "node ml/local/eco_train/thermal-qualify.mjs --plan",
     "validate:planetscale-migrations": "node scripts/validate-migration-baseline.mjs",
