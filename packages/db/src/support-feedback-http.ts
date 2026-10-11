@@ -20,11 +20,12 @@ type ReadBody=(request:Request,maximum:number)=>Promise<unknown>;
 const ERRORS=new Set(['support_input_invalid','support_not_found','support_owner_required','support_authentication_required',
   'support_revision_conflict','support_idempotency_conflict','support_rate_limited','support_closed','support_evidence_required',
   'support_transition_invalid','support_policy_version_mismatch','support_feedback_submission_invalid','support_feedback_record_invalid',
-  'support_privacy_invalid','support_privacy_held','support_policy_invalid','support_unavailable','invalid_json','request_too_large']);
+  'support_privacy_invalid','support_privacy_held','support_policy_invalid','support_unavailable','invalid_json','request_too_large','unsupported_media_type']);
 
 function status(code:string):number {
   if(code==='invalid_json')return 400;
   if(code==='request_too_large')return 413;
+  if(code==='unsupported_media_type')return 415;
   if(code==='support_authentication_required')return 401;
   if(code==='support_owner_required')return 403;
   if(code==='support_not_found')return 404;
@@ -76,6 +77,10 @@ export async function handleSupportFeedbackRequest(input:{request:Request;servic
   const url=new URL(input.request.url),route=pathKind(url.pathname,input.channel);
   if(!route)return null;
   const answer=(body:unknown,statusCode=200)=>input.respond(typeof body==='object'&&body!==null&&!Array.isArray(body)?body as Record<string,unknown>:{data:body},statusCode);
+  const readJson=()=>{
+    if(input.request.headers.get('content-type')?.split(';',1)[0]?.trim().toLowerCase()!=='application/json')throw new Error('unsupported_media_type');
+    return input.readBody(input.request,32*1024);
+  };
   try {
     if(!input.service)throw new Error('support_unavailable');
     if(route.options){
@@ -89,7 +94,7 @@ export async function handleSupportFeedbackRequest(input:{request:Request;servic
         ?await input.service.memberList(input.request,route.kind,parseListOptions(url))
         :await input.service.ownerQueue(input.request,route.kind,parseListOptions(url)));
       if(input.request.method==='POST'&&input.channel==='member'){
-        const body=await input.readBody(input.request,32*1024),fields=supportObject(body);
+        const body=await readJson(),fields=supportObject(body);
         if(fields.kind!==route.kind)throw new Error('support_input_invalid');
         const result=await input.service.submit(input.request,fields);
         return answer(result,result.replayed?200:201);
@@ -100,7 +105,7 @@ export async function handleSupportFeedbackRequest(input:{request:Request;servic
       ?await input.service.memberDetail(input.request,route.kind,route.id,parseDetailOptions(url,input.channel))
       :await input.service.ownerDetail(input.request,route.kind,route.id,parseDetailOptions(url,input.channel)));
     if(route.action!==null&&input.request.method==='POST'){
-      const body=await input.readBody(input.request,32*1024);
+      const body=await readJson();
       let result:{replayed?:boolean};
       if(route.action==='messages')result=input.channel==='member'
         ?await input.service.memberReply(input.request,route.kind,route.id,body)
