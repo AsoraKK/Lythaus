@@ -3,9 +3,10 @@ import { before, after, test } from 'node:test';
 import pg from 'pg';
 import { generateKeyPair, exportJWK, exportPKCS8 } from 'jose';
 import { signAccessToken, uuidv7 } from '@lythaus/security';
-import { postModerationFixture } from './post-moderation-fixture.mjs';
+import { postModerationFixture, postReviewTestOptions } from './post-moderation-fixture.mjs';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
+const requiresAccountLock = await postReviewTestOptions(connectionString);
 const target = new URL(connectionString ?? 'file:///missing');
 assert.ok(['127.0.0.1', 'localhost'].includes(target.hostname));
 assert.ok(target.pathname.startsWith('/lythaus_auth_test_post_'));
@@ -56,7 +57,7 @@ async function counts(id) {
     (SELECT moderation_state FROM content.posts WHERE id=$1) AS state`, [id])).rows[0];
 }
 
-test('native API -> transactional outbox -> jobs evidence -> private pending -> final public read', async () => {
+test('native API and outbox keep owner status private while Jobs account authority is unavailable', async () => {
   const createdPost = await created();
   const replay = await call(owner, 'POST', '/api/posts', createdPost.payload, createdPost.key);
   assert.equal(replay.status, 201);
@@ -65,17 +66,22 @@ test('native API -> transactional outbox -> jobs evidence -> private pending -> 
   assert.equal(relayed.status, 200, await relayed.clone().text());
   const delivery = fixture.deliveries.find(item => item.body.eventId === createdPost.event.eventId);
   assert.equal(delivery.queue, 'MODERATION_QUEUE');
-  assert.deepEqual(await deliver(delivery.body), { ack: 1, retry: 0 });
-  assert.equal(fixture.modelCalls, 1);
-  assert.deepEqual(await counts(createdPost.post.id), { detectors: 1, cases: 1, state: 'under_review' });
-  assert.deepEqual(await deliver(delivery.body), { ack: 1, retry: 0 });
-  assert.equal(fixture.modelCalls, 1);
+  assert.deepEqual(await deliver(delivery.body), requiresAccountLock.skip ? { ack: 0, retry: 1 } : { ack: 1, retry: 0 });
+  assert.equal(fixture.modelCalls, requiresAccountLock.skip ? 0 : 1);
+  assert.deepEqual(await counts(createdPost.post.id), { detectors: requiresAccountLock.skip ? 0 : 1, cases: requiresAccountLock.skip ? 0 : 1, state: 'under_review' });
+  assert.deepEqual(await deliver(delivery.body), requiresAccountLock.skip ? { ack: 0, retry: 1 } : { ack: 1, retry: 0 });
+  assert.equal(fixture.modelCalls, requiresAccountLock.skip ? 0 : 1);
   const pending = await call(owner, 'GET', '/api/posts/' + createdPost.post.id + '/owner-view');
   assert.equal(pending.status, 200);
   assert.match(pending.headers.get('cache-control'), /private.*no-store/);
   assert.equal((await pending.json()).post.moderationState, 'under_review');
   for (const viewer of [null, other, owner]) assert.equal((await call(viewer, 'GET', '/api/posts/' + createdPost.post.id)).status, 404);
   for (const viewer of [null, other]) assert.equal((await call(viewer, 'GET', '/api/posts/' + createdPost.post.id + '/owner-view')).status, viewer ? 404 : 401);
+  if (requiresAccountLock.skip) {
+    assert.equal((await client.query('SELECT published_at FROM content.posts WHERE id=$1', [createdPost.post.id])).rows[0].published_at, null);
+    assert.equal((await client.query("SELECT id FROM system.outbox_events WHERE aggregate_id=$1 AND event_type LIKE '%published%'", [createdPost.post.id])).rowCount, 0);
+    return;
+  }
   // Synthetic final-decision setup; this does not claim to exercise the admin decision handler.
   await client.query("UPDATE content.posts SET moderation_state='allowed',published_at=now() WHERE id=$1", [createdPost.post.id]);
   await client.query("UPDATE content.content_declarations SET public_label='Human-authored',review_required=false WHERE post_id=$1", [createdPost.post.id]);
@@ -84,15 +90,20 @@ test('native API -> transactional outbox -> jobs evidence -> private pending -> 
   assert.ok((await published.text()).includes('Human-authored'));
 });
 
-test('concurrent duplicate queue deliveries persist one detector and one review case', async () => {
+test('concurrent duplicate queue deliveries cannot persist evidence without atomic account authority', async () => {
   const { post, event } = await created('Concurrent synthetic post');
   const replies = await Promise.all([deliver(event), deliver(event)]);
+  if (requiresAccountLock.skip) {
+    assert.ok(replies.every(reply => reply.retry === 1));
+    assert.deepEqual(await deliver(event), { ack: 0, retry: 1 });
+    assert.deepEqual(await counts(post.id), { detectors: 0, cases: 0, state: 'under_review' }); return;
+  }
   assert.ok(replies.some(reply => reply.ack === 1));
   assert.deepEqual(await deliver(event), { ack: 1, retry: 0 });
   assert.deepEqual(await counts(post.id), { detectors: 1, cases: 1, state: 'under_review' });
 });
 
-test('provider outage yields manual review and keeps content withheld without automatic guilt or allow', async () => {
+test('provider outage yields manual review and keeps content withheld without automatic guilt or allow', requiresAccountLock, async () => {
   fixture.failModel = true;
   try {
     const { post, event } = await created('Synthetic provider outage');

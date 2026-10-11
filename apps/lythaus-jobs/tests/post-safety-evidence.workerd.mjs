@@ -7,7 +7,7 @@ import { uuidv7 } from '@lythaus/security';
 import { communityClassifierEvidence, communityDigest } from '../../../packages/db/src/community-appeal-access.ts';
 import { identicalCommunityAppealOverride } from '../../../packages/db/src/community-appeal-closure.ts';
 import { postSafetyEvidenceFixture } from './post-safety-evidence-fixture.mjs';
-import { postModerationFixture } from './post-moderation-fixture.mjs';
+import { postModerationFixture, postReviewTestOptions } from './post-moderation-fixture.mjs';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
 const target = new URL(connectionString ?? 'file:///missing');
@@ -371,7 +371,7 @@ test('provider receives canonical server body, including private scope; delivery
   assert.deepEqual(await unchangedState(post), state);
 });
 
-test('ordinary evaluation-only-v1 row/case/decision/declaration remains unchanged and does not count as safety completion', async () => {
+test('ordinary evaluation-only-v1 row/case/decision/declaration remains unchanged and does not count as safety completion', await postReviewTestOptions(connectionString), async () => {
   const post = await created(), ordinary = await postModerationFixture(connectionString, {
     ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test',
   });

@@ -16,6 +16,8 @@ async function notifyCommunityParticipants(client: Client, session: CommunitySes
 }
 
 async function restoreChallengedContent(client: Client, session: CommunitySession, now: string) {
+  if (session.content_type === 'post') await client.query(`SELECT id FROM moderation.cases
+    WHERE content_type = $1 AND content_id = $2 ORDER BY id FOR UPDATE`, [session.content_type, session.content_id]);
   await client.query(`INSERT INTO moderation.community_appeal_overrides
     (appeal_id, decision_id, content_type, content_id, source_event_id, content_hash, evidence_hash, recorded_at)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`, [session.appeal_id, session.challenged_decision_id, session.content_type,

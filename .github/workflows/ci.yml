@@ -125,6 +125,12 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
         run: npm run test:publication:pg17
+      - name: Verify complete proposed Jobs author-lock caller acceptance with disposable PG17 and denied outbound
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
+        run: npm run test:publication:pg17 -- --proposed
+      - name: Verify typed publishing assessment and versioned policy outcomes
+        run: node --experimental-strip-types --test apps/lythaus-jobs/tests/post-publishing.test.mjs
       - name: Verify publication CI target isolation
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
