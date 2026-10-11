@@ -32,6 +32,12 @@ variants. Delete them only after owner approval.
 No values were read. Valid non-Azure credentials are not deleted by this
 repository PR merely because their names are unfamiliar.
 
+The retained Firebase build purpose is inventoried in
+[Firebase mobile scope](firebase-mobile-purpose-inventory.md). Retention of a
+credential name is not full Cloudflare-first exception, provider privacy/retention
+or live push/crash acceptance approval. An unspecified plaintext credential
+attachment remains unverified; do not retrieve or reproduce it.
+
 ## Retired credentials
 
 | Name | Scope | Decision |
