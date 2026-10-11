@@ -117,7 +117,9 @@ for (const scenario of ['safe', 'flagged']) test(`${scenario} evidence is correl
   assert.equal(evidence.purpose, 'safety'); assert.equal(evidence.applicability, 'evaluation-only');
   assert.equal(evidence.flagged, scenario === 'flagged'); assert.equal(evidence.categories.harassment, scenario === 'flagged');
   assert.equal(evidence.providerResult, scenario === 'flagged' ? 'REVIEW' : 'ALLOW');
-  assert.deepEqual(evidence.categoryAppliedInputTypes, { harassment: ['text'] });
+  assert.equal(Object.keys(evidence.categories).length, 13);
+  assert.deepEqual(evidence.categoryAppliedInputTypes.harassment, ['text']);
+  assert.ok(Object.values(evidence.categoryAppliedInputTypes).every(types => types.length === 1 && types[0] === 'text'));
   assert.deepEqual(reply.diagnostic, { factoryCalls: 1, hashCalls: 2, loads: 2, aborted: false });
   assert.deepEqual(await unchangedState(post), state);
 });
@@ -173,6 +175,41 @@ for (const [scenario, category] of Object.entries(failures)) test(`${scenario} r
   assert.deepEqual(await unchangedState(post), state);
 });
 
+const documentedCategories = ['harassment', 'harassment/threatening', 'hate', 'hate/threatening', 'illicit', 'illicit/violent',
+  'self-harm', 'self-harm/instructions', 'self-harm/intent', 'sexual', 'sexual/minors', 'violence', 'violence/graphic'];
+for (const category of documentedCategories) test(`documented category ${category} is retained as safety evidence`, async () => {
+  const post = await created(), state = await unchangedState(post);
+  const reply = await attempt(post, { scenario: 'flagged:' + category });
+  assert.equal(reply.result.state, 'evidence'); assert.equal(reply.result.evidence.flagged, true);
+  assert.equal(reply.result.evidence.providerResult, 'REVIEW');
+  assert.equal(reply.result.evidence.categories[category], true); assert.equal(reply.result.evidence.categoryScores[category], 0.9);
+  for (const field of ['categories', 'categoryScores', 'categoryAppliedInputTypes']) {
+    assert.deepEqual(Object.keys(reply.result.evidence[field]).sort(), [...documentedCategories].sort());
+  }
+  assert.deepEqual(await unchangedState(post), state);
+});
+
+const malformedMetadata = ['token_category', 'body_category', 'future_category', 'empty_maps', 'partial_maps', 'inconsistent_flag', 'unsupported_input_type',
+  ...['categories', 'category_scores', 'category_applied_input_types'].flatMap(field =>
+    ['empty_', 'missing_', 'token_', 'replaced_'].map(prefix => prefix + field))];
+for (const scenario of malformedMetadata) test(`${scenario} never returns arbitrary or incomplete category metadata`, async () => {
+  const post = await created('private-body-like-token'), state = await unchangedState(post);
+  const reply = await attempt(post, { scenario });
+  assert.deepEqual(reply.result, { state: 'unknown', persisted: false, analyseTextCalls: 1, errorCategory: 'UNEXPECTED_SCHEMA' });
+  for (const sensitive of ['synthetic-secret-body-token', post.body, 'future-safety-category']) {
+    assert.ok(!JSON.stringify(reply).includes(sensitive)); assert.ok(!fixture.logs.join('\n').includes(sensitive));
+  }
+  assert.deepEqual(await unchangedState(post), state);
+});
+
+test('documented category-specific input types are retained without changing post state', async () => {
+  const post = await created(), state = await unchangedState(post), reply = await attempt(post, { scenario: 'documented_input_types' });
+  assert.equal(reply.result.state, 'evidence');
+  assert.deepEqual(reply.result.evidence.categoryAppliedInputTypes.violence, ['text', 'image']);
+  assert.deepEqual(reply.result.evidence.categoryAppliedInputTypes.harassment, ['text']);
+  assert.deepEqual(await unchangedState(post), state);
+});
+
 test('malformed event and canonical source mismatch are fenced before factory or provider', async () => {
   const post = await created(), state = await unchangedState(post);
   for (const patch of [{ eventId: uuidv7() }, { eventId: 'not-a-uuid' }, { payload: null },
@@ -189,10 +226,15 @@ test('malformed event and canonical source mismatch are fenced before factory or
     ["UPDATE system.outbox_events SET event_type='notification.created' WHERE id=$1", [post.source]],
     ["UPDATE system.outbox_events SET aggregate_type='comment' WHERE id=$1", [post.source]],
   ]) {
+    await client.query(`UPDATE system.outbox_events SET actor_id=$2,event_type='content.post.created',aggregate_type='post'
+      WHERE id=$1`, [post.source, post.author]);
     await client.query(sql, values);
     const reply = await attempt(post);
     assert.equal(reply.result.reason, 'source_event_mismatch'); assert.equal(reply.result.analyseTextCalls, 0);
   }
+  await client.query(`UPDATE system.outbox_events SET actor_id=$2,event_type='content.post.created',aggregate_type='post'
+    WHERE id=$1`, [post.source, post.author]);
+  assert.equal((await attempt(post)).result.state, 'evidence', 'restored canonical event independently passes all guards');
 });
 
 const changes = {

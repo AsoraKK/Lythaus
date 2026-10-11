@@ -147,9 +147,30 @@ export async function postSafetyEvidenceFixture(connectionString) {
         if (scenario === 'redirect') return new Response(null, { status: 307,
           headers: { location: 'https://redirect-target.synthetic.invalid/collect' } });
         if (scenario === 'malformed_json') return new Response('{broken');
-        const response = { model: 'omni-moderation-latest', results: [{ flagged: scenario === 'flagged',
-          categories: { harassment: scenario === 'flagged' }, category_scores: { harassment: scenario === 'flagged' ? 0.9 : 0.01 },
-          category_applied_input_types: { harassment: ['text'] } }] };
+        const categories = ['harassment', 'harassment/threatening', 'hate', 'hate/threatening', 'illicit', 'illicit/violent',
+          'self-harm', 'self-harm/instructions', 'self-harm/intent', 'sexual', 'sexual/minors', 'violence', 'violence/graphic'];
+        const flaggedCategory = scenario?.startsWith('flagged:') ? scenario.slice('flagged:'.length) : 'harassment';
+        const flagged = scenario === 'flagged' || scenario?.startsWith('flagged:');
+        const response = { model: 'omni-moderation-latest', results: [{ flagged: Boolean(flagged),
+          categories: Object.fromEntries(categories.map(category => [category, Boolean(flagged && category === flaggedCategory)])),
+          category_scores: Object.fromEntries(categories.map(category => [category, flagged && category === flaggedCategory ? 0.9 : 0.01])),
+          category_applied_input_types: Object.fromEntries(categories.map(category => [category, ['text']])) }] };
+        const result = response.results[0];
+        if (scenario === 'token_category' || scenario === 'body_category' || scenario === 'future_category') {
+          const key = scenario === 'body_category' ? body.input : scenario === 'future_category' ? 'future-safety-category' : 'synthetic-secret-body-token';
+          result.categories[key] = false; result.category_scores[key] = 0; result.category_applied_input_types[key] = ['text'];
+        }
+        for (const field of ['categories', 'category_scores', 'category_applied_input_types']) {
+          if (scenario === 'empty_' + field || scenario === 'empty_maps') result[field] = {};
+          if (scenario === 'missing_' + field || scenario === 'partial_maps') delete result[field].harassment;
+          if (scenario === 'token_' + field) result[field]['synthetic-secret-body-token'] = result[field].hate;
+          if (scenario === 'replaced_' + field) {
+            result[field]['synthetic-secret-body-token'] = result[field].hate; delete result[field].hate;
+          }
+        }
+        if (scenario === 'inconsistent_flag') result.categories.harassment = true;
+        if (scenario === 'unsupported_input_type') result.category_applied_input_types.harassment = ['image'];
+        if (scenario === 'documented_input_types') result.category_applied_input_types.violence = ['text', 'image'];
         if (scenario === 'malformed_model') response.model = 'unapproved-model';
         if (scenario === 'malformed_schema') response.results[0].flagged = 'false';
         if (scenario === 'malformed_scores') response.results[0].category_scores.harassment = 2;

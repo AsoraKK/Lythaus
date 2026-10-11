@@ -48,6 +48,15 @@ export interface PostSafetyDependencies {
   createProvider(options: { timeoutMs: number; flaggedResult: 'REVIEW' | 'BLOCK'; now(): number }): Pick<ModerationProvider, 'analyseText'>;
 }
 
+const POST_SAFETY_CATEGORIES = [
+  'harassment', 'harassment/threatening', 'hate', 'hate/threatening', 'illicit', 'illicit/violent',
+  'self-harm', 'self-harm/instructions', 'self-harm/intent', 'sexual', 'sexual/minors', 'violence', 'violence/graphic',
+] as const;
+export type PostSafetyCategory = typeof POST_SAFETY_CATEGORIES[number];
+const IMAGE_CAPABLE_CATEGORIES = new Set<PostSafetyCategory>([
+  'self-harm', 'self-harm/instructions', 'self-harm/intent', 'sexual', 'violence', 'violence/graphic',
+]);
+
 export interface PostSafetyEvidence {
   schemaVersion: 'lythaus-post-safety-evidence-preparation-v1';
   purpose: 'safety';
@@ -58,9 +67,9 @@ export interface PostSafetyEvidence {
   status: 'SUCCESS';
   providerResult: 'ALLOW' | 'REVIEW' | 'BLOCK';
   flagged: boolean;
-  categories: Readonly<Record<string, boolean>>;
-  categoryScores: Readonly<Record<string, number>>;
-  categoryAppliedInputTypes: Readonly<Record<string, readonly string[]>>;
+  categories: Readonly<Record<PostSafetyCategory, boolean>>;
+  categoryScores: Readonly<Record<PostSafetyCategory, number>>;
+  categoryAppliedInputTypes: Readonly<Record<PostSafetyCategory, readonly string[]>>;
   executionMs: number;
 }
 
@@ -89,9 +98,13 @@ function record(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function metadata(value: unknown, valid: (item: unknown) => boolean): boolean {
-  return record(value) && Object.entries(value).every(([key, item]) =>
-    /^[a-z][a-z0-9_/-]{0,79}$/.test(key) && valid(item));
+function metadata(value: unknown, valid: (item: unknown, category: PostSafetyCategory) => boolean): boolean {
+  return record(value) && Object.keys(value).length === POST_SAFETY_CATEGORIES.length
+    && POST_SAFETY_CATEGORIES.every(category => Object.hasOwn(value, category) && valid(value[category], category));
+}
+
+function categoryMap<T>(value: Readonly<Record<string, T>>): Record<PostSafetyCategory, T> {
+  return Object.fromEntries(POST_SAFETY_CATEGORIES.map(category => [category, value[category]])) as Record<PostSafetyCategory, T>;
 }
 
 function normalize(analysis: ModerationAnalysis, revision: ContentModerationRevision, flaggedResult: 'REVIEW' | 'BLOCK'): PostSafetyOutcome {
@@ -114,16 +127,18 @@ function normalize(analysis: ModerationAnalysis, revision: ContentModerationRevi
     || analysis.result !== (evidence.flagged ? flaggedResult : 'ALLOW')
     || !metadata(evidence.categories, item => typeof item === 'boolean')
     || !metadata(evidence.categoryScores, item => typeof item === 'number' && Number.isFinite(item) && item >= 0 && item <= 1)
-    || !metadata(evidence.categoryAppliedInputTypes, item => Array.isArray(item) && item.length <= 8
-      && item.every(type => type === 'text' || type === 'image'))) return unknown('UNEXPECTED_SCHEMA');
+    || !metadata(evidence.categoryAppliedInputTypes, (item, category) => Array.isArray(item) && item.length <= 8
+      && item.every(type => type === 'text' || type === 'image' && IMAGE_CAPABLE_CATEGORIES.has(category)))) return unknown('UNEXPECTED_SCHEMA');
+  if (evidence.flagged !== POST_SAFETY_CATEGORIES.some(category => evidence.categories[category])) return unknown('UNEXPECTED_SCHEMA');
   return {
     state: 'evidence', persisted: false, analyseTextCalls: 1,
     evidence: {
       schemaVersion: 'lythaus-post-safety-evidence-preparation-v1', purpose: 'safety', applicability: 'evaluation-only',
       revision: { ...revision }, provider: 'openai', model: evidence.model, status: 'SUCCESS',
       providerResult: evidence.flagged ? flaggedResult : 'ALLOW', flagged: evidence.flagged,
-      categories: { ...evidence.categories }, categoryScores: { ...evidence.categoryScores },
-      categoryAppliedInputTypes: Object.fromEntries(Object.entries(evidence.categoryAppliedInputTypes).map(([key, types]) => [key, [...types]])),
+      categories: categoryMap(evidence.categories), categoryScores: categoryMap(evidence.categoryScores),
+      categoryAppliedInputTypes: categoryMap(Object.fromEntries(POST_SAFETY_CATEGORIES.map(category =>
+        [category, [...evidence.categoryAppliedInputTypes[category]]]))),
       executionMs: evidence.executionMs,
     },
   };
