@@ -955,7 +955,7 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
        RETURNING id`,
       [uuidv7(), revision.contentId, AUTHENTICITY_POLICY, revision.sourceEventId]
     );
-    if (caseResult.rowCount !== 1) return false;
+    if (caseResult.rowCount !== 1) throw new Error('post_review_case_conflict');
     await client.query(
       `INSERT INTO moderation.decisions (id, case_id, outcome, public_label, policy_version) VALUES ($1, $2, 'queue', 'Under review', $3)`,
       [uuidv7(), caseResult.rows[0].id, AUTHENTICITY_POLICY]

@@ -12,9 +12,9 @@ export async function postModerationFixture(connectionString, bindings) {
   const { build } = require('esbuild');
   const { Miniflare, convertV4MiniflareOptions } = require('miniflare');
   const root = fileURLToPath(new URL('../../../', import.meta.url));
-  const clients = new Map(), deliveries = [], statements = [];
+  const clients = new Map(), deliveries = [], statements = [], sqlErrors = [];
   let sequence = 0, modelCalls = 0, failModel = false, failQueue = false;
-  let duringModel, duringSql, failSql, modelResponse = { riskScore: 0.1,
+  let duringModel, duringSql, afterSql, failSql, modelResponse = { riskScore: 0.1,
     signals: [{ category: 'synthetic_evidence', confidence: 0.5, rationale: 'Local fixture only' }] };
   const bundle = await build({ absWorkingDir: root, bundle: true, write: false,
     format: 'esm', platform: 'node', target: 'es2022', external: ['cloudflare:workers'],
@@ -52,6 +52,7 @@ export async function postModerationFixture(connectionString, bindings) {
     stdin: { resolveDir: root, contents: `
       import api from './apps/lythaus-public-api/src/index.ts';
       import jobs from './apps/lythaus-jobs/src/index.ts';
+      import admin from './apps/lythaus-admin-api/src/index.ts';
       export default { async fetch(request, env, ctx) {
         const path = new URL(request.url).pathname;
         env.AI = { async run() {
@@ -77,7 +78,7 @@ export async function postModerationFixture(connectionString, bindings) {
           await jobs.scheduled({}, env);
           return Response.json({ completed: true });
         }
-        return api.fetch(request, env, ctx);
+        return path.startsWith('/api/admin/') ? admin.fetch(request, env, ctx) : api.fetch(request, env, ctx);
       }};
     ` },
   });
@@ -85,13 +86,19 @@ export async function postModerationFixture(connectionString, bindings) {
     name: 'post-incident-local', modules: true, script: bundle.outputFiles[0].text,
     compatibilityDate: '2026-07-27', compatibilityFlags: ['nodejs_compat'],
     bindings: { ...bindings, DB_APP_FRESH: { role: 'lythaus_runtime' },
+      DB_ADMIN_FRESH: { role: 'lythaus_admin' },
       DB_JOBS_FRESH: { role: 'lythaus_jobs' }, DB_PRIVACY_FRESH: { role: 'lythaus_privacy' },
       AUTHENTICITY_AI_ENABLED: 'true', AUTHENTICITY_ALPHA_ENABLED: 'false',
       AUTHENTICITY_BETA_ENABLED: 'false', MEDIA_UPLOADS_ENABLED: 'false',
       AUTHENTICITY_TEXT_MODEL: '@cf/openai/gpt-oss-20b', AI_GATEWAY_ID: 'lythaus-ai',
       COST_BUDGET_ENABLED: 'true', COST_BUDGET_PERIOD_PREFIX: 'synthetic-post-test',
     },
-    outboundService: () => { throw new Error('Local fixture refuses external requests'); },
+    outboundService: request => {
+      if (request.url === 'https://access.synthetic.invalid/certs' && bindings.FIXTURE_ACCESS_JWKS) {
+        return Response.json(JSON.parse(bindings.FIXTURE_ACCESS_JWKS));
+      }
+      throw new Error('Local fixture refuses external requests');
+    },
     serviceBindings: {
       FIXTURE_MODEL: async () => {
         modelCalls++;
@@ -110,8 +117,10 @@ export async function postModerationFixture(connectionString, bindings) {
         let client = clients.get(input.transactionId);
         try {
           if (temporary) {
-            assert.ok(['lythaus_runtime', 'lythaus_jobs', 'lythaus_privacy'].includes(input.role));
+            assert.ok(['lythaus_runtime', 'lythaus_jobs', 'lythaus_privacy', 'lythaus_admin'].includes(input.role));
             client = new pg.Client({ connectionString, ssl: false, connectionTimeoutMillis: 5000 });
+            client.on('error', error => sqlErrors.push({ role: input.role, code: error.code }));
+            client.fixtureRole = input.role;
             await client.connect();
             await client.query("SET statement_timeout='5s'");
             await client.query('SET ROLE ' + input.role);
@@ -124,19 +133,21 @@ export async function postModerationFixture(connectionString, bindings) {
             return Response.json({ transactionId });
           }
           if (input.action === 'query') {
-            statements.push({ text: input.text, role: input.role, transactionId: input.transactionId });
-            if (duringSql) await duringSql(input);
+            const diagnostic = { ...input, role: client.fixtureRole, backendPid: client.processID };
+            statements.push({ text: input.text, role: client.fixtureRole, transactionId: input.transactionId });
+            if (duringSql) await duringSql(diagnostic);
             if (failSql && input.text.includes(failSql.match) && failSql.remaining > 0) {
               failSql.remaining--;
               throw new Error('synthetic_interrupted_database_write');
             }
             const result = await client.query(input.text, input.values);
+            if (afterSql) await afterSql(diagnostic);
             return Response.json({ rows: result.rows, rowCount: result.rowCount });
           }
           assert.ok(['commit', 'rollback'].includes(input.action));
           await client.query(input.action === 'commit' ? 'COMMIT' : 'ROLLBACK');
           return Response.json({ completed: true });
-        } catch (error) { return Response.json({ error: error.message }, { status: 500 }); }
+        } catch (error) { sqlErrors.push({ role: client?.fixtureRole, code: error.code }); return Response.json({ error: error.message }, { status: 500 }); }
         finally {
           if ((temporary && input.action !== 'begin') || ['commit', 'rollback'].includes(input.action)) {
             clients.delete(input.transactionId);
@@ -146,11 +157,26 @@ export async function postModerationFixture(connectionString, bindings) {
       },
     },
   }] }));
-  return { deliveries, statements, get modelCalls() { return modelCalls; },
+  return { deliveries, statements, sqlErrors, get modelCalls() { return modelCalls; },
     set failModel(value) { failModel = value; }, set failQueue(value) { failQueue = value; },
     set duringModel(value) { duringModel = value; }, set failSql(value) { failSql = value; },
     set duringSql(value) { duringSql = value; },
+    set afterSql(value) { afterSql = value; },
     set modelResponse(value) { modelResponse = value; },
+    async disconnectPrivacyTransactions() {
+      const control = new pg.Client({ connectionString, ssl: false });
+      await control.connect();
+      try {
+        const selected = [...clients.values()].filter(client => client.fixtureRole === 'lythaus_privacy');
+        assert.equal(selected.length, 1, 'exactly one account-lock connection is expected');
+        await control.query('SELECT pg_terminate_backend($1)', [selected[0].processID]);
+      } finally { await control.end(); }
+    },
+    async abortPrivacyTransactions() {
+      const selected = [...clients.values()].filter(client => client.fixtureRole === 'lythaus_privacy');
+      assert.equal(selected.length, 1);
+      await assert.rejects(selected[0].query('SELECT 1/0'), error => error.code === '22012');
+    },
     dispatchFetch: (...args) => runtime.dispatchFetch(...args),
     async dispose() {
       await runtime.dispose();

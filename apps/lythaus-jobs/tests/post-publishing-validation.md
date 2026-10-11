@@ -1,11 +1,28 @@
 # Ordinary post publishing integration boundary
 
+**Review remains blocked on account-lock atomicity.** Follow-up tests terminate
+the idle privacy connection during a Jobs lock wait or apply, and restrict the
+account after lock loss. The separate Jobs transaction can still commit stale
+review evidence. An aborted privacy transaction can likewise roll back at its
+outer COMMIT after the inner Jobs commit. These are active failing regressions,
+not accepted limitations. No deployment or merge is appropriate until the
+account lock and review writes share one transaction under a narrowly approved
+database capability. No privilege expansion or shared schema edit is made here.
+
 This Jobs change binds ordinary post review work to the canonical outbox event,
 actor, declaration, body hash and active account. The same checks run before
 evaluation and again under the content lock before persistence. The existing
 privacy connection holds a shared account-row lock during the Jobs transaction;
-the Jobs role does not acquire new identity privileges. No provider call runs
-inside these locks.
+the Jobs role does not acquire new identity privileges. That split connection
+is unsafe on lock loss, as noted above. No provider call runs inside these locks.
+
+Confirmed fixes from review: human admin queue decisions are retained even when
+their inherited policy is `evaluation-only-v1`. Exempting an automatic queue now
+requires null `decided_by`, the expected policy, an existing review-only Jobs
+detector run and matching provenance. A same-source case with no decision/evidence
+is conservatively retained. Cases are locked in ID order before the post, matching
+the real admin case-then-post handler. A late case-insert conflict throws and
+rolls back all earlier declaration/evidence changes.
 
 `assessPostPublishing` consumes explicit Safety outcomes, independently versioned
 provenance/specialist/behaviour/reasoning outcomes and a revision-bound policy
@@ -60,6 +77,9 @@ schemas, migrations, Wrangler files, generated Worker types or CI are edited.
 | Canonical source and actor | `readPostPublishingSnapshot` | Absent source, source actor/payload mutations before/during inference; API JWT.sub author path. |
 | Revision/body/declaration binding | Snapshot checks and typed assessment bindings | Submit/revise, stale old delivery, changed body; each component/policy/Safety binding field mismatch. |
 | Privacy/deletion authority | `withPostPublishingAccountLock`, locked snapshot | Locked/deleted account, deleted post before/during inference; concurrent privacy/account and admin/post row-lock races. |
+| Account-lock atomicity (blocked) | Split privacy and Jobs transactions | Three active failures: lost privacy connection during post-lock wait/apply, and idle privacy abort followed by outer COMMIT rollback. Stale detector writes persist; this is not accepted. |
+| Human and pending case authority | Ordered case lock, latest decision identity and provenance checks | Real admin same-policy queue before/during inference without detector evidence; existing undecided case remains unchanged. |
+| Case conflict atomicity | Throw on late case INSERT conflict | Real PostgreSQL conflict rolls back detector/declaration writes and retries; real admin case/post race has no `40P01`. |
 | Independent holds and appeal scope | Before/after hold and identical-override checks | Independent queue/block and peer override before/during inference; unchanged appeal evidence fingerprint. |
 | No implied authority | `assessPostPublishing`, existing review-only writes | Human and AI-assisted pass/review/block/unknown feedback; policy ALLOW/REVIEW/BLOCK/NOT_RUN; unavailable/uncertain/malformed stages. |
 | Idempotency/recovery | Existing inbox, uniqueness and budget guards | Concurrent duplicate delivery; rollback during apply; failure after apply; repeated failures through configured retry horizon with one synthetic model invocation. |
@@ -86,6 +106,9 @@ npm run test:product-integrity-runtime
 npm run test:native-architecture
 npm run openapi:lint
 npm run openapi:test:contract
+PLANETSCALE_PG17_TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:55439/postgres \
+  node apps/lythaus-jobs/tests/run-post-publishing-pg17.mjs \
+  apps/lythaus-jobs/tests/post-publishing-review.workerd.mjs
 ```
 
 The final focused publishing suite has 34 passing cases; ordinary moderation has
@@ -96,6 +119,13 @@ retired-provider scan, canonical migration validation and diff checks pass.
 OpenAPI lint passes with two existing warnings (`EmailAuthRequest` required
 property and `PrivacyRequestAccepted` allOf). Contract tests pass 70 and skip 17
 in one existing skipped suite; skips are not passes.
+
+The additional real-handler review suite has **5 passes and 3 active failures**.
+The failures establish unsafe split-transaction account-lock atomicity and block
+merge/deployment. Normal-path successes above do not override this evidence.
+The synthetic Access JWKS response exercises the actual admin authorization
+handler without external network requests; it does not certify production auth.
+Gitleaks passes with no leaks. No denied remote read is retried.
 
 The retry-exhaustion fixture manually delivers through the configured retry
 horizon. It verifies withholding and retry signals in actual Workerd; it does
@@ -116,14 +146,20 @@ Acceptance-lane CI wiring for these new focused commands is still required.
 - Outage deadlines, retry/re-evaluation authority and permitted budgets require
   owner decisions. Existing budgets and queue retries are preserved; no new
   timeouts, fallbacks, paid resources or spend limits are selected.
-- Review the account/privacy-lock -> content-lock order and the extra local
+- Review the account/privacy-lock -> ordered-case-lock -> content-lock order and the extra local
   database round trips. The two transactions are not a distributed atomic
   transaction: the privacy transaction only holds a row lock; all review writes
-  are atomic in the Jobs transaction. A later outer commit failure is safely
-  handled by existing duplicate-delivery guards.
+  are atomic in the Jobs transaction. Duplicate-delivery guards cannot make
+  those two transactions atomic: connection-loss/outer-abort tests fail and
+  block approval. Parent allocation for a single-transaction lock capability is
+  required; repeating liveness checks would still leave a race at commit.
 - Parent review must serialize merges/releases and validate admin/appeal
   publication paths. Source review, release deployment, production authentication
   certification, detector qualification and feature activation are separate.
+- `publication-release-guard-proposal.md` inventories manual allow, historical
+  reversal, community restoration, editorial publication and public projection/
+  fanout. It proposes a coherent withheld/owner-test/public boundary for parent
+  allocation. No global release guard or live flag change is implemented here.
 
 Rollback is a normal revert of this Jobs commit after parent review, with no
 schema, grant, resource or flag rollback. Revert restores the earlier review

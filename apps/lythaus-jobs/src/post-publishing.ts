@@ -44,6 +44,8 @@ export async function readPostPublishingSnapshot(client: DatabaseClient, input: 
     || !['content.post.created', 'content.post.updated'].includes(String(input.eventType))) {
     return { state: 'stale', reason: 'invalid_event' };
   }
+  if (input.lock) await client.query(`SELECT id FROM moderation.cases
+    WHERE content_type = 'post' AND content_id = $1 ORDER BY id FOR UPDATE`, [revision.contentId]);
   const post = (await client.query<PublishingPost>(
     `SELECT post.id, post.author_id, post.body, post.declared_creation_mode, post.moderation_state,
             post.deleted_at, post.moderation_source_event_id, author.status AS author_status,
@@ -75,12 +77,19 @@ export async function readPostPublishingSnapshot(client: DatabaseClient, input: 
     contentType: 'post', contentId: post.id, sourceEventId: revision.sourceEventId,
     body: post.body, declaredCreationMode: post.declared_creation_mode,
   })) return { state: 'protected', reason: 'scoped_peer_override' };
-  const hold = await client.query(`SELECT 1 FROM moderation.cases c JOIN LATERAL (
-      SELECT outcome, policy_version FROM moderation.decisions WHERE case_id = c.id ORDER BY created_at DESC, id DESC LIMIT 1
+  const hold = await client.query(`SELECT 1 FROM moderation.cases c LEFT JOIN LATERAL (
+      SELECT id, outcome, policy_version, decided_by FROM moderation.decisions WHERE case_id = c.id ORDER BY created_at DESC, id DESC LIMIT 1
     ) d ON true WHERE c.content_type = 'post' AND c.content_id = $1 AND c.source_event_id = $2
-      AND c.state <> 'superseded' AND d.outcome IN ('block', 'queue')
-      AND NOT (d.outcome = 'queue' AND d.policy_version = 'evaluation-only-v1') LIMIT 1`,
-  [revision.contentId, revision.sourceEventId]);
+      AND c.state <> 'superseded' AND (d.id IS NULL OR d.outcome IN ('block', 'queue')
+      AND NOT (d.outcome = 'queue' AND d.policy_version = 'evaluation-only-v1' AND d.decided_by IS NULL
+        AND EXISTS (SELECT 1 FROM moderation.detector_runs r JOIN trust.provenance_events p
+          ON p.content_id = r.content_id AND p.source_event_id = r.source_event_id
+          AND p.detector_provider = r.provider AND p.detector_model_version = r.model_version
+          WHERE r.content_type = 'post' AND r.content_id = $1 AND r.source_event_id = $2
+            AND r.provider = 'lythaus-authenticity-ai' AND r.signal->>'policyVersion' = 'evaluation-only-v1'
+            AND r.signal->>'recommendation' = 'review' AND r.signal->>'reviewRequired' = 'true'
+            AND p.author_id = $3 AND p.policy_version = 'evaluation-only-v1' AND p.final_decision = 'queue'))) LIMIT 1`,
+  [revision.contentId, revision.sourceEventId, post.author_id]);
   if (hold.rowCount) return { state: 'protected', reason: 'independent_hold' };
   if (!isCurrentContentModerationRevision({ revision, canonical })) return { state: 'stale', reason: 'revision_changed' };
   return { state: 'current', post };
