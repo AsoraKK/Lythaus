@@ -26,8 +26,14 @@ export interface DatabaseLedgerQueryResult {
   rows: Array<Record<string, unknown>>;
 }
 
-/** Structural seam for the existing PlanetScale/Hyperdrive PostgreSQL client. */
+/**
+ * Structural seam for a dedicated autocommit PostgreSQL client. The integration
+ * must reject an ambient transaction in assertAutocommit(), and query() must
+ * resolve only after the top-level statement commits. Do not pass a transaction
+ * client or share this connection with code that can issue BEGIN.
+ */
 export interface DatabaseLedgerClient {
+  assertAutocommit(): Promise<void>;
   query(sql: string, values?: unknown[]): Promise<DatabaseLedgerQueryResult>;
 }
 
@@ -41,6 +47,7 @@ interface SanitizedCategory {
   category: string;
   provider_flag: boolean | null;
   provider_score: number | null;
+  input_types_observed: boolean;
   applied_input_types: string[];
 }
 
@@ -104,6 +111,7 @@ function sanitizedCategories(receipt: CollectedReceipt): SanitizedCategory[] {
     category,
     provider_flag: typeof raw.categoryFlags[category] === 'boolean' ? raw.categoryFlags[category] : null,
     provider_score: typeof raw.categoryScores[category] === 'number' ? raw.categoryScores[category] : null,
+    input_types_observed: Object.hasOwn(raw.appliedInputTypes, category),
     applied_input_types: Array.isArray(raw.appliedInputTypes[category])
       ? [...new Set(raw.appliedInputTypes[category])]
       : [],
@@ -229,13 +237,16 @@ const COMMIT_RESULT_SQL = `
     RETURNING run_fingerprint, sample_id
   ), inserted_categories AS (
     INSERT INTO evaluation.posting_feedback_result_categories
-      (run_fingerprint, sample_id, category, provider_flag, provider_score, applied_input_types)
+      (run_fingerprint, sample_id, category, provider_flag, provider_score,
+       input_types_observed, applied_input_types)
     SELECT inserted_result.run_fingerprint, inserted_result.sample_id,
        category_record.category, category_record.provider_flag, category_record.provider_score,
+       category_record.input_types_observed,
        category_record.applied_input_types
       FROM inserted_result
       CROSS JOIN jsonb_to_recordset($27::jsonb) AS category_record(
-        category text, provider_flag boolean, provider_score numeric, applied_input_types text[])
+        category text, provider_flag boolean, provider_score numeric,
+        input_types_observed boolean, applied_input_types text[])
     RETURNING category
   )
   SELECT (SELECT count(*) FROM inserted_result)::integer AS result_count,
@@ -256,9 +267,16 @@ const PURGE_EXPIRED_RESULTS_SQL = `
 export function createDatabaseReceiptLedger(database: DatabaseLedgerClient): ReceiptLedger & {
   purgeExpiredResults(): Promise<number>;
 } {
+  if (!database || typeof database.assertAutocommit !== 'function' || typeof database.query !== 'function')
+    throw new Error('database_ledger_autocommit_client_required');
   assertProbeEnvelope();
   let context: ProbeContext | null = null;
   let claimedAttempts = 0;
+
+  async function committedQuery(sql: string, values?: unknown[]): Promise<DatabaseLedgerQueryResult> {
+    await database.assertAutocommit();
+    return database.query(sql, values);
+  }
 
   return {
     durability: 'DURABLE_DATABASE',
@@ -269,7 +287,7 @@ export function createDatabaseReceiptLedger(database: DatabaseLedgerClient): Rec
       assertHex(binding.sourceSha, 40, 'source_sha');
       assertHex(binding.collectorHash, 64, 'collector_hash');
       const fingerprint = await createRunFingerprint(binding.selectionHash, binding.sourceSha, binding.collectorHash);
-      const result = await database.query(CLAIM_RUN_SQL, [
+      const result = await committedQuery(CLAIM_RUN_SQL, [
         fingerprint, binding.selectionHash, binding.sourceSha, binding.collectorHash, OPENAI_MODERATION_MODEL,
       ]);
       if (result.rows.length !== 1) return false;
@@ -283,7 +301,7 @@ export function createDatabaseReceiptLedger(database: DatabaseLedgerClient): Rec
       if (!fixture) throw new Error('database_ledger_sample_not_in_frozen_selection');
       if (fixture.revision !== binding.revision || await hash(fixture.body) !== binding.inputHash)
         throw new Error('database_ledger_stale_sample_revision');
-      const result = await database.query(CLAIM_SAMPLE_SQL, [
+      const result = await committedQuery(CLAIM_SAMPLE_SQL, [
         context.fingerprint, binding.sampleId, binding.inputHash, binding.revision,
       ]);
       if (result.rows.length !== 1) return false;
@@ -294,14 +312,14 @@ export function createDatabaseReceiptLedger(database: DatabaseLedgerClient): Rec
     async persistReceipt(receipt) {
       if (!context) throw new Error('database_ledger_probe_not_claimed');
       const sanitized = await sanitizeReceipt(receipt, context);
-      const result = await database.query(COMMIT_RESULT_SQL, sanitized.values);
+      const result = await committedQuery(COMMIT_RESULT_SQL, sanitized.values);
       const row = result.rows[0];
       if (Number(row?.result_count) !== 1 || Number(row?.category_count) !== sanitized.categories.length)
         throw new Error('database_ledger_receipt_not_committed');
     },
 
     async purgeExpiredResults() {
-      const result = await database.query(PURGE_EXPIRED_RESULTS_SQL);
+      const result = await committedQuery(PURGE_EXPIRED_RESULTS_SQL);
       return Number(result.rows[0]?.deleted_count ?? 0);
     },
   };

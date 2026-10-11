@@ -133,13 +133,15 @@ CREATE TABLE evaluation.posting_feedback_result_categories (
   )),
   provider_flag boolean,
   provider_score numeric CHECK (provider_score IS NULL OR provider_score BETWEEN 0 AND 1),
+  input_types_observed boolean NOT NULL DEFAULT false,
   applied_input_types text[] NOT NULL DEFAULT '{}'
     CHECK (cardinality(applied_input_types) <= 2
-      AND applied_input_types <@ ARRAY['text', 'image']::text[]),
+      AND applied_input_types <@ ARRAY['text', 'image']::text[]
+      AND (input_types_observed OR cardinality(applied_input_types) = 0)),
   PRIMARY KEY (run_fingerprint, sample_id, category),
   FOREIGN KEY (run_fingerprint, sample_id)
     REFERENCES evaluation.posting_feedback_results(run_fingerprint, sample_id) ON DELETE CASCADE,
-  CHECK (provider_flag IS NOT NULL OR provider_score IS NOT NULL OR cardinality(applied_input_types) > 0)
+  CHECK (provider_flag IS NOT NULL OR provider_score IS NOT NULL OR input_types_observed)
 );
 
 CREATE INDEX posting_feedback_results_expiry_idx
@@ -177,7 +179,9 @@ COMMENT ON TABLE evaluation.posting_feedback_result_categories IS
 -- GRANT SELECT (category)
 --   ON evaluation.posting_feedback_result_categories TO __APPROVED_EVALUATION_WRITER_ROLE__;
 -- GRANT SELECT (expires_at), DELETE ON evaluation.posting_feedback_results TO __APPROVED_RETENTION_ROLE__;
+-- GRANT USAGE ON SCHEMA evaluation TO __APPROVED_RETENTION_ROLE__;
 -- GRANT SELECT ON evaluation.posting_feedback_results, evaluation.posting_feedback_result_categories
 --   TO __APPROVED_EVALUATION_READER_ROLE__;
+-- GRANT USAGE ON SCHEMA evaluation TO __APPROVED_EVALUATION_READER_ROLE__;
 -- Do not grant DELETE on run or attempt claims to an application or retention role.
 */
