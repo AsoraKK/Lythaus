@@ -154,11 +154,12 @@ failed, were corrected, and the final scoped typing and 17-case suite passed.
 | Migration baseline / registry | 20 migration files, 102 tables and 33 resource guardrails validated statically; no live schema evidence |
 | `validate:native-workers` | Failed: pinned `wrangler@4.123.0 types --check` reported all 3 generated type files stale or unverifiable. Configs and those files are byte-unchanged; this lane does not resolve their freshness or substitute another version |
 | Native scope, provider retirement, branding | Passed locally |
-| Syntax, documentation security, whitespace and tracked-file hygiene | Passed locally; dedicated gitleaks unavailable |
+| Syntax, documentation security, whitespace and tracked-file hygiene | Passed locally |
+| Repository secret scan | Pinned Gitleaks 8.18.0 subsequently installed by the existing script; 1,833 commits scanned, no leaks found. Initial absence did not count as a pass |
 | PostgreSQL 17 / browser / Flutter analyze | Unrun in this lane: no persistence, UI or Dart changes; no new DB or browser acceptance claimed |
 | Real provider measurements, checkpoint inference, licensed labelled corpus, costs | Unrun/unauthorized; zero live calls, zero added paid resources; no empirical band qualification |
 | Release manifest, production auth, actual public posting | Unrun/uncertified. Do not retry prior denied operations or infer from unrelated successful reads |
-| Remote SHA / current-head checks / requiredness | Draft-PR handoff must report observed head and check status separately. Prior protection 403 means requiredness is not re-certified here |
+| Remote SHA / current-head checks / requiredness | Draft #992 opened and implementation head `12a31d100f93ed9515b87da5274aaf4e60a7d6d6` verified via new-branch Git read, PR metadata and exact-head check API. Security/CodeQL/dependency/workflow/mobile/pilot checks passed; repository hygiene failed with only exit-code annotation and other checks were pending. Final handoff rechecks any later head. No denied job-log read was retried; prior protection 403 means requiredness is not re-certified here |
 
 The [machine-readable plan](../../packages/authenticity/evaluation/posting-feedback/evaluation-plan.json)
 defines the exact future gate: owner-approved provider/model/modalities, rights and
