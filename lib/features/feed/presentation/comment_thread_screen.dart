@@ -44,6 +44,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   bool _isSubmitting = false;
   bool _confirmingDeletion = false;
   String? _errorMessage;
+  String? _mutationErrorMessage;
   _ThreadComment? _replyTarget;
   String? _pendingParentId;
   String? _aiLabel;
@@ -59,6 +60,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   int _draftVersion = 0;
   ProviderSubscription<String?>? _sessionSub;
   Future<void> Function()? _retryAction;
+  Future<void> Function()? _mutationRetryAction;
   final _locallySubmitted = <String>{};
 
   @override
@@ -99,8 +101,11 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
           _restoring = false;
           _confirmingDeletion = false;
           _errorMessage = null;
+          _mutationErrorMessage = null;
           _draftStatus = null;
         });
+        _retryAction = null;
+        _mutationRetryAction = null;
         unawaited(_restoreComposer());
         unawaited(_loadInitial());
       },
@@ -218,6 +223,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       _errorMessage = null;
       _isLoadingMore = false;
     });
+    _retryAction = null;
 
     try {
       final actor = _actor;
@@ -317,6 +323,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       _isLoadingMore = true;
       _errorMessage = null;
     });
+    _retryAction = null;
 
     try {
       final page = await _fetchComments(cursor: cursor);
@@ -406,7 +413,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
+      _mutationErrorMessage = null;
     });
+    _retryAction = null;
+    _mutationRetryAction = null;
 
     try {
       final token = await tokenFuture;
@@ -494,9 +504,9 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _locked =
             registry.pending(_createScope) != null &&
             registry.pending(_createScope)?.needsReentry != true;
-        _errorMessage = failure.message;
-        _retryAction = _submitComment;
+        _mutationErrorMessage = failure.message;
       });
+      _mutationRetryAction = _submitComment;
       _drainDeferredInitialReload();
     }
   }
@@ -562,7 +572,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     setState(() {
       _confirmingDeletion = true;
       _errorMessage = null;
+      _mutationErrorMessage = null;
     });
+    _retryAction = null;
+    _mutationRetryAction = null;
     try {
       if (ask) {
         final confirmed = await showDialog<bool>(
@@ -649,9 +662,9 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       setState(() {
         _confirmingDeletion = false;
         _isSubmitting = false;
-        _errorMessage = failure.message;
-        _retryAction = () => _deleteComment(comment, ask: false);
+        _mutationErrorMessage = failure.message;
       });
+      _mutationRetryAction = () => _deleteComment(comment, ask: false);
       _drainDeferredInitialReload();
     }
   }
@@ -701,7 +714,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
+      _mutationErrorMessage = null;
     });
+    _retryAction = null;
+    _mutationRetryAction = null;
     try {
       final token = await ref.read(jwtProvider.future);
       if (!mounted ||
@@ -748,9 +764,9 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       if (!mounted || actor != _actor || epoch != _sessionEpoch) return;
       setState(() {
         _isSubmitting = false;
-        _errorMessage = failure.message;
-        _retryAction = () => _retryDeletedComment(saved);
+        _mutationErrorMessage = failure.message;
       });
+      _mutationRetryAction = () => _retryDeletedComment(saved);
       _drainDeferredInitialReload();
     } finally {
       if (mounted &&
@@ -820,6 +836,18 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
           appBar: AppBar(title: const Text('Comments')),
           body: Column(
             children: [
+              if (_mutationErrorMessage != null)
+                MaterialBanner(
+                  content: Text(_mutationErrorMessage!),
+                  actions: [
+                    TextButton(
+                      onPressed: _isSubmitting
+                          ? null
+                          : () => _mutationRetryAction?.call(),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
               if (_errorMessage != null)
                 MaterialBanner(
                   content: Text(_errorMessage!),

@@ -946,9 +946,11 @@ void main() {
     },
   );
 
-  for (final secondMutationFails in [false, true]) {
+  for (final secondMutationStatus in <int?>[null, 503, 403]) {
     testWidgets('synthetic stale initial read reloads after a second mutation '
-        '${secondMutationFails ? 'fails' : 'succeeds'}', (tester) async {
+        '${secondMutationStatus == null ? 'succeeds' : 'fails with $secondMutationStatus'}', (
+      tester,
+    ) async {
       final initialRead = Completer<ResponseBody>();
       final secondWrite = Completer<ResponseBody>();
       var commentReads = 0;
@@ -962,7 +964,7 @@ void main() {
           return _response({
             'items': [
               _comment('first'),
-              if (!secondMutationFails) _comment('second'),
+              if (secondMutationStatus == null) _comment('second'),
             ],
           });
         }
@@ -975,7 +977,13 @@ void main() {
               'moderationState': 'under_review',
             }, 201);
           }
-          return secondWrite.future;
+          if (writes == 2) return secondWrite.future;
+          return _response({
+            'id': 'second-retried',
+            'body': 'Second synthetic send',
+            'declaredCreationMode': 'human',
+            'moderationState': 'under_review',
+          }, 201);
         }
         return _response({'items': <Object>[]});
       });
@@ -1036,11 +1044,14 @@ void main() {
         reason: 'The fresh read must wait for the active second mutation.',
       );
 
-      if (secondMutationFails) {
+      if (secondMutationStatus != null) {
         secondWrite.complete(
           _response({
-            'error': {'code': 'INTERNAL_ERROR', 'message': 'Synthetic failure'},
-          }, 503),
+            'error': {
+              'code': 'ACCESS_DENIED',
+              'message': 'Synthetic rejection',
+            },
+          }, secondMutationStatus),
         );
       } else {
         secondWrite.complete(
@@ -1059,9 +1070,31 @@ void main() {
       expect(find.text('Comment first'), findsOneWidget);
       expect(
         find.text('Comment second'),
-        secondMutationFails ? findsNothing : findsOneWidget,
+        secondMutationStatus == null ? findsOneWidget : findsNothing,
       );
       expect(commentReads, 2, reason: 'The deferred refresh must run once.');
+      if (secondMutationStatus == 403) {
+        expect(
+          find.text('You are not allowed to change this content.'),
+          findsOneWidget,
+        );
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          'Second synthetic send',
+        );
+        await tester.tap(find.text('Retry'));
+        await _pumpUntil(tester, () => writes == 3);
+        await tester.pumpAndSettle();
+        expect(
+          find.text('You are not allowed to change this content.'),
+          findsNothing,
+        );
+        expect(find.text('Second synthetic send'), findsOneWidget);
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).controller!.text,
+          isEmpty,
+        );
+      }
       expect(tester.takeException(), isNull);
     });
   }
@@ -1156,6 +1189,70 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'synthetic queued refresh preserves delete rejection and its retry',
+    (tester) async {
+      final firstDelete = Completer<ResponseBody>();
+      var commentReads = 0;
+      var deletes = 0;
+      final adapter = _Adapter((request) async {
+        if (request.method == 'GET' &&
+            request.path.endsWith('/comments') &&
+            request.queryParameters['cursor'] == null) {
+          commentReads++;
+          return _response({
+            'items': [_comment('c1')],
+          });
+        }
+        if (request.method == 'DELETE') {
+          deletes++;
+          return deletes == 1
+              ? firstDelete.future
+              : _response({'commentId': 'c1', 'deleted': true});
+        }
+        return _response({'items': <Object>[]});
+      });
+
+      await _pump(tester, adapter);
+      await _openComments(tester);
+      await tester.tap(find.text('Delete comment'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete', skipOffstage: true));
+      await _pumpUntil(tester, () => deletes == 1);
+
+      final refresh = tester
+          .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+          .onRefresh;
+      await refresh();
+      await tester.pump();
+      expect(commentReads, 1, reason: 'Refresh queues behind the delete.');
+
+      firstDelete.complete(
+        _response({
+          'error': {'code': 'ACCESS_DENIED'},
+        }, 403),
+      );
+      await _pumpUntil(tester, () => commentReads == 2);
+      await tester.pumpAndSettle();
+      expect(find.text('Comment c1'), findsOneWidget);
+      expect(
+        find.text('You are not allowed to change this content.'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Retry'));
+      await _pumpUntil(tester, () => deletes == 2);
+      await tester.pumpAndSettle();
+      expect(find.text('Comment c1'), findsNothing);
+      expect(
+        find.text('You are not allowed to change this content.'),
+        findsNothing,
+      );
+      expect(commentReads, 2);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('stale pagination cannot overwrite a newer refresh', (
     tester,
