@@ -49,6 +49,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   String? _aiLabel;
   bool _locked = false;
   int _loadEpoch = 0;
+  int _mutationEpoch = 0;
   int _sessionEpoch = 0;
   late String _actor;
   String get _createScope => 'comment-create:$_actor:${widget.postId}';
@@ -80,6 +81,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       (previous, next) {
         if ((next ?? 'session') == _actor) return;
         ++_loadEpoch;
+        ++_mutationEpoch;
         ++_sessionEpoch;
         ++_draftVersion;
         _actor = next ?? 'session';
@@ -203,6 +205,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   Future<void> _loadInitial() async {
     if (!mounted || _isSubmitting) return;
     final epoch = ++_loadEpoch;
+    final mutationEpoch = _mutationEpoch;
     setState(() {
       _isInitialLoading = true;
       _errorMessage = null;
@@ -240,6 +243,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         }
       }
       if (!mounted || epoch != _loadEpoch) return;
+      if (mutationEpoch != _mutationEpoch) {
+        unawaited(_loadInitial());
+        return;
+      }
       _locallySubmitted.removeAll(page.items.map((comment) => comment.id));
       setState(() {
         _comments = _mergeComments(
@@ -256,6 +263,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       });
     } on DioException catch (error) {
       if (!mounted || epoch != _loadEpoch) return;
+      if (mutationEpoch != _mutationEpoch) {
+        unawaited(_loadInitial());
+        return;
+      }
       setState(() {
         _isInitialLoading = false;
         _errorMessage = _messageForCommentsFailure(error);
@@ -263,6 +274,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       });
     } catch (_) {
       if (!mounted || epoch != _loadEpoch) return;
+      if (mutationEpoch != _mutationEpoch) {
+        unawaited(_loadInitial());
+        return;
+      }
       setState(() {
         _isInitialLoading = false;
         _errorMessage = 'Unable to load comments right now.';
@@ -277,6 +292,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       return;
     }
     final epoch = _loadEpoch;
+    final mutationEpoch = _mutationEpoch;
 
     setState(() {
       _isLoadingMore = true;
@@ -286,6 +302,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     try {
       final page = await _fetchComments(cursor: cursor);
       if (!mounted || epoch != _loadEpoch) return;
+      if (mutationEpoch != _mutationEpoch) {
+        setState(() => _isLoadingMore = false);
+        return;
+      }
       setState(() {
         _comments = _mergeComments(_comments, page.items);
         _nextCursor = page.nextCursor == cursor ? null : page.nextCursor;
@@ -293,6 +313,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       });
     } on DioException catch (error) {
       if (!mounted || epoch != _loadEpoch) return;
+      if (mutationEpoch != _mutationEpoch) {
+        setState(() => _isLoadingMore = false);
+        return;
+      }
       setState(() {
         _isLoadingMore = false;
         _errorMessage = _messageForCommentsFailure(error);
@@ -300,6 +324,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       });
     } catch (_) {
       if (!mounted || epoch != _loadEpoch) return;
+      if (mutationEpoch != _mutationEpoch) {
+        setState(() => _isLoadingMore = false);
+        return;
+      }
       setState(() {
         _isLoadingMore = false;
         _errorMessage = 'Unable to load more comments right now.';
@@ -419,6 +447,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         receipt: OwnedContent('comment', created.id, postId: widget.postId),
       );
       if (!mounted || actor != _actor || sessionEpoch != _sessionEpoch) return;
+      ++_mutationEpoch;
       ++_draftVersion;
       setState(() {
         _isSubmitting = false;
@@ -481,15 +510,20 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       ),
     );
     if (!mounted || revised == null || !_isOwner(comment)) return;
+    final currentIndex = _comments.indexWhere((item) => item.id == comment.id);
+    if (currentIndex < 0 || _comments[currentIndex].deleted) return;
+    final current = _comments[currentIndex];
+    if (!_isOwner(current)) return;
     final updated = _ThreadComment.fromJson({
-      'id': comment.id,
+      'id': current.id,
       'postId': widget.postId,
-      'authorId': comment.authorId,
-      'authorUsername': comment.authorUsername,
-      'createdAt': comment.createdAt.toIso8601String(),
-      'parentId': comment.parentCommentId,
+      'authorId': current.authorId,
+      'authorUsername': current.authorUsername,
+      'createdAt': current.createdAt.toIso8601String(),
+      'parentId': current.parentCommentId,
       ...revised,
     });
+    ++_mutationEpoch;
     setState(() {
       _comments = _mergeComments(_comments, [updated]);
       _locallySubmitted.add(updated.id);
@@ -574,6 +608,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         receipt: OwnedContent('comment', comment.id, postId: widget.postId),
       );
       if (!mounted || actor != _actor || epoch != _sessionEpoch) return;
+      ++_mutationEpoch;
       setState(() {
         _isSubmitting = false;
         _comments = _comments.where((item) => item.id != comment.id).toList();
@@ -676,6 +711,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         receipt: OwnedContent('comment', id, postId: widget.postId),
       );
       if (!mounted || actor != _actor || epoch != _sessionEpoch) return;
+      ++_mutationEpoch;
       setState(() => _isSubmitting = false);
       await _loadInitial();
     } catch (error) {

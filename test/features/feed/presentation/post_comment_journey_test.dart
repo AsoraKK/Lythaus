@@ -604,6 +604,75 @@ void main() {
   );
 
   testWidgets(
+    'synthetic late edit response cannot restore a comment removed by refresh',
+    (tester) async {
+      final editResponse = Completer<ResponseBody>();
+      var commentReads = 0;
+      final adapter = _Adapter((request) async {
+        if (request.method == 'PUT') return editResponse.future;
+        if (request.method == 'GET' && request.path.endsWith('/comments')) {
+          return ++commentReads == 1
+              ? _response({
+                  'items': [_comment('c1')],
+                })
+              : _response({'items': <Object>[]});
+        }
+        return _response({'items': <Object>[]});
+      });
+      await _pump(tester, adapter);
+      await _openComments(tester);
+      await tester.tap(find.text('Edit comment'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byType(TextField),
+        'Late synthetic edit receipt',
+      );
+      await tester.tap(find.widgetWithText(ChoiceChip, 'AI-assisted'));
+      await tester.pump();
+      await tester.tap(find.text('Submit edit'));
+      for (var i = 0; i < 10; i++) {
+        if (adapter.requests.any((request) => request.method == 'PUT')) break;
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      expect(adapter.requests.where((r) => r.method == 'PUT'), hasLength(1));
+
+      final refresh = tester
+          .widget<RefreshIndicator>(
+            find.byType(RefreshIndicator, skipOffstage: false).first,
+          )
+          .onRefresh;
+      var refreshCompleted = false;
+      final refreshing = refresh().whenComplete(() => refreshCompleted = true);
+      for (var i = 0; i < 10 && !refreshCompleted; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await refreshing;
+      expect(find.byType(TextField), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'Late synthetic edit receipt',
+      );
+
+      editResponse.complete(
+        _response({
+          'id': 'c1',
+          'body': 'Late synthetic edit receipt',
+          'declaredCreationMode': 'ai_assisted',
+          'moderationState': 'under_review',
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Submit edit'), findsNothing);
+      expect(
+        find.text('No comments yet. Be the first to reply.'),
+        findsOneWidget,
+      );
+      expect(find.text('Late synthetic edit receipt'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'owner deletion is confirmed, retains content on 403, then removes on acknowledgement',
     (tester) async {
       var deletes = 0;
@@ -896,6 +965,122 @@ void main() {
     await refresh;
     expect(find.text('Comment fresh'), findsOneWidget);
     expect(find.text('Comment stale'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'synthetic stale pagination cannot overwrite a newer comment edit',
+    (tester) async {
+      final stalePage = Completer<ResponseBody>();
+      final adapter = _Adapter((request) async {
+        if (request.method == 'PUT') {
+          return _response({
+            'id': 'c0',
+            ..._body(request),
+            'moderationState': 'under_review',
+          });
+        }
+        if (request.queryParameters['cursor'] == 'next') {
+          return stalePage.future;
+        }
+        return _response({
+          'items': List.generate(30, (i) => _comment('c$i')),
+          'nextCursor': 'next',
+        });
+      });
+      await _pump(tester, adapter);
+      await _openComments(tester);
+      final controller = tester
+          .widget<ListView>(find.byType(ListView).first)
+          .controller!;
+      controller.jumpTo(controller.position.maxScrollExtent);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump();
+      expect(
+        adapter.requests.where((r) => r.queryParameters['cursor'] == 'next'),
+        hasLength(1),
+      );
+      controller.jumpTo(0);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Edit comment').first);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byType(TextField),
+        'Revised while an older page was pending',
+      );
+      await tester.tap(find.widgetWithText(ChoiceChip, 'AI-assisted'));
+      await tester.tap(find.text('Submit edit'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Revised while an older page was pending'),
+        findsOneWidget,
+      );
+
+      stalePage.complete(
+        _response({
+          'items': [_comment('c0'), _comment('c30')],
+          'nextCursor': 'next2',
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Revised while an older page was pending'),
+        findsOneWidget,
+      );
+      expect(find.text('Comment c0'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('synthetic stale pagination cannot restore a deleted comment', (
+    tester,
+  ) async {
+    final stalePage = Completer<ResponseBody>();
+    final adapter = _Adapter((request) async {
+      if (request.method == 'DELETE') {
+        return _response({'commentId': 'c0', 'deleted': true});
+      }
+      if (request.queryParameters['cursor'] == 'next') {
+        return stalePage.future;
+      }
+      return _response({
+        'items': List.generate(30, (i) => _comment('c$i')),
+        'nextCursor': 'next',
+      });
+    });
+    await _pump(tester, adapter);
+    await _openComments(tester);
+    final controller = tester
+        .widget<ListView>(find.byType(ListView).first)
+        .controller!;
+    controller.jumpTo(controller.position.maxScrollExtent);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump();
+    expect(
+      adapter.requests.where((r) => r.queryParameters['cursor'] == 'next'),
+      hasLength(1),
+    );
+    controller.jumpTo(0);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Delete comment').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete', skipOffstage: true).last);
+    await tester.pumpAndSettle();
+    expect(find.text('Comment c0'), findsNothing);
+
+    stalePage.complete(
+      _response({
+        'items': [_comment('c0'), _comment('c30')],
+        'nextCursor': 'next2',
+      }),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Comment c0'), findsNothing);
+    expect(find.text('Comment c30'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
