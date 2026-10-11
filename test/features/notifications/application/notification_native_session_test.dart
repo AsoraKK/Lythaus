@@ -99,6 +99,65 @@ Future<void> _drain() async {
 }
 
 void main() {
+  for (final dismissing in [false, true]) {
+    for (final uncertain in [false, true]) {
+      test(
+        'unread count refetches after ${dismissing ? 'dismiss' : 'read'} with uncertain=$uncertain and rejects an older count',
+        () async {
+          final olderCount = Completer<Map<String, dynamic>>();
+          var countRequests = 0;
+          final adapter = _Adapter((request) async {
+            if (request.path.endsWith('/unread-count')) {
+              if (countRequests++ == 0) return olderCount.future;
+              return {'count': 0, 'unreadCount': 0};
+            }
+            if (request.method == 'POST') {
+              if (uncertain) {
+                throw DioException(
+                  requestOptions: request,
+                  type: DioExceptionType.receiveTimeout,
+                );
+              }
+              return {
+                'id': 'private-owner-a',
+                'action': dismissing ? 'dismiss' : 'read',
+              };
+            }
+            return _page('owner-a');
+          });
+          final container = _container(adapter);
+          final subscription = container.listen(unreadCountProvider, (_, _) {});
+          addTearDown(subscription.close);
+          await _drain();
+          final controller = container.read(
+            notificationsControllerProvider.notifier,
+          );
+          await controller.loadNotifications();
+          final confirmed = dismissing
+              ? await controller.dismiss('private-owner-a')
+              : await controller.markAsRead('private-owner-a');
+          expect(confirmed, !uncertain);
+          await container.pump();
+          expect(await container.read(unreadCountProvider.future), 0);
+          olderCount.complete({'count': 7, 'unreadCount': 7});
+          await _drain();
+          expect(container.read(unreadCountProvider).requireValue, 0);
+          expect(countRequests, 2);
+          if (uncertain) {
+            expect(controller.state.notifications.single.read, isFalse);
+          }
+          expect(
+            adapter.requests.every(
+              (request) =>
+                  request.headers['Authorization'] == 'Bearer token-owner-a',
+            ),
+            isTrue,
+          );
+        },
+      );
+    }
+  }
+
   test(
     'expired member response clears private rows and requests authentication',
     () async {
