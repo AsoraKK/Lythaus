@@ -17,6 +17,7 @@ const activePaths = [
   'docs/policy/approved-product-copy.md', 'docs/policy/alpha-ai-authorship-and-moderation.md',
   'docs/product/quiet-trust-feed/state-machines.md',
   'docs/alpha/staged-rollout.md', 'docs/testing/monthly-reputation-acceptance.md',
+  'docs/testing/support-feedback-local-services.md',
   'docs/security/firebase-mobile-purpose-inventory.md',
   'docs/security/github-credential-purpose-inventory.md',
   'docs/firebase_fcm_setup.md', 'docs/firebase_ios_setup.md',
@@ -51,6 +52,9 @@ function contradictions(relative, source) {
     if (/Firebase credentials are present in Function App|https:\/\/<function-host>|processPendingNotifications.*(?:deployed|timer cycle)/i.test(block)) {
       failures.push(`${relative}: retired notification runtime instruction`);
     }
+    if (/parent is retrieving (?:the )?(?:exact )?later (?:prospective owner authority|owner decision)|prospective budget authority.{0,160}being retrieved by the parent|missing later authority|150 points quarterly has no\s+approved budget|budget\/period\/boundary defaults remain pending/i.test(block)) {
+      failures.push(`${relative}: recovered prospective approval still marked missing`);
+    }
   }
   for (const line of source.split('\n')) {
     const heading = /^(#{1,6})\s+(.+)/.exec(line);
@@ -75,6 +79,23 @@ function launchGates(source) {
   if (!/no earlier retroactive credit/i.test(source)) failures.push('no-retroactivity rule missing');
   if (!/no routine Editorial confirmation/i.test(source)) failures.push('standard appeal rule missing');
   if (!/historical.*policy version/is.test(source)) failures.push('historical version preservation missing');
+  return failures;
+}
+
+function prospectiveApprovalGates(source) {
+  const failures = [];
+  const row = source.split('\n').find(line => line.startsWith('| Prospective monthly v2 |')) ?? '';
+  if (!/approved 13,650 source-month maximum/.test(row)) failures.push('approved maximum not scoped to prospective v2');
+  if (!/preserve existing awards.*optional 150-point suggestion award/.test(row)) failures.push('existing awards or optional suggestion scope missing');
+  if (!/Approval does not activate features/.test(row)) failures.push('approval/activation separation missing');
+  for (const evidence of [
+    '7 October 2026, 20:12:31 UTC', 'Sentinel_0314431144fc819189590df3e4956084',
+    'Sentinel_fb825567aba88191887e4cd7480216f7',
+    '7 October 2026, 20:00:03 UTC', 'Sentinel_b33d9262a58081918f6a3643f98b14f7',
+  ]) {
+    if (!source.includes(evidence)) failures.push(`recovered approval provenance missing: ${evidence}`);
+  }
+  if (!/1,000-point email\s+award and the optional 150-point suggestion award/.test(source)) failures.push('all-quarterly award scope missing');
   return failures;
 }
 
@@ -125,6 +146,31 @@ test('public community guidelines retain the reviewed baseline bytes', () => {
 test('a prospective approved budget is not rejected by a numeric heuristic', () => {
   const hypotheticalApprovedV2 = 'Fixture: version v2 has an explicitly approved ceiling 13,650.';
   assert.deepEqual(contradictions('fixture.md', hypotheticalApprovedV2), []);
+});
+
+test('recovered prospective v2 approval is versioned, evidenced and separate from activation', () => {
+  assert.deepEqual(prospectiveApprovalGates(documents.get(authorityPath)), []);
+});
+
+test('approval cannot be relabelled historical, lose provenance or imply activation', () => {
+  const source = documents.get(authorityPath);
+  assert.ok(prospectiveApprovalGates(source.replace('| Prospective monthly v2 |', '| Historical monthly v1 |'))
+    .includes('approved maximum not scoped to prospective v2'));
+  assert.ok(prospectiveApprovalGates(source.replace('Sentinel_0314431144fc819189590df3e4956084', 'unverified'))
+    .some(failure => failure.startsWith('recovered approval provenance missing')));
+  assert.ok(prospectiveApprovalGates(source.replace('Approval does not activate features', 'Approval activates features'))
+    .includes('approval/activation separation missing'));
+});
+
+test('obsolete prospective budget evidence gaps are rejected without rewriting signed v1', () => {
+  for (const source of [
+    'The parent is retrieving the exact later owner decision.',
+    'Exact later prospective budget authority is being retrieved by the parent.',
+    'Missing later authority in this record does not reject that decision.',
+    'The stated 150 points quarterly has no approved budget, rubric or period-boundary policy.',
+    'The award is 150, while budget/period/boundary defaults remain pending.',
+  ]) assert.equal(contradictions('fixture.md', source).length, 1);
+  assert.deepEqual(contradictions('fixture.md', 'Pinned historical v1 leaves budget placement pending and retains its 13,500 ceiling.'), []);
 });
 
 test('unversioned weighted rules are rejected, scoped historical rules retained', () => {

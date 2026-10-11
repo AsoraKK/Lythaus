@@ -10,8 +10,10 @@ awards, remaining months only and no earlier retroactive credit. The signed v1
 catalogue and implementation are preserved; their tests do not prove that new
 rule. Prospective v2 work belongs to the existing policy lane. Activation remains
 separate. All 13,500 statements below describe the pinned historical v1 candidate;
-they do not constrain a later approved v2 budget. The parent is retrieving the
-exact later prospective owner authority.
+they do not constrain the owner-approved prospective v2 maximum of 13,650,
+which preserves existing awards and adds optional 150-point suggestion credit.
+Recovered 7 October approval provenance is in the authority record; it does
+not change this historical v1 checkpoint or activate features.
 Reviewed baseline: `8c4261402dd370b4c57e082cf0fc16b41927f7db`. At the 4 October
 verification checkpoint, GitHub `main` was
 `627ae30b36cd995c4f117bf3c44789c986b5d46b`, containing security release 89

@@ -33,7 +33,8 @@ task provenance and authority links belong in technical review records only.
 | Pinned historical monthly candidate `lythaus-monthly-rewards-2026-10-v1` | Dated v1 checkpoint, with a 13,500 source-month ceiling for this version only; operational defaults and activation remain separate | [Monthly implementation record](../architecture/monthly-reputation-2026-10.md), [calculator](../../packages/contracts/src/monthly-reputation-policy.ts), immutable [received catalogue](../../packages/contracts/policies/Lythaus_Monthly_Rewards_Action_Catalogue_v2.json) | Its rolling quarterly validity is superseded prospectively by the 7 October decision; this v1 record does not establish a prospective version's budget or current-quarter acceptance |
 | New standard community appeals | Owner 2 October: timed community review, one equal vote per eligible member, no fixed trained panel, no Level 5 weight and no routine Editorial confirmation | [Candidate evaluator](../../packages/contracts/src/monthly-peer-appeal-policy.ts), [versioned access](../../packages/db/src/community-appeal-access.ts), [closure](../../packages/db/src/community-appeal-closure.ts) and canonical [OpenAPI fragment](../../api/openapi/community-appeals.yaml) already exist | D09 duration, quorum, extension and ballot conventions require separate approval; restricted/unresolved operations and activation remain gated |
 | All prospective quarterly awards | Owner 7 October: calendar-quarter-end expiry, remaining months only, no earlier retroactive credit | Baseline [maintenance calculator](../../packages/contracts/src/monthly-maintenance-policy.ts) still contains the earlier rolling candidate; prospective v2 work is reported by the parent | Coordinate with the existing policy lane; do not duplicate it, rewrite signed v1, or claim the new expiry is implemented here |
-| Pinned v1 accepted useful suggestion amendment | 150 points for one independently accepted useful suggestion per quarter; participation remains optional | [Pinned v1 suggestion amendment](../../packages/contracts/policies/Lythaus_Monthly_Rewards_Suggestion_Amendment_v1.json) leaves budget placement pending and retains the historical v1 ceiling of 13,500 | This is v1 evidence only. The parent is retrieving the later prospective owner authority; an unavailable decision is an evidence gap, not grounds to reject an approved v2 ceiling |
+| Pinned v1 accepted useful suggestion amendment | 150 points for one independently accepted useful suggestion per quarter; participation remains optional | [Pinned v1 suggestion amendment](../../packages/contracts/policies/Lythaus_Monthly_Rewards_Suggestion_Amendment_v1.json) leaves budget placement pending and retains the historical v1 ceiling of 13,500 | This is immutable v1 evidence only; the recovered prospective approval below does not amend it |
+| Prospective monthly v2 | Owner 7 October: approved 13,650 source-month maximum; preserve existing awards and add the optional 150-point suggestion award | Recovered parent-supplied approval provenance below; implementation and acceptance belong to the existing prospective policy lane | Approval does not activate features; exact version, implementation, acceptance and operational defaults remain separate |
 | Launch authentication | Owner 11 October: retain email/password; guest browsing remains read-only | [Authentication ADR](../architecture/email-guest-authentication-adr.md), [password policy](../../packages/contracts/src/password-policy.ts), canonical [OpenAPI](../../api/openapi/openapi.yaml) | Exact-candidate authentication acceptance remains separate from the product decision |
 | Public publishing | Owner 11 October: withhold public posting until the complete publishing pipeline is validated | Existing submission, moderation, Jobs, disclosure and appeal contracts are implementation evidence | Validation and an explicit activation decision are required; deployment or successful submission does not grant public visibility |
 
@@ -72,13 +73,32 @@ invent them or change already signed historical records.
 
 The pinned historical v1 signed catalogue and suggestion amendment remain
 unchanged. Their 13,500 ceiling and unplaced 150-point field describe v1 only.
-They do not set a ceiling for a prospective version. A later explicitly approved
-v2 budget governs that version; missing evidence in this lane is not authority
-to reject it. The parent is retrieving the exact later owner decision so the
-prospective policy and its tests can be reconciled by their owning lane. Do not
-infer a new budget from arithmetic or silently alter historical v1 records.
+They do not set a ceiling for a prospective version. The recovered 7 October
+owner approval sets the prospective v2 source-month maximum to 13,650,
+preserves existing awards and adds the optional 150-point suggestion award.
+Its implementation and version-specific acceptance remain with the existing
+policy lane. Do not silently alter historical v1 records.
 Never award points or entitlements from a client, ticket status, popularity or
 unverified evidence. No monthly or quarterly feature is activated by this doc.
+
+### Recovered 7 October prospective approval
+
+The parent supplied the recovered decision evidence after PR991 merged. At
+7 October 2026, 20:12:31 UTC, owner message
+`Sentinel_0314431144fc819189590df3e4956084` said “Perfect” directly in response
+to the parent's 20:08 recommendation to raise the maximum to 13,650, preserve
+existing awards and add optional 150-point suggestion credit. Parent acknowledgement
+`Sentinel_fb825567aba88191887e4cd7480216f7` confirmed proceeding with that
+proposed maximum. This establishes prospective v2 approval, not a signed v1
+amendment, implementation acceptance or activation.
+
+At 7 October 2026, 20:00:03 UTC, owner message
+`Sentinel_b33d9262a58081918f6a3643f98b14f7` said “To all quarterly points”.
+The fixed-calendar-quarter rule therefore covers both the 1,000-point email
+award and the optional 150-point suggestion award: remaining months only,
+calendar-quarter-end expiry and no earlier retroactive credit. The historical
+signed 13,500 catalogue remains unchanged. This lane records parent-supplied
+provenance; it did not independently retrieve the original conversations.
 
 ## Launch, identity and privacy
 
@@ -136,10 +156,10 @@ retrieve, reproduce or treat it as authorization for new access.
 
 ## Parent / owner-only unresolved evidence
 
-- Exact later prospective budget authority, including the reported 13,650 v2
-  decision, is being retrieved by the parent. Its absence here does not reject
-  that decision or apply historical v1's ceiling to v2. Reconcile version-specific
-  placement, source-month effect and acceptance rubric with that evidence.
+- Prospective v2 version-specific placement, source-month application and
+  acceptance rubric/evidence remain with the existing policy lane. The 13,650
+  maximum and all-quarterly calendar validity are approved as recorded above;
+  these implementation and acceptance gates do not reopen those decisions.
 - Exact reviewed prospective quarterly implementation/PR and policy identifier;
   no such v2 ref was present in the authorized local refs. Existing merged PR896
   (`6599418923d39088af836bff08785d7f3ff5a15a`) supplies the earlier candidate.
