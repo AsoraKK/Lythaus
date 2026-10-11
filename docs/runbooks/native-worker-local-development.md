@@ -19,6 +19,18 @@ Wrangler with undeclared inherited-object selectors bypasses that source check
 and is unsupported. The pinned parser can inherit Admin routes for such an
 input; an empty `env` object alone is not a universal raw-CLI safety boundary.
 
+Offline checks of Wrangler 4.123.0 and 4.129.1 resolve `--env __proto__` to a
+separate `<production-name>-__proto__` Worker with empty variables and resource
+bindings. They retain disabled previews, but inherit the Admin route and Jobs
+cron. This does not select the removed weaker development settings or the
+unchanged production configuration. Raw `--name <production-name>` can override
+the suffixed name during deployment; an Admin route can also be reassigned
+without that name override. These are residual direct-CLI overwrite/routing
+risks, not validated deployment paths. No provider operation was used to test
+them. The existing SOURCE check blocks hidden environment selectors in
+supported workflows; source configuration alone does not constrain arbitrary
+raw CLI options. Keep this broader boundary under parent/toolchain review.
+
 Use the repository's local synthetic fixtures for development. Workerd fixtures
 construct Miniflare bindings explicitly, deny external requests and use a
 disposable PostgreSQL fixture where a database is needed. They do not read
