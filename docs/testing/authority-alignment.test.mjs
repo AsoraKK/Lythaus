@@ -15,7 +15,7 @@ const activePaths = [
   'docs/runbooks/notifications-testing.md', 'docs/runbooks/crash-reporting.md',
   'docs/policy/reputation-policy-v1.md',
   'docs/policy/approved-product-copy.md', 'docs/policy/alpha-ai-authorship-and-moderation.md',
-  'docs/legal/public/community-guidelines.md', 'docs/product/quiet-trust-feed/state-machines.md',
+  'docs/product/quiet-trust-feed/state-machines.md',
   'docs/alpha/staged-rollout.md', 'docs/testing/monthly-reputation-acceptance.md',
   'docs/security/firebase-mobile-purpose-inventory.md',
   'docs/security/github-credential-purpose-inventory.md',
@@ -47,9 +47,6 @@ function contradictions(relative, source) {
     }
     if (/Development branch: `development`|use `development` with synthetic|do not delete PlanetScale `development`|main.*currently exposes \d+ relations/i.test(block)) {
       failures.push(`${relative}: stale hosted database instruction`);
-    }
-    if (/(?:approved (?:ceiling|maximum)|ceiling is|maximum is) 13,?650|13,?650 (?:is approved|ceiling is approved)/i.test(block)) {
-      failures.push(`${relative}: unsupported budget approval`);
     }
     if (/Firebase credentials are present in Function App|https:\/\/<function-host>|processPendingNotifications.*(?:deployed|timer cycle)/i.test(block)) {
       failures.push(`${relative}: retired notification runtime instruction`);
@@ -119,6 +116,17 @@ test('historical reputation body and signed catalogues retain baseline bytes', (
   }
 });
 
+test('public community guidelines retain the reviewed baseline bytes', () => {
+  const bytes = fs.readFileSync(path.join(root, 'docs/legal/public/community-guidelines.md'));
+  assert.equal(createHash('sha256').update(bytes).digest('hex'),
+    '75d5b1d3bff0beadd428237ec48faa4ab8363eafc8210d9354284dba081594d0');
+});
+
+test('a prospective approved budget is not rejected by a numeric heuristic', () => {
+  const hypotheticalApprovedV2 = 'Fixture: version v2 has an explicitly approved ceiling 13,650.';
+  assert.deepEqual(contradictions('fixture.md', hypotheticalApprovedV2), []);
+});
+
 test('unversioned weighted rules are rejected, scoped historical rules retained', () => {
   const rule = 'Five independently assigned trained reviewers and a weighted majority are required.';
   assert.equal(contradictions('fixture.md', `## Appeals\n\n${rule}`).length, 1);
@@ -149,8 +157,8 @@ test('hosted development and uncertified relation counts cannot return to guidan
   }
 });
 
-test('unsupported ceiling approval and retired notification setup are rejected', () => {
-  for (const source of ['The approved ceiling 13,650 applies.', 'Firebase credentials are present in Function App settings.', 'Use https://<function-host>/api/notifications/devices.']) {
+test('retired notification setup is rejected', () => {
+  for (const source of ['Firebase credentials are present in Function App settings.', 'Use https://<function-host>/api/notifications/devices.']) {
     assert.equal(contradictions('fixture.md', source).length, 1);
   }
 });

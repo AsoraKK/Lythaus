@@ -9,7 +9,9 @@ quarterly-validity proposal with calendar-quarter-end expiry for all quarterly
 awards, remaining months only and no earlier retroactive credit. The signed v1
 catalogue and implementation are preserved; their tests do not prove that new
 rule. Prospective v2 work belongs to the existing policy lane. Activation remains
-separate, and no later 13,650 authority was available to this documentation lane.
+separate. All 13,500 statements below describe the pinned historical v1 candidate;
+they do not constrain a later approved v2 budget. The parent is retrieving the
+exact later prospective owner authority.
 Reviewed baseline: `8c4261402dd370b4c57e082cf0fc16b41927f7db`. At the 4 October
 verification checkpoint, GitHub `main` was
 `627ae30b36cd995c4f117bf3c44789c986b5d46b`, containing security release 89
@@ -59,8 +61,9 @@ adding a duplicate Rewards route or a second report projection. Ordinary deletio
 preserves earned points; only independent invalidation evidence may append a
 correction. DSR collection/retention approval remains pending.
 
-The October monthly model replaces the earlier accumulating reputation model for
-future approved assessments. Four highest whole weekly results belonging to source
+The pinned historical monthly v1 candidate replaces the earlier accumulating
+reputation model for assessments approved under v1. Within that version, four
+highest whole weekly results belonging to source
 month A contribute at most 10,000 points, monthly maintenance at most 2,500, and
 valid quarterly email evidence exactly 0 or 1,000. The maximum is 13,500. The
 assessment fixes month B's level; activity in B builds C. No account age,
@@ -584,9 +587,10 @@ in the versioned sidecar
 `packages/contracts/policies/Lythaus_Monthly_Rewards_Suggestion_Amendment_v1.json`;
 the original 22-action catalogue and its digest remain unchanged.
 
-F01 is the remaining decision outside the original catalogue's D01–D13: where this
-150 fits in the existing budget and which source-month assessment it affects.
-The 13,500 source-month maximum is unchanged. No additional score component,
+F01 in this pinned v1 record is the remaining decision outside the original
+catalogue's D01–D13: where its 150 fits in the v1 budget and which source-month
+assessment it affects. The historical v1 source-month maximum remains 13,500;
+this does not establish a prospective version's ceiling. No additional v1 score component,
 quarterly-email increase, recurring award in multiple months or allocation to a
 weekly/monthly cap is inferred. Calendar-quarter-end validity is settled by the
 7 October decision; the detailed acceptance rubric and source-month placement

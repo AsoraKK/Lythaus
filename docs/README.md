@@ -15,6 +15,9 @@ Material classification:
   weighted `appeals-v1.0.0`; its historical body is preserved unchanged and does not govern new
   standard community appeals. The dated monthly v1 candidate and signed catalogue
   likewise do not override the 7 October calendar-quarter-end decision.
+- Public/legal copy remains at the reviewed baseline in this alignment PR.
+  Public terms and community-guideline amendments require separate deliberate
+  review; technical authority records do not automatically amend them.
 
 - Runtime and deployment source lives under `apps/`, `packages/`,
   `database/`, `infrastructure/`, and `.github/workflows/`.

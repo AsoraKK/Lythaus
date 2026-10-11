@@ -19,16 +19,21 @@ checkpoints describe their named versions and evidence only. A file name such as
 ballots, reports and signed obligations retain their recorded policy version;
 documentation reconciliation cannot migrate or relabel them.
 
+This technical authority record does not amend public terms or community
+guidelines. Public/legal wording stays at the reviewed baseline in this PR;
+user-facing policy changes require separate deliberate legal review. Internal
+task provenance and authority links belong in technical review records only.
+
 ## Version authority table
 
 | Subject / version | Authority and scope | Implementation evidence at the baseline | Remaining gate |
 | --- | --- | --- | --- |
 | Historical reputation `reputation-v2.0.0` | Retained policy for records issued under this version; cumulative Level 0–5 and pillar gates | [Reputation Policy v1](reputation-policy-v1.md), [historical evaluator](../../packages/contracts/src/reputation-policy.ts) and [event catalogue](../contracts/reputation-event-catalogue-v2.json) | Preserve historical meaning; do not apply these gates to new monthly assessments by inference |
 | Historical appeals `appeals-v1.0.0` | Five trained reviewers, weighted majority and required adjudication belong to this version | [Historical appeal contract](../../packages/contracts/src/appeal-policy.ts); historical operations in [admin runbook](../runbooks/admin-ops.md) | Historical cases stay on this version; no automatic cutover |
-| Monthly candidate `lythaus-monthly-rewards-2026-10-v1` | Dated implementation checkpoint, with 13,500 source-month ceiling; operational defaults and activation remain separate | [Monthly implementation record](../architecture/monthly-reputation-2026-10.md), [calculator](../../packages/contracts/src/monthly-reputation-policy.ts), immutable [received catalogue](../../packages/contracts/policies/Lythaus_Monthly_Rewards_Action_Catalogue_v2.json) | Its rolling quarterly validity is superseded prospectively by the 7 October decision; this v1 record is not current-quarter acceptance |
+| Pinned historical monthly candidate `lythaus-monthly-rewards-2026-10-v1` | Dated v1 checkpoint, with a 13,500 source-month ceiling for this version only; operational defaults and activation remain separate | [Monthly implementation record](../architecture/monthly-reputation-2026-10.md), [calculator](../../packages/contracts/src/monthly-reputation-policy.ts), immutable [received catalogue](../../packages/contracts/policies/Lythaus_Monthly_Rewards_Action_Catalogue_v2.json) | Its rolling quarterly validity is superseded prospectively by the 7 October decision; this v1 record does not establish a prospective version's budget or current-quarter acceptance |
 | New standard community appeals | Owner 2 October: timed community review, one equal vote per eligible member, no fixed trained panel, no Level 5 weight and no routine Editorial confirmation | [Candidate evaluator](../../packages/contracts/src/monthly-peer-appeal-policy.ts), [versioned access](../../packages/db/src/community-appeal-access.ts), [closure](../../packages/db/src/community-appeal-closure.ts) and canonical [OpenAPI fragment](../../api/openapi/community-appeals.yaml) already exist | D09 duration, quorum, extension and ballot conventions require separate approval; restricted/unresolved operations and activation remain gated |
 | All prospective quarterly awards | Owner 7 October: calendar-quarter-end expiry, remaining months only, no earlier retroactive credit | Baseline [maintenance calculator](../../packages/contracts/src/monthly-maintenance-policy.ts) still contains the earlier rolling candidate; prospective v2 work is reported by the parent | Coordinate with the existing policy lane; do not duplicate it, rewrite signed v1, or claim the new expiry is implemented here |
-| Accepted useful suggestion amendment | 150 points for one independently accepted useful suggestion per quarter; participation remains optional | [Pinned suggestion amendment](../../packages/contracts/policies/Lythaus_Monthly_Rewards_Suggestion_Amendment_v1.json) leaves budget placement pending and retains 13,500 | F01 placement, source-month effect and acceptance rubric remain unresolved; no later explicit authority for 13,650 was available to this lane |
+| Pinned v1 accepted useful suggestion amendment | 150 points for one independently accepted useful suggestion per quarter; participation remains optional | [Pinned v1 suggestion amendment](../../packages/contracts/policies/Lythaus_Monthly_Rewards_Suggestion_Amendment_v1.json) leaves budget placement pending and retains the historical v1 ceiling of 13,500 | This is v1 evidence only. The parent is retrieving the later prospective owner authority; an unavailable decision is an evidence gap, not grounds to reject an approved v2 ceiling |
 | Launch authentication | Owner 11 October: retain email/password; guest browsing remains read-only | [Authentication ADR](../architecture/email-guest-authentication-adr.md), [password policy](../../packages/contracts/src/password-policy.ts), canonical [OpenAPI](../../api/openapi/openapi.yaml) | Exact-candidate authentication acceptance remains separate from the product decision |
 | Public publishing | Owner 11 October: withhold public posting until the complete publishing pipeline is validated | Existing submission, moderation, Jobs, disclosure and appeal contracts are implementation evidence | Validation and an explicit activation decision are required; deployment or successful submission does not grant public visibility |
 
@@ -65,10 +70,13 @@ three-month validity. Boundary timezone and source-month accounting details
 must be explicit in the approved prospective contract; this document does not
 invent them or change already signed historical records.
 
-The baseline signed catalogue and suggestion amendment remain unchanged. The
-150-point amount does not itself approve an additional component or a 13,650
-ceiling. Until later explicit authority is supplied and reconciled by the
-parent, retain the pinned 13,500 ceiling and report budget placement as pending.
+The pinned historical v1 signed catalogue and suggestion amendment remain
+unchanged. Their 13,500 ceiling and unplaced 150-point field describe v1 only.
+They do not set a ceiling for a prospective version. A later explicitly approved
+v2 budget governs that version; missing evidence in this lane is not authority
+to reject it. The parent is retrieving the exact later owner decision so the
+prospective policy and its tests can be reconciled by their owning lane. Do not
+infer a new budget from arithmetic or silently alter historical v1 records.
 Never award points or entitlements from a client, ticket status, popularity or
 unverified evidence. No monthly or quarterly feature is activated by this doc.
 
@@ -128,8 +136,10 @@ retrieve, reproduce or treat it as authorization for new access.
 
 ## Parent / owner-only unresolved evidence
 
-- Original later authority, if any, for a 13,650 ceiling; suggestion placement,
-  source-month effect and acceptance rubric remain unresolved in available files.
+- Exact later prospective budget authority, including the reported 13,650 v2
+  decision, is being retrieved by the parent. Its absence here does not reject
+  that decision or apply historical v1's ceiling to v2. Reconcile version-specific
+  placement, source-month effect and acceptance rubric with that evidence.
 - Exact reviewed prospective quarterly implementation/PR and policy identifier;
   no such v2 ref was present in the authorized local refs. Existing merged PR896
   (`6599418923d39088af836bff08785d7f3ff5a15a`) supplies the earlier candidate.
