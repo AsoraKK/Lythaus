@@ -8,11 +8,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/design_system/components/lyth_card.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
+import 'package:lythaus/features/auth/application/auth_service.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/notifications/application/notification_providers.dart';
 import 'package:lythaus/features/notifications/presentation/notifications_screen.dart';
@@ -121,6 +125,7 @@ Future<ProviderContainer> _open(
   _Observer? observer,
   GlobalKey? capture,
   bool pushed = false,
+  AuthService? authService,
 }) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -129,14 +134,20 @@ Future<ProviderContainer> _open(
   final container = ProviderContainer(
     overrides: [
       secureDioProvider.overrideWithValue(dio),
-      authSessionRevisionProvider.overrideWith(
-        (ref) => AuthSessionRevision(ref.read(_session.notifier)),
-      ),
-      currentUserProvider.overrideWith((ref) => ref.watch(_session)),
-      guestModeProvider.overrideWith((ref) => ref.watch(_session) == null),
-      jwtProvider.overrideWith(
-        (ref) async => 'token-${ref.watch(currentUserProvider)?.id}',
-      ),
+      if (authService != null)
+        enhancedAuthServiceProvider.overrideWithValue(authService),
+      if (authService == null)
+        authSessionRevisionProvider.overrideWith(
+          (ref) => AuthSessionRevision(ref.read(_session.notifier)),
+        ),
+      if (authService == null)
+        currentUserProvider.overrideWith((ref) => ref.watch(_session)),
+      if (authService == null)
+        guestModeProvider.overrideWith((ref) => ref.watch(_session) == null),
+      if (authService == null)
+        jwtProvider.overrideWith(
+          (ref) async => 'token-${ref.watch(currentUserProvider)?.id}',
+        ),
     ],
   );
   addTearDown(container.dispose);
@@ -193,6 +204,116 @@ void main() {
   });
   for (final size in [const Size(390, 844), const Size(1440, 1000)]) {
     final width = size.width.toInt();
+    for (final revoked in [false, true]) {
+      testWidgets(
+        '$width: real same-owner refresh ${revoked ? 'recovers authentication-required rows' : 'fences an old navigation receipt'}',
+        (tester) async {
+          FlutterSecureStorage.setMockInitialValues({
+            'jwt': 'old-access',
+            'refreshToken': 'old-refresh',
+          });
+          final authRequests = <http.Request>[];
+          final authClient = MockClient((request) async {
+            authRequests.add(request);
+            if (request.url.path.endsWith('/auth/userinfo')) {
+              return http.Response(jsonEncode(_user('owner-a').toJson()), 200);
+            }
+            expectSync(request.url.path, '/api/auth/refresh');
+            expectSync(jsonDecode(request.body), {
+              'refreshToken': 'old-refresh',
+            });
+            return http.Response(
+              jsonEncode({
+                'accessToken': 'new-access',
+                'refreshToken': 'new-refresh',
+              }),
+              200,
+            );
+          });
+          addTearDown(authClient.close);
+          final pending = Completer<_Reply>();
+          final adapter = _Adapter((request) async {
+            final fresh =
+                request.headers['Authorization'] == 'Bearer new-access';
+            if (request.path.endsWith('/read')) {
+              if (fresh) {
+                return const _Reply({'id': 'recovered', 'action': 'read'});
+              }
+              return revoked
+                  ? const _Reply({'error': 'authentication_required'}, 401)
+                  : pending.future;
+            }
+            return _Reply(_page([fresh ? 'recovered' : 'first'], link: true));
+          });
+          final observer = _Observer();
+          final container = await _open(
+            tester,
+            adapter,
+            size,
+            observer: observer,
+            authService: AuthService(
+              httpClient: authClient,
+              authUrl: 'https://local.invalid/api',
+              useWebSession: false,
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(find.text('Synthetic update first'), findsOneWidget);
+          await tester.tap(find.text('Synthetic update first'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 100));
+          if (revoked) {
+            await tester.pumpAndSettle();
+            expect(
+              find.text('Sign in to view your notifications.'),
+              findsOneWidget,
+            );
+          }
+          final revision = container.read(authSessionRevisionProvider);
+          final version = container.read(tokenVersionProvider);
+          final refresh = container
+              .read(authStateProvider.notifier)
+              .refreshToken();
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 100));
+          await tester.pumpAndSettle();
+          await refresh;
+          expect(
+            container.read(authStateProvider).hasError,
+            isFalse,
+            reason:
+                '${container.read(authStateProvider).error} ${container.read(authStateProvider).stackTrace}',
+          );
+          expect(container.read(authSessionRevisionProvider), revision);
+          expect(container.read(tokenVersionProvider), version + 1);
+          expect(authRequests, hasLength(2));
+          expect(authRequests.last.method, 'POST');
+          expect(find.text('Synthetic update recovered'), findsOneWidget);
+          expect(find.text('Synthetic update first'), findsNothing);
+          if (!revoked) {
+            pending.complete(const _Reply({'id': 'first', 'action': 'read'}));
+            await tester.pumpAndSettle();
+          }
+          expect(find.byType(NotificationsSettingsScreen), findsNothing);
+          expect(_unread, findsOneWidget);
+          expect(observer.pushes, 1);
+          expect(
+            container.read(notificationsControllerProvider).authRequired,
+            isFalse,
+          );
+          await tester.tap(find.text('Synthetic update recovered'));
+          await tester.pumpAndSettle();
+          expect(find.byType(NotificationsSettingsScreen), findsOneWidget);
+          expect(observer.pushes, 2);
+          expect(
+            adapter.requests.where((request) => request.path.endsWith('/read')),
+            hasLength(2),
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+
     testWidgets(
       '$width: failed read retries and unknown destination stays in the centre',
       (tester) async {
@@ -454,6 +575,76 @@ void main() {
             find.text(pop ? 'Synthetic home' : 'Synthetic next route'),
             findsOneWidget,
           );
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+
+    for (final settleOtherRoute in [true, false]) {
+      testWidgets(
+        '$width: push then Back before ${settleOtherRoute ? 'delayed' : 'immediate'} read receipt cancels old navigation',
+        (tester) async {
+          final pending = Completer<_Reply>();
+          final adapter = _Adapter((request) async {
+            if (request.path.endsWith('/read')) return pending.future;
+            return _Reply(_page(['first'], link: true));
+          });
+          final navigator = GlobalKey<NavigatorState>();
+          final observer = _Observer();
+          final container = await _open(
+            tester,
+            adapter,
+            size,
+            navigator: navigator,
+            observer: observer,
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Synthetic update first'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 100));
+          expect(
+            adapter.requests.where((request) => request.path.endsWith('/read')),
+            hasLength(1),
+          );
+          navigator.currentState!.push(
+            MaterialPageRoute<void>(
+              builder: (_) =>
+                  const Scaffold(body: Text('Synthetic temporary route')),
+            ),
+          );
+          if (settleOtherRoute) {
+            await tester.pumpAndSettle();
+            expect(find.text('Synthetic temporary route'), findsOneWidget);
+          }
+          navigator.currentState!.pop();
+          await tester.pumpAndSettle();
+          expect(find.byType(NotificationsScreen), findsOneWidget);
+          expect(_unread, findsOneWidget);
+          pending.complete(const _Reply({'id': 'first', 'action': 'read'}));
+          await tester.pumpAndSettle();
+          expect(find.byType(NotificationsSettingsScreen), findsNothing);
+          expect(find.byType(NotificationsScreen), findsOneWidget);
+          expect(observer.pushes, 2);
+          expect(_unread, findsNothing);
+          expect(
+            container
+                .read(notificationsControllerProvider)
+                .notifications
+                .single
+                .read,
+            isTrue,
+          );
+          await tester.tap(find.text('Synthetic update first'));
+          await tester.pumpAndSettle();
+          expect(find.byType(NotificationsSettingsScreen), findsOneWidget);
+          expect(observer.pushes, 3);
+          expect(
+            adapter.requests.where((request) => request.path.endsWith('/read')),
+            hasLength(1),
+          );
+          navigator.currentState!.pop();
+          await tester.pumpAndSettle();
+          expect(find.byType(NotificationsScreen), findsOneWidget);
           expect(tester.takeException(), isNull);
         },
       );

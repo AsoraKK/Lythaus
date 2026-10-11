@@ -37,8 +37,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   final Set<String> _pending = {};
   bool _markingAll = false;
   bool _opening = false;
-  int get _sessionEpoch =>
-      ref.read(authSessionRevisionProvider.notifier).revision;
+  ModalRoute<dynamic>? _route;
+  Animation<double>? _coverAnimation;
+  int _navigationEpoch = 0;
+  ({int session, int token})? _scheduledReload;
+  ({int session, int token}) get _sessionEpoch => (
+    session: ref.read(authSessionRevisionProvider.notifier).revision,
+    token: ref.read(tokenVersionProvider),
+  );
 
   @override
   void initState() {
@@ -54,7 +60,26 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != _route) {
+      _coverAnimation?.removeStatusListener(_onCover);
+      _route = route;
+      _coverAnimation = route?.secondaryAnimation;
+      _coverAnimation?.addStatusListener(_onCover);
+      ++_navigationEpoch;
+    }
+    if (route?.isCurrent != true) ++_navigationEpoch;
+  }
+
+  void _onCover(AnimationStatus status) {
+    if (status != AnimationStatus.dismissed) ++_navigationEpoch;
+  }
+
+  @override
   void dispose() {
+    _coverAnimation?.removeStatusListener(_onCover);
     _scrollController.dispose();
     super.dispose();
   }
@@ -141,11 +166,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     if (_opening || _pending.contains(notification.id)) return;
     _opening = true;
     final epoch = _sessionEpoch;
+    final navigationEpoch = _navigationEpoch;
     final route = ModalRoute.of(context);
     try {
       if (!notification.read) await _markAsRead(notification);
       if (!mounted ||
           epoch != _sessionEpoch ||
+          navigationEpoch != _navigationEpoch ||
           route?.isCurrent != true ||
           ref.read(notificationsControllerProvider).authRequired) {
         return;
@@ -161,25 +188,29 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    ref.listen(authSessionRevisionProvider, (_, next) {
-      setState(() {
-        _pending.clear();
-        _markingAll = false;
-        _opening = false;
-      });
-      final epoch = _sessionEpoch;
-      if (ref.read(currentUserProvider) != null) {
-        Future.microtask(() {
-          if (mounted && epoch == _sessionEpoch) {
-            ref
-                .read(notificationsControllerProvider.notifier)
-                .loadNotifications();
-          }
-        });
+  void _onSessionChanged() {
+    setState(() {
+      _pending.clear();
+      _markingAll = false;
+      _opening = false;
+    });
+    final epoch = _sessionEpoch;
+    if (ref.read(currentUserProvider) == null || _scheduledReload == epoch) {
+      return;
+    }
+    _scheduledReload = epoch;
+    Future.microtask(() {
+      if (_scheduledReload == epoch) _scheduledReload = null;
+      if (mounted && epoch == _sessionEpoch) {
+        ref.read(notificationsControllerProvider.notifier).loadNotifications();
       }
     });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(authSessionRevisionProvider, (_, _) => _onSessionChanged());
+    ref.listen(tokenVersionProvider, (_, _) => _onSessionChanged());
     if (ref.watch(guestModeProvider)) return _signIn();
     final state = ref.watch(notificationsControllerProvider);
     if (state.authRequired) return _signIn();

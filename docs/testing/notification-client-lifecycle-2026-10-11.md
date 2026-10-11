@@ -61,13 +61,54 @@ reset cursor history, and a new authentication session gets a new controller.
 | --- | --- | --- |
 | Stale pages cannot reverse confirmed actions | `NotificationsController._reconcile`, `markAsRead`, `dismiss` | Delayed refresh/page × read/dismiss; overlapping IDs; uncertain dismissal retained until explicit read |
 | Truthful pagination and recovery | Captured cursor, `_visitedCursors`, `loadMoreFailed`; centre retry callback | Repeated cursor, cursor cycle/reset, failed-page retry then another page; last-page refresh retry at both widths |
-| Private account isolation and session revocation | `_requireAuthentication`, existing service session fences; centre epoch and route checks | Real Dio/provider A→B→A; mutation 401 with stale refresh; existing logout/reentry, delayed token, guest and foreign-owner cases |
+| Private account isolation and session revocation | `_requireAuthentication`, service auth/credential revisions; centre session/token epoch and route checks | Real Dio/provider A→B→A; mutation 401 with stale refresh; real auth/service refresh recovery and old read/dismiss cancellation; logout/reentry with both distinct-ID transports observed; delayed token, guest and foreign-owner cases |
 | Reliable mutation and unread reconciliation | Per-ID pending set, explicit result, `onUnreadChanged` callback | Repeated pending reads; four real-provider read/dismiss × confirmed/uncertain count tests with late older counts |
-| Existing destinations and Back | Centre `_opening`, captured `ModalRoute.isCurrent` | Repeated clicks, Back after destination, Back before receipt, inactive route, failed-read retry and unknown destination at both widths |
+| Existing destinations and Back | Centre `_opening`, durable `_navigationEpoch`, route dependency/secondary-animation listeners, captured `ModalRoute.isCurrent` | Repeated clicks, Back after destination, Back before receipt, inactive route, push→Back→late receipt including no intervening frame, failed-read retry and unknown destination at both widths |
 | Preference request ordering | `PreferencesController._requestEpoch`, `_updating` | Older read/error after save, latest read wins, repeated save/load while saving; existing native toggle acknowledgements and account-switch rendered tests |
 | Truthful empty/loading and native preference contract | Existing screen branches, preserved native parsing | Pending load becomes empty only after response; existing guest/error states; native five-boolean payload, no quiet-hour/timezone controls or invented links |
 
 ## Validation
+
+### Independent review corrections
+
+Four additional rendered cases reproduce the reviewed push→Back→late-receipt
+navigation race against draft `cb6463ea`. A screen-local navigation generation
+now invalidates the old tap when the route is covered, even if it becomes
+current again before the receipt. Route dependencies cover rendered route
+changes, and the route's secondary-animation status catches an immediate
+Material-route push/pop without a frame. Listeners are removed on disposal.
+No shared router or observer configuration changed. Acknowledged read state
+is retained, and a fresh tap still opens the existing supported destination.
+
+Three real `AuthStateNotifier`/`AuthService` regressions and two server-read
+overlap regressions fail against that draft. Successful same-owner
+`refreshToken()` changes `tokenVersion` while preserving the auth revision and
+owner. Notification services now use a private credential-revision notifier
+with synchronous cancellation, reusing the existing revision implementation.
+Credential rotations create fresh controllers and clear the authentication-
+required latch; old list/read/dismiss results remain fenced. The centre also
+tracks token versions and reloads after rotation. Four additional rendered
+cases verify real auth/service recovery and late-receipt rejection at both
+widths. The auth HTTP fixtures use `expectSync` in asynchronous callbacks so
+Flutter's guarded `pump` does not turn a fixture assertion into an auth error.
+
+The logout/reentry fixture uses two notification IDs and asserts that both
+read and dismissal transports start before the switch. Both old outcomes
+return false, and both fresh rows remain unchanged. The previous same-ID
+fixture did not start dismissal once the per-ID busy guard was introduced.
+
+Canonical `notificationAction` only sets `read_at`; it exposes no operation
+that clears read state. Reconciliation therefore retains server-observed
+read facts as well as local acknowledgements across older overlapping pages
+and refreshes. It does not fabricate a timestamp or add a product policy.
+
+Correction focused suite: 147 PASS, zero failures/skips, including 28 new
+rendered cases at 390px and 1440px. Full correction coverage run: 3,217 PASS,
+six existing skips and zero failures; all coverage gates pass with unchanged
+baselines. Analysis, seven-file formatting, diff, canonical release web build
+and rebuilt Chromium notification fixtures at both widths pass. Hosted
+exact-head CI results are recorded separately in the draft handoff. Local
+WebKit retains the documented pre-launch host limitation and was not retried.
 
 At the committed production and test source (`92ded7e9`), including all 20
 new rendered cases:

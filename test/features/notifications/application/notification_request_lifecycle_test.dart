@@ -108,6 +108,38 @@ void main() {
     ]);
   });
 
+  for (final refresh in [false, true]) {
+    test(
+      'server-read rows stay read after an older ${refresh ? 'refresh' : 'overlap'} without a local mutation',
+      () async {
+        final initial = controller.loadNotifications();
+        api.pages.last.complete(
+          NotificationsListResponse(
+            notifications: [
+              _item(
+                'first',
+              ).copyWith(read: true, readAt: '2026-10-01T12:30:00Z'),
+            ],
+            continuationToken: 'page-2',
+            totalUnread: 0,
+          ),
+        );
+        await initial;
+        final later = refresh
+            ? controller.loadNotifications()
+            : controller.loadMore();
+        api.pages.last.complete(_page(['first', 'second']));
+        await later;
+        expect(controller.state.notifications.first.read, isTrue);
+        expect(api.actionIds, isEmpty);
+        expect(
+          controller.state.notifications.map((notification) => notification.id),
+          ['first', 'second'],
+        );
+      },
+    );
+  }
+
   test('a repeated cursor fails truthfully without adding rows', () async {
     final loading = controller.loadMore();
     api.pages.single.complete(_page(['second'], cursor: 'page-2'));

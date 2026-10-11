@@ -26,22 +26,32 @@ final dioProvider = Provider<Dio>((ref) {
   return ref.watch(secureDioProvider);
 });
 
+final _notificationTokenRevisionProvider =
+    StateNotifierProvider<AuthSessionRevision, int>(
+      (ref) => AuthSessionRevision(ref.watch(tokenVersionProvider.notifier)),
+    );
+
 /// Notification API service provider
 final notificationApiServiceProvider = Provider<NotificationApiService>((ref) {
   final revision = ref.watch(authSessionRevisionProvider);
+  final tokenRevision = ref.watch(_notificationTokenRevisionProvider);
+  final tokens = ref.read(_notificationTokenRevisionProvider.notifier);
   final session = ref.read(authSessionRevisionProvider.notifier);
   final ownerId = ref.watch(currentUserProvider.select((user) => user?.id));
   final dio = ref.watch(dioProvider);
   final cancelToken = CancelToken();
   final stop = session.cancelOnChange(cancelToken.cancel);
+  final stopTokens = tokens.cancelOnChange(cancelToken.cancel);
   ref.onDispose(stop);
+  ref.onDispose(stopTokens);
   ref.onDispose(cancelToken.cancel);
   return NotificationApiService(
     dioClient: dio,
     ownerId: ownerId,
     cancelToken: cancelToken,
     accessToken: () => ref.read(jwtProvider.future),
-    isCurrentSession: () => session.revision == revision,
+    isCurrentSession: () =>
+        session.revision == revision && tokens.revision == tokenRevision,
   );
 });
 
@@ -119,6 +129,7 @@ class NotificationsController extends StateNotifier<NotificationsState> {
     final byId = <String, Notification>{};
     for (final notification in notifications) {
       if (_dismissedIds.contains(notification.id)) continue;
+      if (notification.read) _readIds.add(notification.id);
       byId[notification.id] = _readIds.contains(notification.id)
           ? notification.copyWith(read: true)
           : notification;
