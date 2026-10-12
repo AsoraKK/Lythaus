@@ -36,13 +36,22 @@ async function call(actor, method, path, body, key = uuidv7()) {
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 }
-async function created(body = 'Synthetic human post') {
+async function created(body = 'Synthetic human post', postAuthor = owner) {
   const key = uuidv7(), payload = { body, declaredCreationMode: 'human', geoScope: 'none' };
-  const response = await call(owner, 'POST', '/api/posts', payload, key);
+  const response = await call(postAuthor, 'POST', '/api/posts', payload, key);
   assert.equal(response.status, 201, await response.clone().text());
   const post = await response.json();
   const event = (await client.query('SELECT id AS "eventId", event_type AS "eventType", payload FROM system.outbox_events WHERE id=$1', [post.eventId])).rows[0];
   return { post, event, payload, key };
+}
+async function createdComment(postId, body = 'Synthetic human comment') {
+  const response = await call(owner, 'POST', `/api/posts/${postId}/comments`, { body, declaredCreationMode: 'human' });
+  assert.equal(response.status, 201, await response.clone().text());
+  const comment = await response.json();
+  const event = (await client.query(`SELECT id AS "eventId",event_type AS "eventType",payload
+    FROM system.outbox_events WHERE aggregate_id=$1 AND event_type='content.comment.created'`, [comment.commentId])).rows[0];
+  assert.ok(event);
+  return { comment, event };
 }
 async function deliver(event) {
   const response = await call(null, 'POST', '/fixture/queue', event);
@@ -82,6 +91,37 @@ test('native API -> transactional outbox -> jobs evidence -> private pending -> 
   const published = await call(null, 'GET', '/api/posts/' + createdPost.post.id);
   assert.equal(published.status, 200, await published.clone().text());
   assert.ok((await published.text()).includes('Human-authored'));
+});
+
+test('comment Jobs handler persists its audit and queued case; duplicate delivery is idempotent', async () => {
+  const { post } = await created('Synthetic public parent for comment moderation', other);
+  await client.query("UPDATE content.posts SET moderation_state='allowed',published_at=now() WHERE id=$1", [post.id]);
+  await client.query("UPDATE content.content_declarations SET public_label='Human-authored',review_required=false WHERE post_id=$1", [post.id]);
+  const { comment, event } = await createdComment(post.id);
+
+  assert.deepEqual(await deliver(event), { ack: 1, retry: 0 });
+  const review = (await client.query(`SELECT c.id,c.state,d.outcome,d.policy_version,d.decided_by
+    FROM moderation.cases c JOIN moderation.decisions d ON d.case_id=c.id
+    WHERE c.content_type='comment' AND c.content_id=$1 AND c.source_event_id=$2`, [comment.commentId, event.eventId])).rows[0];
+  assert.ok(review);
+  assert.equal(review.state, 'open');
+  assert.equal(review.outcome, 'queue');
+  assert.equal(review.policy_version, 'evaluation-only-v1');
+  assert.equal(review.decided_by, null);
+  const audit = (await client.query(`SELECT id,correlation_id FROM system.audit_events
+    WHERE action='moderation.comment.review_requested' AND target_id=$1 AND id=$2`, [comment.commentId, event.eventId])).rows[0];
+  assert.deepEqual(audit, { id: event.eventId, correlation_id: event.eventId });
+  assert.equal((await client.query(`SELECT state FROM system.consumer_inbox
+    WHERE consumer_name='lythaus-jobs' AND event_id=$1`, [event.eventId])).rows[0].state, 'completed');
+
+  assert.deepEqual(await deliver(event), { ack: 1, retry: 0 });
+  const counts = (await client.query(`SELECT
+    (SELECT count(*)::int FROM system.audit_events WHERE id=$1 AND target_id=$2 AND action='moderation.comment.review_requested') AS audits,
+    (SELECT count(*)::int FROM moderation.detector_runs WHERE content_type='comment' AND content_id=$2 AND source_event_id=$1) AS detectors,
+    (SELECT count(*)::int FROM moderation.cases WHERE content_type='comment' AND content_id=$2 AND source_event_id=$1) AS cases,
+    (SELECT count(*)::int FROM system.outbox_events WHERE aggregate_id=$2 AND event_type='content.comment.published') AS publications`,
+    [event.eventId, comment.commentId])).rows[0];
+  assert.deepEqual(counts, { audits: 1, detectors: 1, cases: 1, publications: 0 });
 });
 
 test('concurrent duplicate queue deliveries persist one detector and one review case', async () => {

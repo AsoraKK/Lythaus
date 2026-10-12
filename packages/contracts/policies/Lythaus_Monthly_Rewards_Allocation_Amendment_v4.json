@@ -1,0 +1,54 @@
+{
+  "schema_version": "lythaus-monthly-rewards-amendment-v1",
+  "amendment_id": "quarterly-suggestion-additive-allocation-2026-10-07-v4",
+  "previous_amendment_id": "all-quarterly-scoring-calendar-quarter-2026-10-07-v3",
+  "base_policy_version": "lythaus-monthly-rewards-2026-10-v1",
+  "prospective_policy_version": "lythaus-monthly-rewards-2026-10-v2",
+  "source_authority": "Kyle, 2026-10-07T20:12:31.000Z: Perfect, accepting the contextual recommendation to preserve existing awards, add optional 150 suggestion points and allow a 13,650 maximum",
+  "status": "owner_confirmed_additive_allocation_pending_operational_approval_and_activation",
+  "runtime_activation_allowed": false,
+  "confirmed": {
+    "weekly_maximum_per_complete_week": 2500,
+    "selected_complete_weeks": 4,
+    "monthly_maximum": 2500,
+    "quarterly_email_maximum": 1000,
+    "quarterly_suggestion_maximum": 150,
+    "quarterly_maximum": 1150,
+    "source_month_maximum": 13650,
+    "level_five_lower_threshold": 10000,
+    "level_five_upper_bound": 13650,
+    "other_level_thresholds_unchanged": true,
+    "existing_awards_unchanged": true,
+    "all_quarterly_components_use_fixed_calendar_quarters": true,
+    "once_per_component_per_eligible_source_month": true,
+    "multiple_feedback_does_not_stack": true,
+    "feedback_optional": true
+  },
+  "unresolved": {
+    "prospective_collection_cutover": null,
+    "first_source_month_under_v2": null,
+    "calendar_boundary_timezone": null,
+    "acceptance_rubric": null,
+    "reviewer_authority": null,
+    "suggestion_selection_replacement_and_correction_timing": null
+  },
+  "constraints": {
+    "old_v1_maximum": 13500,
+    "v1_proofs_and_reports_rewritten": false,
+    "security_proof_freshness_and_authorization_unchanged": true,
+    "paid_membership_only_affects_reward_selection": true,
+    "no_spend_carry_or_age_gates": true,
+    "no_live_awards_or_activation": true,
+    "incentive_optimality_empirically_proven": false
+  },
+  "integration": {
+    "prospective_catalogue": "Lythaus_Monthly_Rewards_Action_Catalogue_v3.json",
+    "week_month_calculator": "reuse_v1_whole_week_and_maintenance_validation_with_quarterly_zero",
+    "email_adapter": "existing_private_email_control_observations",
+    "suggestion_adapter": "private_server_normalized_acceptance_history_pending_qualified_producer",
+    "report_contract": "versioned_proposal_preview_with_13650_and_1150_denominators",
+    "shared_api_changes": false,
+    "consumer_wired": false,
+    "applied_points": 0
+  }
+}
