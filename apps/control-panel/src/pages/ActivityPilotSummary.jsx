@@ -26,8 +26,18 @@ export default function ActivityPilotSummary({ enabled = import.meta.env.VITE_AC
   }, []);
   useEffect(() => {
     if (enabled) load();
+    else { setSnapshot(null); setError(null); setLoading(false); }
     return () => { revision.current++; };
   }, [enabled, load]);
+  useEffect(() => {
+    const refreshClock = () => setNow(Date.now());
+    document.addEventListener('visibilitychange', refreshClock);
+    window.addEventListener('pageshow', refreshClock);
+    return () => {
+      document.removeEventListener('visibilitychange', refreshClock);
+      window.removeEventListener('pageshow', refreshClock);
+    };
+  }, []);
   const evidence = enabled && snapshot ? activityPilotEvidence(snapshot, now) : null;
   useEffect(() => {
     if (!evidence?.fresh) return undefined;
