@@ -1272,7 +1272,7 @@ class _ThreadComment {
         userFromPayload,
         handle: json['authorHandle'] as String?,
         authorId: authorId,
-      ),
+      ).replaceFirst(RegExp(r'^@'), ''),
       text: json['deleted'] == true
           ? '[deleted]'
           : (json['body'] ?? json['text']) as String? ?? '',
