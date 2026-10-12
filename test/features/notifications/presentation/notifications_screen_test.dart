@@ -206,7 +206,9 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Title n1'), findsOneWidget);
         expect(
-          find.text('Could not dismiss this notification. Please try again.'),
+          find.text(
+            'Could not confirm dismissal. Please refresh or try again.',
+          ),
           findsOneWidget,
         );
         verify(() => api.dismissNotification('n1')).called(1);

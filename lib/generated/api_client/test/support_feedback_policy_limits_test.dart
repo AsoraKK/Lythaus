@@ -32,5 +32,25 @@ void main() {
       // TODO
     });
 
+    // int titleCharacters
+    test('to test the property `titleCharacters`', () async {
+      // TODO
+    });
+
+    // int detailCharacters
+    test('to test the property `detailCharacters`', () async {
+      // TODO
+    });
+
+    // int stepsCharacters
+    test('to test the property `stepsCharacters`', () async {
+      // TODO
+    });
+
+    // int memberMessageCharacters
+    test('to test the property `memberMessageCharacters`', () async {
+      // TODO
+    });
+
   });
 }

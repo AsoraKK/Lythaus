@@ -937,6 +937,8 @@ paths:
     $ref: './owner-content.yaml#/paths/~1posts~1{postId}~1owner-view'
   /users/me/posts:
     $ref: './owner-content.yaml#/paths/~1users~1me~1posts'
+  /users/me/comments:
+    $ref: './owner-content.yaml#/paths/~1users~1me~1comments'
   /comments/{commentId}/owner-view:
     $ref: './owner-content.yaml#/paths/~1comments~1{commentId}~1owner-view'
   /posts/{id}:
@@ -1365,6 +1367,12 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1admin~1auth~1summary'
   /admin/overview:
     $ref: './overview.yaml#/paths/~1admin~1overview'
+  /analytics/activity-consent:
+    $ref: './activity-measurement.yaml#/paths/~1analytics~1activity-consent'
+  /analytics/activity:
+    $ref: './activity-measurement.yaml#/paths/~1analytics~1activity'
+  /admin/activity-measurement:
+    $ref: './activity-measurement.yaml#/paths/~1admin~1activity-measurement'
   /support/options:
     $ref: './support-feedback.yaml#/paths/~1support~1options'
   /support/problems:
@@ -1462,6 +1470,16 @@ components:
       name: CF-Access-Jwt-Assertion
       description: Cloudflare Access JWT assertion required by the admin Worker.
   schemas:
+    ActivityConsentInput:
+      $ref: './activity-measurement.yaml#/components/schemas/ActivityConsentInput'
+    ActivityRenderInput:
+      $ref: './activity-measurement.yaml#/components/schemas/ActivityRenderInput'
+    ActivityConsent:
+      $ref: './activity-measurement.yaml#/components/schemas/ActivityConsent'
+    ActivityMetric:
+      $ref: './activity-measurement.yaml#/components/schemas/ActivityMetric'
+    ActivitySummary:
+      $ref: './activity-measurement.yaml#/components/schemas/ActivitySummary'
     WaitlistSubmission:
       type: object
       additionalProperties: false

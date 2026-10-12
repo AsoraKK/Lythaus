@@ -23,6 +23,7 @@ part 'member_suggestion_request.g.dart';
 /// * [createdAt]
 /// * [updatedAt]
 /// * [memberMessage]
+/// * [closed] - Whether new replies are closed for this request.
 @BuiltValue()
 abstract class MemberSuggestionRequest implements Built<MemberSuggestionRequest, MemberSuggestionRequestBuilder> {
   @BuiltValueField(wireName: r'kind')
@@ -58,6 +59,10 @@ abstract class MemberSuggestionRequest implements Built<MemberSuggestionRequest,
 
   @BuiltValueField(wireName: r'memberMessage')
   String? get memberMessage;
+
+  /// Whether new replies are closed for this request.
+  @BuiltValueField(wireName: r'closed')
+  bool? get closed;
 
   MemberSuggestionRequest._();
 
@@ -137,6 +142,13 @@ class _$MemberSuggestionRequestSerializer implements PrimitiveSerializer<MemberS
       object.memberMessage,
       specifiedType: const FullType.nullable(String),
     );
+    if (object.closed != null) {
+      yield r'closed';
+      yield serializers.serialize(
+        object.closed,
+        specifiedType: const FullType(bool),
+      );
+    }
   }
 
   @override
@@ -237,6 +249,13 @@ class _$MemberSuggestionRequestSerializer implements PrimitiveSerializer<MemberS
           ) as String?;
           if (valueDes == null) continue;
           result.memberMessage = valueDes;
+          break;
+        case r'closed':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.closed = valueDes;
           break;
         default:
           unhandled.add(key);

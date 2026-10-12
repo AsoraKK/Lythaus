@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/core/analytics/analytics_consent.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
+import 'package:lythaus/features/privacy/widgets/activity_measurement_settings_card.dart';
 import 'package:lythaus/design_system/components/lyth_button.dart';
 import 'package:lythaus/design_system/components/lyth_card.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
@@ -152,6 +153,8 @@ class AnalyticsSettingsCard extends ConsumerWidget {
               ),
             ],
           ),
+          const Divider(height: 32),
+          const ActivityMeasurementSettingsCard(),
         ],
       ),
     );

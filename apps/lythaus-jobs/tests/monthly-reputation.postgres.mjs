@@ -51,6 +51,7 @@ mock.module('@lythaus/db', { namedExports: { ...database,
     return transact(client => client.query(text, values), 'lythaus_jobs');
   },
   transaction: (binding, work) => {
+    if (binding === privacyBinding) return transact(work, 'lythaus_privacy');
     assert.equal(binding, freshBinding);
     return transact(work, 'lythaus_jobs');
   },
@@ -65,7 +66,8 @@ const platform = registerHooks({ resolve(specifier, context, nextResolve) {
 const { default: jobsWorker } = await import('../src/index.ts');
 platform.deregister();
 const freshBinding = Object.freeze({ connectionString: 'local-fixture-binding' });
-const env = { DB_JOBS_FRESH: freshBinding };
+const privacyBinding = Object.freeze({ connectionString: 'local-privacy-fixture-binding' });
+const env = { DB_JOBS_FRESH: freshBinding, DB_PRIVACY_FRESH: privacyBinding };
 const userId = uuidv7();
 const otherId = uuidv7();
 const firstSourceId = uuidv7();

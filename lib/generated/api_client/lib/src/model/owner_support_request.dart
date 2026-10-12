@@ -29,6 +29,7 @@ part 'owner_support_request.g.dart';
 /// * [createdAt]
 /// * [updatedAt]
 /// * [memberMessage]
+/// * [closed] - Whether new replies are closed for this request.
 /// * [submitterId]
 /// * [improvement]
 /// * [benefit]
@@ -40,8 +41,8 @@ abstract class OwnerSupportRequest implements Built<OwnerSupportRequest, OwnerSu
   static const String discriminatorFieldName = r'kind';
 
   static const Map<String, Type> discriminatorMapping = {
-    r'OwnerProblemRequest': OwnerProblemRequest,
-    r'OwnerSuggestionRequest': OwnerSuggestionRequest,
+    r'problem': OwnerProblemRequest,
+    r'suggestion': OwnerSuggestionRequest,
   };
 
   OwnerSupportRequest._();
@@ -58,10 +59,10 @@ abstract class OwnerSupportRequest implements Built<OwnerSupportRequest, OwnerSu
 extension OwnerSupportRequestDiscriminatorExt on OwnerSupportRequest {
     String? get discriminatorValue {
         if (this is OwnerProblemRequest) {
-            return r'OwnerProblemRequest';
+            return r'problem';
         }
         if (this is OwnerSuggestionRequest) {
-            return r'OwnerSuggestionRequest';
+            return r'suggestion';
         }
         return null;
     }
@@ -69,10 +70,10 @@ extension OwnerSupportRequestDiscriminatorExt on OwnerSupportRequest {
 extension OwnerSupportRequestBuilderDiscriminatorExt on OwnerSupportRequestBuilder {
     String? get discriminatorValue {
         if (this is OwnerProblemRequestBuilder) {
-            return r'OwnerProblemRequest';
+            return r'problem';
         }
         if (this is OwnerSuggestionRequestBuilder) {
-            return r'OwnerSuggestionRequest';
+            return r'suggestion';
         }
         return null;
     }
@@ -118,14 +119,14 @@ class _$OwnerSupportRequestSerializer implements PrimitiveSerializer<OwnerSuppor
     Object oneOfResult;
     Type oneOfType;
     switch (discValue) {
-      case r'OwnerProblemRequest':
+      case r'problem':
         oneOfResult = serializers.deserialize(
           oneOfDataSrc,
           specifiedType: FullType(OwnerProblemRequest),
         ) as OwnerProblemRequest;
         oneOfType = OwnerProblemRequest;
         break;
-      case r'OwnerSuggestionRequest':
+      case r'suggestion':
         oneOfResult = serializers.deserialize(
           oneOfDataSrc,
           specifiedType: FullType(OwnerSuggestionRequest),

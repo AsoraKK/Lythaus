@@ -127,7 +127,7 @@ void main() {
       await controller.markAsRead('n1');
 
       expect(controller.state.notifications.first.read, isTrue);
-      expect(controller.state.notifications.first.readAt, isNotNull);
+      expect(controller.state.notifications.first.readAt, isNull);
     });
 
     test('dismiss removes notification from state', () async {

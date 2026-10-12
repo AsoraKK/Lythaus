@@ -3,6 +3,7 @@ import { supportUuid } from '../../contracts/src/account-support.ts';
 import { projectMemberSupportRequest } from '../../contracts/src/support-feedback.ts';
 import { parseSupportServicePolicy, supportFailureCode, supportObject } from './support-feedback-policy.ts';
 import { supportEventProjection } from './support-feedback.ts';
+import { lockSupportScrubParticipants, SUPPORT_REQUEST_HELD } from './support-feedback-contributor-privacy.ts';
 
 const TIME = (column: string) => `to_char(${column} AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`;
 const ERRORS=new Set(['support_privacy_invalid','support_privacy_held','support_policy_invalid','support_policy_version_mismatch','support_feedback_record_invalid']);
@@ -20,6 +21,7 @@ async function lockSubject(client: DatabaseClient, subject: string) {
 }
 async function scrub(client: DatabaseClient, ids: readonly string[], deleteAudit: boolean): Promise<number> {
   if (!ids.length) return 0;
+  await lockSupportScrubParticipants(client, ids);
   await client.query('DELETE FROM support.messages WHERE request_id=ANY($1::uuid[])',[ids]);
   await client.query('DELETE FROM support.notes WHERE request_id=ANY($1::uuid[])',[ids]);
   await client.query('DELETE FROM support.decisions WHERE request_id=ANY($1::uuid[])',[ids]);
@@ -49,10 +51,11 @@ async function retainSupport(client: DatabaseClient, suppliedPolicy: unknown) {
   const candidates=await client.query(`WITH next_subject AS (
     SELECT r.submitter_id FROM support.requests r WHERE r.deleted_at IS NULL AND r.closed_at IS NOT NULL
       AND r.closed_at < CURRENT_TIMESTAMP-$1*interval '1 second'
-      AND NOT EXISTS(SELECT 1 FROM privacy.legal_holds h WHERE h.subject_id=r.submitter_id AND h.active)
+      AND NOT (${SUPPORT_REQUEST_HELD})
     ORDER BY r.closed_at,r.id LIMIT 1)
     SELECT r.id,r.submitter_id FROM support.requests r JOIN next_subject s ON s.submitter_id=r.submitter_id
     WHERE r.deleted_at IS NULL AND r.closed_at IS NOT NULL AND r.closed_at < CURRENT_TIMESTAMP-$1*interval '1 second'
+      AND NOT (${SUPPORT_REQUEST_HELD})
     ORDER BY r.closed_at,r.id LIMIT $2`,[p.privacy.retentionSeconds,p.privacy.batch]);
   let scrubbedRecords=0;
   if(!candidates.rows.length)return Object.freeze({scrubbedRecords:0,heldRecords:0});
@@ -63,7 +66,11 @@ async function retainSupport(client: DatabaseClient, suppliedPolicy: unknown) {
   for (const candidate of candidates.rows) {
     const current=await client.query(`SELECT id FROM support.requests WHERE id=$1 AND deleted_at IS NULL AND closed_at IS NOT NULL
       AND closed_at < CURRENT_TIMESTAMP-$2*interval '1 second' FOR UPDATE`,[candidate.id,p.privacy.retentionSeconds]);
-    if(current.rows[0])scrubbedRecords+=await scrub(client,[candidate.id],p.privacy.deleteAudit);
+    if(current.rows[0]) {
+      try { scrubbedRecords+=await scrub(client,[candidate.id],p.privacy.deleteAudit); }
+      catch (error) { if (supportFailureCode(error,ERRORS,'support_privacy_unavailable')==='support_privacy_held')
+        return Object.freeze({scrubbedRecords,heldRecords:1}); throw error; }
+    }
   }
   return Object.freeze({scrubbedRecords,heldRecords:0});
 }
@@ -77,7 +84,7 @@ async function exportSupport(client: DatabaseClient, requestId: unknown, supplie
   for(const row of rows.rows.slice(0,p.privacy.batch)) {
     if(row.policy_version!==p.version)throw new Error('support_policy_version_mismatch');
     const request=projectMemberSupportRequest({...row.submission,id:row.id,submitterId:subject,revision:row.revision,state:row.state,
-      createdAt:row.createdAt,updatedAt:row.updatedAt,memberMessage:row.member_message},subject,p.contract);
+      createdAt:row.createdAt,updatedAt:row.updatedAt,memberMessage:row.member_message,closed:Boolean(row.closed_at)},subject,p.contract);
     const messages=await client.query(`SELECT id,author_role,body,revision,${TIME('created_at')} AS "createdAt" FROM support.messages WHERE request_id=$1 AND revision<=$3 ORDER BY revision LIMIT $2`,[row.id,p.limits.messages+1,row.revision]);
     const page=messages.rows.slice(0,p.limits.messages);
     items.push(Object.freeze({request,messages:Object.freeze(page.map(m=>Object.freeze({id:m.id,from:m.author_role,text:m.body,revision:m.revision,createdAt:m.createdAt}))),

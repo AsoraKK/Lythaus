@@ -1,4 +1,5 @@
 import { classifyPublicError } from './auth-runtime-policy.ts';
+import { assertFeedItemEligibility } from './feed-runtime-policy.ts';
 
 export interface OwnerContentReadDependencies {
   authenticate: () => Promise<{ userId: string }>;
@@ -44,6 +45,33 @@ export const ownerCommentQuery = `SELECT comment.id, comment.post_id AS "postId"
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const cursorTimestamp = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{6})Z$/;
+export const ownerCommentsQuery = `SELECT comment.id, comment.post_id AS "postId",
+       comment.author_id AS "authorId", comment.parent_id AS "parentId", comment.depth,
+       comment.body, comment.declared_creation_mode AS "declaredCreationMode",
+       comment.moderation_state AS "moderationState", comment.created_at AS "createdAt",
+       comment.updated_at AS "updatedAt", (comment.deleted_at IS NOT NULL) AS deleted,
+       to_char(comment.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "cursorCreatedAt",
+       post.author_id AS "postAuthorId", post.visibility AS "postVisibility",
+       post.moderation_state AS "postModerationState", (post.deleted_at IS NOT NULL) AS "postDeleted",
+       declaration.public_label AS "postPublicLabel",
+       EXISTS (SELECT 1 FROM social.follows f WHERE f.follower_id = $1 AND f.followed_id = post.author_id) AS "postFollowsAuthor"
+  FROM content.comments comment
+  JOIN identity.users author ON author.id = comment.author_id AND author.status = 'active'
+  JOIN content.posts post ON post.id = comment.post_id AND post.deleted_at IS NULL AND post.moderation_state = 'allowed'
+  JOIN identity.users post_author ON post_author.id = post.author_id AND post_author.status = 'active'
+  JOIN content.content_declarations declaration ON declaration.post_id = post.id
+ WHERE comment.author_id = $1::uuid AND comment.deleted_at IS NULL
+   AND comment.moderation_state IN ('allowed', 'under_review')
+   AND comment.declared_creation_mode IN ('human', 'ai_assisted')
+   AND declaration.public_label IN ('Human-authored', 'AI-assisted')
+   AND (post.visibility = 'public' OR post.author_id = $1 OR (post.visibility = 'followers' AND EXISTS (
+     SELECT 1 FROM social.follows f WHERE f.follower_id = $1 AND f.followed_id = post.author_id
+   )))
+   AND NOT EXISTS (SELECT 1 FROM social.blocks b WHERE (b.blocker_id = $1 AND b.blocked_id = post.author_id)
+     OR (b.blocker_id = post.author_id AND b.blocked_id = $1))
+   AND ($2::timestamptz IS NULL OR (comment.created_at, comment.id) < ($2::timestamptz, $3::uuid))
+ ORDER BY comment.created_at DESC, comment.id DESC LIMIT $4`;
+
 const ownerPostsPageSize = 8;
 const ownerPostsMaximumPageSize = 20;
 
@@ -145,8 +173,9 @@ export async function handleOwnerContentRead(
   const url = new URL(request.url);
   const match = url.pathname.match(/^\/api\/(posts|comments)\/([^/]+)\/owner-view$/);
   const ownerPostsList = url.pathname === '/api/users/me/posts';
-  if (request.method !== 'GET' || (!match && !ownerPostsList)) return undefined;
-  if (ownerPostsList) {
+  const ownerCommentsList = url.pathname === '/api/users/me/comments';
+  if (request.method !== 'GET' || (!match && !ownerPostsList && !ownerCommentsList)) return undefined;
+  if (ownerPostsList || ownerCommentsList) {
     try {
       const actor = await dependencies.authenticate();
       const limit = parseOwnerPostsLimit(url.searchParams.get('limit'));
@@ -154,7 +183,7 @@ export async function handleOwnerContentRead(
       if (limit === undefined || cursor === false) {
         return dependencies.respond({ error: 'invalid_pagination' }, 400);
       }
-      const result = await dependencies.query(ownerPostsQuery, [
+      const result = await dependencies.query(ownerCommentsList ? ownerCommentsQuery : ownerPostsQuery, [
         actor.userId,
         cursor?.timestamp ?? null,
         cursor?.id ?? null,
@@ -162,7 +191,16 @@ export async function handleOwnerContentRead(
       ]);
       const hasMore = result.rows.length > limit;
       const rows = result.rows.slice(0, limit);
-      const items = rows.map((row) => presentOwnerPost(row, actor.userId));
+      const items = rows.map((row) => {
+        if (!ownerCommentsList) return presentOwnerPost(row, actor.userId);
+        assertFeedItemEligibility({
+          authorId: String(row.postAuthorId), visibility: row.postVisibility,
+          moderationState: row.postModerationState, publicLabel: row.postPublicLabel,
+          deleted: row.postDeleted !== false,
+          viewer: { userId: actor.userId, followsAuthor: row.postFollowsAuthor === true, blocked: false, muted: false },
+        });
+        return presentOwnerContent('comment', row, actor.userId);
+      });
       const tail = rows.at(-1);
       const nextCursor = hasMore && tail
         && typeof tail.cursorCreatedAt === 'string' && typeof tail.id === 'string'
