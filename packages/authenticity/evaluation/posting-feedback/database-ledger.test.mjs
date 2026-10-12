@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createServer } from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
-import { readFile } from 'node:fs/promises';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { test, mock } from 'node:test';
@@ -13,6 +13,7 @@ import { createDatabaseReceiptLedger } from './database-ledger-proposal.ts';
 import { createInactivePostingFeedbackLedger, createInactivePostingFeedbackCollector } from '../../../../apps/lythaus-jobs/src/posting-feedback-runtime.ts';
 import { createDedicatedAutocommitClient, DatabaseAutocommitUncertainError, DatabaseAutocommitCleanupError } from '../../../db/src/autocommit.ts';
 import { fixtureHost, localFixtureDns, statementResponseProxy } from '../../../db/tests/transaction-socket-fixture.mjs';
+import { lateCloudflareSocketFixture } from '../../../db/tests/late-cloudflare-socket-fixture.mjs';
 import { simulateTextProbe, PROBE_SELECTION_HASH } from './collector.ts';
 import { OPENAI_MODERATION_MODEL } from '../../src/research-config.ts';
 
@@ -800,6 +801,56 @@ postgresTest('PostgreSQL ledger claims once, stores only allowlisted outcomes, a
         assert.equal(workerdCalls, 20);
         assert.equal(outboundCalls, 0);
       } finally { await runtime.dispose(); }
+    });
+    await t.test('installed pg-cloudflare late read/close errors stay handled after the forced-close fallback', { timeout: 30_000 }, async () => {
+      const gates = [gate('4'.repeat(40), '6'.repeat(64)), gate('4'.repeat(40), '7'.repeat(64)), gate('4'.repeat(40), '8'.repeat(64))];
+      const proxy = await statementResponseProxy(new URL(`postgresql://postgres@127.0.0.1:${port}/postgres`),
+        'INSERT INTO evaluation.posting_feedback_probe_runs', 'stall_after_acknowledgement');
+      let evidence;
+      try {
+        evidence = await lateCloudflareSocketFixture(
+          `postgresql://posting_feedback_writer_test:synthetic-fixture-only@127.0.0.1:${proxy.port}/postgres`, gates);
+      } finally { await proxy.close(); }
+      process.stdout.write(`Late Cloudflare transport evidence ${JSON.stringify(evidence)}\n`);
+      assert.equal(evidence.providerCalls, 0);
+      assert.equal(evidence.outboundCalls, 0);
+      for (const row of evidence.cases) {
+        assert.equal(row.usesInstalledCloudflareSocket, true);
+        assert.equal(row.outcome, 'acknowledged');
+        assert.equal(row.failure, 'database_autocommit_connection_cleanup_failed');
+        assert.ok(row.elapsedMs >= 1200 && row.elapsedMs < 2500);
+        assert.equal(row.atReturn.activeSockets, 0);
+        assert.equal(row.atReturn.nativeClosed, 1);
+        assert.equal(row.atReturn.faultSignals, 0);
+        assert.equal(row.atReturn.closeNotifications, 0);
+        assert.equal(row.atReturn.pendingBoundTimers, 0);
+        assert.deepEqual(row.atReturn.clientErrorSinks, [1]);
+        assert.deepEqual(row.atReturn.nativeCloseTypes, ['function']);
+        assert.equal(row.lateSourceErrors, row.mode === 'read_error' ? 1 : 2);
+        assert.equal(row.destroyFailures, row.mode === 'destroy_throws' ? 1 : 0);
+        assert.equal(row.unhandledRejections, 0);
+        assert.equal(row.activeSockets, 0);
+        assert.equal(row.pendingTimers, 0);
+        assert.deepEqual(row.listeners, [{ client: 0, connection: 0, stream: 0 }]);
+      }
+      for (const value of gates) {
+        assert.equal((await client.query(`SELECT count(*)::integer AS count FROM evaluation.posting_feedback_probe_runs
+          WHERE source_sha=$1 AND collector_hash=$2`, [value.observedSourceSha, value.observedCollectorHash])).rows[0].count, 1);
+      }
+      const directory = new URL('../../../../.artifacts/posting-feedback/', import.meta.url);
+      await mkdir(directory, { recursive: true });
+      const sourceFiles = ['packages/db/src/autocommit.ts',
+        'packages/db/tests/late-cloudflare-socket-fixture.mjs',
+        'packages/authenticity/evaluation/posting-feedback/database-ledger.test.mjs'];
+      const sourceSha256 = Object.fromEntries(await Promise.all(sourceFiles.map(async path =>
+        [path, await hash(await readFile(new URL(`../../../../${path}`, import.meta.url), 'utf8'))])));
+      await writeFile(new URL('late-cloudflare-transport.json', directory), `${JSON.stringify({
+        schemaVersion: 'lythaus-autocommit-late-error-evidence-v1',
+        evidenceClass: 'CONTROLLED_WORKERD_FAULT_INJECTION_LOCAL_PG17',
+        sourceHeadSha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+        checkoutDirty: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim().length > 0,
+        sourceSha256, ...evidence,
+      }, null, 2)}\n`, { mode: 0o600 });
     });
     assert.equal(ambientNetwork.mock.callCount(), 0);
   } finally {

@@ -29,7 +29,15 @@ export interface DedicatedAutocommitClient {
   ): Promise<QueryResult<T>>;
 }
 
-async function closeDedicatedClient(client: Client): Promise<void> {
+interface CloudflareTransportSocket {
+  closed: Promise<unknown>;
+  close(): void | Promise<unknown>;
+}
+
+function retiredClientErrorSink(): void {}
+function retiredTransportEventSink(): boolean { return false; }
+
+async function closeDedicatedClient(client: Client, socket?: CloudflareTransportSocket): Promise<void> {
   let closeTimer: ReturnType<typeof setTimeout> | undefined;
   let forceTimer: ReturnType<typeof setTimeout> | undefined;
   let resolveClose!: () => void, rejectClose!: (error: Error) => void;
@@ -44,6 +52,10 @@ async function closeDedicatedClient(client: Client): Promise<void> {
   } catch (error) {
     // Destroy does not wait for the peer's FIN or a graceful protocol response.
     try { client.connection.stream.destroy(); } catch {}
+    // pg-cloudflare 1.4 may throw in destroy/end before closing its native socket.
+    if (socket) {
+      try { void Promise.resolve(socket.close()).catch(retiredClientErrorSink); } catch {}
+    }
     await Promise.race([closing.catch(() => {}), new Promise<void>(resolve => {
       forceTimer = setTimeout(resolve, 250);
     })]);
@@ -82,10 +94,23 @@ export function createDedicatedAutocommitClient(binding: HyperdriveBinding): Ded
       const client = new Client({ connectionString, connectionTimeoutMillis: 15_000,
         ...AUTOCOMMIT_TIMEOUTS });
       let connectionFailed = false, submitted = false, acknowledged = false, failed = false;
+      let terminal = false, cleanupFinished = false, retired = false;
       let primaryError: unknown;
       let result: QueryResult<T> | undefined;
       const onConnectionError = () => { connectionFailed = true; };
+      const retire = () => {
+        if (!terminal || !cleanupFinished || retired) return;
+        retired = true;
+        // Delayed pg-cloudflare read/closed tasks can emit after terminal closure.
+        // This dedicated emitter has no further consumer; retain no event listeners.
+        client.connection.stream.emit = retiredTransportEventSink;
+        client.connection.stream.removeAllListeners();
+        client.connection.removeAllListeners();
+        client.removeAllListeners();
+      };
+      const onTerminal = () => { terminal = true; retire(); };
       client.on('error', onConnectionError);
+      client.connection.once('end', onTerminal);
       try {
         await client.connect();
         if (client.getTransactionStatus() !== 'I') throw new Error('database_autocommit_session_not_idle');
@@ -100,13 +125,22 @@ export function createDedicatedAutocommitClient(binding: HyperdriveBinding): Ded
         primaryError = submitted && !(error instanceof DatabaseError && error.severity === 'ERROR')
           ? new DatabaseAutocommitUncertainError() : error;
       } finally {
-        try { await closeDedicatedClient(client); }
+        const socket = (client.connection.stream as unknown as { _cfSocket?: CloudflareTransportSocket | null })._cfSocket;
+        if (socket) void Promise.resolve(socket.closed).then(onTerminal, onTerminal).catch(retiredClientErrorSink);
+        try { await closeDedicatedClient(client, socket ?? undefined); }
         catch {
           if (!failed) {
             failed = true;
             primaryError = acknowledged ? new DatabaseAutocommitCleanupError() : new DatabaseAutocommitUncertainError();
           }
-        } finally { client.removeListener('error', onConnectionError); }
+        } finally {
+          cleanupFinished = true;
+          if (!terminal) {
+            client.on('error', retiredClientErrorSink);
+            client.removeListener('error', onConnectionError);
+          }
+          retire();
+        }
       }
       if (failed) throw primaryError;
       if (connectionFailed) throw new DatabaseAutocommitCleanupError();
