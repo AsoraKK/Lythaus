@@ -1,6 +1,9 @@
 /*
 DISABLED PROPOSAL ONLY — DO NOT EXECUTE OR APPLY.
 This file is outside database/planetscale/migrations and is not a migration.
+Candidate migration target, only after owner approval and baseline refresh:
+  database/planetscale/migrations/0021_posting_feedback_ledger.sql
+Current verified repository prefix ends at 0020_auth_recovery_delivery.sql.
 The SQL below is kept inside this block comment so direct psql invocation is inert.
 The role placeholders below are intentionally unresolved and are not SQL identifiers.
 
