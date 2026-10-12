@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'package:dio/dio.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
@@ -62,6 +63,10 @@ class SettingsController extends StateNotifier<SettingsState> {
   }
 
   void _apply(PresentationPreferences preferences, {String? message}) {
+    if (state.preferencesOwnerId != null &&
+        preferences.version < state.preferencesVersion) {
+      throw const FormatException('Stale account preferences');
+    }
     state = state.copyWith(
       leftHandedMode: preferences.leftHandedMode,
       horizontalSwipeEnabled: preferences.horizontalSwipeEnabled,
@@ -107,6 +112,16 @@ class SettingsController extends StateNotifier<SettingsState> {
     }
   }
 
+  Future<void> refreshAccountPreferences() async {
+    if (state.preferencesOwnerId == null ||
+        state.preferencesLoading ||
+        state.preferencesSaving ||
+        state.preferencesRetryPending) {
+      return;
+    }
+    await reload();
+  }
+
   Future<void> savePreferences({
     required bool leftHandedMode,
     required bool horizontalSwipeEnabled,
@@ -128,14 +143,14 @@ class SettingsController extends StateNotifier<SettingsState> {
     try {
       final saved = await _save(_pending!, _pendingKey!);
       if (!_current(operation)) return;
-      _pending = null;
-      _pendingKey = null;
       _apply(
         saved,
         message: state.preferencesOwnerId == null
             ? 'Saved on this device for guest use.'
             : 'Saved to your account.',
       );
+      _pending = null;
+      _pendingKey = null;
       if (state.preferencesOwnerId != null) {
         await reload(message: 'Saved to your account.');
       }
@@ -273,6 +288,10 @@ final settingsProvider =
           });
       ref.onDispose(stop);
       ref.onDispose(cancellation.cancel);
+      final lifecycle = AppLifecycleListener(
+        onResume: () => unawaited(controller.refreshAccountPreferences()),
+      );
+      ref.onDispose(lifecycle.dispose);
       return controller;
     });
 

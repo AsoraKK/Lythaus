@@ -23,6 +23,7 @@ part 'owner_suggestion_request.g.dart';
 /// * [createdAt]
 /// * [updatedAt]
 /// * [memberMessage]
+/// * [closed] - Whether new replies are closed for this request.
 /// * [submitterId]
 @BuiltValue()
 abstract class OwnerSuggestionRequest implements Built<OwnerSuggestionRequest, OwnerSuggestionRequestBuilder> {
@@ -59,6 +60,10 @@ abstract class OwnerSuggestionRequest implements Built<OwnerSuggestionRequest, O
 
   @BuiltValueField(wireName: r'memberMessage')
   String? get memberMessage;
+
+  /// Whether new replies are closed for this request.
+  @BuiltValueField(wireName: r'closed')
+  bool? get closed;
 
   @BuiltValueField(wireName: r'submitterId')
   String get submitterId;
@@ -141,6 +146,13 @@ class _$OwnerSuggestionRequestSerializer implements PrimitiveSerializer<OwnerSug
       object.memberMessage,
       specifiedType: const FullType.nullable(String),
     );
+    if (object.closed != null) {
+      yield r'closed';
+      yield serializers.serialize(
+        object.closed,
+        specifiedType: const FullType(bool),
+      );
+    }
     yield r'submitterId';
     yield serializers.serialize(
       object.submitterId,
@@ -246,6 +258,13 @@ class _$OwnerSuggestionRequestSerializer implements PrimitiveSerializer<OwnerSug
           ) as String?;
           if (valueDes == null) continue;
           result.memberMessage = valueDes;
+          break;
+        case r'closed':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.closed = valueDes;
           break;
         case r'submitterId':
           final valueDes = serializers.deserialize(

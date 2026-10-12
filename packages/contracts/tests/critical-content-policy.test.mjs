@@ -52,13 +52,30 @@ test('admin allow helper permits only the matching public label', () => {
   }), /ai_generated_public_content_blocked/);
 });
 
-test('grapheme counting fails conservatively when Segmenter is unavailable', () => {
+test('grapheme counting explicitly rejects an unsupported runtime without miscounting code points', () => {
   const descriptor = Object.getOwnPropertyDescriptor(Intl, 'Segmenter');
-  if (!descriptor?.configurable) return;
+  assert.equal(descriptor?.configurable, true);
   Object.defineProperty(Intl, 'Segmenter', { ...descriptor, value: undefined });
   try {
-    assert.equal(countUserPerceivedCharacters('e\u0301'), 1);
+    for (const body of ['a', 'e\u0301', '👩‍💻'.repeat(249), '🇿🇦'.repeat(249), '👍🏽'.repeat(249)]) {
+      assert.throws(() => countUserPerceivedCharacters(body), /grapheme_segmentation_unavailable/);
+      for (const declaredCreationMode of ['human', 'ai_assisted', 'ai_generated']) {
+        assert.throws(() => enforceContentDeclaration({ body, declaredCreationMode }), /grapheme_segmentation_unavailable/);
+        assert.throws(() => enforceAdminAllowPublication({ body, declaredCreationMode }), /grapheme_segmentation_unavailable/);
+      }
+    }
   } finally {
     Object.defineProperty(Intl, 'Segmenter', descriptor);
   }
 });
+
+for (const cluster of ['a', 'e\u0301', '👩‍💻', '🇿🇦', '👍🏽']) {
+  test(`assisted grapheme boundary for ${cluster} preserves normalization and trimming`, () => {
+    const body = `  ${cluster.repeat(249)}  `;
+    const decision = enforceContentDeclaration({ body, declaredCreationMode: 'ai_assisted' });
+    assert.equal(decision.body, cluster.repeat(249).normalize('NFC'));
+    assert.equal(decision.characterCount, 249);
+    assert.throws(() => enforceContentDeclaration({ body: cluster.repeat(250), declaredCreationMode: 'ai_assisted' }), /ai_assisted_character_limit_exceeded/);
+    assert.equal(enforceContentDeclaration({ body: cluster.repeat(250), declaredCreationMode: 'human' }).characterCount, 250);
+  });
+}

@@ -104,10 +104,35 @@ class _ProfileTabViewState extends ConsumerState<ProfileTabView>
             physics: ref.watch(horizontalSwipeEnabledProvider)
                 ? null
                 : const NeverScrollableScrollPhysics(),
-            children: [widget.overview, widget.posts, widget.comments],
+            children: [
+              _PersistentProfileTab(child: widget.overview),
+              _PersistentProfileTab(child: widget.posts),
+              _PersistentProfileTab(child: widget.comments),
+            ],
           ),
         ),
       ],
     );
+  }
+}
+
+class _PersistentProfileTab extends StatefulWidget {
+  const _PersistentProfileTab({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_PersistentProfileTab> createState() => _PersistentProfileTabState();
+}
+
+class _PersistentProfileTabState extends State<_PersistentProfileTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }

@@ -42,6 +42,42 @@ class SupportFeedbackCancelled implements Exception {
   const SupportFeedbackCancelled();
 }
 
+Map<String, dynamic> validateSupportFeedbackMutationResult(
+  Map<String, dynamic> result, {
+  required String kind,
+  String? requestId,
+}) {
+  final value = result['request'];
+  final request = value is Map ? Map<String, dynamic>.from(value) : null;
+  final id = request?['id'];
+  final recordId = result['recordId'];
+  final revision = request?['revision'];
+  final state = request?['state'];
+  final title = request?['title'];
+  final category = request?['category'];
+  if (request == null ||
+      id is! String ||
+      id.isEmpty ||
+      !Uuid.isValidUUID(fromString: id) ||
+      (requestId != null && id != requestId) ||
+      request['kind'] != kind ||
+      revision is! int ||
+      revision < 1 ||
+      state is! String ||
+      state.isEmpty ||
+      title is! String ||
+      title.isEmpty ||
+      category is! String ||
+      category.isEmpty ||
+      !result.containsKey('recordId') ||
+      (recordId != null &&
+          (recordId is! String || !Uuid.isValidUUID(fromString: recordId))) ||
+      result['replayed'] is! bool) {
+    throw const SupportFeedbackApiException(503, 'support_unavailable');
+  }
+  return <String, dynamic>{...result, 'request': request};
+}
+
 class DioSupportFeedbackClient implements SupportFeedbackClient {
   DioSupportFeedbackClient({
     required Dio dio,
@@ -100,12 +136,15 @@ class DioSupportFeedbackClient implements SupportFeedbackClient {
     required String kind,
     required Map<String, dynamic> body,
     required String idempotencyKey,
-  }) => _request(
-    '/api/support/${_pathKind(kind)}',
-    method: 'POST',
-    body: <String, dynamic>{...body, 'kind': kind},
-    idempotencyKey: idempotencyKey,
-  );
+  }) async {
+    final result = await _request(
+      '/api/support/${_pathKind(kind)}',
+      method: 'POST',
+      body: <String, dynamic>{...body, 'kind': kind},
+      idempotencyKey: idempotencyKey,
+    );
+    return validateSupportFeedbackMutationResult(result, kind: kind);
+  }
 
   @override
   Future<Map<String, dynamic>> reply({
@@ -114,15 +153,22 @@ class DioSupportFeedbackClient implements SupportFeedbackClient {
     required int expectedRevision,
     required String message,
     required String idempotencyKey,
-  }) => _request(
-    '/api/support/${_pathKind(kind)}/${Uri.encodeComponent(requestId)}/messages',
-    method: 'POST',
-    body: <String, dynamic>{
-      'expectedRevision': expectedRevision,
-      'message': message,
-    },
-    idempotencyKey: idempotencyKey,
-  );
+  }) async {
+    final result = await _request(
+      '/api/support/${_pathKind(kind)}/${Uri.encodeComponent(requestId)}/messages',
+      method: 'POST',
+      body: <String, dynamic>{
+        'expectedRevision': expectedRevision,
+        'message': message,
+      },
+      idempotencyKey: idempotencyKey,
+    );
+    return validateSupportFeedbackMutationResult(
+      result,
+      kind: kind,
+      requestId: requestId,
+    );
+  }
 
   Future<Map<String, dynamic>> _request(
     String path, {
@@ -131,16 +177,24 @@ class DioSupportFeedbackClient implements SupportFeedbackClient {
     Map<String, dynamic>? body,
     String? idempotencyKey,
   }) async {
-    final token = await _accessToken();
-    if (!_isCurrentSession() || token == null || token.isEmpty) {
-      throw const SupportFeedbackApiException(
-        401,
-        'support_authentication_required',
-      );
-    }
     final cancelToken = CancelToken();
     _pending.add(cancelToken);
     try {
+      final token = await Future.any<String?>(<Future<String?>>[
+        _accessToken(),
+        cancelToken.whenCancel.then<String?>(
+          (_) => throw const SupportFeedbackCancelled(),
+        ),
+      ]);
+      if (cancelToken.isCancelled) {
+        throw const SupportFeedbackCancelled();
+      }
+      if (!_isCurrentSession() || token == null || token.isEmpty) {
+        throw const SupportFeedbackApiException(
+          401,
+          'support_authentication_required',
+        );
+      }
       final response = await _dio.request<dynamic>(
         path,
         data: body,
@@ -155,6 +209,11 @@ class DioSupportFeedbackClient implements SupportFeedbackClient {
         ),
         cancelToken: cancelToken,
       );
+      if (body != null &&
+          response.statusCode != 200 &&
+          response.statusCode != 201) {
+        throw const SupportFeedbackApiException(503, 'support_unavailable');
+      }
       if (!_isCurrentSession()) {
         throw const SupportFeedbackApiException(
           401,

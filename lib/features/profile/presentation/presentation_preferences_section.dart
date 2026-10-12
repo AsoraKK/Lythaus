@@ -18,6 +18,14 @@ class PresentationPreferencesSection extends ConsumerStatefulWidget {
 class _PresentationPreferencesSectionState
     extends ConsumerState<PresentationPreferencesSection> {
   PresentationPreferences? _draft;
+  bool _leftEdited = false;
+  bool _swipeEdited = false;
+
+  void _clearDraft() {
+    _draft = null;
+    _leftEdited = false;
+    _swipeEdited = false;
+  }
 
   @override
   void initState() {
@@ -40,11 +48,27 @@ class _PresentationPreferencesSectionState
     final account = ref.watch(currentUserProvider) != null;
     ref.listen(settingsProvider, (previous, next) {
       if (previous?.preferencesOwnerId != next.preferencesOwnerId ||
-          (previous?.preferencesLoading == true && !next.preferencesLoading) ||
           (previous?.preferencesSaving == true &&
               !next.preferencesSaving &&
               !next.preferencesRetryPending)) {
-        setState(() => _draft = null);
+        setState(_clearDraft);
+      } else if (previous != null &&
+          previous.preferencesLoading &&
+          !next.preferencesLoading &&
+          next.preferencesAvailable &&
+          _draft != null) {
+        final draft = _draft!;
+        setState(
+          () => _draft = PresentationPreferences(
+            leftHandedMode: _leftEdited
+                ? draft.leftHandedMode
+                : next.leftHandedMode,
+            horizontalSwipeEnabled: _swipeEdited
+                ? draft.horizontalSwipeEnabled
+                : next.horizontalSwipeEnabled,
+            version: draft.version,
+          ),
+        );
       }
     });
     final choices = _draft ?? controller.pendingPreferences;
@@ -57,6 +81,8 @@ class _PresentationPreferencesSectionState
         !busy &&
         !settings.preferencesRetryPending;
     final dirty =
+        _leftEdited ||
+        _swipeEdited ||
         left != settings.leftHandedMode ||
         swipe != settings.horizontalSwipeEnabled;
     return Semantics(
@@ -72,41 +98,62 @@ class _PresentationPreferencesSectionState
                 : 'Save these choices on this device for guest use. Account choices stay separate.',
           ),
           if (busy)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: Spacing.sm),
-              child: LinearProgressIndicator(minHeight: 2),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
+              child: Semantics(
+                container: true,
+                liveRegion: true,
+                label: settings.preferencesSaving
+                    ? 'Saving preferences'
+                    : 'Loading saved preferences',
+                child: const ExcludeSemantics(
+                  child: LinearProgressIndicator(minHeight: 2),
+                ),
+              ),
             ),
           SwitchListTile(
             title: const Text('Swipe between profile tabs'),
             subtitle: const Text('Tabs remain available when swipe is off.'),
             value: swipe,
             onChanged: editable
-                ? (value) => setState(
-                    () => _draft = PresentationPreferences(
+                ? (value) => setState(() {
+                    _swipeEdited = true;
+                    _draft = PresentationPreferences(
                       leftHandedMode: left,
                       horizontalSwipeEnabled: value,
-                      version: settings.preferencesVersion,
-                    ),
-                  )
+                      version: _draft?.version ?? settings.preferencesVersion,
+                    );
+                  })
                 : null,
           ),
           SwitchListTile(
             title: const Text('Left-handed mode (mirror nav)'),
             value: left,
             onChanged: editable
-                ? (value) => setState(
-                    () => _draft = PresentationPreferences(
+                ? (value) => setState(() {
+                    _leftEdited = true;
+                    _draft = PresentationPreferences(
                       leftHandedMode: value,
                       horizontalSwipeEnabled: swipe,
-                      version: settings.preferencesVersion,
-                    ),
-                  )
+                      version: _draft?.version ?? settings.preferencesVersion,
+                    );
+                  })
                 : null,
           ),
           if (settings.preferencesMessage != null)
             Semantics(
               liveRegion: true,
               child: Text(settings.preferencesMessage!),
+            ),
+          if (_draft != null &&
+              _draft!.version != settings.preferencesVersion &&
+              settings.preferencesAvailable &&
+              !busy)
+            Semantics(
+              liveRegion: true,
+              child: const Text(
+                'Saved choices changed on another device. Your edits are preserved; review the choices before saving.',
+              ),
             ),
           Wrap(
             spacing: Spacing.sm,
@@ -132,11 +179,16 @@ class _PresentationPreferencesSectionState
               ),
               if (dirty && !settings.preferencesRetryPending && !busy)
                 TextButton(
-                  onPressed: () => setState(() => _draft = null),
+                  onPressed: () => setState(_clearDraft),
                   child: const Text('Discard preference changes'),
                 ),
               TextButton(
-                onPressed: busy ? null : () => controller.reload(),
+                onPressed: busy
+                    ? null
+                    : () {
+                        setState(_clearDraft);
+                        controller.reload();
+                      },
                 child: const Text('Reload saved preferences'),
               ),
               if (!account && !settings.preferencesAvailable && !busy)

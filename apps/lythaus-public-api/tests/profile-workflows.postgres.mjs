@@ -140,8 +140,9 @@ test('native full export and delete use private preferences, R2, canonical grant
   assert.equal((await sql('SELECT count(*)::integer AS count FROM privacy.deletion_tombstones WHERE subject_id=$1', [subjectId])).rows[0].count, 1);
   const successfulSteps = fixture.steps.slice(stepStart).filter(s => s.state === 'succeeded').map(s => s.name);
   assert.deepEqual(successfulSteps, ['resolve-request', 'lock-account-and-revoke-sessions', 'evaluate-legal-holds',
-    'purge-support-feedback-for-deletion', 'tombstone-private-beta', 'wait-private-beta-upload-expiry', 'purge-private-beta',
-    'redact-authoritative-content', 'reset-presentation-preferences', 'purge-media-and-mark-locator', 'complete-request-and-tombstone']);
+    'purge-account-activity-for-deletion', 'purge-support-feedback-for-deletion', 'tombstone-private-beta', 'wait-private-beta-upload-expiry', 'purge-private-beta',
+    'redact-authoritative-content', 'reset-presentation-preferences', 'purge-media-and-mark-locator',
+    'verify-support-deletion-locations', 'complete-request-and-tombstone']);
   assert.ok(fixture.statements.some(s => s.role === 'lythaus_privacy' && s.values[0] === subjectId && s.text.includes('SET presentation_left_handed = false')));
   await completed('delete', deleted);
   assert.deepEqual(await preferences(subjectId), defaults);
@@ -166,8 +167,10 @@ test('native complete workflows preserve wholly absent schema compatibility', as
 test('incomplete storage stops completion and permits repaired same-request re-execution', async () => {
   await storage('incomplete');
   const subjectId = await subject();
+  const exportSubjectId = await subject();
   await sql('UPDATE identity.users SET presentation_left_handed=true WHERE id=$1', [subjectId]);
-  const exported = await request(subjectId, 'export');
+  await sql('UPDATE identity.users SET presentation_left_handed=true WHERE id=$1', [exportSubjectId]);
+  const exported = await request(exportSubjectId, 'export');
   const exports = await fixture.bucket('PRIVATE_EXPORTS');
   const exportStatus = await fixture.run('export', exported);
   assert.equal(exportStatus.status, 'errored', JSON.stringify(exportStatus));
@@ -187,6 +190,8 @@ test('incomplete storage stops completion and permits repaired same-request re-e
   assert.equal((await sql('SELECT status FROM identity.users WHERE id=$1', [subjectId])).rows[0].status, 'deleted');
   await storage('ready');
   await savePreferences(subjectId);
+  await savePreferences(exportSubjectId);
+  assert.equal((await sql('SELECT status FROM identity.users WHERE id=$1', [exportSubjectId])).rows[0].status, 'active');
   await completed('export', exported);
   assert.equal((await (await exports.get(key(exported))).json()).profile.presentation_preferences.version, 7);
   await completed('delete', deleted);

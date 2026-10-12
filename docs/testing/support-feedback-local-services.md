@@ -218,9 +218,11 @@ proposal independently refuses database names outside this local test prefix.
    dispatch-time privacy checks and the required privacy-role permissions are
    separately configured and approved. The current eligibility adapter sends
    nothing.
-6. Keep suggestion points disabled. The stated 150 points quarterly has no
-   approved budget, rubric or period-boundary policy; this slice grants zero
-   points and does not change reputation or the 13,500 budget.
+6. Keep suggestion points disabled. The [current policy authority](../policy/current-policy-authority.md)
+   records the owner-approved prospective v2 maximum of 13,650 and optional
+   150-point suggestion award with fixed-calendar-quarter validity. Rubric,
+   ledger integration and acceptance remain separate; this slice grants zero
+   points and does not change historical v1's 13,500 budget or activate rewards.
 7. Keep all feature flags false until the preceding review gates and final
    member/owner authorization, privacy, accessibility and responsive acceptance
    pass at the release head. This work does not deploy or activate the feature.
@@ -228,7 +230,8 @@ proposal independently refuses database names outside this local test prefix.
 Owner-dependent inputs are the approved retention/audit/deletion/export policy,
 operational limits and closure evidence policy, plus notification channel and
 preference routing. The optional quarterly accepted-useful-suggestion award
-is 150, while budget/period/boundary defaults remain pending. Rewards owns that
-future ledger integration; this slice grants zero points and changes no 13500
-budget. Retained record counts, outbox rows and eligibility candidates are
+is 150 under the approved prospective v2 ceiling and all-quarterly calendar rule.
+Rewards owns version-specific accounting, rubric, acceptance and future ledger
+integration; this slice grants zero points and leaves signed historical v1
+unchanged. Retained record counts, outbox rows and eligibility candidates are
 not delivery confirmations, paid subscriptions or payments.

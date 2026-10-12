@@ -66,8 +66,8 @@ jobs:
           cache: npm
       - name: Install pinned repository dependencies
         run: npm ci --ignore-scripts
-      - name: Run support contract, HTTP and runtime tests
-        run: node --experimental-strip-types --experimental-test-module-mocks --test packages/contracts/tests/support-feedback.test.mjs packages/db/tests/support-feedback-http.test.mjs packages/db/tests/support-feedback-runtime.test.mjs apps/lythaus-public-api/tests/support-feedback-routing.test.mjs apps/lythaus-admin-api/tests/support-feedback-routing.test.mjs
+      - name: Run support contract, policy, HTTP and runtime tests
+        run: node --experimental-strip-types --experimental-test-module-mocks --test packages/contracts/tests/support-feedback.test.mjs packages/db/tests/support-feedback-approved-limits.test.mjs packages/db/tests/support-feedback-http.test.mjs packages/db/tests/support-feedback-runtime.test.mjs apps/lythaus-public-api/tests/support-feedback-routing.test.mjs apps/lythaus-admin-api/tests/support-feedback-routing.test.mjs
       - name: Typecheck native support services
         run: npm run typecheck:native
       - name: Exercise isolated support services against PostgreSQL 17

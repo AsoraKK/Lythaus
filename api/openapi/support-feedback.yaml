@@ -373,14 +373,28 @@ components:
       additionalProperties: false
       required: [limits, categories, states]
       properties:
-        limits: { type: object, additionalProperties: false, required: [titleBytes, detailBytes, stepsBytes, contextBytes, memberMessageBytes], properties: { titleBytes: { type: integer, minimum: 1 }, detailBytes: { type: integer, minimum: 1 }, stepsBytes: { type: integer, minimum: 1 }, contextBytes: { type: integer, minimum: 1 }, memberMessageBytes: { type: integer, minimum: 1 } } }
+        limits:
+          type: object
+          additionalProperties: false
+          required: [titleBytes, detailBytes, stepsBytes, contextBytes, memberMessageBytes]
+          description: Optional character limits count Unicode scalar values after trimming. UTF-8 byte limits remain independently enforced.
+          properties:
+            titleBytes: { type: integer, minimum: 1 }
+            detailBytes: { type: integer, minimum: 1 }
+            stepsBytes: { type: integer, minimum: 1 }
+            contextBytes: { type: integer, minimum: 1 }
+            memberMessageBytes: { type: integer, minimum: 1 }
+            titleCharacters: { type: integer, minimum: 1 }
+            detailCharacters: { type: integer, minimum: 1 }
+            stepsCharacters: { type: integer, minimum: 1 }
+            memberMessageCharacters: { type: integer, minimum: 1 }
         categories: { type: object, additionalProperties: false, required: [problem, suggestion], properties: { problem: { type: array, minItems: 1, items: { type: string } }, suggestion: { type: array, minItems: 1, items: { type: string } } } }
         states: { type: object, additionalProperties: false, required: [problem, suggestion], properties: { problem: { type: array, minItems: 1, items: { type: string } }, suggestion: { type: array, minItems: 1, items: { type: string } } } }
     SupportTransition: { type: object, additionalProperties: false, required: [kind, from, to, terminal, reasons, evidenceTypes], properties: { kind: { type: string, enum: [problem, suggestion] }, from: { type: string }, to: { type: string }, terminal: { type: boolean }, reasons: { type: array, items: { type: string } }, evidenceTypes: { type: array, items: { type: string } } } }
     SupportOptions: { type: object, additionalProperties: false, required: [version, contract, limits], properties: { version: { type: string }, contract: { $ref: '#/components/schemas/SupportFeedbackPolicy' }, limits: { type: object, additionalProperties: { type: integer, minimum: 1 } }, initial: { type: object, additionalProperties: false, properties: { problem: { type: string }, suggestion: { type: string } } }, transitions: { type: array, items: { $ref: '#/components/schemas/SupportTransition' } }, evidenceTypes: { type: array, items: { type: string } } } }
     ProblemSubmission: { type: object, additionalProperties: false, required: [kind, category, title, actual, expected], properties: { kind: { type: string, enum: [problem] }, category: { type: string, pattern: '^[a-z][a-z0-9_-]{0,63}$' }, title: { type: string, minLength: 1 }, actual: { type: string, minLength: 1 }, expected: { type: string, minLength: 1 }, reproductionSteps: { type: string }, appVersion: { type: string }, platform: { type: string } } }
     SuggestionSubmission: { type: object, additionalProperties: false, required: [kind, category, title, improvement, benefit], properties: { kind: { type: string, enum: [suggestion] }, category: { type: string, pattern: '^[a-z][a-z0-9_-]{0,63}$' }, title: { type: string, minLength: 1 }, improvement: { type: string, minLength: 1 }, benefit: { type: string, minLength: 1 } } }
-    MemberSupportRequest: { oneOf: [{ $ref: '#/components/schemas/MemberProblemRequest' }, { $ref: '#/components/schemas/MemberSuggestionRequest' }], discriminator: { propertyName: kind } }
+    MemberSupportRequest: { oneOf: [{ $ref: '#/components/schemas/MemberProblemRequest' }, { $ref: '#/components/schemas/MemberSuggestionRequest' }], discriminator: { propertyName: kind, mapping: { problem: '#/components/schemas/MemberProblemRequest', suggestion: '#/components/schemas/MemberSuggestionRequest' } } }
     MemberProblemRequest:
       type: object
       additionalProperties: false
@@ -400,6 +414,7 @@ components:
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         memberMessage: { type: string, nullable: true }
+        closed: { type: boolean, description: Whether new replies are closed for this request. }
     MemberSuggestionRequest:
       type: object
       additionalProperties: false
@@ -416,7 +431,8 @@ components:
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         memberMessage: { type: string, nullable: true }
-    OwnerSupportRequest: { oneOf: [{ $ref: '#/components/schemas/OwnerProblemRequest' }, { $ref: '#/components/schemas/OwnerSuggestionRequest' }], discriminator: { propertyName: kind } }
+        closed: { type: boolean, description: Whether new replies are closed for this request. }
+    OwnerSupportRequest: { oneOf: [{ $ref: '#/components/schemas/OwnerProblemRequest' }, { $ref: '#/components/schemas/OwnerSuggestionRequest' }], discriminator: { propertyName: kind, mapping: { problem: '#/components/schemas/OwnerProblemRequest', suggestion: '#/components/schemas/OwnerSuggestionRequest' } } }
     OwnerProblemRequest:
       type: object
       additionalProperties: false
@@ -436,6 +452,7 @@ components:
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         memberMessage: { type: string, nullable: true }
+        closed: { type: boolean, description: Whether new replies are closed for this request. }
         submitterId: { type: string, format: uuid }
     OwnerSuggestionRequest:
       type: object
@@ -453,6 +470,7 @@ components:
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         memberMessage: { type: string, nullable: true }
+        closed: { type: boolean, description: Whether new replies are closed for this request. }
         submitterId: { type: string, format: uuid }
     PublicMessage: { type: object, additionalProperties: false, required: [id, from, text, revision, createdAt], properties: { id: { type: string, format: uuid }, from: { type: string, enum: [member, owner] }, text: { type: string }, revision: { type: integer, minimum: 1 }, createdAt: { type: string, format: date-time } } }
     MemberRequestPage: { type: object, additionalProperties: false, required: [items, nextCursor, snapshotAt], properties: { items: { type: array, items: { $ref: '#/components/schemas/MemberSupportRequest' } }, nextCursor: { type: string, nullable: true }, snapshotAt: { type: string, format: date-time } } }

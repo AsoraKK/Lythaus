@@ -1,0 +1,102 @@
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:dio/dio.dart';
+import 'package:lythaus_api_client/lythaus_api_client.dart';
+import 'package:test/test.dart';
+
+const wire = <String, Object?>{
+  'items': [
+    {
+      'id': '0192c000-0000-7000-8000-000000000001',
+      'authorId': '0192c000-0000-7000-8000-000000000002',
+      'postId': '0192c000-0000-7000-8000-000000000003',
+      'parentId': null,
+      'depth': 0,
+      'body': 'Synthetic pending comment',
+      'declaredCreationMode': 'human',
+      'moderationState': 'under_review',
+      'deleted': false,
+      'createdAt': '2026-10-10T10:00:00.000Z',
+      'updatedAt': '2026-10-10T10:00:00.000Z',
+    },
+  ],
+  'nextCursor': 'synthetic-next-cursor',
+  'correlationId': 'synthetic-request',
+};
+
+class OwnerCommentsAdapter implements HttpClientAdapter {
+  final requests = <RequestOptions>[];
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    requests.add(options);
+    return ResponseBody.fromString(
+      jsonEncode(wire),
+      200,
+      headers: {
+        Headers.contentTypeHeader: ['application/json'],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+void main() {
+  test(
+    'canonical comments page parses owned pending content and nullable fields',
+    () {
+      final page = standardSerializers.deserializeWith(
+        OwnerCommentsPage.serializer,
+        wire,
+      )!;
+      expect(page.items.single.body, 'Synthetic pending comment');
+      expect(
+        page.items.single.moderationState,
+        OwnerCommentModerationStateEnum.underReview,
+      );
+      expect(page.items.single.parentId, isNull);
+      expect(page.items.single.deleted, false);
+      expect(page.nextCursor, 'synthetic-next-cursor');
+      final serialized = standardSerializers.serializeWith(
+          OwnerCommentsPage.serializer, page) as Map;
+      expect(
+        (serialized['items'] as List).single,
+        (wire['items'] as List).single,
+      );
+      final empty = standardSerializers.deserializeWith(
+        OwnerCommentsPage.serializer,
+        {'items': [], 'nextCursor': null},
+      )!;
+      expect(empty.items, isEmpty);
+      expect(empty.nextCursor, isNull);
+    },
+  );
+
+  test(
+    'generated operation preserves authorization, cursor and bounded page size',
+    () async {
+      final adapter = OwnerCommentsAdapter();
+      final dio = Dio()..httpClientAdapter = adapter;
+      final api = LythausApiClient(dio: dio);
+      api.setBearerAuth('bearerAuth', 'synthetic-token');
+      final result = await api.getCommentsApi().usersMeCommentsList(
+            limit: 8,
+            cursor: 'synthetic-cursor',
+          );
+      expect(result.data!.items.single.body, 'Synthetic pending comment');
+      final request = adapter.requests.single;
+      expect(request.path, '/users/me/comments');
+      expect(request.queryParameters, {
+        'limit': 8,
+        'cursor': 'synthetic-cursor',
+      });
+      expect(request.headers['Authorization'], 'Bearer synthetic-token');
+    },
+  );
+}

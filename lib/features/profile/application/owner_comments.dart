@@ -1,0 +1,147 @@
+// ignore_for_file: public_member_api_docs
+
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/application/auth_session_revision.dart';
+import 'package:lythaus/features/profile/domain/owner_comment.dart';
+
+const int ownerCommentsPageSize = 8;
+
+final ownerCommentsServiceProvider = Provider<OwnerCommentsService>((ref) {
+  return OwnerCommentsService(ref.watch(secureDioProvider));
+});
+
+final ownerCommentsTimelineProvider = AsyncNotifierProvider.autoDispose
+    .family<OwnerCommentsController, OwnerCommentsTimeline, OwnerCommentsKey>(
+      OwnerCommentsController.new,
+    );
+
+class OwnerCommentsService {
+  OwnerCommentsService(this._dio);
+
+  final Dio _dio;
+
+  Future<OwnerCommentsPage> getPage({
+    required String accessToken,
+    String? cursor,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/api/users/me/comments',
+      queryParameters: {
+        'limit': ownerCommentsPageSize,
+        if (cursor != null) 'cursor': cursor,
+      },
+      cancelToken: cancelToken,
+      options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+    );
+    return OwnerCommentsPage.fromJson(response.data ?? const {});
+  }
+}
+
+class OwnerCommentsController
+    extends
+        AutoDisposeFamilyAsyncNotifier<
+          OwnerCommentsTimeline,
+          OwnerCommentsKey
+        > {
+  int _requestRevision = 0;
+
+  @override
+  Future<OwnerCommentsTimeline> build(OwnerCommentsKey key) async {
+    ++_requestRevision;
+    final revision = ref.watch(authSessionRevisionProvider);
+    final user = ref.watch(currentUserProvider);
+    if (user == null ||
+        user.id != key.userId ||
+        revision != key.sessionRevision) {
+      throw StateError('Sign in to view your private comments');
+    }
+    final page = await _fetchPage(null);
+    return OwnerCommentsTimeline(
+      items: page.items,
+      nextCursor: page.nextCursor,
+    );
+  }
+
+  Future<void> loadMore() async {
+    final current = state.valueOrNull;
+    if (current == null || !current.hasMore || current.isLoadingMore) return;
+    final requestRevision = _requestRevision;
+    state = AsyncData(
+      current.copyWith(isLoadingMore: true, clearLoadMoreError: true),
+    );
+    try {
+      final page = await _fetchPage(current.nextCursor);
+      if (!_sessionMatches() || requestRevision != _requestRevision) return;
+      final latest = state.valueOrNull ?? current;
+      state = AsyncData(latest.append(page));
+    } catch (error) {
+      if (!_sessionMatches() ||
+          requestRevision != _requestRevision ||
+          (error is DioException && CancelToken.isCancel(error))) {
+        return;
+      }
+      final latest = state.valueOrNull;
+      if (latest == null) return;
+      state = AsyncData(
+        latest.copyWith(isLoadingMore: false, loadMoreError: error),
+      );
+    }
+  }
+
+  Future<void> refresh() async {
+    if (!_sessionMatches()) return;
+    state = const AsyncLoading();
+    // Rebuild through Riverpod so it detaches any older initial build future,
+    // disposes its request callbacks, and owns the current error/data result.
+    ref.invalidateSelf();
+    try {
+      await future;
+    } catch (_) {
+      // The current build publishes its own failure for the retry UI.
+    }
+  }
+
+  Future<OwnerCommentsPage> _fetchPage(String? cursor) async {
+    final cancelToken = CancelToken();
+    final session = ref.read(authSessionRevisionProvider.notifier);
+    final stop = session.cancelOnChange(cancelToken.cancel);
+    ref.onDispose(stop);
+    ref.onDispose(cancelToken.cancel);
+    try {
+      final token = await Future.any<String?>([
+        ref.read(jwtProvider.future),
+        cancelToken.whenCancel.then<String?>((error) => throw error),
+      ]);
+      if (cancelToken.isCancelled) throw cancelToken.cancelError!;
+      if (token == null || token.isEmpty) throw StateError('Session expired');
+      final page = await ref
+          .read(ownerCommentsServiceProvider)
+          .getPage(
+            accessToken: token,
+            cursor: cursor,
+            cancelToken: cancelToken,
+          );
+      if (!_sessionMatches()) throw StateError('Profile session changed');
+      if (page.items.any((comment) => comment.authorId != arg.userId)) {
+        throw const FormatException('Owner comments do not match the session');
+      }
+      return page;
+    } finally {
+      stop();
+    }
+  }
+
+  bool _sessionMatches() {
+    try {
+      return ref.read(currentUserProvider)?.id == arg.userId &&
+          ref.read(authSessionRevisionProvider) == arg.sessionRevision;
+    } catch (_) {
+      return false;
+    }
+  }
+}

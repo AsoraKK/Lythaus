@@ -2,6 +2,20 @@ const PERIODS = ['today', 'mtd', 'ytd'];
 
 const unavailable = reason => ({ value: null, availability: 'unavailable', reason });
 
+export function overviewCalendarStart(period, at) {
+  const date = new Date(at);
+  date.setUTCHours(0, 0, 0, 0);
+  if (period === 'mtd') date.setUTCDate(1);
+  if (period === 'ytd') date.setUTCMonth(0, 1);
+  return date.getTime();
+}
+
+export function overviewSnapshotFresh(community, period, expired, now = Date.now()) {
+  const age = now - Date.parse(community?.sampledAt);
+  return !expired && community?.period === period && Number.isFinite(age) && age >= -5000 && age <= 65000
+    && community.cacheTtlSeconds === 60 && Date.parse(community.current?.start) === overviewCalendarStart(period, now);
+}
+
 export function overviewActivityEvidence(community, fresh, period) {
   const windowStart = Date.parse(community?.current?.start);
   const windowEnd = Date.parse(community?.current?.end);

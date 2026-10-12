@@ -24,7 +24,7 @@ type SegmenterConstructor = new (
 export function countUserPerceivedCharacters(input: string): number {
   const normalized = input.normalize('NFC').trim();
   const Segmenter = (Intl as unknown as { Segmenter?: SegmenterConstructor }).Segmenter;
-  if (!Segmenter) return Array.from(normalized).length;
+  if (!Segmenter) throw new Error('grapheme_segmentation_unavailable');
   return Array.from(new Segmenter(undefined, { granularity: 'grapheme' }).segment(normalized)).length;
 }
 
@@ -34,13 +34,14 @@ export function enforceContentDeclaration(input: {
 }): ContentDeclarationDecision {
   if (typeof input.body !== 'string') throw new Error('invalid_post');
   const body = input.body.normalize('NFC').trim();
-  if (!body || countUserPerceivedCharacters(body) > MAX_PUBLIC_CONTENT_GRAPHEMES) throw new Error('invalid_post');
+  if (!body) throw new Error('invalid_post');
+  const characterCount = countUserPerceivedCharacters(body);
+  if (characterCount > MAX_PUBLIC_CONTENT_GRAPHEMES) throw new Error('invalid_post');
   if (input.declaredCreationMode === 'ai_generated') throw new Error('ai_generated_public_content_blocked');
   if (input.declaredCreationMode !== 'human' && input.declaredCreationMode !== 'ai_assisted') {
     throw new Error('invalid_post');
   }
 
-  const characterCount = countUserPerceivedCharacters(body);
   if (input.declaredCreationMode === 'ai_assisted' && characterCount > MAX_AI_ASSISTED_PUBLIC_GRAPHEMES) {
     throw new Error('ai_assisted_character_limit_exceeded');
   }
