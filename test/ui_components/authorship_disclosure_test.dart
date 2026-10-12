@@ -34,8 +34,8 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Author declaration: Human-authored'), findsOneWidget);
-    expect(find.text('Authorship assessment: Human-authored'), findsOneWidget);
+    expect(find.text('Declared: Human-authored'), findsOneWidget);
+    expect(find.text('Assessment: Human-authored'), findsOneWidget);
     expect(find.text('Authorship: Under review'), findsNWidgets(2));
     expect(find.textContaining('verified'), findsNothing);
   });

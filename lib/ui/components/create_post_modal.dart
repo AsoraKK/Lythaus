@@ -39,7 +39,6 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
 
   ContentType selectedType = ContentType.text;
   bool isNews = false;
-  final GlobalKey<TooltipState> _policyTooltipKey = GlobalKey<TooltipState>();
   late final TextEditingController controller;
 
   @override
@@ -286,23 +285,17 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
                 ),
                 SizedBox(width: spacing.md),
                 Expanded(
-                  child: Tooltip(
-                    key: _policyTooltipKey,
-                    message: _policyReminderMessage,
-                    triggerMode: TooltipTriggerMode.manual,
-                    showDuration: const Duration(seconds: 6),
-                    child: LythButton.primary(
-                      label: !canCreate
-                          ? 'Sign in first'
-                          : state.errorResult?.outcomeUncertain == true
-                          ? 'Retry submission'
-                          : 'Post',
-                      onPressed:
-                          state.isSubmitting || state.isRestoring || !canCreate
-                          ? null
-                          : _handleSubmit,
-                      isLoading: state.isSubmitting,
-                    ),
+                  child: LythButton.primary(
+                    label: !canCreate
+                        ? 'Sign in first'
+                        : state.errorResult?.outcomeUncertain == true
+                        ? 'Retry submission'
+                        : 'Post',
+                    onPressed:
+                        state.isSubmitting || state.isRestoring || !canCreate
+                        ? null
+                        : _handleSubmit,
+                    isLoading: state.isSubmitting,
                   ),
                 ),
               ],

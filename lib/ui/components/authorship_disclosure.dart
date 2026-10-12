@@ -32,7 +32,7 @@ class AuthorshipDisclosure extends StatelessWidget {
               (classificationSource == 'user_disclosure' ||
                   (classificationSource == 'automated_classification' &&
                       classificationState == 'confirmed'))
-          ? '${classificationSource == 'user_disclosure' ? 'Author declaration' : 'Authorship assessment'}: $label'
+          ? '${classificationSource == 'user_disclosure' ? 'Declared' : 'Assessment'}: $label'
           : 'Authorship: Under review',
       style: context.textTheme.labelMedium,
     ),

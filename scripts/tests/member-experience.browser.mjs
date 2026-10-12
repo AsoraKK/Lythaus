@@ -31,7 +31,7 @@ try {
     await run('member-feed', { width, theme }, async (page, _, result) => {
       await button(page, 'Open Discover').click();
       await text(page, 'Kai Rivers').waitFor();
-      await text(page, 'Author declaration: Human-authored').waitFor();
+      await text(page, 'Declared: Human-authored').waitFor();
       await screenshot(page, result, 'member-feed');
       await button(page, 'Trust details').click();
       await text(page, 'does not independently verify authorship').waitFor();
@@ -73,6 +73,8 @@ try {
     await button(page, 'Post').click();
     await button(page, 'Retry submission').waitFor();
     assert.equal(await input.inputValue(), body);
+    await button(page, 'Retry submission').hover();
+    assert.equal(await text(page, 'Choose Human-authored or AI-assisted before posting.').count(), 0);
     await screenshot(page, result, 'member-offline-draft');
     await context.setOffline(false);
     assert.equal(result.writes.length, 1);

@@ -43,7 +43,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   final _textController = TextEditingController();
   final _focusNode = FocusNode();
-  GlobalKey<TooltipState> _policyTooltipKey = GlobalKey<TooltipState>();
 
   @override
   void initState() {
@@ -93,9 +92,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
     // Listen for successful post creation
     ref.listen<PostCreationState>(postCreationProvider, (previous, next) {
-      if (next.result != null && next.result != previous?.result) {
-        _dismissPolicyReminder();
-      }
       if (_textController.text != next.text) {
         _textController.value = TextEditingValue(
           text: next.text,
@@ -132,49 +128,43 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             actions: [
               Padding(
                 padding: const EdgeInsets.only(right: 8),
-                child: Tooltip(
-                  key: _policyTooltipKey,
-                  message: _policyReminderMessage,
-                  triggerMode: TooltipTriggerMode.manual,
-                  showDuration: const Duration(seconds: 6),
-                  child: FilledButton(
-                    onPressed:
-                        state.isSubmitting ||
-                            state.isRestoring ||
-                            !state.isValid ||
-                            !canCreate
-                        ? null
-                        : _handleSubmit,
-                    child: Semantics(
-                      label: state.isSubmitting ? 'Submitting post' : null,
-                      value: state.isSubmitting ? 'In progress' : null,
-                      liveRegion: state.isSubmitting,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Visibility(
-                            visible: !state.isSubmitting,
-                            maintainSize: true,
-                            maintainAnimation: true,
-                            maintainState: true,
-                            child: Text(
-                              state.errorResult?.outcomeUncertain == true
-                                  ? 'Retry submission'
-                                  : 'Post',
+                child: FilledButton(
+                  onPressed:
+                      state.isSubmitting ||
+                          state.isRestoring ||
+                          !state.isValid ||
+                          !canCreate
+                      ? null
+                      : _handleSubmit,
+                  child: Semantics(
+                    label: state.isSubmitting ? 'Submitting post' : null,
+                    value: state.isSubmitting ? 'In progress' : null,
+                    liveRegion: state.isSubmitting,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Visibility(
+                          visible: !state.isSubmitting,
+                          maintainSize: true,
+                          maintainAnimation: true,
+                          maintainState: true,
+                          child: Text(
+                            state.errorResult?.outcomeUncertain == true
+                                ? 'Retry submission'
+                                : 'Post',
+                          ),
+                        ),
+                        if (state.isSubmitting)
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              value: context.disableAnimations ? 0.75 : null,
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
-                          if (state.isSubmitting)
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                value: context.disableAnimations ? 0.75 : null,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
                 ),
@@ -558,7 +548,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         !TickerMode.valuesOf(context).enabled) {
       return;
     }
-    _dismissPolicyReminder();
     final navigator = Navigator.of(context);
     if (navigator.canPop()) {
       navigator.pop(result);
@@ -574,12 +563,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         ).toString(),
       );
     }
-  }
-
-  void _dismissPolicyReminder() {
-    // Recreate the tooltip to remove its overlay even when the retained
-    // composer becomes inactive and its dismissal animation cannot tick.
-    setState(() => _policyTooltipKey = GlobalKey<TooltipState>());
   }
 
   Future<void> _submitBlockedAppeal(String caseId) async {

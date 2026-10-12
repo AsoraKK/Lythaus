@@ -34,7 +34,9 @@ is visible. These user screenshots are not committed to the repository.
   Required declaration choices and the normalized 249-grapheme assisted limit
   remain enforced by the existing client and server policy. Short guidance
   links to the detailed policy. The editor remains in the existing Manrope
-  theme and restrained Lythaus layout.
+  theme and restrained Lythaus layout. A mobile offline render exposed a long
+  hover tooltip covering the editor; the submit/retry buttons now have no policy
+  tooltip, and detailed policy opens only through the explicit link.
 - Expanded feed trust details recursively rendered the diagnostic strip,
   including `complete`, `none` and `no_extra_signals`. Member feed/detail
   expansion now explains what the label means in prose. Appeals and pending
