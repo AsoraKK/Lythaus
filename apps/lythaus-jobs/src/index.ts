@@ -758,32 +758,28 @@ async function processAppealReputationResolution(message: QueueMessage, env: Env
   const subjectUserId = stringValue(payload.subjectUserId);
   const finalDecision = stringValue(payload.finalDecision);
   if (!appealId || !subjectUserId || !finalDecision) throw new Error('appeal_reputation_event_invalid');
+  if (finalDecision === 'overturn') return;
+  if (finalDecision !== 'uphold') throw new Error('appeal_reputation_event_invalid');
+  const resolved = await query(
+    env.DB_JOBS_FRESH,
+    `SELECT appeal.id
+       FROM system.outbox_events source
+       JOIN moderation.appeals appeal ON source.aggregate_type = 'appeal' AND source.aggregate_id = appeal.id
+       JOIN moderation.cases moderation_case ON moderation_case.id = appeal.case_id
+       JOIN moderation.appeal_outcomes outcome ON outcome.appeal_id = appeal.id
+       LEFT JOIN content.posts post ON moderation_case.content_type = 'post' AND post.id = moderation_case.content_id
+       LEFT JOIN content.comments comment ON moderation_case.content_type = 'comment' AND comment.id = moderation_case.content_id
+      WHERE source.id = $1 AND appeal.id = $2 AND moderation_case.content_id = $3
+        AND CASE moderation_case.content_type
+          WHEN 'post' THEN post.author_id WHEN 'comment' THEN comment.author_id
+          WHEN 'profile' THEN moderation_case.content_id WHEN 'account' THEN moderation_case.content_id
+        END = $4
+        AND appeal.state = 'resolved' AND outcome.state = 'resolved' AND outcome.final_decision = 'uphold'
+        AND appeal.policy_version = $5 AND outcome.policy_version = $5`,
+    [eventId, appealId, stringValue(payload.contentId), subjectUserId, APPEAL_POLICY.version],
+  );
+  if (resolved.rowCount !== 1) return;
   const correlationId = stringValue(message.body.correlationId) ?? appealId;
-  if (finalDecision === 'overturn') {
-    const original = await query<{ id: string }>(
-      env.DB_JOBS_FRESH,
-      `SELECT event.id
-         FROM trust.reputation_events event
-        WHERE event.subject_user_id = $1
-          AND event.content_id = $2
-          AND event.status = 'effective'
-          AND event.impact < 0
-        ORDER BY event.created_at DESC
-        LIMIT 1`,
-      [subjectUserId, stringValue(payload.contentId)],
-    );
-    if (original.rows[0]) await processSingleReputationSignal(env, {
-      eventId: original.rows[0].id,
-      eventType: 'moderation.appeal.resolved',
-      signalType: 'reputation_event_reversal',
-      subjectUserId,
-      contentId: stringValue(payload.contentId),
-      appealId,
-      reversalReference: original.rows[0].id,
-      occurredAt: source.created_at,
-      correlationId,
-    });
-  }
   const votes = await query<{ id: string; reviewer_id: string; decision: string }>(
     env.DB_JOBS_FRESH,
     `SELECT id, reviewer_id, decision FROM moderation.appeal_review_votes WHERE appeal_id = $1`,

@@ -63,7 +63,7 @@ const ADMIN_ERROR_CODES = new Set([
   'appeal_adjudication_list_forbidden', 'appeal_adjudication_not_recorded', 'appeal_adjudicator_conflict',
   'appeal_adjudicator_required', 'appeal_adjudicator_role_invalid',
   'appeal_adjudicator_training_required', 'appeal_already_resolved', 'appeal_not_found',
-  'appeal_policy_version_unsupported', 'appeal_profile_access_unavailable', 'appeal_risk_class_invalid',
+  'appeal_policy_version_unsupported', 'appeal_profile_access_unavailable', 'appeal_resolution_unavailable', 'appeal_risk_class_invalid',
   'appeal_subject_not_found', 'appeal_vote_decision_invalid', 'appeal_vote_level_invalid',
   'appeal_vote_qualification_invalid', 'appeal_vote_weight_invalid',
   'invalid_account_status', 'invalid_date_filter', 'invalid_display_name', 'invalid_editorial_publication', 'invalid_handle', 'invalid_json',
@@ -84,7 +84,7 @@ function adminError(error: unknown): { exposedCode: string; internalCode: string
     : ['access_required', 'access_assertion_invalid', 'access_subject_missing'].includes(exposedCode) ? 401
       : ['auth_data_unavailable', 'auth_email_dispatch_unavailable'].includes(exposedCode) ? 503
         : ['admin_role_required', 'admin_mutation_origin_invalid', 'account_support_owner_required', 'overview_owner_required', 'community_appeal_triage_not_allowed', 'monthly_context_actor_not_allowed', 'appeal_adjudication_list_forbidden', 'profile_editing_unavailable'].includes(exposedCode) ? 403
-          : ['appeal_profile_access_unavailable', 'community_appeals_unavailable', 'monthly_context_unavailable'].includes(exposedCode) ? 503
+          : ['appeal_profile_access_unavailable', 'appeal_resolution_unavailable', 'community_appeals_unavailable', 'monthly_context_unavailable'].includes(exposedCode) ? 503
             : ['community_appeal_state_conflict', 'monthly_context_idempotency_reused', 'monthly_context_revision_conflict', 'monthly_context_rules_locked', 'monthly_context_scope_changed'].includes(exposedCode) ? 409
           : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
               : ['appeal_adjudication_locked', 'appeal_already_resolved', 'email_already_verified', 'idempotency_in_progress', 'idempotency_key_reused', 'moderation_case_already_resolved', 'moderation_case_superseded', 'moderation_declaration_missing', 'user_email_exists', 'waitlist_duplicate', 'waitlist_status_transition_invalid'].includes(exposedCode) ? 409
@@ -783,6 +783,7 @@ async function adjudicateAppeal(request: Request, env: Env, actor: { userId: str
       adjudications: adjudicationResult.rows,
     });
     const outcomePlan = appealOutcomeAuditPlan(evaluation);
+    if (evaluation.status === 'resolved' && evaluation.finalDecision === 'overturn') throw new Error('appeal_resolution_unavailable');
     await client.query(
       `INSERT INTO moderation.appeal_outcomes
          (appeal_id, risk_class, reviewer_panel_decision, final_decision, completed_reviewers, total_weight,
