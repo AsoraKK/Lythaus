@@ -16,7 +16,12 @@ export async function localAuthBrowserServer(handle) {
   const server=https.createServer({key:await readFile(keyFile),cert:await readFile(certFile)},async(req,res)=>{
     if(!allowed.has(req.headers.host)){res.writeHead(403).end();return;}
     const chunks=[];let bytes=0;
-    for await(const chunk of req){bytes+=chunk.length;if(bytes>16384){res.writeHead(413).end();return;}chunks.push(chunk);}
+    try {
+      for await(const chunk of req){bytes+=chunk.length;if(bytes>16384){res.writeHead(413).end();return;}chunks.push(chunk);}
+    } catch(error) {
+      if(req.aborted && error?.code === 'ECONNRESET') return;
+      throw error;
+    }
     const body=Buffer.concat(chunks).toString();
     const request={url:()=>`https://${req.headers.host}${req.url}`,method:()=>req.method,
       allHeaders:async()=>req.headers,postData:()=>body,postDataJSON:()=>JSON.parse(body)};

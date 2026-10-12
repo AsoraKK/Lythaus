@@ -17,6 +17,7 @@ export interface SupportServicePolicy {
   readonly limits: Readonly<{
     page: number; messages: number; privateItems: number; messageBytes: number; noteBytes: number;
     evidenceBytes: number; referenceBytes: number; rateWindowSeconds: number; memberMutations: number; ownerMutations: number;
+    submissionsPerHour?: number; submissionsPerDay?: number;
   }>;
   readonly privacy: Readonly<{ retentionSeconds: number; batch: number; requestStates: readonly string[]; deleteAudit: boolean }>;
 }
@@ -41,9 +42,10 @@ export function supportObject(value: unknown, allowed?: readonly string[], error
   }
   return result;
 }
-export function supportText(value: unknown, maximum: number): string {
+export function supportText(value: unknown, maximum: number, maximumCharacters?: number): string {
   if (typeof value !== 'string' || value.length > maximum || /[\ud800-\udfff]/u.test(value) || new TextEncoder().encode(value).length > maximum
-    || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value) || !value.trim()) throw new Error('support_input_invalid');
+    || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(value) || !value.trim()
+    || (maximumCharacters !== undefined && [...value.trim()].length > maximumCharacters)) throw new Error('support_input_invalid');
   return value.trim();
 }
 function code(value: unknown): string {
@@ -88,12 +90,17 @@ export function parseSupportServicePolicy(value: unknown): SupportServicePolicy 
       if ((t.kind !== 'problem' && t.kind !== 'suggestion') || typeof t.terminal !== 'boolean') throw new Error(ERROR);
       const from = code(t.from), to = code(t.to), reasons = list(t.reasons), required = list(t.evidenceTypes, !t.terminal);
       if (from === to || !contract.states[t.kind].includes(from) || !contract.states[t.kind].includes(to)
-        || required.some(x => !evidenceTypes.includes(x))) throw new Error(ERROR);
+        || required.some(x => !evidenceTypes.includes(x))
+        || (to === 'duplicate' && (!t.terminal || !required.includes('duplicate_reference')))) throw new Error(ERROR);
       return Object.freeze({ kind: t.kind, from, to, terminal: t.terminal, reasons, evidenceTypes: required }) as SupportTransition;
     });
     if (new Set(transitions.map(t => `${t.kind}:${t.from}:${t.to}`)).size !== transitions.length) throw new Error(ERROR);
     const fields = ['page', 'messages', 'privateItems', 'messageBytes', 'noteBytes', 'evidenceBytes', 'referenceBytes', 'rateWindowSeconds', 'memberMutations', 'ownerMutations'] as const;
-    const supplied = supportObject(p.limits, fields, ERROR), limits = Object.fromEntries(fields.map(k => [k, positive(supplied[k], ['page', 'messages', 'privateItems'].includes(k) ? 100 : Number.MAX_SAFE_INTEGER)])) as unknown as SupportServicePolicy['limits'];
+    const supplied = supportObject(p.limits, [...fields, 'submissionsPerHour', 'submissionsPerDay'], ERROR);
+    const hasHour = Object.hasOwn(supplied, 'submissionsPerHour'), hasDay = Object.hasOwn(supplied, 'submissionsPerDay');
+    if (hasHour !== hasDay) throw new Error(ERROR);
+    const limits = { ...Object.fromEntries(fields.map(k => [k, positive(supplied[k], ['page', 'messages', 'privateItems'].includes(k) ? 100 : Number.MAX_SAFE_INTEGER)])),
+      ...(hasHour ? { submissionsPerHour: positive(supplied.submissionsPerHour), submissionsPerDay: positive(supplied.submissionsPerDay) } : {}) } as unknown as SupportServicePolicy['limits'];
     if(transitions.some(t=>t.evidenceTypes.length>limits.privateItems))throw new Error(ERROR);
     const privacy = supportObject(p.privacy, ['retentionSeconds', 'batch', 'requestStates', 'deleteAudit'], ERROR);
     if (typeof privacy.deleteAudit !== 'boolean') throw new Error(ERROR);

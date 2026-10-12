@@ -1,0 +1,190 @@
+/*
+DISABLED PROPOSAL ONLY — DO NOT EXECUTE OR APPLY.
+This file is outside database/planetscale/migrations and is not a migration.
+Candidate migration target, only after owner approval and baseline refresh:
+  database/planetscale/migrations/0021_posting_feedback_ledger.sql
+Current verified repository prefix ends at 0020_auth_recovery_delivery.sql.
+The SQL below is kept inside this block comment so direct psql invocation is inert.
+The role placeholders below are intentionally unresolved and are not SQL identifiers.
+
+CREATE SCHEMA IF NOT EXISTS evaluation;
+
+CREATE TABLE evaluation.posting_feedback_probe_samples (
+  sample_id uuid PRIMARY KEY CHECK (substring(sample_id::text FROM 15 FOR 1) = '7'),
+  input_hash text NOT NULL CHECK (input_hash ~ '^[0-9a-f]{64}$'),
+  revision integer NOT NULL CHECK (revision > 0),
+  UNIQUE (sample_id, input_hash, revision)
+);
+
+INSERT INTO evaluation.posting_feedback_probe_samples (sample_id, input_hash, revision) VALUES
+  ('019a0000-0000-7000-8000-000000000001', '3126cb3959fd7c097884059762b9005f8ddff541dfe4ac32f9af7eb1d8cf5ae8', 1),
+  ('019a0000-0000-7000-8000-000000000002', '91b44b7172036b5355e2d5e223a14dacfdafe4e2026d889c95c1a02bc501098b', 1),
+  ('019a0000-0000-7000-8000-000000000003', 'b37fddce786a76725c635fc2136573909f4668c2e9316adfac3f5323e7ffd114', 1),
+  ('019a0000-0000-7000-8000-000000000004', '538ac717d22e67e0955d8d19e2c05226eaab88432d8b5907d16eb39f3c1c566b', 1),
+  ('019a0000-0000-7000-8000-000000000005', '2d3583a2e1e853cd0604d5fcd7afbf2962cb3bd40bef40fd989f5dcb9379e7e8', 1),
+  ('019a0000-0000-7000-8000-000000000006', '3a588058bdf09756b3bf70c00f6f54ece7e0b98781b8dd2f1c66f2ac938a3fb9', 1),
+  ('019a0000-0000-7000-8000-000000000007', '2b7bdd41d18b1b374a386efa6cbe14d7e8177bdee9efd2ce315736fa4092d139', 1),
+  ('019a0000-0000-7000-8000-000000000008', '246bc1f4bac922223f0af5c61bd36045539811b6b29ad83616f11992c72463f2', 1),
+  ('019a0000-0000-7000-8000-000000000009', '00ade87495b0ffd4411ae14499576d0d6e330c4157f5c393782bb1873e2a9748', 1),
+  ('019a0000-0000-7000-8000-000000000010', '8c289c0263bd6807714040111830934327be764ad67d33d56daa8a92d0f4cba5', 1),
+  ('019a0000-0000-7000-8000-000000000011', '47804b7525de86f9083c0ec69c6bd33821fbb4c12977fe9e35f3b9dec2287685', 1),
+  ('019a0000-0000-7000-8000-000000000012', '768d00a9c61820e9477223eeb202bdb07bf60d4c961dce536d44aa5a1240d3e7', 1),
+  ('019a0000-0000-7000-8000-000000000013', 'b0f2e11253be19cc45a9073cc6f8c006f5e4a857917f685683828023335e7299', 1),
+  ('019a0000-0000-7000-8000-000000000014', 'f92af09806ae72b043f29cebe9b291d939541cfc61aee65a97bd9fb68c9992c6', 1),
+  ('019a0000-0000-7000-8000-000000000015', 'ccbe821aae16073ed95160811940079913dc758e915f81fe8eef09eca6765a20', 1),
+  ('019a0000-0000-7000-8000-000000000016', '8bdf56e018165ce98e85fe4c9cdede64bd359324a355d610efdfd09b22edfdb2', 1),
+  ('019a0000-0000-7000-8000-000000000017', '4a83c0347fdcd7054e64ee0b087aecab040261f99707b9d099bd4a3c7dce10f0', 1),
+  ('019a0000-0000-7000-8000-000000000018', 'ef9226c1533212b23257efa1062a5c730bf5eec8987beb3e40d6d8e497ad7e86', 1),
+  ('019a0000-0000-7000-8000-000000000019', '1eacf520322b185b25f5fc74ea368fbe1370d229c0a00bd9b207f186ad4a0c87', 1),
+  ('019a0000-0000-7000-8000-000000000020', 'd524618b176ac1be9cda4b2e3f73c8b731aec2fb400d663b202ace1eb1b324ac', 1);
+
+CREATE TABLE evaluation.posting_feedback_probe_runs (
+  run_fingerprint text PRIMARY KEY
+    CHECK (run_fingerprint ~ '^[0-9a-f]{64}$'),
+  selection_hash text NOT NULL
+    CHECK (selection_hash = 'c8882fa321e8e0073a5859814dcc86287651aa2d3b9b3170b16bd009cd6e1ed6'),
+  source_sha text NOT NULL CHECK (source_sha ~ '^[0-9a-f]{40}$'),
+  collector_hash text NOT NULL CHECK (collector_hash ~ '^[0-9a-f]{64}$'),
+  provider text NOT NULL CHECK (provider = 'openai'),
+  requested_model text NOT NULL CHECK (requested_model = 'omni-moderation-latest'),
+  claimed_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+  UNIQUE (selection_hash, source_sha, collector_hash, provider, requested_model)
+);
+
+CREATE TABLE evaluation.posting_feedback_attempt_claims (
+  run_fingerprint text NOT NULL
+    REFERENCES evaluation.posting_feedback_probe_runs(run_fingerprint) ON DELETE RESTRICT,
+  sample_id uuid NOT NULL
+    CHECK (substring(sample_id::text FROM 15 FOR 1) = '7'),
+  input_hash text NOT NULL CHECK (input_hash ~ '^[0-9a-f]{64}$'),
+  revision integer NOT NULL CHECK (revision > 0),
+  state text NOT NULL DEFAULT 'STARTED_NO_REPLAY'
+    CHECK (state IN ('STARTED_NO_REPLAY', 'RECEIPT_COMMITTED')),
+  claimed_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+  receipt_committed_at timestamptz,
+  PRIMARY KEY (run_fingerprint, sample_id),
+  FOREIGN KEY (sample_id, input_hash, revision)
+    REFERENCES evaluation.posting_feedback_probe_samples(sample_id, input_hash, revision) ON DELETE RESTRICT,
+  CHECK ((state = 'STARTED_NO_REPLAY' AND receipt_committed_at IS NULL)
+      OR (state = 'RECEIPT_COMMITTED' AND receipt_committed_at IS NOT NULL))
+);
+
+CREATE TABLE evaluation.posting_feedback_results (
+  run_fingerprint text NOT NULL,
+  sample_id uuid NOT NULL,
+  schema_version text NOT NULL
+    CHECK (schema_version = 'lythaus-bounded-moderation-receipt-v1'),
+  evidence_class text NOT NULL
+    CHECK (evidence_class IN ('ACTUAL_PROVIDER_OBSERVATION', 'SYNTHETIC_TRANSPORT_TEST_ONLY')),
+  input_class text NOT NULL
+    CHECK (input_class = 'ARTIFICIAL_AGENT_WRITTEN_NOT_HUMAN_GROUND_TRUTH'),
+  provider text NOT NULL CHECK (provider = 'openai'),
+  requested_model text NOT NULL CHECK (requested_model = 'omni-moderation-latest'),
+  response_model text
+    CHECK (response_model IS NULL OR response_model ~ '^omni-moderation-[a-z0-9.-]{1,80}$'),
+  provider_snapshot_known boolean NOT NULL DEFAULT false CHECK (provider_snapshot_known = false),
+  response_hash text CHECK (response_hash IS NULL OR response_hash ~ '^[0-9a-f]{64}$'),
+  http_status integer CHECK (http_status IS NULL OR http_status BETWEEN 100 AND 599),
+  adapter_status text NOT NULL CHECK (adapter_status IN ('ALLOW', 'REVIEW', 'BLOCK', 'PROVIDER_FAILURE')),
+  adapter_accepted boolean NOT NULL,
+  evidence_schema text
+    CHECK (evidence_schema IS NULL OR evidence_schema = 'lythaus-moderation-provider-evidence-v1'),
+  schema_valid boolean NOT NULL,
+  provider_flagged boolean,
+  adapter_flagged boolean,
+  safety_band text NOT NULL CHECK (safety_band IN ('REVIEW', 'ALLOW_EVIDENCE', 'ABSTAIN')),
+  delivery_status text NOT NULL
+    CHECK (delivery_status IN ('RESPONSE_CAPTURED', 'UNKNOWN_NO_RETRY', 'NOT_SENT')),
+  transport_calls smallint NOT NULL CHECK (transport_calls BETWEEN 0 AND 1),
+  actual_provider_requests smallint NOT NULL CHECK (actual_provider_requests BETWEEN 0 AND 1),
+  failure_code text CHECK (failure_code IS NULL OR failure_code IN (
+    'MISSING_CREDENTIAL', 'EMPTY_INPUT', 'INVALID_MIME', 'IMAGE_SIZE_LIMIT_EXCEEDED',
+    'HTTP_AUTHENTICATION_FAILURE', 'HTTP_RATE_LIMITED', 'HTTP_SERVER_FAILURE', 'HTTP_FAILURE',
+    'TIMEOUT', 'NETWORK_FAILURE', 'MALFORMED_RESPONSE', 'UNEXPECTED_SCHEMA',
+    'RESPONSE_SIZE_LIMIT_EXCEEDED', 'INTERRUPTED_OR_TIMEOUT',
+    'TRANSPORT_OR_RESPONSE_READ_FAILURE', 'EVALUATION_SCHEMA_OR_CONSISTENCY_FAILURE',
+    'UNCLASSIFIED_FAILURE'
+  )),
+  execution_ms numeric(12, 3) NOT NULL CHECK (execution_ms BETWEEN 0 AND 600000),
+  explanation_code text NOT NULL CHECK (explanation_code IN (
+    'PROVIDER_FLAGS_ONLY_NO_AUTHORSHIP_OR_PUBLICATION_AUTHORITY',
+    'NO_USABLE_SAFETY_RESULT_STOP_WITHOUT_RETRY'
+  )),
+  score_interpretation text NOT NULL DEFAULT 'UNCALIBRATED_PROVIDER_SCORE'
+    CHECK (score_interpretation = 'UNCALIBRATED_PROVIDER_SCORE'),
+  captured_at timestamptz NOT NULL,
+  expires_at timestamptz NOT NULL,
+  PRIMARY KEY (run_fingerprint, sample_id),
+  FOREIGN KEY (run_fingerprint, sample_id)
+    REFERENCES evaluation.posting_feedback_attempt_claims(run_fingerprint, sample_id) ON DELETE RESTRICT,
+  CHECK (expires_at - captured_at = interval '7 days'),
+  CHECK (actual_provider_requests <= transport_calls),
+  CHECK ((evidence_class = 'SYNTHETIC_TRANSPORT_TEST_ONLY' AND actual_provider_requests = 0)
+      OR (evidence_class = 'ACTUAL_PROVIDER_OBSERVATION' AND actual_provider_requests = transport_calls)),
+  CHECK ((delivery_status = 'NOT_SENT' AND transport_calls = 0 AND response_hash IS NULL)
+      OR (delivery_status = 'RESPONSE_CAPTURED' AND transport_calls = 1 AND response_hash IS NOT NULL)
+      OR (delivery_status = 'UNKNOWN_NO_RETRY' AND transport_calls = 1 AND response_hash IS NULL))
+);
+
+CREATE TABLE evaluation.posting_feedback_result_categories (
+  run_fingerprint text NOT NULL,
+  sample_id uuid NOT NULL,
+  category text NOT NULL CHECK (category IN (
+    'harassment', 'harassment/threatening', 'hate', 'hate/threatening', 'illicit',
+    'illicit/violent', 'self-harm', 'self-harm/instructions', 'self-harm/intent',
+    'sexual', 'sexual/minors', 'violence', 'violence/graphic'
+  )),
+  provider_flag boolean,
+  provider_score numeric CHECK (provider_score IS NULL OR provider_score BETWEEN 0 AND 1),
+  input_types_observed boolean NOT NULL DEFAULT false,
+  applied_input_types text[] NOT NULL DEFAULT '{}'
+    CHECK (cardinality(applied_input_types) <= 2
+      AND applied_input_types <@ ARRAY['text', 'image']::text[]
+      AND (input_types_observed OR cardinality(applied_input_types) = 0)),
+  PRIMARY KEY (run_fingerprint, sample_id, category),
+  FOREIGN KEY (run_fingerprint, sample_id)
+    REFERENCES evaluation.posting_feedback_results(run_fingerprint, sample_id) ON DELETE CASCADE,
+  CHECK (provider_flag IS NOT NULL OR provider_score IS NOT NULL OR input_types_observed)
+);
+
+CREATE INDEX posting_feedback_results_expiry_idx
+  ON evaluation.posting_feedback_results (expires_at);
+
+COMMENT ON TABLE evaluation.posting_feedback_probe_runs IS
+  'Minimal no-replay tombstones for one frozen synthetic moderation probe; not user content.';
+COMMENT ON TABLE evaluation.posting_feedback_probe_samples IS
+  'The exact immutable first-20 artificial fixtures and SHA-256 body bindings approved for this proposal.';
+COMMENT ON TABLE evaluation.posting_feedback_attempt_claims IS
+  'One durable pre-call claim per frozen run/sample. Claims are never expired by result cleanup.';
+COMMENT ON TABLE evaluation.posting_feedback_results IS
+  'Sanitized allowlisted moderation observations with a proposed seven-day result lifetime.';
+COMMENT ON TABLE evaluation.posting_feedback_result_categories IS
+  'Provider category flags, scores, and applied modalities; scores are not calibrated probabilities.';
+
+-- Future retention operation, only after its separate deployment approval:
+-- DELETE FROM evaluation.posting_feedback_results WHERE expires_at <= statement_timestamp();
+-- The category rows cascade; the run and attempt claim tombstones must remain.
+
+-- Future grants are intentionally non-executable placeholders. Resolve managed
+-- PlanetScale SQL roles through the normal authorized role workflow first:
+-- GRANT USAGE ON SCHEMA evaluation TO __APPROVED_EVALUATION_WRITER_ROLE__;
+-- GRANT INSERT ON evaluation.posting_feedback_probe_runs TO __APPROVED_EVALUATION_WRITER_ROLE__;
+-- GRANT SELECT (run_fingerprint) ON evaluation.posting_feedback_probe_runs TO __APPROVED_EVALUATION_WRITER_ROLE__;
+-- GRANT INSERT ON evaluation.posting_feedback_attempt_claims TO __APPROVED_EVALUATION_WRITER_ROLE__;
+-- GRANT SELECT (run_fingerprint, sample_id, input_hash, revision, state)
+--   ON evaluation.posting_feedback_attempt_claims TO __APPROVED_EVALUATION_WRITER_ROLE__;
+-- GRANT UPDATE (state, receipt_committed_at)
+--   ON evaluation.posting_feedback_attempt_claims TO __APPROVED_EVALUATION_WRITER_ROLE__;
+-- GRANT INSERT ON evaluation.posting_feedback_results TO __APPROVED_EVALUATION_WRITER_ROLE__;
+-- GRANT SELECT (run_fingerprint, sample_id)
+--   ON evaluation.posting_feedback_results TO __APPROVED_EVALUATION_WRITER_ROLE__;
+-- GRANT INSERT ON evaluation.posting_feedback_result_categories TO __APPROVED_EVALUATION_WRITER_ROLE__;
+-- GRANT SELECT (category)
+--   ON evaluation.posting_feedback_result_categories TO __APPROVED_EVALUATION_WRITER_ROLE__;
+-- GRANT SELECT (expires_at), DELETE ON evaluation.posting_feedback_results TO __APPROVED_RETENTION_ROLE__;
+-- GRANT USAGE ON SCHEMA evaluation TO __APPROVED_RETENTION_ROLE__;
+-- GRANT SELECT ON evaluation.posting_feedback_results, evaluation.posting_feedback_result_categories
+--   TO __APPROVED_EVALUATION_READER_ROLE__;
+-- GRANT USAGE ON SCHEMA evaluation TO __APPROVED_EVALUATION_READER_ROLE__;
+-- Do not grant DELETE on run or attempt claims to an application or retention role.
+*/

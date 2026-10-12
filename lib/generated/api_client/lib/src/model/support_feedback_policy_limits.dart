@@ -8,7 +8,7 @@ import 'package:built_value/serializer.dart';
 
 part 'support_feedback_policy_limits.g.dart';
 
-/// SupportFeedbackPolicyLimits
+/// Optional character limits count Unicode scalar values after trimming. UTF-8 byte limits remain independently enforced.
 ///
 /// Properties:
 /// * [titleBytes]
@@ -16,6 +16,10 @@ part 'support_feedback_policy_limits.g.dart';
 /// * [stepsBytes]
 /// * [contextBytes]
 /// * [memberMessageBytes]
+/// * [titleCharacters]
+/// * [detailCharacters]
+/// * [stepsCharacters]
+/// * [memberMessageCharacters]
 @BuiltValue()
 abstract class SupportFeedbackPolicyLimits implements Built<SupportFeedbackPolicyLimits, SupportFeedbackPolicyLimitsBuilder> {
   @BuiltValueField(wireName: r'titleBytes')
@@ -32,6 +36,18 @@ abstract class SupportFeedbackPolicyLimits implements Built<SupportFeedbackPolic
 
   @BuiltValueField(wireName: r'memberMessageBytes')
   int get memberMessageBytes;
+
+  @BuiltValueField(wireName: r'titleCharacters')
+  int? get titleCharacters;
+
+  @BuiltValueField(wireName: r'detailCharacters')
+  int? get detailCharacters;
+
+  @BuiltValueField(wireName: r'stepsCharacters')
+  int? get stepsCharacters;
+
+  @BuiltValueField(wireName: r'memberMessageCharacters')
+  int? get memberMessageCharacters;
 
   SupportFeedbackPolicyLimits._();
 
@@ -81,6 +97,34 @@ class _$SupportFeedbackPolicyLimitsSerializer implements PrimitiveSerializer<Sup
       object.memberMessageBytes,
       specifiedType: const FullType(int),
     );
+    if (object.titleCharacters != null) {
+      yield r'titleCharacters';
+      yield serializers.serialize(
+        object.titleCharacters,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.detailCharacters != null) {
+      yield r'detailCharacters';
+      yield serializers.serialize(
+        object.detailCharacters,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.stepsCharacters != null) {
+      yield r'stepsCharacters';
+      yield serializers.serialize(
+        object.stepsCharacters,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.memberMessageCharacters != null) {
+      yield r'memberMessageCharacters';
+      yield serializers.serialize(
+        object.memberMessageCharacters,
+        specifiedType: const FullType(int),
+      );
+    }
   }
 
   @override
@@ -138,6 +182,34 @@ class _$SupportFeedbackPolicyLimitsSerializer implements PrimitiveSerializer<Sup
             specifiedType: const FullType(int),
           ) as int;
           result.memberMessageBytes = valueDes;
+          break;
+        case r'titleCharacters':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.titleCharacters = valueDes;
+          break;
+        case r'detailCharacters':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.detailCharacters = valueDes;
+          break;
+        case r'stepsCharacters':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.stepsCharacters = valueDes;
+          break;
+        case r'memberMessageCharacters':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.memberMessageCharacters = valueDes;
           break;
         default:
           unhandled.add(key);

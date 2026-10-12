@@ -1,0 +1,190 @@
+# Notification client request lifecycle
+
+Integration base: `88ffc079d95797485bce33617e2a7e3545ef7e0b`, fetched from
+`origin/main` and independently checked through GitHub on 2026-10-11.
+#975–#978 and #979/#980/#983 are included. The initial saved checkout was
+clean at `dba135ca3720b1311c5ec3d1d9e00ab7a67a568d`.
+
+Read root AGENTS.md, README, canonical notification schemas/routes in
+`api/openapi/product-integrity.yaml`, the resource registry, migrations
+0004/0010/0012, native notification handlers and policy, and the disabled
+push seed before edits. No repository `.agents/skills/SKILL.md` or nested
+AGENTS.md exists. Open PRs were inspected; #981/#982/#984/#985 own adjacent
+work and have no overlapping paths. No competing notification-centre slice
+was found. Their workflow, settings, posting and export files are untouched.
+
+Read-only PlanetScale metadata confirms `lythaus/lythaus-core` is PostgreSQL
+with only production `main`. Feed schema inspection confirms existing
+notification, delivery-preference and redacted-device storage. No personal
+notification content or live rows were read. Registry resources, feature
+flags, provider configuration and production schema/data are unchanged.
+
+## Demonstrated defects and correction
+
+Thirteen new delayed-response provider tests fail against unmodified main.
+Six rendered tests copied into a detached checkout of the same exact main
+also fail, covering refresh recovery, repeated navigation and a receipt
+arriving after another route becomes current, at 390px and 1440px.
+
+The client now preserves acknowledged read/dismiss actions across later list
+responses, deduplicates IDs, rejects repeated/cyclic cursors without appending
+rows, and clears pagination errors after successful retry. Refresh failures
+retry the first page, including when no pagination cursor remains.
+
+Per-notification pending actions issue at most one concurrent write. Boolean
+results describe an acknowledged action independently of the current page.
+Uncertain transport results retain rows and show confirmation/recovery text;
+explicit refresh can reconcile an operation whose server reply was lost.
+Reads retain a nullable server timestamp rather than inventing one locally.
+Read/dismiss outcomes invalidate the separate unread-count read, including
+uncertain results; an older count cannot replace its refreshed generation.
+
+Authentication-required mutation results clear the private list and fence
+older list reads. Existing synchronous session revision, cancellation,
+JWT-subject binding and guest protection remain intact. A navigation guard
+permits one destination at a time and rejects late navigation after Back,
+an account change, or another route becoming current.
+
+Preference reads use a request generation so an older result/error cannot
+replace an acknowledged save or newer read. A pending preference save blocks
+overlapping loads and rejects another write. The existing error/reload UI
+still obtains authoritative server values after a failed save.
+
+Confirmed ID sets and cursor history are memory-only and belong to the
+existing session-scoped controller. Read/dismiss are monotonic operations in
+the current contract; neither endpoint supports undo. Fresh first-page reads
+reset cursor history, and a new authentication session gets a new controller.
+
+## Requirements, code and regression evidence
+
+| Requirement | Code | Tests |
+| --- | --- | --- |
+| Stale pages cannot reverse confirmed actions | `NotificationsController._reconcile`, `markAsRead`, `dismiss` | Delayed refresh/page × read/dismiss; overlapping IDs; uncertain dismissal retained until explicit read |
+| Truthful pagination and recovery | Captured cursor, `_visitedCursors`, `loadMoreFailed`; centre retry callback | Repeated cursor, cursor cycle/reset, failed-page retry then another page; last-page refresh retry at both widths |
+| Private account isolation and session revocation | `_requireAuthentication`, service auth/credential revisions; centre session/token epoch and route checks | Real Dio/provider A→B→A; mutation 401 with stale refresh; real auth/service refresh recovery and old read/dismiss cancellation; logout/reentry with both distinct-ID transports observed; delayed token, guest and foreign-owner cases |
+| Reliable mutation and unread reconciliation | Per-ID pending set, explicit result, `onUnreadChanged` callback | Repeated pending reads; four real-provider read/dismiss × confirmed/uncertain count tests with late older counts |
+| Existing destinations and Back | Centre `_opening`, durable `_navigationEpoch`, route dependency/secondary-animation listeners, captured `ModalRoute.isCurrent` | Repeated clicks, Back after destination, Back before receipt, inactive route, push→Back→late receipt including no intervening frame, failed-read retry and unknown destination at both widths |
+| Preference request ordering | `PreferencesController._requestEpoch`, `_updating` | Older read/error after save, latest read wins, repeated save/load while saving; existing native toggle acknowledgements and account-switch rendered tests |
+| Truthful empty/loading and native preference contract | Existing screen branches, preserved native parsing | Pending load becomes empty only after response; existing guest/error states; native five-boolean payload, no quiet-hour/timezone controls or invented links |
+
+## Validation
+
+### Independent review corrections
+
+Four additional rendered cases reproduce the reviewed push→Back→late-receipt
+navigation race against draft `cb6463ea`. A screen-local navigation generation
+now invalidates the old tap when the route is covered, even if it becomes
+current again before the receipt. Route dependencies cover rendered route
+changes, and the route's secondary-animation status catches an immediate
+Material-route push/pop without a frame. Listeners are removed on disposal.
+No shared router or observer configuration changed. Acknowledged read state
+is retained, and a fresh tap still opens the existing supported destination.
+
+Three real `AuthStateNotifier`/`AuthService` regressions and two server-read
+overlap regressions fail against that draft. Successful same-owner
+`refreshToken()` changes `tokenVersion` while preserving the auth revision and
+owner. Notification services now use a private credential-revision notifier
+with synchronous cancellation, reusing the existing revision implementation.
+Credential rotations create fresh controllers and clear the authentication-
+required latch; old list/read/dismiss results remain fenced. The centre also
+tracks token versions and reloads after rotation. Four additional rendered
+cases verify real auth/service recovery and late-receipt rejection at both
+widths. The auth HTTP fixtures use `expectSync` in asynchronous callbacks so
+Flutter's guarded `pump` does not turn a fixture assertion into an auth error.
+
+The logout/reentry fixture uses two notification IDs and asserts that both
+read and dismissal transports start before the switch. Both old outcomes
+return false, and both fresh rows remain unchanged. The previous same-ID
+fixture did not start dismissal once the per-ID busy guard was introduced.
+
+Canonical `notificationAction` only sets `read_at`; it exposes no operation
+that clears read state. Reconciliation therefore retains server-observed
+read facts as well as local acknowledgements across older overlapping pages
+and refreshes. It does not fabricate a timestamp or add a product policy.
+
+Correction focused suite: 147 PASS, zero failures/skips, including 28 new
+rendered cases at 390px and 1440px. Full correction coverage run: 3,217 PASS,
+six existing skips and zero failures; all coverage gates pass with unchanged
+baselines. Analysis, seven-file formatting, diff, canonical release web build
+and rebuilt Chromium notification fixtures at both widths pass. Hosted
+exact-head CI results are recorded separately in the draft handoff. Local
+WebKit retains the documented pre-launch host limitation and was not retried.
+
+At the committed production and test source (`92ded7e9`), including all 20
+new rendered cases:
+
+- `bash scripts/test-with-coverage.sh`: 3,204 PASS, six existing skips,
+  zero failures; total coverage 88.77%.
+- `bash scripts/check_coverage_gates.sh`: PASS, total/P1/P2/P3 gates intact
+  (88.77%/89%/91%/86%). No baselines were changed.
+
+Focused checks, including failed-read/unknown-link cases and deterministic
+icon loading:
+
+- `flutter test --no-pub test/features/notifications test/core/routing/deeplink_router_test.dart test/screens/guest_account_entry_test.dart --reporter expanded`:
+  134 PASS, zero failures/skips, including 20 new rendered mobile/desktop cases.
+- `flutter analyze --no-pub`: PASS after scoped formatting/type corrections.
+- Scoped `dart format --output=none --set-exit-if-changed` and
+  `git diff --check`: PASS.
+- `bash scripts/cf-pages-build.sh`: PASS, release host and security-header
+  checks intact. Existing Wasm dry-run warnings remain; no Wasm build is claimed.
+- `npm run typecheck:native`: PASS.
+- `npm run openapi:test:contract`: 70 PASS, 17 existing skips.
+- Native notification policy tests: 2 PASS.
+- `npm run validate:planetscale-postgres17`: PASS on a new disposable local
+  PostgreSQL 17 container/database, including migration checksums, grants,
+  forbidden privileges and rollback checks. This validates schema compatibility,
+  not a new end-to-end notification delivery path.
+- Existing release `native-notifications.browser.mjs`: Chromium 390px/1440px
+  PASS. Both WebKit cases fail before launching the app: host validation
+  reports `libGLESv2.so.2` unavailable in the system loader cache. The packaged
+  library is available through the local library path, but that does not
+  satisfy Playwright's independent `ldconfig -p` check. A WebKit-only rerun
+  reproduces the same pre-launch failure. Fixture listeners left open after
+  failed launch cause the outer 180-second run timeout. No host check, test,
+  assertion or workflow was disabled or weakened. WebKit app assertions are
+  unrun locally; exact-head hosted CI remains separate evidence.
+
+The initial new rendered fixture stalled on test-clock scheduling and was
+stopped; corrected fixtures pass. Popup-menu route counting was corrected to
+count page destinations. Existing settings tests still emit their prior
+hit-test warning; this slice does not suppress it or claim physical-device QA.
+
+Regenerate synthetic screenshots with
+`NOTIFICATION_SCREENSHOTS_DIR=/tmp/notification-screenshots flutter test --no-pub test/features/notifications/presentation/notifications_lifecycle_test.dart`.
+Captured and visually inspected mobile/desktop refresh-error and unconfirmed-
+dismissal PNGs are available under that directory. Provider/unit baseline
+failure logs, rendered baseline failures and final logs are in
+`/tmp/notification-*.log`. Generated coverage artifacts are local evidence,
+not part of the source change.
+
+## Remaining gates and rollback
+
+GitHub denied the main branch-protection read with HTTP403
+`Resource not accessible by integration`. A CI job-log download also returned
+HTTP403. Both operations stopped without another route to obtain the denied
+content. Available job metadata and local reproduction identified an evidence-
+document naming failure; its wording was corrected without changing the gate.
+The parent must certify the
+required-check set and coordinate independent review and serialized integration.
+Draft head, verified remote SHA and exact-head CI results belong in the PR
+handoff; historical main or earlier-head checks do not certify the draft.
+Main advanced to `bc57edf59f843346f965ce66d719dc3c9c424283` (#982 profile
+settings) after this branch was based on `88ffc079`. Its four changed paths
+do not overlap this slice. Parent integration and combined-head validation
+remain pending.
+
+Native notification payloads currently provide a generic title/type/entity ID
+without a destination or post preview. Existing compatible deep links remain
+supported; this slice does not derive a post destination from an ambiguous ID.
+Any new server destination/payload policy would require parent allocation of
+`apps/lythaus-public-api/src/index.ts` and `api/openapi/product-integrity.yaml`,
+with posting/moderation review. Private or under-review post previews are not
+introduced. Canonical preferences expose only five delivery booleans;
+quiet-hour/timezone editing needs an approved server contract/schema and product
+decisions. Existing unavailable behavior and disabled features are preserved.
+
+Owner native/browser, cross-device and complete social-post/delivery acceptance
+remain pending Sunday October 11. No live push/email, credentials, activation,
+paid resources, migration, merge or deployment occurred. Rollback is a reviewed
+revert of the scoped client commit; there is no database or provider rollback.

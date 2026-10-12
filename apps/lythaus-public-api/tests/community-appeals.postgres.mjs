@@ -44,9 +44,9 @@ async function tx(work, role = 'lythaus_runtime') {
   } catch (error) { await client.query('ROLLBACK'); throw error; } finally { await client.end(); }
 }
 const sql = (text, values) => tx(client => client.query(text, values), null);
-const binding = { role: 'lythaus_runtime' }, jobsBinding = { role: 'lythaus_jobs' }, adminBinding = { role: 'lythaus_admin' };
+const binding = { role: 'lythaus_runtime' }, jobsBinding = { role: 'lythaus_jobs' }, adminBinding = { role: 'lythaus_admin' }, privacyBinding = { role: 'lythaus_privacy' };
 mock.module('@lythaus/db', { namedExports: { ...database,
-  transaction: (actual, work) => { assert.ok([binding, jobsBinding, adminBinding].includes(actual)); return tx(work, actual.role); },
+  transaction: (actual, work) => { assert.ok([binding, jobsBinding, adminBinding, privacyBinding].includes(actual)); return tx(work, actual.role); },
   query: (actual, text, values) => { assert.ok([binding, jobsBinding, adminBinding].includes(actual)); return tx(client => client.query(text, values), actual.role); },
 } });
 const { default: worker } = await import('../src/index.ts');
@@ -63,7 +63,7 @@ const rules = PROPOSED_COMMUNITY_APPEAL_RULES.version, flag = 'moderation.commun
 const env = { EXPECTED_HOSTNAMES: 'api.lythaus.test', CORS_ALLOWED_ORIGINS: 'https://app.lythaus.test',
   DB_APP_FRESH: binding, COMMUNITY_APPEAL_RULES_VERSION: rules,
   JWT_PUBLIC_JWKS: JSON.stringify({ keys: [{ ...await exportJWK(publicKey), kid: keyId, alg: 'ES256', use: 'sig' }] }) };
-const jobsEnv = { DB_JOBS_FRESH: jobsBinding, COMMUNITY_APPEAL_RULES_VERSION: rules };
+const jobsEnv = { DB_JOBS_FRESH: jobsBinding, DB_PRIVACY_FRESH: privacyBinding, COMMUNITY_APPEAL_RULES_VERSION: rules };
 const adminEnv = { EXPECTED_HOSTNAMES: 'admin-api.lythaus.test', CORS_ALLOWED_ORIGINS: 'https://admin-api.lythaus.test',
   DB_ADMIN_FRESH: adminBinding, COMMUNITY_APPEAL_RULES_VERSION: rules, ACCESS_AUDIENCES: 'synthetic-community-admin',
   ACCESS_SUBJECT_HMAC_KEY: 'synthetic-community-access-subject-key', ACCESS_TEAM_DOMAIN: 'synthetic-access.lythaus.test',
