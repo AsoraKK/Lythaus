@@ -3,6 +3,11 @@
 Status: Approved amendment for controlled Alpha
 Classifier: Lythaus Authenticity AI
 
+Authority reconciled 11 October 2026: [current policy authority](current-policy-authority.md).
+The disclosure rules below remain unchanged. Public publishing stays withheld
+until the complete pipeline is validated and activation is approved; this Alpha
+policy and owner-test deployment do not certify authentication or detection.
+
 ## Public labels
 
 Lythaus displays exactly one categorical label on every post surface:
@@ -29,9 +34,21 @@ Honestly disclosed AI-assisted content receives a neutral disclosure ledger even
 
 ## Appeals
 
-The appeal record retains the original disclosure, automated classification, internal score and threshold version, appeal reason, independent trained-reviewer result, human adjudication, final label, final moderation action, decision version, and timestamps.
+The appeal record retains the original disclosure, classification and threshold
+version, reason, policy-versioned review/outcome, final label and moderation
+action, decision version and timestamps. Private scores and evidence remain
+internal. Historical reviewer and adjudication evidence must be preserved.
 
-Each appeal requires five independently assigned trained reviewers, the approved weighted quorum and majority, and at least one trained Editorial/journalist adjudicator confirmation. Higher-risk cases require two adjudicators. Reviewer votes alone cannot change content state or override legal or safety requirements. Final updates invalidate cached public representations through private/no-store or revalidation-safe response policies.
+New standard appeals use timed, private community review with one equal vote per
+eligible member and no routine Editorial confirmation. The duration, quorum and
+activation are separate approvals. Restricted safety and unresolved cases require
+accountable handling; no outcome may override legal or safety requirements.
+
+Historical `appeals-v1.0.0` cases retain five trained reviewers, weighted quorum
+and majority, and trained Editorial/journalist confirmation (one standard, two
+high-risk). These rules do not govern new standard cases. Final updates invalidate
+cached public representations through private/no-store or revalidation-safe
+response policies; a resolved appeal does not bypass publishing holds.
 
 ## Surfaces
 

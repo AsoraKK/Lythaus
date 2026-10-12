@@ -44,6 +44,8 @@ try {
   if (monthlyFixtures.error || monthlyFixtures.status !== 0)
     throw monthlyFixtures.error ?? new Error(monthlyFixtures.stderr);
   writeFileSync(join(validationPackage, 'test/monthly_rewards_preparation_wire.json'), monthlyFixtures.stdout);
+  cpSync(resolve('tests/contract/dart/owner_comments_serialization_test.dart.fixture'),
+    join(validationPackage, 'test/owner_comments_serialization_test.dart'));
   // Keep the temporary validator on the verified compatible build toolchain.
   // analyzer 14.5 removed the contextFeatures setter used by build_runner 2.16.1.
   const manifestPath = join(validationPackage, 'pubspec.yaml');
@@ -55,7 +57,7 @@ try {
     '  build_runner: 2.16.1\n  analyzer: 14.4.0'));
   run(['pub', 'get']);
   run(['run', 'build_runner', 'build']);
-  run(['format', '--output=none', '--set-exit-if-changed', 'test/community_appeal_serialization_test.dart', 'test/admin_mutation_admission_test.dart', 'test/support_feedback_serialization_test.dart', 'test/activity_measurement_serialization_test.dart', 'test/monthly_rewards_preparation_serialization_test.dart']);
+  run(['format', '--output=none', '--set-exit-if-changed', 'test/community_appeal_serialization_test.dart', 'test/admin_mutation_admission_test.dart', 'test/support_feedback_serialization_test.dart', 'test/activity_measurement_serialization_test.dart', 'test/monthly_rewards_preparation_serialization_test.dart', 'test/owner_comments_serialization_test.dart']);
   run(['analyze', '--no-fatal-warnings']);
   run(['test', '--reporter', 'compact']);
 } finally {

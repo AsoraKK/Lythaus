@@ -220,7 +220,6 @@ test('schema rejects legacy/unversioned output, extra properties and entitlement
   const inconsistent = reportDto(preparedReportFixture()); inconsistent.report.weekly.periodPolicyStatus = 'unavailable';
   assert.equal(validate(inconsistent), false);
 });
-
 test('known preparation readiness is disabled metadata, never assessed progress or authority', () => {
   const value = monthlyRewardsResponseReadiness();
   assert.deepEqual(value, { state: 'disabled', reasonCode: 'activation_not_approved', ...metadata });

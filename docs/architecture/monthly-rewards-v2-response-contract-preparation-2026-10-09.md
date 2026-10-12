@@ -1,7 +1,8 @@
 # Disabled monthly rewards v2 response contract preparation
 
-This dependent preparation starts at reviewed #963 commit
-`73c31f2d0db290ae95e839eae72551ab6ac507d0`. Main inspected on 9 October is
+This dependent preparation originally started at reviewed #963 commit
+`73c31f2d0db290ae95e839eae72551ab6ac507d0` and is now refreshed on top of #963
+head `d849ea1e0a18055db7c6a41385e58c60652c9a5b`. Main inspected on 9 October is
 `e9bb0007b08fff89d85217adefde0d45a4b56f65`; shared integration remains with
 the coordinator. No route, environment binding, generated client, screen,
 activation decision, provider resource, grant or production migration changes.

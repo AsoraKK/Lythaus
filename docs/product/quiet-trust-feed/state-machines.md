@@ -3,13 +3,17 @@
 **Status:** Current UI mapping for the repository contract. Server responses
 remain authoritative; unknown values use safe, non-affirming fallbacks.
 
+See the [current policy authority](../../policy/current-policy-authority.md).
+The table below maps historical `appeals-v1.0.0` states, not a universal appeal
+policy. New-policy UI and activation require their own verified contract mapping.
+
 ## Trust strip
 
 Status precedence is `under_appeal`, `actioned`,
 `verified_signals_attached`, then `no_extra_signals`. The receipt timeline is
 chronological and may show content creation, moderation, an appeal submission,
 reviewer-panel completion, adjudication, and a final appeal outcome. It must not
-invent a public vote, staff override, or model-authored decision.
+invent public ballot exposure, a staff override, or a model-authored decision.
 
 | Backend | Flutter UI value |
 | --- | --- |
@@ -32,6 +36,17 @@ Unknown trust status maps to `noExtraSignals`.
 Unknown moderation action maps to `none`.
 
 ## Appeal lifecycle
+
+### New standard community direction
+
+New standard cases use timed private community review with equal votes, no fixed
+trained panel or Level 5 weight, and no routine Editorial confirmation. The
+candidate [community contract](../../../api/openapi/community-appeals.yaml)
+distinguishes open/extended, resolved allow/retain, unresolved and restricted
+states plus restoration holds. Do not render an unknown state or an outcome with
+a hold as public approval. Timing/quorum defaults and activation remain separate.
+
+### Historical appeals-v1.0.0 mapping
 
 An eligible appeal is submitted in `open` state. Jobs independently assign
 five trained reviewers. Known related-account groups may occupy at most one
@@ -63,6 +78,9 @@ override, or administrator override.
 Unknown appeal state maps to `inReview`; it must not render as resolved.
 
 ## Timeline events
+
+The following historical events retain their existing meanings; do not fabricate
+them for new-policy cases or use them to infer routine adjudication is required.
 
 | Canonical event | Flutter presentation |
 | --- | --- |

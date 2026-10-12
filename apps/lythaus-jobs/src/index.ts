@@ -8,6 +8,7 @@ import { constantTimeEqual, decryptField, uuidv7 } from '@lythaus/security';
 import { buildPrivacyDataPassport, decryptPrivatePassportIdentity, ensureWorkflowCreate, isCurrentContentModerationRevision, isCurrentProfileModerationRevision, legalHoldPlan, lockedAppealVote, moderationReputationSignal, parseContentModerationRevision, parseProfileModerationRevision, privacyRequestLifecyclePlan, queueRouteForEvent, reconcilePrivacyRequestPayload, reputationActivity, retentionCleanupPlan, reviewerReplacementPlan, securityAuditRetentionPlan, type PrivacyRequestPayload, type WorkflowCreateBinding } from './runtime-policy.ts';
 import { EMAIL_LIFECYCLE_QUEUE, handleTransactionalEmailLifecycleWebhook, processEmailLifecycleQueue, readTransactionalEmailDeliveryEvidence, relayTransactionalEmailOutbox } from './transactional-email-runtime.ts';
 import { WorkflowEntrypoint } from 'cloudflare:workers';
+import { storePrivateExportObject } from './privacy-export-storage.ts';
 import { processBetaEvent, expireBetaWork } from './authenticity-beta.ts';
 import { processAlphaEvent, expireAlphaWork } from './authenticity-alpha.ts';
 import { deferMonthlyReputationAssessment, processMonthlyReputationAssessment, reconcileDeferredMonthlyReputation } from './monthly-reputation.ts';
@@ -1096,7 +1097,7 @@ async function processCommentModeration(message: QueueMessage, env: Env): Promis
       `INSERT INTO system.audit_events
          (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
        VALUES ($1, $2, 'moderation.comment.review_requested', 'comment', $3,
-               'PUBLIC_COMMENT_REVIEW', $1::text, '{}'::jsonb)
+               'PUBLIC_COMMENT_REVIEW', $1::uuid::text, '{}'::jsonb)
        ON CONFLICT (id) DO NOTHING
        RETURNING id`,
       [eventId, row.author_id, revision.contentId],
@@ -2512,16 +2513,29 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
       const digest = await crypto.subtle.digest('SHA-256', bytes);
       const packageHash = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, '0')).join('');
       const objectKey = `exports/${subjectId}/${requestId}.json`;
-      await exportsBucket.put(objectKey, bytes, { httpMetadata: { contentType: 'application/json' } });
       const activityEventId = await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
+        const current = await client.query<{ state: string }>(
+          `SELECT state FROM privacy.requests
+            WHERE id = $1 AND subject_id = $2 AND request_type = 'export' FOR UPDATE`,
+          [requestId, subjectId]);
+        if (!current.rows[0]) throw new Error('privacy_export_request_not_found');
+        if (!['received', 'processing', 'completed'].includes(current.rows[0].state)) {
+          throw new Error('privacy_export_request_unavailable');
+        }
+        const account = await client.query<{ status: string; deleted_at: string | null }>(
+          `SELECT status, deleted_at FROM identity.users WHERE id = $1 FOR NO KEY UPDATE`, [subjectId]);
+        if (account.rows[0]?.status !== 'active' || account.rows[0].deleted_at !== null) {
+          throw new Error('privacy_export_account_unavailable');
+        }
+        await storePrivateExportObject(client, exportsBucket, objectKey, bytes);
         await client.query(
           `INSERT INTO privacy.export_manifests (id, request_id, object_key, package_hash, expires_at)
            VALUES ($1, $2, $3, $4, now() + interval '7 days')
            ON CONFLICT (request_id, object_key)
-           DO UPDATE SET package_hash = EXCLUDED.package_hash, expires_at = EXCLUDED.expires_at`,
+           DO UPDATE SET package_hash = EXCLUDED.package_hash`,
           [uuidv7(), requestId, objectKey, packageHash],
         );
-        await client.query(`UPDATE privacy.requests SET state = 'completed', completed_at = now() WHERE id = $1`, [requestId]);
+        await client.query(`UPDATE privacy.requests SET state = 'completed', completed_at = COALESCE(completed_at, now()) WHERE id = $1`, [requestId]);
         await client.query(`INSERT INTO privacy.request_events (id, request_id, event_type, metadata)
           SELECT $1, $2, 'completed', $3::jsonb
            WHERE NOT EXISTS (SELECT 1 FROM privacy.request_events WHERE request_id = $2 AND event_type = 'completed')`, [uuidv7(), requestId, JSON.stringify({ objectKey, packageHash })]);

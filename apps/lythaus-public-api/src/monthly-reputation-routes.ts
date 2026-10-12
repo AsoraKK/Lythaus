@@ -1,10 +1,11 @@
 import type { Client } from 'pg';
+import { uuidv7 } from '@lythaus/security';
 import { classifyPublicError } from './auth-runtime-policy.ts';
-import { readOwnMonthlyReputationReport } from '../../../packages/db/src/monthly-reputation-report.ts';
+import { readOwnMonthlyReputationReport, type MonthlyReputationReportBounds } from '../../../packages/db/src/monthly-reputation-report.ts';
 import { readOwnMonthlyRewardSnapshot } from '../../../packages/db/src/monthly-reward-snapshots.ts';
 import { readOwnMonthlyRewardSelections } from '../../../packages/db/src/monthly-reward-selections.ts';
 import { requireSourceMonth } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
-import { serializeMonthlyReputationReportCsv } from './monthly-reputation-report-export.ts';
+import { serializeMonthlyReputationReportCsv, serializeMonthlyReputationReportJson } from './monthly-reputation-report-export.ts';
 import { monthlyRewardsResponseReadiness } from '../../../packages/contracts/src/monthly-rewards-response-readiness.ts';
 
 export interface MonthlyReputationRouteDependencies {
@@ -12,6 +13,7 @@ export interface MonthlyReputationRouteDependencies {
   transaction: <T>(work: (client: Client) => Promise<T>) => Promise<T>;
   snapshotRulesVersion?: string;
   selectionRulesVersion?: string;
+  reportBounds?: Partial<MonthlyReputationReportBounds>;
   respond: (body: unknown, status: number, headers?: HeadersInit) => Response;
 }
 
@@ -23,13 +25,16 @@ function privateResponse(dependencies: MonthlyReputationRouteDependencies, body:
 }
 
 function monthlyJsonResponse(dependencies: MonthlyReputationRouteDependencies, body: object): Response {
-  return privateResponse(dependencies, { ...body,
+  return privateResponse(dependencies, serializeMonthlyReputationReportJson({ ...body,
     responsePreparation: monthlyRewardsResponseReadiness(), preparedResponse: null,
-  }, 200, { 'content-type': 'application/json; charset=utf-8' });
+  }, dependencies.reportBounds), 200, { 'content-type': 'application/json; charset=utf-8' });
 }
 
 function errorResponse(dependencies: MonthlyReputationRouteDependencies, error: unknown): Response {
   const code = error instanceof Error ? error.message : '';
+  if (code === 'monthly_report_resource_limit_exceeded') {
+    return privateResponse(dependencies, { error: code, correlationId: uuidv7() }, 503);
+  }
   if (code === 'monthly_reputation_source_month_invalid' || code === 'monthly_reputation_effective_month_invalid') {
     return privateResponse(dependencies, { error: code }, 400);
   }
@@ -68,9 +73,10 @@ export async function handleMonthlyReputationRead(request: Request,
         subjectId: principal.userId,
         sourceMonth,
         snapshotRulesVersion: dependencies.snapshotRulesVersion,
+        bounds: dependencies.reportBounds,
       }));
       if (route.kind === 'csv') {
-        return privateResponse(dependencies, serializeMonthlyReputationReportCsv(report), 200, {
+        return privateResponse(dependencies, serializeMonthlyReputationReportCsv(report, undefined, dependencies.reportBounds), 200, {
           'content-type': 'text/csv; charset=utf-8',
           'content-disposition': `attachment; filename="monthly-reputation-${sourceMonth}.csv"`,
         });

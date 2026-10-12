@@ -16,6 +16,9 @@ import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/application/owner_posts.dart';
+import 'package:lythaus/features/profile/application/owner_comments.dart';
+import 'package:lythaus/features/profile/domain/owner_comment.dart';
+import 'package:lythaus/features/profile/presentation/owner_comments_section.dart';
 import 'package:lythaus/features/rewards/application/reward_providers.dart';
 import 'package:lythaus/features/profile/application/follow_providers.dart';
 import 'package:lythaus/features/profile/application/follow_service.dart';
@@ -37,6 +40,8 @@ import 'package:lythaus/ui/screens/profile/reputation_ledger_screen.dart';
 import 'package:lythaus/ui/screens/rewards/monthly_reputation_widgets.dart';
 import 'package:lythaus/state/providers/reputation_providers.dart';
 import 'package:lythaus/widgets/reputation_badge.dart';
+
+enum _ProfileToolbarAction { openSettings, refresh }
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key, this.userId});
@@ -73,7 +78,14 @@ class ProfileScreen extends ConsumerWidget {
       loading: () => ReadingPane(
         child: Scaffold(
           appBar: AppBar(title: const Text('Profile')),
-          body: const Center(child: CircularProgressIndicator()),
+          body: Semantics(
+            container: true,
+            liveRegion: true,
+            label: 'Loading profile',
+            child: const ExcludeSemantics(
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          ),
         ),
       ),
       error: (error, stack) => ReadingPane(
@@ -110,6 +122,7 @@ class ProfileScreen extends ConsumerWidget {
   }) {
     final currentUser = ref.read(currentUserProvider);
     final isOwner = currentUser != null && currentUser.id == profile.id;
+    final compactToolbar = MediaQuery.sizeOf(context).width < 240;
     final canModerate =
         isOwner &&
         (currentUser.role == UserRole.moderator ||
@@ -118,34 +131,76 @@ class ProfileScreen extends ConsumerWidget {
       _logProfileComplete(ref, profile, currentUser.id);
     }
 
+    void refreshProfile() {
+      ref.invalidate(publicUserProvider(profile.id));
+      if (isOwner) {
+        ref.invalidate(ownerProfileProvider);
+        ref.invalidate(reputationProvider);
+        ref.invalidate(monthlyRewardsViewProvider);
+        final key = OwnerPostsKey(
+          userId: profile.id,
+          sessionRevision: ref.read(authSessionRevisionProvider),
+        );
+        ref.read(ownerPostsTimelineProvider(key).notifier).refresh();
+        ref
+            .read(
+              ownerCommentsTimelineProvider(
+                OwnerCommentsKey(
+                  userId: profile.id,
+                  sessionRevision: key.sessionRevision,
+                ),
+              ).notifier,
+            )
+            .refresh();
+      }
+    }
+
     return ReadingPane(
       child: Scaffold(
         appBar: AppBar(
           title: Text(
-            MediaQuery.sizeOf(context).width < 240
+            compactToolbar
                 ? 'Profile'
                 : profile.displayName.isEmpty
                 ? 'Your profile'
                 : profile.displayName,
           ),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              tooltip: 'Refresh profile',
-              onPressed: () {
-                ref.invalidate(publicUserProvider(profile.id));
-                if (isOwner) {
-                  ref.invalidate(ownerProfileProvider);
-                  ref.invalidate(reputationProvider);
-                  ref.invalidate(monthlyRewardsViewProvider);
-                  final key = OwnerPostsKey(
-                    userId: profile.id,
-                    sessionRevision: ref.read(authSessionRevisionProvider),
-                  );
-                  ref.read(ownerPostsTimelineProvider(key).notifier).refresh();
-                }
-              },
-            ),
+            if (isOwner)
+              if (compactToolbar)
+                PopupMenuButton<_ProfileToolbarAction>(
+                  tooltip: 'Profile actions',
+                  onSelected: (action) {
+                    switch (action) {
+                      case _ProfileToolbarAction.openSettings:
+                        _openSettings(context);
+                      case _ProfileToolbarAction.refresh:
+                        refreshProfile();
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: _ProfileToolbarAction.openSettings,
+                      child: Text('Open settings'),
+                    ),
+                    PopupMenuItem(
+                      value: _ProfileToolbarAction.refresh,
+                      child: Text('Refresh profile'),
+                    ),
+                  ],
+                )
+              else
+                IconButton(
+                  icon: const Icon(Icons.settings_outlined),
+                  tooltip: 'Open settings',
+                  onPressed: () => _openSettings(context),
+                ),
+            if (!isOwner || !compactToolbar)
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Refresh profile',
+                onPressed: refreshProfile,
+              ),
           ],
         ),
         body: ProfileTabView(
@@ -236,30 +291,16 @@ class ProfileScreen extends ConsumerWidget {
               ],
               const SizedBox(height: Spacing.lg),
               if (isOwner) ...[
-                if (owner != null && owner.hasDetails)
-                  Text(owner.statusMessage),
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.settings_outlined),
                   title: const Text('Settings'),
                   subtitle: const Text('Security, privacy and notifications'),
-                  onTap: () {
-                    final router = GoRouter.maybeOf(context);
-                    if (router != null) {
-                      router.go(
-                        GoRouterState.of(
-                          context,
-                        ).uri.replace(path: '/settings').toString(),
-                      );
-                      return;
-                    }
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const SettingsScreen(),
-                      ),
-                    );
-                  },
+                  onTap: () => _openSettings(context),
                 ),
+                if (owner != null && owner.hasDetails)
+                  Text(owner.statusMessage),
+                const Divider(),
                 ListTile(
                   leading: const Icon(Icons.edit_outlined),
                   title: Text(
@@ -323,17 +364,36 @@ class ProfileScreen extends ConsumerWidget {
           comments: ListView(
             key: PageStorageKey('profile-comments-${profile.id}'),
             padding: const EdgeInsets.all(Spacing.lg),
-            children: const [
-              LythEmptyState(
-                icon: Icons.chat_bubble_outline,
-                title: 'Profile comment lists are unavailable',
-                subtitle: 'Comments remain available on posts you can view.',
-              ),
+            children: [
+              if (isOwner)
+                OwnerCommentsSection(userId: profile.id)
+              else
+                const LythEmptyState(
+                  icon: Icons.chat_bubble_outline,
+                  title: 'Profile comment lists are unavailable',
+                  subtitle: 'Comments remain available on posts you can view.',
+                ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  void _openSettings(BuildContext context) {
+    final router = GoRouter.maybeOf(context);
+    if (router != null) {
+      router.go(
+        GoRouterState.of(context).uri.replace(path: '/settings').toString(),
+      );
+      return;
+    }
+    if (ModalRoute.of(context)?.isCurrent == false) {
+      return;
+    }
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
   }
 
   void _logProfileComplete(WidgetRef ref, PublicUser profile, String userId) {
@@ -411,8 +471,10 @@ class _OwnerPostsSection extends ConsumerWidget {
           error: (error, stackTrace) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Unable to load your posts. Your profile is still available.',
+              Text(
+                ownerContentIsOffline(error)
+                    ? 'You appear to be offline. Connect to load your posts.'
+                    : 'Unable to load your posts. Your profile is still available.',
               ),
               TextButton.icon(
                 onPressed: () => ref
@@ -454,7 +516,9 @@ class _OwnerPostsSection extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: Spacing.xs),
             child: Text(
-              'More posts could not be loaded. Try again.',
+              ownerContentIsOffline(timeline.loadMoreError!)
+                  ? 'You appear to be offline. Connect to load more posts.'
+                  : 'More posts could not be loaded. Try again.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.error,
               ),
@@ -550,7 +614,7 @@ class _ReputationStateBadge extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final reputation = ref.watch(reputationProvider);
     final compact =
-        MediaQuery.sizeOf(context).width < 360 ||
+        MediaQuery.sizeOf(context).width < 400 ||
         MediaQuery.textScalerOf(context).scale(1) >= 1.8;
     return reputation.when(
       data: (state) => ReputationBadge(

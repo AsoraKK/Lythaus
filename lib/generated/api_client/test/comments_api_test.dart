@@ -16,5 +16,14 @@ void main() {
       // TODO
     });
 
+    // List my own comments and replies
+    //
+    // Private newest-first cursor collection bound to the active JWT subject. Returns only the author's non-deleted allowed or pending human or AI-assisted comments on currently accessible allowed posts, using existing post visibility, authorship, follow, block and public-label rules. Deleted, blocked or inactive content and foreign bodies are excluded. Parent comment bodies are never returned.
+    //
+    //Future<OwnerCommentsPage> usersMeCommentsList({ int limit, String cursor }) async
+    test('test usersMeCommentsList', () async {
+      // TODO
+    });
+
   });
 }

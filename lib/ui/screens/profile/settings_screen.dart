@@ -152,27 +152,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 );
               },
             ),
-            if (currentUser != null && supportFeedbackEnabled)
+            if (currentUser != null && supportFeedbackEnabled) ...<Widget>[
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.feedback_outlined),
-                title: const Text('Report a problem or share an idea'),
+                leading: const Icon(Icons.bug_report_outlined),
+                title: const Text('Report a problem'),
                 subtitle: const Text(
-                  'Send a private report or suggestion and follow its history',
+                  'Send a private bug report and follow its history',
                 ),
-                onTap: () {
-                  final router = GoRouter.maybeOf(context);
-                  if (router != null) {
-                    router.go('/settings/support');
-                    return;
-                  }
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const SupportFeedbackScreen(),
-                    ),
-                  );
-                },
+                onTap: () => _openSupportEntry(context, 'problem'),
               ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.lightbulb_outline),
+                title: const Text('Feedback and suggestions'),
+                subtitle: const Text(
+                  'Share a private idea and follow its history',
+                ),
+                onTap: () => _openSupportEntry(context, 'suggestion'),
+              ),
+            ],
             const Divider(height: Spacing.xl),
             const PresentationPreferencesSection(),
             const Divider(height: Spacing.xl),
@@ -345,5 +344,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         setState(() => _savingTrustVisibility = false);
       }
     }
+  }
+
+  void _openSupportEntry(BuildContext context, String kind) {
+    final destination = kind == 'problem' ? 'problems' : 'suggestions';
+    final router = GoRouter.maybeOf(context);
+    if (router != null) {
+      router.go('/settings/support/$destination');
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SupportFeedbackScreen(initialKind: kind),
+      ),
+    );
   }
 }

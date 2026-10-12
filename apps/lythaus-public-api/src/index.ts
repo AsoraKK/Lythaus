@@ -1896,7 +1896,9 @@ async function updatePost(request: Request, env: Env, user: Principal, postId: s
     });
     const declaration = enforceContentDeclaration({
       body: revision.bodyUpdated ? input.body : current.rows[0].body,
-      declaredCreationMode: input.declaredCreationMode ?? current.rows[0].declared_creation_mode,
+      declaredCreationMode: input.declaredCreationMode === undefined
+        ? current.rows[0].declared_creation_mode
+        : input.declaredCreationMode,
     });
     if (tagSearchMaintenanceEnabled && revision.bodyUpdated) {
       enforcePostTagLimit(declaration.body, maxDistinctTags);
@@ -3338,7 +3340,7 @@ export default {
         }) ?? privateResponse(request, env, { error: 'not_found' }, { status: 404 });
       }
       const ownerItem = url.pathname.match(/^\/api\/(posts|comments)\/([^/]+)\/owner-view$/);
-      if (request.method === 'GET' && (ownerItem || url.pathname === '/api/users/me/posts')) {
+      if (request.method === 'GET' && (ownerItem || url.pathname === '/api/users/me/posts' || url.pathname === '/api/users/me/comments')) {
         const ownerContent = await handleOwnerContentRead(request, {
           authenticate: () => principal(request, env),
           query: (sql, values) => query(env.DB_APP_FRESH, sql, values),

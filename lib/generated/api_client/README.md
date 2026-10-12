@@ -175,6 +175,7 @@ Class | Method | HTTP request | Description
 [*AuthenticityPrivateAlphaApi*](doc/AuthenticityPrivateAlphaApi.md) | [**requestAuthenticityPrivateAlphaReview**](doc/AuthenticityPrivateAlphaApi.md#requestauthenticityprivatealphareview) | **POST** /authenticity/alpha/cases/{caseId}/review | Request private alpha review
 [*AuthenticityPrivateAlphaApi*](doc/AuthenticityPrivateAlphaApi.md) | [**submitAuthenticityPrivateAlphaFeedback**](doc/AuthenticityPrivateAlphaApi.md#submitauthenticityprivatealphafeedback) | **POST** /authenticity/alpha/cases/{caseId}/feedback | Submit private alpha feedback
 [*CommentsApi*](doc/CommentsApi.md) | [**commentsOwnerView**](doc/CommentsApi.md#commentsownerview) | **GET** /comments/{commentId}/owner-view | Read the author&#39;s own allowed or pending comment
+[*CommentsApi*](doc/CommentsApi.md) | [**usersMeCommentsList**](doc/CommentsApi.md#usersmecommentslist) | **GET** /users/me/comments | List my own comments and replies
 [*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsCreate**](doc/CustomFeedsApi.md#customfeedscreate) | **POST** /custom-feeds | Create a custom feed
 [*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsDelete**](doc/CustomFeedsApi.md#customfeedsdelete) | **DELETE** /custom-feeds/{id} | Delete an owned custom feed
 [*CustomFeedsApi*](doc/CustomFeedsApi.md) | [**customFeedsGet**](doc/CustomFeedsApi.md#customfeedsget) | **GET** /custom-feeds/{id} | Get an owned custom feed
@@ -472,6 +473,7 @@ Class | Method | HTTP request | Description
  - [OverviewProviderAccountingPeriod](doc/OverviewProviderAccountingPeriod.md)
  - [OverviewWindow](doc/OverviewWindow.md)
  - [OwnerComment](doc/OwnerComment.md)
+ - [OwnerCommentsPage](doc/OwnerCommentsPage.md)
  - [OwnerDecisionRequest](doc/OwnerDecisionRequest.md)
  - [OwnerDetail](doc/OwnerDetail.md)
  - [OwnerEvidenceRequest](doc/OwnerEvidenceRequest.md)

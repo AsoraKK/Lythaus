@@ -1,11 +1,23 @@
 # WP08 disabled version-aware source/assessment preparation
 
-Verified frozen main: `f47c11b099171d9c8173182b711b66b7e18c762f`.
-Branch base: reviewed proposal PR956 head
-`8dfef92c940bae704549400e3ba4500b2c53eed3`, which contains that main.
+Original frozen main: `f47c11b099171d9c8173182b711b66b7e18c762f`.
+Current `origin/main` integrated for this refresh:
+`a64697181d242426da65cea66ad68a937ac408ca`.
+Original PR #958 head before integration:
+`ff3a81c4186486fadf2f50c6380841c4b42383c5`.
+Normal two-parent merge commit:
+`41bf525a11cb7e9d9856dda814ccc8b39b7ce13c` (PR head first, current main
+second), with no conflicts. No force push was used. Current policy authority was
+confirmed in `docs/policy/current-policy-authority.md`, with the monthly
+implementation record and ADR-003 on that same current main.
+
+Original branch base: reviewed proposal PR956 head
+`8dfef92c940bae704549400e3ba4500b2c53eed3`, which contains the original frozen main.
 Reviewed PR953 commits `5bb69e7b` and `861bc645` are carried as dependencies
 without changing either reviewed branch/head. Dependency checkpoint:
-`966824e5f806a978416191560fa0df3577c1312e`. No branch merge or main mutation.
+`966824e5f806a978416191560fa0df3577c1312e`. Drafts #953/#956 and dependent
+#961–970 remain untouched; no dependent branch or SDK verification policy was
+integrated. The merge is into the #958 draft branch only; `main` was not mutated.
 
 The parent reserved exactly these implementation paths:
 
@@ -112,6 +124,25 @@ implemented; unreserved integrations remain explicitly pending.
 
 ## Validation
 
+### Current post-merge checks
+
+At merge commit `41bf525a11cb7e9d9856dda814ccc8b39b7ce13c`, the local environment
+used Node `v24.19.0`:
+
+- `node --experimental-strip-types --test packages/contracts/tests/monthly-reputation.test.mjs` — **32 passed, 0 failed/skipped**.
+- `node --experimental-strip-types --test packages/contracts/tests/monthly-peer-appeal.test.mjs` — **8 passed, 0 failed/skipped**.
+- `npm run typecheck:native` — passed.
+- `git diff --check origin/main...HEAD` — passed.
+
+The PostgreSQL 17 baseline and monthly source/assessment integration suite were
+not run: `PLANETSCALE_PG17_TEST_DATABASE_URL` is unset in this environment, and
+the suite requires an explicit loopback-only disposable database. No provider or
+production database was contacted. The focused database commands below remain
+required on a local PostgreSQL 17 fixture. Hosted exact-head CI is also pending
+for the final pushed head; earlier green checks do not carry forward.
+
+### Prior-head evidence only
+
 Use Node 22 and the explicit disposable loopback database. Initial baseline:
 
 ```sh
@@ -129,7 +160,9 @@ git diff --check
 `PLANETSCALE_PG17_TEST_DATABASE_URL` points only at local
 `lythaus_monthly_test`; never a provider branch. Original v1 schema plus upgrade
 suffix are executed in fixture transactions. Baseline validates 103 relations,
-102 launch tables and three existing extensions on PG17.11.
+102 launch tables and three existing extensions on PG17.11. These PostgreSQL
+results were recorded on the pre-integration candidate and are historical only;
+they do not validate the current merge commit or final pushed head.
 Focused suite: **19 passed, zero failed/skipped**. Jobs adapter coverage is
 100% lines/branches/functions; database adapter exceeds 98% lines and 93%
 branches, with 100% functions. Policy coverage suite: **56 passed, zero
@@ -156,9 +189,9 @@ production report code changes, and no corrupt row is persisted. The existing
 disposable-database guard, lineage corruption and missing-assembly assertions
 remain in place.
 
-Required full exact-head CI and parent independent review precede serialized
-merge. These local results do not substitute for them; current CI status belongs
-in the draft PR. Reviewed #953/#956 commits are unchanged.
+The full exact-head CI results below belong to the former candidate and are
+historical only. Required CI on the final pushed head and parent independent
+review still precede serialized merge. Reviewed #953/#956 commits are unchanged.
 
 ## Remaining gates
 
@@ -170,5 +203,6 @@ operational settings, production timezone, cutover/first v2 source month,
 retention, suggestion selection/replacement/correction timing, privacy/collection
 and feature activation are not selected by this preparation slice.
 No provider integration, production DDL, role/grant edit, flags/queues, mailing,
-personhood grant, real-member award, merge or deployment is performed. Frozen
-main/Release104 owner UI hold remains intact.
+personhood grant, real-member award, PR merge or deployment is performed. The
+only new history is the normal current-main-to-#958 merge described above.
+Release104 owner UI hold remains intact.

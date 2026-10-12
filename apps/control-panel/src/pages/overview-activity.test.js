@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { overviewActivityEvidence } from './overview-activity.js';
+import { overviewActivityEvidence, overviewSnapshotFresh } from './overview-activity.js';
 
 const sampledAt = '2026-10-07T07:00:00.000Z';
 function snapshot(count = 3, overrides = {}) {
@@ -83,5 +83,19 @@ describe('contributor-backed activity evidence', () => {
     const result = overviewActivityEvidence(data, true, 'today');
     expect(JSON.stringify(data)).toBe(before);
     expect(JSON.stringify(result)).not.toContain('synthetic-private');
+  });
+});
+
+describe('overview sample freshness', () => {
+  it.each([
+    ['today', 'mtd', '2026-10-01T00:00:00.000Z', '2026-10-01T12:00:00.000Z'],
+    ['today', 'mtd', '2026-01-01T00:00:00.000Z', '2026-01-01T12:00:00.000Z'],
+    ['today', 'ytd', '2026-01-01T00:00:00.000Z', '2026-01-01T12:00:00.000Z'],
+    ['mtd', 'ytd', '2026-01-01T00:00:00.000Z', '2026-01-01T12:00:00.000Z'],
+  ])('does not relabel a %s sample as %s when both UTC periods share a start', (sourcePeriod, selectedPeriod, start, sampledAt) => {
+    const data = snapshot(3, { period: sourcePeriod, sampledAt, current: { start, end: sampledAt } });
+    const now = Date.parse(sampledAt);
+    expect(overviewSnapshotFresh(data, sourcePeriod, false, now)).toBe(true);
+    expect(overviewSnapshotFresh(data, selectedPeriod, false, now)).toBe(false);
   });
 });

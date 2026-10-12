@@ -72,6 +72,167 @@ void main() {
   );
 
   test(
+    'a stale follow-up read cannot roll back an acknowledged account save',
+    () async {
+      var current = const PresentationPreferences(version: 7);
+      final controller = SettingsController(
+        ownerId: 'owner-a',
+        load: () async => current,
+        save: (preferences, key) async => const PresentationPreferences(
+          leftHandedMode: true,
+          horizontalSwipeEnabled: false,
+          version: 8,
+        ),
+      );
+      addTearDown(controller.dispose);
+      await flush();
+      await controller.savePreferences(
+        leftHandedMode: true,
+        horizontalSwipeEnabled: false,
+      );
+      expect(controller.state.leftHandedMode, isTrue);
+      expect(controller.state.horizontalSwipeEnabled, isFalse);
+      expect(controller.state.preferencesVersion, 8);
+      expect(controller.state.preferencesAvailable, isFalse);
+      expect(controller.state.preferencesMessage, contains('Unable to load'));
+      expect(controller.pendingPreferences, isNull);
+      current = const PresentationPreferences(
+        leftHandedMode: true,
+        horizontalSwipeEnabled: false,
+        version: 8,
+      );
+      await controller.reload();
+      expect(controller.state.preferencesAvailable, isTrue);
+      expect(controller.state.preferencesVersion, 8);
+      expect(controller.state.preferencesMessage, isNull);
+    },
+  );
+
+  test(
+    'an older save acknowledgement preserves confirmed choices and its retry key',
+    () async {
+      final keys = <String>[];
+      final payloads = <PresentationPreferences>[];
+      final controller = SettingsController(
+        ownerId: 'owner-a',
+        load: () async => const PresentationPreferences(version: 4),
+        save: (preferences, key) async {
+          keys.add(key);
+          payloads.add(preferences);
+          return const PresentationPreferences(
+            leftHandedMode: true,
+            version: 3,
+          );
+        },
+      );
+      addTearDown(controller.dispose);
+      await flush();
+      await controller.savePreferences(
+        leftHandedMode: true,
+        horizontalSwipeEnabled: true,
+      );
+      expect(controller.state.leftHandedMode, isFalse);
+      expect(controller.state.preferencesVersion, 4);
+      expect(controller.state.preferencesRetryPending, isTrue);
+      expect(controller.pendingPreferences, same(payloads.single));
+      await controller.savePreferences(
+        leftHandedMode: false,
+        horizontalSwipeEnabled: false,
+      );
+      expect(keys[1], keys[0]);
+      expect(payloads[1], same(payloads[0]));
+      expect(controller.state.preferencesVersion, 4);
+    },
+  );
+
+  test(
+    'foreground refresh cannot interrupt a load, save or immutable retry',
+    () async {
+      final initial = Completer<PresentationPreferences>();
+      final acknowledgement = Completer<PresentationPreferences>();
+      var reads = 0;
+      final keys = <String>[];
+      final payloads = <PresentationPreferences>[];
+      final controller = SettingsController(
+        ownerId: 'owner-a',
+        load: () async {
+          reads++;
+          if (reads == 1) return initial.future;
+          return const PresentationPreferences(
+            leftHandedMode: true,
+            version: 2,
+          );
+        },
+        save: (preferences, key) {
+          keys.add(key);
+          payloads.add(preferences);
+          if (keys.length == 1) return acknowledgement.future;
+          return Future.value(
+            const PresentationPreferences(leftHandedMode: true, version: 2),
+          );
+        },
+      );
+      addTearDown(controller.dispose);
+      await flush();
+      await controller.refreshAccountPreferences();
+      expect(reads, 1);
+      initial.complete(const PresentationPreferences());
+      await flush();
+      final saving = controller.savePreferences(
+        leftHandedMode: true,
+        horizontalSwipeEnabled: true,
+      );
+      await controller.refreshAccountPreferences();
+      expect(reads, 1);
+      expect(controller.state.preferencesSaving, isTrue);
+      acknowledgement.completeError(StateError('Outcome unknown'));
+      await saving;
+      await controller.refreshAccountPreferences();
+      expect(reads, 1);
+      expect(controller.state.preferencesRetryPending, isTrue);
+      expect(controller.pendingPreferences, same(payloads.single));
+      await controller.savePreferences(
+        leftHandedMode: false,
+        horizontalSwipeEnabled: false,
+      );
+      expect(keys[1], keys[0]);
+      expect(payloads[1], same(payloads[0]));
+      expect(controller.state.leftHandedMode, isTrue);
+      expect(controller.state.preferencesRetryPending, isFalse);
+      expect(reads, 2);
+    },
+  );
+
+  test(
+    'foreground refresh never reads guest storage or an invalidated account',
+    () async {
+      var reads = 0;
+      final guest = SettingsController(
+        load: () async {
+          reads++;
+          return const PresentationPreferences();
+        },
+      );
+      addTearDown(guest.dispose);
+      await flush();
+      await guest.refreshAccountPreferences();
+      expect(reads, 1);
+      final account = SettingsController(
+        ownerId: 'owner-a',
+        load: () async {
+          reads++;
+          return const PresentationPreferences();
+        },
+      );
+      addTearDown(account.dispose);
+      await flush();
+      account.clearSession();
+      await account.refreshAccountPreferences();
+      expect(reads, 2);
+    },
+  );
+
+  test(
     'failed save retries immutable payload and key; repeated taps cannot duplicate writes',
     () async {
       final writes = <PresentationPreferences>[];
