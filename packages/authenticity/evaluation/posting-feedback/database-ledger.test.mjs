@@ -2,12 +2,18 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createServer } from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
-import { readFile } from 'node:fs/promises';
-import { test } from 'node:test';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { test, mock } from 'node:test';
 import pg from 'pg';
 import { fixtures } from './fixtures.mjs';
 import { CATEGORIES, hash } from './harness.ts';
 import { createDatabaseReceiptLedger } from './database-ledger-proposal.ts';
+import { createInactivePostingFeedbackLedger, createInactivePostingFeedbackCollector } from '../../../../apps/lythaus-jobs/src/posting-feedback-runtime.ts';
+import { createDedicatedAutocommitClient, DatabaseAutocommitUncertainError, DatabaseAutocommitCleanupError } from '../../../db/src/autocommit.ts';
+import { fixtureHost, localFixtureDns, statementResponseProxy } from '../../../db/tests/transaction-socket-fixture.mjs';
+import { lateCloudflareSocketFixture } from '../../../db/tests/late-cloudflare-socket-fixture.mjs';
 import { simulateTextProbe, PROBE_SELECTION_HASH } from './collector.ts';
 import { OPENAI_MODERATION_MODEL } from '../../src/research-config.ts';
 
@@ -50,6 +56,20 @@ function runBinding(sourceSha, collectorHash) {
   return { selectionHash: PROBE_SELECTION_HASH, sourceSha, collectorHash };
 }
 
+function hyperdriveFixtureBinding(port, applicationName, role = 'posting_feedback_writer_test') {
+  const url = new URL(`postgresql://postgres@${fixtureHost}:${port}/postgres`);
+  url.searchParams.set('sslmode', 'disable');
+  if (role) url.searchParams.set('options', `-c role=${role}`);
+  url.searchParams.set('application_name', applicationName);
+  return { connectionString: url.toString() };
+}
+
+async function assertNoRuntimeClients(client, applicationName) {
+  const { rows } = await client.query(`SELECT count(*)::integer AS count FROM pg_stat_activity
+    WHERE application_name = $1`, [applicationName]);
+  assert.equal(rows[0].count, 0);
+}
+
 function gate(sourceSha, collectorHash) {
   return {
     reviewedSourceSha: sourceSha, observedSourceSha: sourceSha,
@@ -63,18 +83,11 @@ function gate(sourceSha, collectorHash) {
   };
 }
 
-function autocommitClient(client, { afterQuery } = {}) {
-  let ambientTransaction = false;
+function autocommitClient(client) {
   return {
-    async assertAutocommit() {
-      if (ambientTransaction) throw new Error('database_ledger_ambient_transaction_forbidden');
+    async queryAutocommit(sql, values) {
+      return client.query(sql, values);
     },
-    async query(sql, values) {
-      const result = await client.query(sql, values);
-      await afterQuery?.(sql, result);
-      return result;
-    },
-    setAmbientTransaction(value) { ambientTransaction = value; },
   };
 }
 
@@ -114,15 +127,204 @@ test('adapter requires an autocommit acknowledgement contract', () => {
   assert.throws(() => createDatabaseReceiptLedger({ query: async () => ({ rows: [] }) }), /autocommit_client_required/);
 });
 
-postgresTest('PostgreSQL ledger claims once, stores only allowlisted outcomes, and retains tombstones after result expiry', async () => {
+test('Jobs ledger factory is separate from the production entrypoint', async () => {
+  const entrypoint = await readFile(new URL('../../../../apps/lythaus-jobs/src/index.ts', import.meta.url), 'utf8');
+  assert.doesNotMatch(entrypoint, /posting-feedback-runtime/);
+  const ledger = createInactivePostingFeedbackLedger(hyperdriveFixtureBinding(1, 'disabled_fixture'));
+  assert.equal(Object.isFrozen(ledger), true);
+  assert.equal(Object.hasOwn(ledger, 'purgeExpiredResults'), false);
+});
+
+test('live callable is hard-disabled before any database or provider work', async () => {
+  const network = mock.method(globalThis, 'fetch', () => { throw new Error('OUTBOUND_DENIED'); });
+  try {
+    const collector = createInactivePostingFeedbackCollector(hyperdriveFixtureBinding(1, 'disabled_fixture'));
+    await assert.rejects(collector.collect({ fixtures: fixtures.slice(0, 20),
+      gate: gate('1'.repeat(40), '2'.repeat(64)), apiKey: 'synthetic-test-only',
+    }), /posting_feedback_live_collection_disabled/);
+    assert.equal(network.mock.callCount(), 0);
+  } finally { network.mock.restore(); }
+});
+
+test('binding DSNs cannot override dedicated statement or query deadlines', () => {
+  const original = hyperdriveFixtureBinding(1, 'timeout_override_fixture', null);
+  const adversarial = [
+    'statement_timeout=0', 'query_timeout=600000', 'query_timeout=0',
+    'statement_timeout=', 'statement_timeout=-1', 'statement_timeout=15s',
+    'query_timeout=Infinity', 'statement_timeout=15000&statement_timeout=0',
+    'query_timeout=16000&query_timeout=600000', '%73tatement_timeout=0',
+    'options=-c%20statement_timeout%3D0', 'options=--statement_timeout%3D0',
+    'options=--statement-timeout%3D0',
+    'options=-c%20statement%5C_timeout%3D0',
+    'options=-c%20role%3Dfixture&options=-c%20statement_timeout%3D0',
+  ];
+  for (const suffix of adversarial)
+    assert.throws(() => createDedicatedAutocommitClient({ connectionString: `${original.connectionString}&${suffix}` }),
+      /database_autocommit_timeout_override_forbidden/);
+  assert.throws(() => createDedicatedAutocommitClient({ connectionString:
+    'postgresql://fixture:synthetic@example.invalid/postgres?sslmode=disable&statement_timeout=0' }),
+    /hyperdrive_requires_sslmode_verify_full/);
+});
+
+test('ledger snapshots and reserves a probe before awaits; uncertain claims cannot reuse its context', async () => {
+  let calls = 0;
+  const captured = [];
+  const ledger = createDatabaseReceiptLedger({ async queryAutocommit(sql, values) {
+    calls += 1; captured.push([...values]);
+    return { rows: [{}] };
+  } });
+  const binding = runBinding('1'.repeat(40), '2'.repeat(64));
+  const pending = ledger.claimProbe(binding);
+  binding.sourceSha = '3'.repeat(40);
+  assert.equal(await ledger.claimProbe(runBinding('4'.repeat(40), '5'.repeat(64))), false);
+  assert.equal(await pending, true);
+  assert.equal(captured[0][2], '1'.repeat(40));
+  const attempt = { sampleId: fixtures[0].id, inputHash: await hash(fixtures[0].body), revision: 1 };
+  const claim = ledger.claimAttempt(attempt);
+  attempt.inputHash = 'f'.repeat(64);
+  assert.equal(await ledger.claimAttempt({ ...attempt, inputHash: await hash(fixtures[0].body) }), false);
+  assert.equal(await claim, true);
+  assert.equal(captured[1][2], await hash(fixtures[0].body));
+  assert.equal(calls, 2);
+
+  const uncertain = createDatabaseReceiptLedger({ async queryAutocommit() { throw new DatabaseAutocommitUncertainError(); } });
+  await assert.rejects(uncertain.claimProbe(runBinding('6'.repeat(40), '7'.repeat(64))), DatabaseAutocommitUncertainError);
+  assert.equal(await uncertain.claimProbe(runBinding('8'.repeat(40), '9'.repeat(64))), false);
+});
+
+postgresTest('dedicated PostgreSQL client enforces autocommit and closes every connection path', async (t) => {
+  const containerName = `lythaus-autocommit-pg17-${process.pid}-${Date.now().toString(36)}`;
+  const port = await freeLocalPort();
+  docker(['run', '--detach', '--rm', '--name', containerName,
+    '--env', 'POSTGRES_HOST_AUTH_METHOD=trust', '--publish', `127.0.0.1:${port}:5432`, 'postgres:17']);
+  let observer, restoreDns;
+  try {
+    observer = await connectToTemporaryPostgres(port);
+    assert.match((await observer.query('SHOW server_version_num')).rows[0].server_version_num, /^17/);
+    restoreDns = localFixtureDns();
+    await observer.query('CREATE TABLE public.autocommit_fixture(id text PRIMARY KEY)');
+    const applicationName = 'posting_feedback_autocommit_boundary';
+    const binding = hyperdriveFixtureBinding(port, applicationName, null);
+    const database = createDedicatedAutocommitClient(binding);
+    assert.equal(Object.isFrozen(database), true);
+    assert.deepEqual(Object.keys(database), ['queryAutocommit']);
+
+    await t.test('concurrent statements own different clients and acknowledge only idle committed sessions', async () => {
+      const results = await Promise.all([1, 2].map(() => database.queryAutocommit('SELECT pg_backend_pid() AS pid, pg_sleep(0.05)')));
+      assert.notEqual(results[0].rows[0].pid, results[1].rows[0].pid);
+      await assertNoRuntimeClients(observer, applicationName);
+    });
+    await t.test('binding and scalar values are snapshotted; an ambient rollback cannot undo the write', async () => {
+      const mutableBinding = { ...binding, query: () => assert.fail('ambient client must never be called') };
+      const captured = createDedicatedAutocommitClient(mutableBinding);
+      mutableBinding.connectionString = 'unusable-after-factory-snapshot';
+      await observer.query('BEGIN');
+      const values = ['snapshotted'];
+      const pending = captured.queryAutocommit('INSERT INTO public.autocommit_fixture(id) VALUES ($1) RETURNING id', values);
+      values[0] = 'mutated';
+      assert.equal((await pending).rows[0].id, 'snapshotted');
+      assert.equal((await observer.query("SELECT count(*)::integer AS count FROM public.autocommit_fixture WHERE id='snapshotted'")).rows[0].count, 1);
+      await observer.query('ROLLBACK');
+      assert.equal((await observer.query("SELECT count(*)::integer AS count FROM public.autocommit_fixture WHERE id='snapshotted'")).rows[0].count, 1);
+      await assertNoRuntimeClients(observer, applicationName);
+    });
+    await t.test('transaction control and multi-statement SQL cannot create an ambient transaction', async () => {
+      for (const sql of ['BEGIN', 'COMMIT', 'ROLLBACK', 'SAVEPOINT fixture', 'CALL fixture()'])
+        await assert.rejects(database.queryAutocommit(sql), /data_statement_required/);
+      await assert.rejects(database.queryAutocommit('SELECT 1; BEGIN'), { code: '42601' });
+      await assert.rejects(database.queryAutocommit('SELECT $1', [{ unsafe: 'object' }]), /scalar_parameters_required/);
+      await assert.rejects(database.queryAutocommit('SELECT $1', new Array(1)), /scalar_parameters_required/);
+      await assertNoRuntimeClients(observer, applicationName);
+    });
+    await t.test('server statement errors retain their SQLSTATE and close the client', async () => {
+      await assert.rejects(database.queryAutocommit('SELECT 1/0'), { code: '22012' });
+      await assertNoRuntimeClients(observer, applicationName);
+    });
+    await t.test('failed startup closes without submitting a statement', async () => {
+      const missing = new URL(binding.connectionString); missing.pathname = '/lythaus_missing_fixture_database';
+      const unavailable = createDedicatedAutocommitClient({ connectionString: missing.toString() });
+      await assert.rejects(unavailable.queryAutocommit('SELECT 1'), { code: '3D000' });
+      await assertNoRuntimeClients(observer, applicationName);
+    });
+    await t.test('server disconnect before acknowledgement reports uncertainty and closes', async () => {
+      const pending = database.queryAutocommit('SELECT pg_sleep(30)');
+      const rejected = assert.rejects(pending, error => error instanceof DatabaseAutocommitUncertainError && error.outcome === 'unknown');
+      let pid;
+      for (let attempts = 0; attempts < 200 && !pid; attempts += 1) {
+        pid = (await observer.query('SELECT pid FROM pg_stat_activity WHERE application_name=$1 AND state=$2', [applicationName, 'active'])).rows[0]?.pid;
+        if (!pid) await delay(10);
+      }
+      assert.ok(pid);
+      await observer.query('SELECT pg_terminate_backend($1)', [pid]);
+      await rejected;
+      await assertNoRuntimeClients(observer, applicationName);
+    });
+    await t.test('server deadline cancels the statement and closes without retry', { timeout: 25_000 }, async () => {
+      const declared = new URL(binding.connectionString);
+      declared.searchParams.append('statement_timeout', '15000');
+      declared.searchParams.append('query_timeout', '16000');
+      declared.searchParams.append('options', `-c application_name=${applicationName}`);
+      const bounded = createDedicatedAutocommitClient({ connectionString: declared.toString() });
+      const settings = await bounded.queryAutocommit("SELECT current_setting('statement_timeout') AS timeout, current_setting('application_name') AS application_name");
+      assert.equal(settings.rows[0].timeout, '15s');
+      assert.equal(settings.rows[0].application_name, applicationName);
+      await assert.rejects(bounded.queryAutocommit('SELECT pg_sleep(30)'), { code: '57014' });
+      await assertNoRuntimeClients(observer, applicationName);
+    });
+    await t.test('conflicting timeout DSNs fail before PostgreSQL receives a connection', async () => {
+      for (const [key, value] of [['statement_timeout', '0'], ['query_timeout', '600000'],
+        ['options', '-c statement_timeout=0'], ['options', '-c statement\\_timeout=0']]) {
+        const override = new URL(binding.connectionString); override.searchParams.append(key, value);
+        assert.throws(() => createDedicatedAutocommitClient({ connectionString: override.toString() }),
+          /database_autocommit_timeout_override_forbidden/);
+      }
+      await assertNoRuntimeClients(observer, applicationName);
+    });
+    await t.test('acknowledged writes fail closed within the cleanup bound when the peer stalls its close', { timeout: 5_000 }, async () => {
+      const target = new URL(`postgresql://postgres@127.0.0.1:${port}/postgres`);
+      const proxy = await statementResponseProxy(target, 'INSERT INTO public.autocommit_fixture', 'stall_after_acknowledgement');
+      const proxied = createDedicatedAutocommitClient(hyperdriveFixtureBinding(proxy.port, applicationName, null));
+      let timeout;
+      try {
+        await Promise.race([
+          assert.rejects(proxied.queryAutocommit('INSERT INTO public.autocommit_fixture(id) VALUES ($1)', ['stalled_close']),
+            error => error instanceof DatabaseAutocommitCleanupError && error.outcome === 'acknowledged'),
+          new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('fixture_close_bound_exceeded')), 3_000); }),
+        ]);
+        assert.equal(proxy.acknowledged, true);
+        assert.equal(proxy.terminationSeen, true);
+        assert.equal((await observer.query("SELECT count(*)::integer AS count FROM public.autocommit_fixture WHERE id='stalled_close'")).rows[0].count, 1);
+        await assertNoRuntimeClients(observer, applicationName);
+      } finally { clearTimeout(timeout); await proxy.close(); }
+    });
+    for (const mode of ['drop_before_commit', 'drop_committed_response']) await t.test(`missing acknowledgement is unknown for ${mode}`, async () => {
+      const target = new URL(`postgresql://postgres@127.0.0.1:${port}/postgres`);
+      const proxy = await statementResponseProxy(target, 'INSERT INTO public.autocommit_fixture', mode);
+      const proxied = createDedicatedAutocommitClient(hyperdriveFixtureBinding(proxy.port, applicationName, null));
+      try {
+        await assert.rejects(proxied.queryAutocommit('INSERT INTO public.autocommit_fixture(id) VALUES ($1)', [mode]),
+          error => error instanceof DatabaseAutocommitUncertainError && error.outcome === 'unknown');
+        assert.equal(proxy.responseDropped, true);
+        const count = (await observer.query('SELECT count(*)::integer AS count FROM public.autocommit_fixture WHERE id=$1', [mode])).rows[0].count;
+        assert.equal(count, mode === 'drop_committed_response' ? 1 : 0);
+        await assertNoRuntimeClients(observer, applicationName);
+      } finally { await proxy.close(); }
+    });
+  } finally {
+    restoreDns?.(); await observer?.end().catch(() => {});
+    try { docker(['rm', '--force', containerName]); } catch {}
+  }
+});
+
+postgresTest('PostgreSQL ledger claims once, stores only allowlisted outcomes, and retains tombstones after result expiry', async (t) => {
   const containerName = `lythaus-ledger-pg17-${process.pid}-${Date.now().toString(36)}`;
   const port = await freeLocalPort();
   docker(['run', '--detach', '--rm', '--name', containerName,
     '--env', 'POSTGRES_HOST_AUTH_METHOD=trust', '--publish', `127.0.0.1:${port}:5432`, 'postgres:17']);
 
   let client;
-  let clientA;
-  let clientB;
+  let restoreFixtureDns;
+  const ambientNetwork = mock.method(globalThis, 'fetch', () => { throw new Error('OUTBOUND_DENIED'); });
   try {
     client = await connectToTemporaryPostgres(port);
     const { rows: versionRows } = await client.query('SHOW server_version_num');
@@ -136,7 +338,7 @@ postgresTest('PostgreSQL ledger claims once, stores only allowlisted outcomes, a
     const { rows: manifestRows } = await client.query('SELECT count(*)::integer AS sample_count FROM evaluation.posting_feedback_probe_samples');
     assert.equal(manifestRows[0].sample_count, 20);
 
-    await client.query(`CREATE ROLE posting_feedback_writer_test;
+    await client.query(`CREATE ROLE posting_feedback_writer_test LOGIN;
                        CREATE ROLE posting_feedback_reader_test;
                        CREATE ROLE posting_feedback_retention_test`);
     const roleGrants = proposalGrantStatements(proposal);
@@ -149,59 +351,36 @@ postgresTest('PostgreSQL ledger claims once, stores only allowlisted outcomes, a
         .replaceAll('__APPROVED_RETENTION_ROLE__', 'posting_feedback_retention_test'));
     }
 
-    const ambientDb = autocommitClient(client);
-    await client.query('BEGIN');
-    ambientDb.setAmbientTransaction(true);
-    await assert.rejects(createDatabaseReceiptLedger(ambientDb).claimProbe(runBinding('d'.repeat(40), 'e'.repeat(64))), /ambient_transaction_forbidden/);
-    await client.query('ROLLBACK');
-    ambientDb.setAmbientTransaction(false);
-    const { rows: ambientRows } = await client.query("SELECT count(*)::integer AS count FROM evaluation.posting_feedback_probe_runs WHERE source_sha = $1", ['d'.repeat(40)]);
-    assert.equal(ambientRows[0].count, 0);
-
+    restoreFixtureDns = localFixtureDns();
+    const runtimeApplicationName = 'posting_feedback_runtime_test';
+    const runtimeBinding = hyperdriveFixtureBinding(port, runtimeApplicationName);
     const concurrentBinding = runBinding('1'.repeat(40), '2'.repeat(64));
-    clientA = await connectToTemporaryPostgres(port);
-    clientB = await connectToTemporaryPostgres(port);
     await client.query(`CREATE FUNCTION evaluation.test_delay_claim_insert() RETURNS trigger
       LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_sleep(0.15); RETURN NEW; END $$;
       CREATE TRIGGER test_delay_run_claim BEFORE INSERT ON evaluation.posting_feedback_probe_runs
         FOR EACH ROW EXECUTE FUNCTION evaluation.test_delay_claim_insert();
       CREATE TRIGGER test_delay_attempt_claim BEFORE INSERT ON evaluation.posting_feedback_attempt_claims
         FOR EACH ROW EXECUTE FUNCTION evaluation.test_delay_claim_insert()`);
-    const concurrentA = createDatabaseReceiptLedger(autocommitClient(clientA));
-    const concurrentB = createDatabaseReceiptLedger(autocommitClient(clientB));
-    const runClaims = await Promise.all([concurrentA.claimProbe(concurrentBinding), concurrentB.claimProbe(concurrentBinding)]);
+    const runtimeLedgers = [createInactivePostingFeedbackLedger(runtimeBinding), createInactivePostingFeedbackLedger(runtimeBinding)];
+    const runClaims = await Promise.all(runtimeLedgers.map(ledger => ledger.claimProbe(concurrentBinding)));
     assert.deepEqual([...runClaims].sort(), [false, true]);
-    const winner = runClaims[0] ? concurrentA : concurrentB;
+    const runtimeRace = runtimeLedgers[runClaims.indexOf(true)];
     const firstFixture = fixtures[0];
     const firstAttempt = { sampleId: firstFixture.id, inputHash: await hash(firstFixture.body), revision: firstFixture.revision };
-    assert.equal(await winner.claimAttempt(firstAttempt), true);
+    const attemptClaims = await Promise.all([runtimeRace.claimAttempt(firstAttempt), runtimeRace.claimAttempt(firstAttempt)]);
+    assert.deepEqual([...attemptClaims].sort(), [false, true]);
     await client.query(`DROP TRIGGER test_delay_run_claim ON evaluation.posting_feedback_probe_runs;
                        DROP TRIGGER test_delay_attempt_claim ON evaluation.posting_feedback_attempt_claims;
                        DROP FUNCTION evaluation.test_delay_claim_insert()`);
-
-    let nextConnection = 0;
-    const splitConnection = {
-      async assertAutocommit() {},
-      query(sql, values) {
-        const selected = nextConnection++ % 2 === 0 ? clientA : clientB;
-        return selected.query(sql, values);
-      },
-    };
-    const attemptBinding = runBinding('9'.repeat(40), 'a'.repeat(64));
-    const attemptRace = createDatabaseReceiptLedger(splitConnection);
-    assert.equal(await attemptRace.claimProbe(attemptBinding), true);
-    const attemptClaims = await Promise.all([
-      attemptRace.claimAttempt(firstAttempt), attemptRace.claimAttempt(firstAttempt),
-    ]);
-    assert.deepEqual([...attemptClaims].sort(), [false, true]);
-    assert.equal(await createDatabaseReceiptLedger(autocommitClient(client)).claimProbe(concurrentBinding), false);
+    assert.equal(await createInactivePostingFeedbackLedger(runtimeBinding).claimProbe(concurrentBinding), false);
+    await assertNoRuntimeClients(client, runtimeApplicationName);
     const { rows: interruptedClaim } = await client.query(`
       SELECT state, receipt_committed_at FROM evaluation.posting_feedback_attempt_claims
        WHERE run_fingerprint = (SELECT run_fingerprint FROM evaluation.posting_feedback_probe_runs WHERE source_sha = $1)
          AND sample_id = $2`, [concurrentBinding.sourceSha, firstFixture.id]);
     assert.equal(interruptedClaim[0].state, 'STARTED_NO_REPLAY');
     assert.equal(interruptedClaim[0].receipt_committed_at, null);
-    await assert.rejects(winner.claimAttempt({ ...firstAttempt, revision: firstAttempt.revision + 1 }), /replay|claimed|stale/i);
+    await assert.rejects(runtimeRace.claimAttempt({ ...firstAttempt, revision: firstAttempt.revision + 1 }), /replay|claimed|stale/i);
     const { rows: concurrentRunRows } = await client.query(
       'SELECT run_fingerprint FROM evaluation.posting_feedback_probe_runs WHERE source_sha = $1', [concurrentBinding.sourceSha]);
     await assert.rejects(client.query(`INSERT INTO evaluation.posting_feedback_attempt_claims
@@ -209,20 +388,45 @@ postgresTest('PostgreSQL ledger claims once, stores only allowlisted outcomes, a
     [concurrentRunRows[0].run_fingerprint, '019a0000-0000-7000-8000-000000000021', '0'.repeat(64)]), { code: '23503' });
 
     const successBinding = runBinding('3'.repeat(40), '4'.repeat(64));
-    const successLedger = createDatabaseReceiptLedger(autocommitClient(client));
+    const successLedger = createInactivePostingFeedbackLedger(runtimeBinding);
     let providerTransportCalls = 0;
+    await client.query('BEGIN');
     const syntheticReport = await simulateTextProbe({
       fixtures: structuredClone(fixtures.slice(0, 20)),
       ledger: successLedger,
       gate: gate(successBinding.sourceSha, successBinding.collectorHash),
       apiKey: 'synthetic-test-only',
-      fetchImpl: async () => { providerTransportCalls += 1; return successBody(); },
+      fetchImpl: async () => {
+        const fixture = fixtures[providerTransportCalls];
+        const { rows } = await client.query(`SELECT claim.state,
+          (SELECT count(*)::integer FROM evaluation.posting_feedback_results result
+            WHERE result.run_fingerprint = claim.run_fingerprint) AS prior_results
+          FROM evaluation.posting_feedback_attempt_claims claim
+          JOIN evaluation.posting_feedback_probe_runs run USING (run_fingerprint)
+          WHERE run.source_sha = $1 AND claim.sample_id = $2`, [successBinding.sourceSha, fixture.id]);
+        assert.equal(rows.length, 1, 'an independent connection sees each committed claim before transport');
+        assert.equal(rows[0].state, 'STARTED_NO_REPLAY');
+        assert.equal(rows[0].prior_results, providerTransportCalls, 'the prior receipt committed before the next transport');
+        await assertNoRuntimeClients(client, runtimeApplicationName);
+        providerTransportCalls += 1; return successBody();
+      },
     });
+    await client.query('ROLLBACK');
     assert.equal(providerTransportCalls, 20);
     assert.equal(syntheticReport.actualProviderRequests, 0);
     assert.equal(syntheticReport.receipts.length, 20);
     assert.equal(syntheticReport.thresholds, 'UNEVALUATED');
     assert.equal(syntheticReport.publicPosting, 'WITHHELD');
+    await assertNoRuntimeClients(client, runtimeApplicationName);
+
+    let replayTransportCalls = 0;
+    await assert.rejects(simulateTextProbe({ fixtures: structuredClone(fixtures.slice(0, 20)),
+      ledger: createInactivePostingFeedbackLedger(runtimeBinding),
+      gate: gate(successBinding.sourceSha, successBinding.collectorHash), apiKey: 'synthetic-test-only',
+      fetchImpl: async () => { replayTransportCalls += 1; return successBody(); },
+    }), /collection_probe_already_claimed/);
+    assert.equal(replayTransportCalls, 0);
+    await assertNoRuntimeClients(client, runtimeApplicationName);
 
     const { rows: totals } = await client.query(`
       SELECT (SELECT count(*)::integer FROM evaluation.posting_feedback_attempt_claims
@@ -339,54 +543,86 @@ postgresTest('PostgreSQL ledger claims once, stores only allowlisted outcomes, a
     assert.equal(rollbackRows[0].results, 0);
     assert.equal(await createDatabaseReceiptLedger(autocommitClient(client)).claimProbe(rollbackBinding), false);
 
-    const lostRunAckBinding = runBinding('1'.repeat(40), 'a'.repeat(64));
-    const lostRunAckDb = autocommitClient(client, { afterQuery: (sql) => {
-      if (sql.includes('INSERT INTO evaluation.posting_feedback_probe_runs')) throw new Error('synthetic_run_ack_lost');
-    } });
-    let lostRunAckTransportCalls = 0;
-    await assert.rejects(simulateTextProbe({ fixtures: structuredClone(fixtures.slice(0, 20)),
-      ledger: createDatabaseReceiptLedger(lostRunAckDb), gate: gate(lostRunAckBinding.sourceSha, lostRunAckBinding.collectorHash),
-      apiKey: 'synthetic-test-only', fetchImpl: async () => { lostRunAckTransportCalls += 1; return successBody(); },
-    }), /synthetic_run_ack_lost/);
-    assert.equal(lostRunAckTransportCalls, 0);
-    assert.equal(await createDatabaseReceiptLedger(autocommitClient(client)).claimProbe(lostRunAckBinding), false);
+    const target = new URL(`postgresql://postgres@127.0.0.1:${port}/postgres`);
+    await t.test('stalled claim cleanup preserves acknowledged state and prevents any provider request', { timeout: 5_000 }, async () => {
+      const proxy = await statementResponseProxy(target, 'INSERT INTO evaluation.posting_feedback_probe_runs', 'stall_after_acknowledgement');
+      const stalledBinding = runBinding('6'.repeat(40), '1'.repeat(64));
+      const stalledLedger = createInactivePostingFeedbackLedger(hyperdriveFixtureBinding(proxy.port, 'posting_feedback_stalled_claim'));
+      let timeout, providerCalls = 0;
+      try {
+        await Promise.race([
+          assert.rejects(simulateTextProbe({ fixtures: fixtures.slice(0, 20), ledger: stalledLedger,
+            gate: gate(stalledBinding.sourceSha, stalledBinding.collectorHash), apiKey: 'synthetic-test-only',
+            fetchImpl: async () => { providerCalls += 1; return successBody(); },
+          }), error => error instanceof DatabaseAutocommitCleanupError && error.outcome === 'acknowledged'),
+          new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('fixture_close_bound_exceeded')), 3_000); }),
+        ]);
+        assert.equal(providerCalls, 0);
+        assert.equal(proxy.acknowledged, true);
+        assert.equal(proxy.terminationSeen, true);
+        assert.equal((await client.query('SELECT count(*)::integer AS count FROM evaluation.posting_feedback_probe_runs WHERE source_sha=$1', [stalledBinding.sourceSha])).rows[0].count, 1);
+        assert.equal(await createInactivePostingFeedbackLedger(runtimeBinding).claimProbe(stalledBinding), false);
+        assert.equal(await stalledLedger.claimProbe(stalledBinding), false);
+        await assertNoRuntimeClients(client, 'posting_feedback_stalled_claim');
+      } finally { clearTimeout(timeout); await proxy.close(); }
+    });
+    async function verifyLostAcknowledgement({ label, binding, statement, expectedCalls, expectedClaimState, expectedResults }) {
+      const proxy = await statementResponseProxy(target, statement);
+      const applicationName = `posting_feedback_lost_${label}`;
+      const proxyBinding = hyperdriveFixtureBinding(proxy.port, applicationName);
+      let providerCalls = 0;
+      const lostLedger = createInactivePostingFeedbackLedger(proxyBinding);
+      try {
+        await assert.rejects(simulateTextProbe({ fixtures: structuredClone(fixtures.slice(0, 20)),
+          ledger: lostLedger,
+          gate: gate(binding.sourceSha, binding.collectorHash), apiKey: 'synthetic-test-only',
+          fetchImpl: async () => { providerCalls += 1; return successBody(); },
+        }), DatabaseAutocommitUncertainError);
+        assert.equal(proxy.commitSeen, true);
+        assert.equal(proxy.responseDropped, true);
+        assert.ok(proxy.commandObserved);
+        assert.equal(providerCalls, expectedCalls);
+        assert.equal(await lostLedger.claimAttempt({ sampleId: fixtures[1].id,
+          inputHash: await hash(fixtures[1].body), revision: 1 }), false, 'a failed acknowledgement poisons this ledger instance');
 
-    const lostAttemptAckBinding = runBinding('2'.repeat(40), 'b'.repeat(64));
-    const lostAttemptAckDb = autocommitClient(client, { afterQuery: (sql) => {
-      if (sql.includes('INSERT INTO evaluation.posting_feedback_attempt_claims')) throw new Error('synthetic_attempt_ack_lost');
-    } });
-    let lostAttemptAckTransportCalls = 0;
-    await assert.rejects(simulateTextProbe({ fixtures: structuredClone(fixtures.slice(0, 20)),
-      ledger: createDatabaseReceiptLedger(lostAttemptAckDb), gate: gate(lostAttemptAckBinding.sourceSha, lostAttemptAckBinding.collectorHash),
-      apiKey: 'synthetic-test-only', fetchImpl: async () => { lostAttemptAckTransportCalls += 1; return successBody(); },
-    }), /synthetic_attempt_ack_lost/);
-    assert.equal(lostAttemptAckTransportCalls, 0);
-    const { rows: lostAttemptRows } = await client.query(`SELECT state FROM evaluation.posting_feedback_attempt_claims
-      WHERE run_fingerprint = (SELECT run_fingerprint FROM evaluation.posting_feedback_probe_runs WHERE source_sha = $1)`,
-    [lostAttemptAckBinding.sourceSha]);
-    assert.equal(lostAttemptRows[0].state, 'STARTED_NO_REPLAY');
-    assert.equal(await createDatabaseReceiptLedger(autocommitClient(client)).claimProbe(lostAttemptAckBinding), false);
+        const { rows } = await client.query(`SELECT run.run_fingerprint,
+          (SELECT count(*)::integer FROM evaluation.posting_feedback_attempt_claims AS claim
+            WHERE claim.run_fingerprint = run.run_fingerprint) AS claims,
+          (SELECT min(state) FROM evaluation.posting_feedback_attempt_claims AS claim
+            WHERE claim.run_fingerprint = run.run_fingerprint) AS claim_state,
+          (SELECT count(*)::integer FROM evaluation.posting_feedback_results AS result
+            WHERE result.run_fingerprint = run.run_fingerprint) AS results
+          FROM evaluation.posting_feedback_probe_runs AS run
+          WHERE run.source_sha = $1 AND run.collector_hash = $2`,
+        [binding.sourceSha, binding.collectorHash]);
+        assert.equal(rows.length, 1);
+        assert.equal(rows[0].claims, expectedClaimState ? 1 : 0);
+        assert.equal(rows[0].claim_state, expectedClaimState);
+        assert.equal(rows[0].results, expectedResults);
 
-    const lostResultAckBinding = runBinding('6'.repeat(40), 'd'.repeat(64));
-    const lostResultAckDb = autocommitClient(client, { afterQuery: (sql) => {
-      if (sql.includes('WITH transitioned_claim')) throw new Error('synthetic_result_ack_lost');
-    } });
-    let lostResultAckTransportCalls = 0;
-    await assert.rejects(simulateTextProbe({ fixtures: structuredClone(fixtures.slice(0, 20)),
-      ledger: createDatabaseReceiptLedger(lostResultAckDb), gate: gate(lostResultAckBinding.sourceSha, lostResultAckBinding.collectorHash),
-      apiKey: 'synthetic-test-only', fetchImpl: async () => { lostResultAckTransportCalls += 1; return successBody(); },
-    }), /synthetic_result_ack_lost/);
-    assert.equal(lostResultAckTransportCalls, 1);
-    const { rows: lostResultRows } = await client.query(`SELECT claim.state,
-      (SELECT count(*)::integer FROM evaluation.posting_feedback_results AS result
-        WHERE result.run_fingerprint = claim.run_fingerprint AND result.sample_id = claim.sample_id) AS results
-      FROM evaluation.posting_feedback_attempt_claims AS claim
-      WHERE claim.run_fingerprint = (SELECT run_fingerprint FROM evaluation.posting_feedback_probe_runs WHERE source_sha = $1)`,
-    [lostResultAckBinding.sourceSha]);
-    assert.equal(lostResultRows[0].state, 'RECEIPT_COMMITTED');
-    assert.equal(lostResultRows[0].results, 1);
-    assert.equal(await createDatabaseReceiptLedger(autocommitClient(client)).claimProbe(lostResultAckBinding), false);
-    assert.equal(lostResultAckTransportCalls, 1);
+        let retryCalls = 0;
+        await assert.rejects(simulateTextProbe({ fixtures: structuredClone(fixtures.slice(0, 20)),
+          ledger: createInactivePostingFeedbackLedger(runtimeBinding),
+          gate: gate(binding.sourceSha, binding.collectorHash), apiKey: 'synthetic-test-only',
+          fetchImpl: async () => { retryCalls += 1; return successBody(); },
+        }), /collection_probe_already_claimed/);
+        assert.equal(retryCalls, 0);
+        await assertNoRuntimeClients(client, applicationName);
+        await assertNoRuntimeClients(client, runtimeApplicationName);
+      } finally {
+        await proxy.close();
+      }
+    }
+
+    await verifyLostAcknowledgement({ label: 'run', binding: runBinding('8'.repeat(40), '9'.repeat(64)),
+      statement: 'INSERT INTO evaluation.posting_feedback_probe_runs', expectedCalls: 0,
+      expectedClaimState: null, expectedResults: 0 });
+    await verifyLostAcknowledgement({ label: 'attempt', binding: runBinding('9'.repeat(40), 'a'.repeat(64)),
+      statement: 'INSERT INTO evaluation.posting_feedback_attempt_claims', expectedCalls: 0,
+      expectedClaimState: 'STARTED_NO_REPLAY', expectedResults: 0 });
+    await verifyLostAcknowledgement({ label: 'result', binding: runBinding('a'.repeat(40), 'b'.repeat(64)),
+      statement: 'WITH transitioned_claim', expectedCalls: 1,
+      expectedClaimState: 'RECEIPT_COMMITTED', expectedResults: 1 });
 
     const driftBinding = runBinding('5'.repeat(40), '6'.repeat(64));
     const driftLedger = createDatabaseReceiptLedger(autocommitClient(client));
@@ -438,7 +674,7 @@ postgresTest('PostgreSQL ledger claims once, stores only allowlisted outcomes, a
                          WHERE result.run_fingerprint =
                            (SELECT run_fingerprint FROM evaluation.posting_feedback_probe_runs WHERE source_sha = $1)`,
     [successBinding.sourceSha]);
-    assert.equal(await successLedger.purgeExpiredResults(), 20);
+    assert.equal(await createDatabaseReceiptLedger(autocommitClient(client)).purgeExpiredResults(), 20);
     const { rows: afterExpiry } = await client.query(`
       SELECT (SELECT count(*)::integer FROM evaluation.posting_feedback_attempt_claims
                WHERE run_fingerprint = (SELECT run_fingerprint FROM evaluation.posting_feedback_probe_runs WHERE source_sha = $1)) AS claims,
@@ -451,9 +687,175 @@ postgresTest('PostgreSQL ledger claims once, stores only allowlisted outcomes, a
     assert.equal(afterExpiry[0].results, 0);
     assert.equal(afterExpiry[0].categories, 0);
     assert.equal(await createDatabaseReceiptLedger(autocommitClient(client)).claimProbe(successBinding), false);
+
+    const callable = createInactivePostingFeedbackCollector(runtimeBinding);
+    const interrupted = new AbortController();
+    let interruptedCalls = 0;
+    const interruptedGate = gate('e'.repeat(40), '0'.repeat(64));
+    const interruptedReport = await callable.simulate({ fixtures: fixtures.slice(0, 20),
+      gate: interruptedGate, apiKey: 'synthetic-test-only', signal: interrupted.signal,
+      fetchImpl: async () => { interruptedCalls += 1; interrupted.abort(); throw new Error('synthetic_interruption'); },
+    });
+    assert.equal(interruptedCalls, 1);
+    assert.equal(interruptedReport.receipts.length, 1);
+    assert.equal(interruptedReport.receipts[0].delivery, 'UNKNOWN_NO_RETRY');
+    assert.equal(interruptedReport.actualProviderRequests, 0);
+    let interruptedReplayCalls = 0;
+    await assert.rejects(callable.simulate({ fixtures: fixtures.slice(0, 20),
+      gate: interruptedGate, apiKey: 'synthetic-test-only',
+      fetchImpl: async () => { interruptedReplayCalls += 1; return successBody(); },
+    }), /collection_probe_already_claimed/);
+    assert.equal(interruptedReplayCalls, 0);
+
+    const beforeStart = new AbortController(); beforeStart.abort();
+    let beforeStartCalls = 0;
+    await assert.rejects(callable.simulate({ fixtures: fixtures.slice(0, 20),
+      gate: gate('f'.repeat(40), '0'.repeat(64)), apiKey: 'synthetic-test-only', signal: beforeStart.signal,
+      fetchImpl: async () => { beforeStartCalls += 1; return successBody(); },
+    }), /collection_interrupted/);
+    assert.equal(beforeStartCalls, 0);
+    assert.equal((await client.query('SELECT count(*)::integer AS count FROM evaluation.posting_feedback_probe_runs WHERE source_sha=$1', ['f'.repeat(40)])).rows[0].count, 0);
+
+    let simultaneousCalls = 0;
+    const simultaneousOptions = { fixtures: fixtures.slice(0, 20), gate: gate('0'.repeat(40), '1'.repeat(64)),
+      apiKey: 'synthetic-test-only', fetchImpl: async () => { simultaneousCalls += 1; return successBody(); } };
+    const simultaneous = await Promise.allSettled([callable.simulate(simultaneousOptions), callable.simulate(simultaneousOptions)]);
+    assert.equal(simultaneous.filter(value => value.status === 'fulfilled').length, 1);
+    assert.equal(simultaneous.filter(value => value.status === 'rejected').length, 1);
+    assert.match(simultaneous.find(value => value.status === 'rejected').reason.message, /collection_probe_already_claimed/);
+    assert.equal(simultaneousCalls, 20);
+
+    const mutableOptions = { fixtures: structuredClone(fixtures.slice(0, 20)),
+      gate: gate('d'.repeat(40), 'a'.repeat(64)), apiKey: 'synthetic-test-only',
+      fetchImpl: async () => new Response(null, { status: 503 }) };
+    const snapshotted = callable.simulate(mutableOptions);
+    mutableOptions.gate.observedSourceSha = 'f'.repeat(40);
+    mutableOptions.fixtures[0].body = 'changed after callable entry';
+    const snapshotReport = await snapshotted;
+    assert.equal(snapshotReport.sourceSha, 'd'.repeat(40));
+    assert.equal(snapshotReport.receipts[0].inputHash, await hash(fixtures[0].body));
+    assert.equal(snapshotReport.receipts.length, 1);
+    await assertNoRuntimeClients(client, runtimeApplicationName);
+
+    await t.test('Workerd callable uses real Hyperdrive PostgreSQL clients and an outbound-denied provider fixture', { timeout: 60_000 }, async () => {
+      const require = createRequire(new URL('../../../../node_modules/wrangler/package.json', import.meta.url));
+      const { build } = require('esbuild');
+      const { Miniflare, convertV4MiniflareOptions } = require('miniflare');
+      const root = fileURLToPath(new URL('../../../../', import.meta.url));
+      const workerdGate = gate('2'.repeat(40), '3'.repeat(64));
+      const bundle = await build({ absWorkingDir: root, bundle: true, write: false,
+        format: 'esm', platform: 'node', target: 'es2022', conditions: ['workerd'],
+        external: ['node:*', 'cloudflare:*', 'pg-native'],
+        banner: { js: "import { createRequire } from 'node:module'; const require = createRequire('file:///posting-feedback-fixture.mjs');" },
+        stdin: { resolveDir: root, contents: `
+          import { createInactivePostingFeedbackCollector } from './apps/lythaus-jobs/src/posting-feedback-runtime.ts';
+          import { fixtures } from './packages/authenticity/evaluation/posting-feedback/fixtures.mjs';
+          export default { async fetch(request, env) {
+            const collector = createInactivePostingFeedbackCollector(env.DB_JOBS_FRESH);
+            const options = { fixtures: fixtures.slice(0, 20), gate: env.GATE, apiKey: 'synthetic-test-only' };
+            try {
+              if (new URL(request.url).pathname === '/live') return Response.json(await collector.collect(options));
+              return Response.json(await collector.simulate({ ...options,
+                fetchImpl: (input, init) => env.PROVIDER_FIXTURE.fetch(input, init) }));
+            } catch (error) { return Response.json({ error: error.message }, { status: 409 }); }
+          }};
+        ` },
+      });
+      let workerdCalls = 0, outboundCalls = 0;
+      const runtime = new Miniflare(convertV4MiniflareOptions({ workers: [{
+        name: 'posting-feedback-runtime-fixture', modules: true, script: bundle.outputFiles[0].text,
+        compatibilityDate: '2026-07-27', compatibilityFlags: ['nodejs_compat'],
+        hyperdrives: { DB_JOBS_FRESH: `postgresql://posting_feedback_writer_test:synthetic-fixture-only@127.0.0.1:${port}/postgres` },
+        bindings: { GATE: workerdGate },
+        outboundService: () => { outboundCalls += 1; throw new Error('OUTBOUND_DENIED'); },
+        serviceBindings: { PROVIDER_FIXTURE: async request => {
+          assert.equal(request.url, 'https://api.openai.com/v1/moderations');
+          const payload = await request.json();
+          assert.equal(payload.input, fixtures[workerdCalls].body);
+          const { rows } = await client.query(`SELECT claim.state,
+            (SELECT count(*)::integer FROM evaluation.posting_feedback_results result
+              WHERE result.run_fingerprint=claim.run_fingerprint) AS prior_results
+            FROM evaluation.posting_feedback_attempt_claims claim
+            JOIN evaluation.posting_feedback_probe_runs run USING(run_fingerprint)
+            WHERE run.source_sha=$1 AND claim.sample_id=$2`, [workerdGate.observedSourceSha, fixtures[workerdCalls].id]);
+          assert.equal(rows[0]?.state, 'STARTED_NO_REPLAY');
+          assert.equal(rows[0]?.prior_results, workerdCalls);
+          workerdCalls += 1; return successBody();
+        } },
+      }] }));
+      try {
+        const disabled = await runtime.dispatchFetch('https://posting-feedback-fixture.test/live');
+        assert.equal(disabled.status, 409);
+        assert.equal((await disabled.json()).error, 'posting_feedback_live_collection_disabled');
+        assert.equal(workerdCalls, 0);
+        const response = await runtime.dispatchFetch('https://posting-feedback-fixture.test/simulate');
+        assert.equal(response.status, 200, await response.clone().text());
+        const report = await response.json();
+        assert.equal(report.receipts.length, 20);
+        assert.equal(report.actualProviderRequests, 0);
+        assert.equal(report.publicPosting, 'WITHHELD');
+        assert.equal(workerdCalls, 20);
+        const replay = await runtime.dispatchFetch('https://posting-feedback-fixture.test/simulate');
+        assert.equal(replay.status, 409);
+        assert.equal((await replay.json()).error, 'collection_probe_already_claimed');
+        assert.equal(workerdCalls, 20);
+        assert.equal(outboundCalls, 0);
+      } finally { await runtime.dispose(); }
+    });
+    await t.test('installed pg-cloudflare late read/close errors stay handled after the forced-close fallback', { timeout: 30_000 }, async () => {
+      const gates = [gate('4'.repeat(40), '6'.repeat(64)), gate('4'.repeat(40), '7'.repeat(64)), gate('4'.repeat(40), '8'.repeat(64))];
+      const proxy = await statementResponseProxy(new URL(`postgresql://postgres@127.0.0.1:${port}/postgres`),
+        'INSERT INTO evaluation.posting_feedback_probe_runs', 'stall_after_acknowledgement');
+      let evidence;
+      try {
+        evidence = await lateCloudflareSocketFixture(
+          `postgresql://posting_feedback_writer_test:synthetic-fixture-only@127.0.0.1:${proxy.port}/postgres`, gates);
+      } finally { await proxy.close(); }
+      process.stdout.write(`Late Cloudflare transport evidence ${JSON.stringify(evidence)}\n`);
+      assert.equal(evidence.providerCalls, 0);
+      assert.equal(evidence.outboundCalls, 0);
+      for (const row of evidence.cases) {
+        assert.equal(row.usesInstalledCloudflareSocket, true);
+        assert.equal(row.outcome, 'acknowledged');
+        assert.equal(row.failure, 'database_autocommit_connection_cleanup_failed');
+        assert.ok(row.elapsedMs >= 1200 && row.elapsedMs < 2500);
+        assert.equal(row.atReturn.activeSockets, 0);
+        assert.equal(row.atReturn.nativeClosed, 1);
+        assert.equal(row.atReturn.faultSignals, 0);
+        assert.equal(row.atReturn.closeNotifications, 0);
+        assert.equal(row.atReturn.pendingBoundTimers, 0);
+        assert.deepEqual(row.atReturn.clientErrorSinks, [1]);
+        assert.deepEqual(row.atReturn.nativeCloseTypes, ['function']);
+        assert.equal(row.lateSourceErrors, row.mode === 'read_error' ? 1 : 2);
+        assert.equal(row.destroyFailures, row.mode === 'destroy_throws' ? 1 : 0);
+        assert.equal(row.unhandledRejections, 0);
+        assert.equal(row.activeSockets, 0);
+        assert.equal(row.pendingTimers, 0);
+        assert.deepEqual(row.listeners, [{ client: 0, connection: 0, stream: 0 }]);
+      }
+      for (const value of gates) {
+        assert.equal((await client.query(`SELECT count(*)::integer AS count FROM evaluation.posting_feedback_probe_runs
+          WHERE source_sha=$1 AND collector_hash=$2`, [value.observedSourceSha, value.observedCollectorHash])).rows[0].count, 1);
+      }
+      const directory = new URL('../../../../.artifacts/posting-feedback/', import.meta.url);
+      await mkdir(directory, { recursive: true });
+      const sourceFiles = ['packages/db/src/autocommit.ts',
+        'packages/db/tests/late-cloudflare-socket-fixture.mjs',
+        'packages/authenticity/evaluation/posting-feedback/database-ledger.test.mjs'];
+      const sourceSha256 = Object.fromEntries(await Promise.all(sourceFiles.map(async path =>
+        [path, await hash(await readFile(new URL(`../../../../${path}`, import.meta.url), 'utf8'))])));
+      await writeFile(new URL('late-cloudflare-transport.json', directory), `${JSON.stringify({
+        schemaVersion: 'lythaus-autocommit-late-error-evidence-v1',
+        evidenceClass: 'CONTROLLED_WORKERD_FAULT_INJECTION_LOCAL_PG17',
+        sourceHeadSha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+        checkoutDirty: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim().length > 0,
+        sourceSha256, ...evidence,
+      }, null, 2)}\n`, { mode: 0o600 });
+    });
+    assert.equal(ambientNetwork.mock.callCount(), 0);
   } finally {
-    await clientA?.end().catch(() => {});
-    await clientB?.end().catch(() => {});
+    ambientNetwork.mock.restore();
+    restoreFixtureDns?.();
     await client?.end().catch(() => {});
     try { docker(['rm', '--force', containerName]); } catch {}
   }

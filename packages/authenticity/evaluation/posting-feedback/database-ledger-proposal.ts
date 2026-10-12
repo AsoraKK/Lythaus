@@ -27,14 +27,14 @@ export interface DatabaseLedgerQueryResult {
 }
 
 /**
- * Structural seam for a dedicated autocommit PostgreSQL client. The integration
- * must reject an ambient transaction in assertAutocommit(), and query() must
- * resolve only after the top-level statement commits. Do not pass a transaction
- * client or share this connection with code that can issue BEGIN.
+ * One-statement autocommit boundary. Implementations must use a dedicated
+ * connection per call, submit exactly one statement without BEGIN, and resolve
+ * only after PostgreSQL returns ReadyForQuery for the implicit transaction.
+ * Connection errors reject; callers must treat a missing acknowledgement as
+ * uncertain and never retry the claimed operation automatically.
  */
 export interface DatabaseLedgerClient {
-  assertAutocommit(): Promise<void>;
-  query(sql: string, values?: unknown[]): Promise<DatabaseLedgerQueryResult>;
+  queryAutocommit(sql: string, values?: unknown[]): Promise<DatabaseLedgerQueryResult>;
 }
 
 interface ProbeContext {
@@ -267,25 +267,31 @@ const PURGE_EXPIRED_RESULTS_SQL = `
 export function createDatabaseReceiptLedger(database: DatabaseLedgerClient): ReceiptLedger & {
   purgeExpiredResults(): Promise<number>;
 } {
-  if (!database || typeof database.assertAutocommit !== 'function' || typeof database.query !== 'function')
+  if (!database || typeof database.queryAutocommit !== 'function')
     throw new Error('database_ledger_autocommit_client_required');
   assertProbeEnvelope();
   let context: ProbeContext | null = null;
-  let claimedAttempts = 0;
+  let probeStarted = false;
+  let databaseFailed = false;
+  const attemptsStarted = new Set<string>();
 
   async function committedQuery(sql: string, values?: unknown[]): Promise<DatabaseLedgerQueryResult> {
-    await database.assertAutocommit();
-    return database.query(sql, values);
+    if (databaseFailed) throw new Error('database_ledger_unavailable_after_failed_statement');
+    try { return await database.queryAutocommit(sql, values); }
+    catch (error) { databaseFailed = true; throw error; }
   }
 
   return {
     durability: 'DURABLE_DATABASE',
 
-    async claimProbe(binding) {
-      if (context || binding.selectionHash !== PROBE_SELECTION_HASH)
+    async claimProbe(input) {
+      if (probeStarted) return false;
+      const binding = { ...input };
+      if (binding.selectionHash !== PROBE_SELECTION_HASH)
         throw new Error('database_ledger_wrong_or_reused_probe');
       assertHex(binding.sourceSha, 40, 'source_sha');
       assertHex(binding.collectorHash, 64, 'collector_hash');
+      probeStarted = true;
       const fingerprint = await createRunFingerprint(binding.selectionHash, binding.sourceSha, binding.collectorHash);
       const result = await committedQuery(CLAIM_RUN_SQL, [
         fingerprint, binding.selectionHash, binding.sourceSha, binding.collectorHash, OPENAI_MODERATION_MODEL,
@@ -295,17 +301,20 @@ export function createDatabaseReceiptLedger(database: DatabaseLedgerClient): Rec
       return true;
     },
 
-    async claimAttempt(binding) {
-      if (!context || claimedAttempts >= PROBE_LIMITS.requests) return false;
+    async claimAttempt(input) {
+      const binding = { ...input };
+      if (!context || databaseFailed || attemptsStarted.size >= PROBE_LIMITS.requests) return false;
       const fixture = APPROVED_SAMPLES.get(binding.sampleId);
       if (!fixture) throw new Error('database_ledger_sample_not_in_frozen_selection');
-      if (fixture.revision !== binding.revision || await hash(fixture.body) !== binding.inputHash)
+      if (fixture.revision !== binding.revision) throw new Error('database_ledger_stale_sample_revision');
+      if (attemptsStarted.has(binding.sampleId)) return false;
+      attemptsStarted.add(binding.sampleId);
+      if (await hash(fixture.body) !== binding.inputHash)
         throw new Error('database_ledger_stale_sample_revision');
       const result = await committedQuery(CLAIM_SAMPLE_SQL, [
         context.fingerprint, binding.sampleId, binding.inputHash, binding.revision,
       ]);
-      if (result.rows.length !== 1) return false;
-      claimedAttempts += 1;
+      if (result.rows.length !== 1) { databaseFailed = true; return false; }
       return true;
     },
 
@@ -314,8 +323,10 @@ export function createDatabaseReceiptLedger(database: DatabaseLedgerClient): Rec
       const sanitized = await sanitizeReceipt(receipt, context);
       const result = await committedQuery(COMMIT_RESULT_SQL, sanitized.values);
       const row = result.rows[0];
-      if (Number(row?.result_count) !== 1 || Number(row?.category_count) !== sanitized.categories.length)
+      if (Number(row?.result_count) !== 1 || Number(row?.category_count) !== sanitized.categories.length) {
+        databaseFailed = true;
         throw new Error('database_ledger_receipt_not_committed');
+      }
     },
 
     async purgeExpiredResults() {
