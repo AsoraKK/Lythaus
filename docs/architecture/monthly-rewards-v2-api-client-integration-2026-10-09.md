@@ -1,12 +1,15 @@
 # Disabled monthly rewards API and generated-client integration
 
 This isolated dependent slice preserves reviewed #964 at
-`8d87accc710ba3943b22d269996164ece97a3aee`. Actual main was fetched at
-`1853ed33fe5aa0b159597b914a5e77c84a69d193` and reconciled exclusively into
-`codex/monthly-v2-api-client-integration` at merge commit
-`e1743c5b6507cac148c4ba1a34e208b359afdc00`. Main and Release106 are unchanged.
-Review the implementation diff from that reconciliation commit to distinguish
-this slice from already-merged support, analytics, authentication and privacy work.
+`8d87accc710ba3943b22d269996164ece97a3aee`. The reviewed #965 head
+`7405edad06b98c1696f5155e453894e8f7f55ff8` integrated the then-current main
+snapshot `5b87219ac647a4deedadfa66e145b4e87c0d2af9`. Main later advanced through
+#1004 and #1005 to `6647e269ba379a53232922d50d0aadba7136230d`; this branch now
+contains a normal merge of that main snapshot at
+`42b1d859410bcbecb803bcd4d0b4a3bae70263d6`, with parents `7405edad` and
+`6647e269`. This follow-up updates only the PR branch and does not alter main or
+Release106. Review the PR diff against current main to distinguish this slice
+from already-merged support, feed, analytics, authentication and privacy work.
 
 ## Invoked API behavior
 
