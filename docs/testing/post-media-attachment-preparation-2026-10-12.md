@@ -1,7 +1,7 @@
 # Post image attachment preparation
 
-Status: disabled preparation only, based on main at
-`5b87219ac647a4deedadfa66e145b4e87c0d2af9`. This work adds no active migration,
+Status: disabled preparation only, rebased onto main at
+`a8133eeb677e1934f2888b139d491133135888e0`. This work adds no active migration,
 grant, API route, queue consumer, feed projection, flag change, provider resource,
 or public posting behavior. Public posting remains held until the complete
 pipeline is validated and separately released.
@@ -15,9 +15,15 @@ duplicate/order constraints, and a media-state version that changes when the
 linked object's identity, bytes, state, or deletion marker changes. The insert
 guard locks and rechecks the media object and upload session before recording
 the expected version. It does not add a public detector authorization relation,
-role grants, or feed visibility. Every row is constrained to
-`publication_eligible = false`. The proposal must not be applied as-is or used
-to infer that an attachment is publishable.
+role grants, or feed visibility. It is an INSERT guard only: the proposal has
+no UPDATE guard and does not establish effective INSERT-only permissions or
+relation immutability. That insert check alone does not make later updates safe.
+Before any integration, either enforce immutable attachment rows for the
+runtime role (with a separately designed delete/tombstone path), or add and test
+UPDATE guards that recheck ownership, source, state version, and evidence
+bindings. Every row is constrained to `publication_eligible = false`. The
+proposal must not be applied as-is or used to infer that an attachment is
+publishable.
 
 `packages/db/src/post-attachment-preparation.ts` is a pure typed preparation
 contract. It accepts only UUID media references, compares both media and upload
@@ -81,9 +87,32 @@ object in review and stores generic evaluation metadata, so neither state may
 admit a public post. The private authenticity alpha/beta workflows remain
 purpose- and consent-bound.
 
-The future validated path must separately bind its safety and authenticity
-results to current media bytes/state, reject missing/failed/stale detector
-results, and validate privacy-safe derivatives. It must preserve human-image-
-only policy, block AI-assisted/generated public images, and defer video. No
-fixture or this structural contract certifies detector accuracy or permits
-activation.
+The future API should accept opaque media IDs and the user's declaration only.
+A trusted server-side loader must retrieve authoritative media, upload-session,
+and detector-evidence records for the authenticated owner; the client must not
+provide evidence, hashes, state, or policy values. The pure checker in this
+branch does not establish that trust boundary. Missing, failed, stale, or
+unbound evidence must block.
+
+Attachment creation must revalidate the loaded owner, purpose, state version,
+source identity, bytes, and evidence bindings under transaction locks in the
+same transaction that records the relation. Any later publication transition
+must perform its own current-state and eligibility check in its transaction.
+`revalidatePostAttachmentSnapshot` is a pure comparison helper; calling it does
+not by itself provide transactional consistency or authorize a write.
+
+The proposal's `BEFORE INSERT` guard does not cover UPDATE or DELETE. A future
+integration must enforce relation immutability with effective runtime-role
+permissions and a separately specified deletion/tombstone flow, or implement
+equivalent UPDATE guards and race tests. Do not claim the INSERT guard alone
+makes row updates safe.
+
+The future validated path must bind separate safety and authenticity results
+to current media bytes/state, and validate derivatives for explicit orientation
+normalization plus GPS/EXIF removal. Keep originals private and define their
+retention and relation tombstone policy before activation. UI, Create Post/API,
+and feed projection integration remain separate gates owned by the composer
+and feed lane after `#1005`; this preparation wires none of them. Preserve
+human-image-only policy, block AI-assisted/generated public images, and defer
+video. No fixture or this structural contract certifies detector accuracy or
+permits activation.

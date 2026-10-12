@@ -1,6 +1,10 @@
 -- Proposal only. This file is not an approved migration and must not be applied
 -- to any hosted database. The missing public detector authorization relation is
 -- deliberate; this shape records linkage and revision inputs only.
+-- The trigger below validates INSERT only. This proposal defines no UPDATE or
+-- DELETE guards and no effective app-role permissions. Before integration,
+-- enforce relation immutability for the runtime role or add equivalent UPDATE
+-- guards and race tests; the INSERT guard alone does not make UPDATE safe.
 BEGIN;
 SET LOCAL lock_timeout = '5s';
 SET LOCAL statement_timeout = '30s';
