@@ -149,7 +149,7 @@ try {
   await run('reply-and-retry',{width:390,theme:'light'},async(page,result)=>{
     await open(page,'Open comments','Synthetic owner comment');
     await button(page,'Reply').nth(1).click();
-    await content(page,'Replying to @Rowan West',{exact:true}).waitFor();
+    await content(page,'Replying to Rowan West',{exact:true}).waitFor();
     await enterText(page,page.getByRole('textbox',{name:/Write a reply/}),'Retry canonical child body');
     await declare(page);
     await button(page,/Send reply/).click();

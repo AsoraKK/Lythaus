@@ -219,6 +219,15 @@ void main() {
           expect(find.text('No extra signals'), findsNothing);
           expect(find.textContaining('authenticity verified'), findsNothing);
           expect(historyOpens, 0);
+          final history = find.widgetWithText(
+            TextButton,
+            'View content history',
+          );
+          await tester.ensureVisible(history);
+          expect(tester.getSize(history).height, greaterThanOrEqualTo(48));
+          await tester.tap(find.bySemanticsLabel('View content history'));
+          await tester.pumpAndSettle();
+          expect(historyOpens, 1);
           await tester.tap(details);
           await tester.pumpAndSettle();
           expect(find.text('Created: complete'), findsNothing);

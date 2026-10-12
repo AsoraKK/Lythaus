@@ -159,13 +159,23 @@ class _CompactTrustDetailsState extends State<_CompactTrustDetails> {
         if (_expanded)
           Padding(
             padding: EdgeInsets.only(bottom: context.spacing.sm),
-            child: Text(
-              summary.hasAppeal || summary.trustStatus == 'under_appeal'
-                  ? 'An appeal is on record. A declaration or attached evidence '
-                        'does not independently verify authorship.'
-                  : 'The authorship label records a declaration or assessment. '
-                        'A declaration does not independently verify authorship.',
-              style: context.textTheme.bodySmall,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  summary.hasAppeal || summary.trustStatus == 'under_appeal'
+                      ? 'An appeal is on record. A declaration or attached evidence '
+                            'does not independently verify authorship.'
+                      : 'The authorship label records a declaration or assessment. '
+                            'A declaration does not independently verify authorship.',
+                  style: context.textTheme.bodySmall,
+                ),
+                TextButton(
+                  onPressed: widget.onTap,
+                  style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                  child: const Text('View content history'),
+                ),
+              ],
             ),
           ),
       ],

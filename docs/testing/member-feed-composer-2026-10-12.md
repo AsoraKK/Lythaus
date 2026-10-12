@@ -43,7 +43,9 @@ is visible. These user screenshots are not committed to the repository.
   review remain visible in plain language. Supplied supporting evidence is
   described as supplied, never as verified authorship. Self-declarations and
   explicit confirmed assessment metadata render different labels; absent or
-  unknown assessment metadata stays Under review.
+  unknown assessment metadata stays Under review. A plain, accessible
+  **View content history** action retains the existing drawer callback; its
+  history and appeal controls keep their existing eligibility gates.
 - A 201 is a submission receipt. Pending feedback uses an informational
   treatment; it does not say AI assessment passed. Unknown transport outcomes
   expose **Retry submission**, retain the frozen payload and durable key, and
@@ -76,9 +78,13 @@ fixture body and screenshot author. This is neither client demo content nor a
 client fallback. The exact body originates in
 [authenticated acceptance A12](../../scripts/ci/run-adr003-authenticated-acceptance.mjs);
 A11 also writes fixture profile text, and A13 flags that fixture.
-All three fixture writes now require a disposable loopback API target and fail
-closed on promoted production Worker and public API addresses. No keyword
-filter hides genuine member content.
+All three fixture writes now require a loopback API address and fail closed on
+direct promoted production Worker and public API addresses. The request helper
+already uses manual redirect handling. Address and redirect restrictions do
+not prove that a loopback server uses an isolated database. Disposable database
+isolation is established separately by the existing local PG17 test target and
+baseline checks; this harness does not certify that isolation. No keyword filter
+hides genuine member content.
 
 Published post `01a044ea-8e39-7c4a-bbdb-061688ba5906` was created on
 27 August at 20:30:17.657 UTC. Its initial provenance was
@@ -86,11 +92,21 @@ Published post `01a044ea-8e39-7c4a-bbdb-061688ba5906` was created on
 `01a12cbe-8acf-7d0a-901e-c82f492ce5d2` recorded `allow`, label
 `Human-authored`, policy `evaluation-only-v1`, at **11 October 20:54:06.876 UTC**,
 exactly matching `published_at`. The other four remain `under_review` with no
-publication timestamp. Stored provider/model strings and this allow decision
-are not detector-operational or full-pipeline acceptance evidence. Parent must
-reconcile this evaluation-only publication with the current publishing hold.
+publication timestamp. These are sanitized observed DB facts, not an attribution
+to the evaluator or an operator. Ordinary [Jobs moderation](../../apps/lythaus-jobs/src/index.ts)
+records queue/Under review; the [Admin decision path](../../apps/lythaus-admin-api/src/index.ts)
+can record allow and publish while retaining the case policy version. The facts
+are consistent with that admin path but do not prove which caller executed it
+or identify an actor. Stored provider/model strings and this allow decision are
+not detector-operational or full-pipeline acceptance evidence. Parent must
+reconcile this observed publication with the current publishing hold.
 This lane did not retrieve private operator identity or execute any production
 write.
+
+[Sanitized exact observed evidence](member-feed-fixture-evidence-2026-10-12.json)
+records the post, provenance and decision metadata without private operator
+identity or detector signal payloads. The body matches the A12 literal; the
+exact historical acceptance request/run is not established by these queries.
 
 Owner-only cleanup proposal, not executed: re-quarantine the exact published
 test post through an authorized audited workflow, setting visibility private,
@@ -138,6 +154,19 @@ and synthetic rejection, replay, interruption, account-switch, privacy/deletion
 and cache tests. A separately approved complete-pipeline activation decision is
 still required. No provider calls, detector activation or media publication
 enablement were performed for this repair.
+
+## Existing history service dependency
+
+The clean trust expansion retains the existing `ReceiptDrawer` entry point.
+UI regressions exercise eligible, disabled and already-open appeal action data
+and the existing case-only informational dialog; no appeal submission is enabled
+from this content view. The native public Worker and canonical OpenAPI currently
+do not define `/api/posts/:id/receipt`. The restored drawer therefore retains a
+recoverable unavailable/retry state for that native response. Synthetic receipt
+fixtures prove callback and control accessibility, not a live history-service
+contract or permission grant. Binding a supported, audience-safe history reader
+remains an explicit backend dependency; this PR does not add a route or activate
+an appeal workflow.
 
 ## Regression and visual evidence
 

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { requireLocalContentFixtureTarget } from '../ci/acceptance-content-target.mjs';
 
-test('content fixtures can write only to disposable loopback APIs', () => {
+test('content fixture target rejects direct production API URLs', () => {
   for (const target of ['http://127.0.0.1:8787/api', 'http://localhost/api', 'http://[::1]:8787/api']) {
     assert.doesNotThrow(() => requireLocalContentFixtureTarget(target));
   }

@@ -39,7 +39,14 @@ try {
         assert.equal(await page.getByText(diagnostic, { exact: true }).count(), 0);
       }
       await screenshot(page, result, 'member-feed-details');
+      await button(page, 'View content history').click();
+      await text(page, 'Post Receipt').waitFor();
+      await text(page, 'Submission recorded').waitFor();
+      await screenshot(page, result, 'member-content-history');
+      await button(page, 'Close receipt').click();
+      assert.equal(result.writes.length, 0);
       result.checks.push('Public name projection', 'Self-declaration is explicit', 'Expanded details contain no internal states');
+      result.checks.push('Accessible history action opens the existing drawer without a content write');
     });
     await run('member-composer', { width, theme }, async (page, _, result) => {
       await button(page, 'Open composer').click();
@@ -61,6 +68,19 @@ try {
       assert.equal(result.writes.length, 1);
       await screenshot(page, result, 'member-submitted-pending');
       result.checks.push('Media gate is explained', 'Required declaration', 'Full policy is accessible', 'Accepted pending returns to a nonblank caller');
+    });
+  }
+  for (const theme of ['light', 'dark']) {
+    await run('member-post-history', {width:390,theme}, async (page, _, result) => {
+      await button(page,'Open post').click();
+      await text(page,'Synthetic published post').waitFor();
+      await button(page,'Trust details').click();
+      await button(page,'View content history').click();
+      await text(page,'Post Receipt').waitFor();
+      await text(page,'Submission recorded').waitFor();
+      await screenshot(page,result,'member-post-history');
+      assert.equal(result.writes.length,0);
+      result.checks.push('Post detail compact history action remains reachable','Synthetic receipt reader only; no new native API or appeal activation');
     });
   }
   await run('offline-post-retry', { width: 390, theme: 'dark' }, async (page, context, result) => {

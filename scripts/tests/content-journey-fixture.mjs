@@ -62,6 +62,11 @@ export function contentFixture() {
     const comment=state.comments.find(item=>item.id===commentId);
     if(method==='GET') {
       if(path==='/api/feed/discover') return send({items:state.posts.filter(item=>!item.deleted && item.moderationState==='allowed')});
+      if(path.endsWith('/receipt')) {
+        if(!post || post.deleted || (post.moderationState!=='allowed' && post.authorId!==actor)) return send({error:'not_found'},404);
+        return send({postId:post.id,events:[{id:'synthetic-history',type:'POST_SUBMITTED',
+          summary:'Submission recorded',reason:'Synthetic content history. A declaration does not verify authorship.',actions:[]}]});
+      }
       if(path.endsWith('/owner-view')) {
         const item=commentId?comment:post;
         if(actor==='guest') return send({error:'unauthorized'},401);

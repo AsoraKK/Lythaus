@@ -1034,7 +1034,7 @@ class _ComposerBar extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Replying to @${replyTarget!.authorUsername}',
+                      'Replying to ${replyTarget!.authorUsername}',
                       style: Theme.of(context).textTheme.labelMedium,
                     ),
                   ),
@@ -1158,7 +1158,7 @@ class _CommentTile extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '@${comment.authorUsername}',
+                  comment.authorUsername,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w700,
@@ -1272,7 +1272,7 @@ class _ThreadComment {
         userFromPayload,
         handle: json['authorHandle'] as String?,
         authorId: authorId,
-      ).replaceFirst(RegExp(r'^@'), ''),
+      ),
       text: json['deleted'] == true
           ? '[deleted]'
           : (json['body'] ?? json['text']) as String? ?? '',
