@@ -135,6 +135,45 @@ test('prepared projection refuses fractional, mixed-policy, rebound or malformed
   const collision = await readOwnMonthlyReputationReport(preparedClient({ snapshotPolicy: v1 }), input, disposable);
   assert.equal(collision.levelAuthority.reasonCode, 'snapshot_policy_requires_review');
   assert.equal(collision.levelAuthority.sourceScore, null);
+  for (const mutate of [
+    row => { row.calculation.weeks[1].weekId = row.calculation.weeks[0].weekId; },
+    row => { row.report.weeks[1].weekId = row.report.weeks[0].weekId; },
+    row => { row.calculation.periodPolicyVersion = 'unknown'; },
+    row => { Object.assign(row.calculation.weeks[0], { startsAt: '2026-11-30T00:00:00.000Z', endsAt: '2026-11-29T00:00:00.000Z' }); },
+    row => { row.calculation.periodPolicyVersion = 'closing-sunday-utc-proposal-v1';
+      Object.assign(row.calculation.weeks[0], { startsAt: '2026-11-30T00:00:00.000Z', endsAt: '2026-12-06T00:00:00.000Z' }); },
+    row => { row.calculation.periodPolicyVersion = 'closing-sunday-utc-proposal-v1';
+      row.report.weeks[0].calculation.periodPolicyVersion = 'other'; },
+  ]) await assert.rejects(readOwnMonthlyReputationReport(preparedClient({ mutate }), input, disposable), /preparation_invalid|integrity_failed/);
+});
+
+test('prepared report rejects malformed captured period versions, including alongside valid versions', async () => {
+  const validPeriodVersion = 'closing-sunday-utc-proposal-v1';
+  const malformed = [
+    row => { row.calculation.periodPolicyVersion = 42;
+      row.report.weeks[0].calculation.periodPolicyVersion = validPeriodVersion; },
+    row => { row.calculation.periodPolicyVersion = validPeriodVersion;
+      row.report.weeks[0].calculation.periodPolicyVersion = false; },
+    row => { row.calculation.periodPolicyVersion = validPeriodVersion;
+      row.report.missingWeeks = [{ startsAt: '2026-12-07T00:00:00.000Z', endsAt: '2026-12-13T23:59:59.999Z',
+        reasonCode: 'synthetic_missing', periodPolicyVersion: { version: validPeriodVersion } }]; },
+  ];
+  for (const mutate of malformed) {
+    await assert.rejects(readOwnMonthlyReputationReport(preparedClient({ mutate }), input, disposable),
+      /^Error: monthly_report_source_integrity_failed$/);
+  }
+});
+
+test('prepared report keeps null and absent captured versions as unavailable evidence', async () => {
+  const absent = await readOwnMonthlyReputationReport(preparedClient(), input, disposable);
+  assert.equal(absent.report.weekly.periodPolicyVersion, null);
+  assert.equal(absent.report.weekly.periodPolicyStatus, 'unavailable');
+  const explicitNull = await readOwnMonthlyReputationReport(preparedClient({ mutate: row => {
+    row.calculation.periodPolicyVersion = null;
+    row.report.weeks[0].calculation.periodPolicyVersion = null;
+  } }), input, disposable);
+  assert.equal(explicitNull.report.weekly.periodPolicyVersion, null);
+  assert.equal(explicitNull.report.weekly.periodPolicyStatus, 'unavailable');
 });
 
 test('prepared snapshot readers reuse the SQL settlement clock and never trust client time or latest progress', async () => {
