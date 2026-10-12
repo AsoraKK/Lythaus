@@ -1,0 +1,63 @@
+{
+  "schema_version": "lythaus-monthly-rewards-amendment-v1",
+  "amendment_id": "accepted-useful-suggestion-calendar-quarter-2026-10-07-v2",
+  "previous_amendment_id": "accepted-useful-suggestion-2026-10-02-v1",
+  "base_policy_version": "lythaus-monthly-rewards-2026-10-v1",
+  "base_catalogue_sha256": "bc8be9d8f4cae4b0f3ec327e09f308069dd3e6b07e8ff57ccc6a6cc62435f5a2",
+  "source_authority": "Kyle, 2026-10-07T18:15:47.000Z, item 2 in the suggestion-points discussion; parent interpretation supplied to this lane",
+  "status": "confirmed_suggestion_calendar_projection_pending_allocation_and_activation",
+  "decision_id": "F01",
+  "runtime_activation_allowed": false,
+  "confirmed": {
+    "points_per_accepted_suggestion": 150,
+    "maximum_awarded_suggestions_per_quarter": 1,
+    "cadence": "fixed_calendar_quarter",
+    "quarter_start_months": [1, 4, 7, 10],
+    "completion_month_qualifies_through_quarter_end": true,
+    "completion_in_first_month_qualifies_for_months": 3,
+    "completion_in_second_month_qualifies_for_months": 2,
+    "completion_in_third_month_qualifies_for_months": 1,
+    "completion_requires_independent_acceptance": true,
+    "no_credit_before_completion_month": true,
+    "no_carry_after_quarter_end": true,
+    "source_month_fixes_next_month_level": true,
+    "quarter_expiry_does_not_withdraw_fixed_next_month_level": true,
+    "useful_contribution_required": true,
+    "participation_required": false,
+    "submission_earns_points": false,
+    "reporting_without_rewards_available": true
+  },
+  "unresolved": {
+    "cap_group": null,
+    "email_scoring_amount_if_quarterly_budget_shared": null,
+    "calendar_boundary_timezone": null,
+    "prospective_cutover": null,
+    "acceptance_rubric": null,
+    "reviewer_authority": null,
+    "bug_report_eligibility": null,
+    "concurrent_qualification_selection": null,
+    "replacement_after_reversal": null,
+    "correction_and_reversal_timing": null,
+    "calendar_rule_application_to_email_scoring": null
+  },
+  "constraints": {
+    "source_month_maximum_unchanged": 13500,
+    "original_catalogue_and_v1_amendment_preserved": true,
+    "extra_budget_authorised": false,
+    "historical_policy_meanings_preserved": true,
+    "email_scoring_and_sensitive_action_proof_unchanged": true,
+    "same_contribution_cannot_also_earn": ["weekly.accepted_help", "weekly.accepted_accessibility"],
+    "acceptance_and_reversal_idempotent": true,
+    "duplicate_spam_and_self_acceptance_safeguards_required": true,
+    "case_history_private": true
+  },
+  "integration": {
+    "ticket_backend_owner": "control_panel_ticket_workstream",
+    "proposed_transport": "existing_transactional_outbox",
+    "consumer_wired": false,
+    "runtime_action_id": null,
+    "pure_preview_only": true,
+    "preview_calendar_basis": "UTC; operational approval still required",
+    "applied_points": 0
+  }
+}

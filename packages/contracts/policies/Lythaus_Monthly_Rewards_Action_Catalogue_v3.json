@@ -1,0 +1,48 @@
+{
+  "schema_version": "lythaus-monthly-rewards-catalogue-delta-v1",
+  "policy_version": "lythaus-monthly-rewards-2026-10-v2",
+  "status": "owner_confirmed_budgets_pending_operational_approval_and_activation",
+  "runtime_activation_allowed": false,
+  "inherited_catalogue": "Lythaus_Monthly_Rewards_Action_Catalogue_v2.json",
+  "inherited_policy_version": "lythaus-monthly-rewards-2026-10-v1",
+  "inherited_catalogue_sha256": "bc8be9d8f4cae4b0f3ec327e09f308069dd3e6b07e8ff57ccc6a6cc62435f5a2",
+  "inherited_action_count": 22,
+  "total_action_count": 23,
+  "existing_action_awards_unchanged": true,
+  "weekly_maximum_per_complete_week": 2500,
+  "selected_complete_weeks": 4,
+  "monthly_maximum": 2500,
+  "quarterly_maximum": 1150,
+  "source_month_maximum": 13650,
+  "quarterly_calendar_rule": "all-quarterly-scoring-calendar-quarter-2026-10-07-v3",
+  "quarterly_cap_groups": [
+    { "id": "email_control", "max_points": 1000 },
+    { "id": "accepted_suggestion", "max_points": 150 }
+  ],
+  "additional_actions": [{
+    "id": "quarterly.accepted_suggestion",
+    "label": "Independently accepted useful suggestion",
+    "cadence": "quarterly",
+    "cap_group": "accepted_suggestion",
+    "max_points_before_shared_cap": 150,
+    "maximum_accepted_contributions_per_quarter": 1,
+    "optional": true,
+    "submission_earns_points": false,
+    "same_contribution_cannot_also_earn": ["weekly.accepted_help", "weekly.accepted_accessibility"],
+    "acceptance_rubric": null,
+    "reviewer_authority": null
+  }],
+  "levels": [
+    { "level": 1, "min_points": 0, "max_points": 999 },
+    { "level": 2, "min_points": 1000, "max_points": 2999 },
+    { "level": 3, "min_points": 3000, "max_points": 5999 },
+    { "level": 4, "min_points": 6000, "max_points": 9999 },
+    { "level": 5, "min_points": 10000, "max_points": 13650 }
+  ],
+  "source_month_fixes_next_month_level": true,
+  "score_carries_across_months": false,
+  "points_spendable": false,
+  "level_age_gates": false,
+  "all_membership_plans_can_earn_level_five": true,
+  "historical_catalogue_and_reports_preserved": true
+}

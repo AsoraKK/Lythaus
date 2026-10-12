@@ -1,0 +1,75 @@
+{
+  "schema_version": "lythaus-monthly-rewards-amendment-v1",
+  "amendment_id": "all-quarterly-scoring-calendar-quarter-2026-10-07-v3",
+  "previous_amendment_id": "accepted-useful-suggestion-calendar-quarter-2026-10-07-v2",
+  "base_policy_version": "lythaus-monthly-rewards-2026-10-v1",
+  "base_catalogue_sha256": "bc8be9d8f4cae4b0f3ec327e09f308069dd3e6b07e8ff57ccc6a6cc62435f5a2",
+  "source_authority": "Kyle, 2026-10-07T20:00:03.000Z: To all quarterly points, replying to the explicit email and suggestion scope question; completion-month timing confirmed at 2026-10-07T18:15:47.000Z",
+  "status": "confirmed_all_quarterly_calendar_timing_pending_allocation_and_activation",
+  "runtime_activation_allowed": false,
+  "confirmed": {
+    "scope": "every_quarterly_scoring_component",
+    "current_components": ["quarterly.email_control", "accepted_useful_suggestion"],
+    "cadence": "fixed_calendar_quarter",
+    "quarter_start_months": [1, 4, 7, 10],
+    "completion_month_qualifies_through_quarter_end": true,
+    "remaining_months_by_completion_position": [3, 2, 1],
+    "no_credit_before_completion_month": true,
+    "no_carry_after_quarter_end": true,
+    "source_month_fixes_next_month_level": true,
+    "quarter_expiry_does_not_withdraw_fixed_next_month_level": true,
+    "email_requires_canonical_verification_or_rewards_renewal_completion": true,
+    "old_security_credential_does_not_create_new_scoring_quarter_completion": true,
+    "suggestion_requires_independent_useful_acceptance": true,
+    "email_allowance_before_allocation_decision": 1000,
+    "suggestion_allowance_before_allocation_decision": 150
+  },
+  "unresolved": {
+    "quarterly_allowance_allocation": null,
+    "calendar_boundary_timezone": null,
+    "prospective_cutover": null,
+    "acceptance_rubric": null,
+    "reviewer_authority": null,
+    "concurrent_suggestion_selection": null,
+    "suggestion_replacement_after_reversal": null,
+    "suggestion_correction_and_reversal_timing": null
+  },
+  "constraints": {
+    "quarterly_maximum_unchanged": 1000,
+    "source_month_maximum_unchanged": 13500,
+    "combined_nominal_quarterly_allowances": 1150,
+    "unresolved_excess": 150,
+    "extra_budget_authorised": false,
+    "silent_truncation_allowed": false,
+    "historical_v1_and_previous_sidecars_preserved": true,
+    "old_proofs_and_reports_rewritten": false,
+    "security_proof_freshness_and_sensitive_action_authorization_unchanged": true,
+    "private_evidence_required": true
+  },
+  "incentive_assessment": {
+    "source_authority": "Kyle, 2026-10-07T20:08:42.000Z, healthy pro-human thriving-platform design goal; not numerical cap approval",
+    "proven_optimality": false,
+    "cap_change_approved": false,
+    "new_acceptance_rubrics_approved": false,
+    "recommended_suggestion_schedule": "one independently useful accepted contribution per quarter, qualifying only from actual acceptance month through quarter end",
+    "principles": [
+      "usefulness_over_volume_popularity_or_time_online",
+      "constructive_disagreement",
+      "accessible_participation",
+      "optional_feedback",
+      "scarce_opportunity_fairness",
+      "no_spam_or_self_manufactured_tasks",
+      "independent_acceptance"
+    ],
+    "illustrative_150_influence_across_source_calculations_not_balance": [450, 300, 150],
+    "tradeoffs_and_allocation_choices": "docs/testing/wp08-quarterly-suggestion-2026-10-07.md"
+  },
+  "integration": {
+    "email_evidence_shape": "existing_private_monthly_maintenance_email_control_observations",
+    "email_producer": "existing_canonical_verification_and_rewards_renewal_services",
+    "suggestion_transport": "existing_transactional_outbox_pending_qualified_support_producer",
+    "consumer_wired": false,
+    "preview_calendar_basis": "UTC; operational approval still required",
+    "applied_points": 0
+  }
+}

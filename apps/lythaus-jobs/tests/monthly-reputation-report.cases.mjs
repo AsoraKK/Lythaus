@@ -191,12 +191,30 @@ export function registerMonthlyReportCases({ tx, sql, person, snapshot, reviewer
 
     await sql('ALTER TABLE trust.monthly_reputation_sources DISABLE TRIGGER monthly_reputation_sources_immutable');
     try {
-      await sql("UPDATE trust.monthly_reputation_sources SET catalogue_hash=$2 WHERE id=$1", [source.id, 'f'.repeat(64)]);
-      await assert.rejects(read(member, '2026-08'), /monthly_report_source_integrity_failed/);
+      // The CHECK now prevents storing the corruption, even without the update trigger.
+      await assert.rejects(sql('UPDATE trust.monthly_reputation_sources SET catalogue_hash=$2 WHERE id=$1',
+        [source.id, 'f'.repeat(64)]), { code: '23514', constraint: 'monthly_reputation_source_policy_catalogue_v2' });
     } finally {
-      await sql('UPDATE trust.monthly_reputation_sources SET catalogue_hash=$2 WHERE id=$1', [source.id, source.catalogue_hash]);
       await sql('ALTER TABLE trust.monthly_reputation_sources ENABLE TRIGGER monthly_reputation_sources_immutable');
     }
+    let corruptedRead = false;
+    await assert.rejects(tx(client => readOwnMonthlyReputationReport({ query: async (text, values) => {
+      const result = await client.query(text, values);
+      // Model a corrupt read boundary using real rows; retain the real reader's rejection.
+      if (text.includes('source.catalogue_hash, assembly.report')) {
+        assert.equal(values[0], member);
+        assert.ok(result.rows.length > 0);
+        corruptedRead = true;
+        return { ...result, rows: result.rows.map((row, index) => index === 0
+          ? { ...row, catalogue_hash: 'f'.repeat(64) } : row) };
+      }
+      return result;
+    } }, { subjectId: member, sourceMonth: '2026-08', snapshotRulesVersion })), /monthly_report_source_integrity_failed/);
+    assert.equal(corruptedRead, true);
+    assert.equal((await sql('SELECT catalogue_hash FROM trust.monthly_reputation_sources WHERE id=$1', [source.id])).rows[0].catalogue_hash, source.catalogue_hash);
+    assert.equal((await sql(`SELECT convalidated FROM pg_constraint
+      WHERE conrelid='trust.monthly_reputation_sources'::regclass
+        AND conname='monthly_reputation_source_policy_catalogue_v2'`)).rows[0].convalidated, true);
 
     await sql('ALTER TABLE trust.monthly_reputation_assessments DISABLE TRIGGER monthly_reputation_assessments_immutable');
     try {
