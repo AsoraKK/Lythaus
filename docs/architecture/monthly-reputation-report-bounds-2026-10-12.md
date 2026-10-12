@@ -52,15 +52,14 @@ the Worker. It does not select raw source input or the separate assembly
 `evidence_ids` column. Nested action evidence identifiers in the bounded stored
 report are inspected internally and omitted from the public projection.
 
-PostgreSQL must still inspect the stored JSON sizes within the bounded row set;
-these transfer checks do not guarantee a specific database CPU or heap budget.
-The reader runs in the caller's existing transaction and statement-timeout
-boundary. No production schema or writer-size constraint is added here.
-
-PostgreSQL must still inspect the stored JSON size for the bounded candidate
-rows. This does not impose a universal database CPU or scratch-memory guarantee;
-transaction statement-timeout protection remains the caller's responsibility.
-The row/byte/node limits bound transfer into the Worker and subsequent structures.
+The SQL `json::text` size checks materialize text in PostgreSQL and incur
+database-side work. Inspection of the `@lythaus/db` transaction wrapper and
+canonical roles found no transaction or statement timeout. Callers must supply
+and verify timeout protection before activation. The row and byte checks bound
+transfer into the Worker, and the later node and output checks bound Worker-side
+processing; none of these limits establishes a bound on database CPU, heap or
+memory use. This database resource issue remains an activation gate. No
+production schema or writer-size constraint is added here.
 
 Snapshot history independently uses a subject/month/policy-scoped `LIMIT + 1`
 probe. The reader rejects either overflow before building correction lists.
