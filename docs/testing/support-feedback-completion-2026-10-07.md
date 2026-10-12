@@ -80,7 +80,7 @@ The existing generic audit duration is unchanged and is not a support approval.
 | Profile changes preserved | Six reviewed profile Workflow regressions rerun: private biography, null/empty fields, preferences, R2, absent/incomplete storage, retries and holds. |
 | Member/session/pagination UI | Seven widget cases include 160 astral characters, oversized text before API, configured page size, closed requests, kind separation, cancellation and account switching; existing service paging/revision tests retained. |
 | Rendered owner queues | Chromium 1280×900 and 390×844: actual route/title, keyboard selection, character limits, closed suggestion history, no horizontal overflow, console errors or page errors; four synthetic screenshots. External font CSS is stubbed to use local fallback fonts. Existing owner unit mutations remain covered. |
-| No automatic points or notifications | Accepted/declined flows emit only existing prose-free `support.workflow.changed` fields. No rewards code, score, notification provider, mail send or production flag changes. F01 remains pending. |
+| No automatic points or notifications | Accepted/declined flows emit only existing prose-free `support.workflow.changed` fields. No rewards code, score, notification provider, mail send or production flag changes. The optional prospective v2 suggestion component and 13,650 maximum are approved separately; this support candidate does not implement or activate them. |
 
 The main support PG umbrella invokes the canonical and native Workflow suites as
 bounded child processes and verifies positive pass counts with zero failures,
@@ -143,9 +143,11 @@ stored records are relabelled by this package.
   pending locators now block false completion. Reporter-only scrub/retention
   locks are not proof that every contributor's hold is protected; activation
   must wait for that safeguard and policy review.
-- F01's optional quarterly 150 points remains off, pending placement inside
-  13,500, cadence, acceptance/conflict/duplicate rules and reversal. Closure or
-  submission never authorizes awards, a higher cap or monthly stacking.
+- The optional 150-point quarterly suggestion component and 13,650 prospective
+  v2 maximum are approved; historical v1 remains capped at 13,500. This support
+  candidate contains no award logic and remains inactive. Earning eligibility,
+  version-specific implementation acceptance and reversal rules stay with the
+  rewards lane. Submission or ticket closure alone awards no points.
 - Live schema/grants, binding identity/cache behavior, owner Access revocation,
   authenticated A→B switching, expiry/holds/DSR acceptance and provider notification
   authorization need their separate exact-serving-artifact evidence.
@@ -212,4 +214,6 @@ validation must identify its exact head and retain any event-specific skipped
 checks. Parent owns final independent review, main integration and the release
 freeze. No ready/merge/deployment, production schema/grants or activation is
 authorized in this lane. Only the previously approved beta numerical limits
-are composed in source; all six remaining recommendations stay unapproved.
+are composed in source. The prospective v2 amount and maximum are approved but
+not implemented or activated by this support package; the remaining support and
+reward eligibility decisions stay explicit in the sections above.
