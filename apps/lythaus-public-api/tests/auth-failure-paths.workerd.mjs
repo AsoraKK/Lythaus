@@ -39,6 +39,10 @@ const publicErrorHeaders = {
   'transfer-encoding': 'chunked',
   vary: 'Origin, Authorization',
 };
+const safeAuthTraceFields = new Set([
+  'timestamp', 'service', 'event', 'outcome', 'correlationId', 'errorCode',
+  'internalErrorCode', 'route', 'passwordScreeningFailureReason', 'passwordScreeningHttpStatus',
+]);
 
 function normalizePrivateError(response, body) {
   assert.ok(body && typeof body === 'object' && !Array.isArray(body));
@@ -64,7 +68,16 @@ function assertAuthFailureTrace(events, expected) {
   const matchingEvents = correlatedEvents.filter(event => event.route === expected.route && event.errorCode === expected.errorCode);
   assert.ok(matchingEvents.length > 0, 'target auth failure emits a trace matching its response correlation, route, and error');
   assert.ok(correlatedEvents.every(event => event.route === expected.route && event.errorCode === expected.errorCode), 'target auth trace records retain the response route and error');
-  return correlatedEvents;
+}
+
+function assertRedactedAuthTraceRecords(events, privateValues) {
+  const serializedTraces = JSON.stringify(events);
+  for (const privateValue of privateValues) {
+    assert.ok(!serializedTraces.includes(privateValue), 'captured Workerd auth traces exclude private credentials and proofs');
+  }
+  for (const trace of events) {
+    assert.ok(Object.keys(trace).every(field => safeAuthTraceFields.has(field)), 'auth trace fields stay within the reviewed diagnostic allowlist');
+  }
 }
 
 test('auth trace assertion rejects missing or mismatched request records without echoing log payloads', () => {
@@ -91,6 +104,46 @@ test('auth trace assertion rejects missing or mismatched request records without
     assert.ok(failure instanceof assert.AssertionError, 'missing or incorrect request traces are rejected');
     assert.ok(!failure.message.includes(privateLogPayload), 'trace assertion failures do not echo private log payloads');
   }
+
+  const mixedTraces = [
+    { ...expected, timestamp: '2026-10-12T00:00:00.000Z', service: 'lythaus-public-api' },
+    {
+      ...expected,
+      correlationId: '00000000-0000-4000-8000-000000000002',
+      timestamp: '2026-10-12T00:00:01.000Z',
+      service: 'lythaus-public-api',
+      privateLogPayload,
+    },
+  ];
+  let privacyFailure;
+  try {
+    assertAuthFailureTrace(mixedTraces, expected);
+    assertRedactedAuthTraceRecords(mixedTraces, [privateLogPayload]);
+  } catch (error) {
+    privacyFailure = error;
+  }
+  assert.ok(privacyFailure instanceof assert.AssertionError, 'a private value in an uncorrelated request trace is rejected');
+  assert.ok(!privacyFailure.message.includes(privateLogPayload), 'trace privacy failures do not echo private log payloads');
+
+  const unapprovedFieldTraces = [
+    { ...expected, timestamp: '2026-10-12T00:00:02.000Z', service: 'lythaus-public-api' },
+    {
+      ...expected,
+      correlationId: '00000000-0000-4000-8000-000000000003',
+      timestamp: '2026-10-12T00:00:03.000Z',
+      service: 'lythaus-public-api',
+      unreviewedDiagnostic: privateLogPayload,
+    },
+  ];
+  let allowlistFailure;
+  try {
+    assertAuthFailureTrace(unapprovedFieldTraces, expected);
+    assertRedactedAuthTraceRecords(unapprovedFieldTraces, []);
+  } catch (error) {
+    allowlistFailure = error;
+  }
+  assert.ok(allowlistFailure instanceof assert.AssertionError, 'an unapproved field in an uncorrelated request trace is rejected');
+  assert.ok(!allowlistFailure.message.includes(privateLogPayload), 'trace allowlist failures do not echo private log payloads');
 });
 
 function assertPrivacyLeakMutationsRejected(response, body, status, error, extraHeaders = {}) {
@@ -580,23 +633,14 @@ describe('Public API authentication failures in native Workerd', { timeout: 180_
     const failedLoginBody = await failedLogin.json();
     assertPrivateError(failedLogin, failedLoginBody, 401, 'invalid_credentials');
 
-    const traceEvents = assertAuthFailureTrace(await fixture.traceEvents(traceStart), {
+    const traceEvents = await fixture.traceEvents(traceStart);
+    assertAuthFailureTrace(traceEvents, {
       correlationId: failedLoginBody.correlationId,
       route: '/api/auth/email',
       errorCode: 'invalid_credentials',
     });
-    const serializedTraces = JSON.stringify(traceEvents);
     const verificationMessage = await fixture.emailEnvelope(email, 'verification');
-    for (const privateValue of [email, password, wrongPassword, signup.turnstileToken, verificationMessage.token]) {
-      assert.ok(!serializedTraces.includes(privateValue), 'captured Workerd traces exclude signup credentials and proof');
-    }
-    const safeTraceFields = new Set([
-      'timestamp', 'service', 'event', 'outcome', 'correlationId', 'errorCode',
-      'internalErrorCode', 'route', 'passwordScreeningFailureReason', 'passwordScreeningHttpStatus',
-    ]);
-    for (const trace of traceEvents) {
-      assert.ok(Object.keys(trace).every(field => safeTraceFields.has(field)), 'auth trace fields stay within the reviewed diagnostic allowlist');
-    }
+    assertRedactedAuthTraceRecords(traceEvents, [email, password, wrongPassword, signup.turnstileToken, verificationMessage.token]);
   });
 
   test('the Public Worker enforces ten auth requests and resets at the minute boundary', { timeout: 180_000 }, async () => {
