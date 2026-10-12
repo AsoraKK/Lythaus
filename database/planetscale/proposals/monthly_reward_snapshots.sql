@@ -331,3 +331,141 @@ GRANT SELECT,INSERT ON trust.monthly_reward_snapshot_corrections TO lythaus_admi
 GRANT SELECT,DELETE ON trust.monthly_reward_snapshot_rule_sets,trust.monthly_reward_snapshots,
   trust.monthly_reward_snapshot_corrections,trust.monthly_reward_snapshot_receipts TO lythaus_privacy;
 GRANT SELECT ON system.feature_flags TO lythaus_admin,lythaus_runtime;
+
+-- Disabled forward proposal; original v1 prefix, period uniqueness and grants remain intact.
+BEGIN;
+ALTER TABLE trust.monthly_reward_snapshot_rule_sets ADD COLUMN preparation_configuration jsonb;
+ALTER TABLE trust.monthly_reward_snapshot_rule_sets
+  ADD CONSTRAINT monthly_reward_rules_policy_v2 CHECK (COALESCE(
+    policy_version = 'lythaus-monthly-rewards-2026-10-v1'
+    OR (policy_version = 'lythaus-monthly-rewards-2026-10-v2'
+      AND catalogue_hash = '26213abccce99ee51be6c0623406c28aaa7d39ed3ea3b4ac630b7cffd859db67'
+      AND mode = 'shadow' AND jsonb_typeof(preparation_configuration) = 'object'
+      AND preparation_configuration @> jsonb_build_object('runtimeActivationAllowed', false,
+        'scoringPolicyVersion', policy_version, 'scoringCatalogueHash', catalogue_hash,
+        'policyVersion', 'lythaus-monthly-rewards-2026-10-v1',
+        'catalogueHash', 'bc8be9d8f4cae4b0f3ec327e09f308069dd3e6b07e8ff57ccc6a6cc62435f5a2',
+        'amendmentVersion', 'all-quarterly-scoring-calendar-quarter-2026-10-07-v3',
+        'scoringAmendmentVersion', 'quarterly-suggestion-additive-allocation-2026-10-07-v4',
+        'firstSourceMonth', to_char(first_source_month, 'YYYY-MM'))
+      AND jsonb_typeof(preparation_configuration -> 'prospectiveFrom') = 'string'
+      AND jsonb_typeof(preparation_configuration -> 'rubricVersion') = 'string'
+      AND jsonb_typeof(preparation_configuration -> 'authorityVersion') = 'string'), false)) NOT VALID;
+ALTER TABLE trust.monthly_reward_snapshot_rule_sets ADD UNIQUE (version, policy_version);
+ALTER TABLE trust.monthly_reputation_assessments ADD UNIQUE (id, policy_version);
+ALTER TABLE trust.monthly_reward_snapshots ADD COLUMN preparation_only boolean NOT NULL DEFAULT false;
+ALTER TABLE trust.monthly_reward_snapshots
+  ADD CONSTRAINT monthly_reward_snapshot_caps_v2 CHECK (
+    (policy_version = 'lythaus-monthly-rewards-2026-10-v1' AND source_score BETWEEN 0 AND 13500 AND NOT preparation_only)
+    OR (policy_version = 'lythaus-monthly-rewards-2026-10-v2' AND source_score BETWEEN 0 AND 13650 AND mode = 'shadow' AND preparation_only)) NOT VALID,
+  ADD UNIQUE (id, subject_user_id, effective_month, mode, policy_version),
+  ADD CONSTRAINT monthly_reward_snapshot_supersedes_policy_v2
+    FOREIGN KEY (supersedes_id, subject_user_id, effective_month, mode, policy_version)
+    REFERENCES trust.monthly_reward_snapshots(id, subject_user_id, effective_month, mode, policy_version) NOT VALID,
+  ADD CONSTRAINT monthly_reward_snapshot_assessment_policy_v2 FOREIGN KEY (assessment_id, policy_version)
+    REFERENCES trust.monthly_reputation_assessments(id, policy_version) ON DELETE CASCADE NOT VALID,
+  ADD CONSTRAINT monthly_reward_snapshot_rules_policy_v2 FOREIGN KEY (rules_version, policy_version)
+    REFERENCES trust.monthly_reward_snapshot_rule_sets(version, policy_version) NOT VALID;
+ALTER TABLE trust.monthly_reward_snapshot_corrections
+  ADD COLUMN policy_version text NOT NULL DEFAULT 'lythaus-monthly-rewards-2026-10-v1';
+ALTER TABLE trust.monthly_reward_snapshot_corrections
+  ADD CONSTRAINT monthly_reward_correction_assessment_policy_v2 FOREIGN KEY (target_assessment_id, policy_version)
+    REFERENCES trust.monthly_reputation_assessments(id, policy_version) ON DELETE CASCADE NOT VALID,
+  ADD CONSTRAINT monthly_reward_correction_rules_policy_v2 FOREIGN KEY (rules_version, policy_version)
+    REFERENCES trust.monthly_reward_snapshot_rule_sets(version, policy_version) NOT VALID;
+ALTER TABLE trust.monthly_reward_snapshots ADD UNIQUE (id, policy_version);
+ALTER TABLE trust.monthly_reward_snapshot_corrections
+  ADD CONSTRAINT monthly_reward_correction_snapshot_policy_v2 FOREIGN KEY (snapshot_id, policy_version)
+    REFERENCES trust.monthly_reward_snapshots(id, policy_version) ON DELETE CASCADE NOT VALID;
+ALTER TABLE trust.monthly_reward_snapshot_receipts
+  ADD COLUMN policy_version text NOT NULL DEFAULT 'lythaus-monthly-rewards-2026-10-v1';
+ALTER TABLE trust.monthly_reward_snapshot_receipts
+  ADD CONSTRAINT monthly_reward_receipt_assessment_policy_v2 FOREIGN KEY (assessment_id, policy_version)
+    REFERENCES trust.monthly_reputation_assessments(id, policy_version) ON DELETE CASCADE NOT VALID,
+  ADD CONSTRAINT monthly_reward_receipt_rules_policy_v2 FOREIGN KEY (rules_version, policy_version)
+    REFERENCES trust.monthly_reward_snapshot_rule_sets(version, policy_version) NOT VALID;
+
+ALTER TABLE trust.monthly_reward_snapshot_rule_sets VALIDATE CONSTRAINT monthly_reward_rules_policy_v2;
+ALTER TABLE trust.monthly_reward_snapshots VALIDATE CONSTRAINT monthly_reward_snapshot_caps_v2;
+ALTER TABLE trust.monthly_reward_snapshots VALIDATE CONSTRAINT monthly_reward_snapshot_supersedes_policy_v2;
+ALTER TABLE trust.monthly_reward_snapshots VALIDATE CONSTRAINT monthly_reward_snapshot_assessment_policy_v2;
+ALTER TABLE trust.monthly_reward_snapshots VALIDATE CONSTRAINT monthly_reward_snapshot_rules_policy_v2;
+ALTER TABLE trust.monthly_reward_snapshot_corrections VALIDATE CONSTRAINT monthly_reward_correction_assessment_policy_v2;
+ALTER TABLE trust.monthly_reward_snapshot_corrections VALIDATE CONSTRAINT monthly_reward_correction_rules_policy_v2;
+ALTER TABLE trust.monthly_reward_snapshot_corrections VALIDATE CONSTRAINT monthly_reward_correction_snapshot_policy_v2;
+ALTER TABLE trust.monthly_reward_snapshot_receipts VALIDATE CONSTRAINT monthly_reward_receipt_assessment_policy_v2;
+ALTER TABLE trust.monthly_reward_snapshot_receipts VALIDATE CONSTRAINT monthly_reward_receipt_rules_policy_v2;
+ALTER TABLE trust.monthly_reward_snapshot_rule_sets DROP CONSTRAINT monthly_reward_snapshot_rule_sets_policy_version_check;
+ALTER TABLE trust.monthly_reward_snapshots DROP CONSTRAINT monthly_reward_snapshots_policy_version_check,
+  DROP CONSTRAINT monthly_reward_snapshots_source_score_check;
+
+DROP TRIGGER monthly_reward_snapshot_guard ON trust.monthly_reward_snapshots;
+CREATE TRIGGER monthly_reward_snapshot_guard BEFORE INSERT ON trust.monthly_reward_snapshots
+  FOR EACH ROW WHEN (NEW.policy_version = 'lythaus-monthly-rewards-2026-10-v1')
+  EXECUTE FUNCTION trust.require_monthly_reward_snapshot();
+CREATE OR REPLACE FUNCTION trust.require_monthly_prepared_reward_snapshot() RETURNS trigger
+LANGUAGE plpgsql SET search_path = '' AS $$ BEGIN
+  PERFORM 1 FROM trust.lock_monthly_reward_configuration();
+  PERFORM pg_advisory_xact_lock(hashtextextended('monthly-reputation:' || NEW.subject_user_id::text || ':' || to_char(NEW.source_month,'YYYY-MM'),0));
+  IF (SELECT count(*) FROM trust.lock_monthly_reward_configuration()
+      WHERE enabled AND policy_version = 'lythaus-monthly-rewards-2026-10-v1') <> 2
+    OR NOT trust.lock_monthly_reward_subject(NEW.subject_user_id) THEN
+    RAISE EXCEPTION 'monthly_reward_snapshot_unavailable' USING ERRCODE = '55000';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM trust.monthly_reputation_assessments assessment
+      JOIN trust.monthly_reputation_sources source ON source.id = assessment.source_id
+      JOIN trust.monthly_reputation_assemblies assembly ON assembly.source_id = source.id
+      JOIN trust.monthly_reward_snapshot_rule_sets rules ON rules.version = NEW.rules_version
+      JOIN trust.monthly_maintenance_rule_sets maintenance ON maintenance.version = rules.maintenance_rules_version
+      WHERE assessment.id = NEW.assessment_id AND source.id = NEW.source_id
+        AND source.subject_user_id = NEW.subject_user_id AND source.source_month = NEW.source_month
+        AND assessment.policy_version = NEW.policy_version AND source.policy_version = NEW.policy_version
+        AND assembly.policy_version = NEW.policy_version AND rules.policy_version = NEW.policy_version
+        AND rules.mode = 'shadow' AND NEW.mode = rules.mode AND NEW.preparation_only
+        AND rules.catalogue_hash = source.catalogue_hash
+        AND rules.approved_by IS NOT NULL AND rules.approved_at <= clock_timestamp() AND rules.approval_reference IS NOT NULL
+        AND rules.collection_privacy_version = 'monthly-privacy-v1' AND source.source_month >= rules.first_source_month
+        AND source.revision = NEW.source_revision AND assessment.source_score = NEW.source_score AND assessment.level = NEW.level
+        AND assembly.weekly_rules_version = rules.weekly_rules_version AND assembly.rules_version = rules.maintenance_rules_version
+        AND assembly.report -> 'preparationConfiguration' = rules.preparation_configuration
+        AND ((source.source_month + interval '1 month') AT TIME ZONE 'UTC')
+          + (maintenance.configuration ->> 'monthSettlementHours')::integer * interval '1 hour' <= clock_timestamp()) THEN
+    RAISE EXCEPTION 'monthly_reward_snapshot_provenance_required' USING ERRCODE = '55000';
+  END IF;
+  IF NEW.source_id IS DISTINCT FROM (SELECT id FROM trust.monthly_reputation_sources
+      WHERE subject_user_id = NEW.subject_user_id AND source_month = NEW.source_month AND policy_version = NEW.policy_version
+      ORDER BY revision DESC LIMIT 1)
+    OR (NEW.revision = 1 AND EXISTS (SELECT 1 FROM trust.monthly_reward_snapshots
+      WHERE subject_user_id = NEW.subject_user_id AND effective_month = NEW.effective_month AND mode = NEW.mode))
+    OR (NEW.revision > 1 AND NOT EXISTS (SELECT 1 FROM trust.monthly_reward_snapshots previous
+      WHERE previous.id = NEW.supersedes_id AND previous.policy_version = NEW.policy_version
+        AND previous.rules_version = NEW.rules_version AND previous.revision + 1 = NEW.revision
+        AND previous.id = (SELECT id FROM trust.monthly_reward_snapshots
+          WHERE subject_user_id = NEW.subject_user_id AND effective_month = NEW.effective_month AND mode = NEW.mode
+          ORDER BY revision DESC LIMIT 1))) THEN
+    RAISE EXCEPTION 'monthly_reward_snapshot_revision_conflict' USING ERRCODE = '55000';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM system.outbox_events event WHERE event.id = NEW.source_event_id AND (
+    (NEW.correction_id IS NULL AND event.event_type = 'trust.monthly_assessment.recorded'
+      AND event.aggregate_type = 'monthly_reputation_assessment' AND event.aggregate_id = NEW.assessment_id
+      AND event.actor_id = NEW.subject_user_id AND event.payload @> jsonb_build_object('assessmentId',NEW.assessment_id::text,
+        'sourceId',NEW.source_id::text,'mode','shadow','policyVersion',NEW.policy_version,'preparationOnly',true))
+    OR (NEW.correction_id IS NOT NULL AND EXISTS (SELECT 1 FROM trust.monthly_reward_snapshot_corrections correction
+      WHERE correction.id = NEW.correction_id AND correction.source_event_id = event.id
+        AND correction.subject_user_id = NEW.subject_user_id AND correction.target_assessment_id = NEW.assessment_id
+        AND correction.snapshot_id = NEW.supersedes_id AND correction.rules_version = NEW.rules_version
+        AND correction.policy_version = NEW.policy_version
+        AND event.event_type = 'trust.monthly_reward_snapshot.correction_approved'
+        AND event.aggregate_type = 'monthly_reward_snapshot_correction' AND event.aggregate_id = correction.id
+        AND event.actor_id = correction.actor_id AND event.created_at = correction.recorded_at
+        AND event.payload @> jsonb_build_object('correctionId',correction.id::text,'policyVersion',NEW.policy_version,
+          'preparationOnly',true))))) THEN
+    RAISE EXCEPTION 'monthly_reward_snapshot_event_required' USING ERRCODE = '55000';
+  END IF;
+  RETURN NEW;
+END; $$;
+REVOKE ALL ON FUNCTION trust.require_monthly_prepared_reward_snapshot() FROM PUBLIC;
+CREATE TRIGGER monthly_prepared_reward_snapshot_guard BEFORE INSERT ON trust.monthly_reward_snapshots
+  FOR EACH ROW WHEN (NEW.policy_version = 'lythaus-monthly-rewards-2026-10-v2')
+  EXECUTE FUNCTION trust.require_monthly_prepared_reward_snapshot();
+COMMIT;

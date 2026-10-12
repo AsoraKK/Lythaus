@@ -209,3 +209,49 @@ GRANT SELECT ON trust.monthly_maintenance_revocations TO lythaus_jobs;
 GRANT SELECT, INSERT ON trust.monthly_reputation_assemblies TO lythaus_jobs;
 GRANT SELECT, DELETE ON trust.monthly_maintenance_observations, trust.monthly_maintenance_revocations,
   trust.monthly_reputation_assemblies TO lythaus_privacy;
+
+-- Disabled forward proposal; validate only on disposable local PostgreSQL 17.
+BEGIN;
+ALTER TABLE trust.monthly_reputation_assemblies
+  ADD CONSTRAINT monthly_assembly_policy_report_v2 CHECK (COALESCE(
+    policy_version = 'lythaus-monthly-rewards-2026-10-v1'
+    OR (policy_version = 'lythaus-monthly-rewards-2026-10-v2'
+      AND report @> jsonb_build_object('policyVersion', policy_version, 'mode', 'shadow',
+        'sourceMonth', to_char(source_month, 'YYYY-MM'), 'rulesVersion', rules_version,
+        'weeklyRulesVersion', weekly_rules_version, 'preparationOnly', true,
+        'runtimeActivationAllowed', false, 'appliedPoints', 0,
+        'catalogueHash', '26213abccce99ee51be6c0623406c28aaa7d39ed3ea3b4ac630b7cffd859db67')
+      AND report -> 'inheritance' = '{"weeklyPolicyVersion":"lythaus-monthly-rewards-2026-10-v1","maintenancePolicyVersion":"lythaus-monthly-rewards-2026-10-v1","quarterlyPolicyVersion":"lythaus-monthly-rewards-2026-10-v2"}'::jsonb
+      AND jsonb_typeof(report -> 'preparationConfiguration') = 'object'
+      AND report -> 'quarterly' -> 'emailPoints' IN ('0'::jsonb, '1000'::jsonb)
+      AND report -> 'quarterly' -> 'suggestionPoints' IN ('0'::jsonb, '150'::jsonb)
+      AND (report -> 'quarterly' ->> 'quarterlyPoints')::integer
+        = (report -> 'quarterly' ->> 'emailPoints')::integer + (report -> 'quarterly' ->> 'suggestionPoints')::integer
+      AND report -> 'quarterly' ->> 'evidenceDigest' ~ '^[0-9a-f]{64}$'
+      AND jsonb_typeof(report -> 'quarterly' -> 'suggestionRevisionReferences') = 'array'), false)) NOT VALID;
+ALTER TABLE trust.monthly_reputation_assemblies VALIDATE CONSTRAINT monthly_assembly_policy_report_v2;
+ALTER TABLE trust.monthly_reputation_assemblies DROP CONSTRAINT monthly_reputation_assemblies_policy_version_check;
+
+CREATE OR REPLACE FUNCTION trust.require_monthly_prepared_assembly() RETURNS trigger
+LANGUAGE plpgsql SET search_path = '' AS $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM trust.monthly_reputation_sources source
+      JOIN trust.monthly_earning_rule_sets weekly ON weekly.version = NEW.weekly_rules_version
+      JOIN trust.monthly_maintenance_rule_sets maintenance ON maintenance.version = NEW.rules_version
+      WHERE source.id = NEW.source_id AND source.policy_version = NEW.policy_version
+        AND weekly.policy_version = 'lythaus-monthly-rewards-2026-10-v1'
+        AND maintenance.policy_version = weekly.policy_version
+        AND weekly.catalogue_hash = 'bc8be9d8f4cae4b0f3ec327e09f308069dd3e6b07e8ff57ccc6a6cc62435f5a2'
+        AND maintenance.catalogue_hash = weekly.catalogue_hash
+        AND source.input -> 'monthlyPoints' = NEW.report -> 'maintenance' -> 'monthlyPoints'
+        AND source.input -> 'emailPoints' = NEW.report -> 'quarterly' -> 'emailPoints'
+        AND source.input -> 'suggestionPoints' = NEW.report -> 'quarterly' -> 'suggestionPoints'
+        AND source.input -> 'quarterlyPoints' = NEW.report -> 'quarterly' -> 'quarterlyPoints') THEN
+    RAISE EXCEPTION 'monthly_assembly_source_policy_mismatch' USING ERRCODE = '55000';
+  END IF;
+  RETURN NEW;
+END; $$;
+REVOKE ALL ON FUNCTION trust.require_monthly_prepared_assembly() FROM PUBLIC;
+CREATE TRIGGER monthly_prepared_assembly_guard BEFORE INSERT ON trust.monthly_reputation_assemblies
+  FOR EACH ROW WHEN (NEW.policy_version = 'lythaus-monthly-rewards-2026-10-v2')
+  EXECUTE FUNCTION trust.require_monthly_prepared_assembly();
+COMMIT;

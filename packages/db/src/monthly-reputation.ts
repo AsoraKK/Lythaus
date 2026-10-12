@@ -113,7 +113,7 @@ function calculatePreparationInput(input: PreparationInput, evaluatedAt: string)
     level: prospectiveReputationLevelForScore(sourceScore), preparationOnly: true };
 }
 
-async function disposablePreparationAllowed(client: Client, context?: MonthlyReputationDisposablePreparation) {
+export async function disposablePreparationAllowed(client: Client, context?: MonthlyReputationDisposablePreparation) {
   if (!context) return false;
   const connection = (client as Client & {
     connectionParameters?: { host: string; database: string };
