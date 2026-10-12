@@ -9,6 +9,104 @@ export function registerMonthlyReportCases({ tx, sql, person, snapshot, reviewer
   const read = (subjectId, sourceMonth, rulesVersion = snapshotRulesVersion) =>
     tx(client => readOwnMonthlyReputationReport(client, { subjectId, sourceMonth, snapshotRulesVersion: rulesVersion }));
 
+  test('RPT bounds: source revision overflow withholds payloads without truncating corrections or crossing owners', async () => {
+    const member = await person(), other = await person();
+    await snapshot(member, 1000, '2026-08');
+    await snapshot(member, 100, '2026-08');
+    await snapshot(other, 500, '2026-08');
+    let probed = false;
+    await assert.rejects(tx(client => readOwnMonthlyReputationReport({ query: async (text, values) => {
+      const result = await client.query(text, values);
+      if (text.includes('budget.exceeded AS bounds_exceeded')) {
+        probed = true;
+        assert.equal(values[0], member); assert.equal(values[3], 2);
+        assert.equal(result.rows.length, 2);
+        assert.ok(result.rows.every(row => row.bounds_exceeded && row.report === null && row.calculation === null));
+      }
+      return result;
+    } }, { subjectId: member, sourceMonth: '2026-08', snapshotRulesVersion,
+      bounds: { maximumSourceRevisions: 1 } })), /monthly_report_resource_limit_exceeded/);
+    assert.equal(probed, true);
+    const complete = await tx(client => readOwnMonthlyReputationReport(client, {
+      subjectId: member, sourceMonth: '2026-08', snapshotRulesVersion, bounds: { maximumSourceRevisions: 2 },
+    }));
+    assert.equal(complete.report.sourceRevision, 2);
+    assert.equal(complete.report.total.sourceScore, 100);
+    assert.equal(complete.corrections.sourceRevisions.length, 1);
+    const isolated = await tx(client => readOwnMonthlyReputationReport(client, {
+      subjectId: other, sourceMonth: '2026-08', snapshotRulesVersion, bounds: { maximumSourceRevisions: 1 },
+    }));
+    assert.equal(isolated.report.total.sourceScore, 500);
+    assert.deepEqual(isolated.corrections.sourceRevisions, []);
+  });
+
+  test('RPT bounds: PostgreSQL withholds oversized stored JSON and cumulative evidence before transfer', async () => {
+    const member = await person();
+    const options = { firstWeekActions: [{ actionId: 'weekly.three_human_posts', points: 100,
+      privatePadding: 'x'.repeat(4096), evidenceIds: [uuidv7()] }] };
+    await snapshot(member, 100, '2026-08', options);
+    const guardedRead = async bounds => {
+      let probed = false;
+      await assert.rejects(tx(client => readOwnMonthlyReputationReport({ query: async (text, values) => {
+        const result = await client.query(text, values);
+        if (text.includes('budget.exceeded AS bounds_exceeded')) {
+          probed = true;
+          assert.ok(result.rows.length > 0);
+          assert.ok(result.rows.every(row => row.bounds_exceeded && row.report === null && row.calculation === null));
+        }
+        return result;
+      } }, { subjectId: member, sourceMonth: '2026-08', snapshotRulesVersion, bounds })),
+      /monthly_report_resource_limit_exceeded/);
+      assert.equal(probed, true);
+    };
+    await guardedRead({ maximumSourceRowBytes: 1024 });
+    await snapshot(member, 200, '2026-08', options);
+    const sizes = (await sql(`SELECT octet_length(assembly.report::text)
+        + octet_length(assessment.calculation::text) AS bytes
+      FROM trust.monthly_reputation_sources source
+      JOIN trust.monthly_reputation_assemblies assembly ON assembly.source_id=source.id
+      JOIN trust.monthly_reputation_assessments assessment ON assessment.source_id=source.id
+      WHERE source.subject_user_id=$1 AND source.source_month='2026-08-01'`, [member])).rows.map(row => row.bytes);
+    assert.equal(sizes.length, 2);
+    const budget = Math.max(...sizes) + 128;
+    assert.ok(budget < sizes.reduce((sum, bytes) => sum + bytes, 0));
+    await guardedRead({ maximumSourceRowBytes: budget, maximumSourcePayloadBytes: budget });
+    const complete = await read(member, '2026-08');
+    assert.equal(complete.report.sourceRevision, 2);
+    assert.equal(complete.corrections.sourceRevisions.length, 1);
+    assert.ok(!JSON.stringify(complete).includes('privatePadding'));
+  });
+
+  test('RPT bounds: snapshot overflow probe cannot omit corrected authority', async () => {
+    const member = await person();
+    const initial = await snapshot(member, 1000, '2026-08');
+    const corrected = await snapshot(member, 100, '2026-08');
+    const approval = await tx(client => approveMonthlyRewardSnapshotCorrection(client, {
+      actorId: reviewer(), subjectId: member, snapshotId: initial.id, assessmentId: corrected.assessmentId,
+      rulesVersion: snapshotRulesVersion, expectedSnapshotRevision: initial.revision,
+      reasonCode: 'synthetic_independent_provider_invalidation', evidenceReference: 'synthetic bound test',
+      idempotencyKey: uuidv7(),
+    }), 'lythaus_admin');
+    await tx(client => applyMonthlyRewardSnapshotCorrection(client, {
+      eventId: approval.sourceEventId, rulesVersion: snapshotRulesVersion,
+    }), 'lythaus_jobs');
+    let probed = false;
+    await assert.rejects(tx(client => readOwnMonthlyReputationReport({ query: async (text, values) => {
+      const result = await client.query(text, values);
+      if (text.includes('SELECT revision, mode')) {
+        probed = true; assert.match(text, /LIMIT \$4/);
+        assert.equal(values[0], member); assert.equal(values[3], 2);
+        assert.equal(result.rows.length, 2);
+      }
+      return result;
+    } }, { subjectId: member, sourceMonth: '2026-08', snapshotRulesVersion,
+      bounds: { maximumSnapshotRevisions: 1 } })), /monthly_report_resource_limit_exceeded/);
+    assert.equal(probed, true);
+    const complete = await read(member, '2026-08');
+    assert.equal(complete.levelAuthority.sourceScore, 100);
+    assert.equal(complete.corrections.effectiveSnapshots.length, 1);
+  });
+
   test('RPT-01/02/03: owner report projects stored selected/omitted weeks and allowances without evidence identifiers', async () => {
     const member = await person();
     const privateEvidenceId = uuidv7();
@@ -201,7 +299,7 @@ export function registerMonthlyReportCases({ tx, sql, person, snapshot, reviewer
     await assert.rejects(tx(client => readOwnMonthlyReputationReport({ query: async (text, values) => {
       const result = await client.query(text, values);
       // Model a corrupt read boundary using real rows; retain the real reader's rejection.
-      if (text.includes('source.catalogue_hash, assembly.report')) {
+      if (text.includes('budget.exceeded AS bounds_exceeded')) {
         assert.equal(values[0], member);
         assert.ok(result.rows.length > 0);
         corruptedRead = true;
