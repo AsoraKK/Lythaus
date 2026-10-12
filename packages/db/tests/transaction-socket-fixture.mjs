@@ -44,7 +44,7 @@ export async function commitResponseProxy(target, mode) {
 export async function statementResponseProxy(target, statementFragment, mode = 'drop_committed_response') {
   assert.ok(['127.0.0.1', 'localhost'].includes(target.hostname));
   assert.ok(typeof statementFragment === 'string' && statementFragment.length >= 12);
-  assert.ok(['drop_committed_response', 'drop_before_commit'].includes(mode));
+  assert.ok(['drop_committed_response', 'drop_before_commit', 'stall_after_acknowledgement'].includes(mode));
   return responseProxy(target, {
     mode,
     matches(kind, body) {
@@ -59,19 +59,25 @@ export async function statementResponseProxy(target, statementFragment, mode = '
 
 async function responseProxy(target, { mode, matches }) {
   const sockets = new Set();
-  let commitSeen = false, commandObserved, responseDropped = false;
-  const server = net.createServer(front => {
+  let commitSeen = false, commandObserved, responseDropped = false, acknowledged = false, terminationSeen = false;
+  const server = net.createServer({ allowHalfOpen: mode === 'stall_after_acknowledgement' }, front => {
     const back = net.connect({ host: '127.0.0.1', port: Number(target.port || 5432) });
     sockets.add(front); sockets.add(back);
     for (const socket of [front, back]) {
       socket.on('error', () => { front.destroy(); back.destroy(); });
       socket.on('close', () => sockets.delete(socket));
     }
-    const requestFrames = frames(true, (kind, body) => { if (matches(kind, body)) commitSeen = true; });
+    const requestFrames = frames(true, (kind, body) => {
+      if (matches(kind, body)) commitSeen = true;
+      if (kind === 'X') terminationSeen = true;
+    });
     const responseFrames = frames(false, (kind, body) => {
       if (!commitSeen) return;
       if (kind === 'C') commandObserved = body.toString('utf8').replace(/\0$/, '');
-      if (kind === 'Z') { responseDropped = true; front.destroy(); back.destroy(); }
+      if (kind === 'Z') {
+        acknowledged = true;
+        if (mode !== 'stall_after_acknowledgement') { responseDropped = true; front.destroy(); back.destroy(); }
+      }
     });
     front.on('data', data => {
       requestFrames(data);
@@ -81,10 +87,14 @@ async function responseProxy(target, { mode, matches }) {
       back.write(data);
     });
     back.on('data', data => {
-      if (commitSeen) responseFrames(data);
+      if (commitSeen) {
+        responseFrames(data);
+        if (mode === 'stall_after_acknowledgement') front.write(data);
+      }
       else front.write(data);
     });
-    front.on('end', () => back.end()); back.on('end', () => front.end());
+    front.on('end', () => back.end());
+    back.on('end', () => { if (mode !== 'stall_after_acknowledgement' || !acknowledged) front.end(); });
   });
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
   return {
@@ -92,6 +102,8 @@ async function responseProxy(target, { mode, matches }) {
     get commitSeen() { return commitSeen; },
     get commandObserved() { return commandObserved; },
     get responseDropped() { return responseDropped; },
+    get acknowledged() { return acknowledged; },
+    get terminationSeen() { return terminationSeen; },
     async close() { for (const socket of sockets) socket.destroy(); await new Promise(resolve => server.close(resolve)); },
   };
 }

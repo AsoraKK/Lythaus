@@ -23,6 +23,8 @@ deletion are evidence about the proposal, not production grants or retention.
 | Dedicated client ownership, no ambient transaction | `packages/db/src/autocommit.ts` factory, Jobs ledger factory | Concurrent statements use distinct backend PIDs; an ambient `ROLLBACK` does not undo a dedicated committed write; caller `query` is never used |
 | One acknowledged implicit transaction | Named extended query plus public `pg.Client.getTransactionStatus() === 'I'` checks | Transaction-control commands are refused; even zero-parameter multi-statement SQL fails with SQLSTATE `42601`; an independent observer sees each claim before mocked transport |
 | Connection lifecycle | Dedicated client with error listener and finally-close; 15-second server statement/connection limits and 16-second client guard | Success, SQL error, failed startup, server termination and dropped acknowledgement paths leave no backend for the fixture application name; actual server deadline cancels with SQLSTATE `57014` |
+| DSN timeout precedence | Reject conflicting parsed timeout fields and timeout selectors in startup `options` after existing TLS verification | Zero/relaxed/malformed/duplicate/encoded timeout fields and escaped/hyphenated options are rejected before connection; accepted canonical 15000/16000 fields retain the real 15-second PG cancellation and non-timeout startup options |
+| Stalled post-acknowledgement close | One-second graceful deadline, forced socket destroy and at most 250 ms close-event wait | A proxy forwards ReadyForQuery but holds its half-closed socket open. The durable write remains, cleanup returns `outcome: acknowledged`, the ledger stops before any provider request and cannot replay; unknown-acknowledgement errors remain primary |
 | Uncertain commit fails closed | `DatabaseAutocommitUncertainError`, poisoned ledger after failed statement | Drop before execution yields zero writes; drop after server ReadyForQuery yields one write; both return `outcome: unknown`. Run/sample/result acknowledgement loss sends 0/0/1 mocked requests, then no further request/replay |
 | Race and caller mutation | Pre-await probe/sample reservation; copied scalar bindings; callable input snapshot | A ledger cannot acquire a second context; mutated binding/parameter/gate/content inputs retain their entry snapshots; two collector invocations produce one accepted run and 20 rather than 40 mocked requests |
 | Claim before transport, receipt before next transport | Existing collector awaits dedicated ledger operations | Independent connection sees `STARTED_NO_REPLAY` and exactly the prior receipt count before each of 20 mocked requests; all dedicated sessions have closed |
@@ -42,8 +44,8 @@ node --experimental-strip-types scripts/ci/validate-posting-feedback-evaluation.
 npm run validate:planetscale-migrations
 ```
 
-The adapter has 17 tests including nine dedicated-client subtests and the real
-Workerd/Hyperdrive integration subtest. Native typing and six unchanged TLS guard
+The adapter has 21 tests including eleven dedicated-client subtests, a stalled
+claim cleanup subtest and the real Workerd/Hyperdrive integration subtest. Native typing and six unchanged TLS guard
 tests passed. All fifteen existing direct transaction regressions also passed on
 a separate disposable PG17 database after the unchanged 20-migration/grant baseline
 was applied, confirming that the generalized fault proxy preserves COMMIT tests.
@@ -58,6 +60,15 @@ selected pg-cloudflare's empty Node export; adding the fixture-only password and
 `workerd` bundle condition corrected both. Final whole-suite results and the exact
 committed source SHA are recorded in the PR receipt. None of these runs accessed
 a provider or production database.
+
+Independent PR review identified two security defects in the initial adapter:
+pg parsed DSN fields could replace its configured deadlines, and graceful close
+could wait indefinitely after ReadyForQuery. The correction rejects conflicting
+DSN values (including duplicate and startup-option forms) without rewriting binding
+identity or weakening TLS. It also bounds close, forces the owned socket to shut
+down, clears both timers and removes its owned end/error listeners. The real
+stalled-close fixture confirms acknowledged cleanup failure rather than successful
+transport or an unknown commit. Final corrections remain disabled and unimported.
 
 ## Production gates and rollback
 

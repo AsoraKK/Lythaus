@@ -11,7 +11,7 @@ import { fixtures } from './fixtures.mjs';
 import { CATEGORIES, hash } from './harness.ts';
 import { createDatabaseReceiptLedger } from './database-ledger-proposal.ts';
 import { createInactivePostingFeedbackLedger, createInactivePostingFeedbackCollector } from '../../../../apps/lythaus-jobs/src/posting-feedback-runtime.ts';
-import { createDedicatedAutocommitClient, DatabaseAutocommitUncertainError } from '../../../db/src/autocommit.ts';
+import { createDedicatedAutocommitClient, DatabaseAutocommitUncertainError, DatabaseAutocommitCleanupError } from '../../../db/src/autocommit.ts';
 import { fixtureHost, localFixtureDns, statementResponseProxy } from '../../../db/tests/transaction-socket-fixture.mjs';
 import { simulateTextProbe, PROBE_SELECTION_HASH } from './collector.ts';
 import { OPENAI_MODERATION_MODEL } from '../../src/research-config.ts';
@@ -145,6 +145,26 @@ test('live callable is hard-disabled before any database or provider work', asyn
   } finally { network.mock.restore(); }
 });
 
+test('binding DSNs cannot override dedicated statement or query deadlines', () => {
+  const original = hyperdriveFixtureBinding(1, 'timeout_override_fixture', null);
+  const adversarial = [
+    'statement_timeout=0', 'query_timeout=600000', 'query_timeout=0',
+    'statement_timeout=', 'statement_timeout=-1', 'statement_timeout=15s',
+    'query_timeout=Infinity', 'statement_timeout=15000&statement_timeout=0',
+    'query_timeout=16000&query_timeout=600000', '%73tatement_timeout=0',
+    'options=-c%20statement_timeout%3D0', 'options=--statement_timeout%3D0',
+    'options=--statement-timeout%3D0',
+    'options=-c%20statement%5C_timeout%3D0',
+    'options=-c%20role%3Dfixture&options=-c%20statement_timeout%3D0',
+  ];
+  for (const suffix of adversarial)
+    assert.throws(() => createDedicatedAutocommitClient({ connectionString: `${original.connectionString}&${suffix}` }),
+      /database_autocommit_timeout_override_forbidden/);
+  assert.throws(() => createDedicatedAutocommitClient({ connectionString:
+    'postgresql://fixture:synthetic@example.invalid/postgres?sslmode=disable&statement_timeout=0' }),
+    /hyperdrive_requires_sslmode_verify_full/);
+});
+
 test('ledger snapshots and reserves a probe before awaits; uncertain claims cannot reuse its context', async () => {
   let calls = 0;
   const captured = [];
@@ -239,9 +259,42 @@ postgresTest('dedicated PostgreSQL client enforces autocommit and closes every c
       await assertNoRuntimeClients(observer, applicationName);
     });
     await t.test('server deadline cancels the statement and closes without retry', { timeout: 25_000 }, async () => {
-      assert.equal((await database.queryAutocommit("SELECT current_setting('statement_timeout') AS timeout")).rows[0].timeout, '15s');
-      await assert.rejects(database.queryAutocommit('SELECT pg_sleep(30)'), { code: '57014' });
+      const declared = new URL(binding.connectionString);
+      declared.searchParams.append('statement_timeout', '15000');
+      declared.searchParams.append('query_timeout', '16000');
+      declared.searchParams.append('options', `-c application_name=${applicationName}`);
+      const bounded = createDedicatedAutocommitClient({ connectionString: declared.toString() });
+      const settings = await bounded.queryAutocommit("SELECT current_setting('statement_timeout') AS timeout, current_setting('application_name') AS application_name");
+      assert.equal(settings.rows[0].timeout, '15s');
+      assert.equal(settings.rows[0].application_name, applicationName);
+      await assert.rejects(bounded.queryAutocommit('SELECT pg_sleep(30)'), { code: '57014' });
       await assertNoRuntimeClients(observer, applicationName);
+    });
+    await t.test('conflicting timeout DSNs fail before PostgreSQL receives a connection', async () => {
+      for (const [key, value] of [['statement_timeout', '0'], ['query_timeout', '600000'],
+        ['options', '-c statement_timeout=0'], ['options', '-c statement\\_timeout=0']]) {
+        const override = new URL(binding.connectionString); override.searchParams.append(key, value);
+        assert.throws(() => createDedicatedAutocommitClient({ connectionString: override.toString() }),
+          /database_autocommit_timeout_override_forbidden/);
+      }
+      await assertNoRuntimeClients(observer, applicationName);
+    });
+    await t.test('acknowledged writes fail closed within the cleanup bound when the peer stalls its close', { timeout: 5_000 }, async () => {
+      const target = new URL(`postgresql://postgres@127.0.0.1:${port}/postgres`);
+      const proxy = await statementResponseProxy(target, 'INSERT INTO public.autocommit_fixture', 'stall_after_acknowledgement');
+      const proxied = createDedicatedAutocommitClient(hyperdriveFixtureBinding(proxy.port, applicationName, null));
+      let timeout;
+      try {
+        await Promise.race([
+          assert.rejects(proxied.queryAutocommit('INSERT INTO public.autocommit_fixture(id) VALUES ($1)', ['stalled_close']),
+            error => error instanceof DatabaseAutocommitCleanupError && error.outcome === 'acknowledged'),
+          new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('fixture_close_bound_exceeded')), 3_000); }),
+        ]);
+        assert.equal(proxy.acknowledged, true);
+        assert.equal(proxy.terminationSeen, true);
+        assert.equal((await observer.query("SELECT count(*)::integer AS count FROM public.autocommit_fixture WHERE id='stalled_close'")).rows[0].count, 1);
+        await assertNoRuntimeClients(observer, applicationName);
+      } finally { clearTimeout(timeout); await proxy.close(); }
     });
     for (const mode of ['drop_before_commit', 'drop_committed_response']) await t.test(`missing acknowledgement is unknown for ${mode}`, async () => {
       const target = new URL(`postgresql://postgres@127.0.0.1:${port}/postgres`);
@@ -490,6 +543,28 @@ postgresTest('PostgreSQL ledger claims once, stores only allowlisted outcomes, a
     assert.equal(await createDatabaseReceiptLedger(autocommitClient(client)).claimProbe(rollbackBinding), false);
 
     const target = new URL(`postgresql://postgres@127.0.0.1:${port}/postgres`);
+    await t.test('stalled claim cleanup preserves acknowledged state and prevents any provider request', { timeout: 5_000 }, async () => {
+      const proxy = await statementResponseProxy(target, 'INSERT INTO evaluation.posting_feedback_probe_runs', 'stall_after_acknowledgement');
+      const stalledBinding = runBinding('6'.repeat(40), '1'.repeat(64));
+      const stalledLedger = createInactivePostingFeedbackLedger(hyperdriveFixtureBinding(proxy.port, 'posting_feedback_stalled_claim'));
+      let timeout, providerCalls = 0;
+      try {
+        await Promise.race([
+          assert.rejects(simulateTextProbe({ fixtures: fixtures.slice(0, 20), ledger: stalledLedger,
+            gate: gate(stalledBinding.sourceSha, stalledBinding.collectorHash), apiKey: 'synthetic-test-only',
+            fetchImpl: async () => { providerCalls += 1; return successBody(); },
+          }), error => error instanceof DatabaseAutocommitCleanupError && error.outcome === 'acknowledged'),
+          new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('fixture_close_bound_exceeded')), 3_000); }),
+        ]);
+        assert.equal(providerCalls, 0);
+        assert.equal(proxy.acknowledged, true);
+        assert.equal(proxy.terminationSeen, true);
+        assert.equal((await client.query('SELECT count(*)::integer AS count FROM evaluation.posting_feedback_probe_runs WHERE source_sha=$1', [stalledBinding.sourceSha])).rows[0].count, 1);
+        assert.equal(await createInactivePostingFeedbackLedger(runtimeBinding).claimProbe(stalledBinding), false);
+        assert.equal(await stalledLedger.claimProbe(stalledBinding), false);
+        await assertNoRuntimeClients(client, 'posting_feedback_stalled_claim');
+      } finally { clearTimeout(timeout); await proxy.close(); }
+    });
     async function verifyLostAcknowledgement({ label, binding, statement, expectedCalls, expectedClaimState, expectedResults }) {
       const proxy = await statementResponseProxy(target, statement);
       const applicationName = `posting_feedback_lost_${label}`;
