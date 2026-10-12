@@ -59,6 +59,40 @@ function assertPrivateError(response, body, status, error, extraHeaders = {}) {
   });
 }
 
+function assertAuthFailureTrace(events, expected) {
+  const correlatedEvents = events.filter(event => event?.correlationId === expected.correlationId);
+  const matchingEvents = correlatedEvents.filter(event => event.route === expected.route && event.errorCode === expected.errorCode);
+  assert.ok(matchingEvents.length > 0, 'target auth failure emits a trace matching its response correlation, route, and error');
+  assert.ok(correlatedEvents.every(event => event.route === expected.route && event.errorCode === expected.errorCode), 'target auth trace records retain the response route and error');
+  return correlatedEvents;
+}
+
+test('auth trace assertion rejects missing or mismatched request records without echoing log payloads', () => {
+  const expected = {
+    correlationId: '00000000-0000-4000-8000-000000000001',
+    route: '/api/auth/email',
+    errorCode: 'invalid_credentials',
+  };
+  const privateLogPayload = 'synthetic private trace payload';
+  const invalidTraces = [
+    [],
+    [{ ...expected, correlationId: '00000000-0000-4000-8000-000000000002', privateLogPayload }],
+    [{ ...expected, route: '/api/auth/refresh', privateLogPayload }],
+    [{ ...expected, errorCode: 'provider_private_details', privateLogPayload }],
+  ];
+
+  for (const traces of invalidTraces) {
+    let failure;
+    try {
+      assertAuthFailureTrace(traces, expected);
+    } catch (error) {
+      failure = error;
+    }
+    assert.ok(failure instanceof assert.AssertionError, 'missing or incorrect request traces are rejected');
+    assert.ok(!failure.message.includes(privateLogPayload), 'trace assertion failures do not echo private log payloads');
+  }
+});
+
 function assertPrivacyLeakMutationsRejected(response, body, status, error, extraHeaders = {}) {
   const mutations = [
     { accountState: 'verified' },
@@ -289,8 +323,8 @@ describe('Public API authentication failures in native Workerd', { timeout: 180_
     const nonexistent = await fixture.request('/api/auth/email', {
       mode: 'login', email: fixture.email('unknown-login'), password,
     });
-    const wrongPassword = await fixture.request('/api/auth/email', { mode: 'login', email, password: 'synthetic wrong password' });
     const nonexistentBody = await nonexistent.json();
+    const wrongPassword = await fixture.request('/api/auth/email', { mode: 'login', email, password: 'synthetic wrong password' });
     const wrongPasswordBody = await wrongPassword.json();
     assertPrivateError(nonexistent, nonexistentBody, 401, 'invalid_credentials');
     assertPrivateError(wrongPassword, wrongPasswordBody, 401, 'invalid_credentials');
@@ -499,6 +533,12 @@ describe('Public API authentication failures in native Workerd', { timeout: 180_
     assert.equal((await fixture.request('/api/auth/userinfo', undefined, {
       method: 'GET', access: logoutSession.accessToken,
     })).status, 401, 'logout revocation is enforced by subsequent Worker requests');
+    assert.equal((await fixture.request('/api/auth/refresh', { refreshToken: secondSession.refreshToken })).status, 401,
+      'global logout revokes an older refresh session for the same account');
+    assert.equal((await fixture.request('/api/auth/userinfo', undefined, {
+      method: 'GET', access: secondSession.accessToken,
+    })).status, 401, 'global logout revokes access issued by an older session');
+    assert.equal(await fixture.activeSessionCount(secondAccount.id), 0, 'global logout leaves no active session for that account');
     const firstStillActive = await fixture.request('/api/auth/userinfo', undefined, {
       method: 'GET', access: rotatedSession.accessToken,
     });
@@ -533,15 +573,20 @@ describe('Public API authentication failures in native Workerd', { timeout: 180_
     assert.equal(fixture.providerCounts().denied, 0);
 
     const wrongPassword = 'synthetic trace-only password input';
+    const traceStart = fixture.tracePosition();
     const failedLogin = await fixture.request('/api/auth/email', {
       mode: 'login', email, password: wrongPassword,
     });
-    assertPrivateError(failedLogin, await failedLogin.json(), 401, 'invalid_credentials');
+    const failedLoginBody = await failedLogin.json();
+    assertPrivateError(failedLogin, failedLoginBody, 401, 'invalid_credentials');
 
-    const traceEvents = await fixture.traceEvents();
+    const traceEvents = assertAuthFailureTrace(await fixture.traceEvents(traceStart), {
+      correlationId: failedLoginBody.correlationId,
+      route: '/api/auth/email',
+      errorCode: 'invalid_credentials',
+    });
     const serializedTraces = JSON.stringify(traceEvents);
     const verificationMessage = await fixture.emailEnvelope(email, 'verification');
-    assert.ok(traceEvents.length > 0, 'captured Workerd auth errors produce a trace to inspect');
     for (const privateValue of [email, password, wrongPassword, signup.turnstileToken, verificationMessage.token]) {
       assert.ok(!serializedTraces.includes(privateValue), 'captured Workerd traces exclude signup credentials and proof');
     }
@@ -814,9 +859,10 @@ async function createFixture() {
         encryptionKeyVersion: row.delivery_envelope_encryption_key_version,
       }, emailEnvelopeEncryptionKey);
     },
-    async traceEvents() {
+    tracePosition() { return structuredLogs.length; },
+    async traceEvents(startIndex = 0) {
       await new Promise(resolve => setTimeout(resolve, 0));
-      return structuredLogs.map(({ message }) => {
+      return structuredLogs.slice(startIndex).map(({ message }) => {
         try { return JSON.parse(message); } catch { return { message }; }
       });
     },
