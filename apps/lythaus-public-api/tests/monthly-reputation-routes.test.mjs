@@ -15,6 +15,7 @@ const snapshot = {
   effective_month: new Date('2026-09-01T00:00:00Z'), mode: 'confirmed', revision: 1,
   assessment_id: assessmentId, source_id: sourceId, source_revision: 1,
   source_score: 500, level: 1, rules_version: 'synthetic-snapshot-rules',
+  policy_version: MONTHLY_REPUTATION_POLICY_VERSION,
 };
 const assessment = {
   policyVersion: MONTHLY_REPUTATION_POLICY_VERSION, sourceMonth: '2026-08', effectiveMonth: '2026-09',
@@ -38,7 +39,7 @@ function reportClient({ sourceReasonCode = 'assembled' } = {}) {
         { enabled: true, policy_version: MONTHLY_REPUTATION_POLICY_VERSION },
       ], rowCount: 2 };
       if (sql.includes('SELECT version,mode,first_source_month')) return { rows: [{
-        version: 'synthetic-snapshot-rules', mode: 'confirmed', first_source_month: new Date('2026-08-01T00:00:00Z'),
+        version: 'synthetic-snapshot-rules', policy_version: MONTHLY_REPUTATION_POLICY_VERSION, mode: 'confirmed', first_source_month: new Date('2026-08-01T00:00:00Z'),
         weekly_rules_version: 'synthetic-weekly-rules', maintenance_rules_version: 'synthetic-maintenance-rules',
         decision_approvals: Object.fromEntries(MONTHLY_REPUTATION_DECISIONS.map(id => [id, 'synthetic approval'])),
       }], rowCount: 1 };
@@ -49,6 +50,7 @@ function reportClient({ sourceReasonCode = 'assembled' } = {}) {
       if (sql.includes('FROM trust.monthly_reputation_sources source')) return { rows: [{
         revision: 1, reason_code: sourceReasonCode, recorded_at: new Date('2026-09-01T00:00:00Z'),
         catalogue_hash: MONTHLY_REPUTATION_CATALOGUE_HASH, report: assembly, assessment_mode: 'shadow',
+        assembly_policy: MONTHLY_REPUTATION_POLICY_VERSION,
         calculation: assessment, weekly_points: 500, monthly_points: 0, quarterly_points: 0,
         source_score: 500, level: 1,
       }], rowCount: 1 };
@@ -193,7 +195,7 @@ test('monthly reward projections share the revision protected by the selection p
       { enabled: true, policy_version: MONTHLY_REPUTATION_POLICY_VERSION },
     ], rowCount: 2 };
     if (sql.includes('SELECT version,mode,first_source_month')) return { rows: [{
-      version: 'synthetic-snapshot-rules', mode: 'confirmed', first_source_month: new Date('2026-08-01T00:00:00Z'),
+      version: 'synthetic-snapshot-rules', policy_version: MONTHLY_REPUTATION_POLICY_VERSION, mode: 'confirmed', first_source_month: new Date('2026-08-01T00:00:00Z'),
       weekly_rules_version: 'weekly', maintenance_rules_version: 'maintenance',
       decision_approvals: Object.fromEntries(MONTHLY_REPUTATION_DECISIONS.map(id => [id, 'synthetic approval'])),
     }], rowCount: 1 };
@@ -242,4 +244,79 @@ test('unrelated paths and methods are left to the main dispatcher', async () => 
   const deps = dependencies({ authenticate: async () => assert.fail('unmatched request authenticated') });
   assert.equal(await handleMonthlyReputationRead(request('/api/rewards/me'), deps), undefined);
   assert.equal(await handleMonthlyReputationRead(request('/api/rewards/me/monthly', 'POST'), deps), undefined);
+});
+
+test('source overflow returns the published private unavailable error with fresh server correlation and no partial report', async () => {
+  for (const suffix of ['', '/export.csv']) {
+    const client = reportClient();
+    const query = client.query.bind(client);
+    client.query = async (sql, values) => {
+      const result = await query(sql, values);
+      if (sql.includes('FROM trust.monthly_reputation_sources source')) {
+        assert.equal(values[3], 2);
+        assert.equal(values[4], 1);
+        return { rows: [result.rows[0], { ...result.rows[0], revision: 2 }] };
+      }
+      return result;
+    };
+    const deps = dependencies({ reportBounds: { maximumSourceRevisions: 1 }, transaction: async work => work(client) });
+    const response = await handleMonthlyReputationRead(request(
+      `/api/reputation/me/reports/monthly/2026-08${suffix}?subjectId=${other}&limit=99999&maximumSourceRevisions=99999`), deps);
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get('cache-control'), 'private, no-store');
+    const body = await response.json();
+    assert.deepEqual(Object.keys(body).sort(), ['correlationId', 'error']);
+    assert.equal(body.error, 'monthly_report_resource_limit_exceeded');
+    assert.match(body.correlationId, /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    assert.ok(![owner, other, sourceId, snapshotId, assessmentId].includes(body.correlationId));
+    assert.equal(response.headers.get('content-disposition'), null);
+    assert.equal(client.calls.some(({ values }) => values.includes(other)), false);
+    assert.equal(client.calls.some(({ sql }) => sql.includes('SELECT revision, mode')), false);
+  }
+});
+
+test('JSON and CSV output bounds return a private error instead of emitting an oversized successful response', async () => {
+  for (const suffix of ['', '/export.csv']) {
+    const response = await handleMonthlyReputationRead(request(`/api/reputation/me/reports/monthly/2026-08${suffix}`),
+      dependencies({ reportBounds: { maximumOutputBytes: 1 } }));
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get('cache-control'), 'private, no-store');
+    assert.equal((await response.json()).error, 'monthly_report_resource_limit_exceeded');
+  }
+});
+
+test('unavailable reports preserve their exact private v1 JSON and CSV shapes', async () => {
+  for (const suffix of ['', '/export.csv']) {
+    const deps = dependencies({ snapshotRulesVersion: undefined,
+      transaction: async work => work({ query: () => assert.fail('unavailable report must not query monthly data') }) });
+    const response = await handleMonthlyReputationRead(request(`/api/reputation/me/reports/monthly/2026-08${suffix}`), deps);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('cache-control'), 'private, no-store');
+    assert.equal(deps.calls.auth.length, 1);
+    if (!suffix) {
+      const body = await response.json();
+      assert.equal(body.reasonCode, 'report_unavailable');
+      assert.equal(body.report, null);
+      assert.deepEqual(body.corrections, { sourceRevisions: [], effectiveSnapshots: [] });
+      assert.equal(body.dataVersion, undefined);
+    } else assert.ok((await response.text()).includes('"report_unavailable"'));
+  }
+});
+
+test('each monthly request refreshes the principal and never accepts a request-supplied owner or bound', async () => {
+  const clients = [];
+  const principals = [owner, other];
+  const deps = dependencies({ authenticate: async () => ({ userId: principals.shift() }), transaction: async work => {
+    const client = reportClient(); clients.push(client); return work(client);
+  } });
+  for (const ignoredSubject of [other, owner]) {
+    const response = await handleMonthlyReputationRead(request(
+      `/api/reputation/me/reports/monthly/2026-08?subjectId=${ignoredSubject}&limit=1&maximumOutputBytes=1`), deps);
+    assert.equal(response.status, 200);
+  }
+  for (const [index, principal] of [owner, other].entries()) {
+    const call = clients[index].calls.find(({ sql }) => sql.includes('FROM trust.monthly_reputation_sources source'));
+    assert.equal(call.values[0], principal);
+    assert.equal(call.values[3], 129);
+  }
 });
