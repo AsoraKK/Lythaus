@@ -13,6 +13,8 @@ on:
       - 'apps/lythaus-admin-api/src/index.ts'
       - 'apps/lythaus-admin-api/tests/support-feedback-routing.test.mjs'
       - 'apps/lythaus-jobs/src/index.ts'
+      - 'apps/lythaus-jobs/tests/support-workflows.postgres.mjs'
+      - 'apps/lythaus-public-api/tests/native-postgres-workflow-fixture.mjs'
       - 'lib/core/routing/app_router.dart'
       - 'lib/ui/screens/profile/settings_screen.dart'
       - 'lib/features/support/**'
@@ -74,6 +76,10 @@ jobs:
         env:
           SUPPORT_LOCAL_PG_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_support_test?sslmode=disable
         run: node --experimental-strip-types --experimental-test-module-mocks --test packages/db/tests/support-feedback.postgres.mjs
+      - name: Exercise native support privacy workflows against PostgreSQL 17
+        env:
+          SUPPORT_LOCAL_PG_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_support_test?sslmode=disable
+        run: node --experimental-strip-types --experimental-test-module-mocks --test apps/lythaus-jobs/tests/support-workflows.postgres.mjs
 
   owner-console:
     runs-on: ubuntu-latest
