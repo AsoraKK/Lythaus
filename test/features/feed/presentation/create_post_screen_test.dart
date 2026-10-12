@@ -511,7 +511,7 @@ void main() {
     });
 
     group('Discard Confirmation', () {
-      testWidgets('shows discard dialog when closing with unsaved content', (
+      testWidgets('preserves saved text without a discard prompt', (
         tester,
       ) async {
         await tester.pumpWidget(createTestWidget(user: createTestUser()));
@@ -519,22 +519,20 @@ void main() {
 
         // Enter text
         final textField = find.byType(TextField);
-        await tester.enterText(textField, 'Unsaved post content');
-        await tester.pump();
+        await tester.enterText(textField, 'Saved post content');
+        await tester.pumpAndSettle();
+        expect(find.text('Draft saved on this device.'), findsOneWidget);
 
         // Tap close button
         final closeButton = find.byIcon(Icons.close);
         await tester.tap(closeButton);
         await tester.pumpAndSettle();
 
-        // Should show discard dialog
-        expect(find.text('Discard post?'), findsOneWidget);
+        expect(find.text('Discard post?'), findsNothing);
         expect(
-          find.text('Your post will be lost if you close this screen.'),
-          findsOneWidget,
+          tester.widget<TextField>(textField).controller!.text,
+          'Saved post content',
         );
-        expect(find.text('Keep editing'), findsOneWidget);
-        expect(find.text('Discard'), findsOneWidget);
       });
 
       testWidgets('closes without dialog when text is empty', (tester) async {
