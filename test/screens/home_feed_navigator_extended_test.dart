@@ -438,7 +438,7 @@ void main() {
       expect(pageView.physics, isA<NeverScrollableScrollPhysics>());
     });
 
-    testWidgets('feed control panel no longer switches feeds', (tester) async {
+    testWidgets('feed control panel lists available feeds', (tester) async {
       tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
       addTearDown(
         () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
@@ -466,14 +466,25 @@ void main() {
       await tester.tap(find.byType(InkWell).first);
       await tester.pumpAndSettle();
 
-      expect(find.text('Feed tools'), findsOneWidget);
+      expect(find.text('Choose a feed'), findsOneWidget);
       expect(
-        find.text(
-          'Switch feeds from the Discover rail at the top of the home screen.',
+        find.descendant(
+          of: find.byType(ListTile),
+          matching: find.text('Discover'),
         ),
         findsOneWidget,
       );
-      expect(find.text('Curated discover'), findsNothing);
+      expect(
+        find.descendant(of: find.byType(ListTile), matching: find.text('News')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(ListTile),
+          matching: find.text('Moderation'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('top bar search button opens search screen', (tester) async {
@@ -572,7 +583,18 @@ void main() {
 
       await tester.tap(find.byType(InkWell).first);
       await tester.pumpAndSettle();
-      expect(find.text('Feed tools'), findsOneWidget);
+      expect(find.text('Choose a feed'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(ListTile),
+          matching: find.text('Discover'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: find.byType(ListTile), matching: find.text('News')),
+        findsOneWidget,
+      );
       expect(find.text('Build custom feed'), findsNothing);
       expect(find.text('Moderation hub'), findsNothing);
       expect(find.text('Appeals queue'), findsNothing);

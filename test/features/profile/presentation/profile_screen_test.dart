@@ -5,6 +5,7 @@ library;
 
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -75,6 +76,62 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.textContaining('Unable to load profile'), findsOneWidget);
+  });
+
+  testWidgets('profile retry can recover after a temporary load failure', (
+    tester,
+  ) async {
+    var calls = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ..._commonOverrides('user-1'),
+          publicUserProvider('user-1').overrideWith((_) async {
+            calls += 1;
+            if (calls == 1) throw Exception('temporary unavailable');
+            return _fakeUser();
+          }),
+        ],
+        child: const MaterialApp(home: ProfileScreen(userId: 'user-1')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Unable to load profile'), findsOneWidget);
+
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+
+    expect(calls, 2);
+    expect(find.text('Test User'), findsWidgets);
+  });
+
+  testWidgets('unavailable profile response stays private and final', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ..._commonOverrides('user-1'),
+          publicUserProvider('user-1').overrideWith((_) async {
+            final request = RequestOptions(path: '/api/users/user-1');
+            throw DioException(
+              requestOptions: request,
+              response: Response(requestOptions: request, statusCode: 404),
+              type: DioExceptionType.badResponse,
+            );
+          }),
+        ],
+        child: const MaterialApp(home: ProfileScreen(userId: 'user-1')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Profile unavailable'), findsOneWidget);
+    expect(find.text('This profile is unavailable to view.'), findsOneWidget);
+    expect(find.text('Retry'), findsNothing);
+    expect(find.textContaining('private'), findsNothing);
+    expect(find.textContaining('deleted'), findsNothing);
+    expect(find.textContaining('blocked'), findsNothing);
   });
 
   testWidgets('shows sign-in prompt when userId is null and no current user', (

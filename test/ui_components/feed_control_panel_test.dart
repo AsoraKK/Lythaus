@@ -51,7 +51,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Feeds'), findsOneWidget);
+      expect(find.text('Choose a feed'), findsOneWidget);
       expect(find.text('Curated discover'), findsOneWidget);
       expect(find.byIcon(Icons.home_filled), findsOneWidget);
 
@@ -143,7 +143,7 @@ void main() {
     expect(find.text('Moderation only'), findsOneWidget);
   });
 
-  testWidgets('hides feed switching list when onSelect is not provided', (
+  testWidgets('does not expose inert feed choices without a callback', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -161,11 +161,6 @@ void main() {
     expect(find.text('Build custom feed'), findsNothing);
     expect(find.text('Moderation hub'), findsNothing);
     expect(find.text('Appeals queue'), findsNothing);
-    expect(
-      find.text(
-        'Switch feeds from the Discover rail at the top of the home screen.',
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('Switch feeds from the Discover rail'), findsNothing);
   });
 }

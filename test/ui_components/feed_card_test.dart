@@ -1,5 +1,8 @@
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/ui/components/feed_card.dart';
+import 'package:lythaus/ui/components/trust_strip_row.dart';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -81,7 +84,57 @@ void main() {
 
     expect(find.text('profile:author-alice'), findsOneWidget);
     expect(postOpened, isFalse);
+
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('View Alice profile'), findsOneWidget);
+    await tester.tap(find.byTooltip('View Alice profile'));
+    await tester.pumpAndSettle();
+    expect(find.text('profile:author-alice'), findsOneWidget);
   });
+
+  testWidgets(
+    'raw author ids render a humane label and keep profile navigation',
+    (tester) async {
+      const authorId = '01a044e4-3860-7f76-b819-5be99e0000f6';
+      final item = FeedItem(
+        id: 'post-uuid-label',
+        feedId: 'discover',
+        author: authorId,
+        authorId: authorId,
+        contentType: ContentType.text,
+        title: 'Update',
+        body: 'A public update',
+        publishedAt: DateTime.utc(2025, 1, 1),
+      );
+      final router = GoRouter(
+        initialLocation: '/feed',
+        routes: [
+          GoRoute(
+            path: '/feed',
+            builder: (context, state) => Scaffold(body: FeedCard(item: item)),
+          ),
+          GoRoute(
+            name: 'profile',
+            path: '/user/:userId',
+            builder: (context, state) => Scaffold(
+              body: Text('profile:${state.pathParameters['userId']}'),
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Lythaus member'), findsOneWidget);
+      expect(find.textContaining(authorId), findsNothing);
+      await tester.tap(find.byTooltip('View Lythaus member profile'));
+      await tester.pumpAndSettle();
+      expect(find.text('profile:$authorId'), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'hides source text when requested and shows video preview badge',
@@ -148,6 +201,35 @@ void main() {
     expect(find.text('update'), findsNothing);
     expect(find.text('Plain update'), findsNothing);
     expect(find.byType(Image), findsNothing);
+  });
+
+  testWidgets('trust status labels are not exposed as checkbox controls', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TrustStripRow(
+              summary: const FeedTrustSummary(
+                trustStatus: 'no_extra_signals',
+                timeline: FeedTrustTimeline(),
+              ),
+              onTap: () {},
+            ),
+          ),
+        ),
+      );
+
+      final status = tester.getSemantics(find.text('No extra signals'));
+      expect(
+        status.getSemanticsData().flagsCollection.isChecked,
+        ui.CheckedState.none,
+      );
+    } finally {
+      semantics.dispose();
+    }
   });
 
   testWidgets('renders mixed content label', (tester) async {

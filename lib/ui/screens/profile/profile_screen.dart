@@ -25,6 +25,7 @@ import 'package:lythaus/features/profile/application/follow_service.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
 import 'package:lythaus/features/profile/domain/owner_profile.dart';
 import 'package:lythaus/features/profile/domain/owner_post.dart';
+import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
 import 'package:lythaus/features/profile/presentation/profile_tab_view.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
@@ -95,17 +96,22 @@ class ProfileScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const LythEmptyState(
+                LythEmptyState(
                   icon: Icons.person_off_outlined,
-                  title: 'Unable to load profile',
-                  subtitle: 'Please try again.',
+                  title: _isUnavailableProfileError(error)
+                      ? 'Profile unavailable'
+                      : 'Unable to load profile',
+                  subtitle: _isUnavailableProfileError(error)
+                      ? 'This profile is unavailable to view.'
+                      : 'Please try again.',
                 ),
-                TextButton(
-                  onPressed: () => isOwner
-                      ? ref.invalidate(ownerProfileProvider)
-                      : ref.invalidate(publicUserProvider(targetUserId)),
-                  child: const Text('Retry'),
-                ),
+                if (!_isUnavailableProfileError(error))
+                  TextButton(
+                    onPressed: () => isOwner
+                        ? ref.invalidate(ownerProfileProvider)
+                        : ref.invalidate(publicUserProvider(targetUserId)),
+                    child: const Text('Retry'),
+                  ),
               ],
             ),
           ),
@@ -416,6 +422,10 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
+bool _isUnavailableProfileError(Object error) =>
+    error is DioException &&
+    const {403, 404}.contains(error.response?.statusCode);
+
 class _ProfileCompletionGuide extends StatelessWidget {
   const _ProfileCompletionGuide();
 
@@ -511,7 +521,15 @@ class _OwnerPostsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final post in timeline.items) _OwnerPostCard(post: post),
+        for (final post in timeline.items)
+          _OwnerPostCard(
+            post: post,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => PostDetailScreen(postId: post.id),
+              ),
+            ),
+          ),
         if (timeline.loadMoreError != null)
           Padding(
             padding: const EdgeInsets.only(bottom: Spacing.xs),
@@ -554,9 +572,10 @@ class _OwnerPostsSection extends ConsumerWidget {
 }
 
 class _OwnerPostCard extends StatelessWidget {
-  const _OwnerPostCard({required this.post});
+  const _OwnerPostCard({required this.post, required this.onTap});
 
   final OwnerPost post;
+  final VoidCallback onTap;
 
   String get _visibilityDescription {
     if (post.isPending) {
@@ -573,37 +592,41 @@ class _OwnerPostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Card(
     margin: const EdgeInsets.only(bottom: Spacing.sm),
-    child: Padding(
-      padding: const EdgeInsets.all(Spacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(post.body, style: Theme.of(context).textTheme.bodyLarge),
-          const SizedBox(height: Spacing.sm),
-          Wrap(
-            spacing: Spacing.xs,
-            runSpacing: Spacing.xs,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Chip(label: Text(post.statusLabel)),
-              Text(
-                MaterialLocalizations.of(
-                  context,
-                ).formatShortDate(post.createdAt.toLocal()),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(Spacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(post.body, style: Theme.of(context).textTheme.bodyLarge),
+            const SizedBox(height: Spacing.sm),
+            Wrap(
+              spacing: Spacing.xs,
+              runSpacing: Spacing.xs,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Chip(label: Text(post.statusLabel)),
+                Text(
+                  MaterialLocalizations.of(
+                    context,
+                  ).formatShortDate(post.createdAt.toLocal()),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: Spacing.xs),
-          Text(
-            _visibilityDescription,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: Spacing.xs),
+            Text(
+              _visibilityDescription,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     ),
   );
