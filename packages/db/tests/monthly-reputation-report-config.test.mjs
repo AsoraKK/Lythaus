@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createHash } from 'node:crypto';
-import { readOwnMonthlyReputationReport } from '../src/monthly-reputation-report.ts';
+import { readOwnMonthlyReputationReport, monthlyReputationReportBounds, assertMonthlyReputationReportValueBounded,
+  MONTHLY_REPUTATION_REPORT_DEFAULT_BOUNDS, MONTHLY_REPUTATION_REPORT_HARD_BOUNDS } from '../src/monthly-reputation-report.ts';
 import { readOwnMonthlyRewardSnapshot } from '../src/monthly-reward-snapshots.ts';
-import { serializeMonthlyReputationReportCsv } from '../../../apps/lythaus-public-api/src/monthly-reputation-report-export.ts';
+import { serializeMonthlyReputationReportCsv, serializeMonthlyReputationReportJson } from '../../../apps/lythaus-public-api/src/monthly-reputation-report-export.ts';
 import { MONTHLY_REPUTATION_POLICY_VERSION as v1 } from '../../contracts/src/monthly-reputation-policy.ts';
 import { PROSPECTIVE_REPUTATION_POLICY_VERSION as v2, PROSPECTIVE_REPUTATION_CATALOGUE_HASH as hash } from '../../contracts/src/monthly-reputation-prospective.ts';
 
@@ -218,4 +219,119 @@ test('nullable suggestion validity is unavailable evidence even when qualified, 
   } }), input, disposable);
   assert.equal(partial.report.quarterlySuggestion.validFrom, '2026-12-31T12:00:00.000Z');
   assert.equal(partial.report.quarterlySuggestion.validUntil, null); assert.equal(partial.report.quarterlySuggestion.points, 150);
+});
+
+test('trusted engineering bounds accept conservative overrides and reject invalid configuration before database reads', async () => {
+  assert.deepEqual(monthlyReputationReportBounds(), MONTHLY_REPUTATION_REPORT_DEFAULT_BOUNDS);
+  assert.ok(Object.isFrozen(monthlyReputationReportBounds()));
+  assert.equal(monthlyReputationReportBounds({ maximumSourceRevisions: 2 }).maximumSourceRevisions, 2);
+  assert.deepEqual(monthlyReputationReportBounds(MONTHLY_REPUTATION_REPORT_HARD_BOUNDS), MONTHLY_REPUTATION_REPORT_HARD_BOUNDS);
+  for (const bounds of [null, [], 'untrusted', { unknown: 1 }, { maximumSourceRevisions: 0 },
+    { maximumSnapshotRevisions: -1 }, { maximumCsvRows: 1.5 }, { maximumJsonNodes: Infinity },
+    { maximumOutputBytes: undefined }, { maximumStringBytes: NaN },
+    { maximumSourceRowBytes: 100, maximumSourcePayloadBytes: 99 },
+    ...Object.entries(MONTHLY_REPUTATION_REPORT_HARD_BOUNDS).map(([key, value]) => ({ [key]: value + 1 }))]) {
+    const client = clientWith(() => assert.fail('invalid bounds must precede database reads'));
+    await assert.rejects(readOwnMonthlyReputationReport(client, { ...input, bounds }), /monthly_report_bounds_invalid/);
+    assert.deepEqual(client.statements, []);
+  }
+});
+
+function interceptPrepared(overrides) {
+  const client = preparedClient();
+  const query = client.query;
+  const calls = [];
+  client.query = async (statement, values) => {
+    calls.push({ statement, values });
+    const result = await query(statement, values);
+    return overrides(statement, values, result) ?? result;
+  };
+  client.calls = calls;
+  return client;
+}
+
+test('source LIMIT plus one and SQL byte budgets reject overflow markers before touching JSON payloads', async () => {
+  const client = interceptPrepared((statement, values) => {
+    if (!statement.includes('FROM trust.monthly_reputation_sources source')) return;
+    assert.match(statement, /ORDER BY source\.revision DESC LIMIT \$4/);
+    assert.match(statement, /octet_length\(assembly\.report::text\)/);
+    assert.match(statement, /octet_length\(assessment\.calculation::text\)/);
+    assert.match(statement, /count\(\*\) > \$5/);
+    assert.match(statement, /sum\(payload_bytes\).* > \$6/);
+    assert.match(statement, /max\(payload_bytes\).* > \$7/);
+    assert.match(statement, /CASE WHEN NOT budget\.exceeded THEN assembly\.report END AS report/);
+    assert.match(statement, /CASE WHEN NOT budget\.exceeded THEN assessment\.calculation END AS calculation/);
+    assert.deepEqual(values.slice(0, 7), [subjectId, '2026-12-01', v2, 3, 2, 4096, 2048]);
+    const row = { bounds_exceeded: true };
+    Object.defineProperty(row, 'report', { get: () => assert.fail('oversize report payload must not be read') });
+    Object.defineProperty(row, 'calculation', { get: () => assert.fail('oversize calculation must not be read') });
+    return { rows: [row] };
+  });
+  await assert.rejects(readOwnMonthlyReputationReport(client, { ...input,
+    bounds: { maximumSourceRevisions: 2, maximumSourceRowBytes: 2048, maximumSourcePayloadBytes: 4096 } }, disposable),
+  /monthly_report_resource_limit_exceeded/);
+  assert.ok(!client.calls.some(({ statement }) => statement.includes('SELECT revision, mode')));
+});
+
+test('source and snapshot revision overflow refuse the whole report instead of dropping corrections', async () => {
+  for (const kind of ['source', 'snapshot']) {
+    const client = interceptPrepared((statement, values, result) => {
+      if (kind === 'source' && statement.includes('FROM trust.monthly_reputation_sources source'))
+        return { rows: Array.from({ length: 3 }, () => result.rows[0]) };
+      if (kind === 'snapshot' && statement.includes('SELECT revision, mode')) {
+        assert.match(statement, /ORDER BY mode, revision LIMIT \$4/);
+        assert.deepEqual(values, [subjectId, '2027-01-01', v2, 3]);
+        return { rows: Array.from({ length: 3 }, (_, index) => ({ revision: index + 1, corrected: true })) };
+      }
+    });
+    await assert.rejects(readOwnMonthlyReputationReport(client, { ...input,
+      bounds: { maximumSourceRevisions: 2, maximumSnapshotRevisions: 2 } }, disposable), /monthly_report_resource_limit_exceeded/);
+  }
+});
+
+test('wide private evidence arrays and excessive payload bytes fail before report projection', async () => {
+  const wide = preparedClient({ mutate: row => {
+    const evidenceIds = Array(9);
+    Object.defineProperty(evidenceIds, '0', { get: () => assert.fail('oversize evidence must not be traversed') });
+    row.report.weeks[0].calculation.actions = [{ actionId: 'weekly.synthetic', evidenceIds }];
+  } });
+  await assert.rejects(readOwnMonthlyReputationReport(wide, { ...input, bounds: { maximumArrayItems: 8 } }, disposable),
+    /monthly_report_resource_limit_exceeded/);
+  const large = preparedClient({ mutate: row => { row.report.privateEvidence = '🙂'.repeat(1000); } });
+  await assert.rejects(readOwnMonthlyReputationReport(large, { ...input,
+    bounds: { maximumSourceRowBytes: 4096 } }, disposable), /monthly_report_resource_limit_exceeded/);
+});
+
+test('JSON structural guards bound nodes, depth, strings, cycles and exact UTF-8 serialization', () => {
+  const exact = { value: '🙂é\n"', missing: undefined, rows: [null, true, false, NaN, undefined], date: new Date('2026-10-12T00:00:00Z') };
+  const json = JSON.stringify(exact), bytes = Buffer.byteLength(json, 'utf8');
+  assert.equal(serializeMonthlyReputationReportJson(exact, { maximumOutputBytes: bytes }), json);
+  assert.throws(() => serializeMonthlyReputationReportJson(exact, { maximumOutputBytes: bytes - 1 }), /resource_limit_exceeded/);
+  const circular = {}; circular.self = circular;
+  for (const [value, bounds] of [[{ a: { b: 1 } }, { maximumJsonDepth: 1 }],
+    [[1, 2], { maximumJsonNodes: 2 }], [['🙂'], { maximumStringBytes: 3 }],
+    [[1, 2], { maximumArrayItems: 1 }], [circular, {}], [1n, {}], [new Set(), {}]]) {
+    assert.throws(() => assertMonthlyReputationReportValueBounded(value, monthlyReputationReportBounds(bounds)), /resource_limit_exceeded/);
+  }
+  assert.throws(() => serializeMonthlyReputationReportJson(undefined), /resource_limit_exceeded/);
+});
+
+test('CSV serialization enforces complete data-row and byte limits after escaping and formula protection', async () => {
+  const report = await readOwnMonthlyReputationReport(preparedClient(), input, disposable);
+  report.report.sourceReasonCode = ' \t=SUM("🙂é",1)\r\nnext';
+  report.corrections.effectiveSnapshots.push({ revision: 2, mode: 'shadow', sourceRevision: 2,
+    sourceScore: 13650, level: 5, recordedAt: '2027-01-04T00:00:00Z' });
+  const preparation = { mode: 'disabled_v2_preparation' };
+  const csv = serializeMonthlyReputationReportCsv(report, preparation);
+  const bytes = Buffer.byteLength(csv, 'utf8');
+  assert.ok(bytes > csv.length);
+  assert.ok(csv.includes('"\' \t=SUM(""🙂é"",1)\r\nnext"'));
+  assert.equal(serializeMonthlyReputationReportCsv(report, preparation, { maximumOutputBytes: bytes, maximumCsvRows: 10 }), csv);
+  assert.throws(() => serializeMonthlyReputationReportCsv(report, preparation, { maximumOutputBytes: bytes - 1 }), /resource_limit_exceeded/);
+  assert.throws(() => serializeMonthlyReputationReportCsv(report, preparation, { maximumCsvRows: 9 }), /resource_limit_exceeded/);
+  assert.throws(() => serializeMonthlyReputationReportCsv(report, preparation, { maximumOutputBytes: 1 }), /resource_limit_exceeded/);
+  for (const prefix of ['=', '+', '-', '@', ' \t\r\n=']) {
+    const value = { ...report, reasonCode: `${prefix}synthetic()` };
+    assert.ok(serializeMonthlyReputationReportCsv(value, preparation).includes(`'${prefix}synthetic()`));
+  }
 });
