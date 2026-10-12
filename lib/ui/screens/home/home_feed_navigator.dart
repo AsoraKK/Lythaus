@@ -115,7 +115,10 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
                   setState(() => _activeIndex = index);
                 },
                 itemCount: feeds.length,
-                itemBuilder: (context, index) => _FeedPage(feed: feeds[index]),
+                itemBuilder: (context, index) => _FeedPage(
+                  key: ValueKey(feeds[index].id),
+                  feed: feeds[index],
+                ),
               ),
             ),
           ],
@@ -274,6 +277,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
           autofocus: true,
           child: Align(
             alignment: Alignment.bottomCenter,
+            heightFactor: 1,
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxWidth: 640,
@@ -411,7 +415,7 @@ class _FeedSwitchRail extends StatelessWidget {
 }
 
 class _FeedPage extends ConsumerStatefulWidget {
-  const _FeedPage({required this.feed});
+  const _FeedPage({super.key, required this.feed});
 
   final FeedModel feed;
 
@@ -423,12 +427,16 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
   static const double _estimatedCardExtent = 340;
   late final ScrollController _scrollController;
   bool _restoreApplied = false;
+  bool _restoreCallbackScheduled = false;
   bool _firstFeedLoadLogged = false;
+  FeedRestoreResult? _pendingRestoreResult;
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
+    _scrollController = ScrollController(
+      onAttach: (_) => _scheduleRestoreIfPossible(),
+    );
     _scrollController.addListener(_persistRestoreSnapshot);
   }
 
@@ -565,13 +573,33 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
       return;
     }
 
-    _restoreApplied = true;
+    _pendingRestoreResult = restoreResult;
+    _scheduleRestoreIfPossible();
+  }
+
+  void _scheduleRestoreIfPossible() {
+    if (_restoreApplied ||
+        _restoreCallbackScheduled ||
+        _pendingRestoreResult == null) {
+      return;
+    }
+    _restoreCallbackScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollController.hasClients) {
+      _restoreCallbackScheduled = false;
+      if (!mounted || _restoreApplied || !_scrollController.hasClients) {
         return;
       }
 
-      final maxExtent = _scrollController.position.maxScrollExtent;
+      final position = _scrollController.position;
+      if (!position.hasContentDimensions) {
+        _scheduleRestoreIfPossible();
+        WidgetsBinding.instance.scheduleFrame();
+        return;
+      }
+
+      _restoreApplied = true;
+      final restoreResult = _pendingRestoreResult!;
+      final maxExtent = position.maxScrollExtent;
       final targetOffset = restoreResult.offset.clamp(0, maxExtent).toDouble();
       if (targetOffset > 0) {
         _scrollController.jumpTo(targetOffset);
