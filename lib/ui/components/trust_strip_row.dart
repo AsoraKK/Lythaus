@@ -97,40 +97,6 @@ class _CompactTrustDetailsState extends State<_CompactTrustDetails> {
   @override
   Widget build(BuildContext context) {
     final summary = widget.summary;
-    final timeline = summary.timeline;
-    final relevantStates = <Widget>[
-      if (summary.trustStatus != 'no_extra_signals')
-        _StatusChip(status: summary.trustStatus),
-      if (timeline.created != 'complete')
-        _TimelineChip(
-          icon: Icons.fiber_manual_record_outlined,
-          label: 'Created',
-          state: timeline.created,
-        ),
-      if (timeline.mediaChecked != 'none' &&
-          timeline.mediaChecked != 'complete')
-        _TimelineChip(
-          icon: Icons.perm_media_outlined,
-          label: 'Media checked',
-          state: timeline.mediaChecked,
-        ),
-      if (timeline.moderation != 'none')
-        _TimelineChip(
-          icon: Icons.gavel_outlined,
-          label: 'Moderation',
-          state: timeline.moderation,
-        ),
-      if (timeline.appeal != null)
-        _TimelineChip(
-          icon: Icons.outbox_outlined,
-          label: 'Appeal',
-          state: timeline.appeal!,
-        ),
-      if (summary.hasAppeal &&
-          timeline.appeal == null &&
-          summary.trustStatus != 'under_appeal')
-        Text('Appeal on record', style: context.textTheme.bodySmall),
-    ];
 
     final detailsButton = MergeSemantics(
       child: Semantics(
@@ -162,9 +128,7 @@ class _CompactTrustDetailsState extends State<_CompactTrustDetails> {
       ),
     );
     final leading = widget.leading;
-    final stackDisclosure =
-        MediaQuery.textScalerOf(context).scale(14) > 18 ||
-        relevantStates.isNotEmpty;
+    final stackDisclosure = MediaQuery.textScalerOf(context).scale(14) > 18;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,20 +144,39 @@ class _CompactTrustDetailsState extends State<_CompactTrustDetails> {
                 detailsButton,
               ],
             ),
-        if (relevantStates.isNotEmpty)
-          Padding(
-            padding: EdgeInsets.only(top: context.spacing.xs),
-            child: Wrap(
-              spacing: context.spacing.sm,
-              runSpacing: context.spacing.sm,
-              children: relevantStates,
-            ),
+        if (summary.trustStatus == 'under_appeal')
+          Text('Appeal in progress', style: context.textTheme.bodySmall),
+        if (summary.trustStatus == 'actioned')
+          Text('Content restricted', style: context.textTheme.bodySmall),
+        if (summary.timeline.moderation == 'pending_review')
+          Text('Review pending', style: context.textTheme.bodySmall),
+        if (summary.proofSignalsProvided)
+          Text(
+            'Supporting evidence supplied',
+            style: context.textTheme.bodySmall,
           ),
         if (leading == null || stackDisclosure) detailsButton,
         if (_expanded)
           Padding(
             padding: EdgeInsets.only(bottom: context.spacing.sm),
-            child: TrustStripRow(summary: summary, onTap: widget.onTap),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  summary.hasAppeal || summary.trustStatus == 'under_appeal'
+                      ? 'An appeal is on record. A declaration or attached evidence '
+                            'does not independently verify authorship.'
+                      : 'The authorship label records a declaration or assessment. '
+                            'A declaration does not independently verify authorship.',
+                  style: context.textTheme.bodySmall,
+                ),
+                TextButton(
+                  onPressed: widget.onTap,
+                  style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                  child: const Text('View content history'),
+                ),
+              ],
+            ),
           ),
       ],
     );

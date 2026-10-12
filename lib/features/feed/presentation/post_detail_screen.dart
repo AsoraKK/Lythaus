@@ -371,7 +371,12 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     const SizedBox(height: 8),
-                    AuthorshipDisclosure(label: post.authorship.label.label),
+                    AuthorshipDisclosure(
+                      label: post.authorship.label.label,
+                      classificationSource:
+                          post.authorship.classificationSource,
+                      classificationState: post.authorship.classificationState,
+                    ),
                     if (post.moderationState == 'under_review') ...[
                       const SizedBox(height: 8),
                       const Text(
@@ -390,6 +395,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                     ),
                     const SizedBox(height: 12),
                     TrustStripRow(
+                      compact: true,
                       summary: FeedTrustSummary(
                         trustStatus: post.trustStatus,
                         timeline: FeedTrustTimeline(

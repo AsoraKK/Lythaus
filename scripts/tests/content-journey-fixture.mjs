@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 const initial=()=>({
-  posts:[{id:'p1',authorId:'owner',body:'Synthetic published post',declaredCreationMode:'human',
+  posts:[{id:'p1',authorId:'owner',authorDisplayName:'Kai Rivers',authorHandle:'kai',body:'Synthetic published post',declaredCreationMode:'human',
     moderationState:'allowed',publicLabel:'Human-authored',createdAt:'2026-10-01T00:00:00Z'}],
   comments:['owner','other'].map((actor,i)=>({id:'c'+(i+1),postId:'p1',authorId:actor,
+    authorDisplayName:actor==='owner'?'Kai Rivers':'Rowan West',
     body:'Synthetic '+actor+' comment',parentId:null,declaredCreationMode:'human',
     moderationState:'allowed',createdAt:'2026-10-01T00:00:00Z'})),
   requests:[],replay:new Map(),processing:new Map(),denied:false,attempts:new Map(),
@@ -61,6 +62,11 @@ export function contentFixture() {
     const comment=state.comments.find(item=>item.id===commentId);
     if(method==='GET') {
       if(path==='/api/feed/discover') return send({items:state.posts.filter(item=>!item.deleted && item.moderationState==='allowed')});
+      if(path.endsWith('/receipt')) {
+        if(!post || post.deleted || (post.moderationState!=='allowed' && post.authorId!==actor)) return send({error:'not_found'},404);
+        return send({postId:post.id,events:[{id:'synthetic-history',type:'POST_SUBMITTED',
+          summary:'Submission recorded',reason:'Synthetic content history. A declaration does not verify authorship.',actions:[]}]});
+      }
       if(path.endsWith('/owner-view')) {
         const item=commentId?comment:post;
         if(actor==='guest') return send({error:'unauthorized'},401);

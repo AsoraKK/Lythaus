@@ -5,4 +5,5 @@ import { execFileSync } from 'node:child_process';
 for (const script of [
   'scripts/tests/content-journey-browser-functional.mjs',
   'scripts/tests/content-journey-browser-recovery.mjs',
+  'scripts/tests/member-experience.browser.mjs',
 ]) execFileSync(process.execPath, [script], { stdio: 'inherit', env: process.env });

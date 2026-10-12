@@ -219,3 +219,35 @@ test('owner timeline pages only that author’s allowed and pending non-deleted 
   assert.ok(!otherBody.includes('Synthetic pending private post'));
   assert.equal((await call(null, 'GET', undefined, '/api/users/me/posts')).status, 401);
 });
+
+test('public author projection respects profile privacy and feed isolation', async () => {
+  const actor = await owner('Permitted public name');
+  const reader = await owner('Reader');
+  const id = await publishedPost(actor);
+  await sql("INSERT INTO social.profiles(user_id,bio,public_visibility,moderation_state) VALUES($1,'Private biography',true,'allowed')", [actor.id]);
+  const read = async viewer => {
+    const result = await call(viewer, 'GET', undefined, '/api/posts/' + id);
+    assert.equal(result.status, 200, await result.clone().text());
+    return (await result.json()).post;
+  };
+  assert.equal((await read(reader)).authorDisplayName, 'Permitted public name');
+  const discover = await call(reader, 'GET', undefined, '/api/feed/discover');
+  assert.equal(discover.status, 200, await discover.clone().text());
+  assert.equal((await discover.json()).items.find(item => item.id === id).authorDisplayName, 'Permitted public name');
+  for (const visibility of [false, true]) {
+    await sql("UPDATE social.profiles SET public_visibility=$2,moderation_state=$3 WHERE user_id=$1",
+      [actor.id, visibility, visibility ? 'under_review' : 'allowed']);
+    const item = await read(reader);
+    assert.equal(item.authorDisplayName, null);
+    assert.equal(item.authorHandle, null);
+    assert.ok(!JSON.stringify(item).includes('Private biography'));
+    assert.ok(!('email' in item));
+    assert.ok(!('accountabilityName' in item));
+    assert.equal(item.authorId, actor.id);
+  }
+  await sql("INSERT INTO social.blocks(blocker_id,blocked_id) VALUES($1,$2)", [reader.id,actor.id]);
+  assert.equal((await call(reader, 'GET', undefined, '/api/posts/' + id)).status, 404);
+  await sql("DELETE FROM social.blocks WHERE blocker_id=$1 AND blocked_id=$2", [reader.id,actor.id]);
+  await sql("UPDATE identity.users SET status='deleted' WHERE id=$1", [actor.id]);
+  assert.equal((await call(reader, 'GET', undefined, '/api/posts/' + id)).status, 404);
+});
