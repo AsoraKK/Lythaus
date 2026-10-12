@@ -88,9 +88,11 @@ above:
 - Local PostgreSQL baseline: PostgreSQL 17.11, all 20 approved migrations
   through `0020_auth_recovery_delivery.sql`, 103 application relations, 102
   tables, and migration/grant verification passed.
-- Native auth failure-path Workerd suite: 6/6 passed, zero skipped. This
-  includes the new recovery, session, isolation, discarded-response and trace
-  cases plus the existing provider-failure and rate-limit cases.
+- Native auth failure-path Workerd suite: 7/7 passed, zero skipped. This
+  includes the recovery, session, isolation, discarded-response, and
+  request-correlated trace cases plus the provider-failure and rate-limit cases.
+  Synthetic negative cases reject missing or mismatched correlation, leaked
+  uncorrelated records, and unapproved trace fields without echoing payloads.
 - Native password-screening Workerd suite: 1/1 passed, zero skipped. The
   existing Cloudflare fetch fix remains compatible with native Worker fetch.
 - Auth policy, intake, recovery, session and transport unit suite: 43/43
