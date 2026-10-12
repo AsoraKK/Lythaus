@@ -1,6 +1,8 @@
 # Member feed and composer repair, 12 October 2026
 
 Scope: narrow draft change based on main `18b019d6787c572c2204134dc9e35a4cccad5c35`.
+Final integration also retains reviewed main
+`5b87219ac647a4deedadfa66e145b4e87c0d2af9` through a normal merge.
 Owner-testing release111 is `00f174d2`. This lane does not merge, deploy,
 activate publication or detectors, change credentials, permissions or schema,
 or modify rewards and support workflows. Release112 cancellation is coordinated
