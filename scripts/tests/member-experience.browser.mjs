@@ -72,6 +72,7 @@ try {
     await context.setOffline(true);
     await button(page, 'Post').click();
     await button(page, 'Retry submission').waitFor();
+    await text(page, 'Check your connection and retry.').waitFor();
     assert.equal(await input.inputValue(), body);
     await button(page, 'Retry submission').hover();
     assert.equal(await text(page, 'Choose Human-authored or AI-assisted before posting.').count(), 0);

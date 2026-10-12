@@ -200,6 +200,7 @@ void main() {
         requests.add(invocation.namedArguments[#request] as CreatePostRequest);
         return const CreatePostError(
           message: 'Unknown outcome',
+          code: 'network_error',
           outcomeUncertain: true,
         );
       });
@@ -218,6 +219,18 @@ void main() {
       notifier.updateText('A preserved draft');
       notifier.setAiLabel('human');
       await notifier.submit();
+      expect(
+        container.read(postCreationProvider).errorResult?.code,
+        'network_error',
+      );
+      expect(
+        container.read(postCreationProvider).errorResult?.message,
+        contains('Check your connection'),
+      );
+      expect(
+        container.read(postCreationProvider).errorResult?.message,
+        isNot(contains('signing in')),
+      );
       notifier.reset();
       notifier.clearError();
       notifier.updateText('A different draft');

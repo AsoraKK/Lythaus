@@ -48,6 +48,8 @@ is visible. These user screenshots are not committed to the repository.
   treatment; it does not say AI assessment passed. Unknown transport outcomes
   expose **Retry submission**, retain the frozen payload and durable key, and
   require an explicit retry. Close during an in-flight send gives feedback.
+  Offline retry preserves the failure code and points to connection recovery;
+  only an authentication failure asks the member to sign in again.
   Draft persistence, account fencing and submission ownership are preserved.
 - The earlier white-screen root cause is documented in
   [the incident report](post-composer-incident-2026-10-10.md): a retained root
