@@ -9,6 +9,10 @@ export interface SupportFeedbackPolicy {
     stepsBytes: number;
     contextBytes: number;
     memberMessageBytes: number;
+    titleCharacters?: number;
+    detailCharacters?: number;
+    stepsCharacters?: number;
+    memberMessageCharacters?: number;
   }>;
   readonly categories: Readonly<Record<SupportFeedbackKind, readonly string[]>>;
   readonly states: Readonly<Record<SupportFeedbackKind, readonly string[]>>;
@@ -42,6 +46,7 @@ type SupportReadFields = Readonly<{
   createdAt: string;
   updatedAt: string;
   memberMessage: string | null;
+  closed?: boolean;
 }>;
 
 export type MemberSupportRequest = SupportSubmission & SupportReadFields;
@@ -51,6 +56,7 @@ const POLICY_ERROR = 'support_feedback_policy_invalid';
 const SUBMISSION_ERROR = 'support_feedback_submission_invalid';
 const RECORD_ERROR = 'support_feedback_record_invalid';
 const LIMIT_FIELDS = ['titleBytes', 'detailBytes', 'stepsBytes', 'contextBytes', 'memberMessageBytes'] as const;
+const CHARACTER_FIELDS = ['titleCharacters', 'detailCharacters', 'stepsCharacters', 'memberMessageCharacters'] as const;
 const SUBMISSION_FIELDS = {
   problem: ['kind', 'category', 'title', 'actual', 'expected', 'reproductionSteps', 'appVersion', 'platform'],
   suggestion: ['kind', 'category', 'title', 'improvement', 'benefit'],
@@ -114,20 +120,26 @@ export function parseSupportFeedbackPolicy(value: unknown): SupportFeedbackPolic
   return guard(POLICY_ERROR, () => {
     const input = shape(value, ['limits', 'categories', 'states'], POLICY_ERROR);
     requireFields(input, ['limits', 'categories', 'states'], POLICY_ERROR);
-    const limits = shape(input.limits, LIMIT_FIELDS, POLICY_ERROR);
+    const limits = shape(input.limits, [...LIMIT_FIELDS, ...CHARACTER_FIELDS], POLICY_ERROR);
     requireFields(limits, LIMIT_FIELDS, POLICY_ERROR);
     for (const key of LIMIT_FIELDS) {
       if (!Number.isSafeInteger(limits[key]) || Number(limits[key]) < 1) throw new Error(POLICY_ERROR);
     }
+    const characters: Record<string, number> = {};
+    for (const key of CHARACTER_FIELDS) {
+      if (!Object.hasOwn(limits, key)) continue;
+      if (!Number.isSafeInteger(limits[key]) || Number(limits[key]) < 1) throw new Error(POLICY_ERROR);
+      characters[key] = Number(limits[key]);
+    }
     return Object.freeze({
       limits: Object.freeze({ titleBytes: Number(limits.titleBytes), detailBytes: Number(limits.detailBytes),
-        stepsBytes: Number(limits.stepsBytes), contextBytes: Number(limits.contextBytes), memberMessageBytes: Number(limits.memberMessageBytes) }),
+        stepsBytes: Number(limits.stepsBytes), contextBytes: Number(limits.contextBytes), memberMessageBytes: Number(limits.memberMessageBytes), ...characters }),
       categories: perKindCodes(input.categories), states: perKindCodes(input.states),
     });
   });
 }
 
-function text(value: unknown, maximum: number, error: string): string {
+function text(value: unknown, maximum: number, error: string, maximumCharacters?: number): string {
   if (typeof value !== 'string' || value.length > maximum) throw new Error(error);
   let bytes = 0;
   for (let index = 0; index < value.length; index += 1) {
@@ -144,12 +156,12 @@ function text(value: unknown, maximum: number, error: string): string {
     if (bytes > maximum) throw new Error(error);
   }
   const result = value.trim();
-  if (!result) throw new Error(error);
+  if (!result || (maximumCharacters !== undefined && [...result].length > maximumCharacters)) throw new Error(error);
   return result;
 }
 
-function optionalText(input: Record<string, unknown>, key: string, maximum: number, error: string): string | undefined {
-  return Object.hasOwn(input, key) ? text(input[key], maximum, error) : undefined;
+function optionalText(input: Record<string, unknown>, key: string, maximum: number, error: string, maximumCharacters?: number): string | undefined {
+  return Object.hasOwn(input, key) ? text(input[key], maximum, error, maximumCharacters) : undefined;
 }
 
 function submission(input: Record<string, unknown>, policy: SupportFeedbackPolicy, error: string): SupportSubmission {
@@ -159,18 +171,18 @@ function submission(input: Record<string, unknown>, policy: SupportFeedbackPolic
   if (DETAIL_FIELDS.some(key => Object.hasOwn(input, key) && !fields.includes(key))) throw new Error(error);
   const category = code(input.category, error);
   if (!policy.categories[kind].includes(category)) throw new Error(error);
-  const title = text(input.title, policy.limits.titleBytes, error);
+  const title = text(input.title, policy.limits.titleBytes, error, policy.limits.titleCharacters);
   if (kind === 'suggestion') {
     requireFields(input, ['improvement', 'benefit'], error);
     return Object.freeze({ kind, category, title,
-      improvement: text(input.improvement, policy.limits.detailBytes, error), benefit: text(input.benefit, policy.limits.detailBytes, error) });
+      improvement: text(input.improvement, policy.limits.detailBytes, error, policy.limits.detailCharacters), benefit: text(input.benefit, policy.limits.detailBytes, error, policy.limits.detailCharacters) });
   }
   requireFields(input, ['actual', 'expected'], error);
-  const reproductionSteps = optionalText(input, 'reproductionSteps', policy.limits.stepsBytes, error);
+  const reproductionSteps = optionalText(input, 'reproductionSteps', policy.limits.stepsBytes, error, policy.limits.stepsCharacters);
   const appVersion = optionalText(input, 'appVersion', policy.limits.contextBytes, error);
   const platform = optionalText(input, 'platform', policy.limits.contextBytes, error);
   return Object.freeze({ kind, category, title,
-    actual: text(input.actual, policy.limits.detailBytes, error), expected: text(input.expected, policy.limits.detailBytes, error),
+    actual: text(input.actual, policy.limits.detailBytes, error, policy.limits.detailCharacters), expected: text(input.expected, policy.limits.detailBytes, error, policy.limits.detailCharacters),
     ...(reproductionSteps === undefined ? {} : { reproductionSteps }), ...(appVersion === undefined ? {} : { appVersion }),
     ...(platform === undefined ? {} : { platform }),
   });
@@ -197,8 +209,10 @@ function project(value: unknown, policy: SupportFeedbackPolicy): { member: Membe
   try { createdAt = supportTimestamp(input.createdAt); updatedAt = supportTimestamp(input.updatedAt); }
   catch { throw new Error(RECORD_ERROR); }
   if (updatedAt < createdAt) throw new Error(RECORD_ERROR);
-  const memberMessage = input.memberMessage === null ? null : text(input.memberMessage, policy.limits.memberMessageBytes, RECORD_ERROR);
-  return { member: Object.freeze({ ...details, id: input.id.toLowerCase(), revision: Number(input.revision), state, createdAt, updatedAt, memberMessage }),
+  const memberMessage = input.memberMessage === null ? null : text(input.memberMessage, policy.limits.memberMessageBytes, RECORD_ERROR, policy.limits.memberMessageCharacters);
+  if (Object.hasOwn(input, 'closed') && typeof input.closed !== 'boolean') throw new Error(RECORD_ERROR);
+  return { member: Object.freeze({ ...details, id: input.id.toLowerCase(), revision: Number(input.revision), state, createdAt, updatedAt, memberMessage,
+    ...(Object.hasOwn(input, 'closed') ? { closed: input.closed as boolean } : {}) }),
     submitterId: input.submitterId.toLowerCase() };
 }
 

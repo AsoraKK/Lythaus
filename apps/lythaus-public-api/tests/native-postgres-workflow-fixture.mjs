@@ -5,10 +5,10 @@ import { setTimeout } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 
-export async function nativePostgresPrivacyWorkflowFixture(connectionString) {
+export async function nativePostgresPrivacyWorkflowFixture(connectionString, { supportPolicy, onStep, afterQuery } = {}) {
   const target = new URL(connectionString);
   assert.ok(['127.0.0.1', 'localhost'].includes(target.hostname));
-  assert.ok(target.pathname.startsWith('/lythaus_auth_test')
+  assert.ok(target.pathname.startsWith('/lythaus_auth_test') || target.pathname.startsWith('/lythaus_support_test_workflow_')
     || (process.env.GITHUB_ACTIONS === 'true' && target.pathname === '/postgres'));
   const require = createRequire(new URL('../../../node_modules/wrangler/package.json', import.meta.url));
   const { build } = require('esbuild');
@@ -55,7 +55,7 @@ export async function nativePostgresPrivacyWorkflowFixture(connectionString) {
       });
     } }],
     stdin: { resolveDir: root, contents: `
-      import { AccountExportWorkflow, AccountDeleteWorkflow } from './apps/lythaus-jobs/src/index.ts';
+      import { AccountExportWorkflow, AccountDeleteWorkflow, RetentionCleanupWorkflow } from './apps/lythaus-jobs/src/index.ts';
       function boundedStep(step, env, instanceId) {
         async function trace(name, state) {
           await env.FIXTURE_TRACE.fetch('https://fixture.invalid/step', {
@@ -86,19 +86,64 @@ export async function nativePostgresPrivacyWorkflowFixture(connectionString) {
       export class FixtureAccountDelete extends AccountDeleteWorkflow {
         run(event, step) { return super.run(event, boundedStep(step, this.env, event.instanceId)); }
       }
-      export default { async fetch() { return new Response('Disposable privacy workflow fixture'); } };
+      export class FixtureRetentionCleanup extends RetentionCleanupWorkflow {
+        run(event, step) { return super.run(event, boundedStep(step, this.env, event.instanceId)); }
+      }
+      export default { async fetch(request, env) {
+        const url = new URL(request.url);
+        if (url.pathname === '/__fixture/workflow') {
+          const input = await request.json();
+          const workflows = { export: env.ACCOUNT_EXPORT, delete: env.ACCOUNT_DELETE, retention: env.RETENTION_CLEANUP };
+          const workflow = workflows[input.kind];
+          if (!workflow) return Response.json({ error: 'Unknown fixture workflow' }, { status: 400 });
+          if (input.action === 'create') {
+            const instance = await workflow.create({ params: input.params });
+            return Response.json({ id: instance.id });
+          }
+          if (input.action === 'terminate') {
+            await (await workflow.get(input.id)).terminate();
+            return Response.json({ terminated: true });
+          }
+          if (input.action === 'status') return Response.json(await (await workflow.get(input.id)).status());
+          return Response.json({ error: 'Unknown fixture workflow action' }, { status: 400 });
+        }
+        if (url.pathname === '/__fixture/r2') {
+          const input = await request.json();
+          const buckets = { PRIVATE_EXPORTS: env.PRIVATE_EXPORTS, MEDIA_APPROVED: env.MEDIA_APPROVED, MEDIA_QUARANTINE: env.MEDIA_QUARANTINE };
+          const bucket = buckets[input.bucket];
+          if (!bucket) return Response.json({ error: 'Unknown fixture bucket' }, { status: 400 });
+          if (input.action === 'put') {
+            await bucket.put(input.key, input.body, input.options);
+            return Response.json({ stored: true });
+          }
+          if (input.action === 'delete') {
+            await bucket.delete(input.key);
+            return Response.json({ deleted: true });
+          }
+          if (input.action === 'list') return Response.json(await bucket.list(input.options));
+          const object = await bucket.get(input.key);
+          return Response.json(object ? { body: await object.text(), httpMetadata: object.httpMetadata } : null);
+        }
+        return new Response('Disposable privacy workflow fixture');
+      } };
     ` },
   });
   const runtime = new Miniflare(convertV4MiniflareOptions({ workers: [{
     name: 'profile-privacy-workflows-local', modules: true, script: bundle.outputFiles[0].text,
     compatibilityDate: '2026-07-27', compatibilityFlags: ['nodejs_compat'],
     bindings: { DB_PRIVACY_FRESH: { role: 'lythaus_privacy' }, DB_JOBS_FRESH: { role: 'lythaus_jobs' },
-      AUTHENTICITY_BETA_STORAGE_ENABLED: 'true' },
+      AUTHENTICITY_BETA_STORAGE_ENABLED: 'true',
+      ...(supportPolicy ? { SUPPORT_FEEDBACK_POLICY: JSON.stringify(supportPolicy) } : {}) },
     r2Buckets: ['PRIVATE_EXPORTS', 'MEDIA_APPROVED', 'MEDIA_QUARANTINE'],
     workflows: { ACCOUNT_EXPORT: { name: 'profile-export-local', className: 'FixtureAccountExport' },
-      ACCOUNT_DELETE: { name: 'profile-delete-local', className: 'FixtureAccountDelete' } },
+      ACCOUNT_DELETE: { name: 'profile-delete-local', className: 'FixtureAccountDelete' },
+      RETENTION_CLEANUP: { name: 'support-retention-local', className: 'FixtureRetentionCleanup' } },
     serviceBindings: {
-      FIXTURE_TRACE: async request => { steps.push(await request.json()); return new Response(null, { status: 204 }); },
+      FIXTURE_TRACE: async request => {
+        const trace = await request.json(); steps.push(trace);
+        await onStep?.(trace);
+        return new Response(null, { status: 204 });
+      },
       DISPOSABLE_POSTGRES: async request => {
         const input = await request.json();
         const temporary = !input.transactionId;
@@ -125,6 +170,7 @@ export async function nativePostgresPrivacyWorkflowFixture(connectionString) {
             statements.push(statement);
             try {
               const result = await client.query(input.text, input.values);
+              await afterQuery?.(input, result);
               return Response.json({ rows: result.rows, rowCount: result.rowCount });
             } catch (error) { statement.error = error.message; throw error; }
           }
@@ -142,19 +188,40 @@ export async function nativePostgresPrivacyWorkflowFixture(connectionString) {
       },
     },
   }] }));
-  const bindings = await runtime.getBindings();
+  // Route local test access through the worker because Miniflare's getBindings() stalls with Workflows enabled.
+  async function fixtureRequest(path, input) {
+    const response = await runtime.dispatchFetch(`https://fixture.invalid${path}`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error ?? `Fixture request failed (${response.status})`);
+    return result;
+  }
+  function bucket(name) {
+    return {
+      async put(key, body, options) { return fixtureRequest('/__fixture/r2', { action: 'put', bucket: name, key, body, options }); },
+      async delete(key) { return fixtureRequest('/__fixture/r2', { action: 'delete', bucket: name, key }); },
+      async list(options) { return fixtureRequest('/__fixture/r2', { action: 'list', bucket: name, options }); },
+      async get(key) {
+        const object = await fixtureRequest('/__fixture/r2', { action: 'get', bucket: name, key });
+        return object && { httpMetadata: object.httpMetadata,
+          async text() { return object.body; }, async json() { return JSON.parse(object.body); } };
+      },
+    };
+  }
   return { statements, steps,
-    bucket: name => runtime.getR2Bucket(name),
+    bucket,
     async run(kind, params) {
-      const instance = await bindings[kind === 'export' ? 'ACCOUNT_EXPORT' : 'ACCOUNT_DELETE'].create({ params });
+      assert.ok(['export', 'delete', 'retention'].includes(kind));
+      const { id } = await fixtureRequest('/__fixture/workflow', { action: 'create', kind, params });
       const deadline = Date.now() + 30_000;
       let status;
       do {
-        status = await instance.status();
+        status = await fixtureRequest('/__fixture/workflow', { action: 'status', kind, id });
         if (['complete', 'errored', 'terminated'].includes(status.status)) return status;
         await setTimeout(20);
       } while (Date.now() < deadline);
-      await instance.terminate();
+      await fixtureRequest('/__fixture/workflow', { action: 'terminate', kind, id });
       throw new Error('Disposable workflow timeout: ' + JSON.stringify(status));
     },
     async dispose() {

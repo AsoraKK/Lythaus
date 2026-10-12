@@ -2,6 +2,18 @@
 
 Status: confirmed product direction; operational defaults and activation pending.
 Policy: `lythaus-monthly-rewards-2026-10-v1`.
+
+**Dated candidate record:** Follow the [current policy authority](../policy/current-policy-authority.md)
+for later owner decisions. The 7 October rule replaces the earlier rolling
+quarterly-validity proposal with calendar-quarter-end expiry for all quarterly
+awards, remaining months only and no earlier retroactive credit. The signed v1
+catalogue and implementation are preserved; their tests do not prove that new
+rule. Prospective v2 work belongs to the existing policy lane. Activation remains
+separate. All 13,500 statements below describe the pinned historical v1 candidate;
+they do not constrain the owner-approved prospective v2 maximum of 13,650,
+which preserves existing awards and adds optional 150-point suggestion credit.
+Recovered 7 October approval provenance is in the authority record; it does
+not change this historical v1 checkpoint or activate features.
 Reviewed baseline: `8c4261402dd370b4c57e082cf0fc16b41927f7db`. At the 4 October
 verification checkpoint, GitHub `main` was
 `627ae30b36cd995c4f117bf3c44789c986b5d46b`, containing security release 89
@@ -51,8 +63,9 @@ adding a duplicate Rewards route or a second report projection. Ordinary deletio
 preserves earned points; only independent invalidation evidence may append a
 correction. DSR collection/retention approval remains pending.
 
-The October monthly model replaces the earlier accumulating reputation model for
-future approved assessments. Four highest whole weekly results belonging to source
+The pinned historical monthly v1 candidate replaces the earlier accumulating
+reputation model for assessments approved under v1. Within that version, four
+highest whole weekly results belonging to source
 month A contribute at most 10,000 points, monthly maintenance at most 2,500, and
 valid quarterly email evidence exactly 0 or 1,000. The maximum is 13,500. The
 assessment fixes month B's level; activity in B builds C. No account age,
@@ -94,7 +107,7 @@ resource is activated by this slice.
 | Policy | `packages/contracts/src/reputation-policy.ts` | `reputation-v2.0.0`, L0–L5, cumulative score, age/activity/pillar gates; retain labelled history, version new assessments explicitly |
 | Persistence | `packages/db/src/reputation.ts` | Aggregates all effective history and rewrites profile/balance; new monthly revisions must never call this path |
 | Appeals | `packages/contracts/src/appeal-policy.ts` | `appeals-v1.0.0`, five trained reviewers, L5 weight 2 and Editorial adjudication; new standard cases need separate version dispatch |
-| Appeal runtime | public `index.ts` create/vote/recuse/assignments; Jobs `processAppealVoteLocked` and `AppealLifecycleWorkflow`; admin `adjudicateAppeal` and `runtime-policy.ts` | Assignment foreign keys, weighted outcomes and required adjudication span all three Workers; update together in T06 |
+| Historical appeal runtime | public `index.ts` create/vote/recuse/assignments; Jobs `processAppealVoteLocked` and `AppealLifecycleWorkflow`; admin `adjudicateAppeal` and `runtime-policy.ts` | Retained historical assignment foreign keys, weighted outcomes and required adjudication span all three Workers; new-policy dispatch is separate |
 | Earning | Jobs `processReputationSource`, `processAppealReputationResolution`, `processAccountStandingRefresh` | Old point impacts and reversal semantics are invoked; T04 needs policy-versioned event collection and derived corrections |
 | Rewards | public `rewardsSnapshot`, `redeemReward`; `packages/contracts/src/tier-policy.ts` | Reads current historical profile and enforces seven-day maturity; new access must use fixed monthly snapshots and persistent plan slots |
 | Flutter | `lib/ui/screens/adaptive_shell.dart`, `rewards/rewards_dashboard.dart`, `profile/reputation_ledger_screen.dart`, reputation and reward providers/models | The branch candidate extends the existing Rewards/Profile surfaces and private report tracker. Exact-head Flutter analysis and the 20-case rendered auth/profile journey passed at `9d2e187`; the earlier scroll-helper failures were fixed and rerun successfully. The older Rewards snapshot/redemption providers still need the auth-session revision lifecycle fix; coordinate remaining profile/client work with app-flow |
@@ -121,9 +134,12 @@ generated-client checks, Flutter analysis/tests/browser evidence, and a separate
 PostgreSQL 17 workflow. The production migration manifest pins the exact approved
 file set and bytes; a draft schema must not enter that set before review.
 
-## Owner decision register
+## Dated candidate decision register
 
-Every entry remains pending. Proposed values are test candidates, not live policy.
+This is the 4 October checkpoint, not a fresh request for settled owner decisions.
+Operational defaults are test candidates rather than live policy; later decisions
+are recorded in the current authority table. Appeal direction and quarterly-end
+validity are settled; timing/quorum defaults and activation remain separate.
 
 | ID | Pending decision |
 | --- | --- |
@@ -134,7 +150,7 @@ Every entry remains pending. Proposed values are test candidates, not live polic
 | D05 | One accepted contextual own/other discussion contribution for each 150 milestone |
 | D06 | Reception rubric, evidence sufficiency, fairness and shadow evaluation |
 | D07 | Full-month credential/2FA continuity; new-user and protection-gap treatment |
-| D08 | Rolling three calendar months from verification, clamped at target month end, scored immediately before cutoff; this proposal supersedes the older fixed-quarter discussion but still needs activation approval |
+| D08 | Historical rolling three-calendar-month candidate; superseded prospectively by the owner's 7 October calendar-quarter-end rule for all quarterly awards, remaining months only, no earlier retroactive credit. Preserve signed v1; coordinate implementation and activation separately |
 | D09 | 48-hour review, quorum five, strict majority, one 24-hour extension; ballot-edit convention |
 | D10 | One valid ballot for the weekly 250; no-case handling, no invented substitute |
 | D11 | Restricted safety route and accountable unresolved-case review |
@@ -573,13 +589,15 @@ in the versioned sidecar
 `packages/contracts/policies/Lythaus_Monthly_Rewards_Suggestion_Amendment_v1.json`;
 the original 22-action catalogue and its digest remain unchanged.
 
-F01 is the remaining decision outside the original catalogue's D01–D13: where this
-150 fits in the existing budget and which source-month assessment it affects.
-The 13,500 source-month maximum is unchanged. No additional score component,
+F01 in this pinned v1 record is the remaining decision outside the original
+catalogue's D01–D13: where its 150 fits in the v1 budget and which source-month
+assessment it affects. The historical v1 source-month maximum remains 13,500;
+this does not establish a prospective version's ceiling. No additional v1 score component,
 quarterly-email increase, recurring award in multiple months or allocation to a
-weekly/monthly cap is inferred. The quarter boundary and detailed acceptance rubric
-also remain to be specified. In particular, the earlier D08 email-validity proposal
-does not define the suggestion allowance window.
+weekly/monthly cap is inferred. Calendar-quarter-end validity is settled by the
+7 October decision; the detailed acceptance rubric and source-month placement
+remain unresolved. The historical D08 rolling proposal does not govern new
+quarterly awards, including suggestions.
 
 The same contribution cannot also earn `weekly.accepted_help` or
 `weekly.accepted_accessibility`. Those existing actions share the 250 weekly
@@ -609,7 +627,7 @@ private to the member and authorised staff. Export, redaction, deletion and rete
 need a coordinated reference-handling contract across both workstreams. Public
 methodology can explain approved eligibility without exposing private cases.
 
-F01 must settle budget placement, source-month effect, quarter boundaries, acceptance
+F01 must settle budget placement, source-month effect and acceptance
 rubric, reviewer authority/conflicts, duplicate treatment, contribution time versus
 acceptance time and correction timing. Privacy retention also needs agreement
 across the two workstreams. There is no wired event consumer or ticket implementation

@@ -430,6 +430,8 @@ export async function runClockValidation(expectedSha, artifactRoot, interruption
     'scripts/ci/validate-planetscale-postgres17.mjs',
     'scripts/ci/planetscale-migration-manifest.mjs', fixture, 'packages/db/src/monthly-reward-snapshots.ts',
     'packages/db/src/monthly-reputation-report.ts', 'apps/lythaus-public-api/src/monthly-reputation-report-export.ts',
+    'apps/lythaus-public-api/src/monthly-reputation-routes.ts', 'packages/db/tests/monthly-reputation-report-config.test.mjs',
+    'apps/lythaus-jobs/tests/monthly-reputation-report.cases.mjs', 'apps/lythaus-jobs/tests/monthly-reputation-dsr.test.mjs',
     'packages/db/src/monthly-reputation.ts', 'database/planetscale/proposals/monthly_reward_snapshots.sql', '.github/workflows/native-planetscale-ci.yml'];
   for (const file of files) manifest.sourceFiles[file] = sha256(readFileSync(path.join(root, file)));
   writeFileSync(path.join(directory, 'test-helper.mjs'), readFileSync(fileURLToPath(import.meta.url)));

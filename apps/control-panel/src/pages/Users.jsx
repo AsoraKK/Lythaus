@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { adminRequest } from '../api/adminApi.js';
 import { formatDateTime } from '../utils/formatters.js';
 import LythButton from '../components/LythButton.jsx';
@@ -32,6 +32,8 @@ function Users({ inWorkspace = false }) {
   const [error, setError] = useState('');
   const [selected, setSelected] = useState(null);
   const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
   const [action, setAction] = useState(null);
   const [reasonCode, setReasonCode] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -39,49 +41,104 @@ function Users({ inWorkspace = false }) {
   const [actionBusy, setActionBusy] = useState(false);
   const [invite, setInvite] = useState({ email: '', displayName: '', handle: '', reasonCode: '', confirmation: '' });
   const [inviteMessage, setInviteMessage] = useState('');
+  const listRequestId = useRef(0);
+  const detailRequestId = useRef(0);
+  const selectedUserRef = useRef(null);
+  const accessContextId = useRef(0);
+  const actionInFlight = useRef(false);
+  const paginationFocusPending = useRef(false);
+  const listRef = useRef(null);
+
+  const clearListForAccessDenial = useCallback((message) => {
+    listRequestId.current += 1;
+    detailRequestId.current += 1;
+    selectedUserRef.current = null;
+    accessContextId.current += 1;
+    setLoading(false);
+    setLoadingMore(false);
+    setItems([]);
+    setNextCursor(null);
+    setSelected(null);
+    setDetail(null);
+    setDetailLoading(false);
+    setDetailError('');
+    setAction(null);
+    setReasonCode('');
+    setConfirmation('');
+    setActionMessage('');
+    setError(message);
+  }, []);
 
   const loadUsers = useCallback(async ({ cursor = null, append = false } = {}) => {
-    append ? setLoadingMore(true) : setLoading(true);
+    const requestId = ++listRequestId.current;
+    if (append) setLoadingMore(true);
+    else { setLoading(true); setLoadingMore(false); }
     setError('');
     try {
       const response = await adminRequest('users', { query: { q: query.trim(), status, createdAfter, createdBefore, limit: 50, cursor } });
+      if (requestId !== listRequestId.current) return;
       const received = Array.isArray(response?.items) ? response.items : [];
       setItems((current) => append ? [...current, ...received] : received);
       setNextCursor(response?.nextCursor || null);
     } catch (requestError) {
+      if (requestId !== listRequestId.current) return;
       if (requestError.status === 401 || requestError.status === 403) {
-        setItems([]); setNextCursor(null); setSelected(null); setDetail(null);
-        setError(requestError.status === 403 ? 'Administrator access is required to view registered accounts.' : 'Sign in through approved admin access to view registered accounts.');
+        clearListForAccessDenial(requestError.status === 403 ? 'Administrator access is required to view registered accounts.' : 'Sign in through approved admin access to view registered accounts.');
       } else {
         if (!append) { setItems([]); setNextCursor(null); }
         setError('User data could not be loaded.');
       }
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (requestId === listRequestId.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
-  }, [createdAfter, createdBefore, query, status]);
+  }, [clearListForAccessDenial, createdAfter, createdBefore, query, status]);
 
-  useEffect(() => { loadUsers(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadUsers();
+    return () => { listRequestId.current += 1; detailRequestId.current += 1; selectedUserRef.current = null; accessContextId.current += 1; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const selectUser = async (user) => {
+  useEffect(() => {
+    if (loadingMore || !paginationFocusPending.current) return;
+    paginationFocusPending.current = false;
+    if (!nextCursor) listRef.current?.focus();
+  }, [loadingMore, nextCursor]);
+
+  const selectUser = async (user, message = '') => {
+    const requestId = ++detailRequestId.current;
+    selectedUserRef.current = user;
     setSelected(user);
     setDetail(null);
-    setActionMessage('');
+    setDetailLoading(true);
+    setDetailError('');
+    setAction(null);
+    setReasonCode('');
+    setConfirmation('');
+    setActionMessage(message);
     try {
       const response = await adminRequest(`users/${encodeURIComponent(user.id)}`);
-      setDetail(response?.user || user);
+      if (requestId !== detailRequestId.current) return;
+      if (response?.user?.id !== user.id || !STATUS_OPTIONS.includes(response.user.status) || !response.user.status) throw new Error('invalid_account_detail');
+      setDetail(response.user);
     } catch (requestError) {
+      if (requestId !== detailRequestId.current) return;
       if (requestError.status === 401 || requestError.status === 403) {
-        setItems([]); setNextCursor(null); setSelected(null); setDetail(null);
-        setError(requestError.status === 403 ? 'Administrator access is required to review this account.' : 'Sign in through approved admin access to review this account.');
+        clearListForAccessDenial(requestError.status === 403 ? 'Administrator access is required to review this account.' : 'Sign in through approved admin access to review this account.');
       } else {
-        setDetail(user);
+        setDetailError('Account details could not be loaded.');
+      }
+    } finally {
+      if (requestId === detailRequestId.current) {
+        setDetailLoading(false);
       }
     }
   };
 
   const beginAction = (nextAction) => {
+    if (!detail || detailLoading || detailError || actionBusy) return;
     setAction(nextAction);
     setReasonCode('');
     setConfirmation('');
@@ -89,7 +146,11 @@ function Users({ inWorkspace = false }) {
   };
 
   const runAction = async () => {
-    if (!selected || !action) return;
+    if (!selected || !action || detail?.id !== selected.id || detailLoading || detailError || actionBusy || actionInFlight.current) return;
+    const accountId = selected.id;
+    const contextId = accessContextId.current;
+    const isCurrentAccount = () => selectedUserRef.current?.id === accountId;
+    const isCurrentContext = () => contextId === accessContextId.current;
     const normalizedReason = reasonCode.trim().toUpperCase();
     if (!/^[A-Z0-9_.:-]{2,80}$/.test(normalizedReason)) {
       setActionMessage('A stable policy reason code is required.');
@@ -104,6 +165,7 @@ function Users({ inWorkspace = false }) {
       setActionMessage(`Type ${expected} to confirm this action.`);
       return;
     }
+    actionInFlight.current = true;
     setActionBusy(true);
     setActionMessage('');
     try {
@@ -117,14 +179,34 @@ function Users({ inWorkspace = false }) {
         const statusValue = action === 'reactivate' ? 'active' : action === 'suspend' ? 'suspended' : 'locked';
         await adminRequest(`users/${selected.id}/status`, { method: 'POST', body: { status: statusValue, reasonCode: normalizedReason, confirmation } });
       }
-      setActionMessage('Action recorded.');
+      if (!isCurrentAccount()) return;
+      detailRequestId.current += 1;
+      setDetail(null);
+      setDetailLoading(true);
+      setDetailError('');
       setAction(null);
+      setReasonCode('');
       setConfirmation('');
-      await loadUsers();
-      await selectUser({ ...selected, status: action === 'reactivate' ? 'active' : action === 'suspend' ? 'suspended' : action === 'lock' ? 'locked' : selected.status });
-    } catch {
-      setActionMessage('The requested account action could not be completed.');
+      setActionMessage(isCurrentContext() ? 'Action recorded.' : '');
+      if (isCurrentContext()) await loadUsers();
+      if (!isCurrentAccount()) return;
+      await selectUser(selectedUserRef.current, isCurrentContext() ? 'Action recorded.' : '');
+    } catch (requestError) {
+      if (!isCurrentAccount()) return;
+      if ((requestError.status === 401 || requestError.status === 403) && isCurrentContext()) {
+        clearListForAccessDenial(requestError.status === 403 ? 'Administrator access is required to change this account.' : 'Sign in through approved admin access to change this account.');
+      } else {
+        detailRequestId.current += 1;
+        setDetail(null);
+        setDetailLoading(false);
+        setAction(null);
+        setReasonCode('');
+        setConfirmation('');
+        setDetailError('Account details need to be refreshed.');
+        setActionMessage(isCurrentContext() ? 'The requested account action could not be confirmed. Refresh account details before retrying.' : '');
+      }
     } finally {
+      actionInFlight.current = false;
       setActionBusy(false);
     }
   };
@@ -153,9 +235,7 @@ function Users({ inWorkspace = false }) {
   const submitSearch = (event) => {
     event.preventDefault();
     if (query.includes('@')) {
-      setItems([]);
-      setNextCursor(null);
-      setError('Exact email lookup is available only in the owner-only Account support tab.');
+      clearListForAccessDenial('Exact email lookup is available only in the owner-only Account support tab.');
       return;
     }
     loadUsers();
@@ -164,7 +244,7 @@ function Users({ inWorkspace = false }) {
   return (
     <PageLayout title={inWorkspace ? 'Account administration' : 'Users'} headingLevel={inWorkspace ? 2 : 1} subtitle="Registered accounts across all statuses. Existing administrator and owner permissions apply." guide={USERS_GUIDE}>
       <LythCard variant="panel">
-        <div className="panel-header"><h2>Find accounts</h2><LythButton variant="ghost" type="button" onClick={() => loadUsers()} disabled={loading}>Refresh</LythButton></div>
+        <div className="panel-header"><h2>Find accounts</h2><LythButton variant="ghost" type="button" onClick={() => loadUsers()} disabled={loading}>{error ? 'Retry' : 'Refresh'}</LythButton></div>
         <p className="muted">This list shows account identity and access state only. Exact email lookup and recorded support history remain owner-only in Account support.</p>
         <form className="form-row" onSubmit={submitSearch}>
           <LythInput type="text" aria-label="Search registered accounts" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search account ID, display name, or handle" />
@@ -176,10 +256,11 @@ function Users({ inWorkspace = false }) {
           <LythButton type="submit" disabled={loading}>Search</LythButton>
         </form>
         {error ? <div className="notice error" role="alert">{error}</div> : null}
-        {loading ? <p aria-live="polite">Loading users...</p> : null}
+        {loading ? <p role="status" aria-live="polite">Loading users...</p> : null}
+        {loadingMore ? <p role="status" aria-live="polite">Loading more registered accounts...</p> : null}
         {!loading && !error && !items.length ? <div className="empty-state">No registered accounts match these filters.</div> : null}
         {items.length ? (
-          <div className="data-table users-data-table" role="table" aria-label="Registered accounts">
+          <div ref={listRef} className="data-table users-data-table" role="table" aria-label="Registered accounts" aria-busy={loadingMore} tabIndex={-1}>
             <div className="data-row header" role="row"><span role="columnheader">Account</span><span role="columnheader">Status</span><span role="columnheader">Created</span><span role="columnheader">Active sessions</span><span role="columnheader">Plan</span><span role="columnheader">Actions</span></div>
             {items.map((user) => <div key={user.id} className="data-row" role="row">
               <span role="cell"><strong>{user.displayName || user.handle || 'User'}</strong>{user.handle ? <span className="muted">@{user.handle}</span> : null}<span className="muted user-account-id">{user.id}</span></span>
@@ -187,11 +268,15 @@ function Users({ inWorkspace = false }) {
               <span role="cell">{formatDateTime(user.createdAt)}</span>
               <span role="cell">{user.currentSessionCount ?? 'Unknown'}</span>
               <span role="cell">{user.subscriptionTier || 'Unknown'}</span>
-              <span role="cell"><LythButton variant="ghost" type="button" onClick={() => selectUser(user)}>Review</LythButton></span>
+              <span role="cell"><LythButton variant="ghost" type="button" aria-label={`Review account ${user.displayName || user.handle || 'account'} (${user.id})`} onClick={() => selectUser(user)}>Review</LythButton></span>
             </div>)}
           </div>
         ) : null}
-        {nextCursor && !loading ? <LythButton variant="secondary" type="button" onClick={() => loadUsers({ cursor: nextCursor, append: true })} disabled={loadingMore}>{loadingMore ? 'Loading...' : 'Load more'}</LythButton> : null}
+        {nextCursor && !loading ? <LythButton variant="secondary" type="button" aria-label="Load more registered accounts" aria-disabled={loadingMore} onClick={(event) => {
+          if (loadingMore) return;
+          paginationFocusPending.current = document.activeElement === event.currentTarget;
+          loadUsers({ cursor: nextCursor, append: true });
+        }}>{loadingMore ? 'Loading...' : 'Load more'}</LythButton> : null}
       </LythCard>
 
       <LythCard variant="panel">
@@ -215,20 +300,22 @@ function Users({ inWorkspace = false }) {
           <>
             <div className="detail-list">
               <div><span className="detail-label">Account ID</span><span className="user-account-id">{selected.id}</span></div>
-              <div><span className="detail-label">Status</span><span className={`status-pill ${String((detail || selected).status).toLowerCase()}`}>{(detail || selected).status}</span></div>
-              <div><span className="detail-label">Plan</span><span>{detail?.subscriptionTier || selected.subscriptionTier || 'Unknown'}</span></div>
-              <div><span className="detail-label">Last sign-in or account creation</span><span>{formatDateTime(detail?.lastLoginAt || selected.lastLoginAt || selected.createdAt)}</span></div>
-              <div><span className="detail-label">Active sessions</span><span>{detail?.currentSessionCount ?? selected.currentSessionCount ?? 'Unknown'}</span></div>
+              <div><span className="detail-label">Status</span><span className={`status-pill ${String(detail?.status || 'unknown').toLowerCase()}`}>{detail?.status || 'Unknown'}</span></div>
+              <div><span className="detail-label">Plan</span><span>{detail?.subscriptionTier || 'Unknown'}</span></div>
+              <div><span className="detail-label">Last sign-in or account creation</span><span>{detail ? formatDateTime(detail.lastLoginAt || detail.createdAt) : 'Unknown'}</span></div>
+              <div><span className="detail-label">Active sessions</span><span>{detail?.currentSessionCount ?? 'Unknown'}</span></div>
               <div><span className="detail-label">Contact lookup</span><span>Owner-only in Account support</span></div>
             </div>
+            {detailLoading ? <div className="notice" role="status">Loading account details...</div> : null}
+            {detailError ? <div className="notice error" role="alert">{detailError} <LythButton variant="secondary" type="button" onClick={() => selectUser(selected)} disabled={actionBusy}>Retry account details</LythButton></div> : null}
             {actionMessage ? <div className="notice" role="status">{actionMessage}</div> : null}
             {!action ? <div className="panel-actions">
-              <LythButton variant="danger" type="button" onClick={() => beginAction('suspend')}>Suspend</LythButton>
-              <LythButton variant="secondary" type="button" onClick={() => beginAction('reactivate')}>Reactivate</LythButton>
-              <LythButton variant="danger" type="button" onClick={() => beginAction('lock')}>Lock</LythButton>
-              <LythButton variant="ghost" type="button" onClick={() => beginAction('resend')}>Resend verification</LythButton>
-              <LythButton variant="ghost" type="button" onClick={() => beginAction('revoke')}>Revoke sessions</LythButton>
-              <LythButton variant="danger" type="button" onClick={() => beginAction('delete')}>Delete</LythButton>
+              <LythButton variant="danger" type="button" onClick={() => beginAction('suspend')} disabled={!detail || detailLoading || actionBusy}>Suspend</LythButton>
+              <LythButton variant="secondary" type="button" onClick={() => beginAction('reactivate')} disabled={!detail || detailLoading || actionBusy}>Reactivate</LythButton>
+              <LythButton variant="danger" type="button" onClick={() => beginAction('lock')} disabled={!detail || detailLoading || actionBusy}>Lock</LythButton>
+              <LythButton variant="ghost" type="button" onClick={() => beginAction('resend')} disabled={!detail || detailLoading || actionBusy}>Resend verification</LythButton>
+              <LythButton variant="ghost" type="button" onClick={() => beginAction('revoke')} disabled={!detail || detailLoading || actionBusy}>Revoke sessions</LythButton>
+              <LythButton variant="danger" type="button" onClick={() => beginAction('delete')} disabled={!detail || detailLoading || actionBusy}>Delete</LythButton>
             </div> : (
               <div className="form-grid">
                 <label className="field"><span className="field-label">Reason code</span><LythInput value={reasonCode} onChange={(event) => setReasonCode(event.target.value)} placeholder="SECURITY_REMEDIATION" /></label>

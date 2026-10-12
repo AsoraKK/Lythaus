@@ -44,12 +44,15 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   bool _isSubmitting = false;
   bool _confirmingDeletion = false;
   String? _errorMessage;
+  String? _mutationErrorMessage;
   _ThreadComment? _replyTarget;
   String? _pendingParentId;
   String? _aiLabel;
   bool _locked = false;
   int _loadEpoch = 0;
+  int _mutationEpoch = 0;
   int _sessionEpoch = 0;
+  bool _deferredInitialReload = false;
   late String _actor;
   String get _createScope => 'comment-create:$_actor:${widget.postId}';
   bool _restoring = false;
@@ -57,6 +60,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   int _draftVersion = 0;
   ProviderSubscription<String?>? _sessionSub;
   Future<void> Function()? _retryAction;
+  Future<void> Function()? _mutationRetryAction;
   final _locallySubmitted = <String>{};
 
   @override
@@ -80,8 +84,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       (previous, next) {
         if ((next ?? 'session') == _actor) return;
         ++_loadEpoch;
+        ++_mutationEpoch;
         ++_sessionEpoch;
         ++_draftVersion;
+        _deferredInitialReload = false;
         _actor = next ?? 'session';
         _composerController.clear();
         _locallySubmitted.clear();
@@ -95,8 +101,11 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
           _restoring = false;
           _confirmingDeletion = false;
           _errorMessage = null;
+          _mutationErrorMessage = null;
           _draftStatus = null;
         });
+        _retryAction = null;
+        _mutationRetryAction = null;
         unawaited(_restoreComposer());
         unawaited(_loadInitial());
       },
@@ -201,13 +210,20 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   }
 
   Future<void> _loadInitial() async {
-    if (!mounted || _isSubmitting) return;
+    if (!mounted) return;
+    if (_isSubmitting) {
+      _deferredInitialReload = true;
+      return;
+    }
+    _deferredInitialReload = false;
     final epoch = ++_loadEpoch;
+    final mutationEpoch = _mutationEpoch;
     setState(() {
       _isInitialLoading = true;
       _errorMessage = null;
       _isLoadingMore = false;
     });
+    _retryAction = null;
 
     try {
       final actor = _actor;
@@ -240,6 +256,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         }
       }
       if (!mounted || epoch != _loadEpoch) return;
+      if (mutationEpoch != _mutationEpoch) {
+        _requestInitialReload();
+        return;
+      }
       _locallySubmitted.removeAll(page.items.map((comment) => comment.id));
       setState(() {
         _comments = _mergeComments(
@@ -256,6 +276,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       });
     } on DioException catch (error) {
       if (!mounted || epoch != _loadEpoch) return;
+      if (mutationEpoch != _mutationEpoch) {
+        _requestInitialReload();
+        return;
+      }
       setState(() {
         _isInitialLoading = false;
         _errorMessage = _messageForCommentsFailure(error);
@@ -263,6 +287,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       });
     } catch (_) {
       if (!mounted || epoch != _loadEpoch) return;
+      if (mutationEpoch != _mutationEpoch) {
+        _requestInitialReload();
+        return;
+      }
       setState(() {
         _isInitialLoading = false;
         _errorMessage = 'Unable to load comments right now.';
@@ -271,21 +299,39 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     }
   }
 
+  void _requestInitialReload() {
+    if (!mounted) return;
+    _deferredInitialReload = true;
+    _drainDeferredInitialReload();
+  }
+
+  void _drainDeferredInitialReload() {
+    if (!mounted || !_deferredInitialReload || _isSubmitting) return;
+    _deferredInitialReload = false;
+    unawaited(_loadInitial());
+  }
+
   Future<void> _loadMore() async {
     final cursor = _nextCursor;
     if (cursor == null || _isLoadingMore || _isInitialLoading || !mounted) {
       return;
     }
     final epoch = _loadEpoch;
+    final mutationEpoch = _mutationEpoch;
 
     setState(() {
       _isLoadingMore = true;
       _errorMessage = null;
     });
+    _retryAction = null;
 
     try {
       final page = await _fetchComments(cursor: cursor);
       if (!mounted || epoch != _loadEpoch) return;
+      if (mutationEpoch != _mutationEpoch) {
+        setState(() => _isLoadingMore = false);
+        return;
+      }
       setState(() {
         _comments = _mergeComments(_comments, page.items);
         _nextCursor = page.nextCursor == cursor ? null : page.nextCursor;
@@ -293,6 +339,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       });
     } on DioException catch (error) {
       if (!mounted || epoch != _loadEpoch) return;
+      if (mutationEpoch != _mutationEpoch) {
+        setState(() => _isLoadingMore = false);
+        return;
+      }
       setState(() {
         _isLoadingMore = false;
         _errorMessage = _messageForCommentsFailure(error);
@@ -300,6 +350,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       });
     } catch (_) {
       if (!mounted || epoch != _loadEpoch) return;
+      if (mutationEpoch != _mutationEpoch) {
+        setState(() => _isLoadingMore = false);
+        return;
+      }
       setState(() {
         _isLoadingMore = false;
         _errorMessage = 'Unable to load more comments right now.';
@@ -359,7 +413,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
+      _mutationErrorMessage = null;
     });
+    _retryAction = null;
+    _mutationRetryAction = null;
 
     try {
       final token = await tokenFuture;
@@ -368,6 +425,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
           token.isEmpty ||
           (ref.read(currentUserProvider)?.id ?? 'session') != actor) {
         setState(() => _isSubmitting = false);
+        _drainDeferredInitialReload();
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Sign in to comment.')));
@@ -419,6 +477,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         receipt: OwnedContent('comment', created.id, postId: widget.postId),
       );
       if (!mounted || actor != _actor || sessionEpoch != _sessionEpoch) return;
+      ++_mutationEpoch;
       ++_draftVersion;
       setState(() {
         _isSubmitting = false;
@@ -431,6 +490,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _locallySubmitted.add(created.id);
         _comments = _mergeComments(_comments, [created]);
       });
+      _drainDeferredInitialReload();
     } catch (error) {
       final failure = contentMutationFailure(error);
       if (attempt != null) {
@@ -444,9 +504,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _locked =
             registry.pending(_createScope) != null &&
             registry.pending(_createScope)?.needsReentry != true;
-        _errorMessage = failure.message;
-        _retryAction = _submitComment;
+        _mutationErrorMessage = failure.message;
       });
+      _mutationRetryAction = _submitComment;
+      _drainDeferredInitialReload();
     }
   }
 
@@ -481,15 +542,20 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       ),
     );
     if (!mounted || revised == null || !_isOwner(comment)) return;
+    final currentIndex = _comments.indexWhere((item) => item.id == comment.id);
+    if (currentIndex < 0 || _comments[currentIndex].deleted) return;
+    final current = _comments[currentIndex];
+    if (!_isOwner(current)) return;
     final updated = _ThreadComment.fromJson({
-      'id': comment.id,
+      'id': current.id,
       'postId': widget.postId,
-      'authorId': comment.authorId,
-      'authorUsername': comment.authorUsername,
-      'createdAt': comment.createdAt.toIso8601String(),
-      'parentId': comment.parentCommentId,
+      'authorId': current.authorId,
+      'authorUsername': current.authorUsername,
+      'createdAt': current.createdAt.toIso8601String(),
+      'parentId': current.parentCommentId,
       ...revised,
     });
+    ++_mutationEpoch;
     setState(() {
       _comments = _mergeComments(_comments, [updated]);
       _locallySubmitted.add(updated.id);
@@ -506,7 +572,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     setState(() {
       _confirmingDeletion = true;
       _errorMessage = null;
+      _mutationErrorMessage = null;
     });
+    _retryAction = null;
+    _mutationRetryAction = null;
     try {
       if (ask) {
         final confirmed = await showDialog<bool>(
@@ -574,12 +643,14 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         receipt: OwnedContent('comment', comment.id, postId: widget.postId),
       );
       if (!mounted || actor != _actor || epoch != _sessionEpoch) return;
+      ++_mutationEpoch;
       setState(() {
         _isSubmitting = false;
         _comments = _comments.where((item) => item.id != comment.id).toList();
         _locallySubmitted.remove(comment.id);
         if (_replyTarget?.id == comment.id) _replyTarget = null;
       });
+      _drainDeferredInitialReload();
     } catch (error) {
       final failure = contentMutationFailure(error);
       if (attempt != null) {
@@ -591,9 +662,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       setState(() {
         _confirmingDeletion = false;
         _isSubmitting = false;
-        _errorMessage = failure.message;
-        _retryAction = () => _deleteComment(comment, ask: false);
+        _mutationErrorMessage = failure.message;
       });
+      _mutationRetryAction = () => _deleteComment(comment, ask: false);
+      _drainDeferredInitialReload();
     }
   }
 
@@ -642,7 +714,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
+      _mutationErrorMessage = null;
     });
+    _retryAction = null;
+    _mutationRetryAction = null;
     try {
       final token = await ref.read(jwtProvider.future);
       if (!mounted ||
@@ -676,6 +751,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         receipt: OwnedContent('comment', id, postId: widget.postId),
       );
       if (!mounted || actor != _actor || epoch != _sessionEpoch) return;
+      ++_mutationEpoch;
       setState(() => _isSubmitting = false);
       await _loadInitial();
     } catch (error) {
@@ -688,15 +764,17 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       if (!mounted || actor != _actor || epoch != _sessionEpoch) return;
       setState(() {
         _isSubmitting = false;
-        _errorMessage = failure.message;
-        _retryAction = () => _retryDeletedComment(saved);
+        _mutationErrorMessage = failure.message;
       });
+      _mutationRetryAction = () => _retryDeletedComment(saved);
+      _drainDeferredInitialReload();
     } finally {
       if (mounted &&
           actor == _actor &&
           epoch == _sessionEpoch &&
           _isSubmitting) {
         setState(() => _isSubmitting = false);
+        _drainDeferredInitialReload();
       }
     }
   }
@@ -758,6 +836,18 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
           appBar: AppBar(title: const Text('Comments')),
           body: Column(
             children: [
+              if (_mutationErrorMessage != null)
+                MaterialBanner(
+                  content: Text(_mutationErrorMessage!),
+                  actions: [
+                    TextButton(
+                      onPressed: _isSubmitting
+                          ? null
+                          : () => _mutationRetryAction?.call(),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
               if (_errorMessage != null)
                 MaterialBanner(
                   content: Text(_errorMessage!),

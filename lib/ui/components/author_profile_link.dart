@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lythaus/ui/screens/profile/profile_screen.dart';
 
 class AuthorProfileLink extends StatefulWidget {
   const AuthorProfileLink({
@@ -25,14 +26,24 @@ class _AuthorProfileLinkState extends State<AuthorProfileLink> {
   Future<void> _openProfile() async {
     if (_openingProfile) return;
     final router = GoRouter.maybeOf(context);
-    if (router == null) return;
+    final navigator = router == null ? Navigator.maybeOf(context) : null;
+    if (router == null && navigator == null) return;
 
     setState(() => _openingProfile = true);
     try {
-      await router.pushNamed<void>(
-        'profile',
-        pathParameters: {'userId': widget.userId.trim()},
-      );
+      final userId = widget.userId.trim();
+      if (router != null) {
+        await router.pushNamed<void>(
+          'profile',
+          pathParameters: {'userId': userId},
+        );
+      } else {
+        await navigator!.push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => ProfileScreen(userId: userId),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _openingProfile = false);
     }

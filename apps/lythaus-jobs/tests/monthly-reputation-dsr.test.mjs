@@ -21,7 +21,7 @@ function configuredClient({ installed = true, enabled = true, sourceRows = [] } 
       ], rowCount: 2,
     };
     if (sql.includes('FROM trust.monthly_reward_snapshot_rule_sets')) return {
-      rows: [{ version, mode: 'shadow', first_source_month: new Date('2026-07-01T00:00:00.000Z'),
+      rows: [{ version, mode: 'shadow', policy_version: MONTHLY_REPUTATION_POLICY_VERSION, first_source_month: new Date('2026-07-01T00:00:00.000Z'),
         weekly_rules_version: 'synthetic-weekly', maintenance_rules_version: 'synthetic-maintenance', decision_approvals: {} }],
       rowCount: 1,
     };
@@ -74,4 +74,29 @@ test('Data Passport report adapter rejects malformed internal subject ids', asyn
   const { client, calls } = configuredClient();
   await assert.rejects(() => readMonthlyReputationReportsForPassport(client, 'not-a-uuid', version), /monthly_report_subject_invalid/);
   assert.equal(calls.some(call => call.sql.includes('FROM trust.monthly_reputation_sources')), false);
+});
+
+test('Data Passport propagates report overflow and never returns earlier months as a complete partial export', async () => {
+  const { client, calls } = configuredClient({ sourceRows: [
+    { source_month: '2026-08' }, { source_month: '2026-09' }, { source_month: '2026-10' },
+  ] });
+  const configuredQuery = client.query;
+  const attemptedMonths = [];
+  client.query = async (sql, values) => {
+    if (sql.includes('FROM trust.monthly_reputation_sources source')) {
+      calls.push({ sql, values });
+      attemptedMonths.push(values[1]);
+      return { rows: values[1] === '2026-08-01' ? [] : [{ bounds_exceeded: true }], rowCount: 1 };
+    }
+    if (sql.includes('pg_advisory_xact_lock') || sql.includes('SELECT * FROM trust.monthly_reward_snapshots')
+      || sql.includes('SELECT revision, mode')) return { rows: [], rowCount: 0 };
+    if (sql.includes('SELECT trust.lock_monthly_reward_subject')) return { rows: [{ allowed: true }], rowCount: 1 };
+    if (sql.includes('to_char(clock_timestamp()')) return { rows: [{ month: '2026-11' }], rowCount: 1 };
+    if (sql.includes('SELECT 1 FROM trust.monthly_reputation_sources')) return { rows: [{}], rowCount: 1 };
+    return configuredQuery(sql, values);
+  };
+  await assert.rejects(readMonthlyReputationReportsForPassport(client, owner, version), /monthly_report_resource_limit_exceeded/);
+  assert.deepEqual(attemptedMonths, ['2026-08-01', '2026-09-01']);
+  assert.ok(calls.filter(({ sql }) => sql.includes('FROM trust.monthly_reputation_sources source'))
+    .every(({ values }) => values[0] === owner));
 });

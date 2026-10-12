@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lythaus/core/analytics/foreground_activity_observer.dart';
 import 'package:flutter/scheduler.dart';
 
 import 'package:lythaus/core/analytics/analytics_events.dart';
@@ -82,12 +83,14 @@ class _LythausAppState extends ConsumerState<LythausApp> {
     ref.watch(contentMutationRegistryProvider);
     final router = ref.watch(appRouterProvider);
 
-    return MaterialApp.router(
-      title: 'Lythaus',
-      theme: LythausTheme.light(),
-      darkTheme: LythausTheme.dark(),
-      themeMode: ThemeMode.system,
-      routerConfig: router,
+    return ForegroundActivityObserver(
+      child: MaterialApp.router(
+        title: 'Lythaus',
+        theme: LythausTheme.light(),
+        darkTheme: LythausTheme.dark(),
+        themeMode: ThemeMode.system,
+        routerConfig: router,
+      ),
     );
   }
 }

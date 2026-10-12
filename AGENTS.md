@@ -7,33 +7,36 @@ Authoritative, concise instructions for agents working in this repository via Co
 - Historical Git commits and files under `docs/history/` may accurately retain retired names. Do not rewrite Git history solely for branding.
 - Azure was fully deleted on 6 August 2026. Do not add Azure code, dependencies, configuration, deployment paths, credentials, or recovery fallbacks.
 - Cloudflare Workers are the only backend runtime. PlanetScale PostgreSQL is the canonical database.
-- Initial authentication is email plus guest access only. Do not add Google, Apple, World ID, Entra, B2C, or generic OAuth provider selection.
+- Initial authentication retains email/password for launch (owner 11 October 2026), plus read-only guest browsing. Do not add Google, Apple, World ID, Entra, B2C, or generic OAuth provider selection.
 - Hive is prohibited. Authenticity logic must be provider-neutral, Lythaus-owned, and located under `packages/authenticity/`.
+- Read `docs/policy/current-policy-authority.md` before policy work. New standard appeals use timed community review with equal votes and no routine Editorial confirmation; historical cases retain their recorded policy version. Timing/quorum defaults and activation remain separate.
+- All prospective quarterly awards expire at calendar-quarter end, for remaining months only, with no earlier retroactive credit (owner 7 October). Preserve signed historical policy bytes and coordinate with the existing monthly policy lane; do not duplicate it. The pinned 13,500 budget applies only to historical v1. Owner-approved prospective v2 has a 13,650 maximum, preserving existing awards and adding the optional 150-point suggestion award; approval does not activate features.
+- Withhold public posting until the complete publishing pipeline is validated (owner 11 October). Owner-test deployments and production smoke do not certify production authentication, detection or publishing. Documentation edits do not activate features.
 
 ## PlanetScale Database
 
 - Organization: `lythaus`
 - Database: `lythaus-core`
 - Production branch: `main`
-- Development branch: `development`
-- AI development branch: `ai-development` (Git convention only; not a permanent database branch)
+- Hosted branches: production-only `main`; do not recreate `development`, `ai-development` or automatic `ci-*` branches
+- The old `ai-development` label was a Git convention only, not a hosted validation target.
+- Validation database: disposable local PostgreSQL 17 with synthetic data
 - Default PostgreSQL database: `postgres`
 
 Use PlanetScale MCP for schema inspection and approved database operations.
 Do not execute write queries against `main` without explicit human approval.
-Use `development` with synthetic data and a disposable local PostgreSQL 17
-container for migration validation. Never create another PlanetScale branch;
-do not create automatic `ci-*` branches.
-Initial verification prompt: use PlanetScale MCP to confirm access to
-`lythaus/lythaus-core`, list all branches, and inspect the schema. Do not
-execute writes or DDL.
-Verified 2026-08-05 through PlanetScale MCP: `main` and `development` exist.
-`main` currently exposes 78 relations including `identity.contact_emails` and
-`development` exposes 77 relations without that table. The approved budget
-migration adds four system relations, so the post-migration production contract
-is 82 relations with schema version `0009_cost_budget_enforcement.sql`.
-`pgcrypto`, `pg_trgm`, and `unaccent` are installed;
-PostGIS is unavailable and is not a launch dependency. Do not apply writes or
+Use only disposable local PostgreSQL 17 for synthetic migration validation.
+Never create another PlanetScale branch for development or CI.
+The 2026-08-22 read-only inventory found only `main`; see
+`database/planetscale/README.md`. Older hosted development-branch observations
+and relation counts are historical snapshots, not current instructions.
+Read `scripts/ci/planetscale-migration-manifest.mjs` for the exact approved
+baseline and `infrastructure/lythaus-resource-registry.json` for dated provider
+evidence. Do not infer today's migration or relation count from a snapshot.
+When authorized provider access exists, inspect schema read-only; if unavailable,
+record `UNKNOWN/BLOCKED` and continue local validation without retrying denied
+operations or changing credentials. PostGIS is not a launch dependency.
+Do not apply writes or
 DDL to `main` until the PostgreSQL 17 compatibility test, exact baseline, data
 classification, migration reconciliation, and explicit migration gates pass.
 
@@ -54,12 +57,18 @@ Workflows, KV namespace, and Access applications listed in
 their physical names remain unchanged, but their logical environment,
 retention, access policy, and deletion protection become production.
 
+The owner requires Cloudflare-first use of existing Workers Paid with no
+additional paid resources. Firebase mobile dependencies have a documented
+purpose, but exception/privacy/retention approval is not established by their
+presence; read `docs/security/firebase-mobile-purpose-inventory.md` before
+related work. Do not remove dependencies or infer approval.
+
 Before any agent creates or changes a provider resource it must read the
 registry, inspect live provider state, search for an equivalent, prefer reuse
 or rebinding, check possible cost, and stop if a duplicate or new cost may be
 required. No automatic create-if-missing behavior is permitted.
 
-Do not restore deleted provider paths from historical commits. Never import credentials or reversible passwords from historical evidence. Do not delete PlanetScale `development` or any live Cloudflare resource without the registry, live-state, cost, rollback, and explicit approval gates below.
+Do not restore deleted provider paths from historical commits. Never import credentials or reversible passwords from historical evidence or an unverified attachment. Do not create, rename or delete provider resources without explicit approval and the registry, live-state, cost and rollback gates. Physical `-dev`/`-development` suffixes in the registry denote production-promoted resources, not disposable test targets; coordinate target isolation with its owning lane.
 
 ## Quick Start
 
