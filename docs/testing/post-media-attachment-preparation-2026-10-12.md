@@ -1,6 +1,6 @@
 # Post image attachment preparation
 
-Status: disabled preparation only, based on `AsoraKK/Lythaus` main at
+Status: disabled preparation only, based on main at
 `5b87219ac647a4deedadfa66e145b4e87c0d2af9`. This work adds no active migration,
 grant, API route, queue consumer, feed projection, flag change, provider resource,
 or public posting behavior. Public posting remains held until the complete
