@@ -1,4 +1,4 @@
-import { createDedicatedAutocommitClient, type DedicatedAutocommitClient } from '@lythaus/db/autocommit';
+import { createDedicatedAutocommitClient, type DedicatedAutocommitClient } from '../../../packages/db/src/autocommit.ts';
 import type { HyperdriveBinding } from '@lythaus/db';
 import {
   createDatabaseReceiptLedger,

@@ -92,6 +92,20 @@ has no provider or external HTTP requests. The initial destroy-failure fixture
 also suppressed its first native close; that extra fault was removed so the case
 isolates driver destroy failure with the native shutdown capability available.
 
+CI run `38210993077` on `85ed3fbece2b7ce5bfa8aff3479ae9e19331c5d9`
+failed the homepage freeze guard because the adapter added a DB package export.
+Its dependency scans passed; the audit job failed only in the launch-blocker
+summary because Web frontends failed. The same frontend failure appeared on
+`fdc6ea15c76e30cfba8f2ad0b0840faf51846153`. The adapter now imports its dedicated
+module directly, as it already does for the evaluation modules, and restores the
+frozen DB package manifest. The homepage guard and shared CI remain unchanged.
+Local verification passes all 73 marketing tests (including the 19 homepage
+guards), the marketing build and its 19-route output contract, native typing,
+six TLS guards and all 22 adapter tests. Initial local dependency installation
+and the default Astro build failed on unwritable home cache/config paths;
+using a temporary npm cache and disabling Astro telemetry resolved those local
+environment failures without changing dependencies or frontend source.
+
 ## Production gates and rollback
 
 The production evaluation schema is absent according to owner-supplied metadata;

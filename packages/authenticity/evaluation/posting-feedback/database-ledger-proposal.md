@@ -39,7 +39,7 @@ IDs, revisions, and timestamps, not content.
 The local POSIX ledger remains local-only. The inactive
 `apps/lythaus-jobs/src/posting-feedback-runtime.ts` factory adapts the existing
 `DB_JOBS_FRESH` Hyperdrive binding to
-`@lythaus/db/autocommit.createDedicatedAutocommitClient()`. That factory captures
+`packages/db/src/autocommit.ts`'s `createDedicatedAutocommitClient()`. That factory captures
 the verified connection string and scalar parameters, owns a new `pg.Client` for
 each statement, and accepts no caller client. It requires idle transaction status
 at startup and after the named extended-protocol query. The named query forces

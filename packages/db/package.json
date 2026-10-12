@@ -8,7 +8,6 @@
     "pg": "^8.23.0"
   },
   "exports": {
-    ".": "./src/index.ts",
-    "./autocommit": "./src/autocommit.ts"
+    ".": "./src/index.ts"
   }
 }
