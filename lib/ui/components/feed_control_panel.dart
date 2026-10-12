@@ -10,21 +10,29 @@ import 'package:lythaus/ui/theme/spacing.dart';
 class FeedControlPanel extends ConsumerWidget {
   const FeedControlPanel({
     super.key,
+    this.availableFeeds,
+    this.selectedFeedId,
     this.onSelect,
     this.onCreateCustom,
     this.onOpenModerationHub,
     this.onOpenAppeals,
+    this.onClose,
   });
 
+  final List<FeedModel>? availableFeeds;
+  final String? selectedFeedId;
   final ValueChanged<FeedModel>? onSelect;
   final VoidCallback? onCreateCustom;
   final VoidCallback? onOpenModerationHub;
   final VoidCallback? onOpenAppeals;
+  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final feeds = ref.watch(feedListProvider);
     final current = ref.watch(currentFeedProvider);
+    final choices = availableFeeds ?? feeds;
+    final activeFeedId = selectedFeedId ?? current.id;
     final allowFeedSwitching = onSelect != null;
 
     return Padding(
@@ -33,33 +41,46 @@ class FeedControlPanel extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            allowFeedSwitching ? 'Feeds' : 'Feed tools',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  allowFeedSwitching ? 'Choose a feed' : 'Feed tools',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              if (onClose != null)
+                IconButton(
+                  tooltip: 'Close feed controls',
+                  onPressed: onClose,
+                  icon: const Icon(Icons.close),
+                ),
+            ],
           ),
           const SizedBox(height: Spacing.sm),
           if (allowFeedSwitching)
-            ...feeds.map(
-              (feed) => ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: Spacing.sm,
+            if (choices.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: Spacing.sm),
+                child: Text('No feeds are available yet.'),
+              )
+            else
+              ...choices.map(
+                (feed) => ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: Spacing.sm,
+                  ),
+                  title: Text(feed.name),
+                  subtitle: Text(_subtitle(feed)),
+                  trailing: feed.isHome
+                      ? const Icon(Icons.home_filled, size: 18)
+                      : null,
+                  selected: feed.id == activeFeedId,
+                  onTap: () => onSelect?.call(feed),
                 ),
-                title: Text(feed.name),
-                subtitle: Text(_subtitle(feed)),
-                trailing: feed.isHome
-                    ? const Icon(Icons.home_filled, size: 18)
-                    : null,
-                selected: feed.id == current.id,
-                onTap: () => onSelect?.call(feed),
               ),
-            ),
-          if (!allowFeedSwitching)
-            Text(
-              'Switch feeds from the Discover rail at the top of the home screen.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
           const SizedBox(height: Spacing.sm),
           if (onCreateCustom != null)
             FilledButton.icon(

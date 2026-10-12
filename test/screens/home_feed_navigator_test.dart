@@ -9,6 +9,7 @@ import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/ui/components/feed_card.dart';
 import 'package:lythaus/ui/screens/home/home_feed_navigator.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -166,6 +167,26 @@ void main() {
       findsOneWidget,
     );
     expect(find.byType(FeedCard), findsWidgets);
+
+    await tester.tap(find.byTooltip('Feed controls'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose a feed'), findsOneWidget);
+    expect(find.text('Curated discover'), findsOneWidget);
+    expect(find.text('Hybrid news'), findsOneWidget);
+    expect(find.text('Custom filters'), findsOneWidget);
+    expect(find.byTooltip('Close feed controls'), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Close feed controls'), findsNothing);
+
+    await tester.tap(find.byTooltip('Feed controls'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('News').last);
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Editorial coverage from earned, revocable contributors.'),
+      findsOneWidget,
+    );
 
     await tester.pumpWidget(buildNavigator(AlphaFeedSection.newsBoard));
     await tester.pumpAndSettle();

@@ -259,6 +259,53 @@ void main() {
     expect(find.text('Post Receipt'), findsOneWidget);
   });
 
+  testWidgets('unavailable history has a visible close and compact sheet', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final dio = _dioWithAdapter(
+      _MockAdapter((options) async {
+        throw DioException(
+          requestOptions: options,
+          type: DioExceptionType.badResponse,
+          response: Response(requestOptions: options, statusCode: 404),
+        );
+      }),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [secureDioProvider.overrideWithValue(dio)],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => ReceiptDrawer.show(context, 'missing-history'),
+                child: const Text('Open history'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open history'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Receipt unavailable'), findsOneWidget);
+    expect(find.byTooltip('Close receipt'), findsOneWidget);
+    expect(
+      tester.getRect(find.byType(ReceiptDrawerSheet)).height,
+      lessThan(500),
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(ReceiptDrawerSheet), findsNothing);
+  });
+
   testWidgets('uses fallback labels for sparse event payload and closes', (
     tester,
   ) async {

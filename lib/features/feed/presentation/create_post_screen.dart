@@ -423,6 +423,19 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       return;
     }
     if (state.text.isNotEmpty && !state.isSuccess) {
+      if (state.draftStatus == 'Draft saved on this device.' ||
+          state.draftStatus == 'Draft restored on this device.') {
+        _leaveComposer();
+        return;
+      }
+      if (state.draftStatus == 'Saving draft…') {
+        LythSnackbar.info(
+          context: context,
+          message:
+              'Your draft is still saving. Wait for confirmation before closing.',
+        );
+        return;
+      }
       _showDiscardDialog(context);
     } else {
       ref.read(postCreationProvider.notifier).reset();

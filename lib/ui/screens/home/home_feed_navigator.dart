@@ -3,6 +3,7 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -43,11 +44,27 @@ class HomeFeedNavigator extends ConsumerStatefulWidget {
 class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   late final PageController _pageController;
   int _activeIndex = 0;
+  late AlphaFeedSection _activeSection;
 
   @override
   void initState() {
     super.initState();
+    _activeSection = widget.section;
     _pageController = PageController();
+  }
+
+  @override
+  void didUpdateWidget(HomeFeedNavigator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.section != widget.section) {
+      _activeSection = widget.section;
+      _activeIndex = 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _pageController.hasClients) {
+          _pageController.jumpToPage(0);
+        }
+      });
+    }
   }
 
   @override
@@ -58,7 +75,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
 
   @override
   Widget build(BuildContext context) {
-    final feeds = _feedsForSection(ref.watch(feedListProvider));
+    final feeds = _feedsForSection(ref.watch(feedListProvider), _activeSection);
     final spacing = context.spacing;
 
     if (feeds.isEmpty) {
@@ -108,20 +125,49 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   }
 
   void _onFeedSelected(int index) {
-    setState(() => _activeIndex = index);
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _pageController.jumpToPage(index);
-      return;
-    }
-    _pageController.animateToPage(
-      index,
-      duration: LythMotion.standard,
-      curve: LythMotion.emphasisCurve,
-    );
+    final feeds = _feedsForSection(ref.read(feedListProvider), _activeSection);
+    if (index < 0 || index >= feeds.length) return;
+    _selectFeed(feeds[index]);
   }
 
-  List<FeedModel> _feedsForSection(List<FeedModel> feeds) {
-    return switch (widget.section) {
+  void _selectFeed(FeedModel feed) {
+    final allFeeds = ref.read(feedListProvider);
+    final globalIndex = allFeeds.indexWhere((item) => item.id == feed.id);
+    if (globalIndex < 0) return;
+    final section = switch (feed.type) {
+      FeedType.discover => AlphaFeedSection.discover,
+      FeedType.custom => AlphaFeedSection.myFeeds,
+      FeedType.news => AlphaFeedSection.newsBoard,
+      FeedType.moderation => _activeSection,
+    };
+    final feeds = _feedsForSection(allFeeds, section);
+    final index = feeds.indexWhere((item) => item.id == feed.id);
+    if (index < 0) return;
+    final disableAnimations = MediaQuery.disableAnimationsOf(context);
+    setState(() {
+      _activeSection = section;
+      _activeIndex = index;
+    });
+    ref.read(currentFeedIndexProvider.notifier).state = globalIndex;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_pageController.hasClients) return;
+      if (disableAnimations) {
+        _pageController.jumpToPage(index);
+        return;
+      }
+      _pageController.animateToPage(
+        index,
+        duration: LythMotion.standard,
+        curve: LythMotion.emphasisCurve,
+      );
+    });
+  }
+
+  List<FeedModel> _feedsForSection(
+    List<FeedModel> feeds,
+    AlphaFeedSection section,
+  ) {
+    return switch (section) {
       AlphaFeedSection.discover =>
         feeds.where((feed) => feed.type == FeedType.discover).toList(),
       AlphaFeedSection.myFeeds =>
@@ -132,18 +178,18 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   }
 
   Widget _buildEmptySection(BuildContext context) {
-    final isMyFeeds = widget.section == AlphaFeedSection.myFeeds;
-    final title = switch (widget.section) {
+    final isMyFeeds = _activeSection == AlphaFeedSection.myFeeds;
+    final title = switch (_activeSection) {
       AlphaFeedSection.discover => 'Discover',
       AlphaFeedSection.myFeeds => 'My Feeds',
       AlphaFeedSection.newsBoard => 'News Board',
     };
-    final heading = switch (widget.section) {
+    final heading = switch (_activeSection) {
       AlphaFeedSection.discover => 'Discover unavailable',
       AlphaFeedSection.myFeeds => 'No custom feeds yet',
       AlphaFeedSection.newsBoard => 'News Board is Black-only',
     };
-    final description = switch (widget.section) {
+    final description = switch (_activeSection) {
       AlphaFeedSection.discover =>
         'Try again when the Discover service is available.',
       AlphaFeedSection.myFeeds =>
@@ -151,7 +197,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
       AlphaFeedSection.newsBoard =>
         'News Board is available only to Black accounts. Lythaus confirms access before content loads.',
     };
-    final icon = switch (widget.section) {
+    final icon = switch (_activeSection) {
       AlphaFeedSection.discover => Icons.explore_outlined,
       AlphaFeedSection.myFeeds => Icons.dynamic_feed_outlined,
       AlphaFeedSection.newsBoard => Icons.newspaper_outlined,
@@ -208,11 +254,48 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   }
 
   void _openFeedControl() {
+    final allFeeds = ref.read(feedListProvider);
+    final sectionFeeds = _feedsForSection(allFeeds, _activeSection);
+    final activeFeed = sectionFeeds.isEmpty
+        ? null
+        : sectionFeeds[_activeIndex.clamp(0, sectionFeeds.length - 1)];
     showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
       isScrollControlled: true,
-      builder: (_) => const SingleChildScrollView(child: FeedControlPanel()),
+      showDragHandle: true,
+      builder: (sheetContext) => CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.escape): () {
+            Navigator.of(sheetContext).maybePop();
+          },
+        },
+        child: Focus(
+          autofocus: true,
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 640,
+                maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.72,
+              ),
+              child: Material(
+                child: SingleChildScrollView(
+                  child: FeedControlPanel(
+                    availableFeeds: allFeeds,
+                    selectedFeedId: activeFeed?.id,
+                    onSelect: (feed) {
+                      Navigator.of(sheetContext).pop();
+                      _selectFeed(feed);
+                    },
+                    onClose: () => Navigator.of(sheetContext).maybePop(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
