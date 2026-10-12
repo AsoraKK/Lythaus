@@ -75,7 +75,7 @@ test('native API -> transactional outbox -> jobs evidence -> private pending -> 
   const delivery = fixture.deliveries.find(item => item.body.eventId === createdPost.event.eventId);
   assert.equal(delivery.queue, 'MODERATION_QUEUE');
   assert.deepEqual(await deliver(delivery.body), { ack: 1, retry: 0 });
-  assert.equal(fixture.modelCalls, 1);
+  assert.equal(await fixture.modelCallCount(), 1);
   assert.deepEqual(await counts(createdPost.post.id), { detectors: 1, cases: 1, state: 'under_review' });
   const decision = (await client.query(`SELECT c.policy_version AS "casePolicy", c.state AS "caseState",
       d.outcome, d.policy_version AS "decisionPolicy", d.decided_by AS "decidedBy",
@@ -102,7 +102,7 @@ test('native API -> transactional outbox -> jobs evidence -> private pending -> 
   assert.equal((await call(null, 'GET', '/api/posts/' + createdPost.post.id)).status, 404,
     'a low risk score and detection signal are evidence for review, not publication authority or proof of human authorship');
   assert.deepEqual(await deliver(delivery.body), { ack: 1, retry: 0 });
-  assert.equal(fixture.modelCalls, 1);
+  assert.equal(await fixture.modelCallCount(), 1);
   const pending = await call(owner, 'GET', '/api/posts/' + createdPost.post.id + '/owner-view');
   assert.equal(pending.status, 200);
   assert.match(pending.headers.get('cache-control'), /private.*no-store/);
@@ -119,7 +119,7 @@ test('native API -> transactional outbox -> jobs evidence -> private pending -> 
 
 test('missing and malformed revision evidence retries without detector or publication writes; valid-hash stale evidence is acknowledged withheld', async () => {
   const malformed = await created('Synthetic malformed revision evidence', await actor());
-  const modelCalls = fixture.modelCalls;
+  const modelCalls = await fixture.modelCallCount();
   const invalidDeliveries = [
     { ...malformed.event, payload: undefined },
     { ...malformed.event, payload: { ...malformed.event.payload, bodyHash: 'not-a-hash' } },
@@ -127,7 +127,7 @@ test('missing and malformed revision evidence retries without detector or public
     { ...malformed.event, payload: { ...malformed.event.payload, declaredCreationMode: 'ai_generated' } },
   ];
   for (const invalid of invalidDeliveries) assert.deepEqual(await deliver(invalid), { ack: 0, retry: 1 });
-  assert.equal(fixture.modelCalls, modelCalls);
+  assert.equal(await fixture.modelCallCount(), modelCalls);
   assert.deepEqual(await counts(malformed.post.id), { detectors: 0, cases: 0, state: 'under_review' });
   assert.equal((await client.query(`SELECT count(*)::int AS count FROM system.consumer_inbox
     WHERE consumer_name = 'lythaus-jobs' AND event_id = $1`, [malformed.event.eventId])).rows[0].count, 0,
@@ -136,14 +136,14 @@ test('missing and malformed revision evidence retries without detector or public
     WHERE aggregate_id = $1 AND event_type = 'content.post.published'`, [malformed.post.id])).rows[0].count, 0);
   assert.equal((await call(null, 'GET', '/api/posts/' + malformed.post.id)).status, 404);
   assert.deepEqual(await deliver(malformed.event), { ack: 1, retry: 0 });
-  assert.equal(fixture.modelCalls, modelCalls + 1);
+  assert.equal(await fixture.modelCallCount(), modelCalls + 1);
   assert.deepEqual(await counts(malformed.post.id), { detectors: 1, cases: 1, state: 'under_review' });
 
   const stale = await created('Synthetic stale evidence hash', await actor());
   const staleDelivery = { ...stale.event, payload: { ...stale.event.payload, bodyHash: 'f'.repeat(64) } };
-  const callsBeforeStale = fixture.modelCalls;
+  const callsBeforeStale = await fixture.modelCallCount();
   assert.deepEqual(await deliver(staleDelivery), { ack: 1, retry: 0 });
-  assert.equal(fixture.modelCalls, callsBeforeStale);
+  assert.equal(await fixture.modelCallCount(), callsBeforeStale);
   assert.deepEqual(await counts(stale.post.id), { detectors: 0, cases: 0, state: 'under_review' });
   assert.equal((await client.query(`SELECT count(*)::int AS count FROM system.outbox_events
     WHERE aggregate_id = $1 AND event_type = 'content.post.published'`, [stale.post.id])).rows[0].count, 0);
@@ -206,14 +206,14 @@ test('stale revision and independent blocked decision cannot be overwritten by l
   const { post, event } = await created('Original synthetic revision');
   const response = await call(owner, 'PUT', '/api/posts/' + post.id, { body: 'New synthetic revision', declaredCreationMode: 'human' });
   assert.equal(response.status, 200, await response.clone().text());
-  const calls = fixture.modelCalls;
+  const calls = await fixture.modelCallCount();
   assert.deepEqual(await deliver(event), { ack: 1, retry: 0 });
-  assert.equal(fixture.modelCalls, calls);
+  assert.equal(await fixture.modelCallCount(), calls);
   const current = (await client.query("SELECT id AS \"eventId\",event_type AS \"eventType\",payload FROM system.outbox_events WHERE aggregate_id=$1 AND event_type='content.post.updated'", [post.id])).rows[0];
   await client.query("UPDATE content.posts SET moderation_state='blocked' WHERE id=$1", [post.id]);
   assert.deepEqual(await deliver(current), { ack: 1, retry: 0 });
   assert.deepEqual(await counts(post.id), { detectors: 0, cases: 0, state: 'blocked' });
-  assert.equal(fixture.modelCalls, calls);
+  assert.equal(await fixture.modelCallCount(), calls);
 });
 
 test('failed dispatch retains outbox work for retry and guest submission cannot persist content', async () => {

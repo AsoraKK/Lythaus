@@ -379,7 +379,7 @@ test('ordinary evaluation-only-v1 row/case/decision/declaration remains unchange
     const response = await ordinary.dispatchFetch('https://api.lythaus.test/fixture/queue', { method: 'POST',
       body: JSON.stringify({ eventId: post.source, eventType: 'content.post.created', payload: post.payload }) });
     assert.equal(response.status, 200); assert.deepEqual(await response.json(), { ack: 1, retry: 0 });
-    assert.equal(ordinary.modelCalls, 1);
+    assert.equal(await ordinary.modelCallCount(), 1);
     const state = await unchangedState(post);
     assert.equal(state['moderation.detector_runs'][0].provider, 'lythaus-authenticity-ai');
     assert.equal(state['moderation.cases'][0].policy_version, 'evaluation-only-v1');

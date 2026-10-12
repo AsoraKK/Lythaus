@@ -669,10 +669,6 @@ interface AppealCaseRecord extends ModerationCaseRecord {
   appellant_id: string;
   risk_class: string;
   appeal_policy_version: string;
-  challenged_decision_id: string | null;
-  challenged_decision_outcome: string | null;
-  challenged_decision_policy_version: string | null;
-  challenged_decision_created_at: Date | null;
   subject_user_id: string | null;
   current_source_event_id: string | null;
   content_active: boolean;
@@ -687,10 +683,6 @@ async function adjudicateAppeal(request: Request, env: Env, actor: { userId: str
       `SELECT a.id AS appeal_id, a.state AS appeal_state, a.appellant_id, a.risk_class,
               a.policy_version AS appeal_policy_version, c.content_type, c.content_id, c.policy_version,
               c.state, c.source_event_id,
-              challenged_decision.id AS challenged_decision_id,
-              challenged_decision.outcome AS challenged_decision_outcome,
-              challenged_decision.policy_version AS challenged_decision_policy_version,
-              challenged_decision.created_at AS challenged_decision_created_at,
               CASE c.content_type
                 WHEN 'post' THEN p.author_id
                 WHEN 'comment' THEN cm.author_id
@@ -709,13 +701,6 @@ async function adjudicateAppeal(request: Request, env: Env, actor: { userId: str
               END AS content_active
          FROM moderation.appeals a
          JOIN moderation.cases c ON c.id = a.case_id
-         LEFT JOIN LATERAL (
-           SELECT d.id, d.outcome, d.policy_version, d.created_at
-             FROM moderation.decisions d
-            WHERE d.case_id = c.id AND d.created_at <= a.created_at
-            ORDER BY d.created_at DESC, d.id DESC
-            LIMIT 1
-         ) challenged_decision ON true
          LEFT JOIN content.posts p ON c.content_type = 'post' AND p.id = c.content_id
          LEFT JOIN content.comments cm ON c.content_type = 'comment' AND cm.id = c.content_id
         WHERE a.id = $1
@@ -882,224 +867,8 @@ async function adjudicateAppeal(request: Request, env: Env, actor: { userId: str
         [appealId],
       );
       if (resolved.rowCount !== 1) throw new Error('appeal_already_resolved');
-      let contentReversed = false;
-      let contentReversalHold: string | null = null;
-      let independentHoldDecisionId: string | null = null;
-      let priorPublicDecisionId: string | null = null;
-      let priorPublicPublicationEventId: string | null = null;
-      let priorPublicAt: Date | null = null;
-      if (resolution.reverseContent) {
-        if (!appeal.content_active) contentReversalHold = 'content_inactive';
-        else if (appeal.source_event_id !== appeal.current_source_event_id) contentReversalHold = 'stale_revision';
-        else if (!appeal.challenged_decision_id) contentReversalHold = 'challenged_decision_unavailable';
-        else if (!['block', 'queue'].includes(appeal.challenged_decision_outcome ?? '')) {
-          contentReversalHold = 'challenged_decision_not_restrictive';
-        } else if (appeal.challenged_decision_outcome === 'queue'
-          && appeal.challenged_decision_policy_version === 'evaluation-only-v1') {
-          contentReversalHold = 'evaluation_only_challenge';
-        } else {
-          let post: { body: string; declared_creation_mode: string; current_source_event_id: string; content_active: boolean; visibility: string } | undefined;
-          let comment: {
-            body: string;
-            declared_creation_mode: string;
-            current_source_event_id: string;
-            content_active: boolean;
-            parent_visibility: string;
-            parent_moderation_state: string;
-            parent_published_at: Date | null;
-            parent_active: boolean;
-          } | undefined;
-          if (appeal.content_type === 'post') {
-            post = (await client.query<{ body: string; declared_creation_mode: string; current_source_event_id: string; content_active: boolean; visibility: string }>(
-              `SELECT body, declared_creation_mode, moderation_source_event_id AS current_source_event_id,
-                      deleted_at IS NULL AS content_active, visibility
-                 FROM content.posts
-                WHERE id = $1
-                FOR UPDATE`,
-              [appeal.content_id],
-            )).rows[0];
-          } else if (appeal.content_type === 'comment') {
-            comment = (await client.query<{
-              body: string;
-              declared_creation_mode: string;
-              current_source_event_id: string;
-              content_active: boolean;
-              parent_visibility: string;
-              parent_moderation_state: string;
-              parent_published_at: Date | null;
-              parent_active: boolean;
-            }>(
-              `SELECT comment.body, comment.declared_creation_mode,
-                      comment.moderation_source_event_id AS current_source_event_id,
-                      comment.deleted_at IS NULL AS content_active,
-                      parent.visibility AS parent_visibility,
-                      parent.moderation_state AS parent_moderation_state,
-                      parent.published_at AS parent_published_at,
-                      parent.deleted_at IS NULL AS parent_active
-                 FROM content.comments comment
-                 JOIN content.posts parent ON parent.id = comment.post_id
-                WHERE comment.id = $1
-                FOR UPDATE OF comment`,
-              [appeal.content_id],
-            )).rows[0];
-          }
-          const lockedContent = post ?? comment;
-          if (lockedContent && !lockedContent.content_active) contentReversalHold = 'content_inactive';
-          else if (lockedContent && lockedContent.current_source_event_id !== appeal.source_event_id) {
-            contentReversalHold = 'stale_revision';
-          } else if (appeal.content_type === 'profile'
-            && appeal.current_source_event_id !== appeal.source_event_id) {
-            contentReversalHold = 'stale_revision';
-          } else if (!lockedContent && appeal.content_type !== 'profile') {
-            contentReversalHold = 'content_unavailable';
-          } else {
-            const hold = (await client.query<{ id: string }>(
-              `SELECT d.id
-                 FROM moderation.cases c
-                 JOIN LATERAL (
-                   SELECT id, outcome, policy_version, created_at
-                     FROM moderation.decisions
-                    WHERE case_id = c.id
-                    ORDER BY created_at DESC, id DESC
-                    LIMIT 1
-                 ) d ON true
-                WHERE c.content_type = $1 AND c.content_id = $2 AND c.source_event_id = $3
-                  AND c.state <> 'superseded'
-                  AND d.outcome IN ('block', 'queue')
-                  AND d.id <> $4
-                  AND NOT (d.outcome = 'queue' AND d.policy_version = 'evaluation-only-v1')
-                ORDER BY d.created_at DESC, d.id DESC
-                LIMIT 1`,
-              [appeal.content_type, appeal.content_id, appeal.source_event_id, appeal.challenged_decision_id],
-            )).rows[0];
-            if (hold) {
-              contentReversalHold = 'independent_decision_hold';
-              independentHoldDecisionId = hold.id;
-            } else {
-              const priorPublicDecision = (await client.query<{
-                id: string;
-                publication_event_id: string;
-                publication_created_at: Date;
-              }>(
-                `SELECT prior_decision.id, publication_event.id AS publication_event_id,
-                        publication_event.created_at AS publication_created_at
-                   FROM moderation.cases prior_case
-                   JOIN moderation.decisions prior_decision ON prior_decision.case_id = prior_case.id
-                   JOIN system.outbox_events source_event ON source_event.id = prior_case.source_event_id
-                   JOIN system.outbox_events publication_event
-                     ON publication_event.aggregate_type = prior_case.content_type
-                    AND publication_event.aggregate_id = prior_case.content_id
-                   JOIN moderation.decisions challenged ON challenged.id = $4
-                  WHERE prior_case.content_type = $1 AND prior_case.content_id = $2
-                    AND prior_case.source_event_id = $3 AND prior_case.state <> 'superseded'
-                    AND prior_decision.outcome = 'allow' AND prior_decision.decided_by IS NOT NULL
-                    AND source_event.aggregate_type = $1 AND source_event.aggregate_id = $2
-                    AND source_event.event_type IN (
-                      CASE WHEN $1 = 'post' THEN 'content.post.created' ELSE 'content.comment.created' END,
-                      CASE WHEN $1 = 'post' THEN 'content.post.updated' ELSE 'content.comment.updated' END
-                    )
-                    AND publication_event.event_type = CASE
-                      WHEN $1 = 'post' THEN 'content.post.published'
-                      ELSE 'content.comment.published'
-                    END
-                    AND publication_event.created_at >= source_event.created_at
-                    AND publication_event.created_at >= prior_decision.created_at
-                    AND publication_event.created_at <= challenged.created_at
-                    AND (prior_decision.created_at < challenged.created_at
-                      OR (prior_decision.created_at = challenged.created_at AND prior_decision.id < challenged.id))
-                    AND ($1 <> 'comment' OR EXISTS (
-                      SELECT 1
-                        FROM content.comments current_comment
-                        JOIN content.posts parent ON parent.id = current_comment.post_id
-                       WHERE current_comment.id = $2 AND parent.visibility = 'public'
-                         AND parent.moderation_state = 'allowed' AND parent.deleted_at IS NULL
-                         AND parent.published_at IS NOT NULL
-                         AND parent.published_at <= publication_event.created_at
-                    ))
-                  ORDER BY publication_event.created_at DESC, publication_event.id DESC,
-                           prior_decision.created_at DESC, prior_decision.id DESC
-                  LIMIT 1`,
-                [appeal.content_type, appeal.content_id, appeal.source_event_id, appeal.challenged_decision_id],
-              )).rows[0];
-              const currentRevisionPublic = appeal.content_type === 'post'
-                ? post?.visibility === 'public'
-                : appeal.content_type === 'comment'
-                  ? comment?.parent_visibility === 'public'
-                    && comment.parent_moderation_state === 'allowed'
-                    && comment.parent_active
-                    && comment.parent_published_at !== null
-                    && priorPublicDecision !== undefined
-                    && comment.parent_published_at <= priorPublicDecision.publication_created_at
-                  : false;
-              if (!priorPublicDecision || !currentRevisionPublic) {
-                contentReversalHold = 'prior_publication_evidence_missing';
-              } else {
-                priorPublicDecisionId = priorPublicDecision.id;
-                priorPublicPublicationEventId = priorPublicDecision.publication_event_id;
-                priorPublicAt = priorPublicDecision.publication_created_at;
-              }
-            }
-            if (!contentReversalHold && post) {
-              const declaration = await client.query(
-                `SELECT post_id FROM content.content_declarations WHERE post_id = $1 FOR UPDATE`,
-                [appeal.content_id],
-              );
-              if (declaration.rowCount !== 1) throw new Error('moderation_declaration_missing');
-              const publication = enforceAdminAllowPublication({
-                body: post.body,
-                declaredCreationMode: post.declared_creation_mode,
-              });
-              const declarationUpdate = await client.query(
-                `UPDATE content.content_declarations
-                    SET public_label = $2, review_required = false, updated_at = now()
-                  WHERE post_id = $1`,
-                [appeal.content_id, publication.publicLabel],
-              );
-              if (declarationUpdate.rowCount !== 1) throw new Error('moderation_declaration_missing');
-              const contentUpdate = await client.query(
-                `UPDATE content.posts
-                    SET moderation_state = 'allowed', published_at = $3, updated_at = now()
-                  WHERE id = $1 AND moderation_source_event_id = $2 AND deleted_at IS NULL
-                    AND visibility = 'public'`,
-                [appeal.content_id, appeal.source_event_id, priorPublicAt],
-              );
-              if (contentUpdate.rowCount !== 1) throw new Error('moderation_case_superseded');
-              contentReversed = true;
-            } else if (!contentReversalHold && comment) {
-              enforceAdminAllowPublication({
-                body: comment.body,
-                declaredCreationMode: comment.declared_creation_mode,
-              });
-              const contentUpdate = await client.query(
-                `UPDATE content.comments
-                    SET moderation_state = 'allowed', updated_at = now()
-                  WHERE id = $1 AND moderation_source_event_id = $2 AND deleted_at IS NULL`,
-                [appeal.content_id, appeal.source_event_id],
-              );
-              if (contentUpdate.rowCount !== 1) throw new Error('moderation_case_superseded');
-              contentReversed = true;
-            } else if (!contentReversalHold && appeal.content_type === 'profile') {
-              const contentUpdate = await client.query(
-                `UPDATE social.profiles
-                    SET moderation_state = 'allowed', updated_at = now()
-                  WHERE user_id = $1 AND moderation_source_event_id = $2`,
-                [appeal.content_id, appeal.source_event_id],
-              );
-              contentReversed = contentUpdate.rowCount === 1;
-              if (!contentReversed) contentReversalHold = 'stale_revision';
-            }
-          }
-        }
-      }
-      if (contentReversed) {
-        await client.query(
-          `INSERT INTO moderation.appeal_outcome_effects
-             (id, appeal_id, effect_type, target_type, target_id, source_event_id)
-           VALUES ($1, $2, 'content_reversal', $3, $4, $2)
-           ON CONFLICT (appeal_id, effect_type, target_type, target_id) DO NOTHING`,
-          [uuidv7(), appealId, appeal.content_type, appeal.content_id],
-        );
-      }
+      const contentReversed = false;
+      const contentReversalHold = resolution.reverseContent ? 'challenged_decision_unavailable' : null;
       await client.query(
         `UPDATE trust.provenance_events
             SET appeal_state = 'resolved', final_decision = $1
@@ -1156,13 +925,9 @@ async function adjudicateAppeal(request: Request, env: Env, actor: { userId: str
           policyVersion: evaluation.policyVersion,
           contentReversed,
           contentReversalHold,
-          independentHoldDecisionId,
-          priorPublicDecisionId,
-          priorPublicPublicationEventId,
+          challengeBinding: resolution.reverseContent ? 'unavailable' : null,
           sourceEventId: appeal.source_event_id,
-          challengedDecisionId: appeal.challenged_decision_id,
-          challengedDecisionOutcome: appeal.challenged_decision_outcome,
-          challengedDecisionPolicyVersion: appeal.challenged_decision_policy_version,
+          challengedDecisionId: null,
         })],
       );
       await client.query(

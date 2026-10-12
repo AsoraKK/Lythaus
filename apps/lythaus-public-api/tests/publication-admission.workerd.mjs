@@ -262,7 +262,7 @@ test('missing post declaration rolls back a real admin allow after provisional d
   await rejected(() => admin(review), 409, 'moderation_declaration_missing');
 });
 
-test('historical overturn restores eligible content but preserves independent holds and stale revision boundaries', async () => {
+test('historical overturn fails closed without durable challenge binding and preserves private content', async () => {
   const profileAccess = (await client.query(`SELECT has_schema_privilege('lythaus_admin','social','USAGE') AS "schemaUsage",
       has_table_privilege('lythaus_admin','social.profiles','SELECT') AS "profileSelect"`)).rows[0];
   assert.deepEqual(profileAccess, { schemaUsage: false, profileSelect: false },
@@ -277,6 +277,7 @@ test('historical overturn restores eligible content but preserves independent ho
   const priorPublicDecision = (await client.query(
     `SELECT id FROM moderation.decisions WHERE case_id=$1 AND outcome='allow' AND decided_by IS NOT NULL`, [review.id],
   )).rows[0];
+  assert.ok(priorPublicDecision, 'the source revision was explicitly allowed before the synthetic block');
   const priorPublicPublication = (await client.query(`SELECT id,created_at FROM system.outbox_events
     WHERE aggregate_type='post' AND aggregate_id=$1 AND event_type='content.post.published'
     ORDER BY created_at DESC,id DESC LIMIT 1`, [item.id])).rows[0];
@@ -293,7 +294,8 @@ test('historical overturn restores eligible content but preserves independent ho
     VALUES($1,$2,$3,'open','standard',$4,'Synthetic historical appeal')`,
   [appealId, review.id, postOwner.id, APPEAL_POLICY.version]);
 
-  const reviewers = await Promise.all(Array.from({ length: 5 }, () => actor()));
+  const reviewers = [];
+  for (let index = 0; index < 5; index++) reviewers.push(await actor());
   const adjudicatorRole = (await client.query('SELECT role FROM identity.admin_memberships WHERE user_id=$1', [adminId])).rows[0].role;
   try {
     await client.query("UPDATE identity.admin_memberships SET role='editorial' WHERE user_id=$1", [adminId]);
@@ -324,42 +326,38 @@ test('historical overturn restores eligible content but preserves independent ho
     assert.equal(result.finalDecision, 'overturn');
     assert.equal(result.policyVersion, APPEAL_POLICY.version);
     const versions = (await client.query(`SELECT c.policy_version AS "casePolicy", a.policy_version AS "appealPolicy",
-        decision.policy_version AS "decisionPolicy", adjudication.policy_version AS "adjudicationPolicy",
+        adjudication.policy_version AS "adjudicationPolicy",
         outcome.policy_version AS "outcomePolicy"
       FROM moderation.cases c
       JOIN moderation.appeals a ON a.case_id=c.id
-      JOIN LATERAL (SELECT d.policy_version FROM moderation.decisions d
-        WHERE d.case_id=c.id AND d.created_at<=a.created_at ORDER BY d.created_at DESC,d.id DESC LIMIT 1) decision ON true
       JOIN moderation.appeal_adjudications adjudication ON adjudication.appeal_id=a.id
       JOIN moderation.appeal_outcomes outcome ON outcome.appeal_id=a.id
       WHERE a.id=$1`, [appealId])).rows[0];
     assert.deepEqual(versions, {
       casePolicy: policy, appealPolicy: APPEAL_POLICY.version,
-      decisionPolicy: policy, adjudicationPolicy: APPEAL_POLICY.version,
+      adjudicationPolicy: APPEAL_POLICY.version,
       outcomePolicy: APPEAL_POLICY.version,
     });
-    const restoredState = (await client.query(`SELECT post.moderation_state AS "moderationState",
+    const appealState = (await client.query(`SELECT post.moderation_state AS "moderationState",
         declaration.public_label AS "publicLabel", declaration.review_required AS "reviewRequired",
         post.published_at AS "publishedAt"
       FROM content.posts post JOIN content.content_declarations declaration ON declaration.post_id=post.id
       WHERE post.id=$1`, [item.id])).rows[0];
-    assert.deepEqual(restoredState, {
-      moderationState: 'allowed', publicLabel: 'Human-authored', reviewRequired: false,
-      publishedAt: priorPublicPublication.created_at,
+    assert.deepEqual(appealState, {
+      moderationState: 'blocked', publicLabel: 'Under review', reviewRequired: true,
+      publishedAt: null,
     });
-    const restorationAudit = (await client.query(`SELECT metadata FROM system.audit_events
+    const appealAudit = (await client.query(`SELECT metadata FROM system.audit_events
       WHERE target_type='appeal' AND target_id=$1 AND action='moderation.appeal.outcome_applied'
       ORDER BY created_at DESC LIMIT 1`, [appealId])).rows[0].metadata;
-    assert.equal(restorationAudit.challengedDecisionId, challengedDecisionId);
-    assert.equal(restorationAudit.priorPublicDecisionId, priorPublicDecision.id);
-    assert.equal(restorationAudit.priorPublicPublicationEventId, priorPublicPublication.id);
-    assert.equal(restorationAudit.sourceEventId,
+    assert.equal(appealAudit.challengedDecisionId, null);
+    assert.equal(appealAudit.challengeBinding, 'unavailable');
+    assert.equal(appealAudit.contentReversalHold, 'challenged_decision_unavailable');
+    assert.equal(appealAudit.contentReversed, false);
+    assert.equal(appealAudit.sourceEventId,
       (await client.query('SELECT source_event_id FROM moderation.cases WHERE id=$1', [review.id])).rows[0].source_event_id);
-    const publicRead = await call(null, 'GET', itemPath(item));
-    assert.equal(publicRead.status, 200, await publicRead.clone().text());
-    const published = await publicRead.json();
-    assert.equal(published.post.id, item.id);
-    assert.equal(published.post.publicLabel, 'Human-authored');
+    assert.equal((await call(null, 'GET', itemPath(item))).status, 404,
+      'a previous allow and publication event cannot substitute for a durable challenge binding');
     assert.equal(fixture.statements.some(({ role, text }) => role === 'lythaus_admin' && /FROM social\.profiles/i.test(text)), false,
       'post appeal adjudication must not read profile data');
 
@@ -388,13 +386,19 @@ test('historical overturn restores eligible content but preserves independent ho
       { decision: 'overturn', reasonCode: 'SYNTHETIC_REPLY_OVERTURN' }, uuidv7(),
       { 'cf-access-jwt-assertion': accessToken, origin: 'https://api.lythaus.test' });
     assert.equal(replyResponse.status, 200, await replyResponse.clone().text());
-    const restoredReplyList = await call(null, 'GET', `/api/posts/${parentPost.id}/comments?limit=100`);
-    assert.equal(restoredReplyList.status, 200, await restoredReplyList.clone().text());
-    assert.ok((await restoredReplyList.text()).includes(previouslyPublicReply.id));
+    const privateReplyList = await call(null, 'GET', `/api/posts/${parentPost.id}/comments?limit=100`);
+    assert.equal(privateReplyList.status, 200, await privateReplyList.clone().text());
+    assert.equal((await privateReplyList.text()).includes(previouslyPublicReply.id), false,
+      'an overturn without a durable challenge binding does not restore a reply');
+    assert.equal((await client.query('SELECT moderation_state FROM content.comments WHERE id=$1',
+      [previouslyPublicReply.id])).rows[0].moderation_state, 'blocked');
     const replyAudit = (await client.query(`SELECT metadata FROM system.audit_events
       WHERE target_type='appeal' AND target_id=$1 AND action='moderation.appeal.outcome_applied'
       ORDER BY created_at DESC LIMIT 1`, [replyAppealId])).rows[0].metadata;
-    assert.equal(replyAudit.priorPublicPublicationEventId, replyPriorPublication.id);
+    assert.equal(replyAudit.challengeBinding, 'unavailable');
+    assert.equal(replyAudit.challengedDecisionId, null);
+    assert.equal(replyAudit.contentReversalHold, 'challenged_decision_unavailable');
+    assert.equal(replyAudit.contentReversed, false);
 
     const allowedWithoutPublication = await create(await actor(), 'post', {
       body: 'Synthetic allow without publication evidence stays private', declaredCreationMode: 'human',
@@ -425,9 +429,9 @@ test('historical overturn restores eligible content but preserves independent ho
     const unpublishedAudit = (await client.query(`SELECT metadata FROM system.audit_events
       WHERE target_type='appeal' AND target_id=$1 AND action='moderation.appeal.outcome_applied'
       ORDER BY created_at DESC LIMIT 1`, [unpublishedAppealId])).rows[0].metadata;
-    assert.equal(unpublishedAudit.priorPublicDecisionId, null);
-    assert.equal(unpublishedAudit.priorPublicPublicationEventId, null);
-    assert.equal(unpublishedAudit.contentReversalHold, 'prior_publication_evidence_missing');
+    assert.equal(unpublishedAudit.challengeBinding, 'unavailable');
+    assert.equal(unpublishedAudit.challengedDecisionId, null);
+    assert.equal(unpublishedAudit.contentReversalHold, 'challenged_decision_unavailable');
 
     const generated = await create(await actor(), 'post', {
       body: 'Synthetic appeal must preserve generated-content block', declaredCreationMode: 'human',
@@ -465,7 +469,8 @@ test('historical overturn restores eligible content but preserves independent ho
     const generatedAudit = (await client.query(`SELECT metadata FROM system.audit_events
       WHERE target_type='appeal' AND target_id=$1 AND action='moderation.appeal.outcome_applied'
       ORDER BY created_at DESC LIMIT 1`, [generatedAppealId])).rows[0].metadata;
-    assert.equal(generatedAudit.contentReversalHold, 'prior_publication_evidence_missing');
+    assert.equal(generatedAudit.challengeBinding, 'unavailable');
+    assert.equal(generatedAudit.contentReversalHold, 'challenged_decision_unavailable');
 
     const neverPublic = await create(await actor(), 'post', {
       body: 'Synthetic never-public appeal remains private', declaredCreationMode: 'human',
@@ -497,7 +502,8 @@ test('historical overturn restores eligible content but preserves independent ho
     const neverPublicAudit = (await client.query(`SELECT metadata FROM system.audit_events
       WHERE target_type='appeal' AND target_id=$1 AND action='moderation.appeal.outcome_applied'
       ORDER BY created_at DESC LIMIT 1`, [neverPublicAppealId])).rows[0].metadata;
-    assert.equal(neverPublicAudit.contentReversalHold, 'prior_publication_evidence_missing');
+    assert.equal(neverPublicAudit.challengeBinding, 'unavailable');
+    assert.equal(neverPublicAudit.contentReversalHold, 'challenged_decision_unavailable');
 
     const missing = await create(await actor(), 'post', {
       body: 'Synthetic appeal cannot bypass a missing declaration', declaredCreationMode: 'human',
@@ -520,8 +526,8 @@ test('historical overturn restores eligible content but preserves independent ho
     const missingResponse = await call(null, 'POST', `/api/admin/appeals/${missingAppealId}/adjudications`,
       { decision: 'overturn', reasonCode: 'SYNTHETIC_MISSING_DECLARATION' }, uuidv7(),
       { 'cf-access-jwt-assertion': accessToken, origin: 'https://api.lythaus.test' });
-    assert.equal(missingResponse.status, 409, await missingResponse.clone().text());
-    assert.equal((await missingResponse.json()).error, 'moderation_declaration_missing');
+    assert.equal(missingResponse.status, 200, await missingResponse.clone().text());
+    assert.equal((await missingResponse.json()).finalDecision, 'overturn');
     const missingState = (await client.query(`SELECT post.moderation_state AS "moderationState",
         post.published_at IS NOT NULL AS "published", appeal.state AS "appealState",
         count(adjudication.id)::integer AS "adjudicationCount",
@@ -530,8 +536,12 @@ test('historical overturn restores eligible content but preserves independent ho
       LEFT JOIN moderation.appeal_adjudications adjudication ON adjudication.appeal_id=appeal.id
       WHERE post.id=$1 GROUP BY post.id,appeal.id`, [missing.id, missingReview.id])).rows[0];
     assert.deepEqual(missingState, {
-      moderationState: 'blocked', published: false, appealState: 'open', adjudicationCount: 0, declarationExists: false,
+      moderationState: 'blocked', published: false, appealState: 'resolved', adjudicationCount: 1, declarationExists: false,
     });
+    const missingAudit = (await client.query(`SELECT metadata FROM system.audit_events
+      WHERE target_type='appeal' AND target_id=$1 AND action='moderation.appeal.outcome_applied'
+      ORDER BY created_at DESC LIMIT 1`, [missingAppealId])).rows[0].metadata;
+    assert.equal(missingAudit.contentReversalHold, 'challenged_decision_unavailable');
 
     const profileOwner = await actor(), profileAppellant = await actor(), profileSourceEventId = uuidv7();
     await client.query(`UPDATE social.profiles
@@ -561,81 +571,84 @@ test('historical overturn restores eligible content but preserves independent ho
     assert.equal(fixture.statements.some(({ role, text }) => role === 'lythaus_admin' && /FROM social\.profiles/i.test(text)), false,
       'an unauthorized profile read fails at the privilege check before accessing social.profiles');
 
-    const heldOwner = await actor();
-    const heldPost = await create(heldOwner, 'post', {
-      body: 'Synthetic same-revision independent safety hold', declaredCreationMode: 'human',
+    const raceOwner = await actor();
+    const racePost = await create(raceOwner, 'post', {
+      body: 'Synthetic late-commit appeal binding race', declaredCreationMode: 'human',
     });
-    const heldReview = await reviewCase(heldPost);
-    const heldPriorAllow = await admin(heldReview, { reasonCode: 'SYNTHETIC_HOLD_PRIOR_ALLOW' });
-    assert.equal(heldPriorAllow.status, 200, await heldPriorAllow.clone().text());
-    assert.equal((await call(null, 'GET', itemPath(heldPost))).status, 200);
-    await client.query(`UPDATE content.posts SET moderation_state='blocked',published_at=NULL WHERE id=$1`, [heldPost.id]);
-    await client.query(`UPDATE content.content_declarations
-      SET public_label='Under review',review_required=true,updated_at=now() WHERE post_id=$1`, [heldPost.id]);
-    const heldChallengeId = uuidv7();
-    await client.query(`INSERT INTO moderation.decisions(id,case_id,outcome,public_label,policy_version,decided_by,created_at)
-      VALUES($1,$2,'block','Under review',$3,$4,clock_timestamp())`,
-    [heldChallengeId, heldReview.id, policy, adminId]);
-    const heldChallenge = (await client.query(
-      `SELECT id FROM moderation.decisions WHERE case_id=$1 ORDER BY created_at DESC,id DESC LIMIT 1`, [heldReview.id],
-    )).rows[0];
-    const heldAppealId = uuidv7();
-    await client.query(`INSERT INTO moderation.appeals(id,case_id,appellant_id,state,risk_class,policy_version,statement)
-      VALUES($1,$2,$3,'open','standard',$4,'Synthetic race-bound independent hold')`,
-    [heldAppealId, heldReview.id, heldOwner.id, APPEAL_POLICY.version]);
-    await seedOverturnVotes(heldAppealId);
-
+    const raceReview = await reviewCase(racePost);
+    const raceAllow = await admin(raceReview, { reasonCode: 'SYNTHETIC_RACE_PRIOR_ALLOW' });
+    assert.equal(raceAllow.status, 200, await raceAllow.clone().text());
+    assert.equal((await call(null, 'GET', itemPath(racePost))).status, 200);
+    const raceAppealId = uuidv7();
     const blocker = new pg.Client({ connectionString, ssl: false, connectionTimeoutMillis: 5000 });
     await blocker.connect();
-    await blocker.query('BEGIN');
-    await blocker.query('SELECT id FROM content.posts WHERE id=$1 FOR UPDATE', [heldPost.id]);
-    const startStatement = fixture.statements.length;
-    let adjudicationRequest;
+    let transactionStartedAt;
+    let restrictiveDecision;
+    let raceAppeal;
+    let ambiguousQueue;
     try {
-      adjudicationRequest = call(null, 'POST', `/api/admin/appeals/${heldAppealId}/adjudications`,
-        { decision: 'overturn', reasonCode: 'SYNTHETIC_RACE_OVERTURN' }, uuidv7(),
-        { 'cf-access-jwt-assertion': accessToken, origin: 'https://api.lythaus.test' });
-      const deadline = Date.now() + 5000;
-      while (!fixture.statements.slice(startStatement).some(({ role, text }) =>
-        role === 'lythaus_admin' && /SELECT body, declared_creation_mode,[\s\S]*FROM content\.posts[\s\S]*FOR UPDATE/i.test(text))) {
-        if (Date.now() >= deadline) throw new Error('appeal_content_lock_not_observed');
-        await new Promise(resolve => setTimeout(resolve, 5));
-      }
-      await blocker.query(`INSERT INTO moderation.decisions(id,case_id,outcome,policy_version,decided_by,created_at)
-        VALUES($1,$2,'block','synthetic-independent-safety-v2',$3,clock_timestamp())`,
-      [uuidv7(), heldReview.id, adminId]);
+      await blocker.query('BEGIN');
+      transactionStartedAt = (await blocker.query('SELECT transaction_timestamp() AS started_at')).rows[0].started_at;
+      await blocker.query('SELECT pg_sleep(0.01)');
+      const restrictiveDecisionId = uuidv7();
+      await blocker.query(`INSERT INTO moderation.decisions(id,case_id,outcome,public_label,policy_version,decided_by)
+        VALUES($1,$2,'block','Under review',$3,$4)`,
+      [restrictiveDecisionId, raceReview.id, policy, adminId]);
+      restrictiveDecision = (await blocker.query(
+        'SELECT id,created_at FROM moderation.decisions WHERE id=$1', [restrictiveDecisionId],
+      )).rows[0];
+      await blocker.query(`UPDATE content.posts SET moderation_state='blocked',published_at=NULL WHERE id=$1`, [racePost.id]);
+      await blocker.query(`UPDATE content.content_declarations
+        SET public_label='Under review',review_required=true,updated_at=now() WHERE post_id=$1`, [racePost.id]);
+      raceAppeal = (await client.query(`INSERT INTO moderation.appeals
+        (id,case_id,appellant_id,state,risk_class,policy_version,statement)
+        VALUES($1,$2,$3,'open','standard',$4,'Synthetic late-commit challenge binding race')
+        RETURNING created_at`,
+      [raceAppealId, raceReview.id, raceOwner.id, APPEAL_POLICY.version])).rows[0];
+      assert.ok(transactionStartedAt < raceAppeal.created_at,
+        'the restrictive decision transaction starts before appeal intake');
+      assert.ok(restrictiveDecision.created_at < raceAppeal.created_at,
+        'the uncommitted restrictive decision uses the earlier transaction-start timestamp');
+      ambiguousQueue = (await client.query(`INSERT INTO moderation.decisions
+        (id,case_id,outcome,policy_version,decided_by)
+        VALUES($1,$2,'queue','evaluation-only-v1',$3)
+        RETURNING id,created_at`,
+      [uuidv7(), raceReview.id, adminId])).rows[0];
+      assert.ok(raceAppeal.created_at < ambiguousQueue.created_at,
+        'an explicitly admin-authored evaluation-only queue is recorded after appeal intake');
       await blocker.query('COMMIT');
     } finally {
       await blocker.query('ROLLBACK').catch(() => undefined);
       await blocker.end();
     }
-    const heldResponse = await adjudicationRequest;
-    assert.equal(heldResponse.status, 200, await heldResponse.clone().text());
-    assert.equal((await heldResponse.json()).finalDecision, 'overturn');
-    const heldState = (await client.query(`SELECT post.moderation_state AS "moderationState",
+    await seedOverturnVotes(raceAppealId);
+    const raceResponse = await call(null, 'POST', `/api/admin/appeals/${raceAppealId}/adjudications`,
+      { decision: 'overturn', reasonCode: 'SYNTHETIC_LATE_COMMIT_RACE' }, uuidv7(),
+      { 'cf-access-jwt-assertion': accessToken, origin: 'https://api.lythaus.test' });
+    assert.equal(raceResponse.status, 200, await raceResponse.clone().text());
+    assert.equal((await raceResponse.json()).finalDecision, 'overturn');
+    const raceState = (await client.query(`SELECT post.moderation_state AS "moderationState",
         declaration.public_label AS "publicLabel", declaration.review_required AS "reviewRequired",
         post.published_at IS NOT NULL AS "published", appeal.state AS "appealState",
         EXISTS(SELECT 1 FROM moderation.appeal_outcome_effects effect
           WHERE effect.appeal_id=appeal.id AND effect.effect_type='content_reversal') AS "hasContentReversal"
       FROM content.posts post JOIN content.content_declarations declaration ON declaration.post_id=post.id
-      JOIN moderation.appeals appeal ON appeal.id=$2
-      WHERE post.id=$1`, [heldPost.id, heldAppealId])).rows[0];
-    assert.deepEqual(heldState, {
+      JOIN moderation.appeals appeal ON appeal.id=$2 WHERE post.id=$1`, [racePost.id, raceAppealId])).rows[0];
+    assert.deepEqual(raceState, {
       moderationState: 'blocked', publicLabel: 'Under review', reviewRequired: true,
       published: false, appealState: 'resolved', hasContentReversal: false,
     });
-    assert.equal((await call(null, 'GET', itemPath(heldPost))).status, 404,
-      'a later same-revision safety decision keeps the post out of public reads');
-    const holdAudit = (await client.query(`SELECT metadata FROM system.audit_events
+    assert.equal((await call(null, 'GET', itemPath(racePost))).status, 404,
+      'a late-committed restriction and ambiguous queue cannot restore a previously public revision');
+    const raceAudit = (await client.query(`SELECT metadata FROM system.audit_events
       WHERE target_type='appeal' AND target_id=$1 AND action='moderation.appeal.outcome_applied'
-      ORDER BY created_at DESC LIMIT 1`, [heldAppealId])).rows[0].metadata;
-    const independentDecision = (await client.query(`SELECT id FROM moderation.decisions
-      WHERE case_id=$1 AND policy_version='synthetic-independent-safety-v2'`, [heldReview.id])).rows[0];
-    assert.equal(holdAudit.challengedDecisionId, heldChallenge.id);
-    assert.equal(holdAudit.challengedDecisionOutcome, 'block');
-    assert.equal(holdAudit.contentReversalHold, 'independent_decision_hold');
-    assert.equal(holdAudit.independentHoldDecisionId, independentDecision.id);
-    assert.equal(holdAudit.contentReversed, false);
+      ORDER BY created_at DESC LIMIT 1`, [raceAppealId])).rows[0].metadata;
+    assert.equal(raceAudit.challengeBinding, 'unavailable');
+    assert.equal(raceAudit.challengedDecisionId, null);
+    assert.equal(raceAudit.contentReversalHold, 'challenged_decision_unavailable');
+    assert.equal(raceAudit.contentReversed, false);
+    assert.ok(restrictiveDecision.id);
+    assert.ok(ambiguousQueue.id);
 
     const revisedOwner = await actor();
     const revisedPost = await create(revisedOwner, 'post', {
@@ -685,8 +698,8 @@ test('historical overturn restores eligible content but preserves independent ho
       WHERE target_type='appeal' AND target_id=$1 AND action='moderation.appeal.outcome_applied'
       ORDER BY created_at DESC LIMIT 1`, [currentAppealId])).rows[0].metadata;
     assert.equal(staleAudit.sourceEventId, revisionSources.currentSource);
-    assert.equal(staleAudit.priorPublicDecisionId, null);
-    assert.equal(staleAudit.contentReversalHold, 'prior_publication_evidence_missing');
+    assert.equal(staleAudit.challengedDecisionId, null);
+    assert.equal(staleAudit.contentReversalHold, 'challenged_decision_unavailable');
   } finally {
     await client.query('DELETE FROM moderation.reviewer_qualifications WHERE user_id=ANY($1::uuid[])',
       [[...reviewers.map(reviewer => reviewer.id), adminId]]);
