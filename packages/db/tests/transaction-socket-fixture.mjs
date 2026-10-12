@@ -35,6 +35,29 @@ function frames(startup, receive) {
 export async function commitResponseProxy(target, mode) {
   assert.ok(['127.0.0.1', 'localhost'].includes(target.hostname));
   assert.ok(['drop_committed_response', 'drop_before_commit'].includes(mode));
+  return responseProxy(target, {
+    mode,
+    matches(kind, body) { return kind === 'Q' && body.toString('utf8') === 'COMMIT\0'; },
+  });
+}
+
+export async function statementResponseProxy(target, statementFragment, mode = 'drop_committed_response') {
+  assert.ok(['127.0.0.1', 'localhost'].includes(target.hostname));
+  assert.ok(typeof statementFragment === 'string' && statementFragment.length >= 12);
+  assert.ok(['drop_committed_response', 'drop_before_commit'].includes(mode));
+  return responseProxy(target, {
+    mode,
+    matches(kind, body) {
+      if (kind !== 'P') return false;
+      const statementNameEnd = body.indexOf(0);
+      const queryEnd = body.indexOf(0, statementNameEnd + 1);
+      return statementNameEnd >= 0 && queryEnd > statementNameEnd
+        && body.subarray(statementNameEnd + 1, queryEnd).toString('utf8').includes(statementFragment);
+    },
+  });
+}
+
+async function responseProxy(target, { mode, matches }) {
   const sockets = new Set();
   let commitSeen = false, commandObserved, responseDropped = false;
   const server = net.createServer(front => {
@@ -44,9 +67,7 @@ export async function commitResponseProxy(target, mode) {
       socket.on('error', () => { front.destroy(); back.destroy(); });
       socket.on('close', () => sockets.delete(socket));
     }
-    const requestFrames = frames(true, (kind, body) => {
-      if (kind === 'Q' && body.toString('utf8') === 'COMMIT\0') commitSeen = true;
-    });
+    const requestFrames = frames(true, (kind, body) => { if (matches(kind, body)) commitSeen = true; });
     const responseFrames = frames(false, (kind, body) => {
       if (!commitSeen) return;
       if (kind === 'C') commandObserved = body.toString('utf8').replace(/\0$/, '');
