@@ -45,7 +45,10 @@ export function registerSupportCompletionCases({ test, assert, fixture, policy, 
     assert.equal((await f.service('member').submit(proof, problem())).replayed, true);
   });
   test('actual Public Worker dispatch enforces approved Unicode boundaries and returns safe closed metadata', async t => {
-    const custom = approvedFixture(), f = await fixture(t, custom), env = workerEnvironment(custom);
+    const custom = policy(); custom.version = 'synthetic_completion_v1';
+    Object.assign(custom.contract.limits, { titleBytes: 1024, detailBytes: 8192, stepsBytes: 8192, memberMessageBytes: 8192 });
+    custom.limits.messageBytes = 8192;
+    const f = await fixture(t, applyApprovedSupportCompletionLimits(custom)), env = workerEnvironment(custom);
     const created = await invokeWorker(publicWorker, await f.memberRequest(), '/api/support/problems', env, { ...problem(), title: '😀'.repeat(160), actual: '😀'.repeat(2000) });
     assert.equal(created.status, 201); const row = (await created.json()).request; assert.equal(row.closed, false);
     const oversized = await invokeWorker(publicWorker, await f.memberRequest(), '/api/support/problems', env, { ...problem(), title: '😀'.repeat(161) });
@@ -55,6 +58,23 @@ export function registerSupportCompletionCases({ test, assert, fixture, policy, 
     const overReply = await invokeWorker(publicWorker, await f.memberRequest(), `/api/support/problems/${row.id}/messages`, env, { expectedRevision: 2, message: 'x'.repeat(2001) });
     assert.equal(overReply.status, 400);
     assert.equal(reply.headers.get('cache-control'), 'private, no-store');
+  });
+  test('actual Public Worker composes approved hour and day quotas onto a raw policy candidate', async t => {
+    const custom = policy(); custom.version = 'synthetic_runtime_completion_v1';
+    const f = await fixture(t, applyApprovedSupportCompletionLimits(custom)), env = workerEnvironment(custom);
+    const attempts = await Promise.all(Array.from({ length: 6 }, async (_, index) => {
+      const submission = index % 2 ? suggestion() : problem();
+      const response = await invokeWorker(publicWorker, await f.memberRequest(), `/api/support/${submission.kind === 'problem' ? 'problems' : 'suggestions'}`, env, submission);
+      return response.status;
+    }));
+    assert.equal(attempts.filter(status => status === 201).length, 5);
+    assert.equal(attempts.filter(status => status === 429).length, 1);
+    const hash = createHash('sha256').update(f.other).digest('hex');
+    await database().query(`INSERT INTO system.rate_limit_windows(scope,subject_hash,window_started_at,request_count,expires_at)
+      VALUES('support:member:submit:day',$1,to_timestamp(floor(extract(epoch FROM clock_timestamp())/86400)*86400),20,now()+interval '1 day')`, [hash]);
+    const dayLimited = await invokeWorker(publicWorker, await f.memberRequest(f.other), '/api/support/problems', env, problem());
+    assert.equal(dayLimited.status, 429);
+    assert.equal((await database().query("SELECT count(*)::integer AS count FROM system.rate_limit_windows WHERE subject_hash=$1 AND scope='support:member:submit:hour'", [hash])).rows[0].count, 0);
   });
   const workflowFixture = () => {
     const custom = JSON.parse(JSON.stringify(approvedFixture()));

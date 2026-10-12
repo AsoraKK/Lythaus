@@ -1,6 +1,6 @@
 import { query, type HyperdriveBinding } from './index.ts';
 import { createSupportService, supportTransactions, type SupportTransaction } from './support-feedback.ts';
-import { parseSupportServicePolicy } from './support-feedback-policy.ts';
+import { applyApprovedSupportCompletionLimits } from './support-feedback-approved-limits.ts';
 import type { SupportAuthentication } from './support-feedback-auth.ts';
 
 type Channel = 'member'|'owner';
@@ -61,7 +61,7 @@ export async function supportFeedbackSchemaReady(binding: HyperdriveBinding, cha
 
 function decodedPolicy(value: unknown): unknown | null {
   if(typeof value!=='string'||value.length===0||new TextEncoder().encode(value).length>32*1024)return null;
-  try {const parsed:unknown=JSON.parse(value);parseSupportServicePolicy(parsed);return parsed;} catch {return null;}
+  try {const parsed:unknown=JSON.parse(value);return applyApprovedSupportCompletionLimits(parsed);} catch {return null;}
 }
 
 export async function createSupportFeedbackRuntime(input: {

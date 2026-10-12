@@ -62,11 +62,24 @@ describe('Support feedback control-panel route', () => {
     const user = userEvent.setup();
     renderRoutes('/');
     await user.click(await screen.findByRole('link', { name: 'Support' }));
-    expect(await screen.findByRole('heading', { name: 'Problem reports' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Problem reports' }, { timeout: 10000 })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Support' })).toHaveAttribute('aria-current', 'page');
     expect(await screen.findByRole('button', { name: /Synthetic layout issue/ })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Suggestions' }));
-    expect(await screen.findByText('No suggestions in this queue.')).toBeInTheDocument();
-    expect(adminRequest).toHaveBeenCalledWith('support/suggestions', { query: { limit: 3, cursor: null } });
+
+    for (let cycle = 0; cycle < 3; cycle += 1) {
+      const suggestions = screen.getByRole('button', { name: 'Suggestions' });
+      await user.click(suggestions);
+      expect(await screen.findByText('No suggestions in this queue.')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Suggestions' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.queryByRole('button', { name: /Synthetic layout issue/ })).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Problem reports' }));
+      expect(await screen.findByRole('button', { name: /Synthetic layout issue/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Problem reports' })).toHaveAttribute('aria-pressed', 'true');
+    }
+
+    expect(adminRequest.mock.calls.filter(([path]) => path === 'support/problems')).toHaveLength(4);
+    expect(adminRequest.mock.calls.filter(([path]) => path === 'support/suggestions')).toHaveLength(3);
   });
 
   it('loads private detail and sends an audited, idempotent owner reply', async () => {

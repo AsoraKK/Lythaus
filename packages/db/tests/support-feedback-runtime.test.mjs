@@ -4,7 +4,8 @@ import test, { mock } from 'node:test';
 const state = { sql: '', rows: [], error: null };
 mock.module(new URL('../src/index.ts', import.meta.url), { cache: true, namedExports: {
   query: async (_binding, sql) => { state.sql = sql; if (state.error) throw state.error; return { rows: state.rows }; },
-  transaction: async (_binding, work) => work({ query: async () => ({ rows: [], rowCount: 0 }) }),
+  transaction: async (_binding, work) => work({ query: async sql => /FROM identity\.users/.test(sql)
+    ? { rows: [{ status: 'active', token_version: 3 }], rowCount: 1 } : { rows: [], rowCount: 0 } }),
 } });
 
 const { supportFeedbackSchemaReady, createSupportFeedbackRuntime } = await import('../src/support-feedback-runtime.ts');
@@ -89,6 +90,15 @@ test('valid serialized policy reaches readiness and creates both runtime channel
     assert.equal(typeof runtime?.submit, 'function');
     assert.equal(typeof runtime?.ownerDecision, 'function');
   }
+});
+
+test('runtime applies approved completion values to a supplied policy candidate', async () => {
+  const runtime = await createSupportFeedbackRuntime({ binding: {}, policy: JSON.stringify(policy),
+    authentication: { member: async () => ({ userId: '00000000-0000-7000-8000-000000000001', tokenVersion: 3 }), owner: async () => '' },
+    channel: 'member', ready: async () => true });
+  const result = await runtime.supportOptions(new Request('https://local-fixture.example.invalid/api/support/options'), 'member');
+  assert.deepEqual([result.contract.limits.titleCharacters, result.contract.limits.detailCharacters,
+    result.contract.limits.stepsCharacters, result.contract.limits.memberMessageCharacters], [160, 2000, 2000, 2000]);
 });
 
 test('runtime fails closed on readiness exceptions and rejects missing, oversized or invalid policies before database access', async () => {
