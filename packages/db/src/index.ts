@@ -26,6 +26,7 @@ export async function checkTransactionHealth(client: DatabaseClient): Promise<vo
 
 export { enqueueTransactionalEmailIntent, lockAuthDelivery, type TransactionalEmailOutboxInput, type TransactionalEmailPurpose } from './transactional-email.ts';
 export { supportFeedbackSchemaReady, createSupportFeedbackRuntime } from './support-feedback-runtime.ts';
+export { applyApprovedSupportCompletionLimits } from './support-feedback-approved-limits.ts';
 export { supportFeedbackPrivacyIsReady, supportFeedbackPrivacySchemaState, type SupportFeedbackPrivacySchemaState } from './support-feedback-privacy-runtime.ts';
 export { supportAuthentication, type SupportAuthentication } from './support-feedback-auth.ts';
 export { handleSupportFeedbackRequest, isSupportFeedbackPath } from './support-feedback-http.ts';

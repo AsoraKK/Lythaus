@@ -36,7 +36,7 @@ before(async () => {
   for (const migration of loadApprovedMigrations().migrations) await control.query(migration.contents.toString());
   await control.query(readFileSync('database/planetscale/grants/roles.sql', 'utf8'));
   await control.query(readFileSync('database/planetscale/proposals/profile-presentation-preferences.sql', 'utf8'));
-  fixture = await nativePostgresPrivacyWorkflowFixture(local.toString(), { supportPolicy: policy });
+  fixture = await nativePostgresPrivacyWorkflowFixture(local.toString(), { supportPolicy: candidate });
 });
 after(async () => {
   await fixture?.dispose(); await control?.end();

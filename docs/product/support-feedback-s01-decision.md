@@ -7,15 +7,19 @@ bugs/suggestions, review and needs-information flows, resolved/accepted,
 declined/duplicate outcomes, titles up to 160 characters, explanations/replies
 up to 2,000, five new tickets per hour and twenty per day per member with separate
 reply limits, and closed ticket text deletion after thirty days unless held.
-The exact reply rates, audit retention, deletion safeguards/hold authority and
-F01 are **not approved** by that receipt. No production policy version,
+The exact reply rates, taxonomy/reason/evidence details, audit and tombstone
+disposition, deletion safeguards, hold authority, and cross-person export/delete
+rules remain unresolved. A separate 7 October decision approves the optional
+150-point quarterly suggestion component and 13,650 prospective v2 maximum;
+historical v1's 13,500 ceiling remains unchanged. That decision does not define
+earning eligibility or activate points. No production support policy version,
 configuration, DDL, activation or notifications are approved by inference.
 
-`applyApprovedSupportCompletionLimits` composes only the approved numerical
-values with a complete explicitly supplied candidate. It has no reply, owner,
-audit or taxonomy defaults. Character counts use Unicode scalar values after
-trimming; byte and HTTP bounds remain independent. The implementation and
-current requirements matrix are in
+`applyApprovedSupportCompletionLimits` composes the approved numerical values
+with a complete supplied candidate when Public/Admin runtimes and privacy Jobs
+load it. It has no reply, owner, audit or taxonomy defaults. Character counts
+use Unicode scalar values after trimming; byte and HTTP bounds remain
+independent. The implementation and current requirements matrix are in
 [the completion packet](../testing/support-feedback-completion-2026-10-07.md).
 
 Submission quotas use fixed UTC hour/day buckets, not rolling windows. Boundary
@@ -27,15 +31,17 @@ version `support_pending_v1`; it is not the newly approved production policy.
 Its source baseline is main
 `2477c001d9f5a93865f00664c6369ced8da7b5ec`; the complete PG fixture is
 `packages/db/tests/support-feedback.postgres.mjs`, version `local_fixture_v1`.
-Production defaults do not exist in source: a supplied serialized policy is
-required. Other unit/UI fixtures use different values. The values below are the
+Production defaults do not exist in source: a complete serialized candidate is
+required for the unresolved settings, and the runtime composes approved values
+on load. Other unit/UI fixtures use different values. The values below are the
 tested pending baseline, not a report of live configuration.
 
 The original fixture remains unchanged so the earlier reviewed evidence is
 reproducible. New synthetic completion cases exercise the approved states and
 limits. The one-hour fixture age accelerates disposable tests only. The thirty-day
 direction is now approved; executing deletion still needs the separate safeguards
-and privacy review. Support, notifications and points remain OFF.
+and privacy review. This support candidate does not activate support, notifications
+or reward logic.
 
 | Existing tested value | Rationale and recommended disposition |
 | --- | --- |
@@ -122,5 +128,7 @@ Do not ask Kyle to reconfirm the already-approved numerical values or thirty-day
 direction. Synthetic reason and quota fixtures are not production choices.
 
 An answer approves the specified policy choices only. It does not activate
-support, authorize production DDL or notification sends, or settle F01's optional
-150-point quarterly placement/cadence/reversal decision inside the 13,500 cap.
+support, authorize production DDL or notification sends, or activate rewards.
+The optional 150-point quarterly suggestion component and 13,650 prospective v2
+maximum are approved separately; historical v1 stays at 13,500. Earning
+eligibility and reversal rules remain with the rewards policy lane.
