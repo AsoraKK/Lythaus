@@ -157,10 +157,11 @@ void main() {
         expect(card.canEdit, isFalse);
         expect(find.byTooltip('Post actions'), findsNothing);
         expect(
-          find.text(hasAppeal ? 'Under appeal' : 'Verified signals attached'),
-          findsOneWidget,
+          find.text('Appeal in progress'),
+          hasAppeal ? findsOneWidget : findsNothing,
         );
-        expect(find.text('Authorship: Human-authored'), findsOneWidget);
+        expect(find.text('Verified signals attached'), findsNothing);
+        expect(find.text('Author declaration: Human-authored'), findsOneWidget);
         await tester.ensureVisible(find.text('Trust details'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Trust details'));
@@ -168,6 +169,10 @@ void main() {
         expect(tester.takeException(), isNull, reason: 'after expanding trust');
         expect(
           find.bySemanticsLabel(RegExp('^View content history')),
+          findsNothing,
+        );
+        expect(
+          find.textContaining('does not independently verify authorship'),
           findsOneWidget,
         );
         semantics.dispose();

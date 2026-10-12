@@ -38,5 +38,6 @@ FeedItem mapPostToFeedItem(
     ),
     authorshipLabel: post.authorship.label.label,
     classificationSource: post.authorship.classificationSource,
+    classificationState: post.authorship.classificationState,
   );
 }

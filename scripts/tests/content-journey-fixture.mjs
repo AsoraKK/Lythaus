@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 const initial=()=>({
-  posts:[{id:'p1',authorId:'owner',body:'Synthetic published post',declaredCreationMode:'human',
+  posts:[{id:'p1',authorId:'owner',authorDisplayName:'Kai Rivers',authorHandle:'kai',body:'Synthetic published post',declaredCreationMode:'human',
     moderationState:'allowed',publicLabel:'Human-authored',createdAt:'2026-10-01T00:00:00Z'}],
   comments:['owner','other'].map((actor,i)=>({id:'c'+(i+1),postId:'p1',authorId:actor,
+    authorDisplayName:actor==='owner'?'Kai Rivers':'Rowan West',
     body:'Synthetic '+actor+' comment',parentId:null,declaredCreationMode:'human',
     moderationState:'allowed',createdAt:'2026-10-01T00:00:00Z'})),
   requests:[],replay:new Map(),processing:new Map(),denied:false,attempts:new Map(),

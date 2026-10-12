@@ -163,4 +163,41 @@ void main() {
     expect(find.byTooltip('View Bob profile'), findsOneWidget);
     expect(find.byType(ProfileScreen), findsNothing);
   });
+  testWidgets(
+    'identifier fallback keeps profile navigation without displaying the ID',
+    (tester) async {
+      const id = '01a044e4-3860-7f76-b819-5be99e0000f6';
+      String? openedId;
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => const Scaffold(
+              body: AuthorProfileLink(userId: id, label: id),
+            ),
+          ),
+          GoRoute(
+            name: 'profile',
+            path: '/user/:userId',
+            builder: (_, state) {
+              openedId = state.pathParameters['userId'];
+              return const Scaffold(body: Text('This profile is unavailable.'));
+            },
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+      expect(find.text(id), findsNothing);
+      expect(find.text('Lythaus member'), findsOneWidget);
+      await tester.tap(find.byTooltip('View Lythaus member profile'));
+      await tester.pumpAndSettle();
+      expect(openedId, id);
+      expect(find.text('This profile is unavailable.'), findsOneWidget);
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('Lythaus member'), findsOneWidget);
+    },
+  );
 }

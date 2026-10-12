@@ -209,17 +209,16 @@ void main() {
           expect(FocusManager.instance.primaryFocus?.hasFocus, isTrue);
           await tester.sendKeyEvent(LogicalKeyboardKey.enter);
           await tester.pumpAndSettle();
-          expect(find.text('Created: complete'), findsOneWidget);
-          expect(find.text('Media checked: none'), findsOneWidget);
-          expect(find.text('Moderation: none'), findsOneWidget);
-          expect(find.text('No extra signals'), findsOneWidget);
+          expect(find.text('Created: complete'), findsNothing);
+          expect(
+            find.textContaining('does not independently verify authorship'),
+            findsOneWidget,
+          );
+          expect(find.text('Media checked: none'), findsNothing);
+          expect(find.text('Moderation: none'), findsNothing);
+          expect(find.text('No extra signals'), findsNothing);
           expect(find.textContaining('authenticity verified'), findsNothing);
           expect(historyOpens, 0);
-          await tester.tap(
-            find.bySemanticsLabel(RegExp('^View content history')),
-          );
-          await tester.pumpAndSettle();
-          expect(historyOpens, 1);
           await tester.tap(details);
           await tester.pumpAndSettle();
           expect(find.text('Created: complete'), findsNothing);
@@ -250,7 +249,11 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(details);
         await tester.pumpAndSettle();
-        expect(find.text('Created: complete'), findsOneWidget);
+        expect(find.text('Created: complete'), findsNothing);
+        expect(
+          find.textContaining('does not independently verify authorship'),
+          findsOneWidget,
+        );
         expect(
           tester
               .getSemantics(find.bySemanticsLabel('Trust details').first)
@@ -311,15 +314,19 @@ void main() {
     );
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
-    expect(find.text('Created: complete'), findsOneWidget);
+    expect(find.text('Created: complete'), findsNothing);
+    expect(
+      find.textContaining('does not independently verify authorship'),
+      findsOneWidget,
+    );
     expect(postOpens, 1);
     expect(tester.takeException(), isNull);
   });
 
   for (final entry in {
-    'under_appeal': 'Under appeal',
-    'actioned': 'Actioned',
-    'pending_review': 'pending review',
+    'under_appeal': 'Appeal in progress',
+    'actioned': 'Content restricted',
+    'pending_review': 'Review pending',
   }.entries) {
     testWidgets('keeps supplied ${entry.key} state visible before expansion', (
       tester,
@@ -331,8 +338,10 @@ void main() {
           compact: true,
           summary: FeedTrustSummary(
             trustStatus: entry.key,
-            timeline: const FeedTrustTimeline(
-              moderation: 'warn',
+            timeline: FeedTrustTimeline(
+              moderation: entry.key == 'pending_review'
+                  ? 'pending_review'
+                  : 'warn',
               appeal: 'open',
             ),
             hasAppeal: true,
@@ -342,8 +351,8 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text(entry.value).hitTestable(), findsOneWidget);
-      expect(find.text('Moderation: warn').hitTestable(), findsOneWidget);
-      expect(find.text('Appeal: open').hitTestable(), findsOneWidget);
+      expect(find.text('Moderation: warn'), findsNothing);
+      expect(find.text('Appeal: open'), findsNothing);
       expect(find.text('Created: complete'), findsNothing);
       expect(find.text('No extra signals'), findsNothing);
       expect(tester.takeException(), isNull);

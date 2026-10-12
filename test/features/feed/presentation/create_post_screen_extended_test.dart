@@ -167,6 +167,9 @@ void main() {
     expect(find.text('Human-authored'), findsOneWidget);
     expect(find.text('AI-assisted'), findsOneWidget);
     expect(find.text('AI-generated'), findsNothing);
+    await tester.ensureVisible(find.text('Posting policy'));
+    await tester.tap(find.text('Posting policy'));
+    await tester.pumpAndSettle();
     expect(
       find.textContaining('AI-generated public content is not allowed'),
       findsOneWidget,

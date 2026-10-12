@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from 'node:fs';
+import { ContentFixtureTargetBlocked, requireLocalContentFixtureTarget } from './acceptance-content-target.mjs';
 import { randomUUID } from 'node:crypto';
 import { parseRealEmailAcceptanceEvidence } from './real-email-acceptance-evidence.mjs';
 
@@ -192,7 +193,7 @@ function candidateReadinessEvidence() {
 }
 
 function failureReason(error) {
-  if (error instanceof BlockedCase) return error.message;
+  if (error instanceof BlockedCase || error instanceof ContentFixtureTargetBlocked) return error.message;
   const message = error instanceof Error ? error.message : '';
   if (/^.*:http_\d+$/.test(message)) return message.split(':').at(-1);
   if (/timeout|fetch|network/i.test(message)) return 'network_error';
@@ -213,7 +214,7 @@ async function runCase(id, action) {
       ...(result?.acceptanceNote ? { acceptanceNote: result.acceptanceNote } : {}),
     });
   } catch (error) {
-    results.push({ id, outcome: error instanceof BlockedCase ? 'blocked' : 'failed', reason: failureReason(error) });
+    results.push({ id, outcome: error instanceof BlockedCase || error instanceof ContentFixtureTargetBlocked ? 'blocked' : 'failed', reason: failureReason(error) });
   }
 }
 
@@ -394,6 +395,7 @@ await runCase('A08', async () => {
 });
 
 await runCase('A11', () => runAuthenticatedCase(async () => {
+  requireLocalContentFixtureTarget(apiBase);
   const read = await requestJson('/api/users/me', { headers: bearer() });
   expectStatus(read, [200], 'profile_read');
   const update = await requestJson('/api/users/me', {
@@ -406,6 +408,7 @@ await runCase('A11', () => runAuthenticatedCase(async () => {
 }));
 
 await runCase('A12', () => runAuthenticatedCase(async () => {
+  requireLocalContentFixtureTarget(apiBase);
   const result = await requestJson('/api/posts', {
     method: 'POST',
     headers: { ...bearer(), 'idempotency-key': randomUUID() },
@@ -419,6 +422,7 @@ await runCase('A12', () => runAuthenticatedCase(async () => {
 }));
 
 await runCase('A13', () => runAuthenticatedCase(async () => {
+  requireLocalContentFixtureTarget(apiBase);
   expect(Boolean(postId), 'moderation_target_missing');
   const result = await requestJson('/api/flags', {
     method: 'POST',

@@ -1,5 +1,6 @@
+import { FEED_AUTHOR_FIELDS, FEED_AUTHOR_JOINS } from './feed-author-projection.ts';
 export const TAGGED_DISCOVERY_SQL = `
-  SELECT p.id, p.author_id AS "authorId", p.body, p.published_at AS "publishedAt",
+  SELECT p.id, p.author_id AS "authorId", ${FEED_AUTHOR_FIELDS}, p.body, p.published_at AS "publishedAt",
          p.visibility, p.moderation_state AS "moderationState", (p.deleted_at IS NOT NULL) AS "feedItemDeleted",
          declaration.public_label AS "publicLabel", d.topic, d.region_code AS "regionCode",
          COALESCE((SELECT jsonb_object_agg(counted.reaction_type, counted.reaction_count)

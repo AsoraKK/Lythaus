@@ -149,7 +149,7 @@ try {
   await run('reply-and-retry',{width:390,theme:'light'},async(page,result)=>{
     await open(page,'Open comments','Synthetic owner comment');
     await button(page,'Reply').nth(1).click();
-    await content(page,'Replying to @other',{exact:true}).waitFor();
+    await content(page,'Replying to @Rowan West',{exact:true}).waitFor();
     await enterText(page,page.getByRole('textbox',{name:/Write a reply/}),'Retry canonical child body');
     await declare(page);
     await button(page,/Send reply/).click();
@@ -238,9 +238,9 @@ try {
   await run('appeal-trust-status',{width:390,theme:'light',scenario:'appeal'},async(page,result)=>{
     await button(page,'Open Discover').click();
     await content(page,'Synthetic published post').waitFor();
-    await content(page,'Under appeal').waitFor();
-    await content(page,'Moderation: warn').waitFor();
-    await content(page,'Appeal: open').waitFor();
+    await content(page,'Appeal in progress').waitFor();
+    assert.equal(await content(page,'Moderation: warn').count(),0);
+    assert.equal(await content(page,'Appeal: open').count(),0);
     assert.equal(await content(page,'No extra signals').count(),0);
     assert.equal(await content(page,'Moderation: none').count(),0);
     assert.equal(result.writes.length,0);

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import fs from 'node:fs';
 import test from 'node:test';
+import { requireLocalContentFixtureTarget } from '../ci/acceptance-content-target.mjs';
 
 const workflow = readFileSync('.github/workflows/production-release.yml', 'utf8').replace(/\r\n/g, '\n');
 const webWorkflow = readFileSync('.github/workflows/deploy-alpha-web.yml', 'utf8');
@@ -717,4 +718,16 @@ test('production smoke authenticates the Access-protected admin API health check
 test('Pages deployment verification uses the supported inventory page size', () => {
   assert.match(pagesVerifier, /\/deployments\?per_page=25/);
   assert.doesNotMatch(pagesVerifier, /\/deployments\?per_page=100/);
+});
+
+test('ADR content write acceptance is blocked on promoted production targets', () => {
+  for (const base of ['https://api.lythaus.co/api', 'https://lythaus-public-api-development.workers.dev/api']) {
+    assert.throws(() => requireLocalContentFixtureTarget(base), /disposable_local_target/);
+  }
+  for (const id of ['A11', 'A12', 'A13']) {
+    const start = adr003Harness.indexOf("await runCase('" + id + "'");
+    assert.ok(start > 0);
+    assert.match(adr003Harness.slice(start, adr003Harness.indexOf('\n}));', start)),
+      /requireLocalContentFixtureTarget\(apiBase\)/);
+  }
 });
