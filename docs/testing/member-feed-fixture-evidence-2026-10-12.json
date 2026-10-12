@@ -1,0 +1,43 @@
+{
+  "observationDateUtc": "2026-10-12",
+  "source": "read-only PlanetScale queries",
+  "target": {"organization": "lythaus", "database": "lythaus-core", "branch": "main", "postgresDatabase": "postgres"},
+  "matchedAuthorId": "01a044e4-3860-7f76-b819-5be99e0000f6",
+  "matchedBody": "ADR-003 acceptance fixture",
+  "matchedRows": 5,
+  "publishedRecord": {
+    "id": "01a044ea-8e39-7c4a-bbdb-061688ba5906",
+    "createdAt": "2026-08-27T20:30:17.657Z",
+    "publishedAt": "2026-10-11T20:54:06.876Z",
+    "moderationState": "allowed",
+    "visibility": "public",
+    "deletedAt": null,
+    "publicLabel": "Human-authored",
+    "reviewRequired": false
+  },
+  "initialProvenance": {
+    "contentId": "01a044ea-8e39-7c4a-bbdb-061688ba5906",
+    "detectedContentClass": "text_manual_review",
+    "finalDecision": "queue",
+    "sourceEventId": "01a044ea-8e39-7800-8dfb-ebea627ce646",
+    "createdAt": "2026-08-27T20:30:45.149Z"
+  },
+  "decisions": [
+    {"id": "01a12cbe-8acf-7d0a-901e-c82f492ce5d2", "outcome": "allow", "publicLabel": "Human-authored", "policyVersion": "evaluation-only-v1", "createdAt": "2026-10-11T20:54:06.876Z"},
+    {"id": "01a044ea-fce3-761f-afdd-5ae024ff752c", "outcome": "queue", "publicLabel": "Under review", "policyVersion": "evaluation-only-v1", "createdAt": "2026-08-27T20:30:45.149Z"}
+  ],
+  "otherMatchedRecords": [
+    {"id": "01a04af5-ccda-7e7f-ad71-9c14fae3010c", "moderationState": "under_review", "publishedAt": null},
+    {"id": "01a04ad2-42c4-75c8-9952-ba98f4720deb", "moderationState": "under_review", "publishedAt": null},
+    {"id": "01a047cd-5f46-7a9e-b579-ff3e143890a4", "moderationState": "under_review", "publishedAt": null},
+    {"id": "01a044fe-25a0-72d6-83e8-f681383cc5d4", "moderationState": "under_review", "publishedAt": null}
+  ],
+  "qualifications": [
+    "No production rows were mutated or deleted.",
+    "No operator identity or private owner fields were queried.",
+    "The fixture body matches the acceptance harness literal; an exact historical request/run attribution is not established.",
+    "An allow decision and matching publication timestamp do not prove evaluator auto-publication or identify a caller.",
+    "Jobs ordinarily records queue/Under review; the Admin path can allow/publish using the existing case policy version.",
+    "These records do not establish operational detection or complete pipeline validation."
+  ]
+}

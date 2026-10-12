@@ -2,7 +2,7 @@
 
 ## Scope and sequencing
 
-Staged after Accounts on 2026-10-02 from Kyle's voice-call follow-up. PR909 and PR910 are merged: PR910 merged on 2026-10-04 at `28eb5803872bb053a728c6ce31213f59b81f02ad`. The bounded default-off support slice is integrated with the public/admin dispatchers, OpenAPI/generated client, privacy jobs and Flutter member route. Its owner console and member UI remain disabled unless their independent feature flags are explicitly enabled. The coordinator reports the source included in release102 at `f757d35a3263f86f817ea09fd76368bd1f6a8e01`, with support OFF; deployment does not establish activation or owner acceptance. WP07 makes no production support migration, notification delivery, reward or public-homepage change. Parent controls integration, activation and release. F01 reconciliation remains required before any reward integration. See the [WP07 inventory and activation packet](../testing/wp07-support-completion-2026-10-07.md).
+Staged after Accounts on 2026-10-02 from Kyle's voice-call follow-up. PR909 and PR910 are merged: PR910 merged on 2026-10-04 at `28eb5803872bb053a728c6ce31213f59b81f02ad`. The bounded default-off support slice is integrated with the public/admin dispatchers, OpenAPI/generated client, privacy jobs and Flutter member route. Its owner console and member UI remain disabled unless their independent feature flags are explicitly enabled. The coordinator reports the source included in release102 at `f757d35a3263f86f817ea09fd76368bd1f6a8e01`, with support OFF; deployment does not establish activation or owner acceptance. WP07 makes no production support migration, notification delivery, reward or public-homepage change. Parent controls integration, activation and release. The optional 150-point quarterly suggestion component and 13,650 prospective v2 maximum are approved separately; reward integration, earning eligibility and activation remain with the rewards lane. See the [WP07 inventory and activation packet](../testing/wp07-support-completion-2026-10-07.md).
 
 Two separate private support flows and forms:
 
@@ -46,9 +46,9 @@ The existing HTTP adapter and dispatchers expose member `/api/support/problems` 
 
 ## Contribution event and reward gate
 
-Kyle approved **150 points per accepted suggestion quarterly**. The checkpoint's one accepted useful suggestion per user per quarter is a proposed eligibility interpretation; quarterly budget, period/boundary defaults and eligibility must be reconciled with parent/Astra before activation. Acceptance means an owner-reviewed useful contribution with recorded evidence. Submission alone earns nothing. Additional ideas and bug reports remain allowed and can be accepted without an award. Do not promise a reward in forms before policy activation.
+The optional **150-point quarterly suggestion component** and 13,650 prospective v2 maximum are approved; historical v1's 13,500 maximum remains unchanged. The checkpoint's one accepted useful suggestion per user per quarter is still a proposed eligibility interpretation. This approval does not establish earning eligibility, implementation acceptance or activation. Submission or closure alone earns nothing in this support code. Additional ideas and bug reports remain allowed and can be accepted without an award. Do not promise a reward in forms before policy activation.
 
-Astra lane `01a0fd06` owns the reputation/reward policy, its monthly 13,500 model and ledger integration. Parent must reconcile these before ticket reward implementation. No hardcoded 150-point award, policy default, ledger write or activation is added here.
+The existing rewards lane owns prospective v2 policy implementation and ledger integration. This support lane adds no award logic, default eligibility rule, ledger write or activation. Keep the historical v1 13,500 maximum unchanged and the prospective v2 13,650 maximum in its own versioned policy.
 
 Proposed internal event interface:
 
@@ -72,6 +72,6 @@ Reversal is a new audited event referencing the original acceptance/award, never
 
 1. PR909 and PR910 are merged into main. Preserve their services, API/OpenAPI/client, privacy integration, both UIs and scoped CI. WP07 adds bounded runtime test evidence and corrects stale documentation; independent review of its exact candidate remains a separate gate.
 2. Resolve approved production schema/grants, privacy locators/completion, retention, legal-hold and rollback gates. Run final Worker authorization, no-store, audit, query-bound, navigation and responsive/accessibility acceptance at the exact release head.
-3. Add configured notifications only after transport, preferences, dedupe and dispatch-time privacy checks are approved. Add no suggestion award until Rewards approves the 150-point quarterly policy boundaries and budget; keep bugs unrewarded by inference.
+3. Add configured notifications only after transport, preferences, dedupe and dispatch-time privacy checks are approved. Add no suggestion award logic until the rewards lane implements the approved 150-point quarterly v2 component, defines earning eligibility and confirms version-specific acceptance; keep the component inactive and bugs unrewarded by inference.
 
 Ultra action-plan lane retains backlog/disposition. This staging creates no issues, closes nothing and changes no release state.

@@ -197,6 +197,9 @@ before activation; the proposal reuses the nine existing explicit indexes and
 does not infer capacity from these small disposable fixtures.
 
 Implemented proposal/tested disposable/draft/merged/deployed/activated/owner-
-accepted remain separate states. S01, real owner mapping, serialized Jobs/manifest
-integration and release approval are outstanding. F01 and notifications remain
-separate and OFF. See the short [S01 decision packet](../product/support-feedback-s01-decision.md).
+accepted remain separate states. Remaining S01 choices, real owner mapping,
+serialized Jobs/manifest integration and release approval are outstanding. The
+optional 150-point quarterly suggestion component and 13,650 prospective v2
+maximum are approved but remain unimplemented and inactive in this support
+package; notifications remain separately gated and inactive. See the short
+[S01 decision packet](../product/support-feedback-s01-decision.md).

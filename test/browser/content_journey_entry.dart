@@ -20,6 +20,8 @@ import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
 import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
 import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
 import 'package:lythaus/state/models/feed_models.dart';
+import 'package:lythaus/state/models/post_feed_item_mapper.dart';
+import 'package:lythaus/features/feed/domain/models.dart' as domain;
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/ui/screens/home/home_feed_navigator.dart';
 
@@ -53,16 +55,10 @@ class FixtureFeed extends LiveFeedController {
         for (final item
             in (response.data?['items'] as List? ?? [])
                 .cast<Map<String, dynamic>>())
-          FeedItem(
-            id: item['id'] as String,
+          mapPostToFeedItem(
+            domain.Post.fromJson(item),
             feedId: 'discover',
-            author: 'Synthetic owner',
-            authorId: item['authorId'] as String,
-            contentType: ContentType.text,
-            title: item['body'] as String,
-            body: item['body'] as String,
-            authorshipLabel: 'Human-authored',
-            publishedAt: DateTime.utc(2026, 10, 1),
+            fallbackTitle: 'A member update',
           ),
       ],
     );

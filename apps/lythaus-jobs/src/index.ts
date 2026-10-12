@@ -1,4 +1,4 @@
-import { databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, reconcileBudgetReservation, recordReputationSignal, recordUserActivity, refreshReputationProfile, reserveBudget, settleBudgetReservation, transaction, supportFeedbackPrivacyIsReady, exportSupportForPrivacy, exportSupportMessagesForPrivacy, purgeSupportForPrivacy, retainSupportBatch, parseSupportServicePolicy, type BudgetConfig, type DatabaseClient, type HyperdriveBinding, type ReputationMutationResult } from '@lythaus/db';
+import { applyApprovedSupportCompletionLimits, databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, query, reconcileBudgetReservation, recordReputationSignal, recordUserActivity, refreshReputationProfile, reserveBudget, settleBudgetReservation, transaction, supportFeedbackPrivacyIsReady, exportSupportForPrivacy, exportSupportMessagesForPrivacy, purgeSupportForPrivacy, retainSupportBatch, type BudgetConfig, type DatabaseClient, type HyperdriveBinding, type ReputationMutationResult } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { evaluateAuthenticity, type AuthenticityEvaluation } from '@lythaus/authenticity';
 import { ACTIVITY_POLICY_VERSION, APPEAL_POLICY, evaluateAppeal, selectAppealReviewers, type ActivityEventInput, type AppealReviewerCandidate, type AppealRiskClass, type AppealVote, type ReputationSignalType } from '@lythaus/contracts';
@@ -63,9 +63,8 @@ function configuredSupportFeedbackPolicy(env: Env): unknown {
     throw new Error('support_policy_invalid');
   }
   try {
-    const policy: unknown = JSON.parse(serialized);
-    parseSupportServicePolicy(policy);
-    return policy;
+    const candidate: unknown = JSON.parse(serialized);
+    return applyApprovedSupportCompletionLimits(candidate);
   } catch {
     throw new Error('support_policy_invalid');
   }

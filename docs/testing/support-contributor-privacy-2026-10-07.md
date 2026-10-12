@@ -79,8 +79,11 @@ versioned configuration or policy change:
 
 The already accepted 30-day closed-content direction stays unchanged. It does
 not settle private-field disclosure, retained audit, tombstone expiry or hold
-authority. F01 remains pending: no points on submission/closure, no monthly
-stacking, no award activation and no increase to the frozen 13,500 cap.
+authority. A separate 7 October decision approves the optional prospective v2
+150-point quarterly suggestion component and 13,650 maximum while preserving
+historical v1's 13,500 cap. This privacy package implements and awards no points;
+earning eligibility, rewards-lane implementation acceptance and activation remain
+separate. Submission or closure alone grants no points.
 
 ## Ownership, validation and activation packet
 

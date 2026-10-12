@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/features/profile/domain/public_author_label.dart';
 import 'package:intl/intl.dart';
 
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
@@ -30,10 +31,11 @@ class FeedCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final spacing = context.spacing;
+    final authorLabel = publicAuthorLabel(item.author, authorId: item.authorId);
     final sourceLabel =
         (item.sourceName != null && item.sourceName!.trim().isNotEmpty)
         ? item.sourceName!.trim()
-        : item.author;
+        : authorLabel;
     final headline = theme.textTheme.titleMedium?.copyWith(
       fontWeight: FontWeight.w700,
     );
@@ -70,12 +72,12 @@ class FeedCard extends StatelessWidget {
                           if (item.authorId?.trim().isNotEmpty == true)
                             AuthorProfileLink(
                               userId: item.authorId!,
-                              label: item.author,
+                              label: authorLabel,
                               textStyle: theme.textTheme.titleSmall,
                             )
                           else
                             Text(
-                              item.author,
+                              authorLabel,
                               style: theme.textTheme.titleSmall,
                             ),
                           Text(
@@ -84,7 +86,7 @@ class FeedCard extends StatelessWidget {
                             ),
                             style: theme.textTheme.bodySmall,
                           ),
-                          if (showSource && sourceLabel != item.author)
+                          if (showSource && sourceLabel != authorLabel)
                             Wrap(
                               spacing: spacing.xs,
                               crossAxisAlignment: WrapCrossAlignment.center,
@@ -151,7 +153,11 @@ class FeedCard extends StatelessWidget {
                   summary: item.trustSummary,
                   onTap: () => ReceiptDrawer.show(context, item.id),
                   compact: true,
-                  leading: AuthorshipDisclosure(label: item.authorshipLabel),
+                  leading: AuthorshipDisclosure(
+                    label: item.authorshipLabel,
+                    classificationSource: item.classificationSource,
+                    classificationState: item.classificationState,
+                  ),
                 ),
               ],
             ),

@@ -159,12 +159,13 @@ approved production DDL artifact to apply, and the local-only SQL refusal stays.
 Support notification purpose/template, destination consent/preferences,
 idempotent dispatch, send-time privacy checks and receipts remain a separate
 approval. No mail, push or provider request is sent by this package. The existing
-`support.workflow.changed` intent is not an award event. The roadmap's proposed
-accepted/reversed contribution envelope remains unimplemented pending **F01**;
-it must contain IDs/version/time/minimal evidence references, never ticket prose
-or private contacts. F01 must place 150 quarterly inside the frozen 13,500 budget
-and resolve source month, boundaries, rubric, conflicts, duplicates and reversal.
-No points from submission/closure, cap increase, monthly stacking or activation.
+`support.workflow.changed` intent is not an award event. The optional prospective
+v2 suggestion component (150 points quarterly, 13,650 maximum) is approved but
+remains unimplemented and inactive here; historical v1 remains at 13,500. Its
+earning eligibility, accepted/reversed contribution envelope and version-specific
+implementation acceptance remain with the rewards lane. Any future envelope must
+contain IDs/version/time/minimal evidence references, never ticket prose or private
+contacts. This support package awards no points on submission or closure.
 
 ## Local validation and limits
 
@@ -225,13 +226,16 @@ OpenAPI fragment `f345667ebb33f709a9dad1ed0c8fb7d74ce422d97232cc2533e3fea6b2297c
 | --- | --- | --- | --- | --- | --- | --- |
 | PR909/910 foundation | Yes, reused | Historical exact-head checks plus scoped current local evidence | Yes | Release102 source inclusion, coordinator supplied | OFF per coordinator | Not established |
 | WP07 runtime/test evidence + packet | Candidate complete | Local results above; final exact-head receipt in handoff; hosted checks pending | No | No | No flag change | No |
-| Production schema/grants/locator/S01 | Local proposal and existing privacy adapters only | Disposable fixture evidence | Canonical production delta absent | No WP07 provider application | Gated | Missing S01 and operational acceptance |
-| Notifications/F01 awards | Eligibility/proposed interface only | Eligibility fixtures, zero sends/awards | No new behavior | No new behavior | Gated | Missing separate decisions |
+| Production schema/grants/locator/S01 follow-ups | Local proposal and existing privacy adapters only | Disposable fixture evidence | Canonical production delta absent | No WP07 provider application | Gated | Exact reply/owner rates, taxonomy/reason/evidence details, audit/tombstone disposition and contributor privacy/hold decisions remain |
+| Notifications | No delivery implementation | No sends | No new behavior | No new behavior | Off | Purpose, destination, preference, dedupe and dispatch-time privacy approvals remain |
+| Prospective v2 suggestion component | 150 points quarterly and 13,650 maximum approved; no award logic in this support candidate | Zero awards | No new behavior | No new behavior | Off | Earning eligibility, rewards-lane implementation acceptance and activation remain |
 
 Minimum next action: parent requests an independent read-only review of this
 exact draft and coordinates its hosted checks. Database/privacy owners and Kyle
-then resolve S01 and the canonical schema/grant/locator packet before any
-activation request. F01 and notification approvals are separate future packages.
+then resolve remaining S01 choices and the canonical schema/grant/locator packet
+before any activation request. The rewards lane owns eligibility and implementation
+for the already-approved v2 suggestion component; notification approvals remain
+separate.
 Release102 remains deployed at `f757d35`, owner-uncertified/NO-GO pending owner
 UAT on 10 October; main's PR942 evidence does not redeploy it. No credentials,
 paid resources, hosted DB branches, production writes/DDL, provider configuration,

@@ -2,6 +2,8 @@
 
 library feed_models;
 
+import 'package:lythaus/features/profile/domain/public_author_label.dart';
+
 /// LYTHAUS FEED DOMAIN MODELS
 ///
 /// 🎯 Purpose: Core domain models for social media feed features
@@ -73,11 +75,14 @@ class Post {
     final sourceJson = json['source'];
     final authorId =
         json['authorId']?.toString() ?? author?['id']?.toString() ?? '';
-    final username =
-        json['authorUsername'] as String? ??
-        author?['username'] as String? ??
-        author?['displayName'] as String? ??
-        authorId;
+    final username = publicAuthorLabel(
+      json['authorDisplayName'] as String? ??
+          author?['displayName'] as String? ??
+          json['authorUsername'] as String? ??
+          author?['username'] as String?,
+      handle: json['authorHandle'] as String? ?? author?['handle'] as String?,
+      authorId: authorId,
+    );
     final createdAtValue = json['createdAt'] ?? json['publishedAt'];
 
     String normalizeTrustStatus(Object? value) {
@@ -456,10 +461,12 @@ class Comment {
       id: (json['id'] ?? json['commentId']) as String,
       postId: json['postId'] as String? ?? '',
       authorId: json['authorId'] as String? ?? '',
-      authorUsername:
-          json['authorUsername'] as String? ??
-          json['authorId'] as String? ??
-          'user',
+      authorUsername: publicAuthorLabel(
+        json['authorDisplayName'] as String? ??
+            json['authorUsername'] as String?,
+        handle: json['authorHandle'] as String?,
+        authorId: json['authorId'] as String?,
+      ),
       text: json['deleted'] == true
           ? '[deleted]'
           : (json['body'] ?? json['text']) as String? ?? '',

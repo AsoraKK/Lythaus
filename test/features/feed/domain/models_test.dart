@@ -175,7 +175,7 @@ void main() {
 
       final post = Post.fromJson(json);
 
-      expect(post.authorUsername, 'annareader');
+      expect(post.authorUsername, 'Anna Reader');
       expect(post.text, 'Hello from content field');
       expect(post.metadata?.tags, ['policy', 'safety']);
       expect(post.metadata?.location, 'Global');

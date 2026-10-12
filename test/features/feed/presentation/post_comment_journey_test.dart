@@ -798,14 +798,14 @@ void main() {
       await _pump(tester, adapter);
       await tester.tap(find.text('Open post'));
       await tester.pumpAndSettle();
-      expect(find.text('Verified signals attached'), findsOneWidget);
+      expect(find.text('Supporting evidence supplied'), findsOneWidget);
       await tester.tap(find.byTooltip('Edit post'));
       await tester.pumpAndSettle();
       await _draft(tester, 'Revised synthetic post');
       await tester.tap(find.text('Submit edit'));
       await tester.pumpAndSettle();
       expect(find.text('Revised synthetic post'), findsOneWidget);
-      expect(find.text('Verified signals attached'), findsNothing);
+      expect(find.text('Supporting evidence supplied'), findsNothing);
       expect(find.byTooltip('Delete post'), findsOneWidget);
       expect(
         find.text('Under review. Publication checks are pending.'),

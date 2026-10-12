@@ -1,5 +1,6 @@
+import { FEED_AUTHOR_FIELDS, FEED_AUTHOR_JOINS } from './feed-author-projection.ts';
 export const TAGGED_DISCOVERY_SQL = `
-  SELECT p.id, p.author_id AS "authorId", p.body, p.published_at AS "publishedAt",
+  SELECT p.id, p.author_id AS "authorId", ${FEED_AUTHOR_FIELDS}, p.body, p.published_at AS "publishedAt",
          p.visibility, p.moderation_state AS "moderationState", (p.deleted_at IS NOT NULL) AS "feedItemDeleted",
          declaration.public_label AS "publicLabel", d.topic, d.region_code AS "regionCode",
          COALESCE((SELECT jsonb_object_agg(counted.reaction_type, counted.reaction_count)
@@ -16,10 +17,12 @@ export const TAGGED_DISCOVERY_SQL = `
          candidate.scan_truncated AS "tagSearchUnavailable"
     FROM feed.search_public_posts_by_tag($5, $1, $2, $3, $4, $6) candidate
     LEFT JOIN content.posts p ON p.id = candidate.post_id
+    LEFT JOIN identity.users author ON author.id = p.author_id AND author.status = 'active'
+    ${FEED_AUTHOR_JOINS}
     LEFT JOIN content.content_declarations declaration ON declaration.post_id = p.id
     LEFT JOIN feed.discovery_candidates d ON d.post_id = p.id
    WHERE candidate.post_id IS NULL OR (
-     p.visibility = 'public' AND p.moderation_state = 'allowed' AND p.deleted_at IS NULL
+     author.id IS NOT NULL AND p.visibility = 'public' AND p.moderation_state = 'allowed' AND p.deleted_at IS NULL
      AND p.published_at IS NOT NULL
      AND declaration.public_label IN ('Human-authored', 'AI-assisted')
      AND declaration.review_required = false

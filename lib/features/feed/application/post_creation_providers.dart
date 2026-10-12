@@ -434,9 +434,12 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
       state = state.copyWith(
         isSubmitting: false,
         result: unconfirmed && result is! CreatePostSuccess
-            ? const CreatePostError(
+            ? CreatePostError(
                 message:
-                    'The earlier submission is still unconfirmed. Retry the same request after signing in.',
+                    result is CreatePostError && result.code == 'auth_required'
+                    ? 'Sign in again to check your saved submission.'
+                    : 'Submission unconfirmed. Your draft is kept. Check your connection and retry.',
+                code: result is CreatePostError ? result.code : null,
                 outcomeUncertain: true,
               )
             : result,

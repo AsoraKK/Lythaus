@@ -187,21 +187,16 @@ void main() {
     expect(find.textContaining('Retry after: 10 minutes'), findsOneWidget);
   });
 
-  testWidgets('attaches media via picker', (tester) async {
+  testWidgets('explains unavailable media without a pretend picker', (
+    tester,
+  ) async {
     final harness = _buildHarness(submitFn: (n) async => false);
-
     await tester.pumpWidget(harness.widget);
-    await tester.tap(find.text('Add media'));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(
-      find.byType(TextField).last,
-      'https://example.com/img.jpg',
-    );
-    await tester.tap(find.text('Attach'));
-    await tester.pumpAndSettle();
-
-    expect(harness.notifier.state.mediaUrl, 'https://example.com/img.jpg');
+    expect(find.text('Add media'), findsNothing);
+    expect(find.text('Image'), findsNothing);
+    expect(find.text('Video'), findsNothing);
+    expect(find.textContaining('Photos are not available yet'), findsOneWidget);
+    expect(harness.notifier.state.mediaUrl, isNull);
   });
 
   testWidgets('CreateModalScreen.show opens create post screen', (

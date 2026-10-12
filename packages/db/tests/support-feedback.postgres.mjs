@@ -246,9 +246,11 @@ test('invoked Worker validation, revisions, quota and audit rollback produce hon
   assert.equal(reply.status,201);
   const conflict=await invokeWorker(publicWorker,await f.memberRequest(),`/api/support/problems/${ticket}/messages`,env,{expectedRevision:1,message:'Synthetic stale revision'});
   assert.equal(conflict.status,409);assert.deepEqual(await conflict.json(),{error:'support_revision_conflict'});
-  const limited=await invokeWorker(publicWorker,await f.memberRequest(),`/api/support/problems/${ticket}/messages`,env,{expectedRevision:2,message:'Synthetic quota rejection'});
+  const secondReply=await invokeWorker(publicWorker,await f.memberRequest(),`/api/support/problems/${ticket}/messages`,env,{expectedRevision:2,message:'Synthetic second distinct reply'});
+  assert.equal(secondReply.status,201);
+  const limited=await invokeWorker(publicWorker,await f.memberRequest(),`/api/support/problems/${ticket}/messages`,env,{expectedRevision:3,message:'Synthetic quota rejection'});
   assert.equal(limited.status,429);assert.deepEqual(await limited.json(),{error:'support_rate_limited'});
-  assert.equal((await control.query('SELECT count(*)::int AS n FROM system.outbox_events WHERE aggregate_id=$1',[ticket])).rows[0].n,2);
+  assert.equal((await control.query('SELECT count(*)::int AS n FROM system.outbox_events WHERE aggregate_id=$1',[ticket])).rows[0].n,3);
 });
 
 test('real schema and grant gaps stop invoked Workers and make privacy retry; wholly absent support remains optional',async t=>{

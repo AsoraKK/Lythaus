@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/features/profile/domain/public_author_label.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lythaus/ui/screens/profile/profile_screen.dart';
 
@@ -52,11 +53,12 @@ class _AuthorProfileLinkState extends State<AuthorProfileLink> {
   @override
   Widget build(BuildContext context) {
     final userId = widget.userId.trim();
-    if (userId.isEmpty) return Text(widget.label, style: widget.textStyle);
+    final label = publicAuthorLabel(widget.label, authorId: userId);
+    if (userId.isEmpty) return Text(label, style: widget.textStyle);
 
     final scheme = Theme.of(context).colorScheme;
     return Tooltip(
-      message: 'View ${widget.label} profile',
+      message: 'View $label profile',
       child: TextButton(
         onPressed: _openingProfile ? null : _openProfile,
         style: TextButton.styleFrom(
@@ -70,7 +72,7 @@ class _AuthorProfileLinkState extends State<AuthorProfileLink> {
             decorationColor: scheme.primary,
           ),
         ),
-        child: Text(widget.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
       ),
     );
   }

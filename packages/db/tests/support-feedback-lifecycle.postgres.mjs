@@ -33,7 +33,14 @@ export function registerSupportLifecycleCases({ test, assert, fixture, policy, p
       assert.equal(await systemCount('outbox_events', 'aggregate_id', row.id), 2);
     }
     const hash = createHash('sha256').update(f.member).digest('hex');
-    assert.equal((await database().query("SELECT sum(request_count)::int AS total FROM system.rate_limit_windows WHERE scope='support:member' AND subject_hash=$1", [hash])).rows[0].total, 4);
+    const windows = await database().query(`SELECT scope,sum(request_count)::int AS total FROM system.rate_limit_windows
+      WHERE scope IN ('support:member:reply','support:member:submit:day','support:member:submit:hour') AND subject_hash=$1
+      GROUP BY scope ORDER BY scope`, [hash]);
+    assert.deepEqual(windows.rows, [
+      { scope: 'support:member:reply', total: 2 },
+      { scope: 'support:member:submit:day', total: 2 },
+      { scope: 'support:member:submit:hour', total: 2 },
+    ]);
     assert.equal((await database().query('SELECT count(*)::int AS n FROM support.requests WHERE submitter_id=$1', [f.member])).rows[0].n, 2);
   });
 

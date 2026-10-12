@@ -29,6 +29,7 @@ import {
   TAG_SEARCH_PROPOSED_MAX_DISTINCT_TAGS_PER_POST,
 } from './tag-search-policy.ts';
 import { maintainPostTagIndex, tagSearchCandidateScanLimit, tagSearchMaxDistinctTags } from './tag-search-indexing.ts';
+import { FEED_AUTHOR_FIELDS, FEED_AUTHOR_JOINS } from './feed-author-projection.ts';
 import { TAGGED_DISCOVERY_SQL } from './tag-search-query.ts';
 import { readBoundedJson } from './request-body-runtime.ts';
 import { parseProfileUpdate, readPresentationPreferences } from './profile-runtime-policy.ts';
@@ -2618,7 +2619,7 @@ async function customFeedItems(request: Request, env: Env, user: Principal, feed
   if (!owned.rows[0]) throw new Error('custom_feed_not_found');
   const page = pageRequest(new URL(request.url));
   const result = await query<FeedResponseCandidate & { id: string; publishedAt: string }>(env.DB_APP_FRESH,
-    `SELECT p.id, p.author_id AS "authorId", p.body, p.published_at AS "publishedAt",
+    `SELECT p.id, p.author_id AS "authorId", ${FEED_AUTHOR_FIELDS}, p.body, p.published_at AS "publishedAt",
             p.visibility, p.moderation_state AS "moderationState", (p.deleted_at IS NOT NULL) AS "feedItemDeleted",
             declaration.public_label AS "publicLabel", d.topic, d.region_code AS "regionCode",
             COALESCE((SELECT jsonb_object_agg(counted.reaction_type, counted.reaction_count)
@@ -2634,6 +2635,7 @@ async function customFeedItems(request: Request, env: Env, user: Principal, feed
             EXISTS (SELECT 1 FROM social.follows f WHERE f.follower_id = $2 AND f.followed_id = p.author_id) AS "feedFollowsAuthor"
        FROM content.posts p
        JOIN identity.users author ON author.id = p.author_id AND author.status = 'active'
+       ${FEED_AUTHOR_JOINS}
        JOIN content.content_declarations declaration ON declaration.post_id = p.id
        LEFT JOIN feed.discovery_candidates d ON d.post_id = p.id
       WHERE p.visibility = 'public' AND p.moderation_state = 'allowed' AND p.deleted_at IS NULL
@@ -2775,7 +2777,7 @@ async function discoveryFeed(request: Request, env: Env, viewer?: Principal): Pr
     page.limit + 1,
   ];
   const result = await query<FeedResponseCandidate & { id: string; publishedAt: string }>(env.DB_APP_FRESH,
-    `SELECT p.id, p.author_id AS "authorId", p.body, p.published_at AS "publishedAt",
+    `SELECT p.id, p.author_id AS "authorId", ${FEED_AUTHOR_FIELDS}, p.body, p.published_at AS "publishedAt",
             p.visibility, p.moderation_state AS "moderationState", (p.deleted_at IS NOT NULL) AS "feedItemDeleted",
             declaration.public_label AS "publicLabel", d.topic, d.region_code AS "regionCode",
             COALESCE((SELECT jsonb_object_agg(counted.reaction_type, counted.reaction_count)
@@ -2791,6 +2793,7 @@ async function discoveryFeed(request: Request, env: Env, viewer?: Principal): Pr
             EXISTS (SELECT 1 FROM social.follows f WHERE f.follower_id = $1 AND f.followed_id = p.author_id) AS "feedFollowsAuthor"
        FROM content.posts p
        JOIN identity.users author ON author.id = p.author_id AND author.status = 'active'
+       ${FEED_AUTHOR_JOINS}
        JOIN content.content_declarations declaration ON declaration.post_id = p.id
        LEFT JOIN feed.discovery_candidates d ON d.post_id = p.id
       WHERE p.visibility = 'public' AND p.moderation_state = 'allowed' AND p.deleted_at IS NULL
@@ -3128,7 +3131,7 @@ async function redeemReward(request: Request, env: Env, user: Principal, rewardI
 async function getPersonalFeed(request: Request, env: Env, user: Principal): Promise<Response> {
   const page = pageRequest(new URL(request.url));
   const result = await query<FeedResponseCandidate & { id: string; cursor_timestamp: string }>(env.DB_APP_FRESH,
-    `SELECT p.id, p.author_id AS "authorId", p.body, p.declared_creation_mode AS "declaredCreationMode",
+    `SELECT p.id, p.author_id AS "authorId", ${FEED_AUTHOR_FIELDS}, p.body, p.declared_creation_mode AS "declaredCreationMode",
             p.visibility, p.moderation_state AS "moderationState", p.geo_scope AS "geoScope",
             p.place_id AS "placeId", p.published_at AS "publishedAt", p.created_at AS "createdAt",
             declaration.public_label AS "publicLabel", (p.deleted_at IS NOT NULL) AS "feedItemDeleted",
@@ -3147,6 +3150,7 @@ async function getPersonalFeed(request: Request, env: Env, user: Principal): Pro
        FROM feed.user_inbox i
        JOIN content.posts p ON p.id = i.post_id
        JOIN identity.users author ON author.id = p.author_id AND author.status = 'active'
+       ${FEED_AUTHOR_JOINS}
        JOIN content.content_declarations declaration ON declaration.post_id = p.id
       WHERE i.user_id = $1 AND p.deleted_at IS NULL AND p.moderation_state = 'allowed'
         AND declaration.public_label IN ('Human-authored', 'AI-assisted')
@@ -3166,7 +3170,7 @@ async function getPersonalFeed(request: Request, env: Env, user: Principal): Pro
 
 async function getPost(request: Request, env: Env, postId: string, viewer?: Principal): Promise<Response> {
   const result = await query<FeedResponseCandidate & { id: string }>(env.DB_APP_FRESH,
-    `SELECT p.id, p.author_id AS "authorId", p.body, p.declared_creation_mode AS "declaredCreationMode",
+    `SELECT p.id, p.author_id AS "authorId", ${FEED_AUTHOR_FIELDS}, p.body, p.declared_creation_mode AS "declaredCreationMode",
             p.visibility, p.moderation_state AS "moderationState", p.geo_scope AS "geoScope",
             p.place_id AS "placeId", p.published_at AS "publishedAt", p.created_at AS "createdAt",
             declaration.public_label AS "publicLabel", (p.deleted_at IS NOT NULL) AS "feedItemDeleted",
@@ -3183,6 +3187,7 @@ async function getPost(request: Request, env: Env, postId: string, viewer?: Prin
             EXISTS (SELECT 1 FROM social.follows f WHERE f.follower_id = $2 AND f.followed_id = p.author_id) AS "feedFollowsAuthor"
        FROM content.posts p
        JOIN identity.users author ON author.id = p.author_id AND author.status = 'active'
+       ${FEED_AUTHOR_JOINS}
        JOIN content.content_declarations declaration ON declaration.post_id = p.id
       WHERE p.id = $1 AND p.deleted_at IS NULL AND p.moderation_state = 'allowed'
         AND declaration.public_label IN ('Human-authored', 'AI-assisted')
@@ -3200,7 +3205,7 @@ async function getPost(request: Request, env: Env, postId: string, viewer?: Prin
 async function getComments(request: Request, env: Env, postId: string, viewer?: Principal): Promise<Response> {
   const page = pageRequest(new URL(request.url), 100);
   const result = await query<Omit<CommentFeedResponseCandidate, 'publicLabel'> & { id: string; createdAt: string; declaredCreationMode: unknown }>(env.DB_APP_FRESH,
-    `SELECT comment.id, comment.author_id AS "authorId", comment.parent_id AS "parentId",
+    `SELECT comment.id, comment.author_id AS "authorId", ${FEED_AUTHOR_FIELDS}, comment.parent_id AS "parentId",
             CASE WHEN comment.deleted_at IS NULL THEN comment.body ELSE NULL END AS body,
             comment.depth, comment.declared_creation_mode AS "declaredCreationMode",
             comment.moderation_state AS "moderationState",
@@ -3213,6 +3218,7 @@ async function getComments(request: Request, env: Env, postId: string, viewer?: 
        FROM content.comments comment
        JOIN content.posts post ON post.id = comment.post_id
        JOIN identity.users author ON author.id = comment.author_id AND author.status = 'active'
+       ${FEED_AUTHOR_JOINS}
       WHERE comment.post_id = $1 AND comment.moderation_state = 'allowed'
         AND post.deleted_at IS NULL AND post.moderation_state = 'allowed'
         AND (post.visibility = 'public' OR post.author_id = $2 OR (post.visibility = 'followers' AND EXISTS (
