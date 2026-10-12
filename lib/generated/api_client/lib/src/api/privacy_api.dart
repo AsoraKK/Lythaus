@@ -10,10 +10,14 @@ import 'package:dio/dio.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:built_value/json_object.dart';
 import 'package:lythaus_api_client/src/api_util.dart';
+import 'package:lythaus_api_client/src/model/activity_consent.dart';
+import 'package:lythaus_api_client/src/model/activity_consent_input.dart';
+import 'package:lythaus_api_client/src/model/activity_render_input.dart';
 import 'package:lythaus_api_client/src/model/api_error.dart';
 import 'package:lythaus_api_client/src/model/privacy_request_accepted.dart';
 import 'package:lythaus_api_client/src/model/privacy_request_create.dart';
 import 'package:lythaus_api_client/src/model/privacy_request_status_response.dart';
+import 'package:lythaus_api_client/src/model/record_foreground_activity_day200_response.dart';
 import 'package:lythaus_api_client/src/model/safety_limit_error.dart';
 import 'package:lythaus_api_client/src/model/storage_usage_get200_response.dart';
 import 'package:lythaus_api_client/src/model/unauthorized_error.dart';
@@ -30,6 +34,85 @@ class PrivacyApi {
   final Serializers _serializers;
 
   const PrivacyApi(this._dio, this._serializers);
+
+  /// Read own account-linked activity consent
+  ///
+  ///
+  /// Parameters:
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [ActivityConsent] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<ActivityConsent>> getActivityMeasurementConsent({
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/analytics/activity-consent';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    ActivityConsent? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(ActivityConsent),
+      ) as ActivityConsent;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<ActivityConsent>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
 
   /// Submit an asynchronous privacy request
   /// Records an export, account deletion, or rectification request and queues it for durable processing. Acceptance does not mean processing is complete.
@@ -291,6 +374,208 @@ class PrivacyApi {
     }
 
     return Response<PrivacyRequestStatusResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Record one canonical account and UTC active day
+  /// Authenticated visible foreground render only, including an empty feed. No background heartbeat, browsing URL, content, identity or client timestamp is accepted. Server deduplication and current consent episode checks are transactional. Signal is client-asserted visibility, not human-attention attestation. Existing authenticated origin/CSRF and rate limits are dispatcher prerequisites.
+  ///
+  /// Parameters:
+  /// * [activityRenderInput]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [RecordForegroundActivityDay200Response] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<RecordForegroundActivityDay200Response>> recordForegroundActivityDay({
+    required ActivityRenderInput activityRenderInput,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/analytics/activity';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(ActivityRenderInput);
+      _bodyData = _serializers.serialize(activityRenderInput, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    RecordForegroundActivityDay200Response? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(RecordForegroundActivityDay200Response),
+      ) as RecordForegroundActivityDay200Response;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<RecordForegroundActivityDay200Response>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Explicitly grant or withdraw this account-linked purpose
+  /// Existing anonymous consent does not authorize this purpose. Withdrawal remains possible while collection is disabled; dates are removed transactionally unless an existing legal hold requires preservation. Held dates are excluded from metrics and collection. Activation also requires approved retention terms. Existing account consent decisions remain exportable. Existing authenticated origin/CSRF and rate limits are mandatory dispatcher prerequisites.
+  ///
+  /// Parameters:
+  /// * [activityConsentInput]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [ActivityConsent] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<ActivityConsent>> setActivityMeasurementConsent({
+    required ActivityConsentInput activityConsentInput,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/analytics/activity-consent';
+    final _options = Options(
+      method: r'PUT',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'bearerAuth',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(ActivityConsentInput);
+      _bodyData = _serializers.serialize(activityConsentInput, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    ActivityConsent? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(ActivityConsent),
+      ) as ActivityConsent;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<ActivityConsent>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

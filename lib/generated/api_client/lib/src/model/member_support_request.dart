@@ -29,6 +29,7 @@ part 'member_support_request.g.dart';
 /// * [createdAt]
 /// * [updatedAt]
 /// * [memberMessage]
+/// * [closed] - Whether new replies are closed for this request.
 /// * [improvement]
 /// * [benefit]
 @BuiltValue()
@@ -39,8 +40,8 @@ abstract class MemberSupportRequest implements Built<MemberSupportRequest, Membe
   static const String discriminatorFieldName = r'kind';
 
   static const Map<String, Type> discriminatorMapping = {
-    r'MemberProblemRequest': MemberProblemRequest,
-    r'MemberSuggestionRequest': MemberSuggestionRequest,
+    r'problem': MemberProblemRequest,
+    r'suggestion': MemberSuggestionRequest,
   };
 
   MemberSupportRequest._();
@@ -57,10 +58,10 @@ abstract class MemberSupportRequest implements Built<MemberSupportRequest, Membe
 extension MemberSupportRequestDiscriminatorExt on MemberSupportRequest {
     String? get discriminatorValue {
         if (this is MemberProblemRequest) {
-            return r'MemberProblemRequest';
+            return r'problem';
         }
         if (this is MemberSuggestionRequest) {
-            return r'MemberSuggestionRequest';
+            return r'suggestion';
         }
         return null;
     }
@@ -68,10 +69,10 @@ extension MemberSupportRequestDiscriminatorExt on MemberSupportRequest {
 extension MemberSupportRequestBuilderDiscriminatorExt on MemberSupportRequestBuilder {
     String? get discriminatorValue {
         if (this is MemberProblemRequestBuilder) {
-            return r'MemberProblemRequest';
+            return r'problem';
         }
         if (this is MemberSuggestionRequestBuilder) {
-            return r'MemberSuggestionRequest';
+            return r'suggestion';
         }
         return null;
     }
@@ -117,14 +118,14 @@ class _$MemberSupportRequestSerializer implements PrimitiveSerializer<MemberSupp
     Object oneOfResult;
     Type oneOfType;
     switch (discValue) {
-      case r'MemberProblemRequest':
+      case r'problem':
         oneOfResult = serializers.deserialize(
           oneOfDataSrc,
           specifiedType: FullType(MemberProblemRequest),
         ) as MemberProblemRequest;
         oneOfType = MemberProblemRequest;
         break;
-      case r'MemberSuggestionRequest':
+      case r'suggestion':
         oneOfResult = serializers.deserialize(
           oneOfDataSrc,
           specifiedType: FullType(MemberSuggestionRequest),

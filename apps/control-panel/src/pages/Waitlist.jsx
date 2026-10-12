@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { adminRequest } from '../api/adminApi.js';
 import { formatDateTime } from '../utils/formatters.js';
 import LythButton from '../components/LythButton.jsx';
@@ -38,21 +38,28 @@ function Waitlist() {
   const [confirmation, setConfirmation] = useState('');
   const [editSource, setEditSource] = useState('');
   const [newEntry, setNewEntry] = useState({ email: '', source: 'keeper', reasonCode: '', confirmation: '' });
+  const listRequestId = useRef(0);
+  const paginationFocusPending = useRef(false);
+  const listRef = useRef(null);
 
   const loadWaitlist = useCallback(async ({ cursor = null, append = false } = {}) => {
     setPendingAction(null);
     setReasonCode('');
     setConfirmation('');
-    append ? setLoadingMore(true) : setLoading(true);
+    const requestId = ++listRequestId.current;
+    if (append) setLoadingMore(true);
+    else { setLoading(true); setLoadingMore(false); }
     if (!append) { setLinkedAccounts({}); setAppliedFilters({ ...filters }); }
     setError('');
     try {
       const response = await adminRequest('waitlist', { query: { ...filters, limit: 50, cursor } });
+      if (requestId !== listRequestId.current) return;
       if (!response || !Array.isArray(response.items) || !response.summary) throw new Error('invalid_waitlist_response');
       setItems((current) => append ? [...current, ...response.items] : response.items);
       setSummary({ totalWaiting: Number(response.summary.totalWaiting ?? 0), last7Days: Number(response.summary.last7Days ?? 0), last24Hours: Number(response.summary.last24Hours ?? 0) });
       setNextCursor(response.nextCursor || null);
     } catch (requestError) {
+      if (requestId !== listRequestId.current) return;
       if (requestError.status === 401 || requestError.status === 403) {
         setItems([]); setNextCursor(null); setSummary({ totalWaiting: null, last7Days: null, last24Hours: null });
         setError(requestError.status === 403 ? 'Administrator access is required to view waitlist contacts.' : 'Sign in through approved admin access to view waitlist contacts.');
@@ -64,12 +71,23 @@ function Waitlist() {
         setError('Waitlist data could not be loaded.');
       }
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (requestId === listRequestId.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
   }, [filters]);
 
-  useEffect(() => { loadWaitlist(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadWaitlist();
+    return () => { listRequestId.current += 1; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (loadingMore || !paginationFocusPending.current) return;
+    paginationFocusPending.current = false;
+    if (!nextCursor) listRef.current?.focus();
+  }, [loadingMore, nextCursor]);
 
   useEffect(() => {
     let active = true;
@@ -186,7 +204,7 @@ function Waitlist() {
   };
 
   return (
-    <PageLayout title="Waitlist" subtitle="People who have requested early access to Lythaus." guide={WAITLIST_GUIDE} className="waitlist-page" headerActions={<LythButton variant="ghost" type="button" onClick={() => loadWaitlist()} disabled={loading}>Refresh</LythButton>}>
+    <PageLayout title="Waitlist" subtitle="People who have requested early access to Lythaus." guide={WAITLIST_GUIDE} className="waitlist-page" headerActions={<LythButton variant="ghost" type="button" onClick={() => loadWaitlist()} disabled={loading}>{error ? 'Retry' : 'Refresh'}</LythButton>}>
       <div className="waitlist-summary-grid" aria-label="Waitlist summary">
         <LythCard variant="panel" className="waitlist-summary-card"><span>Waiting</span><strong>{metric(summary.totalWaiting)}</strong></LythCard>
         <LythCard variant="panel" className="waitlist-summary-card"><span>Joined in the last 7 days</span><strong>{metric(summary.last7Days)}</strong></LythCard>
@@ -198,7 +216,7 @@ function Waitlist() {
         <form className="form-row" onSubmit={(event) => { event.preventDefault(); loadWaitlist(); }}>
           <LythInput type="email" aria-label="Search waitlist by exact email" value={filters.q} onChange={(event) => updateFilter({ q: event.target.value })} placeholder="Exact email address" />
           <select aria-label="Filter waitlist status" value={filters.status} onChange={(event) => updateFilter({ status: event.target.value })}><option value="">All statuses</option><option value="waiting">Waiting</option><option value="invited">Invited</option><option value="converted">Converted</option><option value="unsubscribed">Unsubscribed</option></select>
-          <LythInput value={filters.source} onChange={(event) => updateFilter({ source: event.target.value })} placeholder="Source" />
+          <LythInput aria-label="Filter waitlist by source" value={filters.source} onChange={(event) => updateFilter({ source: event.target.value })} placeholder="Source" />
           <LythInput type="datetime-local" aria-label="Waitlist created after" value={filters.createdAfter} onChange={(event) => updateFilter({ createdAfter: event.target.value })} />
           <LythInput type="datetime-local" aria-label="Waitlist created before" value={filters.createdBefore} onChange={(event) => updateFilter({ createdBefore: event.target.value })} />
           <LythButton type="submit" disabled={loading}>Filter</LythButton>
@@ -217,11 +235,12 @@ function Waitlist() {
       </LythCard>
 
       <LythCard variant="panel" className="waitlist-table-panel">
-        {loading ? <p className="waitlist-loading" aria-live="polite">Loading waitlist...</p> : null}
+        {loading ? <p className="waitlist-loading" role="status" aria-live="polite">Loading waitlist...</p> : null}
+        {loadingMore ? <p role="status" aria-live="polite">Loading more waitlist contacts...</p> : null}
         {error ? <div className="notice error" role="alert"><strong>{error}</strong><span>Try again. If the problem continues, check the admin API status.</span></div> : null}
         {actionMessage ? <p className="waitlist-action-error" role="status">{actionMessage}</p> : null}
         {!loading && !error && items.length === 0 ? <div className="waitlist-empty"><h2>{hasWaitlistFilters(appliedFilters) ? 'No contacts match these filters' : 'No waitlist signups yet'}</h2><p>{hasWaitlistFilters(appliedFilters) ? 'Try a different exact address or widen the selected filters.' : 'New waitlist requests will appear here.'}</p></div> : null}
-        {!loading && !error && items.length > 0 ? <div className="waitlist-table-wrap"><table className="waitlist-table"><thead><tr><th>Email</th><th>Status</th><th>Source</th><th>Joined</th><th>Existing account</th><th>Actions</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}>
+        {!loading && !error && items.length > 0 ? <div className="waitlist-table-wrap"><table ref={listRef} className="waitlist-table" aria-label="Waitlist contacts" aria-busy={loadingMore} tabIndex={-1}><thead><tr><th>Email</th><th>Status</th><th>Source</th><th>Joined</th><th>Existing account</th><th>Actions</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}>
           <td>{item.email}</td><td><span className={`waitlist-status ${String(item.status).toLowerCase()}`}>{item.status}</span><span className="muted">{item.retentionHold ? 'Retention hold active' : ''}</span></td><td>{item.source}</td><td>{formatDateTime(item.createdAt)}</td><td><AccountLinkStatus item={item} value={linkedAccounts[item.id]} access={supportAccess} busy={linkLookupBusyId === item.id} onCheck={checkAccountLink} /></td>
           <td><div className="waitlist-actions">
             <select aria-label={`Update waitlist status for ${item.email}`} value={item.status} onChange={(event) => beginAction({ ...item, nextStatus: event.target.value }, 'status', `UPDATE WAITLIST STATUS ${item.id} TO ${event.target.value.toUpperCase()}`)} disabled={loading || loadingMore || updatingId === item.id || ['converted', 'unsubscribed'].includes(item.status)}><option value={item.status}>{item.status}</option>{item.status === 'waiting' ? <option value="invited">Invited</option> : null}{['waiting', 'invited'].includes(item.status) ? <option value="converted">Converted</option> : null}</select>
@@ -230,7 +249,11 @@ function Waitlist() {
             <LythButton variant="danger" type="button" onClick={() => beginAction(item, 'delete', `UNSUBSCRIBE AND REQUEST PURGE ${item.id}`)} disabled={loading || loadingMore || updatingId === item.id}>Unsubscribe + request purge</LythButton>
           </div></td>
         </tr>)}</tbody></table></div> : null}
-        {nextCursor && !loading ? <div className="waitlist-pagination"><LythButton variant="secondary" type="button" onClick={() => loadWaitlist({ cursor: nextCursor, append: true })} disabled={loadingMore}>{loadingMore ? 'Loading...' : 'Load more'}</LythButton></div> : null}
+        {nextCursor && !loading ? <div className="waitlist-pagination"><LythButton variant="secondary" type="button" aria-label="Load more waitlist contacts" aria-disabled={loadingMore} onClick={(event) => {
+          if (loadingMore) return;
+          paginationFocusPending.current = document.activeElement === event.currentTarget;
+          loadWaitlist({ cursor: nextCursor, append: true });
+        }}>{loadingMore ? 'Loading...' : 'Load more'}</LythButton></div> : null}
       </LythCard>
 
       {pendingAction ? <LythCard variant="panel"><div className="panel-header"><h2>Confirm waitlist action</h2></div><div className="waitlist-confirmation-summary" role="note"><p><strong>Record:</strong> {pendingAction.item.email}</p><p>{waitlistActionSummary(pendingAction, editSource)}</p></div><p>Type <strong>{pendingAction.expected}</strong> to confirm this action.</p><div className="form-row">{pendingAction.operation === 'edit' ? <LythInput aria-label="Waitlist source" value={editSource} onChange={(event) => setEditSource(event.target.value)} placeholder="Source" /> : null}<LythInput aria-label="Waitlist reason code" value={reasonCode} onChange={(event) => setReasonCode(event.target.value)} placeholder="Reason code" /><LythInput aria-label="Waitlist confirmation" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} placeholder={pendingAction.expected} /><LythButton variant="danger" type="button" onClick={confirmAction} disabled={updatingId === pendingAction.item.id}>Confirm</LythButton><LythButton variant="ghost" type="button" onClick={() => { setPendingAction(null); setReasonCode(''); setConfirmation(''); }}>Cancel</LythButton></div></LythCard> : null}

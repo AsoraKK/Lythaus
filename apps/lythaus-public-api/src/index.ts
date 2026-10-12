@@ -12,6 +12,7 @@ import { handleAlphaApi } from './authenticity-alpha.ts';
 import { issueAuthSession, revokeAllAuthSessions, rotateAuthSession } from './auth-session-runtime.ts';
 import { lockLoginAccount, lockRefreshSession } from './auth-account-transaction.ts';
 import { expiredRefreshCookie, optionalRefreshCookie, refreshCookie, sessionTransport, sessionTransportResult, validateAuthRequestOrigin } from './auth-session-transport.ts';
+import { handleActivityMeasurement } from './activity-measurement-handler.ts';
 import { passwordScreeningFailureLogFields, requireUncompromisedPassword } from './auth-password-screen.ts';
 import { claimRegistrationAddress, establishVerifiedCredential, findRecoveryUser, lockRecoveryAccount, persistRecoveryIntake, recoveryAddressReason, recoveryPlan, recoverySupportReason } from './auth-recovery-policy.ts';
 import { idempotentAuthIntake } from './auth-intake-runtime.ts';
@@ -1895,7 +1896,9 @@ async function updatePost(request: Request, env: Env, user: Principal, postId: s
     });
     const declaration = enforceContentDeclaration({
       body: revision.bodyUpdated ? input.body : current.rows[0].body,
-      declaredCreationMode: input.declaredCreationMode ?? current.rows[0].declared_creation_mode,
+      declaredCreationMode: input.declaredCreationMode === undefined
+        ? current.rows[0].declared_creation_mode
+        : input.declaredCreationMode,
     });
     if (tagSearchMaintenanceEnabled && revision.bodyUpdated) {
       enforcePostTagLimit(declaration.body, maxDistinctTags);
@@ -3308,6 +3311,16 @@ export default {
       if (url.pathname === '/api/waitlist') return await waitlistRoute(request, env);
       const rateLimit = rateLimitPlan(url.pathname);
       await enforceRateLimit(request, env, rateLimit.scope, rateLimit.limit);
+      if (url.pathname === '/api/analytics/activity-consent' && ['GET', 'PUT'].includes(request.method)) {
+        if (request.method === 'PUT') sessionTransport(request, env.CORS_ALLOWED_ORIGINS);
+        const result = await handleActivityMeasurement(request, env, await principal(request, env));
+        return privateResponse(request, env, await result.json(), { status: result.status, headers: result.headers });
+      }
+      if (url.pathname === '/api/analytics/activity' && request.method === 'POST') {
+        sessionTransport(request, env.CORS_ALLOWED_ORIGINS);
+        const result = await handleActivityMeasurement(request, env, await principal(request, env));
+        return privateResponse(request, env, await result.json(), { status: result.status, headers: result.headers });
+      }
       if (isSupportFeedbackPath(url.pathname, 'member')) {
         if (env.SUPPORT_FEEDBACK_ENABLED !== 'true') {
           return privateResponse(request, env, { error: 'feature_disabled' }, { status: 404 });
@@ -3327,7 +3340,7 @@ export default {
         }) ?? privateResponse(request, env, { error: 'not_found' }, { status: 404 });
       }
       const ownerItem = url.pathname.match(/^\/api\/(posts|comments)\/([^/]+)\/owner-view$/);
-      if (request.method === 'GET' && (ownerItem || url.pathname === '/api/users/me/posts')) {
+      if (request.method === 'GET' && (ownerItem || url.pathname === '/api/users/me/posts' || url.pathname === '/api/users/me/comments')) {
         const ownerContent = await handleOwnerContentRead(request, {
           authenticate: () => principal(request, env),
           query: (sql, values) => query(env.DB_APP_FRESH, sql, values),

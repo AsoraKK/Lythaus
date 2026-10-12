@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { handleOwnerContentRead, ownerCommentQuery, ownerPostQuery, ownerPostsQuery, presentOwnerContent, presentOwnerPost } from '../src/owner-content-reader.ts';
+import { handleOwnerContentRead, ownerCommentQuery, ownerCommentsQuery, ownerPostQuery, ownerPostsQuery, presentOwnerContent, presentOwnerPost } from '../src/owner-content-reader.ts';
 
 const actorId = '0192c000-0000-7000-8000-000000000001';
 const id = '0192c000-0000-7000-8000-000000000002';
@@ -158,4 +158,82 @@ test('owner post collection is not handled for unrelated requests',async()=>{
   for(const req of [request('/api/users/me/posts','POST'),request('/api/users/not-me/posts')]){
     assert.equal(await handleOwnerContentRead(req,dependencies([],{authenticate:async()=>assert.fail('unrelated request authenticated')})),undefined);
   }
+});
+const commentsOwner = '0192c000-0000-7000-8000-000000000001';
+const commentsOther = '0192c000-0000-7000-8000-000000000002';
+const commentRow = (id, changes = {}) => ({
+  id, authorId: commentsOwner, postId: commentsOther, parentId: null, depth: 0,
+  body: 'Synthetic own comment', declaredCreationMode: 'human', moderationState: 'under_review',
+  deleted: false, createdAt: '2026-10-10T10:00:00Z', updatedAt: '2026-10-10T10:00:00Z',
+  cursorCreatedAt: '2026-10-10T10:00:00.123456Z',
+  postAuthorId: commentsOther, postVisibility: 'public', postModerationState: 'allowed',
+  postDeleted: false, postPublicLabel: 'Human-authored', postFollowsAuthor: false,
+  parentBody: 'Foreign parent secret', ...changes,
+});
+const commentRequest = (query = '', method = 'GET', path = '/api/users/me/comments') =>
+  new Request('https://local.test' + path + query, { method });
+const commentDependencies = (query, authenticate = async () => ({ userId: commentsOwner })) => ({
+  query, authenticate,
+  respond: (body, status) => Response.json(body, { status,
+    headers: { 'cache-control': 'private, no-store', vary: 'Origin, Authorization' } }),
+});
+
+test('comments collection keeps microsecond cursors and exposes only owned comment fields', async () => {
+  const rows = [commentRow(commentsOwner), commentRow(commentsOther, { depth: 1, parentId: commentsOwner }), commentRow('0192c000-0000-7000-8000-000000000003')];
+  let parameters;
+  const first = await handleOwnerContentRead(commentRequest('?limit=2'), commentDependencies(async (sql, values) => {
+    assert.equal(sql, ownerCommentsQuery); parameters = values; return { rows };
+  }));
+  assert.equal(first.status, 200);
+  assert.equal(first.headers.get('cache-control'), 'private, no-store');
+  assert.equal(first.headers.get('vary'), 'Origin, Authorization');
+  assert.deepEqual(parameters, [commentsOwner, null, null, 3]);
+  const page = await first.json();
+  assert.equal(page.items.length, 2);
+  assert.equal(page.items[1].parentId, commentsOwner);
+  assert.equal(page.items[0].moderationState, 'under_review');
+  for (const item of page.items) {
+    assert.equal(item.parentBody, undefined);
+    assert.equal(item.postVisibility, undefined);
+    assert.equal(item.cursorCreatedAt, undefined);
+  }
+  const second = await handleOwnerContentRead(commentRequest('?limit=2&cursor=' + page.nextCursor),
+    commentDependencies(async (_sql, values) => { parameters = values; return { rows: [rows[2]] }; }));
+  assert.deepEqual(parameters, [commentsOwner, '2026-10-10T10:00:00.123456Z', commentsOther, 3]);
+  assert.equal((await second.json()).nextCursor, null);
+});
+
+test('guest and invalid pagination never query private comments', async () => {
+  const guest = await handleOwnerContentRead(commentRequest(), commentDependencies(
+    async () => assert.fail('guest queried'), async () => { throw new Error('authentication_required'); }));
+  assert.equal(guest.status, 401);
+  for (const query of ['?limit=0', '?limit=21', '?limit=1.5', '?cursor=broken', '?cursor=' + 'x'.repeat(513)]) {
+    const result = await handleOwnerContentRead(commentRequest(query), commentDependencies(async () => assert.fail('invalid page queried')));
+    assert.equal(result.status, 400);
+  }
+  for (const req of [commentRequest('', 'POST'), commentRequest('', 'GET', '/api/users/' + commentsOther + '/comments')]) {
+    assert.equal(await handleOwnerContentRead(req, commentDependencies(async () => assert.fail('foreign path queried'))), undefined);
+  }
+});
+
+test('foreign, deleted, blocked, generated and inaccessible response candidates fail closed', async () => {
+  for (const changes of [
+    { authorId: commentsOther }, { deleted: true }, { moderationState: 'blocked' },
+    { declaredCreationMode: 'ai_generated' }, { postDeleted: true },
+    { postModerationState: 'blocked' }, { postVisibility: 'private' },
+    { postVisibility: 'followers', postFollowsAuthor: false }, { postPublicLabel: 'AI-generated' },
+  ]) {
+    const response = await handleOwnerContentRead(commentRequest(), commentDependencies(async () => ({ rows: [commentRow(commentsOwner, changes)] })));
+    assert.notEqual(response.status, 200);
+    assert.ok(!(await response.text()).includes('Synthetic own comment'));
+  }
+  const followed = await handleOwnerContentRead(commentRequest(), commentDependencies(async () => ({
+    rows: [commentRow(commentsOwner, { postVisibility: 'followers', postFollowsAuthor: true })],
+  })));
+  assert.equal(followed.status, 200);
+  const empty = await handleOwnerContentRead(commentRequest(), commentDependencies(async () => ({ rows: [] })));
+  assert.deepEqual(await empty.json(), { items: [], nextCursor: null });
+  const unavailable = await handleOwnerContentRead(commentRequest(), commentDependencies(async () => { throw new Error('private SQL detail'); }));
+  assert.equal(unavailable.status, 500);
+  assert.ok(!(await unavailable.text()).includes('private SQL detail'));
 });

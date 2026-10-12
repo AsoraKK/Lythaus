@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -244,3 +244,37 @@ describe('Support feedback control-panel route', () => {
 });
 
 function optionsFixture() { return options; }
+
+describe('Support completion limits', () => {
+  beforeEach(() => { vi.stubEnv('VITE_SUPPORT_FEEDBACK_ENABLED', 'true'); adminRequest.mockReset(); });
+  afterEach(() => vi.unstubAllEnvs());
+  function configured(closed = false) {
+    const config = { ...options, contract: { ...options.contract, limits: { ...options.contract.limits, memberMessageCharacters: 2 } } };
+    adminRequest.mockImplementation(path => {
+      if (path === 'support/options') return Promise.resolve(config);
+      if (path === 'support/problems') return Promise.resolve({ items: [request], nextCursor: null });
+      if (path === `support/problems/${request.id}`) return Promise.resolve({ ...detail, request: { ...request, closed } });
+      return Promise.resolve({});
+    });
+  }
+  it('counts astral Unicode as characters and disables an oversized reply independently of bytes', async () => {
+    configured(); renderRoutes();
+    await userEvent.setup().click(await screen.findByRole('button', { name: /Synthetic layout issue/ }));
+    const input = await screen.findByLabelText('Reply to member');
+    fireEvent.change(input, { target: { value: '😀😀' } });
+    expect(screen.getByRole('button', { name: 'Send reply' })).toBeEnabled();
+    expect(screen.getByText('2 / 2 characters')).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: '😀😀😀' } });
+    expect(screen.getByRole('button', { name: 'Send reply' })).toBeDisabled();
+    expect(screen.getByText('3 / 2 characters')).toBeInTheDocument();
+    expect(adminRequest.mock.calls.filter(([, args]) => args?.method === 'POST')).toHaveLength(0);
+  });
+  it('keeps a closed request readable while disabling reply controls', async () => {
+    configured(true); renderRoutes();
+    await userEvent.setup().click(await screen.findByRole('button', { name: /Synthetic layout issue/ }));
+    expect(await screen.findByLabelText('Reply to member')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Send reply' })).toBeDisabled();
+    expect(screen.getByText('This request is closed.')).toBeInTheDocument();
+    expect(screen.getByText('Synthetic owner note.')).toBeInTheDocument();
+  });
+});

@@ -26,8 +26,14 @@ import 'package:lythaus_api_client/src/model/account_support_lookup_request.dart
 import 'package:lythaus_api_client/src/model/account_support_lookup_response.dart';
 import 'package:lythaus_api_client/src/model/account_tier_response.dart';
 import 'package:lythaus_api_client/src/model/account_tier_update.dart';
+import 'package:lythaus_api_client/src/model/activity_consent.dart';
+import 'package:lythaus_api_client/src/model/activity_consent_input.dart';
 import 'package:lythaus_api_client/src/model/activity_event.dart';
+import 'package:lythaus_api_client/src/model/activity_metric.dart';
 import 'package:lythaus_api_client/src/model/activity_page.dart';
+import 'package:lythaus_api_client/src/model/activity_render_input.dart';
+import 'package:lythaus_api_client/src/model/activity_summary.dart';
+import 'package:lythaus_api_client/src/model/activity_summary_metrics.dart';
 import 'package:lythaus_api_client/src/model/admin_auth_summary.dart';
 import 'package:lythaus_api_client/src/model/admin_email_health.dart';
 import 'package:lythaus_api_client/src/model/admin_health.dart';
@@ -190,6 +196,7 @@ import 'package:lythaus_api_client/src/model/overview_provider.dart';
 import 'package:lythaus_api_client/src/model/overview_provider_accounting_period.dart';
 import 'package:lythaus_api_client/src/model/overview_window.dart';
 import 'package:lythaus_api_client/src/model/owner_comment.dart';
+import 'package:lythaus_api_client/src/model/owner_comments_page.dart';
 import 'package:lythaus_api_client/src/model/owner_decision_request.dart';
 import 'package:lythaus_api_client/src/model/owner_detail.dart';
 import 'package:lythaus_api_client/src/model/owner_evidence_request.dart';
@@ -237,6 +244,7 @@ import 'package:lythaus_api_client/src/model/reaction_counts.dart';
 import 'package:lythaus_api_client/src/model/reaction_delete_response.dart';
 import 'package:lythaus_api_client/src/model/reaction_request.dart';
 import 'package:lythaus_api_client/src/model/reaction_response.dart';
+import 'package:lythaus_api_client/src/model/record_foreground_activity_day200_response.dart';
 import 'package:lythaus_api_client/src/model/refresh_session_request.dart';
 import 'package:lythaus_api_client/src/model/refresh_token_request.dart';
 import 'package:lythaus_api_client/src/model/relation_change.dart';
@@ -307,8 +315,14 @@ part 'serializers.g.dart';
   AccountSupportLookupResponse,
   AccountTierResponse,
   AccountTierUpdate,
+  ActivityConsent,
+  ActivityConsentInput,
   ActivityEvent,
+  ActivityMetric,
   ActivityPage,
+  ActivityRenderInput,
+  ActivitySummary,
+  ActivitySummaryMetrics,
   AdminAuthSummary,
   AdminEmailHealth,
   AdminHealth,
@@ -471,6 +485,7 @@ part 'serializers.g.dart';
   OverviewProviderAccountingPeriod,
   OverviewWindow,
   OwnerComment,
+  OwnerCommentsPage,
   OwnerDecisionRequest,
   OwnerDetail,
   OwnerEvidenceRequest,
@@ -518,6 +533,7 @@ part 'serializers.g.dart';
   ReactionDeleteResponse,
   ReactionRequest,
   ReactionResponse,
+  RecordForegroundActivityDay200Response,
   RefreshSessionRequest,
   RefreshTokenRequest,
   RelationChange,

@@ -3,10 +3,14 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
+import 'package:lythaus/features/auth/application/auth_service.dart';
 import 'package:lythaus/features/auth/domain/auth_required_exception.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/notifications/application/notification_providers.dart';
@@ -98,7 +102,226 @@ Future<void> _drain() async {
   }
 }
 
+Future<ProviderContainer> _realAuthContainer(_Adapter adapter) async {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  FlutterSecureStorage.setMockInitialValues({
+    'jwt': 'old-access',
+    'refreshToken': 'old-refresh',
+  });
+  final client = MockClient((request) async {
+    if (request.url.path.endsWith('/auth/userinfo')) {
+      expect(request.headers['Authorization'], 'Bearer old-access');
+      return http.Response(jsonEncode(_user('owner-a').toJson()), 200);
+    }
+    expect(request.url.path, '/api/auth/refresh');
+    expect(request.method, 'POST');
+    expect(jsonDecode(request.body), {'refreshToken': 'old-refresh'});
+    return http.Response(
+      jsonEncode({'accessToken': 'new-access', 'refreshToken': 'new-refresh'}),
+      200,
+    );
+  });
+  addTearDown(client.close);
+  final dio = Dio(BaseOptions(baseUrl: 'https://local.invalid/api'))
+    ..httpClientAdapter = adapter;
+  final container = ProviderContainer(
+    overrides: [
+      secureDioProvider.overrideWithValue(dio),
+      enhancedAuthServiceProvider.overrideWithValue(
+        AuthService(
+          httpClient: client,
+          authUrl: 'https://local.invalid/api',
+          useWebSession: false,
+        ),
+      ),
+    ],
+  );
+  addTearDown(container.dispose);
+  container.read(authStateProvider);
+  await _drain();
+  expect(container.read(currentUserProvider)?.id, 'owner-a');
+  return container;
+}
+
 void main() {
+  test(
+    'real same-owner token refresh recovers auth-required notifications and fences older reads',
+    () async {
+      final olderPage = Completer<Map<String, dynamic>>();
+      var loads = 0;
+      late final _Adapter adapter;
+      adapter = _Adapter((request) async {
+        if (request.method == 'POST') {
+          adapter.status = 401;
+          return {
+            'error': {'code': 'authentication_required'},
+          };
+        }
+        if (loads++ == 1) return olderPage.future;
+        return _page(loads == 1 ? 'owner-a' : 'fresh-owner-a');
+      });
+      final container = await _realAuthContainer(adapter);
+      final subscription = container.listen(
+        notificationsControllerProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      final old = container.read(notificationsControllerProvider.notifier);
+      await old.loadNotifications();
+      final stale = old.loadNotifications();
+      await _drain();
+      expect(await old.markAsRead('private-owner-a'), isFalse);
+      expect(old.state.authRequired, isTrue);
+      final revision = container.read(authSessionRevisionProvider);
+      final version = container.read(tokenVersionProvider);
+      final owner = container.read(currentUserProvider);
+      await container.read(authStateProvider.notifier).refreshToken();
+      expect(
+        container.read(authStateProvider).hasError,
+        isFalse,
+        reason:
+            '${container.read(authStateProvider).error} ${container.read(authStateProvider).stackTrace}',
+      );
+      expect(container.read(currentUserProvider), same(owner));
+      expect(container.read(authSessionRevisionProvider), revision);
+      expect(container.read(tokenVersionProvider), version + 1);
+      adapter.status = 200;
+      await container.pump();
+      final current = container.read(notificationsControllerProvider.notifier);
+      expect(
+        container.read(notificationApiServiceProvider).isCurrentSession,
+        isTrue,
+      );
+      await current.loadNotifications();
+      expect(current.state.authRequired, isFalse);
+      expect(current.state.notifications.single.id, 'private-fresh-owner-a');
+      expect(
+        adapter.requests.last.headers['Authorization'],
+        'Bearer new-access',
+      );
+      olderPage.complete(_page('stale-owner-a'));
+      await stale;
+      expect(current.state.notifications.single.id, 'private-fresh-owner-a');
+    },
+  );
+
+  for (final dismissing in [false, true]) {
+    test(
+      'real same-owner token refresh synchronously fences pending ${dismissing ? 'dismiss' : 'read'}',
+      () async {
+        final receipt = Completer<Map<String, dynamic>>();
+        final adapter = _Adapter((request) async {
+          if (request.method == 'POST') return receipt.future;
+          return _page('owner-a');
+        });
+        final container = await _realAuthContainer(adapter);
+        final subscription = container.listen(
+          notificationsControllerProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        final old = container.read(notificationsControllerProvider.notifier);
+        final oldService = container.read(notificationApiServiceProvider);
+        await old.loadNotifications();
+        final action = dismissing
+            ? old.dismiss('private-owner-a')
+            : old.markAsRead('private-owner-a');
+        await _drain();
+        expect(
+          adapter.requests.where((request) => request.method == 'POST'),
+          hasLength(1),
+        );
+        await container.read(authStateProvider.notifier).refreshToken();
+        expect(oldService.isCurrentSession, isFalse);
+        expect(await old.markAsRead('must-not-send'), isFalse);
+        await container.pump();
+        final current = container.read(
+          notificationsControllerProvider.notifier,
+        );
+        expect(current, isNot(same(old)));
+        expect(
+          container.read(notificationApiServiceProvider).isCurrentSession,
+          isTrue,
+        );
+        await current.loadNotifications();
+        receipt.complete({
+          'id': 'private-owner-a',
+          'action': dismissing ? 'dismiss' : 'read',
+        });
+        expect(await action, isFalse);
+        expect(current.state.notifications.single.read, isFalse);
+        expect(current.state.notifications.single.id, 'private-owner-a');
+        expect(
+          adapter.requests.last.headers['Authorization'],
+          'Bearer new-access',
+        );
+        expect(
+          adapter.requests.where((request) => request.method == 'POST'),
+          hasLength(1),
+        );
+      },
+    );
+  }
+
+  for (final dismissing in [false, true]) {
+    for (final uncertain in [false, true]) {
+      test(
+        'unread count refetches after ${dismissing ? 'dismiss' : 'read'} with uncertain=$uncertain and rejects an older count',
+        () async {
+          final olderCount = Completer<Map<String, dynamic>>();
+          var countRequests = 0;
+          final adapter = _Adapter((request) async {
+            if (request.path.endsWith('/unread-count')) {
+              if (countRequests++ == 0) return olderCount.future;
+              return {'count': 0, 'unreadCount': 0};
+            }
+            if (request.method == 'POST') {
+              if (uncertain) {
+                throw DioException(
+                  requestOptions: request,
+                  type: DioExceptionType.receiveTimeout,
+                );
+              }
+              return {
+                'id': 'private-owner-a',
+                'action': dismissing ? 'dismiss' : 'read',
+              };
+            }
+            return _page('owner-a');
+          });
+          final container = _container(adapter);
+          final subscription = container.listen(unreadCountProvider, (_, _) {});
+          addTearDown(subscription.close);
+          await _drain();
+          final controller = container.read(
+            notificationsControllerProvider.notifier,
+          );
+          await controller.loadNotifications();
+          final confirmed = dismissing
+              ? await controller.dismiss('private-owner-a')
+              : await controller.markAsRead('private-owner-a');
+          expect(confirmed, !uncertain);
+          await container.pump();
+          expect(await container.read(unreadCountProvider.future), 0);
+          olderCount.complete({'count': 7, 'unreadCount': 7});
+          await _drain();
+          expect(container.read(unreadCountProvider).requireValue, 0);
+          expect(countRequests, 2);
+          if (uncertain) {
+            expect(controller.state.notifications.single.read, isFalse);
+          }
+          expect(
+            adapter.requests.every(
+              (request) =>
+                  request.headers['Authorization'] == 'Bearer token-owner-a',
+            ),
+            isTrue,
+          );
+        },
+      );
+    }
+  }
+
   test(
     'expired member response clears private rows and requests authentication',
     () async {
@@ -363,6 +586,10 @@ void main() {
       await container.pump();
       final current = container.read(notificationsControllerProvider.notifier);
       expect(current, isNot(same(old)));
+      expect(
+        container.read(notificationApiServiceProvider).isCurrentSession,
+        isTrue,
+      );
       await current.loadNotifications();
       pending.complete({
         'items': [
@@ -535,7 +762,16 @@ void main() {
       final adapter = _Adapter((request) async {
         if (request.path.endsWith('/read')) return read.future;
         if (request.path.endsWith('/dismiss')) return dismiss.future;
-        return _page('owner-a');
+        final page = _page('owner-a');
+        final items = page['items'] as List;
+        page['items'] = <Map<String, dynamic>>[
+          ...items.cast<Map<String, dynamic>>(),
+          {
+            ...items.first as Map<String, dynamic>,
+            'id': 'private-owner-a-second',
+          },
+        ];
+        return page;
       });
       final container = _container(adapter);
       final subscription = container.listen(
@@ -545,9 +781,22 @@ void main() {
       addTearDown(subscription.close);
       final old = container.read(notificationsControllerProvider.notifier);
       await old.loadNotifications();
+      expect(old.state.notifications, hasLength(2));
       final reading = old.markAsRead('private-owner-a');
-      final dismissing = old.dismiss('private-owner-a');
+      final dismissing = old.dismiss('private-owner-a-second');
       await _drain();
+      expect(
+        adapter.requests.where(
+          (request) => request.path.endsWith('/private-owner-a/read'),
+        ),
+        hasLength(1),
+      );
+      expect(
+        adapter.requests.where(
+          (request) => request.path.endsWith('/private-owner-a-second/dismiss'),
+        ),
+        hasLength(1),
+      );
       container.read(_session.notifier).state = null;
       await container.pump();
       expect(
@@ -560,19 +809,21 @@ void main() {
       expect(current, isNot(same(old)));
       await current.loadNotifications();
       read.complete({'id': 'private-owner-a', 'action': 'read'});
-      dismiss.complete({'id': 'private-owner-a', 'action': 'dismiss'});
-      await Future.wait([reading, dismissing]);
+      dismiss.complete({'id': 'private-owner-a-second', 'action': 'dismiss'});
+      expect(await Future.wait([reading, dismissing]), [false, false]);
       expect(
-        container.read(notificationsControllerProvider).notifications.single.id,
-        'private-owner-a',
+        container
+            .read(notificationsControllerProvider)
+            .notifications
+            .map((notification) => notification.id),
+        ['private-owner-a', 'private-owner-a-second'],
       );
       expect(
         container
             .read(notificationsControllerProvider)
             .notifications
-            .single
-            .read,
-        isFalse,
+            .every((notification) => !notification.read),
+        isTrue,
       );
     },
   );

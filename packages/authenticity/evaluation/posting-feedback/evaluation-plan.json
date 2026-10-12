@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "lythaus-posting-feedback-collection-plan-v1",
+  "state": "NOT_AUTHORIZED_NOT_EXECUTED",
+  "reviewedBaseSha": "49cca9caa34b34c7ded7f4842792f698be9bd41f",
+  "publicPosting": "WITHHELD",
+  "enforcementActivation": false,
+  "thresholds": {
+    "version": "lythaus-posting-bands-unevaluated-v1",
+    "safetyAllowMaximum": null,
+    "safetyBlockMinimum": null,
+    "authorshipAllowMaximum": null,
+    "authorshipBlockMinimum": null
+  },
+  "executableOfflineControls": [
+    "node --experimental-strip-types scripts/ci/validate-posting-feedback-evaluation.mjs",
+    "node --experimental-strip-types packages/authenticity/evaluation/posting-feedback/run.mjs --output .artifacts/posting-feedback/synthetic-report.json"
+  ],
+  "nextMinimumLiveProbeProposal": {
+    "purpose": "Measure actual response shape, flags, scores, model alias, timing and error/missingness behavior; not accuracy, human authorship or posting-band qualification.",
+    "provider": "OpenAI existing moderation adapter",
+    "model": "omni-moderation-latest; record the returned alias and unavailable immutable snapshot explicitly",
+    "modality": "text only",
+    "source": "First 20 agent-written artificial scenarios from fixtures.mjs, IDs 019a0000-0000-7000-8000-000000000001 through 019a0000-0000-7000-8000-000000000020. These contain no private user content, imported dataset or verified human-written truth.",
+    "selectionSha256": "c8882fa321e8e0073a5859814dcc86287651aa2d3b9b3170b16bd009cd6e1ed6",
+    "selectionFieldsInOrder": ["id", "familyId", "split", "body", "declaration", "scenarioAuthorship", "slices", "revision"],
+    "selectionEncoding": "SHA-256 of UTF-8 JSON.stringify of the first 20 fixtures projected to selectionFieldsInOrder, preserving fixture array and object field order.",
+    "freeze": "The subset hash was computed locally without calls. Independently verify this selection and freeze the reviewed collector source before requesting authorization; full 32-item corpus hash alone is not authorization for this subset.",
+    "maxRequests": 20,
+    "requestsPerSample": 1,
+    "automaticRetries": 0,
+    "executionWindowMinutes": 10,
+    "proposedMaxIncrementalTotalUsd": 0,
+    "officialProviderPriceUsd": 0,
+    "officialPriceVerifiedAt": "2026-10-11",
+    "officialPriceSource": "https://help.openai.com/en/articles/4936833-is-the-moderation-endpoint-free-to-use",
+    "officialAuthenticationSource": "https://developers.openai.com/api/reference/overview",
+    "officialModelSource": "https://developers.openai.com/api/docs/models/omni-moderation-latest",
+    "officialDataControlsSource": "https://developers.openai.com/api/docs/guides/your-data",
+    "costStatus": "Official OpenAI moderation endpoint price is free and does not count toward monthly usage limits. This establishes provider price, not account access, project permission or zero total Worker/log/storage cost. No inference or account billing call was made. Require verified included execution/storage usage with maximum incremental total spend USD 0; no funding, top-up, new paid resource or subscription.",
+    "existingBindingVerification": "Local OpenAI environment key is absent. A name-only read of the already registered Jobs Worker secrets using the existing Cloudflare token returned HTTP 401; stopped without retry, alternate route or secret-value access. Deployed binding existence, permission and prior approval remain unverified. Do not infer them from a TypeScript optional binding or official free pricing.",
+    "credentialPrerequisite": "Already approved scoped OpenAI binding. If absent or inaccessible, stop; no new credential or alternate access route is authorized.",
+    "retentionProposal": "Sanitized local artifacts in mode 0600 for 7 days, then delete under the approved retention plan. Discard raw responses after validating and hashing; never retain credentials, arbitrary provider messages, raw input bodies or model rationale in result artifacts.",
+    "sanitizedArtifact": "Separate actual-observation envelope: source/subset/response hashes, sample/family/revision, observed model alias, schema validity, category flags/scores/input modalities, monotonic elapsed time, status/failure, attempt count, missing snapshot and known limits. No scripted timing or synthetic response is relabelled as a real observation.",
+    "authorizationStillRequired": "Explicit owner approval for this exact corpus, text transmission, provider/model, count/window, maximum spend, already approved binding and retention. The authorized collector is not implemented in this lane and none of these calls has occurred.",
+    "excludedComponents": ["Workers AI general-model prompt", "SAFE-A inference", "Moondream", "GPT-OSS adviser", "public publishing", "production writes"]
+  },
+  "laterImageEvaluationSlices": {
+    "state": "PLANNING_ONLY_NOT_AUTHORIZED_NOT_EXECUTED",
+    "distinctProcessingSlices": ["camera_originals", "synthetic_originals", "recompressed_jpeg", "unknown_history_png", "hard_negatives"],
+    "lineage": "Retain originals and every derivative in one source family and one split; record processing history, generator/camera provenance and current component support separately. Unsupported history remains inconclusive.",
+    "historicalContextOnly": "Owner-provided September 29 Version 0.5 handoff reportedly recorded 0/40 synthetic detections and 8/60 negative controls flagged on a bounded JPEG slice. Its artifacts/source/model/corpus were not independently retrieved or validated here. These counts are not current accuracy evidence and are excluded from all current matrices and threshold selection.",
+    "ownerProvidedReference": "https://chatgpt.com/c/6ab976e0-ec50-83e9-bee6-d26459740e9b#message-533dd0d4-8685-4402-ad59-2b65674ef88a"
+  },
+  "liveCollectionPrerequisites": {
+    "authorization": "Owner authorization must name the exact provider/model, modalities, rights-approved corpus hash, source SHA, existing execution resource, finite calls by component including retries, execution window and maximum total spend in USD. This task authorizes zero live calls.",
+    "data": "A rights/purpose-approved local labelled corpus with evidence of actual human authorship or documented assistance/generation, independent contextual safety labels, no private user content, provenance and retention/deletion rules; external transmission requires explicit separate authorization.",
+    "cost": "Fresh existing-account usage, kill-switch and reservation evidence plus a finite approved call/retry envelope. No added paid resources; do not infer actual cost from a zero adapter estimate or Workers Paid availability.",
+    "credentials": "Use only already approved scoped bindings in the normally authorized environment. Do not create credentials, log values, recover denied access or switch routes to evade denials.",
+    "safeA": "Verify the frozen checkpoint, preprocessing, runtime digest and accepted rights scope, then separately authorize a local/private inference evaluation. These protocol fixtures load no checkpoint and establish no ordinary-image support.",
+    "decisionTargets": "Owner-approved category/context policy, safety false-acceptance and false-rejection budgets, review capacity and outage behavior; research targets are not publication approval.",
+    "collectorImplementation": "Allocate a separate provenance envelope and authorized collector. The current runner is synthetic only and must not relabel scripted records as live measurements. No existing Jobs runtime or shared CI may be edited without allocation."
+  },
+  "frozenEvaluationProcedure": [
+    "Verify source/model identities, rights and purpose records before any content access or calls.",
+    "Group every source and its edits, quotes, paraphrases, crops, recompressions and related prompts/outputs; audit author and generator lineage. Assign disjoint calibration and holdout families before obtaining provider results; freeze both manifest hashes.",
+    "Collect one receipt per attempt with sample ID, family ID, split, revision, exact input hash, provider/model request and returned version or explicit unavailable snapshot, response hash, schema validity, category flags/scores/applied modalities, latency clock source, component status, sanitized failure and attempt linkage. Record uncertain delivery without replaying it as success.",
+    "Keep safety truth, AI involvement/provenance, declaration compliance and publication authority as different fields. No qualified text-authorship result is currently available.",
+    "On calibration only, evaluate owner-defined candidate category bands; unsupported inputs, missing evidence, contradictions and drift abstain. Freeze candidate policy, comparison operators, support rules and version before opening holdout.",
+    "Evaluate the frozen candidate once on holdout: complete matrices, false rejection and acceptance with denominators, safe review burden, abstention, coverage, failures and observed latency. Report uncertainty and meaningful supported language/context/modality/generator/source-history slices; account for related examples with family-level intervals.",
+    "Reject thresholds without sufficient independent holdout support, acceptable slice uncertainty or owner error budgets. Do not replace unsupported categories/modalities with zero risk or convert model confidence into probability.",
+    "Retest after model/alias, policy, preprocessing, support, prompt or schema drift. Hidden alias drift remains a limitation when no immutable provider snapshot is supplied.",
+    "Parent independently reviews any recommended policy and validates the complete publishing pipeline. Activation, public launch, merges, releases, migrations and production-auth certification remain separate gates."
+  ]
+}

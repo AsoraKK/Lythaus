@@ -34,6 +34,15 @@ void main() {
       // TODO
     });
 
+    // Read bounded owner-only consenting-cohort activity metrics
+    //
+    // Verified Access, current active owner membership, existing rate limit and committed audit are mandatory. Completed UTC days only; cohorts must have continuous consent throughout each window. Nonconsenting and pre-cutover populations are not reconstructed. Quiet requires observed prior-30-day activity and no recent-30-day activity with complete 60-day coverage. No raw dates or identities; no unmatched contributor ratios. Disabled, zero-cohort, stale, capped and missing coverage states do not become measured zero.
+    //
+    //Future<ActivitySummary> adminActivityMeasurement() async
+    test('test adminActivityMeasurement', () async {
+      // TODO
+    });
+
     // Record a trained editorial appeal adjudication
     //
     // This never auto-resolves an appeal. The shared governance policy evaluates the independently assigned reviewer quorum and then requires one trained adjudicator for standard risk or two for high risk. The outcome is applied only when the returned status is resolved.
