@@ -19,6 +19,7 @@ on:
       - 'apps/lythaus-admin-api/src/account-support-runtime.ts'
       - 'apps/lythaus-admin-api/src/overview-*.ts'
       - 'apps/lythaus-public-api/tests/*.postgres.mjs'
+      - 'apps/lythaus-public-api/tests/native-postgres-workflow-fixture.mjs'
       - 'apps/lythaus-public-api/tests/auth-failure-paths.workerd.mjs'
       - 'apps/lythaus-auth-acceptance-coordinator/src/**'
       - 'apps/lythaus-auth-acceptance-coordinator/tests/**'
