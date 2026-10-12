@@ -63,7 +63,7 @@ const ADMIN_ERROR_CODES = new Set([
   'appeal_adjudication_list_forbidden', 'appeal_adjudication_not_recorded', 'appeal_adjudicator_conflict',
   'appeal_adjudicator_required', 'appeal_adjudicator_role_invalid',
   'appeal_adjudicator_training_required', 'appeal_already_resolved', 'appeal_not_found',
-  'appeal_policy_version_unsupported', 'appeal_risk_class_invalid',
+  'appeal_policy_version_unsupported', 'appeal_profile_access_unavailable', 'appeal_risk_class_invalid',
   'appeal_subject_not_found', 'appeal_vote_decision_invalid', 'appeal_vote_level_invalid',
   'appeal_vote_qualification_invalid', 'appeal_vote_weight_invalid',
   'invalid_account_status', 'invalid_date_filter', 'invalid_display_name', 'invalid_editorial_publication', 'invalid_handle', 'invalid_json',
@@ -84,7 +84,7 @@ function adminError(error: unknown): { exposedCode: string; internalCode: string
     : ['access_required', 'access_assertion_invalid', 'access_subject_missing'].includes(exposedCode) ? 401
       : ['auth_data_unavailable', 'auth_email_dispatch_unavailable'].includes(exposedCode) ? 503
         : ['admin_role_required', 'admin_mutation_origin_invalid', 'account_support_owner_required', 'overview_owner_required', 'community_appeal_triage_not_allowed', 'monthly_context_actor_not_allowed', 'appeal_adjudication_list_forbidden', 'profile_editing_unavailable'].includes(exposedCode) ? 403
-          : ['community_appeals_unavailable', 'monthly_context_unavailable'].includes(exposedCode) ? 503
+          : ['appeal_profile_access_unavailable', 'community_appeals_unavailable', 'monthly_context_unavailable'].includes(exposedCode) ? 503
             : ['community_appeal_state_conflict', 'monthly_context_idempotency_reused', 'monthly_context_revision_conflict', 'monthly_context_rules_locked', 'monthly_context_scope_changed'].includes(exposedCode) ? 409
           : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
               : ['appeal_adjudication_locked', 'appeal_already_resolved', 'email_already_verified', 'idempotency_in_progress', 'idempotency_key_reused', 'moderation_case_already_resolved', 'moderation_case_superseded', 'moderation_declaration_missing', 'user_email_exists', 'waitlist_duplicate', 'waitlist_status_transition_invalid'].includes(exposedCode) ? 409
@@ -692,29 +692,42 @@ async function adjudicateAppeal(request: Request, env: Env, actor: { userId: str
               CASE c.content_type
                 WHEN 'post' THEN p.moderation_source_event_id
                 WHEN 'comment' THEN cm.moderation_source_event_id
-                WHEN 'profile' THEN profile.moderation_source_event_id
                 ELSE NULL
               END AS current_source_event_id,
               CASE c.content_type
                 WHEN 'post' THEN p.id IS NOT NULL AND p.deleted_at IS NULL
                 WHEN 'comment' THEN cm.id IS NOT NULL AND cm.deleted_at IS NULL
-                WHEN 'profile' THEN profile.user_id IS NOT NULL AND profile_user.status = 'active'
                 ELSE false
               END AS content_active
          FROM moderation.appeals a
          JOIN moderation.cases c ON c.id = a.case_id
          LEFT JOIN content.posts p ON c.content_type = 'post' AND p.id = c.content_id
          LEFT JOIN content.comments cm ON c.content_type = 'comment' AND cm.id = c.content_id
-         LEFT JOIN social.profiles profile ON c.content_type = 'profile' AND profile.user_id = c.content_id
-         LEFT JOIN identity.users profile_user ON profile_user.id = profile.user_id
         WHERE a.id = $1
         FOR UPDATE OF a`,
       [appealId],
     );
-    const appeal = appealResult.rows[0];
+    let appeal = appealResult.rows[0];
     if (!appeal) throw new Error('appeal_not_found');
     if (appeal.appeal_state !== 'open') throw new Error('appeal_already_resolved');
     if (appeal.appeal_policy_version !== APPEAL_POLICY.version) throw new Error('appeal_policy_version_unsupported');
+    if (appeal.content_type === 'profile') {
+      const profileAccess = await client.query<{ allowed: boolean }>(
+        `SELECT has_schema_privilege(current_user, 'social', 'USAGE')
+                AND has_table_privilege(current_user, 'social.profiles', 'SELECT') AS allowed`,
+      );
+      if (profileAccess.rows[0]?.allowed !== true) throw new Error('appeal_profile_access_unavailable');
+      const profileResult = await client.query<{ current_source_event_id: string | null; content_active: boolean }>(
+        `SELECT profile.moderation_source_event_id AS current_source_event_id,
+                profile.user_id IS NOT NULL AND profile_user.status = 'active' AS content_active
+           FROM social.profiles profile
+           JOIN identity.users profile_user ON profile_user.id = profile.user_id
+          WHERE profile.user_id = $1
+          FOR UPDATE OF profile, profile_user`,
+        [appeal.content_id],
+      );
+      appeal = { ...appeal, ...profileResult.rows[0] };
+    }
     if (!appeal.subject_user_id) throw new Error('appeal_subject_not_found');
     if (appeal.appellant_id === actor.userId || appeal.subject_user_id === actor.userId) throw new Error('appeal_adjudicator_conflict');
     const qualification = await client.query<{ user_id: string }>(
@@ -860,19 +873,61 @@ async function adjudicateAppeal(request: Request, env: Env, actor: { userId: str
         && appeal.source_event_id === appeal.current_source_event_id) {
         let contentUpdate;
         if (appeal.content_type === 'post') {
-          contentUpdate = await client.query(
-            `UPDATE content.posts
-                SET moderation_state = 'allowed', published_at = COALESCE(published_at, now()), updated_at = now()
-              WHERE id = $1 AND moderation_source_event_id = $2 AND deleted_at IS NULL`,
-            [appeal.content_id, appeal.source_event_id],
-          );
+          const post = (await client.query<{ body: string; declared_creation_mode: string; current_source_event_id: string; content_active: boolean }>(
+            `SELECT body, declared_creation_mode, moderation_source_event_id AS current_source_event_id,
+                    deleted_at IS NULL AS content_active
+               FROM content.posts
+              WHERE id = $1
+              FOR UPDATE`,
+            [appeal.content_id],
+          )).rows[0];
+          if (post?.content_active && post.current_source_event_id === appeal.source_event_id) {
+            const declaration = await client.query(
+              `SELECT post_id FROM content.content_declarations WHERE post_id = $1 FOR UPDATE`,
+              [appeal.content_id],
+            );
+            if (declaration.rowCount !== 1) throw new Error('moderation_declaration_missing');
+            const publication = enforceAdminAllowPublication({
+              body: post.body,
+              declaredCreationMode: post.declared_creation_mode,
+            });
+            const declarationUpdate = await client.query(
+              `UPDATE content.content_declarations
+                  SET public_label = $2, review_required = false, updated_at = now()
+                WHERE post_id = $1`,
+              [appeal.content_id, publication.publicLabel],
+            );
+            if (declarationUpdate.rowCount !== 1) throw new Error('moderation_declaration_missing');
+            contentUpdate = await client.query(
+              `UPDATE content.posts
+                  SET moderation_state = 'allowed', published_at = COALESCE(published_at, now()), updated_at = now()
+                WHERE id = $1 AND moderation_source_event_id = $2 AND deleted_at IS NULL`,
+              [appeal.content_id, appeal.source_event_id],
+            );
+            if (contentUpdate.rowCount !== 1) throw new Error('moderation_case_superseded');
+          }
         } else if (appeal.content_type === 'comment') {
-          contentUpdate = await client.query(
-            `UPDATE content.comments
-                SET moderation_state = 'allowed', updated_at = now()
-              WHERE id = $1 AND moderation_source_event_id = $2 AND deleted_at IS NULL`,
-            [appeal.content_id, appeal.source_event_id],
-          );
+          const comment = (await client.query<{ body: string; declared_creation_mode: string; current_source_event_id: string; content_active: boolean }>(
+            `SELECT body, declared_creation_mode, moderation_source_event_id AS current_source_event_id,
+                    deleted_at IS NULL AS content_active
+               FROM content.comments
+              WHERE id = $1
+              FOR UPDATE`,
+            [appeal.content_id],
+          )).rows[0];
+          if (comment?.content_active && comment.current_source_event_id === appeal.source_event_id) {
+            enforceAdminAllowPublication({
+              body: comment.body,
+              declaredCreationMode: comment.declared_creation_mode,
+            });
+            contentUpdate = await client.query(
+              `UPDATE content.comments
+                  SET moderation_state = 'allowed', updated_at = now()
+                WHERE id = $1 AND moderation_source_event_id = $2 AND deleted_at IS NULL`,
+              [appeal.content_id, appeal.source_event_id],
+            );
+            if (contentUpdate.rowCount !== 1) throw new Error('moderation_case_superseded');
+          }
         } else if (appeal.content_type === 'profile') {
           contentUpdate = await client.query(
             `UPDATE social.profiles

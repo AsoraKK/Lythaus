@@ -77,6 +77,30 @@ test('native API -> transactional outbox -> jobs evidence -> private pending -> 
   assert.deepEqual(await deliver(delivery.body), { ack: 1, retry: 0 });
   assert.equal(fixture.modelCalls, 1);
   assert.deepEqual(await counts(createdPost.post.id), { detectors: 1, cases: 1, state: 'under_review' });
+  const decision = (await client.query(`SELECT c.policy_version AS "casePolicy", c.state AS "caseState",
+      d.outcome, d.policy_version AS "decisionPolicy", d.decided_by AS "decidedBy",
+      detector.signal->>'riskScore' AS "riskScore", declaration.public_label AS "publicLabel",
+      declaration.declaration_conflict AS "declarationConflict", provenance.final_decision AS "provenanceDecision",
+      provenance.policy_version AS "provenancePolicy", post.published_at AS "publishedAt",
+      (SELECT count(*)::int FROM system.outbox_events WHERE aggregate_id = post.id
+        AND event_type = 'content.post.published') AS "publicationEvents"
+    FROM content.posts post
+    JOIN content.content_declarations declaration ON declaration.post_id = post.id
+    JOIN moderation.cases c ON c.content_type = 'post' AND c.content_id = post.id
+      AND c.source_event_id = post.moderation_source_event_id
+    JOIN moderation.decisions d ON d.case_id = c.id
+    JOIN moderation.detector_runs detector ON detector.content_type = 'post' AND detector.content_id = post.id
+      AND detector.source_event_id = post.moderation_source_event_id
+    JOIN trust.provenance_events provenance ON provenance.content_id = post.id
+      AND provenance.source_event_id = post.moderation_source_event_id
+    WHERE post.id = $1`, [createdPost.post.id])).rows[0];
+  assert.deepEqual(decision, {
+    casePolicy: 'evaluation-only-v1', caseState: 'open', outcome: 'queue', decisionPolicy: 'evaluation-only-v1',
+    decidedBy: null, riskScore: '0.1', publicLabel: 'Under review', declarationConflict: true,
+    provenanceDecision: 'queue', provenancePolicy: 'evaluation-only-v1', publishedAt: null, publicationEvents: 0,
+  });
+  assert.equal((await call(null, 'GET', '/api/posts/' + createdPost.post.id)).status, 404,
+    'a low risk score and detection signal are evidence for review, not publication authority or proof of human authorship');
   assert.deepEqual(await deliver(delivery.body), { ack: 1, retry: 0 });
   assert.equal(fixture.modelCalls, 1);
   const pending = await call(owner, 'GET', '/api/posts/' + createdPost.post.id + '/owner-view');
@@ -91,6 +115,39 @@ test('native API -> transactional outbox -> jobs evidence -> private pending -> 
   const published = await call(null, 'GET', '/api/posts/' + createdPost.post.id);
   assert.equal(published.status, 200, await published.clone().text());
   assert.ok((await published.text()).includes('Human-authored'));
+});
+
+test('missing and malformed revision evidence retries without detector or publication writes; valid-hash stale evidence is acknowledged withheld', async () => {
+  const malformed = await created('Synthetic malformed revision evidence', await actor());
+  const modelCalls = fixture.modelCalls;
+  const invalidDeliveries = [
+    { ...malformed.event, payload: undefined },
+    { ...malformed.event, payload: { ...malformed.event.payload, bodyHash: 'not-a-hash' } },
+    { ...malformed.event, payload: { ...malformed.event.payload, sourceEventId: uuidv7() } },
+    { ...malformed.event, payload: { ...malformed.event.payload, declaredCreationMode: 'ai_generated' } },
+  ];
+  for (const invalid of invalidDeliveries) assert.deepEqual(await deliver(invalid), { ack: 0, retry: 1 });
+  assert.equal(fixture.modelCalls, modelCalls);
+  assert.deepEqual(await counts(malformed.post.id), { detectors: 0, cases: 0, state: 'under_review' });
+  assert.equal((await client.query(`SELECT count(*)::int AS count FROM system.consumer_inbox
+    WHERE consumer_name = 'lythaus-jobs' AND event_id = $1`, [malformed.event.eventId])).rows[0].count, 0,
+  'a malformed event claim is released so the canonical outbox delivery can retry');
+  assert.equal((await client.query(`SELECT count(*)::int AS count FROM system.outbox_events
+    WHERE aggregate_id = $1 AND event_type = 'content.post.published'`, [malformed.post.id])).rows[0].count, 0);
+  assert.equal((await call(null, 'GET', '/api/posts/' + malformed.post.id)).status, 404);
+  assert.deepEqual(await deliver(malformed.event), { ack: 1, retry: 0 });
+  assert.equal(fixture.modelCalls, modelCalls + 1);
+  assert.deepEqual(await counts(malformed.post.id), { detectors: 1, cases: 1, state: 'under_review' });
+
+  const stale = await created('Synthetic stale evidence hash', await actor());
+  const staleDelivery = { ...stale.event, payload: { ...stale.event.payload, bodyHash: 'f'.repeat(64) } };
+  const callsBeforeStale = fixture.modelCalls;
+  assert.deepEqual(await deliver(staleDelivery), { ack: 1, retry: 0 });
+  assert.equal(fixture.modelCalls, callsBeforeStale);
+  assert.deepEqual(await counts(stale.post.id), { detectors: 0, cases: 0, state: 'under_review' });
+  assert.equal((await client.query(`SELECT count(*)::int AS count FROM system.outbox_events
+    WHERE aggregate_id = $1 AND event_type = 'content.post.published'`, [stale.post.id])).rows[0].count, 0);
+  assert.equal((await call(null, 'GET', '/api/posts/' + stale.post.id)).status, 404);
 });
 
 test('comment Jobs handler persists its audit and queued case; duplicate delivery is idempotent', async () => {

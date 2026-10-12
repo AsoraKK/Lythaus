@@ -4,6 +4,7 @@ import { before, after, test } from 'node:test';
 import pg from 'pg';
 import { generateKeyPair, exportJWK, exportPKCS8, SignJWT } from 'jose';
 import { signAccessToken, hmacLookup, uuidv7 } from '@lythaus/security';
+import { APPEAL_POLICY } from '../../../packages/contracts/src/appeal-policy.ts';
 import { publicationAdmissionFixture } from './publication-admission-fixture.mjs';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
@@ -73,7 +74,7 @@ async function create(owner, kind, input, key = uuidv7()) {
   else { assert.equal(pending.status, 200); assert.ok(!(await pending.text()).includes(result.id)); }
   return { ...result, declaredCreationMode: stored.declared_creation_mode, owner, kind, key };
 }
-async function reviewCase(item) {
+async function reviewCase(item, policyVersion = policy) {
   const table = item.kind === 'post' ? 'posts' : 'comments';
   const row = (await client.query(`SELECT moderation_source_event_id FROM content.${table} WHERE id=$1`, [item.id])).rows[0];
   if (item.kind === 'post') {
@@ -82,7 +83,7 @@ async function reviewCase(item) {
   }
   const id = uuidv7();
   await client.query("INSERT INTO moderation.cases(id,content_type,content_id,state,policy_version,source_event_id) VALUES($1,$2,$3,'open',$4,$5)",
-    [id, item.kind === 'post' ? 'post' : 'comment', item.id, policy, row.moderation_source_event_id]);
+    [id, item.kind === 'post' ? 'post' : 'comment', item.id, policyVersion, row.moderation_source_event_id]);
   return { id, item };
 }
 async function admin(review, input = {}, headers = {}) {
@@ -259,6 +260,175 @@ test('missing post declaration rolls back a real admin allow after provisional d
   const review = await reviewCase(item);
   await client.query('DELETE FROM content.content_declarations WHERE post_id=$1', [item.id]);
   await rejected(() => admin(review), 409, 'moderation_declaration_missing');
+});
+
+test('historical overturn restores the eligible declaration before a post becomes publicly readable', async () => {
+  const profileAccess = (await client.query(`SELECT has_schema_privilege('lythaus_admin','social','USAGE') AS "schemaUsage",
+      has_table_privilege('lythaus_admin','social.profiles','SELECT') AS "profileSelect"`)).rows[0];
+  assert.deepEqual(profileAccess, { schemaUsage: false, profileSelect: false },
+    'the canonical admin role deliberately has no social profile read grant');
+  const postOwner = await actor();
+  const item = await create(postOwner, 'post', { body: 'Synthetic historical appeal restoration', declaredCreationMode: 'human' });
+  const review = await reviewCase(item, APPEAL_POLICY.version);
+  const block = await admin(review, { outcome: 'block', publicLabel: 'Under review', reasonCode: 'SYNTHETIC_BLOCK' });
+  assert.equal(block.status, 200, await block.clone().text());
+  const appealId = uuidv7();
+  await client.query(`INSERT INTO moderation.appeals(id,case_id,appellant_id,state,risk_class,policy_version,statement)
+    VALUES($1,$2,$3,'open','standard',$4,'Synthetic historical appeal')`,
+  [appealId, review.id, postOwner.id, APPEAL_POLICY.version]);
+
+  const reviewers = await Promise.all(Array.from({ length: 5 }, () => actor()));
+  const adjudicatorRole = (await client.query('SELECT role FROM identity.admin_memberships WHERE user_id=$1', [adminId])).rows[0].role;
+  try {
+    await client.query("UPDATE identity.admin_memberships SET role='editorial' WHERE user_id=$1", [adminId]);
+    for (const reviewer of [...reviewers, { id: adminId }]) {
+      await client.query(`INSERT INTO moderation.reviewer_qualifications(user_id,state,policy_version,trained_at)
+        VALUES($1,'trained',$2,now())`, [reviewer.id, APPEAL_POLICY.version]);
+    }
+    const seedOverturnVotes = async targetAppealId => {
+      for (const [index, reviewer] of reviewers.entries()) {
+        const assignmentId = uuidv7();
+        await client.query(`INSERT INTO moderation.appeal_assignments
+          (id,appeal_id,reviewer_id,assignment_ordinal,level_snapshot,qualification_snapshot,vote_weight_snapshot,
+           state,random_rank_hash,conflict_checked,policy_version)
+          VALUES($1,$2,$3,$4,1,'trained',1,'voted',$5,true,$6)`,
+        [assignmentId, targetAppealId, reviewer.id, index + 1, 'a'.repeat(64), APPEAL_POLICY.version]);
+        await client.query(`INSERT INTO moderation.appeal_review_votes
+          (id,assignment_id,appeal_id,reviewer_id,decision,level_snapshot,qualification_snapshot,vote_weight_snapshot,idempotency_key,policy_version)
+          VALUES($1,$2,$3,$4,'overturn',1,'trained',1,$5,$6)`,
+        [uuidv7(), assignmentId, targetAppealId, reviewer.id, `synthetic-${targetAppealId}-${reviewer.id}`, APPEAL_POLICY.version]);
+      }
+    };
+    await seedOverturnVotes(appealId);
+    const response = await call(null, 'POST', `/api/admin/appeals/${appealId}/adjudications`,
+      { decision: 'overturn', reasonCode: 'SYNTHETIC_OVERTURN' }, uuidv7(),
+      { 'cf-access-jwt-assertion': accessToken, origin: 'https://api.lythaus.test' });
+    assert.equal(response.status, 200, await response.clone().text());
+    const result = await response.json();
+    assert.equal(result.finalDecision, 'overturn');
+    assert.equal(result.policyVersion, APPEAL_POLICY.version);
+    const versions = (await client.query(`SELECT c.policy_version AS "casePolicy", a.policy_version AS "appealPolicy",
+        decision.policy_version AS "decisionPolicy", adjudication.policy_version AS "adjudicationPolicy",
+        outcome.policy_version AS "outcomePolicy"
+      FROM moderation.cases c
+      JOIN moderation.appeals a ON a.case_id=c.id
+      JOIN moderation.decisions decision ON decision.case_id=c.id
+      JOIN moderation.appeal_adjudications adjudication ON adjudication.appeal_id=a.id
+      JOIN moderation.appeal_outcomes outcome ON outcome.appeal_id=a.id
+      WHERE a.id=$1`, [appealId])).rows[0];
+    assert.deepEqual(versions, {
+      casePolicy: APPEAL_POLICY.version, appealPolicy: APPEAL_POLICY.version,
+      decisionPolicy: APPEAL_POLICY.version, adjudicationPolicy: APPEAL_POLICY.version,
+      outcomePolicy: APPEAL_POLICY.version,
+    });
+    const restoredState = (await client.query(`SELECT post.moderation_state AS "moderationState",
+        declaration.public_label AS "publicLabel", declaration.review_required AS "reviewRequired",
+        post.published_at IS NOT NULL AS "published"
+      FROM content.posts post JOIN content.content_declarations declaration ON declaration.post_id=post.id
+      WHERE post.id=$1`, [item.id])).rows[0];
+    assert.deepEqual(restoredState, {
+      moderationState: 'allowed', publicLabel: 'Human-authored', reviewRequired: false, published: true,
+    });
+    const publicRead = await call(null, 'GET', itemPath(item));
+    assert.equal(publicRead.status, 200, await publicRead.clone().text());
+    const published = await publicRead.json();
+    assert.equal(published.post.id, item.id);
+    assert.equal(published.post.publicLabel, 'Human-authored');
+    assert.equal(fixture.statements.some(({ role, text }) => role === 'lythaus_admin' && /FROM social\.profiles/i.test(text)), false,
+      'post appeal adjudication must not read profile data');
+
+    const generated = await create(await actor(), 'post', {
+      body: 'Synthetic appeal must preserve generated-content block', declaredCreationMode: 'human',
+    });
+    await client.query("UPDATE content.posts SET visibility='private',declared_creation_mode='ai_generated' WHERE id=$1", [generated.id]);
+    await client.query("UPDATE content.content_declarations SET declared_creation_mode='ai_generated',public_label='Under review',review_required=true WHERE post_id=$1",
+      [generated.id]);
+    const generatedReview = await reviewCase({ ...generated, declaredCreationMode: 'ai_generated' }, APPEAL_POLICY.version);
+    const generatedBlock = await admin(generatedReview, { outcome: 'block', publicLabel: 'Under review' });
+    assert.equal(generatedBlock.status, 200, await generatedBlock.clone().text());
+    const generatedAppealId = uuidv7();
+    await client.query(`INSERT INTO moderation.appeals(id,case_id,appellant_id,state,risk_class,policy_version,statement)
+      VALUES($1,$2,$3,'open','standard',$4,'Synthetic generated-content appeal')`,
+    [generatedAppealId, generatedReview.id, generatedReview.item.owner.id, APPEAL_POLICY.version]);
+    await seedOverturnVotes(generatedAppealId);
+    const generatedResponse = await call(null, 'POST', `/api/admin/appeals/${generatedAppealId}/adjudications`,
+      { decision: 'overturn', reasonCode: 'SYNTHETIC_GENERATED_OVERTURN' }, uuidv7(),
+      { 'cf-access-jwt-assertion': accessToken, origin: 'https://api.lythaus.test' });
+    assert.equal(generatedResponse.status, 400, await generatedResponse.clone().text());
+    assert.equal((await generatedResponse.json()).error, 'ai_generated_public_content_blocked');
+    const generatedState = (await client.query(`SELECT post.moderation_state AS "moderationState",
+        declaration.public_label AS "publicLabel", declaration.review_required AS "reviewRequired",
+        post.published_at IS NOT NULL AS "published", appeal.state AS "appealState",
+        count(adjudication.id)::integer AS "adjudicationCount"
+      FROM content.posts post JOIN content.content_declarations declaration ON declaration.post_id=post.id
+      JOIN moderation.appeals appeal ON appeal.case_id=$2
+      LEFT JOIN moderation.appeal_adjudications adjudication ON adjudication.appeal_id=appeal.id
+      WHERE post.id=$1 GROUP BY post.id,declaration.post_id,appeal.id`, [generated.id, generatedReview.id])).rows[0];
+    assert.deepEqual(generatedState, {
+      moderationState: 'blocked', publicLabel: 'Under review', reviewRequired: true, published: false,
+      appealState: 'open', adjudicationCount: 0,
+    });
+
+    const missing = await create(await actor(), 'post', {
+      body: 'Synthetic appeal cannot bypass a missing declaration', declaredCreationMode: 'human',
+    });
+    const missingReview = await reviewCase(missing, APPEAL_POLICY.version);
+    const missingBlock = await admin(missingReview, { outcome: 'block', publicLabel: 'Under review' });
+    assert.equal(missingBlock.status, 200, await missingBlock.clone().text());
+    const missingAppealId = uuidv7();
+    await client.query(`INSERT INTO moderation.appeals(id,case_id,appellant_id,state,risk_class,policy_version,statement)
+      VALUES($1,$2,$3,'open','standard',$4,'Synthetic missing-declaration appeal')`,
+    [missingAppealId, missingReview.id, missingReview.item.owner.id, APPEAL_POLICY.version]);
+    await seedOverturnVotes(missingAppealId);
+    await client.query('DELETE FROM content.content_declarations WHERE post_id=$1', [missing.id]);
+    const missingResponse = await call(null, 'POST', `/api/admin/appeals/${missingAppealId}/adjudications`,
+      { decision: 'overturn', reasonCode: 'SYNTHETIC_MISSING_DECLARATION' }, uuidv7(),
+      { 'cf-access-jwt-assertion': accessToken, origin: 'https://api.lythaus.test' });
+    assert.equal(missingResponse.status, 409, await missingResponse.clone().text());
+    assert.equal((await missingResponse.json()).error, 'moderation_declaration_missing');
+    const missingState = (await client.query(`SELECT post.moderation_state AS "moderationState",
+        post.published_at IS NOT NULL AS "published", appeal.state AS "appealState",
+        count(adjudication.id)::integer AS "adjudicationCount",
+        EXISTS(SELECT 1 FROM content.content_declarations WHERE post_id=post.id) AS "declarationExists"
+      FROM content.posts post JOIN moderation.appeals appeal ON appeal.case_id=$2
+      LEFT JOIN moderation.appeal_adjudications adjudication ON adjudication.appeal_id=appeal.id
+      WHERE post.id=$1 GROUP BY post.id,appeal.id`, [missing.id, missingReview.id])).rows[0];
+    assert.deepEqual(missingState, {
+      moderationState: 'blocked', published: false, appealState: 'open', adjudicationCount: 0, declarationExists: false,
+    });
+
+    const profileOwner = await actor(), profileAppellant = await actor(), profileSourceEventId = uuidv7();
+    await client.query(`UPDATE social.profiles
+      SET moderation_state='blocked',moderation_source_event_id=$2 WHERE user_id=$1`, [profileOwner.id, profileSourceEventId]);
+    const profileCaseId = uuidv7(), profileAppealId = uuidv7();
+    await client.query(`INSERT INTO moderation.cases(id,content_type,content_id,state,policy_version,source_event_id)
+      VALUES($1,'profile',$2,'resolved',$3,$4)`, [profileCaseId, profileOwner.id, APPEAL_POLICY.version, profileSourceEventId]);
+    await client.query(`INSERT INTO moderation.decisions(id,case_id,outcome,policy_version)
+      VALUES($1,$2,'block',$3)`, [uuidv7(), profileCaseId, APPEAL_POLICY.version]);
+    await client.query(`INSERT INTO moderation.appeals(id,case_id,appellant_id,state,risk_class,policy_version,statement)
+      VALUES($1,$2,$3,'open','standard',$4,'Synthetic unauthorized profile appeal')`,
+    [profileAppealId, profileCaseId, profileAppellant.id, APPEAL_POLICY.version]);
+    const profileResponse = await call(null, 'POST', `/api/admin/appeals/${profileAppealId}/adjudications`,
+      { decision: 'overturn', reasonCode: 'SYNTHETIC_PROFILE_ACCESS' }, uuidv7(),
+      { 'cf-access-jwt-assertion': accessToken, origin: 'https://api.lythaus.test' });
+    assert.equal(profileResponse.status, 503, await profileResponse.clone().text());
+    assert.equal((await profileResponse.json()).error, 'appeal_profile_access_unavailable');
+    const profileState = (await client.query(`SELECT profile.moderation_state AS "moderationState",
+        profile.moderation_source_event_id AS "sourceEventId", appeal.state AS "appealState",
+        count(adjudication.id)::integer AS "adjudicationCount"
+      FROM social.profiles profile JOIN moderation.appeals appeal ON appeal.id=$2
+      LEFT JOIN moderation.appeal_adjudications adjudication ON adjudication.appeal_id=appeal.id
+      WHERE profile.user_id=$1 GROUP BY profile.user_id,appeal.id`, [profileOwner.id, profileAppealId])).rows[0];
+    assert.deepEqual(profileState, {
+      moderationState: 'blocked', sourceEventId: profileSourceEventId, appealState: 'open', adjudicationCount: 0,
+    });
+    assert.equal(fixture.statements.some(({ role, text }) => role === 'lythaus_admin' && /FROM social\.profiles/i.test(text)), false,
+      'an unauthorized profile read fails at the privilege check before accessing social.profiles');
+  } finally {
+    await client.query('DELETE FROM moderation.reviewer_qualifications WHERE user_id=ANY($1::uuid[])',
+      [[...reviewers.map(reviewer => reviewer.id), adminId]]);
+    await client.query('UPDATE identity.admin_memberships SET role=$2 WHERE user_id=$1', [adminId, adjudicatorRole]);
+  }
 });
 
 test('admin authentication, origin and restricted roles execute; all outbound requests remain synthetic', async () => {
