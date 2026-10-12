@@ -169,7 +169,7 @@ void main() {
         expect(tester.takeException(), isNull, reason: 'after expanding trust');
         expect(
           find.bySemanticsLabel(RegExp('^View content history')),
-          findsNothing,
+          findsOneWidget,
         );
         expect(
           find.textContaining('does not independently verify authorship'),
