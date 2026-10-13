@@ -272,8 +272,8 @@ const authRepairPaths = new Set([
   'packages/security/tests/critical-security-policy.test.mjs',
 ]);
 const reviewedPrivacyStatusFiles = new Map([
-  ['apps/lythaus-public-api/src/privacy-runtime-policy.ts', '8c674c929d35c748b28579b2fdeed3ff4daac2bc'],
-  ['apps/lythaus-public-api/tests/privacy-runtime-policy.test.mjs', '5609e2acf2bcb0fc32a36cee8b0d7f5c102d497e'],
+  ['apps/lythaus-public-api/src/privacy-runtime-policy.ts', '1fdc39ff1492963d54a70b09b9ee52b7f81f53aa'],
+  ['apps/lythaus-public-api/tests/privacy-runtime-policy.test.mjs', 'd6aee9457b2449c21231d45462a7a677b1de852c'],
 ]);
 const allocatedDeclarationRepairFiles = new Map([
   ['packages/contracts/src/content-policy.ts', '644bebca65503fa96bed03d9ba490b467c8defdd'],
