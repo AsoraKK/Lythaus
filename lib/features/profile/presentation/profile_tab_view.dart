@@ -68,13 +68,18 @@ class _ProfileTabViewState extends ConsumerState<ProfileTabView>
     final uri = GoRouterState.of(context).uri;
     final selected = _tabs[_controller.index];
     if ((uri.queryParameters['profileTab'] ?? 'overview') == selected) return;
-    router.go(
-      uri
-          .replace(
-            queryParameters: {...uri.queryParameters, 'profileTab': selected},
-          )
-          .toString(),
-    );
+    final location = uri
+        .replace(
+          queryParameters: {...uri.queryParameters, 'profileTab': selected},
+        )
+        .toString();
+    if (router.routerDelegate.currentConfiguration.last
+        is ImperativeRouteMatch) {
+      router.replace<void>(location);
+    } else {
+      // Keep direct routes declarative so their path remains in the URL.
+      router.go(location);
+    }
   }
 
   @override

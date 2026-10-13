@@ -23,6 +23,22 @@ class AuthorProfileLink extends StatefulWidget {
 
 class _AuthorProfileLinkState extends State<AuthorProfileLink> {
   bool _openingProfile = false;
+  bool _callerWasCovered = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final isCurrent = ModalRoute.isCurrentOf(context);
+    if (_openingProfile && isCurrent == false) {
+      _callerWasCovered = true;
+    }
+    // A replaced profile page can leave the original push future unresolved.
+    // Returning to the caller must still make its author action available.
+    if (_callerWasCovered && isCurrent == true) {
+      _openingProfile = false;
+      _callerWasCovered = false;
+    }
+  }
 
   Future<void> _openProfile() async {
     if (_openingProfile) return;
