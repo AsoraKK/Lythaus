@@ -1,18 +1,14 @@
 import assert from 'node:assert/strict';
-import { mock, test } from 'node:test';
+import { after, mock, test } from 'node:test';
 import { createHash } from 'node:crypto';
 import pg from 'pg';
 import { exportJWK, exportPKCS8, generateKeyPair } from 'jose';
 import * as database from '@lythaus/db';
 import { signAccessToken, uuidv7 } from '@lythaus/security';
 import { PLATFORM_SAFETY_LIMITS } from '../../../packages/contracts/src/tier-policy.ts';
+import { privacyPostgresTarget } from './privacy-postgres-target.mjs';
 
-const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
-const target = new URL(connectionString ?? 'file:///missing');
-if (!['localhost', '127.0.0.1'].includes(target.hostname)
-  || !(target.pathname.startsWith('/lythaus_auth_test') || (process.env.GITHUB_ACTIONS === 'true' && target.pathname === '/postgres'))) {
-  throw new Error('Privacy tests require an explicitly local disposable PostgreSQL database');
-}
+const connectionString = privacyPostgresTarget(process.env.PLANETSCALE_PG17_TEST_DATABASE_URL).toString();
 async function withClient(work, role) {
   const client = new pg.Client({ connectionString, ssl: false });
   await client.connect();
@@ -26,8 +22,12 @@ async function withClient(work, role) {
   } finally { await client.end(); }
 }
 const sql = (text, values) => withClient(client => client.query(text, values));
+const workerQueries = [];
 mock.module('@lythaus/db', { namedExports: { ...database,
-  query: (binding, text, values) => withClient(client => client.query(text, values), binding.role),
+  query: (binding, text, values) => {
+    workerQueries.push({ text, values });
+    return withClient(client => client.query(text, values), binding.role);
+  },
   transaction: (binding, work) => withClient(async client => {
     await client.query('BEGIN');
     try { const result = await work(client); await client.query('COMMIT'); return result; }
@@ -40,6 +40,33 @@ const keyId = 'synthetic-local-privacy-test';
 const privateKeyPem = await exportPKCS8(privateKey);
 const storageReads = [];
 const objects = new Map();
+const ownedUserIds = [];
+const fixtureIp = '2001:db8:' + uuidv7().replaceAll('-', '').slice(-16).match(/.{4}/g).join(':') + '::1';
+const rateHash = createHash('sha256').update(`public-api:${fixtureIp}`).digest('hex');
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async () => { throw new Error('external_network_forbidden_in_privacy_tests'); };
+after(() => { globalThis.fetch = originalFetch; });
+after(async () => {
+  await withClient(async client => {
+    await client.query('BEGIN');
+    try {
+      for (const table of ['privacy.export_manifests', 'privacy.request_events']) {
+        await client.query(`DELETE FROM ${table} WHERE request_id IN
+          (SELECT id FROM privacy.requests WHERE subject_id=ANY($1::uuid[]))`, [ownedUserIds]);
+      }
+      await client.query('DELETE FROM privacy.requests WHERE subject_id=ANY($1::uuid[])', [ownedUserIds]);
+      await client.query('DELETE FROM trust.user_activity_events WHERE user_id=ANY($1::uuid[]) OR actor_user_id=ANY($1::uuid[])', [ownedUserIds]);
+      await client.query('DELETE FROM system.outbox_events WHERE actor_id=ANY($1::uuid[])', [ownedUserIds]);
+      await client.query('DELETE FROM system.idempotency_keys WHERE actor_id=ANY($1::uuid[])', [ownedUserIds]);
+      await client.query("DELETE FROM system.rate_limit_windows WHERE scope='public-api' AND subject_hash=$1", [rateHash]);
+      await client.query('DELETE FROM identity.users WHERE id=ANY($1::uuid[])', [ownedUserIds]);
+      assert.equal((await client.query('SELECT count(*)::integer AS count FROM identity.users WHERE id=ANY($1::uuid[])', [ownedUserIds])).rows[0].count, 0);
+      assert.equal((await client.query("SELECT count(*)::integer AS count FROM system.rate_limit_windows WHERE scope='public-api' AND subject_hash=$1", [rateHash])).rows[0].count, 0);
+      await client.query('COMMIT');
+    } catch (error) { await client.query('ROLLBACK'); throw error; }
+  });
+  process.stdout.write('Privacy handler fixture cleanup: zero owned users and rate windows.\n');
+});
 const env = {
   ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test',
   CORS_ALLOWED_ORIGINS: 'https://app.lythaus.test', DB_APP_FRESH: { role: 'lythaus_runtime' },
@@ -49,6 +76,7 @@ const env = {
 async function owner() {
   const id = uuidv7();
   await sql("INSERT INTO identity.users(id,status) VALUES($1,'active')", [id]);
+  ownedUserIds.push(id);
   return { id, token: await signAccessToken({ userId: id, privateKeyPem, keyId }) };
 }
 async function call(actor, method, path, body, key = uuidv7()) {
@@ -56,6 +84,7 @@ async function call(actor, method, path, body, key = uuidv7()) {
     method, headers: {
       ...(actor ? { Authorization: 'Bearer ' + actor.token } : {}),
       Origin: 'https://app.lythaus.test',
+      'cf-connecting-ip': fixtureIp,
       ...(body !== undefined ? { 'Content-Type': 'application/json', 'Idempotency-Key': key } : {}),
     }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   }), env, { waitUntil() {} });
@@ -139,7 +168,13 @@ test('download requires the current owner, completion and an unexpired manifest 
     VALUES($1,$2,$3,$4,now()+interval '1 day')`, [uuidv7(), id, objectKey, hash]);
   objects.set(objectKey, { body: bytes, httpEtag: 'synthetic', httpMetadata: { contentType: 'application/json' } });
   const before = storageReads.length;
-  assert.notEqual((await call(stranger, 'GET', '/' + id + '/export')).status, 200);
+  const foreign = await call(stranger, 'GET', '/' + id + '/export');
+  assert.equal(foreign.status, 404);
+  const foreignBody = await foreign.json();
+  assert.equal(foreignBody.error, 'export_not_found');
+  assert.ok(!JSON.stringify(foreignBody).includes(actor.id));
+  assert.ok(!JSON.stringify(foreignBody).includes(objectKey));
+  assert.match(foreign.headers.get('cache-control'), /private.*no-store/);
   assert.equal(storageReads.length, before);
   const response = await call(actor, 'GET', '/' + id + '/export');
   assert.equal(response.status, 200, await response.clone().text());
@@ -149,10 +184,13 @@ test('download requires the current owner, completion and an unexpired manifest 
   assert.match(response.headers.get('access-control-expose-headers'), /x-content-sha256/);
   await sql("UPDATE privacy.export_manifests SET expires_at=now()-interval '1 second' WHERE request_id=$1", [id]);
   const after = storageReads.length;
-  assert.notEqual((await call(actor, 'GET', '/' + id + '/export')).status, 200);
+  assert.equal((await call(actor, 'GET', '/' + id + '/export')).status, 404);
   await sql("UPDATE privacy.export_manifests SET expires_at=now()+interval '1 day' WHERE request_id=$1", [id]);
+  await sql("UPDATE privacy.requests SET request_type='delete' WHERE id=$1", [id]);
+  assert.equal((await call(actor, 'GET', '/' + id + '/export')).status, 404);
+  await sql("UPDATE privacy.requests SET request_type='export' WHERE id=$1", [id]);
   await sql("UPDATE privacy.requests SET state='blocked' WHERE id=$1", [id]);
-  assert.notEqual((await call(actor, 'GET', '/' + id + '/export')).status, 200);
+  assert.equal((await call(actor, 'GET', '/' + id + '/export')).status, 404);
   assert.equal(storageReads.length, after);
   await sql('UPDATE identity.users SET token_version=token_version+1 WHERE id=$1', [actor.id]);
   assert.equal((await call(actor, 'GET', '?requestType=export')).status, 401);
@@ -188,3 +226,60 @@ test('anonymous, missing-object and provider-failed downloads never record succe
   assert.deepEqual(Buffer.from(await retry.arrayBuffer()), bytes);
   assert.equal((await sql("SELECT id FROM trust.user_activity_events WHERE user_id=$1 AND event_type='privacy.export_accessed'", [actor.id])).rowCount, 1);
 });
+
+test('malformed export identifiers fail privately before manifest SQL or storage access', async () => {
+  const actor = await owner();
+  for (const requestId of ['not-a-uuid', `${uuidv7()}' OR '1'='1`, '../../private-export']) {
+    const queryStart = workerQueries.length;
+    const storageStart = storageReads.length;
+    const response = await call(actor, 'GET', '/' + encodeURIComponent(requestId) + '/export');
+    assert.equal(response.status, 404);
+    const body = await response.json();
+    assert.equal(body.error, 'export_not_found');
+    assert.match(response.headers.get('cache-control'), /private.*no-store/);
+    assert.ok(!JSON.stringify(body).includes(requestId));
+    assert.equal(storageReads.length, storageStart);
+    assert.ok(!workerQueries.slice(queryStart).some(item => item.text.includes('FROM privacy.export_manifests')));
+  }
+  assert.equal((await sql("SELECT id FROM trust.user_activity_events WHERE user_id=$1 AND event_type='privacy.export_accessed'", [actor.id])).rowCount, 0);
+});
+
+for (const requestType of ['export', 'delete']) {
+  test(`${requestType} acceptance and replay remain bound to the owner and never claim completion`, async () => {
+    const actor = await owner(), other = await owner(), key = uuidv7();
+    const body = { requestType };
+    const first = await call(actor, 'POST', '', body, key);
+    assert.equal(first.status, 202);
+    const accepted = await first.json();
+    assert.equal(accepted.requestType, requestType);
+    assert.equal(accepted.state, 'received');
+    assert.ok(!('completedAt' in accepted));
+    assert.ok(!('deleted' in accepted));
+    const record = (await sql('SELECT subject_id,state,completed_at FROM privacy.requests WHERE id=$1', [accepted.requestId])).rows[0];
+    assert.deepEqual(record, { subject_id: actor.id, state: 'received', completed_at: null });
+    assert.equal((await sql('SELECT status FROM identity.users WHERE id=$1', [actor.id])).rows[0].status, 'active');
+
+    const replay = await call(actor, 'POST', '', body, key);
+    assert.equal(replay.status, 202);
+    assert.deepEqual(await replay.json(), accepted);
+    for (const [caller, changedBody] of [[other, body], [actor, { requestType: requestType === 'export' ? 'delete' : 'export' }]]) {
+      const rejected = await call(caller, 'POST', '', changedBody, key);
+      assert.equal(rejected.status, 409);
+      assert.equal((await rejected.json()).error, 'idempotency_key_conflict');
+      assert.match(rejected.headers.get('cache-control'), /private.*no-store/);
+    }
+    const ownStatus = await call(actor, 'GET', `?requestType=${requestType}&subjectId=${other.id}`);
+    assert.match(ownStatus.headers.get('cache-control'), /private.*no-store/);
+    const status = await ownStatus.json();
+    assert.equal(status.request.requestId, accepted.requestId);
+    assert.equal(status.request.state, 'received');
+    assert.equal(status.request.completedAt, null);
+    const foreignStatus = await call(other, 'GET', `?requestType=${requestType}&subjectId=${actor.id}&requestId=${accepted.requestId}`);
+    const expected = requestType === 'export' ? { request: null, retryAfterSeconds: 0 } : { request: null };
+    assert.deepEqual(await foreignStatus.json(), expected);
+    assert.match(foreignStatus.headers.get('cache-control'), /private.*no-store/);
+    assert.equal((await sql('SELECT id FROM privacy.requests WHERE subject_id=ANY($1::uuid[])', [[actor.id, other.id]])).rowCount, 1);
+    assert.equal((await sql("SELECT id FROM system.outbox_events WHERE aggregate_id=$1 AND event_type='privacy.request.created'", [accepted.requestId])).rowCount, 1);
+    assert.equal((await sql('SELECT id FROM trust.user_activity_events WHERE user_id=$1', [other.id])).rowCount, 0);
+  });
+}
