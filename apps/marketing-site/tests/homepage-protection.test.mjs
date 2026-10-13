@@ -275,6 +275,14 @@ const reviewedPrivacyStatusFiles = new Map([
   ['apps/lythaus-public-api/src/privacy-runtime-policy.ts', '1fdc39ff1492963d54a70b09b9ee52b7f81f53aa'],
   ['apps/lythaus-public-api/tests/privacy-runtime-policy.test.mjs', 'd6aee9457b2449c21231d45462a7a677b1de852c'],
 ]);
+const reviewedFeedReadFiles = new Map([
+  ['apps/lythaus-public-api/src/feed-runtime-policy.ts', 'c868e3a32ee289263765309f71b37dbf22253d7f'],
+  ['apps/lythaus-public-api/tests/feed-runtime-policy.test.mjs', '627a791e1b3f8a07d2cfb3843abfe88059fc9245'],
+]);
+function assertReviewedFeedReadFile(filename, blob) {
+  assert.ok(reviewedFeedReadFiles.has(filename), 'The feed read exception covers only the two reviewed policy and test files');
+  assert.equal(blob, reviewedFeedReadFiles.get(filename), 'Feed reads must match the exact independently reviewed source and test bytes');
+}
 const allocatedDeclarationRepairFiles = new Map([
   ['packages/contracts/src/content-policy.ts', '644bebca65503fa96bed03d9ba490b467c8defdd'],
   ['packages/contracts/tests/critical-content-policy.test.mjs', 'a63ccaa4e21b8f16f61a2cde419f0221501ce7fe'],
@@ -339,6 +347,10 @@ export function assertHomepageFrozen() {
     if (reviewedPrivacyStatusFiles.has(filename)) {
       assert.equal(git('hash-object', `--path=${filename}`, filename), reviewedPrivacyStatusFiles.get(filename),
         'Privacy status may change only to the exact reviewed cooldown policy and tests');
+      continue;
+    }
+    if (reviewedFeedReadFiles.has(filename)) {
+      assertReviewedFeedReadFile(filename, git('hash-object', `--path=${filename}`, filename));
       continue;
     }
     if (authRepairPaths.has(filename)) continue;
@@ -683,6 +695,19 @@ test('reviewed reputation exception rejects changed bytes, historical bytes and 
     assert.throws(() => assertReviewedReputationRepair(filename, git('rev-parse', `${baselineSha}:${filename}`)), assert.AssertionError);
   }
   assert.throws(() => assertReviewedReputationRepair('apps/marketing-site/src/pages/index.astro', reviewedReputationRepairFiles.values().next().value), assert.AssertionError);
+});
+
+test('feed read exceptions reject changed bytes, old blobs, and every other homepage dependency path', () => {
+  for (const filename of reviewedFeedReadFiles.keys()) {
+    assert.doesNotThrow(() => assertReviewedFeedReadFile(filename, git('hash-object', `--path=${filename}`, filename)));
+    const source = readFileSync(path.join(root, filename), 'utf8') + '\n// synthetic unrelated mutation\n';
+    const altered = execFileSync('git', ['hash-object', '--stdin'], { cwd: root, encoding: 'utf8', input: source }).trim();
+    assert.throws(() => assertReviewedFeedReadFile(filename, altered), assert.AssertionError);
+    assert.throws(() => assertReviewedFeedReadFile(filename, git('rev-parse', `${baselineSha}:${filename}`)), assert.AssertionError);
+  }
+  for (const filename of ['apps/marketing-site/src/pages/index.astro', 'apps/lythaus-public-api/src/index.ts']) {
+    assert.throws(() => assertReviewedFeedReadFile(filename, reviewedFeedReadFiles.values().next().value), assert.AssertionError);
+  }
 });
 
 test('upstream integration preserves homepage rendering inputs and waitlist route dispatch', () => {
