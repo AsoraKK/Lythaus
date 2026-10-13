@@ -41,6 +41,8 @@ import { castCommunityBallot, submitCommunityAppeal, withdrawCommunityAppeal, ty
 import { MONTHLY_REPUTATION_POLICY_VERSION } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
 import { recordMonthlyEmailControl } from '../../../packages/db/src/monthly-maintenance.ts';
 import { handleMonthlyReputationRead } from './monthly-reputation-routes.ts';
+import { handleJobsReputationSessionBridge } from './jobs-reputation-session-bridge.ts';
+import { JOBS_SESSION_PATH } from '../../../packages/contracts/src/jobs-reputation-session.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -49,6 +51,7 @@ interface Env extends EnvBindings {
   PRIVATE_EXPORTS: NonNullable<EnvBindings['PRIVATE_EXPORTS']>;
   MODERATION_QUEUE: NonNullable<EnvBindings['MODERATION_QUEUE']>;
   JOBS_COMPATIBILITY: NonNullable<EnvBindings['JOBS_COMPATIBILITY']>;
+  JOBS_REPUTATION_SESSION_DIAGNOSTIC_ENABLED?: string;
   R2_ACCOUNT_ID: string;
   LYTHAUS_CONFIG?: NonNullable<EnvBindings['LYTHAUS_CONFIG']>;
   COMMUNITY_APPEAL_RULES_VERSION?: string;
@@ -3302,6 +3305,9 @@ export default {
       if (request.method === 'OPTIONS') return response(request, env, null, { status: 204, headers: { 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS', 'access-control-allow-headers': 'Authorization, Content-Type, Idempotency-Key, X-Correlation-ID, X-Device-Rooted, X-Device-Emulator, X-Device-Debug, X-Live-Test-Mode, X-Lythaus-Auth-Transport' } });
       validateAuthRequestOrigin(request, env.CORS_ALLOWED_ORIGINS);
       if (request.method === 'GET' && (url.pathname === '/health' || url.pathname === '/api/health')) return response(request, env, { status: 'ok', service: 'lythaus-public-api', environment: env.ENVIRONMENT ?? 'unknown' });
+      if (url.pathname === JOBS_SESSION_PATH || url.pathname === '/api' + JOBS_SESSION_PATH) {
+        return await handleJobsReputationSessionBridge(request, env, hasReadinessAuthorization(request, env));
+      }
       if (request.method === 'GET' && (url.pathname === '/internal/readiness/database-identity' || url.pathname === '/api/internal/readiness/database-identity')) {
         if (!hasReadinessAuthorization(request, env)) return new Response(null, { status: 404 });
         const identity = await inspectDatabaseIdentity(env.DB_APP_FRESH, databaseExpectationsFromEnv(env));

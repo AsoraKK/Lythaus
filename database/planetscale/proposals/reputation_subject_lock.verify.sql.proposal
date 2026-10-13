@@ -1,0 +1,28 @@
+/*
+DISABLED READ-ONLY REVIEW QUERIES. Direct execution is inert.
+Use only an authorized existing actual Jobs connection; never SET ROLE from
+postgres/admin to claim Jobs-session verification. No app rows/helper invocation.
+
+BEGIN REPUTATION LOCK SESSION VERIFICATION
+BEGIN READ ONLY;
+SELECT session_user, current_user, pg_catalog.current_database() AS database,
+  pg_catalog.current_setting('transaction_isolation') AS effective_isolation,
+  pg_catalog.current_setting('default_transaction_isolation') AS default_isolation,
+  pg_catalog.current_setting('search_path') AS caller_search_path,
+  pg_catalog.current_setting('transaction_read_only') AS read_only;
+SELECT role_row.rolname, role_row.rolsuper, role_row.rolbypassrls,
+  role_row.rolcreaterole, role_row.rolcreatedb, role_row.rolinherit,
+  (SELECT count(*) FROM pg_catalog.pg_auth_members membership WHERE membership.member=role_row.oid) AS memberships
+FROM pg_catalog.pg_roles role_row WHERE role_row.rolname=current_user;
+SELECT pg_catalog.has_schema_privilege(current_user,'trust','USAGE') AS trust_usage,
+  pg_catalog.has_schema_privilege(current_user,'public','CREATE') AS public_create,
+  pg_catalog.has_schema_privilege(current_user,'identity','CREATE') AS identity_create,
+  pg_catalog.has_schema_privilege(current_user,'trust','CREATE') AS trust_create,
+  pg_catalog.has_any_column_privilege(current_user,'identity.users','UPDATE') AS any_users_update,
+  pg_catalog.has_column_privilege(current_user,'identity.users','id','SELECT') AS users_id_select,
+  pg_catalog.has_column_privilege(current_user,'identity.users','status','SELECT') AS users_status_select;
+SELECT relation.relrowsecurity, relation.relforcerowsecurity
+FROM pg_catalog.pg_class relation WHERE relation.oid='identity.users'::pg_catalog.regclass;
+ROLLBACK;
+END REPUTATION LOCK SESSION VERIFICATION
+*/

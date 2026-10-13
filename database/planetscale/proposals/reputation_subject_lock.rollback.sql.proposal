@@ -1,0 +1,13 @@
+/*
+DISABLED REVIEW PROPOSAL. Restore the previous application query first.
+Outstanding reputation deliveries then continue to retry under the canonical role.
+No table grants are involved. Direct execution of this file is inert.
+
+BEGIN REPUTATION LOCK ROLLBACK
+BEGIN;
+SET LOCAL search_path = pg_catalog, pg_temp;
+REVOKE ALL ON FUNCTION trust.lock_reputation_subject(pg_catalog.uuid) FROM pscale_api_9jfbtij9y4b2;
+DROP FUNCTION trust.lock_reputation_subject(pg_catalog.uuid);
+COMMIT;
+END REPUTATION LOCK ROLLBACK
+*/
