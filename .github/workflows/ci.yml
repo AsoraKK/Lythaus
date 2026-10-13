@@ -61,6 +61,8 @@ jobs:
         run: node --test scripts/tests/flutter-sdk-cache.test.mjs scripts/tests/workflow-action-pins.test.mjs
       - name: Validate production release contract
         run: npm run validate:production-release-contract
+      - name: Validate bounded Jobs Hyperdrive origin diagnostic
+        run: node --test scripts/tests/jobs-hyperdrive-origin.test.mjs
       - name: Validate read-only Cloudflare audit contract
         run: node --test scripts/tests/cloudflare-audit-contract.test.mjs scripts/tests/attach-auth-email-consumer.test.mjs
       - name: Validate read-only GitHub controls audit contract
