@@ -116,6 +116,7 @@ export function createApi({ cloudflareToken, githubToken, readinessToken, runId,
 }
 export function assertSharedWorkerLock(readFile = name => fs.readFileSync(name, 'utf8')) {
   const locked = value => value?.group === 'lythaus-production-workers' && value?.['cancel-in-progress'] === false;
+  const canonical = value => value?.group === 'lythaus-canonical-production-release' && value?.['cancel-in-progress'] === false;
   const native = parse(readFile('.github/workflows/native-workers-deploy.yml'));
   const release = parse(readFile('.github/workflows/production-release.yml'));
   const diagnostic = parse(readFile(`.github/workflows/${WORKFLOW}`));
@@ -124,7 +125,8 @@ export function assertSharedWorkerLock(readFile = name => fs.readFileSync(name, 
   // Parent must coordinate the existing rollback writer before this can mutate.
   // A check immediately before POST cannot provide atomic provider isolation.
   if (!locked(native.concurrency) || !locked(release.jobs?.rollback?.concurrency)
-    || !locked(waitlist.concurrency) || !locked(diagnostic.concurrency) || !locked(recovery.concurrency)) fail('shared_worker_lock_unavailable');
+    || !locked(waitlist.concurrency) || !locked(diagnostic.jobs?.diagnose?.concurrency) || !locked(recovery.jobs?.recover?.concurrency)
+    || !canonical(release.concurrency) || !canonical(diagnostic.concurrency) || !canonical(recovery.concurrency)) fail('shared_worker_lock_unavailable');
 }
 export async function workflowGate(api, env, { recovery = false } = {}) {
   const runId = recovery ? env.RECOVER_RUN_ID : env.GITHUB_RUN_ID;

@@ -30,6 +30,9 @@ provider resource, member UI, auth/session/email, policy, media or rewards edits
 - Hosted hygiene identified the GitHub owner literal as a retired-name match.
   Repository identity now derives from the exact canonical URL already recognized
   by the existing scanner. The scanner and its allowlist are unchanged.
+- New workflows hold the canonical release lock at workflow level and the Worker
+  lock at job level. A Worker lock alone would allow concurrent canonical
+  preflight/provider evidence, causing cleanup to contend with a new release.
 
 ## Privacy and proof boundaries
 

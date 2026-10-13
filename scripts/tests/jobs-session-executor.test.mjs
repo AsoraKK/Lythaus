@@ -278,13 +278,21 @@ for (const kind of ['branch', 'protection', 'attempt', 'source', 'event', 'missi
 test('current rollback locking gap is an explicit pre-mutation blocker', () => {
   assert.throws(() => assertSharedWorkerLock(), /shared_worker_lock_unavailable/);
   const locked = 'concurrency:\n  group: lythaus-production-workers\n  cancel-in-progress: false\n';
-  assert.doesNotThrow(() => assertSharedWorkerLock(name => name.endsWith('production-release.yml') ? `jobs:\n  rollback:\n    ${locked.replaceAll('\n', '\n    ')}` : locked));
+  const canonical = locked.replace('lythaus-production-workers', 'lythaus-canonical-production-release');
+  assert.doesNotThrow(() => assertSharedWorkerLock(name => {
+    if (name.endsWith('production-release.yml')) return canonical + `jobs:\n  rollback:\n    ${locked.replaceAll('\n', '\n    ')}`;
+    if (name.endsWith('jobs-session-one-shot.yml')) return canonical + `jobs:\n  diagnose:\n    ${locked.replaceAll('\n', '\n    ')}`;
+    if (name.endsWith('jobs-session-recovery.yml')) return canonical + `jobs:\n  recover:\n    ${locked.replaceAll('\n', '\n    ')}`;
+    return locked;
+  }));
 });
 test('protected workflow persists baseline before execution; recovery has no readiness credential or probe', () => {
   const main = parse(fs.readFileSync('.github/workflows/jobs-session-one-shot.yml', 'utf8'));
   const recovery = parse(fs.readFileSync('.github/workflows/jobs-session-recovery.yml', 'utf8'));
-  assert.equal(main.concurrency.group, 'lythaus-production-workers');
+  assert.equal(main.concurrency.group, 'lythaus-canonical-production-release');
   assert.equal(recovery.concurrency.group, main.concurrency.group);
+  assert.equal(main.jobs.diagnose.concurrency.group, 'lythaus-production-workers');
+  assert.equal(recovery.jobs.recover.concurrency.group, main.jobs.diagnose.concurrency.group);
   assert.equal(main.jobs.diagnose.environment, 'production');
   assert.equal(recovery.jobs.recover.environment, 'production');
   const steps = main.jobs.diagnose.steps;

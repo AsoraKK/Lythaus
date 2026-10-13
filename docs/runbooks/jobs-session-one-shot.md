@@ -35,6 +35,11 @@ replacement secret value.
 
 ## Current live gates
 
+The new workflows hold lythaus-canonical-production-release for the whole run and
+lythaus-production-workers for the protected job. This excludes a canonical
+release's preflight as well as its Worker writes; recovery holds the same locks.
+The existing writers below still need parent coordination.
+
 1. **shared_worker_lock_unavailable:** current production-release rollback writes
    Public/Jobs outside lythaus-production-workers. deploy-public-waitlist also
    uses its own group. Parent must coordinate those existing shared workflows;

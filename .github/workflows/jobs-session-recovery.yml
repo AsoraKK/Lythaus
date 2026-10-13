@@ -16,11 +16,14 @@ permissions:
   actions: read
 
 concurrency:
-  group: lythaus-production-workers
+  group: lythaus-canonical-production-release
   cancel-in-progress: false
 
 jobs:
   recover:
+    concurrency:
+      group: lythaus-production-workers
+      cancel-in-progress: false
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'workflow_dispatch' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.repository.full_name == github.repository)
     runs-on: ubuntu-latest
     environment: production
