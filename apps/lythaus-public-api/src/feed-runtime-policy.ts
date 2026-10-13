@@ -7,6 +7,16 @@ export interface FeedResponsePlan {
   cacheControl: string;
 }
 
+export function requireFeedPostId(value: string): string {
+  let id: string;
+  try { id = decodeURIComponent(value); }
+  catch { throw new Error('post_not_found'); }
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    throw new Error('post_not_found');
+  }
+  return id;
+}
+
 const PRIVATE_FEED_RESPONSE: FeedResponsePlan = {
   privateResponse: true,
   cacheControl: 'private, no-store',
