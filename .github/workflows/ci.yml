@@ -63,6 +63,8 @@ jobs:
         run: npm run validate:production-release-contract
       - name: Validate bounded Jobs Hyperdrive origin diagnostic
         run: node --test scripts/tests/jobs-hyperdrive-origin.test.mjs
+      - name: Validate protected Jobs session lifecycle without provider access
+        run: node --experimental-strip-types --test scripts/tests/jobs-session-executor.test.mjs
       - name: Validate read-only Cloudflare audit contract
         run: node --test scripts/tests/cloudflare-audit-contract.test.mjs scripts/tests/attach-auth-email-consumer.test.mjs
       - name: Validate read-only GitHub controls audit contract

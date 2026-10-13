@@ -1,0 +1,93 @@
+name: Bounded Jobs SQL session diagnostic
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact reviewed source tag of both existing versions
+        required: true
+        type: string
+      public_version:
+        description: Expected current Public version UUID (100 percent traffic)
+        required: true
+        type: string
+      jobs_version:
+        description: Expected current Jobs version UUID (100 percent traffic)
+        required: true
+        type: string
+      public_deployment:
+        description: Expected current Public deployment UUID
+        required: true
+        type: string
+      jobs_deployment:
+        description: Expected current Jobs deployment UUID
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: lythaus-production-workers
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    env:
+      REF_PROTECTED: ${{ github.ref_protected }}
+      SOURCE_SHA: ${{ inputs.source_sha }}
+      PUBLIC_VERSION: ${{ inputs.public_version }}
+      JOBS_VERSION: ${{ inputs.jobs_version }}
+      PUBLIC_DEPLOYMENT: ${{ inputs.public_deployment }}
+      JOBS_DEPLOYMENT: ${{ inputs.jobs_deployment }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Install locked workflow parser
+        run: npm ci --ignore-scripts --no-audit
+      - name: Capture read-only baseline and prove recovery prerequisites
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node --experimental-strip-types scripts/ci/jobs-session-executor.mjs prepare
+      - name: Persist immutable sanitized recovery record before mutation
+        id: baseline
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: jobs-session-recovery-${{ github.run_id }}
+          path: .artifacts/jobs-session/recovery.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+      - name: Execute one diagnostic and verify restoration
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          BASELINE_ARTIFACT_ID: ${{ steps.baseline.outputs.artifact-id }}
+          BASELINE_ARTIFACT_DIGEST: ${{ steps.baseline.outputs.artifact-digest }}
+        run: node --experimental-strip-types scripts/ci/jobs-session-executor.mjs execute
+      - name: Preserve sanitized execution and restoration outcome
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: jobs-session-outcome-${{ github.run_id }}
+          include-hidden-files: true
+          path: |
+            .artifacts/jobs-session/execution.json
+            .artifacts/jobs-session/restoration.json
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: State the acceptance boundary
+        if: always()
+        run: echo 'One read-only Jobs session diagnostic only. Consult restoration evidence; cleanup attempts do not certify flags off. SQL installation and public posting remain unapproved.' >> "$GITHUB_STEP_SUMMARY"
