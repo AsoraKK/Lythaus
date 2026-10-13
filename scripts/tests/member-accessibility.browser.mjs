@@ -52,6 +52,8 @@ async function draft(page, body) {
 async function profileTab(page, name) {
   const tab = page.getByRole('tab', { name: new RegExp('^' + name) });
   await tab.focus();
+  // Flutter's scrollable TabBar animates focus scrolling for 300 ms.
+  await page.waitForTimeout(350);
   await tab.evaluate(node => node.click());
   await page.getByRole('tab', { name: new RegExp('^' + name), selected: true }).waitFor();
   await focused(page, name);
