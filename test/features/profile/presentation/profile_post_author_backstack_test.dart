@@ -21,6 +21,7 @@ import 'package:lythaus/features/profile/domain/owner_post.dart';
 import 'package:lythaus/features/profile/domain/owner_comment.dart';
 import 'package:lythaus/features/profile/domain/owner_profile.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
+import 'package:lythaus/features/profile/presentation/profile_tab_view.dart';
 import 'package:lythaus/features/rewards/application/reward_providers.dart';
 import 'package:lythaus/state/models/reputation.dart';
 import 'package:lythaus/state/providers/reputation_providers.dart';
@@ -257,6 +258,69 @@ void main() {
             token: any(named: 'token'),
           ),
         );
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      '$width: direct profile tabs retain path, query and Back destination',
+      (tester) async {
+        tester.view.physicalSize = Size(width, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final router = GoRouter(
+          initialLocation: '/user/$_ownerId?origin=synthetic-direct',
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, _) => const Scaffold(body: Text('Discover caller')),
+              routes: [
+                GoRoute(
+                  name: 'profile',
+                  path: 'user/:userId',
+                  builder: (_, _) => Scaffold(
+                    appBar: AppBar(title: const Text('Direct profile')),
+                    body: const ProfileTabView(
+                      overview: Text('Direct overview'),
+                      posts: Text('Direct posts'),
+                      comments: Text('Direct comments'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              settingsProvider.overrideWith((ref) => SettingsController()),
+            ],
+            child: MaterialApp.router(
+              routerConfig: router,
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(disableAnimations: true),
+                child: child!,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        for (final tab in ['Posts', 'Comments', 'Overview']) {
+          await tester.tap(find.widgetWithText(Tab, tab));
+          await tester.pumpAndSettle();
+          expect(
+            router.routeInformationProvider.value.uri.toString(),
+            '/user/$_ownerId?origin=synthetic-direct&profileTab=${tab.toLowerCase()}',
+          );
+          expect(find.text('Direct ${tab.toLowerCase()}'), findsOneWidget);
+        }
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        expect(find.text('Discover caller'), findsOneWidget);
+        expect(router.routeInformationProvider.value.uri.path, '/');
         expect(tester.takeException(), isNull);
       },
     );
