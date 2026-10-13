@@ -27,11 +27,14 @@ import { presentationPreferencesIdentityExportQuery, resetPresentationPreference
 import { reconcileSupportPrivacyDeletionLocations } from '../../../packages/db/src/support-feedback-privacy-runtime.ts';
 import { exportOwnSupportContributionsForPrivacy } from '../../../packages/db/src/support-feedback-contributor-privacy.ts';
 import { activityMeasurementPrivacyExport, activityMeasurementPrivacyDelete, activityMeasurementPrivacyReconcile, activityMeasurementRetentionCleanup, activityMeasurementScheduledWork } from './activity-measurement.ts';
+import { handleJobsReputationSessionDiagnostic } from './reputation-session-diagnostic.ts';
+import { JOBS_SESSION_PATH } from '../../../packages/contracts/src/jobs-reputation-session.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
   DB_JOBS_FRESH: HyperdriveBinding;
   DB_PRIVACY_FRESH: HyperdriveBinding;
+  JOBS_REPUTATION_SESSION_DIAGNOSTIC_ENABLED?: string;
   MONTHLY_REPUTATION_SHADOW_RULES?: string;
   MONTHLY_REPUTATION_MAINTENANCE_RULES?: string;
   MONTHLY_REPUTATION_PEER_PARTICIPATION_RULES?: string;
@@ -1920,6 +1923,9 @@ async function deliverAdminOutcomeNotifications(env: Env): Promise<void> {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const pathname = new URL(request.url).pathname;
+    if (pathname === JOBS_SESSION_PATH) {
+      return handleJobsReputationSessionDiagnostic(request, env, hasReadinessAuthorization(request, env));
+    }
     if (pathname === '/internal/email/lifecycle' && request.method === 'POST') {
       return handleTransactionalEmailLifecycleWebhook(request, env);
     }

@@ -28,6 +28,34 @@ const upstreamProtectedPaths = [
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const nativeModerationWorkerdTest = 'packages/authenticity/tests/openai-moderation.workerd.mjs';
 const publicationPg17Script = 'node scripts/ci/run-publication-pg17.mjs';
+const allocatedJobsDiagnosticTests = 'apps/lythaus-jobs/tests/reputation-session-diagnostic.test.mjs apps/lythaus-jobs/tests/reputation-session-diagnostic.workerd.mjs';
+const allocatedJobsDiagnosticFiles = new Map([
+  ['apps/lythaus-jobs/src/index.ts', '8a6487ab099287f151fc8594b3b9ff846a9226b7'],
+  ['apps/lythaus-public-api/src/index.ts', '7a941be1765e82b5cbf00294b114952ab6ea27a1'],
+  ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
+  ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
+  ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],
+  ['packages/db/src/autocommit.ts', 'b0027a8d204b3fe12f4896fc4175ccc82986828c'],
+  ['apps/lythaus-jobs/tests/reputation-session-diagnostic.test.mjs', '96232e28172a6da48e6d0d011d9eb22767dbe54e'],
+  ['apps/lythaus-jobs/tests/reputation-session-diagnostic.workerd.mjs', '3760dc0b580ced8d3691dbc14d431545c92e58d3'],
+  ['apps/lythaus-jobs/tests/reputation-session-fixture.mjs', '1b871695c5e9b9af9e1b55f8dc915f1e39556b4d'],
+  ['apps/lythaus-jobs/tests/reputation-session-driver-fixture.mjs', 'da16d235ee43c6b9401418def8124fcf864a95b1'],
+]);
+function assertAllocatedJobsDiagnosticFile(filename, blob) {
+  assert.ok(allocatedJobsDiagnosticFiles.has(filename), 'The Jobs exception covers only the allocated diagnostic source and tests');
+  assert.equal(blob, allocatedJobsDiagnosticFiles.get(filename), 'Jobs diagnostic bytes must match the exact allocated review revision');
+}
+function assertOnlyAllocatedJobsDiagnosticRegistration(before, after) {
+  const script = 'test:native-architecture';
+  const expected = `${before.scripts[script]} ${nativeModerationWorkerdTest} ${allocatedJobsDiagnosticTests}`;
+  assert.equal(after.scripts[script], expected, 'Only the exact two allocated Jobs diagnostic tests may follow native moderation');
+  for (const filename of allocatedJobsDiagnosticFiles.keys()) {
+    assertAllocatedJobsDiagnosticFile(filename, git('hash-object', `--path=${filename}`, filename));
+  }
+  const normalized = structuredClone(after);
+  normalized.scripts[script] = expected.slice(0, -(` ${allocatedJobsDiagnosticTests}`).length);
+  assertOnlyReviewedNativeModerationTestRegistration(before, normalized);
+}
 const protectedPaths = [
   'apps/marketing-site/src/components/OpeningWordmark.astro',
   'apps/marketing-site/src/scripts/home-opening.js',
@@ -618,7 +646,7 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
       before.overrides['source-map-js'] = '1.2.2';
     }
     if (file === 'package.json') {
-      assertOnlyReviewedNativeModerationTestRegistration(before, after);
+      assertOnlyAllocatedJobsDiagnosticRegistration(before, after);
     } else {
       assert.deepEqual(after, before, 'Only the TypeScript test runtime flag and exact reviewed security changes may change; homepage dependencies remain frozen');
     }
@@ -684,6 +712,44 @@ test('declaration repair exceptions reject changed bytes and every other homepag
     assert.throws(() => assertAllocatedDeclarationRepair(filename, altered), assert.AssertionError);
   }
   assert.throws(() => assertAllocatedDeclarationRepair('apps/marketing-site/src/pages/index.astro', allocatedDeclarationRepairFiles.values().next().value), assert.AssertionError);
+});
+
+test('allocated Jobs registration rejects missing reordered duplicate extra commands and dependency changes', () => {
+  const before = { scripts: { 'test:native-architecture': 'node --test scripts/tests/native-architecture.test.mjs',
+    'marketing:test': 'node --test apps/marketing-site/tests/*.test.mjs' }, dependencies: { astro: '5.0.0' } };
+  const after = structuredClone(before);
+  after.scripts['test:native-architecture'] += ` ${nativeModerationWorkerdTest} ${allocatedJobsDiagnosticTests}`;
+  assert.doesNotThrow(() => assertOnlyAllocatedJobsDiagnosticRegistration(structuredClone(before), after));
+  const paths = allocatedJobsDiagnosticTests.split(' ');
+  for (const suffix of ['', paths[0], paths.toReversed().join(' '),
+    allocatedJobsDiagnosticTests + ' ' + paths[0], allocatedJobsDiagnosticTests + ' --skip-cleanup',
+    allocatedJobsDiagnosticTests + ' scripts/tests/unreviewed.test.mjs']) {
+    const changed = structuredClone(after);
+    changed.scripts['test:native-architecture'] = `${before.scripts['test:native-architecture']} ${nativeModerationWorkerdTest}${suffix ? ' ' + suffix : ''}`;
+    assert.throws(() => assertOnlyAllocatedJobsDiagnosticRegistration(structuredClone(before), changed), assert.AssertionError);
+  }
+  for (const change of [value => { value.scripts['marketing:test'] += ' --update-snapshots'; },
+    value => { value.dependencies.astro = '6.0.0'; }]) {
+    const changed = structuredClone(after); change(changed);
+    assert.throws(() => assertOnlyAllocatedJobsDiagnosticRegistration(structuredClone(before), changed), assert.AssertionError);
+  }
+});
+
+test('allocated Jobs pins reject altered historical and unrelated source paths', () => {
+  for (const [filename, expected] of allocatedJobsDiagnosticFiles) {
+    assert.doesNotThrow(() => assertAllocatedJobsDiagnosticFile(filename, git('hash-object', `--path=${filename}`, filename)));
+    const source = readFileSync(path.join(root, filename), 'utf8') + '\n// synthetic unrelated mutation\n';
+    const changed = execFileSync('git', ['hash-object', '--stdin'], { cwd: root, encoding: 'utf8', input: source }).trim();
+    assert.notEqual(changed, expected);
+    assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, changed), assert.AssertionError);
+    if (filename.endsWith('/index.ts')) {
+      assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, git('rev-parse', `4b32a00cde7a940ec7fcc4134368bda80d78f699:${filename}`)), assert.AssertionError);
+    }
+  }
+  assert.throws(() => assertAllocatedJobsDiagnosticFile('apps/marketing-site/src/pages/index.astro',
+    allocatedJobsDiagnosticFiles.values().next().value), assert.AssertionError);
+  assert.throws(() => assertAllocatedJobsDiagnosticFile('apps/lythaus-public-api/src/auth-runtime-policy.ts',
+    allocatedJobsDiagnosticFiles.values().next().value), assert.AssertionError);
 });
 
 test('reviewed reputation exception rejects changed bytes, historical bytes and every other dependency path', () => {
