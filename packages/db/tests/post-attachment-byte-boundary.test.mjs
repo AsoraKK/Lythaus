@@ -516,3 +516,53 @@ test('a provider operation rejecting after timeout is handled without producing 
   assert.equal(result.snapshot, null);
   noAuthority(result);
 });
+
+test('final storage HEAD fulfillment past absolute expiry cannot return inspected before the timer fires', async t => {
+  const f = fixture(), head = f.storedBucket.head.bind(f.storedBucket);
+  let heads = 0;
+  const storedBucket = { ...f.storedBucket, async head(...args) {
+    const value = await head(...args);
+    if (++heads === 2) t.mock.timers.setTime(21);
+    return value;
+  } };
+  const result = await deadlineBoundary(t, f, { storedBucket }).loadForOwner(owner, { mediaId });
+  assert.equal(heads, 2);
+  assert.equal(result.reason, 'attachment_inspection_deadline');
+  assert.equal(result.status, 'unavailable');
+  assert.equal(result.snapshot, null);
+  noAuthority(result);
+});
+
+test('a storage body fulfilled after wall-clock expiry is canceled and unlocked before rejection', async t => {
+  const f = fixture(), get = f.sourceBucket.get.bind(f.sourceBucket);
+  let body;
+  const sourceBucket = { ...f.sourceBucket, async get(...args) {
+    const value = await get(...args);
+    body = value.body;
+    t.mock.timers.setTime(21);
+    return value;
+  } };
+  const result = await deadlineBoundary(t, f, { sourceBucket }).loadForOwner(owner, { mediaId });
+  assert.equal(result.reason, 'attachment_inspection_deadline');
+  assert.equal(f.state.canceled, 1);
+  assert.equal(body.locked, false);
+  assert.equal(f.state.decodes, 0);
+  assert.equal(result.snapshot, null);
+  noAuthority(result);
+});
+
+test('an Images output fulfilled after wall-clock expiry is disposed once before rejection', async t => {
+  const f = fixture();
+  let canceled = 0;
+  const body = new ReadableStream({ cancel() { canceled++; } });
+  const images = { ...f.images, input: () => ({ output: async () => {
+    t.mock.timers.setTime(21);
+    return { image: () => body };
+  } }) };
+  const result = await deadlineBoundary(t, f, { images }).loadForOwner(owner, { mediaId });
+  assert.equal(result.reason, 'attachment_inspection_deadline');
+  assert.equal(canceled, 1);
+  assert.equal(body.locked, false);
+  assert.equal(result.snapshot, null);
+  noAuthority(result);
+});

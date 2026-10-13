@@ -125,7 +125,9 @@ may configure `inspectionTimeoutMs` from 1 through 30,000 (default 30,000) and
 `cleanupTimeoutMs` from 1 through 1,000 (default 250). These follow the existing
 provider-wait and database-cleanup timer conventions, not attachment policy.
 Lookups, storage waits, Images info/output, hashes, and stream reads share one
-deadline. Timeout errors supplied input streams, cancels/releases owned readers,
+deadline. Absolute expiry is rechecked on fulfillment before accepting a value,
+even if the timer callback has not run; returned bodies share a once-only bounded
+disposal path. Timeout errors supplied input streams, cancels/releases owned readers,
 and bounds cleanup even when a cancellation hook hangs. Late returned bodies
 are canceled and late promise rejections are handled. APIs without supported
 abort operations may continue internally: caller deadlines do not preempt

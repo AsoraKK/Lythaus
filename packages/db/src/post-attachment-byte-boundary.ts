@@ -116,8 +116,18 @@ function inspectionBudget(timeoutMs: number, cleanupMs: number) {
       if (controller.signal.aborted || Date.now() >= deadlineAt) throw expired();
       return work();
     });
-    void call.then(value => { if (controller.signal.aborted && late) return late(value); }).catch(() => {});
-    try { return await Promise.race([call, timeout]); }
+    let disposal: Promise<void> | undefined;
+    const discard = (value: T): Promise<void> => disposal ??= Promise.resolve().then(() => late?.(value)).catch(() => {});
+    void call.then(value => { if (controller.signal.aborted) return discard(value); }).catch(() => {});
+    try {
+      const value = await Promise.race([call, timeout]);
+      if (Date.now() >= deadlineAt && !controller.signal.aborted) controller.abort(expired());
+      if (controller.signal.aborted) {
+        await discard(value);
+        throw expired();
+      }
+      return value;
+    }
     finally { controller.signal.removeEventListener('abort', abort); }
   };
   const body = (source: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> => {
