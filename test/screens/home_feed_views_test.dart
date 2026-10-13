@@ -161,7 +161,7 @@ void main() {
           hasAppeal ? findsOneWidget : findsNothing,
         );
         expect(find.text('Verified signals attached'), findsNothing);
-        expect(find.text('Declared: Human-authored'), findsOneWidget);
+        expect(find.text('Author declaration: Human-authored'), findsOneWidget);
         await tester.ensureVisible(find.text('Trust details'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Trust details'));

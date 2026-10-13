@@ -43,6 +43,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   final _textController = TextEditingController();
   final _focusNode = FocusNode();
+  bool _memberDialogOpen = false;
 
   @override
   void initState() {
@@ -263,20 +264,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                             ),
                           ),
                           TextButton(
-                            onPressed: () => showDialog<void>(
-                              context: context,
-                              builder: (dialogContext) => AlertDialog(
-                                title: const Text('Posting policy'),
-                                content: const Text(_policyReminderMessage),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(dialogContext).pop(),
-                                    child: const Text('Done'),
-                                  ),
-                                ],
-                              ),
-                            ),
+                            onPressed: _showPostingPolicy,
                             child: const Text('Posting policy'),
                           ),
                           const SizedBox(height: 8),
@@ -386,6 +374,25 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     );
   }
 
+  void _showPostingPolicy() {
+    if (_memberDialogOpen) return;
+    _memberDialogOpen = true;
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        scrollable: true,
+        title: const Text('Posting policy'),
+        content: const Text(_policyReminderMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
+    ).whenComplete(() => _memberDialogOpen = false);
+  }
+
   void _handleSubmit() async {
     final user = ref.read(currentUserProvider);
     ref
@@ -410,6 +417,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   void _handleClose(BuildContext context) {
+    if (_memberDialogOpen) return;
     final state = ref.read(postCreationProvider);
     if (state.isSubmitting) {
       LythSnackbar.info(
@@ -444,6 +452,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   void _showDiscardDialog(BuildContext context) {
+    if (_memberDialogOpen) return;
+    _memberDialogOpen = true;
     final registry = ref.read(contentMutationRegistryProvider);
     final epoch = registry.sessionEpoch;
     final actor = ref.read(currentUserProvider)?.id ?? 'session';
@@ -525,7 +535,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           ),
         ),
       ),
-    );
+    ).whenComplete(() => _memberDialogOpen = false);
   }
 
   void _onPostCreated(BuildContext context, CreatePostSuccess result) {
