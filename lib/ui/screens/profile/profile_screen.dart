@@ -595,16 +595,23 @@ class _OwnerPostCardState extends State<_OwnerPostCard> {
     if (_opening) return;
     _opening = true;
     final callerRoute = ModalRoute.of(context);
+    final router = GoRouter.maybeOf(context);
+    final callerUri = router?.routeInformationProvider.value.uri;
+    bool callerIsActive() =>
+        mounted &&
+        callerRoute?.isCurrent == true &&
+        router?.routeInformationProvider.value.uri == callerUri &&
+        TickerMode.getValuesNotifier(context).value.enabled;
     try {
       await widget.onTap();
     } finally {
-      if (mounted && callerRoute?.isCurrent == true) {
+      if (callerIsActive()) {
         _focusNode.unfocus();
         FocusManager.instance.applyFocusChangesIfNeeded();
         // Commit the unfocused semantics before refocusing the restored card.
         // Web semantics otherwise treats its cached focus request as unchanged.
         await WidgetsBinding.instance.endOfFrame;
-        if (mounted && callerRoute?.isCurrent == true) {
+        if (callerIsActive()) {
           _focusNode.requestFocus();
         }
       }

@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:ui' show Tristate;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,8 +21,10 @@ import 'package:lythaus/features/feed/domain/models.dart' as domain;
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
 import 'package:lythaus/features/profile/application/owner_posts.dart';
+import 'package:lythaus/features/profile/application/owner_comments.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/domain/owner_post.dart';
+import 'package:lythaus/features/profile/domain/owner_comment.dart';
 import 'package:lythaus/features/profile/domain/owner_profile.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
 import 'package:lythaus/features/rewards/application/reward_providers.dart';
@@ -63,6 +67,17 @@ class _Posts extends OwnerPostsService {
 }
 
 class _Repository extends Mock implements PostRepository {}
+
+class _Comments extends OwnerCommentsService {
+  _Comments() : super(Dio());
+
+  @override
+  Future<OwnerCommentsPage> getPage({
+    required String accessToken,
+    String? cursor,
+    CancelToken? cancelToken,
+  }) async => const OwnerCommentsPage(items: [], nextCursor: null);
+}
 
 class _Session extends StateNotifier<Object?> {
   _Session() : super(null);
@@ -133,6 +148,7 @@ Future<GoRouter> _pump(WidgetTester tester, double width) async {
           ),
         ),
         ownerPostsServiceProvider.overrideWithValue(_Posts()),
+        ownerCommentsServiceProvider.overrideWithValue(_Comments()),
         settingsProvider.overrideWith((ref) => SettingsController()),
         analyticsClientProvider.overrideWithValue(const NullAnalyticsClient()),
         postRepositoryProvider.overrideWithValue(repository),
@@ -174,6 +190,81 @@ Finder _button(int index) => find.ancestor(
 );
 
 void main() {
+  for (final destination in ['comments', 'create']) {
+    testWidgets('pending Back focus respects newer $destination navigation', (
+      tester,
+    ) async {
+      final router = await _pump(tester, 390);
+      final card = tester.widget<TextButton>(_button(1)).focusNode!;
+      final callerRoute = ModalRoute.of(
+        tester.element(find.byType(AdaptiveShell)),
+      )!;
+      final nextControl = destination == 'comments'
+          ? find.widgetWithText(Tab, 'Comments')
+          : find.descendant(
+              of: find.byType(BottomNavigationBar),
+              matching: find.text('Create'),
+            );
+      final nextFocus = Focus.of(tester.element(nextControl));
+      final profileTabs = tester
+          .widget<TabBar>(find.byType(TabBar))
+          .controller!;
+      final selectShellTab = tester
+          .widget<BottomNavigationBar>(find.byType(BottomNavigationBar))
+          .onTap!;
+      card.requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      final detailRoute = ModalRoute.of(
+        tester.element(find.byType(PostDetailScreen)),
+      )!;
+      var changedAtBoundary = false;
+      bool? callerCurrentAtBoundary;
+      bool? cardFocusedAtBoundary;
+      SchedulerPhase? boundaryPhase;
+      final navigation = Completer<void>();
+      detailRoute.completed.then((_) {
+        tester.binding.addPostFrameCallback((_) {
+          callerCurrentAtBoundary = callerRoute.isCurrent;
+          cardFocusedAtBoundary = card.hasFocus;
+          boundaryPhase = tester.binding.schedulerPhase;
+          changedAtBoundary = true;
+          nextFocus.requestFocus();
+          if (destination == 'comments') {
+            profileTabs.index = 2;
+          } else {
+            selectShellTab(1);
+          }
+          navigation.complete();
+        });
+      });
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await navigation.future;
+      expect(changedAtBoundary, isTrue);
+      expect(callerCurrentAtBoundary, isTrue);
+      expect(cardFocusedAtBoundary, isFalse);
+      expect(boundaryPhase, SchedulerPhase.postFrameCallbacks);
+      expect(card.context, isNotNull);
+      expect(
+        ModalRoute.of(tester.element(find.byType(AdaptiveShell))),
+        same(callerRoute),
+      );
+      expect(callerRoute.isCurrent, isTrue);
+      expect(
+        router.routeInformationProvider.value.uri.queryParameters[destination ==
+                'comments'
+            ? 'profileTab'
+            : 'tab'],
+        destination,
+      );
+      expect(card.hasFocus, isFalse);
+      expect(nextFocus.hasPrimaryFocus, isTrue);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   for (final width in [320.0, 390.0, 1440.0]) {
     testWidgets('$width: each post has one named button action', (
       tester,
