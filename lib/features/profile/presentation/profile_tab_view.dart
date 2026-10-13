@@ -91,32 +91,34 @@ class _ProfileTabViewState extends ConsumerState<ProfileTabView>
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TabBar(
-          controller: _controller,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          tabs: const [
-            Tab(text: 'Overview'),
-            Tab(text: 'Posts'),
-            Tab(text: 'Comments'),
-          ],
-        ),
-        Expanded(
-          child: TabBarView(
+    return FocusTraversalGroup(
+      child: Column(
+        children: [
+          TabBar(
             controller: _controller,
-            physics: ref.watch(horizontalSwipeEnabledProvider)
-                ? null
-                : const NeverScrollableScrollPhysics(),
-            children: [
-              _PersistentProfileTab(child: widget.overview),
-              _PersistentProfileTab(child: widget.posts),
-              _PersistentProfileTab(child: widget.comments),
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            tabs: const [
+              Tab(text: 'Overview'),
+              Tab(text: 'Posts'),
+              Tab(text: 'Comments'),
             ],
           ),
-        ),
-      ],
+          Expanded(
+            child: TabBarView(
+              controller: _controller,
+              physics: ref.watch(horizontalSwipeEnabledProvider)
+                  ? null
+                  : const NeverScrollableScrollPhysics(),
+              children: [
+                _PersistentProfileTab(child: widget.overview),
+                _PersistentProfileTab(child: widget.posts),
+                _PersistentProfileTab(child: widget.comments),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

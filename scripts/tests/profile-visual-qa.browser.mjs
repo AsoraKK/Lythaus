@@ -283,6 +283,16 @@ test(
             } else {
               body = { items: [], nextCursor: null };
             }
+          } else if (request.method() === 'GET' && /^\/api\/posts\/[^/]+$/.test(requestUrl.pathname)) {
+            const item = [...firstPage, ...secondPage].find(
+              (post) => requestUrl.pathname === `/api/posts/${post.id}`,
+            );
+            status = session && requestHeaders.authorization === `Bearer ${accessToken}`
+              ? item ? 200 : 404
+              : 401;
+            body = status === 200
+              ? { post: { ...item, authorUsername: owner.displayName } }
+              : { error: status === 401 ? 'session_required' : 'post_not_found' };
           } else if (requestUrl.pathname === '/api/users/me/comments') {
             ownerCommentsCalls.push(entry);
             assert.equal(requestUrl.searchParams.get('limit'), '8');
@@ -546,7 +556,35 @@ test(
 
           function postCard(body) {
             const escaped = body.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            return page.getByRole('button', { name: new RegExp(`^Open post\\. .*${escaped}`) });
+          }
+
+          function commentCard(body) {
+            const escaped = body.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             return page.getByRole('group', { name: new RegExp(escaped) });
+          }
+
+          async function focused(control) {
+            const id = await control.getAttribute('id');
+            assert.ok(id, 'Focused semantics controls have an identity');
+            try {
+              await page.waitForFunction(
+                id => document.getElementById(id) === document.activeElement,
+                id,
+              );
+            } catch (error) {
+              t.diagnostic(JSON.stringify({ expectedFocusId: id,
+                active: await page.evaluate(() => ({
+                  id: document.activeElement?.id,
+                  role: document.activeElement?.getAttribute('role'),
+                  name: document.activeElement?.textContent?.slice(0, 200),
+                })),
+                target: await control.evaluate(element => ({
+                  id: element.id, role: element.getAttribute('role'),
+                  name: element.textContent?.slice(0, 200),
+                })) }));
+              throw error;
+            }
           }
 
           await openApp('/settings');
@@ -589,15 +627,15 @@ test(
           await screenshot('owner-comments-empty');
           commentsMode = 'populated';
           await page.getByRole('button', { name: 'Refresh profile' }).click();
-          await postCard(commentPage[0].body).waitFor();
-          await postCard(commentPage[1].body).waitFor();
+          await commentCard(commentPage[0].body).waitFor();
+          await commentCard(commentPage[1].body).waitFor();
           assert.ok((await profileText()).includes('Awaiting review'));
           await moveHeadingNearTop('Your comments');
           await screenshot('owner-comments-populated');
           const loadComments = page.getByRole('button', { name: 'Load more comments', exact: true });
           await loadComments.focus();
           await page.keyboard.press('Enter');
-          await postCard(commentSecondPage[0].body).waitFor();
+          await commentCard(commentSecondPage[0].body).waitFor();
           assert.equal(ownerCommentsCalls.at(-1)?.cursor, 'visual-comments-page-2');
           const loadedCommentsCalls = ownerCommentsCalls.length;
           await page.getByRole('tab', { name: /^Posts/ }).click();
@@ -605,21 +643,64 @@ test(
           assert.ok((await profileText()).includes('No posts are available in this list.'));
           await screenshot('owner-empty');
           await page.getByRole('tab', { name: /^Comments/ }).click();
-          await postCard(commentSecondPage[0].body).waitFor();
+          await commentCard(commentSecondPage[0].body).waitFor();
           assert.equal(ownerCommentsCalls.length, loadedCommentsCalls);
           await page.getByRole('tab', { name: /^Posts/ }).click();
 
           postsMode = 'populated';
           await page.getByRole('button', { name: 'Refresh profile' }).click();
           await postCard(firstPage[0].body).waitFor();
-          await page.getByRole('checkbox', { name: 'Followers only' }).waitFor();
+          await page.getByRole('button', { name: /Followers only.*Visible to followers\./ }).waitFor();
           await page
-            .getByRole('group', { name: /Only you can see this while it is under review\./ })
+            .getByRole('button', { name: /Only you can see this while it is under review\./ })
             .waitFor();
           const ownText = await profileText();
           assert.doesNotMatch(ownText, /\b(?:Followers|Following)\s*[:=]\s*\d+/i);
           await moveHeadingNearTop('Your posts');
           await screenshot('owner-populated');
+
+          const postButtons = firstPage.map(post => postCard(post.body));
+          for (const control of postButtons) {
+            assert.equal(await control.count(), 1);
+            assert.equal(await control.locator('[role="button"],[role="link"],[role="checkbox"]').count(), 0);
+          }
+          const postsTab = page.getByRole('tab', { name: /^Posts/ });
+          const postsTabId = await postsTab.getAttribute('id');
+          for (let step = 0; step < 40; step += 1) {
+            const atPosts = await page.evaluate(id => document.activeElement?.id === id, postsTabId);
+            if (atPosts) break;
+            await page.keyboard.press('Tab');
+            await page.evaluate(() => new Promise(resolve =>
+              requestAnimationFrame(() => requestAnimationFrame(resolve))));
+          }
+          await focused(postsTab);
+          await page.keyboard.press('Tab');
+          await focused(page.getByRole('tab', { name: /^Comments/ }));
+          for (const control of postButtons) {
+            await page.keyboard.press('Tab');
+            await focused(control);
+          }
+          await page.keyboard.press('Shift+Tab');
+          await focused(postButtons[1]);
+          await page.keyboard.press('Shift+Tab');
+          await focused(postButtons[0]);
+          await screenshot('owner-post-keyboard-focus');
+          const callerUrl = page.url();
+          const callerBox = await postButtons[0].boundingBox();
+          const callerCardId = await postButtons[0].getAttribute('id');
+          for (const key of ['Enter', 'Space']) {
+            await page.keyboard.press(key);
+            await page.getByText(firstPage[0].body, { exact: true }).waitFor();
+            await page.getByRole('button', { name: 'Back', exact: true }).click();
+            await page.mouse.move(0, 0);
+            await postButtons[0].waitFor();
+            assert.equal(await postButtons[0].getAttribute('id'), callerCardId, 'Back preserves the original card semantics identity');
+            await focused(postButtons[0]);
+            assert.equal(page.url(), callerUrl);
+            const returnedBox = await postButtons[0].boundingBox();
+            assert.ok(Math.abs(returnedBox.y - callerBox.y) <= 2, 'Back preserves the focused card scroll position');
+          }
+          await screenshot('owner-post-keyboard-return');
 
           const loadMore = page.getByRole('button', {
             name: 'Load more posts',
@@ -628,7 +709,7 @@ test(
           await loadMore.focus();
           await page.keyboard.press('Enter');
           await postCard(secondPage[0].body).waitFor();
-          await page.getByRole('group', { name: /Only you can see this\./ }).waitFor();
+          await page.getByRole('button', { name: /Only you can see this\./ }).waitFor();
           await moveHeadingNearTop('Your posts');
           await screenshot('owner-populated-page-two');
 
@@ -843,6 +924,7 @@ test(
                   requestPath !== '/api/users/me' &&
                   requestPath !== '/api/users/me/posts' &&
                   requestPath !== '/api/users/me/comments' &&
+                  ![...firstPage, ...secondPage].some(post => requestPath === `/api/posts/${post.id}`) &&
                   requestPath !== `/api/users/${publicMember.id}` &&
                   requestPath !== `/api/users/${publicMember.id}/follow` &&
                   requestPath !== `/api/users/${hiddenMember.id}` &&
@@ -893,7 +975,7 @@ test(
         2,
       ),
     );
-    const expectedCaptures = selectedThemes.length * selectedSizes.length * 17;
+    const expectedCaptures = selectedThemes.length * selectedSizes.length * 19;
     assert.equal(captures.length, expectedCaptures, 'Every profile state screenshot must be captured');
     assert.deepEqual(
       configResults.flatMap(({ errors }) => errors),
