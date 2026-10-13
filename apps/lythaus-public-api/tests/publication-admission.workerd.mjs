@@ -471,6 +471,48 @@ test('historical appeal authority stays fail-closed across admin, outbox, Jobs a
       assert.equal((await call(null, 'GET', itemPath(f.item))).status, 404);
     });
 
+    await t.test('concurrent duplicate queue delivery keeps one claim and applies no legacy overturn effects', async () => {
+      const f = await prepare();
+      await seedHistoricalPenalty(f, f.blockEvent, 'confirmed_spam');
+      const event = await legacyEvent(f, { challengeBinding: 'bound', contentReversed: true });
+      const before = await snapshot(), start = fixture.statements.length;
+      const gate = fixture.pauseAfterSql(/INSERT INTO system\.consumer_inbox/);
+      const first = deliver(event);
+      let timer, firstResult;
+      try {
+        const claim = await Promise.race([
+          gate.reached,
+          first.then(() => { throw new Error('first_delivery_finished_before_claim_pause'); }),
+          new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('claim_pause_not_reached')), 5000); }),
+        ]);
+        clearTimeout(timer);
+        assert.deepEqual(claim, { role: 'lythaus_jobs', rowCount: 1 });
+        const claimed = await snapshot();
+        assert.deepEqual({ ...claimed, 'system.consumer_inbox': before['system.consumer_inbox'] }, before);
+        const inbox = claimed['system.consumer_inbox'].filter(row => row.event_id === event.id);
+        assert.equal(inbox.length, 1); assert.equal(inbox[0].state, 'processing');
+        assert.equal(claimed['system.consumer_inbox'].length, before['system.consumer_inbox'].length + 1);
+        assert.deepEqual(await deliver(event, { finalDecision: 'uphold', subjectUserId: reviewers[0].id }), { ack: 0, retry: 1 });
+        assert.deepEqual(await snapshot(), claimed);
+      } finally {
+        clearTimeout(timer);
+        gate.release();
+        firstResult = await first;
+      }
+      assert.deepEqual(firstResult, { ack: 1, retry: 0 });
+      const completed = await snapshot();
+      assert.deepEqual({ ...completed, 'system.consumer_inbox': before['system.consumer_inbox'] }, before);
+      const inbox = completed['system.consumer_inbox'].filter(row => row.event_id === event.id);
+      assert.equal(inbox.length, 1); assert.equal(inbox[0].state, 'completed');
+      assert.equal(completed['system.consumer_inbox'].length, before['system.consumer_inbox'].length + 1);
+      assert.deepEqual(await deliver(event), { ack: 1, retry: 0 });
+      assert.deepEqual(await snapshot(), completed);
+      assert.equal(fixture.statements.slice(start).filter(({ role, text }) => role === 'lythaus_jobs'
+        && /SELECT event_type, actor_id, payload, created_at/.test(text)).length, 1);
+      assert.ok((await refresh(f.item.owner.id)).promotionBlockers.includes('unresolved_serious_enforcement'));
+      assert.equal((await call(null, 'GET', itemPath(f.item))).status, 404);
+    });
+
     await t.test('an old same-case overturn marker cannot clear any independent block during reputation refresh', async () => {
       const f = await prepare();
       await client.query("INSERT INTO moderation.enforcement_events(id,case_id,subject_id,action,reason_code,policy_version,actor_id,created_at) VALUES($1,$2,$3,'block','SYNTHETIC_INDEPENDENT_BLOCK',$4,$5,clock_timestamp())",
@@ -502,6 +544,43 @@ test('historical appeal authority stays fail-closed across admin, outbox, Jobs a
       assert.ok((await refresh(f.item.owner.id)).promotionBlockers.includes('unresolved_serious_enforcement'));
       const audit = (await client.query("SELECT metadata FROM system.audit_events WHERE target_id=$1 AND action='moderation.appeal.outcome_applied'", [f.appealId])).rows[0].metadata;
       assert.equal(audit.outcome, 'uphold'); assert.equal(audit.contentReversed, false);
+    });
+
+    await t.test('successful outbox insert rolls back every appeal effect and the same request can retry once', async () => {
+      const f = await prepare({ decision: 'uphold' }), key = uuidv7(), start = fixture.statements.length;
+      fixture.interruptAfterSql = /INSERT INTO system\.outbox_events/;
+      await rejected(() => adjudicate(f.appealId, 'uphold', key), 500, 'admin_request_failed');
+      const inserted = fixture.statements.slice(start).filter(({ role, text }) => role === 'lythaus_admin'
+        && /INSERT INTO system\.outbox_events/.test(text));
+      assert.equal(inserted.length, 1);
+      assert.equal(inserted[0].rowCount, 1);
+      assert.equal(inserted[0].interruptedAfterSuccess, true);
+      const failed = (await client.query(`SELECT
+        (SELECT count(*)::integer FROM moderation.appeal_adjudications WHERE appeal_id=$1) AS adjudications,
+        (SELECT count(*)::integer FROM moderation.appeal_outcomes WHERE appeal_id=$1) AS outcomes,
+        (SELECT count(*)::integer FROM moderation.appeal_outcome_effects WHERE appeal_id=$1) AS effects,
+        (SELECT count(*)::integer FROM system.audit_events WHERE target_id=$1 AND action='moderation.appeal.outcome_applied') AS audits,
+        (SELECT count(*)::integer FROM system.outbox_events WHERE aggregate_id=$1 AND event_type='moderation.appeal.resolved') AS outbox`,
+        [f.appealId])).rows[0];
+      assert.deepEqual(failed, { adjudications: 0, outcomes: 0, effects: 0, audits: 0, outbox: 0 });
+      assert.equal((await client.query('SELECT state FROM moderation.appeals WHERE id=$1', [f.appealId])).rows[0].state, 'open');
+      const response = await adjudicate(f.appealId, 'uphold', key);
+      assert.equal(response.status, 200, await response.clone().text());
+      const result = await response.json();
+      assert.equal(result.status, 'resolved'); assert.equal(result.finalDecision, 'uphold');
+      const applied = (await client.query(`SELECT
+        (SELECT count(*)::integer FROM moderation.appeal_adjudications WHERE appeal_id=$1) AS adjudications,
+        (SELECT count(*)::integer FROM moderation.appeal_outcomes WHERE appeal_id=$1 AND state='resolved' AND final_decision='uphold') AS outcomes,
+        (SELECT count(*)::integer FROM moderation.appeal_outcome_effects WHERE appeal_id=$1) AS effects,
+        (SELECT count(*)::integer FROM system.audit_events WHERE target_id=$1 AND action='moderation.appeal.outcome_applied') AS audits,
+        (SELECT count(*)::integer FROM system.outbox_events WHERE aggregate_id=$1 AND event_type='moderation.appeal.resolved') AS outbox,
+        (SELECT count(*)::integer FROM moderation.enforcement_events WHERE case_id=$2 AND action='appeal_uphold') AS upholds,
+        (SELECT count(*)::integer FROM trust.reputation_events WHERE appeal_id=$1) AS reputation`,
+        [f.appealId, f.review.id])).rows[0];
+      assert.deepEqual(applied, { adjudications: 1, outcomes: 1, effects: 2, audits: 1, outbox: 1, upholds: 1, reputation: 0 });
+      await rejected(() => adjudicate(f.appealId, 'uphold', key), 409, 'appeal_already_resolved');
+      assert.ok((await refresh(f.item.owner.id)).promotionBlockers.includes('unresolved_serious_enforcement'));
+      assert.equal((await call(null, 'GET', itemPath(f.item))).status, 404);
     });
 
     await t.test('historical high-risk pending adjudications remain intact when final overturn authority is unavailable', async () => {

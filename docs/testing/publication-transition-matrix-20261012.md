@@ -113,3 +113,29 @@ modified. The draft defers unbound historical overturn resolution, suppresses ol
 reputation effects, and ignores unbound reversal markers during standing refresh. PR CI still needs the repository's existing
 `.github/workflows/ci.yml` `native_runtime` job; no remote branch-protection or
 live provider/production acceptance is claimed.
+
+## Independent review regressions, 13 October
+
+A test-only follow-up to saved repair `4a8e3a70955f981364963ad146cbcd145274897c`
+adds deterministic concurrent duplicate queue delivery and rollback after a
+successful appeal outbox INSERT. The disposable transport records the successful
+SQL row count before interrupting and can pause after the committed inbox claim.
+The concurrent duplicate retries while the first delivery owns that claim;
+after release, one delivery completes and repeated delivery acknowledges without
+reputation, publication, audit or appeal effects. The outbox interruption observes
+one inserted row, then verifies every snapshot table is restored and the appeal
+is open; retry creates exactly one upheld outcome, audit, outbox event and
+enforcement record, plus the existing two activity/notification effect records.
+
+Using the cached Node 22.23.3 runtime and the existing loopback-only PostgreSQL
+17.11 container, the approved baseline validator exited 0 on a freshly owned
+database. `node --experimental-strip-types --test --test-reporter=tap
+--test-concurrency=1 --test-timeout=120000
+apps/lythaus-public-api/tests/publication-admission.workerd.mjs` exited 0:
+39 tests passed, including all 11 historical authority subtests, with zero
+failures or skips. The owned database was dropped and the existing container
+stopped afterward. No production credentials, hosted data or permissions were
+accessed or changed; no local grant override was introduced. Canonical Jobs
+penalty/reward delivery still retries under the existing user-lock privilege
+limitation. The entire four-suite publication runner was not rerun for this
+follow-up; its earlier 152-test result remains evidence for the saved repair.
