@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lythaus/design_system/components/lyth_avatar.dart';
+import 'package:lythaus/design_system/tokens/radius.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -523,12 +524,15 @@ class _OwnerPostsSection extends ConsumerWidget {
       children: [
         for (final post in timeline.items)
           _OwnerPostCard(
+            key: ValueKey('owner-post-${post.id}'),
             post: post,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
+            onTap: () async {
+              final route = MaterialPageRoute<void>(
                 builder: (_) => PostDetailScreen(postId: post.id),
-              ),
-            ),
+              );
+              await Navigator.of(context).push(route);
+              await route.completed;
+            },
           ),
         if (timeline.loadMoreError != null)
           Padding(
@@ -571,11 +575,52 @@ class _OwnerPostsSection extends ConsumerWidget {
   }
 }
 
-class _OwnerPostCard extends StatelessWidget {
-  const _OwnerPostCard({required this.post, required this.onTap});
+class _OwnerPostCard extends StatefulWidget {
+  const _OwnerPostCard({required this.post, required this.onTap, super.key});
 
   final OwnerPost post;
-  final VoidCallback onTap;
+  final Future<void> Function() onTap;
+
+  @override
+  State<_OwnerPostCard> createState() => _OwnerPostCardState();
+}
+
+class _OwnerPostCardState extends State<_OwnerPostCard> {
+  final _focusNode = FocusNode();
+  bool _opening = false;
+
+  OwnerPost get post => widget.post;
+
+  Future<void> _openPost() async {
+    if (_opening) return;
+    _opening = true;
+    try {
+      await widget.onTap();
+    } finally {
+      _opening = false;
+      if (mounted) {
+        _focusNode.unfocus();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _focusNode.requestFocus();
+        });
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_focusChanged);
+  }
+
+  void _focusChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_focusChanged);
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   String get _visibilityDescription {
     if (post.isPending) {
@@ -590,46 +635,90 @@ class _OwnerPostCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Card(
-    margin: const EdgeInsets.only(bottom: Spacing.sm),
-    clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(Spacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(post.body, style: Theme.of(context).textTheme.bodyLarge),
-            const SizedBox(height: Spacing.sm),
-            Wrap(
-              spacing: Spacing.xs,
-              runSpacing: Spacing.xs,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Chip(label: Text(post.statusLabel)),
-                Text(
-                  MaterialLocalizations.of(
-                    context,
-                  ).formatShortDate(post.createdAt.toLocal()),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final date = MaterialLocalizations.of(
+      context,
+    ).formatShortDate(post.createdAt.toLocal());
+    final cardShape = theme.cardTheme.shape;
+    final shape = cardShape is OutlinedBorder
+        ? cardShape
+        : RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(LythRadius.card),
+          );
+    return Semantics(
+      container: true,
+      button: true,
+      enabled: true,
+      focusable: true,
+      focused: _focusNode.hasFocus,
+      onFocus: _focusNode.requestFocus,
+      onTap: _openPost,
+      excludeSemantics: true,
+      label:
+          'Open post. ${post.body}. ${post.statusLabel}. $date. $_visibilityDescription',
+      child: Card(
+        margin: const EdgeInsets.only(bottom: Spacing.sm),
+        clipBehavior: Clip.antiAlias,
+        semanticContainer: false,
+        child: TextButton(
+          focusNode: _focusNode,
+        onPressed: _openPost,
+          style:
+              TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                alignment: Alignment.centerLeft,
+                foregroundColor: theme.colorScheme.onSurface,
+                shape: shape,
+              ).copyWith(
+                side: WidgetStateProperty.resolveWith(
+                  (states) => BorderSide(
+                    color: states.contains(WidgetState.focused)
+                        ? theme.colorScheme.primary
+                        : Colors.transparent,
+                    width: 2,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: Spacing.xs),
-            Text(
-              _visibilityDescription,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+          child: ExcludeFocus(
+            child: Padding(
+              padding: const EdgeInsets.all(Spacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(post.body, style: Theme.of(context).textTheme.bodyLarge),
+                  const SizedBox(height: Spacing.sm),
+                  Wrap(
+                    spacing: Spacing.xs,
+                    runSpacing: Spacing.xs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Chip(label: Text(post.statusLabel)),
+                      Text(
+                        date,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: Spacing.xs),
+                  Text(
+                    _visibilityDescription,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _ReputationStateBadge extends ConsumerWidget {
