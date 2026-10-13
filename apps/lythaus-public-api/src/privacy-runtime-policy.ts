@@ -1,5 +1,12 @@
 export type PrivacyRequestType = 'export' | 'delete' | 'rectify';
 
+export function requirePrivacyExportRequestId(value: unknown): string {
+  if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
+    throw new Error('export_not_found');
+  }
+  return value;
+}
+
 export function privacyExportRetryAfter(acceptedAt: string | Date | null, now: number, cooldownDays: number): number {
   if (acceptedAt === null) return 0;
   const createdAt = acceptedAt instanceof Date ? acceptedAt.getTime() : Date.parse(acceptedAt);

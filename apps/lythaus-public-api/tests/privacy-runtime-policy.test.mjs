@@ -8,9 +8,19 @@ import {
   privacyRequestPlan,
   requirePrivacyExportDependencies,
   requirePrivacyExportObject,
+  requirePrivacyExportRequestId,
   retentionRulePlan,
 } from '../src/privacy-runtime-policy.ts';
 import { PLATFORM_SAFETY_LIMITS } from '../../../packages/contracts/src/tier-policy.ts';
+
+test('export request identifiers accept canonical UUIDs and reject malformed input as unavailable', () => {
+  for (const id of ['018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1a', '018F2C4E-8C2B-4B4E-8D2A-2E2F0B7E4B1A']) {
+    assert.equal(requirePrivacyExportRequestId(id), id);
+  }
+  for (const id of [null, undefined, '', 'not-a-uuid', '../../private-export', "018f2c4e-8c2b-7b4e-8d2a-2e2f0b7e4b1a' OR '1'='1"]) {
+    assert.throws(() => requirePrivacyExportRequestId(id), /export_not_found/);
+  }
+});
 
 test('export cooldown uses the creation timestamp and canonical policy independently of processing state', () => {
   const now = Date.parse('2026-10-02T12:00:00Z');
