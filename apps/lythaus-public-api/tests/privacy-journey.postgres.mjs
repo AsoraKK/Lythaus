@@ -6,13 +6,9 @@ import { exportJWK, exportPKCS8, generateKeyPair } from 'jose';
 import * as database from '@lythaus/db';
 import { signAccessToken, uuidv7 } from '@lythaus/security';
 import { PLATFORM_SAFETY_LIMITS } from '../../../packages/contracts/src/tier-policy.ts';
+import { privacyPostgresTarget } from './privacy-postgres-target.mjs';
 
-const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
-const target = new URL(connectionString ?? 'file:///missing');
-if (!['localhost', '127.0.0.1'].includes(target.hostname)
-  || !(target.pathname.startsWith('/lythaus_auth_test') || (process.env.GITHUB_ACTIONS === 'true' && target.pathname === '/postgres'))) {
-  throw new Error('Privacy tests require an explicitly local disposable PostgreSQL database');
-}
+const connectionString = privacyPostgresTarget(process.env.PLANETSCALE_PG17_TEST_DATABASE_URL).toString();
 async function withClient(work, role) {
   const client = new pg.Client({ connectionString, ssl: false });
   await client.connect();
