@@ -266,6 +266,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                             onPressed: () => showDialog<void>(
                               context: context,
                               builder: (dialogContext) => AlertDialog(
+                                scrollable: true,
                                 title: const Text('Posting policy'),
                                 content: const Text(_policyReminderMessage),
                                 actions: [

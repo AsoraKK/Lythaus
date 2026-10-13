@@ -346,6 +346,48 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('posting policy dialog remains reachable on a small large-text screen', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpWidget(
+      buildWithState(
+        const PostCreationState(text: 'Hello world', aiLabel: 'human'),
+        user: _testUser(),
+        textScale: 2,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Posting policy'));
+    await tester.tap(find.text('Posting policy'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('249 user-perceived characters'), findsOneWidget);
+    expect(find.text('Done').hitTestable(), findsOneWidget);
+    final policyContent = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(SingleChildScrollView),
+    );
+    expect(policyContent, findsOneWidget);
+    final policyScrollable = find.descendant(
+      of: policyContent,
+      matching: find.byType(Scrollable),
+    );
+    expect(policyScrollable, findsOneWidget);
+    final scrollState = tester.state<ScrollableState>(policyScrollable);
+    expect(scrollState.position.maxScrollExtent, greaterThan(0));
+    await tester.drag(policyScrollable, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(scrollState.position.pixels, greaterThan(0));
+    expect(find.text('Done').hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   group('CreatePostFAB', () {
     testWidgets('renders FAB with Post label', (tester) async {
       await tester.pumpWidget(
