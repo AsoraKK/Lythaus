@@ -21,7 +21,8 @@ test('required native CI runs each publication and direct-client suite once thro
   assert.match(native, /image: postgres:17/);
   assert.match(native, /POSTGRES_DB: lythaus_auth_test_post_control/);
   assert.match(native, /npm run test:publication:pg17/);
-  for (const suite of ['post-moderation.workerd.mjs', 'publication-admission.workerd.mjs', 'post-safety-evidence.workerd.mjs', 'transaction-client.postgres.mjs']) {
+  for (const suite of ['post-moderation.workerd.mjs', 'publication-admission.workerd.mjs', 'post-safety-evidence.workerd.mjs',
+    'transaction-client.postgres.mjs', 'post-attachment-preparation.postgres.mjs']) {
     assert.equal(runner.split(suite).length - 1, 1);
   }
   assert.match(runner, /CREATE DATABASE/);

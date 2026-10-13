@@ -129,7 +129,7 @@ function parseJpeg(bytes: Uint8Array, mime: string): ParsedContainer {
     const dataStart = offset + 2;
     const dataEnd = offset + length;
     if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker) && length >= 7) {
-      imageDimensions = dimensions(u16(bytes, dataStart + 1), u16(bytes, dataStart + 3));
+      imageDimensions = dimensions(u16(bytes, dataStart + 3), u16(bytes, dataStart + 1));
       progressive = marker === 0xc2 || marker === 0xca;
     }
     if (marker === 0xdb) {
