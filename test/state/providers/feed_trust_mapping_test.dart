@@ -241,9 +241,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Under appeal'), findsOneWidget);
-      expect(find.text('Moderation: warn'), findsOneWidget);
-      expect(find.text('Appeal: open'), findsOneWidget);
+      expect(find.text('Appeal in progress'), findsOneWidget);
+      expect(find.text('Moderation: warn'), findsNothing);
+      expect(find.text('Appeal: open'), findsNothing);
       expect(find.text('Moderation: none'), findsNothing);
       expect(find.text('No extra signals'), findsNothing);
     },

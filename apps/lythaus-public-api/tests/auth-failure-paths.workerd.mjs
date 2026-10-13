@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { after, before, describe, test } from 'node:test';
 import pg from 'pg';
 import { exportJWK, exportPKCS8, generateKeyPair } from 'jose';
-import { hashAuthToken, hmacLookup, uuidv7 } from '@lythaus/security';
+import { hashAuthToken, hashResetToken, hmacLookup, uuidv7 } from '@lythaus/security';
+import { decryptTransactionalEmailEnvelope } from '../../lythaus-jobs/src/transactional-email-runtime.ts';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
 if (!connectionString) throw new Error('Auth Workerd fixtures require local disposable PostgreSQL 17');
@@ -24,7 +25,8 @@ const { Miniflare, convertV4MiniflareOptions } = require('miniflare');
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const password = 'synthetic pre-verification password';
 const ownerPassword = 'synthetic mailbox owner password';
-const acceptedPasswordDigests = [password, ownerPassword].map(value => createHash('sha1').update(value).digest('hex').toUpperCase());
+const changedPassword = 'synthetic changed mailbox owner password';
+const acceptedPasswordDigests = [password, ownerPassword, changedPassword].map(value => createHash('sha1').update(value).digest('hex').toUpperCase());
 const hmacKey = randomBytes(32).toString('base64');
 const rateLimitWindowMs = 60_000;
 const stableWindowStartOffsetMs = 1_500;
@@ -37,6 +39,10 @@ const publicErrorHeaders = {
   'transfer-encoding': 'chunked',
   vary: 'Origin, Authorization',
 };
+const safeAuthTraceFields = new Set([
+  'timestamp', 'service', 'event', 'outcome', 'correlationId', 'errorCode',
+  'internalErrorCode', 'route', 'passwordScreeningFailureReason', 'passwordScreeningHttpStatus',
+]);
 
 function normalizePrivateError(response, body) {
   assert.ok(body && typeof body === 'object' && !Array.isArray(body));
@@ -56,6 +62,89 @@ function assertPrivateError(response, body, status, error, extraHeaders = {}) {
     headers: { ...publicErrorHeaders, ...extraHeaders },
   });
 }
+
+function assertAuthFailureTrace(events, expected) {
+  const correlatedEvents = events.filter(event => event?.correlationId === expected.correlationId);
+  const matchingEvents = correlatedEvents.filter(event => event.route === expected.route && event.errorCode === expected.errorCode);
+  assert.ok(matchingEvents.length > 0, 'target auth failure emits a trace matching its response correlation, route, and error');
+  assert.ok(correlatedEvents.every(event => event.route === expected.route && event.errorCode === expected.errorCode), 'target auth trace records retain the response route and error');
+}
+
+function assertRedactedAuthTraceRecords(events, privateValues) {
+  const serializedTraces = JSON.stringify(events);
+  for (const privateValue of privateValues) {
+    assert.ok(!serializedTraces.includes(privateValue), 'captured Workerd auth traces exclude private credentials and proofs');
+  }
+  for (const trace of events) {
+    assert.ok(Object.keys(trace).every(field => safeAuthTraceFields.has(field)), 'auth trace fields stay within the reviewed diagnostic allowlist');
+  }
+}
+
+test('auth trace assertion rejects missing or mismatched request records without echoing log payloads', () => {
+  const expected = {
+    correlationId: '00000000-0000-4000-8000-000000000001',
+    route: '/api/auth/email',
+    errorCode: 'invalid_credentials',
+  };
+  const privateLogPayload = 'synthetic private trace payload';
+  const invalidTraces = [
+    [],
+    [{ ...expected, correlationId: '00000000-0000-4000-8000-000000000002', privateLogPayload }],
+    [{ ...expected, route: '/api/auth/refresh', privateLogPayload }],
+    [{ ...expected, errorCode: 'provider_private_details', privateLogPayload }],
+  ];
+
+  for (const traces of invalidTraces) {
+    let failure;
+    try {
+      assertAuthFailureTrace(traces, expected);
+    } catch (error) {
+      failure = error;
+    }
+    assert.ok(failure instanceof assert.AssertionError, 'missing or incorrect request traces are rejected');
+    assert.ok(!failure.message.includes(privateLogPayload), 'trace assertion failures do not echo private log payloads');
+  }
+
+  const mixedTraces = [
+    { ...expected, timestamp: '2026-10-12T00:00:00.000Z', service: 'lythaus-public-api' },
+    {
+      ...expected,
+      correlationId: '00000000-0000-4000-8000-000000000002',
+      timestamp: '2026-10-12T00:00:01.000Z',
+      service: 'lythaus-public-api',
+      privateLogPayload,
+    },
+  ];
+  let privacyFailure;
+  try {
+    assertAuthFailureTrace(mixedTraces, expected);
+    assertRedactedAuthTraceRecords(mixedTraces, [privateLogPayload]);
+  } catch (error) {
+    privacyFailure = error;
+  }
+  assert.ok(privacyFailure instanceof assert.AssertionError, 'a private value in an uncorrelated request trace is rejected');
+  assert.ok(!privacyFailure.message.includes(privateLogPayload), 'trace privacy failures do not echo private log payloads');
+
+  const unapprovedFieldTraces = [
+    { ...expected, timestamp: '2026-10-12T00:00:02.000Z', service: 'lythaus-public-api' },
+    {
+      ...expected,
+      correlationId: '00000000-0000-4000-8000-000000000003',
+      timestamp: '2026-10-12T00:00:03.000Z',
+      service: 'lythaus-public-api',
+      unreviewedDiagnostic: privateLogPayload,
+    },
+  ];
+  let allowlistFailure;
+  try {
+    assertAuthFailureTrace(unapprovedFieldTraces, expected);
+    assertRedactedAuthTraceRecords(unapprovedFieldTraces, []);
+  } catch (error) {
+    allowlistFailure = error;
+  }
+  assert.ok(allowlistFailure instanceof assert.AssertionError, 'an unapproved field in an uncorrelated request trace is rejected');
+  assert.ok(!allowlistFailure.message.includes(privateLogPayload), 'trace allowlist failures do not echo private log payloads');
+});
 
 function assertPrivacyLeakMutationsRejected(response, body, status, error, extraHeaders = {}) {
   const mutations = [
@@ -287,8 +376,8 @@ describe('Public API authentication failures in native Workerd', { timeout: 180_
     const nonexistent = await fixture.request('/api/auth/email', {
       mode: 'login', email: fixture.email('unknown-login'), password,
     });
-    const wrongPassword = await fixture.request('/api/auth/email', { mode: 'login', email, password: 'synthetic wrong password' });
     const nonexistentBody = await nonexistent.json();
+    const wrongPassword = await fixture.request('/api/auth/email', { mode: 'login', email, password: 'synthetic wrong password' });
     const wrongPasswordBody = await wrongPassword.json();
     assertPrivateError(nonexistent, nonexistentBody, 401, 'invalid_credentials');
     assertPrivateError(wrongPassword, wrongPasswordBody, 401, 'invalid_credentials');
@@ -367,6 +456,193 @@ describe('Public API authentication failures in native Workerd', { timeout: 180_
     assert.equal(fixture.providerCounts().denied, 0, 'the Worker made no unrecognized or live provider request');
   });
 
+  test('native Worker recovery, rotation, expiry, revocation and account isolation', async () => {
+    fixture.setProviderModes({ screening: 'ok', turnstile: 'ok' });
+    const firstEmail = fixture.email('recovery-owner');
+    const secondEmail = fixture.email('isolated-owner');
+
+    async function registerAndVerify(email) {
+      const signup = await fixture.request('/api/auth/email', {
+        mode: 'register', email, password, turnstileToken: 'account_signup',
+      });
+      assert.equal(signup.status, 202);
+      assert.deepEqual(await signup.json(), { state: 'verification_required' });
+      const verificationMessage = await fixture.emailEnvelope(email, 'verification');
+      assert.equal(verificationMessage.to, email);
+      const verified = await fixture.request('/api/auth/email/verify', {
+        token: verificationMessage.token, password: ownerPassword,
+      });
+      assert.equal(verified.status, 200);
+      assert.deepEqual(await verified.json(), { state: 'verified' });
+      return fixture.account(email);
+    }
+
+    const firstAccount = await registerAndVerify(firstEmail);
+    const secondAccount = await registerAndVerify(secondEmail);
+    assert.ok(firstAccount?.id);
+    assert.ok(secondAccount?.id);
+    assert.notEqual(firstAccount.id, secondAccount.id);
+
+    const firstLogin = await fixture.request('/api/auth/email', {
+      mode: 'login', email: firstEmail, password: ownerPassword,
+    });
+    assert.equal(firstLogin.status, 200);
+    const firstSession = await firstLogin.json();
+    const secondLogin = await fixture.request('/api/auth/email', {
+      mode: 'login', email: secondEmail, password: ownerPassword,
+    });
+    assert.equal(secondLogin.status, 200);
+    const secondSession = await secondLogin.json();
+
+    const resetRequest = await fixture.request('/api/auth/password/reset/request', {
+      email: firstEmail, turnstileToken: 'password_reset_request',
+    });
+    assert.equal(resetRequest.status, 202);
+    assert.deepEqual(Object.keys(await resetRequest.json()).sort(), ['correlationId', 'state']);
+    const resetMessage = await fixture.emailEnvelope(firstEmail, 'password_reset');
+    assert.equal(resetMessage.to, firstEmail);
+    const resetToken = resetMessage.token;
+    const reset = await fixture.request('/api/auth/password/reset/complete', {
+      token: resetToken, password: changedPassword,
+    });
+    assert.equal(reset.status, 200);
+    assert.deepEqual(await reset.json(), { state: 'password_reset_completed' });
+    const replayedReset = await fixture.request('/api/auth/password/reset/complete', {
+      token: resetToken, password: changedPassword,
+    });
+    assertPrivateError(replayedReset, await replayedReset.json(), 400, 'reset_token_invalid');
+    const staleRefresh = await fixture.request('/api/auth/refresh', { refreshToken: firstSession.refreshToken });
+    assertPrivateError(staleRefresh, await staleRefresh.json(), 401, 'refresh_token_invalid');
+    const staleAccess = await fixture.request('/api/auth/userinfo', undefined, {
+      method: 'GET', access: firstSession.accessToken,
+    });
+    assert.equal(staleAccess.status, 401, 'password reset revokes access through the account token version');
+    const stalePassword = await fixture.request('/api/auth/email', {
+      mode: 'login', email: firstEmail, password: ownerPassword,
+    });
+    assertPrivateError(stalePassword, await stalePassword.json(), 401, 'invalid_credentials');
+
+    const secondInfo = await fixture.request('/api/auth/userinfo', undefined, {
+      method: 'GET', access: secondSession.accessToken,
+    });
+    assert.equal(secondInfo.status, 200);
+    assert.equal((await secondInfo.json()).id, secondAccount.id, 'another account keeps its own principal after reset');
+
+    const expiredResetRequest = await fixture.request('/api/auth/password/reset/request', {
+      email: secondEmail, turnstileToken: 'password_reset_request',
+    });
+    assert.equal(expiredResetRequest.status, 202);
+    const expiredResetMessage = await fixture.emailEnvelope(secondEmail, 'password_reset');
+    await fixture.query(
+      `UPDATE identity.password_reset_tokens SET expires_at=now()-interval '1 second'
+        WHERE token_hash=decode($1,'base64')`,
+      [hashAuthToken(expiredResetMessage.token, 'password_reset')],
+    );
+    const expiredReset = await fixture.request('/api/auth/password/reset/complete', {
+      token: expiredResetMessage.token, password: changedPassword,
+    });
+    assertPrivateError(expiredReset, await expiredReset.json(), 400, 'reset_token_invalid');
+
+    const changedLogin = await fixture.request('/api/auth/email', {
+      mode: 'login', email: firstEmail, password: changedPassword,
+    });
+    assert.equal(changedLogin.status, 200);
+    const changedSession = await changedLogin.json();
+    const rotated = await fixture.request('/api/auth/refresh', { refreshToken: changedSession.refreshToken });
+    assert.equal(rotated.status, 200);
+    const rotatedSession = await rotated.json();
+    assert.notEqual(rotatedSession.refreshToken, changedSession.refreshToken);
+    assert.equal(await fixture.activeSessionCount(firstAccount.id), 1, 'rotation leaves one live refresh session');
+
+    const reused = await fixture.request('/api/auth/refresh', { refreshToken: changedSession.refreshToken });
+    assertPrivateError(reused, await reused.json(), 401, 'refresh_token_reuse');
+    const revokedReplacement = await fixture.request('/api/auth/refresh', { refreshToken: rotatedSession.refreshToken });
+    assertPrivateError(revokedReplacement, await revokedReplacement.json(), 401, 'refresh_token_invalid');
+    assert.equal(await fixture.activeSessionCount(firstAccount.id), 0, 'refresh reuse revokes the family on the server');
+
+    const expiringLogin = await fixture.request('/api/auth/email', {
+      mode: 'login', email: secondEmail, password: ownerPassword,
+    });
+    assert.equal(expiringLogin.status, 200);
+    const expiringSession = await expiringLogin.json();
+    await fixture.query(
+      `UPDATE identity.auth_sessions SET expires_at=now()-interval '1 second'
+        WHERE refresh_token_hash=decode($1,'base64')`,
+      [hashResetToken(expiringSession.refreshToken)],
+    );
+    const expired = await fixture.request('/api/auth/refresh', { refreshToken: expiringSession.refreshToken });
+    assertPrivateError(expired, await expired.json(), 401, 'refresh_token_invalid');
+    assert.equal(await fixture.activeSessionCount(secondAccount.id), 1, 'only the deliberately expired session is inactive');
+
+    const logoutLogin = await fixture.request('/api/auth/email', {
+      mode: 'login', email: secondEmail, password: ownerPassword,
+    });
+    assert.equal(logoutLogin.status, 200);
+    const logoutSession = await logoutLogin.json();
+    const logout = await fixture.request('/api/auth/logout', { refreshToken: logoutSession.refreshToken });
+    assert.equal(logout.status, 200);
+    assert.deepEqual(await logout.json(), { loggedOut: true });
+    assert.equal((await fixture.request('/api/auth/refresh', { refreshToken: logoutSession.refreshToken })).status, 401);
+    assert.equal((await fixture.request('/api/auth/userinfo', undefined, {
+      method: 'GET', access: logoutSession.accessToken,
+    })).status, 401, 'logout revocation is enforced by subsequent Worker requests');
+    assert.equal((await fixture.request('/api/auth/refresh', { refreshToken: secondSession.refreshToken })).status, 401,
+      'global logout revokes an older refresh session for the same account');
+    assert.equal((await fixture.request('/api/auth/userinfo', undefined, {
+      method: 'GET', access: secondSession.accessToken,
+    })).status, 401, 'global logout revokes access issued by an older session');
+    assert.equal(await fixture.activeSessionCount(secondAccount.id), 0, 'global logout leaves no active session for that account');
+    const firstStillActive = await fixture.request('/api/auth/userinfo', undefined, {
+      method: 'GET', access: rotatedSession.accessToken,
+    });
+    assert.equal(firstStillActive.status, 200, 'logout of the second account does not revoke the first account');
+    assert.equal((await firstStillActive.json()).id, firstAccount.id);
+    assert.equal(fixture.providerCounts().denied, 0, 'all provider calls stayed on synthetic fixture services');
+  });
+
+  test('discarded signup response replays one intent and Worker traces omit private values', async () => {
+    fixture.setProviderModes({ screening: 'ok', turnstile: 'ok' });
+    const email = fixture.email('interrupted-request');
+    const key = fixture.idempotencyKey('lost-response');
+    const signup = { mode: 'register', email, password, turnstileToken: 'account_signup' };
+    const before = fixture.providerCounts();
+    assert.equal(await fixture.request('/api/auth/email', signup, {
+      idempotencyKey: key, discardResponse: true, discardedStatusExpected: 202,
+    }), undefined, 'the fixture drops the response after the Worker completes');
+    assert.equal(await fixture.accountCount(email), 1);
+    const account = await fixture.account(email);
+    assert.equal(await fixture.challengeCount(account.id), 1);
+    assert.equal(await fixture.outboxCount(email), 1);
+    const afterFirstAttempt = fixture.providerCounts();
+    assert.equal(afterFirstAttempt.screening - before.screening, 1);
+    assert.equal(afterFirstAttempt.turnstile - before.turnstile, 1);
+
+    const retry = await fixture.request('/api/auth/email', signup, { idempotencyKey: key });
+    assert.equal(retry.status, 202);
+    assert.deepEqual(await retry.json(), { state: 'verification_required' });
+    assert.deepEqual(fixture.providerCounts(), afterFirstAttempt, 'the retry does not call providers or create another intent');
+    assert.equal(await fixture.challengeCount(account.id), 1);
+    assert.equal(await fixture.outboxCount(email), 1);
+    assert.equal(fixture.providerCounts().denied, 0);
+
+    const wrongPassword = 'synthetic trace-only password input';
+    const traceStart = fixture.tracePosition();
+    const failedLogin = await fixture.request('/api/auth/email', {
+      mode: 'login', email, password: wrongPassword,
+    });
+    const failedLoginBody = await failedLogin.json();
+    assertPrivateError(failedLogin, failedLoginBody, 401, 'invalid_credentials');
+
+    const traceEvents = await fixture.traceEvents(traceStart);
+    assertAuthFailureTrace(traceEvents, {
+      correlationId: failedLoginBody.correlationId,
+      route: '/api/auth/email',
+      errorCode: 'invalid_credentials',
+    });
+    const verificationMessage = await fixture.emailEnvelope(email, 'verification');
+    assertRedactedAuthTraceRecords(traceEvents, [email, password, wrongPassword, signup.turnstileToken, verificationMessage.token]);
+  });
+
   test('the Public Worker enforces ten auth requests and resets at the minute boundary', { timeout: 180_000 }, async () => {
     const ip = fixture.rateLimitIp();
     const selectionDeadline = performance.now() + stableWindowSelectionTimeoutMs;
@@ -414,6 +690,8 @@ async function createFixture() {
   const ipPrefix = `2001:db8:${ipNonce.slice(0, 4)}:${ipNonce.slice(4, 8)}:${ipNonce.slice(8, 12)}:${ipNonce.slice(12, 16)}`;
   const providerModes = { screening: 'ok', turnstile: 'ok' };
   const counts = { screening: 0, turnstile: 0, denied: 0 };
+  const structuredLogs = [];
+  const emailEnvelopeEncryptionKey = randomBytes(32).toString('base64');
   const createdEmails = new Set();
   const createdIdempotencyKeys = new Set();
   const rateLimitSubjects = new Map();
@@ -453,7 +731,7 @@ async function createFixture() {
       WORKER_VERSION: { id: uuidv7(), tag: 'synthetic-auth-workerd' },
       AUTH_PASSWORD_PEPPER_V1: randomBytes(32).toString('base64'),
       PII_ENCRYPTION_KEY_V1: randomBytes(32).toString('base64'), PII_HMAC_KEY_V1: hmacKey,
-      TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1: randomBytes(32).toString('base64'),
+      TRANSACTIONAL_EMAIL_ENCRYPTION_KEY_V1: emailEnvelopeEncryptionKey,
       JWT_KEY_ID: keyId, JWT_PRIVATE_KEY: await exportPKCS8(privateKey),
       JWT_PUBLIC_JWKS: JSON.stringify({ keys: [publicJwk] }),
       TURNSTILE_REQUIRED: 'true', TURNSTILE_SECRET_KEY: 'synthetic-turnstile-secret',
@@ -532,7 +810,7 @@ async function createFixture() {
       counts.denied += 1;
       return new Response(null, { status: 403 });
     },
-  }] }));
+  }], handleStructuredLogs: log => structuredLogs.push(log) }));
 
   async function query(text, values = []) {
     const client = new pg.Client({ connectionString, ssl: false, connectionTimeoutMillis: 5000 });
@@ -559,9 +837,15 @@ async function createFixture() {
       }
       const headers = new Headers({ 'content-type': 'application/json', 'cf-connecting-ip': ip });
       if (options.idempotencyKey) headers.set('idempotency-key', options.idempotencyKey);
+      if (options.access) headers.set('authorization', `Bearer ${options.access}`);
       const response = await worker.dispatchFetch(`https://api.lythaus.test${path}`, {
         method: options.method ?? 'POST', headers, ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
+      if (options.discardResponse) {
+        if (options.discardedStatusExpected !== undefined) assert.equal(response.status, options.discardedStatusExpected);
+        await response.arrayBuffer();
+        return undefined;
+      }
       return response;
     },
     async account(email) {
@@ -593,6 +877,38 @@ async function createFixture() {
     },
     async sessionCount(userId) {
       return Number((await query(`SELECT count(*)::int AS count FROM identity.auth_sessions WHERE user_id=$1`, [userId])).rows[0].count);
+    },
+    async activeSessionCount(userId) {
+      return Number((await query(
+        `SELECT count(*)::int AS count FROM identity.auth_sessions s
+          JOIN identity.refresh_token_families f ON f.id=s.refresh_family_id
+          WHERE s.user_id=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND f.revoked_at IS NULL`, [userId],
+      )).rows[0].count);
+    },
+    async emailEnvelope(email, purpose) {
+      const user = (await query(
+        `SELECT user_id FROM identity.email_credentials WHERE email_lookup_hmac=decode($1,'base64')`,
+        [hmacLookup(email, hmacKey)],
+      )).rows[0];
+      assert.ok(user, 'synthetic fixture account exists before inspecting its encrypted email intent');
+      const row = (await query(
+        `SELECT purpose,delivery_envelope_ciphertext,delivery_envelope_encryption_key_version
+           FROM system.transactional_email_outbox
+          WHERE user_id=$1 AND purpose=$2 AND delivery_envelope_ciphertext IS NOT NULL
+          ORDER BY created_at DESC LIMIT 1`, [user.user_id, purpose],
+      )).rows[0];
+      assert.ok(row, `encrypted ${purpose} intent exists for the synthetic account`);
+      return decryptTransactionalEmailEnvelope({
+        ciphertext: row.delivery_envelope_ciphertext,
+        encryptionKeyVersion: row.delivery_envelope_encryption_key_version,
+      }, emailEnvelopeEncryptionKey);
+    },
+    tracePosition() { return structuredLogs.length; },
+    async traceEvents(startIndex = 0) {
+      await new Promise(resolve => setTimeout(resolve, 0));
+      return structuredLogs.slice(startIndex).map(({ message }) => {
+        try { return JSON.parse(message); } catch { return { message }; }
+      });
     },
     async idempotencyRecord(scope, key) {
       return (await query(`SELECT response FROM system.idempotency_keys WHERE scope=$1 AND key=$2`, [`auth-intake:${scope}`, key])).rows[0];

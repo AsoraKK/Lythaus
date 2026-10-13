@@ -151,7 +151,8 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
-        expect(find.text('Source attestation'), findsOneWidget);
+        expect(find.text('Source attestation'), findsNothing);
+        expect(find.text('Photos are not available yet'), findsOneWidget);
       });
     }
     testWidgets('renders blocked banner with categories', (tester) async {
@@ -309,135 +310,40 @@ void main() {
     });
   });
 
-  group('Proof tiles', () {
-    testWidgets('renders proof tiles with not-provided state', (tester) async {
-      tester.view.physicalSize = const Size(1200, 3000);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
-
-      await tester.pumpWidget(
-        buildWithState(
-          const PostCreationState(
-            text: 'Hello world',
-            proofSignals: ProofSignals(),
-          ),
-          user: _testUser(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Should show proof tile titles
-      expect(find.text('Capture metadata hash'), findsOneWidget);
-      expect(find.text('Edit history hash'), findsOneWidget);
-      expect(find.text('Source attestation'), findsOneWidget);
-
-      // All should be "Not provided"
-      expect(find.text('Not provided'), findsNWidgets(3));
-      expect(find.text('Add'), findsNWidgets(3));
-    });
-
-    testWidgets('renders proof tiles with provided state', (tester) async {
-      tester.view.physicalSize = const Size(1200, 3000);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
-
-      await tester.pumpWidget(
-        buildWithState(
-          const PostCreationState(
-            text: 'Hello world',
-            proofSignals: ProofSignals(
-              captureMetadataHash: 'abc123def456ghi789',
-              editHistoryHash: 'xyz987uvw654',
-              sourceAttestationUrl: 'https://source.example.com/proof',
-            ),
-          ),
-          user: _testUser(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Should show "Provided" and "View details" for each
-      expect(find.text('Provided'), findsNWidgets(3));
-      expect(find.text('View details'), findsNWidgets(3));
-    });
-
-    testWidgets('source attestation details sheet shows domain and copy link', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(1200, 3000);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
-
-      await tester.pumpWidget(
-        buildWithState(
-          const PostCreationState(
-            text: 'Hello world',
-            proofSignals: ProofSignals(
-              sourceAttestationUrl: 'https://source.example.com/proof',
-            ),
-          ),
-          user: _testUser(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.widgetWithText(TextButton, 'View details'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Source attestation'), findsAtLeastNWidgets(1));
-      expect(find.text('Status: Provided'), findsOneWidget);
-      expect(find.text('Domain: source.example.com'), findsOneWidget);
-
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Copy link'));
-      await tester.pumpAndSettle();
-    });
-
-    testWidgets('hash proof details sheet shows preview and copy hash', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(1200, 3000);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
-
-      await tester.pumpWidget(
-        buildWithState(
-          const PostCreationState(
-            text: 'Hello world',
-            proofSignals: ProofSignals(
-              captureMetadataHash: 'abc123def456ghi789',
-            ),
-          ),
-          user: _testUser(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.widgetWithText(TextButton, 'View details').first);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Capture metadata hash'), findsAtLeastNWidgets(1));
-      expect(
-        find.byWidgetPredicate(
-          (w) => w is Text && (w.data ?? '').contains('abc123de'),
-        ),
-        findsOneWidget,
-      );
-
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Copy hash'));
-      await tester.pumpAndSettle();
-    });
+  testWidgets('member composer explains gates and keeps policy accessible', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      buildWithState(
+        const PostCreationState(text: 'Hello world', aiLabel: 'human'),
+        user: _testUser(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Capture metadata hash'), findsNothing);
+    expect(find.text('Edit history hash'), findsNothing);
+    expect(find.text('Source attestation'), findsNothing);
+    expect(find.text('Photos are not available yet'), findsOneWidget);
+    expect(
+      find.textContaining('does not mean AI assessment has completed'),
+      findsOneWidget,
+    );
+    await tester.ensureVisible(find.text('Posting policy'));
+    await tester.tap(find.text('Posting policy'));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('AI-generated public content is not allowed.'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('249 user-perceived characters'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   group('CreatePostFAB', () {

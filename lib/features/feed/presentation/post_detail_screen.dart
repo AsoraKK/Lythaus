@@ -5,6 +5,7 @@ import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/profile/domain/public_author_label.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/domain/models.dart' as domain;
 import 'package:lythaus/features/reactions/presentation/reaction_bar.dart';
@@ -245,6 +246,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   }
 
   Future<void> _openComments(BuildContext context, domain.Post post) async {
+    if (post.moderationState == 'under_review') return;
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => CommentThreadScreen(
@@ -371,7 +373,12 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                     const SizedBox(height: 8),
-                    AuthorshipDisclosure(label: post.authorship.label.label),
+                    AuthorshipDisclosure(
+                      label: post.authorship.label.label,
+                      classificationSource:
+                          post.authorship.classificationSource,
+                      classificationState: post.authorship.classificationState,
+                    ),
                     if (post.moderationState == 'under_review') ...[
                       const SizedBox(height: 8),
                       const Text(
@@ -390,6 +397,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                     ),
                     const SizedBox(height: 12),
                     TrustStripRow(
+                      compact: true,
                       summary: FeedTrustSummary(
                         trustStatus: post.trustStatus,
                         timeline: FeedTrustTimeline(
@@ -407,22 +415,33 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                       onTap: () => ReceiptDrawer.show(context, post.id),
                     ),
                     const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: () => _openComments(context, post),
-                          icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                          label: Text('Comments (${post.commentCount})'),
+                    if (post.moderationState == 'under_review')
+                      Text(
+                        'Comments are unavailable while this post is under review.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
-                        if (post.hasAppeal)
-                          const Chip(
-                            avatar: Icon(Icons.gavel, size: 16),
-                            label: Text('Appeal open'),
+                      )
+                    else
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: () => _openComments(context, post),
+                            icon: const Icon(
+                              Icons.chat_bubble_outline,
+                              size: 18,
+                            ),
+                            label: Text('Comments (${post.commentCount})'),
                           ),
-                      ],
-                    ),
+                          if (post.hasAppeal)
+                            const Chip(
+                              avatar: Icon(Icons.gavel, size: 16),
+                              label: Text('Appeal open'),
+                            ),
+                        ],
+                      ),
                   ],
                 ),
               );
@@ -443,14 +462,16 @@ class _PostHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
+    final authorLabel = publicAuthorLabel(
+      post.authorUsername,
+      authorId: post.authorId,
+    );
 
     return Row(
       children: [
         CircleAvatar(
           child: Text(
-            post.authorUsername.isNotEmpty
-                ? post.authorUsername[0].toUpperCase()
-                : '?',
+            authorLabel.isNotEmpty ? authorLabel[0].toUpperCase() : '?',
           ),
         ),
         const SizedBox(width: 12),
@@ -460,7 +481,7 @@ class _PostHeader extends StatelessWidget {
             children: [
               AuthorProfileLink(
                 userId: post.authorId,
-                label: post.authorUsername,
+                label: authorLabel,
                 textStyle: textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),

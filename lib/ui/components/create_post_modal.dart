@@ -39,19 +39,15 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
 
   ContentType selectedType = ContentType.text;
   bool isNews = false;
-  bool _policyReminderShown = false;
-  final GlobalKey<TooltipState> _policyTooltipKey = GlobalKey<TooltipState>();
   late final TextEditingController controller;
-  late final TextEditingController mediaController;
 
   @override
   void initState() {
     super.initState();
     final state = ref.read(postCreationProvider);
     controller = TextEditingController(text: state.text);
-    mediaController = TextEditingController(text: state.mediaUrl);
     isNews = state.isNews;
-    selectedType = _typeFromString(state.contentType);
+    selectedType = ContentType.text;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) ref.read(postCreationProvider.notifier).refreshDraftOnOpen();
     });
@@ -60,16 +56,10 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
   @override
   void dispose() {
     controller.dispose();
-    mediaController.dispose();
     super.dispose();
   }
 
   Future<void> _handleSubmit() async {
-    if (!_policyReminderShown) {
-      _policyReminderShown = true;
-      _policyTooltipKey.currentState?.ensureTooltipVisible();
-    }
-
     await runWithDeviceGuard(
       context,
       ref,
@@ -105,12 +95,17 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
                   userId: user.id,
                 );
           }
-          LythSnackbar.success(
-            context: context,
-            message: state.successResult?.post.moderationState == 'allowed'
-                ? 'Posted to Lythaus'
-                : 'Post submitted. Publication checks are pending.',
-          );
+          if (state.successResult?.post.moderationState == 'allowed') {
+            LythSnackbar.success(
+              context: context,
+              message: 'Posted to Lythaus',
+            );
+          } else {
+            LythSnackbar.info(
+              context: context,
+              message: 'Post submitted. Publication checks are pending.',
+            );
+          }
           notifier.reset();
           Navigator.of(context).maybePop();
         }
@@ -165,26 +160,6 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
             SizedBox(height: spacing.lg),
-            Wrap(
-              spacing: spacing.xs,
-              children: ContentType.values
-                  .where((type) => type != ContentType.mixed)
-                  .map((type) {
-                    final selected = selectedType == type;
-                    return ChoiceChip(
-                      label: Text(_label(type)),
-                      selected: selected,
-                      onSelected: !canEdit
-                          ? null
-                          : (_) {
-                              setState(() => selectedType = type);
-                              notifier.setContentType(type.name);
-                            },
-                    );
-                  })
-                  .toList(),
-            ),
-            SizedBox(height: spacing.lg),
             LythTextField(
               key: ValueKey(
                 'post-modal-input:$inputEpoch:${state.isRestoring}',
@@ -204,6 +179,22 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
                 'Authorship disclosure (required)',
                 style: Theme.of(context).textTheme.labelLarge,
               ),
+            ),
+            TextButton(
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (dialogContext) => AlertDialog(
+                  title: const Text('Posting policy'),
+                  content: const Text(_policyReminderMessage),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                      child: const Text('Done'),
+                    ),
+                  ],
+                ),
+              ),
+              child: const Text('Posting policy'),
             ),
             SizedBox(height: spacing.xs),
             Wrap(
@@ -248,26 +239,10 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
               ),
             ],
             SizedBox(height: spacing.lg),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: LythButton.tertiary(
-                label: 'Add media',
-                icon: Icons.attach_file_outlined,
-                onPressed: canEdit ? _openMediaPicker : null,
-              ),
+            const Text(
+              'Photos are not available yet. Image sharing will open after '
+              'the required safety and authenticity checks are ready.',
             ),
-            SizedBox(height: spacing.xs),
-            if (state.mediaUrl != null)
-              Wrap(
-                spacing: spacing.xs,
-                runSpacing: spacing.xs,
-                children: [
-                  LythChip.input(
-                    label: state.mediaUrl!,
-                    onDeleted: () => notifier.updateMediaUrl(null),
-                  ),
-                ],
-              ),
             if (widget.canMarkNews) ...[
               SizedBox(height: spacing.sm),
               SwitchListTile(
@@ -310,19 +285,17 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
                 ),
                 SizedBox(width: spacing.md),
                 Expanded(
-                  child: Tooltip(
-                    key: _policyTooltipKey,
-                    message: _policyReminderMessage,
-                    triggerMode: TooltipTriggerMode.manual,
-                    showDuration: const Duration(seconds: 6),
-                    child: LythButton.primary(
-                      label: canCreate ? 'Post' : 'Sign in first',
-                      onPressed:
-                          state.isSubmitting || state.isRestoring || !canCreate
-                          ? null
-                          : _handleSubmit,
-                      isLoading: state.isSubmitting,
-                    ),
+                  child: LythButton.primary(
+                    label: !canCreate
+                        ? 'Sign in first'
+                        : state.errorResult?.outcomeUncertain == true
+                        ? 'Retry submission'
+                        : 'Post',
+                    onPressed:
+                        state.isSubmitting || state.isRestoring || !canCreate
+                        ? null
+                        : _handleSubmit,
+                    isLoading: state.isSubmitting,
                   ),
                 ),
               ],
@@ -398,60 +371,6 @@ class _CreatePostModalState extends ConsumerState<CreatePostModal> {
           ],
         ),
       ),
-    );
-  }
-
-  void _openMediaPicker() {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (_) => Padding(
-        padding: EdgeInsets.all(context.spacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Add media',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            SizedBox(height: context.spacing.sm),
-            LythTextField(
-              controller: mediaController,
-              label: 'Media URL',
-              helperText: 'Paste an image or video URL.',
-            ),
-            SizedBox(height: context.spacing.lg),
-            LythButton.primary(
-              label: 'Attach',
-              onPressed: () {
-                ref
-                    .read(postCreationProvider.notifier)
-                    .updateMediaUrl(mediaController.text.trim());
-                Navigator.of(context).maybePop();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _label(ContentType type) {
-    return switch (type) {
-      ContentType.text => 'Text',
-      ContentType.image => 'Image',
-      ContentType.video => 'Video',
-      ContentType.mixed => 'Mixed',
-    };
-  }
-
-  ContentType _typeFromString(String value) {
-    return ContentType.values.firstWhere(
-      (type) => type.name == value,
-      orElse: () => ContentType.text,
     );
   }
 }

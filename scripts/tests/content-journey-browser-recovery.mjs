@@ -114,8 +114,8 @@ try {
       const original=r.writes[0];
       await newProfile(p,context,r,{width:390,theme:'light',scenario:'ack-loss'},async(q,qr)=>{
         await open(q,kind==='post'?'Open composer':'Open comments',kind==='post'?'Your post':'Synthetic owner comment');
-        await button(q,kind==='post'?'Post':'Retry same comment').waitFor();
-        await button(q,kind==='post'?'Post':'Retry same comment').click();
+        await button(q,kind==='post'?'Retry submission':'Retry same comment').waitFor();
+        await button(q,kind==='post'?'Retry submission':'Retry same comment').click();
         if(kind==='post') await button(q,'Open composer').waitFor();
         else await content(q,text).waitFor();
         assert.deepEqual(qr.writes[0],original);

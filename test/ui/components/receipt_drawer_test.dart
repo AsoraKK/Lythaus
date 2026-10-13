@@ -259,6 +259,102 @@ void main() {
     expect(find.text('Post Receipt'), findsOneWidget);
   });
 
+  testWidgets(
+    'receipt modal is bounded and backdrop-dismissable on mobile and desktop',
+    (tester) async {
+      final dio = _dioWithAdapter(
+        _MockAdapter((_) async {
+          return _jsonResponse({
+            'postId': 'post-bounded',
+            'events': <Map<String, dynamic>>[],
+            'issuedAt': '2026-01-01T00:00:00Z',
+            'signature': 'sig',
+            'keyId': 'k1',
+          });
+        }),
+      );
+
+      for (final size in [const Size(390, 800), const Size(1440, 900)]) {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [secureDioProvider.overrideWithValue(dio)],
+            child: MaterialApp(
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => TextButton(
+                    onPressed: () =>
+                        ReceiptDrawer.show(context, 'post-bounded'),
+                    child: const Text('Open bounded receipt'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('Open bounded receipt'));
+        await tester.pumpAndSettle();
+
+        final sheetRect = tester.getRect(find.byType(BottomSheet));
+        expect(sheetRect.height, lessThan(600));
+        expect(sheetRect.top, greaterThan(0));
+        await tester.tapAt(Offset(size.width / 2, sheetRect.top - 8));
+        await tester.pumpAndSettle();
+        expect(find.text('Post Receipt'), findsNothing);
+      }
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+    },
+  );
+
+  testWidgets('unavailable history has a visible close and compact sheet', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final dio = _dioWithAdapter(
+      _MockAdapter((options) async {
+        throw DioException(
+          requestOptions: options,
+          type: DioExceptionType.badResponse,
+          response: Response(requestOptions: options, statusCode: 404),
+        );
+      }),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [secureDioProvider.overrideWithValue(dio)],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => ReceiptDrawer.show(context, 'missing-history'),
+                child: const Text('Open history'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open history'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Receipt unavailable'), findsOneWidget);
+    expect(find.byTooltip('Close receipt'), findsOneWidget);
+    expect(
+      tester.getRect(find.byType(ReceiptDrawerSheet)).height,
+      lessThan(500),
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(ReceiptDrawerSheet), findsNothing);
+  });
+
   testWidgets('uses fallback labels for sparse event payload and closes', (
     tester,
   ) async {

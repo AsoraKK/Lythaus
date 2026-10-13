@@ -110,6 +110,7 @@ class FeedItem {
   final FeedTrustSummary trustSummary;
   final String authorshipLabel;
   final String classificationSource;
+  final String classificationState;
 
   const FeedItem({
     required this.id,
@@ -130,6 +131,7 @@ class FeedItem {
     this.trustSummary = const FeedTrustSummary(),
     this.authorshipLabel = 'Under review',
     this.classificationSource = 'automated_classification',
+    this.classificationState = 'unavailable',
   });
 }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,6 +12,11 @@ import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
+import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/domain/models.dart' as feed;
+import 'package:lythaus/features/feed/domain/post_repository.dart';
+import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
 import 'package:lythaus/features/profile/application/follow_providers.dart';
 import 'package:lythaus/features/profile/application/follow_service.dart';
 import 'package:lythaus/features/profile/application/owner_posts.dart';
@@ -19,20 +26,25 @@ import 'package:lythaus/features/profile/domain/public_user.dart';
 import 'package:lythaus/features/profile/domain/owner_profile.dart';
 import 'package:lythaus/state/models/reputation.dart';
 import 'package:lythaus/state/providers/reputation_providers.dart';
+import '../helpers/content_recovery.dart';
 import 'package:lythaus/ui/screens/profile/profile_screen.dart';
 
 class _MockFollowService extends Mock implements FollowService {}
 
 class _FakeOwnerPostsService extends OwnerPostsService {
-  _FakeOwnerPostsService() : super(Dio());
+  _FakeOwnerPostsService([this.items = const []]) : super(Dio());
+
+  final List<OwnerPost> items;
 
   @override
   Future<OwnerPostsPage> getPage({
     required String accessToken,
     String? cursor,
     CancelToken? cancelToken,
-  }) async => const OwnerPostsPage(items: [], nextCursor: null);
+  }) async => OwnerPostsPage(items: items, nextCursor: null);
 }
+
+class _MockPostRepository extends Mock implements PostRepository {}
 
 const _reputationSnapshot = ReputationState(
   userId: 'user-1',
@@ -148,6 +160,76 @@ void main() {
           .first,
     );
     expect(find.text('Settings'), findsOneWidget);
+  });
+
+  testWidgets('owner post card opens its post detail', (tester) async {
+    final user = User(
+      id: 'user-1',
+      email: 'ada@example.com',
+      role: UserRole.user,
+      tier: UserTier.gold,
+      reputationScore: 120,
+      createdAt: DateTime(2024, 1, 1),
+      lastLoginAt: DateTime(2024, 1, 2),
+    );
+    const profile = PublicUser(
+      id: 'user-1',
+      displayName: 'Ada Lovelace',
+      handle: '@ada',
+      tier: 'gold',
+    );
+    final postRepository = _MockPostRepository();
+    final pendingPost = Completer<feed.Post>();
+    when(
+      () => postRepository.getPost(
+        postId: 'owner-private-post',
+        token: 'synthetic-token',
+      ),
+    ).thenAnswer((_) => pendingPost.future);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserProvider.overrideWith((ref) => user),
+          ownerPostsServiceProvider.overrideWithValue(
+            _FakeOwnerPostsService([
+              OwnerPost(
+                id: 'owner-private-post',
+                authorId: user.id,
+                body: 'Synthetic owner post',
+                declaredCreationMode: 'human',
+                moderationState: 'under_review',
+                visibility: 'private',
+                publishedAt: null,
+                createdAt: DateTime(2026, 1, 1),
+                updatedAt: DateTime(2026, 1, 1),
+              ),
+            ]),
+          ),
+          ownerProfileProvider.overrideWith(
+            (ref) => Future.value(_ownerProfile(profile)),
+          ),
+          jwtProvider.overrideWith((ref) async => 'synthetic-token'),
+          reputationProvider.overrideWith((ref) async => _reputationSnapshot),
+          postRepositoryProvider.overrideWithValue(postRepository),
+          contentRecoveryStorageProvider.overrideWithValue(
+            MemoryContentRecoveryStorage(),
+          ),
+        ],
+        child: const MaterialApp(home: ProfileScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Posts'));
+    await tester.pumpAndSettle();
+    expect(find.text('Synthetic owner post'), findsOneWidget);
+
+    await tester.tap(find.text('Synthetic owner post'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(find.byType(PostDetailScreen), findsOneWidget);
+    expect(find.text('Post'), findsOneWidget);
   });
 
   testWidgets('profile screen shows error state on load failure', (

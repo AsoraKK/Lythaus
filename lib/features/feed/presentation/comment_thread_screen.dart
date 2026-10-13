@@ -3,6 +3,7 @@
 import 'package:dio/dio.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:lythaus/features/profile/domain/public_author_label.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -1033,7 +1034,7 @@ class _ComposerBar extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Replying to @${replyTarget!.authorUsername}',
+                      'Replying to ${replyTarget!.authorUsername}',
                       style: Theme.of(context).textTheme.labelMedium,
                     ),
                   ),
@@ -1157,7 +1158,7 @@ class _CommentTile extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '@${comment.authorUsername}',
+                  comment.authorUsername,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w700,
@@ -1254,19 +1255,9 @@ class _ThreadComment {
         (json['commentId'] as String?) ?? (json['id'] as String?) ?? 'unknown';
     final authorId = json['authorId'] as String? ?? 'unknown';
     final userFromPayload =
+        json['authorDisplayName'] as String? ??
         json['authorUsername'] as String? ??
-        json['authorHandle'] as String? ??
         json['username'] as String?;
-
-    String fallbackUsername(String value) {
-      if (value.isEmpty) {
-        return 'user';
-      }
-      if (value.length <= 10) {
-        return value;
-      }
-      return value.substring(0, 10);
-    }
 
     final createdAtRaw =
         (json['createdAt'] as String?) ??
@@ -1277,7 +1268,11 @@ class _ThreadComment {
       id: id,
       postId: (json['postId'] as String?) ?? '',
       authorId: authorId,
-      authorUsername: userFromPayload ?? fallbackUsername(authorId),
+      authorUsername: publicAuthorLabel(
+        userFromPayload,
+        handle: json['authorHandle'] as String?,
+        authorId: authorId,
+      ),
       text: json['deleted'] == true
           ? '[deleted]'
           : (json['body'] ?? json['text']) as String? ?? '',

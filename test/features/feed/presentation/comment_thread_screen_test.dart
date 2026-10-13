@@ -252,6 +252,92 @@ void main() {
 
   // ── Comment list ───────────────────────────────────────────────────────────
   group('Comment list', () {
+    for (final labelCase in [
+      (
+        name: 'display name',
+        displayName: 'Kai Rivers',
+        handle: 'kai',
+        label: 'Kai Rivers',
+      ),
+      (
+        name: 'missing profile',
+        displayName: null,
+        handle: null,
+        label: 'Lythaus member',
+      ),
+    ]) {
+      testWidgets(
+        '${labelCase.name} stays a public label in comment and reply',
+        (tester) async {
+          const authorId = '01a044e4-3860-7f76-b819-5be99e0000f6';
+          when(
+            () => dio.get<Map<String, dynamic>>(
+              any(),
+              queryParameters: any(named: 'queryParameters'),
+              options: any(named: 'options'),
+            ),
+          ).thenAnswer(
+            (_) async => _commentPageResponse(
+              items: [
+                {
+                  ..._commentJson('public-label'),
+                  'authorId': authorId,
+                  'authorUsername': null,
+                  'authorDisplayName': labelCase.displayName,
+                  'authorHandle': labelCase.handle,
+                },
+              ],
+            ),
+          );
+          await tester.pumpWidget(_buildApp(postId: 'p1', dio: dio));
+          await tester.pumpAndSettle();
+          expect(find.text(labelCase.label), findsOneWidget);
+          expect(find.text('@${labelCase.label}'), findsNothing);
+          expect(find.textContaining(authorId), findsNothing);
+          await tester.tap(find.widgetWithText(TextButton, 'Reply'));
+          await tester.pumpAndSettle();
+          expect(find.text('Replying to ${labelCase.label}'), findsOneWidget);
+          expect(find.text('Replying to @${labelCase.label}'), findsNothing);
+          expect(find.textContaining(authorId), findsNothing);
+        },
+      );
+    }
+
+    testWidgets(
+      'permitted handle fallback renders one prefix without an internal ID',
+      (tester) async {
+        const authorId = '01a044e4-3860-7f76-b819-5be99e0000f6';
+        when(
+          () => dio.get<Map<String, dynamic>>(
+            any(),
+            queryParameters: any(named: 'queryParameters'),
+            options: any(named: 'options'),
+          ),
+        ).thenAnswer(
+          (_) async => _commentPageResponse(
+            items: [
+              {
+                ..._commentJson('handle'),
+                'authorId': authorId,
+                'authorUsername': null,
+                'authorDisplayName': '',
+                'authorHandle': 'kai',
+              },
+            ],
+          ),
+        );
+        await tester.pumpWidget(_buildApp(postId: 'p1', dio: dio));
+        await tester.pumpAndSettle();
+        expect(find.text('@kai'), findsOneWidget);
+        expect(find.text('@@kai'), findsNothing);
+        expect(find.textContaining(authorId), findsNothing);
+        await tester.tap(find.widgetWithText(TextButton, 'Reply'));
+        await tester.pumpAndSettle();
+        expect(find.text('Replying to @kai'), findsOneWidget);
+        expect(find.text('Replying to @@kai'), findsNothing);
+      },
+    );
+
     testWidgets('renders comments returned by API', (tester) async {
       when(
         () => dio.get<Map<String, dynamic>>(

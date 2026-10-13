@@ -136,7 +136,7 @@ void main() {
       expect(post.authorUsername, 'Bob D');
     });
 
-    test('falls back to authorId when no username found', () {
+    test('uses a member label when no public name is available', () {
       final json = {
         'id': 'p1',
         'authorId': 'a1',
@@ -144,7 +144,7 @@ void main() {
         'createdAt': now.toIso8601String(),
       };
       final post = Post.fromJson(json);
-      expect(post.authorUsername, 'a1');
+      expect(post.authorUsername, 'Lythaus member');
     });
 
     test('uses content field as fallback text', () {

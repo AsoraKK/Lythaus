@@ -129,6 +129,11 @@ void main() {
       );
       await tester.pumpAndSettle();
       storage.failWrites = true;
+      await tester.enterText(
+        find.byType(TextField).first,
+        'Synthetic discard draft with an unsaved edit',
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Close composer'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Discard'));
@@ -140,7 +145,7 @@ void main() {
       );
       expect(
         tester.widget<TextField>(find.byType(TextField).first).controller!.text,
-        'Synthetic discard draft',
+        'Synthetic discard draft with an unsaved edit',
       );
       expect(storage.values.values.join(), contains('Synthetic discard draft'));
       storage.failWrites = false;
@@ -160,6 +165,39 @@ void main() {
     },
   );
 
+  testWidgets('closing a saved draft preserves text and disclosure quietly', (
+    tester,
+  ) async {
+    final storage = MemoryContentRecoveryStorage();
+    await tester.pumpWidget(_screen(storage: storage, viaNavigator: true));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open composer'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'Saved private draft');
+    await tester.pump();
+    await tester.tap(find.text('Human-authored'));
+    await tester.pumpAndSettle();
+    expect(find.text('Draft saved on this device.'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Close composer'));
+    await tester.pumpAndSettle();
+    expect(find.text('Discard post?'), findsNothing);
+    expect(find.text('Open composer'), findsOneWidget);
+
+    await tester.tap(find.text('Open composer'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextField>(find.byType(TextField).first).controller!.text,
+      'Saved private draft',
+    );
+    expect(
+      tester
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Human-authored'))
+          .selected,
+      isTrue,
+    );
+  });
+
   testWidgets('offers only allowed public authorship choices', (tester) async {
     await tester.pumpWidget(_screen());
     await tester.pumpAndSettle();
@@ -167,6 +205,9 @@ void main() {
     expect(find.text('Human-authored'), findsOneWidget);
     expect(find.text('AI-assisted'), findsOneWidget);
     expect(find.text('AI-generated'), findsNothing);
+    await tester.ensureVisible(find.text('Posting policy'));
+    await tester.tap(find.text('Posting policy'));
+    await tester.pumpAndSettle();
     expect(
       find.textContaining('AI-generated public content is not allowed'),
       findsOneWidget,
