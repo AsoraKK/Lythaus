@@ -15,11 +15,14 @@ async function bundles(scenario = 'normal') {
   const pgFixture = { name: 'synthetic-pg', setup(plugin) {
     plugin.onResolve({ filter: /^pg$/ }, () => ({ path: 'pg', namespace: 'synthetic-pg' }));
     plugin.onLoad({ filter: /.*/, namespace: 'synthetic-pg' }, () => ({ contents: `
+      import {EventEmitter} from 'node:events';
       export const trace=[]; let index=0;
+      export class DatabaseError extends Error {}
       const rows=${JSON.stringify(rows)};
-      export class Client {
-        constructor(){trace.push('client')}
-        on(){return this} removeListener(){return this}
+      export class Client extends EventEmitter {
+        constructor(){super();trace.push('client');this.connection=new EventEmitter();this.connection.stream=new EventEmitter();
+          let resolveClosed; const socket={closed:new Promise(resolve=>{resolveClosed=resolve}),close:()=>{resolveClosed();this.connection.emit('end')}};
+          this.connection.stream._cfSocket=socket;this.connection.stream.destroy=()=>socket.close();}
         async connect(){trace.push('connect')}
         async query(sql){trace.push(sql);
           if(sql==='BEGIN READ ONLY')return {command:'BEGIN',rows:[]};
@@ -29,7 +32,7 @@ async function bundles(scenario = 'normal') {
           if(${JSON.stringify(scenario)}==='restriction' && 'usersUpdate' in row)row.usersUpdate=true;
           return {command:'SELECT',rows:[row]};
         }
-        async end(){trace.push('end')}
+        async end(){trace.push('end');this.connection.stream._cfSocket.close()}
       }
       export default {Client};`, loader: 'js' }));
   } };
@@ -83,6 +86,13 @@ test('actual Public and Jobs bundles preserve authorization across the private s
       assert.equal((await f.mf.dispatchFetch('https://api.lythaus.test' + path, { method: 'POST', headers })).status, 404);
       assert.equal((await f.mf.dispatchFetch('https://api.lythaus.test' + path + '?sql=SELECT', { headers })).status, 400);
       assert.equal((await f.mf.dispatchFetch('https://api.lythaus.test' + path, { headers: { authorization: headers.authorization } })).status, 409);
+      for (const pins of [`lythaus-jobs-development="${version}"`,
+        `lythaus-public-api-development="invalid", lythaus-jobs-development="${version}"`,
+        `lythaus-public-api-development="${version}", lythaus-jobs-development="${version}"`]) {
+        assert.equal((await f.mf.dispatchFetch('https://api.lythaus.test' + path, {
+          headers: { authorization: headers.authorization, 'Cloudflare-Workers-Version-Overrides': pins },
+        })).status, 409);
+      }
       assert.deepEqual(await (await jobs.fetch('https://fixture.invalid/__synthetic_trace')).json(), []);
     });
     await t.test('pinned authorized request observes only mocked catalog metadata and confirms rollback', async () => {

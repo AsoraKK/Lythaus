@@ -5,16 +5,26 @@ import { inspectJobsReputationSession, handleJobsReputationSessionDiagnostic, JO
 import { handleJobsReputationSessionBridge } from '../../lythaus-public-api/src/jobs-reputation-session-bridge.ts';
 import { JOBS_SESSION_PATH, JOBS_SESSION_SCHEMA, JOBS_SESSION_RECEIPT_BYTES, observedJobsSession, sanitizedJobsSessionReceipt } from '../../../packages/contracts/src/jobs-reputation-session.ts';
 import { version, otherVersion, release, metadata, rows } from './reputation-session-fixture.mjs';
+import { pinnedDriverFixture } from './reputation-session-driver-fixture.mjs';
 
 const binding = { connectionString: 'postgres://synthetic:SYNTHETIC_CREDENTIAL@fixture.psdb.cloud/postgres?sslmode=verify-full' };
 const worker = { id: version, tag: release };
 const request = (options = {}) => new Request('https://api.synthetic.invalid' + JOBS_SESSION_PATH, {
-  headers: { authorization: 'Bearer synthetic-readiness', 'Cloudflare-Workers-Version-Overrides': `lythaus-jobs-development="${version}"` }, ...options,
+  headers: { authorization: 'Bearer synthetic-readiness', 'Cloudflare-Workers-Version-Overrides': `lythaus-public-api-development="${version}", lythaus-jobs-development="${version}"` }, ...options,
 });
 function fixture(override = {}) {
   const trace = [];
   let index = 0, config;
   const client = new EventEmitter();
+  let resolveClosed;
+  const transport = { closed: false, destroyCalls: 0, closeCalls: 0 };
+  client.connection = new EventEmitter();
+  client.connection.stream = new EventEmitter();
+  const socket = { closed: new Promise(resolve => { resolveClosed = resolve; }), close() {
+    transport.closeCalls++; transport.closed = true; resolveClosed(); client.connection.emit('end');
+  } };
+  client.connection.stream._cfSocket = socket;
+  client.connection.stream.destroy = () => { transport.destroyCalls++; if (override.destroy) return override.destroy(); socket.close(); };
   client.connect = async () => { trace.push('connect'); return override.connect?.(); };
   client.query = async sql => {
     trace.push(sql);
@@ -24,8 +34,8 @@ function fixture(override = {}) {
     assert.equal(sql, JOBS_SESSION_CATALOG_QUERIES[index]);
     return { command: 'SELECT', rows: [{ ...rows[index++], secret: 'SYNTHETIC_CREDENTIAL' }] };
   };
-  client.end = async () => { trace.push('end'); return override.end?.(); };
-  return { client, trace, get config() { return config; }, dependencies: {
+  client.end = async () => { trace.push('end'); await override.end?.(); socket.close(); };
+  return { client, trace, transport, get config() { return config; }, dependencies: {
     createClient: value => { config = value; return client; }, timeoutMs: 5_000, cleanupMs: 10,
   } };
 }
@@ -35,6 +45,7 @@ test('one actual-client-shaped read-only transaction performs only four fixed ca
   const result = await inspectJobsReputationSession(binding, f.dependencies);
   assert.equal(result.status, 'observed'); assert.equal(result.prerequisitesMet, true);
   assert.equal(result.rollbackConfirmed, true);
+  assert.equal(f.transport.closed, true);
   assert.deepEqual(f.trace, ['connect', 'BEGIN READ ONLY', ...JOBS_SESSION_CATALOG_QUERIES, 'ROLLBACK', 'end']);
   assert.equal(new URL(f.config.connectionString).searchParams.get('sslmode'), 'verify-full');
   assert.equal(f.config.connectionTimeoutMillis, 5_000); assert.equal(f.config.query_timeout, 5_000);
@@ -87,6 +98,7 @@ for (const phase of ['connect', 'begin', 'catalog', 'rollback', 'end']) {
     const receipt = await inspectJobsReputationSession(binding, { ...f.dependencies, timeoutMs: 10, cleanupMs: 5, now: () => 0 });
     assert.equal(receipt.status, 'unavailable'); assert.equal(receipt.diagnosticCode, 'timeout');
     assert.ok(f.trace.includes('end')); assert.ok(!f.trace.includes('COMMIT'));
+    assert.equal(f.transport.closed, true, 'the deadline must close the transport, not just stop awaiting');
     if (phase !== 'connect') assert.ok(f.trace.includes('ROLLBACK'));
     if (phase === 'end') assert.doesNotThrow(() => f.client.emit('error', new Error('late synthetic transport error')));
   });
@@ -114,7 +126,51 @@ test('deadline exhaustion after rollback still closes the connection', async () 
   const receipt = await inspectJobsReputationSession(binding, { ...f.dependencies, timeoutMs: 100, now: () => now });
   assert.equal(receipt.status, 'unavailable'); assert.equal(receipt.diagnosticCode, 'timeout');
   assert.equal(f.trace.at(-1), 'end');
+  assert.equal(f.transport.closed, true);
 });
+
+test('successful close retains a retired client sink and retires delayed transport events', async () => {
+  const f = fixture();
+  assert.equal((await inspectJobsReputationSession(binding, f.dependencies)).status, 'observed');
+  assert.equal(f.transport.closed, true);
+  assert.doesNotThrow(() => f.client.emit('error', new Error('SYNTHETIC_CREDENTIAL late close')));
+  assert.equal(f.client.connection.stream.emit('error', new Error('SYNTHETIC_CREDENTIAL late read')), false);
+  assert.equal(f.client.connection.stream.emit('data', Buffer.from('late data')), false);
+});
+
+for (const phase of ['throw', 'reject', 'destroy-throw']) test(`failed ${phase} end forces actual native transport close`, async () => {
+  const f = fixture({ end: () => {
+    if (phase === 'reject') return Promise.reject(new Error('SYNTHETIC_CREDENTIAL'));
+    throw new Error('SYNTHETIC_CREDENTIAL');
+  }, destroy: phase === 'destroy-throw' ? () => { throw new Error('synthetic pg-cloudflare destroy/write exception'); } : undefined });
+  const receipt = await inspectJobsReputationSession(binding, f.dependencies);
+  assert.equal(receipt.status, 'unavailable');
+  assert.equal(f.transport.closed, true); assert.ok(f.transport.destroyCalls > 0); assert.ok(f.transport.closeCalls > 0);
+  assert.doesNotThrow(() => f.client.emit('error', new Error('delayed synthetic error')));
+  assert.ok(!JSON.stringify(receipt).includes('SYNTHETIC_CREDENTIAL'));
+});
+
+test('pinned pg and pg-cloudflare transport retire delayed read and prior closed errors after successful end', async () => {
+  const f = pinnedDriverFixture();
+  const receipt = await inspectJobsReputationSession(binding, f.dependencies);
+  assert.equal(receipt.status, 'observed', JSON.stringify({ receipt, state: f.state })); assert.equal(receipt.rollbackConfirmed, true);
+  assert.equal(f.state.nativeClosed, true); assert.equal(f.state.closeCalls, 1);
+  assert.equal(f.state.reads, 1);
+  await f.delayedErrors();
+  assert.doesNotThrow(() => f.client.emit('error', new Error('late retired client error')));
+  assert.equal(f.stream.emit('error', new Error('late retired transport error')), false);
+});
+
+for (const mode of ['hang', 'reject', 'write-throw', 'destroy-throw']) {
+  test(`pinned driver ${mode} cleanup forces native close and retires late failures`, async () => {
+    const f = pinnedDriverFixture(mode);
+    const receipt = await inspectJobsReputationSession(binding, f.dependencies);
+    assert.equal(receipt.status, 'unavailable'); assert.equal(f.state.nativeClosed, true);
+    assert.ok(f.state.closeCalls > 0); assert.ok(f.state.destroyCalls > 0);
+    await f.delayedErrors();
+    assert.ok(!JSON.stringify(receipt).includes('SYNTHETIC_CREDENTIAL'));
+  });
+}
 
 test('missing or malformed catalog data cannot become observed evidence', async () => {
   const f = fixture({ query: async sql => ({ command: sql === 'BEGIN READ ONLY' ? 'BEGIN' : sql === 'ROLLBACK' ? 'ROLLBACK' : 'SELECT', rows: [] }) });
@@ -164,7 +220,7 @@ test('bridge sends one fixed private GET and returns only the verified sanitized
   const f = bridge(envelope());
   const response = await handleJobsReputationSessionBridge(request({ headers: {
     authorization: 'Bearer synthetic-readiness', 'x-arbitrary': 'SYNTHETIC_CREDENTIAL',
-    'Cloudflare-Workers-Version-Overrides': `lythaus-public-api-development="${otherVersion}", lythaus-jobs-development="${version}"`,
+    'Cloudflare-Workers-Version-Overrides': `lythaus-public-api-development="${version}", lythaus-jobs-development="${version}"`,
   } }), f.env, true);
   assert.equal(response.status, 200); assert.equal(response.headers.get('cache-control'), 'private, no-store');
   assert.equal((await response.json()).receipt.prerequisitesMet, true);
@@ -181,6 +237,19 @@ test('bridge authorization flag methods overrides and SQL inputs cannot contact 
     [request({ headers: { 'Cloudflare-Workers-Version-Overrides': `unrelated-worker="${version}"` } }), f.env, true, 409],
     [new Request('https://api.synthetic.invalid' + JOBS_SESSION_PATH + '?role=postgres&sql=DROP'), f.env, true, 400]]) {
     assert.equal((await handleJobsReputationSessionBridge(req, env, auth)).status, status);
+  }
+  assert.equal(f.calls.length, 0);
+});
+
+test('missing malformed mismatched or duplicate Public pins reject before contacting Jobs', async () => {
+  const f = bridge(envelope());
+  for (const pins of [`lythaus-jobs-development="${version}"`,
+    `lythaus-public-api-development="invalid", lythaus-jobs-development="${version}"`,
+    `lythaus-public-api-development="${otherVersion}", lythaus-jobs-development="${version}"`,
+    `lythaus-public-api-development="${version}", lythaus-public-api-development="${version}", lythaus-jobs-development="${version}"`]) {
+    const response = await handleJobsReputationSessionBridge(request({ headers: { authorization: 'Bearer synthetic-readiness',
+      'Cloudflare-Workers-Version-Overrides': pins } }), f.env, true);
+    assert.equal(response.status, 409); assert.deepEqual(await response.json(), { error: 'diagnostic_version_unavailable' });
   }
   assert.equal(f.calls.length, 0);
 });

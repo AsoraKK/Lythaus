@@ -47,17 +47,23 @@ export function safeWorkerVersion(value: unknown): { id: string; tag: string } |
     && typeof tag === 'string' && /^[a-f0-9]{40}$/.test(tag) ? { id, tag } : null;
 }
 
-export function jobsVersionOverride(value: string | null): string | null {
+export function workerVersionOverrides(value: string | null): { jobs: string | null; public: string | null } | null {
   if (!value || value.length > 256) return null;
   let jobs: string | null = null;
+  let publicVersion: string | null = null;
   const seen = new Set<string>();
   for (const entry of value.split(',')) {
     const match = /^\s*(lythaus-jobs-development|lythaus-public-api-development)="([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})"\s*$/.exec(entry);
     if (!match || seen.has(match[1])) return null;
     seen.add(match[1]);
     if (match[1] === JOBS_WORKER_NAME) jobs = match[2];
+    else publicVersion = match[2];
   }
-  return jobs;
+  return { jobs, public: publicVersion };
+}
+
+export function jobsVersionOverride(value: string | null): string | null {
+  return workerVersionOverrides(value)?.jobs ?? null;
 }
 
 export function observedJobsSession(value: unknown): JobsSessionReceipt | null {

@@ -1,5 +1,5 @@
 import { JOBS_SESSION_PATH, JOBS_WORKER_NAME, JOBS_SESSION_BRIDGE_TIMEOUT_MS,
-  JOBS_SESSION_RECEIPT_BYTES, jobsSessionResponse, jobsVersionOverride,
+  JOBS_SESSION_RECEIPT_BYTES, jobsSessionResponse, workerVersionOverrides,
   safeWorkerVersion, sanitizedJobsSessionReceipt,
 } from '../../../packages/contracts/src/jobs-reputation-session.ts';
 
@@ -19,8 +19,11 @@ export async function handleJobsReputationSessionBridge(
     return jobsSessionResponse({ error: 'diagnostic_request_invalid' }, 400);
   }
   const publicVersion = safeWorkerVersion(env.WORKER_VERSION);
-  const expectedJobsVersion = jobsVersionOverride(request.headers.get('Cloudflare-Workers-Version-Overrides'));
-  if (!publicVersion || !expectedJobsVersion) return jobsSessionResponse({ error: 'diagnostic_version_unavailable' }, 409);
+  const pins = workerVersionOverrides(request.headers.get('Cloudflare-Workers-Version-Overrides'));
+  const expectedJobsVersion = pins?.jobs;
+  if (!publicVersion || !expectedJobsVersion || pins?.public !== publicVersion.id) {
+    return jobsSessionResponse({ error: 'diagnostic_version_unavailable' }, 409);
+  }
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;

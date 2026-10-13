@@ -1,5 +1,7 @@
 import { Client, type ClientConfig } from 'pg';
 import { verifyFullConnectionString, type HyperdriveBinding } from '@lythaus/db';
+import { beginDedicatedClientRetirement, closeDedicatedClient, DatabaseClientCloseDeadlineError,
+  type DedicatedClientCleanupTarget } from '../../../packages/db/src/autocommit.ts';
 import { JOBS_SESSION_PATH, JOBS_SESSION_TIMEOUT_MS, JOBS_SESSION_CLEANUP_MS,
   jobsSessionResponse, observedJobsSession, safeWorkerVersion, jobsVersionOverride,
   unavailableJobsSession, type JobsSessionReceipt, type JobsSessionDiagnosticCode,
@@ -28,12 +30,9 @@ export const JOBS_SESSION_CATALOG_QUERIES = [
     FROM pg_catalog.pg_class r WHERE r.oid OPERATOR(pg_catalog.=) 'identity.users'::pg_catalog.regclass`,
 ] as const;
 
-interface DiagnosticClient {
+interface DiagnosticClient extends DedicatedClientCleanupTarget {
   connect(): Promise<unknown>;
   query(sql: string): Promise<{ rows: Record<string, unknown>[]; command: string }>;
-  end(): Promise<void>;
-  on(event: 'error', listener: () => void): unknown;
-  removeListener(event: 'error', listener: () => void): unknown;
 }
 interface DiagnosticDependencies {
   createClient?: (config: ClientConfig) => DiagnosticClient;
@@ -60,7 +59,9 @@ export async function inspectJobsReputationSession(
   const now = dependencies.now ?? (() => performance.now());
   const deadline = now() + timeoutMs;
   let client: DiagnosticClient | undefined;
-  let rollbackRequired = false, endStarted = false, endConfirmed = false, connectionFailed = false;
+  let rollbackRequired = false, connectionFailed = false;
+  let retirement: ReturnType<typeof beginDedicatedClientRetirement> | undefined;
+  let receipt: JobsSessionReceipt = unavailableJobsSession('connection_unavailable');
   const onError = () => { connectionFailed = true; };
   let failure: JobsSessionDiagnosticCode = 'connection_unavailable';
   try {
@@ -69,6 +70,7 @@ export async function inspectJobsReputationSession(
       connectionTimeoutMillis: timeoutMs, query_timeout: timeoutMs,
     });
     client.on('error', onError);
+    retirement = beginDedicatedClientRetirement(client, onError);
     const connection = client;
     const run = <T>(work: () => Promise<T>) => bounded(work, deadline - now());
     await run(() => connection.connect());
@@ -88,24 +90,31 @@ export async function inspectJobsReputationSession(
     const rollback = await run(() => connection.query('ROLLBACK'));
     if (rollback.command !== 'ROLLBACK') throw new Error('rollback_unconfirmed');
     rollbackRequired = false;
-    failure = 'connection_unavailable';
-    await run(() => { endStarted = true; return connection.end(); });
-    endConfirmed = true;
-    if (connectionFailed) throw new Error('connection_unavailable');
-    return observedJobsSession(metadata) ?? unavailableJobsSession('catalog_unavailable');
+    receipt = observedJobsSession(metadata) ?? unavailableJobsSession('catalog_unavailable');
   } catch (error) {
     const code = (error as { code?: unknown } | null)?.code;
-    return unavailableJobsSession(error instanceof DiagnosticTimeout ? 'timeout'
+    receipt = unavailableJobsSession(error instanceof DiagnosticTimeout ? 'timeout'
       : code === '42501' ? 'insufficient_privilege' : failure);
   } finally {
     if (client) {
+      const socket = retirement?.captureSocket();
       if (rollbackRequired) await bounded(() => client!.query('ROLLBACK'), cleanupMs).catch(() => undefined);
-      if (!endStarted) {
-        await bounded(() => client!.end(), cleanupMs).then(() => { endConfirmed = true; }).catch(() => undefined);
+      const remaining = deadline - now();
+      if (remaining <= 0 && receipt.status === 'observed') receipt = unavailableJobsSession('timeout');
+      try {
+        await closeDedicatedClient(client, socket, {
+          closeMs: receipt.status === 'observed' ? remaining : cleanupMs,
+          forceMs: Math.min(cleanupMs, 250),
+        });
+      } catch (error) {
+        if (receipt.status === 'observed') receipt = unavailableJobsSession(
+          error instanceof DatabaseClientCloseDeadlineError ? 'timeout' : 'connection_unavailable');
+      } finally {
+        retirement?.finishCleanup();
       }
-      if (endConfirmed) client.removeListener('error', onError);
     }
   }
+  return connectionFailed && receipt.status === 'observed' ? unavailableJobsSession('connection_unavailable') : receipt;
 }
 
 interface DiagnosticEnv {
