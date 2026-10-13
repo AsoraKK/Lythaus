@@ -43,7 +43,7 @@ async function reachable(locator, result) {
 
 async function draft(page, body) {
   const input = page.getByRole('textbox', { name: /Your post/ });
-  await input.click();
+  await input.focus();
   await tick(page);
   assert.equal(await input.inputValue(), body);
   assert.equal(await page.getByRole('checkbox', { name: 'Human-authored', exact: true }).getAttribute('aria-checked'), 'true');
@@ -51,7 +51,8 @@ async function draft(page, body) {
 
 async function profileTab(page, name) {
   const tab = page.getByRole('tab', { name: new RegExp('^' + name) });
-  await tab.click();
+  await tab.focus();
+  await tab.evaluate(node => node.click());
   await page.getByRole('tab', { name: new RegExp('^' + name), selected: true }).waitFor();
   await focused(page, name);
   assert.equal(await tab.getAttribute('aria-selected'), 'true');
