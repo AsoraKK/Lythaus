@@ -18,7 +18,7 @@ import { claimRegistrationAddress, establishVerifiedCredential, findRecoveryUser
 import { idempotentAuthIntake } from './auth-intake-runtime.ts';
 import { publishCommittedEmailDispatch } from './auth-email-dispatch-queue.ts';
 import { assertDistinctReactionAuthor, contentDeletionPlan, planCommentCreation, planCommentRevision, planPostPublication, planPostRevision, planReactionChange, planRelationshipMutation, replyDepth } from './content-runtime-policy.ts';
-import { assertCommentFeedItemEligibility, assertCustomFeedAvailable, assertFeedItemEligibility, assertNewsBoardItemEligibility, commentPublicLabel, entitlementsForTier, feedResponsePlan, requireNewsBoardAccess, type FeedSurface } from './feed-runtime-policy.ts';
+import { assertCommentFeedItemEligibility, assertCustomFeedAvailable, assertFeedItemEligibility, assertNewsBoardItemEligibility, commentPublicLabel, entitlementsForTier, feedResponsePlan, requireFeedPostId, requireNewsBoardAccess, type FeedSurface } from './feed-runtime-policy.ts';
 import { optionalPrivacyRequestType, privacyExportAccessActivity, privacyExportRetryAfter, privacyRequestPlan, requirePrivacyExportDependencies, requirePrivacyExportObject, requirePrivacyExportRequestId, retentionRulePlan } from './privacy-runtime-policy.ts';
 import { normalizeNotificationDevice, normalizeNotificationPreferences } from './notification-policy.ts';
 import { encodeCursor, enforceContentDeclaration, normalizeCustomFeedRules, pageRequest, reputationBand } from './product-policy.ts';
@@ -3170,6 +3170,7 @@ async function getPersonalFeed(request: Request, env: Env, user: Principal): Pro
 }
 
 async function getPost(request: Request, env: Env, postId: string, viewer?: Principal): Promise<Response> {
+  postId = requireFeedPostId(postId);
   const result = await query<FeedResponseCandidate & { id: string }>(env.DB_APP_FRESH,
     `SELECT p.id, p.author_id AS "authorId", ${FEED_AUTHOR_FIELDS}, p.body, p.declared_creation_mode AS "declaredCreationMode",
             p.visibility, p.moderation_state AS "moderationState", p.geo_scope AS "geoScope",
@@ -3204,6 +3205,7 @@ async function getPost(request: Request, env: Env, postId: string, viewer?: Prin
 }
 
 async function getComments(request: Request, env: Env, postId: string, viewer?: Principal): Promise<Response> {
+  postId = requireFeedPostId(postId);
   const page = pageRequest(new URL(request.url), 100);
   const result = await query<Omit<CommentFeedResponseCandidate, 'publicLabel'> & { id: string; createdAt: string; declaredCreationMode: unknown }>(env.DB_APP_FRESH,
     `SELECT comment.id, comment.author_id AS "authorId", ${FEED_AUTHOR_FIELDS}, comment.parent_id AS "parentId",
@@ -3218,15 +3220,19 @@ async function getComments(request: Request, env: Env, postId: string, viewer?: 
             EXISTS (SELECT 1 FROM social.mutes m WHERE m.muter_id = $2 AND m.muted_id = comment.author_id) AS "feedMutedCommentAuthor"
        FROM content.comments comment
        JOIN content.posts post ON post.id = comment.post_id
+       JOIN identity.users post_author ON post_author.id = post.author_id AND post_author.status = 'active'
+       JOIN content.content_declarations post_declaration ON post_declaration.post_id = post.id
        JOIN identity.users author ON author.id = comment.author_id AND author.status = 'active'
        ${FEED_AUTHOR_JOINS}
       WHERE comment.post_id = $1 AND comment.moderation_state = 'allowed'
         AND post.deleted_at IS NULL AND post.moderation_state = 'allowed'
+        AND post_declaration.public_label IN ('Human-authored', 'AI-assisted')
         AND (post.visibility = 'public' OR post.author_id = $2 OR (post.visibility = 'followers' AND EXISTS (
           SELECT 1 FROM social.follows f WHERE f.follower_id = $2 AND f.followed_id = post.author_id
         )))
         AND ($2::uuid IS NULL OR (
-          NOT EXISTS (SELECT 1 FROM social.blocks b WHERE (b.blocker_id = $2 AND b.blocked_id = comment.author_id) OR (b.blocker_id = comment.author_id AND b.blocked_id = $2))
+          NOT EXISTS (SELECT 1 FROM social.blocks b WHERE (b.blocker_id = $2 AND b.blocked_id = post.author_id) OR (b.blocker_id = post.author_id AND b.blocked_id = $2))
+          AND NOT EXISTS (SELECT 1 FROM social.blocks b WHERE (b.blocker_id = $2 AND b.blocked_id = comment.author_id) OR (b.blocker_id = comment.author_id AND b.blocked_id = $2))
           AND NOT EXISTS (SELECT 1 FROM social.mutes m WHERE m.muter_id = $2 AND m.muted_id = comment.author_id)
         ))
         AND ($3::timestamptz IS NULL OR (comment.created_at, comment.id) > ($3::timestamptz, $4::uuid))
