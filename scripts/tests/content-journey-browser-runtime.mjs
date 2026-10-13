@@ -45,11 +45,11 @@ export async function harness() {
   }};
 }
 
-export async function newPage(runtime, { width = 390, theme = 'light', actor = 'owner', scenario = '', caseId = randomUUID(), storageState } = {}) {
-  const context = await runtime.browser.newContext({ viewport: { width, height: 900 },
+export async function newPage(runtime, { width = 390, height = 900, textScale = 1, keyboardInset = 0, theme = 'light', actor = 'owner', scenario = '', caseId = randomUUID(), storageState } = {}) {
+  const context = await runtime.browser.newContext({ viewport: { width, height },
     colorScheme: theme, locale: 'en-US', timezoneId: 'Etc/UTC',
     reducedMotion: 'reduce', serviceWorkers: 'block', storageState });
-  const result = { width, height: 900, theme, actor, errors: [], warnings: [], blocked: [],
+  const result = { width, height, textScale, keyboardInset, theme, actor, errors: [], warnings: [], blocked: [],
     writes: [], checks: [], screenshots: [], expectedHttpErrors: [], caseId };
   await context.route('**/*', route => {
     const url = new URL(route.request().url());
@@ -74,7 +74,9 @@ export async function newPage(runtime, { width = 390, theme = 'light', actor = '
     else if (message.type() === 'error') result.errors.push(text);
     else if (message.type() === 'warning') result.warnings.push(text);
   });
-  await page.goto(runtime.origin + '/?theme=' + theme + '&actor=' + actor + '&scenario=' + scenario+'&case='+caseId, { waitUntil: 'load' });
+  const query = new URLSearchParams({ theme, actor, scenario, case: caseId,
+    textScale: String(textScale), keyboardInset: String(keyboardInset) });
+  await page.goto(runtime.origin + '/?' + query, { waitUntil: 'load' });
   await page.locator('flt-semantics-placeholder').waitFor({ timeout: 60000 });
   await page.locator('flt-semantics-placeholder').evaluate(element => element.click());
   await page.getByRole('button', { name: 'Open composer', exact: true }).waitFor();

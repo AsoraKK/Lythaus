@@ -19,10 +19,12 @@ import 'package:lythaus/features/feed/application/social_feed_service.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
 import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
 import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
+import 'package:lythaus/features/profile/presentation/profile_tab_view.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/models/post_feed_item_mapper.dart';
 import 'package:lythaus/features/feed/domain/models.dart' as domain;
 import 'package:lythaus/state/providers/feed_providers.dart';
+import 'package:lythaus/state/providers/settings_providers.dart';
 import 'package:lythaus/ui/screens/home/home_feed_navigator.dart';
 
 const discover = FeedModel(
@@ -40,6 +42,8 @@ final fixtureActorProvider = StateProvider<String>(
 );
 @JS('lythausSyntheticActor')
 external set fixtureSession(JSFunction value);
+@JS('lythausSyntheticBack')
+external set fixtureBack(JSFunction value);
 
 class FixtureFeed extends LiveFeedController {
   FixtureFeed(this.dio) : super(const LiveFeedState(isInitialLoading: true)) {
@@ -122,6 +126,7 @@ void main() {
         secureDioProvider.overrideWithValue(dio),
         postRepositoryProvider.overrideWithValue(PostRepositoryImpl(dio)),
         analyticsClientProvider.overrideWithValue(const NullAnalyticsClient()),
+        settingsProvider.overrideWith((ref) => SettingsController()),
         feedListProvider.overrideWithValue(const [discover]),
         if (Uri.base.queryParameters['scenario'] == 'appeal')
           socialFeedServiceProvider.overrideWithValue(
@@ -153,22 +158,42 @@ class FixtureApp extends ConsumerWidget {
     fixtureSession = ((JSString actor) {
       ref.read(fixtureActorProvider.notifier).state = actor.toDart;
     }).toJS;
+    fixtureBack = (() {
+      unawaited(WidgetsBinding.instance.handlePopRoute());
+    }).toJS;
     return MaterialApp(
       title: 'Lythaus content journey synthetic QA',
       debugShowCheckedModeBanner: false,
       theme: Uri.base.queryParameters['theme'] == 'dark'
           ? LythausTheme.dark()
           : LythausTheme.light(),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: TextScaler.linear(
+            double.tryParse(Uri.base.queryParameters['textScale'] ?? '') ?? 1,
+          ),
+          viewInsets: EdgeInsets.only(
+            bottom:
+                double.tryParse(
+                  Uri.base.queryParameters['keyboardInset'] ?? '',
+                ) ??
+                0,
+          ),
+          disableAnimations: true,
+        ),
+        child: child!,
+      ),
       home: Builder(
         builder: (context) => Scaffold(
           appBar: AppBar(title: const Text('Synthetic journey QA')),
-          body: Column(
+          body: ListView(
             children: [
               for (final entry in <String, Widget>{
                 'Open composer': const CreatePostScreen(),
                 'Open comments': const CommentThreadScreen(postId: 'p1'),
                 'Open post': const PostDetailScreen(postId: 'p1'),
                 'Open Discover': const HomeFeedNavigator(),
+                'Open profile tabs': const FixtureProfileTabs(),
               }.entries)
                 TextButton(
                   onPressed: () => Navigator.push(
@@ -198,4 +223,37 @@ class FixtureApp extends ConsumerWidget {
       ),
     );
   }
+}
+
+class FixtureProfileTabs extends StatelessWidget {
+  const FixtureProfileTabs({super.key});
+
+  Widget _page(BuildContext context, String name) => ListView(
+    key: PageStorageKey('synthetic-profile-$name'),
+    padding: const EdgeInsets.all(16),
+    children: [
+      Text('Synthetic member $name'),
+      TextButton(
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const CreatePostScreen()),
+        ),
+        child: const Text('Open composer'),
+      ),
+      for (var i = 0; i < 20; i++)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Text('$name update $i'),
+        ),
+    ],
+  );
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Member profile')),
+    body: ProfileTabView(
+      overview: _page(context, 'overview'),
+      posts: _page(context, 'posts'),
+      comments: _page(context, 'comments'),
+    ),
+  );
 }

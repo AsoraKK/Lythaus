@@ -7,9 +7,11 @@ import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/ui/components/feed_card.dart';
+import 'package:lythaus/ui/components/lythaus_top_bar.dart';
 import 'package:lythaus/ui/screens/home/home_feed_navigator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -369,13 +371,26 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    for (final size in [const Size(390, 844), const Size(1440, 900)]) {
+    for (final size in [
+      const Size(320, 640),
+      const Size(390, 640),
+      const Size(1440, 900),
+    ]) {
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(home: HomeFeedNavigator()),
+          child: MaterialApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                disableAnimations: true,
+                textScaler: TextScaler.linear(size.width < 400 ? 2 : 1),
+              ),
+              child: child!,
+            ),
+            home: const HomeFeedNavigator(),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -388,6 +403,40 @@ void main() {
       await tester.tapAt(Offset(size.width / 2, sheetRect.top - 8));
       await tester.pumpAndSettle();
       expect(find.text('Choose a feed'), findsNothing);
+      final openControls = tester
+          .widget<LythausTopBar>(find.byType(LythausTopBar))
+          .onLogoTap!;
+      openControls();
+      openControls();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Close feed controls').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Choose a feed'), findsNothing);
+      final controlsFocus = Focus.of(tester.element(find.byType(SvgPicture)));
+      final titleFocus = Focus.of(
+        tester.element(
+          find.descendant(
+            of: find.byType(LythausTopBar),
+            matching: find.text('Discover'),
+          ),
+        ),
+      );
+      for (final triggerFocus in [controlsFocus, titleFocus]) {
+        triggerFocus.requestFocus();
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        expect(find.text('Choose a feed'), findsOneWidget);
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        expect(find.text('Choose a feed'), findsOneWidget);
+        await tester.tap(find.byTooltip('Close feed controls'));
+        await tester.pumpAndSettle();
+        expect(find.text('Choose a feed'), findsNothing);
+        expect(triggerFocus.hasPrimaryFocus, isTrue);
+      }
     }
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);

@@ -45,6 +45,9 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   late final PageController _pageController;
   int _activeIndex = 0;
   late AlphaFeedSection _activeSection;
+  bool _feedControlsOpen = false;
+  final _feedControlsFocus = FocusNode(debugLabel: 'Feed controls');
+  final _feedTitleFocus = FocusNode(debugLabel: 'Feed title');
 
   @override
   void initState() {
@@ -70,6 +73,8 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   @override
   void dispose() {
     _pageController.dispose();
+    _feedControlsFocus.dispose();
+    _feedTitleFocus.dispose();
     super.dispose();
   }
 
@@ -91,8 +96,10 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
           children: [
             LythausTopBar(
               title: activeFeed.name,
-              onLogoTap: _openFeedControl,
-              onTitleTap: _openFeedControl,
+              logoFocusNode: _feedControlsFocus,
+              titleFocusNode: _feedTitleFocus,
+              onLogoTap: () => _openFeedControl(_feedControlsFocus),
+              onTitleTap: () => _openFeedControl(_feedTitleFocus),
               onSearchTap: _openSearch,
               onTrendingTap: _openTrending,
               useWordmark: true,
@@ -211,8 +218,10 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
           children: [
             LythausTopBar(
               title: title,
-              onLogoTap: _openFeedControl,
-              onTitleTap: _openFeedControl,
+              logoFocusNode: _feedControlsFocus,
+              titleFocusNode: _feedTitleFocus,
+              onLogoTap: () => _openFeedControl(_feedControlsFocus),
+              onTitleTap: () => _openFeedControl(_feedTitleFocus),
               onSearchTap: _openSearch,
               onTrendingTap: _openTrending,
               useWordmark: true,
@@ -256,7 +265,10 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     );
   }
 
-  void _openFeedControl() {
+  void _openFeedControl(FocusNode triggerFocus) {
+    if (_feedControlsOpen) return;
+    _feedControlsOpen = true;
+    triggerFocus.requestFocus();
     final allFeeds = ref.read(feedListProvider);
     final sectionFeeds = _feedsForSection(allFeeds, _activeSection);
     final activeFeed = sectionFeeds.isEmpty
@@ -300,7 +312,12 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
           ),
         ),
       ),
-    );
+    ).whenComplete(() {
+      _feedControlsOpen = false;
+      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+        triggerFocus.requestFocus();
+      }
+    });
   }
 
   void _openTrending() {
