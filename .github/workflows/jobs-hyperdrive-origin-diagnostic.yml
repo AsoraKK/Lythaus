@@ -1,0 +1,63 @@
+name: Read-only Jobs Hyperdrive origin diagnostic
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact reviewed current main SHA for this diagnostic
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lythaus-jobs-hyperdrive-origin-diagnostic
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    name: Inspect the existing Jobs Hyperdrive origin
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Require protected main and exact reviewed source
+        env:
+          EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
+          REF_PROTECTED: ${{ github.ref_protected }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$REF_PROTECTED" = true
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_SHA" = "$EXPECTED_SOURCE_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$EXPECTED_SOURCE_SHA"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Validate diagnostic boundaries with synthetic fixtures
+        run: node --test scripts/tests/jobs-hyperdrive-origin.test.mjs
+      - name: Read only the approved Jobs Hyperdrive origin
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ci/inspect-jobs-hyperdrive-origin.mjs > "$RUNNER_TEMP/jobs-hyperdrive-origin.json"
+          cat "$RUNNER_TEMP/jobs-hyperdrive-origin.json"
+          cat "$RUNNER_TEMP/jobs-hyperdrive-origin.json" >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain only the allowlisted username and target identity
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: jobs-hyperdrive-origin-${{ github.run_id }}
+          path: ${{ runner.temp }}/jobs-hyperdrive-origin.json
+          if-no-files-found: error
+          retention-days: 7
