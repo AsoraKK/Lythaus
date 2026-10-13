@@ -14,6 +14,8 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
     this.onTitleTap,
     this.onSearchTap,
     this.onTrendingTap,
+    this.logoFocusNode,
+    this.titleFocusNode,
     this.showDivider = false,
     this.useWordmark = false,
   });
@@ -23,6 +25,8 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onTitleTap;
   final VoidCallback? onSearchTap;
   final VoidCallback? onTrendingTap;
+  final FocusNode? logoFocusNode;
+  final FocusNode? titleFocusNode;
   final bool showDivider;
   final bool useWordmark;
 
@@ -45,6 +49,7 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
       child: Row(
         children: [
           IconButton(
+            focusNode: logoFocusNode,
             onPressed: onLogoTap,
             tooltip: 'Feed controls',
             icon: SvgPicture.asset(
@@ -65,6 +70,7 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
           SizedBox(width: spacing.sm),
           Expanded(
             child: TextButton(
+              focusNode: titleFocusNode,
               onPressed: onTitleTap,
               style: TextButton.styleFrom(
                 alignment: Alignment.centerLeft,

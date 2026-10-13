@@ -31,7 +31,7 @@ try {
     await run('member-feed', { width, theme }, async (page, _, result) => {
       await button(page, 'Open Discover').click();
       await text(page, 'Kai Rivers').waitFor();
-      await text(page, 'Declared: Human-authored').waitFor();
+      await page.getByLabel(/Author declaration:\s*Human-authored/).waitFor();
       await screenshot(page, result, 'member-feed');
       await button(page, 'Trust details').click();
       await text(page, 'does not independently verify authorship').waitFor();
