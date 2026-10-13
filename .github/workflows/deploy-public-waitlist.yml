@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: lythaus-public-waitlist-production
+  group: lythaus-production-workers
   cancel-in-progress: false
 
 jobs:

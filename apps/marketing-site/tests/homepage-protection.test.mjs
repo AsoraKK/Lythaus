@@ -56,6 +56,12 @@ function assertOnlyAllocatedJobsDiagnosticRegistration(before, after) {
   normalized.scripts[script] = expected.slice(0, -(` ${allocatedJobsDiagnosticTests}`).length);
   assertOnlyReviewedNativeModerationTestRegistration(before, normalized);
 }
+function assertOnlyReviewedWaitlistWorkerLock(source, frozen) {
+  const before = 'concurrency:\n  group: lythaus-public-waitlist-production\n  cancel-in-progress: false\n';
+  const after = before.replace('lythaus-public-waitlist-production', 'lythaus-production-workers');
+  assert.equal(frozen.split(before).length, 2, 'Frozen waitlist workflow must contain exactly one original concurrency block');
+  assert.equal(source, frozen.replace(before, after), 'Only the exact approved shared Worker concurrency group may change');
+}
 const protectedPaths = [
   'apps/marketing-site/src/components/OpeningWordmark.astro',
   'apps/marketing-site/src/scripts/home-opening.js',
@@ -391,6 +397,11 @@ export function assertHomepageFrozen() {
     }
     if (filename === 'package-lock.json') continue;
     if (filename === 'apps/marketing-site/package-lock.json') continue;
+    if (filename === '.github/workflows/deploy-public-waitlist.yml') {
+      const frozen = execFileSync('git', ['show', `${baselineSha}:${filename}`], { cwd: root, encoding: 'utf8' });
+      assertOnlyReviewedWaitlistWorkerLock(readFileSync(path.join(root, filename), 'utf8'), frozen);
+      continue;
+    }
     const expected = metadata.split(' ')[2];
     if (filename === 'apps/marketing-site/public/sitemap.xml') {
       const original = git('show', `${baselineSha}:${filename}`);
@@ -410,6 +421,29 @@ export function assertHomepageFrozen() {
 test('homepage visual assets, build and waitlist dependencies remain frozen', () => {
   assertHomepageFrozen();
 });
+test('waitlist freeze permits only the approved shared Worker lock group', () => {
+  const filename = '.github/workflows/deploy-public-waitlist.yml';
+  const frozen = execFileSync('git', ['show', `${baselineSha}:${filename}`], { cwd: root, encoding: 'utf8' });
+  const source = readFileSync(path.join(root, filename), 'utf8');
+  assertOnlyReviewedWaitlistWorkerLock(source, frozen);
+  assert.throws(() => assertOnlyReviewedWaitlistWorkerLock(frozen, frozen));
+});
+for (const [label, mutate] of [
+  ['different group', source => source.replace('lythaus-production-workers', 'unreviewed-group')],
+  ['cancellation', source => source.replace('cancel-in-progress: false', 'cancel-in-progress: true')],
+  ['deployment steps', source => source.replace('timeout-minutes: 30', 'timeout-minutes: 31')],
+  ['extra bytes', source => source + '\n'],
+  ['duplicate lock', source => source + '\nconcurrency:\n  group: lythaus-production-workers\n'],
+]) {
+  test(`waitlist lock exception rejects ${label}`, () => {
+    const filename = '.github/workflows/deploy-public-waitlist.yml';
+    const frozen = execFileSync('git', ['show', `${baselineSha}:${filename}`], { cwd: root, encoding: 'utf8' });
+    const source = readFileSync(path.join(root, filename), 'utf8');
+    const changed = mutate(source);
+    assert.notEqual(changed, source);
+    assert.throws(() => assertOnlyReviewedWaitlistWorkerLock(changed, frozen));
+  });
+}
 
 test('Astro security replacement rejects changed target, identity, license and unrelated dependencies', () => {
   const readLock = () => JSON.parse(readFileSync(path.join(root, 'apps/marketing-site/package-lock.json'), 'utf8'));

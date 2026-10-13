@@ -1,0 +1,81 @@
+name: Recover bounded Jobs session diagnostic
+
+on:
+  workflow_run:
+    workflows: ['Bounded Jobs SQL session diagnostic']
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Completed original diagnostic run ID; recovery never probes
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: lythaus-canonical-production-release
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    concurrency:
+      group: lythaus-production-workers
+      cancel-in-progress: false
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'workflow_dispatch' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 8
+    env:
+      REF_PROTECTED: ${{ github.ref_protected }}
+      RECOVER_RUN_ID: ${{ inputs.run_id || github.event.workflow_run.id }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Install locked workflow parser
+        run: npm ci --ignore-scripts --no-audit
+      - name: Locate the original immutable baseline
+        id: locate
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RECOVER_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RECOVER_RUN_ID/artifacts?per_page=100" --jq "[.artifacts[] | select(.name == \"jobs-session-recovery-$RECOVER_RUN_ID\" and .expired == false)] | length" > "$RUNNER_TEMP/baseline-count"
+          count=$(cat "$RUNNER_TEMP/baseline-count")
+          test "$count" -le 1
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+      - name: Download only the original sanitized baseline
+        if: steps.locate.outputs.count == '1'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: jobs-session-recovery-${{ env.RECOVER_RUN_ID }}
+          path: .artifacts/jobs-session/
+          run-id: ${{ env.RECOVER_RUN_ID }}
+          github-token: ${{ github.token }}
+      - name: Restore original versions and verify absence of diagnostic exposure
+        if: steps.locate.outputs.count == '1'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: node --experimental-strip-types scripts/ci/jobs-session-executor.mjs recover
+      - name: Preserve sanitized recovery verification
+        if: always() && steps.locate.outputs.count == '1'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: jobs-session-restoration-${{ env.RECOVER_RUN_ID }}-${{ github.run_id }}
+          path: .artifacts/jobs-session/restoration.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+      - name: Record missing baseline as unverifiable
+        if: steps.locate.outputs.count != '1'
+        run: |
+          echo 'No usable immutable recovery baseline. No provider writes or probe performed. Restoration is unverified; inspect the original protected run before any further execution.' >> "$GITHUB_STEP_SUMMARY"
+          exit 1
