@@ -2,12 +2,10 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { privacyPostgresTarget } from './privacy-postgres-target.mjs';
 
-export async function nativePostgresProfileFixture(connectionString, bindings) {
-  const target = new URL(connectionString);
-  assert.ok(['127.0.0.1', 'localhost'].includes(target.hostname));
-  assert.ok(target.pathname.startsWith('/lythaus_auth_test')
-    || (process.env.GITHUB_ACTIONS === 'true' && target.pathname === '/postgres'));
+export async function nativePostgresProfileFixture(connectionString, bindings, options = {}) {
+  connectionString = privacyPostgresTarget(connectionString).toString();
   const require = createRequire(new URL('../../../node_modules/wrangler/package.json', import.meta.url));
   const { build } = require('esbuild');
   const { Miniflare, convertV4MiniflareOptions } = require('miniflare');
@@ -72,6 +70,8 @@ export async function nativePostgresProfileFixture(connectionString, bindings) {
   const runtime = new Miniflare(convertV4MiniflareOptions({ workers: [{
     name: 'profile-preferences-local', modules: true, script: bundle.outputFiles[0].text,
     compatibilityDate: '2026-07-27', compatibilityFlags: ['nodejs_compat'],
+    r2Buckets: options.privateExports ? ['PRIVATE_EXPORTS'] : [],
+    outboundService: options.outboundService,
     bindings: { ...bindings, DB_APP_FRESH: { role: 'lythaus_runtime' },
       DB_PRIVACY_FRESH: { role: 'lythaus_privacy' }, DB_JOBS_FRESH: { role: 'lythaus_jobs' } },
     serviceBindings: { DISPOSABLE_POSTGRES: async request => {
@@ -94,6 +94,11 @@ export async function nativePostgresProfileFixture(connectionString, bindings) {
           return Response.json({ transactionId });
         }
         if (input.action === 'query') {
+          if (options.onQuery) {
+            const identity = (await client.query(`SELECT current_user AS role, rolsuper, rolcreaterole, rolcreatedb
+              FROM pg_roles WHERE rolname=current_user`)).rows[0];
+            options.onQuery({ ...identity, text: input.text, values: input.values });
+          }
           const result = await client.query(input.text, input.values);
           return Response.json({ rows: result.rows, rowCount: result.rowCount });
         }
@@ -110,7 +115,8 @@ export async function nativePostgresProfileFixture(connectionString, bindings) {
       }
     } },
   }] }));
-  return { dispatchFetch: (...args) => runtime.dispatchFetch(...args), async dispose() {
+  return { dispatchFetch: (...args) => runtime.dispatchFetch(...args),
+    privateExports: () => runtime.getR2Bucket('PRIVATE_EXPORTS'), async dispose() {
     await runtime.dispose();
     await Promise.all([...clients.values()].map(client => client.end()));
     clients.clear();
