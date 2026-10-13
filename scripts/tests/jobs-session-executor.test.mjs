@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { parse } from 'yaml';
 import { prepare, execute, recover, validateRecord, clonePayload, digest, FLAG, TARGETS,
   versionProjection } from '../release/jobs-session-lifecycle.mjs';
-import { boundedJson, createApi, workflowGate, assertSharedWorkerLock } from '../ci/jobs-session-executor.mjs';
+import { boundedJson, createApi, workflowGate, assertSharedWorkerLock, REPO } from '../ci/jobs-session-executor.mjs';
 
 const id = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const sourceSha = 'a'.repeat(40);
@@ -242,10 +242,10 @@ test('API adapter uses fixed targets, exact inheritance endpoint, one request an
   assert.throws(() => api.getVersion('foreign', id(1)), /target_invalid/);
 });
 function gateFixture() {
-  const env = { GITHUB_REPOSITORY: 'AsoraKK/Lythaus', GITHUB_REF: 'refs/heads/main', REF_PROTECTED: 'true',
+  const env = { GITHUB_REPOSITORY: REPO, GITHUB_REF: 'refs/heads/main', REF_PROTECTED: 'true',
     GITHUB_RUN_ATTEMPT: '1', GITHUB_RUN_ID: '1234', GITHUB_SHA: executorSha };
   const original = { id: 1234, event: 'workflow_dispatch', head_branch: 'main', head_sha: executorSha,
-    run_attempt: 1, status: 'in_progress', path: '.github/workflows/jobs-session-one-shot.yml', repository: { full_name: 'AsoraKK/Lythaus' } };
+    run_attempt: 1, status: 'in_progress', path: '.github/workflows/jobs-session-one-shot.yml', repository: { full_name: REPO } };
   const history = { total_count: 1, workflow_runs: [original] };
   const api = { gh: async route => route.includes('/runs?') ? history : route.includes('/workflows/')
     ? { state: 'active', path: '.github/workflows/jobs-session-recovery.yml' } : original };

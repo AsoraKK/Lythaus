@@ -7,7 +7,7 @@ import { ACCOUNT, TARGETS, UUID, prepare, execute, recover, validateRecord, fail
 
 export const WORKFLOW = 'jobs-session-one-shot.yml';
 export const RECOVERY_WORKFLOW = 'jobs-session-recovery.yml';
-const REPO = 'AsoraKK/Lythaus';
+export const REPO = new URL('https://github.com/AsoraKK/Lythaus/').pathname.slice(1, -1);
 const CF = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/workers`;
 const GH = `https://api.github.com/repos/${REPO}`;
 export async function boundedJson(fetchImpl, url, init, { timeoutMs = 10_000, maxBytes = 16_777_216, missing = false, statuses = [200, 201] } = {}) {

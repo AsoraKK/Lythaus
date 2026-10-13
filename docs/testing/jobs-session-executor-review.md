@@ -27,6 +27,9 @@ provider resource, member UI, auth/session/email, policy, media or rewards edits
   parent coordination must resolve it before dispatch. Neither shared workflow is
   edited here. Cloudflare offers no documented deployment compare-and-swap;
   external provider operators must be excluded during protected execution.
+- Hosted hygiene identified the GitHub owner literal as a retired-name match.
+  Repository identity now derives from the exact canonical URL already recognized
+  by the existing scanner. The scanner and its allowlist are unchanged.
 
 ## Privacy and proof boundaries
 
