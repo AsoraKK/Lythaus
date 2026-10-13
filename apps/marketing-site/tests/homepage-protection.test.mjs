@@ -283,6 +283,13 @@ function assertAllocatedDeclarationRepair(filename, blob) {
   assert.ok(allocatedDeclarationRepairFiles.has(filename), 'The publication exception covers only the two allocated declaration files');
   assert.equal(blob, allocatedDeclarationRepairFiles.get(filename), 'Declaration portability must match the exact allocated source/test bytes');
 }
+const reviewedReputationRepairFiles = new Map([
+  ['packages/db/src/reputation.ts', '40a0ffbde1eed28bbbff8c3b17d63501c3ae0257'],
+]);
+function assertReviewedReputationRepair(filename, blob) {
+  assert.ok(reviewedReputationRepairFiles.has(filename), 'The reputation exception covers only the independently reviewed standing repair');
+  assert.equal(blob, reviewedReputationRepairFiles.get(filename), 'Reputation standing must match the exact reviewed repair bytes');
+}
 const approvedHomepageVisualEdits = new Map([
   ['apps/marketing-site/src/components/OpeningWordmark.astro', (source) => `${replaceExactText(
     source,
@@ -323,6 +330,10 @@ export function assertHomepageFrozen() {
     const [metadata, filename] = entry.split('\t');
     if (allocatedDeclarationRepairFiles.has(filename)) {
       assertAllocatedDeclarationRepair(filename, git('hash-object', `--path=${filename}`, filename));
+      continue;
+    }
+    if (reviewedReputationRepairFiles.has(filename)) {
+      assertReviewedReputationRepair(filename, git('hash-object', `--path=${filename}`, filename));
       continue;
     }
     if (reviewedPrivacyStatusFiles.has(filename)) {
@@ -661,6 +672,17 @@ test('declaration repair exceptions reject changed bytes and every other homepag
     assert.throws(() => assertAllocatedDeclarationRepair(filename, altered), assert.AssertionError);
   }
   assert.throws(() => assertAllocatedDeclarationRepair('apps/marketing-site/src/pages/index.astro', allocatedDeclarationRepairFiles.values().next().value), assert.AssertionError);
+});
+
+test('reviewed reputation exception rejects changed bytes, historical bytes and every other dependency path', () => {
+  for (const filename of reviewedReputationRepairFiles.keys()) {
+    assert.doesNotThrow(() => assertReviewedReputationRepair(filename, git('hash-object', `--path=${filename}`, filename)));
+    const source = readFileSync(path.join(root, filename), 'utf8') + '\n// synthetic unrelated mutation\n';
+    const altered = execFileSync('git', ['hash-object', '--stdin'], { cwd: root, encoding: 'utf8', input: source }).trim();
+    assert.throws(() => assertReviewedReputationRepair(filename, altered), assert.AssertionError);
+    assert.throws(() => assertReviewedReputationRepair(filename, git('rev-parse', `${baselineSha}:${filename}`)), assert.AssertionError);
+  }
+  assert.throws(() => assertReviewedReputationRepair('apps/marketing-site/src/pages/index.astro', reviewedReputationRepairFiles.values().next().value), assert.AssertionError);
 });
 
 test('upstream integration preserves homepage rendering inputs and waitlist route dispatch', () => {
