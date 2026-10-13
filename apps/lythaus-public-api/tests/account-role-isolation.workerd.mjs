@@ -4,6 +4,10 @@ import { fileURLToPath } from 'node:url';
 import { after, before, test } from 'node:test';
 import { exportJWK, exportPKCS8, generateKeyPair, SignJWT } from 'jose';
 import { hmacLookup, signAccessToken, uuidv7 } from '@lythaus/security';
+import { createPostgresIsolationDatabase } from './account-role-isolation-pg17-fixture.mjs';
+
+const postgresMode = new URL(import.meta.url).searchParams.get('database') === 'postgres17';
+const runtimeLabel = postgresMode ? 'native Workerd with real PG17' : 'native Workerd with synthetic SQL';
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const require = createRequire(new URL('../../../node_modules/wrangler/package.json', import.meta.url));
@@ -107,6 +111,7 @@ function activityEvent(id, title) {
 
 function createDatabase() {
   const ids = { a: uuidv7(), b: uuidv7(), staff: uuidv7(), moderator: uuidv7() };
+  const requestIp = '2001:db8:' + ids.a.replaceAll('-', '').slice(-16).match(/.{4}/g).join(':') + '::1';
   const users = new Map([
     [ids.a, { status: 'active', token_version: 1 }],
     [ids.b, { status: 'active', token_version: 1 }],
@@ -189,7 +194,7 @@ function createDatabase() {
     }
     if (text.includes('FROM identity.admin_memberships') && text.includes('access_subject_hmac')) {
       const membership = memberships.get(values[0]);
-      return result(membership ? [membership] : []);
+      return result(membership && membership.active !== false ? [membership] : []);
     }
     if (text.includes('INSERT INTO system.rate_limit_windows')) return result([{ request_count: 1 }], 1);
     if (text.includes('INSERT INTO system.audit_events')) return result([], 1);
@@ -242,7 +247,13 @@ function createDatabase() {
     }
   }
 
-  return { ids, users, profiles, preferences, activities, memberships, reads, service };
+  return { ids, requestIp, users, profiles, preferences, activities, memberships, reads, service,
+    async preferencesFor(id) { return preferences.get(id); },
+    async setMembership(hmac, membership) { memberships.set(hmac, membership); },
+    async revokeMembership(id) {
+      for (const membership of memberships.values()) if (membership.user_id === id) membership.active = false;
+    },
+  };
 }
 
 async function accessAssertion(privateKey, subject) {
@@ -262,7 +273,11 @@ function assertPrivate(response) {
 
 let fixture;
 before(async () => {
-  const database = createDatabase();
+  const database = postgresMode
+    ? await createPostgresIsolationDatabase(process.env.PLANETSCALE_PG17_TEST_DATABASE_URL)
+    : createDatabase();
+  fixture = database;
+  fixture.unexpectedOutbound = 0;
   const [{ privateKey: jwtPrivateKey, publicKey: jwtPublicKey }, { privateKey: accessPrivateKey, publicKey: accessPublicKey }] = await Promise.all([
     generateKeyPair('ES256', { extractable: true }),
     generateKeyPair('RS256', { extractable: true }),
@@ -274,15 +289,15 @@ before(async () => {
   const memberSubject = 'member-a@example.invalid';
   const staffSubject = 'staff@example.invalid';
   const moderatorSubject = 'moderator@example.invalid';
-  database.memberships.set(hmacLookup(staffSubject, accessSubjectHmacKey), { user_id: database.ids.staff, role: 'administrator' });
-  database.memberships.set(hmacLookup(moderatorSubject, accessSubjectHmacKey), { user_id: database.ids.moderator, role: 'moderator' });
+  await database.setMembership(hmacLookup(staffSubject, accessSubjectHmacKey), { user_id: database.ids.staff, role: 'administrator' });
+  await database.setMembership(hmacLookup(moderatorSubject, accessSubjectHmacKey), { user_id: database.ids.moderator, role: 'moderator' });
 
   const [publicScript, adminScript, jwtPrivateKeyPem] = await Promise.all([
     buildWorker('apps/lythaus-public-api/src/worker.ts'),
     buildWorker('apps/lythaus-admin-api/src/index.ts'),
     exportPKCS8(jwtPrivateKey),
   ]);
-  const publicWorker = new Miniflare(convertV4MiniflareOptions({ workers: [{
+  const publicRuntime = new Miniflare(convertV4MiniflareOptions({ workers: [{
     name: 'account-isolation-public-api',
     modules: true,
     script: publicScript,
@@ -299,7 +314,20 @@ before(async () => {
       JWT_PUBLIC_JWKS: JSON.stringify({ keys: [jwtPublicJwk] }),
     },
     serviceBindings: { AUTHZ_DATABASE: database.service },
+    outboundService: async () => {
+      fixture.unexpectedOutbound += 1;
+      return new Response(null, { status: 403 });
+    },
   }] }));
+  const publicWorker = {
+    dispatchFetch(input, init = {}) {
+      const headers = new Headers(init.headers);
+      headers.set('cf-connecting-ip', database.requestIp);
+      return publicRuntime.dispatchFetch(input, { ...init, headers });
+    },
+    dispose: () => publicRuntime.dispose(),
+  };
+  fixture.publicWorker = publicWorker;
   const adminWorker = new Miniflare(convertV4MiniflareOptions({ workers: [{
     name: 'account-isolation-admin-api',
     modules: true,
@@ -320,10 +348,12 @@ before(async () => {
     outboundService: async request => {
       const url = new URL(request.url);
       if (url.href === 'https://access-fixture.lythaus.test/certs') return Response.json({ keys: [accessPublicJwk] });
+      fixture.unexpectedOutbound += 1;
       return new Response(null, { status: 403 });
     },
   }] }));
 
+  fixture.adminWorker = adminWorker;
   const tokens = {
     a: await signAccessToken({ userId: database.ids.a, privateKeyPem: jwtPrivateKeyPem, keyId: jwtKeyId }),
     b: await signAccessToken({ userId: database.ids.b, privateKeyPem: jwtPrivateKeyPem, keyId: jwtKeyId }),
@@ -342,10 +372,13 @@ before(async () => {
 });
 
 after(async () => {
-  await Promise.all([fixture?.publicWorker.dispose(), fixture?.adminWorker.dispose()]);
+  const closed = await Promise.allSettled([fixture?.publicWorker?.dispose(), fixture?.adminWorker?.dispose()]);
+  await fixture?.dispose?.();
+  const failed = closed.find(result => result.status === 'rejected');
+  if (failed) throw failed.reason;
 });
 
-test('native public Worker isolates profile, preferences, and activity by verified account', async () => {
+test(`${runtimeLabel} isolates profile, preferences, and activity by verified account`, async () => {
   const token = fixture.tokens.a;
   const profileStart = fixture.reads.length;
   const profile = await fixture.publicWorker.dispatchFetch('https://api.lythaus.test/api/users/me?userId=' + fixture.ids.b, {
@@ -375,7 +408,7 @@ test('native public Worker isolates profile, preferences, and activity by verifi
   });
   assert.equal(preferences.status, 200);
   assertPrivate(preferences);
-  assert.deepEqual(await preferences.json(), fixture.preferences.get(fixture.ids.a));
+  assert.deepEqual(await preferences.json(), await fixture.preferencesFor(fixture.ids.a));
   const preferencesQuery = fixture.reads.slice(preferencesStart).find(read => read.text.includes('FROM feed.notification_preferences'));
   assert.match(preferencesQuery.text, /WHERE user_id = \$1/);
   assert.equal(preferencesQuery.values[0], fixture.ids.a, 'private preferences are selected by the verified principal');
@@ -389,8 +422,8 @@ test('native public Worker isolates profile, preferences, and activity by verifi
   assert.equal(update.status, 200);
   assertPrivate(update);
   assert.equal((await update.json()).emailEnabled, true);
-  assert.equal(fixture.preferences.get(fixture.ids.a).emailEnabled, true);
-  assert.equal(fixture.preferences.get(fixture.ids.b).emailEnabled, false, 'an attempted target ID cannot change another account');
+  assert.equal((await fixture.preferencesFor(fixture.ids.a)).emailEnabled, true);
+  assert.equal((await fixture.preferencesFor(fixture.ids.b)).emailEnabled, false, 'an attempted target ID cannot change another account');
   const preferenceMutation = fixture.reads.slice(updateStart).find(read => read.text.includes('INSERT INTO feed.notification_preferences'));
   assert.equal(preferenceMutation.values[0], fixture.ids.a, 'preference writes are bound to the verified principal');
 
@@ -430,7 +463,7 @@ test('native public Worker isolates profile, preferences, and activity by verifi
   assert.deepEqual((await accountBActivity.json()).items.map(item => item.title), ['Private event for account B']);
 });
 
-test('native Workers reject guest and non-staff requests and keep private failures uncacheable', async () => {
+test(`${runtimeLabel} rejects guest and non-staff requests and keeps private failures uncacheable`, async () => {
   for (const path of ['/api/users/me', '/api/notifications/preferences', '/api/users/me/activity']) {
     const response = await fixture.publicWorker.dispatchFetch(`https://api.lythaus.test${path}`);
     assert.equal(response.status, 401, `guest cannot read ${path}`);
@@ -438,7 +471,20 @@ test('native Workers reject guest and non-staff requests and keep private failur
     assert.equal((await response.json()).error, 'authentication_required');
   }
 
-  const adminPath = 'https://admin-api.lythaus.test/api/admin/users/search?q=member-b';
+  for (const [path, method, body] of [
+    ['/api/users/me', 'PATCH', { bio: 'Guest must not save this biography' }],
+    ['/api/notifications/preferences', 'PUT', { userId: fixture.ids.b, emailEnabled: true }],
+  ]) {
+    const response = await fixture.publicWorker.dispatchFetch(`https://api.lythaus.test${path}`, {
+      method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    });
+    assert.equal(response.status, 401);
+    assertPrivate(response);
+    assert.equal((await response.json()).error, 'authentication_required');
+  }
+  assert.equal((await fixture.preferencesFor(fixture.ids.b)).emailEnabled, false);
+
+  const adminPath = 'https://admin-api.lythaus.test/api/admin/users/search?q=' + fixture.ids.b;
   const guest = await fixture.adminWorker.dispatchFetch(adminPath);
   assert.equal(guest.status, 401);
   assertPrivate(guest);
@@ -462,7 +508,7 @@ test('native Workers reject guest and non-staff requests and keep private failur
   assert.deepEqual(staffBody.items.map(user => user.id), [fixture.ids.b]);
   assert.ok(!JSON.stringify(staffBody).includes('Private biography for account B.'));
 
-  const adminUsersPath = 'https://admin-api.lythaus.test/api/admin/users?limit=5';
+  const adminUsersPath = 'https://admin-api.lythaus.test/api/admin/users?limit=5&q=' + fixture.ids.b;
   const moderatorAssertion = await fixture.accessToken(fixture.moderatorSubject);
   const moderator = await fixture.adminWorker.dispatchFetch(adminUsersPath, {
     headers: { 'cf-access-jwt-assertion': moderatorAssertion },
@@ -477,4 +523,41 @@ test('native Workers reject guest and non-staff requests and keep private failur
   assert.equal(administrator.status, 200);
   assertPrivate(administrator);
   assert.deepEqual((await administrator.json()).items.map(user => user.id), [fixture.ids.b]);
+  await fixture.revokeMembership(fixture.ids.staff);
+  const revoked = await fixture.adminWorker.dispatchFetch(adminPath, {
+    headers: { 'cf-access-jwt-assertion': staffAssertion },
+  });
+  assert.equal(revoked.status, 403);
+  assertPrivate(revoked);
+  assert.equal((await revoked.json()).error, 'admin_role_required');
+});
+
+test(`${runtimeLabel} ignores hostile account identifiers on private read routes`, async () => {
+  for (const target of [fixture.ids.b, `${fixture.ids.b}' OR '1'='1`, `../../users/${fixture.ids.b}`]) {
+    for (const path of ['/api/users/me', '/api/notifications/preferences', '/api/activity']) {
+      const url = new URL('https://api.lythaus.test' + path);
+      url.searchParams.set('userId', target);
+      url.searchParams.set('subjectId', target);
+      const response = await fixture.publicWorker.dispatchFetch(url, { headers: { authorization: `Bearer ${fixture.tokens.a}` } });
+      assert.equal(response.status, 200);
+      assertPrivate(response);
+      const body = await response.json();
+      if (path === '/api/users/me') assert.equal(body.user.id, fixture.ids.a);
+      else if (path === '/api/notifications/preferences') assert.deepEqual(body, await fixture.preferencesFor(fixture.ids.a));
+      else assert.ok(body.items.length > 0 && body.items.every(item => item.userId === fixture.ids.a));
+      assert.ok(!JSON.stringify(body).includes('Private biography for account B.'));
+      assert.ok(!JSON.stringify(body).includes('Private event for account B'));
+    }
+  }
+  assert.equal(fixture.unexpectedOutbound, 0, 'only the intercepted synthetic Access JWKS destination may be fetched');
+});
+
+if (postgresMode) test('actual SQL connections use only canonical restricted runtime and admin roles', () => {
+  assert.deepEqual([...new Set(fixture.roleEvidence.map(row => row.role))].sort(), ['lythaus_admin', 'lythaus_runtime']);
+  assert.ok(fixture.roleEvidence.every(row => !row.rolsuper && !row.rolcreaterole && !row.rolcreatedb));
+  assert.ok(fixture.reads.some(read => read.role === 'lythaus_runtime' && read.text.includes('FROM trust.user_activity_events')));
+  assert.ok(fixture.reads.some(read => read.role === 'lythaus_admin' && read.text.includes('FROM identity.admin_memberships')));
+  const publicRateQueries = fixture.reads.filter(read => read.values?.[0] === 'public-api');
+  assert.ok(publicRateQueries.length > 0 && publicRateQueries.every(read => read.values[1] === fixture.publicRateHash));
+  assert.deepEqual(fixture.databaseErrors, []);
 });

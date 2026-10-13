@@ -22,6 +22,7 @@ on:
       - 'apps/lythaus-public-api/tests/native-postgres-workflow-fixture.mjs'
       - 'apps/lythaus-public-api/tests/auth-failure-paths.workerd.mjs'
       - 'apps/lythaus-public-api/tests/account-role-isolation.workerd.mjs'
+      - 'apps/lythaus-public-api/tests/account-role-isolation-pg17-fixture.mjs'
       - 'apps/lythaus-auth-acceptance-coordinator/src/**'
       - 'apps/lythaus-auth-acceptance-coordinator/tests/**'
       - 'apps/lythaus-admin-api/src/auth-email-dispatch-adapter.ts'
