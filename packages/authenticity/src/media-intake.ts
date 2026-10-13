@@ -109,7 +109,7 @@ export async function ingestMedia(input: MediaIntakeRequest, dependencies: Media
   return { schemaVersion: MEDIA_INTAKE_SCHEMA_VERSION, accepted: true, duplicate: false, caseRecord, existingCase: null, objectKey, sha256, perceptualHash };
 }
 
-export async function readBoundedRequestBody(request: Request, maxBytes = MAX_MEDIA_BYTES): Promise<Uint8Array> {
+export async function readBoundedRequestBody(request: Pick<Request, 'headers' | 'body'>, maxBytes = MAX_MEDIA_BYTES): Promise<Uint8Array> {
   const declaredLength = request.headers.get('content-length');
   if (declaredLength && Number.isFinite(Number(declaredLength)) && Number(declaredLength) > maxBytes) throw new Error('media_size_limit_exceeded');
   if (!request.body) return new Uint8Array();

@@ -19,6 +19,7 @@ const suites = [
   ['admission', 'apps/lythaus-public-api/tests/publication-admission.workerd.mjs', 240000],
   ['safety', 'apps/lythaus-jobs/tests/post-safety-evidence.workerd.mjs'],
   ['tx', 'packages/db/tests/transaction-client.postgres.mjs'],
+  ['attach', 'packages/db/tests/post-attachment-preparation.postgres.mjs'],
 ];
 
 export async function runPublicationSuites(value) {

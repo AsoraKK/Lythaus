@@ -121,6 +121,11 @@ jobs:
           packages/contracts/tests/monthly-earning.test.mjs
           packages/contracts/tests/monthly-maintenance.test.mjs
       - run: npm run test:critical-coverage
+      - name: Verify disabled post media attachment validation
+        run: >-
+          node --experimental-strip-types --test
+          packages/db/tests/post-attachment-preparation.test.mjs
+          packages/db/tests/post-attachment-byte-boundary.test.mjs
       - name: Verify isolated synthetic publication admission and evidence on PG17 and Workerd
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
