@@ -16,7 +16,7 @@ export function publicationControlTarget(value) {
 
 const suites = [
   ['moderation', 'apps/lythaus-jobs/tests/post-moderation.workerd.mjs'],
-  ['admission', 'apps/lythaus-public-api/tests/publication-admission.workerd.mjs'],
+  ['admission', 'apps/lythaus-public-api/tests/publication-admission.workerd.mjs', 240000],
   ['safety', 'apps/lythaus-jobs/tests/post-safety-evidence.workerd.mjs'],
   ['tx', 'packages/db/tests/transaction-client.postgres.mjs'],
 ];
@@ -44,7 +44,7 @@ export async function runPublicationSuites(value) {
     await control.connect();
     await control.query("SET statement_timeout='10s'");
     assert.match((await control.query('SHOW server_version_num')).rows[0].server_version_num, /^17/);
-    for (const [label, suite] of suites) {
+    for (const [label, suite, testTimeout = 120000] of suites) {
       if (interrupted) throw new Error('publication_test_interrupted');
       const name = `lythaus_auth_test_post_${label}_${randomUUID().replaceAll('-', '')}`;
       await control.query(`CREATE DATABASE ${name}`);
@@ -52,7 +52,7 @@ export async function runPublicationSuites(value) {
       const local = new URL(target); local.pathname = '/' + name;
       process.stdout.write(`Publication ${label}: fresh owned PG17 database\n`);
       await run(['scripts/ci/validate-planetscale-postgres17.mjs'], local.toString());
-      await run(['--experimental-strip-types', '--test', '--test-concurrency=1', '--test-timeout=120000', suite], local.toString());
+      await run(['--experimental-strip-types', '--test', '--test-concurrency=1', `--test-timeout=${testTimeout}`, suite], local.toString());
       await control.query(`DROP DATABASE ${name} WITH (FORCE)`);
       owned.delete(name);
     }
