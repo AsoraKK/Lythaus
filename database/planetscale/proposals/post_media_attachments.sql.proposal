@@ -1,0 +1,136 @@
+-- Proposal only. This file is not an approved migration and must not be applied
+-- to any hosted database. The missing public detector authorization relation is
+-- deliberate; this shape records linkage and revision inputs only.
+-- The trigger below validates INSERT only. This proposal defines no UPDATE or
+-- DELETE guards and no effective app-role permissions. Before integration,
+-- enforce relation immutability for the runtime role or add equivalent UPDATE
+-- guards and race tests; the INSERT guard alone does not make UPDATE safe.
+BEGIN;
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '30s';
+
+ALTER TABLE content.posts
+  ADD CONSTRAINT posts_id_author_unique UNIQUE (id, author_id);
+
+ALTER TABLE media.upload_sessions
+  ADD CONSTRAINT upload_sessions_id_user_unique UNIQUE (id, user_id);
+
+ALTER TABLE media.objects
+  ADD COLUMN source_upload_session_id uuid,
+  ADD COLUMN attachment_state_version bigint NOT NULL DEFAULT 1
+    CHECK (attachment_state_version > 0),
+  ADD CONSTRAINT media_objects_id_owner_session_unique
+    UNIQUE (id, owner_id, source_upload_session_id),
+  ADD CONSTRAINT media_objects_source_session_owner_fkey
+    FOREIGN KEY (source_upload_session_id, owner_id)
+    REFERENCES media.upload_sessions (id, user_id);
+
+CREATE UNIQUE INDEX media_objects_source_upload_session_unique
+  ON media.objects (source_upload_session_id)
+  WHERE source_upload_session_id IS NOT NULL;
+
+CREATE FUNCTION media.bump_post_attachment_state_version()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, media
+AS $$
+BEGIN
+  IF ROW(NEW.owner_id, NEW.source_upload_session_id, NEW.object_key, NEW.content_type,
+         NEW.byte_size, NEW.sha256, NEW.state, NEW.deleted_at)
+     IS DISTINCT FROM
+     ROW(OLD.owner_id, OLD.source_upload_session_id, OLD.object_key, OLD.content_type,
+         OLD.byte_size, OLD.sha256, OLD.state, OLD.deleted_at) THEN
+    NEW.attachment_state_version := OLD.attachment_state_version + 1;
+  ELSE
+    NEW.attachment_state_version := OLD.attachment_state_version;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER media_objects_bump_post_attachment_state_version
+  BEFORE UPDATE ON media.objects
+  FOR EACH ROW EXECUTE FUNCTION media.bump_post_attachment_state_version();
+
+CREATE TABLE content.post_media_attachments (
+  post_id uuid NOT NULL,
+  author_id uuid NOT NULL,
+  media_object_id uuid NOT NULL,
+  media_owner_id uuid NOT NULL,
+  source_upload_session_id uuid NOT NULL,
+  expected_media_state_version bigint NOT NULL CHECK (expected_media_state_version > 0),
+  ordinal smallint NOT NULL CHECK (ordinal BETWEEN 0 AND 31),
+  publication_eligible boolean NOT NULL DEFAULT false CHECK (publication_eligible = false),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT post_media_attachments_owner_match CHECK (author_id = media_owner_id),
+  CONSTRAINT post_media_attachments_post_owner_fkey
+    FOREIGN KEY (post_id, author_id) REFERENCES content.posts (id, author_id),
+  CONSTRAINT post_media_attachments_media_owner_session_fkey
+    FOREIGN KEY (media_object_id, media_owner_id, source_upload_session_id)
+    REFERENCES media.objects (id, owner_id, source_upload_session_id),
+  CONSTRAINT post_media_attachments_session_owner_fkey
+    FOREIGN KEY (source_upload_session_id, media_owner_id)
+    REFERENCES media.upload_sessions (id, user_id),
+  CONSTRAINT post_media_attachments_post_media_unique UNIQUE (post_id, media_object_id),
+  CONSTRAINT post_media_attachments_post_ordinal_unique UNIQUE (post_id, ordinal)
+);
+
+CREATE INDEX post_media_attachments_owner_media_idx
+  ON content.post_media_attachments (media_owner_id, media_object_id);
+
+CREATE FUNCTION content.guard_post_media_attachment_insert()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, content, media
+AS $$
+DECLARE
+  object_owner uuid;
+  object_session uuid;
+  object_version bigint;
+  object_state text;
+  object_deleted_at timestamptz;
+  session_owner uuid;
+  session_purpose text;
+  session_status text;
+BEGIN
+  IF NEW.author_id <> NEW.media_owner_id THEN
+    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'post_attachment_owner_mismatch';
+  END IF;
+
+  SELECT owner_id, source_upload_session_id, attachment_state_version, state, deleted_at
+    INTO object_owner, object_session, object_version, object_state, object_deleted_at
+    FROM media.objects WHERE id = NEW.media_object_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'post_attachment_media_missing';
+  END IF;
+  IF object_owner <> NEW.media_owner_id OR object_session <> NEW.source_upload_session_id THEN
+    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'post_attachment_media_owner_or_source_mismatch';
+  END IF;
+  IF object_version <> NEW.expected_media_state_version THEN
+    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'post_attachment_media_version_stale';
+  END IF;
+  IF object_state <> 'approved' OR object_deleted_at IS NOT NULL THEN
+    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'post_attachment_media_state_unavailable';
+  END IF;
+
+  SELECT user_id, purpose, status
+    INTO session_owner, session_purpose, session_status
+    FROM media.upload_sessions WHERE id = NEW.source_upload_session_id FOR UPDATE;
+  IF NOT FOUND OR session_owner <> NEW.media_owner_id THEN
+    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'post_attachment_upload_owner_mismatch';
+  END IF;
+  IF session_purpose <> 'standard' THEN
+    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'post_attachment_upload_purpose_unsupported';
+  END IF;
+  IF session_status <> 'approved' THEN
+    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'post_attachment_upload_state_unavailable';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER post_media_attachments_guard_insert
+  BEFORE INSERT ON content.post_media_attachments
+  FOR EACH ROW EXECUTE FUNCTION content.guard_post_media_attachment_insert();
+
+COMMIT;
