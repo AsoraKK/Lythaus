@@ -77,3 +77,11 @@ page reloads, platform secure storage, and browser contexts restored from the
 same device storage. It records canonical requests, exact retry keys, screenshots
 and expected injected HTTP failures. PostgreSQL tests cover real authentication,
 owner predicates, public exclusion and duplicate outbox prevention.
+
+`node scripts/tests/member-accessibility.browser.mjs` checks member dialogs,
+feed controls, profile tabs and retained composer drafts at 320 and 390 pixels,
+including 200% Flutter text. Its keyboard inset is injected synthetic layout
+data; Back invokes `WidgetsBinding.handlePopRoute`, rather than browser history.
+The fixture supplies local preferences and synthetic profile-tab content without
+calling authentication or profile services. Policy text scrolls while Done stays
+reachable, and repeated dialog or feed-control activation opens one overlay.

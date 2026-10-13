@@ -6,6 +6,7 @@ library;
 import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
 import '../../../helpers/content_recovery.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
@@ -345,6 +346,132 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  for (final width in [320.0, 390.0]) {
+    testWidgets(
+      'posting policy remains reachable at $width pixels with large text and keyboard',
+      (tester) async {
+        tester.view.physicalSize = Size(width, 640);
+        tester.view.devicePixelRatio = 1;
+        tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetViewInsets);
+        await tester.pumpWidget(
+          buildWithState(
+            const PostCreationState(text: 'Hello world', aiLabel: 'human'),
+            user: _testUser(),
+            textScale: 2,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Posting policy'));
+        await tester.tap(find.text('Posting policy'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining('249 user-perceived characters'),
+          findsOneWidget,
+        );
+        expect(find.text('Done').hitTestable(), findsOneWidget);
+        final policyContent = find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(SingleChildScrollView),
+        );
+        expect(policyContent, findsOneWidget);
+        final policyScrollable = find.descendant(
+          of: policyContent,
+          matching: find.byType(Scrollable),
+        );
+        expect(policyScrollable, findsOneWidget);
+        final scrollState = tester.state<ScrollableState>(policyScrollable);
+        expect(scrollState.position.maxScrollExtent, greaterThan(0));
+        await tester.drag(policyScrollable, const Offset(0, -300));
+        await tester.pumpAndSettle();
+        expect(scrollState.position.pixels, greaterThan(0));
+        expect(find.text('Done').hitTestable(), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets('policy Done, Escape and Back restore focus and preserve draft', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildWithState(
+        const PostCreationState(text: 'Draft for review', aiLabel: 'assisted'),
+        user: _testUser(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Posting policy'));
+    final policyFocus = Focus.of(tester.element(find.text('Posting policy')));
+    policyFocus.requestFocus();
+    await tester.pump();
+
+    for (final dismiss in ['Done', 'Escape', 'Back']) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsOneWidget);
+      if (dismiss == 'Done') {
+        await tester.tap(find.text('Done'));
+      } else if (dismiss == 'Escape') {
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      } else {
+        await tester.binding.handlePopRoute();
+      }
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(policyFocus.hasPrimaryFocus, isTrue);
+    }
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(CreatePostScreen)),
+    );
+    expect(container.read(postCreationProvider).text, 'Draft for review');
+    expect(container.read(postCreationProvider).aiLabel, 'assisted');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'repeated policy and Close activations open one dialog and retain draft',
+    (tester) async {
+      await tester.pumpWidget(
+        buildWithState(
+          const PostCreationState(text: 'Unsent draft', aiLabel: 'human'),
+          user: _testUser(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Posting policy'));
+      final openPolicy = tester
+          .widget<TextButton>(find.widgetWithText(TextButton, 'Posting policy'))
+          .onPressed!;
+      openPolicy();
+      openPolicy();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Done').last);
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+
+      final close = tester
+          .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.close))
+          .onPressed!;
+      close();
+      close();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Keep editing').last);
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(CreatePostScreen), findsOneWidget);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(CreatePostScreen)),
+      );
+      expect(container.read(postCreationProvider).text, 'Unsent draft');
+      expect(container.read(postCreationProvider).aiLabel, 'human');
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   group('CreatePostFAB', () {
     testWidgets('renders FAB with Post label', (tester) async {
