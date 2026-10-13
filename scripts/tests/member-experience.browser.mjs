@@ -27,7 +27,7 @@ async function run(name, options, task) {
 }
 
 try {
-  for (const width of [320, 390]) for (const theme of ['light', 'dark']) {
+  for (const width of [320, 390, 1280]) for (const theme of ['light', 'dark']) {
     await run('member-feed', { width, theme }, async (page, _, result) => {
       await button(page, 'Open Discover').click();
       await text(page, 'Kai Rivers').waitFor();

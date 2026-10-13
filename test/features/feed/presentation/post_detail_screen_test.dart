@@ -15,18 +15,28 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/domain/models.dart' as domain;
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
+import 'package:lythaus/features/profile/application/profile_providers.dart';
+import 'package:lythaus/features/profile/domain/owner_profile.dart';
+import 'package:lythaus/features/profile/domain/public_user.dart';
 
 class _MockPostRepository extends Mock implements PostRepository {}
 
-domain.Post _fakePost({String id = 'post-1', String text = 'Hello world'}) {
+domain.Post _fakePost({
+  String id = 'post-1',
+  String text = 'Hello world',
+  String authorId = 'author-1',
+  String authorUsername = 'testuser',
+  String? moderationState,
+}) {
   return domain.Post(
     id: id,
-    authorId: 'author-1',
-    authorUsername: 'testuser',
+    authorId: authorId,
+    authorUsername: authorUsername,
     text: text,
     createdAt: DateTime(2024),
     likeCount: 0,
@@ -41,6 +51,7 @@ domain.Post _fakePost({String id = 'post-1', String text = 'Hello world'}) {
     proofSignalsProvided: false,
     verifiedContextBadgeEligible: false,
     featuredEligible: false,
+    moderationState: moderationState,
   );
 }
 
@@ -56,6 +67,16 @@ Widget _buildApp({required _MockPostRepository repo, String postId = 'p1'}) {
     child: MaterialApp(home: PostDetailScreen(postId: postId)),
   );
 }
+
+User _viewer(String id) => User(
+  id: id,
+  email: 'member@example.test',
+  role: UserRole.user,
+  tier: UserTier.bronze,
+  reputationScore: 0,
+  createdAt: DateTime(2026),
+  lastLoginAt: DateTime(2026),
+);
 
 void main() {
   setUpAll(() {
@@ -250,6 +271,121 @@ void main() {
 
       expect(find.textContaining('testuser'), findsOneWidget);
       expect(find.byTooltip('View testuser profile'), findsOneWidget);
+    });
+
+    testWidgets('uses safe owner label without reading a private profile', (
+      tester,
+    ) async {
+      const authorId = '01a044e4-3860-7f76-b819-5be99e0000f6';
+      when(
+        () => repo.getPost(
+          postId: any(named: 'postId'),
+          token: any(named: 'token'),
+        ),
+      ).thenAnswer(
+        (_) async => _fakePost(
+          authorId: authorId,
+          authorUsername: authorId,
+          moderationState: 'under_review',
+        ),
+      );
+      var ownerProfileReads = 0;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            contentRecoveryStorageProvider.overrideWithValue(
+              MemoryContentRecoveryStorage(),
+            ),
+            postRepositoryProvider.overrideWithValue(repo),
+            currentUserProvider.overrideWithValue(_viewer(authorId)),
+            jwtProvider.overrideWith((ref) async => 'test-token'),
+            ownerProfileProvider.overrideWith((ref) async {
+              ownerProfileReads += 1;
+              return const OwnerProfile(
+                user: PublicUser(
+                  id: 'owner-1',
+                  displayName: 'Kyle Private',
+                  handle: '@kyle',
+                  tier: 'free',
+                ),
+                moderationState: 'under_review',
+                publicVisibility: false,
+              );
+            }),
+          ],
+          child: const MaterialApp(home: PostDetailScreen(postId: 'p1')),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(ownerProfileReads, 0);
+      expect(find.text('Lythaus member'), findsOneWidget);
+      expect(find.text(authorId), findsNothing);
+    });
+
+    testWidgets('does not read private owner profile for other viewers', (
+      tester,
+    ) async {
+      when(
+        () => repo.getPost(
+          postId: any(named: 'postId'),
+          token: any(named: 'token'),
+        ),
+      ).thenAnswer(
+        (_) async =>
+            _fakePost(authorId: 'owner-1', authorUsername: 'Lythaus member'),
+      );
+      var ownerProfileReads = 0;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            contentRecoveryStorageProvider.overrideWithValue(
+              MemoryContentRecoveryStorage(),
+            ),
+            postRepositoryProvider.overrideWithValue(repo),
+            currentUserProvider.overrideWithValue(_viewer('viewer-1')),
+            jwtProvider.overrideWith((ref) async => 'test-token'),
+            ownerProfileProvider.overrideWith((ref) async {
+              ownerProfileReads += 1;
+              return const OwnerProfile(
+                user: PublicUser(
+                  id: 'owner-1',
+                  displayName: 'Private owner name',
+                  tier: 'free',
+                ),
+                moderationState: 'under_review',
+                publicVisibility: false,
+              );
+            }),
+          ],
+          child: const MaterialApp(home: PostDetailScreen(postId: 'p1')),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(ownerProfileReads, 0);
+      expect(find.text('Lythaus member'), findsOneWidget);
+      expect(find.text('Private owner name'), findsNothing);
+    });
+
+    testWidgets('pending posts do not invite unavailable replies', (
+      tester,
+    ) async {
+      when(
+        () => repo.getPost(
+          postId: any(named: 'postId'),
+          token: any(named: 'token'),
+        ),
+      ).thenAnswer((_) async => _fakePost(moderationState: 'under_review'));
+
+      await tester.pumpWidget(_buildApp(repo: repo));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Comments are unavailable while this post is under review.'),
+        findsOneWidget,
+      );
+      expect(find.text('Comments (0)'), findsNothing);
     });
 
     testWidgets('post detail author link opens the existing profile route', (

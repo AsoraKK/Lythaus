@@ -11,13 +11,34 @@ import 'package:lythaus/widgets/appeal_dialog.dart';
 
 class ReceiptDrawer {
   static Future<void> show(BuildContext context, String postId) {
+    final height = (MediaQuery.sizeOf(context).height * 0.6)
+        .clamp(240.0, 480.0)
+        .toDouble();
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => SizedBox(
-        height: MediaQuery.of(context).size.height * 0.82,
-        child: ReceiptDrawerSheet(postId: postId),
+      showDragHandle: true,
+      builder: (sheetContext) => CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.escape): () {
+            Navigator.of(sheetContext).maybePop();
+          },
+        },
+        child: Focus(
+          autofocus: true,
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            heightFactor: 1,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 680),
+              child: SizedBox(
+                height: height,
+                child: ReceiptDrawerSheet(postId: postId),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -68,51 +89,10 @@ class _ReceiptDrawerSheetState extends ConsumerState<ReceiptDrawerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<_ReceiptPayload>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const _ReceiptLoading();
-        }
-        if (snapshot.hasError) {
-          return _ReceiptError(
-            onRetry: () => setState(() {
-              _future = _loadReceipt();
-            }),
-          );
-        }
-        final payload = snapshot.data;
-        if (payload == null) {
-          return _ReceiptError(
-            message: 'Receipt unavailable',
-            onRetry: () => setState(() {
-              _future = _loadReceipt();
-            }),
-          );
-        }
-        return _ReceiptContent(payload: payload);
-      },
-    );
-  }
-}
-
-class _ReceiptContent extends StatelessWidget {
-  const _ReceiptContent({required this.payload});
-
-  final _ReceiptPayload payload;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasAppealEvent = payload.events.any(
-      (event) =>
-          event.type == 'APPEAL_OPENED' || event.type == 'APPEAL_RESOLVED',
-    );
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          padding: const EdgeInsets.fromLTRB(20, 8, 12, 4),
           child: Row(
             children: [
               Expanded(
@@ -131,28 +111,71 @@ class _ReceiptContent extends StatelessWidget {
             ],
           ),
         ),
-        if (payload.events.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child: Text('No receipt events yet.'),
-          )
-        else
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-              itemCount: payload.events.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final event = payload.events[index];
-                return _ReceiptEventTile(
-                  event: event,
-                  postId: payload.postId,
-                  allowAppealAction: !hasAppealEvent,
+        Expanded(
+          child: FutureBuilder<_ReceiptPayload>(
+            future: _future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const _ReceiptLoading();
+              }
+              if (snapshot.hasError) {
+                return _ReceiptError(
+                  onRetry: () => setState(() {
+                    _future = _loadReceipt();
+                  }),
                 );
-              },
-            ),
+              }
+              final payload = snapshot.data;
+              if (payload == null) {
+                return _ReceiptError(
+                  message: 'Receipt unavailable',
+                  onRetry: () => setState(() {
+                    _future = _loadReceipt();
+                  }),
+                );
+              }
+              return _ReceiptContent(payload: payload);
+            },
           ),
+        ),
       ],
+    );
+  }
+}
+
+class _ReceiptContent extends StatelessWidget {
+  const _ReceiptContent({required this.payload});
+
+  final _ReceiptPayload payload;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasAppealEvent = payload.events.any(
+      (event) =>
+          event.type == 'APPEAL_OPENED' || event.type == 'APPEAL_RESOLVED',
+    );
+
+    if (payload.events.isEmpty) {
+      return const Align(
+        alignment: Alignment.topLeft,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Text('No receipt events yet.'),
+        ),
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      itemCount: payload.events.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final event = payload.events[index];
+        return _ReceiptEventTile(
+          event: event,
+          postId: payload.postId,
+          allowAppealAction: !hasAppealEvent,
+        );
+      },
     );
   }
 }
@@ -286,10 +309,7 @@ class _ReceiptLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(20),
-      child: Center(child: CircularProgressIndicator()),
-    );
+    return const Center(child: CircularProgressIndicator());
   }
 }
 

@@ -389,21 +389,12 @@ void main() {
   );
 
   testWidgets(
-    'discard on root composer requires confirmation and retains shell',
+    'closing a saved draft returns to the shell and keeps the draft',
     (tester) async {
       final fixture = await setup(tester);
       await tester.tap(find.byTooltip('Close composer'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Keep editing'));
-      await tester.pumpAndSettle();
-      expect(
-        fixture.container.read(postCreationProvider).text,
-        'Synthetic submission',
-      );
-      await tester.tap(find.byTooltip('Close composer'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Discard'));
-      await tester.pumpAndSettle();
+
       expect(tester.takeException(), isNull);
       expect(
         fixture
@@ -415,7 +406,14 @@ void main() {
         'discover',
       );
       expect(find.byType(AdaptiveShell), findsOneWidget);
-      expect(fixture.container.read(postCreationProvider).text, isEmpty);
+      expect(
+        fixture.container.read(postCreationProvider).text,
+        'Synthetic submission',
+      );
+      expect(
+        fixture.container.read(postCreationProvider).draftStatus,
+        'Draft saved on this device.',
+      );
     },
   );
 
@@ -486,46 +484,35 @@ void main() {
     ).called(1);
   });
 
-  testWidgets(
-    'native Back on dirty root confirms discard and preserves cancel',
-    (tester) async {
-      final fixture = await setup(tester);
-      final activeRoute = fixture.router.routeInformationProvider.value.uri;
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      expect(find.text('Discard post?'), findsOneWidget);
-      expect(fixture.router.routeInformationProvider.value.uri, activeRoute);
-      expect(
-        fixture.container.read(postCreationProvider).text,
-        'Synthetic submission',
-      );
-      await tester.tap(find.text('Keep editing'));
-      await tester.pumpAndSettle();
-      expect(find.text('Discard post?'), findsNothing);
-      expect(fixture.router.routeInformationProvider.value.uri, activeRoute);
-      expect(
-        fixture.container.read(postCreationProvider).text,
-        'Synthetic submission',
-      );
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Discard'));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      expect(find.byType(AdaptiveShell), findsOneWidget);
-      expect(
-        fixture.router.routeInformationProvider.value.uri.queryParameters,
-        {'tab': 'discover', 'source': 'synthetic'},
-      );
-      expect(fixture.container.read(postCreationProvider).text, isEmpty);
-      verifyNever(
-        () => fixture.repo.createPost(
-          request: any(named: 'request'),
-          token: any(named: 'token'),
-        ),
-      );
-    },
-  );
+  testWidgets('native Back closes a saved draft without losing it', (
+    tester,
+  ) async {
+    final fixture = await setup(tester);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Discard post?'), findsNothing);
+    expect(find.byType(AdaptiveShell), findsOneWidget);
+    expect(fixture.router.routeInformationProvider.value.uri.queryParameters, {
+      'tab': 'discover',
+      'source': 'synthetic',
+    });
+    expect(
+      fixture.container.read(postCreationProvider).text,
+      'Synthetic submission',
+    );
+    expect(
+      fixture.container.read(postCreationProvider).draftStatus,
+      'Draft saved on this device.',
+    );
+    verifyNever(
+      () => fixture.repo.createPost(
+        request: any(named: 'request'),
+        token: any(named: 'token'),
+      ),
+    );
+  });
 
   testWidgets(
     'native Back during submission preserves frozen draft and route',

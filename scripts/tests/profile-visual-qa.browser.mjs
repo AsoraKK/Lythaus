@@ -692,8 +692,14 @@ test(
           const ownerCallCountAfterBack = ownerPostsCalls.length;
 
           await openApp(`/user/${hiddenMember.id}`);
-          await page.getByText('Unable to load profile', { exact: true }).waitFor();
-          await page.getByRole('button', { name: 'Retry', exact: true }).waitFor();
+          await page.getByText('Profile unavailable', { exact: true }).waitFor();
+          await page
+            .getByText('This profile is unavailable to view.', { exact: true })
+            .waitFor();
+          assert.equal(
+            await page.getByRole('button', { name: 'Retry', exact: true }).count(),
+            0,
+          );
           const hiddenText = await profileText();
           assert.doesNotMatch(
             hiddenText,
