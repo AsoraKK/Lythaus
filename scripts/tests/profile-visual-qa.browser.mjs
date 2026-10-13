@@ -687,12 +687,14 @@ test(
           await screenshot('owner-post-keyboard-focus');
           const callerUrl = page.url();
           const callerBox = await postButtons[0].boundingBox();
+          const callerCardId = await postButtons[0].getAttribute('id');
           for (const key of ['Enter', 'Space']) {
             await page.keyboard.press(key);
             await page.getByText(firstPage[0].body, { exact: true }).waitFor();
             await page.getByRole('button', { name: 'Back', exact: true }).click();
             await page.mouse.move(0, 0);
             await postButtons[0].waitFor();
+            assert.equal(await postButtons[0].getAttribute('id'), callerCardId, 'Back preserves the original card semantics identity');
             await focused(postButtons[0]);
             assert.equal(page.url(), callerUrl);
             const returnedBox = await postButtons[0].boundingBox();
