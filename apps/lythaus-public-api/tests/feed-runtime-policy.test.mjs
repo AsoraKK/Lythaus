@@ -9,8 +9,19 @@ import {
   commentPublicLabel,
   entitlementsForTier,
   feedResponsePlan,
+  requireFeedPostId,
   requireNewsBoardAccess,
 } from '../src/feed-runtime-policy.ts';
+
+test('read-side post IDs accept canonical UUIDs and reject hostile or malformed paths', () => {
+  const id = '01a13414-5bd9-7b58-aac6-31f49aacc7a0';
+  for (const value of [id, id.toUpperCase(), id.replace('0', '%30')]) {
+    assert.equal(requireFeedPostId(value).toLowerCase(), id);
+  }
+  for (const value of ['not-a-uuid', id + "' OR '1'='1", '../../private', '%', '%252e%252e%252fprivate']) {
+    assert.throws(() => requireFeedPostId(value), /post_not_found/);
+  }
+});
 
 test('public feed surfaces receive only their bounded cache policy', () => {
   assert.deepEqual(feedResponsePlan('discovery', false), {
