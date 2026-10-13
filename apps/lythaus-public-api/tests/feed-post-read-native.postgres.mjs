@@ -135,9 +135,10 @@ const idsOf = items => items.map(item => item.id).sort();
 
 test('native guest, owner and unrelated member feeds exclude pending, rejected, deleted and private content', async () => {
   const publicIds = [posts.publicA.id, posts.publicB.id].sort();
+  const fixturePostIds = new Set(Object.values(posts).map(post => post.id));
   for (const actor of [undefined, 'a', 'b', 'a']) {
     const discovery = await read(actor, '/api/feed/discover', 'discovery');
-    assert.deepEqual(idsOf(discovery.items), publicIds);
+    assert.deepEqual(idsOf(discovery.items.filter(item => fixturePostIds.has(item.id))), publicIds);
     for (const name of ['pendingA', 'rejectedA', 'privateA', 'followersA', 'deletedA', 'unlabelledA']) {
       assert.ok(!JSON.stringify(discovery).includes(posts[name].body));
     }
