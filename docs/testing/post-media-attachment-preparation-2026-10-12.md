@@ -37,6 +37,14 @@ exported from the package entrypoint and has no active caller. Its hard release
 constant keeps both relation writes and publication eligibility false even
 when synthetic test inputs satisfy the prospective shape.
 
+The checker also requires source and stored-byte format-inspection evidence
+bound to each corresponding SHA-256 and current media-state version. Declared
+MIME metadata must be canonical, match the inspected format, and appear in the
+explicit capability allowlist. Safety and image-authenticity evidence bind to
+the exact stored-object digest and version. The checker validates these
+synthetic evidence shapes; it does not inspect bytes or establish who produced
+the evidence.
+
 The parser's 32-reference limit is an engineering request-size bound only. It
 does not set the product's attachment entitlement. The proposal's ordinal range
 uses the same hard engineering bound. `UNRESOLVED_POST_ATTACHMENT_CAPABILITIES`
@@ -89,10 +97,13 @@ purpose- and consent-bound.
 
 The future API should accept opaque media IDs and the user's declaration only.
 A trusted server-side loader must retrieve authoritative media, upload-session,
-and detector-evidence records for the authenticated owner; the client must not
-provide evidence, hashes, state, or policy values. The pure checker in this
-branch does not establish that trust boundary. Missing, failed, stale, or
-unbound evidence must block.
+byte-format-inspection, and detector-evidence records for the authenticated
+owner; the client must not provide MIME validation results, evidence, hashes,
+state, or policy values. The byte-format inspector must read the exact source
+and stored bytes and bind each result to its digest and media-state revision;
+declared MIME strings alone are not evidence. The pure checker in this branch
+does not establish that trust boundary or inspect bytes. Missing, failed, stale,
+or unbound evidence must block.
 
 Attachment creation must revalidate the loaded owner, purpose, state version,
 source identity, bytes, and evidence bindings under transaction locks in the

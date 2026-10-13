@@ -3,6 +3,7 @@ export const POST_ATTACHMENT_ACTIVATION_ENABLED = false as const;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
+const MIME_TYPE_PATTERN = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+\/[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
 
 export interface PostAttachmentCapabilityInputs {
   enabled: boolean;
@@ -49,6 +50,13 @@ export interface DetectorEvidenceInput {
   runId: string | null;
 }
 
+export interface FormatInspectionEvidenceInput {
+  outcome: 'verified' | 'failed' | 'unknown';
+  detectedContentType: string | null;
+  inputSha256: string | null;
+  mediaStateVersion: number | null;
+}
+
 export interface PostAttachmentMediaSnapshot {
   mediaId: string;
   ownerId: string;
@@ -57,6 +65,7 @@ export interface PostAttachmentMediaSnapshot {
   deletedAt: string | null;
   objectContentType: string;
   objectByteSize: number;
+  objectSha256: string | null;
   sourceSha256: string | null;
   width: number;
   height: number;
@@ -66,6 +75,8 @@ export interface PostAttachmentMediaSnapshot {
   sourceUploadStatus: string;
   sourceContentType: string;
   sourceByteSize: number;
+  sourceFormatEvidence: unknown;
+  objectFormatEvidence: unknown;
   orientationNormalized: boolean | null;
   exifMetadataAbsent: boolean | null;
   gpsMetadataAbsent: boolean | null;
@@ -89,6 +100,7 @@ export interface PreparedPostAttachmentState {
   deletedAt: string | null;
   objectContentType: string;
   objectByteSize: number;
+  objectSha256: string;
   sourceSha256: string;
   width: number;
   height: number;
@@ -98,6 +110,8 @@ export interface PreparedPostAttachmentState {
   sourceUploadStatus: string;
   sourceContentType: string;
   sourceByteSize: number;
+  sourceFormatEvidence: FormatInspectionEvidenceInput;
+  objectFormatEvidence: FormatInspectionEvidenceInput;
   orientationNormalized: boolean;
   exifMetadataAbsent: boolean;
   gpsMetadataAbsent: boolean;
@@ -129,13 +143,27 @@ function isSha256(value: unknown): value is string {
   return typeof value === 'string' && SHA256_PATTERN.test(value);
 }
 
+function canonicalMimeType(value: unknown): string | null {
+  if (typeof value !== 'string' || value !== value.trim() || !MIME_TYPE_PATTERN.test(value)) return null;
+  return value.toLowerCase();
+}
+
+function hasCanonicalImageMimePolicy(value: readonly string[] | null): boolean {
+  return Array.isArray(value) && value.length > 0 && value.every((mime) => {
+    const canonical = canonicalMimeType(mime);
+    return canonical !== null && canonical.startsWith('image/') && canonical === mime;
+  });
+}
+
 function policyBlockers(capabilities: PostAttachmentCapabilityInputs): string[] {
   const blockers: string[] = [];
   if (!capabilities.enabled) blockers.push('post_attachment_feature_disabled');
   if (!isPositiveSafeInteger(capabilities.maxAttachments)
     || capabilities.maxAttachments > POST_ATTACHMENT_REFERENCE_HARD_LIMIT) blockers.push('attachment_count_policy_unresolved');
   if (!capabilities.allowedSourceContentTypes?.length) blockers.push('source_content_type_policy_unresolved');
+  else if (!hasCanonicalImageMimePolicy(capabilities.allowedSourceContentTypes)) blockers.push('source_content_type_policy_invalid');
   if (!capabilities.allowedStoredContentTypes?.length) blockers.push('stored_content_type_policy_unresolved');
+  else if (!hasCanonicalImageMimePolicy(capabilities.allowedStoredContentTypes)) blockers.push('stored_content_type_policy_invalid');
   if (!isPositiveSafeInteger(capabilities.maxSourceBytes)) blockers.push('source_size_policy_unresolved');
   if (!isPositiveSafeInteger(capabilities.maxStoredBytes)) blockers.push('stored_size_policy_unresolved');
   if (!isPositiveSafeInteger(capabilities.maxPixels)) blockers.push('pixel_limit_policy_unresolved');
@@ -157,6 +185,36 @@ function parseDetectorEvidence(value: unknown): DetectorEvidenceInput | null {
     mediaStateVersion: typeof item.mediaStateVersion === 'number' ? item.mediaStateVersion : null,
     runId: typeof item.runId === 'string' ? item.runId : null,
   };
+}
+
+function parseFormatInspectionEvidence(value: unknown): FormatInspectionEvidenceInput | null {
+  if (!value || typeof value !== 'object') return null;
+  const item = value as Partial<FormatInspectionEvidenceInput>;
+  if (item.outcome !== 'verified' && item.outcome !== 'failed' && item.outcome !== 'unknown') return null;
+  return {
+    outcome: item.outcome,
+    detectedContentType: typeof item.detectedContentType === 'string' ? item.detectedContentType : null,
+    inputSha256: typeof item.inputSha256 === 'string' ? item.inputSha256 : null,
+    mediaStateVersion: typeof item.mediaStateVersion === 'number' ? item.mediaStateVersion : null,
+  };
+}
+
+function formatInspectionBlocker(
+  evidence: FormatInspectionEvidenceInput | null,
+  declaredMime: string | null,
+  expectedSha256: string,
+  expectedVersion: number,
+  label: 'source' | 'stored',
+): string | null {
+  if (!evidence || evidence.outcome !== 'verified') return `${label}_format_evidence_unverified`;
+  const detectedMime = canonicalMimeType(evidence.detectedContentType);
+  if (!detectedMime) return `${label}_format_evidence_invalid`;
+  if (!detectedMime.startsWith('image/')) return `${label}_non_image_media_unsupported`;
+  if (detectedMime !== declaredMime) return `${label}_content_type_mismatch`;
+  if (evidence.inputSha256 !== expectedSha256 || evidence.mediaStateVersion !== expectedVersion) {
+    return `${label}_format_evidence_stale_or_unbound`;
+  }
+  return null;
 }
 
 function detectorBlocker(
@@ -193,25 +251,38 @@ function safeMediaState(media: PostAttachmentMediaSnapshot, ownerId: string): {
   if (media.objectState === 'rejected' || media.objectState === 'deleted' || media.deletedAt !== null) blockers.push('media_rejected_or_deleted');
   else if (media.objectState !== 'approved') blockers.push('media_not_approved');
   if (!isSha256(media.sourceSha256)) blockers.push('media_hash_missing_or_invalid');
+  if (!isSha256(media.objectSha256)) blockers.push('stored_media_hash_missing_or_invalid');
   if (!isPositiveSafeInteger(media.sourceByteSize) || !isPositiveSafeInteger(media.objectByteSize)
     || !isPositiveSafeInteger(media.width) || !isPositiveSafeInteger(media.height)) blockers.push('media_dimensions_or_size_invalid');
   if (media.orientationNormalized !== true || media.exifMetadataAbsent !== true || media.gpsMetadataAbsent !== true) blockers.push('derivative_privacy_unverified');
 
-  const sourceMime = typeof media.sourceContentType === 'string' ? media.sourceContentType : '';
-  const storedMime = typeof media.objectContentType === 'string' ? media.objectContentType : '';
-  if (!sourceMime.startsWith('image/') || !storedMime.startsWith('image/')) blockers.push('non_image_media_unsupported');
+  const sourceMime = canonicalMimeType(media.sourceContentType);
+  const storedMime = canonicalMimeType(media.objectContentType);
+  if (!sourceMime) blockers.push('source_content_type_invalid');
+  else if (!sourceMime.startsWith('image/')) blockers.push('non_image_media_unsupported');
+  if (!storedMime) blockers.push('stored_content_type_invalid');
+  else if (!storedMime.startsWith('image/')) blockers.push('non_image_media_unsupported');
+
+  const sourceFormatEvidence = parseFormatInspectionEvidence(media.sourceFormatEvidence);
+  const objectFormatEvidence = parseFormatInspectionEvidence(media.objectFormatEvidence);
 
   const safetyEvidence = parseDetectorEvidence(media.safetyEvidence);
   const authenticityEvidence = parseDetectorEvidence(media.authenticityEvidence);
-  const hash = isSha256(media.sourceSha256) ? media.sourceSha256 : '';
+  const sourceHash = isSha256(media.sourceSha256) ? media.sourceSha256 : '';
+  const objectHash = isSha256(media.objectSha256) ? media.objectSha256 : '';
   const version = isPositiveSafeInteger(media.objectVersion) ? media.objectVersion : -1;
-  const safetyBlocker = detectorBlocker(safetyEvidence, 'public_safety_detector', hash, version, 'safety');
-  const authenticityBlocker = detectorBlocker(authenticityEvidence, 'public_image_authenticity_detector', hash, version, 'authenticity');
+  const sourceFormatBlocker = formatInspectionBlocker(sourceFormatEvidence, sourceMime, sourceHash, version, 'source');
+  const objectFormatBlocker = formatInspectionBlocker(objectFormatEvidence, storedMime, objectHash, version, 'stored');
+  if (sourceFormatBlocker) blockers.push(sourceFormatBlocker);
+  if (objectFormatBlocker) blockers.push(objectFormatBlocker);
+  const safetyBlocker = detectorBlocker(safetyEvidence, 'public_safety_detector', objectHash, version, 'safety');
+  const authenticityBlocker = detectorBlocker(authenticityEvidence, 'public_image_authenticity_detector', objectHash, version, 'authenticity');
   if (safetyBlocker) blockers.push(safetyBlocker);
   if (authenticityBlocker) blockers.push(authenticityBlocker);
 
   if (blockers.length || !mediaId || !mediaOwnerId || !sessionId || !sessionOwnerId
-    || !isSha256(media.sourceSha256) || !safetyEvidence || !authenticityEvidence) return { state: null, blockers };
+    || !sourceMime || !storedMime || !isSha256(media.sourceSha256) || !isSha256(media.objectSha256)
+    || !sourceFormatEvidence || !objectFormatEvidence || !safetyEvidence || !authenticityEvidence) return { state: null, blockers };
   return {
     state: {
       mediaId,
@@ -221,6 +292,7 @@ function safeMediaState(media: PostAttachmentMediaSnapshot, ownerId: string): {
       deletedAt: media.deletedAt,
       objectContentType: storedMime,
       objectByteSize: media.objectByteSize,
+      objectSha256: media.objectSha256,
       sourceSha256: media.sourceSha256,
       width: media.width,
       height: media.height,
@@ -230,6 +302,8 @@ function safeMediaState(media: PostAttachmentMediaSnapshot, ownerId: string): {
       sourceUploadStatus: media.sourceUploadStatus,
       sourceContentType: sourceMime,
       sourceByteSize: media.sourceByteSize,
+      sourceFormatEvidence: { ...sourceFormatEvidence, detectedContentType: canonicalMimeType(sourceFormatEvidence.detectedContentType) },
+      objectFormatEvidence: { ...objectFormatEvidence, detectedContentType: canonicalMimeType(objectFormatEvidence.detectedContentType) },
       orientationNormalized: media.orientationNormalized === true,
       exifMetadataAbsent: media.exifMetadataAbsent === true,
       gpsMetadataAbsent: media.gpsMetadataAbsent === true,
@@ -285,8 +359,10 @@ export function preparePostAttachments(input: PreparePostAttachmentsInput): Post
     if (checked.state) states.push(checked.state);
     const sourceTypes = input.capabilities.allowedSourceContentTypes;
     const storedTypes = input.capabilities.allowedStoredContentTypes;
-    if (sourceTypes && !sourceTypes.includes(matching[0].sourceContentType)) blockers.push('source_content_type_unsupported');
-    if (storedTypes && !storedTypes.includes(matching[0].objectContentType)) blockers.push('stored_content_type_unsupported');
+    const sourceMime = canonicalMimeType(matching[0].sourceContentType);
+    const storedMime = canonicalMimeType(matching[0].objectContentType);
+    if (sourceTypes && sourceMime && !sourceTypes.includes(sourceMime)) blockers.push('source_content_type_unsupported');
+    if (storedTypes && storedMime && !storedTypes.includes(storedMime)) blockers.push('stored_content_type_unsupported');
     if (isPositiveSafeInteger(input.capabilities.maxSourceBytes)
       && matching[0].sourceByteSize > input.capabilities.maxSourceBytes) blockers.push('source_size_limit_exceeded');
     if (isPositiveSafeInteger(input.capabilities.maxStoredBytes)

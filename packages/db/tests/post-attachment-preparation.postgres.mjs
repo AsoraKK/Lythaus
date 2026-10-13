@@ -118,6 +118,10 @@ test('attachment identity and ordering are unique; exact retries are idempotent 
   assert.equal(await insertOrReplay(f), 'inserted');
   assert.equal(await insertOrReplay(f), 'replayed');
   assert.equal((await client.query('SELECT publication_eligible FROM content.post_media_attachments WHERE post_id=$1', [f.postId])).rows[0].publication_eligible, false);
+  await assert.rejects(
+    client.query('UPDATE content.post_media_attachments SET publication_eligible=true WHERE post_id=$1', [f.postId]),
+    error => error.code === '23514',
+  );
   assert.equal(Number((await client.query('SELECT count(*) AS count FROM content.post_media_attachments WHERE post_id=$1', [f.postId])).rows[0].count), 1);
   await assert.rejects(insertOrReplay(f, 1), /post_attachment_idempotency_conflict/);
   const otherSession = uuidv7(), otherMedia = uuidv7();
