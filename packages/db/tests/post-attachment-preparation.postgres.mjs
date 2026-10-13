@@ -3,12 +3,13 @@ import { readFile } from 'node:fs/promises';
 import test, { before, after } from 'node:test';
 import pg from 'pg';
 import { uuidv7 } from '../../security/src/index.ts';
+import { POST_ATTACHMENT_OWNER_LOOKUP_SQL } from '../src/post-attachment-byte-boundary.ts';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL ?? '';
 const target = new URL(connectionString || 'file:///missing');
 assert.equal(target.protocol, 'postgresql:');
 assert.ok(['localhost', '127.0.0.1'].includes(target.hostname));
-assert.match(target.pathname, /^\/lythaus_auth_test_post_attachment_[a-f0-9]{32}$/);
+assert.match(target.pathname, /^\/lythaus_auth_test_post_attach_[a-f0-9]{32}$/);
 assert.equal(target.search, '');
 assert.equal(target.hash, '');
 
@@ -17,6 +18,7 @@ const proposalPath = new URL('../../../database/planetscale/proposals/post_media
 
 before(async () => {
   await client.connect();
+  assert.equal((await client.query('SELECT current_database() AS name')).rows[0].name, target.pathname.slice(1));
   const version = Number((await client.query("SELECT current_setting('server_version_num') AS version")).rows[0].version);
   assert.ok(version >= 170000 && version < 180000, `expected disposable PostgreSQL 17, found ${version}`);
   await client.query(await readFile(proposalPath, 'utf8'));
@@ -98,6 +100,18 @@ test('composite owner/source constraints reject cross-owner links and missing me
     error => error.code === '23514' || error.code === '23503');
   await assert.rejects(client.query(INSERT, [f.postId, f.ownerId, uuidv7(), f.ownerId, f.sessionId, 1, 0]),
     error => error.code === '23514' && error.message === 'post_attachment_media_missing');
+});
+
+test('server metadata lookup scopes both media and source owners and excludes private-purpose sources', async () => {
+  const f = await fixture();
+  const loaded = await client.query(POST_ATTACHMENT_OWNER_LOOKUP_SQL, [f.mediaId, f.ownerId]);
+  assert.equal(loaded.rowCount, 1);
+  assert.equal(loaded.rows[0].source_owner_id, f.ownerId);
+  assert.equal(loaded.rows[0].source_sha256, 'a'.repeat(64));
+  assert.equal(loaded.rows[0].stored_sha256, 'b'.repeat(64));
+  assert.equal((await client.query(POST_ATTACHMENT_OWNER_LOOKUP_SQL, [f.mediaId, uuidv7()])).rowCount, 0);
+  const privateSource = await fixture({ purpose: 'authenticity_alpha' });
+  assert.equal((await client.query(POST_ATTACHMENT_OWNER_LOOKUP_SQL, [privateSource.mediaId, privateSource.ownerId])).rowCount, 0);
 });
 
 test('purpose, status, and media state guards reject private, pending, and review rows', async () => {

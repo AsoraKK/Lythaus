@@ -57,6 +57,67 @@ The PostgreSQL fixtures use only synthetic rows and apply the proposal in a
 fresh disposable PG17 database created by the publication test runner. They do
 not contain image samples and make no detector-accuracy claim.
 
+## Disabled server-owned byte boundary (13 October)
+
+`packages/db/src/post-attachment-byte-boundary.ts` adds an uncalled factory
+whose server-held dependencies are a database client, two private R2 buckets,
+the existing Images binding, and explicit format/bounds configuration. Its
+request accepts one opaque media ID only: caller-provided owner, object key,
+format verdict, detector pass, or evidence fields are rejected. The separate
+owner argument must come from the authenticated server principal. These
+dependencies and configuration must never be deserialized from a client body.
+The earlier pure preparation checker still accepts structural values and must
+not become runtime authority for caller-created snapshots.
+
+The fixed lookup selects the media object and source upload session with both
+owners scoped to that principal. A defensive owner/purpose/state check follows.
+It requires the source-session linkage and state-version fields in the unapplied
+proposal; their absence returns `attachment_metadata_schema_unavailable`.
+Neither this factory nor its tests apply that proposal to a hosted database.
+The current Jobs flow deletes source quarantine bytes after processing, so
+unavailable originals return `private_bytes_unavailable`; this work does not
+change retention or recreate originals.
+
+Object keys come only from the authoritative rows. Reads use private-bucket
+HEAD metadata, conditional ETags, configured byte bounds, exact byte counts,
+and recomputed source/stored SHA-256 values. Records and storage versions are
+reloaded after inspection. This is optimistic read revalidation, not a lock
+covering a later attachment write or publication transition; the transaction
+requirements below still apply.
+
+The factory reuses the generic `media-intake.ts` signature detection and bounded
+stream reader plus `forensics.ts` header inspection and digest helper. The
+existing JPEG header parser's swapped width/height is corrected and covered by
+a non-square real-byte fixture. Complete PNG chunk/CRC, JPEG ending, WebP RIFF,
+and bounded AVIF box checks precede the Images binding's metadata read and full
+RGBA decode. Decode output is counted and discarded under the existing decoded
+memory bound. Decoder errors, incomplete pixels, unknown container variants,
+and recognized animations remain blocked or unavailable. No claim about
+authorship, authenticity, safety, orientation, or EXIF/GPS removal follows from
+these format checks.
+
+There are no attachment format defaults. Explicit allowed formats must be a
+subset of the existing standard upload configuration, and configured byte/pixel
+bounds cannot exceed its engineering caps. That existing list is not public
+attachment policy approval. Missing configuration or decoder returns
+unavailable before any lookup or storage read. All success results are immutable
+`inspected` snapshots with no locators, null modality/privacy evidence,
+`runtimeAuthority = false`, and false relation/publication eligibility. Feeding
+such a snapshot to the preparation checker remains blocked. The new module is
+not exported from the package entrypoint or imported by a runtime entrypoint.
+
+The isolated suite generates synthetic PNG/JPEG/WebP/AVIF bytes locally and uses
+a Sharp-backed fake Images binding, fake database, and in-memory private buckets.
+The production module does not import Sharp. This verifies local byte handling,
+not the hosted Images decoder's behavior, service budgets, or a public release.
+Real-byte tests and an added disposable PG17 owner-lookup test supplement the
+existing attachment ownership, idempotency, and state-race cases. The new PG17
+case awaits execution by the existing disposable runner: this follow-up's
+no-DDL/grants scope did not permit reapplying its baseline/proposal locally.
+Its database suffix is shortened to fit PostgreSQL's identifier limit and the
+fixture now checks actual database identity before any proposal application.
+No detector is invoked and no fixture certifies detector accuracy.
+
 ## Existing lifecycle and storage follow-up
 
 - The standard finalizer checks byte count and SHA-256 from the server-side
