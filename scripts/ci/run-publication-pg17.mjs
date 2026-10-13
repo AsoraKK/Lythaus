@@ -22,11 +22,16 @@ const suites = [
   ['attach', 'packages/db/tests/post-attachment-preparation.postgres.mjs'],
 ];
 
+export function publicationFailureAnnotation(stage) {
+  assert.match(stage, /^(control|(?:moderation|admission|safety|tx|attach)\.(?:create|baseline|suite|drop))$/);
+  return `::error title=Publication fixture failure::${stage} failed; inspect this stage's child output.`;
+}
+
 export async function runPublicationSuites(value) {
   const target = publicationControlTarget(value);
   const control = new pg.Client({ connectionString: target.toString(), ssl: false, connectionTimeoutMillis: 5000 });
   const owned = new Set();
-  let child, interrupted;
+  let child, interrupted, stage = 'control';
   const stop = signal => { interrupted = signal; child?.kill(signal); };
   const onInt = () => stop('SIGINT'), onTerm = () => stop('SIGTERM');
   process.on('SIGINT', onInt); process.on('SIGTERM', onTerm);
@@ -48,15 +53,22 @@ export async function runPublicationSuites(value) {
     for (const [label, suite, testTimeout = 120000] of suites) {
       if (interrupted) throw new Error('publication_test_interrupted');
       const name = `lythaus_auth_test_post_${label}_${randomUUID().replaceAll('-', '')}`;
+      stage = `${label}.create`;
       await control.query(`CREATE DATABASE ${name}`);
       owned.add(name);
       const local = new URL(target); local.pathname = '/' + name;
       process.stdout.write(`Publication ${label}: fresh owned PG17 database\n`);
+      stage = `${label}.baseline`;
       await run(['scripts/ci/validate-planetscale-postgres17.mjs'], local.toString());
+      stage = `${label}.suite`;
       await run(['--experimental-strip-types', '--test', '--test-concurrency=1', `--test-timeout=${testTimeout}`, suite], local.toString());
+      stage = `${label}.drop`;
       await control.query(`DROP DATABASE ${name} WITH (FORCE)`);
       owned.delete(name);
     }
+  } catch (error) {
+    if (!interrupted && process.env.GITHUB_ACTIONS === 'true') console.error(publicationFailureAnnotation(stage));
+    throw error;
   } finally {
     try {
       for (const name of owned) await control.query(`DROP DATABASE ${name} WITH (FORCE)`);
