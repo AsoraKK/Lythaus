@@ -87,164 +87,178 @@ void main() {
     registerFallbackValue(const CreatePostRequest(text: 'fallback'));
   });
 
-  testWidgets(
-    'owner Posts -> post -> author Posts -> Back preserves caller and enabled link',
-    (tester) async {
-      tester.view.physicalSize = const Size(390, 844);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final repo = _Repository();
-      when(
-        () => repo.getPost(
-          postId: _postId,
-          token: any(named: 'token'),
-        ),
-      ).thenAnswer(
-        (_) async => domain.Post(
-          id: _postId,
-          authorId: _ownerId,
-          authorUsername: _member.displayName,
-          text: _body,
-          createdAt: DateTime.utc(2026, 10, 1),
-          moderationState: 'allowed',
-          declaredCreationMode: 'human',
-        ),
-      );
-      final router = GoRouter(
-        initialLocation: '/?tab=profile&origin=synthetic-owner',
-        routes: [
-          GoRoute(
-            path: '/',
-            builder: (context, state) =>
-                state.uri.queryParameters['tab'] == 'profile'
-                ? const ProfileScreen()
-                : const Scaffold(body: Text('Discover caller')),
-            routes: [
-              GoRoute(
-                name: 'profile',
-                path: 'user/:userId',
-                builder: (context, state) =>
-                    ProfileScreen(userId: state.pathParameters['userId']),
-              ),
-            ],
+  for (final width in [320.0, 390.0]) {
+    testWidgets(
+      '$width: owner Posts -> post -> author Posts -> Back preserves caller and enabled link',
+      (tester) async {
+        tester.view.physicalSize = Size(width, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final repo = _Repository();
+        when(
+          () => repo.getPost(
+            postId: _postId,
+            token: any(named: 'token'),
           ),
-        ],
-      );
-      addTearDown(router.dispose);
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            currentUserProvider.overrideWithValue(
-              User(
-                id: _ownerId,
-                email: 'owner@example.invalid',
-                role: UserRole.user,
-                tier: UserTier.bronze,
-                reputationScore: 0,
-                createdAt: DateTime.utc(2026),
-                lastLoginAt: DateTime.utc(2026),
-              ),
-            ),
-            authSessionRevisionProvider.overrideWith(
-              (ref) => AuthSessionRevision(_Session()),
-            ),
-            jwtProvider.overrideWith((ref) async => 'synthetic-token'),
-            ownerProfileProvider.overrideWith(
-              (ref) async => const OwnerProfile(
-                user: _member,
-                moderationState: 'allowed',
-                publicVisibility: true,
-              ),
-            ),
-            ownerPostsServiceProvider.overrideWithValue(_Posts()),
-            ownerCommentsServiceProvider.overrideWithValue(_Comments()),
-            settingsProvider.overrideWith((ref) => SettingsController()),
-            analyticsClientProvider.overrideWithValue(
-              const NullAnalyticsClient(),
-            ),
-            postRepositoryProvider.overrideWithValue(repo),
-            contentRecoveryStorageProvider.overrideWithValue(
-              MemoryContentRecoveryStorage(),
-            ),
-            reputationProvider.overrideWith(
-              (ref) async => const ReputationState(
-                userId: _ownerId,
-                level: 0,
-                levelName: 'Member',
-                reputationStatus: 'active',
-                reputationBand: 'Getting started',
-                policyVersion: 'synthetic',
-                pillars: {},
-                promotionBlockers: [],
-              ),
-            ),
-            monthlyRewardsViewProvider.overrideWith(
-              (ref) async =>
-                  throw StateError('Synthetic monthly view unavailable'),
+        ).thenAnswer(
+          (_) async => domain.Post(
+            id: _postId,
+            authorId: _ownerId,
+            authorUsername: _member.displayName,
+            text: _body,
+            createdAt: DateTime.utc(2026, 10, 1),
+            moderationState: 'allowed',
+            declaredCreationMode: 'human',
+          ),
+        );
+        final router = GoRouter(
+          initialLocation: '/?tab=profile&origin=synthetic-owner',
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, state) =>
+                  state.uri.queryParameters['tab'] == 'profile'
+                  ? const ProfileScreen()
+                  : const Scaffold(body: Text('Discover caller')),
+              routes: [
+                GoRoute(
+                  name: 'profile',
+                  path: 'user/:userId',
+                  builder: (context, state) =>
+                      ProfileScreen(userId: state.pathParameters['userId']),
+                ),
+              ],
             ),
           ],
-          child: MaterialApp.router(
-            routerConfig: router,
-            builder: (context, child) => MediaQuery(
-              data: MediaQuery.of(context).copyWith(disableAnimations: true),
-              child: child!,
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              currentUserProvider.overrideWithValue(
+                User(
+                  id: _ownerId,
+                  email: 'owner@example.invalid',
+                  role: UserRole.user,
+                  tier: UserTier.bronze,
+                  reputationScore: 0,
+                  createdAt: DateTime.utc(2026),
+                  lastLoginAt: DateTime.utc(2026),
+                ),
+              ),
+              authSessionRevisionProvider.overrideWith(
+                (ref) => AuthSessionRevision(_Session()),
+              ),
+              jwtProvider.overrideWith((ref) async => 'synthetic-token'),
+              ownerProfileProvider.overrideWith(
+                (ref) async => const OwnerProfile(
+                  user: _member,
+                  moderationState: 'allowed',
+                  publicVisibility: true,
+                ),
+              ),
+              ownerPostsServiceProvider.overrideWithValue(_Posts()),
+              ownerCommentsServiceProvider.overrideWithValue(_Comments()),
+              settingsProvider.overrideWith((ref) => SettingsController()),
+              analyticsClientProvider.overrideWithValue(
+                const NullAnalyticsClient(),
+              ),
+              postRepositoryProvider.overrideWithValue(repo),
+              contentRecoveryStorageProvider.overrideWithValue(
+                MemoryContentRecoveryStorage(),
+              ),
+              reputationProvider.overrideWith(
+                (ref) async => const ReputationState(
+                  userId: _ownerId,
+                  level: 0,
+                  levelName: 'Member',
+                  reputationStatus: 'active',
+                  reputationBand: 'Getting started',
+                  policyVersion: 'synthetic',
+                  pillars: {},
+                  promotionBlockers: [],
+                ),
+              ),
+              monthlyRewardsViewProvider.overrideWith(
+                (ref) async =>
+                    throw StateError('Synthetic monthly view unavailable'),
+              ),
+            ],
+            child: MaterialApp.router(
+              routerConfig: router,
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(disableAnimations: true),
+                child: child!,
+              ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(Tab, 'Posts'));
-      await tester.pumpAndSettle();
-      final origin = router.routeInformationProvider.value.uri;
-      expect(origin.queryParameters['tab'], 'profile');
-      expect(origin.queryParameters['profileTab'], 'posts');
-      await tester.tap(find.text(_body));
-      await tester.pumpAndSettle();
-      expect(find.byType(PostDetailScreen), findsOneWidget);
-      await tester.tap(find.byTooltip('View Casey Member profile'));
-      await tester.pumpAndSettle();
-      expect(
-        tester.widget<ProfileScreen>(find.byType(ProfileScreen).last).userId,
-        _ownerId,
-      );
-      await tester.tap(find.widgetWithText(Tab, 'Posts').last);
-      await tester.pumpAndSettle();
-      await tester.pageBack();
-      await tester.pumpAndSettle();
-      expect(find.byType(PostDetailScreen), findsOneWidget);
-      final link = find.descendant(
-        of: find.byType(AuthorProfileLink),
-        matching: find.byType(TextButton),
-      );
-      final enabledOnReturn = tester.widget<TextButton>(link).onPressed != null;
-      await tester.pageBack();
-      await tester.pumpAndSettle();
-      expect(
-        {
-          'authorEnabled': enabledOnReturn,
-          'uri': router.routeInformationProvider.value.uri.toString(),
-          'ownerPosts': find
-              .text('Your posts')
-              .hitTestable()
-              .evaluate()
-              .isNotEmpty,
-          'discover': find.text('Discover caller').evaluate().isNotEmpty,
-        },
-        {
-          'authorEnabled': true,
-          'uri': origin.toString(),
-          'ownerPosts': true,
-          'discover': false,
-        },
-      );
-      verifyNever(
-        () => repo.createPost(
-          request: any(named: 'request'),
-          token: any(named: 'token'),
-        ),
-      );
-      expect(tester.takeException(), isNull);
-    },
-  );
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(Tab, 'Posts'));
+        await tester.pumpAndSettle();
+        final origin = router.routeInformationProvider.value.uri;
+        expect(origin.queryParameters['tab'], 'profile');
+        expect(origin.queryParameters['profileTab'], 'posts');
+        await tester.tap(find.text(_body));
+        await tester.pumpAndSettle();
+        expect(find.byType(PostDetailScreen), findsOneWidget);
+        await tester.tap(find.byTooltip('View Casey Member profile'));
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<ProfileScreen>(find.byType(ProfileScreen).last).userId,
+          _ownerId,
+        );
+        await tester.tap(find.widgetWithText(Tab, 'Posts').last);
+        await tester.pumpAndSettle();
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        expect(find.byType(PostDetailScreen), findsOneWidget);
+        final link = find.descendant(
+          of: find.byType(AuthorProfileLink),
+          matching: find.byType(TextButton),
+        );
+        final enabledOnReturn =
+            tester.widget<TextButton>(link).onPressed != null;
+        expect(enabledOnReturn, isTrue);
+        await tester.tap(link);
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(Tab, 'Comments').last);
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(Tab, 'Posts').last);
+        await tester.pumpAndSettle();
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        expect(find.byType(PostDetailScreen), findsOneWidget);
+        expect(tester.widget<TextButton>(link).onPressed, isNotNull);
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        expect(
+          {
+            'authorEnabled': enabledOnReturn,
+            'uri': router.routeInformationProvider.value.uri.toString(),
+            'ownerPosts': find
+                .text('Your posts')
+                .hitTestable()
+                .evaluate()
+                .isNotEmpty,
+            'discover': find.text('Discover caller').evaluate().isNotEmpty,
+          },
+          {
+            'authorEnabled': true,
+            'uri': origin.toString(),
+            'ownerPosts': true,
+            'discover': false,
+          },
+        );
+        verifyNever(
+          () => repo.createPost(
+            request: any(named: 'request'),
+            token: any(named: 'token'),
+          ),
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 }

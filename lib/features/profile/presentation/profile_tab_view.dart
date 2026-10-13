@@ -68,7 +68,7 @@ class _ProfileTabViewState extends ConsumerState<ProfileTabView>
     final uri = GoRouterState.of(context).uri;
     final selected = _tabs[_controller.index];
     if ((uri.queryParameters['profileTab'] ?? 'overview') == selected) return;
-    router.go(
+    router.replace<void>(
       uri
           .replace(
             queryParameters: {...uri.queryParameters, 'profileTab': selected},
