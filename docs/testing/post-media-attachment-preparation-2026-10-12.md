@@ -90,8 +90,8 @@ stream reader plus `forensics.ts` header inspection and digest helper. The
 existing JPEG header parser's swapped width/height is corrected and covered by
 a non-square real-byte fixture. Complete PNG chunk/CRC, JPEG ending, WebP RIFF,
 and bounded AVIF box checks precede the Images binding's metadata read and full
-RGBA decode. Decode output is counted and discarded under the existing decoded
-memory bound. Decoder errors, incomplete pixels, unknown container variants,
+RGBA decode. Decode output is counted and discarded under the existing caller
+decoded-byte limit. Decoder errors, incomplete pixels, unknown container variants,
 and recognized animations remain blocked or unavailable. No claim about
 authorship, authenticity, safety, orientation, or EXIF/GPS removal follows from
 these format checks.
@@ -119,6 +119,20 @@ Its database suffix fits PostgreSQL's identifier limit and the fixture checks
 actual database identity before any proposal application. No hosted schema or
 permissions were changed, and this does not certify the hosted Images decoder.
 No detector is invoked and no fixture certifies detector accuracy.
+
+The uncalled factory has a shared asynchronous operation deadline: the server
+may configure `inspectionTimeoutMs` from 1 through 30,000 (default 30,000) and
+`cleanupTimeoutMs` from 1 through 1,000 (default 250). These follow the existing
+provider-wait and database-cleanup timer conventions, not attachment policy.
+Lookups, storage waits, Images info/output, hashes, and stream reads share one
+deadline. Timeout errors supplied input streams, cancels/releases owned readers,
+and bounds cleanup even when a cancellation hook hangs. Late returned bodies
+are canceled and late promise rejections are handled. APIs without supported
+abort operations may continue internally: caller deadlines do not preempt
+synchronous parsing or bound hosted decoder memory, CPU, billing, or cost.
+They cannot forcibly release readers owned by another consumer. Hosted abort
+behavior and service resource/cost limits remain separate acceptance gates;
+mock-clock stalled-operation tests establish only the caller-side cleanup.
 
 ## Existing lifecycle and storage follow-up
 

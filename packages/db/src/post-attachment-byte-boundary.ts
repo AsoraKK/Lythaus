@@ -34,6 +34,8 @@ export interface AttachmentByteBoundaryDependencies {
   storedBucket: AttachmentPrivateBucket;
   images?: AttachmentImagesBinding;
   policy?: AttachmentInspectionPolicy;
+  inspectionTimeoutMs?: number;
+  cleanupTimeoutMs?: number;
 }
 
 interface MediaRecord {
@@ -82,6 +84,86 @@ class InspectionFailure extends Error {
   readonly status: 'blocked' | 'unavailable';
   constructor(status: 'blocked' | 'unavailable', reason: string) { super(reason); this.status = status; }
 }
+
+function inspectionBudget(timeoutMs: number, cleanupMs: number) {
+  const controller = new AbortController(), deadlineAt = Date.now() + timeoutMs;
+  const expired = () => new InspectionFailure('unavailable', 'attachment_inspection_deadline');
+  const timer = setTimeout(() => controller.abort(expired()), timeoutMs);
+  const streams = new Set<() => Promise<void>>(), cleaning = new Set<Promise<void>>();
+  const cancel = (reader: ReadableStreamDefaultReader<Uint8Array>, reason: unknown): Promise<void> => {
+    let pending: Promise<void>;
+    try { pending = reader.cancel(reason); } catch { pending = Promise.resolve(); }
+    try { reader.releaseLock(); } catch {}
+    let cleanupTimer: ReturnType<typeof setTimeout>;
+    const done = Promise.race([pending.catch(() => {}), new Promise<void>(resolve => {
+      cleanupTimer = setTimeout(resolve, cleanupMs);
+    })]).finally(() => { clearTimeout(cleanupTimer); cleaning.delete(done); });
+    cleaning.add(done);
+    return done;
+  };
+  const cancelBody = async (body?: ReadableStream<Uint8Array>): Promise<void> => {
+    if (body && !body.locked) await cancel(body.getReader(), expired());
+  };
+  const run = async <T>(work: () => Promise<T>, late?: (value: T) => Promise<void>): Promise<T> => {
+    if (Date.now() >= deadlineAt && !controller.signal.aborted) controller.abort(expired());
+    if (controller.signal.aborted) throw expired();
+    let abort!: () => void;
+    const timeout = new Promise<never>((_, reject) => {
+      abort = () => reject(expired());
+      controller.signal.addEventListener('abort', abort, { once: true });
+    });
+    const call = Promise.resolve().then(() => {
+      if (controller.signal.aborted || Date.now() >= deadlineAt) throw expired();
+      return work();
+    });
+    void call.then(value => { if (controller.signal.aborted && late) return late(value); }).catch(() => {});
+    try { return await Promise.race([call, timeout]); }
+    finally { controller.signal.removeEventListener('abort', abort); }
+  };
+  const body = (source: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> => {
+    const reader = source.getReader();
+    let finished = false, target: ReadableStreamDefaultController<Uint8Array>;
+    const retire = (): Promise<void> => {
+      if (finished) return Promise.resolve();
+      finished = true;
+      streams.delete(retire);
+      controller.signal.removeEventListener('abort', abort);
+      return cancel(reader, expired());
+    };
+    const abort = () => { if (!finished) { target.error(expired()); void retire(); } };
+    const wrapped = new ReadableStream<Uint8Array>({
+      start(value) { target = value; },
+      async pull(value) {
+        try {
+          const next = await run(() => reader.read());
+          if (finished) return;
+          if (next.done) {
+            finished = true;
+            streams.delete(retire);
+            controller.signal.removeEventListener('abort', abort);
+            reader.releaseLock();
+            value.close();
+          } else value.enqueue(next.value);
+        } catch (error) { value.error(error); await retire(); }
+      },
+      cancel: retire,
+    });
+    streams.add(retire);
+    controller.signal.addEventListener('abort', abort, { once: true });
+    if (controller.signal.aborted) abort();
+    return wrapped;
+  };
+  return {
+    run, body, cancelBody,
+    async close() {
+      clearTimeout(timer);
+      controller.abort(expired());
+      await Promise.all([...streams].map(retire => retire()).concat([...cleaning]));
+    },
+  };
+}
+
+type InspectionBudget = ReturnType<typeof inspectionBudget>;
 
 const uuid = (value: unknown): value is string => typeof value === 'string'
   && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -178,7 +260,7 @@ function completeEnvelope(bytes: Uint8Array, contentType: string): void {
 }
 
 async function inspectBytes(bytes: Uint8Array, expectedMime: string, allowed: readonly string[],
-  maxPixels: number, images: AttachmentImagesBinding): Promise<{ mime: string; sha256: string; width: number; height: number }> {
+  maxPixels: number, images: AttachmentImagesBinding, budget: InspectionBudget): Promise<{ mime: string; sha256: string; width: number; height: number }> {
   const detected = detectMediaMime(bytes);
   if (!detected || detected !== mime(expectedMime)) throw new InspectionFailure('blocked', 'mime_bytes_mismatch');
   if (!allowed.includes(detected)) throw new InspectionFailure('unavailable', 'image_format_policy_unavailable');
@@ -193,16 +275,17 @@ async function inspectBytes(bytes: Uint8Array, expectedMime: string, allowed: re
     return pixels;
   };
   if (header) boundedDimensions(header.width, header.height);
-  const stream = () => new Response(bytes.slice()).body!;
-  const info = await images.info(stream());
+  const stream = () => budget.body(new Response(bytes.slice()).body!);
+  const info = await budget.run(() => images.info(stream()));
   const infoMime = mime(info.format) ?? ({ jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', avif: 'image/avif' } as Record<string, string>)[info.format.toLowerCase()];
   if (infoMime !== detected || info.fileSize !== bytes.length
     || (header && (info.width !== header.width || info.height !== header.height))) {
     throw new InspectionFailure('blocked', 'decoded_metadata_mismatch');
   }
   const pixels = boundedDimensions(info.width, info.height);
-  const decoded = await images.input(stream()).output({ format: 'rgba', anim: false });
-  const reader = decoded.image().getReader();
+  const decoded = await budget.run(() => images.input(stream()).output({ format: 'rgba', anim: false }),
+    value => budget.cancelBody(value.image()));
+  const reader = budget.body(decoded.image()).getReader();
   let decodedBytes = 0;
   try {
     while (true) {
@@ -216,7 +299,7 @@ async function inspectBytes(bytes: Uint8Array, expectedMime: string, allowed: re
     }
   } finally { reader.releaseLock(); }
   if (decodedBytes !== pixels * 4) throw new InspectionFailure('blocked', 'decoded_pixels_incomplete');
-  return { mime: detected, sha256: await sha256Hex(bytes), width: info.width!, height: info.height! };
+  return { mime: detected, sha256: await budget.run(() => sha256Hex(bytes)), width: info.width!, height: info.height! };
 }
 
 function sameStorage(a: AttachmentPrivateObject, b: AttachmentPrivateObject): boolean {
@@ -224,18 +307,22 @@ function sameStorage(a: AttachmentPrivateObject, b: AttachmentPrivateObject): bo
 }
 
 async function privateBytes(bucket: AttachmentPrivateBucket, key: string, expectedSize: number, expectedMime: string,
-  maxBytes: number): Promise<{ bytes: Uint8Array; head: AttachmentPrivateObject }> {
+  maxBytes: number, budget: InspectionBudget): Promise<{ bytes: Uint8Array; head: AttachmentPrivateObject }> {
   if (!positive(expectedSize) || expectedSize > maxBytes) throw new InspectionFailure('blocked', 'stored_size_limit');
-  const head = await bucket.head(key);
+  const head = await budget.run(() => bucket.head(key));
   if (!head) throw new InspectionFailure('unavailable', 'private_bytes_unavailable');
   if (!head.etag || head.size !== expectedSize || mime(head.httpMetadata?.contentType) !== mime(expectedMime)) {
     throw new InspectionFailure('blocked', 'storage_metadata_mismatch');
   }
   const stableHead = { etag: head.etag, size: head.size, httpMetadata: { contentType: head.httpMetadata?.contentType } };
-  const object = await bucket.get(key, { onlyIf: { etagMatches: stableHead.etag } });
-  if (!object?.body || !sameStorage(stableHead, object)) throw new InspectionFailure('blocked', 'storage_revision_changed');
+  const object = await budget.run(() => bucket.get(key, { onlyIf: { etagMatches: stableHead.etag } }),
+    value => budget.cancelBody(value?.body));
+  if (!object?.body || !sameStorage(stableHead, object)) {
+    await budget.cancelBody(object?.body);
+    throw new InspectionFailure('blocked', 'storage_revision_changed');
+  }
   let bytes: Uint8Array;
-  try { bytes = await readBoundedRequestBody({ headers: new Headers(), body: object.body }, maxBytes); }
+  try { bytes = await readBoundedRequestBody({ headers: new Headers(), body: budget.body(object.body) }, maxBytes); }
   catch (error) {
     if (error instanceof Error && error.message === 'media_size_limit_exceeded') throw new InspectionFailure('blocked', 'stored_size_limit');
     throw error;
@@ -247,8 +334,9 @@ async function privateBytes(bucket: AttachmentPrivateBucket, key: string, expect
 export function createPostAttachmentByteBoundary(dependencies: AttachmentByteBoundaryDependencies) {
   const { database, sourceBucket, storedBucket, images } = dependencies;
   const policy = policyCopy(dependencies.policy);
-  const lookup = async (mediaId: string, ownerId: string): Promise<MediaRecord> => {
-    const loaded = await database.query<MediaRecord>(POST_ATTACHMENT_OWNER_LOOKUP_SQL, [mediaId, ownerId]);
+  const timeoutMs = dependencies.inspectionTimeoutMs ?? 30_000, cleanupMs = dependencies.cleanupTimeoutMs ?? 250;
+  const lookup = async (mediaId: string, ownerId: string, budget: InspectionBudget): Promise<MediaRecord> => {
+    const loaded = await budget.run(() => database.query<MediaRecord>(POST_ATTACHMENT_OWNER_LOOKUP_SQL, [mediaId, ownerId]));
     if (loaded.rows.length !== 1) throw new InspectionFailure('blocked', 'attachment_unavailable');
     const row = loaded.rows[0];
     if (row.media_id !== mediaId || row.owner_id !== ownerId || row.source_owner_id !== ownerId
@@ -268,6 +356,9 @@ export function createPostAttachmentByteBoundary(dependencies: AttachmentByteBou
     async loadForOwner(ownerId: string, request: unknown): Promise<AttachmentByteInspectionResult> {
       if (!policy) return result('unavailable', 'image_format_or_bounds_policy_unavailable');
       if (!images) return result('unavailable', 'image_decoder_unavailable');
+      if (!positive(timeoutMs) || timeoutMs > 30_000 || !positive(cleanupMs) || cleanupMs > 1_000) {
+        return result('unavailable', 'inspection_deadline_config_invalid');
+      }
       let mediaId: string, owner: string;
       try {
         if (!uuid(ownerId) || !request || typeof request !== 'object' || Array.isArray(request)
@@ -278,21 +369,24 @@ export function createPostAttachmentByteBoundary(dependencies: AttachmentByteBou
         }
         mediaId = descriptor.value.toLowerCase(); owner = ownerId.toLowerCase();
       } catch { return result('blocked', 'attachment_request_invalid'); }
+      const budget = inspectionBudget(timeoutMs, cleanupMs);
       try {
-        const row = await lookup(mediaId, owner);
-        const source = await privateBytes(sourceBucket, row.source_key, Number(row.source_bytes), row.source_mime, policy.maxSourceBytes!);
-        const stored = await privateBytes(storedBucket, row.stored_key, Number(row.stored_bytes), row.stored_mime, policy.maxStoredBytes!);
-        if (await sha256Hex(source.bytes) !== row.source_sha256 || await sha256Hex(stored.bytes) !== row.stored_sha256) {
+        const row = await lookup(mediaId, owner, budget);
+        const source = await privateBytes(sourceBucket, row.source_key, Number(row.source_bytes), row.source_mime, policy.maxSourceBytes!, budget);
+        const stored = await privateBytes(storedBucket, row.stored_key, Number(row.stored_bytes), row.stored_mime, policy.maxStoredBytes!, budget);
+        if (await budget.run(() => sha256Hex(source.bytes)) !== row.source_sha256
+          || await budget.run(() => sha256Hex(stored.bytes)) !== row.stored_sha256) {
           throw new InspectionFailure('blocked', 'source_or_stored_integrity_mismatch');
         }
-        const sourceFacts = await inspectBytes(source.bytes, row.source_mime, policy.allowedSourceContentTypes!, policy.maxPixels!, images);
-        const storedFacts = await inspectBytes(stored.bytes, row.stored_mime, policy.allowedStoredContentTypes!, policy.maxPixels!, images);
+        const sourceFacts = await inspectBytes(source.bytes, row.source_mime, policy.allowedSourceContentTypes!, policy.maxPixels!, images, budget);
+        const storedFacts = await inspectBytes(stored.bytes, row.stored_mime, policy.allowedStoredContentTypes!, policy.maxPixels!, images, budget);
         if (sourceFacts.sha256 !== row.source_sha256 || storedFacts.sha256 !== row.stored_sha256) {
           throw new InspectionFailure('blocked', 'source_or_stored_integrity_mismatch');
         }
-        const fresh = await lookup(mediaId, owner);
+        const fresh = await lookup(mediaId, owner, budget);
         if (JSON.stringify(row) !== JSON.stringify(fresh)) throw new InspectionFailure('blocked', 'media_revision_changed');
-        const sourceHead = await sourceBucket.head(row.source_key), storedHead = await storedBucket.head(row.stored_key);
+        const sourceHead = await budget.run(() => sourceBucket.head(row.source_key));
+        const storedHead = await budget.run(() => storedBucket.head(row.stored_key));
         if (!sourceHead || !storedHead || !sameStorage(source.head, sourceHead) || !sameStorage(stored.head, storedHead)) {
           throw new InspectionFailure('blocked', 'storage_revision_changed');
         }
@@ -316,7 +410,7 @@ export function createPostAttachmentByteBoundary(dependencies: AttachmentByteBou
         const code = (error as { code?: string } | null)?.code;
         if (code === '42703' || code === '42P01') return result('unavailable', 'attachment_metadata_schema_unavailable');
         return result('unavailable', 'inspection_dependency_unavailable');
-      }
+      } finally { await budget.close(); }
     },
   });
 }

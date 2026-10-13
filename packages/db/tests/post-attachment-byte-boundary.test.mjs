@@ -339,3 +339,180 @@ test('repeated inspections are deterministic and read only; dependency failures 
   assert.equal(JSON.stringify(result).includes('private key'), false);
   noAuthority(result);
 });
+
+function deferred() {
+  let resolve, reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+
+function deadlineBoundary(t, f, overrides = {}) {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 0 });
+  return createPostAttachmentByteBoundary({ ...f.dependencies, inspectionTimeoutMs: 20, cleanupTimeoutMs: 5, ...overrides });
+}
+
+test('deadlines cannot be disabled or extended above the server hard bounds', async () => {
+  const f = fixture();
+  for (const limits of [{ inspectionTimeoutMs: 0 }, { inspectionTimeoutMs: 30_001 },
+    { cleanupTimeoutMs: 0 }, { cleanupTimeoutMs: 1001 }]) {
+    const result = await createPostAttachmentByteBoundary({ ...f.dependencies, ...limits }).loadForOwner(owner, { mediaId });
+    assert.equal(result.reason, 'inspection_deadline_config_invalid');
+    noAuthority(result);
+  }
+  assert.equal(f.state.queries.length, 0);
+});
+
+test('a stalled metadata lookup stops at the shared deadline', async t => {
+  const f = fixture(), entered = deferred();
+  const database = { query() { entered.resolve(); return new Promise(() => {}); } };
+  const pending = deadlineBoundary(t, f, { database }).loadForOwner(owner, { mediaId });
+  await entered.promise;
+  t.mock.timers.tick(20);
+  const result = await pending;
+  assert.equal(result.reason, 'attachment_inspection_deadline');
+  assert.equal(f.state.storageReads.length, 0);
+  noAuthority(result);
+});
+
+test('stalled Images info errors its input stream and returns no authority', async t => {
+  const f = fixture(), entered = deferred();
+  let input;
+  const images = { ...f.images, info(stream) { input = stream; entered.resolve(); return new Promise(() => {}); } };
+  const pending = deadlineBoundary(t, f, { images }).loadForOwner(owner, { mediaId });
+  await entered.promise;
+  t.mock.timers.tick(20);
+  const result = await pending;
+  assert.equal(result.reason, 'attachment_inspection_deadline');
+  const reader = input.getReader();
+  await assert.rejects(reader.read(), /attachment_inspection_deadline/);
+  reader.releaseLock();
+  assert.equal(input.locked, false);
+  assert.equal(f.state.decodes, 0);
+  noAuthority(result);
+});
+
+test('Images output shares elapsed budget and a late output body is canceled and unlocked', async t => {
+  const f = fixture(), infoReady = deferred(), infoContinue = deferred(), outputReady = deferred(), output = deferred();
+  let input, canceled = 0;
+  const images = {
+    async info(stream) { const value = await f.images.info(stream); infoReady.resolve(); await infoContinue.promise; return value; },
+    input(stream) { input = stream; return { output() { outputReady.resolve(); return output.promise; } }; },
+  };
+  const pending = deadlineBoundary(t, f, { images }).loadForOwner(owner, { mediaId });
+  await infoReady.promise;
+  t.mock.timers.tick(10);
+  infoContinue.resolve();
+  await outputReady.promise;
+  t.mock.timers.tick(10);
+  const result = await pending;
+  assert.equal(result.reason, 'attachment_inspection_deadline');
+  assert.equal(f.state.decodes, 1);
+  const lateBody = new ReadableStream({ cancel() { canceled++; } });
+  output.resolve({ image: () => lateBody });
+  await new Promise(resolve => queueMicrotask(resolve));
+  await new Promise(resolve => queueMicrotask(resolve));
+  assert.equal(canceled, 1);
+  assert.equal(lateBody.locked, false);
+  assert.equal(input.locked, false);
+  noAuthority(result);
+});
+
+test('a stalled private byte stream is canceled and its reader released', async t => {
+  const f = fixture(), entered = deferred();
+  let canceled = 0;
+  const body = new ReadableStream({ pull() { entered.resolve(); return new Promise(() => {}); }, cancel() { canceled++; } }, { highWaterMark: 0 });
+  const get = f.sourceBucket.get.bind(f.sourceBucket);
+  const sourceBucket = { ...f.sourceBucket, async get(...args) { return { ...await get(...args), body }; } };
+  const pending = deadlineBoundary(t, f, { sourceBucket }).loadForOwner(owner, { mediaId });
+  await entered.promise;
+  t.mock.timers.tick(20);
+  const result = await pending;
+  assert.equal(result.reason, 'attachment_inspection_deadline');
+  assert.equal(canceled, 1);
+  assert.equal(body.locked, false);
+  assert.equal(f.state.decodes, 0);
+  noAuthority(result);
+});
+
+test('a stalled decoded pixel stream is canceled and its reader released', async t => {
+  const f = fixture(), entered = deferred();
+  let canceled = 0;
+  const body = new ReadableStream({ pull() { entered.resolve(); return new Promise(() => {}); }, cancel() { canceled++; } }, { highWaterMark: 0 });
+  const images = { ...f.images, input: () => ({ output: async () => ({ image: () => body }) }) };
+  const pending = deadlineBoundary(t, f, { images }).loadForOwner(owner, { mediaId });
+  await entered.promise;
+  t.mock.timers.tick(20);
+  const result = await pending;
+  assert.equal(result.reason, 'attachment_inspection_deadline');
+  assert.equal(canceled, 1);
+  assert.equal(body.locked, false);
+  noAuthority(result);
+});
+
+test('a cancellation hook that never settles cannot hold the reader or extend cleanup indefinitely', async t => {
+  const f = fixture(), entered = deferred();
+  const body = new ReadableStream({ start(value) { value.enqueue(new Uint8Array(5000)); },
+    cancel() { entered.resolve(); return new Promise(() => {}); } });
+  const get = f.sourceBucket.get.bind(f.sourceBucket);
+  const sourceBucket = { ...f.sourceBucket, async get(...args) { return { ...await get(...args), body }; } };
+  const pending = deadlineBoundary(t, f, { sourceBucket }).loadForOwner(owner, { mediaId });
+  await entered.promise;
+  assert.equal(body.locked, false);
+  t.mock.timers.tick(5);
+  const result = await pending;
+  assert.equal(result.reason, 'stored_size_limit');
+  assert.equal(f.state.decodes, 0);
+  t.mock.timers.tick(1000);
+  noAuthority(result);
+});
+
+test('late private bodies are canceled even when their get operation outlives the caller deadline', async t => {
+  const f = fixture(), entered = deferred(), fetched = deferred();
+  let canceled = 0;
+  const sourceBucket = { ...f.sourceBucket, get() { entered.resolve(); return fetched.promise; } };
+  const pending = deadlineBoundary(t, f, { sourceBucket }).loadForOwner(owner, { mediaId });
+  await entered.promise;
+  t.mock.timers.tick(20);
+  const result = await pending;
+  const body = new ReadableStream({ cancel() { canceled++; return Promise.reject(new Error('cancel rejected')); } });
+  fetched.resolve({ etag: 'late', size: png.length, body });
+  await new Promise(resolve => queueMicrotask(resolve));
+  await new Promise(resolve => queueMicrotask(resolve));
+  assert.equal(result.reason, 'attachment_inspection_deadline');
+  assert.equal(canceled, 1);
+  assert.equal(body.locked, false);
+  noAuthority(result);
+});
+
+test('timeout cleanup has its own finite budget when cancel never settles', async t => {
+  const f = fixture(), reading = deferred(), canceling = deferred();
+  const body = new ReadableStream({ pull() { reading.resolve(); return new Promise(() => {}); },
+    cancel() { canceling.resolve(); return new Promise(() => {}); } }, { highWaterMark: 0 });
+  const get = f.sourceBucket.get.bind(f.sourceBucket);
+  const sourceBucket = { ...f.sourceBucket, async get(...args) { return { ...await get(...args), body }; } };
+  const pending = deadlineBoundary(t, f, { sourceBucket }).loadForOwner(owner, { mediaId });
+  await reading.promise;
+  t.mock.timers.tick(20);
+  await canceling.promise;
+  assert.equal(body.locked, false);
+  t.mock.timers.tick(5);
+  const result = await pending;
+  assert.equal(result.reason, 'attachment_inspection_deadline');
+  assert.equal(f.state.decodes, 0);
+  noAuthority(result);
+});
+
+test('a provider operation rejecting after timeout is handled without producing evidence', async t => {
+  const f = fixture(), entered = deferred(), info = deferred();
+  const images = { ...f.images, info() { entered.resolve(); return info.promise; } };
+  const pending = deadlineBoundary(t, f, { images }).loadForOwner(owner, { mediaId });
+  await entered.promise;
+  t.mock.timers.tick(20);
+  const result = await pending;
+  info.reject(new Error('late decoder rejection'));
+  await new Promise(resolve => queueMicrotask(resolve));
+  await new Promise(resolve => queueMicrotask(resolve));
+  assert.equal(result.reason, 'attachment_inspection_deadline');
+  assert.equal(result.snapshot, null);
+  noAuthority(result);
+});
