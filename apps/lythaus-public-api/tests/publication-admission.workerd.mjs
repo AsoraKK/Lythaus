@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { randomBytes } from 'node:crypto';
-import { before, after, test } from 'node:test';
+import { createHash, randomBytes } from 'node:crypto';
+import { before, beforeEach, after, test } from 'node:test';
 import pg from 'pg';
 import { generateKeyPair, exportJWK, exportPKCS8, SignJWT } from 'jose';
 import { signAccessToken, hmacLookup, uuidv7 } from '@lythaus/security';
@@ -44,6 +44,12 @@ before(async () => {
   await allow(await reviewCase(parentComment));
 });
 after(async () => { await fixture?.dispose(); await client.end(); });
+beforeEach(async () => { await resetAdminRateWindow(); });
+
+const adminRateSubject = () => createHash('sha256').update(`admin:${adminId}`).digest('hex');
+async function resetAdminRateWindow() {
+  await client.query("DELETE FROM system.rate_limit_windows WHERE scope='admin-api' AND subject_hash=$1", [adminRateSubject()]);
+}
 
 async function actor() {
   const id = uuidv7();
@@ -140,6 +146,23 @@ test('pinned Workerd has real Segmenter; forced absence gives explicit unsupport
       { 'x-fixture-segmenter': 'unavailable' });
     assert.deepEqual(await unsupported.json(), { available: false, error: 'grapheme_segmentation_unavailable' });
   }
+});
+
+test('native admin limiter rejects a full owned window without publication effects and fixture reset is subject-scoped', async () => {
+  const item = await create(await actor(), 'post', { body: 'Synthetic rate-boundary admission', declaredCreationMode: 'human' });
+  const review = await reviewCase(item), window = Math.floor(Date.now() / 60_000) * 60_000;
+  const otherSubject = createHash('sha256').update('synthetic-unrelated-admin-rate-subject').digest('hex');
+  for (const subject of [adminRateSubject(), otherSubject]) {
+    for (const offset of [-1, 0, 1]) await client.query(`INSERT INTO system.rate_limit_windows(scope,subject_hash,window_started_at,request_count,expires_at)
+      VALUES('admin-api',$1,$2,120,$2::timestamptz + interval '2 minutes')`, [subject, new Date(window + offset * 60_000).toISOString()]);
+  }
+  await rejected(() => admin(review), 429, 'rate_limit_exceeded');
+  await resetAdminRateWindow();
+  assert.equal((await client.query("SELECT count(*)::int AS count FROM system.rate_limit_windows WHERE scope='admin-api' AND subject_hash=$1", [adminRateSubject()])).rows[0].count, 0);
+  assert.deepEqual((await client.query("SELECT request_count FROM system.rate_limit_windows WHERE scope='admin-api' AND subject_hash=$1 ORDER BY window_started_at", [otherSubject])).rows,
+    [{ request_count: 120 }, { request_count: 120 }, { request_count: 120 }]);
+  await allow(review);
+  await client.query("DELETE FROM system.rate_limit_windows WHERE scope='admin-api' AND subject_hash=$1", [otherSubject]);
 });
 
 for (const kind of ['post', 'comment', 'reply']) {
