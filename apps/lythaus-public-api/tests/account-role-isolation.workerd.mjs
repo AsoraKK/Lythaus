@@ -448,7 +448,25 @@ test(`${runtimeLabel} isolates profile, preferences, and activity by verified ac
   });
   assert.equal(accountB.status, 200);
   assertPrivate(accountB);
-  assert.equal((await accountB.json()).user.id, fixture.ids.b);
+  const accountBBody = await accountB.json();
+  assert.equal(accountBBody.user.id, fixture.ids.b);
+  assert.equal(accountBBody.user.displayName, 'Synthetic Member B');
+  assert.equal(accountBBody.user.bio, 'Private biography for account B.');
+  assert.ok(!JSON.stringify(accountBBody).includes('Synthetic Member A'));
+  assert.ok(!JSON.stringify(accountBBody).includes('Private biography for account A.'));
+
+  const accountAAgain = await fixture.publicWorker.dispatchFetch('https://api.lythaus.test/api/users/me', {
+    headers: { authorization: `Bearer ${fixture.tokens.a}` },
+  });
+  assert.equal(accountAAgain.status, 200);
+  assertPrivate(accountAAgain);
+  const accountAAgainBody = await accountAAgain.json();
+  assert.equal(accountAAgainBody.user.id, fixture.ids.a);
+  assert.equal(accountAAgainBody.user.displayName, 'Synthetic Member A');
+  assert.equal(accountAAgainBody.user.bio, 'Private biography for account A.');
+  assert.ok(!JSON.stringify(accountAAgainBody).includes('Synthetic Member B'));
+  assert.ok(!JSON.stringify(accountAAgainBody).includes('Private biography for account B.'));
+
   const accountBPreferences = await fixture.publicWorker.dispatchFetch('https://api.lythaus.test/api/notifications/preferences?userId=' + fixture.ids.a, {
     headers: { authorization: `Bearer ${fixture.tokens.b}` },
   });
