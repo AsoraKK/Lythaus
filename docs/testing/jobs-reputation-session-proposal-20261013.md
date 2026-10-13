@@ -54,9 +54,16 @@ It reads no application row, calls no lock helper and changes no application
 state. No request can choose SQL, a role, a connection, a subject or a provider.
 
 The normal deadline is five seconds for connect/queries/rollback/close combined.
-Failure cleanup allows at most 500 ms each for a rollback attempt and close.
-The pg driver's own connect/query bounds are five seconds; end closes an active
-non-pipelined query connection. Failed/unknown rollback never yields an observed
+Failure cleanup allows at most 500 ms each for a rollback attempt and graceful
+close, plus at most 250 ms for forced-close acknowledgement.
+The pg driver's own connect/query bounds are five seconds. Cleanup reuses the
+inactive autocommit module's exported dedicated-client routines, closes the
+captured native socket, and requires its terminal closed promise as well as end
+completion. Throwing/rejected/stalled end destroys the stream and closes the
+native socket even when pg-cloudflare destroy/write throws. Retired transport
+events are suppressed and a client error sink remains after successful or failed
+cleanup. No ordinary query/transaction or autocommit adapter is activated.
+Failed/unknown rollback never yields an observed
 receipt. A stalled cleanup is unavailable, not a claim that rollback completed.
 Public bounds fetch plus streamed body to seven seconds and 4096 bytes, aborts
 on timeout and rejects redirects, malformed JSON and wrong Worker receipts.
@@ -204,3 +211,41 @@ connection is not closed. The final regression requires close on that path.
 Workerd also proved that redirect:error is unsupported for a service binding;
 manual redirect mode plus explicit status rejection passes the native no-forwarding
 regression. No completed inert PG17 suite or production probe was rerun.
+
+## Independent review follow-up
+
+At reviewed head 462df60a, hosted Web frontends job 115416822910 failed at
+`node --test apps/marketing-site/tests/*.test.mjs`. Authorized step/annotation
+metadata and a source-level 1/1 failing control identify the package-command
+freeze: it allowed only the old moderation suffix and rejected the exact two
+new Jobs diagnostic tests. No denied raw-log storage was retried.
+
+The correction keeps both frozen revision IDs, original native/publication
+registration validator and homepage/release/dependency guards. A narrow wrapper
+requires the exact two-path suffix and pins ten allocated source/test blobs as
+literal Git object IDs. Negative cases reject missing/reordered/duplicate/extra
+test commands, changed marketing scripts/dependencies, mutated bytes, historical
+dispatcher blobs, homepage paths and unrelated authentication paths. No homepage
+asset, source, build configuration, dependency or release workflow changes.
+
+Independent review also identified post-end error-listener removal, missing
+forced teardown and a missing/mismatched Public version pin. Those are repaired
+in separate bounded cleanup/provenance changes. Tests use the actual installed
+pg Client and pinned pg-cloudflare 1.4.0 CloudflareSocket methods with synthetic
+protocol I/O, including delayed read and prior closed-promise rejection after
+successful end, and hung/rejected/write-throw/destroy-throw close paths. They
+assert actual native socket closure and retirement rather than end invocation.
+The shared routine handles the pinned driver's two-argument write-callback
+mismatch by closing its captured native socket directly after requesting end.
+No network connection or real database query occurs in these driver tests.
+
+Public now requires both exact Worker pins and compares its pin with actual
+WORKER_VERSION before contacting Jobs. Missing/malformed/mismatched/duplicate
+Public pins are denied in Node and actual Workerd routing tests. Private Jobs
+receives only its own validated pin, preserving the existing service boundary.
+
+Focused follow-up checks pass Node 30/30, Workerd 11/11 and marketing 77/77;
+the registered native architecture command passes 376/376 and native typecheck
+passes, with zero failures/skips/cancellations. The earlier 366 result above records the prior source
+revision; the new exact-head registered suite and hosted checks are tracked
+separately. All activation/exposure, actual-session and owner-install gates remain.
