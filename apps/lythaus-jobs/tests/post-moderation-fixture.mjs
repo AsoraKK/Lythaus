@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -13,7 +14,9 @@ export async function postModerationFixture(connectionString, bindings) {
   const { Miniflare, convertV4MiniflareOptions } = require('miniflare');
   const root = fileURLToPath(new URL('../../../', import.meta.url));
   const clients = new Map(), deliveries = [];
-  let sequence = 0, modelCalls = 0, failModel = false, failQueue = false;
+  const modelCallFixtureId = randomUUID();
+  const modelCallMetrics = new pg.Pool({ connectionString, ssl: false, max: 8 });
+  let sequence = 0, failModel = false, failQueue = false;
   const bundle = await build({ absWorkingDir: root, bundle: true, write: false,
     format: 'esm', platform: 'node', target: 'es2022', external: ['cloudflare:workers'],
     banner: { js: "import { createRequire } from 'node:module'; const require = createRequire('file:///fixture.mjs');" },
@@ -92,7 +95,10 @@ export async function postModerationFixture(connectionString, bindings) {
     outboundService: () => { throw new Error('Local fixture refuses external requests'); },
     serviceBindings: {
       FIXTURE_MODEL: async () => {
-        modelCalls++;
+        await modelCallMetrics.query(`INSERT INTO system.audit_events
+          (id,action,target_type,correlation_id,metadata)
+          VALUES($1,'test.fixture.authenticity_model_called','test_fixture',$2,$3::jsonb)`,
+        [randomUUID(), modelCallFixtureId, JSON.stringify({ fixtureId: modelCallFixtureId })]);
         if (failModel) return new Response(null, { status: 503 });
         return Response.json({ response: JSON.stringify({ riskScore: 0.1,
           signals: [{ category: 'synthetic_evidence', confidence: 0.5, rationale: 'Local fixture only' }] }) });
@@ -138,12 +144,18 @@ export async function postModerationFixture(connectionString, bindings) {
       },
     },
   }] }));
-  return { deliveries, get modelCalls() { return modelCalls; },
+  return { deliveries,
+    async modelCallCount() {
+      const result = await modelCallMetrics.query(`SELECT count(*)::int AS count FROM system.audit_events
+        WHERE action='test.fixture.authenticity_model_called' AND metadata->>'fixtureId'=$1`, [modelCallFixtureId]);
+      return result.rows[0].count;
+    },
     set failModel(value) { failModel = value; }, set failQueue(value) { failQueue = value; },
     dispatchFetch: (...args) => runtime.dispatchFetch(...args),
     async dispose() {
       await runtime.dispose();
       await Promise.all([...clients.values()].map(client => client.end()));
+      await modelCallMetrics.end();
       clients.clear();
     },
   };

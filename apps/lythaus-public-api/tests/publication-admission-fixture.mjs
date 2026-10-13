@@ -13,7 +13,7 @@ export async function publicationAdmissionFixture(connectionString, bindings) {
   const { Miniflare, convertV4MiniflareOptions } = require('miniflare');
   const root = fileURLToPath(new URL('../../../', import.meta.url));
   const clients = new Map(), statements = [], outbound = [];
-  let sequence = 0, failure;
+  let sequence = 0, failure, pause, pausedQueryRelease;
   const bundle = await build({ absWorkingDir: root, bundle: true, write: false,
     format: 'esm', platform: 'node', target: 'es2022', external: ['cloudflare:workers'],
     banner: { js: "import { createRequire } from 'node:module'; const require = createRequire('file:///fixture.mjs');" },
@@ -50,6 +50,8 @@ export async function publicationAdmissionFixture(connectionString, bindings) {
     stdin: { resolveDir: root, contents: `
       import api from './apps/lythaus-public-api/src/index.ts';
       import admin from './apps/lythaus-admin-api/src/index.ts';
+      import jobs from './apps/lythaus-jobs/src/index.ts';
+      import { transaction, refreshReputationProfile } from './packages/db/src/index.ts';
       import { countUserPerceivedCharacters, enforceContentDeclaration } from './packages/contracts/src/content-policy.ts';
       export default { async fetch(request, env, ctx) {
         const path = new URL(request.url).pathname;
@@ -57,6 +59,18 @@ export async function publicationAdmissionFixture(connectionString, bindings) {
         const unavailable = request.headers.get('x-fixture-segmenter') === 'unavailable';
         if (unavailable) Object.defineProperty(Intl, 'Segmenter', { configurable: true, value: undefined });
         try {
+          if (path === '/fixture/queue') {
+            const body = await request.json();
+            let ack = 0, retry = 0;
+            await jobs.queue({ queue: 'lythaus-audit-dev', messages: [{ id: body.eventId,
+              body, ack() { ack++; }, retry() { retry++; } }] }, env);
+            return Response.json({ ack, retry });
+          }
+          if (path === '/fixture/reputation') {
+            const input = await request.json();
+            return Response.json(await transaction(env.DB_JOBS_FRESH,
+              client => refreshReputationProfile(client, input.userId)));
+          }
           if (path === '/fixture/graphemes') {
             const input = await request.json();
             try { return Response.json({ available: typeof Intl.Segmenter === 'function',
@@ -77,6 +91,7 @@ export async function publicationAdmissionFixture(connectionString, bindings) {
     name: 'publication-admission-local', modules: true, script: bundle.outputFiles[0].text,
     compatibilityDate: '2026-07-27', compatibilityFlags: ['nodejs_compat'],
     bindings: { ...bindings, DB_APP_FRESH: { role: 'lythaus_runtime' }, DB_ADMIN_FRESH: { role: 'lythaus_admin' },
+      DB_JOBS_FRESH: { role: 'lythaus_jobs' },
       DB_PRIVACY_FRESH: { role: 'lythaus_privacy' }, AUTHENTICITY_AI_ENABLED: 'false',
       AUTHENTICITY_ALPHA_ENABLED: 'false', AUTHENTICITY_BETA_ENABLED: 'false', MEDIA_UPLOADS_ENABLED: 'false' },
     outboundService: request => {
@@ -90,7 +105,7 @@ export async function publicationAdmissionFixture(connectionString, bindings) {
       let entry = clients.get(input.transactionId);
       try {
         if (temporary) {
-          assert.ok(['lythaus_runtime', 'lythaus_admin', 'lythaus_privacy'].includes(input.role));
+          assert.ok(['lythaus_runtime', 'lythaus_admin', 'lythaus_privacy', 'lythaus_jobs'].includes(input.role));
           const client = new pg.Client({ connectionString, ssl: false, connectionTimeoutMillis: 5000 });
           await client.connect();
           await client.query("SET statement_timeout='5s'");
@@ -105,11 +120,21 @@ export async function publicationAdmissionFixture(connectionString, bindings) {
           return Response.json({ transactionId });
         }
         if (input.action === 'query') {
-          statements.push({ role: entry.role, text: input.text });
+          const statement = { role: entry.role, text: input.text };
+          statements.push(statement);
           const result = await entry.client.query(input.text, input.values);
+          statement.rowCount = result.rowCount;
           if (failure?.test(input.text)) {
             failure = undefined;
+            statement.interruptedAfterSuccess = true;
             throw new Error('synthetic_transaction_interrupted');
+          }
+          if (pause?.pattern.test(input.text)) {
+            const gate = pause;
+            pause = undefined;
+            pausedQueryRelease = gate.release;
+            gate.reached({ role: entry.role, rowCount: result.rowCount });
+            try { await gate.released; } finally { pausedQueryRelease = undefined; }
           }
           return Response.json({ rows: result.rows, rowCount: result.rowCount });
         }
@@ -126,8 +151,22 @@ export async function publicationAdmissionFixture(connectionString, bindings) {
     } },
   }] }));
   return { statements, outbound, set interruptAfterSql(value) { failure = value; },
+    pauseAfterSql(pattern) {
+      assert.ok(!pause && !pausedQueryRelease, 'only one query pause is permitted');
+      let reached, resume;
+      const signal = new Promise(resolve => { reached = resolve; });
+      const released = new Promise(resolve => { resume = resolve; });
+      const gate = { pattern, reached, released, release() {
+        if (pause === gate) pause = undefined;
+        resume();
+      } };
+      pause = gate;
+      return { reached: signal, release: gate.release };
+    },
     dispatchFetch: (...args) => runtime.dispatchFetch(...args),
     async dispose() {
+      pause?.release();
+      pausedQueryRelease?.();
       await runtime.dispose();
       await Promise.all([...clients.values()].map(({ client }) => client.end()));
       clients.clear();

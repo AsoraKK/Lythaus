@@ -165,7 +165,7 @@ const failures = { timeout: 'TIMEOUT', network: 'NETWORK_FAILURE', provider_reje
   late_loader_rejection: 'DEPENDENCY_FAILURE', late_missing_protection: 'INVALID_SNAPSHOT' };
 for (const [scenario, category] of Object.entries(failures)) test(`${scenario} returns sanitized unknown and preserves pending state`, async () => {
   const post = await created(), state = await unchangedState(post), calls = fixture.calls.length;
-  const reply = await attempt(post, { scenario, selection: { ...selection, timeoutMs: 10 } });
+  const reply = await attempt(post, { scenario, selection: { ...selection, timeoutMs: scenario === 'timeout' ? 10 : 1_000 } });
   assert.equal(reply.result.state, 'unknown'); assert.equal(reply.result.errorCategory, category);
   assert.equal(reply.result.persisted, false); assert.ok(!('evidence' in reply.result));
   if (scenario === 'timeout') assert.equal(reply.diagnostic.aborted, true);
@@ -379,7 +379,7 @@ test('ordinary evaluation-only-v1 row/case/decision/declaration remains unchange
     const response = await ordinary.dispatchFetch('https://api.lythaus.test/fixture/queue', { method: 'POST',
       body: JSON.stringify({ eventId: post.source, eventType: 'content.post.created', payload: post.payload }) });
     assert.equal(response.status, 200); assert.deepEqual(await response.json(), { ack: 1, retry: 0 });
-    assert.equal(ordinary.modelCalls, 1);
+    assert.equal(await ordinary.modelCallCount(), 1);
     const state = await unchangedState(post);
     assert.equal(state['moderation.detector_runs'][0].provider, 'lythaus-authenticity-ai');
     assert.equal(state['moderation.cases'][0].policy_version, 'evaluation-only-v1');

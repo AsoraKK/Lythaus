@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
-import { randomBytes } from 'node:crypto';
-import { before, after, test } from 'node:test';
+import { createHash, randomBytes } from 'node:crypto';
+import { before, beforeEach, after, test } from 'node:test';
 import pg from 'pg';
 import { generateKeyPair, exportJWK, exportPKCS8, SignJWT } from 'jose';
 import { signAccessToken, hmacLookup, uuidv7 } from '@lythaus/security';
+import { APPEAL_POLICY } from '../../../packages/contracts/src/appeal-policy.ts';
+import { recordReputationSignal } from '../../../packages/db/src/reputation.ts';
 import { publicationAdmissionFixture } from './publication-admission-fixture.mjs';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
@@ -42,6 +44,12 @@ before(async () => {
   await allow(await reviewCase(parentComment));
 });
 after(async () => { await fixture?.dispose(); await client.end(); });
+beforeEach(async () => { await resetAdminRateWindow(); });
+
+const adminRateSubject = () => createHash('sha256').update(`admin:${adminId}`).digest('hex');
+async function resetAdminRateWindow() {
+  await client.query("DELETE FROM system.rate_limit_windows WHERE scope='admin-api' AND subject_hash=$1", [adminRateSubject()]);
+}
 
 async function actor() {
   const id = uuidv7();
@@ -73,7 +81,7 @@ async function create(owner, kind, input, key = uuidv7()) {
   else { assert.equal(pending.status, 200); assert.ok(!(await pending.text()).includes(result.id)); }
   return { ...result, declaredCreationMode: stored.declared_creation_mode, owner, kind, key };
 }
-async function reviewCase(item) {
+async function reviewCase(item, policyVersion = policy) {
   const table = item.kind === 'post' ? 'posts' : 'comments';
   const row = (await client.query(`SELECT moderation_source_event_id FROM content.${table} WHERE id=$1`, [item.id])).rows[0];
   if (item.kind === 'post') {
@@ -82,7 +90,7 @@ async function reviewCase(item) {
   }
   const id = uuidv7();
   await client.query("INSERT INTO moderation.cases(id,content_type,content_id,state,policy_version,source_event_id) VALUES($1,$2,$3,'open',$4,$5)",
-    [id, item.kind === 'post' ? 'post' : 'comment', item.id, policy, row.moderation_source_event_id]);
+    [id, item.kind === 'post' ? 'post' : 'comment', item.id, policyVersion, row.moderation_source_event_id]);
   return { id, item };
 }
 async function admin(review, input = {}, headers = {}) {
@@ -111,7 +119,9 @@ async function snapshot() {
   const result = {};
   for (const table of ['content.posts', 'content.comments', 'content.content_declarations', 'moderation.cases',
     'moderation.decisions', 'moderation.enforcement_events', 'system.outbox_events', 'system.audit_events',
-    'trust.user_activity_events', 'trust.reputation_events']) {
+    'trust.user_activity_events', 'trust.reputation_events', 'moderation.appeals', 'moderation.appeal_adjudications',
+    'moderation.appeal_outcomes', 'moderation.appeal_outcome_effects', 'trust.provenance_events',
+    'trust.reputation_profiles', 'trust.reputation_balances', 'feed.notifications', 'system.consumer_inbox']) {
     result[table] = (await client.query(`SELECT * FROM ${table} ORDER BY 1`)).rows;
   }
   return result;
@@ -136,6 +146,23 @@ test('pinned Workerd has real Segmenter; forced absence gives explicit unsupport
       { 'x-fixture-segmenter': 'unavailable' });
     assert.deepEqual(await unsupported.json(), { available: false, error: 'grapheme_segmentation_unavailable' });
   }
+});
+
+test('native admin limiter rejects a full owned window without publication effects and fixture reset is subject-scoped', async () => {
+  const item = await create(await actor(), 'post', { body: 'Synthetic rate-boundary admission', declaredCreationMode: 'human' });
+  const review = await reviewCase(item), window = Math.floor(Date.now() / 60_000) * 60_000;
+  const otherSubject = createHash('sha256').update('synthetic-unrelated-admin-rate-subject').digest('hex');
+  for (const subject of [adminRateSubject(), otherSubject]) {
+    for (const offset of [-1, 0, 1]) await client.query(`INSERT INTO system.rate_limit_windows(scope,subject_hash,window_started_at,request_count,expires_at)
+      VALUES('admin-api',$1,$2,120,$2::timestamptz + interval '2 minutes')`, [subject, new Date(window + offset * 60_000).toISOString()]);
+  }
+  await rejected(() => admin(review), 429, 'rate_limit_exceeded');
+  await resetAdminRateWindow();
+  assert.equal((await client.query("SELECT count(*)::int AS count FROM system.rate_limit_windows WHERE scope='admin-api' AND subject_hash=$1", [adminRateSubject()])).rows[0].count, 0);
+  assert.deepEqual((await client.query("SELECT request_count FROM system.rate_limit_windows WHERE scope='admin-api' AND subject_hash=$1 ORDER BY window_started_at", [otherSubject])).rows,
+    [{ request_count: 120 }, { request_count: 120 }, { request_count: 120 }]);
+  await allow(review);
+  await client.query("DELETE FROM system.rate_limit_windows WHERE scope='admin-api' AND subject_hash=$1", [otherSubject]);
 });
 
 for (const kind of ['post', 'comment', 'reply']) {
@@ -259,6 +286,363 @@ test('missing post declaration rolls back a real admin allow after provisional d
   const review = await reviewCase(item);
   await client.query('DELETE FROM content.content_declarations WHERE post_id=$1', [item.id]);
   await rejected(() => admin(review), 409, 'moderation_declaration_missing');
+});
+
+test('historical appeal authority stays fail-closed across admin, outbox, Jobs and standing', async t => {
+  const reviewers = [];
+  for (let index = 0; index < 5; index++) reviewers.push(await actor());
+  const oldRole = (await client.query('SELECT role FROM identity.admin_memberships WHERE user_id=$1', [adminId])).rows[0].role;
+  await client.query("UPDATE identity.admin_memberships SET role='editorial' WHERE user_id=$1", [adminId]);
+  for (const reviewer of [...reviewers, { id: adminId }]) {
+    await client.query("INSERT INTO moderation.reviewer_qualifications(user_id,state,policy_version,trained_at) VALUES($1,'trained',$2,now())",
+      [reviewer.id, APPEAL_POLICY.version]);
+  }
+  const adjudicate = (appealId, decision = 'overturn', key = uuidv7()) =>
+    call(null, 'POST', '/api/admin/appeals/' + appealId + '/adjudications',
+      { decision, reasonCode: 'SYNTHETIC_APPEAL' }, key,
+      { 'cf-access-jwt-assertion': accessToken, origin: 'https://api.lythaus.test' });
+  const deliver = async (event, messagePayload = event.payload) => {
+    const response = await call(null, 'POST', '/fixture/queue', {
+      eventId: event.id, eventType: event.event_type, payload: messagePayload,
+    });
+    assert.equal(response.status, 200, await response.clone().text());
+    return response.json();
+  };
+  const refresh = async userId => {
+    const response = await call(null, 'POST', '/fixture/reputation', { userId });
+    assert.equal(response.status, 200, await response.clone().text());
+    return (await response.json()).profile;
+  };
+  const seedVotes = async (appealId, decision) => {
+    for (const [index, reviewer] of reviewers.entries()) {
+      const assignmentId = uuidv7();
+      await client.query("INSERT INTO moderation.appeal_assignments (id,appeal_id,reviewer_id,assignment_ordinal,level_snapshot,qualification_snapshot,vote_weight_snapshot,state,random_rank_hash,conflict_checked,policy_version) VALUES($1,$2,$3,$4,1,'trained',1,'voted',$5,true,$6)",
+        [assignmentId, appealId, reviewer.id, index + 1, 'a'.repeat(64), APPEAL_POLICY.version]);
+      await client.query("INSERT INTO moderation.appeal_review_votes (id,assignment_id,appeal_id,reviewer_id,decision,level_snapshot,qualification_snapshot,vote_weight_snapshot,idempotency_key,policy_version) VALUES($1,$2,$3,$4,$5,1,'trained',1,$6,$7)",
+        [uuidv7(), assignmentId, appealId, reviewer.id, decision, 'synthetic-' + appealId + '-' + reviewer.id, APPEAL_POLICY.version]);
+    }
+  };
+  const prepare = async ({ kind = 'post', previouslyPublic = false, decision = 'overturn', intake = true } = {}) => {
+    const item = await create(await actor(), kind, { body: 'Synthetic authority fixture ' + uuidv7(), declaredCreationMode: 'human' });
+    const review = await reviewCase(item);
+    if (previouslyPublic) {
+      await allow(review);
+      await client.query("UPDATE moderation.cases SET state='open',resolved_at=NULL WHERE id=$1", [review.id]);
+    }
+    const blocked = await admin(review, { outcome: 'block', reasonCode: 'CONFIRMED_SPAM', publicLabel: 'Under review' });
+    assert.equal(blocked.status, 200, await blocked.clone().text());
+    const blockDecisionId = (await client.query("SELECT metadata->>'decisionId' AS id FROM system.audit_events WHERE action='moderation.decision' AND correlation_id=$1 AND target_id=$2",
+      [blocked.headers.get('x-correlation-id'), review.id])).rows[0].id;
+    const blockEvent = (await client.query("SELECT id,event_type,payload FROM system.outbox_events WHERE event_type='moderation.content.blocked' AND aggregate_id=$1 ORDER BY created_at DESC,id DESC LIMIT 1",
+      [item.id])).rows[0];
+    assert.ok(blockEvent);
+    if (!intake) return { item, review, blockEvent, blockDecisionId };
+    const response = await call(item.owner, 'POST', '/api/appeals', { caseId: review.id, statement: 'Synthetic historical appeal statement' });
+    assert.equal(response.status, 201, await response.clone().text());
+    const appealId = (await response.json()).appealId;
+    await seedVotes(appealId, decision);
+    return { item, review, appealId, blockEvent, blockDecisionId };
+  };
+  const seedHistoricalPenalty = async (f, event, signalType, decisionId = f.blockDecisionId) => {
+    await client.query('BEGIN');
+    try {
+      const mutation = await recordReputationSignal(client, { id: uuidv7(), subjectUserId: f.item.owner.id,
+        contentId: f.item.id, signalType, sourceEventId: event.id, moderationDecisionId: decisionId,
+        occurredAt: new Date().toISOString() });
+      await client.query('COMMIT');
+      return mutation.event;
+    } catch (error) { await client.query('ROLLBACK'); throw error; }
+  };
+  const unavailable = async appealId => {
+    await rejected(() => adjudicate(appealId), 503, 'appeal_resolution_unavailable');
+    const state = (await client.query("SELECT state,policy_version FROM moderation.appeals WHERE id=$1", [appealId])).rows[0];
+    assert.deepEqual(state, { state: 'open', policy_version: APPEAL_POLICY.version });
+  };
+  const legacyEvent = async (f, overrides = {}) => {
+    await client.query("UPDATE moderation.appeals SET state='resolved',resolved_at=now() WHERE id=$1", [f.appealId]);
+    await client.query("INSERT INTO moderation.appeal_outcomes (appeal_id,risk_class,reviewer_panel_decision,final_decision,completed_reviewers,total_weight,overturn_weight,uphold_weight,winning_share,required_adjudicators,state,policy_version,resolved_at) VALUES($1,'standard','overturn','overturn',5,5,5,0,1,1,'resolved',$2,now()) ON CONFLICT(appeal_id) DO NOTHING",
+      [f.appealId, APPEAL_POLICY.version]);
+    const id = uuidv7(), payload = { appealId: f.appealId, subjectUserId: f.item.owner.id,
+      contentId: f.item.id, contentType: f.item.kind === 'post' ? 'post' : 'comment',
+      finalDecision: 'overturn', riskClass: 'standard', ...overrides };
+    await client.query("INSERT INTO system.outbox_events(id,event_type,aggregate_type,aggregate_id,actor_id,payload) VALUES($1,'moderation.appeal.resolved','appeal',$2,$3,$4::jsonb)",
+      [id, f.appealId, adminId, JSON.stringify(payload)]);
+    return { id, event_type: 'moderation.appeal.resolved', payload };
+  };
+  try {
+    await t.test('real intake has no binding; failed and concurrent overturns leave every authority effect unchanged', async () => {
+      const f = await prepare({ previouslyPublic: true });
+      const columns = await client.query("SELECT column_name FROM information_schema.columns WHERE table_schema='moderation' AND table_name='appeals' AND column_name='challenged_decision_id'");
+      assert.equal(columns.rowCount, 0);
+      const intake = (await client.query("SELECT payload FROM system.outbox_events WHERE event_type='moderation.appeal.created' AND aggregate_id=$1", [f.appealId])).rows[0];
+      assert.equal(intake.payload.caseId, f.review.id);
+      assert.equal(intake.payload.challengedDecisionId, undefined);
+      fixture.interruptAfterSql = /INSERT INTO moderation\.appeal_adjudications/;
+      await rejected(() => adjudicate(f.appealId), 500, 'admin_request_failed');
+      await unavailable(f.appealId);
+      const before = await snapshot(), key = uuidv7();
+      const replies = await Promise.all([adjudicate(f.appealId, 'overturn', key), adjudicate(f.appealId, 'overturn', key)]);
+      for (const response of replies) {
+        assert.equal(response.status, 503);
+        assert.equal((await response.json()).error, 'appeal_resolution_unavailable');
+      }
+      assert.deepEqual(await snapshot(), before);
+      await unavailable(f.appealId);
+      assert.equal((await call(null, 'GET', itemPath(f.item))).status, 404);
+      assert.equal((await refresh(f.item.owner.id)).promotionBlockers.includes('unresolved_serious_enforcement'), true);
+      assert.equal((await client.query("SELECT policy_version FROM moderation.cases WHERE id=$1", [f.review.id])).rows[0].policy_version, policy);
+    });
+
+    await t.test('previous publication, replies, generated content and missing declarations cannot substitute for binding', async () => {
+      for (const variant of [
+        { kind: 'reply', previouslyPublic: true },
+        { declaredCreationMode: 'ai_generated' },
+        { missingDeclaration: true },
+        { previouslyPublic: false },
+      ]) {
+        const f = await prepare(variant);
+        if (variant.declaredCreationMode) {
+          await client.query("UPDATE content.posts SET visibility='private',declared_creation_mode=$2 WHERE id=$1", [f.item.id, variant.declaredCreationMode]);
+          await client.query('UPDATE content.content_declarations SET declared_creation_mode=$2 WHERE post_id=$1', [f.item.id, variant.declaredCreationMode]);
+        }
+        if (variant.missingDeclaration) await client.query('DELETE FROM content.content_declarations WHERE post_id=$1', [f.item.id]);
+        await unavailable(f.appealId);
+        const table = f.item.kind === 'post' ? 'posts' : 'comments';
+        assert.equal((await client.query('SELECT moderation_state FROM content.' + table + ' WHERE id=$1', [f.item.id])).rows[0].moderation_state, 'blocked');
+      }
+    });
+
+    await t.test('late commit with default now and an independent queue cannot acquire reversal authority', async () => {
+      const f = await prepare({ previouslyPublic: true, intake: false });
+      const blocker = new pg.Client({ connectionString, ssl: false, connectionTimeoutMillis: 5000 });
+      await blocker.connect();
+      let raceAppealId;
+      try {
+        await blocker.query('BEGIN');
+        const lateDecisionId = uuidv7();
+        const intake = await call(f.item.owner, 'POST', '/api/appeals', { caseId: f.review.id, statement: 'Synthetic late-commit appeal' });
+        assert.equal(intake.status, 201, await intake.clone().text());
+        raceAppealId = (await intake.json()).appealId;
+        const created = (await client.query('SELECT created_at FROM moderation.appeals WHERE id=$1', [raceAppealId])).rows[0].created_at;
+        const late = (await blocker.query("INSERT INTO moderation.decisions(id,case_id,outcome,policy_version,decided_by) VALUES($1,$2,'block',$3,$4) RETURNING created_at",
+          [lateDecisionId, f.review.id, policy, adminId])).rows[0];
+        await blocker.query("INSERT INTO moderation.enforcement_events(id,case_id,subject_id,action,reason_code,policy_version,actor_id) VALUES($1,$2,$3,'block','CONFIRMED_HARASSMENT',$4,$5)",
+          [uuidv7(), f.review.id, f.item.owner.id, policy, adminId]);
+        assert.ok(late.created_at < created, 'transaction-start default now predates appeal intake despite committing later');
+        await seedVotes(raceAppealId, 'overturn');
+        await client.query("INSERT INTO moderation.decisions(id,case_id,outcome,policy_version,decided_by,created_at) VALUES($1,$2,'queue','evaluation-only-v1',$3,clock_timestamp())",
+          [uuidv7(), f.review.id, adminId]);
+        await unavailable(raceAppealId);
+        await blocker.query('COMMIT');
+      } finally {
+        await blocker.query('ROLLBACK');
+        await blocker.end();
+      }
+      await unavailable(raceAppealId);
+      const profile = await refresh(f.item.owner.id);
+      assert.ok(profile.promotionBlockers.includes('unresolved_serious_enforcement'));
+    });
+
+    await t.test('stale revision and independent penalties survive old canonical overturn events, retries and forged authority labels', async () => {
+      const f = await prepare();
+      const role = (await client.query("SELECT has_table_privilege('lythaus_jobs','identity.users','UPDATE') AS can_lock_users")).rows[0];
+      assert.equal(role.can_lock_users, false);
+      const empty = await snapshot();
+      assert.deepEqual(await deliver(f.blockEvent), { ack: 0, retry: 1 });
+      assert.deepEqual(await snapshot(), empty, 'canonical Jobs cannot apply a penalty without its required user-lock privilege');
+      await seedHistoricalPenalty(f, f.blockEvent, 'confirmed_spam');
+      const initialPenalty = (await client.query("SELECT id,status,moderation_decision_id FROM trust.reputation_events WHERE subject_user_id=$1 AND impact<0", [f.item.owner.id])).rows[0];
+      assert.equal(initialPenalty.status, 'effective');
+      const revised = await call(f.item.owner, 'PUT', itemPath(f.item), { body: 'Synthetic current revision', declaredCreationMode: 'human' });
+      assert.equal(revised.status, 200, await revised.clone().text());
+      const currentReview = await reviewCase(f.item);
+      const currentBlock = await admin(currentReview, { outcome: 'block', reasonCode: 'CONFIRMED_HARASSMENT', publicLabel: 'Under review' });
+      assert.equal(currentBlock.status, 200, await currentBlock.clone().text());
+      const currentDecisionId = (await client.query("SELECT metadata->>'decisionId' AS id FROM system.audit_events WHERE action='moderation.decision' AND correlation_id=$1 AND target_id=$2",
+        [currentBlock.headers.get('x-correlation-id'), currentReview.id])).rows[0].id;
+      const currentEvent = (await client.query("SELECT id,event_type,payload FROM system.outbox_events WHERE event_type='moderation.content.blocked' AND aggregate_id=$1 AND id<>$2",
+        [f.item.id, f.blockEvent.id])).rows[0];
+      await seedHistoricalPenalty(f, currentEvent, 'confirmed_harassment', currentDecisionId);
+      await unavailable(f.appealId);
+      const event = await legacyEvent(f, { challengeBinding: 'bound', challengedDecisionId: initialPenalty.moderation_decision_id,
+        sourceEventId: f.blockEvent.payload.sourceEventId, contentReversed: true, policyVersion: APPEAL_POLICY.version });
+      await client.query("INSERT INTO moderation.enforcement_events(id,case_id,subject_id,action,reason_code,policy_version,actor_id,created_at) VALUES($1,$2,$3,'appeal_overturn','SYNTHETIC_LEGACY_OVERTURN',$4,$5,clock_timestamp())",
+        [uuidv7(), f.review.id, f.item.owner.id, APPEAL_POLICY.version, adminId]);
+      const before = await snapshot();
+      fixture.interruptAfterSql = /UPDATE system\.consumer_inbox SET state = 'completed'/;
+      assert.deepEqual(await deliver(event), { ack: 0, retry: 1 });
+      assert.deepEqual(await snapshot(), before);
+      assert.deepEqual(await deliver(event), { ack: 1, retry: 0 });
+      const after = await snapshot();
+      assert.deepEqual(await deliver(event, { finalDecision: 'uphold', challengedDecisionId: currentDecisionId }), { ack: 1, retry: 0 });
+      assert.deepEqual(await snapshot(), after);
+      const penalties = (await client.query("SELECT id,status FROM trust.reputation_events WHERE subject_user_id=$1 AND impact<0 ORDER BY id", [f.item.owner.id])).rows;
+      assert.equal(penalties.length, 2);
+      assert.ok(penalties.every(row => row.status === 'effective'));
+      for (const overrides of [{ finalDecision: 'uphold' }, { finalDecision: 'bogus' }, { finalDecision: undefined }, { subjectUserId: undefined }]) {
+        const oldEvent = await legacyEvent(f, overrides), state = await snapshot();
+        const expected = overrides.finalDecision === 'uphold' ? { ack: 1, retry: 0 } : { ack: 0, retry: 1 };
+        assert.deepEqual(await deliver(oldEvent), expected);
+        if (expected.retry) assert.deepEqual(await snapshot(), state);
+        assert.deepEqual((await client.query('SELECT id,status FROM trust.reputation_events WHERE subject_user_id=$1 AND impact<0 ORDER BY id', [f.item.owner.id])).rows, penalties);
+      }
+      const profile = await refresh(f.item.owner.id);
+      assert.ok(profile.promotionBlockers.includes('unresolved_serious_enforcement'));
+      await client.query("UPDATE identity.users SET status='suspended' WHERE id=$1", [f.item.owner.id]);
+      assert.equal((await refresh(f.item.owner.id)).status, 'suspended');
+      assert.equal((await client.query('SELECT status FROM identity.users WHERE id=$1', [f.item.owner.id])).rows[0].status, 'suspended');
+      assert.equal((await call(null, 'GET', itemPath(f.item))).status, 404);
+    });
+
+    await t.test('concurrent duplicate queue delivery keeps one claim and applies no legacy overturn effects', async () => {
+      const f = await prepare();
+      await seedHistoricalPenalty(f, f.blockEvent, 'confirmed_spam');
+      const event = await legacyEvent(f, { challengeBinding: 'bound', contentReversed: true });
+      const before = await snapshot(), start = fixture.statements.length;
+      const gate = fixture.pauseAfterSql(/INSERT INTO system\.consumer_inbox/);
+      const first = deliver(event);
+      let timer, firstResult;
+      try {
+        const claim = await Promise.race([
+          gate.reached,
+          first.then(() => { throw new Error('first_delivery_finished_before_claim_pause'); }),
+          new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('claim_pause_not_reached')), 5000); }),
+        ]);
+        clearTimeout(timer);
+        assert.deepEqual(claim, { role: 'lythaus_jobs', rowCount: 1 });
+        const claimed = await snapshot();
+        assert.deepEqual({ ...claimed, 'system.consumer_inbox': before['system.consumer_inbox'] }, before);
+        const inbox = claimed['system.consumer_inbox'].filter(row => row.event_id === event.id);
+        assert.equal(inbox.length, 1); assert.equal(inbox[0].state, 'processing');
+        assert.equal(claimed['system.consumer_inbox'].length, before['system.consumer_inbox'].length + 1);
+        assert.deepEqual(await deliver(event, { finalDecision: 'uphold', subjectUserId: reviewers[0].id }), { ack: 0, retry: 1 });
+        assert.deepEqual(await snapshot(), claimed);
+      } finally {
+        clearTimeout(timer);
+        gate.release();
+        firstResult = await first;
+      }
+      assert.deepEqual(firstResult, { ack: 1, retry: 0 });
+      const completed = await snapshot();
+      assert.deepEqual({ ...completed, 'system.consumer_inbox': before['system.consumer_inbox'] }, before);
+      const inbox = completed['system.consumer_inbox'].filter(row => row.event_id === event.id);
+      assert.equal(inbox.length, 1); assert.equal(inbox[0].state, 'completed');
+      assert.equal(completed['system.consumer_inbox'].length, before['system.consumer_inbox'].length + 1);
+      assert.deepEqual(await deliver(event), { ack: 1, retry: 0 });
+      assert.deepEqual(await snapshot(), completed);
+      assert.equal(fixture.statements.slice(start).filter(({ role, text }) => role === 'lythaus_jobs'
+        && /SELECT event_type, actor_id, payload, created_at/.test(text)).length, 1);
+      assert.ok((await refresh(f.item.owner.id)).promotionBlockers.includes('unresolved_serious_enforcement'));
+      assert.equal((await call(null, 'GET', itemPath(f.item))).status, 404);
+    });
+
+    await t.test('an old same-case overturn marker cannot clear any independent block during reputation refresh', async () => {
+      const f = await prepare();
+      await client.query("INSERT INTO moderation.enforcement_events(id,case_id,subject_id,action,reason_code,policy_version,actor_id,created_at) VALUES($1,$2,$3,'block','SYNTHETIC_INDEPENDENT_BLOCK',$4,$5,clock_timestamp())",
+        [uuidv7(), f.review.id, f.item.owner.id, policy, adminId]);
+      await client.query("INSERT INTO moderation.enforcement_events(id,case_id,subject_id,action,reason_code,policy_version,actor_id,created_at) VALUES($1,$2,$3,'appeal_overturn','SYNTHETIC_UNBOUND_MARKER',$4,$5,clock_timestamp())",
+        [uuidv7(), f.review.id, f.item.owner.id, APPEAL_POLICY.version, adminId]);
+      assert.ok((await refresh(f.item.owner.id)).promotionBlockers.includes('unresolved_serious_enforcement'));
+      await unavailable(f.appealId);
+    });
+
+    await t.test('historical uphold rolls back on audit failure; its actual admin outbox retries safely under canonical Jobs privileges', async () => {
+      const f = await prepare({ decision: 'uphold' });
+      fixture.interruptAfterSql = /INSERT INTO system\.audit_events/;
+      await rejected(() => adjudicate(f.appealId, 'uphold'), 500, 'admin_request_failed');
+      const response = await adjudicate(f.appealId, 'uphold');
+      assert.equal(response.status, 200, await response.clone().text());
+      const result = await response.json();
+      assert.equal(result.status, 'resolved'); assert.equal(result.finalDecision, 'uphold');
+      assert.equal(result.policyVersion, APPEAL_POLICY.version);
+      const event = (await client.query("SELECT id,event_type,payload FROM system.outbox_events WHERE event_type='moderation.appeal.resolved' AND aggregate_id=$1", [f.appealId])).rows[0];
+      assert.equal(event.payload.finalDecision, 'uphold');
+      const before = await snapshot();
+      assert.deepEqual(await deliver(event), { ack: 0, retry: 1 });
+      assert.equal((await client.query('SELECT 1 FROM trust.reputation_events WHERE appeal_id=$1', [f.appealId])).rowCount, 0);
+      assert.deepEqual(await snapshot(), before);
+      assert.deepEqual(await deliver(event, { finalDecision: 'overturn' }), { ack: 0, retry: 1 });
+      assert.deepEqual(await snapshot(), before);
+      await rejected(() => adjudicate(f.appealId, 'uphold'), 409, 'appeal_already_resolved');
+      assert.ok((await refresh(f.item.owner.id)).promotionBlockers.includes('unresolved_serious_enforcement'));
+      const audit = (await client.query("SELECT metadata FROM system.audit_events WHERE target_id=$1 AND action='moderation.appeal.outcome_applied'", [f.appealId])).rows[0].metadata;
+      assert.equal(audit.outcome, 'uphold'); assert.equal(audit.contentReversed, false);
+    });
+
+    await t.test('successful outbox insert rolls back every appeal effect and the same request can retry once', async () => {
+      const f = await prepare({ decision: 'uphold' }), key = uuidv7(), start = fixture.statements.length;
+      fixture.interruptAfterSql = /INSERT INTO system\.outbox_events/;
+      await rejected(() => adjudicate(f.appealId, 'uphold', key), 500, 'admin_request_failed');
+      const inserted = fixture.statements.slice(start).filter(({ role, text }) => role === 'lythaus_admin'
+        && /INSERT INTO system\.outbox_events/.test(text));
+      assert.equal(inserted.length, 1);
+      assert.equal(inserted[0].rowCount, 1);
+      assert.equal(inserted[0].interruptedAfterSuccess, true);
+      const failed = (await client.query(`SELECT
+        (SELECT count(*)::integer FROM moderation.appeal_adjudications WHERE appeal_id=$1) AS adjudications,
+        (SELECT count(*)::integer FROM moderation.appeal_outcomes WHERE appeal_id=$1) AS outcomes,
+        (SELECT count(*)::integer FROM moderation.appeal_outcome_effects WHERE appeal_id=$1) AS effects,
+        (SELECT count(*)::integer FROM system.audit_events WHERE target_id=$1 AND action='moderation.appeal.outcome_applied') AS audits,
+        (SELECT count(*)::integer FROM system.outbox_events WHERE aggregate_id=$1 AND event_type='moderation.appeal.resolved') AS outbox`,
+        [f.appealId])).rows[0];
+      assert.deepEqual(failed, { adjudications: 0, outcomes: 0, effects: 0, audits: 0, outbox: 0 });
+      assert.equal((await client.query('SELECT state FROM moderation.appeals WHERE id=$1', [f.appealId])).rows[0].state, 'open');
+      const response = await adjudicate(f.appealId, 'uphold', key);
+      assert.equal(response.status, 200, await response.clone().text());
+      const result = await response.json();
+      assert.equal(result.status, 'resolved'); assert.equal(result.finalDecision, 'uphold');
+      const applied = (await client.query(`SELECT
+        (SELECT count(*)::integer FROM moderation.appeal_adjudications WHERE appeal_id=$1) AS adjudications,
+        (SELECT count(*)::integer FROM moderation.appeal_outcomes WHERE appeal_id=$1 AND state='resolved' AND final_decision='uphold') AS outcomes,
+        (SELECT count(*)::integer FROM moderation.appeal_outcome_effects WHERE appeal_id=$1) AS effects,
+        (SELECT count(*)::integer FROM system.audit_events WHERE target_id=$1 AND action='moderation.appeal.outcome_applied') AS audits,
+        (SELECT count(*)::integer FROM system.outbox_events WHERE aggregate_id=$1 AND event_type='moderation.appeal.resolved') AS outbox,
+        (SELECT count(*)::integer FROM moderation.enforcement_events WHERE case_id=$2 AND action='appeal_uphold') AS upholds,
+        (SELECT count(*)::integer FROM trust.reputation_events WHERE appeal_id=$1) AS reputation`,
+        [f.appealId, f.review.id])).rows[0];
+      assert.deepEqual(applied, { adjudications: 1, outcomes: 1, effects: 2, audits: 1, outbox: 1, upholds: 1, reputation: 0 });
+      await rejected(() => adjudicate(f.appealId, 'uphold', key), 409, 'appeal_already_resolved');
+      assert.ok((await refresh(f.item.owner.id)).promotionBlockers.includes('unresolved_serious_enforcement'));
+      assert.equal((await call(null, 'GET', itemPath(f.item))).status, 404);
+    });
+
+    await t.test('historical high-risk pending adjudications remain intact when final overturn authority is unavailable', async () => {
+      const f = await prepare();
+      await client.query("UPDATE moderation.appeals SET risk_class='high' WHERE id=$1", [f.appealId]);
+      const pending = await adjudicate(f.appealId);
+      assert.equal(pending.status, 200, await pending.clone().text());
+      const evaluation = await pending.json();
+      assert.equal(evaluation.status, 'pending_adjudication');
+      assert.equal(evaluation.finalDecision, null);
+      assert.equal(evaluation.requiredAdjudicators, 2);
+      const second = await actor();
+      await client.query("INSERT INTO moderation.appeal_adjudications(id,appeal_id,adjudicator_id,adjudicator_role,trained_snapshot,decision,reason_code,policy_version) VALUES($1,$2,$3,'editorial',true,'overturn','SYNTHETIC_HISTORICAL_PENDING',$4)",
+        [uuidv7(), f.appealId, second.id, APPEAL_POLICY.version]);
+      await unavailable(f.appealId);
+      const stored = (await client.query('SELECT state,final_decision,required_adjudicators,policy_version FROM moderation.appeal_outcomes WHERE appeal_id=$1', [f.appealId])).rows[0];
+      assert.deepEqual(stored, { state: 'pending_adjudication', final_decision: null, required_adjudicators: 2, policy_version: APPEAL_POLICY.version });
+    });
+
+    await t.test('unsupported policy versions remain unresolved without relabelling historical records', async () => {
+      const f = await prepare();
+      await client.query("UPDATE moderation.appeals SET policy_version='synthetic-unsupported-policy' WHERE id=$1", [f.appealId]);
+      await rejected(() => adjudicate(f.appealId), 400, 'appeal_policy_version_unsupported');
+    });
+
+    await t.test('profile privilege failure remains sanitized and rolls back before profile access', async () => {
+      const owner = await actor(), appellant = await actor(), caseId = uuidv7(), appealId = uuidv7();
+      await client.query("UPDATE social.profiles SET moderation_state='blocked',moderation_source_event_id=$2 WHERE user_id=$1", [owner.id, uuidv7()]);
+      await client.query("INSERT INTO moderation.cases(id,content_type,content_id,state,policy_version,source_event_id) VALUES($1,'profile',$2,'resolved',$3,$4)", [caseId, owner.id, policy, uuidv7()]);
+      await client.query("INSERT INTO moderation.appeals(id,case_id,appellant_id,state,risk_class,policy_version,statement) VALUES($1,$2,$3,'open','standard',$4,'Synthetic profile appeal')",
+        [appealId, caseId, appellant.id, APPEAL_POLICY.version]);
+      await rejected(() => adjudicate(appealId), 503, 'appeal_profile_access_unavailable');
+      assert.equal(fixture.statements.some(({ role, text }) => role === 'lythaus_admin' && /FROM social\.profiles/i.test(text)), false);
+    });
+  } finally {
+    await client.query('DELETE FROM moderation.reviewer_qualifications WHERE user_id=ANY($1::uuid[])',
+      [[...reviewers.map(reviewer => reviewer.id), adminId]]);
+    await client.query('UPDATE identity.admin_memberships SET role=$2 WHERE user_id=$1', [adminId, oldRole]);
+  }
 });
 
 test('admin authentication, origin and restricted roles execute; all outbound requests remain synthetic', async () => {

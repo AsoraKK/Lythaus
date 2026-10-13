@@ -168,12 +168,6 @@ export async function refreshReputationProfile(
                WHERE enforcement.subject_id = users.id
                  AND enforcement.action = 'block'
                  AND enforcement.created_at >= now() - interval '90 days'
-                 AND NOT EXISTS (
-                   SELECT 1 FROM moderation.enforcement_events reversal
-                    WHERE reversal.case_id = enforcement.case_id
-                      AND reversal.action = 'appeal_overturn'
-                      AND reversal.created_at > enforcement.created_at
-                 )
             ) AS unresolved_serious_enforcement,
             EXISTS (
               SELECT 1 FROM moderation.enforcement_events enforcement
