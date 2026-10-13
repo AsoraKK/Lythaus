@@ -568,14 +568,21 @@ test(
             const id = await control.getAttribute('id');
             assert.ok(id, 'Focused semantics controls have an identity');
             try {
-            await page.waitForFunction(
-              id => document.getElementById(id) === document.activeElement,
-              id,
-            );
+              await page.waitForFunction(
+                id => document.getElementById(id) === document.activeElement,
+                id,
+              );
             } catch (error) {
               t.diagnostic(JSON.stringify({ expectedFocusId: id,
-                active: await page.evaluate(() => document.activeElement?.outerHTML),
-                target: await control.evaluate(element => element.outerHTML) }));
+                active: await page.evaluate(() => ({
+                  id: document.activeElement?.id,
+                  role: document.activeElement?.getAttribute('role'),
+                  name: document.activeElement?.textContent?.slice(0, 200),
+                })),
+                target: await control.evaluate(element => ({
+                  id: element.id, role: element.getAttribute('role'),
+                  name: element.textContent?.slice(0, 200),
+                })) }));
               throw error;
             }
           }
@@ -683,11 +690,8 @@ test(
           for (const key of ['Enter', 'Space']) {
             await page.keyboard.press(key);
             await page.getByText(firstPage[0].body, { exact: true }).waitFor();
-            t.diagnostic(JSON.stringify({ activationKey: key, backControls: await page.locator('flt-semantics')
-              .evaluateAll(nodes => nodes.filter(node => node.textContent === 'Back').map(node => ({
-                role: node.getAttribute('role'), id: node.id, label: node.getAttribute('aria-label'),
-              }))) }));
             await page.getByRole('button', { name: 'Back', exact: true }).click();
+            await page.mouse.move(0, 0);
             await postButtons[0].waitFor();
             await focused(postButtons[0]);
             assert.equal(page.url(), callerUrl);

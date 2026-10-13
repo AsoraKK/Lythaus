@@ -594,16 +594,21 @@ class _OwnerPostCardState extends State<_OwnerPostCard> {
   Future<void> _openPost() async {
     if (_opening) return;
     _opening = true;
+    final callerRoute = ModalRoute.of(context);
     try {
       await widget.onTap();
     } finally {
-      _opening = false;
-      if (mounted) {
+      if (mounted && callerRoute?.isCurrent == true) {
         _focusNode.unfocus();
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _focusNode.requestFocus();
-        });
+        FocusManager.instance.applyFocusChangesIfNeeded();
+        // Commit the unfocused semantics before refocusing the restored card.
+        // Web semantics otherwise treats its cached focus request as unchanged.
+        await WidgetsBinding.instance.endOfFrame;
+        if (mounted && callerRoute?.isCurrent == true) {
+          _focusNode.requestFocus();
+        }
       }
+      _opening = false;
     }
   }
 
@@ -663,7 +668,7 @@ class _OwnerPostCardState extends State<_OwnerPostCard> {
         semanticContainer: false,
         child: TextButton(
           focusNode: _focusNode,
-        onPressed: _openPost,
+          onPressed: _openPost,
           style:
               TextButton.styleFrom(
                 padding: EdgeInsets.zero,

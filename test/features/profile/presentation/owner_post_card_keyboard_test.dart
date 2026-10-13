@@ -95,7 +95,12 @@ Future<GoRouter> _pump(WidgetTester tester, double width) async {
   });
   final router = GoRouter(
     initialLocation: '/?tab=profile&profileTab=posts&origin=keyboard-caller',
-    routes: [GoRoute(path: '/', builder: (_, _) => const AdaptiveShell(initialIndex: 2))],
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (_, _) => const AdaptiveShell(initialIndex: 2),
+      ),
+    ],
   );
   addTearDown(router.dispose);
   await tester.pumpWidget(
