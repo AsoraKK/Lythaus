@@ -101,6 +101,13 @@ No migration number is reserved; the approved manifest is unchanged.
 | Rollback marked payload, 222 bytes | 9a8879ddfa2b3431b7d820afb2bc42485e126da47ce757cf834f1a8802c48543 | 207 bytes; 39076bf0415a4896f5091c1707b48755a3a6a870b771c9f6f2118d577a588c91 |
 | Unapplied application patch, 1265 bytes | 7739004a2198740908ae99e82682890c18edb00222de3595e137e135ef5835d1 | Apply only in parent-reviewed integration; no query fallback. |
 
+Full commented-file SHA-256 pins are install
+`71a4fc9a7945cd683bc1b70ad01e958d6d0735a6ab9a37f8c254669244732d62`,
+rollback `b28eacc41c8c5b77311cd0dc3ef14467e7c515aac53e908186080e7c9a56796f`,
+and read-only checks `35f8fe76fa3bab02c2388fba45a49352aa6918e04e38e2ed4a9be38b133e87fd`.
+The unapplied patch file uses the patch hash above. Check file hashes before
+extracting any payload; checking only the body is insufficient.
+
 ## Narrow workflow/executor design: not implemented or dispatched
 
 The design uses a new narrowly reviewed manual job in the existing protected
