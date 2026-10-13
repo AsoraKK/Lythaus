@@ -111,11 +111,13 @@ a Sharp-backed fake Images binding, fake database, and in-memory private buckets
 The production module does not import Sharp. This verifies local byte handling,
 not the hosted Images decoder's behavior, service budgets, or a public release.
 Real-byte tests and an added disposable PG17 owner-lookup test supplement the
-existing attachment ownership, idempotency, and state-race cases. The new PG17
-case awaits execution by the existing disposable runner: this follow-up's
-no-DDL/grants scope did not permit reapplying its baseline/proposal locally.
-Its database suffix is shortened to fit PostgreSQL's identifier limit and the
-fixture now checks actual database identity before any proposal application.
+existing attachment ownership, idempotency, and state-race cases. After the
+explicit clarification permitting disposable local fixture DDL/grants, canonical
+baseline/role validation and all six attachment PG17 tests passed on PostgreSQL
+17.11 in a fresh loopback-only container; the container was removed afterward.
+Its database suffix fits PostgreSQL's identifier limit and the fixture checks
+actual database identity before any proposal application. No hosted schema or
+permissions were changed, and this does not certify the hosted Images decoder.
 No detector is invoked and no fixture certifies detector accuracy.
 
 ## Existing lifecycle and storage follow-up
