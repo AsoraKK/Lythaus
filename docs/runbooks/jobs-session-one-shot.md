@@ -38,13 +38,15 @@ replacement secret value.
 The new workflows hold lythaus-canonical-production-release for the whole run and
 lythaus-production-workers for the protected job. This excludes a canonical
 release's preflight as well as its Worker writes; recovery holds the same locks.
-The existing writers below still need parent coordination.
+The PR also coordinates the existing Public waitlist workflow and canonical
+rollback job with the Worker lock. Rollback retains its dependency on the completed
+native Worker job and the outer canonical lock; it does not nest the same group.
 
-1. **shared_worker_lock_unavailable:** current production-release rollback writes
-   Public/Jobs outside lythaus-production-workers. deploy-public-waitlist also
-   uses its own group. Parent must coordinate those existing shared workflows;
-   this lane has not edited either. The source gate deliberately blocks the
-   current checkout before any Worker mutation.
+1. **Writer closure:** the reviewed shared lock changes and both new workflows
+   must be present on protected main. Preparation, execution and recovery all
+   verify closure; every POST/DELETE verifies it again. An uncoordinated checkout
+   fails shared_worker_lock_unavailable before mutation. A one-time observation
+   that no writer is running is insufficient exclusion evidence.
 2. Independent source/privacy review and exact-head required CI must clear this
    draft. Both manual and completion-triggered recovery workflows must be merged,
    enabled and runnable under the existing production environment before any
@@ -62,6 +64,13 @@ The existing writers below still need parent coordination.
    restoration_unverified and is never overwritten by a blind rollback.
 
 ## Failure and bounded recovery
+
+GET Worker fingerprints explicitly retain identity, logpush, observability,
+routing/reference guards, subdomain, tags, tail consumers and preview base
+configuration. Only provider read timestamps created_on/updated_on/deployed_on
+are omitted. Complete nested values remain bound, and unknown top-level fields
+fail closed. Deployment/upload/deletion timestamp changes therefore cannot block
+owned restoration, while actual security, binding or configuration drift can.
 
 Every transport request plus streamed body has a ten-second deadline (the single
 diagnostic uses nine seconds). Recovery inventories at most five pages of 100

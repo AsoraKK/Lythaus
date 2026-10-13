@@ -695,6 +695,9 @@ jobs:
           echo 'jobs=PASS' >> "$GITHUB_OUTPUT"
 
   rollback:
+    concurrency:
+      group: lythaus-production-workers
+      cancel-in-progress: false
     name: Roll back changed components after downstream failure
     needs: [preflight, provider_evidence, marketing, web, admin, workers, production_smoke]
     if: ${{ always() && needs.workers.result == 'success' && (needs.marketing.result == 'failure' || needs.marketing.result == 'cancelled' || needs.web.result == 'failure' || needs.web.result == 'cancelled' || needs.admin.result == 'failure' || needs.admin.result == 'cancelled' || needs.production_smoke.result == 'failure' || needs.production_smoke.result == 'cancelled') }}

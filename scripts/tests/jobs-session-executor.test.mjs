@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { parse } from 'yaml';
 import { prepare, execute, recover, validateRecord, clonePayload, digest, FLAG, TARGETS,
   versionProjection } from '../release/jobs-session-lifecycle.mjs';
-import { boundedJson, createApi, workflowGate, assertSharedWorkerLock, REPO } from '../ci/jobs-session-executor.mjs';
+import { boundedJson, createApi, workflowGate, assertSharedWorkerLock, workerSettingsProjection, main, REPO } from '../ci/jobs-session-executor.mjs';
 
 const id = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const sourceSha = 'a'.repeat(40);
@@ -77,6 +78,191 @@ async function prepared(f = fixture()) {
 }
 const run = f => execute({ api: f.api, record: f.record, durable });
 const mutations = calls => calls.filter(value => /^(create|deploy|delete|probe):?/.test(value));
+
+// Exercise the actual adapter against a synthetic HTTP API rather than projecting
+// Worker settings in the lifecycle stub. Provider timestamps advance on writes.
+function wireFixture() {
+  const f = fixture();
+  const state = f.api;
+  let clock = 0;
+  const tick = () => new Date(Date.UTC(2026, 9, 13, 19, 0, ++clock)).toISOString();
+  const owners = Object.fromEntries(Object.keys(TARGETS).map(component => [component, new Set([f.expected[component].versionId])]));
+  for (const [component, number] of [['public', 1], ['jobs', 2]]) {
+    f.settings[component] = { ...f.settings[component], id: String(number).padStart(32, '0'),
+      created_on: '2026-08-24T10:00:00.000Z', updated_on: tick(), deployed_on: tick(),
+      references: { dispatch_namespace_outbounds: [], domains: [], durable_objects: [], queues: [], workers: [] },
+      tail_consumers: [], previews_base_config: { cache_options: { enabled: false },
+        env: { SYNTHETIC_BINDING: { type: 'plain_text' } }, limits: { cpu_ms: 30 }, logpush: false,
+        observability: { enabled: true }, placement: { mode: 'smart' }, tail_consumers: [] } };
+  }
+  f.control = { rejectRestore: false, rejectProbe: false, afterDeployment: () => {} };
+  f.requests = [];
+  f.fetchImpl = async (input, init) => {
+      const url = new URL(input);
+      f.requests.push({ url: input, method: init.method });
+      if (url.hostname === 'api.github.com') {
+        if (url.pathname.endsWith('/actions/runs/1234')) return Response.json({ id: 1234, event: 'workflow_dispatch', head_branch: 'main',
+          head_sha: executorSha, run_attempt: 1, status: 'completed', path: '.github/workflows/jobs-session-one-shot.yml', repository: { full_name: REPO } });
+        if (url.pathname.endsWith('/actions/workflows/jobs-session-recovery.yml')) return Response.json({ state: 'active', path: '.github/workflows/jobs-session-recovery.yml' });
+        return Response.json({ total_count: 0, workflow_runs: [] });
+      }
+      if (url.hostname === 'api.lythaus.co') {
+        if (f.control.rejectProbe) { f.calls.push('probe'); throw new Error('synthetic probe transport failure'); }
+        const header = init.headers['Cloudflare-Workers-Version-Overrides'];
+        const pins = Object.fromEntries(Object.entries(TARGETS).map(([component, name]) => [component,
+          header.match(new RegExp(`${name}="([a-f0-9-]+)"`))?.[1]]));
+        return Response.json(await state.probe(pins));
+      }
+      assert.equal(url.hostname, 'api.cloudflare.com');
+      const match = /\/workers\/(workers|scripts)\/([^/]+)(.*)$/.exec(url.pathname);
+      const component = Object.keys(TARGETS).find(key => TARGETS[key] === match?.[2]);
+      assert(component);
+      const suffix = match[3];
+      const response = result => Response.json({ success: true, result });
+      if (match[1] === 'scripts' && suffix === '/deployments') {
+        if (init.method === 'GET') return response({ deployments: [f.active[component]] });
+        const body = JSON.parse(init.body);
+        if (f.control.rejectRestore && component === 'public' && body.versions.length === 1) throw new Error('synthetic restoration transport failure');
+        const result = await state.deploy(component, body.versions);
+        f.settings[component].updated_on = tick(); f.settings[component].deployed_on = tick();
+        f.control.afterDeployment(component, body.versions);
+        return response(result);
+      }
+      if (!suffix) return response(structuredClone(f.settings[component]));
+      if (suffix === '/versions') {
+        if (init.method === 'GET') return Response.json({ success: true,
+          result: [...owners[component]].filter(value => value in f.versions).map(value => f.versions[value]), result_info: { total_pages: 1 } });
+        const result = await state.createCandidate(component, JSON.parse(init.body));
+        owners[component].add(result.id); f.settings[component].updated_on = tick();
+        return response(result);
+      }
+      const versionId = suffix.slice('/versions/'.length);
+      if (init.method === 'DELETE') {
+        await state.deleteCandidate(component, versionId); f.settings[component].updated_on = tick();
+        return Response.json({ success: true });
+      }
+      return versionId in f.versions ? response(f.versions[versionId]) : new Response(null, { status: 404 });
+    };
+  f.api = createApi({ cloudflareToken: 'synthetic cf', githubToken: 'synthetic gh', readinessToken: 'synthetic readiness', runId: '1234', fetchImpl: f.fetchImpl });
+  return f;
+}
+
+test('real HTTP adapter lifecycle tolerates advancing Worker update/deployment timestamps and verifies deletion', async () => {
+  const f = await prepared(wireFixture());
+  const initial = structuredClone(f.settings);
+  const result = await run(f);
+  assert.equal(result.status, 'observed');
+  assert.equal(result.restoration.status, 'restored_verified');
+  assert.equal(Object.keys(f.versions).length, 2);
+  for (const component of Object.keys(TARGETS)) {
+    assert.notEqual(f.settings[component].updated_on, initial[component].updated_on);
+    assert.notEqual(f.settings[component].deployed_on, initial[component].deployed_on);
+    assert.deepEqual(f.active[component].versions, [{ version_id: f.expected[component].versionId, percentage: 100 }]);
+  }
+});
+test('real HTTP adapter failure cleanup restores flags despite timestamps and preserves restoration failures', async () => {
+  const f = await prepared(wireFixture());
+  f.control.rejectRestore = true;
+  const result = await run(f);
+  assert.equal(result.status, 'failed');
+  assert.equal(result.restoration.workers.public, 'restoration_unverified');
+  assert.equal(result.restoration.workers.jobs, 'restored_verified');
+  assert.equal(f.active.public.versions.length, 2);
+  f.control.rejectRestore = false;
+  assert.equal((await recover({ api: f.api, record: f.record })).status, 'restored_verified');
+  assert.equal(Object.keys(f.versions).length, 2);
+  assert.equal(f.calls.filter(value => value === 'probe').length, 1);
+});
+test('real HTTP adapter restores both original versions after failed probe with advancing timestamps', async () => {
+  const f = await prepared(wireFixture());
+  f.control.rejectProbe = true;
+  const result = await run(f);
+  assert.equal(result.status, 'failed');
+  assert.equal(result.restoration.status, 'restored_verified');
+  assert.equal(Object.keys(f.versions).length, 2);
+  assert.equal(f.calls.filter(value => value === 'probe').length, 1);
+  for (const component of Object.keys(TARGETS)) assert.deepEqual(f.active[component].versions,
+    [{ version_id: f.expected[component].versionId, percentage: 100 }]);
+});
+test('Worker fingerprint excludes exactly documented timestamps and keeps all real settings', () => {
+  const f = wireFixture();
+  const settings = f.settings.public;
+  const projected = workerSettingsProjection(settings);
+  assert.deepEqual(Object.keys(projected).sort(), ['id', 'name', 'logpush', 'observability', 'references', 'subdomain',
+    'tags', 'tail_consumers', 'previews_base_config'].sort());
+  const changed = { ...settings, created_on: '2026-01-01T00:00:00Z', updated_on: '2027-01-01T00:00:00Z', deployed_on: null };
+  assert.equal(digest(workerSettingsProjection(changed)), digest(projected));
+  assert.throws(() => workerSettingsProjection({ ...settings, undocumented_setting: true }), /settings_capability_unavailable/);
+});
+for (const field of ['id', 'name', 'logpush', 'observability', 'references', 'subdomain', 'tags', 'tail_consumers', 'previews_base_config']) {
+  test(`real HTTP adapter detects ${field} change without masking it as metadata`, async () => {
+    const f = await prepared(wireFixture());
+    const row = f.settings.public;
+    if (field === 'id') row.id = 'other immutable identity';
+    if (field === 'name') row.name = 'other-worker';
+    if (field === 'logpush') row.logpush = true;
+    if (field === 'observability') row.observability = { enabled: true, traces: { propagation_policy: 'accept' } };
+    if (field === 'references') row.references.domains.push({ hostname: 'synthetic.invalid' });
+    if (field === 'subdomain') row.subdomain.previews_enabled = true;
+    if (field === 'tags') row.tags.push('changed');
+    if (field === 'tail_consumers') row.tail_consumers.push({ name: 'changed-consumer' });
+    if (field === 'previews_base_config') row.previews_base_config.env.SYNTHETIC_BINDING.type = 'secret_text';
+    row.updated_on = '2027-01-01T00:00:00Z';
+    assert.equal((await run(f)).status, 'failed');
+    assert.deepEqual(mutations(f.calls), []);
+  });
+}
+test('real security setting drift during deployment still refuses restoration and deletion', async () => {
+  const f = await prepared(wireFixture());
+  f.control.afterDeployment = (component, versions) => {
+    if (component === 'jobs' && versions.length === 2) f.settings.jobs.observability = { enabled: false };
+  };
+  const result = await run(f);
+  assert.equal(result.status, 'failed');
+  assert.equal(result.restoration.workers.jobs, 'restoration_unverified');
+  assert.equal(f.active.jobs.versions.length, 2);
+  assert(!f.calls.includes('delete:jobs'));
+  assert(!f.calls.includes('probe'));
+});
+test('protected recovery rejects uncoordinated current checkout with zero POST or DELETE', async t => {
+  const f = await prepared(wireFixture());
+  for (const component of Object.keys(TARGETS)) {
+    const candidate = await f.api.createCandidate(component, clonePayload(f.versions[f.expected[component].versionId], `jobs-session:1234:1:${component}`));
+    await f.api.deploy(component, [{ version_id: f.expected[component].versionId, percentage: 100 }, { version_id: candidate.id, percentage: 0 }]);
+  }
+  f.requests.length = 0;
+  const read = fs.readFileSync;
+  t.mock.method(fs, 'readFileSync', (name, ...args) => {
+    if (name === '.artifacts/jobs-session/recovery.json') return JSON.stringify(f.record);
+    const value = read(name, ...args);
+    return name === '.github/workflows/deploy-public-waitlist.yml' ? value.replace('lythaus-production-workers', 'uncoordinated-writer') : value;
+  });
+  t.mock.method(globalThis, 'fetch', f.fetchImpl);
+  const originalArgv = process.argv;
+  process.argv = [...originalArgv];
+  process.argv[2] = 'recover';
+  t.after(() => { process.argv = originalArgv; });
+  const env = { GITHUB_REPOSITORY: REPO, GITHUB_REF: 'refs/heads/main', REF_PROTECTED: 'true',
+    GITHUB_RUN_ATTEMPT: '1', GITHUB_RUN_ID: '9999', RECOVER_RUN_ID: '1234',
+    GITHUB_SHA: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+    CLOUDFLARE_API_TOKEN: 'synthetic', GITHUB_TOKEN: 'synthetic' };
+  await assert.rejects(main(env), /shared_worker_lock_unavailable/);
+  assert.deepEqual(f.requests.filter(request => ['POST', 'DELETE'].includes(request.method)), []);
+  assert.equal(f.active.public.versions.length, 2);
+  assert.equal(f.active.jobs.versions.length, 2);
+});
+test('API mutation boundaries recheck writer closure before every POST and DELETE', async t => {
+  const f = wireFixture();
+  const read = fs.readFileSync;
+  t.mock.method(fs, 'readFileSync', (name, ...args) => {
+    const value = read(name, ...args);
+    return name === '.github/workflows/deploy-public-waitlist.yml' ? value.replace('lythaus-production-workers', 'uncoordinated-writer') : value;
+  });
+  await assert.rejects(f.api.createCandidate('jobs', {}), /shared_worker_lock_unavailable/);
+  await assert.rejects(f.api.deploy('jobs', [{ version_id: id(2), percentage: 100 }]), /shared_worker_lock_unavailable/);
+  await assert.rejects(f.api.deleteCandidate('jobs', id(2)), /shared_worker_lock_unavailable/);
+  assert.deepEqual(f.requests, []);
+});
 
 test('one pinned request, exact inherited bindings, original versions restored and candidate versions deleted', async () => {
   const f = await prepared();
@@ -275,8 +461,10 @@ for (const kind of ['branch', 'protection', 'attempt', 'source', 'event', 'missi
     await assert.rejects(workflowGate(f.api, f.env));
   });
 }
-test('current rollback locking gap is an explicit pre-mutation blocker', () => {
-  assert.throws(() => assertSharedWorkerLock(), /shared_worker_lock_unavailable/);
+test('coordinated checkout passes and uncoordinated writer regression fails closed', () => {
+  assert.doesNotThrow(() => assertSharedWorkerLock());
+  assert.throws(() => assertSharedWorkerLock(name => fs.readFileSync(name, 'utf8')
+    .replace('lythaus-production-workers', 'uncoordinated-writer')), /shared_worker_lock_unavailable/);
   const locked = 'concurrency:\n  group: lythaus-production-workers\n  cancel-in-progress: false\n';
   const canonical = locked.replace('lythaus-production-workers', 'lythaus-canonical-production-release');
   assert.doesNotThrow(() => assertSharedWorkerLock(name => {
@@ -285,6 +473,21 @@ test('current rollback locking gap is an explicit pre-mutation blocker', () => {
     if (name.endsWith('jobs-session-recovery.yml')) return canonical + `jobs:\n  recover:\n    ${locked.replaceAll('\n', '\n    ')}`;
     return locked;
   }));
+});
+test('writer lock coordination preserves release ordering and avoids nesting the same group', () => {
+  const workflow = name => parse(fs.readFileSync(`.github/workflows/${name}.yml`, 'utf8'));
+  const release = workflow('production-release');
+  const native = workflow('native-workers-deploy');
+  const waitlist = workflow('deploy-public-waitlist');
+  const diagnostic = workflow('jobs-session-one-shot');
+  assert.equal(release.concurrency.group, diagnostic.concurrency.group);
+  assert.equal(release.jobs.rollback.concurrency.group, native.concurrency.group);
+  assert.equal(waitlist.concurrency.group, native.concurrency.group);
+  assert.notEqual(release.concurrency.group, release.jobs.rollback.concurrency.group);
+  assert(release.jobs.rollback.needs.includes('workers'));
+  assert(release.jobs.rollback.if.includes("needs.workers.result == 'success'"));
+  assert.equal(release.jobs.rollback.environment, 'production');
+  assert.equal(waitlist.jobs.deploy.environment, 'production');
 });
 test('protected workflow persists baseline before execution; recovery has no readiness credential or probe', () => {
   const main = parse(fs.readFileSync('.github/workflows/jobs-session-one-shot.yml', 'utf8'));

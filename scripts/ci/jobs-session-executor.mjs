@@ -10,6 +10,24 @@ export const RECOVERY_WORKFLOW = 'jobs-session-recovery.yml';
 export const REPO = new URL('https://github.com/AsoraKK/Lythaus/').pathname.slice(1, -1);
 const CF = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/workers`;
 const GH = `https://api.github.com/repos/${REPO}`;
+// Complete documented GET Worker fields: retain configuration, identity and
+// routing/reference guards; omit only provider-maintained read timestamps.
+const WORKER_SETTINGS = ['id', 'name', 'logpush', 'observability', 'references',
+  'subdomain', 'tags', 'tail_consumers', 'previews_base_config'];
+const WORKER_READ_METADATA = ['created_on', 'updated_on', 'deployed_on'];
+export function workerSettingsProjection(value) {
+  const object = entry => entry && typeof entry === 'object' && !Array.isArray(entry);
+  if (!object(value) || Object.keys(value).some(key => ![...WORKER_SETTINGS, ...WORKER_READ_METADATA].includes(key))
+    || WORKER_SETTINGS.filter(key => key !== 'previews_base_config').some(key => !(key in value))
+    || typeof value.id !== 'string' || !value.id || typeof value.name !== 'string' || !value.name
+    || typeof value.logpush !== 'boolean' || !object(value.observability) || !object(value.references)
+    || !object(value.subdomain) || !Array.isArray(value.tags) || value.tags.some(tag => typeof tag !== 'string')
+    || !Array.isArray(value.tail_consumers) || value.tail_consumers.some(entry => !object(entry) || typeof entry.name !== 'string')
+    || ('previews_base_config' in value && !object(value.previews_base_config))) fail('settings_capability_unavailable');
+  // Keep complete nested values: security, binding and future nested setting
+  // changes must change the hash. Unknown top-level fields fail closed.
+  return Object.fromEntries(WORKER_SETTINGS.filter(key => key in value).map(key => [key, value[key]]));
+}
 export async function boundedJson(fetchImpl, url, init, { timeoutMs = 10_000, maxBytes = 16_777_216, missing = false, statuses = [200, 201] } = {}) {
   const controller = new AbortController();
   const abort = () => controller.abort();
@@ -45,6 +63,7 @@ export async function boundedJson(fetchImpl, url, init, { timeoutMs = 10_000, ma
 export function createApi({ cloudflareToken, githubToken, readinessToken, runId, fetchImpl = fetch }) {
   if (!cloudflareToken || !githubToken) fail('protected_credentials_missing');
   const cf = async (route, method = 'GET', body, missing = false) => {
+    if (method === 'POST' || method === 'DELETE') assertSharedWorkerLock();
     const value = await boundedJson(fetchImpl, CF + route, { method,
       headers: { authorization: `Bearer ${cloudflareToken}`, accept: 'application/json', 'content-type': 'application/json' },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }) }, { missing });
@@ -76,9 +95,7 @@ export function createApi({ cloudflareToken, githubToken, readinessToken, runId,
       if (!Array.isArray(deployments?.deployments) || !deployments.deployments.length) fail('deployment_unavailable');
       const settings = await cf(`/workers/${name}`);
       if (settings.name !== name || settings.subdomain?.enabled !== false || settings.subdomain?.previews_enabled !== false) fail('settings_unavailable');
-      // Exclude only dated read metadata and external references; settings themselves are never written.
-      const { created_on, references, ...configuration } = settings;
-      return { deployment: deployments.deployments[0], settings: configuration, version: await getVersion(component, versionId) };
+      return { deployment: deployments.deployments[0], settings: workerSettingsProjection(settings), version: await getVersion(component, versionId) };
     },
     getVersion,
     createCandidate: (component, payload) => cf(`/workers/${worker(component)}/versions?deploy=false`, 'POST', payload),
@@ -169,7 +186,7 @@ export async function main(env = process.env) {
     readinessToken: env.DATABASE_READINESS_TOKEN, runId: recovery ? env.RECOVER_RUN_ID : env.GITHUB_RUN_ID });
   const run = await workflowGate(api, env, { recovery });
   if (execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim() !== env.GITHUB_SHA) fail('checkout_mismatch');
-  if (!recovery) assertSharedWorkerLock();
+  assertSharedWorkerLock();
   if (mode === 'prepare') {
     if (!env.DATABASE_READINESS_TOKEN || !/^[a-f0-9]{40}$/.test(env.SOURCE_SHA ?? '')) fail('prerequisites_unavailable');
     execFileSync('git', ['merge-base', '--is-ancestor', env.SOURCE_SHA, 'HEAD'], { stdio: 'ignore' });
@@ -215,7 +232,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       'protected_credentials_missing', 'recovery_workflow_unavailable', 'one_shot_already_requested',
       'one_shot_history_unavailable', 'durable_recovery_unavailable', 'record_provenance_unavailable',
       'prerequisites_unavailable', 'baseline_mismatch', 'baseline_race', 'version_capability_unavailable',
-      'binding_capability_unavailable', 'private_target_unavailable', 'preview_exposure_unavailable'];
+      'binding_capability_unavailable', 'settings_capability_unavailable', 'private_target_unavailable', 'preview_exposure_unavailable'];
     console.error(JSON.stringify({ status: 'failed', diagnosticCode: codes.includes(error?.message) ? error.message : 'executor_unavailable',
       restoration: 'restoration_unverified' }));
     process.exitCode = 1;
