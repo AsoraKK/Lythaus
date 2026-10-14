@@ -483,11 +483,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     final owner = _claimMemberDialog();
     if (owner == null) return;
     final registry = ref.read(contentMutationRegistryProvider);
+    final reloadBlockKey = 'post-discard:${identityHashCode(owner)}';
+    registry.setReloadBlocked(reloadBlockKey, true);
     final epoch = registry.sessionEpoch;
     final actor = ref.read(currentUserProvider)?.id ?? 'session';
     var saving = false;
     String? error;
-    showDialog<void>(
+    late final Future<void> dialogFuture;
+    dialogFuture = showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
@@ -555,6 +558,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         }
                         ref.read(postCreationProvider.notifier).reset();
                         Navigator.of(dialogContext).pop();
+                        await dialogFuture;
+                        await WidgetsBinding.instance.endOfFrame;
+                        if (!mounted) return;
                         _leaveComposer();
                       },
                 child: Text(saving ? 'Discarding…' : 'Discard'),
@@ -563,7 +569,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           ),
         ),
       ),
-    ).whenComplete(() => _releaseMemberDialog(owner));
+    );
+    dialogFuture.whenComplete(() {
+      registry.setReloadBlocked(reloadBlockKey, false);
+      _releaseMemberDialog(owner);
+    });
   }
 
   void _onPostCreated(BuildContext context, CreatePostSuccess result) {
@@ -627,6 +637,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     if (owner == null) return;
     _appealDialogOwner = owner;
     final registry = ref.read(contentMutationRegistryProvider);
+    final reloadBlockKey = 'post-appeal:${identityHashCode(owner)}';
+    registry.setReloadBlocked(reloadBlockKey, true);
     final sessionEpoch = registry.sessionEpoch;
     var statementValue = '';
     try {
@@ -740,6 +752,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         ),
       );
     } finally {
+      registry.setReloadBlocked(reloadBlockKey, false);
       if (identical(_appealDialogOwner, owner)) {
         _appealDialogOwner = null;
       }

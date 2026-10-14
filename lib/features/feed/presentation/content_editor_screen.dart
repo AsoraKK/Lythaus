@@ -45,10 +45,15 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
   int _draftVersion = 0;
   ProviderSubscription<String?>? _sessionSub;
   bool _sessionValid = true;
+  late final String _reloadBlockKey =
+      'content-editor:${identityHashCode(this)}';
+  ContentMutationRegistry? _reloadRegistry;
 
   @override
   void initState() {
     super.initState();
+    _reloadRegistry = ref.read(contentMutationRegistryProvider);
+    _reloadRegistry!.setReloadBlocked(_reloadBlockKey, true);
     _actor = ref.read(currentUserProvider)?.id ?? 'session';
     _scope =
         '${widget.isComment ? 'comment' : 'post'}:$_actor:${widget.contentId}';
@@ -164,6 +169,7 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
   @override
   void dispose() {
     _sessionSub?.close();
+    _reloadRegistry?.setReloadBlocked(_reloadBlockKey, false);
     _controller.dispose();
     super.dispose();
   }

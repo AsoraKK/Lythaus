@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lythaus/core/network/idempotency_key.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
@@ -86,14 +87,26 @@ class ContentMutationRegistry extends ChangeNotifier {
   final _attempts = <String, ContentMutationAttempt>{};
   final _drafts = <String, Map<String, dynamic>>{};
   final _owned = <String, OwnedContent>{};
+  final _reloadBlocks = <String>{};
   Future<void> _tail = Future.value();
   Future<void> ready = Future.value();
   String? _actor;
   int _epoch = 0;
+  int _pendingJournalOperations = 0;
+  bool _isReady = true;
   bool storageUnavailable = false;
   bool _disposed = false;
 
   int get sessionEpoch => _epoch;
+  int get pendingJournalOperations => _pendingJournalOperations;
+  bool get isReady => _isReady;
+  bool get canSafelyReload =>
+      _isReady &&
+      !storageUnavailable &&
+      (_actor == null || _storage != null) &&
+      _pendingJournalOperations == 0 &&
+      _reloadBlocks.isEmpty &&
+      !_attempts.values.any((attempt) => attempt.inFlight);
   List<OwnedContent> get owned => List.unmodifiable(_owned.values);
   List<ContentMutationAttempt> get attempts =>
       List.unmodifiable(_attempts.values);
@@ -113,11 +126,17 @@ class ContentMutationRegistry extends ChangeNotifier {
   }
 
   Future<T> _queue<T>(Future<T> Function() action) {
+    _pendingJournalOperations++;
+    _changed();
     final future = _tail.then(
       (_) => withContentRecoveryLock(_storage ?? this, action),
     );
-    _tail = future.then<void>((_) {}, onError: (Object _, StackTrace __) {});
-    return future;
+    final tracked = future.whenComplete(() {
+      _pendingJournalOperations--;
+      _changed();
+    });
+    _tail = tracked.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return tracked;
   }
 
   void activate(String? actor) {
@@ -125,6 +144,7 @@ class ContentMutationRegistry extends ChangeNotifier {
     final previous = _actor;
     _actor = actor;
     final epoch = ++_epoch;
+    _isReady = false;
     _attempts.clear();
     _drafts.clear();
     _owned.clear();
@@ -149,8 +169,12 @@ class ContentMutationRegistry extends ChangeNotifier {
         }
       } catch (_) {
         if (_epoch == epoch) storageUnavailable = true;
+      } finally {
+        if (_epoch == epoch) {
+          _isReady = true;
+          _changed();
+        }
       }
-      if (_epoch == epoch) _changed();
     });
     // Clear private in-memory state before asynchronous storage work.
     _changed();
@@ -189,6 +213,29 @@ class ContentMutationRegistry extends ChangeNotifier {
       }
       _changed();
     });
+  }
+
+  Future<void> flushPendingJournalWrites() async {
+    await ready;
+    while (_pendingJournalOperations > 0) {
+      final tail = _tail;
+      await tail;
+      if (identical(tail, _tail) && _pendingJournalOperations == 0) return;
+    }
+  }
+
+  void setReloadBlocked(String key, bool blocked) {
+    final changed = blocked
+        ? _reloadBlocks.add(key)
+        : _reloadBlocks.remove(key);
+    if (!changed) return;
+    if (BindingBase.debugBindingType() != null &&
+        SchedulerBinding.instance.schedulerPhase ==
+            SchedulerPhase.persistentCallbacks) {
+      SchedulerBinding.instance.addPostFrameCallback((_) => _changed());
+      return;
+    }
+    _changed();
   }
 
   Future<Map<String, dynamic>> _read(String actor) async {
@@ -284,7 +331,7 @@ class ContentMutationRegistry extends ChangeNotifier {
     try {
       await ready;
       return await _queue(() async {
-        if (_epoch != epoch || storageUnavailable) return false;
+        if (_epoch != epoch) return false;
         final data = await _read(actor);
         final drafts = data['drafts'] as Map;
         if (draft == null) {
@@ -299,12 +346,17 @@ class ContentMutationRegistry extends ChangeNotifier {
         }
         await _storage.write(_storageKey(actor), jsonEncode(data));
         if (_epoch == epoch) {
+          storageUnavailable = false;
           _restore(data);
           _changed();
         }
         return true;
       });
     } catch (_) {
+      if (_epoch == epoch) {
+        storageUnavailable = true;
+        _changed();
+      }
       return false;
     }
   }
@@ -403,6 +455,8 @@ class ContentMutationRegistry extends ChangeNotifier {
         rethrow;
       } catch (_) {
         _attempts[scope]?.inFlight = false;
+        storageUnavailable = true;
+        _changed();
         throw const ContentMutationFailure(
           'Unable to save recovery data. No new request has been sent.',
           uncertain: false,
@@ -453,6 +507,10 @@ class ContentMutationRegistry extends ChangeNotifier {
           _changed();
         }
       } catch (_) {
+        if (_epoch == epoch) {
+          storageUnavailable = true;
+          _changed();
+        }
         throw const ContentMutationFailure(
           'The response could not be saved. Retry to check the same request.',
         );

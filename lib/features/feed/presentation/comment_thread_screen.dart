@@ -63,10 +63,15 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   Future<void> Function()? _retryAction;
   Future<void> Function()? _mutationRetryAction;
   final _locallySubmitted = <String>{};
+  late final String _reloadBlockKey =
+      'comment-thread:${identityHashCode(this)}';
+  ContentMutationRegistry? _reloadRegistry;
 
   @override
   void initState() {
     super.initState();
+    _reloadRegistry = ref.read(contentMutationRegistryProvider);
+    _composerController.addListener(_syncReloadBlock);
     _actor = ref.read(currentUserProvider)?.id ?? 'session';
     final pending = ref
         .read(contentMutationRegistryProvider)
@@ -109,15 +114,18 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _mutationRetryAction = null;
         unawaited(_restoreComposer());
         unawaited(_loadInitial());
+        _syncReloadBlock();
       },
     );
     unawaited(_restoreComposer());
     Future<void>.microtask(_loadInitial);
+    _syncReloadBlock();
   }
 
   Future<void> _restoreComposer() async {
     if (_actor == 'session') return;
     _restoring = true;
+    _syncReloadBlock();
     final actor = _actor;
     final version = _draftVersion;
     final registry = ref.read(contentMutationRegistryProvider);
@@ -151,12 +159,14 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
             : 'human';
       }
     });
+    _syncReloadBlock();
   }
 
   void _saveDraft() {
     final actor = _actor;
     final version = ++_draftVersion;
     setState(() => _draftStatus = 'Saving draft…');
+    _syncReloadBlock();
     unawaited(
       ref
           .read(contentMutationRegistryProvider)
@@ -182,16 +192,39 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
                   ? 'Draft saved on this device.'
                   : 'Draft could not be saved.',
             );
+            _syncReloadBlock();
           }),
+    );
+  }
+
+  void _syncReloadBlock() {
+    final hasDraft =
+        _composerController.text.isNotEmpty ||
+        _replyTarget != null ||
+        _pendingParentId != null ||
+        _aiLabel != null;
+    final safelySaved =
+        _composerController.text.isNotEmpty &&
+        _actor != 'session' &&
+        (_draftStatus == 'Draft saved on this device.' ||
+            _draftStatus == 'Draft restored on this device.');
+    _reloadRegistry?.setReloadBlocked(
+      _reloadBlockKey,
+      _isSubmitting ||
+          _confirmingDeletion ||
+          _restoring ||
+          (hasDraft && !safelySaved),
     );
   }
 
   @override
   void dispose() {
+    _composerController.removeListener(_syncReloadBlock);
+    _reloadRegistry?.setReloadBlocked(_reloadBlockKey, false);
     _sessionSub?.close();
     _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
     _composerController.dispose();
+    _scrollController.dispose();
     _composerFocusNode.dispose();
     super.dispose();
   }
@@ -416,6 +449,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       _errorMessage = null;
       _mutationErrorMessage = null;
     });
+    _syncReloadBlock();
     _retryAction = null;
     _mutationRetryAction = null;
 
@@ -426,6 +460,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
           token.isEmpty ||
           (ref.read(currentUserProvider)?.id ?? 'session') != actor) {
         setState(() => _isSubmitting = false);
+        _syncReloadBlock();
         _drainDeferredInitialReload();
         ScaffoldMessenger.of(
           context,
@@ -491,6 +526,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _locallySubmitted.add(created.id);
         _comments = _mergeComments(_comments, [created]);
       });
+      _syncReloadBlock();
       _drainDeferredInitialReload();
     } catch (error) {
       final failure = contentMutationFailure(error);
@@ -507,6 +543,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
             registry.pending(_createScope)?.needsReentry != true;
         _mutationErrorMessage = failure.message;
       });
+      _syncReloadBlock();
       _mutationRetryAction = _submitComment;
       _drainDeferredInitialReload();
     }
@@ -575,6 +612,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       _errorMessage = null;
       _mutationErrorMessage = null;
     });
+    _syncReloadBlock();
     _retryAction = null;
     _mutationRetryAction = null;
     try {
@@ -601,6 +639,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         if (!mounted) return;
         if (confirmed != true) {
           setState(() => _confirmingDeletion = false);
+          _syncReloadBlock();
           return;
         }
       }
@@ -608,6 +647,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _confirmingDeletion = false;
         _isSubmitting = true;
       });
+      _syncReloadBlock();
       final token = await ref.read(jwtProvider.future);
       if (!mounted) return;
       if (token == null ||
@@ -651,6 +691,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _locallySubmitted.remove(comment.id);
         if (_replyTarget?.id == comment.id) _replyTarget = null;
       });
+      _syncReloadBlock();
       _drainDeferredInitialReload();
     } catch (error) {
       final failure = contentMutationFailure(error);
@@ -665,6 +706,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _isSubmitting = false;
         _mutationErrorMessage = failure.message;
       });
+      _syncReloadBlock();
       _mutationRetryAction = () => _deleteComment(comment, ask: false);
       _drainDeferredInitialReload();
     }
@@ -717,6 +759,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       _errorMessage = null;
       _mutationErrorMessage = null;
     });
+    _syncReloadBlock();
     _retryAction = null;
     _mutationRetryAction = null;
     try {
@@ -754,6 +797,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       if (!mounted || actor != _actor || epoch != _sessionEpoch) return;
       ++_mutationEpoch;
       setState(() => _isSubmitting = false);
+      _syncReloadBlock();
       await _loadInitial();
     } catch (error) {
       final failure = contentMutationFailure(error);
@@ -767,6 +811,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _isSubmitting = false;
         _mutationErrorMessage = failure.message;
       });
+      _syncReloadBlock();
       _mutationRetryAction = () => _retryDeletedComment(saved);
       _drainDeferredInitialReload();
     } finally {
@@ -775,6 +820,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
           epoch == _sessionEpoch &&
           _isSubmitting) {
         setState(() => _isSubmitting = false);
+        _syncReloadBlock();
         _drainDeferredInitialReload();
       }
     }

@@ -6,6 +6,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lythaus/features/authenticity/beta_api.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 
 final betaImagePickerProvider = Provider<Future<XFile?> Function()>((ref) {
@@ -40,11 +41,16 @@ class _AuthenticityBetaScreenState extends ConsumerState<AuthenticityBetaScreen>
   Timer? _poll;
   int _polls = 0;
   final _feedback = TextEditingController();
+  late final String _reloadBlockKey =
+      'authenticity-beta:${identityHashCode(this)}';
+  ContentMutationRegistry? _reloadRegistry;
   int _sandboxBalance = 0;
 
   @override
   void initState() {
     super.initState();
+    _reloadRegistry = ref.read(contentMutationRegistryProvider);
+    _feedback.addListener(_syncReloadBlock);
     WidgetsBinding.instance.addObserver(this);
     unawaited(_load());
   }
@@ -52,6 +58,8 @@ class _AuthenticityBetaScreenState extends ConsumerState<AuthenticityBetaScreen>
   @override
   void dispose() {
     _poll?.cancel();
+    _feedback.removeListener(_syncReloadBlock);
+    if (!_busy) _reloadRegistry?.setReloadBlocked(_reloadBlockKey, false);
     _feedback.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -120,6 +128,7 @@ class _AuthenticityBetaScreenState extends ConsumerState<AuthenticityBetaScreen>
       _error = null;
       _progress = null;
     });
+    _syncReloadBlock();
     try {
       final file = await ref.read(betaImagePickerProvider)();
       if (file == null) {
@@ -167,7 +176,10 @@ class _AuthenticityBetaScreenState extends ConsumerState<AuthenticityBetaScreen>
           _busy = false;
           _progress = null;
         });
+      } else {
+        _busy = false;
       }
+      _syncReloadBlock();
     }
   }
 
@@ -180,6 +192,7 @@ class _AuthenticityBetaScreenState extends ConsumerState<AuthenticityBetaScreen>
       _busy = true;
       _error = null;
     });
+    _syncReloadBlock();
     try {
       await ref
           .read(betaApiProvider)
@@ -199,11 +212,19 @@ class _AuthenticityBetaScreenState extends ConsumerState<AuthenticityBetaScreen>
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _busy = false;
-        });
+        setState(() => _busy = false);
+      } else {
+        _busy = false;
       }
+      _syncReloadBlock();
     }
+  }
+
+  void _syncReloadBlock() {
+    _reloadRegistry?.setReloadBlocked(
+      _reloadBlockKey,
+      _busy || _feedback.text.isNotEmpty,
+    );
   }
 
   Future<void> _select(String id) async {
