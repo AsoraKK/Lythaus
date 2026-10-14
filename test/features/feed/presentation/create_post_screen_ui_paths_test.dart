@@ -3,6 +3,8 @@
 /// auth-required card, proof tiles, and CreatePostFAB.
 library;
 
+import 'dart:async';
+
 import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
 import '../../../helpers/content_recovery.dart';
 import 'package:flutter/material.dart';
@@ -12,10 +14,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/design_system/theme/lyth_theme.dart';
+import 'package:lythaus/services/appeal_provider.dart';
 
 class MockPostRepository extends Mock implements PostRepository {}
 
@@ -44,9 +48,22 @@ class _MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
   }
 }
 
-User _testUser() => User(
-  id: 'u1',
-  email: 'test@test.com',
+typedef _AppealSubmitter =
+    Future<bool> Function(String caseId, String statement);
+
+class _TestAppealService extends AppealService {
+  _TestAppealService(super.ref, this.submitter);
+
+  final _AppealSubmitter? submitter;
+
+  @override
+  Future<bool> submit(String caseId, String statement) =>
+      submitter?.call(caseId, statement) ?? Future.value(false);
+}
+
+User _testUser({String id = 'u1'}) => User(
+  id: id,
+  email: '$id@test.com',
   role: UserRole.user,
   tier: UserTier.bronze,
   reputationScore: 50,
@@ -68,6 +85,7 @@ void main() {
     User? user,
     ThemeData? theme,
     double textScale = 1,
+    _AppealSubmitter? appealSubmitter,
   }) {
     final canCreate = user != null;
     return ProviderScope(
@@ -84,6 +102,9 @@ void main() {
         jwtProvider.overrideWith(
           (ref) async => user != null ? 'test-token' : null,
         ),
+        appealProvider.overrideWith(
+          (ref) => _TestAppealService(ref, appealSubmitter),
+        ),
       ],
       child: MaterialApp(
         theme: theme,
@@ -97,6 +118,30 @@ void main() {
       ),
     );
   }
+
+  Future<void> openAppeal(WidgetTester tester) async {
+    final appealButton = find.widgetWithText(TextButton, 'Appeal');
+    await tester.ensureVisible(appealButton);
+    await tester.tap(appealButton);
+    await tester.pumpAndSettle();
+  }
+
+  Finder appealStatementField() => find.byWidgetPredicate(
+    (widget) =>
+        widget is TextField &&
+        widget.decoration?.hintText ==
+            'Briefly explain why this moderation case should be reviewed.',
+  );
+
+  const appealableBlockedState = PostCreationState(
+    text: 'Blocked draft',
+    result: CreatePostBlocked(
+      message: 'Content blocked',
+      categories: ['spam'],
+      appealEligible: true,
+      appealCaseId: 'case-1',
+    ),
+  );
 
   group('_ContentBlockedBanner', () {
     for (final dark in [false, true]) {
@@ -197,6 +242,335 @@ void main() {
 
       expect(find.text('Content Blocked'), findsOneWidget);
       expect(find.text('Blocked by moderation'), findsOneWidget);
+    });
+  });
+
+  group('Case-gated appeal request', () {
+    testWidgets('appeal action remains case-gated', (tester) async {
+      for (final state in [
+        const PostCreationState(
+          text: 'Blocked draft',
+          result: CreatePostBlocked(
+            message: 'Content blocked',
+            categories: [],
+            appealCaseId: 'case-1',
+          ),
+        ),
+        const PostCreationState(
+          text: 'Blocked draft',
+          result: CreatePostBlocked(
+            message: 'Content blocked',
+            categories: [],
+            appealEligible: true,
+            appealCaseId: '',
+          ),
+        ),
+      ]) {
+        await tester.pumpWidget(buildWithState(state, user: _testUser()));
+        await tester.pumpAndSettle();
+        expect(find.widgetWithText(TextButton, 'Appeal'), findsNothing);
+      }
+    });
+
+    for (final dismissal in ['Cancel', 'Escape', 'Back']) {
+      testWidgets('dismiss via $dismissal is silent and releases the guard', (
+        tester,
+      ) async {
+        final submissions = <String>[];
+        await tester.pumpWidget(
+          buildWithState(
+            appealableBlockedState,
+            user: _testUser(),
+            appealSubmitter: (caseId, statement) async {
+              submissions.add('$caseId:$statement');
+              return true;
+            },
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await openAppeal(tester);
+        expect(find.byType(AlertDialog), findsOneWidget);
+        if (dismissal == 'Cancel') {
+          await tester.tap(find.text('Cancel'));
+        } else if (dismissal == 'Escape') {
+          await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        } else {
+          await tester.binding.handlePopRoute();
+        }
+        await tester.pumpAndSettle();
+
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(
+          find.text('Please provide at least 10 characters for your appeal.'),
+          findsNothing,
+        );
+        expect(submissions, isEmpty);
+
+        await openAppeal(tester);
+        expect(find.byType(AlertDialog), findsOneWidget);
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsNothing);
+      });
+    }
+
+    testWidgets('repeated opening creates only one appeal dialog', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildWithState(appealableBlockedState, user: _testUser()),
+      );
+      await tester.pumpAndSettle();
+      final open = tester
+          .widget<TextButton>(find.widgetWithText(TextButton, 'Appeal'))
+          .onPressed!;
+
+      open();
+      open();
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      await openAppeal(tester);
+      expect(find.byType(AlertDialog), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('short statements still require ten characters', (
+      tester,
+    ) async {
+      var submissions = 0;
+      await tester.pumpWidget(
+        buildWithState(
+          appealableBlockedState,
+          user: _testUser(),
+          appealSubmitter: (caseId, statement) async {
+            submissions++;
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      await openAppeal(tester);
+      await tester.enterText(appealStatementField(), 'Too short');
+      await tester.tap(find.text('Submit'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Please provide at least 10 characters for your appeal.'),
+        findsOneWidget,
+      );
+      expect(submissions, 0);
+    });
+
+    testWidgets('guard remains through submission and clears after response', (
+      tester,
+    ) async {
+      final started = Completer<void>();
+      final response = Completer<bool>();
+      final submissions = <String>[];
+      await tester.pumpWidget(
+        buildWithState(
+          appealableBlockedState,
+          user: _testUser(),
+          appealSubmitter: (caseId, statement) {
+            submissions.add('$caseId:$statement');
+            if (!started.isCompleted) started.complete();
+            return response.future;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      final open = tester
+          .widget<TextButton>(find.widgetWithText(TextButton, 'Appeal'))
+          .onPressed!;
+      await openAppeal(tester);
+      await tester.enterText(
+        appealStatementField(),
+        'This case was incorrectly blocked.',
+      );
+      await tester.tap(find.text('Submit'));
+      await tester.pumpAndSettle();
+      await started.future;
+
+      open();
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(submissions, ['case-1:This case was incorrectly blocked.']);
+
+      response.complete(true);
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining(
+          'Appeal submitted for independent trained-reviewer',
+        ),
+        findsOneWidget,
+      );
+      await openAppeal(tester);
+      expect(find.byType(AlertDialog), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+    });
+
+    testWidgets('service errors leave the appeal available for retry', (
+      tester,
+    ) async {
+      var attempts = 0;
+      await tester.pumpWidget(
+        buildWithState(
+          appealableBlockedState,
+          user: _testUser(),
+          appealSubmitter: (caseId, statement) async {
+            attempts++;
+            if (attempts == 1) throw StateError('temporary network failure');
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await openAppeal(tester);
+      await tester.enterText(
+        appealStatementField(),
+        'Please review this moderation decision.',
+      );
+      await tester.tap(find.text('Submit'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Failed to submit appeal. Please try again.'),
+        findsOneWidget,
+      );
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+
+      await openAppeal(tester);
+      await tester.enterText(
+        appealStatementField(),
+        'Please review this moderation decision.',
+      );
+      await tester.tap(find.text('Submit'));
+      await tester.pumpAndSettle();
+      expect(attempts, 2);
+      expect(
+        find.textContaining(
+          'Appeal submitted for independent trained-reviewer',
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('late appeal response after account change is ignored', (
+      tester,
+    ) async {
+      final started = Completer<void>();
+      final response = Completer<bool>();
+      await tester.pumpWidget(
+        buildWithState(
+          appealableBlockedState,
+          user: _testUser(),
+          appealSubmitter: (caseId, statement) {
+            if (!started.isCompleted) started.complete();
+            return response.future;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      await openAppeal(tester);
+      await tester.enterText(
+        appealStatementField(),
+        'Please review this moderation decision.',
+      );
+      await tester.tap(find.text('Submit'));
+      await tester.pumpAndSettle();
+      await started.future;
+
+      ProviderScope.containerOf(
+        tester.element(find.byType(CreatePostScreen)),
+      ).read(authStateProvider.notifier).setUser(_testUser(id: 'u2'));
+      await tester.pumpAndSettle();
+      response.complete(true);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining(
+          'Appeal submitted for independent trained-reviewer',
+        ),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('account change closes appeal without submitting it', (
+      tester,
+    ) async {
+      final submissions = <String>[];
+      await tester.pumpWidget(
+        buildWithState(
+          appealableBlockedState,
+          user: _testUser(),
+          appealSubmitter: (caseId, statement) async {
+            submissions.add('$caseId:$statement');
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(CreatePostScreen)),
+      );
+      final startingEpoch = container
+          .read(contentMutationRegistryProvider)
+          .sessionEpoch;
+      await openAppeal(tester);
+
+      container.read(authStateProvider.notifier).setUser(_testUser(id: 'u2'));
+      await tester.pumpAndSettle();
+
+      expect(
+        container.read(contentMutationRegistryProvider).sessionEpoch,
+        greaterThan(startingEpoch),
+      );
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(submissions, isEmpty);
+      expect(
+        find.text('Please provide at least 10 characters for your appeal.'),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('disposing the composer releases appeal dialog resources', (
+      tester,
+    ) async {
+      var submissions = 0;
+      await tester.pumpWidget(
+        buildWithState(
+          appealableBlockedState,
+          user: _testUser(),
+          appealSubmitter: (caseId, statement) async {
+            submissions++;
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      await openAppeal(tester);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: Text('Composer closed'))),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Composer closed'), findsOneWidget);
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(submissions, 0);
+      expect(tester.takeException(), isNull);
     });
   });
 

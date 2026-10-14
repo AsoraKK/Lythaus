@@ -44,6 +44,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   final _textController = TextEditingController();
   final _focusNode = FocusNode();
   bool _memberDialogOpen = false;
+  BuildContext? _appealDialogContext;
 
   @override
   void initState() {
@@ -59,6 +60,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   @override
   void dispose() {
+    _dismissAppealDialog();
     _textController.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -71,6 +73,16 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       contentMutationRegistryProvider.select(
         (registry) => registry.sessionEpoch,
       ),
+    );
+    ref.listen<int>(
+      contentMutationRegistryProvider.select(
+        (registry) => registry.sessionEpoch,
+      ),
+      (previous, next) {
+        if (previous != null && previous != next) {
+          _dismissAppealDialog();
+        }
+      },
     );
     final canCreate = ref.watch(canCreatePostProvider);
     final theme = Theme.of(context);
@@ -589,66 +601,120 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   Future<void> _submitBlockedAppeal(String caseId) async {
-    final controller = TextEditingController();
-    final statement = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        scrollable: true,
-        title: Text(
-          'Request an appeal review',
-          style: context.textTheme.headlineSmall,
-        ),
-        content: TextField(
-          controller: controller,
-          minLines: 3,
-          maxLines: 6,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            hintText:
-                'Briefly explain why this moderation case should be reviewed.',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Submit'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
+    if (!mounted || _memberDialogOpen) return;
+    final blocked = ref.read(postCreationProvider).blockedResult;
+    if (blocked?.appealEligible != true || blocked?.appealCaseId != caseId) {
+      return;
+    }
 
-    if (!mounted) return;
-    if (statement == null || statement.trim().length < 10) {
+    _memberDialogOpen = true;
+    final registry = ref.read(contentMutationRegistryProvider);
+    final sessionEpoch = registry.sessionEpoch;
+    var statementValue = '';
+    try {
+      final statement = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) {
+          _appealDialogContext = dialogContext;
+          return AlertDialog(
+            scrollable: true,
+            title: Text(
+              'Request an appeal review',
+              style: dialogContext.textTheme.headlineSmall,
+            ),
+            content: TextField(
+              onChanged: (value) => statementValue = value,
+              minLines: 3,
+              maxLines: 6,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText:
+                    'Briefly explain why this moderation case should be reviewed.',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () =>
+                    Navigator.of(dialogContext).pop(statementValue.trim()),
+                child: const Text('Submit'),
+              ),
+            ],
+          );
+        },
+      );
+      _appealDialogContext = null;
+
+      if (!mounted ||
+          sessionEpoch != registry.sessionEpoch ||
+          statement == null) {
+        return;
+      }
+      final currentBlocked = ref.read(postCreationProvider).blockedResult;
+      if (currentBlocked?.appealEligible != true ||
+          currentBlocked?.appealCaseId != caseId) {
+        return;
+      }
+      if (statement.trim().length < 10) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Please provide at least 10 characters for your appeal.',
+              style: context.textTheme.bodyMedium,
+            ),
+          ),
+        );
+        return;
+      }
+
+      bool success;
+      try {
+        success = await ref.read(appealProvider).submit(caseId, statement);
+      } catch (_) {
+        if (!mounted || sessionEpoch != registry.sessionEpoch) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to submit appeal. Please try again.',
+              style: context.textTheme.bodyMedium,
+            ),
+          ),
+        );
+        return;
+      }
+      if (!mounted || sessionEpoch != registry.sessionEpoch) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Please provide at least 10 characters for your appeal.',
+            success
+                ? 'Appeal submitted for independent trained-reviewer and '
+                      'adjudicator review. We will notify you when there is an update.'
+                : 'Failed to submit appeal. Please try again.',
             style: context.textTheme.bodyMedium,
           ),
         ),
       );
-      return;
+    } finally {
+      _appealDialogContext = null;
+      _memberDialogOpen = false;
     }
+  }
 
-    final success = await ref.read(appealProvider).submit(caseId, statement);
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? 'Appeal submitted for independent trained-reviewer and '
-                    'adjudicator review. We will notify you when there is an update.'
-              : 'Failed to submit appeal. Please try again.',
-          style: context.textTheme.bodyMedium,
-        ),
-      ),
-    );
+  void _dismissAppealDialog() {
+    final dialogContext = _appealDialogContext;
+    if (dialogContext == null) return;
+    _appealDialogContext = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!dialogContext.mounted ||
+          ModalRoute.of(dialogContext)?.isCurrent != true) {
+        return;
+      }
+      Navigator.of(dialogContext).pop();
+    });
   }
 }
 
