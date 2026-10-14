@@ -1,5 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
@@ -15,21 +17,31 @@ class PendingAuthenticatedOperations extends ChangeNotifier {
 
   final _activeOperations = <Object>{};
   bool _disposed = false;
+  bool _notificationScheduled = false;
 
   int get activeCount => _activeOperations.length;
   bool get hasPending => _activeOperations.isNotEmpty;
 
   void _changed() {
-    if (_disposed) return;
-    if (BindingBase.debugBindingType() != null &&
-        SchedulerBinding.instance.schedulerPhase ==
-            SchedulerPhase.persistentCallbacks) {
-      SchedulerBinding.instance.addPostFrameCallback((_) {
-        if (!_disposed) notifyListeners();
-      });
-      return;
-    }
-    notifyListeners();
+    if (_disposed || _notificationScheduled) return;
+    _notificationScheduled = true;
+    scheduleMicrotask(() {
+      if (_disposed) {
+        _notificationScheduled = false;
+        return;
+      }
+      if (BindingBase.debugBindingType() != null &&
+          SchedulerBinding.instance.schedulerPhase ==
+              SchedulerPhase.persistentCallbacks) {
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          _notificationScheduled = false;
+          if (!_disposed) notifyListeners();
+        });
+        return;
+      }
+      _notificationScheduled = false;
+      notifyListeners();
+    });
   }
 
   Object beginOperation() {

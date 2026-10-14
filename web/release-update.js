@@ -13,6 +13,8 @@
   const attemptStorageKey = 'lythaus.web-release.attempted.v1';
   const pollIntervalMs = 5 * 60 * 1000;
   const requestTimeoutMs = 5000;
+  const initialRetryDelayMs = 250;
+  const maxRetryDelayMs = 5000;
 
   const state = {
     available: false,
@@ -25,6 +27,8 @@
   };
 
   let pollTimer = null;
+  let reloadRetryTimer = null;
+  let reloadRetryDelayMs = initialRetryDelayMs;
   let banner = null;
   let bannerMessage = null;
   let reloadButton = null;
@@ -103,6 +107,30 @@
     }
   }
 
+  function cancelReloadRetry() {
+    if (reloadRetryTimer !== null) {
+      window.clearTimeout(reloadRetryTimer);
+      reloadRetryTimer = null;
+    }
+    reloadRetryDelayMs = initialRetryDelayMs;
+  }
+
+  function scheduleReloadRetry() {
+    if (reloadRetryTimer !== null || !state.available || !state.canReload ||
+        state.confirming || state.reloadRequested) {
+      return;
+    }
+    const delay = reloadRetryDelayMs;
+    reloadRetryDelayMs = Math.min(reloadRetryDelayMs * 2, maxRetryDelayMs);
+    reloadRetryTimer = window.setTimeout(() => {
+      reloadRetryTimer = null;
+      if (state.available && state.canReload && !state.confirming &&
+          !state.reloadRequested) {
+        void tryReload(state.targetReleaseId, false);
+      }
+    }, delay);
+  }
+
   function observeRelease(releaseId) {
     const normalized = releaseId?.toLowerCase() ?? null;
     const available = normalized !== null &&
@@ -113,8 +141,15 @@
     }
     state.available = available;
     state.targetReleaseId = available ? normalized : null;
-    if (!available) clearAttempt(currentReleaseId);
+    if (!available) {
+      clearAttempt(currentReleaseId);
+      cancelReloadRetry();
+    }
   }
+
+  // The embedded release identity proves that a prior navigation loaded. Clear
+  // only that identity's attempt marker, even if the live manifest has moved on.
+  if (releaseIdPattern.test(currentReleaseId)) clearAttempt(currentReleaseId);
 
   function validAsset(entry, pattern) {
     if (!entry || typeof entry.file !== 'string' ||
@@ -317,6 +352,11 @@
   }
 
   async function tryReload(expectedReleaseId, manual) {
+    if (manual) {
+      cancelReloadRetry();
+    } else if (reloadRetryTimer !== null) {
+      return false;
+    }
     if (!state.available || !state.canReload || state.confirming ||
         state.reloadRequested || !expectedReleaseId ||
         !window.navigator.onLine || !canRecordAttempt()) {
@@ -353,6 +393,7 @@
       }
       if (!manual && hasAttemptedRelease(candidateId)) return false;
       if (!rememberAttempt(candidateId)) return false;
+      cancelReloadRetry();
       state.reloadRequested = true;
       renderBanner();
       window.location.reload();
@@ -363,7 +404,7 @@
       state.confirming = false;
       renderBanner();
       if (candidateChanged && state.available && state.canReload) {
-        void tryReload(state.targetReleaseId, false);
+        scheduleReloadRetry();
       }
     }
   }

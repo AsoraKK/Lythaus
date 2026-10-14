@@ -33,6 +33,8 @@ const serverState = {
   staleNextDocumentHtml: null,
   staleManifestAfterDocument: null,
   pausedHead: null,
+  manifestSequence: null,
+  manifestSequenceIndex: 0,
   requests: [],
 };
 
@@ -92,6 +94,7 @@ function pauseHeadFor(file) {
 const server = createServer((request, response) => {
   const url = new URL(request.url, 'http://127.0.0.1');
   serverState.requests.push({
+    method: request.method,
     url: request.url,
     mode: request.headers['sec-fetch-mode'],
     destination: request.headers['sec-fetch-dest'],
@@ -104,6 +107,18 @@ const server = createServer((request, response) => {
     return;
   }
   if (url.pathname === '/web-release-assets.json') {
+    if (serverState.manifestSequence !== null) {
+      const sequence = serverState.manifestSequence;
+      const manifest = sequence[
+        serverState.manifestSequenceIndex % sequence.length
+      ];
+      serverState.manifestSequenceIndex += 1;
+      response.writeHead(200, {
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'no-store',
+      }).end(JSON.stringify(manifest));
+      return;
+    }
     if (serverState.manifestMode === 'html') {
       response.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
@@ -433,16 +448,97 @@ try {
   );
   await candidateBHead.entered;
   const candidateC = deployRelease('v5');
+  const candidateCHead = pauseHeadFor(candidateC.manifest.updateClient.file);
+  serverState.pausedHead = candidateCHead;
   await candidateRaceTab.page.evaluate(() =>
     window.lythausReleaseUpdates.checkNow(),
   );
   await candidateRaceTab.page.waitForFunction(
     () => !window.lythausReleaseUpdates.snapshot().checking,
   );
-  serverState.pausedHead = null;
+  const candidateCRequestsStart = serverState.requests.length;
   candidateBHead.release();
+  await candidateCHead.entered;
+  const candidateCChecks = serverState.requests.slice(candidateCRequestsStart);
+  assert.ok(candidateCChecks.some(({ method, url }) =>
+    method === 'GET' && url.startsWith('/web-release-assets.json?check='),
+  ));
+  assert.ok(candidateCChecks.some(({ method, url }) =>
+    method === 'GET' && url === '/index.html',
+  ));
+  assert.ok(candidateCChecks.some(({ method, url }) =>
+    method === 'HEAD' && url === `/${candidateC.manifest.main.file}`,
+  ));
+  assert.ok(candidateCChecks.some(({ method, url }) =>
+    method === 'HEAD' && url === `/${candidateC.manifest.bootstrap.file}`,
+  ));
+  assert.ok(candidateCChecks.some(({ method, url }) =>
+    method === 'HEAD' && url === `/${candidateC.manifest.updateClient.file}`,
+  ));
+  assert.equal(
+    await candidateRaceTab.page.evaluate(() => window.release),
+    'v3',
+  );
+  assert.equal(candidateRaceTab.navigationCount(), candidateRaceNavs);
+  serverState.pausedHead = null;
+  candidateCHead.release();
   await waitForRelease(candidateRaceTab.page, 'v5');
+  assert.equal(
+    await candidateRaceTab.page.evaluate(
+      () => window.lythausReleaseUpdates.snapshot().attemptedReleaseId,
+    ),
+    null,
+  );
   assert.equal(candidateRaceTab.navigationCount(), candidateRaceNavs + 1);
+
+  const loadedCandidateContext = await browser.newContext();
+  const loadedCandidateTab = await openTab(loadedCandidateContext, 'v5');
+  const loadedCandidateNavs = loadedCandidateTab.navigationCount();
+  serverState.staleNextDocumentHtml = candidateB.html;
+  serverState.staleManifestAfterDocument = candidateC.manifest;
+  await loadedCandidateTab.page.evaluate((releaseId) => {
+    window.sessionStorage.setItem(
+      'lythaus.web-release.attempted.v1',
+      JSON.stringify({ schemaVersion: 1, releaseIds: [releaseId] }),
+    );
+    window.location.reload();
+  }, candidateB.manifest.releaseId);
+  await waitForRelease(loadedCandidateTab.page, 'v4');
+  await loadedCandidateTab.page.waitForFunction(
+    (target) => {
+      const snapshot = window.lythausReleaseUpdates.snapshot();
+      return snapshot.available && snapshot.targetReleaseId === target &&
+        !snapshot.checking;
+    },
+    candidateC.manifest.releaseId,
+  );
+  assert.equal(
+    await loadedCandidateTab.page.evaluate(
+      () => window.lythausReleaseUpdates.snapshot().attemptedReleaseId,
+    ),
+    null,
+  );
+  await loadedCandidateTab.page.evaluate(() =>
+    window.lythausReleaseUpdates.setCanReload(true),
+  );
+  await waitForRelease(loadedCandidateTab.page, 'v5');
+  assert.equal(loadedCandidateTab.navigationCount(), loadedCandidateNavs + 2);
+
+  serverState.manifestOverride = null;
+  const rollbackToLoadedCandidate = deployRelease('v4');
+  assert.equal(
+    rollbackToLoadedCandidate.manifest.releaseId,
+    candidateB.manifest.releaseId,
+  );
+  await checkForUpdate(loadedCandidateTab.page);
+  await loadedCandidateTab.page.evaluate(() =>
+    window.lythausReleaseUpdates.setCanReload(true),
+  );
+  await waitForRelease(loadedCandidateTab.page, 'v4');
+  assert.equal(loadedCandidateTab.navigationCount(), loadedCandidateNavs + 3);
+  await loadedCandidateContext.close();
+  const restoreCandidateRelease = deployRelease('v5');
+  assert.equal(restoreCandidateRelease.manifest.releaseId, candidateC.manifest.releaseId);
 
   const rollbackRaceContext = await browser.newContext();
   const rollbackRaceTab = await openTab(rollbackRaceContext, 'v5');
@@ -495,6 +591,36 @@ try {
     window.lythausReleaseUpdates.setCanReload(true),
   );
   await waitForRelease(safetyRaceTab.page, 'v7');
+
+  const alternatingManifestContext = await browser.newContext();
+  const alternatingManifestTab = await openTab(alternatingManifestContext, 'v7');
+  const alternatingB = deployRelease('v8');
+  const alternatingC = deployRelease('v9');
+  serverState.manifestSequence = [
+    alternatingB.manifest,
+    alternatingC.manifest,
+  ];
+  serverState.manifestSequenceIndex = 0;
+  const alternatingNavs = alternatingManifestTab.navigationCount();
+  const alternatingRequestsBefore = serverState.requests.filter(
+    ({ url }) => url.startsWith('/web-release-assets.json?check='),
+  ).length;
+  await alternatingManifestTab.page.evaluate(() =>
+    window.lythausReleaseUpdates.setCanReload(true),
+  );
+  await checkForUpdate(alternatingManifestTab.page);
+  await alternatingManifestTab.page.waitForTimeout(1800);
+  const alternatingRequests = serverState.requests.filter(
+    ({ url }) => url.startsWith('/web-release-assets.json?check='),
+  ).length - alternatingRequestsBefore;
+  assert.ok(alternatingRequests < 8,
+    `expected bounded retries for alternating manifests, got ${alternatingRequests}`);
+  assert.equal(alternatingManifestTab.navigationCount(), alternatingNavs);
+  serverState.manifestSequence = null;
+  await waitForRelease(alternatingManifestTab.page, 'v9');
+  assert.equal(alternatingManifestTab.navigationCount(), alternatingNavs + 1);
+  await alternatingManifestContext.close();
+
   await checkForUpdate(workerTab.page);
   assert.equal(
     await workerTab.page.evaluate(() => window.release),
@@ -522,6 +648,8 @@ try {
         'stale document response is rejected without looping',
         'stale manifest cannot clear a candidate reload fence',
         'candidate verification restarts when a newer release arrives',
+        'a successfully loaded older release clears its attempt before a rollback',
+        'alternating manifests use bounded retries and recover when stable',
         'candidate verification restarts for a newer release after rollback',
         'a closed Flutter safety gate cancels verification reload',
         'blocked session storage pauses reload until the loop guard is available',
@@ -545,6 +673,7 @@ try {
     offlineContext.close(),
     workerContext.close(),
     candidateRaceContext.close(),
+    loadedCandidateContext.close(),
     rollbackRaceContext.close(),
     safetyRaceContext.close(),
   ]);

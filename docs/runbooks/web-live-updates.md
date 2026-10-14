@@ -10,6 +10,11 @@ after its safety gate opens. When a draft or operation is not safe to discard,
 the page shows an update-ready banner and waits for the user to finish or save
 that work.
 
+If the deployed release changes while a candidate is being verified, the
+watcher rechecks the newest candidate with a bounded exponential delay from 250
+milliseconds up to five seconds. Ordinary failed or offline checks wait for the
+next resume, connectivity event, or visible five-minute poll.
+
 The reload uses normal browser navigation. The app does not invoke or promise a
 browser hard refresh. The HTML document and release manifest revalidate without
 cache, while each Flutter entry point has a content-derived filename so the
@@ -48,11 +53,14 @@ The app keeps its authentication cookies and secure content-recovery storage.
 The updater does not clear local storage, cookies, IndexedDB, or account data.
 Its attempted-release IDs live in `sessionStorage` for the current tab only.
 They prevent the same candidate from causing a reload loop and are cleared only
-after that release identity is actually loaded. If the browser serves a stale
-document or manifest after navigation, the candidate remains fenced and the tab
-stays open with an update-ready action. A later deployment with a different
-release identity can still trigger an automatic reload. If `sessionStorage`
-cannot record the fence, the update stays ready but automatic reload is paused.
+after that release identity is actually loaded. The loaded document clears only
+its own marker at startup, even if the live manifest already points to a newer
+release; other candidate markers remain fenced. If the browser serves a stale
+document or manifest after navigation, the unobserved candidate remains fenced
+and the tab stays open with an update-ready action. A later deployment with a
+different release identity can still trigger an automatic reload. If
+`sessionStorage` cannot record the fence, the update stays ready but automatic
+reload is paused.
 
 Before navigation, the watcher rechecks that the verified manifest candidate is
 still current and that the Flutter safety gate is still open. If a newer release
@@ -86,9 +94,10 @@ node scripts/tests/web-release-gate.browser.mjs
 flutter test test/features/feed/application/content_mutation_test.dart test/features/feed/application/post_creation_state_test.dart test/core/network/pending_authenticated_operations_test.dart
 ```
 
-The JavaScript browser test covers stale bundles and manifests, multiple tabs,
-rollback, release and safety-gate races, repeated version signals, an HTML SPA
-fallback, and offline recovery. The compiled Flutter browser test runs the real
+The JavaScript browser test covers stale bundles and manifests, per-tab reload
+fences, rollback, release and safety-gate races, changing manifest candidates,
+bounded retries, repeated version signals, an HTML SPA fallback, and offline
+recovery. The compiled Flutter browser test runs the real
 Dart reload gate and web bridge while editing a post draft, saving it to the
 recovery journal, holding an authenticated operation, and switching accounts
 while a journal write is pending.
