@@ -134,9 +134,7 @@ void main() {
                   body: SingleChildScrollView(child: FeedCard(item: post)),
                 ),
                 'search-unavailable' || 'search-auth-required' =>
-                  const FeedSearchScreen(
-                    initialQuery: 'civic',
-                  ),
+                  const FeedSearchScreen(initialQuery: 'civic'),
                 'settings' => const SettingsScreen(),
                 _ => const RewardsDashboardScreen(),
               },

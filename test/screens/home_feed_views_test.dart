@@ -406,10 +406,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Sign in'), findsOneWidget);
-    expect(
-      find.text('Could not load search. Please try again.'),
-      findsNothing,
-    );
+    expect(find.text('Could not load search. Please try again.'), findsNothing);
   });
 
   testWidgets('feed search clear button resets query', (tester) async {
