@@ -1,0 +1,27 @@
+diff --git a/packages/db/src/reputation.ts b/packages/db/src/reputation.ts
+--- a/packages/db/src/reputation.ts
++++ b/packages/db/src/reputation.ts
+@@ -150,6 +150,12 @@ export async function refreshReputationProfile(
+   client: Client,
+   userId: string,
+ ): Promise<{ profile: ReputationProfileSnapshot; previousLevel: ReputationLevel }> {
++  const subject = await client.query<{ status: string }>(
++    `SELECT status FROM trust.lock_reputation_subject($1::pg_catalog.uuid)`,
++    [userId],
++  );
++  if (!subject.rows[0]) throw new Error('reputation_subject_not_found');
++  if (subject.rows[0].status === 'deleted') throw new Error('reputation_subject_deleted');
+   const previous = await client.query<{ current_level: ReputationLevel }>(
+     `SELECT current_level FROM trust.reputation_profiles WHERE user_id = $1`,
+     [userId],
+@@ -324,8 +330,9 @@ export async function recordReputationSignal(
+ ): Promise<ReputationMutationResult> {
+   if (!Number.isFinite(Date.parse(input.occurredAt))) throw new Error('reputation_event_time_invalid');
+   const subject = await client.query<{ status: string }>(
+-    `SELECT status FROM identity.users WHERE id = $1 FOR UPDATE`,
++    `SELECT status FROM trust.lock_reputation_subject($1::pg_catalog.uuid)`,
+     [input.subjectUserId],
+   );
+   if (!subject.rows[0]) throw new Error('reputation_subject_not_found');
++  if (subject.rows[0].status === 'deleted') throw new Error('reputation_subject_deleted');
+   const existing = await findEventBySource(client, input.subjectUserId, input.sourceEventId, input.signalType);

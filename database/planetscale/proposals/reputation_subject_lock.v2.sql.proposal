@@ -1,0 +1,129 @@
+/*
+DISABLED REVIEW PROPOSAL. Direct execution of this file is inert.
+Version 2: audience preflight/postconditions; supersedes no approved bytes.
+The original proposal and its known hashes remain unchanged.
+No hosted schema, role mapping, permission or activation is approved by this file.
+Target: existing postgres owner; Jobs SQL role pscale_api_9jfbtij9y4b2.
+Requires an authorized existing owner session and separate exact DDL/ACL approval.
+postgres is not a superuser but has BYPASSRLS/CREATEROLE/CREATEDB and inherits pscale_superuser.
+No table privileges, credentials or new roles are proposed.
+
+BEGIN REPUTATION LOCK CANDIDATE
+BEGIN;
+SET LOCAL search_path = pg_catalog, pg_temp;
+DO $preflight$
+BEGIN
+  IF current_user <> 'postgres' OR NOT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_class relation
+    JOIN pg_catalog.pg_namespace namespace ON namespace.oid = relation.relnamespace
+    JOIN pg_catalog.pg_roles owner_role ON owner_role.oid = relation.relowner
+    WHERE namespace.nspname = 'identity' AND relation.relname = 'users'
+      AND owner_role.rolname = 'postgres' AND NOT owner_role.rolsuper
+      AND owner_role.rolbypassrls AND owner_role.rolcreaterole AND owner_role.rolcreatedb AND owner_role.rolinherit
+      AND NOT relation.relrowsecurity AND NOT relation.relforcerowsecurity
+      AND EXISTS (SELECT 1 FROM pg_catalog.pg_namespace schema_owner
+        WHERE schema_owner.nspname = 'trust' AND schema_owner.nspowner = owner_role.oid)
+      AND EXISTS (SELECT 1 FROM pg_catalog.pg_database database_owner
+        WHERE database_owner.datname = pg_catalog.current_database() AND database_owner.datdba = owner_role.oid)
+      AND pg_catalog.pg_has_role('postgres', 'pscale_superuser', 'MEMBER')
+  ) THEN
+    RAISE EXCEPTION 'reputation_lock_owner_unverified';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles jobs_role
+      WHERE jobs_role.rolname='pscale_api_9jfbtij9y4b2'
+        AND NOT jobs_role.rolsuper AND NOT jobs_role.rolbypassrls
+        AND NOT jobs_role.rolcreaterole AND NOT jobs_role.rolcreatedb)
+    OR pg_catalog.has_any_column_privilege('pscale_api_9jfbtij9y4b2', 'identity.users', 'UPDATE')
+    OR EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members membership
+      JOIN pg_catalog.pg_roles member_role ON member_role.oid = membership.member
+      WHERE member_role.rolname = 'pscale_api_9jfbtij9y4b2')
+    OR pg_catalog.has_schema_privilege('pscale_api_9jfbtij9y4b2', 'public', 'CREATE')
+    OR pg_catalog.has_schema_privilege('pscale_api_9jfbtij9y4b2', 'identity', 'CREATE')
+    OR pg_catalog.has_schema_privilege('pscale_api_9jfbtij9y4b2', 'trust', 'CREATE') THEN
+    RAISE EXCEPTION 'reputation_lock_jobs_privileges_unexpected';
+  END IF;
+  -- Refuse all incoming Jobs memberships, including currently disabled edges.
+  -- Every transitive or mixed SET/INHERIT path into Jobs ends at such an edge.
+  -- This is deliberately stricter than checking only effective inheritance.
+  IF EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members membership
+    WHERE membership.roleid = 'pscale_api_9jfbtij9y4b2'::pg_catalog.regrole)
+    OR EXISTS (
+      SELECT 1 FROM pg_catalog.pg_roles audience
+      WHERE NOT audience.rolsuper
+        AND audience.rolname NOT IN ('postgres', 'pscale_api_9jfbtij9y4b2')
+        AND (
+          pg_catalog.pg_has_role(audience.oid, 'postgres'::pg_catalog.regrole, 'USAGE')
+          OR EXISTS (SELECT 1 FROM pg_catalog.pg_roles reachable
+            WHERE pg_catalog.pg_has_role(audience.oid, reachable.oid, 'SET')
+              AND pg_catalog.pg_has_role(reachable.oid, 'postgres'::pg_catalog.regrole, 'USAGE'))
+        )
+    ) THEN
+    RAISE EXCEPTION 'reputation_lock_audience_unverified';
+  END IF;
+  IF NOT pg_catalog.has_schema_privilege('pscale_api_9jfbtij9y4b2', 'trust', 'USAGE')
+    OR NOT pg_catalog.has_column_privilege('pscale_api_9jfbtij9y4b2', 'identity.users', 'id', 'SELECT')
+    OR NOT pg_catalog.has_column_privilege('pscale_api_9jfbtij9y4b2', 'identity.users', 'status', 'SELECT') THEN
+    RAISE EXCEPTION 'reputation_lock_existing_jobs_access_missing';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_catalog.pg_proc function_row
+    JOIN pg_catalog.pg_namespace namespace ON namespace.oid = function_row.pronamespace
+    WHERE namespace.nspname = 'trust') OR EXISTS (
+    SELECT 1 FROM pg_catalog.pg_default_acl default_acl JOIN pg_catalog.pg_roles owner_role ON owner_role.oid = default_acl.defaclrole
+    WHERE owner_role.rolname = 'postgres' AND default_acl.defaclobjtype = 'f') THEN
+    RAISE EXCEPTION 'reputation_lock_function_catalog_changed';
+  END IF;
+END;
+$preflight$;
+
+CREATE FUNCTION trust.lock_reputation_subject(p_subject_id pg_catalog.uuid)
+RETURNS TABLE(status pg_catalog.text)
+LANGUAGE plpgsql VOLATILE STRICT SECURITY DEFINER
+SET search_path = pg_catalog, pg_temp
+AS $lock$
+BEGIN
+  IF pg_catalog.current_setting('transaction_isolation') <> 'read committed' THEN
+    RAISE EXCEPTION USING ERRCODE = '25000', MESSAGE = 'reputation_lock_isolation_unsupported';
+  END IF;
+  RETURN QUERY SELECT users.status FROM identity.users AS users
+  WHERE users.id = p_subject_id
+  FOR UPDATE OF users;
+END;
+$lock$;
+
+REVOKE ALL ON FUNCTION trust.lock_reputation_subject(pg_catalog.uuid)
+  FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION trust.lock_reputation_subject(pg_catalog.uuid) TO pscale_api_9jfbtij9y4b2;
+DO $audience_postcondition$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members membership
+    WHERE membership.roleid = 'pscale_api_9jfbtij9y4b2'::pg_catalog.regrole
+      OR membership.member = 'pscale_api_9jfbtij9y4b2'::pg_catalog.regrole)
+    OR EXISTS (
+    SELECT 1 FROM pg_catalog.pg_proc function_row,
+      LATERAL pg_catalog.aclexplode(COALESCE(function_row.proacl,
+        pg_catalog.acldefault('f', function_row.proowner))) acl
+    WHERE function_row.oid = 'trust.lock_reputation_subject(pg_catalog.uuid)'::pg_catalog.regprocedure
+      AND (acl.grantee NOT IN ('postgres'::pg_catalog.regrole, 'pscale_api_9jfbtij9y4b2'::pg_catalog.regrole)
+        OR acl.privilege_type <> 'EXECUTE' OR acl.is_grantable)
+  ) OR NOT pg_catalog.has_function_privilege('pscale_api_9jfbtij9y4b2',
+    'trust.lock_reputation_subject(pg_catalog.uuid)', 'EXECUTE')
+    OR EXISTS (
+      SELECT 1 FROM pg_catalog.pg_roles audience
+      WHERE NOT audience.rolsuper
+        AND audience.rolname NOT IN ('postgres', 'pscale_api_9jfbtij9y4b2')
+        AND (
+          pg_catalog.has_function_privilege(audience.oid,
+            'trust.lock_reputation_subject(pg_catalog.uuid)'::pg_catalog.regprocedure, 'EXECUTE')
+          OR EXISTS (SELECT 1 FROM pg_catalog.pg_roles reachable
+            WHERE pg_catalog.pg_has_role(audience.oid, reachable.oid, 'SET')
+              AND pg_catalog.has_function_privilege(reachable.oid,
+                'trust.lock_reputation_subject(pg_catalog.uuid)'::pg_catalog.regprocedure, 'EXECUTE'))
+        )
+    ) THEN
+    RAISE EXCEPTION 'reputation_lock_execute_audience_unverified';
+  END IF;
+END;
+$audience_postcondition$;
+COMMIT;
+END REPUTATION LOCK CANDIDATE
+*/

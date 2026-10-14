@@ -1,0 +1,71 @@
+/*
+DISABLED READ-ONLY REVIEW QUERIES. Direct execution is inert.
+Version 2: catalog audience inspection. Does not authorize running this file.
+Use only an authorized existing actual Jobs connection; never SET ROLE from
+postgres/admin to claim Jobs-session verification. No app rows/helper invocation.
+
+BEGIN REPUTATION LOCK SESSION VERIFICATION
+BEGIN READ ONLY;
+SELECT session_user, current_user, pg_catalog.current_database() AS database,
+  pg_catalog.current_setting('transaction_isolation') AS effective_isolation,
+  pg_catalog.current_setting('default_transaction_isolation') AS default_isolation,
+  pg_catalog.current_setting('search_path') AS caller_search_path,
+  pg_catalog.current_setting('transaction_read_only') AS read_only;
+SELECT role_row.rolname, role_row.rolsuper, role_row.rolbypassrls,
+  role_row.rolcreaterole, role_row.rolcreatedb, role_row.rolinherit,
+  (SELECT count(*) FROM pg_catalog.pg_auth_members membership WHERE membership.member=role_row.oid) AS memberships
+FROM pg_catalog.pg_roles role_row WHERE role_row.rolname=current_user;
+SELECT member_role.rolname AS member_role, membership.inherit_option,
+  membership.set_option, membership.admin_option
+FROM pg_catalog.pg_auth_members membership
+JOIN pg_catalog.pg_roles member_role ON member_role.oid=membership.member
+WHERE membership.roleid='pscale_api_9jfbtij9y4b2'::pg_catalog.regrole;
+-- Nonempty results are a gate failure. Covers mixed SET then INHERIT paths.
+-- postgres/true superusers retain administrative authority, outside this boundary.
+SELECT audience.rolname AS unexpected_owner_audience
+FROM pg_catalog.pg_roles audience
+WHERE NOT audience.rolsuper
+  AND audience.rolname NOT IN ('postgres','pscale_api_9jfbtij9y4b2')
+  AND (pg_catalog.pg_has_role(audience.oid,'postgres'::pg_catalog.regrole,'USAGE')
+    OR EXISTS (SELECT 1 FROM pg_catalog.pg_roles reachable
+      WHERE pg_catalog.pg_has_role(audience.oid,reachable.oid,'SET')
+        AND pg_catalog.pg_has_role(reachable.oid,'postgres'::pg_catalog.regrole,'USAGE')));
+SELECT pg_catalog.has_schema_privilege(current_user,'trust','USAGE') AS trust_usage,
+  pg_catalog.has_schema_privilege(current_user,'public','CREATE') AS public_create,
+  pg_catalog.has_schema_privilege(current_user,'identity','CREATE') AS identity_create,
+  pg_catalog.has_schema_privilege(current_user,'trust','CREATE') AS trust_create,
+  pg_catalog.has_any_column_privilege(current_user,'identity.users','UPDATE') AS any_users_update,
+  pg_catalog.has_column_privilege(current_user,'identity.users','id','SELECT') AS users_id_select,
+  pg_catalog.has_column_privilege(current_user,'identity.users','status','SELECT') AS users_status_select;
+SELECT relation.relrowsecurity, relation.relforcerowsecurity
+FROM pg_catalog.pg_class relation WHERE relation.oid='identity.users'::pg_catalog.regclass;
+ROLLBACK;
+END REPUTATION LOCK SESSION VERIFICATION
+
+Separate authorized owner/catalog post-install inspection; no function invocation.
+Missing function, unexpected ACL/audience rows, or unavailable catalog visibility
+are failures. An empty result is not proof about hidden managed-platform powers.
+BEGIN REPUTATION LOCK POSTINSTALL VERIFICATION
+BEGIN READ ONLY;
+SELECT pg_catalog.to_regprocedure('trust.lock_reputation_subject(pg_catalog.uuid)') AS required_function;
+SELECT pg_catalog.pg_get_userbyid(function_row.proowner) AS owner_role,
+  function_row.prosecdef, function_row.provolatile, function_row.proisstrict,
+  function_row.proconfig, function_row.proparallel, function_row.proleakproof,
+  acl.grantee, acl.privilege_type, acl.is_grantable
+FROM pg_catalog.pg_proc function_row,
+  LATERAL pg_catalog.aclexplode(COALESCE(function_row.proacl,
+    pg_catalog.acldefault('f',function_row.proowner))) acl
+WHERE function_row.oid=pg_catalog.to_regprocedure('trust.lock_reputation_subject(pg_catalog.uuid)');
+SELECT audience.rolname AS unexpected_execute_audience
+FROM pg_catalog.pg_roles audience
+WHERE NOT audience.rolsuper
+  AND audience.rolname NOT IN ('postgres','pscale_api_9jfbtij9y4b2')
+  AND (pg_catalog.has_function_privilege(audience.oid,
+      pg_catalog.to_regprocedure('trust.lock_reputation_subject(pg_catalog.uuid)'),'EXECUTE')
+    OR EXISTS (SELECT 1 FROM pg_catalog.pg_roles reachable
+      WHERE pg_catalog.pg_has_role(audience.oid,reachable.oid,'SET')
+        AND pg_catalog.has_function_privilege(reachable.oid,
+          pg_catalog.to_regprocedure('trust.lock_reputation_subject(pg_catalog.uuid)'),'EXECUTE')));
+ROLLBACK;
+END REPUTATION LOCK POSTINSTALL VERIFICATION
+*/
