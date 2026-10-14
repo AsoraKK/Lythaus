@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:lythaus/features/auth/domain/auth_required_exception.dart';
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 import 'package:lythaus/features/feed/domain/models.dart' as domain;
 import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
@@ -378,6 +379,36 @@ void main() {
     expect(
       find.text('Could not load search. Please try again.'),
       findsOneWidget,
+    );
+  });
+
+  testWidgets('feed search offers account recovery for an invalid session', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          feedSearchProvider.overrideWith(
+            () => _SearchNotifier(
+              (_) => Future.error(const AuthRequiredException()),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: FeedSearchScreen(initialQuery: 'civic')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Your session could not be verified. Sign in again or continue as a guest.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Sign in'), findsOneWidget);
+    expect(
+      find.text('Could not load search. Please try again.'),
+      findsNothing,
     );
   });
 

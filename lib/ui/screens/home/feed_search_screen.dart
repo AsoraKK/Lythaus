@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lythaus/features/auth/domain/auth_required_exception.dart';
 import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
@@ -12,6 +13,7 @@ import 'package:lythaus/design_system/components/lyth_empty_state.dart';
 import 'package:lythaus/state/models/post_feed_item_mapper.dart';
 import 'package:lythaus/ui/components/feed_card.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
+import 'package:lythaus/ui/components/sign_in_required.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 
 class FeedSearchScreen extends ConsumerStatefulWidget {
@@ -282,6 +284,13 @@ class _FeedSearchScreenState extends ConsumerState<FeedSearchScreen> {
   );
 
   Widget _searchError(Object error, FeedSearchKey key) {
+    if (error is AuthRequiredException) {
+      return SignInRequired(
+        message:
+            'Your session could not be verified. Sign in again or continue as a guest.',
+        returnTo: _location,
+      );
+    }
     if (error is SocialFeedException) {
       switch (error.code) {
         case 'invalid_tag_search':
