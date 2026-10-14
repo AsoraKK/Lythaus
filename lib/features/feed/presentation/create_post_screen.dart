@@ -43,7 +43,24 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   final _textController = TextEditingController();
   final _focusNode = FocusNode();
-  bool _memberDialogOpen = false;
+  Object? _memberDialogOwner;
+  Object? _appealDialogOwner;
+  Object? _appealDialogRouteOwner;
+  NavigatorState? _appealDialogNavigator;
+  Route<dynamic>? _appealDialogRoute;
+
+  bool get _memberDialogOpen => _memberDialogOwner != null;
+
+  Object? _claimMemberDialog() {
+    if (_memberDialogOpen) return null;
+    final owner = Object();
+    _memberDialogOwner = owner;
+    return owner;
+  }
+
+  void _releaseMemberDialog(Object owner) {
+    if (identical(_memberDialogOwner, owner)) _memberDialogOwner = null;
+  }
 
   @override
   void initState() {
@@ -59,6 +76,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   @override
   void dispose() {
+    _dismissAppealDialog();
     _textController.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -71,6 +89,16 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       contentMutationRegistryProvider.select(
         (registry) => registry.sessionEpoch,
       ),
+    );
+    ref.listen<int>(
+      contentMutationRegistryProvider.select(
+        (registry) => registry.sessionEpoch,
+      ),
+      (previous, next) {
+        if (previous != null && previous != next) {
+          _dismissAppealDialog();
+        }
+      },
     );
     final canCreate = ref.watch(canCreatePostProvider);
     final theme = Theme.of(context);
@@ -375,8 +403,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   void _showPostingPolicy() {
-    if (_memberDialogOpen) return;
-    _memberDialogOpen = true;
+    final owner = _claimMemberDialog();
+    if (owner == null) return;
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -390,7 +418,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           ),
         ],
       ),
-    ).whenComplete(() => _memberDialogOpen = false);
+    ).whenComplete(() => _releaseMemberDialog(owner));
   }
 
   void _handleSubmit() async {
@@ -452,8 +480,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   void _showDiscardDialog(BuildContext context) {
-    if (_memberDialogOpen) return;
-    _memberDialogOpen = true;
+    final owner = _claimMemberDialog();
+    if (owner == null) return;
     final registry = ref.read(contentMutationRegistryProvider);
     final epoch = registry.sessionEpoch;
     final actor = ref.read(currentUserProvider)?.id ?? 'session';
@@ -535,7 +563,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           ),
         ),
       ),
-    ).whenComplete(() => _memberDialogOpen = false);
+    ).whenComplete(() => _releaseMemberDialog(owner));
   }
 
   void _onPostCreated(BuildContext context, CreatePostSuccess result) {
@@ -589,66 +617,160 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   Future<void> _submitBlockedAppeal(String caseId) async {
-    final controller = TextEditingController();
-    final statement = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        scrollable: true,
-        title: Text(
-          'Request an appeal review',
-          style: context.textTheme.headlineSmall,
-        ),
-        content: TextField(
-          controller: controller,
-          minLines: 3,
-          maxLines: 6,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            hintText:
-                'Briefly explain why this moderation case should be reviewed.',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Submit'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
+    if (!mounted || _memberDialogOpen) return;
+    final blocked = ref.read(postCreationProvider).blockedResult;
+    if (blocked?.appealEligible != true || blocked?.appealCaseId != caseId) {
+      return;
+    }
 
-    if (!mounted) return;
-    if (statement == null || statement.trim().length < 10) {
+    final owner = _claimMemberDialog();
+    if (owner == null) return;
+    _appealDialogOwner = owner;
+    final registry = ref.read(contentMutationRegistryProvider);
+    final sessionEpoch = registry.sessionEpoch;
+    var statementValue = '';
+    try {
+      final navigator = Navigator.of(context, rootNavigator: true);
+      final route = DialogRoute<String>(
+        context: context,
+        builder: (dialogContext) {
+          if (!identical(_appealDialogOwner, owner) ||
+              sessionEpoch != registry.sessionEpoch) {
+            return const SizedBox.shrink();
+          }
+          return AlertDialog(
+            scrollable: true,
+            title: Text(
+              'Request an appeal review',
+              style: dialogContext.textTheme.headlineSmall,
+            ),
+            content: TextField(
+              onChanged: (value) => statementValue = value,
+              minLines: 3,
+              maxLines: 6,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText:
+                    'Briefly explain why this moderation case should be reviewed.',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () =>
+                    Navigator.of(dialogContext).pop(statementValue.trim()),
+                child: const Text('Submit'),
+              ),
+            ],
+          );
+        },
+        barrierColor:
+            DialogTheme.of(context).barrierColor ??
+            Theme.of(context).dialogTheme.barrierColor ??
+            Colors.black54,
+        barrierDismissible: true,
+        barrierLabel: MaterialLocalizations.of(
+          context,
+        ).modalBarrierDismissLabel,
+        useSafeArea: true,
+        themes: InheritedTheme.capture(from: context, to: navigator.context),
+        traversalEdgeBehavior: TraversalEdgeBehavior.closedLoop,
+      );
+      _appealDialogRouteOwner = owner;
+      _appealDialogNavigator = navigator;
+      _appealDialogRoute = route;
+      final statement = await navigator.push<String>(route);
+      if (identical(_appealDialogRouteOwner, owner)) {
+        _appealDialogRouteOwner = null;
+        _appealDialogNavigator = null;
+        _appealDialogRoute = null;
+      }
+
+      if (!mounted ||
+          sessionEpoch != registry.sessionEpoch ||
+          statement == null) {
+        return;
+      }
+      final currentBlocked = ref.read(postCreationProvider).blockedResult;
+      if (currentBlocked?.appealEligible != true ||
+          currentBlocked?.appealCaseId != caseId) {
+        return;
+      }
+      if (statement.trim().length < 10) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Please provide at least 10 characters for your appeal.',
+              style: context.textTheme.bodyMedium,
+            ),
+          ),
+        );
+        return;
+      }
+
+      bool success;
+      try {
+        success = await ref.read(appealProvider).submit(caseId, statement);
+      } catch (_) {
+        if (!mounted || sessionEpoch != registry.sessionEpoch) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to submit appeal. Please try again.',
+              style: context.textTheme.bodyMedium,
+            ),
+          ),
+        );
+        return;
+      }
+      if (!mounted || sessionEpoch != registry.sessionEpoch) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Please provide at least 10 characters for your appeal.',
+            success
+                ? 'Appeal submitted for independent trained-reviewer and '
+                      'adjudicator review. We will notify you when there is an update.'
+                : 'Failed to submit appeal. Please try again.',
             style: context.textTheme.bodyMedium,
           ),
         ),
       );
-      return;
+    } finally {
+      if (identical(_appealDialogOwner, owner)) {
+        _appealDialogOwner = null;
+      }
+      if (identical(_appealDialogRouteOwner, owner)) {
+        _appealDialogRouteOwner = null;
+        _appealDialogNavigator = null;
+        _appealDialogRoute = null;
+      }
+      _releaseMemberDialog(owner);
+    }
+  }
+
+  void _dismissAppealDialog() {
+    final owner = _appealDialogOwner;
+    if (owner != null) {
+      _appealDialogOwner = null;
+      _releaseMemberDialog(owner);
     }
 
-    final success = await ref.read(appealProvider).submit(caseId, statement);
-    if (!mounted) return;
+    if (_appealDialogRouteOwner == null) return;
+    final navigator = _appealDialogNavigator;
+    final route = _appealDialogRoute;
+    _appealDialogRouteOwner = null;
+    _appealDialogNavigator = null;
+    _appealDialogRoute = null;
+    if (navigator == null || route == null) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? 'Appeal submitted for independent trained-reviewer and '
-                    'adjudicator review. We will notify you when there is an update.'
-              : 'Failed to submit appeal. Please try again.',
-          style: context.textTheme.bodyMedium,
-        ),
-      ),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!navigator.mounted || !route.isActive) return;
+      navigator.removeRoute(route);
+    });
   }
 }
 
