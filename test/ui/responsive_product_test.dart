@@ -19,9 +19,20 @@ class _SearchNotifier extends FeedSearchNotifier {
   _SearchNotifier(this.responseFor);
 
   final Future<FeedResponse> Function(FeedSearchKey key) responseFor;
+  late FeedSearchKey _key;
 
   @override
-  Future<FeedResponse> build(FeedSearchKey arg) => responseFor(arg);
+  Future<FeedResponse> build(FeedSearchKey arg) {
+    _key = arg;
+    return responseFor(arg);
+  }
+
+  @override
+  Future<void> refresh() async {
+    final previous = state;
+    state = const AsyncLoading<FeedResponse>().copyWithPrevious(previous);
+    state = await AsyncValue.guard(() => responseFor(_key));
+  }
 }
 
 class _UnavailableSearchNotifier extends FeedSearchNotifier {
