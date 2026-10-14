@@ -1,6 +1,6 @@
 /*
 DISABLED READ-ONLY REVIEW QUERIES. Direct execution is inert.
-Version 2: catalog audience inspection. Does not authorize running this file.
+Version 2 revision 2: exact identity and audience. No execution authorization.
 Use only an authorized existing actual Jobs connection; never SET ROLE from
 postgres/admin to claim Jobs-session verification. No app rows/helper invocation.
 
@@ -47,12 +47,88 @@ Missing function, unexpected ACL/audience rows, or unavailable catalog visibilit
 are failures. An empty result is not proof about hidden managed-platform powers.
 BEGIN REPUTATION LOCK POSTINSTALL VERIFICATION
 BEGIN READ ONLY;
+SET LOCAL search_path = pg_catalog, pg_temp;
+DO $identity_guard$
+DECLARE actual_fingerprint pg_catalog.text;
+BEGIN
+  SELECT pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(
+    pg_catalog.string_agg(pg_catalog.octet_length(pg_catalog.convert_to(field.value, 'UTF8'))::pg_catalog.text ||
+      ':' || field.value, '' ORDER BY field.ordinality), 'UTF8')), 'hex')
+  INTO actual_fingerprint
+  FROM pg_catalog.pg_proc function_row
+  JOIN pg_catalog.pg_namespace namespace ON namespace.oid=function_row.pronamespace
+  JOIN pg_catalog.pg_roles owner_role ON owner_role.oid=function_row.proowner
+  JOIN pg_catalog.pg_language language ON language.oid=function_row.prolang
+  CROSS JOIN LATERAL (
+    SELECT pg_catalog.string_agg(
+      pg_catalog.octet_length(pg_catalog.convert_to(names.grantor_name, 'UTF8'))::pg_catalog.text || ':' || names.grantor_name ||
+      pg_catalog.octet_length(pg_catalog.convert_to(names.grantee_name, 'UTF8'))::pg_catalog.text || ':' || names.grantee_name ||
+      pg_catalog.octet_length(pg_catalog.convert_to(acl.privilege_type, 'UTF8'))::pg_catalog.text || ':' || acl.privilege_type ||
+      pg_catalog.octet_length(pg_catalog.convert_to(acl.is_grantable::pg_catalog.text, 'UTF8'))::pg_catalog.text || ':' || acl.is_grantable::pg_catalog.text,
+      '' ORDER BY names.grantor_name COLLATE "C", names.grantee_name COLLATE "C",
+        acl.privilege_type COLLATE "C", acl.is_grantable) AS canonical_acl
+    FROM pg_catalog.aclexplode(COALESCE(function_row.proacl,
+      pg_catalog.acldefault('f', function_row.proowner))) acl
+    CROSS JOIN LATERAL (SELECT pg_catalog.pg_get_userbyid(acl.grantor)::pg_catalog.text AS grantor_name,
+      CASE WHEN acl.grantee=0 THEN 'PUBLIC' ELSE pg_catalog.pg_get_userbyid(acl.grantee)::pg_catalog.text END AS grantee_name) names
+  ) acl_snapshot
+  CROSS JOIN LATERAL pg_catalog.unnest(ARRAY[
+    namespace.nspname,
+    function_row.proname,
+    owner_role.rolname,
+    language.lanname,
+    function_row.prosrc,
+    function_row.prokind::pg_catalog.text,
+    function_row.pronargs::pg_catalog.text,
+    function_row.proargtypes::pg_catalog.text,
+    function_row.proallargtypes::pg_catalog.text,
+    function_row.proargmodes::pg_catalog.text,
+    function_row.proargnames::pg_catalog.text,
+    function_row.prorettype::pg_catalog.text,
+    function_row.proretset::pg_catalog.text,
+    pg_catalog.pg_get_function_result(function_row.oid),
+    function_row.pronargdefaults::pg_catalog.text,
+    COALESCE(function_row.proargdefaults::pg_catalog.text, '<null>'),
+    function_row.provariadic::pg_catalog.text,
+    function_row.proisstrict::pg_catalog.text,
+    function_row.prosecdef::pg_catalog.text,
+    function_row.provolatile::pg_catalog.text,
+    function_row.proparallel::pg_catalog.text,
+    function_row.proleakproof::pg_catalog.text,
+    pg_catalog.array_to_string(function_row.proconfig, E'\n'),
+    function_row.procost::pg_catalog.text,
+    function_row.prorows::pg_catalog.text,
+    COALESCE(function_row.probin, '<null>'),
+    COALESCE(function_row.prosqlbody::pg_catalog.text, '<null>'),
+    function_row.prosupport::pg_catalog.oid::pg_catalog.text,
+    owner_role.rolsuper::pg_catalog.text,
+    owner_role.rolbypassrls::pg_catalog.text,
+    owner_role.rolcreaterole::pg_catalog.text,
+    owner_role.rolcreatedb::pg_catalog.text,
+    owner_role.rolinherit::pg_catalog.text,
+    acl_snapshot.canonical_acl
+  ]::pg_catalog.text[]) WITH ORDINALITY field(value, ordinality)
+  WHERE function_row.oid=pg_catalog.to_regprocedure('trust.lock_reputation_subject(pg_catalog.uuid)')
+    AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_proc overload
+      WHERE overload.pronamespace=function_row.pronamespace
+        AND overload.proname=function_row.proname AND overload.oid<>function_row.oid);
+  IF actual_fingerprint IS DISTINCT FROM 'e013d9425ab7c2cd0c74de9d2a03da1526848ea8fff993477fe72cf5a0fb63cb' THEN
+    RAISE EXCEPTION 'reputation_lock_function_fingerprint_mismatch';
+  END IF;
+END;
+$identity_guard$;
 SELECT pg_catalog.to_regprocedure('trust.lock_reputation_subject(pg_catalog.uuid)') AS required_function;
 SELECT pg_catalog.pg_get_userbyid(function_row.proowner) AS owner_role,
+  language.lanname, function_row.prosrc, function_row.prokind,
+  function_row.proargtypes, function_row.proallargtypes, function_row.proargmodes,
+  function_row.proargnames, function_row.prorettype, function_row.proretset,
+  pg_catalog.pg_get_function_result(function_row.oid) AS result,
   function_row.prosecdef, function_row.provolatile, function_row.proisstrict,
   function_row.proconfig, function_row.proparallel, function_row.proleakproof,
+  acl.grantor, pg_catalog.pg_get_userbyid(acl.grantor) AS grantor_role,
   acl.grantee, acl.privilege_type, acl.is_grantable
-FROM pg_catalog.pg_proc function_row,
+FROM pg_catalog.pg_proc function_row
+JOIN pg_catalog.pg_language language ON language.oid=function_row.prolang,
   LATERAL pg_catalog.aclexplode(COALESCE(function_row.proacl,
     pg_catalog.acldefault('f',function_row.proowner))) acl
 WHERE function_row.oid=pg_catalog.to_regprocedure('trust.lock_reputation_subject(pg_catalog.uuid)');

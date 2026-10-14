@@ -1,0 +1,32 @@
+diff --git a/apps/lythaus-jobs/src/index.ts b/apps/lythaus-jobs/src/index.ts
+--- a/apps/lythaus-jobs/src/index.ts
++++ b/apps/lythaus-jobs/src/index.ts
+@@ -2172,6 +2172,9 @@
+         );
+       });
+       await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
++        const subject = await client.query<{ id: string }>(
++          `SELECT id FROM identity.users WHERE id = $1 FOR UPDATE`, [subjectId]);
++        if (!subject.rows[0]) throw new Error('privacy_subject_not_found');
+         await client.query(`DELETE FROM identity.auth_sessions WHERE user_id = $1`, [subjectId]);
+         await client.query(`DELETE FROM identity.refresh_token_families WHERE user_id = $1`, [subjectId]);
+         await client.query(`DELETE FROM identity.provider_links WHERE user_id = $1`, [subjectId]);
+@@ -2193,6 +2196,18 @@
+         await client.query(`DELETE FROM trust.reputation_profiles WHERE user_id = $1`, [subjectId]);
+         await client.query(`DELETE FROM trust.reward_redemptions WHERE user_id = $1`, [subjectId]);
+         await client.query(`UPDATE identity.users SET status = 'deleted', display_name = '[deleted]', deleted_at = COALESCE(deleted_at, now()), updated_at = now() WHERE id = $1`, [subjectId]);
++      });
++      return true;
++    });
++
++    // Must finish before the workflow records deletion completion. Uses existing
++    // Jobs DELETE privilege; no new privacy-role grant and no ledger-event purge.
++    await step.do('purge-terminal-reputation-balance', async () => {
++      await transaction(this.env.DB_JOBS_FRESH, async (client) => {
++        const subject = await client.query<{ status: string }>(
++          `SELECT status FROM trust.lock_reputation_subject($1::pg_catalog.uuid)`, [subjectId]);
++        if (subject.rows[0]?.status !== 'deleted') throw new Error('privacy_subject_not_terminal');
++        await client.query(`DELETE FROM trust.reputation_balances WHERE user_id = $1`, [subjectId]);
+       });
+       return true;
+     });

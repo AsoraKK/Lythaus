@@ -62,6 +62,7 @@ try {
   await run(['--experimental-strip-types', '--test', '--test-concurrency=1',
     'scripts/tests/reputation-lock-proposal-runner.test.mjs',
     'packages/db/tests/reputation-lock-candidate.test.mjs',
+    'packages/db/tests/reputation-lock-identity.test.mjs',
     'packages/db/tests/reputation-persistence.test.mjs'], target);
 } catch {
   console.error('Owned synthetic reputation fixture failed; no production target is supported.');

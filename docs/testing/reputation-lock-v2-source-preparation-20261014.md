@@ -1,10 +1,15 @@
 # Reputation lock v2: source preparation only
 
 Base reviewed: `fd00b1bf01d26df5fbbb6da5a707e87c08386742` (main).
+Latest observed main is `489aef297ff0b1a40744504594122c9ebc43930d` (#1021,
+Flutter-only changes); the proposal source paths are unchanged. This branch
+retains its reviewed base and does not edit or integrate the separate UI lane.
 This draft does not authorize SQL execution, installation, grants, caller
 activation, privacy changes, diagnostics, credentials, merge, or deployment.
 The install and verification SQL remain single outer comments. No workflow,
 migration manifest, canonical grants, registry, or runtime source changes here.
+Revision 2 follows review of draft head `481596268909f6d91aa7cc25d68439138590771d`.
+All revisions remain unapproved for execution. Original v1 files remain unchanged.
 
 ## Recovered evidence
 
@@ -31,9 +36,10 @@ confined to this disposable cluster. Running it is a separate execution action.
 | `processReputationSource` | Canonical outbox read commits before `processSingleReputationSignal` runs | Synthetic regression captures the subject, scrubs outbox, completes deletion, then delivers the already captured input |
 | `recordReputationSignal` | A returned `deleted` row proceeds to replay/ledger/profile writes | Inert v2 caller patch rejects `reputation_subject_deleted` immediately after acquiring the subject lock |
 | `refreshReputationProfile` | A returned `deleted` row proceeds to aggregate/profile/balance writes | Same terminal guard precedes all profile and aggregate reads/writes |
-| Account deletion final transaction | Deletes activity/profile before updating users to `deleted` | Real PostgreSQL deadlock regression prepared for opposing user-before-profile caller order; accepts either victim and requires SQLSTATE `40P01`, rollback, explicit retry/redelivery, and no duplicate event/activity/award |
+| Account deletion final transaction | Deletes activity/profile before updating users to `deleted` | Separate deterministic Jobs-victim and privacy-victim cases require `40P01`, rollback, retry/redelivery and no duplicate award; proposed user-first privacy patch remains unapplied |
 | Earlier balance/outbox cleanup | Commits in a separate transaction before final user tombstone | Unfixed activation blocker: a locked-user refresh in this interval can recreate an earlier-purged balance; characterization regression explicitly records the unsafe outcome |
-| Deleted delivery error | Existing Queue handling retries failures | No new ack/skip policy proposed; terminal-delivery acknowledgement/DLQ behavior needs separate review |
+| Deleted delivery error | Existing Queue handling retries failures | Unapplied typed-error and Queue patch handles only the genuine deleted-subject class after transaction rollback/release; other errors still propagate |
+| Function identity / rollback | v1 name/signature DROP and initial v2 verification omit exact body/language/grantor proof | Revision 2 shares a 34-field expected catalog fingerprint across install, verification and guarded rollback; drift refuses before REVOKE/DROP |
 
 Source anchors at this base: `packages/db/src/reputation.ts:149,321`;
 `apps/lythaus-jobs/src/index.ts:621,667,703,2044,2105,2141,2161,2175,2192`;
@@ -48,6 +54,64 @@ not make retained ledger events, balances, or activity appropriate to retain or
 recreate after deletion. Closing the multi-transaction cleanup interval and
 choosing a common lock order require the privacy lane/parent before activation.
 
+## Revision 2 proposals and limits
+
+The exact expected catalog fingerprint is
+`e013d9425ab7c2cd0c74de9d2a03da1526848ea8fff993477fe72cf5a0fb63cb`.
+`packages/db/tests/fixtures/reputation-lock-identity.json` lists the 34 fields.
+The digest uses ordered, length-prefixed UTF8 values and ordered length-prefixed
+ACL grantor/grantee/privilege/grant-option values. It covers exact body bytes,
+language, namespace/name, input/output types, argument names/modes/defaults,
+result, owner/attributes, strictness/definer/volatility/path, parallel/leakproof,
+cost/rows/support, and ACLs including grantors. Missing function or unexpected
+overload fails. The same guard precedes installation COMMIT, post-install catalog
+verification, and rollback REVOKE/DROP. No helper invocation is used to verify it.
+
+This is an **expected**, source-derived PostgreSQL 17 fingerprint, not an observed
+catalog result. Type OIDs, single-column TABLE metadata, result rendering, array
+rendering and ACL normalization must pass the authorized isolated positive case;
+unknown or differing output blocks approval. Negative PG sources cover body,
+language, signature, result, owner, path, strictness, PUBLIC/missing/delegated ACL
+and overload drift. The grantor/delegation case also changes grant option and adds
+an ACL recipient; it is not isolated proof of a grantor-only backend mutation.
+
+The fingerprint guard does not serialize a concurrent administrative replacement
+between verification and DROP. The missing protected installer must coordinate
+owner/schema writers and collect exact postconditions; this draft does not claim
+to close that administrative race or supply an installation workflow.
+
+The delegated-owner LOGIN test creates only a transactional synthetic role,
+simulates its session authorization, and SET ROLEs to postgres. Its membership
+still fails the strict owner-audience check. If the real authorized installation
+path requires such a delegate, the proposal currently **cannot install** through
+that path. No delegate allowlist, application-role exception, grants, credentials,
+or role changes are introduced. Exact real owner identity and a separately
+reviewed administrative-access boundary remain unresolved. Synthetic postgres
+is NOLOGIN; a simulated switch is not proof of an actual usable owner session.
+
+`reputation_subject_lock.privacy.patch.proposal` proposes user-before-profile
+locking in the final privacy transaction. Privacy lacks DELETE on balances, so
+the proposal does not put balance cleanup under that role or add a grant. A new
+idempotent Jobs step, after the user tombstone and before workflow completion,
+locks the terminal user through the proposed helper, requires `deleted`, and
+deletes the balance with existing Jobs privileges. Failure retries before
+deletion completion. Retained reputation ledger events are untouched. The unsafe
+pre-tombstone characterization remains a known defect, never acceptance. A
+separate unrun PG case exercises the proposed order/cleanup, rejects privacy-role
+balance DELETE, checks delayed delivery and cleanup retry, and preserves ledger
+bytes. Historical completed workflows/backfill and workflow version/drain plans
+need separate privacy review; this proposal does not alter them.
+
+`reputation_subject_lock.queue.patch.proposal` adds a typed helper only around
+the two reputation transaction entry points. Only a genuine
+`ReputationSubjectDeletedError` becomes a deleted outcome after rollback/release.
+The consumer then finishes remaining stages and uses its existing inbox/ack path.
+No blanket catch or independent early ack is proposed. Plain matching messages,
+forged error-shaped objects, deadlocks and connection errors propagate. Scrubbed
+outbox validation failures before these entry points remain failures; broader
+terminal/DLQ policy is unresolved. The DB, Queue and privacy patches must be
+reviewed and integrated together; none is applied to runtime source here.
+
 ## Reproducible validation sources
 
 `packages/db/tests/reputation-lock-proposal.postgres.mjs` covers canonical-role
@@ -58,6 +122,14 @@ domain shadowing, isolation rejection, same-subject serialization, source replay
 different subjects, status writer ordering, stale refresh, rollback, targeted
 reversal, missing subjects, deletion versus captured delivery, actual deadlock
 victim rollback/redelivery, and helper install/drop rollback.
+Every PG subtest now runs through a per-test `finally`: release JS barriers,
+roll back observer role/DDL changes, cancel only owned test client work, settle
+pending promises, roll back, then disconnect. The two deadlock cases establish
+the long-timeout waiter first, then create the cycle with a chosen short-timeout
+detector and require that exact victim's `40P01`. Only the synthetic bootstrap
+sets test session deadlock timeouts before switching roles; no production
+parameter privilege or managed-role capability is asserted. These cases and
+cleanup paths are source preparations, not executed validation.
 
 The preflight test includes a v1 defect control: an incoming membership inherits
 EXECUTE under v1 but v2 rejects installation. Native mock controls also show both
@@ -68,12 +140,14 @@ Source-only checks run for this draft:
 ```sh
 node --experimental-strip-types --test --test-concurrency=1 \
   packages/db/tests/reputation-lock-candidate.test.mjs \
+  packages/db/tests/reputation-lock-identity.test.mjs \
   packages/db/tests/reputation-persistence.test.mjs \
   scripts/tests/reputation-lock-proposal-runner.test.mjs
 git apply --check database/planetscale/proposals/reputation_subject_lock.v2.patch.proposal
 ```
 
-Result: **23/23 mock/boundary tests pass**; patch dry run and JavaScript syntax
+Result: **61/61 native mock/static/boundary tests pass** (including 34 static
+fingerprint field mutation controls); all three unapplied patch dry runs and syntax
 checks pass. No PostgreSQL connection, Docker operation, SQL, provider diagnostic,
 credential read, or production action was performed for these checks.
 
@@ -112,7 +186,7 @@ full-file SHA256 values remain:
 | verify | `35f8fe76fa3bab02c2388fba45a49352aa6918e04e38e2ed4a9be38b133e87fd` |
 | caller patch | `7739004a2198740908ae99e82682890c18edb00222de3595e137e135ef5835d1` |
 
-Version 2 files require a new exact approval; no old hash authorizes new bytes:
+Prior draft v2 bytes at `48159626` (superseded, not current execution approval):
 
 | v2 file | Bytes | SHA256 |
 | --- | ---: | --- |
@@ -121,9 +195,20 @@ Version 2 files require a new exact approval; no old hash authorizes new bytes:
 | `reputation_subject_lock.v2.verify.sql.proposal` | 4503 | `fd3480c3e0b3cea6814377ca877ce3acdb7aad692ace7060fdeb0c5f6f8e9a76` |
 | `reputation_subject_lock.v2.patch.proposal` | 1562 | `a78a085e861b30dac7881cdefcf237567d62ef537b1bbce47a3004d8dc1c6a2a` |
 
-The unchanged inert v1 rollback names the same proposed function and role;
-restore/drain callers first, then an approved owner may revoke/drop without
-CASCADE. Rollback is not approved or executed by this draft.
+Revision 2 current bytes require a new exact approval; no prior hash authorizes
+them. Use only the new guarded v2 rollback for further review, never the retained
+unguarded v1 rollback. Restore/drain callers first; no CASCADE or ledger rewrite.
+Rollback is not approved or executed by this draft.
+
+| Revision 2 file/payload | Bytes | SHA256 |
+| --- | ---: | --- |
+| `reputation_subject_lock.v2.sql.proposal` | 10905 | `5220a5e176c6d753c3a322449d4ba048c7edabb26a5fb9850567a3e8041b0215` |
+| marked install payload | 10244 | `1a5e24f8cb73ddd3830748c25321906c07a9200f83f8f6fc2855e1a1245aa5b1` |
+| `reputation_subject_lock.v2.verify.sql.proposal` | 8914 | `365e8cf5d2d6707b6520be797011bb518b84b5452078be39b167248948f113cb` |
+| `reputation_subject_lock.v2.rollback.sql.proposal` | 4673 | `eafcbec1bfbbb36ec71db9179491f09df44176a98945789256f22497b82662a9` |
+| `reputation_subject_lock.v2.patch.proposal` | 2424 | `144ca6caee566bcd0b32ff4a5eec6a1573103aaab898cfb38ba44cc782436e25` |
+| `reputation_subject_lock.queue.patch.proposal` | 3018 | `55d75e68a780e73347df24811f7140b6c9d61e56f5c815bf569d22523361954e` |
+| `reputation_subject_lock.privacy.patch.proposal` | 1970 | `28cd8c1ccab76dc2d9ad3fb943fe31e119c2e1268bc42b5f4b198de1724c0b7d` |
 
 ## Remaining approval prerequisites
 
@@ -135,6 +220,8 @@ CASCADE. Rollback is not approved or executed by this draft.
   validation when selected. No checks on a different head substitute for this.
 - Resolve final privacy lock order, pre-tombstone balance cleanup interval,
   whole-transaction retry/terminal handling, and deletion retention semantics.
+  Review proposed patches and real Workflow/Queue runtime behavior; source mocks
+  and the unrun isolated SQL helper cases do not establish this acceptance.
 - Obtain approved actual Jobs-session identity/isolation/search-path/effective
   privileges and a complete effective-audience catalog inspection. Configuration
   usernames and modeled SET SESSION AUTHORIZATION sessions are not that proof.
@@ -142,6 +229,8 @@ CASCADE. Rollback is not approved or executed by this draft.
   owner path, exact SHA/hash inputs, bounded preflight/postconditions/rollback,
   evidence, and concurrency controls. No such installer is provided here; broad
   migration workflows and ephemeral credential fallbacks remain excluded.
+  Resolve the delegated-owner LOGIN conflict without loosening app-role isolation,
+  then confirm the exact authorized owner session through an approved path.
 - Reconcile this helper with the approved migration manifest, migration registry,
   resource registry and rollback bookkeeping. The helper is outside approved
   migrations 0000–0020; no migration number is reserved or schema applied here.
