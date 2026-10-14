@@ -12,6 +12,7 @@ import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/core/routing/app_router.dart';
 import 'package:lythaus/core/routing/url_strategy.dart';
 import 'package:lythaus/core/config/web_release_guard.dart';
+import 'package:lythaus/core/config/web_release_reload_gate.dart';
 import 'package:lythaus/core/config/web_release_update_bridge.dart';
 import 'package:lythaus/design_system/index.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
@@ -58,7 +59,7 @@ class _LythausAppState extends ConsumerState<LythausApp> {
   ProviderSubscription<ContentMutationRegistry>? _contentMutationSub;
   ProviderSubscription<PendingAuthenticatedOperations>? _pendingOperationsSub;
   ProviderSubscription<PostCreationState>? _postCreationSub;
-  int _reloadSafetyRevision = 0;
+  WebReleaseReloadGate? _reloadGate;
 
   @override
   void initState() {
@@ -84,6 +85,17 @@ class _LythausAppState extends ConsumerState<LythausApp> {
     });
 
     if (isReleaseWebBuild) {
+      _reloadGate = WebReleaseReloadGate(
+        registry: ref.read(contentMutationRegistryProvider),
+        authSessionRevision: () => ref.read(authSessionRevisionProvider),
+        authLoading: () => ref.read(authStateProvider).isLoading,
+        hasPendingAuthenticatedWork: () =>
+            ref.read(pendingAuthenticatedOperationsProvider).hasPending,
+        postCanSafelyReload: () =>
+            ref.read(postCreationProvider).canSafelyReload,
+        hasFocusedTextEntry: _hasFocusedTextEntry,
+        setCanReload: setWebReleaseCanReload,
+      );
       FocusManager.instance.addListener(_scheduleReloadSafetySync);
       _contentMutationSub = ref.listenManual(
         contentMutationRegistryProvider,
@@ -108,14 +120,13 @@ class _LythausAppState extends ConsumerState<LythausApp> {
 
   @override
   void dispose() {
-    _reloadSafetyRevision++;
+    _reloadGate?.dispose();
     _authSessionRevisionSub?.close();
     _contentMutationSub?.close();
     _pendingOperationsSub?.close();
     _postCreationSub?.close();
     if (isReleaseWebBuild) {
       FocusManager.instance.removeListener(_scheduleReloadSafetySync);
-      setWebReleaseCanReload(false);
     }
     _authStateSub?.close();
     super.dispose();
@@ -123,41 +134,14 @@ class _LythausAppState extends ConsumerState<LythausApp> {
 
   void _scheduleReloadSafetySync() {
     if (!isReleaseWebBuild || !mounted) return;
-    setWebReleaseCanReload(false);
-    final revision = ++_reloadSafetyRevision;
-    unawaited(_syncReloadSafety(revision));
+    final sync = _reloadGate?.schedule();
+    if (sync != null) unawaited(sync);
   }
 
-  Future<void> _syncReloadSafety(int revision) async {
-    final registry = ref.read(contentMutationRegistryProvider);
-    final authRevision = ref.read(authSessionRevisionProvider);
-    final registryEpoch = registry.sessionEpoch;
-    try {
-      await registry.flushPendingJournalWrites().timeout(
-        const Duration(seconds: 5),
-      );
-    } catch (_) {
-      return;
-    }
-    if (!mounted ||
-        revision != _reloadSafetyRevision ||
-        authRevision != ref.read(authSessionRevisionProvider) ||
-        registryEpoch != registry.sessionEpoch) {
-      return;
-    }
-
-    final authState = ref.read(authStateProvider);
-    final postState = ref.read(postCreationProvider);
+  bool _hasFocusedTextEntry() {
     final focusedContext = FocusManager.instance.primaryFocus?.context;
-    final hasFocusedTextEntry =
-        focusedContext?.findAncestorWidgetOfExactType<EditableText>() != null;
-    final canReload =
-        !authState.isLoading &&
-        !hasFocusedTextEntry &&
-        registry.canSafelyReload &&
-        !ref.read(pendingAuthenticatedOperationsProvider).hasPending &&
-        postState.canSafelyReload;
-    setWebReleaseCanReload(canReload);
+    return focusedContext?.findAncestorWidgetOfExactType<EditableText>() !=
+        null;
   }
 
   @override

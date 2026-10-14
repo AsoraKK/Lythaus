@@ -46,11 +46,18 @@ too.
 
 The app keeps its authentication cookies and secure content-recovery storage.
 The updater does not clear local storage, cookies, IndexedDB, or account data.
-Its retry marker lives in `sessionStorage` for the current tab only and prevents
-the same candidate from causing a reload loop. If the browser serves a stale
-document after navigation, that tab stays open with an update-ready action.
-If `sessionStorage` cannot record the marker, the update stays ready but the
-reload action remains paused until the loop guard can be stored.
+Its attempted-release IDs live in `sessionStorage` for the current tab only.
+They prevent the same candidate from causing a reload loop and are cleared only
+after that release identity is actually loaded. If the browser serves a stale
+document or manifest after navigation, the candidate remains fenced and the tab
+stays open with an update-ready action. A later deployment with a different
+release identity can still trigger an automatic reload. If `sessionStorage`
+cannot record the fence, the update stays ready but automatic reload is paused.
+
+Before navigation, the watcher rechecks that the verified manifest candidate is
+still current and that the Flutter safety gate is still open. If a newer release
+or rollback appears during asset verification, it verifies the new candidate
+instead of navigating to the superseded one.
 
 Reload waits for secure recovery-journal writes to settle, account/session
 transitions to finish, authenticated write requests to complete, and active
@@ -68,14 +75,20 @@ while the update banner waits for the app to report a safe reload state.
 
 ## Local checks
 
-Run the release metadata and cache checks with:
+Run the release metadata, JavaScript cache checks, and compiled Flutter gate
+browser test with:
 
 ```sh
 node --test scripts/tests/version-web-entrypoints.test.mjs
 node scripts/tests/web-release-cache.browser.mjs
+flutter build web --debug --no-pub --no-wasm-dry-run --no-web-resources-cdn --target test/browser/web_release_gate_entry.dart --output build/web-release-gate-fixture
+node scripts/tests/web-release-gate.browser.mjs
 flutter test test/features/feed/application/content_mutation_test.dart test/features/feed/application/post_creation_state_test.dart test/core/network/pending_authenticated_operations_test.dart
 ```
 
-The browser test covers an open tab receiving a release, an active draft,
-independent tabs, rollback, repeated version signals, a stale document response,
-an HTML SPA fallback, a stale manifest response, and offline recovery.
+The JavaScript browser test covers stale bundles and manifests, multiple tabs,
+rollback, release and safety-gate races, repeated version signals, an HTML SPA
+fallback, and offline recovery. The compiled Flutter browser test runs the real
+Dart reload gate and web bridge while editing a post draft, saving it to the
+recovery journal, holding an authenticated operation, and switching accounts
+while a journal write is pending.

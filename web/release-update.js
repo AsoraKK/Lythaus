@@ -21,6 +21,7 @@
     checking: false,
     confirming: false,
     reloadRequested: false,
+    candidateGeneration: 0,
   };
 
   let pollTimer = null;
@@ -28,18 +29,38 @@
   let bannerMessage = null;
   let reloadButton = null;
 
-  function attemptedReleaseId() {
+  function readAttemptedReleaseIds() {
     try {
-      return window.sessionStorage.getItem(attemptStorageKey);
+      const stored = window.sessionStorage.getItem(attemptStorageKey);
+      if (stored === null) return [];
+      if (releaseIdPattern.test(stored)) return [stored.toLowerCase()];
+      const value = JSON.parse(stored);
+      if (value?.schemaVersion !== 1 || !Array.isArray(value.releaseIds)) {
+        return [];
+      }
+      return [...new Set(value.releaseIds
+        .filter((id) => typeof id === 'string' && releaseIdPattern.test(id))
+        .map((id) => id.toLowerCase()))];
     } catch (_) {
-      return null;
+      return [];
     }
+  }
+
+  function attemptedReleaseId() {
+    const ids = readAttemptedReleaseIds();
+    return ids.length === 0 ? null : ids[ids.length - 1];
+  }
+
+  function hasAttemptedRelease(releaseId) {
+    if (!releaseId) return false;
+    return readAttemptedReleaseIds().includes(releaseId.toLowerCase());
   }
 
   function canRecordAttempt() {
     try {
       const probeKey = `${attemptStorageKey}.probe`;
       window.sessionStorage.setItem(probeKey, '1');
+      if (window.sessionStorage.getItem(probeKey) !== '1') return false;
       window.sessionStorage.removeItem(probeKey);
       return true;
     } catch (_) {
@@ -49,19 +70,50 @@
 
   function rememberAttempt(releaseId) {
     try {
-      window.sessionStorage.setItem(attemptStorageKey, releaseId);
+      const normalized = releaseId.toLowerCase();
+      const ids = readAttemptedReleaseIds();
+      if (ids.includes(normalized)) return true;
+      ids.push(normalized);
+      window.sessionStorage.setItem(
+        attemptStorageKey,
+        JSON.stringify({ schemaVersion: 1, releaseIds: ids }),
+      );
       return true;
     } catch (_) {
       return false;
     }
   }
 
-  function clearAttempt() {
+  function clearAttempt(releaseId) {
     try {
-      window.sessionStorage.removeItem(attemptStorageKey);
+      const normalized = releaseId.toLowerCase();
+      const ids = readAttemptedReleaseIds();
+      const remaining = ids.filter((id) => id !== normalized);
+      if (remaining.length === ids.length) return;
+      if (remaining.length === 0) {
+        window.sessionStorage.removeItem(attemptStorageKey);
+      } else {
+        window.sessionStorage.setItem(
+          attemptStorageKey,
+          JSON.stringify({ schemaVersion: 1, releaseIds: remaining }),
+        );
+      }
     } catch (_) {
       // A storage restriction must not turn an ordinary page into an error.
     }
+  }
+
+  function observeRelease(releaseId) {
+    const normalized = releaseId?.toLowerCase() ?? null;
+    const available = normalized !== null &&
+      normalized !== currentReleaseId.toLowerCase();
+    if (state.available !== available ||
+        state.targetReleaseId !== (available ? normalized : null)) {
+      state.candidateGeneration += 1;
+    }
+    state.available = available;
+    state.targetReleaseId = available ? normalized : null;
+    if (!available) clearAttempt(currentReleaseId);
   }
 
   function validAsset(entry, pattern) {
@@ -201,7 +253,7 @@
       document.body.append(banner);
     }
 
-    const alreadyTried = attemptedReleaseId() === state.targetReleaseId;
+    const alreadyTried = hasAttemptedRelease(state.targetReleaseId);
     const attemptStorageAvailable = canRecordAttempt();
     bannerMessage.textContent = !attemptStorageAvailable
       ? 'An app update is ready. Browser storage is unavailable, so reloading is paused to prevent a reload loop.'
@@ -270,52 +322,49 @@
         !window.navigator.onLine || !canRecordAttempt()) {
       return false;
     }
-    if (!manual && attemptedReleaseId() === expectedReleaseId) return false;
+    if (!manual && hasAttemptedRelease(expectedReleaseId)) return false;
 
+    const candidateGeneration = state.candidateGeneration;
     state.confirming = true;
     renderBanner();
     try {
-      let candidate = null;
-      let verified = false;
-      for (let recheck = 0; recheck < 3; recheck += 1) {
-        candidate = await readReleaseManifest();
-        if (!candidate) return false;
-        if (candidate.releaseId.toLowerCase() === currentReleaseId.toLowerCase()) {
-          state.available = false;
-          state.targetReleaseId = null;
-          clearAttempt();
-          renderBanner();
-          return false;
-        }
-        if (candidate.releaseId.toLowerCase() !== expectedReleaseId.toLowerCase()) {
-          expectedReleaseId = candidate.releaseId;
-          state.targetReleaseId = candidate.releaseId;
-          state.available = true;
-          renderBanner();
-          continue;
-        }
-        if (await verifyCandidateAssets(candidate)) {
-          verified = true;
-          break;
-        }
+      const candidate = await readReleaseManifest();
+      if (state.candidateGeneration !== candidateGeneration) return false;
+      if (!candidate) return false;
+      const candidateId = candidate.releaseId.toLowerCase();
+      if (candidateId === currentReleaseId.toLowerCase()) {
+        observeRelease(currentReleaseId);
+        renderBanner();
+        return false;
+      }
+      if (candidateId !== expectedReleaseId.toLowerCase()) {
+        observeRelease(candidate.releaseId);
+        renderBanner();
         return false;
       }
 
-      if (!verified || !candidate ||
-          candidate.releaseId.toLowerCase() !== expectedReleaseId.toLowerCase() ||
+      if (!await verifyCandidateAssets(candidate)) return false;
+
+      if (state.candidateGeneration !== candidateGeneration ||
+          !state.available ||
+          state.targetReleaseId !== candidateId ||
           !state.canReload || !window.navigator.onLine) {
         return false;
       }
-
-      if (!manual && attemptedReleaseId() === candidate.releaseId) return false;
-      if (!rememberAttempt(candidate.releaseId)) return false;
+      if (!manual && hasAttemptedRelease(candidateId)) return false;
+      if (!rememberAttempt(candidateId)) return false;
       state.reloadRequested = true;
       renderBanner();
       window.location.reload();
       return true;
     } finally {
+      const candidateChanged =
+          state.candidateGeneration !== candidateGeneration;
       state.confirming = false;
       renderBanner();
+      if (candidateChanged && state.available && state.canReload) {
+        void tryReload(state.targetReleaseId, false);
+      }
     }
   }
 
@@ -329,13 +378,10 @@
       const manifest = await readReleaseManifest();
       if (!manifest) return;
       if (manifest.releaseId.toLowerCase() === currentReleaseId.toLowerCase()) {
-        state.available = false;
-        state.targetReleaseId = null;
-        clearAttempt();
+        observeRelease(currentReleaseId);
         return;
       }
-      state.available = true;
-      state.targetReleaseId = manifest.releaseId;
+      observeRelease(manifest.releaseId);
     } finally {
       state.checking = false;
       renderBanner();

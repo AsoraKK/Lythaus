@@ -221,7 +221,13 @@ class _AuthenticityBetaScreenState extends ConsumerState<AuthenticityBetaScreen>
   }
 
   void _syncReloadBlock() {
-    _reloadRegistry?.setReloadBlocked(
+    final registry = _reloadRegistry;
+    if (registry == null) return;
+    if (!mounted) {
+      registry.setReloadBlocked(_reloadBlockKey, false);
+      return;
+    }
+    registry.setReloadBlocked(
       _reloadBlockKey,
       _busy || _feedback.text.isNotEmpty,
     );

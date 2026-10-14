@@ -31,6 +31,8 @@ const serverState = {
   manifestMode: 'normal',
   manifestOverride: null,
   staleNextDocumentHtml: null,
+  staleManifestAfterDocument: null,
+  pausedHead: null,
   requests: [],
 };
 
@@ -72,6 +74,19 @@ function sendFile(request, response, file) {
   } catch {
     response.writeHead(404).end();
   }
+}
+
+function pauseHeadFor(file) {
+  let entered;
+  let resume;
+  return {
+    file,
+    used: false,
+    entered: new Promise((resolve) => { entered = resolve; }),
+    resume: new Promise((resolve) => { resume = resolve; }),
+    signalEntered: () => entered(),
+    release: () => resume(),
+  };
 }
 
 const server = createServer((request, response) => {
@@ -121,6 +136,10 @@ const server = createServer((request, response) => {
   ) {
     const html = serverState.staleNextDocumentHtml;
     serverState.staleNextDocumentHtml = null;
+    if (serverState.staleManifestAfterDocument !== null) {
+      serverState.manifestOverride = serverState.staleManifestAfterDocument;
+      serverState.staleManifestAfterDocument = null;
+    }
     response.writeHead(200, {
       'content-type': 'text/html; charset=utf-8',
       'cache-control': 'no-store',
@@ -128,6 +147,13 @@ const server = createServer((request, response) => {
     return;
   }
   const file = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
+  const pausedHead = serverState.pausedHead;
+  if (request.method === 'HEAD' && pausedHead?.file === file && !pausedHead.used) {
+    pausedHead.used = true;
+    pausedHead.signalEntered();
+    void pausedHead.resume.then(() => sendFile(request, response, file));
+    return;
+  }
   sendFile(request, response, file);
 });
 
@@ -261,6 +287,7 @@ try {
   const staleHtml = firstRelease.html;
   const staleCandidate = deployRelease('v2');
   serverState.staleNextDocumentHtml = staleHtml;
+  serverState.staleManifestAfterDocument = firstRelease.manifest;
   const staleNavigation = staleTab.page.waitForEvent('framenavigated', {
     timeout: 10000,
   });
@@ -270,11 +297,17 @@ try {
   await checkForUpdate(staleTab.page);
   await staleNavigation;
   await staleTab.page.waitForFunction(
-    (expected) =>
+    () =>
       window.release === 'v1' &&
-      window.lythausReleaseUpdates.snapshot().attemptedReleaseId === expected,
+      !window.lythausReleaseUpdates.snapshot().checking,
+  );
+  assert.equal(
+    await staleTab.page.evaluate(
+      () => window.lythausReleaseUpdates.snapshot().attemptedReleaseId,
+    ),
     staleCandidate.manifest.releaseId,
   );
+  serverState.manifestOverride = null;
   await staleTab.page.evaluate(() =>
     window.lythausReleaseUpdates.setCanReload(true),
   );
@@ -387,6 +420,81 @@ try {
   );
   await workerTab.page.waitForTimeout(250);
   assert.equal(workerTab.navigationCount(), workerNavsBefore);
+
+  const candidateRaceContext = await browser.newContext();
+  const candidateRaceTab = await openTab(candidateRaceContext, 'v3');
+  const candidateB = deployRelease('v4');
+  await checkForUpdate(candidateRaceTab.page);
+  const candidateBHead = pauseHeadFor(candidateB.manifest.updateClient.file);
+  serverState.pausedHead = candidateBHead;
+  const candidateRaceNavs = candidateRaceTab.navigationCount();
+  await candidateRaceTab.page.evaluate(() =>
+    window.lythausReleaseUpdates.setCanReload(true),
+  );
+  await candidateBHead.entered;
+  const candidateC = deployRelease('v5');
+  await candidateRaceTab.page.evaluate(() =>
+    window.lythausReleaseUpdates.checkNow(),
+  );
+  await candidateRaceTab.page.waitForFunction(
+    () => !window.lythausReleaseUpdates.snapshot().checking,
+  );
+  serverState.pausedHead = null;
+  candidateBHead.release();
+  await waitForRelease(candidateRaceTab.page, 'v5');
+  assert.equal(candidateRaceTab.navigationCount(), candidateRaceNavs + 1);
+
+  const rollbackRaceContext = await browser.newContext();
+  const rollbackRaceTab = await openTab(rollbackRaceContext, 'v5');
+  const rollbackDuringCheck = deployRelease('v3');
+  await checkForUpdate(rollbackRaceTab.page);
+  const rollbackHead = pauseHeadFor(rollbackDuringCheck.manifest.updateClient.file);
+  serverState.pausedHead = rollbackHead;
+  const rollbackRaceNavs = rollbackRaceTab.navigationCount();
+  await rollbackRaceTab.page.evaluate(() =>
+    window.lythausReleaseUpdates.setCanReload(true),
+  );
+  await rollbackHead.entered;
+  const afterRollback = deployRelease('v6');
+  await rollbackRaceTab.page.evaluate(() =>
+    window.lythausReleaseUpdates.checkNow(),
+  );
+  await rollbackRaceTab.page.waitForFunction(
+    () => !window.lythausReleaseUpdates.snapshot().checking,
+  );
+  serverState.pausedHead = null;
+  rollbackHead.release();
+  await waitForRelease(rollbackRaceTab.page, 'v6');
+  assert.equal(rollbackRaceTab.navigationCount(), rollbackRaceNavs + 1);
+
+  const safetyRaceContext = await browser.newContext();
+  const safetyRaceTab = await openTab(safetyRaceContext, 'v6');
+  const deniedCandidate = deployRelease('v7');
+  await checkForUpdate(safetyRaceTab.page);
+  const deniedHead = pauseHeadFor(deniedCandidate.manifest.updateClient.file);
+  serverState.pausedHead = deniedHead;
+  const deniedRaceNavs = safetyRaceTab.navigationCount();
+  await safetyRaceTab.page.evaluate(() =>
+    window.lythausReleaseUpdates.setCanReload(true),
+  );
+  await deniedHead.entered;
+  await safetyRaceTab.page.evaluate(() =>
+    window.lythausReleaseUpdates.setCanReload(false),
+  );
+  serverState.pausedHead = null;
+  deniedHead.release();
+  await safetyRaceTab.page.waitForFunction(
+    () => !window.lythausReleaseUpdates.snapshot().confirming,
+  );
+  assert.equal(safetyRaceTab.navigationCount(), deniedRaceNavs);
+  assert.equal(
+    await safetyRaceTab.page.evaluate(() => window.release),
+    'v6',
+  );
+  await safetyRaceTab.page.evaluate(() =>
+    window.lythausReleaseUpdates.setCanReload(true),
+  );
+  await waitForRelease(safetyRaceTab.page, 'v7');
   await checkForUpdate(workerTab.page);
   assert.equal(
     await workerTab.page.evaluate(() => window.release),
@@ -412,6 +520,10 @@ try {
         'rollback reloads by release identity',
         'repeated signal does not loop',
         'stale document response is rejected without looping',
+        'stale manifest cannot clear a candidate reload fence',
+        'candidate verification restarts when a newer release arrives',
+        'candidate verification restarts for a newer release after rollback',
+        'a closed Flutter safety gate cancels verification reload',
         'blocked session storage pauses reload until the loop guard is available',
         'HTML SPA fallback is not accepted as a manifest',
         'offline polling waits for connectivity',
@@ -432,6 +544,9 @@ try {
     restrictedContext.close(),
     offlineContext.close(),
     workerContext.close(),
+    candidateRaceContext.close(),
+    rollbackRaceContext.close(),
+    safetyRaceContext.close(),
   ]);
 } finally {
   await browser.close();
