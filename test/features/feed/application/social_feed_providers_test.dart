@@ -512,6 +512,180 @@ void main() {
   );
 
   test(
+    'tag search ignores loadMore during refresh and accepts refreshed cursor cycle',
+    () async {
+      final repo = FakeSocialFeedRepository();
+      repo.discoverResponseQueues[null] = [
+        repo.searchPage('before-refresh', nextCursor: 'cursor-B'),
+        repo.searchPage('refreshed', nextCursor: 'cursor-A'),
+      ];
+      repo.discoverResponseQueues['cursor-B'] = [
+        repo.searchPage('old-generation-page', nextCursor: 'cursor-C'),
+      ];
+      repo.discoverResponseQueues['cursor-A'] = [
+        repo.searchPage('fresh-page', nextCursor: 'cursor-B'),
+      ];
+      final container = ProviderContainer(
+        overrides: [
+          socialFeedServiceProvider.overrideWithValue(repo),
+          jwtProvider.overrideWith((ref) async => null),
+        ],
+      );
+      const key = (tag: 'tag', tokenVersion: 0);
+      final subscription = container.listen(
+        feedSearchProvider(key),
+        (previous, next) {},
+      );
+      addTearDown(subscription.close);
+      addTearDown(container.dispose);
+
+      await container.read(feedSearchProvider(key).future);
+      final notifier = container.read(feedSearchProvider(key).notifier);
+      repo
+        ..delayedDiscoverCursor = null
+        ..delayedDiscoverResponse = Completer<FeedResponse>()
+        ..delayedDiscoverRequestStarted = Completer<void>();
+      final refreshResponse = repo.delayedDiscoverResponse!;
+      final refreshStarted = repo.delayedDiscoverRequestStarted!;
+      final refresh = notifier.refresh();
+      await refreshStarted.future;
+      expect(container.read(feedSearchProvider(key)).isLoading, isTrue);
+
+      await notifier.loadMore();
+      expect(repo.discoverCursors, [null, null]);
+      refreshResponse.complete(
+        repo.searchPage('refreshed', nextCursor: 'cursor-A'),
+      );
+      await refresh;
+      final refreshedState = container.read(feedSearchProvider(key)).value!;
+      expect(refreshedState.posts.map((post) => post.id), ['refreshed']);
+      expect(refreshedState.nextCursor, 'cursor-A');
+      await notifier.loadMore();
+
+      final loaded = container.read(feedSearchProvider(key)).value!;
+      expect(loaded.posts.map((post) => post.id), ['refreshed', 'fresh-page']);
+      expect(loaded.nextCursor, 'cursor-B');
+      expect(repo.discoverCursors, [null, null, 'cursor-A']);
+    },
+  );
+
+  test(
+    'tag search stale page cannot overwrite or release a refreshed page lock',
+    () async {
+      final repo = FakeSocialFeedRepository();
+      repo.discoverResponseQueues[null] = [
+        repo.searchPage('before-refresh', nextCursor: 'cursor-A'),
+        repo.searchPage('refreshed', nextCursor: 'cursor-B'),
+      ];
+      repo
+        ..delayedDiscoverCursor = 'cursor-A'
+        ..delayedDiscoverResponse = Completer<FeedResponse>()
+        ..delayedDiscoverRequestStarted = Completer<void>();
+      final oldPageResponse = repo.delayedDiscoverResponse!;
+      final oldPageStarted = repo.delayedDiscoverRequestStarted!;
+      final container = ProviderContainer(
+        overrides: [
+          socialFeedServiceProvider.overrideWithValue(repo),
+          jwtProvider.overrideWith((ref) async => null),
+        ],
+      );
+      const key = (tag: 'tag', tokenVersion: 0);
+      final subscription = container.listen(
+        feedSearchProvider(key),
+        (previous, next) {},
+      );
+      addTearDown(subscription.close);
+      addTearDown(container.dispose);
+
+      await container.read(feedSearchProvider(key).future);
+      final notifier = container.read(feedSearchProvider(key).notifier);
+      final oldLoadMore = container
+          .read(feedSearchProvider(key).notifier)
+          .loadMore();
+      await oldPageStarted.future;
+
+      await notifier.refresh();
+      repo
+        ..delayedDiscoverCursor = 'cursor-B'
+        ..delayedDiscoverResponse = Completer<FeedResponse>()
+        ..delayedDiscoverRequestStarted = Completer<void>();
+      final currentPageResponse = repo.delayedDiscoverResponse!;
+      final currentPageStarted = repo.delayedDiscoverRequestStarted!;
+      final currentLoadMore = notifier.loadMore();
+      await currentPageStarted.future;
+
+      oldPageResponse.complete(
+        repo.searchPage('stale-old-generation-page', nextCursor: 'cursor-B'),
+      );
+      await oldLoadMore;
+      final currentState = container.read(feedSearchProvider(key)).value!;
+      expect(currentState.posts.map((post) => post.id), ['refreshed']);
+      expect(currentState.nextCursor, 'cursor-B');
+
+      final duplicateLoadMore = notifier.loadMore();
+      await container.pump();
+      expect(
+        repo.discoverCursors.where((cursor) => cursor == 'cursor-B'),
+        hasLength(1),
+      );
+      currentPageResponse.complete(
+        repo.searchPage('from-current-generation', nextCursor: 'cursor-C'),
+      );
+      await Future.wait([currentLoadMore, duplicateLoadMore]);
+      final loaded = container.read(feedSearchProvider(key)).value!;
+      expect(loaded.posts.map((post) => post.id), [
+        'refreshed',
+        'from-current-generation',
+      ]);
+      expect(loaded.nextCursor, 'cursor-C');
+    },
+  );
+
+  test('tag search ignores a stale overlapping refresh response', () async {
+    final repo = FakeSocialFeedRepository();
+    final container = ProviderContainer(
+      overrides: [
+        socialFeedServiceProvider.overrideWithValue(repo),
+        jwtProvider.overrideWith((ref) async => null),
+      ],
+    );
+    const key = (tag: 'tag', tokenVersion: 0);
+    final subscription = container.listen(
+      feedSearchProvider(key),
+      (previous, next) {},
+    );
+    addTearDown(subscription.close);
+    addTearDown(container.dispose);
+
+    await container.read(feedSearchProvider(key).future);
+    final notifier = container.read(feedSearchProvider(key).notifier);
+    repo
+      ..delayedDiscoverCursor = null
+      ..delayedDiscoverResponse = Completer<FeedResponse>()
+      ..delayedDiscoverRequestStarted = Completer<void>();
+    final olderResponse = repo.delayedDiscoverResponse!;
+    final olderStarted = repo.delayedDiscoverRequestStarted!;
+    final olderRefresh = notifier.refresh();
+    await olderStarted.future;
+
+    repo
+      ..delayedDiscoverResponse = Completer<FeedResponse>()
+      ..delayedDiscoverRequestStarted = Completer<void>();
+    final newerResponse = repo.delayedDiscoverResponse!;
+    final newerStarted = repo.delayedDiscoverRequestStarted!;
+    final newerRefresh = notifier.refresh();
+    await newerStarted.future;
+    newerResponse.complete(repo.searchPage('newest-refresh'));
+    await newerRefresh;
+
+    olderResponse.complete(repo.searchPage('stale-refresh'));
+    await olderRefresh;
+    final refreshed = container.read(feedSearchProvider(key)).value!;
+    expect(refreshed.posts.map((post) => post.id), ['newest-refresh']);
+    expect(repo.discoverCancellations[1]?.isCancelled, isTrue);
+  });
+
+  test(
     'search identity changes with the authentication token version',
     () async {
       final repo = FakeSocialFeedRepository();

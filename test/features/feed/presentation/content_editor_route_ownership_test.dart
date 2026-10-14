@@ -214,11 +214,12 @@ void main() {
         tester.widget<TextField>(find.byType(TextField).first).enabled,
         isFalse,
       );
-      final savedButton = find.widgetWithText(FilledButton, 'Edit saved');
+      final savedButton = find.widgetWithText(FilledButton, 'Close editor');
       expect(savedButton, findsOneWidget);
-      expect(tester.widget<FilledButton>(savedButton).onPressed, isNull);
+      expect(tester.widget<FilledButton>(savedButton).onPressed, isNotNull);
       await tester.tap(savedButton);
       await tester.pumpAndSettle();
+      expect(find.byType(ContentEditorScreen), findsNothing);
       verifyNever(
         () => fixture.repository.updatePost(
           postId: 'synthetic-post',
@@ -286,11 +287,12 @@ void main() {
         tester.widget<TextField>(find.byType(TextField).first).enabled,
         isFalse,
       );
-      final savedButton = find.widgetWithText(FilledButton, 'Edit saved');
+      final savedButton = find.widgetWithText(FilledButton, 'Close editor');
       expect(savedButton, findsOneWidget);
-      expect(tester.widget<FilledButton>(savedButton).onPressed, isNull);
+      expect(tester.widget<FilledButton>(savedButton).onPressed, isNotNull);
       await tester.tap(savedButton);
       await tester.pumpAndSettle();
+      expect(find.byType(ContentEditorScreen), findsNothing);
       verifyNever(
         () => fixture.dio.put<Map<String, dynamic>>(
           '/api/comments/synthetic-comment',
