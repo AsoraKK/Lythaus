@@ -43,8 +43,24 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
   final _textController = TextEditingController();
   final _focusNode = FocusNode();
-  bool _memberDialogOpen = false;
-  BuildContext? _appealDialogContext;
+  Object? _memberDialogOwner;
+  Object? _appealDialogOwner;
+  Object? _appealDialogRouteOwner;
+  NavigatorState? _appealDialogNavigator;
+  Route<dynamic>? _appealDialogRoute;
+
+  bool get _memberDialogOpen => _memberDialogOwner != null;
+
+  Object? _claimMemberDialog() {
+    if (_memberDialogOpen) return null;
+    final owner = Object();
+    _memberDialogOwner = owner;
+    return owner;
+  }
+
+  void _releaseMemberDialog(Object owner) {
+    if (identical(_memberDialogOwner, owner)) _memberDialogOwner = null;
+  }
 
   @override
   void initState() {
@@ -387,8 +403,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   void _showPostingPolicy() {
-    if (_memberDialogOpen) return;
-    _memberDialogOpen = true;
+    final owner = _claimMemberDialog();
+    if (owner == null) return;
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -402,7 +418,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           ),
         ],
       ),
-    ).whenComplete(() => _memberDialogOpen = false);
+    ).whenComplete(() => _releaseMemberDialog(owner));
   }
 
   void _handleSubmit() async {
@@ -464,8 +480,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   void _showDiscardDialog(BuildContext context) {
-    if (_memberDialogOpen) return;
-    _memberDialogOpen = true;
+    final owner = _claimMemberDialog();
+    if (owner == null) return;
     final registry = ref.read(contentMutationRegistryProvider);
     final epoch = registry.sessionEpoch;
     final actor = ref.read(currentUserProvider)?.id ?? 'session';
@@ -547,7 +563,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           ),
         ),
       ),
-    ).whenComplete(() => _memberDialogOpen = false);
+    ).whenComplete(() => _releaseMemberDialog(owner));
   }
 
   void _onPostCreated(BuildContext context, CreatePostSuccess result) {
@@ -607,15 +623,21 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       return;
     }
 
-    _memberDialogOpen = true;
+    final owner = _claimMemberDialog();
+    if (owner == null) return;
+    _appealDialogOwner = owner;
     final registry = ref.read(contentMutationRegistryProvider);
     final sessionEpoch = registry.sessionEpoch;
     var statementValue = '';
     try {
-      final statement = await showDialog<String>(
+      final navigator = Navigator.of(context, rootNavigator: true);
+      final route = DialogRoute<String>(
         context: context,
         builder: (dialogContext) {
-          _appealDialogContext = dialogContext;
+          if (!identical(_appealDialogOwner, owner) ||
+              sessionEpoch != registry.sessionEpoch) {
+            return const SizedBox.shrink();
+          }
           return AlertDialog(
             scrollable: true,
             title: Text(
@@ -645,8 +667,27 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             ],
           );
         },
+        barrierColor:
+            DialogTheme.of(context).barrierColor ??
+            Theme.of(context).dialogTheme.barrierColor ??
+            Colors.black54,
+        barrierDismissible: true,
+        barrierLabel: MaterialLocalizations.of(
+          context,
+        ).modalBarrierDismissLabel,
+        useSafeArea: true,
+        themes: InheritedTheme.capture(from: context, to: navigator.context),
+        traversalEdgeBehavior: TraversalEdgeBehavior.closedLoop,
       );
-      _appealDialogContext = null;
+      _appealDialogRouteOwner = owner;
+      _appealDialogNavigator = navigator;
+      _appealDialogRoute = route;
+      final statement = await navigator.push<String>(route);
+      if (identical(_appealDialogRouteOwner, owner)) {
+        _appealDialogRouteOwner = null;
+        _appealDialogNavigator = null;
+        _appealDialogRoute = null;
+      }
 
       if (!mounted ||
           sessionEpoch != registry.sessionEpoch ||
@@ -699,21 +740,36 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         ),
       );
     } finally {
-      _appealDialogContext = null;
-      _memberDialogOpen = false;
+      if (identical(_appealDialogOwner, owner)) {
+        _appealDialogOwner = null;
+      }
+      if (identical(_appealDialogRouteOwner, owner)) {
+        _appealDialogRouteOwner = null;
+        _appealDialogNavigator = null;
+        _appealDialogRoute = null;
+      }
+      _releaseMemberDialog(owner);
     }
   }
 
   void _dismissAppealDialog() {
-    final dialogContext = _appealDialogContext;
-    if (dialogContext == null) return;
-    _appealDialogContext = null;
+    final owner = _appealDialogOwner;
+    if (owner != null) {
+      _appealDialogOwner = null;
+      _releaseMemberDialog(owner);
+    }
+
+    if (_appealDialogRouteOwner == null) return;
+    final navigator = _appealDialogNavigator;
+    final route = _appealDialogRoute;
+    _appealDialogRouteOwner = null;
+    _appealDialogNavigator = null;
+    _appealDialogRoute = null;
+    if (navigator == null || route == null) return;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!dialogContext.mounted ||
-          ModalRoute.of(dialogContext)?.isCurrent != true) {
-        return;
-      }
-      Navigator.of(dialogContext).pop();
+      if (!navigator.mounted || !route.isActive) return;
+      navigator.removeRoute(route);
     });
   }
 }

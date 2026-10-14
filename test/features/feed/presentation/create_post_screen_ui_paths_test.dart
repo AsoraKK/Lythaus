@@ -86,6 +86,7 @@ void main() {
     ThemeData? theme,
     double textScale = 1,
     _AppealSubmitter? appealSubmitter,
+    Widget? home,
   }) {
     final canCreate = user != null;
     return ProviderScope(
@@ -114,7 +115,7 @@ void main() {
           ).copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
-        home: const CreatePostScreen(),
+        home: home ?? const CreatePostScreen(),
       ),
     );
   }
@@ -123,6 +124,24 @@ void main() {
     final appealButton = find.widgetWithText(TextButton, 'Appeal');
     await tester.ensureVisible(appealButton);
     await tester.tap(appealButton);
+    await tester.pumpAndSettle();
+  }
+
+  Widget composerLauncher() => Builder(
+    builder: (context) => Scaffold(
+      body: Center(
+        child: TextButton(
+          onPressed: () => Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(builder: (_) => const CreatePostScreen()),
+          ),
+          child: const Text('Open composer'),
+        ),
+      ),
+    ),
+  );
+
+  Future<void> launchComposer(WidgetTester tester) async {
+    await tester.tap(find.text('Open composer'));
     await tester.pumpAndSettle();
   }
 
@@ -542,6 +561,220 @@ void main() {
         find.text('Please provide at least 10 characters for your appeal.'),
         findsNothing,
       );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('account change before the first frame removes the appeal', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildWithState(appealableBlockedState, user: _testUser()),
+      );
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(CreatePostScreen)),
+      );
+      final open = tester
+          .widget<TextButton>(find.widgetWithText(TextButton, 'Appeal'))
+          .onPressed!;
+
+      open();
+      container.read(authStateProvider.notifier).setUser(_testUser(id: 'u2'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('account change removes appeal below a newer route', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildWithState(
+          appealableBlockedState,
+          user: _testUser(),
+          home: composerLauncher(),
+        ),
+      );
+      await launchComposer(tester);
+      await openAppeal(tester);
+      final composerContext = tester.element(find.byType(CreatePostScreen));
+      final navigator = Navigator.of(composerContext);
+      final container = ProviderScope.containerOf(composerContext);
+      final cover = navigator.push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('Cover route')),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      container.read(authStateProvider.notifier).setUser(_testUser(id: 'u2'));
+      await tester.pumpAndSettle();
+      final coverStayedOnTop = find.text('Cover route').evaluate().isNotEmpty;
+
+      navigator.pop();
+      await tester.pumpAndSettle();
+      await cover;
+
+      expect(coverStayedOnTop, isTrue);
+      expect(find.byType(CreatePostScreen), findsOneWidget);
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(
+        ModalRoute.of(tester.element(find.byType(CreatePostScreen)))?.isCurrent,
+        isTrue,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('account change releases a pending appeal for composer close', (
+      tester,
+    ) async {
+      final started = Completer<void>();
+      final response = Completer<bool>();
+      await tester.pumpWidget(
+        buildWithState(
+          appealableBlockedState,
+          user: _testUser(),
+          home: composerLauncher(),
+          appealSubmitter: (caseId, statement) {
+            if (!started.isCompleted) started.complete();
+            return response.future;
+          },
+        ),
+      );
+      await launchComposer(tester);
+      await openAppeal(tester);
+      await tester.enterText(
+        appealStatementField(),
+        'Please review this moderation decision.',
+      );
+      await tester.tap(find.text('Submit'));
+      await tester.pumpAndSettle();
+      await started.future;
+
+      ProviderScope.containerOf(
+        tester.element(find.byType(CreatePostScreen)),
+      ).read(authStateProvider.notifier).setUser(_testUser(id: 'u2'));
+      await tester.pumpAndSettle();
+      final close = tester
+          .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.close))
+          .onPressed!;
+      close();
+      await tester.pumpAndSettle();
+      final composerClosedWhileRequestPending = find
+          .text('Open composer')
+          .evaluate()
+          .isNotEmpty;
+
+      response.complete(true);
+      await tester.pumpAndSettle();
+      expect(composerClosedWhileRequestPending, isTrue);
+      expect(find.byType(CreatePostScreen), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('old appeal completion cannot unlock a newer policy dialog', (
+      tester,
+    ) async {
+      final started = Completer<void>();
+      final response = Completer<bool>();
+      await tester.pumpWidget(
+        buildWithState(
+          appealableBlockedState,
+          user: _testUser(),
+          home: composerLauncher(),
+          appealSubmitter: (caseId, statement) {
+            if (!started.isCompleted) started.complete();
+            return response.future;
+          },
+        ),
+      );
+      await launchComposer(tester);
+      await openAppeal(tester);
+      await tester.enterText(
+        appealStatementField(),
+        'Please review this moderation decision.',
+      );
+      await tester.tap(find.text('Submit'));
+      await tester.pumpAndSettle();
+      await started.future;
+
+      ProviderScope.containerOf(
+        tester.element(find.byType(CreatePostScreen)),
+      ).read(authStateProvider.notifier).setUser(_testUser(id: 'u2'));
+      await tester.pumpAndSettle();
+      final policyButton = find.widgetWithText(TextButton, 'Posting policy');
+      await tester.ensureVisible(policyButton);
+      await tester.tap(policyButton);
+      await tester.pumpAndSettle();
+      final policyOpenedWhileRequestPending =
+          find.byType(AlertDialog).evaluate().length == 1;
+
+      response.complete(true);
+      await tester.pumpAndSettle();
+      final openPolicy = tester.widget<TextButton>(policyButton).onPressed!;
+      openPolicy();
+      await tester.pumpAndSettle();
+      final dialogsAfterOldCompletion = find
+          .byType(AlertDialog)
+          .evaluate()
+          .length;
+
+      for (var count = 0; count < 2; count++) {
+        final done = find.text('Done');
+        if (done.evaluate().isEmpty) break;
+        await tester.tap(done.last);
+        await tester.pumpAndSettle();
+      }
+      final close = tester
+          .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.close))
+          .onPressed!;
+      close();
+      await tester.pumpAndSettle();
+
+      expect(policyOpenedWhileRequestPending, isTrue);
+      expect(dialogsAfterOldCompletion, 1);
+      expect(find.text('Open composer'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('disposing the composer removes its route-local appeal only', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildWithState(
+          appealableBlockedState,
+          user: _testUser(),
+          home: composerLauncher(),
+        ),
+      );
+      await launchComposer(tester);
+      await openAppeal(tester);
+      final composerContext = tester.element(find.byType(CreatePostScreen));
+      final navigator = Navigator.of(composerContext);
+      final composerRoute = ModalRoute.of(composerContext)!;
+      final cover = navigator.push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('Disposal cover')),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      navigator.removeRoute(composerRoute);
+      await tester.pumpAndSettle();
+      final coverStayedOnTop = find
+          .text('Disposal cover')
+          .evaluate()
+          .isNotEmpty;
+      final appealWasRemoved = find.byType(AlertDialog).evaluate().isEmpty;
+      navigator.pop();
+      await tester.pumpAndSettle();
+      await cover;
+
+      expect(coverStayedOnTop, isTrue);
+      expect(appealWasRemoved, isTrue);
+      expect(find.text('Open composer'), findsOneWidget);
+      expect(find.byType(AlertDialog), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
