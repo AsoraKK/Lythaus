@@ -69,7 +69,7 @@ try {
 } finally {
   try { await control?.end(); }
   finally {
-    if (created) execFileSync('docker', ['rm', '--force', name], { stdio: 'ignore' });
+    if (created) execFileSync('docker', ['rm', '--force', '--volumes', name], { stdio: 'ignore' });
     process.off('SIGINT', onInt); process.off('SIGTERM', onTerm);
   }
 }
