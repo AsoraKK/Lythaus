@@ -17,6 +17,7 @@ import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/features/feed/application/post_repository_impl.dart';
 import 'package:lythaus/features/feed/domain/models.dart' as domain;
 import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
+import 'package:lythaus/features/feed/presentation/content_editor_screen.dart';
 import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
@@ -34,6 +35,8 @@ const _discover = FeedModel(
 );
 
 class _StaticFeed extends LiveFeedController {
+  static int refreshCalls = 0;
+
   _StaticFeed()
     : super(
         LiveFeedState(
@@ -56,8 +59,10 @@ class _StaticFeed extends LiveFeedController {
   @override
   Future<void> loadMore() async {}
   @override
-  Future<void> refresh() async =>
-      state = const LiveFeedState(items: [], isInitialLoading: false);
+  Future<void> refresh() async {
+    refreshCalls++;
+    state = const LiveFeedState(items: [], isInitialLoading: false);
+  }
 }
 
 class _Adapter implements HttpClientAdapter {
@@ -273,6 +278,65 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Synthetic feed post'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'discover feed refreshes after a covered edit is explicitly closed',
+    (tester) async {
+      _StaticFeed.refreshCalls = 0;
+      final editAcknowledgement = Completer<ResponseBody>();
+      final adapter = _Adapter((request) async {
+        if (request.method == 'PUT' && request.path == '/api/posts/p1') {
+          return editAcknowledgement.future;
+        }
+        return _response({'items': <Object>[], 'nextCursor': null});
+      });
+      await _pump(tester, adapter, feed: true);
+      await tester.tap(find.byType(PopupMenuButton<String>).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Edit post'));
+      await tester.pumpAndSettle();
+      await _draft(tester, 'Revised from Discover', disclosure: 'AI-assisted');
+      await tester.tap(find.text('Submit edit'));
+      await _pumpUntil(
+        tester,
+        () => adapter.requests.any(
+          (request) =>
+              request.method == 'PUT' && request.path == '/api/posts/p1',
+        ),
+      );
+
+      Navigator.of(tester.element(find.byType(ContentEditorScreen))).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('Covering route')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      editAcknowledgement.complete(
+        _response({
+          'post': {
+            ..._post(),
+            'body': 'Revised from Discover',
+            'declaredCreationMode': 'ai_assisted',
+            'moderationState': 'under_review',
+          },
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Covering route'), findsOneWidget);
+
+      Navigator.of(tester.element(find.text('Covering route'))).pop();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(BackButton).first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Synthetic feed post'), findsNothing);
+      expect(
+        find.text('Edit submitted. Publication checks are pending.'),
+        findsOneWidget,
+      );
+      expect(_StaticFeed.refreshCalls, 1);
     },
   );
 
@@ -628,6 +692,133 @@ void main() {
         find.text('Under review. Publication checks are pending.'),
         findsOneWidget,
       );
+    },
+  );
+
+  testWidgets(
+    'post detail receives a covered edit acknowledgement when editor closes',
+    (tester) async {
+      final editAcknowledgement = Completer<ResponseBody>();
+      final adapter = _Adapter((request) async {
+        if (request.method == 'PUT' && request.path == '/api/posts/p1') {
+          return editAcknowledgement.future;
+        }
+        if (request.method == 'GET' && request.path == '/api/posts/p1') {
+          return _response({'post': _post()});
+        }
+        return _response({'items': <Object>[], 'nextCursor': null});
+      });
+      await _pump(tester, adapter);
+      await tester.tap(find.text('Open post'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Edit post'));
+      await tester.pumpAndSettle();
+      await _draft(tester, 'Revised synthetic post', disclosure: 'AI-assisted');
+      await tester.tap(find.text('Submit edit'));
+      await _pumpUntil(
+        tester,
+        () => adapter.requests.any(
+          (request) =>
+              request.method == 'PUT' && request.path == '/api/posts/p1',
+        ),
+      );
+
+      Navigator.of(tester.element(find.byType(ContentEditorScreen))).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('Covering route')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      editAcknowledgement.complete(
+        _response({
+          'post': {
+            ..._post(),
+            'body': 'Revised synthetic post',
+            'declaredCreationMode': 'ai_assisted',
+            'moderationState': 'under_review',
+          },
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Covering route'), findsOneWidget);
+
+      Navigator.of(tester.element(find.text('Covering route'))).pop();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(BackButton).first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Revised synthetic post'), findsOneWidget);
+      expect(find.text('Synthetic post'), findsNothing);
+      expect(
+        find.text('Under review. Publication checks are pending.'),
+        findsOneWidget,
+      );
+      expect(find.text('Authorship: Under review'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'comment thread receives a covered edit acknowledgement when editor closes',
+    (tester) async {
+      final editAcknowledgement = Completer<ResponseBody>();
+      final adapter = _Adapter((request) async {
+        if (request.method == 'PUT' && request.path == '/api/comments/c1') {
+          return editAcknowledgement.future;
+        }
+        if (request.method == 'GET' && request.path.endsWith('/comments')) {
+          return _response({
+            'items': [_comment('c1')],
+          });
+        }
+        return _response({'items': <Object>[], 'nextCursor': null});
+      });
+      await _pump(tester, adapter);
+      await _openComments(tester);
+      await tester.tap(find.text('Edit comment'));
+      await tester.pumpAndSettle();
+      await _draft(
+        tester,
+        'Revised synthetic comment',
+        disclosure: 'AI-assisted',
+      );
+      await tester.tap(find.text('Submit edit'));
+      await _pumpUntil(
+        tester,
+        () => adapter.requests.any(
+          (request) =>
+              request.method == 'PUT' && request.path == '/api/comments/c1',
+        ),
+      );
+
+      Navigator.of(tester.element(find.byType(ContentEditorScreen))).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('Covering route')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      editAcknowledgement.complete(
+        _response({
+          'id': 'c1',
+          'body': 'Revised synthetic comment',
+          'declaredCreationMode': 'ai_assisted',
+          'moderationState': 'under_review',
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Covering route'), findsOneWidget);
+
+      Navigator.of(tester.element(find.text('Covering route'))).pop();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(BackButton).first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Revised synthetic comment'), findsOneWidget);
+      expect(find.text('Comment c1'), findsNothing);
+      expect(
+        find.text('Under review. Publication checks are pending.'),
+        findsOneWidget,
+      );
+      expect(find.text('AI-assisted'), findsAtLeastNWidgets(1));
     },
   );
 

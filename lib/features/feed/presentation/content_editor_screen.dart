@@ -35,9 +35,12 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
   late final String _scope;
   String? _aiLabel;
   String? _error;
+  String? _successMessage;
+  Map<String, dynamic>? _completedRevision;
   bool _busy = false;
   bool _locked = false;
   bool _restoring = false;
+  bool _closingWithRevision = false;
   String? _draftStatus;
   int _draftVersion = 0;
   ProviderSubscription<String?>? _sessionSub;
@@ -76,6 +79,9 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
           _aiLabel = null;
           _locked = true;
           _busy = false;
+          _successMessage = null;
+          _completedRevision = null;
+          _closingWithRevision = false;
           _error =
               'Your session changed. Reopen your content after signing in.';
         });
@@ -141,6 +147,20 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
     );
   }
 
+  void _closeCompletedEdit() {
+    final revised = _completedRevision;
+    if (_closingWithRevision ||
+        revised == null ||
+        !_sessionValid ||
+        (ref.read(currentUserProvider)?.id ?? 'session') != _actor ||
+        ModalRoute.of(context)?.isCurrent != true ||
+        !TickerMode.valuesOf(context).enabled) {
+      return;
+    }
+    _closingWithRevision = true;
+    Navigator.of(context).pop(revised);
+  }
+
   @override
   void dispose() {
     _sessionSub?.close();
@@ -152,6 +172,7 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
     if (!_sessionValid ||
         _busy ||
         _restoring ||
+        _successMessage != null ||
         (ref.read(currentUserProvider)?.id ?? 'session') != _actor) {
       return;
     }
@@ -260,6 +281,18 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
           (ref.read(currentUserProvider)?.id ?? 'session') != _actor) {
         return;
       }
+      if (ModalRoute.of(context)?.isCurrent != true ||
+          !TickerMode.valuesOf(context).enabled) {
+        setState(() {
+          _busy = false;
+          _locked = true;
+          _completedRevision = Map<String, dynamic>.from(revised);
+          _successMessage = revised['moderationState'] == 'under_review'
+              ? 'Edit saved. Under review; this is not an authorship assessment.'
+              : 'Edit saved.';
+        });
+        return;
+      }
       Navigator.of(context).pop(revised);
     } catch (error) {
       final failure = contentMutationFailure(error);
@@ -286,7 +319,10 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !_busy,
+      canPop: !_busy && _successMessage == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _successMessage != null) _closeCompletedEdit();
+      },
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.isComment ? 'Edit comment' : 'Edit post'),
@@ -298,6 +334,13 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
               Text(
                 _error!,
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (_successMessage != null) ...[
+              Text(
+                _successMessage!,
+                style: TextStyle(color: Theme.of(context).colorScheme.primary),
               ),
               const SizedBox(height: 12),
             ],
@@ -348,10 +391,16 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
             ),
             const SizedBox(height: 16),
             FilledButton(
-              onPressed: _busy || _restoring ? null : _submit,
+              onPressed: _busy || _restoring
+                  ? null
+                  : _successMessage != null
+                  ? _closeCompletedEdit
+                  : _submit,
               child: Text(
                 _busy
                     ? 'Submitting…'
+                    : _successMessage != null
+                    ? 'Close editor'
                     : _locked
                     ? 'Retry same edit'
                     : 'Submit edit',

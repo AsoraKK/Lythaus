@@ -1,5 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -263,7 +265,11 @@ class _FeedSearchScreenState extends ConsumerState<FeedSearchScreen> {
     );
   }
 
-  void _retrySearch() => ref.invalidate(feedSearchProvider(_searchKey));
+  void _retrySearch([FeedSearchKey? key]) {
+    unawaited(
+      ref.read(feedSearchProvider(key ?? _searchKey).notifier).refresh(),
+    );
+  }
 
   Widget _scrollableResultState(Widget child) => LayoutBuilder(
     builder: (context, constraints) => SingleChildScrollView(
@@ -291,7 +297,7 @@ class _FeedSearchScreenState extends ConsumerState<FeedSearchScreen> {
             title: 'Tag search is temporarily unavailable.',
             subtitle: 'Try again in a moment.',
             actionLabel: 'Retry search',
-            onAction: _retrySearch,
+            onAction: () => _retrySearch(key),
           );
         case 'rate_limit_exceeded':
           return LythEmptyState(
@@ -299,7 +305,7 @@ class _FeedSearchScreenState extends ConsumerState<FeedSearchScreen> {
             title: 'You are searching too quickly.',
             subtitle: 'Wait a moment, then try again.',
             actionLabel: 'Try again',
-            onAction: _retrySearch,
+            onAction: () => _retrySearch(key),
           );
         case 'FEED_UNAVAILABLE':
           return _retryableError('This search service is not available.', key);
@@ -318,7 +324,7 @@ class _FeedSearchScreenState extends ConsumerState<FeedSearchScreen> {
             Text(message),
             const SizedBox(height: Spacing.md),
             FilledButton(
-              onPressed: () => ref.invalidate(feedSearchProvider(key)),
+              onPressed: () => _retrySearch(key),
               child: const Text('Retry search'),
             ),
           ],
@@ -328,11 +334,6 @@ class _FeedSearchScreenState extends ConsumerState<FeedSearchScreen> {
   }
 
   Future<void> _refreshSearch(FeedSearchKey key) async {
-    ref.invalidate(feedSearchProvider(key));
-    try {
-      await ref.read(feedSearchProvider(key).future);
-    } catch (_) {
-      // The provider retains the error for its explicit retry state.
-    }
+    await ref.read(feedSearchProvider(key).notifier).refresh();
   }
 }

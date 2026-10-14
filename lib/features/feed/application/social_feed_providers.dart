@@ -195,24 +195,52 @@ class FeedSearchNotifier
     extends AutoDisposeFamilyAsyncNotifier<FeedResponse, FeedSearchKey> {
   FeedRequestCancellation? _cancellation;
   bool _loadingMore = false;
+  final Set<String> _visitedCursors = {};
+  int _generation = 0;
 
   @override
-  Future<FeedResponse> build(FeedSearchKey arg) async {
+  Future<FeedResponse> build(FeedSearchKey arg) =>
+      _loadFirstPage(arg, ref.watch(jwtProvider.future));
+
+  Future<FeedResponse> _loadFirstPage(
+    FeedSearchKey key,
+    Future<String?> tokenFuture,
+  ) async {
+    ++_generation;
+    _cancellation?.cancel();
+    _visitedCursors.clear();
+    _loadingMore = false;
     final cancellation = FeedRequestCancellation();
     _cancellation = cancellation;
     ref.onDispose(cancellation.cancel);
-    final token = await ref.watch(jwtProvider.future);
+    final token = await tokenFuture;
     return ref
         .read(socialFeedServiceProvider)
         .getDiscoverFeed(
-          tag: arg.tag,
+          tag: key.tag,
           token: token,
           cancellation: cancellation,
         );
   }
 
+  Future<void> refresh() async {
+    final previous = state;
+    state = const AsyncLoading<FeedResponse>().copyWithPrevious(previous);
+    final refreshed = AsyncValue.guard(
+      () => _loadFirstPage(arg, ref.read(jwtProvider.future)),
+    );
+    final generation = _generation;
+    final cancellation = _cancellation;
+    final result = await refreshed;
+    if (_ownsRequest(generation, cancellation)) state = result;
+  }
+
   Future<void> loadMore() async {
-    final current = state.value;
+    final currentState = state;
+    if (currentState.isLoading) return;
+
+    final current = currentState.value;
+    final generation = _generation;
     final cancellation = _cancellation;
     if (_loadingMore ||
         current == null ||
@@ -226,6 +254,7 @@ class FeedSearchNotifier
     _loadingMore = true;
     try {
       final token = await ref.read(jwtProvider.future);
+      if (!_ownsRequest(generation, cancellation)) return;
       final nextPage = await ref
           .read(socialFeedServiceProvider)
           .getDiscoverFeed(
@@ -235,7 +264,14 @@ class FeedSearchNotifier
             token: token,
             cancellation: cancellation,
           );
-      if (cancellation.isCancelled) return;
+      if (!_ownsRequest(generation, cancellation)) return;
+
+      final nextCursor = nextPage.nextCursor;
+      if (nextCursor != null &&
+          (nextCursor == current.nextCursor ||
+              _visitedCursors.contains(nextCursor))) {
+        throw const FormatException('Search cursor did not advance');
+      }
 
       final seenIds = current.posts.map((post) => post.id).toSet();
       final uniquePosts = nextPage.posts
@@ -246,15 +282,24 @@ class FeedSearchNotifier
           posts: [...current.posts, ...uniquePosts],
           totalCount: current.totalCount + uniquePosts.length,
           hasMore: nextPage.hasMore,
-          nextCursor: nextPage.nextCursor,
+          nextCursor: nextCursor,
           page: current.page + 1,
           pageSize: current.pageSize,
         ),
       );
+      _visitedCursors.add(current.nextCursor!);
+    } catch (_) {
+      if (_ownsRequest(generation, cancellation)) rethrow;
     } finally {
-      _loadingMore = false;
+      if (_ownsRequest(generation, cancellation)) _loadingMore = false;
     }
   }
+
+  bool _ownsRequest(int generation, FeedRequestCancellation? cancellation) =>
+      cancellation != null &&
+      generation == _generation &&
+      identical(cancellation, _cancellation) &&
+      !cancellation.isCancelled;
 }
 
 /// Notifier for trending feed
