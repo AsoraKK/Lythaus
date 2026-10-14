@@ -35,6 +35,7 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
   late final String _scope;
   String? _aiLabel;
   String? _error;
+  String? _successMessage;
   bool _busy = false;
   bool _locked = false;
   bool _restoring = false;
@@ -152,6 +153,7 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
     if (!_sessionValid ||
         _busy ||
         _restoring ||
+        _successMessage != null ||
         (ref.read(currentUserProvider)?.id ?? 'session') != _actor) {
       return;
     }
@@ -260,6 +262,17 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
           (ref.read(currentUserProvider)?.id ?? 'session') != _actor) {
         return;
       }
+      if (ModalRoute.of(context)?.isCurrent != true ||
+          !TickerMode.valuesOf(context).enabled) {
+        setState(() {
+          _busy = false;
+          _locked = true;
+          _successMessage = revised['moderationState'] == 'under_review'
+              ? 'Edit saved. Under review; this is not an authorship assessment.'
+              : 'Edit saved.';
+        });
+        return;
+      }
       Navigator.of(context).pop(revised);
     } catch (error) {
       final failure = contentMutationFailure(error);
@@ -298,6 +311,13 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
               Text(
                 _error!,
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (_successMessage != null) ...[
+              Text(
+                _successMessage!,
+                style: TextStyle(color: Theme.of(context).colorScheme.primary),
               ),
               const SizedBox(height: 12),
             ],
@@ -348,10 +368,14 @@ class _ContentEditorScreenState extends ConsumerState<ContentEditorScreen> {
             ),
             const SizedBox(height: 16),
             FilledButton(
-              onPressed: _busy || _restoring ? null : _submit,
+              onPressed: _busy || _restoring || _successMessage != null
+                  ? null
+                  : _submit,
               child: Text(
                 _busy
                     ? 'Submitting…'
+                    : _successMessage != null
+                    ? 'Edit saved'
                     : _locked
                     ? 'Retry same edit'
                     : 'Submit edit',

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
@@ -14,6 +16,10 @@ class FakeSocialFeedRepository implements SocialFeedRepository {
   final List<String?> discoverCursors = [];
   final List<String?> discoverTokens = [];
   final List<FeedRequestCancellation?> discoverCancellations = [];
+  final Map<String?, List<FeedResponse>> discoverResponseQueues = {};
+  String? delayedDiscoverCursor;
+  Completer<FeedResponse>? delayedDiscoverResponse;
+  Completer<void>? delayedDiscoverRequestStarted;
 
   Post _post(String id) {
     return Post(
@@ -31,6 +37,17 @@ class FakeSocialFeedRepository implements SocialFeedRepository {
       totalCount: 2,
       hasMore: hasMore,
       page: page,
+      pageSize: 20,
+    );
+  }
+
+  FeedResponse searchPage(String id, {String? nextCursor}) {
+    return FeedResponse(
+      posts: [_post(id)],
+      totalCount: 1,
+      hasMore: nextCursor != null,
+      nextCursor: nextCursor,
+      page: 1,
       pageSize: 20,
     );
   }
@@ -60,6 +77,21 @@ class FakeSocialFeedRepository implements SocialFeedRepository {
     discoverTokens.add(token);
     discoverCancellations.add(cancellation);
     if (tag != null) {
+      final delayedResponse = delayedDiscoverResponse;
+      if (cursor == delayedDiscoverCursor && delayedResponse != null) {
+        final requestStarted = delayedDiscoverRequestStarted;
+        if (requestStarted != null && !requestStarted.isCompleted) {
+          requestStarted.complete();
+        }
+        return delayedResponse.future;
+      }
+      if (discoverResponseQueues.containsKey(cursor)) {
+        final queued = discoverResponseQueues[cursor]!;
+        if (queued.isEmpty) {
+          throw StateError('No queued search response for cursor $cursor');
+        }
+        return queued.removeAt(0);
+      }
       if (cursor == null) {
         return FeedResponse(
           posts: [_post('search-1')],
@@ -360,6 +392,126 @@ void main() {
   });
 
   test(
+    'tag search rejects a repeated cursor and can recover on retry',
+    () async {
+      final repo = FakeSocialFeedRepository();
+      repo.discoverResponseQueues[null] = [
+        repo.searchPage('search-1', nextCursor: 'cursor-1'),
+      ];
+      repo.discoverResponseQueues['cursor-1'] = [
+        repo.searchPage('search-2', nextCursor: 'cursor-1'),
+        repo.searchPage('search-2', nextCursor: 'cursor-2'),
+      ];
+      final container = ProviderContainer(
+        overrides: [
+          socialFeedServiceProvider.overrideWithValue(repo),
+          jwtProvider.overrideWith((ref) async => null),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      const key = (tag: 'tag', tokenVersion: 0);
+      await container.read(feedSearchProvider(key).future);
+      final notifier = container.read(feedSearchProvider(key).notifier);
+
+      await expectLater(notifier.loadMore(), throwsA(isA<FormatException>()));
+      var loaded = container.read(feedSearchProvider(key)).value!;
+      expect(loaded.posts.map((post) => post.id), ['search-1']);
+      expect(loaded.hasMore, isTrue);
+      expect(loaded.nextCursor, 'cursor-1');
+
+      await notifier.loadMore();
+      loaded = container.read(feedSearchProvider(key)).value!;
+      expect(loaded.posts.map((post) => post.id), ['search-1', 'search-2']);
+      expect(loaded.nextCursor, 'cursor-2');
+      expect(repo.discoverCursors, [null, 'cursor-1', 'cursor-1']);
+    },
+  );
+
+  test(
+    'tag search rejects a cursor cycle without discarding loaded posts',
+    () async {
+      final repo = FakeSocialFeedRepository();
+      repo.discoverResponseQueues[null] = [
+        repo.searchPage('search-1', nextCursor: 'cursor-1'),
+      ];
+      repo.discoverResponseQueues['cursor-1'] = [
+        repo.searchPage('search-2', nextCursor: 'cursor-2'),
+      ];
+      repo.discoverResponseQueues['cursor-2'] = [
+        repo.searchPage('search-3', nextCursor: 'cursor-1'),
+        repo.searchPage('search-3', nextCursor: 'cursor-3'),
+      ];
+      final container = ProviderContainer(
+        overrides: [
+          socialFeedServiceProvider.overrideWithValue(repo),
+          jwtProvider.overrideWith((ref) async => null),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      const key = (tag: 'tag', tokenVersion: 0);
+      await container.read(feedSearchProvider(key).future);
+      final notifier = container.read(feedSearchProvider(key).notifier);
+      await notifier.loadMore();
+
+      await expectLater(notifier.loadMore(), throwsA(isA<FormatException>()));
+      var loaded = container.read(feedSearchProvider(key)).value!;
+      expect(loaded.posts.map((post) => post.id), ['search-1', 'search-2']);
+      expect(loaded.hasMore, isTrue);
+      expect(loaded.nextCursor, 'cursor-2');
+
+      await notifier.loadMore();
+      loaded = container.read(feedSearchProvider(key)).value!;
+      expect(loaded.posts.map((post) => post.id), [
+        'search-1',
+        'search-2',
+        'search-3',
+      ]);
+      expect(loaded.nextCursor, 'cursor-3');
+      expect(repo.discoverCursors, [null, 'cursor-1', 'cursor-2', 'cursor-2']);
+    },
+  );
+
+  test(
+    'tag search ignores a page response after refresh invalidates it',
+    () async {
+      final repo = FakeSocialFeedRepository()
+        ..delayedDiscoverCursor = 'cursor-1'
+        ..delayedDiscoverResponse = Completer<FeedResponse>()
+        ..delayedDiscoverRequestStarted = Completer<void>();
+      final container = ProviderContainer(
+        overrides: [
+          socialFeedServiceProvider.overrideWithValue(repo),
+          jwtProvider.overrideWith((ref) async => null),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      const key = (tag: 'tag', tokenVersion: 0);
+      await container.read(feedSearchProvider(key).future);
+      final oldLoadMore = container
+          .read(feedSearchProvider(key).notifier)
+          .loadMore();
+      await repo.delayedDiscoverRequestStarted!.future;
+
+      container.invalidate(feedSearchProvider(key));
+      await container.pump();
+      await container.read(feedSearchProvider(key).future);
+      repo.delayedDiscoverResponse!.complete(
+        repo.searchPage('stale-search-result', nextCursor: 'cursor-2'),
+      );
+      await oldLoadMore;
+
+      final refreshed = container.read(feedSearchProvider(key)).value!;
+      expect(refreshed.posts.map((post) => post.id), ['search-1']);
+      expect(refreshed.nextCursor, 'cursor-1');
+      expect(repo.discoverCursors, [null, 'cursor-1', null]);
+      expect(repo.discoverCancellations.first?.isCancelled, isTrue);
+    },
+  );
+
+  test(
     'search identity changes with the authentication token version',
     () async {
       final repo = FakeSocialFeedRepository();
@@ -377,11 +529,16 @@ void main() {
       const oldKey = (tag: 'tag', tokenVersion: 0);
       const newKey = (tag: 'tag', tokenVersion: 1);
       await container.read(feedSearchProvider(oldKey).future);
+      await container.read(feedSearchProvider(oldKey).notifier).loadMore();
       container.read(tokenVersionProvider.notifier).state = 1;
       await container.pump();
       await container.read(feedSearchProvider(newKey).future);
+      const newQueryKey = (tag: 'other', tokenVersion: 1);
+      await container.read(feedSearchProvider(newQueryKey).future);
 
-      expect(repo.discoverTokens, ['token-0', 'token-1']);
+      expect(repo.discoverTokens, ['token-0', 'token-0', 'token-1', 'token-1']);
+      expect(repo.searchedTags, ['tag', 'tag', 'tag', 'other']);
+      expect(repo.discoverCursors, [null, 'cursor-1', null, null]);
       expect(repo.discoverCancellations.first?.isCancelled, isTrue);
     },
   );

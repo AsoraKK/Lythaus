@@ -195,9 +195,12 @@ class FeedSearchNotifier
     extends AutoDisposeFamilyAsyncNotifier<FeedResponse, FeedSearchKey> {
   FeedRequestCancellation? _cancellation;
   bool _loadingMore = false;
+  final Set<String> _visitedCursors = {};
 
   @override
   Future<FeedResponse> build(FeedSearchKey arg) async {
+    _visitedCursors.clear();
+    _loadingMore = false;
     final cancellation = FeedRequestCancellation();
     _cancellation = cancellation;
     ref.onDispose(cancellation.cancel);
@@ -237,6 +240,13 @@ class FeedSearchNotifier
           );
       if (cancellation.isCancelled) return;
 
+      final nextCursor = nextPage.nextCursor;
+      if (nextCursor != null &&
+          (nextCursor == current.nextCursor ||
+              _visitedCursors.contains(nextCursor))) {
+        throw const FormatException('Search cursor did not advance');
+      }
+
       final seenIds = current.posts.map((post) => post.id).toSet();
       final uniquePosts = nextPage.posts
           .where((post) => seenIds.add(post.id))
@@ -246,11 +256,12 @@ class FeedSearchNotifier
           posts: [...current.posts, ...uniquePosts],
           totalCount: current.totalCount + uniquePosts.length,
           hasMore: nextPage.hasMore,
-          nextCursor: nextPage.nextCursor,
+          nextCursor: nextCursor,
           page: current.page + 1,
           pageSize: current.pageSize,
         ),
       );
+      _visitedCursors.add(current.nextCursor!);
     } finally {
       _loadingMore = false;
     }
