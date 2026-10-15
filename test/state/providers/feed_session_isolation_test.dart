@@ -734,6 +734,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 350));
       expect(find.text(_custom('a').name), findsOneWidget);
       h.switchTo('b');
+      oldScroll.jumpTo(0);
+      expect(h.container.read(feedRestoreSnapshotsProvider), isEmpty);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
       await tester.pump(const Duration(milliseconds: 350));

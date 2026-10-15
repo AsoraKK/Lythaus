@@ -27,6 +27,7 @@ import 'package:lythaus/features/feed/domain/models.dart' as domain;
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/state/providers/settings_providers.dart';
 import 'package:lythaus/ui/screens/home/home_feed_navigator.dart';
+import '../helpers/feed_session.dart';
 
 const discover = FeedModel(
   id: 'discover',
@@ -103,19 +104,21 @@ void main() {
   runApp(
     ProviderScope(
       overrides: [
-        currentUserProvider.overrideWith((ref) {
+        authStateProvider.overrideWith((ref) {
           final actor = ref.watch(fixtureActorProvider);
-          return actor == 'guest'
-              ? null
-              : User(
-                  id: actor,
-                  email: '$actor@example.invalid',
-                  role: UserRole.user,
-                  tier: UserTier.bronze,
-                  reputationScore: 0,
-                  createdAt: DateTime.utc(2026),
-                  lastLoginAt: DateTime.utc(2026),
-                );
+          return FeedTestAuth(
+            actor == 'guest'
+                ? null
+                : User(
+                    id: actor,
+                    email: '$actor@example.invalid',
+                    role: UserRole.user,
+                    tier: UserTier.bronze,
+                    reputationScore: 0,
+                    createdAt: DateTime.utc(2026),
+                    lastLoginAt: DateTime.utc(2026),
+                  ),
+          );
         }),
         canCreatePostProvider.overrideWith(
           (ref) => ref.watch(currentUserProvider) != null,
