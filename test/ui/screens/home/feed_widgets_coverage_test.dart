@@ -119,7 +119,7 @@ void main() {
       await tester.pumpWidget(wrap(const DiscoverFeed(feed: feed, items: [])));
       await tester.pump();
 
-      expect(find.text('A little quiet here'), findsOneWidget);
+      expect(find.text('No posts yet'), findsOneWidget);
       expect(find.text('New public posts will appear here.'), findsOneWidget);
     });
 

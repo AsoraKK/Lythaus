@@ -124,7 +124,7 @@ class DiscoverFeed extends StatelessWidget {
                   SliverToBoxAdapter(
                     child: _FeedNotice(
                       icon: Icons.forum_outlined,
-                      title: 'A little quiet here',
+                      title: 'No posts yet',
                       message: 'New public posts will appear here.',
                       action: onRefresh == null ? null : () => onRefresh!(),
                       actionLabel: 'Check for posts',

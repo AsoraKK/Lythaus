@@ -199,7 +199,7 @@ void main() {
             ),
           );
           final expected = switch (state) {
-            'empty' => 'A little quiet here',
+            'empty' => 'No posts yet',
             'error' => 'Couldn’t load posts',
             'loading' => 'Loading posts',
             _ => 'Review pending',
@@ -238,7 +238,7 @@ void main() {
       );
       expect(find.byType(FeedCard), findsOneWidget);
       expect(find.text(_reviewPost.body), findsOneWidget);
-      expect(find.text('A little quiet here'), findsNothing);
+      expect(find.text('No posts yet'), findsNothing);
       expect(
         find.text(refreshing ? 'Loading posts' : 'Couldn’t update the feed'),
         findsOneWidget,
