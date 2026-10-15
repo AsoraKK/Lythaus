@@ -15,6 +15,10 @@ import 'package:lythaus/features/auth/application/auth_service.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/state/providers/settings_providers.dart';
+import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
+import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+
+import '../../helpers/content_recovery.dart';
 
 class _AuthService extends Mock implements AuthService {}
 
@@ -72,6 +76,61 @@ List<Override> _baseOverrides({bool guest = false}) => [
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
   group('AdaptiveShell', () {
+    testWidgets('resizing and tab changes preserve the active composer', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final user = User(
+        id: '018f0000-0000-7000-8000-000000000001',
+        email: 'synthetic@example.invalid',
+        role: UserRole.user,
+        tier: UserTier.bronze,
+        reputationScore: 0,
+        createdAt: DateTime.utc(2026, 10, 15),
+        lastLoginAt: DateTime.utc(2026, 10, 15),
+      );
+      final auth = _AuthService();
+      when(() => auth.getCurrentUser()).thenAnswer((_) async => user);
+      when(() => auth.getJwtToken()).thenAnswer((_) async => null);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ..._baseOverrides(),
+            enhancedAuthServiceProvider.overrideWithValue(auth),
+            contentRecoveryStorageProvider.overrideWithValue(
+              MemoryContentRecoveryStorage(),
+            ),
+          ],
+          child: const MaterialApp(home: AdaptiveShell(initialIndex: 1)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final composer = tester.state(find.byType(CreatePostScreen));
+      final field = find.byType(TextField);
+      await tester.enterText(field, 'Synthetic unfinished draft');
+      final controller = tester.widget<TextField>(field).controller!;
+      controller.selection = const TextSelection(baseOffset: 2, extentOffset: 9);
+      for (final width in [1024.0, 1440.0, 320.0, 390.0]) {
+        await tester.binding.setSurfaceSize(Size(width, 844));
+        await tester.pumpAndSettle();
+        expect(tester.state(find.byType(CreatePostScreen)), same(composer));
+        expect(tester.widget<TextField>(field).controller, same(controller));
+        expect(controller.text, 'Synthetic unfinished draft');
+        expect(
+          controller.selection,
+          const TextSelection(baseOffset: 2, extentOffset: 9),
+        );
+        await tester.tap(find.text('Discover').last);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Create').last);
+        await tester.pumpAndSettle();
+        expect(tester.state(find.byType(CreatePostScreen)), same(composer));
+        expect(controller.text, 'Synthetic unfinished draft');
+        expect(tester.takeException(), isNull);
+      }
+    });
+
     for (final width in [1024.0, 1440.0]) {
       for (final signedIn in [false, true]) {
         testWidgets(

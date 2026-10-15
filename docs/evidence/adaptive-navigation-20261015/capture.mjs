@@ -34,7 +34,7 @@ const fixture = await localAuthBrowserServer(async route => {
 const browser = await chromium.launch({headless:true,proxy:{server:fixture.proxy},args:['--no-sandbox','--disable-dev-shm-usage']});
 const results = [];
 try {
-  for (const theme of ['light','dark']) for (const viewport of [{width:390,height:844},{width:1024,height:768},{width:1440,height:960}]) {
+  for (const theme of ['light','dark']) for (const viewport of [{width:320,height:844},{width:390,height:844},{width:1024,height:768},{width:1440,height:960}]) {
     const context = await browser.newContext({viewport,colorScheme:theme,serviceWorkers:'block',ignoreHTTPSErrors:true});
     await installFlutterEngineFonts(context);
     const page = await context.newPage();

@@ -1,9 +1,12 @@
 # Adaptive desktop navigation: retained review
 
-This is a dependent change on PR1024. That branding PR remains held pending Kyle's
-logo selection and independent review. The navigation receives a passive `brand`
+This is a dependent change on PR1024. That branding PR remains held pending the
+separate final-asset review and independent review. Kyle selected the A+E Balanced
+connection uppercase LH direction; wordmark spacing remains with the logo lane.
+The circular LH in historical captures is not approved as the final asset.
+The navigation receives a passive `brand`
 widget; it does not know which logo shape, image format or asset is supplied.
-Current approved assets are reused without modification in these captures.
+Existing candidate assets are reused without modification in these captures.
 
 One component now presents the four existing destinations in both desktop modes.
 Selected destinations have a quiet filled row and filled icon. Settings/Help share
