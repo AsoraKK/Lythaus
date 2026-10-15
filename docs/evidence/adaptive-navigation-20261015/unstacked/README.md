@@ -1,5 +1,13 @@
 # Standalone navigation and composer preservation
 
+After capturing the evidence below, the branch was brought current by a normal
+merge of main `c47ecdbf35d3dc3e7e8305f6a1c2acd49ff87dbb` (reviewed cleanup PR1022).
+All cleanup changes, including its native CI step, are preserved. That merge
+changes no Flutter application/test source, pubspec or navigation browser runner;
+the retained UI captures still describe the same application. Fresh exact-head
+and PR CI verify the updated candidate, including the cleanup checks. Main is
+not modified by this branch update.
+
 Navigation is based on main `53ac0f4ece621605762cde8d9a42f7dde8362ca9`, without
 PR1024's branding changes. The default passive identity is main's plain
 `Text('Lythaus')`; `AdaptiveShell.brand` accepts a replacement widget. Existing
