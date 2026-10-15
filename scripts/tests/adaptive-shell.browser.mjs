@@ -78,6 +78,8 @@ try {
         await field.waitFor();
         await page.waitForFunction(() => JSON.parse(window.lythausNavigationSnapshot()).focused);
         assert.deepEqual(await snapshot(page), initial, 'Tab return preserves controller, text, selection and focus');
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        await page.waitForTimeout(250);
         const filename = `${engine}-${theme}-${scale}x-${width}.png`;
         await page.screenshot({ path: path.join(output, filename) });
         results.push({ engine, theme, scale, width, filename, state: await snapshot(page) });
