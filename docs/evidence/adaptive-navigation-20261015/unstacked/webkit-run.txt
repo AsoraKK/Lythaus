@@ -1,0 +1,5 @@
+Skipping host requirements validation logic because `PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS` env variable is set.
+{"engine":"webkit","theme":"light","scale":1,"widths":4,"status":"passed"}
+{"engine":"webkit","theme":"light","scale":2,"widths":4,"status":"passed"}
+{"engine":"webkit","theme":"dark","scale":1,"widths":4,"status":"passed"}
+{"engine":"webkit","theme":"dark","scale":2,"widths":4,"status":"passed"}

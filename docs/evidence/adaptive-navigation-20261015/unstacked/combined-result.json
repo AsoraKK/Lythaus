@@ -1,0 +1,55 @@
+{
+  "combinedCommit": "82733d10636b799a1c76dfb8756c6c2455d36758",
+  "navigationSource": "fa33ed132118a3c6bb3ea6d8e5c3ce54943b4bfb",
+  "feedSource": "39e823e97c333c949e0866fce21df02e83e3996b",
+  "compiledSha256": "59a3e3152376fcabfb00bac7b4869a5e74def5d316c41aac60b7eee504ff0ef5",
+  "nativeTests": 97,
+  "firstBrowserRun": {
+    "passed": 2,
+    "failed": 0
+  },
+  "repeatedBrowserRun": {
+    "passed": 1,
+    "failed": 1,
+    "events": [
+      {
+        "scenario": "baseline",
+        "complete": false,
+        "harnessReportedHead": "local",
+        "failures": [
+          {
+            "sequence": 445,
+            "ms": 21985.733,
+            "phase": "protected_return",
+            "type": "request_failed",
+            "requestId": 58,
+            "pageId": 1,
+            "method": "GET",
+            "path": "/api/feed/discover",
+            "startedAt": 21985.458,
+            "error": "Load request cancelled",
+            "window": "started_after_signout_intent",
+            "profileRead": false
+          }
+        ]
+      },
+      {
+        "scenario": "controlled_pending_owner_response",
+        "complete": true,
+        "harnessReportedHead": "local",
+        "failures": []
+      }
+    ]
+  },
+  "sourceNote": "Detached combined worktree and compiled build identify the source. Harness reports local because it reads GITHUB_SHA, not QA_COMMIT; set GITHUB_SHA when reproducing.",
+  "rawLocalEvidence": {
+    "directory": "/workspace/ui-combined-evidence-82733d10",
+    "sha256": {
+      "ui-combined-release-build.log": "d41677fac0f229a170ce63d60f6acef03837471ce4155b10bc3f6ee906f0175f",
+      "ui-combined-tests.log": "33444b935db7ad798aa75fd2f6fdbee321dd1b975f6a777f1a3e0f1487f6b646",
+      "ui-combined-webkit-auth-exact.log": "295ec65243a85f7b37f610f88e4c55df2376bff007ab88b2c2ac12bfc14685d8",
+      "ui-combined-webkit-auth.log": "96aeaf0611ec01a3c73c8a0705bb7c80adc3aacc0c676af1b332c749c88f63b5"
+    }
+  },
+  "releaseGate": "BLOCKED pending the feed lane final fix and repeated combined verification"
+}

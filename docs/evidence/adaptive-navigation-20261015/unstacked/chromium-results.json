@@ -1,0 +1,283 @@
+{
+  "source": "30fa6bc959f2ecb35b485f11f29c6c8c4142bebf",
+  "engine": "chromium",
+  "browser": "151.0.7922.34",
+  "capturedAt": "2026-10-15T21:52:56.799Z",
+  "compiledSha256": "a3a6fc2148943c44062ec3336b44f534e50f08732ccbb29b89e5dc5b75e7eab6",
+  "scenarios": [
+    {
+      "engine": "chromium",
+      "theme": "light",
+      "scale": 1,
+      "status": "passed",
+      "errors": [],
+      "blocked": []
+    },
+    {
+      "engine": "chromium",
+      "theme": "light",
+      "scale": 2,
+      "status": "passed",
+      "errors": [],
+      "blocked": []
+    },
+    {
+      "engine": "chromium",
+      "theme": "dark",
+      "scale": 1,
+      "status": "passed",
+      "errors": [],
+      "blocked": []
+    },
+    {
+      "engine": "chromium",
+      "theme": "dark",
+      "scale": 2,
+      "status": "passed",
+      "errors": [],
+      "blocked": []
+    }
+  ],
+  "results": [
+    {
+      "engine": "chromium",
+      "theme": "light",
+      "scale": 1,
+      "width": 320,
+      "filename": "chromium-light-1x-320.png",
+      "state": {
+        "fields": 1,
+        "controller": 951545349,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "chromium",
+      "theme": "light",
+      "scale": 1,
+      "width": 390,
+      "filename": "chromium-light-1x-390.png",
+      "state": {
+        "fields": 1,
+        "controller": 951545349,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "chromium",
+      "theme": "light",
+      "scale": 1,
+      "width": 1024,
+      "filename": "chromium-light-1x-1024.png",
+      "state": {
+        "fields": 1,
+        "controller": 951545349,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "chromium",
+      "theme": "light",
+      "scale": 1,
+      "width": 1440,
+      "filename": "chromium-light-1x-1440.png",
+      "state": {
+        "fields": 1,
+        "controller": 951545349,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "chromium",
+      "theme": "light",
+      "scale": 2,
+      "width": 320,
+      "filename": "chromium-light-2x-320.png",
+      "state": {
+        "fields": 1,
+        "controller": 673968821,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "chromium",
+      "theme": "light",
+      "scale": 2,
+      "width": 390,
+      "filename": "chromium-light-2x-390.png",
+      "state": {
+        "fields": 1,
+        "controller": 673968821,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "chromium",
+      "theme": "light",
+      "scale": 2,
+      "width": 1024,
+      "filename": "chromium-light-2x-1024.png",
+      "state": {
+        "fields": 1,
+        "controller": 673968821,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "chromium",
+      "theme": "light",
+      "scale": 2,
+      "width": 1440,
+      "filename": "chromium-light-2x-1440.png",
+      "state": {
+        "fields": 1,
+        "controller": 673968821,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "chromium",
+      "theme": "dark",
+      "scale": 1,
+      "width": 320,
+      "filename": "chromium-dark-1x-320.png",
+      "state": {
+        "fields": 1,
+        "controller": 470988290,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "chromium",
+      "theme": "dark",
+      "scale": 1,
+      "width": 390,
+      "filename": "chromium-dark-1x-390.png",
+      "state": {
+        "fields": 1,
+        "controller": 470988290,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "chromium",
+      "theme": "dark",
+      "scale": 1,
+      "width": 1024,
+      "filename": "chromium-dark-1x-1024.png",
+      "state": {
+        "fields": 1,
+        "controller": 470988290,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "chromium",
+      "theme": "dark",
+      "scale": 1,
+      "width": 1440,
+      "filename": "chromium-dark-1x-1440.png",
+      "state": {
+        "fields": 1,
+        "controller": 470988290,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "chromium",
+      "theme": "dark",
+      "scale": 2,
+      "width": 320,
+      "filename": "chromium-dark-2x-320.png",
+      "state": {
+        "fields": 1,
+        "controller": 1021919396,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "chromium",
+      "theme": "dark",
+      "scale": 2,
+      "width": 390,
+      "filename": "chromium-dark-2x-390.png",
+      "state": {
+        "fields": 1,
+        "controller": 1021919396,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "chromium",
+      "theme": "dark",
+      "scale": 2,
+      "width": 1024,
+      "filename": "chromium-dark-2x-1024.png",
+      "state": {
+        "fields": 1,
+        "controller": 1021919396,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "chromium",
+      "theme": "dark",
+      "scale": 2,
+      "width": 1440,
+      "filename": "chromium-dark-2x-1440.png",
+      "state": {
+        "fields": 1,
+        "controller": 1021919396,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    }
+  ]
+}

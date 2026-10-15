@@ -1,0 +1,283 @@
+{
+  "source": "30fa6bc959f2ecb35b485f11f29c6c8c4142bebf",
+  "engine": "webkit",
+  "browser": "26.5",
+  "capturedAt": "2026-10-15T21:53:40.824Z",
+  "compiledSha256": "a3a6fc2148943c44062ec3336b44f534e50f08732ccbb29b89e5dc5b75e7eab6",
+  "scenarios": [
+    {
+      "engine": "webkit",
+      "theme": "light",
+      "scale": 1,
+      "status": "passed",
+      "errors": [],
+      "blocked": []
+    },
+    {
+      "engine": "webkit",
+      "theme": "light",
+      "scale": 2,
+      "status": "passed",
+      "errors": [],
+      "blocked": []
+    },
+    {
+      "engine": "webkit",
+      "theme": "dark",
+      "scale": 1,
+      "status": "passed",
+      "errors": [],
+      "blocked": []
+    },
+    {
+      "engine": "webkit",
+      "theme": "dark",
+      "scale": 2,
+      "status": "passed",
+      "errors": [],
+      "blocked": []
+    }
+  ],
+  "results": [
+    {
+      "engine": "webkit",
+      "theme": "light",
+      "scale": 1,
+      "width": 320,
+      "filename": "webkit-light-1x-320.png",
+      "state": {
+        "fields": 1,
+        "controller": 274845992,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "webkit",
+      "theme": "light",
+      "scale": 1,
+      "width": 390,
+      "filename": "webkit-light-1x-390.png",
+      "state": {
+        "fields": 1,
+        "controller": 274845992,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "webkit",
+      "theme": "light",
+      "scale": 1,
+      "width": 1024,
+      "filename": "webkit-light-1x-1024.png",
+      "state": {
+        "fields": 1,
+        "controller": 274845992,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "webkit",
+      "theme": "light",
+      "scale": 1,
+      "width": 1440,
+      "filename": "webkit-light-1x-1440.png",
+      "state": {
+        "fields": 1,
+        "controller": 274845992,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "webkit",
+      "theme": "light",
+      "scale": 2,
+      "width": 320,
+      "filename": "webkit-light-2x-320.png",
+      "state": {
+        "fields": 1,
+        "controller": 475038164,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "webkit",
+      "theme": "light",
+      "scale": 2,
+      "width": 390,
+      "filename": "webkit-light-2x-390.png",
+      "state": {
+        "fields": 1,
+        "controller": 475038164,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "webkit",
+      "theme": "light",
+      "scale": 2,
+      "width": 1024,
+      "filename": "webkit-light-2x-1024.png",
+      "state": {
+        "fields": 1,
+        "controller": 475038164,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "webkit",
+      "theme": "light",
+      "scale": 2,
+      "width": 1440,
+      "filename": "webkit-light-2x-1440.png",
+      "state": {
+        "fields": 1,
+        "controller": 475038164,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "webkit",
+      "theme": "dark",
+      "scale": 1,
+      "width": 320,
+      "filename": "webkit-dark-1x-320.png",
+      "state": {
+        "fields": 1,
+        "controller": 415241028,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "webkit",
+      "theme": "dark",
+      "scale": 1,
+      "width": 390,
+      "filename": "webkit-dark-1x-390.png",
+      "state": {
+        "fields": 1,
+        "controller": 415241028,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "webkit",
+      "theme": "dark",
+      "scale": 1,
+      "width": 1024,
+      "filename": "webkit-dark-1x-1024.png",
+      "state": {
+        "fields": 1,
+        "controller": 415241028,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "webkit",
+      "theme": "dark",
+      "scale": 1,
+      "width": 1440,
+      "filename": "webkit-dark-1x-1440.png",
+      "state": {
+        "fields": 1,
+        "controller": 415241028,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "webkit",
+      "theme": "dark",
+      "scale": 2,
+      "width": 320,
+      "filename": "webkit-dark-2x-320.png",
+      "state": {
+        "fields": 1,
+        "controller": 999599784,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "webkit",
+      "theme": "dark",
+      "scale": 2,
+      "width": 390,
+      "filename": "webkit-dark-2x-390.png",
+      "state": {
+        "fields": 1,
+        "controller": 999599784,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "webkit",
+      "theme": "dark",
+      "scale": 2,
+      "width": 1024,
+      "filename": "webkit-dark-2x-1024.png",
+      "state": {
+        "fields": 1,
+        "controller": 999599784,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    },
+    {
+      "engine": "webkit",
+      "theme": "dark",
+      "scale": 2,
+      "width": 1440,
+      "filename": "webkit-dark-2x-1440.png",
+      "state": {
+        "fields": 1,
+        "controller": 999599784,
+        "text": "Synthetic unfinished draft",
+        "base": 2,
+        "extent": 9,
+        "focused": true
+      }
+    }
+  ]
+}
