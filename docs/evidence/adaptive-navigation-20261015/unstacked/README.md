@@ -42,6 +42,40 @@ the exact candidate SHA. Source SHA and compiled JavaScript hash are recorded
 in each browser receipt. Screenshots and local results are added after the clean
 source build; subsequent evidence-only commits do not change the application.
 
+Source `fa33ed132118a3c6bb3ea6d8e5c3ce54943b4bfb` passed all 32 rendered cases,
+with no unexpected errors or external requests. Receipts:
+[Chromium](chromium-results.json), [WebKit](webkit-results.json).
+[SHA-256 manifest](sha256.json) covers 40 generated artifacts. The full local
+Flutter suite passed **3,365 tests, six skipped, zero failures**; the expanded
+native shell suite passed all 18 tests. Analysis and pinned formatting passed.
+See [full-suite summary](full-suite-summary.txt), [native log](native-shell.txt)
+and [analysis](analyze.txt).
+
+| Width | Chromium 100% | Chromium 200% | WebKit 100% | WebKit 200% |
+| --- | --- | --- | --- | --- |
+| 320 | [Light](chromium-light-1x-320.png) / [Dark](chromium-dark-1x-320.png) | [Light](chromium-light-2x-320.png) / [Dark](chromium-dark-2x-320.png) | [Light](webkit-light-1x-320.png) / [Dark](webkit-dark-1x-320.png) | [Light](webkit-light-2x-320.png) / [Dark](webkit-dark-2x-320.png) |
+| 390 | [Light](chromium-light-1x-390.png) / [Dark](chromium-dark-1x-390.png) | [Light](chromium-light-2x-390.png) / [Dark](chromium-dark-2x-390.png) | [Light](webkit-light-1x-390.png) / [Dark](webkit-dark-1x-390.png) | [Light](webkit-light-2x-390.png) / [Dark](webkit-dark-2x-390.png) |
+| 1024 | [Light](chromium-light-1x-1024.png) / [Dark](chromium-dark-1x-1024.png) | [Light](chromium-light-2x-1024.png) / [Dark](chromium-dark-2x-1024.png) | [Light](webkit-light-1x-1024.png) / [Dark](webkit-dark-1x-1024.png) | [Light](webkit-light-2x-1024.png) / [Dark](webkit-dark-2x-1024.png) |
+| 1440 | [Light](chromium-light-1x-1440.png) / [Dark](chromium-dark-1x-1440.png) | [Light](chromium-light-2x-1440.png) / [Dark](chromium-dark-2x-1440.png) | [Light](webkit-light-1x-1440.png) / [Dark](webkit-dark-1x-1440.png) | [Light](webkit-light-2x-1440.png) / [Dark](webkit-dark-2x-1440.png) |
+
+Local WebKit's host preflight did not detect the already installed workspace
+`libGLESv2.so.2`. Its dynamic dependencies were verified with `ldd`, the workspace
+loader path was supplied, and local host preflight was disabled to run the actual
+browser. CI uses normal Playwright dependency installation and validation; no
+CI checks are disabled. The raw [WebKit log](webkit-run.txt) records this local
+environment workaround. Browser versions are in the receipts.
+
+Reproduce from this application source with Flutter 3.41.1 and the repository's
+locked Playwright installation:
+
+```sh
+flutter build web --debug --no-pub --no-wasm-dry-run --no-web-resources-cdn \
+  --target test/browser/adaptive_shell_entry.dart --output build/adaptive-shell-web
+NAVIGATION_SOURCE="$(git rev-parse HEAD)" node scripts/tests/adaptive-shell.browser.mjs
+NAVIGATION_SOURCE="$(git rev-parse HEAD)" NAVIGATION_BROWSER=webkit \
+  node scripts/tests/adaptive-shell.browser.mjs
+```
+
 ## Coordination and gates
 
 Feed PR1025 owns its WebKit logout/navigation regression and shared auth/content
@@ -49,3 +83,10 @@ harness. This lane does not edit those files. A combined-tree check must identif
 both exact source SHAs; an older feed revision is not evidence for its later fix.
 Final CI, independent review and coordinated merge/deployment remain required.
 No homepage redesign, brand activation, merge or deployment is performed here.
+
+The initial local combined tree `82733d10636b799a1c76dfb8756c6c2455d36758`
+combines navigation source `fa33ed132118a3c6bb3ea6d8e5c3ce54943b4bfb` with feed
+`39e823e97c333c949e0866fce21df02e83e3996b`, and passes 97 shell/navigation/feed
+isolation/presentation tests. That feed head adds diagnostics, not a confirmed
+logout fix. This local synthetic tree is not pushed or merged to main. The final
+feed fix and its combined production-browser checks remain separate gates.

@@ -1,0 +1,2 @@
+Compiling test/browser/adaptive_shell_entry.dart for the Web...      1,721ms
+✓ Built build/adaptive-shell-web
