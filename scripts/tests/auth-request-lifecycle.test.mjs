@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createAuthRequestLifecycle, describeFailureWindow } from './auth-request-lifecycle.mjs';
+import { classifyExpectedProtectedReturnDiscoverCancellation, createAuthRequestLifecycle, describeFailureWindow } from './auth-request-lifecycle.mjs';
 
 const ownerId = '018f0000-0000-7000-8000-000000000001';
 const request = { origin: 'https://api.lythaus.co', method: 'GET', path: '/api/users/me', startedAt: 10, failedAt: 30 };
@@ -46,6 +46,62 @@ test('auth lifecycle: snapshots are bounded and cannot mutate recorder state', (
   assert.equal(trace.snapshot().marks.intentAt, 10);
 });
 
+function protectedReturnCancellationTrace() {
+  return { events: [
+    { sequence: 1, type: 'logout_response_finished', phase: 'logout_armed' },
+    { sequence: 2, type: 'both_tabs_signed_out', phase: 'logout_armed' },
+    { sequence: 3, type: 'phase', phase: 'protected_return' },
+    { sequence: 4, type: 'protected_return_navigation_requested', phase: 'protected_return', path: '/settings/security' },
+    { sequence: 5, type: 'request_start', phase: 'protected_return', pageId: 1, requestId: 7,
+      isNavigationRequest: true, method: 'GET', path: '/settings/security' },
+    { sequence: 6, type: 'xhr_send', phase: 'protected_return', pageId: 1, xhrId: 2,
+      method: 'GET', path: '/api/feed/discover', query: 'limit=25' },
+    { sequence: 7, type: 'uncaught_page_error', phase: 'protected_return', pageId: 1,
+      pageErrorIndex: 0, name: 'XMLHttpRequest cannot load https', path: '/login' },
+    { sequence: 8, type: 'xhr_error', phase: 'protected_return', pageId: 1, xhrId: 2,
+      method: 'GET', path: '/api/feed/discover', query: 'limit=25', xhrReadyState: 4, xhrStatus: 0 },
+    { sequence: 9, type: 'xhr_loadend', phase: 'protected_return', pageId: 1, xhrId: 2,
+      method: 'GET', path: '/api/feed/discover', query: 'limit=25', xhrReadyState: 4, xhrStatus: 0 },
+    { sequence: 10, type: 'response_headers', phase: 'protected_return', pageId: 1, requestId: 7,
+      isNavigationRequest: true, method: 'GET', path: '/settings/security', status: 200 },
+    { sequence: 11, type: 'navigation', phase: 'protected_return', pageId: 1, path: '/settings/security' },
+  ] };
+}
+
+test('auth lifecycle: classifies only the correlated Discover XHR canceled by completed logout navigation', () => {
+  assert.deepEqual([...classifyExpectedProtectedReturnDiscoverCancellation(protectedReturnCancellationTrace())], [0]);
+});
+
+test('auth lifecycle: real Discover network activity remains an unexpected CORS failure', () => {
+  for (const activity of [
+    { sequence: 6.5, type: 'request_start', phase: 'protected_return', pageId: 1,
+      method: 'OPTIONS', path: '/api/feed/discover' },
+    { sequence: 8.5, type: 'server_response', phase: 'protected_return', method: 'GET',
+      path: '/api/feed/discover', status: 200 },
+  ]) {
+    const trace = protectedReturnCancellationTrace();
+    trace.events.push(activity);
+    assert.deepEqual([...classifyExpectedProtectedReturnDiscoverCancellation(trace)], []);
+  }
+});
+
+test('auth lifecycle: incomplete logout, wrong request, or missing document navigation never classifies', () => {
+  const mutations = [
+    trace => { trace.events = trace.events.filter(event => event.type !== 'logout_response_finished'); },
+    trace => { trace.events = trace.events.filter(event => event.type !== 'both_tabs_signed_out'); },
+    trace => { trace.events.find(event => event.type === 'xhr_send').query = 'cursor=private'; },
+    trace => { trace.events.find(event => event.type === 'xhr_send').path = '/api/feed/news'; },
+    trace => { trace.events.find(event => event.type === 'request_start').isNavigationRequest = false; },
+    trace => { trace.events.find(event => event.type === 'xhr_error').xhrStatus = 200; },
+    trace => { trace.events.find(event => event.type === 'uncaught_page_error').path = '/settings/security'; },
+  ];
+  for (const mutate of mutations) {
+    const trace = protectedReturnCancellationTrace();
+    mutate(trace);
+    assert.deepEqual([...classifyExpectedProtectedReturnDiscoverCancellation(trace)], []);
+  }
+});
+
 test('auth lifecycle: diagnostic paths strip queries and redact private paths', async () => {
   const bindings = {};
   const context = { on() {}, async addInitScript() {},
@@ -57,9 +113,12 @@ test('auth lifecycle: diagnostic paths strip queries and redact private paths', 
     path: '/api/users/me?private=synthetic-private-value', browserEpochMs: 1 });
   bindings.__lythausAuthDiagnostic({ page }, { type: 'xhr_send',
     path: '/api/users/other-private-owner', browserEpochMs: 2 });
+  bindings.__lythausAuthDiagnostic({ page }, { type: 'xhr_send',
+    path: '/api/feed/discover', query: 'limit=25', browserEpochMs: 3 });
   const snapshot = trace.snapshot();
   assert.equal(snapshot.events[0].path, '/api/users/me');
   assert.equal(snapshot.events[1].path, '/[redacted]');
+  assert.equal(snapshot.events[2].query, 'limit=25');
   assert.ok(!JSON.stringify(snapshot).includes('synthetic-private-value'));
   assert.ok(!JSON.stringify(snapshot).includes('other-private-owner'));
 });
