@@ -235,7 +235,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('A little quiet here'), findsOneWidget);
+      expect(find.text('No posts yet'), findsOneWidget);
       expect(find.text('Unable to load feed right now.'), findsNothing);
       expect(find.text('Retry'), findsNothing);
     });
