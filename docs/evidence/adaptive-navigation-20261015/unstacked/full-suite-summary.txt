@@ -1,0 +1,6 @@
+04:11 +3361 ~6: /workspace/lythaus-ui-unstack/test/features/moderation/application/moderation_service_error_test.dart: maps retained staff-console failures
+04:11 +3362 ~6: /workspace/lythaus-ui-unstack/test/features/moderation/application/moderation_providers_device_integrity_test.dart: blocks flagging on a compromised device
+🔐 SECURITY: {"event_type":"integrityGuard","result":"blocked","environment":"production","strict_mode":true,"use_case":"flag","reason":"enforced","isRootedOrJailbroken":true,"isEmulator":false,"isDebugBuild":false,"lastCheckedAt":"2026-01-01T00:00:00.000Z","platform":"android","show_blocking_ui":true,"timestamp":"2026-10-15T21:49:09.270495"}
+04:11 +3363 ~6: /workspace/lythaus-ui-unstack/test/features/moderation/application/moderation_providers_device_integrity_test.dart: allows flagging on a clean device
+04:12 +3364 ~6: /workspace/lythaus-ui-unstack/test/features/moderation/application/moderation_data_classes_coverage_test.dart: FlagSubmission retains the supported flag request fields
+04:12 +3365 ~6: All tests passed!

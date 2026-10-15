@@ -1,0 +1,20 @@
+00:00 +0: loading /workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart
+00:00 +0: AdaptiveShell resizing and tab changes preserve the active composer
+00:02 +1: AdaptiveShell Settings keeps sign-out reachable at 1024.0 signedIn=false
+00:02 +2: AdaptiveShell Settings keeps sign-out reachable at 1024.0 signedIn=true
+00:02 +3: AdaptiveShell Settings keeps sign-out reachable at 1440.0 signedIn=false
+00:03 +4: AdaptiveShell Settings keeps sign-out reachable at 1440.0 signedIn=true
+00:03 +5: AdaptiveShell mobile order respects leftHanded=false at (390.0, 1.0)
+00:03 +6: AdaptiveShell mobile order respects leftHanded=false at (1440.0, 2.0)
+00:03 +7: AdaptiveShell mobile order respects leftHanded=true at (390.0, 1.0)
+00:03 +8: AdaptiveShell mobile order respects leftHanded=true at (1440.0, 2.0)
+00:03 +9: AdaptiveShell desktop Help handles opened without losing rewards
+00:03 +10: AdaptiveShell desktop Help handles unavailable without losing rewards
+00:03 +11: AdaptiveShell desktop Help handles exception without losing rewards
+00:03 +12: AdaptiveShell desktop Settings returns to the selected rewards screen
+00:04 +13: AdaptiveShell native back restores tab and query without losing route context
+00:04 +14: AdaptiveShell renders bottom nav on narrow viewport
+00:04 +15: AdaptiveShell renders compact side navigation on wide viewport
+00:04 +16: AdaptiveShell guest tapping Create offers account entry
+00:04 +17: AdaptiveShell breakpoint constant is 768
+00:04 +18: All tests passed!
