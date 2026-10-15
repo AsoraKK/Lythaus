@@ -3,9 +3,13 @@
 These screenshots are committed evidence for PR1024 and can be inspected directly
 in GitHub. Before: `489aef297ff0b1a40744504594122c9ebc43930d` (main).
 After: `dff240c8b80f8e34316016de6049bc273709d8a6` (brand implementation).
-The follow-up corrects the filled icon variant's foreground and inset focus border; separate
-captures below show that fix. The existing header captures remain representative
-because its standard icon controls are unchanged by the follow-up.
+The follow-up corrects the filled icon variant's foreground and inset focus border.
+All native header/icon captures were regenerated from clean revision
+`420deb85` (app and test sources identical to `ed56f6d`).
+The earlier light/320px/200% image was stale and incorrectly attributed: it showed
+a split title, missing glyphs and the old single-row layout. That image is replaced;
+it is not evidence of the current implementation. The other five enlarged header
+images reproduced byte for byte. No app code change was required for this correction.
 [manifest.json](manifest.json) identifies each capture, size, timestamp, source
 commit and SHA-256. Images are retained unchanged, without cropping or retouching.
 
@@ -57,7 +61,9 @@ default glyph and two-pixel inset border now use `onPrimary`. Tests check
 at least 3:1 against the actual Material fill and the composited focused fill.
 Enabled glyphs also pass 3:1 against their rendered fills. Standard/outlined
 borders are also checked against the exterior canvas. The
-manifest records the source content hash for these follow-up icon captures.
+manifest records the exact capture revision and file hashes. The
+[native receipt](native/results.json) records all 28 passing tests, source hashes,
+capture times and clean-tree checks for the fresh run.
 
 ## Reproduction and limits
 
@@ -75,10 +81,7 @@ flutter build web --no-pub --release --no-web-resources-cdn \
   --dart-define=ENVIRONMENT=production \
   --dart-define=AUTH_URL="$AUTH_URL" --dart-define=API_BASE_URL="$API_BASE_URL"
 node docs/evidence/app-brand-foundation-20261015/capture.mjs after
-LYTHAUS_BRAND_EVIDENCE=/tmp/lythaus-brand-evidence/headers \
-  flutter test --no-pub test/design_system/brand_foundation_test.dart
-LYTHAUS_BRAND_EVIDENCE=/tmp/lythaus-brand-evidence/icons \
-  flutter test --no-pub test/design_system/brand_accessibility_test.dart
+node docs/evidence/app-brand-foundation-20261015/capture-native.mjs
 node --test scripts/tests/app-brand-assets.test.mjs
 ```
 
@@ -86,6 +89,9 @@ Use `LYTHAUS_BRAND_BUILD` to select an isolated baseline build and pass `before`
 to the capture script; `LYTHAUS_BRAND_OUTPUT` changes the output directory.
 The capture script writes to temporary output by default, never this evidence
 directory. Full receipts: [before](before/results.json), [after](after/results.json).
+The native reproducer requires a clean source tree, uses a new temporary directory
+on every run, requires all 28 tests to pass and records only files from that run.
+It never promotes old temporary output into the gallery automatically.
 Both runs recorded four viewports/themes and no unexpected console/runtime errors.
 The synthetic guest's expected 401 refresh rejection is excluded from errors.
 
