@@ -32,6 +32,7 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
   late int _currentIndex;
   final Set<int> _visited = {0};
   final List<int> _history = [];
+  final _contentKey = GlobalKey();
 
   @override
   void initState() {
@@ -122,6 +123,7 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
           : const RewardsDashboardScreen(),
     ];
     final content = ReadingPane(
+      key: _contentKey,
       child: IndexedStack(
         index: _currentIndex,
         children: [
