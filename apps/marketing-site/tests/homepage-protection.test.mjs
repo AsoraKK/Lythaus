@@ -28,9 +28,10 @@ const upstreamProtectedPaths = [
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const nativeModerationWorkerdTest = 'packages/authenticity/tests/openai-moderation.workerd.mjs';
 const publicationPg17Script = 'node scripts/ci/run-publication-pg17.mjs';
+const reputationPg17Script = 'node scripts/ci/run-reputation-managed-lock-cluster.mjs --synthetic-managed-cluster --execute-local-sql';
 const allocatedJobsDiagnosticTests = 'apps/lythaus-jobs/tests/reputation-session-diagnostic.test.mjs apps/lythaus-jobs/tests/reputation-session-diagnostic.workerd.mjs';
 const allocatedJobsDiagnosticFiles = new Map([
-  ['apps/lythaus-jobs/src/index.ts', '8a6487ab099287f151fc8594b3b9ff846a9226b7'],
+  ['apps/lythaus-jobs/src/index.ts', 'b06faa54bf72c300a4922dc9202c40a66b5c71de'],
   ['apps/lythaus-public-api/src/index.ts', '7a941be1765e82b5cbf00294b114952ab6ea27a1'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
@@ -107,7 +108,11 @@ function assertOnlyReviewedNativeModerationTestRegistration(before, after) {
     assert.equal(after.scripts['test:publication:pg17'], publicationPg17Script, 'Publication tests must retain the exact isolated PG17 runner');
     before.scripts['test:publication:pg17'] = publicationPg17Script;
   }
-  assert.deepEqual(after, before, 'Only the exact native moderation and isolated publication commands may be registered; unrelated scripts and dependencies stay frozen');
+  if (Object.hasOwn(after.scripts, 'test:reputation:pg17')) {
+    assert.equal(after.scripts['test:reputation:pg17'], reputationPg17Script, 'Reputation tests must retain the exact synthetic PG17 runner');
+    before.scripts['test:reputation:pg17'] = reputationPg17Script;
+  }
+  assert.deepEqual(after, before, 'Only the exact native moderation, publication, and reputation commands may be registered; unrelated scripts and dependencies stay frozen');
 }
 const reviewedToolingSecurityPatches = {
   handlebars: {
@@ -326,11 +331,12 @@ function assertAllocatedDeclarationRepair(filename, blob) {
   assert.equal(blob, allocatedDeclarationRepairFiles.get(filename), 'Declaration portability must match the exact allocated source/test bytes');
 }
 const reviewedReputationRepairFiles = new Map([
-  ['packages/db/src/reputation.ts', '40a0ffbde1eed28bbbff8c3b17d63501c3ae0257'],
+  ['packages/db/src/reputation.ts', '1e58faf3a4d8859de4d659615984025d3d24d2bd'],
+  ['packages/db/tests/reputation-persistence.test.mjs', '09168383904d4a62319aae6345b820ed29946f13'],
 ]);
 function assertReviewedReputationRepair(filename, blob) {
-  assert.ok(reviewedReputationRepairFiles.has(filename), 'The reputation exception covers only the independently reviewed standing repair');
-  assert.equal(blob, reviewedReputationRepairFiles.get(filename), 'Reputation standing must match the exact reviewed repair bytes');
+  assert.ok(reviewedReputationRepairFiles.has(filename), 'The reputation exception covers only the independently reviewed implementation and regression test');
+  assert.equal(blob, reviewedReputationRepairFiles.get(filename), 'Reputation changes must match the exact reviewed source and test bytes');
 }
 const approvedHomepageVisualEdits = new Map([
   ['apps/marketing-site/src/components/OpeningWordmark.astro', (source) => `${replaceExactText(
@@ -704,7 +710,7 @@ for (const [label, mutate] of [
   });
 }
 
-test('homepage protection permits only the exact native moderation and isolated publication registrations', () => {
+test('homepage protection permits only exact native moderation, publication, and reputation registrations', () => {
   const before = {
     scripts: {
       'test:native-architecture': 'node --test scripts/tests/native-architecture.test.mjs',
@@ -718,10 +724,17 @@ test('homepage protection permits only the exact native moderation and isolated 
   assert.doesNotThrow(() => assertOnlyReviewedNativeModerationTestRegistration(structuredClone(before), reviewed));
   reviewed.scripts['test:publication:pg17'] = publicationPg17Script;
   assert.doesNotThrow(() => assertOnlyReviewedNativeModerationTestRegistration(structuredClone(before), reviewed));
+  reviewed.scripts['test:reputation:pg17'] = reputationPg17Script;
+  assert.doesNotThrow(() => assertOnlyReviewedNativeModerationTestRegistration(structuredClone(before), reviewed));
 
-  for (const command of [publicationPg17Script + ' --skip-admission', 'node scripts/unreviewed.mjs']) {
+  for (const [name, command] of [
+    ['publication', publicationPg17Script + ' --skip-admission'],
+    ['reputation', reputationPg17Script + ' --execute-production-sql'],
+    ['unreviewed', 'node scripts/unreviewed.mjs'],
+  ]) {
     const changedRunner = structuredClone(reviewed);
-    changedRunner.scripts['test:publication:pg17'] = command;
+    const script = name === 'reputation' ? 'test:reputation:pg17' : 'test:publication:pg17';
+    changedRunner.scripts[script] = command;
     assert.throws(() => assertOnlyReviewedNativeModerationTestRegistration(structuredClone(before), changedRunner), assert.AssertionError);
   }
 
