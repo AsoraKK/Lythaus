@@ -23,6 +23,7 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
     if (sql.startsWith('SELECT state, claimed_at FROM system.consumer_inbox')) return result([{ state: state.inbox }]);
     if (sql.startsWith('UPDATE system.consumer_inbox SET state')) { state.inbox = 'completed'; return result([{}]); }
     if (sql.startsWith('DELETE FROM system.consumer_inbox')) { state.inbox = null; return result([{}]); }
+    if (sql.startsWith('SELECT status, deleted_at FROM identity.users')) return result([state.account]);
     if (sql.startsWith('SELECT') && sql.includes('FROM media.upload_sessions')) {
       if (state.session.purpose !== 'standard' || state.session.id !== values[0]) return result([]);
       if (sql.includes('object_key = $2') && values[1] !== state.session.object_key) return result([]);
@@ -32,8 +33,10 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
     }
     if (sql.startsWith('UPDATE media.upload_sessions')) {
       const next = sql.match(/SET status = '(\w+)'/)[1];
-      const expected = next === 'queued' || (next === 'rejected' && values.length === 2) ? 'pending' : 'queued';
-      if (state.session.status !== expected || (next === 'queued' && !state.session.unexpired)) return result([]);
+      const expected = sql.includes("status = 'pending'") ? 'pending' : 'queued';
+      if (state.session.status !== expected
+        || ((next === 'queued' || next === 'approved') && !state.session.unexpired)
+        || (next === 'expired' && state.session.unexpired && state.account.status === 'active')) return result([]);
       state.session.status = next; return result([{ id: state.session.id }]);
     }
     if (sql.startsWith('INSERT INTO media.objects')) {
@@ -46,12 +49,24 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
     }
     if (sql.includes('INSERT INTO system.outbox_events')) { state.outbox.push({ id: values[0] }); return result([{}]); }
     if (sql.startsWith('UPDATE media.storage_ledger SET bytes_uploaded')) {
-      if (state.reservationMissing) return result([]);
+      if (state.reservationMissing || state.ledgerReserved < Number(values[2])) return result([]);
+      state.ledgerReserved -= Number(values[2]);
+      state.ledgerUploaded += Number(values[1]);
+      state.ledgerApproved += Number(values[1]);
+      state.ledgerWrites++; return result([{}]);
+    }
+    if (sql.startsWith('UPDATE media.storage_ledger SET bytes_reserved = bytes_reserved -')) {
+      if (state.reservationMissing || state.ledgerReserved < Number(values[0])) return result([]);
+      state.ledgerReserved -= Number(values[0]);
+      if (sql.includes('bytes_rejected = bytes_rejected +')) {
+        state.ledgerRejected += Number(values[0]);
+        state.rejections++;
+      }
       state.ledgerWrites++; return result([{}]);
     }
     if (sql.startsWith('UPDATE media.storage_ledger')) { state.rejections++; return result([{}]); }
     if (sql.startsWith('INSERT INTO media.storage_ledger')) { state.ledgerWrites++; return result([{}]); }
-    if (sql.startsWith('SELECT bytes_reserved')) return result([{ bytes_reserved: 0, bytes_approved: 0 }]);
+    if (sql.startsWith('SELECT bytes_reserved')) return result([{ bytes_reserved: state.ledgerReserved, bytes_approved: state.ledgerApproved }]);
     if (sql.startsWith('INSERT INTO media.upload_sessions')) return result([{}]);
     if (sql.startsWith('INSERT INTO media.ownership') || sql.startsWith('INSERT INTO media.variants') || sql.startsWith('INSERT INTO system.rate_limit_windows')) return result([{}]);
     throw new Error('unexpected_fixture_sql:' + sql.slice(0, 90));
@@ -59,7 +74,8 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
   async function seed(status = 'queued', overrides = {}) {
     beforeQuery = undefined;
     const id = randomUUID(), user_id = randomUUID();
-    state = { session: { id, user_id, object_key: `quarantine/${user_id}/${id}`, expected_bytes: png.length,
+    state = { account: { status: 'active', deleted_at: null }, ledgerReserved: status === 'expired' ? 0 : png.length, ledgerRejected: 0,
+      ledgerUploaded: 0, ledgerApproved: 0, session: { id, user_id, object_key: `quarantine/${user_id}/${id}`, expected_bytes: png.length,
       checksum_sha256: digest(png), content_type: 'image/png', purpose: 'standard', status, unexpired: true, ...overrides },
       inbox: null, objects: [], evidence: [], activity: [], outbox: [], ledgerWrites: 0, rejections: 0 };
     await fixture.quarantine.put(state.session.object_key, png, { httpMetadata: { contentType: 'image/png' } });
@@ -93,10 +109,9 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       assert.equal((await fixture.request('/fixture/finalise', input)).status, 400);
       assert.equal(state.outbox.length, 1);
     });
-    await t.test('another owner, private-purpose upload and expired session cannot finalize or read bytes', async () => {
-      for (const scenario of ['other-owner', 'alpha', 'expired']) {
-        const input = await seed('pending', scenario === 'alpha' ? { purpose: 'authenticity_alpha' }
-          : scenario === 'expired' ? { unexpired: false } : {});
+    await t.test('another owner and private-purpose upload cannot finalize or read bytes', async () => {
+      for (const scenario of ['other-owner', 'alpha']) {
+        const input = await seed('pending', scenario === 'alpha' ? { purpose: 'authenticity_alpha' } : {});
         if (scenario === 'other-owner') input.userId = randomUUID();
         assert.equal((await fixture.request('/fixture/finalise', input)).status, 400);
         assert.equal(state.outbox.length, 0);
@@ -111,14 +126,26 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       assert.equal(state.outbox.length, 0);
       assert.equal(state.activity.length, 0);
     });
-    await t.test('MIME spoofing rejects once, releases reservation once and keeps cleanup unclaimed', async () => {
+    await t.test('expired pending finalization releases its reservation and retries private deletion', async () => {
+      const input = await seed('pending', { unexpired: false });
+      assert.equal((await fixture.request('/fixture/finalise', input)).status, 400);
+      assert.equal(state.session.status, 'expired');
+      assert.equal(state.ledgerReserved, 0);
+      assert.equal(state.outbox.length, 0);
+      assert.equal(await fixture.quarantine.head(state.session.object_key), null);
+      assert.equal((await fixture.request('/fixture/finalise', input)).status, 400);
+      assert.equal(state.ledgerReserved, 0);
+    });
+    await t.test('MIME spoofing rejects once, releases reservation once and removes quarantine bytes', async () => {
       const input = await seed('pending', { content_type: 'image/jpeg' });
       const response = await fixture.request('/fixture/finalise', input);
       assert.equal((await response.json()).error, 'unsupported_media_type');
       await fixture.request('/fixture/finalise', input);
       assert.equal(state.rejections, 1);
       assert.equal(state.session.status, 'rejected');
-      assert.ok(await fixture.quarantine.head(state.session.object_key));
+      assert.equal(state.ledgerReserved, 0);
+      assert.equal(state.ledgerRejected, png.length);
+      assert.equal(await fixture.quarantine.head(state.session.object_key), null);
     });
     await t.test('disabled processing retries and does not mark the consumer inbox complete', async () => {
       const input = await seed();
@@ -138,13 +165,36 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       assert.equal(await fixture.quarantine.head(state.session.object_key), null);
       assert.equal(state.objects.length, 0);
     });
-    await t.test('private-purpose and expired sessions never decode or create review objects', async () => {
-      for (const overrides of [{ purpose: 'authenticity_alpha' }, { status: 'expired' }]) {
-        const input = await seed('queued', overrides);
-        assert.deepEqual(await queue(input), { ack: 0, retry: 1, imageCalls: 0 });
-        assert.equal(state.objects.length, 0);
-        assert.ok(await fixture.quarantine.head(state.session.object_key));
-      }
+    await t.test('private-purpose sessions never decode or create review objects', async () => {
+      const input = await seed('queued', { purpose: 'authenticity_alpha' });
+      assert.deepEqual(await queue(input), { ack: 0, retry: 1, imageCalls: 0 });
+      assert.equal(state.objects.length, 0);
+      assert.ok(await fixture.quarantine.head(state.session.object_key));
+    });
+    await t.test('expired queue work releases quota and retries both private bucket deletions', async () => {
+      const input = await seed('queued', { unexpired: false });
+      const key = `approved/${input.userId}/${input.sessionId}.webp`;
+      await fixture.approved.put(key, png);
+      assert.deepEqual(await queue({ ...input, failApprovedDelete: true }), { ack: 0, retry: 1, imageCalls: 0 });
+      assert.equal(state.session.status, 'expired');
+      assert.equal(state.ledgerReserved, 0);
+      assert.equal(state.objects.length, 0);
+      assert.equal(await fixture.quarantine.head(state.session.object_key), null);
+      assert.ok(await fixture.approved.head(key));
+      assert.deepEqual(await queue(input), { ack: 1, retry: 0, imageCalls: 0 });
+      assert.equal(await fixture.approved.head(key), null);
+    });
+    await t.test('deleted-account queue work is fenced before Images and removes private orphans', async () => {
+      const input = await seed();
+      state.account = { status: 'deleted', deleted_at: new Date().toISOString() };
+      const key = `approved/${input.userId}/${input.sessionId}.webp`;
+      await fixture.approved.put(key, png);
+      assert.deepEqual(await queue(input), { ack: 1, retry: 0, imageCalls: 0 });
+      assert.equal(state.session.status, 'expired');
+      assert.equal(state.ledgerReserved, 0);
+      assert.equal(state.objects.length, 0);
+      assert.equal(await fixture.quarantine.head(state.session.object_key), null);
+      assert.equal(await fixture.approved.head(key), null);
     });
     await t.test('decoder failures retain source and retry; malformed output cannot enter approved storage', async () => {
       const input = await seed();
@@ -163,13 +213,17 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
         assert.equal(state.objects.length, 0);
       }
     });
-    await t.test('deleted session state blocks processing at the initial lock', async () => {
+    await t.test('already-expired session state skips Images and repeats private cleanup', async () => {
       const input = await seed();
       beforeQuery = sql => { if (sql.includes('FROM media.upload_sessions') && sql.includes('FOR UPDATE NOWAIT')) state.session.status = 'expired'; };
-      assert.deepEqual(await queue(input), { ack: 0, retry: 1, imageCalls: 0 });
+      const key = `approved/${input.userId}/${input.sessionId}.webp`;
+      await fixture.approved.put(key, png);
+      assert.deepEqual(await queue(input), { ack: 1, retry: 0, imageCalls: 0 });
       assert.equal(state.objects.length, 0);
       assert.equal(state.evidence.length, 0);
       assert.equal(state.ledgerWrites, 0);
+      assert.equal(await fixture.quarantine.head(state.session.object_key), null);
+      assert.equal(await fixture.approved.head(key), null);
     });
     await t.test('review evidence persistence failure rolls back database effects and retries', async () => {
       const input = await seed();

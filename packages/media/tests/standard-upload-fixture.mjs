@@ -69,6 +69,7 @@ export async function standardUploadFixture(database, onEffect = async () => {})
         };
         env.MEDIA_APPROVED = {
           get: (...args) => bindings.MEDIA_APPROVED.get(...args),
+          delete: (...args) => bindings.MEDIA_APPROVED.delete(...args),
           put: async (...args) => {
             await effect('beforePut');
             const result = await bindings.MEDIA_APPROVED.put(...args);
@@ -91,6 +92,10 @@ export async function standardUploadFixture(database, onEffect = async () => {})
         if (input.failDelete) env.MEDIA_QUARANTINE = {
           get: (...args) => bindings.MEDIA_QUARANTINE.get(...args),
           delete: async () => { throw new Error('synthetic_delete_unavailable'); },
+        };
+        if (input.failApprovedDelete) env.MEDIA_APPROVED = {
+          get: (...args) => bindings.MEDIA_APPROVED.get(...args),
+          delete: async () => { throw new Error('synthetic_approved_delete_unavailable'); },
         };
         try {
           if (path === '/fixture/finalise') return await finaliseUpload(request, env, { userId: input.userId }, input.sessionId);

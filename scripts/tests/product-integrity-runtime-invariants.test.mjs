@@ -457,6 +457,18 @@ test('DSR recursive event cleanup matches only exact subject UUID values and pre
   assert.match(deletion, /UPDATE system\.outbox_events[\s\S]*actor_id = NULL[\s\S]*payload = '\{\}'::jsonb[\s\S]*jsonb_path_exists/);
 });
 
+test('account deletion fences standard upload sessions before private-media purge', () => {
+  const deletion = between(jobs, 'export class AccountDeleteWorkflow', 'export class AccountExportWorkflow');
+  const fence = deletion.indexOf("step.do('fence-standard-media-sessions-for-deletion'");
+  const purge = deletion.indexOf("step.do('purge-media-and-mark-locator'");
+  assert.ok(fence >= 0 && purge > fence, 'session fence must complete before storage purge');
+  const fenceStep = deletion.slice(fence, purge);
+  assert.match(fenceStep, /UPDATE media\.upload_sessions SET status = 'expired'[\s\S]*WHERE user_id = \$1 AND purpose = 'standard' AND status IN \('pending', 'queued'\)/);
+  const purgeStep = deletion.slice(purge);
+  assert.match(purgeStep, /SELECT id, object_key FROM media\.upload_sessions WHERE user_id = \$1 AND purpose = 'standard'/);
+  assert.match(purgeStep, /MEDIA_QUARANTINE\.delete\(upload\.object_key\)[\s\S]*MEDIA_APPROVED\.delete\(`approved\/\$\{subjectId\}\/\$\{upload\.id\}\.webp`\)/);
+});
+
 test('Workers bound request and R2 bytes before materializing untrusted payloads', () => {
   assert.match(publicApi, /import \{ readBoundedJson \} from '\.\/request-body-runtime\.ts'/);
   const readJson = between(publicApi, 'async function readJson', 'function feedResponse');

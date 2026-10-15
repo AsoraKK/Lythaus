@@ -1320,13 +1320,26 @@ async function finaliseUpload(request: Request, env: Env, user: Principal, sessi
     [sessionId, user.userId]
   );
   const session = result.rows[0];
-  if (!session || session.status !== 'pending' || session.unexpired !== true) throw new Error('upload_session_invalid');
+  if (!session) throw new Error('upload_session_invalid');
+  if (session.status === 'expired' || session.status === 'rejected' || session.status === 'cancelled') {
+    await env.MEDIA_QUARANTINE.delete(session.object_key);
+    throw new Error('upload_session_invalid');
+  }
+  if (session.status !== 'pending') throw new Error('upload_session_invalid');
+  if (session.unexpired !== true) {
+    const expired = await expirePendingUploadReservation(env, user.userId, sessionId, Number(session.expected_bytes));
+    if (expired) await env.MEDIA_QUARANTINE.delete(session.object_key);
+    throw new Error('upload_session_invalid');
+  }
   const source = await env.MEDIA_QUARANTINE.get(session.object_key);
   if (!source) throw new Error('upload_object_invalid');
   try {
     await verifyStandardUploadBytes(source, session);
   } catch (error) {
-    if (error instanceof UploadIntegrityError) await rejectUploadReservation(env, user.userId, sessionId, Number(session.expected_bytes));
+    if (error instanceof UploadIntegrityError) {
+      const rejected = await rejectUploadReservation(env, user.userId, sessionId, Number(session.expected_bytes));
+      if (rejected) await env.MEDIA_QUARANTINE.delete(session.object_key);
+    }
     throw error;
   }
   const eventId = uuidv7();
@@ -1355,14 +1368,34 @@ async function finaliseUpload(request: Request, env: Env, user: Principal, sessi
   return privateResponse(request, env, { uploadSessionId: sessionId, status: 'queued', eventId });
 }
 
-async function rejectUploadReservation(env: Env, userId: string, sessionId: string, bytes: number): Promise<void> {
-  await transaction(env.DB_APP_FRESH, async (client) => {
+async function expirePendingUploadReservation(env: Env, userId: string, sessionId: string, bytes: number): Promise<boolean> {
+  return transaction(env.DB_APP_FRESH, async (client) => {
     const updated = await client.query(
-      `UPDATE media.upload_sessions SET status = 'rejected' WHERE id = $1 AND user_id = $2 AND status = 'pending' AND purpose = 'standard'`,
+      `UPDATE media.upload_sessions SET status = 'expired'
+        WHERE id = $1 AND user_id = $2 AND status = 'pending' AND purpose = 'standard'
+          AND expires_at <= clock_timestamp() RETURNING id`,
       [sessionId, userId]);
-    if (updated.rowCount !== 0) await client.query(
-      `UPDATE media.storage_ledger SET bytes_reserved = greatest(bytes_reserved - $1, 0), bytes_rejected = bytes_rejected + $1, last_reconciled_at = now() WHERE user_id = $2`,
-      [bytes, userId]);
+    if (updated.rowCount === 0) return false;
+    const released = await client.query(
+      `UPDATE media.storage_ledger SET bytes_reserved = bytes_reserved - $1, last_reconciled_at = now()
+        WHERE user_id = $2 AND bytes_reserved >= $1 RETURNING user_id`, [bytes, userId]);
+    if (released.rowCount !== 1) throw new Error('media_reservation_unavailable');
+    return true;
+  });
+}
+
+async function rejectUploadReservation(env: Env, userId: string, sessionId: string, bytes: number): Promise<boolean> {
+  return transaction(env.DB_APP_FRESH, async (client) => {
+    const updated = await client.query(
+      `UPDATE media.upload_sessions SET status = 'rejected'
+        WHERE id = $1 AND user_id = $2 AND status = 'pending' AND purpose = 'standard' RETURNING id`,
+      [sessionId, userId]);
+    if (updated.rowCount === 0) return false;
+    const released = await client.query(
+      `UPDATE media.storage_ledger SET bytes_reserved = bytes_reserved - $1, bytes_rejected = bytes_rejected + $1, last_reconciled_at = now()
+        WHERE user_id = $2 AND bytes_reserved >= $1 RETURNING user_id`, [bytes, userId]);
+    if (released.rowCount !== 1) throw new Error('media_reservation_unavailable');
+    return true;
   });
 }
 

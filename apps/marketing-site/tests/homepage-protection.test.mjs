@@ -30,8 +30,8 @@ const nativeModerationWorkerdTest = 'packages/authenticity/tests/openai-moderati
 const publicationPg17Script = 'node scripts/ci/run-publication-pg17.mjs';
 const allocatedJobsDiagnosticTests = 'apps/lythaus-jobs/tests/reputation-session-diagnostic.test.mjs apps/lythaus-jobs/tests/reputation-session-diagnostic.workerd.mjs';
 const allocatedJobsDiagnosticFiles = new Map([
-  ['apps/lythaus-jobs/src/index.ts', '79b96b2a830b4c0df3231a6c78d4ac4e59534db1'],
-  ['apps/lythaus-public-api/src/index.ts', '39b25edcffabf06d64caf12b5301cb515e9662d9'],
+  ['apps/lythaus-jobs/src/index.ts', '822d5167d27e942077d064802617d6cca0ab006c'],
+  ['apps/lythaus-public-api/src/index.ts', 'bda1a55ca86df93196aa00c64a32677f682cd603'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],

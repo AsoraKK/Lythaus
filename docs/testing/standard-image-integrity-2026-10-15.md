@@ -1,27 +1,36 @@
 # Standard image upload integrity and posting handoff
 
-Inspected base: `489aef297ff0b1a40744504594122c9ebc43930d` on `main`.
+Inspected base: `53ac0f4ece621605762cde8d9a42f7dde8362ca9` on `main`.
 This is source preparation for independent review, not a posting release.
 Public image posting remains blocked. No provider calls, deployment, merge,
-feature activation, database schema/grant change, credential change or new
-resource is part of this work. Model output does not prove human authorship.
+feature activation, persistent schema/grant change, credential change or new
+resource is part of this work. An unapplied grant patch is included for review;
+its two column grants are exercised only in the uniquely named disposable PG17
+test database and revoked before teardown. Model output does not prove human
+authorship.
 
 ## Ownership and existing work
 
 Open PRs were inspected before editing. #989 owns the ordinary post-review
 transaction/fence and publication PG17 runner; #886 owns private alpha hardening;
-#1000 updates moderation evaluation evidence; #1023 touches composer-adjacent
-Flutter release gates. Their implementation sections remain untouched.
+#1000 updates moderation evaluation evidence; #1022 owns reputation transaction
+cleanup/lock work, including the shared database transaction wrapper; #1023
+touches composer-adjacent Flutter release gates. This lane leaves #1022's
+transaction wrapper files unchanged. It adds a separate named standard-media
+session fence and purge path in `AccountDeleteWorkflow`; the media queue holds
+its existing per-session lock and deletes private bytes only after a terminal
+DB result commits. The PRs have separate steps and SQL scopes in the shared Jobs
+entrypoint and additive CI workflow registration.
 
 This lane owns `packages/media/src/standard-upload.ts`, its four test/fixture
 files, the standard upload functions in Public API `src/index.ts`, and the
 ordinary `processMediaUpload` function in Jobs `src/index.ts`. The only shared
-test maintenance is the existing byte-boundary assertion in
-`scripts/tests/product-integrity-runtime-invariants.test.mjs` and one additive
-CI step in `.github/workflows/ci.yml`. Revision 2 also reconciles the two exact
+test maintenance is the existing byte-boundary assertion and new media-session
+fence ordering assertion in `scripts/tests/product-integrity-runtime-invariants.test.mjs`
+and one additive CI step in `.github/workflows/ci.yml`. Revision 3 also reconciles the two exact
 Worker blob pins in `apps/marketing-site/tests/homepage-protection.test.mjs`,
 with all existing negative controls preserved. No Flutter or generated SDK
-files change. The [revision 2 review packet](standard-image-integrity-review-2026-10-15.md)
+files change. The [revision 3 review packet](standard-image-integrity-review-2026-10-15.md)
 records the independent findings, exact blob identities and true race evidence.
 
 ## Verified path on main
@@ -40,9 +49,10 @@ records the independent findings, exact blob identities and true race evidence.
 
 Checked-in `MEDIA_UPLOADS_ENABLED` and `MEDIA_PROCESSING_ENABLED` are both false.
 Jobs `AUTHENTICITY_AI_ENABLED` is true in source. The original main path would
-call its generic metadata evaluator if media processing were enabled. Revision 2
-removes that call from ordinary image processing and records explicit unavailable
-review evidence with `modelId: not-executed`, even when the AI flag is true.
+call its generic metadata evaluator if media processing were enabled. This
+proposed path removes that call from ordinary image processing and records
+explicit unavailable review evidence with `modelId: not-executed`, even when
+the AI flag is true.
 No flag value changes. Live configuration and grants were not inspected;
 checked-in values are not a claim about deployment state.
 
@@ -56,9 +66,11 @@ checked-in values are not a claim about deployment state.
   both finalization and queued processing. Check the actual GET body's length,
   digest and MIME; do not rely on a prior HEAD or declared MIME. Storage read
   failures stay retryable rather than becoming integrity decisions.
-- Check pending-session expiry with database time both before reading and in
-  the final state transition. Revalidate owner, standard purpose and recorded
-  source metadata in that transition.
+- Check session expiry with database time before work, between source validation
+  and Images, after transformation, and in the final state transition. Pending
+  finalization expiry atomically marks the session expired and releases its
+  reservation; a queued expired session does the same under its session lock.
+  Revalidate owner, standard purpose and source identity at settlement.
 - Recheck checksum after queue delay, isolate standard uploads from private
   alpha/beta purposes, and reject invalid dimensions or non-WebP output. Bound
   transformed bytes to the existing intake reservation, rejecting growth rather
@@ -67,6 +79,13 @@ checked-in values are not a claim about deployment state.
 - Lock the upload session with `FOR UPDATE NOWAIT` before R2/Images work, keeping
   the same transaction through review persistence. A contender retries before
   decoding; terminal sessions perform only idempotent post-commit cleanup.
+- Check current account status before external processing. Account deletion
+  marks pending/queued standard sessions expired before purging media, so it
+  waits for an in-flight session transaction; deletion cleanup also removes
+  quarantine objects and each session's possible private derivative.
+- Settle expiry/rejection only when the existing reservation is sufficient;
+  otherwise the transaction fails instead of masking quota drift or underflow.
+  Private bucket cleanup remains retryable after durable terminal state.
 - Store derivatives conditionally with source-bound private metadata. Retry
   verifies and reuses existing bytes without another Images call. Unknown,
   mismatched or older unbound derivatives remain blocked, never overwritten.
@@ -113,10 +132,14 @@ denied. The signature fixtures deliberately are not detector accuracy samples.
 
 The PostgreSQL suite creates a uniquely named database through the existing
 loopback-only publication control target, applies the unchanged canonical PG17
-baseline/roles, runs real SQL as `lythaus_runtime` / `lythaus_jobs`, and drops its
-database. It adds no grants, proposal schema or privileged runtime fallback.
-Its transport shim uses explicit local transactions; it does not certify the
-production pg/Hyperdrive connection/cleanup wrapper, real R2, Images or Queues.
+baseline/roles, and first verifies both canonical `42501` denials. It then
+applies only the two proposed column-level grants to that unique disposable
+database, exercises actual handler SQL as `lythaus_runtime` / `lythaus_jobs`,
+and revokes the grants before dropping the database. The proposal is not applied
+to canonical files or a hosted database. This proves a local candidate-grant
+path, not production acceptance. The transport shim uses explicit local
+transactions; it does not certify the production pg/Hyperdrive connection or
+cleanup wrapper, hosted R2, Images or Queues.
 
 Commands:
 
@@ -131,23 +154,20 @@ npm run test:product-integrity-runtime
 
 Set `PLANETSCALE_PG17_TEST_DATABASE_URL` to the existing disposable loopback
 `lythaus_auth_test_post_control` database. The dedicated test fails if the target
-is absent or unsafe. CI registers the same three suites. Local unit/Workerd
-coverage includes 22 tests; PG17 includes thirteen scenario groups plus their
-parent test. Passing expected-denial tests is **not** a successful image journey.
+is absent or unsafe. CI registers the same three suites. Current unit/Workerd
+coverage includes 25 tests; PG17 includes 21 tests. Canonical expected-denial
+tests are reported separately from the candidate-grant handler journey; neither
+constitutes hosted production acceptance.
 
-Local results on revision 2: combined dedicated suites **36/36** pass;
-existing attachment byte-boundary/preparation and product-policy suites **55/55**;
-product-integrity checks **21/21**; native architecture/runtime **376/376**.
-Homepage protection is **30/30**; the full marketing suite is **84/84** after
-restoring dependencies from its unchanged lockfile. Its first run had nine
-cache-policy failures because the local install resolved upstream
-`http-cache-semantics` instead of the pinned local adapter; no cache assertion,
-dependency version or lockfile was changed.
-Typechecking, workflow action pins, provider/naming hygiene, canonical migration
-manifest validation and whitespace checks pass. The first native run had one
-npm default-cache filesystem failure (375/376); a writable `/tmp` npm-cache
-rerun passed all 376 with no source/test weakening. Hosted CI and independent
-review remain separate from these local results.
+Current local results on this branch: dedicated unit/Workerd and PG17 suites
+**46/46**; product-integrity checks **22/22**; homepage protection **30/30**;
+marketing **84/84**; attachment/preparation/product-policy **55/55**; native
+architecture/runtime **376/376**. Native typecheck, workflow action pins,
+canonical migration manifest and whitespace checks pass. The first native run
+could not write npm's default cache; rerunning with a writable `/tmp` cache
+passed the full suite. The marketing workspace was restored using its unchanged
+lockfile before its full-suite pass. Hosted exact-head CI and independent review
+remain separate gates.
 
 ## Remaining release blockers
 
@@ -165,17 +185,20 @@ review remain separate from these local results.
    that gap. No new threshold, provider request or spend is added.
 3. **Byte/privacy acceptance:** source signature alone is incomplete. Full
    decoder behavior, orientation and GPS/EXIF removal, presigned PUT ingress
-   bounds/replay, original retention, rejected/abandoned cleanup and bounded
-   storage/decoder waits still need validation and approved contracts.
-4. **Deletion/concurrency:** the early session lock rejects an expired state but
-   is not an account/deletion fence. It retains a DB transaction across external
-   Images work; hosted timeout/connection behavior needs acceptance. A private
-   derivative is written before its DB transaction commits and can remain
-   orphaned after failure or deletion.
-   It is not automatically deleted on uncertain commit because another attempt
-   may have committed it. Canonical queue-source event binding, current-account
-   fencing, full account-delete/hold/retention races, cleanup
-   reconciliation and attachment tombstones remain blocked.
+   bounds/replay, original retention, abandoned pending-session sweeping and
+   bounded storage/decoder waits still need validation and approved contracts.
+   Rejection cleanup retries after a durable terminal state locally; canonical
+   `bytes_rejected` denial still blocks production-role rejection settlement.
+4. **Deletion/concurrency:** standard-session expiry and account-deletion
+   fencing are implemented and covered with local session-lock/race tests, but
+   the full hosted account-delete/hold/retention workflow and restart acceptance
+   remain open. It retains a DB transaction across external Images work; hosted
+   timeout/connection behavior needs acceptance. A private derivative written
+   before DB commit can remain orphaned after connection or process loss;
+   terminal retry and account-deletion cleanup remove known quarantine/derivative
+   keys, but no reconciliation sweep or aggregate physical R2 quota bound is
+   certified. Hosted account-delete/retention restart acceptance, canonical
+   queue-source event binding and attachment tombstones remain blocked.
    If the transaction is lost before a derivative is stored, Images work can
    repeat. Conditional PUT prevents overwrite but cannot supply exactly-once
    external execution. The tests demonstrate this boundary rather than hiding
