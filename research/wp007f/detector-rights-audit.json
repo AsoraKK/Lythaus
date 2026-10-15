@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "lythaus-wp007f-detector-rights-audit-v1",
+  "workPackage": "WP007F",
+  "baseSha": "611b0b006a5ea66ef1f7369255a6e3f19951a6e7",
+  "scope": "research_evaluation_before_checkpoint_acquisition",
+  "holdoutPolicy": {
+    "flux1PixelAccess": false,
+    "flux2PixelAccess": false,
+    "flux2ProviderCalls": 0
+  },
+  "sharedDependencyPolicy": {
+    "openaiClipRepository": {
+      "repository": "https://github.com/openai/CLIP",
+      "revision": "d05afc436d78f1c48dc0dbf8e5980a9d471f35f6",
+      "license": "MIT",
+      "codeResearchUse": "CONFIRMED",
+      "weightSource": "https://openaipublic.azureedge.net/clip/models/b8cca3fd41ae0c99ba7e8951adf17d267cdb84cd88be6f7c2e0eca1737a03836/ViT-L-14.pt",
+      "weightResearchUse": "MODEL_CARD_RESEARCH_INTENDED",
+      "deploymentUse": "MODEL_CARD_OUT_OF_SCOPE_REQUIRES_REVIEW",
+      "modelCard": "https://github.com/openai/CLIP/blob/main/model-card.md",
+      "dataLineage": "Public image-caption data described by the official model card; no training dataset is acquired by WP007F.",
+      "redistribution": "Code MIT; weight redistribution and product deployment remain subject to the official model terms and model card."
+    }
+  },
+  "detectors": [
+    {
+      "detectorId": "SPAI_C512",
+      "displayName": "SPAI C512",
+      "repository": "https://github.com/mever-team/spai",
+      "revision": "RECORDED_IN_WP007B_RIGHTS_AUDIT",
+      "checkpointSource": "Official author-provided SPAI checkpoint recorded by WP007B",
+      "checkpointSha256": "24159f27d7c8c2cd0cb6c4019189eb89ad0874a0d9d15f8dc9afd39ca9648a55",
+      "codeLicense": "Apache-2.0",
+      "checkpointRights": "CONFIRMED_FOR_RESEARCH_EVALUATION",
+      "researchEvaluationRights": "CONFIRMED",
+      "commercialDeploymentRights": "NOT_CONFIRMED",
+      "inputPolicy": "C512 deterministic center crop from decoded pixels; no metadata or provenance fields",
+      "trainingUse": "NO_RETRAINING_IN_WP007F",
+      "statusBeforeQualification": "RESEARCH_EVALUATION_ELIGIBLE"
+    },
+    {
+      "detectorId": "UNIVERSAL_FAKE_DETECT",
+      "displayName": "UniversalFakeDetect",
+      "repository": "https://github.com/WisconsinAIVision/UniversalFakeDetect",
+      "revision": "030495aea3300a8b54c0ec37ec7fe1dd7e63c619",
+      "repositoryLicense": "MIT",
+      "checkpointSource": "Published repository file pretrained_weights/fc_weights.pth",
+      "checkpointSha256": "477100745713bcc957beb2b40859536859b6483fd6301b3b9293151b194c7847",
+      "checkpointLicense": "Repository MIT license applies to repository material; checkpoint provenance and downstream deployment remain separately reviewed.",
+      "underlyingClip": "OpenAI CLIP ViT-L/14; see sharedDependencyPolicy.openaiClipRepository",
+      "researchEvaluationRights": "CONDITIONALLY_ALLOWED_FOR_RESEARCH_EVALUATION",
+      "commercialDeploymentRights": "NOT_CONFIRMED_MODEL_CARD_DEPLOYMENT_REVIEW_REQUIRED",
+      "trainingProxyUse": "NOT_USED; frozen published head only",
+      "outputTrainingRights": "No additional training is performed; any future fine-tuning requires a separate rights review.",
+      "statusBeforeQualification": "RESEARCH_EVALUATION_CHECKPOINT_HASH_VERIFIED"
+    },
+    {
+      "detectorId": "RINE",
+      "displayName": "RINE",
+      "repository": "https://github.com/mever-team/rine",
+      "revision": "9b7fd5857cc205d0412be6aeee0d7611b95bd620",
+      "repositoryLicense": "Apache-2.0",
+      "checkpointSource": "Published repository file ckpt/model_ldm_trainable.pth",
+      "checkpointSha256": "13986ffc86e1bd9d57fd640f891358c4f14c0f8aea8e590e52c598541f69fdc1",
+      "checkpointLicense": "Checkpoint is distributed by the Apache-2.0 repository; provenance and downstream deployment remain separately reviewed.",
+      "underlyingClip": "OpenAI CLIP ViT-L/14; see sharedDependencyPolicy.openaiClipRepository",
+      "researchEvaluationRights": "CONDITIONALLY_ALLOWED_FOR_RESEARCH_EVALUATION",
+      "commercialDeploymentRights": "NOT_CONFIRMED_MODEL_CARD_DEPLOYMENT_REVIEW_REQUIRED",
+      "trainingProxyUse": "NOT_USED; frozen published head only",
+      "outputTrainingRights": "No additional training is performed; any future fine-tuning requires a separate rights review.",
+      "selectedCheckpointRationale": "model_ldm_trainable.pth is the predeclared diffusion-relevant checkpoint and is selected before Lythaus qualification scores are visible.",
+      "statusBeforeQualification": "RESEARCH_EVALUATION_CHECKPOINT_HASH_VERIFIED"
+    }
+  ],
+  "sourcePools": {
+    "camera": "Rights-clean WP006E camera development material; local-only processing; CC BY 4.0 attribution constraints recorded in the role freeze.",
+    "digitalNonAi": "Rights-clean Lythaus-controlled digital negatives; local-only processing.",
+    "diffusionDb": "CC0 1.0 rights carried from WP007A; used for evaluation only in WP007F.",
+    "flux1": "SEALED_FOR_EF3_UNSEEN_GENERATOR_EVALUATION; no pixels resolved.",
+    "flux2": "SEALED_FUTURE_RESERVE; no pixels resolved."
+  },
+  "decision": {
+    "preAcquisition": "Proceed with bounded research qualification only after verifying checkpoint bytes and hashes.",
+    "deployment": "No detector is authorized for live alpha solely by this audit; product deployment requires a separate terms review and qualification result.",
+    "newServiceOrRegistrationRequired": false
+  }
+}

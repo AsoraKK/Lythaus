@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "lythaus-authenticity-alpha-not-deployed",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-09-16",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "observability": { "enabled": true, "head_sampling_rate": 0.1 },
+  "vars": {
+    "LYTHAUS_AUTHENTICITY_ALPHA_MODE": "SHADOW",
+    "DETECTOR_REGISTRY_VERSION": "2026-09-16.wp007f.qualification-1"
+  },
+  "containers": [
+    {
+      "class_name": "LythausAuthenticityAlphaContainer",
+      "image": "./container/Dockerfile",
+      "instance_type": "standard-3",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "AUTHENTICITY_CONTAINER", "class_name": "LythausAuthenticityAlphaContainer" }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "authenticity-alpha-v1",
+      "new_sqlite_classes": ["LythausAuthenticityAlphaContainer"]
+    }
+  ]
+}

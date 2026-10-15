@@ -1,0 +1,657 @@
+{
+  "schemaVersion": "lythaus-wp007f-calibration-profiles-v1",
+  "inputManifestSha256": "3ef81fab74b7c05046f312a5f59dde9bf218e510ffa699d86441fcde6f715c62",
+  "scoreBlind": true,
+  "flux1PixelAccess": false,
+  "flux2PixelAccess": false,
+  "profiles": [
+    {
+      "detectorId": "SPAI_C512",
+      "profileVersion": "wp007f-spai_c512-calibration-v1",
+      "scoreDirection": "HIGHER_SCORE_SYNTHETIC",
+      "rawScoreIsProbability": false,
+      "operatingPoints": [
+        {
+          "targetOverallNegativeFpr": 0.005,
+          "threshold": 1.0,
+          "camera": {
+            "count": 6,
+            "total": 100,
+            "rate": 0.06,
+            "wilson95": [
+              0.027786,
+              0.124768
+            ]
+          },
+          "digital": {
+            "count": 0,
+            "total": 48,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.0741
+            ]
+          },
+          "overall": {
+            "count": 6,
+            "total": 148,
+            "rate": 0.040541,
+            "wilson95": [
+              0.01871,
+              0.085619
+            ]
+          },
+          "syntheticRecall": {
+            "count": 154,
+            "total": 200,
+            "rate": 0.77,
+            "wilson95": [
+              0.706917,
+              0.822907
+            ]
+          }
+        },
+        {
+          "targetOverallNegativeFpr": 0.01,
+          "threshold": 1.0,
+          "camera": {
+            "count": 6,
+            "total": 100,
+            "rate": 0.06,
+            "wilson95": [
+              0.027786,
+              0.124768
+            ]
+          },
+          "digital": {
+            "count": 0,
+            "total": 48,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.0741
+            ]
+          },
+          "overall": {
+            "count": 6,
+            "total": 148,
+            "rate": 0.040541,
+            "wilson95": [
+              0.01871,
+              0.085619
+            ]
+          },
+          "syntheticRecall": {
+            "count": 154,
+            "total": 200,
+            "rate": 0.77,
+            "wilson95": [
+              0.706917,
+              0.822907
+            ]
+          }
+        },
+        {
+          "targetOverallNegativeFpr": 0.02,
+          "threshold": 1.0,
+          "camera": {
+            "count": 6,
+            "total": 100,
+            "rate": 0.06,
+            "wilson95": [
+              0.027786,
+              0.124768
+            ]
+          },
+          "digital": {
+            "count": 0,
+            "total": 48,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.0741
+            ]
+          },
+          "overall": {
+            "count": 6,
+            "total": 148,
+            "rate": 0.040541,
+            "wilson95": [
+              0.01871,
+              0.085619
+            ]
+          },
+          "syntheticRecall": {
+            "count": 154,
+            "total": 200,
+            "rate": 0.77,
+            "wilson95": [
+              0.706917,
+              0.822907
+            ]
+          }
+        },
+        {
+          "targetOverallNegativeFpr": 0.05,
+          "threshold": 0.999837768,
+          "camera": {
+            "count": 8,
+            "total": 100,
+            "rate": 0.08,
+            "wilson95": [
+              0.041093,
+              0.149981
+            ]
+          },
+          "digital": {
+            "count": 0,
+            "total": 48,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.0741
+            ]
+          },
+          "overall": {
+            "count": 8,
+            "total": 148,
+            "rate": 0.054054,
+            "wilson95": [
+              0.027641,
+              0.103031
+            ]
+          },
+          "syntheticRecall": {
+            "count": 182,
+            "total": 200,
+            "rate": 0.91,
+            "wilson95": [
+              0.862234,
+              0.942313
+            ]
+          }
+        },
+        {
+          "targetOverallNegativeFpr": 0.1,
+          "threshold": 0.991239619,
+          "camera": {
+            "count": 15,
+            "total": 100,
+            "rate": 0.15,
+            "wilson95": [
+              0.09306,
+              0.232836
+            ]
+          },
+          "digital": {
+            "count": 0,
+            "total": 48,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.0741
+            ]
+          },
+          "overall": {
+            "count": 15,
+            "total": 148,
+            "rate": 0.101351,
+            "wilson95": [
+              0.062386,
+              0.160487
+            ]
+          },
+          "syntheticRecall": {
+            "count": 189,
+            "total": 200,
+            "rate": 0.945,
+            "wilson95": [
+              0.904213,
+              0.969015
+            ]
+          }
+        }
+      ],
+      "actionProfile": {
+        "target": 0.01,
+        "threshold": 1.0,
+        "supportLevel": "MODERATE_SUPPORT",
+        "labelAuthority": "EVIDENCE_ONLY_NO_INDEPENDENT_AI_GENERATED_LABEL"
+      },
+      "thresholdSource": "DDB_DETECTOR_DEV positives excluded; CAMERA_DEV + DIGITAL_DEV pooled negatives only",
+      "confirmationRequired": true
+    },
+    {
+      "detectorId": "UNIVERSAL_FAKE_DETECT",
+      "profileVersion": "wp007f-universal_fake_detect-calibration-v1",
+      "scoreDirection": "HIGHER_SCORE_SYNTHETIC",
+      "rawScoreIsProbability": false,
+      "operatingPoints": [
+        {
+          "targetOverallNegativeFpr": 0.005,
+          "threshold": 0.690250215,
+          "camera": {
+            "count": 1,
+            "total": 100,
+            "rate": 0.01,
+            "wilson95": [
+              0.001767,
+              0.054486
+            ]
+          },
+          "digital": {
+            "count": 0,
+            "total": 48,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.0741
+            ]
+          },
+          "overall": {
+            "count": 1,
+            "total": 148,
+            "rate": 0.006757,
+            "wilson95": [
+              0.001194,
+              0.037277
+            ]
+          },
+          "syntheticRecall": {
+            "count": 16,
+            "total": 200,
+            "rate": 0.08,
+            "wilson95": [
+              0.049841,
+              0.125989
+            ]
+          }
+        },
+        {
+          "targetOverallNegativeFpr": 0.01,
+          "threshold": 0.543838277,
+          "camera": {
+            "count": 2,
+            "total": 100,
+            "rate": 0.02,
+            "wilson95": [
+              0.005502,
+              0.070012
+            ]
+          },
+          "digital": {
+            "count": 0,
+            "total": 48,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.0741
+            ]
+          },
+          "overall": {
+            "count": 2,
+            "total": 148,
+            "rate": 0.013514,
+            "wilson95": [
+              0.003714,
+              0.047929
+            ]
+          },
+          "syntheticRecall": {
+            "count": 19,
+            "total": 200,
+            "rate": 0.095,
+            "wilson95": [
+              0.061663,
+              0.143602
+            ]
+          }
+        },
+        {
+          "targetOverallNegativeFpr": 0.02,
+          "threshold": 0.479003892,
+          "camera": {
+            "count": 3,
+            "total": 100,
+            "rate": 0.03,
+            "wilson95": [
+              0.010255,
+              0.084519
+            ]
+          },
+          "digital": {
+            "count": 0,
+            "total": 48,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.0741
+            ]
+          },
+          "overall": {
+            "count": 3,
+            "total": 148,
+            "rate": 0.02027,
+            "wilson95": [
+              0.006917,
+              0.057897
+            ]
+          },
+          "syntheticRecall": {
+            "count": 21,
+            "total": 200,
+            "rate": 0.105,
+            "wilson95": [
+              0.069707,
+              0.15518
+            ]
+          }
+        },
+        {
+          "targetOverallNegativeFpr": 0.05,
+          "threshold": 0.10118138,
+          "camera": {
+            "count": 8,
+            "total": 100,
+            "rate": 0.08,
+            "wilson95": [
+              0.041093,
+              0.149981
+            ]
+          },
+          "digital": {
+            "count": 0,
+            "total": 48,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.0741
+            ]
+          },
+          "overall": {
+            "count": 8,
+            "total": 148,
+            "rate": 0.054054,
+            "wilson95": [
+              0.027641,
+              0.103031
+            ]
+          },
+          "syntheticRecall": {
+            "count": 38,
+            "total": 200,
+            "rate": 0.19,
+            "wilson95": [
+              0.141672,
+              0.250012
+            ]
+          }
+        },
+        {
+          "targetOverallNegativeFpr": 0.1,
+          "threshold": 0.034925318,
+          "camera": {
+            "count": 15,
+            "total": 100,
+            "rate": 0.15,
+            "wilson95": [
+              0.09306,
+              0.232836
+            ]
+          },
+          "digital": {
+            "count": 0,
+            "total": 48,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.0741
+            ]
+          },
+          "overall": {
+            "count": 15,
+            "total": 148,
+            "rate": 0.101351,
+            "wilson95": [
+              0.062386,
+              0.160487
+            ]
+          },
+          "syntheticRecall": {
+            "count": 60,
+            "total": 200,
+            "rate": 0.3,
+            "wilson95": [
+              0.240747,
+              0.366791
+            ]
+          }
+        }
+      ],
+      "actionProfile": {
+        "target": 0.01,
+        "threshold": 0.543838277,
+        "supportLevel": "MODERATE_SUPPORT",
+        "labelAuthority": "EVIDENCE_ONLY_NO_INDEPENDENT_AI_GENERATED_LABEL"
+      },
+      "thresholdSource": "DDB_DETECTOR_DEV positives excluded; CAMERA_DEV + DIGITAL_DEV pooled negatives only",
+      "confirmationRequired": true
+    },
+    {
+      "detectorId": "RINE",
+      "profileVersion": "wp007f-rine-calibration-v1",
+      "scoreDirection": "HIGHER_SCORE_SYNTHETIC",
+      "rawScoreIsProbability": false,
+      "operatingPoints": [
+        {
+          "targetOverallNegativeFpr": 0.005,
+          "threshold": 0.917046336,
+          "camera": {
+            "count": 1,
+            "total": 100,
+            "rate": 0.01,
+            "wilson95": [
+              0.001767,
+              0.054486
+            ]
+          },
+          "digital": {
+            "count": 0,
+            "total": 48,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.0741
+            ]
+          },
+          "overall": {
+            "count": 1,
+            "total": 148,
+            "rate": 0.006757,
+            "wilson95": [
+              0.001194,
+              0.037277
+            ]
+          },
+          "syntheticRecall": {
+            "count": 90,
+            "total": 200,
+            "rate": 0.45,
+            "wilson95": [
+              0.382641,
+              0.519244
+            ]
+          }
+        },
+        {
+          "targetOverallNegativeFpr": 0.01,
+          "threshold": 0.890092938,
+          "camera": {
+            "count": 2,
+            "total": 100,
+            "rate": 0.02,
+            "wilson95": [
+              0.005502,
+              0.070012
+            ]
+          },
+          "digital": {
+            "count": 0,
+            "total": 48,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.0741
+            ]
+          },
+          "overall": {
+            "count": 2,
+            "total": 148,
+            "rate": 0.013514,
+            "wilson95": [
+              0.003714,
+              0.047929
+            ]
+          },
+          "syntheticRecall": {
+            "count": 102,
+            "total": 200,
+            "rate": 0.51,
+            "wilson95": [
+              0.441186,
+              0.578437
+            ]
+          }
+        },
+        {
+          "targetOverallNegativeFpr": 0.02,
+          "threshold": 0.872632304,
+          "camera": {
+            "count": 3,
+            "total": 100,
+            "rate": 0.03,
+            "wilson95": [
+              0.010255,
+              0.084519
+            ]
+          },
+          "digital": {
+            "count": 0,
+            "total": 48,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.0741
+            ]
+          },
+          "overall": {
+            "count": 3,
+            "total": 148,
+            "rate": 0.02027,
+            "wilson95": [
+              0.006917,
+              0.057897
+            ]
+          },
+          "syntheticRecall": {
+            "count": 109,
+            "total": 200,
+            "rate": 0.545,
+            "wilson95": [
+              0.475786,
+              0.612518
+            ]
+          }
+        },
+        {
+          "targetOverallNegativeFpr": 0.05,
+          "threshold": 0.76013765,
+          "camera": {
+            "count": 8,
+            "total": 100,
+            "rate": 0.08,
+            "wilson95": [
+              0.041093,
+              0.149981
+            ]
+          },
+          "digital": {
+            "count": 0,
+            "total": 48,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.0741
+            ]
+          },
+          "overall": {
+            "count": 8,
+            "total": 148,
+            "rate": 0.054054,
+            "wilson95": [
+              0.027641,
+              0.103031
+            ]
+          },
+          "syntheticRecall": {
+            "count": 128,
+            "total": 200,
+            "rate": 0.64,
+            "wilson95": [
+              0.571415,
+              0.703308
+            ]
+          }
+        },
+        {
+          "targetOverallNegativeFpr": 0.1,
+          "threshold": 0.686740446,
+          "camera": {
+            "count": 15,
+            "total": 100,
+            "rate": 0.15,
+            "wilson95": [
+              0.09306,
+              0.232836
+            ]
+          },
+          "digital": {
+            "count": 0,
+            "total": 48,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.0741
+            ]
+          },
+          "overall": {
+            "count": 15,
+            "total": 148,
+            "rate": 0.101351,
+            "wilson95": [
+              0.062386,
+              0.160487
+            ]
+          },
+          "syntheticRecall": {
+            "count": 139,
+            "total": 200,
+            "rate": 0.695,
+            "wilson95": [
+              0.628014,
+              0.754636
+            ]
+          }
+        }
+      ],
+      "actionProfile": {
+        "target": 0.01,
+        "threshold": 0.890092938,
+        "supportLevel": "MODERATE_SUPPORT",
+        "labelAuthority": "EVIDENCE_ONLY_NO_INDEPENDENT_AI_GENERATED_LABEL"
+      },
+      "thresholdSource": "DDB_DETECTOR_DEV positives excluded; CAMERA_DEV + DIGITAL_DEV pooled negatives only",
+      "confirmationRequired": true
+    }
+  ]
+}

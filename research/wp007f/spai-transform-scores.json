@@ -1,0 +1,492 @@
+{
+  "schemaVersion": "lythaus-wp007c-spai-score-run-v1",
+  "candidateId": "SPAI_C512",
+  "scoreDirection": "HIGHER_SCORE_SYNTHETIC",
+  "checkpointSha256": "24159f27d7c8c2cd0cb6c4019189eb89ad0874a0d9d15f8dc9afd39ca9648a55",
+  "optimized": true,
+  "cpuThreads": 8,
+  "inputCount": 96,
+  "records": [
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_3_09__canonical",
+      "score": 0.8446866273880005,
+      "runtimeSeconds": 2.083496
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_3_09__jpeg95",
+      "score": 0.870610237121582,
+      "runtimeSeconds": 2.048623
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_3_09__jpeg85",
+      "score": 0.8415593504905701,
+      "runtimeSeconds": 2.045168
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_3_09__jpeg75",
+      "score": 0.2216937392950058,
+      "runtimeSeconds": 2.04104
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_3_09__resize75",
+      "score": 0.9450961351394653,
+      "runtimeSeconds": 2.068138
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_3_09__resize50",
+      "score": 0.9984307885169983,
+      "runtimeSeconds": 2.141758
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_3_09__metadata_stripped",
+      "score": 0.8446866273880005,
+      "runtimeSeconds": 2.055455
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_3_09__screenshot_style_resampling",
+      "score": 0.9879633188247681,
+      "runtimeSeconds": 2.047382
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_2_07__canonical",
+      "score": 0.5094006657600403,
+      "runtimeSeconds": 2.071944
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_2_07__jpeg95",
+      "score": 0.547085702419281,
+      "runtimeSeconds": 2.099569
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_2_07__jpeg85",
+      "score": 0.7067376971244812,
+      "runtimeSeconds": 2.0631
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_2_07__jpeg75",
+      "score": 0.47136151790618896,
+      "runtimeSeconds": 2.166725
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_2_07__resize75",
+      "score": 0.560558021068573,
+      "runtimeSeconds": 2.165695
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_2_07__resize50",
+      "score": 0.6521337628364563,
+      "runtimeSeconds": 2.098592
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_2_07__metadata_stripped",
+      "score": 0.5094006657600403,
+      "runtimeSeconds": 2.055772
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone11_2_07__screenshot_style_resampling",
+      "score": 0.5157756805419922,
+      "runtimeSeconds": 3.001017
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_1_01__canonical",
+      "score": 0.9257898926734924,
+      "runtimeSeconds": 3.72075
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_1_01__jpeg95",
+      "score": 0.9586929082870483,
+      "runtimeSeconds": 3.929009
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_1_01__jpeg85",
+      "score": 0.7088292837142944,
+      "runtimeSeconds": 3.842819
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_1_01__jpeg75",
+      "score": 0.6317518353462219,
+      "runtimeSeconds": 3.818426
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_1_01__resize75",
+      "score": 0.9995228052139282,
+      "runtimeSeconds": 2.412714
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_1_01__resize50",
+      "score": 1.0,
+      "runtimeSeconds": 2.299877
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_1_01__metadata_stripped",
+      "score": 0.9257898926734924,
+      "runtimeSeconds": 5.42981
+    },
+    {
+      "sampleId": "CSAFE_WP006E_iPhone14_1_01__screenshot_style_resampling",
+      "score": 0.9999306201934814,
+      "runtimeSeconds": 5.697235
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_3_01__canonical",
+      "score": 0.011449940502643585,
+      "runtimeSeconds": 5.904467
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_3_01__jpeg95",
+      "score": 0.06227409839630127,
+      "runtimeSeconds": 3.642355
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_3_01__jpeg85",
+      "score": 0.12587863206863403,
+      "runtimeSeconds": 2.546874
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_3_01__jpeg75",
+      "score": 3.149703218241484e-07,
+      "runtimeSeconds": 2.465061
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_3_01__resize75",
+      "score": 0.007663386408239603,
+      "runtimeSeconds": 2.550114
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_3_01__resize50",
+      "score": 0.4232329726219177,
+      "runtimeSeconds": 2.543622
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_3_01__metadata_stripped",
+      "score": 0.011449940502643585,
+      "runtimeSeconds": 2.511836
+    },
+    {
+      "sampleId": "CSAFE_WP006E_s20_3_01__screenshot_style_resampling",
+      "score": 0.1945771872997284,
+      "runtimeSeconds": 3.522659
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_12__canonical",
+      "score": 4.5783590768405055e-35,
+      "runtimeSeconds": 3.659338
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_12__jpeg95",
+      "score": 1.2573168391631806e-32,
+      "runtimeSeconds": 3.586909
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_12__jpeg85",
+      "score": 1.0912368416852903e-28,
+      "runtimeSeconds": 3.52295
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_12__jpeg75",
+      "score": 1.5083645404384225e-30,
+      "runtimeSeconds": 2.695887
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_12__resize75",
+      "score": 3.343336036757759e-32,
+      "runtimeSeconds": 2.476778
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_12__resize50",
+      "score": 2.5009635747529934e-29,
+      "runtimeSeconds": 2.514399
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_12__metadata_stripped",
+      "score": 4.5783590768405055e-35,
+      "runtimeSeconds": 2.582325
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_12__screenshot_style_resampling",
+      "score": 1.0161086015965532e-29,
+      "runtimeSeconds": 2.532569
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_09__canonical",
+      "score": 1.9953922565660265e-32,
+      "runtimeSeconds": 2.529575
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_09__jpeg95",
+      "score": 2.0082386230691008e-30,
+      "runtimeSeconds": 2.59584
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_09__jpeg85",
+      "score": 2.9634422721242394e-26,
+      "runtimeSeconds": 2.525044
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_09__jpeg75",
+      "score": 3.355722881360199e-29,
+      "runtimeSeconds": 2.534386
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_09__resize75",
+      "score": 6.217606028617914e-30,
+      "runtimeSeconds": 2.545502
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_09__resize50",
+      "score": 1.17858816911459e-24,
+      "runtimeSeconds": 2.538989
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_09__metadata_stripped",
+      "score": 1.9953922565660265e-32,
+      "runtimeSeconds": 2.52933
+    },
+    {
+      "sampleId": "PNGN_UI_CAPTURE_09__screenshot_style_resampling",
+      "score": 3.5223809420559392e-28,
+      "runtimeSeconds": 2.532139
+    },
+    {
+      "sampleId": "PNGN_CHART_10__canonical",
+      "score": 9.174793702548811e-10,
+      "runtimeSeconds": 3.164641
+    },
+    {
+      "sampleId": "PNGN_CHART_10__jpeg95",
+      "score": 2.9964123626768924e-08,
+      "runtimeSeconds": 3.953294
+    },
+    {
+      "sampleId": "PNGN_CHART_10__jpeg85",
+      "score": 2.200095883253539e-09,
+      "runtimeSeconds": 4.201308
+    },
+    {
+      "sampleId": "PNGN_CHART_10__jpeg75",
+      "score": 4.719845847489523e-09,
+      "runtimeSeconds": 4.150675
+    },
+    {
+      "sampleId": "PNGN_CHART_10__resize75",
+      "score": 1.8914706743089482e-06,
+      "runtimeSeconds": 4.019765
+    },
+    {
+      "sampleId": "PNGN_CHART_10__resize50",
+      "score": 6.80144376019598e-06,
+      "runtimeSeconds": 2.602188
+    },
+    {
+      "sampleId": "PNGN_CHART_10__metadata_stripped",
+      "score": 9.174793702548811e-10,
+      "runtimeSeconds": 2.524665
+    },
+    {
+      "sampleId": "PNGN_CHART_10__screenshot_style_resampling",
+      "score": 0.0002046912704827264,
+      "runtimeSeconds": 2.452815
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_06__canonical",
+      "score": 5.768320120603382e-14,
+      "runtimeSeconds": 2.531295
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_06__jpeg95",
+      "score": 1.4192671289516706e-13,
+      "runtimeSeconds": 2.487685
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_06__jpeg85",
+      "score": 6.066822825362417e-12,
+      "runtimeSeconds": 2.520574
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_06__jpeg75",
+      "score": 2.7477540243125986e-08,
+      "runtimeSeconds": 2.494221
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_06__resize75",
+      "score": 1.4738928827418007e-11,
+      "runtimeSeconds": 2.561075
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_06__resize50",
+      "score": 8.2297356429617e-11,
+      "runtimeSeconds": 2.527515
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_06__metadata_stripped",
+      "score": 5.768320120603382e-14,
+      "runtimeSeconds": 2.499436
+    },
+    {
+      "sampleId": "PNGN_VECTOR_GRAPHIC_06__screenshot_style_resampling",
+      "score": 8.977679044619435e-09,
+      "runtimeSeconds": 2.595052
+    },
+    {
+      "sampleId": "DDB_0468__canonical",
+      "score": 1.0,
+      "runtimeSeconds": 2.531128
+    },
+    {
+      "sampleId": "DDB_0468__jpeg95",
+      "score": 1.0,
+      "runtimeSeconds": 3.581553
+    },
+    {
+      "sampleId": "DDB_0468__jpeg85",
+      "score": 1.0,
+      "runtimeSeconds": 3.656254
+    },
+    {
+      "sampleId": "DDB_0468__jpeg75",
+      "score": 0.9999946355819702,
+      "runtimeSeconds": 3.837095
+    },
+    {
+      "sampleId": "DDB_0468__resize75",
+      "score": 1.0,
+      "runtimeSeconds": 3.973609
+    },
+    {
+      "sampleId": "DDB_0468__resize50",
+      "score": 1.0,
+      "runtimeSeconds": 3.690938
+    },
+    {
+      "sampleId": "DDB_0468__metadata_stripped",
+      "score": 1.0,
+      "runtimeSeconds": 2.530624
+    },
+    {
+      "sampleId": "DDB_0468__screenshot_style_resampling",
+      "score": 1.0,
+      "runtimeSeconds": 2.518086
+    },
+    {
+      "sampleId": "DDB_0187__canonical",
+      "score": 1.0,
+      "runtimeSeconds": 2.588877
+    },
+    {
+      "sampleId": "DDB_0187__jpeg95",
+      "score": 1.0,
+      "runtimeSeconds": 2.525279
+    },
+    {
+      "sampleId": "DDB_0187__jpeg85",
+      "score": 1.0,
+      "runtimeSeconds": 2.518432
+    },
+    {
+      "sampleId": "DDB_0187__jpeg75",
+      "score": 0.9999905824661255,
+      "runtimeSeconds": 2.529691
+    },
+    {
+      "sampleId": "DDB_0187__resize75",
+      "score": 1.0,
+      "runtimeSeconds": 2.534171
+    },
+    {
+      "sampleId": "DDB_0187__resize50",
+      "score": 1.0,
+      "runtimeSeconds": 2.584433
+    },
+    {
+      "sampleId": "DDB_0187__metadata_stripped",
+      "score": 1.0,
+      "runtimeSeconds": 2.567554
+    },
+    {
+      "sampleId": "DDB_0187__screenshot_style_resampling",
+      "score": 1.0,
+      "runtimeSeconds": 2.5408
+    },
+    {
+      "sampleId": "DDB_0411__canonical",
+      "score": 1.0,
+      "runtimeSeconds": 2.54295
+    },
+    {
+      "sampleId": "DDB_0411__jpeg95",
+      "score": 1.0,
+      "runtimeSeconds": 2.950446
+    },
+    {
+      "sampleId": "DDB_0411__jpeg85",
+      "score": 1.0,
+      "runtimeSeconds": 3.842591
+    },
+    {
+      "sampleId": "DDB_0411__jpeg75",
+      "score": 1.0,
+      "runtimeSeconds": 4.151108
+    },
+    {
+      "sampleId": "DDB_0411__resize75",
+      "score": 1.0,
+      "runtimeSeconds": 4.383004
+    },
+    {
+      "sampleId": "DDB_0411__resize50",
+      "score": 1.0,
+      "runtimeSeconds": 12.612109
+    },
+    {
+      "sampleId": "DDB_0411__metadata_stripped",
+      "score": 1.0,
+      "runtimeSeconds": 6.60915
+    },
+    {
+      "sampleId": "DDB_0411__screenshot_style_resampling",
+      "score": 1.0,
+      "runtimeSeconds": 5.641721
+    },
+    {
+      "sampleId": "DDB_0211__canonical",
+      "score": 1.0,
+      "runtimeSeconds": 2.155112
+    },
+    {
+      "sampleId": "DDB_0211__jpeg95",
+      "score": 1.0,
+      "runtimeSeconds": 2.309171
+    },
+    {
+      "sampleId": "DDB_0211__jpeg85",
+      "score": 0.9999998807907104,
+      "runtimeSeconds": 2.260748
+    },
+    {
+      "sampleId": "DDB_0211__jpeg75",
+      "score": 0.9999899864196777,
+      "runtimeSeconds": 2.251052
+    },
+    {
+      "sampleId": "DDB_0211__resize75",
+      "score": 1.0,
+      "runtimeSeconds": 2.756027
+    },
+    {
+      "sampleId": "DDB_0211__resize50",
+      "score": 1.0,
+      "runtimeSeconds": 4.377653
+    },
+    {
+      "sampleId": "DDB_0211__metadata_stripped",
+      "score": 1.0,
+      "runtimeSeconds": 5.483039
+    },
+    {
+      "sampleId": "DDB_0211__screenshot_style_resampling",
+      "score": 1.0,
+      "runtimeSeconds": 6.841489
+    }
+  ],
+  "inferenceMode": "torch.inference_mode"
+}
