@@ -161,7 +161,7 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     assert.equal(await page.getByRole('textbox',{name:'Email',exact:true}).inputValue(),user.email);
     await page.locator('flt-semantics').getByText('Authentication is temporarily unavailable. Please try again.',{exact:true}).waitFor();
     userinfoUnavailable=false;await submit();
-    await page.getByText('No posts yet',{exact:true}).waitFor();
+    await page.locator('flt-semantics').getByText('No posts yet',{exact:true}).waitFor();
     const cookies=await context.cookies('https://api.lythaus.co');
     assert.ok(cookies.some(cookie=>cookie.name==='__Host-lythaus_refresh'&&cookie.httpOnly&&cookie.secure&&cookie.sameSite==='Strict'),JSON.stringify(cookies.map(({name,domain,httpOnly,secure,sameSite})=>({name,domain,httpOnly,secure,sameSite}))));
     const keys=await page.evaluate(()=>Object.keys(localStorage));
@@ -169,13 +169,16 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     const before=calls.filter(call=>call.path.endsWith('/auth/refresh')).length;
     lifecycle.phase('cookie_restore');
     await openApp();
-    await page.getByText('No posts yet',{exact:true}).waitFor();
+    await page.locator('flt-semantics').getByText('No posts yet',{exact:true}).waitFor();
     assert.ok(calls.filter(call=>call.path.endsWith('/auth/refresh')).length>before);
     const secondTab=await context.newPage();secondTab.setDefaultTimeout(30000);
     lifecycle.phase('two_tab_restore');
     secondTab.on('pageerror',error=>errors.push(error.message));
     await Promise.all([openApp(),openApp('/',secondTab)]);
-    await Promise.all([page.getByText('No posts yet',{exact:true}).waitFor(),secondTab.getByText('No posts yet',{exact:true}).waitFor()]);
+    await Promise.all([
+      page.locator('flt-semantics').getByText('No posts yet',{exact:true}).waitFor(),
+      secondTab.locator('flt-semantics').getByText('No posts yet',{exact:true}).waitFor(),
+    ]);
     assert.equal(maximumRefreshInFlight,1,'Same-origin tabs must serialize refresh instead of racing a rotating cookie');
     lifecycle.phase('settings_entry');
     await openSettingsFromReadyProfile();
