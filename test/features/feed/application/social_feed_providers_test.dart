@@ -9,6 +9,8 @@ import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
 import 'package:lythaus/state/models/feed_models.dart' as state;
 import 'package:lythaus/state/providers/feed_providers.dart';
 
+import '../../../helpers/feed_session.dart';
+
 class FakeSocialFeedRepository implements SocialFeedRepository {
   int trendingCalls = 0;
   bool throwOnTrending = false;
@@ -737,12 +739,16 @@ void main() {
         socialFeedServiceProvider.overrideWithValue(repo),
         jwtProvider.overrideWith((ref) async => 'token'),
         feedListProvider.overrideWithValue([feed]),
+        authStateProvider.overrideWith(
+          (_) => FeedTestAuth(feedTestUser('synthetic-owner')),
+        ),
       ],
     );
     addTearDown(container.dispose);
 
     final items = await container.read(liveFeedItemsProvider(feed).future);
     expect(items, hasLength(1));
+    expect(repo.discoverTokens, ['token']);
 
     final index = container.read(currentFeedIndexProvider);
     final current = container.read(currentFeedProvider);
