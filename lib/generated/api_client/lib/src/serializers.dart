@@ -158,6 +158,7 @@ import 'package:lythaus_api_client/src/model/legacy_appeal_vote_response.dart';
 import 'package:lythaus_api_client/src/model/legacy_refresh_token_request.dart';
 import 'package:lythaus_api_client/src/model/legal_hold_create.dart';
 import 'package:lythaus_api_client/src/model/legal_hold_response.dart';
+import 'package:lythaus_api_client/src/model/media_upload_bytes_response.dart';
 import 'package:lythaus_api_client/src/model/media_upload_finalise_response.dart';
 import 'package:lythaus_api_client/src/model/media_upload_session_create_request.dart';
 import 'package:lythaus_api_client/src/model/media_upload_session_created.dart';
@@ -447,6 +448,7 @@ part 'serializers.g.dart';
   LegacyRefreshTokenRequest,
   LegalHoldCreate,
   LegalHoldResponse,
+  MediaUploadBytesResponse,
   MediaUploadFinaliseResponse,
   MediaUploadSessionCreateRequest,
   MediaUploadSessionCreated,

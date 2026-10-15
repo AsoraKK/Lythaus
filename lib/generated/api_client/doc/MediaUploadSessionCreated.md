@@ -9,8 +9,7 @@ import 'package:lythaus_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **uploadSessionId** | **String** |  |
-**objectKey** | **String** |  |
-**putUrl** | **String** |  |
+**uploadUrl** | **String** | Authenticated Worker route bound to this upload session. |
 **expiresAt** | [**DateTime**](DateTime.md) |  |
 **contentType** | **String** |  |
 **maxBytes** | **int** |  |

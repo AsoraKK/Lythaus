@@ -11,6 +11,7 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**mediaUploadsCreate**](MediaApi.md#mediauploadscreate) | **POST** /media/uploads | Create a quarantined media upload session
 [**mediaUploadsFinalise**](MediaApi.md#mediauploadsfinalise) | **POST** /media/uploads/{uploadSessionId}/finalise | Finalise a quarantined media upload
+[**mediaUploadsPutBytes**](MediaApi.md#mediauploadsputbytes) | **PUT** /media/uploads/{uploadSessionId}/bytes | Upload bytes to a private session
 
 
 # **mediaUploadsCreate**
@@ -18,7 +19,7 @@ Method | HTTP request | Description
 
 Create a quarantined media upload session
 
-Creates a signed private upload session; the uploaded object remains quarantined until finalisation and review.
+Creates a private upload session and returns an authenticated Worker route. The response includes no object key or reusable R2 signature.
 
 ### Example
 ```dart
@@ -99,6 +100,51 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **mediaUploadsPutBytes**
+> MediaUploadBytesResponse mediaUploadsPutBytes(uploadSessionId, body)
+
+Upload bytes to a private session
+
+Rechecks the active owner and pending session, bounds the body before R2, and verifies exact size, SHA-256 and MIME before storing bytes in quarantine.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getMediaApi();
+final String uploadSessionId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final MultipartFile body = BINARY_DATA_HERE; // MultipartFile |
+
+try {
+    final response = api.mediaUploadsPutBytes(uploadSessionId, body);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling MediaApi->mediaUploadsPutBytes: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **uploadSessionId** | **String**|  |
+ **body** | **MultipartFile**|  |
+
+### Return type
+
+[**MediaUploadBytesResponse**](MediaUploadBytesResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: image/jpeg, image/png, image/webp, image/avif
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

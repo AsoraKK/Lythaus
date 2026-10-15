@@ -43,8 +43,9 @@ test maintenance is the existing byte-boundary assertion and new media-session
 fence ordering assertion in `scripts/tests/product-integrity-runtime-invariants.test.mjs`
 and one additive CI step in `.github/workflows/ci.yml`. Revision 3 also reconciles the two exact
 Worker blob pins in `apps/marketing-site/tests/homepage-protection.test.mjs`,
-with all existing negative controls preserved. No Flutter or generated SDK
-files change. The [revision 3 review packet](standard-image-integrity-review-2026-10-15.md)
+with all existing negative controls preserved. This contract change bumps the
+OpenAPI major version to `v12` and regenerates only the Dart API client models
+and media operations; no Flutter UI code changes. The [revision 3 review packet](standard-image-integrity-review-2026-10-15.md)
 records the independent findings, exact blob identities and true race evidence.
 This update also owns migration `0021`, its manifest and schema postconditions,
 the new authenticated upload endpoint contract and bundled OpenAPI output, and
@@ -185,6 +186,8 @@ PLANETSCALE_PG17_TEST_DATABASE_URL=<loopback disposable PG17 control database> \
 node --test scripts/tests/planetscale-production-migrations.test.mjs
 npm run test:reputation:pg17
 node --test apps/marketing-site/tests/homepage-protection.test.mjs
+npm run openapi:gen:dart
+npm run openapi:test:contract
 ```
 
 Local results on the merged tree: unit/Workerd **28/28**, disposable PG17 **24/24**
@@ -197,6 +200,10 @@ with combined source pins. The PostgreSQL media suite confirms the canonical
 its disposable database; it revokes both grants before teardown. The new schema
 remains unapplied to any hosted database. Hosted exact-head CI and independent
 review remain separate gates; the local results do not replace either gate.
+The local OpenAPI Dart-client validator's unit checks pass, but its final
+`dart pub get` step cannot run in this executor because the Dart executable is
+not installed. Exact-head hosted OpenAPI CI includes Flutter setup and must
+complete the generated-client validation.
 
 ## Remaining release blockers
 
