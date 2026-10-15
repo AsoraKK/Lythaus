@@ -43,8 +43,13 @@ holds a completed ROLLBACK close open while a duplicate delivery arrives,
 injects a final balance-delete fault, then replays both cleanup and completion.
   It asserts no premature acknowledgement/completion, no false deleted success,
   backend cleanup, balance removal, and ledger retention.
-- Focused unit and runner checks: **101/101 passed**, including rollback/close
+- Focused unit and runner checks: **104/104 passed**, including rollback/close
   rejection, stall and replay controls against the actual transaction wrapper.
+- Native support workflow PostgreSQL fixture: **12/12 passed** on a separate
+  disposable PostgreSQL 17 database. The fixture installs only the reviewed
+  lock function into its owned database and grants its synthetic `lythaus_jobs`
+  role; it asserts the installer is running as the fixture owner. No hosted
+  role or database was changed.
 - `npx tsc -p tsconfig.native.json --noEmit`, JavaScript syntax checks, and
   `git diff --check` passed.
 

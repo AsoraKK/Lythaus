@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { recordReputationSignal, refreshReputationProfile } from '../src/reputation.ts';
+import {
+  isReputationSubjectDeletedError,
+  ReputationSubjectDeletedError,
+  recordReputationSignal,
+  refreshReputationProfile,
+} from '../src/reputation.ts';
 
 const USER_ID = '018f5f2c-7b3a-7cc1-8db3-111111111111';
 const CONTENT_ID = '018f5f2c-7b3a-7cc1-8db3-222222222222';
@@ -39,6 +44,7 @@ class FakeClient {
     this.createdAt = options.createdAt ?? '2025-01-01T00:00:00.000Z';
     this.profileLevel = options.profileLevel ?? 0;
     this.events = [...(options.events ?? [])];
+    this.dropInserts = options.dropInserts ?? false;
     this.profileWrites = [];
     this.balanceWrites = [];
   }
@@ -131,6 +137,7 @@ class FakeClient {
       return this.result([], row ? 1 : 0);
     }
     if (text.includes('INSERT INTO trust.reputation_events')) {
+      if (this.dropInserts) return this.result([], 0);
       const duplicate = this.events.some((event) => event.id === values[0]
         || (event.subject_user_id === values[1] && event.source_event_id === values[7] && event.event_type === values[3]));
       if (duplicate) return this.result([], 0);
@@ -275,4 +282,35 @@ test('rejects invalid event identity, time and reversal references', async () =>
     signalType: 'reputation_event_reversal',
     reversalReference: '018f5f2c-7b3a-7cc1-8db3-999999999999',
   })), /reputation_reversal_reference_invalid/);
+});
+
+test('typed deleted-subject error distinguishes genuine errors from lookalikes', () => {
+  const error = new ReputationSubjectDeletedError();
+  assert.equal(error.name, 'ReputationSubjectDeletedError');
+  assert.equal(error.code, 'reputation_subject_deleted');
+  assert.equal(isReputationSubjectDeletedError(error), true);
+  assert.equal(isReputationSubjectDeletedError(new Error('reputation_subject_deleted')), false);
+  assert.equal(isReputationSubjectDeletedError({ name: 'ReputationSubjectDeletedError' }), false);
+  assert.equal(isReputationSubjectDeletedError(null), false);
+});
+
+test('deleted subjects stop before reads and writes in both reputation operations', async () => {
+  const recordClient = new FakeClient({ userStatus: 'deleted' });
+  await assert.rejects(() => recordReputationSignal(recordClient, signal()), ReputationSubjectDeletedError);
+  assert.equal(recordClient.events.length, 0);
+  assert.equal(recordClient.profileWrites.length, 0);
+  assert.equal(recordClient.balanceWrites.length, 0);
+
+  const refreshClient = new FakeClient({ userStatus: 'deleted' });
+  await assert.rejects(() => refreshReputationProfile(refreshClient, USER_ID), ReputationSubjectDeletedError);
+  assert.equal(refreshClient.profileWrites.length, 0);
+  assert.equal(refreshClient.balanceWrites.length, 0);
+});
+
+test('failed reputation event insert does not recompute or persist a profile', async () => {
+  const client = new FakeClient({ dropInserts: true });
+  await assert.rejects(() => recordReputationSignal(client, signal()), /reputation_event_not_recorded/);
+  assert.equal(client.events.length, 0);
+  assert.equal(client.profileWrites.length, 0);
+  assert.equal(client.balanceWrites.length, 0);
 });
