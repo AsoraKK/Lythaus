@@ -84,6 +84,74 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
     }
     const session = async input => (await admin.query('SELECT status FROM media.upload_sessions WHERE id=$1', [input.sessionId])).rows[0];
     const queue = async input => (await fixture.request('/fixture/queue', input)).json();
+    const create = async userId => fixture.request('/fixture/create', { userId,
+      upload: { contentType: 'image/png', size: png.length, checksumSha256: checksum } });
+
+    await t.test('Worker ingress bounds bytes before R2 and retries after a lost SQL transition', async () => {
+      const userId = randomUUID();
+      await admin.query("INSERT INTO identity.users(id,status) VALUES($1,'active')", [userId]);
+      const created = await create(userId);
+      assert.equal(created.status, 201);
+      const receipt = await created.json();
+      const row = (await admin.query('SELECT object_key, expires_at FROM media.upload_sessions WHERE id=$1', [receipt.uploadSessionId])).rows[0];
+      assert.ok(Date.parse(receipt.expiresAt) > Date.now());
+      assert.equal(new Date(row.expires_at).toISOString(), receipt.expiresAt);
+      assert.equal((await fixture.upload(receipt.uploadUrl, randomUUID(), png)).status, 409);
+      assert.equal(await fixture.quarantine.head(row.object_key), null);
+      const oversized = await fixture.upload(receipt.uploadUrl, userId, Uint8Array.from([...png, 1]));
+      assert.equal(oversized.status, 413);
+      assert.equal(await fixture.quarantine.head(row.object_key), null);
+
+      beforeQuery = async request => {
+        if (request.text.includes('UPDATE media.upload_sessions SET observed_bytes')) {
+          beforeQuery = undefined;
+          throw new Error('synthetic_upload_commit_lost');
+        }
+      };
+      const first = await fixture.upload(receipt.uploadUrl, userId, png);
+      assert.equal(first.status, 500);
+      assert.equal((await admin.query('SELECT observed_bytes FROM media.upload_sessions WHERE id=$1', [receipt.uploadSessionId])).rows[0].observed_bytes, null);
+      assert.ok(await fixture.quarantine.head(row.object_key), 'R2 may succeed before its SQL transaction is lost');
+      beforeQuery = undefined;
+      const retry = await fixture.upload(receipt.uploadUrl, userId, png);
+      assert.equal(retry.status, 201);
+      const stored = await fixture.quarantine.head(row.object_key);
+      assert.equal(stored.size, png.length);
+      assert.equal(stored.httpMetadata.contentType, 'image/png');
+      assert.equal(stored.customMetadata.checksumSha256, checksum);
+      assert.equal(Number((await admin.query('SELECT observed_bytes FROM media.upload_sessions WHERE id=$1', [receipt.uploadSessionId])).rows[0].observed_bytes), png.length);
+      assert.equal(Number((await admin.query('SELECT bytes_reserved FROM media.storage_ledger WHERE user_id=$1', [userId])).rows[0].bytes_reserved), png.length);
+      const concurrent = await Promise.all([
+        fixture.upload(receipt.uploadUrl, userId, png), fixture.upload(receipt.uploadUrl, userId, png),
+      ]);
+      assert.ok(concurrent.every(response => [201, 500].includes(response.status)));
+      assert.ok(concurrent.some(response => response.status === 201));
+      assert.equal((await fixture.upload(receipt.uploadUrl, userId, png)).status, 201);
+      assert.equal((await fixture.quarantine.head(row.object_key)).customMetadata.checksumSha256, checksum);
+      assert.equal(Number((await admin.query('SELECT bytes_reserved FROM media.storage_ledger WHERE user_id=$1', [userId])).rows[0].bytes_reserved), png.length);
+    });
+
+    await t.test('a still-valid URL cannot recreate quarantine after account deletion', async () => {
+      const userId = randomUUID();
+      await admin.query("INSERT INTO identity.users(id,status) VALUES($1,'active')", [userId]);
+      const created = await create(userId);
+      assert.equal(created.status, 201);
+      const receipt = await created.json();
+      const row = (await admin.query('SELECT object_key FROM media.upload_sessions WHERE id=$1', [receipt.uploadSessionId])).rows[0];
+      assert.equal((await fixture.upload(receipt.uploadUrl, userId, png)).status, 201);
+      await admin.query("UPDATE identity.users SET status='deleted', deleted_at=clock_timestamp() WHERE id=$1", [userId]);
+      assert.ok(Date.parse(receipt.expiresAt) > Date.now());
+      const afterAccountFence = await fixture.upload(receipt.uploadUrl, userId, png);
+      assert.equal(afterAccountFence.status, 409);
+
+      await admin.query("UPDATE media.upload_sessions SET status='expired' WHERE id=$1", [receipt.uploadSessionId]);
+      await fixture.quarantine.delete(row.object_key);
+      await admin.query('DELETE FROM media.storage_ledger WHERE user_id=$1', [userId]);
+      const afterPurge = await fixture.upload(receipt.uploadUrl, userId, png);
+      assert.equal(afterPurge.status, 409);
+      assert.equal(await fixture.quarantine.head(row.object_key), null);
+      assert.equal((await admin.query('SELECT count(*)::integer AS n FROM media.storage_ledger WHERE user_id=$1', [userId])).rows[0].n, 0);
+    });
 
     await t.test('real owner predicates, purpose checks and private queued receipt', async () => {
       const input = await seed();
@@ -119,6 +187,8 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
       assert.equal(Number((await admin.query('SELECT bytes_reserved FROM media.storage_ledger WHERE user_id=$1', [input.userId])).rows[0].bytes_reserved), 0);
       assert.equal((await admin.query('SELECT count(*)::integer AS n FROM system.outbox_events WHERE aggregate_id=$1', [input.sessionId])).rows[0].n, 0);
       assert.ok(await fixture.quarantine.head(input.objectKey));
+      await fixture.quarantine.delete(input.objectKey);
+      await admin.query("UPDATE media.upload_sessions SET status='expired', quarantine_deleted_at=clock_timestamp() WHERE id=$1", [input.sessionId]);
     });
     await t.test('first-ledger concurrent quota reservations cannot exceed the configured quota', async () => {
       const userId = randomUUID();
@@ -165,7 +235,16 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
         assert.deepEqual(Object.values(rejectedLedger).map(Number), [0, png.length]);
         assert.equal(await fixture.quarantine.head(invalid.objectKey), null);
 
-        const input = await seed('pending');
+        const userId = randomUUID();
+        await admin.query("INSERT INTO identity.users(id,status) VALUES($1,'active')", [userId]);
+        const created = await create(userId);
+        assert.equal(created.status, 201);
+        const uploadReceipt = await created.json();
+        const storedSession = (await admin.query('SELECT object_key, expires_at FROM media.upload_sessions WHERE id=$1', [uploadReceipt.uploadSessionId])).rows[0];
+        assert.equal((await fixture.upload(uploadReceipt.uploadUrl, userId, png)).status, 201);
+        const input = { userId, sessionId: uploadReceipt.uploadSessionId, objectKey: storedSession.object_key,
+          event: { eventId: randomUUID(), eventType: 'media.upload.finalised',
+            payload: { uploadSessionId: uploadReceipt.uploadSessionId, objectKey: storedSession.object_key } } };
         const response = await fixture.request('/fixture/finalise', input);
         assert.equal(response.status, 200);
         const receipt = await response.json();
@@ -188,12 +267,43 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
         assert.equal((await admin.query('SELECT count(*)::integer AS n FROM system.outbox_events WHERE aggregate_id=$1', [input.sessionId])).rows[0].n, 1);
         assert.equal(await fixture.quarantine.head(input.objectKey), null);
         assert.ok(await fixture.approved.head(object.object_key));
+        assert.ok(new Date(storedSession.expires_at).getTime() > Date.now());
+        assert.equal((await fixture.upload(uploadReceipt.uploadUrl, userId, png)).status, 409);
+        assert.equal(await fixture.quarantine.head(input.objectKey), null);
         assert.ok(!fixture.statements.some(query => /(?:INSERT INTO|UPDATE) (?:content|feed)\./.test(query.text ?? '')));
         assert.equal(fixture.outbound.length, 0);
       } finally {
         await admin.query('REVOKE INSERT (object_id, owner_id) ON media.ownership FROM lythaus_jobs');
         await admin.query('REVOKE UPDATE (bytes_rejected) ON media.storage_ledger FROM lythaus_runtime');
       }
+    });
+    await t.test('expired-session janitor releases quota once and retries object and marker loss', async () => {
+      const input = await seed('pending');
+      await admin.query("UPDATE media.upload_sessions SET expires_at=clock_timestamp()-interval '20 minutes' WHERE id=$1", [input.sessionId]);
+      const first = await fixture.cleanup({ failDelete: true });
+      assert.equal(first.status, 204);
+      assert.equal((await session(input)).status, 'expired');
+      assert.equal(Number((await admin.query('SELECT bytes_reserved FROM media.storage_ledger WHERE user_id=$1', [input.userId])).rows[0].bytes_reserved), 0);
+      assert.equal((await admin.query('SELECT quarantine_deleted_at FROM media.upload_sessions WHERE id=$1', [input.sessionId])).rows[0].quarantine_deleted_at, null);
+      assert.ok(await fixture.quarantine.head(input.objectKey));
+
+      beforeQuery = async request => {
+        if (request.text.includes('SET quarantine_deleted_at = clock_timestamp()')) {
+          beforeQuery = undefined;
+          throw new Error('synthetic_cleanup_commit_lost');
+        }
+      };
+      const lostMarker = await fixture.cleanup();
+      assert.equal(lostMarker.status, 204);
+      assert.equal(await fixture.quarantine.head(input.objectKey), null);
+      assert.equal((await admin.query('SELECT quarantine_deleted_at FROM media.upload_sessions WHERE id=$1', [input.sessionId])).rows[0].quarantine_deleted_at, null);
+      assert.equal(Number((await admin.query('SELECT bytes_reserved FROM media.storage_ledger WHERE user_id=$1', [input.userId])).rows[0].bytes_reserved), 0);
+
+      beforeQuery = undefined;
+      assert.equal((await fixture.cleanup()).status, 204);
+      assert.ok((await admin.query('SELECT quarantine_deleted_at FROM media.upload_sessions WHERE id=$1', [input.sessionId])).rows[0].quarantine_deleted_at);
+      assert.equal((await fixture.cleanup()).status, 204);
+      assert.equal(Number((await admin.query('SELECT bytes_reserved FROM media.storage_ledger WHERE user_id=$1', [input.userId])).rows[0].bytes_reserved), 0);
     });
     await t.test('Jobs checksum rejection, cleanup failure and redelivery settle once with actual SQL', async () => {
       const input = await seed('queued');

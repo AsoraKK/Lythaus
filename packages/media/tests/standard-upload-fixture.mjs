@@ -41,12 +41,12 @@ export async function standardUploadFixture(database, onEffect = async () => {})
         ` + original.slice(end) };
       });
       builder.onLoad({ filter: /apps\/lythaus-public-api\/src\/index\.ts$/ }, args => ({
-        loader: 'ts', contents: readFileSync(args.path, 'utf8') + '\nexport { createUploadSession, finaliseUpload };',
+        loader: 'ts', contents: readFileSync(args.path, 'utf8') + '\nexport { createUploadSession, finaliseUpload, uploadSessionBytes };',
       }));
     }}],
     stdin: { resolveDir: root, contents: `
-      import api, { createUploadSession, finaliseUpload } from './apps/lythaus-public-api/src/index.ts';
-      import jobs from './apps/lythaus-jobs/src/index.ts';
+      import api, { createUploadSession, finaliseUpload, uploadSessionBytes } from './apps/lythaus-public-api/src/index.ts';
+      import jobs, { reconcileExpiredStandardMediaSessions } from './apps/lythaus-jobs/src/index.ts';
       import { classifyPublicError } from './apps/lythaus-public-api/src/auth-runtime-policy.ts';
       export default { async fetch(request, bindings, ctx) {
         const path = new URL(request.url).pathname;
@@ -54,6 +54,18 @@ export async function standardUploadFixture(database, onEffect = async () => {})
           DB_APP_FRESH: { role: 'lythaus_runtime' },
           MEDIA_UPLOADS_ENABLED: request.headers.get('x-fixture-enabled') ?? 'false',
         }, ctx);
+        const fixtureUpload = path.match(/^\\/fixture\\/upload\\/([^/]+)$/);
+        if (request.method === 'PUT' && fixtureUpload) return uploadSessionBytes(request,
+          { ...bindings, DB_APP_FRESH: { role: 'lythaus_runtime' } },
+          { userId: request.headers.get('x-fixture-user-id') ?? '' }, fixtureUpload[1]);
+        if (path === '/fixture/cleanup') {
+          const env = { ...bindings, DB_JOBS_FRESH: { role: 'lythaus_jobs' } };
+          if (request.headers.get('x-fail-delete') === 'true') {
+            env.MEDIA_QUARANTINE = { delete: async () => { throw new Error('synthetic_quarantine_delete_failed'); } };
+          }
+          await reconcileExpiredStandardMediaSessions(env);
+          return new Response(null, { status: 204 });
+        }
         const input = await request.json();
         const env = { ...bindings, DB_APP_FRESH: { role: 'lythaus_runtime' }, DB_JOBS_FRESH: { role: 'lythaus_jobs' },
           MEDIA_PROCESSING_ENABLED: input.enabled === false ? 'false' : 'true',
@@ -135,6 +147,15 @@ export async function standardUploadFixture(database, onEffect = async () => {})
     quarantine: await runtime.getR2Bucket('MEDIA_QUARANTINE'), approved: await runtime.getR2Bucket('MEDIA_APPROVED'),
     request(path, body) { return runtime.dispatchFetch('https://local.test' + path, { method: 'POST',
       body: JSON.stringify(body), headers: { 'content-type': 'application/json' } }); },
+    upload(uploadUrl, userId, bytes, contentType = 'image/png') {
+      const parsed = new URL(uploadUrl);
+      const sessionId = parsed.pathname.match(/^\/api\/media\/uploads\/([^/]+)\/bytes$/)?.[1];
+      assert.ok(sessionId);
+      return runtime.dispatchFetch(`https://local.test/fixture/upload/${sessionId}`, { method: 'PUT', body: bytes,
+        headers: { 'x-fixture-user-id': userId, 'content-type': contentType } });
+    },
+    cleanup({ failDelete = false } = {}) { return runtime.dispatchFetch('https://local.test/fixture/cleanup', { method: 'POST',
+      headers: { 'x-fail-delete': failDelete ? 'true' : 'false' } }); },
     dispose: () => runtime.dispose(),
   };
 }

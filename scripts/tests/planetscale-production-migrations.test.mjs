@@ -8,7 +8,22 @@ test('loads the immutable canonical migration payload and checksum set', () => {
   assert.equal(manifest.migrations.length, APPROVED_MIGRATIONS.length);
   assert.equal(manifest.bytes, EXPECTED_MIGRATION_BYTES);
   assert.equal(manifest.checksum, EXPECTED_MIGRATION_SET_SHA256);
-  assert.equal(manifest.migrations.at(-1)?.name, '0020_auth_recovery_delivery.sql');
+  assert.equal(manifest.migrations.at(-1)?.name, '0021_media_quarantine_cleanup.sql');
+});
+
+test('requires the nullable quarantine cleanup marker and bounded partial index in 0021', async () => {
+  const checks = migrationPostconditions['0021_media_quarantine_cleanup.sql'];
+  assert.deepEqual(checks.map(({ artifact, kind }) => ({ artifact, kind })), [
+    { artifact: 'column:media.upload_sessions.quarantine_deleted_at', kind: 'column_contract' },
+    { artifact: 'media_quarantine_deleted_at_is_nullable', kind: 'schema_artifact' },
+    { artifact: 'media_upload_quarantine_cleanup_index', kind: 'schema_artifact' },
+  ]);
+  const missingIndex = {
+    async query(sql) { return { rows: [{ present: !sql.includes('media_upload_quarantine_cleanup_index') }] }; },
+  };
+  const [state] = await classifyMigrationState(missingIndex, ['0021_media_quarantine_cleanup.sql']);
+  assert.equal(state.state, 'PARTIALLY_APPLIED');
+  assert.throws(() => assertCompleteMigrationPostconditions(state), /media_upload_quarantine_cleanup_index/);
 });
 
 test('classifies catalog evidence without treating vacuous data invariants as applied structure', () => {

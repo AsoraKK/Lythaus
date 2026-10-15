@@ -1951,6 +1951,74 @@ async function deliverAdminOutcomeNotifications(env: Env): Promise<void> {
   }
 }
 
+const STANDARD_MEDIA_CLEANUP_BATCH_SIZE = 100;
+
+export async function reconcileExpiredStandardMediaSessions(env: Env): Promise<void> {
+  const due = await query<{ id: string; user_id: string }>(env.DB_JOBS_FRESH,
+    `SELECT id, user_id FROM media.upload_sessions
+      WHERE purpose = 'standard' AND (
+        (status IN ('pending', 'queued') AND expires_at <= clock_timestamp()) OR
+        (status IN ('approved', 'rejected', 'expired', 'cancelled')
+          AND quarantine_deleted_at IS NULL
+          AND expires_at <= clock_timestamp() - interval '15 minutes')
+      )
+      ORDER BY expires_at, id LIMIT $1`, [STANDARD_MEDIA_CLEANUP_BATCH_SIZE]);
+  for (const candidate of due.rows) {
+    try {
+      const cleanupKey = await transaction<string | null>(env.DB_JOBS_FRESH, async client => {
+        const selected = await client.query<{
+          object_key: string; expected_bytes: number; status: string; expired: boolean;
+          cleanup_due: boolean; cleanup_pending: boolean;
+        }>(
+          `SELECT object_key, expected_bytes, status,
+                  expires_at <= clock_timestamp() AS expired,
+                  expires_at <= clock_timestamp() - interval '15 minutes' AS cleanup_due,
+                  quarantine_deleted_at IS NULL AS cleanup_pending
+             FROM media.upload_sessions
+            WHERE id = $1 AND user_id = $2 AND purpose = 'standard'
+            FOR UPDATE NOWAIT`,
+          [candidate.id, candidate.user_id]);
+        const row = selected.rows[0];
+        if (!row) return null;
+        if (row.status === 'pending' || row.status === 'queued') {
+          if (!row.expired) return null;
+          const expired = await client.query(
+            `UPDATE media.upload_sessions SET status = 'expired'
+              WHERE id = $1 AND user_id = $2 AND purpose = 'standard'
+                AND status IN ('pending', 'queued') AND expires_at <= clock_timestamp()
+              RETURNING id`, [candidate.id, candidate.user_id]);
+          if (expired.rowCount !== 1) return null;
+          const released = await client.query(
+            `UPDATE media.storage_ledger SET bytes_reserved = bytes_reserved - $1, last_reconciled_at = now()
+              WHERE user_id = $2 AND bytes_reserved >= $1 RETURNING user_id`,
+            [row.expected_bytes, candidate.user_id]);
+          if (released.rowCount !== 1) throw new Error('media_reservation_unavailable');
+          if (!row.cleanup_due) return null;
+        } else if (!['approved', 'rejected', 'expired', 'cancelled'].includes(row.status)
+          || !row.cleanup_pending || !row.cleanup_due) {
+          return null;
+        }
+        return row.object_key;
+      });
+      if (!cleanupKey) continue;
+      if (!env.MEDIA_QUARANTINE) throw new Error('media_quarantine_not_configured');
+      await env.MEDIA_QUARANTINE.delete(cleanupKey);
+      await transaction(env.DB_JOBS_FRESH, async client => {
+        await client.query(
+          `UPDATE media.upload_sessions SET quarantine_deleted_at = clock_timestamp()
+            WHERE id = $1 AND user_id = $2 AND purpose = 'standard'
+              AND status IN ('approved', 'rejected', 'expired', 'cancelled')
+              AND quarantine_deleted_at IS NULL
+              AND expires_at <= clock_timestamp() - interval '15 minutes'`,
+          [candidate.id, candidate.user_id]);
+      });
+    } catch (error) {
+      logEvent({ service: 'lythaus-jobs', event: 'standard_media_expiry_cleanup_failed', sessionId: candidate.id,
+        error: error instanceof Error ? error.message : 'cleanup_failed' });
+    }
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const pathname = new URL(request.url).pathname;
@@ -2026,6 +2094,7 @@ export default {
 
   async scheduled(_event: unknown, env: Env): Promise<void> {
     await activityMeasurementScheduledWork(env.DB_PRIVACY_FRESH, async () => {
+      await reconcileExpiredStandardMediaSessions(env);
       if (env.AUTHENTICITY_BETA_STORAGE_ENABLED === 'true') {
         await expireBetaWork(env);
         await purgeBetaMedia(env.DB_JOBS_FRESH,env.MEDIA_QUARANTINE);

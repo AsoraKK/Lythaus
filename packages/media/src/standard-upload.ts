@@ -2,6 +2,8 @@ import { detectMediaMime, readBoundedRequestBody, MAX_IMAGE_PIXELS } from '../..
 import { sha256Hex } from '../../authenticity/src/forensics.ts';
 import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from './index.ts';
 
+export { readBoundedRequestBody };
+
 export class UploadIntegrityError extends Error {}
 
 export function validStandardImageDimensions(width: unknown, height: unknown): boolean {

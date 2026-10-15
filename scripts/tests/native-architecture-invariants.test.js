@@ -200,7 +200,12 @@ test('launch schema and media boundary are explicit', () => {
   assert.match(launch, /CREATE TABLE social\.profiles/);
   assert.match(launch, /CREATE TABLE content\.content_declarations/);
   assert.match(launch, /CREATE TABLE system\.feature_flags/);
-  assert.match(media, /createPresignedPutUrl/);
+  assert.match(media, /async function uploadSessionBytes/);
+  assert.match(media, /readBoundedRequestBody\(request, Math\.min\(Number\(session\.expected_bytes\), MAX_IMAGE_BYTES\)\)/);
+  assert.match(media, /onlyIf: \{ etagDoesNotMatch: '\*' \}/);
+  assert.match(media, /const uploadBytes = url\.pathname\.match/);
+  assert.match(media, /uploadSessionBytes\(request, env, user, uploadBytes\[1\]\)/);
+  assert.doesNotMatch(media, /createPresignedPutUrl/);
   assert.match(media, /uploadSessionId/);
   assert.doesNotMatch(media, /arrayBuffer\(\).*MEDIA_QUARANTINE\.put/s);
 });

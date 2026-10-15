@@ -3,11 +3,11 @@
 Inspected base: `53ac0f4ece621605762cde8d9a42f7dde8362ca9` on `main`.
 This is source preparation for independent review, not a posting release.
 Public image posting remains blocked. No provider calls, deployment, merge,
-feature activation, persistent schema/grant change, credential change or new
-resource is part of this work. An unapplied grant patch is included for review;
-its two column grants are exercised only in the uniquely named disposable PG17
-test database and revoked before teardown. Model output does not prove human
-authorship.
+feature activation, hosted schema/grant change, credential change or new
+resource is part of this work. Migration `0021_media_quarantine_cleanup.sql` is
+pending review and has not been applied to a hosted database. The two narrow
+grant candidates are exercised only in the uniquely named disposable PG17 test
+database and revoked before teardown. Model output does not prove human authorship.
 
 ## Ownership and existing work
 
@@ -22,6 +22,16 @@ its existing per-session lock and deletes private bytes only after a terminal
 DB result commits. The PRs have separate steps and SQL scopes in the shared Jobs
 entrypoint and additive CI workflow registration.
 
+Cleanup coordination with #1022 stays narrow: this PR's cleanup addition is
+only the separate standard-session scheduled reconciler and its migration.
+#1022 retains the account-deletion transaction wrapper and immediate owner
+purge. The reconciler is a retry path for legacy upload capabilities and
+orphaned quarantine bytes; it does not replace account deletion or change its
+transaction semantics.
+Integrate the reviewed #1022 changes with this PR, apply migration `0021`
+before the Worker code that reads its marker, and rerun the combined exact-head
+suite before any coordinated deployment. Media flags remain disabled.
+
 This lane owns `packages/media/src/standard-upload.ts`, its four test/fixture
 files, the standard upload functions in Public API `src/index.ts`, and the
 ordinary `processMediaUpload` function in Jobs `src/index.ts`. The only shared
@@ -32,6 +42,10 @@ Worker blob pins in `apps/marketing-site/tests/homepage-protection.test.mjs`,
 with all existing negative controls preserved. No Flutter or generated SDK
 files change. The [revision 3 review packet](standard-image-integrity-review-2026-10-15.md)
 records the independent findings, exact blob identities and true race evidence.
+This update also owns migration `0021`, its manifest and schema postconditions,
+the new authenticated upload endpoint contract and bundled OpenAPI output, and
+the lifecycle, retry and still-valid-URL replay assertions in the PG17/Workerd
+fixtures.
 
 ## Verified path on main
 
@@ -66,6 +80,13 @@ checked-in values are not a claim about deployment state.
   both finalization and queued processing. Check the actual GET body's length,
   digest and MIME; do not rely on a prior HEAD or declared MIME. Storage read
   failures stay retryable rather than becoming integrity decisions.
+- New sessions return an authenticated Worker upload route instead of a
+  reusable R2 presigned PUT. The Worker reads at most the smaller of the
+  reserved byte count and the 10 MiB engineering cap, verifies exact size,
+  checksum and MIME before R2, and conditionally creates the quarantine object.
+  A lost SQL transition can retry against the same immutable bytes. Metadata
+  and signatures establish byte identity only; they do not inspect image
+  pixels or produce detector evidence.
 - Check session expiry with database time before work, between source validation
   and Images, after transformation, and in the final state transition. Pending
   finalization expiry atomically marks the session expired and releases its
@@ -83,6 +104,13 @@ checked-in values are not a claim about deployment state.
   marks pending/queued standard sessions expired before purging media, so it
   waits for an in-flight session transaction; deletion cleanup also removes
   quarantine objects and each session's possible private derivative.
+- Migration `0021` adds a bounded lookup index and a private-quarantine deletion
+  marker. The existing 15-minute Jobs schedule expires pending sessions and
+  releases each logical reservation once. Terminal sessions are swept only
+  after expiry plus a 15-minute grace, covering legacy 10-minute R2 URLs that
+  were issued before the Worker route. R2-delete failure and marker-transaction
+  loss both retry idempotently. The maximum cleanup delay is one schedule
+  interval beyond that grace.
 - Settle expiry/rejection only when the existing reservation is sufficient;
   otherwise the transaction fails instead of masking quota drift or underflow.
   Private bucket cleanup remains retryable after durable terminal state.
@@ -110,7 +138,7 @@ using the existing text-post contract independently.
 | --- | --- |
 | `404 feature_disabled`, feature `media_uploads` | Ordinary upload/finalization is unavailable; do not offer a working image-post path. |
 | `401 authentication_required` | Authentication is required; no upload capability has been granted. |
-| Upload-session `201` | Private PUT capability only. Keep its URL and object key private; do not use them in a post/feed. |
+| Upload-session `201` | Authenticated, session-bound Worker route only. It grants no object key or public URL; do not treat successful storage as a post/feed attachment. |
 | Finalization `200`, `status: queued`, `uploadSessionId`, `eventId` | Integrity checks passed and durable review work was queued. This is neither a media-object ID nor publication approval. |
 | `400 media_size_exceeded`, `unsupported_media_type`, `checksum_required` | Invalid metadata or unsupported bytes; preserve the draft and explain that upload did not succeed. |
 | `400 upload_session_invalid` | Missing, wrong-owner/purpose, terminal or expired session. No public eligibility; do not loop finalization. |
@@ -129,6 +157,9 @@ queue entrypoint. A test-only export exposes upload functions; the production
 router is used for disabled/guest checks. Workerd runs against local Miniflare
 R2. Images is a deterministic protocol fixture and all external requests are
 denied. The signature fixtures deliberately are not detector accuracy samples.
+New route tests verify byte limits before R2, MIME/checksum rejection, immutable
+conditional create, transaction-loss retry, and replays through a still-valid
+URL after account deletion and processing.
 
 The PostgreSQL suite creates a uniquely named database through the existing
 loopback-only publication control target, applies the unchanged canonical PG17
@@ -141,34 +172,23 @@ path, not production acceptance. The transport shim uses explicit local
 transactions; it does not certify the production pg/Hyperdrive connection or
 cleanup wrapper, hosted R2, Images or Queues.
 
-Commands:
+Commands verified on this PR head:
 
 ```sh
-node --experimental-strip-types --test --test-concurrency=1 \
-  packages/media/tests/standard-upload.test.mjs \
-  packages/media/tests/standard-upload.workerd.mjs \
-  packages/media/tests/standard-upload.postgres.mjs
-npm run typecheck:native
-npm run test:product-integrity-runtime
+node --test packages/media/tests/standard-upload.test.mjs packages/media/tests/standard-upload.workerd.mjs
+PLANETSCALE_PG17_TEST_DATABASE_URL=<loopback disposable PG17 control database> \
+  node --experimental-strip-types --test --test-concurrency=1 packages/media/tests/standard-upload.postgres.mjs
+node --test scripts/tests/planetscale-production-migrations.test.mjs
 ```
 
-Set `PLANETSCALE_PG17_TEST_DATABASE_URL` to the existing disposable loopback
-`lythaus_auth_test_post_control` database. The dedicated test fails if the target
-is absent or unsafe. CI registers the same three suites. Current unit/Workerd
-coverage includes 25 tests; PG17 includes 21 tests. Canonical expected-denial
-tests are reported separately from the candidate-grant handler journey; neither
-constitutes hosted production acceptance.
-
-Current local results on this branch: dedicated unit/Workerd and PG17 suites
-**46/46**; product-integrity checks **22/22**; homepage protection **30/30**;
-marketing **84/84**; attachment/preparation/product-policy **55/55**; native
-architecture/runtime **376/376**; Public API native privacy Workflow PG17
-regressions **6/6**. Native typecheck, workflow action pins, canonical migration
-manifest and whitespace checks pass. The first native run
-could not write npm's default cache; rerunning with a writable `/tmp` cache
-passed the full suite. The marketing workspace was restored using its unchanged
-lockfile before its full-suite pass. Hosted exact-head CI and independent review
-remain separate gates.
+Local results on this PR head: unit/Workerd **28/28**, disposable PG17 **24/24**
+on PostgreSQL 17.11 with migrations `0000`–`0021`, migration/schema-verifier
+tests **23/23**, product-integrity runtime **22/22**, and native architecture
+**376/376**. Native typecheck passes. The PostgreSQL suite confirms the canonical
+`42501` failures before temporarily applying the two proposed column grants in
+its disposable database; it revokes both grants before teardown. The new schema
+remains unapplied to any hosted database. Exact-head hosted CI and independent
+review remain separate gates.
 
 ## Remaining release blockers
 
@@ -178,31 +198,37 @@ remain separate gates.
    cannot insert `media.ownership`; `42501` rolls review persistence back and
    queue delivery retries. The tests preserve and report these denials. Any
    separately authorized grant/capability repair and hosted reconciliation
-   requires its own review; no grant is changed here.
+   requires its own review; no grant is changed here. The exact narrow proposal
+   is `GRANT UPDATE (bytes_rejected) ON media.storage_ledger TO lythaus_runtime;`
+   and `GRANT INSERT (object_id, owner_id) ON media.ownership TO lythaus_jobs;`.
+   Both statements have only been applied temporarily in the isolated PG17 test
+   database and were revoked before teardown.
 2. **Detection/safety:** pixel-bound qualified/calibrated evidence, separate
    safety and authenticity results, durable current-revision persistence and
    applicable acceptance/approval remain missing. The prior metadata-only image
    evaluation is now replaced by explicit unavailable evidence; it did not fill
    that gap. No new threshold, provider request or spend is added.
 3. **Byte/privacy acceptance:** source signature alone is incomplete. Full
-   decoder behavior, orientation and GPS/EXIF removal, presigned PUT ingress
-   bounds/replay, original retention, abandoned pending-session sweeping and
+   decoder behavior, orientation and GPS/EXIF removal, original retention, and
    bounded storage/decoder waits still need validation and approved contracts.
-   Rejection cleanup retries after a durable terminal state locally; canonical
-   `bytes_rejected` denial still blocks production-role rejection settlement.
+   New sessions no longer use R2 presigned PUTs; already-issued 10-minute URLs
+   cannot be revoked, so terminal quarantine deletion waits until 15 minutes
+   after session expiry and the existing 15-minute sweep runs. This handles
+   replay of legacy URLs but does not certify hosted R2 behavior or aggregate
+   physical-storage bounds. Canonical `bytes_rejected` denial still blocks
+   production-role rejection settlement.
 4. **Deletion/concurrency:** standard-session expiry and account-deletion
    fencing are implemented and covered with local session-lock/race tests, but
    the full hosted account-delete/hold/retention workflow and restart acceptance
    remain open. It retains a DB transaction across external Images work; hosted
    timeout/connection behavior needs acceptance. A private derivative written
-   before DB commit can remain orphaned after connection or process loss;
-   terminal retry and account-deletion cleanup remove known quarantine/derivative
-   keys, but no reconciliation sweep or aggregate physical R2 quota bound is
-   certified. Hosted account-delete/retention restart acceptance, canonical
-   queue-source event binding and attachment tombstones remain blocked.
-   If the transaction is lost before a derivative is stored, Images work can
-   repeat. Conditional PUT prevents overwrite but cannot supply exactly-once
-   external execution. The tests demonstrate this boundary rather than hiding
+   before DB commit can remain orphaned after connection or process loss; the
+   new janitor reconciles source quarantine only. Hosted account-delete/retention
+   restart acceptance, derivative-orphan reconciliation, canonical queue-source
+   event binding and attachment tombstones remain blocked. If the transaction is
+   lost before a derivative is stored, Images work can repeat. Conditional PUT
+   prevents overwrite but cannot supply exactly-once external execution. The
+   tests demonstrate this boundary rather than hiding
    it. Physical orphan storage is not a certified aggregate-quota bound.
 5. **Publication integration:** unresolved attachment policy, unapplied relation,
    authoritative evidence binding, transaction/revision locks, moderator/appeal

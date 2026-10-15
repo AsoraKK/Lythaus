@@ -135,6 +135,9 @@ const columnContracts = {
     ['moderation.authenticity_alpha', 'storage_released_at', 'timestamp with time zone'],
     ['moderation.authenticity_alpha_steps', 'reservation_id', 'uuid'],
   ],
+  '0021_media_quarantine_cleanup.sql': [
+    ['media.upload_sessions', 'quarantine_deleted_at', 'timestamp with time zone'],
+  ],
 };
 
 const relationContractSql = (label, relation, fingerprint) => `/* migration-artifact:${label} */
@@ -307,6 +310,35 @@ const artifacts = {
   ],
   '0020_auth_recovery_delivery.sql': [
     { artifact: 'password_changed_notification_purpose', kind: 'schema_artifact', sql: "SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='system.transactional_email_outbox'::regclass AND conname='transactional_email_outbox_purpose_check' AND convalidated AND pg_get_constraintdef(oid) ILIKE '%password_changed%') AS present" },
+  ],
+  '0021_media_quarantine_cleanup.sql': [
+    ...contractArtifacts['0021_media_quarantine_cleanup.sql'],
+    { artifact: 'media_quarantine_deleted_at_is_nullable', kind: 'schema_artifact', sql: `/* migration-artifact:media_quarantine_deleted_at_is_nullable */ SELECT EXISTS (
+      SELECT 1 FROM pg_attribute attribute
+       WHERE attribute.attrelid = to_regclass('media.upload_sessions')
+         AND attribute.attname = 'quarantine_deleted_at'
+         AND attribute.attnum > 0 AND NOT attribute.attisdropped
+         AND NOT attribute.attnotnull
+    ) AS present` },
+    { artifact: 'media_upload_quarantine_cleanup_index', kind: 'schema_artifact', sql: `/* migration-artifact:media_upload_quarantine_cleanup_index */ SELECT EXISTS (
+      SELECT 1
+        FROM pg_index index_entry
+        JOIN pg_class index_relation ON index_relation.oid = index_entry.indexrelid
+        JOIN pg_namespace index_namespace ON index_namespace.oid = index_relation.relnamespace
+       WHERE index_namespace.nspname = 'media'
+         AND index_relation.relname = 'media_upload_quarantine_cleanup_idx'
+         AND index_entry.indrelid = to_regclass('media.upload_sessions')
+         AND index_entry.indisvalid AND index_entry.indisready
+         AND pg_get_indexdef(index_entry.indexrelid) ILIKE '%USING btree (expires_at, id)%'
+         AND pg_get_expr(index_entry.indpred, index_entry.indrelid) ILIKE '%purpose = ''standard''%'
+         AND pg_get_expr(index_entry.indpred, index_entry.indrelid) ILIKE '%quarantine_deleted_at IS NULL%'
+         AND pg_get_expr(index_entry.indpred, index_entry.indrelid) ILIKE '%pending%'
+         AND pg_get_expr(index_entry.indpred, index_entry.indrelid) ILIKE '%queued%'
+         AND pg_get_expr(index_entry.indpred, index_entry.indrelid) ILIKE '%approved%'
+         AND pg_get_expr(index_entry.indpred, index_entry.indrelid) ILIKE '%rejected%'
+         AND pg_get_expr(index_entry.indpred, index_entry.indrelid) ILIKE '%expired%'
+         AND pg_get_expr(index_entry.indpred, index_entry.indrelid) ILIKE '%cancelled%'
+    ) AS present` },
   ],
 };
 
