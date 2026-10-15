@@ -50,6 +50,12 @@ injects a final balance-delete fault, then replays both cleanup and completion.
   lock function into its owned database and grants its synthetic `lythaus_jobs`
   role; it asserts the installer is running as the fixture owner. No hosted
   role or database was changed.
+- Combined disabled activity pilot, privacy-export, and profile Workflow
+  PostgreSQL 17 suites: **40/40 passed**. The shared disposable Workflow
+  fixture installs the lock function for synthetic `lythaus_jobs` execution;
+  the profile test also asserts the terminal balance purge occurs after
+  content redaction and before preference reset. No activity runtime handler
+  was changed.
 - `npx tsc -p tsconfig.native.json --noEmit`, JavaScript syntax checks, and
   `git diff --check` passed.
 

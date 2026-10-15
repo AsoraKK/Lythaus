@@ -10,7 +10,6 @@ import { reconcileSupportPrivacyDeletionLocations } from '../../../packages/db/s
 import { requirePrivacyExportDependencies } from '../../lythaus-public-api/src/privacy-runtime-policy.ts';
 import { loadApprovedMigrations } from '../../../scripts/ci/planetscale-migration-manifest.mjs';
 import { nativePostgresPrivacyWorkflowFixture } from '../../lythaus-public-api/tests/native-postgres-workflow-fixture.mjs';
-import { installReputationLockFunctionFixture } from './helpers/install-reputation-lock-fixture.mjs';
 
 const supplied = process.env.SUPPORT_LOCAL_PG_URL;
 if (!supplied) throw new Error('support_workflows_require_disposable_local_pg17');
@@ -37,8 +36,6 @@ before(async () => {
   for (const migration of loadApprovedMigrations().migrations) await control.query(migration.contents.toString());
   await control.query(readFileSync('database/planetscale/grants/roles.sql', 'utf8'));
   await control.query(readFileSync('database/planetscale/proposals/profile-presentation-preferences.sql', 'utf8'));
-  assert.equal((await control.query('SELECT current_user AS role')).rows[0].role, 'postgres');
-  await installReputationLockFunctionFixture(control, 'lythaus_jobs');
   fixture = await nativePostgresPrivacyWorkflowFixture(local.toString(), { supportPolicy: candidate });
 });
 after(async () => {
