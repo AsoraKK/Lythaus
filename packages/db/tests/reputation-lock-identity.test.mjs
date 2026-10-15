@@ -41,7 +41,7 @@ for (const [index, field] of fixture.fields.entries()) {
   });
 }
 const queue = await loadReputationQueueCandidate();
-test('proposed typed terminal handler returns deleted only after rollback and release (mock)', async () => {
+test('historical v2 handler control accepts a typed error without wrapper cleanup proof (unsafe)', async () => {
   const order = [];
   const outcome = await queue.runReputationTransaction(async () => {
     try { order.push('begin'); throw new queue.ReputationSubjectDeletedError(); }
@@ -50,7 +50,7 @@ test('proposed typed terminal handler returns deleted only after rollback and re
   });
   assert.equal(outcome, 'deleted'); assert.deepEqual(order, ['begin', 'rollback', 'release']);
 });
-test('proposed terminal handler propagates plain, forged, database and connection errors (mock)', async () => {
+test('historical v2 handler rejects plain/forged errors but does not establish actual cleanup (mock)', async () => {
   for (const error of [new Error('reputation_subject_deleted'), { code: 'reputation_subject_deleted', name: 'ReputationSubjectDeletedError' },
     Object.assign(new Error('synthetic deadlock'), { code: '40P01' }), new Error('synthetic connection failure')]) {
     await assert.rejects(queue.runReputationTransaction(async () => { throw error; }), actual => actual === error);

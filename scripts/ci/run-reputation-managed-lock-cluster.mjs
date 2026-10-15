@@ -63,6 +63,7 @@ try {
     'scripts/tests/reputation-lock-proposal-runner.test.mjs',
     'packages/db/tests/reputation-lock-candidate.test.mjs',
     'packages/db/tests/reputation-lock-identity.test.mjs',
+    'packages/db/tests/reputation-transaction-cleanup.test.mjs',
     'packages/db/tests/reputation-persistence.test.mjs'], target);
 } catch {
   console.error('Owned synthetic reputation fixture failed; no production target is supported.');

@@ -1,5 +1,14 @@
 # Reputation lock v2: source preparation only
 
+**Historical revision 2 Queue evidence is unsafe and superseded.** Independent
+review found that the actual transaction wrapper suppresses ROLLBACK rejection,
+so the Queue helper below cannot establish cleanup from the original typed error.
+Do not activate the retained `reputation_subject_lock.queue.patch.proposal`.
+The source-only correction, actual-wrapper fake-driver tests and current gates
+are in [revision 3](reputation-transaction-cleanup-v3-source-preparation-20261015.md).
+All strict SQL privilege/fingerprint protections and original proposal bytes are
+preserved; the historical 61 tests do not establish transaction cleanup safety.
+
 Base reviewed: `fd00b1bf01d26df5fbbb6da5a707e87c08386742` (main).
 Latest observed main is `489aef297ff0b1a40744504594122c9ebc43930d` (#1021,
 Flutter-only changes); the proposal source paths are unchanged. This branch

@@ -2,11 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 
-export function patchedSource(path, patch) {
+export function patchedSource(path, patch, source = readFileSync(path, 'utf8')) {
   const relative = 'packages/db/src/' + path.split('/').at(-1);
   patch = patch.split(`diff --git a/${relative} b/${relative}\n`)[1]?.split('\ndiff --git ')[0];
   assert.ok(patch, 'proposal must name the exact source file');
-  let source = readFileSync(path, 'utf8');
   for (const hunk of patch.split(/^@@[^\n]*\n/m).slice(1)) {
     const lines = hunk.trimEnd().split('\n');
     assert.ok(lines.every(line => /^[ +\-]/.test(line)));
