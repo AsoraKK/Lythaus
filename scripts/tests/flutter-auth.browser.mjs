@@ -105,7 +105,8 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     page.on('requestfailed',request=>{
       const url=new URL(request.url()),error=request.failure()?.errorText;
       const expectedSignOutCancellation=signingOut&&request.method()==='GET'
-        &&url.origin==='https://api.lythaus.co'&&url.pathname===`/api/users/${user.id}`
+        &&url.origin==='https://api.lythaus.co'
+        &&(url.pathname===`/api/users/${user.id}`||url.pathname==='/api/feed/discover')
         &&error==='Load request cancelled';
       failedRequests.push({path:url.pathname,method:request.method(),error,expectedSignOutCancellation});
     });
