@@ -36,10 +36,16 @@ function closed() {
   assert.equal(clients[0].closed, true);
   assert.equal(clients[0].listenerCount('error'), 0);
 }
-test('actual runtime wrapper and original strict SQL/proposal evidence are byte-preserved', () => {
+test('historical proposal hashes remain recorded while runtime uses verified cleanup', () => {
   const evidence = JSON.parse(readFileSync(new URL('fixtures/reputation-transaction-v3-baseline.json', import.meta.url)));
   assert.equal(evidence.baseline_head, 'da612c489b99ad540bbb7abca8d0d8b348c17e16');
-  for (const file of evidence.files) {
+  const historicalRuntime = evidence.files.find(file => file.path === 'packages/db/src/index.ts');
+  assert.ok(historicalRuntime);
+  const runtime = readFileSync(new URL('../../../packages/db/src/index.ts', import.meta.url));
+  assert.notEqual(runtime.length, historicalRuntime.bytes);
+  assert.notEqual(createHash('sha256').update(runtime).digest('hex'), historicalRuntime.sha256);
+  assert.match(runtime.toString('utf8'), /transactionWithVerifiedFailureCleanup/);
+  for (const file of evidence.files.filter(file => file.path !== 'packages/db/src/index.ts')) {
     const bytes = readFileSync(new URL('../../../' + file.path, import.meta.url));
     assert.equal(bytes.length, file.bytes, file.path);
     assert.equal(createHash('sha256').update(bytes).digest('hex'), file.sha256, file.path);

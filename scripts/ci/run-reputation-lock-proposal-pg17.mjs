@@ -37,6 +37,8 @@ try {
   await run(['scripts/ci/prepare-reputation-managed-lock-fixture.mjs'], local.href);
   await run(['--experimental-strip-types', '--test', '--test-concurrency=1', '--test-timeout=60000',
     'packages/db/tests/reputation-lock-proposal.postgres.mjs'], local.href);
+  await run(['--experimental-strip-types', '--test', '--test-concurrency=1', '--test-timeout=180000',
+    'apps/lythaus-jobs/tests/reputation-lifecycle.postgres.mjs'], local.href);
 } catch {
   console.error('Reputation lock proposal failed; inspect the preceding baseline/test output.');
   process.exitCode = interrupted === 'SIGINT' ? 130 : interrupted === 'SIGTERM' ? 143 : 1;

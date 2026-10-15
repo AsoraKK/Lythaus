@@ -54,9 +54,10 @@ try {
   await control.query(`CREATE ROLE pscale_superuser NOLOGIN NOSUPERUSER;
     CREATE ROLE postgres NOLOGIN NOSUPERUSER BYPASSRLS CREATEROLE CREATEDB INHERIT;
     GRANT pscale_superuser TO postgres;
-    CREATE ROLE pscale_api_9jfbtij9y4b2 NOLOGIN NOSUPERUSER NOCREATEROLE NOCREATEDB NOBYPASSRLS`);
+    CREATE ROLE pscale_api_9jfbtij9y4b2 LOGIN NOSUPERUSER NOCREATEROLE NOCREATEDB NOBYPASSRLS`);
   for (const role of ['lythaus_runtime', 'lythaus_admin', 'lythaus_jobs', 'lythaus_privacy', 'lythaus_migrations']) {
-    await control.query('CREATE ROLE ' + role + ' NOLOGIN NOSUPERUSER');
+    const login = role === 'lythaus_privacy' ? 'LOGIN' : 'NOLOGIN';
+    await control.query('CREATE ROLE ' + role + ' ' + login + ' NOSUPERUSER');
   }
   await run(['scripts/ci/run-reputation-lock-proposal-pg17.mjs', '--synthetic-proposal'], target);
   await run(['--experimental-strip-types', '--test', '--test-concurrency=1',

@@ -75,6 +75,9 @@ class FakeClient {
   }
 
   async query(text, values = []) {
+    if (text.includes('SELECT status FROM trust.lock_reputation_subject')) {
+      return this.result(this.userExists ? [{ status: this.userStatus }] : []);
+    }
     if (text.includes('SELECT status FROM identity.users') && text.includes('FOR UPDATE')) {
       return this.result(this.userExists ? [{ status: this.userStatus }] : []);
     }

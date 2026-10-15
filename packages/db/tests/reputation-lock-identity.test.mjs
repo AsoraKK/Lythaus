@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { loadReputationQueueCandidate, patchedSource } from './helpers/reputation-lock-candidate.mjs';
+import { ReputationSubjectDeletedError, isReputationSubjectDeletedError } from '../src/index.ts';
+import { loadReputationQueueCandidate } from './helpers/reputation-lock-candidate.mjs';
 
 const proposal = new URL('../../../database/planetscale/proposals/', import.meta.url);
 const fixture = JSON.parse(readFileSync(new URL('fixtures/reputation-lock-identity.json', import.meta.url)));
@@ -10,10 +11,11 @@ const encode = fields => fields.map(value => Buffer.byteLength(value) + ':' + va
 const fingerprint = fields => createHash('sha256').update(encode(fields)).digest('hex');
 const values = fixture.fields.map(field => field.value);
 const files = ['reputation_subject_lock.v2.sql.proposal', 'reputation_subject_lock.v2.verify.sql.proposal', 'reputation_subject_lock.v2.rollback.sql.proposal'];
-test('unapplied package barrel exports the typed error and predicate for the Queue import', () => {
-  const patch = readFileSync(new URL('reputation_subject_lock.v2.patch.proposal', proposal), 'utf8');
-  const candidate = patchedSource(new URL('../src/index.ts', import.meta.url).pathname, patch).contents;
-  assert.match(candidate, /export \{\s*ReputationSubjectDeletedError,\s*isReputationSubjectDeletedError,\s*refreshReputationProfile,/);
+test('runtime package barrel exports a typed deleted-subject predicate', () => {
+  assert.equal(typeof ReputationSubjectDeletedError, 'function');
+  assert.equal(typeof isReputationSubjectDeletedError, 'function');
+  assert.equal(isReputationSubjectDeletedError(new ReputationSubjectDeletedError()), true);
+  assert.equal(isReputationSubjectDeletedError({ name: 'ReputationSubjectDeletedError' }), false);
 });
 test('expected catalog fingerprint is reproducible from source; this is not PG catalog evidence', () => {
   assert.equal(fingerprint(values), fixture.fingerprint);

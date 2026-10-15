@@ -1,4 +1,8 @@
-# Transaction cleanup revision 3: source preparation only
+# Transaction cleanup revision 3: initial source preparation (historical)
+
+This packet records the pre-implementation review only. Its “unapplied” and
+“not run” statements describe the state at that time and are superseded by the
+[implementation and PG17 acceptance record](reputation-transaction-cleanup-v3-implementation-acceptance-20261015.md).
 
 Continues draft PR #1022 from
 `da612c489b99ad540bbb7abca8d0d8b348c17e16`. All SQL remains inert, all runtime

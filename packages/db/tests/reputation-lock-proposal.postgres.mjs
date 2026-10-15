@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { readFileSync } from 'node:fs';
 import pg from 'pg';
-import { recordReputationSignal as baselineRecord, refreshReputationProfile as baselineRefresh } from '../src/reputation.ts';
 import { uuidv7 } from '../../security/src/index.ts';
 import { loadReputationLockCandidate } from './helpers/reputation-lock-candidate.mjs';
 import { recordUserActivity } from '../src/activity.ts';
@@ -157,9 +156,9 @@ test('offline reputation lock approval packet under canonical PG17 roles', async
     // pscale_superuser is an empty synthetic group, not PlanetScale behavior.
     // SET SESSION AUTHORIZATION is test scaffolding, never actual Jobs identity proof.
   });
-  await fixtureTest(t, 'unchanged baseline Jobs query fails without ledger writes', async () => {
+  await fixtureTest(t, 'runtime fails closed before lock capability installation without ledger writes', async () => {
     const userId = await subject(), jobs = await client();
-    await assert.rejects(transact(jobs, connection => baselineRecord(connection, input(userId))), error => error.code === '42501');
+    await assert.rejects(transact(jobs, connection => candidate.recordReputationSignal(connection, input(userId))), error => error.code === '42883');
     assert.deepEqual(await snapshot(userId), [[], [], []]); await close(jobs);
   });
   await fixtureTest(t, 'advisory locking alone does not exclude an existing account status writer', async () => {
@@ -449,18 +448,9 @@ test('offline reputation lock approval packet under canonical PG17 roles', async
     assert.equal(original.created, true); assert.equal(replay.created, false); assert.equal(replay.event.id, original.event.id);
     assert.equal((await snapshot(userId))[0].length, 1); await close(first); await close(second);
   });
-  await fixtureTest(t, 'baseline refresh demonstrably loses a committed aggregate; candidate excludes that race', async () => {
+  await fixtureTest(t, 'locked refresh excludes a concurrent write and leaves a current aggregate', async () => {
     const userId = await subject(), refresh = await client(), writer = await client();
     await transact(writer, connection => candidate.recordReputationSignal(connection, input(userId, 'reliable_review')));
-    await refresh.query('BEGIN');
-    const baselinePause = pauseAggregate(refresh);
-    const staleRefresh = watch(baselineRefresh(baselinePause.client, userId));
-    await baselinePause.observed;
-    await transact(writer, connection => candidate.recordReputationSignal(connection, input(userId, 'reliable_review')));
-    baselinePause.release(); await staleRefresh; await refresh.query('COMMIT');
-    const [events, profiles, balances] = await snapshot(userId);
-    assert.equal(events.reduce((sum, event) => sum + Number(event.impact), 0), 10);
-    assert.equal(Number(profiles[0].total_score), 5); assert.equal(Number(balances[0].points), 5);
     await refresh.query('BEGIN');
     const candidatePause = pauseAggregate(refresh);
     const protectedRefresh = watch(candidate.refreshReputationProfile(candidatePause.client, userId));
@@ -468,8 +458,9 @@ test('offline reputation lock approval packet under canonical PG17 roles', async
     const newSignal = transact(writer, connection => candidate.recordReputationSignal(connection, input(userId, 'reliable_review')));
     await blocked(writer, refresh);
     candidatePause.release(); await protectedRefresh; await refresh.query('COMMIT'); await newSignal;
-    const repaired = await snapshot(userId);
-    assert.equal(Number(repaired[1][0].total_score), 15); assert.equal(Number(repaired[2][0].points), 15);
+    const [events, profiles, balances] = await snapshot(userId);
+    assert.equal(events.reduce((sum, event) => sum + Number(event.impact), 0), 10);
+    assert.equal(Number(profiles[0].total_score), 10); assert.equal(Number(balances[0].points), 10);
     await close(refresh); await close(writer);
   });
   await fixtureTest(t, 'different subjects progress independently while daily diminishing is serialized', async () => {
@@ -678,7 +669,7 @@ test('offline reputation lock approval packet under canonical PG17 roles', async
     await assert.rejects(transact(jobs, connection => candidate.recordReputationSignal(connection, input(userId))), error => error.code === '42883');
     await assert.rejects(transact(jobs, connection => candidate.refreshReputationProfile(connection, userId)), error => error.code === '42883');
     assert.deepEqual(await snapshot(userId), [[], [], []]);
-    await assert.rejects(transact(jobs, connection => baselineRecord(connection, input(userId))), error => error.code === '42501');
+    await assert.rejects(transact(jobs, connection => candidate.recordReputationSignal(connection, input(userId))), error => error.code === '42883');
     assert.equal((await jobs.query("SELECT has_any_column_privilege(current_user,'identity.users','UPDATE') AS allowed")).rows[0].allowed, false);
     await close(jobs);
   });

@@ -2,26 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { loadReputationLockCandidate } from './helpers/reputation-lock-candidate.mjs';
+import { recordReputationSignal, refreshReputationProfile } from '../src/reputation.ts';
 
-const candidate = await loadReputationLockCandidate();
 const userId = '01999000-0000-7000-8000-000000000001';
-const v1 = await loadReputationLockCandidate(1);
-for (const method of ['recordReputationSignal', 'refreshReputationProfile']) {
-  test(`${method} v1 control continues querying after a deleted subject (mock only)`, async () => {
-    let calls = 0;
-    const client = { async query() {
-      if (++calls === 1) return { rows: [{ status: 'deleted' }] };
-      throw new Error('synthetic_query_after_deleted');
-    } };
-    const input = method === 'refreshReputationProfile' ? userId : {
-      id: userId, subjectUserId: userId, sourceEventId: userId,
-      signalType: 'email_verified', occurredAt: '2026-10-14T00:00:00Z',
-    };
-    await assert.rejects(v1[method](client, input), /synthetic_query_after_deleted/);
-    assert.equal(calls, 2);
-  });
-}
 for (const method of ['recordReputationSignal', 'refreshReputationProfile']) {
   for (const status of ['deleted', 'missing']) {
     test(`${method} rejects ${status} before any further query (mock only)`, async () => {
@@ -37,7 +20,8 @@ for (const method of ['recordReputationSignal', 'refreshReputationProfile']) {
         id: userId, subjectUserId: userId, sourceEventId: userId,
         signalType: 'email_verified', occurredAt: '2026-10-14T00:00:00Z',
       };
-      await assert.rejects(candidate[method](client, input),
+      const methodUnderTest = method === 'refreshReputationProfile' ? refreshReputationProfile : recordReputationSignal;
+      await assert.rejects(methodUnderTest(client, input),
         { message: status === 'deleted' ? 'reputation_subject_deleted' : 'reputation_subject_not_found' });
       assert.equal(calls.length, 1);
     });

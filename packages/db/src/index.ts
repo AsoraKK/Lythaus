@@ -19,6 +19,29 @@ export class DatabaseCommitUncertainError extends Error {
   }
 }
 
+const VERIFIED_FAILURE_CLEANUP = Symbol('verified_failure_cleanup');
+const verifiedFailureCauses = new WeakMap<Error, Readonly<{ cause: unknown }>>();
+
+export class DatabaseTransactionCleanupUncertainError extends Error {
+  readonly outcome = 'unknown';
+
+  constructor() {
+    super('database_transaction_cleanup_outcome_unknown');
+    this.name = 'DatabaseTransactionCleanupUncertainError';
+  }
+}
+
+export function verifiedTransactionFailureCause(error: unknown): Readonly<{ cause: unknown }> | undefined {
+  return error instanceof Error ? verifiedFailureCauses.get(error) : undefined;
+}
+
+export function transactionWithVerifiedFailureCleanup<T>(
+  binding: HyperdriveBinding,
+  work: (client: Client) => Promise<T>,
+): Promise<T> {
+  return transaction(binding, work, VERIFIED_FAILURE_CLEANUP);
+}
+
 export async function checkTransactionHealth(client: DatabaseClient): Promise<void> {
   try { await client.query('SELECT 1'); }
   catch { throw new Error('database_transaction_unavailable'); }
@@ -56,31 +79,74 @@ export async function query<T extends QueryResultRow = QueryResultRow>(
 
 export async function transaction<T>(
   binding: HyperdriveBinding,
-  work: (client: Client) => Promise<T>
+  work: (client: Client) => Promise<T>,
+  verification?: typeof VERIFIED_FAILURE_CLEANUP,
 ): Promise<T> {
   const connectionString = verifyFullConnectionString(binding.connectionString);
   const client = new Client({ connectionString });
+  const verifyFailureCleanup = verification === VERIFIED_FAILURE_CLEANUP;
   let connectionFailed = false;
+  let beginVerified = false, commitAttempted = false, rollbackVerified = false, closeVerified = false;
+  let failed = false, failure: unknown, verifiedResult: T | undefined;
   const onConnectionError = () => { connectionFailed = true; };
   client.on('error', onConnectionError);
   let begun = false;
   try {
     await client.connect();
-    await client.query('BEGIN');
+    const started = await client.query('BEGIN');
     begun = true;
+    beginVerified = verifyFailureCleanup && !Array.isArray(started) && started?.command === 'BEGIN';
+    if (verifyFailureCleanup && !beginVerified) {
+      throw new Error('database_transaction_begin_unverified');
+    }
     const result = await work(client);
     if (connectionFailed) throw new Error('database_transaction_connection_failed');
+    commitAttempted = true;
     const committed = await client.query('COMMIT').catch(() => { throw new DatabaseCommitUncertainError(); });
     if (committed.command === 'ROLLBACK') throw new Error('database_transaction_rolled_back');
     if (committed.command !== 'COMMIT') throw new DatabaseCommitUncertainError();
-    return result;
+    if (!verifyFailureCleanup) return result;
+    verifiedResult = result;
   } catch (error) {
-    if (begun) await client.query('ROLLBACK').catch(() => undefined);
-    throw error;
+    if (!verifyFailureCleanup) {
+      if (begun) await client.query('ROLLBACK').catch(() => undefined);
+      throw error;
+    }
+    failed = true;
+    failure = error;
+    if (begun) {
+      try {
+        const rolledBack = await client.query('ROLLBACK');
+        rollbackVerified = !commitAttempted && !Array.isArray(rolledBack) && rolledBack?.command === 'ROLLBACK';
+      } catch {
+        rollbackVerified = false;
+      }
+    }
   } finally {
-    try { await client.end(); }
+    try {
+      await client.end();
+      closeVerified = true;
+    }
+    catch (error) {
+      if (!verifyFailureCleanup) throw error;
+      failed = true;
+      closeVerified = false;
+    }
     finally { client.removeListener('error', onConnectionError); }
   }
+  if (!failed) {
+    if (connectionFailed || !closeVerified) throw new DatabaseTransactionCleanupUncertainError();
+    return verifiedResult as T;
+  }
+  // A later rollback cannot establish whether an attempted COMMIT took effect.
+  if (failure instanceof DatabaseCommitUncertainError) throw failure;
+  if (beginVerified && begun && rollbackVerified && closeVerified && !connectionFailed && !commitAttempted) {
+    const receipt = new Error('database_transaction_verified_rollback');
+    receipt.name = 'DatabaseVerifiedTransactionRollbackError';
+    verifiedFailureCauses.set(receipt, Object.freeze({ cause: failure }));
+    throw receipt;
+  }
+  throw new DatabaseTransactionCleanupUncertainError();
 }
 
 export function assertVerifyFull(connectionString: string): void {
@@ -162,6 +228,8 @@ export {
   type ActivityPage,
 } from './activity.ts';
 export {
+  ReputationSubjectDeletedError,
+  isReputationSubjectDeletedError,
   refreshReputationProfile,
   recordReputationSignal,
   type ReputationEventRecord,
