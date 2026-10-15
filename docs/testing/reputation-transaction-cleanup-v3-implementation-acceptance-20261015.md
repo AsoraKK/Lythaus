@@ -56,6 +56,10 @@ injects a final balance-delete fault, then replays both cleanup and completion.
   the profile test also asserts the terminal balance purge occurs after
   content redaction and before preference reset. No activity runtime handler
   was changed.
+- The complete isolated publication PG17/Workerd runner passed all five
+  stages, including the 40-test admission suite. Its fixture verifies direct
+  Jobs `identity.users UPDATE` remains denied while granting only the reviewed
+  subject-lock function in the disposable database.
 - `npx tsc -p tsconfig.native.json --noEmit`, JavaScript syntax checks, and
   `git diff --check` passed.
 
