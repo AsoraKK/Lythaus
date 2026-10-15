@@ -163,7 +163,7 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     await shot('partial-before-save');
     phase = 'saving-partial';
     await page.getByRole('button', { name: 'Save profile', exact: true }).click();
-    await page.getByText('No posts yet', { exact: true }).waitFor();
+    await page.locator('flt-semantics').getByText('No posts yet', { exact: true }).waitFor();
     phase = 'discover-after-partial';
     assert.deepEqual(patches[0].data, { bio: 'Saved partial profile' });
     assert.ok(patches[0].key);
@@ -206,7 +206,7 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     await open();
     await signIn();
     await skipPage.getByRole('button', { name: 'Skip and explore', exact: true }).click();
-    await skipPage.getByText('No posts yet', { exact: true }).waitFor();
+    await skipPage.locator('flt-semantics').getByText('No posts yet', { exact: true }).waitFor();
     assert.equal(patches.length, 2, 'Skip must not write profile data');
     await skipPage.getByRole('button', { name: /^Profile(?:\b|$)/ }).first().click();
     await skipPage.getByRole('button', { name: /^Complete your profile(?:\b|$)/ }).waitFor();
