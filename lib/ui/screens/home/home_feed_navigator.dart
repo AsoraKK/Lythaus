@@ -519,7 +519,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
     return _buildLiveFeed(
       context,
       ref,
-      items: liveState.items,
+      items: liveState.isInitialLoading ? const [] : liveState.items,
       hasMore: liveState.hasMore,
       isLoadingMore: liveState.isLoadingMore,
       isRefreshing: liveState.isInitialLoading,

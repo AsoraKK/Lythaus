@@ -199,6 +199,31 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
+    testWidgets(
+      'refresh keeps cached cards hidden until the request resolves',
+      (tester) async {
+        final cachedPost = FeedItem(
+          id: 'cached-public-post',
+          feedId: 'discover',
+          author: 'Synthetic member',
+          contentType: ContentType.text,
+          title: 'Update',
+          body: 'Previously loaded post',
+          publishedAt: DateTime.utc(2026, 10, 15),
+        );
+        await tester.pumpWidget(
+          buildWithState(
+            stateForFeed: (_) =>
+                LiveFeedState(items: [cachedPost], isInitialLoading: true),
+          ),
+        );
+        await tester.pump();
+        expect(find.text('Loading posts'), findsOneWidget);
+        expect(find.text(cachedPost.body), findsNothing);
+        expect(find.text('No posts yet'), findsNothing);
+      },
+    );
+
     testWidgets('shows error message with retry button on error', (
       tester,
     ) async {
