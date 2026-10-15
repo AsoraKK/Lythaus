@@ -9,10 +9,13 @@ import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
+import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/domain/owner_profile.dart';
 import 'package:lythaus/features/profile/domain/public_user.dart';
 import 'package:lythaus/ui/screens/profile/edit_profile_screen.dart';
+import '../../../helpers/content_recovery.dart';
 
 final _user = User(
   id: 'owner-1',
@@ -69,6 +72,7 @@ Future<ProviderContainer> _open(
   _Adapter adapter, {
   OwnerProfile profile = _empty,
   Future<String?>? token,
+  bool onboarding = false,
 }) async {
   await tester.binding.setSurfaceSize(const Size(430, 1000));
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -83,6 +87,9 @@ Future<ProviderContainer> _open(
       jwtProvider.overrideWith(
         (ref) => token ?? Future.value('synthetic-token'),
       ),
+      contentRecoveryStorageProvider.overrideWithValue(
+        MemoryContentRecoveryStorage(),
+      ),
       secureDioProvider.overrideWithValue(dio),
     ],
   );
@@ -96,7 +103,10 @@ Future<ProviderContainer> _open(
             builder: (context) => TextButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => EditProfileScreen(profile: profile),
+                  builder: (_) => EditProfileScreen(
+                    profile: profile,
+                    onboarding: onboarding,
+                  ),
                 ),
               ),
               child: const Text('Open editor'),
@@ -252,33 +262,63 @@ void main() {
     'back keeps or explicitly discards unsaved edits without a request',
     (tester) async {
       final adapter = _Adapter((options) async => _saved(options));
-      await _open(tester, adapter);
+      final container = await _open(tester, adapter);
+      final registry = container.read(contentMutationRegistryProvider);
+      await registry.ready;
       await tester.enterText(find.byType(TextFormField).last, 'Unsaved');
       await tester.pump();
+      expect(registry.canSafelyReload, isFalse);
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.text('Discard unsaved changes?'), findsOneWidget);
+      expect(registry.canSafelyReload, isFalse);
       await tester.tap(find.text('Keep editing'));
       await tester.pumpAndSettle();
       expect(find.text('Unsaved'), findsOneWidget);
+      expect(registry.canSafelyReload, isFalse);
       await tester.pageBack();
       await tester.pumpAndSettle();
       await tester.tap(find.text('Discard changes'));
       await tester.pumpAndSettle();
       expect(find.text('Open editor'), findsOneWidget);
+      expect(registry.canSafelyReload, isTrue);
       expect(adapter.requests, isEmpty);
     },
   );
+  testWidgets('optional onboarding edits remain guarded while moving focus', (
+    tester,
+  ) async {
+    final adapter = _Adapter((options) async => _saved(options));
+    final container = await _open(tester, adapter, onboarding: true);
+    final registry = container.read(contentMutationRegistryProvider);
+    await registry.ready;
+    await tester.enterText(find.byType(TextFormField).first, 'Optional name');
+    await tester.pump();
+    expect(registry.canSafelyReload, isFalse);
+    await tester.tap(find.text('Skip and explore'));
+    await tester.pumpAndSettle();
+    expect(find.text('Discard unsaved changes?'), findsOneWidget);
+    expect(registry.canSafelyReload, isFalse);
+    await tester.tap(find.text('Keep editing'));
+    await tester.pumpAndSettle();
+    expect(registry.canSafelyReload, isFalse);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    expect(registry.canSafelyReload, isTrue);
+  });
   testWidgets(
     'a missing token is a visible failure and duplicate saves are blocked',
     (tester) async {
       final token = Completer<String?>();
       final adapter = _Adapter((options) async => _saved(options));
-      await _open(tester, adapter, token: token.future);
+      final container = await _open(tester, adapter, token: token.future);
+      final registry = container.read(contentMutationRegistryProvider);
+      await registry.ready;
       await tester.enterText(find.byType(TextFormField).last, 'Unsaved');
       await tester.pump();
       await tester.tap(find.text('Save profile'));
       await tester.pump();
+      expect(registry.canSafelyReload, isFalse);
       expect(
         tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
         isNull,
@@ -289,6 +329,7 @@ void main() {
         find.text('Your session expired. Sign in again to save.'),
         findsOneWidget,
       );
+      expect(registry.canSafelyReload, isFalse);
       expect(adapter.requests, isEmpty);
     },
   );

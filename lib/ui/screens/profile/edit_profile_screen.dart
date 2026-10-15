@@ -13,6 +13,7 @@ import 'package:uuid/uuid.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/profile/application/profile_validator.dart';
 import 'package:lythaus/features/profile/domain/owner_profile.dart';
@@ -46,6 +47,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   bool _leaving = false;
   bool _allowPop = false;
   late final int _openedRevision;
+  late final String _reloadBlockKey = 'profile-edit:${identityHashCode(this)}';
+  ContentMutationRegistry? _reloadRegistry;
 
   bool get _hasChanges =>
       _displayName.text.trim() != widget.profile.user.displayName.trim() ||
@@ -62,10 +65,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _openedRevision = ref.read(authSessionRevisionProvider.notifier).revision;
     _displayName = TextEditingController(text: widget.profile.user.displayName);
     _bio = TextEditingController(text: widget.profile.user.bio ?? '');
+    _reloadRegistry = ref.read(contentMutationRegistryProvider);
+    _displayName.addListener(_syncReloadBlock);
+    _bio.addListener(_syncReloadBlock);
+    _syncReloadBlock();
   }
 
   @override
   void dispose() {
+    _displayName.removeListener(_syncReloadBlock);
+    _bio.removeListener(_syncReloadBlock);
+    if (!_saving) _reloadRegistry?.setReloadBlocked(_reloadBlockKey, false);
     _displayName.dispose();
     _bio.dispose();
     _cancelToken?.cancel();
@@ -186,6 +196,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Future<void> _leave() async {
     if (_saving || _leaving) return;
     _leaving = true;
+    _syncReloadBlock();
     if (_hasChanges) {
       final discard = await showDialog<bool>(
         context: context,
@@ -208,11 +219,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       );
       if (!mounted || !_isOwner || discard != true) {
         _leaving = false;
+        if (mounted) _syncReloadBlock();
         return;
       }
     }
     if (mounted && _isOwner) _finish();
     _leaving = false;
+    if (mounted) _syncReloadBlock();
   }
 
   void _finish() {
@@ -247,6 +260,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       _saving = true;
       _error = null;
     });
+    _syncReloadBlock();
     _cancelToken = CancelToken();
     final stop = ref
         .read(authSessionRevisionProvider.notifier)
@@ -314,6 +328,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (mounted) {
         setState(() => _saving = false);
       }
+      if (mounted) {
+        _syncReloadBlock();
+      } else {
+        _saving = false;
+        _reloadRegistry?.setReloadBlocked(_reloadBlockKey, false);
+      }
     }
+  }
+
+  void _syncReloadBlock() {
+    final blocked = _saving || _leaving || _hasChanges;
+    _reloadRegistry?.setReloadBlocked(_reloadBlockKey, blocked);
   }
 }

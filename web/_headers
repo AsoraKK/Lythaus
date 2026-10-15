@@ -21,3 +21,15 @@
 
 /post/*
   Cache-Control: no-store, max-age=0, must-revalidate
+
+/web-release-assets.json
+  Cache-Control: no-store, max-age=0, must-revalidate
+
+/main.dart.*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/flutter_bootstrap.*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/release-update.*.js
+  Cache-Control: public, max-age=31536000, immutable

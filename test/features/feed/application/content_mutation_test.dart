@@ -61,6 +61,48 @@ void main() {
   });
 
   test(
+    'reload readiness waits for recovery activation and pending attempts',
+    () async {
+      final storage = MemoryContentRecoveryStorage();
+      final registry = ContentMutationRegistry(storage: storage);
+      registry.activate('owner');
+      expect(registry.canSafelyReload, isFalse);
+      await registry.flushPendingJournalWrites();
+      expect(registry.canSafelyReload, isTrue);
+
+      registry.setReloadBlocked('comment-draft', true);
+      expect(registry.canSafelyReload, isFalse);
+      registry.setReloadBlocked('comment-draft', false);
+      expect(registry.canSafelyReload, isTrue);
+
+      final attempt = await registry.beginDurable('post:owner:p1', {
+        'method': 'PUT',
+        'body': {'body': 'saved edit'},
+      });
+      expect(registry.canSafelyReload, isFalse);
+      await registry.finishDurable(attempt, uncertain: true);
+      expect(registry.canSafelyReload, isTrue);
+      registry.dispose();
+    },
+  );
+
+  test('unavailable recovery storage blocks reload', () async {
+    final storage = MemoryContentRecoveryStorage();
+    final registry = ContentMutationRegistry(storage: storage);
+    registry.activate('owner');
+    await registry.ready;
+    storage.failWrites = true;
+
+    expect(
+      await registry.saveDraft('post-create:owner', {'body': 'draft'}),
+      isFalse,
+    );
+    expect(registry.storageUnavailable, isTrue);
+    expect(registry.canSafelyReload, isFalse);
+    registry.dispose();
+  });
+
+  test(
     'serialization preserves normalized disclosure and excludes replay keys',
     () {
       final create = const CreatePostRequest(

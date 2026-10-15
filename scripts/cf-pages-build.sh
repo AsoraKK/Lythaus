@@ -105,6 +105,9 @@ flutter build web --release --no-tree-shake-icons --no-web-resources-cdn \
   --dart-define=API_BASE_URL="${API_BASE_URL}" \
   --dart-define=AUTH_URL="${AUTH_URL}"
 
+echo "==> Replacing Flutter's eager client-reloading service worker"
+cp scripts/ci/flutter-service-worker.js build/web/flutter_service_worker.js
+
 node scripts/ci/version-web-entrypoints.mjs build/web
 
 echo "==> Copying _redirects for SPA routing"

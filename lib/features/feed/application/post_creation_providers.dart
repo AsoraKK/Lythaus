@@ -96,6 +96,21 @@ class PostCreationState {
   /// Check if there's a successful result
   bool get isSuccess => result is CreatePostSuccess;
 
+  bool get canSafelyReload =>
+      !isSubmitting &&
+      !isRestoring &&
+      (isSuccess ||
+          (mediaUrl == null &&
+              !isNews &&
+              contentType == 'text' &&
+              proofSignals.captureMetadataHash == null &&
+              proofSignals.editHistoryHash == null &&
+              proofSignals.sourceAttestationUrl == null &&
+              (text.isEmpty
+                  ? aiLabel == null
+                  : draftStatus == 'Draft saved on this device.' ||
+                        draftStatus == 'Draft restored on this device.')));
+
   /// Check if content was blocked
   bool get isBlocked => result is CreatePostBlocked;
 
