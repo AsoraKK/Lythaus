@@ -203,6 +203,10 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Non-feed landing route'), findsOneWidget);
+      final journalBeforeSignOut =
+          jsonDecode(storage.values.values.single) as Map;
+      expect(journalBeforeSignOut['drafts'], isNotEmpty);
+      expect(storage.clearedAccount.isCompleted, isFalse);
 
       authNotifier.state = const AsyncValue.data(null);
       await tester.pump();
