@@ -20,9 +20,13 @@ scenarios.push({name:'webkit',engine:webkit,width:390,ownerResponseDelayMs:2000}
 for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
   test(`${name} ${width}: actual Flutter release login, recovery navigation, cookie restore and logout${ownerResponseDelayMs?' [controlled pending owner response]':''}`,{timeout:120000},async t=>{
     const lifecycle=createAuthRequestLifecycle({ownerId:user.id});
-    const errors=[],calls=[],failedRequests=[];let session=false,verificationRequired=false,userinfoUnavailable=false,complete=false;
-    let refreshInFlight=0,maximumRefreshInFlight=0,signingOut=false;
+    const errors=[],pageErrors=[],calls=[],failedRequests=[];let session=false,verificationRequired=false,userinfoUnavailable=false,complete=false;
+    let refreshInFlight=0,maximumRefreshInFlight=0,signOutTransitionOpen=false;
     let delayNextOwnerResponse=false;
+    const recordPageError=(target,error)=>{
+      const detail={name:error.name,message:error.message,stack:error.stack?.slice(0,3000),path:new URL(target.url()).pathname};
+      errors.push(error.message);pageErrors.push(detail);lifecycle.record('uncaught_page_error',detail);
+    };
     const fixture=await localAuthBrowserServer(async route=>{
       const req=route.request(),url=new URL(req.url());
       const requestHeaders=await req.allHeaders();
@@ -99,12 +103,12 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     const page=await context.newPage();page.setDefaultTimeout(15000);
     t.after(async()=>{lifecycle.record('teardown_start');try{if(!complete&&!page.isClosed()){
       if(process.env.AUTH_QA_DIR){await mkdir(process.env.AUTH_QA_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.AUTH_QA_DIR,`flutter-${name}-${width}-failure.png`)});}
-      t.diagnostic(JSON.stringify({synthetic:true,calls:calls.map(({path,method})=>({path:path.replaceAll(user.id,'{synthetic-owner}'),method})),pageErrorCount:errors.length,failedRequests:failedRequests.map(({path,method,error,expectedSignOutCancellation})=>({path:path.replaceAll(user.id,'{synthetic-owner}'),method,error:['Load request cancelled','net::ERR_ABORTED','net::ERR_FAILED'].includes(error)?error:'other_network_failure',expectedSignOutCancellation})),urlPath:new URL(page.url()).pathname}));
+      t.diagnostic(JSON.stringify({synthetic:true,calls:calls.map(({path,method})=>({path:path.replaceAll(user.id,'{synthetic-owner}'),method})),pageErrorCount:errors.length,pageErrors,failedRequests:failedRequests.map(({path,method,error,expectedSignOutCancellation})=>({path:path.replaceAll(user.id,'{synthetic-owner}'),method,error:['Load request cancelled','net::ERR_ABORTED','net::ERR_FAILED'].includes(error)?error:'other_network_failure',expectedSignOutCancellation})),urlPath:new URL(page.url()).pathname}));
     }}finally{await browser.close();await fixture.close();lifecycle.record('teardown_finished');t.diagnostic(JSON.stringify({authRequestLifecycle:{engine:name,width,scenario:ownerResponseDelayMs?'controlled_pending_owner_response':'baseline',ownerResponseDelayMs,head:process.env.GITHUB_SHA??'local',fixtureBase:'f0e497af4d8b5c1471e17fd4b35d0c0520a09e37',complete,...lifecycle.snapshot()}}));}});
-    page.on('pageerror',error=>errors.push(error.message));
+    page.on('pageerror',error=>recordPageError(page,error));
     page.on('requestfailed',request=>{
       const url=new URL(request.url()),error=request.failure()?.errorText;
-      const expectedSignOutCancellation=signingOut&&request.method()==='GET'
+      const expectedSignOutCancellation=signOutTransitionOpen&&request.method()==='GET'
         &&url.origin==='https://api.lythaus.co'
         &&(url.pathname===`/api/users/${user.id}`||url.pathname==='/api/feed/discover')
         &&error==='Load request cancelled';
@@ -174,7 +178,7 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     assert.ok(calls.filter(call=>call.path.endsWith('/auth/refresh')).length>before);
     const secondTab=await context.newPage();secondTab.setDefaultTimeout(30000);
     lifecycle.phase('two_tab_restore');
-    secondTab.on('pageerror',error=>errors.push(error.message));
+    secondTab.on('pageerror',error=>recordPageError(secondTab,error));
     await Promise.all([openApp(),openApp('/',secondTab)]);
     await Promise.all([
       page.locator('flt-semantics').getByText('No posts yet',{exact:true}).waitFor(),
@@ -230,7 +234,7 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
       await page.waitForURL(url=>url.pathname==='/settings/security');
     }
     lifecycle.phase('logout_armed');
-    signingOut=true;
+    signOutTransitionOpen=true;
     const logoutReply=page.waitForResponse(response=>response.url()==='https://api.lythaus.co/api/auth/logout'
       &&response.request().method()==='POST'&&response.status()===200);
     await page.getByRole('button',{name:'Sign out of all sessions',exact:true}).click();
@@ -239,6 +243,7 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     await page.getByRole('button',{name:'Sign in with email',exact:true}).waitFor();
     await secondTab.getByRole('button',{name:'Sign in with email',exact:true}).waitFor();
     lifecycle.record('both_tabs_signed_out');
+    signOutTransitionOpen=false;
     lifecycle.phase('protected_return');
     await openApp('/settings/security');
     await page.getByRole('button',{name:'Sign in with email',exact:true}).waitFor();
@@ -250,5 +255,47 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     assert.deepEqual(failedRequests.filter(request=>!request.expectedSignOutCancellation),[]);
     if(failedRequests.length)t.diagnostic(JSON.stringify({expectedSignOutCancellations:failedRequests}));
     complete=true;
+  });
+}
+
+for(const [engineName,engine] of Object.entries({chromium,webkit})) for(const control of [
+  {name:'Access-Control-Allow-Origin',omitted:'access-control-allow-origin'},
+  {name:'Access-Control-Allow-Credentials',omitted:'access-control-allow-credentials'},
+]) {
+  test(`${engineName}: credentialed Discover fetch rejects missing ${control.name}`,{timeout:30000},async()=>{
+    const requests=[];
+    const fixture=await localAuthBrowserServer(async route=>{
+      const req=route.request(),url=new URL(req.url()),requestHeaders=await req.allHeaders();
+      if(url.hostname==='app.lythaus.co')return route.fulfill({contentType:'text/html',body:'<!doctype html><title>CORS negative control</title>'});
+      if(url.hostname==='api.lythaus.co'&&url.pathname==='/api/feed/discover'){
+        const headers={'access-control-allow-origin':'https://app.lythaus.co','access-control-allow-credentials':'true'};
+        delete headers[control.omitted];
+        requests.push({method:req.method(),origin:requestHeaders.origin??null,status:200,
+          allowOrigin:headers['access-control-allow-origin']??null,
+          allowCredentials:headers['access-control-allow-credentials']??null});
+        return route.fulfill({status:200,headers:{...headers,'content-type':'application/json'},body:'{"items":[],"hasMore":false,"nextCursor":null}'});
+      }
+      return route.fulfill({status:404,body:'not found'});
+    });
+    let browser;
+    try {
+      browser=await engine.launch({headless:true,proxy:{server:fixture.proxy}});
+      const context=await browser.newContext({serviceWorkers:'block',ignoreHTTPSErrors:true});
+      const page=await context.newPage();
+      await page.goto('https://app.lythaus.co/');
+      const result=await page.evaluate(async()=>{
+        try {
+          const response=await fetch('https://api.lythaus.co/api/feed/discover?limit=25',{mode:'cors',credentials:'include'});
+          return {accepted:true,status:response.status};
+        } catch(error) { return {accepted:false,name:error.name}; }
+      });
+      assert.deepEqual(requests,[{method:'GET',origin:'https://app.lythaus.co',status:200,
+        allowOrigin:control.omitted==='access-control-allow-origin'?null:'https://app.lythaus.co',
+        allowCredentials:control.omitted==='access-control-allow-credentials'?null:'true'}]);
+      assert.deepEqual(result,{accepted:false,name:'TypeError'});
+    } finally {
+      await browser?.close();
+      await fixture.close();
+    }
   });
 }
