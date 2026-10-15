@@ -81,6 +81,8 @@ export function createAuthRequestLifecycle({ ownerId, clock = () => performance.
       await context.exposeBinding('__lythausAuthDiagnostic', ({ page }, event) => record(event.type, {
         pageId: pageId(page), path: safePath(event.path), browserEpochMs: event.browserEpochMs,
         ...(event.xhrId == null ? {} : { xhrId: event.xhrId, method: event.method }),
+        ...(event.xhrReadyState == null ? {} : { xhrReadyState: event.xhrReadyState }),
+        ...(event.xhrStatus == null ? {} : { xhrStatus: event.xhrStatus }),
       }));
       await context.addInitScript(() => {
         const send = (type, pathname = location.pathname, extra = {}) => {
@@ -101,7 +103,9 @@ export function createAuthRequestLifecycle({ ownerId, clock = () => performance.
           if (url.origin === 'https://api.lythaus.co') {
             const item = { xhrId: ++sequence, method, path: url.pathname }; metadata.set(this, item);
             for (const type of ['load', 'error', 'abort', 'loadend']) {
-              this.addEventListener(type, () => send('xhr_' + type, item.path, item));
+              this.addEventListener(type, () => send('xhr_' + type, item.path, {
+                ...item, xhrReadyState: this.readyState, xhrStatus: this.status,
+              }));
             }
           }
           return open.call(this, method, value, ...rest);
