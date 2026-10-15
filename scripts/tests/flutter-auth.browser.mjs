@@ -5,7 +5,7 @@ import test from 'node:test';
 import { chromium, webkit } from 'playwright';
 import { localAuthBrowserServer } from './local-auth-browser-server.mjs';
 import { installFlutterEngineFonts } from './flutter-engine-font-fixture.mjs';
-import { createAuthRequestLifecycle } from './auth-request-lifecycle.mjs';
+import { classifyExpectedProtectedReturnDiscoverCancellation, createAuthRequestLifecycle } from './auth-request-lifecycle.mjs';
 import './auth-request-lifecycle.test.mjs';
 import { freshOwnerReadFence } from './fresh-owner-read.mjs';
 import './fresh-owner-read.test.mjs';
@@ -24,7 +24,8 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     let refreshInFlight=0,maximumRefreshInFlight=0,signOutTransitionOpen=false;
     let delayNextOwnerResponse=false;
     const recordPageError=(target,error)=>{
-      const detail={name:error.name,message:error.message,stack:error.stack?.slice(0,3000),path:new URL(target.url()).pathname};
+      const detail={pageErrorIndex:pageErrors.length,name:error.name,message:error.message,
+        stack:error.stack?.slice(0,3000),path:new URL(target.url()).pathname};
       errors.push(error.message);pageErrors.push(detail);lifecycle.record('uncaught_page_error',detail);
     };
     const fixture=await localAuthBrowserServer(async route=>{
@@ -245,12 +246,16 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     lifecycle.record('both_tabs_signed_out');
     signOutTransitionOpen=false;
     lifecycle.phase('protected_return');
+    lifecycle.record('protected_return_navigation_requested',{path:'/settings/security'});
     await openApp('/settings/security');
     await page.getByRole('button',{name:'Sign in with email',exact:true}).waitFor();
     assert.equal(new URL(page.url()).searchParams.get('returnTo'),'/settings/security');
     assert.equal(session,false);
     assert.equal((await context.cookies('https://api.lythaus.co')).some(cookie=>cookie.name==='__Host-lythaus_refresh'),false);
-    assert.deepEqual(errors,[]);
+    const expectedPageErrorIndexes=classifyExpectedProtectedReturnDiscoverCancellation(lifecycle.snapshot());
+    assert.deepEqual(pageErrors.filter((_,index)=>!expectedPageErrorIndexes.has(index)),[]);
+    if(expectedPageErrorIndexes.size)t.diagnostic(JSON.stringify({expectedProtectedReturnDiscoverCancellations:
+      [...expectedPageErrorIndexes].map(index=>pageErrors[index])}));
     lifecycle.record('revocation_and_protected_return_assertions_passed');
     assert.deepEqual(failedRequests.filter(request=>!request.expectedSignOutCancellation),[]);
     if(failedRequests.length)t.diagnostic(JSON.stringify({expectedSignOutCancellations:failedRequests}));
