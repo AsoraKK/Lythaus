@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/core/network/pending_authenticated_operations.dart';
 import 'package:lythaus/features/auth/application/auth_service.dart';
 import 'package:lythaus/features/auth/application/session_platform.dart';
 import 'package:lythaus/features/auth/application/invite_redeem_service.dart';
@@ -39,7 +40,7 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
     _otherTabSignOut = browserSignOutEvents().listen((_) {
       if (!mounted) return;
       _operation += 1;
-      unawaited(_authService.clearAfterOtherTabSignOut());
+      unawaited(_withPendingOperation(_authService.clearAfterOtherTabSignOut));
       _ref.read(profileSetupRequestedProvider.notifier).state = false;
       state = const AsyncValue.data(null);
       _bumpTokenVersion();
@@ -51,6 +52,16 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
   int _operation = 0;
   StreamSubscription<void>? _otherTabSignOut;
   bool _current(int operation) => mounted && operation == _operation;
+
+  Future<T> _withPendingOperation<T>(Future<T> Function() action) async {
+    final operations = _ref.read(pendingAuthenticatedOperationsProvider);
+    final token = operations.beginOperation();
+    try {
+      return await action();
+    } finally {
+      operations.finishOperation(token);
+    }
+  }
 
   void _bumpTokenVersion() {
     final notifier = _ref.read(tokenVersionProvider.notifier);
@@ -64,7 +75,7 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
     _bumpTokenVersion();
   }
 
-  Future<void> _loadCurrentUser() async {
+  Future<void> _loadCurrentUser() => _withPendingOperation(() async {
     final operation = ++_operation;
     try {
       final user = await _authService.getCurrentUser();
@@ -74,31 +85,32 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
       if (!_current(operation)) return;
       state = AsyncValue.error(error, stackTrace);
     }
-  }
+  });
 
-  Future<void> signInWithEmail(String email, String password) async {
-    final operation = ++_operation;
-    try {
-      _ref.read(guestModeProvider.notifier).state = false;
-      state = const AsyncValue.loading();
-      final user = await _authService.loginWithEmail(email, password);
-      if (!_current(operation)) return;
-      _ref.read(profileSetupRequestedProvider.notifier).state = true;
-      state = AsyncValue.data(user);
-      _bumpTokenVersion();
-    } on AuthFailure catch (error, stackTrace) {
-      if (!_current(operation)) return;
-      state = AsyncValue.error(error, stackTrace);
-    } catch (error, stackTrace) {
-      if (!_current(operation)) return;
-      state = AsyncValue.error(
-        AuthFailure.serverError('Unable to sign in. Please try again.'),
-        stackTrace,
-      );
-    }
-  }
+  Future<void> signInWithEmail(String email, String password) =>
+      _withPendingOperation(() async {
+        final operation = ++_operation;
+        try {
+          _ref.read(guestModeProvider.notifier).state = false;
+          state = const AsyncValue.loading();
+          final user = await _authService.loginWithEmail(email, password);
+          if (!_current(operation)) return;
+          _ref.read(profileSetupRequestedProvider.notifier).state = true;
+          state = AsyncValue.data(user);
+          _bumpTokenVersion();
+        } on AuthFailure catch (error, stackTrace) {
+          if (!_current(operation)) return;
+          state = AsyncValue.error(error, stackTrace);
+        } catch (error, stackTrace) {
+          if (!_current(operation)) return;
+          state = AsyncValue.error(
+            AuthFailure.serverError('Unable to sign in. Please try again.'),
+            stackTrace,
+          );
+        }
+      });
 
-  Future<void> refreshToken() async {
+  Future<void> refreshToken() => _withPendingOperation(() async {
     final operation = ++_operation;
     try {
       if (!await _authService.refreshSession()) {
@@ -118,9 +130,9 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
         stackTrace,
       );
     }
-  }
+  });
 
-  Future<void> signOut() async {
+  Future<void> signOut() => _withPendingOperation(() async {
     final operation = ++_operation;
     _ref.read(profileSetupRequestedProvider.notifier).state = false;
     _ref.read(guestModeProvider.notifier).state = false;
@@ -141,9 +153,9 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
         _bumpTokenVersion();
       }
     }
-  }
+  });
 
-  Future<void> continueAsGuest() async {
+  Future<void> continueAsGuest() => _withPendingOperation(() async {
     final operation = ++_operation;
     _ref.read(profileSetupRequestedProvider.notifier).state = false;
     try {
@@ -155,9 +167,9 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
     _ref.read(guestModeProvider.notifier).state = true;
     state = const AsyncValue.data(null);
     _bumpTokenVersion();
-  }
+  });
 
-  Future<void> validateToken() async {
+  Future<void> validateToken() => _withPendingOperation(() async {
     final operation = ++_operation;
     try {
       if (!await _authService.validateAndRefreshToken()) {
@@ -173,7 +185,7 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<User?>> {
       if (!_current(operation)) return;
       state = AsyncValue.error(error, stackTrace);
     }
-  }
+  });
 
   @override
   void dispose() {

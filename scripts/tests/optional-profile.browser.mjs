@@ -14,7 +14,7 @@ const user = { id: '018f0000-0000-7000-8000-000000000001', email: 'synthetic@exa
   subscription_tier: 'free', reputation_score: 0, created_at: '2026-08-01T00:00:00Z', last_login_at: '2026-08-01T00:00:00Z' };
 
 for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (const width of [1440, 390]) {
-  test(`${engineName} ${width}: optional profile partial save, skip, pending state and interruption`, { timeout: 120000 }, async t => {
+  test(`${engineName} ${width}: app root preserves optional profile typing through reload-gate changes`, { timeout: 120000 }, async t => {
     let session = false;
     let profile = { id: user.id, displayName: '', bio: '', moderationState: 'allowed', publicVisibility: true, subscriptionTier: 'free' };
     const patches = [], privateReads = [], errors = [], failedRequests = [], consoleErrors = [];
@@ -122,12 +122,13 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
       await page.locator('flt-semantics-placeholder').evaluate(node => node.click());
     }
     async function open(url = 'https://app.lythaus.co/') { await page.goto(url); await activate(); }
-    async function type(field, value) {
+    async function type(field, value, description = 'form field') {
       await field.click();
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       await field.press('ControlOrMeta+A'); await field.press('Backspace');
       if (value) await field.pressSequentially(value, { delay: 15 });
-      assert.equal(await field.inputValue(), value);
+      assert.equal(await field.inputValue(), value,
+        `${description} lost typed text while the app root synchronized its reload gate`);
     }
     async function fieldValue(field) {
       await field.click();
@@ -135,8 +136,8 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
       return field.inputValue();
     }
     async function signIn() {
-      await type(page.getByRole('textbox', { name: 'Email', exact: true }), user.email);
-      await type(page.locator('input[type=password]'), 'synthetic-profile-password');
+      await type(page.getByRole('textbox', { name: 'Email', exact: true }), user.email, 'sign-in email');
+      await type(page.locator('input[type=password]'), 'synthetic-profile-password', 'sign-in password');
       await page.getByRole('button', { name: 'Sign in with email', exact: true }).click();
       await page.getByText('Set up your profile (optional)', { exact: true }).waitFor();
       await page.getByRole('button', { name: 'Save profile', exact: true }).waitFor();
@@ -154,12 +155,12 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     assert.equal(await page.title(), 'Lythaus');
     await signIn();
     assert.ok((await page.locator('flt-semantics').allTextContents()).some(text => text.includes('Save profile')));
-    await type(page.getByRole('textbox', { name: /Display name/ }), 'ＦＵＣＫ');
+    await type(page.getByRole('textbox', { name: /Display name/ }), 'ＦＵＣＫ', 'first optional-profile edit');
     await page.getByRole('button', { name: 'Save profile', exact: true }).click();
     await page.locator('flt-semantics').getByText('Please choose a different display name', { exact: true }).waitFor();
     assert.equal(patches.length, 0);
-    await type(page.getByRole('textbox', { name: /Display name/ }), '');
-    await type(page.getByRole('textbox', { name: /Bio/ }), 'Saved partial profile');
+    await type(page.getByRole('textbox', { name: /Display name/ }), '', 'clear optional display name');
+    await type(page.getByRole('textbox', { name: /Bio/ }), 'Saved partial profile', 'optional-profile bio draft');
     await shot('partial-before-save');
     phase = 'saving-partial';
     await page.getByRole('button', { name: 'Save profile', exact: true }).click();
@@ -173,7 +174,7 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     await page.getByRole('button', { name: /^Edit profile(?:\b|$)/ }).click();
     const bio = page.getByRole('textbox', { name: /Bio/ });
     assert.equal(await fieldValue(bio), 'Saved partial profile');
-    await type(bio, 'Unsaved interruption');
+    await type(bio, 'Unsaved interruption', 'unsaved profile interruption draft');
     await page.getByRole('button', { name: 'Back', exact: true }).click();
     await page.getByText('Discard unsaved changes?', { exact: true }).waitFor();
     await page.getByRole('button', { name: 'Keep editing', exact: true }).click();
@@ -186,7 +187,7 @@ for (const [engineName, engine] of Object.entries({ chromium, webkit })) for (co
     await ownProfile();
     await page.getByRole('button', { name: /^Edit profile(?:\b|$)/ }).click();
     assert.equal(await fieldValue(page.getByRole('textbox', { name: /Bio/ })), 'Saved partial profile');
-    await type(page.getByRole('textbox', { name: /Display name/ }), 'Zoë O’Connor');
+    await type(page.getByRole('textbox', { name: /Display name/ }), 'Zoë O’Connor', 'final owner profile edit');
     await page.getByRole('button', { name: 'Save profile', exact: true }).click();
     await page.getByRole('button', { name: /^Edit profile(?:\b|$)/ }).waitFor();
     assert.deepEqual(patches[1].data, { displayName: 'Zoë O’Connor' });

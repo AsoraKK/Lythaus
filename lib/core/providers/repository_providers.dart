@@ -13,6 +13,7 @@ import 'package:lythaus/core/config/environment_config.dart';
 import 'package:lythaus/features/moderation/domain/moderation_repository.dart';
 import 'package:lythaus/features/moderation/application/moderation_service.dart';
 import 'package:lythaus/core/security/cert_pinning.dart';
+import 'package:lythaus/core/network/pending_authenticated_operations.dart';
 
 /// **Core HTTP Client Provider**
 ///
@@ -25,6 +26,11 @@ final httpClientProvider = Provider<Dio>((ref) {
 
   // Create Dio with certificate pinning enabled
   final dio = createPinnedDio(baseUrl: baseUrl);
+  dio.interceptors.add(
+    PendingAuthenticatedOperationInterceptor(
+      ref.read(pendingAuthenticatedOperationsProvider),
+    ),
+  );
 
   // Configure timeouts and headers
   dio.options.connectTimeout = const Duration(seconds: 10);

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-
+import 'package:lythaus/core/network/pending_authenticated_operations.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_service.dart';
 import 'package:lythaus/features/auth/domain/auth_failure.dart';
@@ -58,6 +58,53 @@ void main() {
     expect(container.read(authErrorProvider)?.message, 'Offline');
     expect(container.read(isAuthenticatedProvider), isFalse);
   });
+
+  test(
+    'cold auth startup tracks pending work synchronously and notifies after provider creation',
+    () async {
+      final restoration = Completer<User?>();
+      final coldAuthService = _MockAuthService();
+      when(
+        () => coldAuthService.getCurrentUser(),
+      ).thenAnswer((_) => restoration.future);
+      final coldContainer = ProviderContainer(
+        overrides: [
+          enhancedAuthServiceProvider.overrideWithValue(coldAuthService),
+        ],
+      );
+      var notifications = 0;
+      final restored = Completer<void>();
+      final subscription = coldContainer.listen(
+        pendingAuthenticatedOperationsProvider,
+        (_, next) {
+          notifications++;
+          if (!next.hasPending && !restored.isCompleted) restored.complete();
+        },
+      );
+
+      try {
+        expect(coldContainer.read(authStateProvider).isLoading, isTrue);
+        final operations = coldContainer.read(
+          pendingAuthenticatedOperationsProvider,
+        );
+        expect(operations.activeCount, 1);
+        expect(operations.hasPending, isTrue);
+        expect(notifications, 0);
+
+        await Future<void>.delayed(Duration.zero);
+        expect(notifications, 1);
+        expect(operations.hasPending, isTrue);
+
+        restoration.complete(null);
+        await restored.future.timeout(const Duration(seconds: 1));
+        expect(operations.hasPending, isFalse);
+        expect(notifications, 2);
+      } finally {
+        subscription.close();
+        coldContainer.dispose();
+      }
+    },
+  );
 
   for (final failure in [
     AuthFailure.invalidCredentials('Invalid email or password'),
