@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "fixture": "Local TLS proxy; synthetic signed-out guest with empty Discover response; no production API access",
+  "flutter": "3.41.1",
+  "dart": "3.11.0",
+  "chromium": "151.0.7922.34",
+  "textScaling": "Native Flutter TextScaler.linear(2); headers only",
+  "followupIconCaptureSource": {
+    "path": "lib/design_system/components/lyth_icon_button.dart",
+    "sha256": "792f2ae4e786e38cda623830a50e8a89ab6d33a1d97611c2df66e850333c49a4",
+    "description": "Filled icon focus fix in this follow-up; source content hash avoids a self-referential commit ID."
+  },
+  "artifacts": [
+    {
+      "path": "before/light-390.png",
+      "bytes": 23176,
+      "sha256": "34cff809d20be1603dc9ccfe7c728729de16005d1a6bd1a7d0b4dcc5915ca866",
+      "capturedAt": "2026-10-15T05:26:41.639Z",
+      "sourceCommit": "489aef297ff0b1a40744504594122c9ebc43930d"
+    },
+    {
+      "path": "after/light-390.png",
+      "bytes": 23925,
+      "sha256": "47bd4e6dd0ad99de5f8f7fcf49c9881aaa658bba0250808c44df27fda2ef4a67",
+      "capturedAt": "2026-10-15T05:24:04.939Z",
+      "sourceCommit": "dff240c8b80f8e34316016de6049bc273709d8a6"
+    },
+    {
+      "path": "after/light-390-focus.png",
+      "bytes": 24409,
+      "sha256": "86926ad25ef5267979914bf721b17cdc02cf6b626b6c9ec75c336b8cca7ee512",
+      "capturedAt": "2026-10-15T05:24:05.083Z",
+      "sourceCommit": "dff240c8b80f8e34316016de6049bc273709d8a6"
+    },
+    {
+      "path": "before/light-1440.png",
+      "bytes": 35728,
+      "sha256": "e5c479d526f9ae4e07dbe8f6962b4a1111febcef147d4aaf841367b13f117a1b",
+      "capturedAt": "2026-10-15T05:26:44.287Z",
+      "sourceCommit": "489aef297ff0b1a40744504594122c9ebc43930d"
+    },
+    {
+      "path": "after/light-1440.png",
+      "bytes": 36500,
+      "sha256": "333ad8e5d925fa8e9cf2e36263f37abaf7443b1ef8fe2c79829e0601ee1924ed",
+      "capturedAt": "2026-10-15T05:24:08.035Z",
+      "sourceCommit": "dff240c8b80f8e34316016de6049bc273709d8a6"
+    },
+    {
+      "path": "after/light-1440-focus.png",
+      "bytes": 36996,
+      "sha256": "d1cd06c206f6d3277279bfd4c8023f4f9040e2cacaa235121dcaae5af182c821",
+      "capturedAt": "2026-10-15T05:24:08.327Z",
+      "sourceCommit": "dff240c8b80f8e34316016de6049bc273709d8a6"
+    },
+    {
+      "path": "headers/light-320-2x.png",
+      "bytes": 7841,
+      "sha256": "034960a49abd0c1756ff46e29befe9798d2c5a3cf90d03df9586c5b3bf0c35b4",
+      "capturedAt": "2026-10-15T05:29:16.091Z",
+      "sourceCommit": "dff240c8b80f8e34316016de6049bc273709d8a6"
+    },
+    {
+      "path": "headers/light-390-2x.png",
+      "bytes": 8887,
+      "sha256": "78bb4ceaa327cc37ed65881ff0989d40eee07cdc6ec29c381dc4ce428b91e006",
+      "capturedAt": "2026-10-15T05:22:42.693Z",
+      "sourceCommit": "dff240c8b80f8e34316016de6049bc273709d8a6"
+    },
+    {
+      "path": "headers/light-1440-2x.png",
+      "bytes": 9218,
+      "sha256": "3c41c154302100b208bbbb2f49f03216f17b556887984352d2e643a9cf0813ff",
+      "capturedAt": "2026-10-15T05:22:42.941Z",
+      "sourceCommit": "dff240c8b80f8e34316016de6049bc273709d8a6"
+    },
+    {
+      "path": "icons/light-standard-focus.png",
+      "bytes": 1413,
+      "sha256": "73b6835129aaf391589733211533e3b7f00986415bd250305f0ad96122e5249c",
+      "capturedAt": "2026-10-15T05:45:09.545Z",
+      "sourceCommit": null
+    },
+    {
+      "path": "icons/light-filled-focus.png",
+      "bytes": 1436,
+      "sha256": "4b752eeaa85990bfb5bf708ba955906d2724d88d6dae8cbb656eaab85af900f6",
+      "capturedAt": "2026-10-15T05:45:09.613Z",
+      "sourceCommit": null
+    },
+    {
+      "path": "icons/light-outlined-focus.png",
+      "bytes": 1413,
+      "sha256": "73b6835129aaf391589733211533e3b7f00986415bd250305f0ad96122e5249c",
+      "capturedAt": "2026-10-15T05:45:09.657Z",
+      "sourceCommit": null
+    },
+    {
+      "path": "before/dark-390.png",
+      "bytes": 23388,
+      "sha256": "948df51bfa7f1cdde7d0fd43d18c2ab84946eb5b05ff6bc1263de6cdadc35303",
+      "capturedAt": "2026-10-15T05:26:46.999Z",
+      "sourceCommit": "489aef297ff0b1a40744504594122c9ebc43930d"
+    },
+    {
+      "path": "after/dark-390.png",
+      "bytes": 24210,
+      "sha256": "502b4732a1072e7405a13c08a873ede1fd5185e5e97c6d04a2f5ae13ff63d775",
+      "capturedAt": "2026-10-15T05:24:11.343Z",
+      "sourceCommit": "dff240c8b80f8e34316016de6049bc273709d8a6"
+    },
+    {
+      "path": "after/dark-390-focus.png",
+      "bytes": 24681,
+      "sha256": "ad416ea5eeee0b375b229b6509600b11f693785e65f638d5acad445d5ed65d27",
+      "capturedAt": "2026-10-15T05:24:11.503Z",
+      "sourceCommit": "dff240c8b80f8e34316016de6049bc273709d8a6"
+    },
+    {
+      "path": "before/dark-1440.png",
+      "bytes": 35866,
+      "sha256": "dcba805fdf456bb22acf935f3fb7c68a6201ef6adc52dce738616f6aa4777909",
+      "capturedAt": "2026-10-15T05:26:49.751Z",
+      "sourceCommit": "489aef297ff0b1a40744504594122c9ebc43930d"
+    },
+    {
+      "path": "after/dark-1440.png",
+      "bytes": 36710,
+      "sha256": "022fa88dbe24bf12c79f15e1afa7c94916c728a327551eaee4ccac8f826a728b",
+      "capturedAt": "2026-10-15T05:24:14.607Z",
+      "sourceCommit": "dff240c8b80f8e34316016de6049bc273709d8a6"
+    },
+    {
+      "path": "after/dark-1440-focus.png",
+      "bytes": 37157,
+      "sha256": "16be2bf9a203ed5f4921b40c14dbc9f80863efdedbfb9830503073b8b3a5103b",
+      "capturedAt": "2026-10-15T05:24:14.887Z",
+      "sourceCommit": "dff240c8b80f8e34316016de6049bc273709d8a6"
+    },
+    {
+      "path": "headers/dark-320-2x.png",
+      "bytes": 8875,
+      "sha256": "9a6279edfcb1fd7be78bfcbe2c61afde85162c732bfe2adb954abae161d7f0b3",
+      "capturedAt": "2026-10-15T05:22:43.189Z",
+      "sourceCommit": "dff240c8b80f8e34316016de6049bc273709d8a6"
+    },
+    {
+      "path": "headers/dark-390-2x.png",
+      "bytes": 9001,
+      "sha256": "fcd7c5a7b8ff452b88cf7d02578320701e8d5e8650c3b4fa2a4d591661da3ff7",
+      "capturedAt": "2026-10-15T05:22:43.445Z",
+      "sourceCommit": "dff240c8b80f8e34316016de6049bc273709d8a6"
+    },
+    {
+      "path": "headers/dark-1440-2x.png",
+      "bytes": 9237,
+      "sha256": "b216c700a45831bd8d9b69d49e9e0bd4db15843fa086db175363137e1da91beb",
+      "capturedAt": "2026-10-15T05:22:43.637Z",
+      "sourceCommit": "dff240c8b80f8e34316016de6049bc273709d8a6"
+    },
+    {
+      "path": "icons/dark-standard-focus.png",
+      "bytes": 1459,
+      "sha256": "50733dbd87940a5fa08f8c00118c31571343af3d1ce4a0ffa5eebb282dd9fbf4",
+      "capturedAt": "2026-10-15T05:45:09.825Z",
+      "sourceCommit": null
+    },
+    {
+      "path": "icons/dark-filled-focus.png",
+      "bytes": 1432,
+      "sha256": "42e63e93c3f489c127ad3b52554a667c976b383fe84e9128e6755685ed7f8520",
+      "capturedAt": "2026-10-15T05:45:09.869Z",
+      "sourceCommit": null
+    },
+    {
+      "path": "icons/dark-outlined-focus.png",
+      "bytes": 1459,
+      "sha256": "50733dbd87940a5fa08f8c00118c31571343af3d1ce4a0ffa5eebb282dd9fbf4",
+      "capturedAt": "2026-10-15T05:45:09.913Z",
+      "sourceCommit": null
+    },
+    {
+      "path": "before/results.json",
+      "bytes": 10264,
+      "sha256": "3659b09c25c167696ece29c1e3600c28d0733defb129c9fd7e37e1fe0d9b8fa2",
+      "capturedAt": "2026-10-15T05:26:50.571Z",
+      "sourceCommit": "489aef297ff0b1a40744504594122c9ebc43930d"
+    },
+    {
+      "path": "after/results.json",
+      "bytes": 10192,
+      "sha256": "57d032b9350cb64f4be833fc5f7e8d85607d64a80d52696779ff440bb71996ae",
+      "capturedAt": "2026-10-15T05:24:15.715Z",
+      "sourceCommit": "dff240c8b80f8e34316016de6049bc273709d8a6"
+    }
+  ]
+}

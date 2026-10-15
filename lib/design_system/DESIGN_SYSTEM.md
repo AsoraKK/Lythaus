@@ -48,6 +48,15 @@ PNG stream and is not copied. Marketing files remain unchanged. Tests verify
 byte-for-byte icon/mark provenance, exact wordmark path geometry and manifest
 dimensions. `web/index.html` retains its existing icon paths and release wiring.
 
+The asset provenance checks run in CI's existing Web frontends job. Accessible
+brand names, native action tooltips and focused Material borders are covered by
+`test/design_system/brand_accessibility_test.dart`. Filled icon controls use
+`onPrimary` for their default glyph and inset focus border so both contrast with
+the fill. Custom glyph colors remain caller-controlled; disabled glyphs use the
+native on-surface opacity treatment.
+The [retained before/after gallery](../../docs/evidence/app-brand-foundation-20261015/README.md)
+includes mobile/desktop, light/dark, keyboard and native 200% text captures.
+
 ## Semantic colors
 
 | Role | Flutter use | Meaning |
