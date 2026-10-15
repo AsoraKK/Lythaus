@@ -9,6 +9,7 @@ import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/ui/screens/home/home_feed_navigator.dart';
+import 'package:lythaus/ui/components/lythaus_top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -82,13 +83,14 @@ void main() {
   Widget buildWithState({
     required LiveFeedState Function(FeedModel) stateForFeed,
     User? user,
+    List<FeedModel>? feeds,
   }) {
     final container = ProviderContainer(
       overrides: [
         contentRecoveryStorageProvider.overrideWithValue(
           MemoryContentRecoveryStorage(),
         ),
-        feedListProvider.overrideWith((ref) => _feeds),
+        feedListProvider.overrideWith((ref) => feeds ?? _feeds),
         liveFeedStateProvider.overrideWith(
           (ref, feed) => _StaticLiveFeedNotifier(stateForFeed(feed)),
         ),
@@ -112,6 +114,33 @@ void main() {
   }
 
   group('_FeedPage states', () {
+    testWidgets('single feed has no redundant selector callback', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildWithState(
+          feeds: [_feeds.first, _feeds.last],
+          stateForFeed: (_) => const LiveFeedState(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final bar = tester.widget<LythausTopBar>(find.byType(LythausTopBar));
+      expect(bar.onLogoTap, isNull);
+      expect(bar.onTitleTap, isNull);
+    });
+
+    testWidgets('multiple available feeds keep selector callbacks', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildWithState(stateForFeed: (_) => const LiveFeedState()),
+      );
+      await tester.pumpAndSettle();
+      final bar = tester.widget<LythausTopBar>(find.byType(LythausTopBar));
+      expect(bar.onLogoTap, isNotNull);
+      expect(bar.onTitleTap, isNotNull);
+    });
+
     testWidgets('empty Alpha sections render scoped recovery states', (
       tester,
     ) async {
@@ -188,7 +217,8 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('Unable to load feed right now.'), findsOneWidget);
+      expect(find.text('Couldn’t load posts'), findsOneWidget);
+      expect(find.text('Unable to load feed right now.'), findsNothing);
       expect(find.text('Retry'), findsOneWidget);
     });
 
@@ -205,7 +235,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('No posts yet'), findsOneWidget);
+      expect(find.text('A little quiet here'), findsOneWidget);
       expect(find.text('Unable to load feed right now.'), findsNothing);
       expect(find.text('Retry'), findsNothing);
     });

@@ -319,7 +319,7 @@ void main() {
     );
     expect(
       (parentSurface.shape! as RoundedRectangleBorder).side.color,
-      Colors.transparent,
+      theme.colorScheme.outlineVariant,
     );
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();

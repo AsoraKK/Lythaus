@@ -80,7 +80,9 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
 
   @override
   Widget build(BuildContext context) {
-    final feeds = _feedsForSection(ref.watch(feedListProvider), _activeSection);
+    final allFeeds = ref.watch(feedListProvider);
+    final feeds = _feedsForSection(allFeeds, _activeSection);
+    final canSwitchFeeds = _canSwitchFeeds(allFeeds);
     final spacing = context.spacing;
 
     if (feeds.isEmpty) {
@@ -98,8 +100,12 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
               title: activeFeed.name,
               logoFocusNode: _feedControlsFocus,
               titleFocusNode: _feedTitleFocus,
-              onLogoTap: () => _openFeedControl(_feedControlsFocus),
-              onTitleTap: () => _openFeedControl(_feedTitleFocus),
+              onLogoTap: canSwitchFeeds
+                  ? () => _openFeedControl(_feedControlsFocus)
+                  : null,
+              onTitleTap: canSwitchFeeds
+                  ? () => _openFeedControl(_feedTitleFocus)
+                  : null,
               onSearchTap: _openSearch,
               onTrendingTap: _openTrending,
               useWordmark: true,
@@ -188,6 +194,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   }
 
   Widget _buildEmptySection(BuildContext context) {
+    final canSwitchFeeds = _canSwitchFeeds(ref.watch(feedListProvider));
     final isMyFeeds = _activeSection == AlphaFeedSection.myFeeds;
     final title = switch (_activeSection) {
       AlphaFeedSection.discover => 'Discover',
@@ -220,8 +227,12 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
               title: title,
               logoFocusNode: _feedControlsFocus,
               titleFocusNode: _feedTitleFocus,
-              onLogoTap: () => _openFeedControl(_feedControlsFocus),
-              onTitleTap: () => _openFeedControl(_feedTitleFocus),
+              onLogoTap: canSwitchFeeds
+                  ? () => _openFeedControl(_feedControlsFocus)
+                  : null,
+              onTitleTap: canSwitchFeeds
+                  ? () => _openFeedControl(_feedTitleFocus)
+                  : null,
               onSearchTap: _openSearch,
               onTrendingTap: _openTrending,
               useWordmark: true,
@@ -265,11 +276,14 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     );
   }
 
+  bool _canSwitchFeeds(List<FeedModel> feeds) =>
+      feeds.where((feed) => feed.type != FeedType.moderation).length > 1;
+
   void _openFeedControl(FocusNode triggerFocus) {
-    if (_feedControlsOpen) return;
+    final allFeeds = ref.read(feedListProvider);
+    if (_feedControlsOpen || !_canSwitchFeeds(allFeeds)) return;
     _feedControlsOpen = true;
     triggerFocus.requestFocus();
-    final allFeeds = ref.read(feedListProvider);
     final sectionFeeds = _feedsForSection(allFeeds, _activeSection);
     final activeFeed = sectionFeeds.isEmpty
         ? null
@@ -478,10 +492,12 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
     _logFirstFeedLoad(liveState);
     _applyRestoreIfReady(liveState: liveState, restoreResult: restoreResult);
 
-    if (liveState.isInitialLoading) {
+    if (feed.type != FeedType.discover && liveState.isInitialLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (liveState.errorMessage != null && liveState.items.isEmpty) {
+    if (feed.type != FeedType.discover &&
+        liveState.errorMessage != null &&
+        liveState.items.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -506,6 +522,8 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
       items: liveState.items,
       hasMore: liveState.hasMore,
       isLoadingMore: liveState.isLoadingMore,
+      isRefreshing: liveState.isInitialLoading,
+      hasError: liveState.errorMessage != null,
       showNewPostsPill: restoreResult.showNewPostsPill,
       onNewPostsPillTap: _onNewPostsPillTap,
       controller: _scrollController,
@@ -518,6 +536,8 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
     required List<FeedItem> items,
     required bool hasMore,
     required bool isLoadingMore,
+    required bool isRefreshing,
+    required bool hasError,
     required bool showNewPostsPill,
     required VoidCallback onNewPostsPillTap,
     required ScrollController controller,
@@ -536,6 +556,8 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
           onEditItem: (item) => _showEditPostDialog(context, ref, item),
           hasMore: hasMore,
           isLoadingMore: isLoadingMore,
+          isRefreshing: isRefreshing,
+          hasError: hasError,
           showNewPostsPill: showNewPostsPill,
           onNewPostsPillTap: onNewPostsPillTap,
           onLoadMore: () =>

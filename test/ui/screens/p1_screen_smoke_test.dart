@@ -66,10 +66,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('Discover calm, trustworthy updates tailored to you.'),
-      findsOneWidget,
-    );
+    expect(find.text('Public posts, newest first.'), findsOneWidget);
     expect(find.text('Body for Discover One'), findsOneWidget);
     expect(find.text('Body for Discover Two'), findsOneWidget);
     expect(find.text('author 1'), findsOneWidget);
