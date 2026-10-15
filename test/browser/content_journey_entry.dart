@@ -12,6 +12,7 @@ import 'package:lythaus/design_system/theme/lyth_theme.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/feed/application/content_mutation.dart';
+import 'package:lythaus/features/feed/application/feed_read_session.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/application/post_repository_impl.dart';
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
@@ -141,7 +142,7 @@ void main() {
           ),
         liveFeedStateProvider.overrideWith(
           (ref, feed) => Uri.base.queryParameters['scenario'] == 'appeal'
-              ? LiveFeedNotifier(ref, feed)
+              ? LiveFeedNotifier(ref, feed, ref.watch(feedReadSessionProvider))
               : FixtureFeed(dio),
         ),
       ],

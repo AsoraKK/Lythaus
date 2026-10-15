@@ -8,6 +8,8 @@ import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 import 'package:lythaus/features/feed/application/custom_feed_service.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/auth_required_exception.dart';
+import '../../helpers/feed_session.dart';
 import 'package:lythaus/core/network/dio_client.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
@@ -98,6 +100,10 @@ ProviderContainer _container({
 }) {
   return ProviderContainer(
     overrides: [
+      authStateProvider.overrideWith(
+        (_) =>
+            FeedTestAuth(token == '' ? null : feedTestUser('synthetic-owner')),
+      ),
       socialFeedServiceProvider.overrideWithValue(feedRepo),
       if (customService != null)
         customFeedServiceProvider.overrideWithValue(customService),
@@ -150,6 +156,7 @@ void main() {
         () => feedRepo.getDiscoverFeed(
           limit: any(named: 'limit'),
           token: any(named: 'token'),
+          cancellation: any(named: 'cancellation'),
         ),
       ).thenAnswer(
         (_) async => _response([
@@ -201,6 +208,7 @@ void main() {
         () => feedRepo.getDiscoverFeed(
           limit: any(named: 'limit'),
           token: any(named: 'token'),
+          cancellation: any(named: 'cancellation'),
         ),
       ).thenThrow(Exception('network error'));
 
@@ -257,17 +265,16 @@ void main() {
       expect(items[0].id, 'c1');
     });
 
-    test('returns empty for custom feed when no token', () async {
+    test('requires a session for custom feed when no token', () async {
       final container = _container(
         feedRepo: feedRepo,
         customService: customService,
         token: '',
       );
-      final items = await container.read(
-        liveFeedItemsProvider(_customFeed).future,
+      await expectLater(
+        container.read(liveFeedItemsProvider(_customFeed).future),
+        throwsA(isA<AuthRequiredException>()),
       );
-
-      expect(items, isEmpty);
     });
   });
 
@@ -280,6 +287,7 @@ void main() {
           cursor: any(named: 'cursor'),
           limit: any(named: 'limit'),
           token: any(named: 'token'),
+          cancellation: any(named: 'cancellation'),
         ),
       ).thenAnswer((_) async => _response([_post('d1')], cursor: 'next-1'));
 
@@ -340,6 +348,7 @@ void main() {
           cursor: any(named: 'cursor'),
           limit: any(named: 'limit'),
           token: any(named: 'token'),
+          cancellation: any(named: 'cancellation'),
         ),
       ).thenAnswer((inv) async {
         final cursor = inv.namedArguments[#cursor] as String?;
@@ -374,6 +383,7 @@ void main() {
           cursor: any(named: 'cursor'),
           limit: any(named: 'limit'),
           token: any(named: 'token'),
+          cancellation: any(named: 'cancellation'),
         ),
       ).thenAnswer((_) async => _response([_post('1')]));
 
@@ -398,6 +408,7 @@ void main() {
           cursor: any(named: 'cursor'),
           limit: any(named: 'limit'),
           token: any(named: 'token'),
+          cancellation: any(named: 'cancellation'),
         ),
       ).thenAnswer((inv) async {
         final cursor = inv.namedArguments[#cursor] as String?;
@@ -427,6 +438,7 @@ void main() {
           cursor: any(named: 'cursor'),
           limit: any(named: 'limit'),
           token: any(named: 'token'),
+          cancellation: any(named: 'cancellation'),
         ),
       ).thenAnswer((_) async {
         callCount++;
@@ -455,6 +467,7 @@ void main() {
           cursor: any(named: 'cursor'),
           limit: any(named: 'limit'),
           token: any(named: 'token'),
+          cancellation: any(named: 'cancellation'),
         ),
       ).thenThrow(Exception('network error'));
 
@@ -503,7 +516,8 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 500));
       final state = container.read(liveFeedStateProvider(_customFeed));
 
-      expect(state.errorMessage, 'Unable to load feed right now.');
+      expect(state.errorMessage, 'Sign in again to load posts.');
+      expect(state.requiresSignIn, isTrue);
     });
   });
 
@@ -540,7 +554,7 @@ void main() {
       expect(feeds.first.id, 'custom-1');
     });
 
-    test('returns empty on service error', () async {
+    test('surfaces custom list service errors', () async {
       when(
         () => customService.listCustomFeeds(
           token: any(named: 'token'),
@@ -554,8 +568,10 @@ void main() {
         token: 'valid-token',
       );
 
-      final feeds = await container.read(customFeedsProvider.future);
-      expect(feeds, isEmpty);
+      await expectLater(
+        container.read(customFeedsProvider.future),
+        throwsA(isA<Exception>()),
+      );
     });
   });
 
