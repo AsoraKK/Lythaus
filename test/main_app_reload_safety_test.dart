@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,13 +13,31 @@ import 'package:lythaus/core/routing/app_router.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/feed/application/content_mutation.dart';
+import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
 import 'package:lythaus/main.dart';
 import 'package:mocktail/mocktail.dart';
+import 'helpers/content_recovery.dart';
 
 class _MockAuthStateNotifier extends StateNotifier<AsyncValue<User?>>
     with Mock
     implements AuthStateNotifier {
-  _MockAuthStateNotifier() : super(const AsyncValue.data(null));
+  _MockAuthStateNotifier({User? user}) : super(AsyncValue.data(user));
+}
+
+class _TrackingRecoveryStorage extends MemoryContentRecoveryStorage {
+  final clearedAccount = Completer<void>();
+  bool trackClearedAccount = false;
+
+  @override
+  Future<void> write(String key, String value) async {
+    await super.write(key, value);
+    final data = jsonDecode(value) as Map<String, dynamic>;
+    if (trackClearedAccount &&
+        (data['drafts'] as Map).isEmpty &&
+        !clearedAccount.isCompleted) {
+      clearedAccount.complete();
+    }
+  }
 }
 
 class _FakeAnalyticsEventTracker implements AnalyticsEventTracker {
@@ -63,6 +84,16 @@ class _ReloadBlockingDraftState extends State<_ReloadBlockingDraft> {
 }
 
 void main() {
+  User signedInUser() => User(
+    id: 'account-a',
+    email: 'synthetic@example.invalid',
+    role: UserRole.user,
+    tier: UserTier.bronze,
+    reputationScore: 0,
+    createdAt: DateTime.utc(2026),
+    lastLoginAt: DateTime.utc(2026),
+  );
+
   testWidgets(
     'app root keeps its router subtree stable when reload safety changes',
     (tester) async {
@@ -123,6 +154,63 @@ void main() {
         same(routerSubtreeBefore),
         reason: 'A clean-to-dirty reload block must not rebuild the app root.',
       );
+    },
+  );
+
+  testWidgets(
+    'app root initializes account journal before sign-out on a non-feed route',
+    (tester) async {
+      final storage = _TrackingRecoveryStorage();
+      final seed = ContentMutationRegistry(storage: storage);
+      seed.activate('account-a');
+      await seed.ready;
+      expect(
+        await seed.saveDraft('post-create:account-a', {
+          'body': 'Private unsent post',
+        }),
+        isTrue,
+      );
+      seed.dispose();
+      storage.trackClearedAccount = true;
+
+      final authNotifier = _MockAuthStateNotifier(user: signedInUser());
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) =>
+                const Scaffold(body: Text('Non-feed landing route')),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appRouterProvider.overrideWithValue(router),
+            authStateProvider.overrideWith((ref) => authNotifier),
+            analyticsClientProvider.overrideWithValue(
+              const NullAnalyticsClient(),
+            ),
+            analyticsEventTrackerProvider.overrideWithValue(
+              _FakeAnalyticsEventTracker(),
+            ),
+            contentRecoveryStorageProvider.overrideWithValue(storage),
+          ],
+          child: const LythausApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Non-feed landing route'), findsOneWidget);
+
+      authNotifier.state = const AsyncValue.data(null);
+      await tester.pump();
+      await storage.clearedAccount.future.timeout(const Duration(seconds: 2));
+
+      final journal = jsonDecode(storage.values.values.single) as Map;
+      expect(journal['drafts'], isEmpty);
+      expect(find.text('Non-feed landing route'), findsOneWidget);
     },
   );
 }

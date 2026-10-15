@@ -84,9 +84,15 @@ class _LythausAppState extends ConsumerState<LythausApp> {
       _scheduleReloadSafetySync();
     });
 
+    // The registry must observe account transitions on every platform so
+    // sign-out can clear account-bound recovery drafts even when the app
+    // starts on a route that never opens feed content. Read it without
+    // watching: registry changes must not rebuild the app root.
+    final contentMutationRegistry = ref.read(contentMutationRegistryProvider);
+
     if (isReleaseWebBuild) {
       _reloadGate = WebReleaseReloadGate(
-        registry: ref.read(contentMutationRegistryProvider),
+        registry: contentMutationRegistry,
         authSessionRevision: () => ref.read(authSessionRevisionProvider),
         authLoading: () => ref.read(authStateProvider).isLoading,
         hasPendingAuthenticatedWork: () =>
