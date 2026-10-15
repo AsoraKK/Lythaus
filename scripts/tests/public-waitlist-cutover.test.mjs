@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import test from 'node:test';
+import { REQUIRED_RELEASE_SCHEMA_VERSION } from '../ci/product-integrity-schema-contract.mjs';
 
 const turnstile = fs.readFileSync('scripts/cloudflare/waitlist-turnstile.mjs', 'utf8');
 const materializer = fs.readFileSync('scripts/ci/materialize-public-waitlist-deploy.mjs', 'utf8');
@@ -31,7 +32,8 @@ test('Turnstile provisioning is exact, idempotent, and secret-safe', () => {
 });
 
 test('public materializer keeps full authenticated acceptance fail closed', () => {
-  assert.match(materializer, /0020_auth_recovery_delivery\.sql/);
+  assert.equal(REQUIRED_RELEASE_SCHEMA_VERSION, '0021_media_quarantine_cleanup.sql');
+  assert.match(materializer, /EXPECTED_DATABASE_SCHEMA_VERSION'\) !== REQUIRED_RELEASE_SCHEMA_VERSION/);
   assert.match(materializer, /TURNSTILE_REQUIRED/);
   assert.match(materializer, /lythaus\.co,www\.lythaus\.co/);
   assert.match(materializer, /AUTHENTICATED_ACCEPTANCE_PROVEN/);

@@ -617,12 +617,27 @@ test('auth repair exceptions cannot alter homepage assets or waitlist routing', 
         source = source.replace(approved, '');
       }
     }
-    const updated = source
-      .replaceAll('0020_auth_recovery_delivery', '0017_authenticity_beta')
-      .replaceAll('POST_0020', 'POST_0017').replaceAll('post-0020', 'post-0017')
-      .replaceAll('migration 0020', 'migration 0017')
+    let updated = source
+      .replaceAll('0021_media_quarantine_cleanup', '0017_authenticity_beta')
+      .replaceAll('POST_0021', 'POST_0017').replaceAll('post-0021', 'post-0017')
+      .replaceAll('migration 0021', 'migration 0017')
       .replace('"main": "src/worker.ts"', '"main": "src/index.ts"')
       .replaceAll('approvedReleaseExpectation', 'approvedPost0017Expectation');
+    if (file === 'scripts/ci/materialize-public-waitlist-deploy.mjs') {
+      updated = updated
+        .replace("import { approvedPost0017Expectation, REQUIRED_RELEASE_SCHEMA_VERSION } from './product-integrity-schema-contract.mjs';",
+          "import { approvedPost0017Expectation } from './product-integrity-schema-contract.mjs';")
+        .replace('const releaseVersionNumber = REQUIRED_RELEASE_SCHEMA_VERSION.slice(0, 4);\n', '')
+        .replace("const fingerprintPlaceholder = `REPLACE_WITH_POST_${releaseVersionNumber}_SCHEMA_FINGERPRINT`;",
+          "const fingerprintPlaceholder = 'REPLACE_WITH_POST_0017_SCHEMA_FINGERPRINT';")
+        .replace("const relationCountPlaceholder = `REPLACE_WITH_POST_${releaseVersionNumber}_RELATION_COUNT`;",
+          "const relationCountPlaceholder = 'REPLACE_WITH_POST_0017_RELATION_COUNT';")
+        .replace("!== REQUIRED_RELEASE_SCHEMA_VERSION)", "!== '0017_authenticity_beta.sql')")
+        .replace('throw new Error(`public waitlist deployment requires ${REQUIRED_RELEASE_SCHEMA_VERSION}`);',
+          "throw new Error('public waitlist deployment requires migration 0017');")
+        .replace('new RegExp(`REPLACE_WITH_POST_${releaseVersionNumber}_`)', '/REPLACE_WITH_POST_0017_/')
+        .replace('schemaVersion: REQUIRED_RELEASE_SCHEMA_VERSION,', "schemaVersion: '0017_authenticity_beta.sql',");
+    }
     const frozen = git('show', `${upstreamBaselineSha}:${file}`);
     if (file === 'apps/lythaus-public-api/wrangler.jsonc') assertOnlyHostedDevelopmentRemoval(updated, frozen);
     else assert.equal(updated.trim(), frozen);
@@ -702,7 +717,9 @@ for (const [label, mutate] of [
   test(`deployment isolation freeze rejects ${label}`, () => {
     const file = 'apps/lythaus-public-api/wrangler.jsonc';
     const source = readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
-    const frozen = git('show', `49cca9caa34b34c7ded7f4842792f698be9bd41f:${file}`);
+    const frozen = git('show', `49cca9caa34b34c7ded7f4842792f698be9bd41f:${file}`)
+      .replaceAll('POST_0020', 'POST_0021')
+      .replace('0020_auth_recovery_delivery.sql', '0021_media_quarantine_cleanup.sql');
     assertOnlyHostedDevelopmentRemoval(source, frozen);
     const changed = mutate(source);
     assert.notEqual(changed, source, 'Mutation must alter the actual configuration');

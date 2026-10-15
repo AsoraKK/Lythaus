@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { REQUIRED_RELEASE_SCHEMA_VERSION } from './ci/product-integrity-schema-contract.mjs';
 import { nativeWorkerDeploymentFailures, nativeWorkerSelectionFailures } from './native-worker-config-policy.mjs';
 
 const selectionFailures = nativeWorkerSelectionFailures(process.env, process.argv.slice(2));
@@ -50,7 +51,10 @@ for (const relative of configs) {
   if (!new RegExp(`"name"\\s*:\\s*"${expectedNames[relative]}"`).test(production)) failures.push(`${relative}: production must reuse ${expectedNames[relative]}`);
   if (/"images"\s*:/.test(production)) failures.push(`${relative}: Cloudflare Images binding is forbidden for this migration`);
   if (!/HYPERDRIVE_QUERY_CACHE_MODE/.test(source) || !/disabled/.test(source)) failures.push(`${relative}: Hyperdrive cache-disabled intent missing`);
-  if (!/"EXPECTED_DATABASE_SCHEMA_VERSION"\s*:\s*"0020_auth_recovery_delivery\.sql"/.test(production)) failures.push(`${relative}: production must require migration 0020`);
+  const escapedSchemaVersion = REQUIRED_RELEASE_SCHEMA_VERSION.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (!new RegExp(`"EXPECTED_DATABASE_SCHEMA_VERSION"\\s*:\\s*"${escapedSchemaVersion}"`).test(production)) {
+    failures.push(`${relative}: production must require ${REQUIRED_RELEASE_SCHEMA_VERSION}`);
+  }
   if (!/"EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED"\s*:\s*"true"/.test(production)) failures.push(`${relative}: production must require the budget ledger`);
   if (/"EXPECTED_DATABASE_SCHEMA_VERSION"\s*:\s*"0008_legacy_relink_status\.sql"/.test(production)) failures.push(`${relative}: legacy 0008 production identity is forbidden`);
   if (relative.includes('public-api') && !/api\.lythaus\.co/.test(production)) failures.push(`${relative}: public API must use api.lythaus.co`);

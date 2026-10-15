@@ -157,6 +157,15 @@ result `pending` and metadata `under_review` make that distinction explicit.
 
 ## Validation and evidence limits
 
+The canonical release schema identity now derives from the approved migration
+manifest and requires `0021_media_quarantine_cleanup.sql`. Worker configs and
+generated types, deploy materializers, read-only production schema verification,
+runtime probes, and sanitized provider evidence use that same required version.
+The readiness verifier requires the exact migration prefix and fingerprint;
+Worker readiness remains blocked until the hosted schema matches. This only
+updates source-side checks. It does not apply migration 0021 or alter hosted
+schema, roles, grants, credentials or Worker state.
+
 The dedicated suites invoke the actual Public API upload functions and Jobs
 queue entrypoint. A test-only export exposes upload functions; the production
 router is used for disabled/guest checks. Workerd runs against local Miniflare
@@ -180,12 +189,14 @@ cleanup wrapper, hosted R2, Images or Queues.
 Commands verified on the merged tree:
 
 ```sh
-node --test packages/media/tests/standard-upload.test.mjs packages/media/tests/standard-upload.workerd.mjs
+node --experimental-strip-types --test --test-concurrency=1 packages/media/tests/standard-upload.test.mjs packages/media/tests/standard-upload.workerd.mjs
 PLANETSCALE_PG17_TEST_DATABASE_URL=<loopback disposable PG17 control database> \
   node --experimental-strip-types --test --test-concurrency=1 packages/media/tests/standard-upload.postgres.mjs
-node --test scripts/tests/planetscale-production-migrations.test.mjs
+npm run test:planetscale-production-migrations
 npm run test:reputation:pg17
 node --test apps/marketing-site/tests/homepage-protection.test.mjs
+npm run test:database-identity
+npm run validate:native-workers
 npm run openapi:gen:dart
 npm run openapi:test:contract
 ```
@@ -195,7 +206,12 @@ on PostgreSQL 17.11 with migrations `0000`–`0021`, migration/schema-verifier
 tests **23/23**, product-integrity runtime **22/22**, and native architecture
 **376/376**. Native typecheck passes. The merged #1022 synthetic managed-owner
 PG17 cleanup/lifecycle runner passes, as does homepage protection **30/30**
-with combined source pins. The PostgreSQL media suite confirms the canonical
+with combined source pins. The release-schema identity contract passes **7/7**;
+runtime probe scenarios pass **65/65**; combined production-release and provider
+audit contracts pass **68/68**; public waitlist cutover checks pass **8/8**; and
+the #1022 synthetic PG17 cleanup/receipt runner passes **104/104**. Native Worker
+config validation checks four configs and three generated type files, and every
+workflow action remains pinned to an immutable commit. The PostgreSQL media suite confirms the canonical
 `42501` failures before temporarily applying the two proposed column grants in
 its disposable database; it revokes both grants before teardown. The new schema
 remains unapplied to any hosted database. Hosted exact-head CI and independent

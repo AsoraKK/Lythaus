@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { approvedReleaseExpectation, REQUIRED_RELEASE_SCHEMA_VERSION } from '../ci/product-integrity-schema-contract.mjs';
 
 const root = process.cwd();
 const version = '11111111-1111-4111-8111-111111111111';
@@ -14,7 +15,9 @@ const previousPublicVersion = '55555555-5555-4555-8555-555555555555';
 const wrongPreviousPublicVersion = '66666666-6666-4666-8666-666666666666';
 const releaseSha = 'a'.repeat(40);
 const previousSha = 'c'.repeat(40);
-const fingerprint = 'd60ce56eda3165e4c21e880e594700b92425b75b0e6eec963caf75fc72d8c1e0';
+const releaseExpectation = approvedReleaseExpectation();
+const fingerprint = releaseExpectation.fingerprint;
+const relationCount = releaseExpectation.relationCount;
 const credentials = ['fixture-readiness-secret', 'fixture-access-id', 'fixture-access-secret'];
 
 function runProbe(t, scenario, worker = 'lythaus-admin-api-development', previousState = false, ownerTestingDeployment = false, ownerTestingCandidate = ownerTestingDeployment) {
@@ -72,9 +75,9 @@ function runProbe(t, scenario, worker = 'lythaus-admin-api-development', previou
         workerVersionId: '${version}', releaseTag: '${releaseSha}',
         emailBinding: { bindingVerified: true, publicWorkerVersion: '${publicVersion}' },
         databaseEnvironment: 'main', branchFingerprint: 'unknown',
-        schemaFingerprint: '${fingerprint}', relationCount: 103,
+        schemaFingerprint: '${fingerprint}', relationCount: ${relationCount},
         identityContactEmails: true, budgetLedgerApplied: true,
-        schemaVersion: '0020_auth_recovery_delivery.sql', roleClass: 'login_non_superuser',
+        schemaVersion: '${REQUIRED_RELEASE_SCHEMA_VERSION}', roleClass: 'login_non_superuser',
         readiness: 'pass', readyForAuthentication: false,
         secret: process.env.DATABASE_READINESS_TOKEN, mailbox: 'fixture@example.invalid',
       };
@@ -158,8 +161,8 @@ function runProbe(t, scenario, worker = 'lythaus-admin-api-development', previou
       ...process.env,
       DATABASE_READINESS_TOKEN: credentials[0], CF_ACCESS_CLIENT_ID: credentials[1], CF_ACCESS_CLIENT_SECRET: credentials[2],
       RELEASE_SHA: releaseSha, EXPECTED_WORKER_SOURCE_SHA: releaseSha,
-      EXPECTED_DATABASE_SCHEMA_FINGERPRINT: fingerprint, EXPECTED_DATABASE_RELATION_COUNT: '103',
-      EXPECTED_DATABASE_SCHEMA_VERSION: '0020_auth_recovery_delivery.sql',
+      EXPECTED_DATABASE_SCHEMA_FINGERPRINT: fingerprint, EXPECTED_DATABASE_RELATION_COUNT: String(relationCount),
+      EXPECTED_DATABASE_SCHEMA_VERSION: REQUIRED_RELEASE_SCHEMA_VERSION,
       REQUIRE_BUDGET_MIGRATION: 'true', HYPERDRIVE_VERIFIED_MAIN: 'true', AUTHENTICATED_ACCEPTANCE_PROVEN: 'false',
       OWNER_TESTING_DEPLOYMENT: ownerTestingDeployment ? 'true' : 'false',
       OWNER_TESTING_CANDIDATE: ownerTestingCandidate ? 'true' : 'false',
@@ -174,6 +177,7 @@ function runProbe(t, scenario, worker = 'lythaus-admin-api-development', previou
     },
     encoding: 'utf8',
   });
+  assert.ok(fs.existsSync(output), `worker probe exited ${result.status ?? 'without a status'} before writing evidence\n${result.stdout ?? ''}\n${result.stderr ?? ''}`);
   const text = fs.readFileSync(output, 'utf8');
   for (const secret of [...credentials, 'fixture@example.invalid']) {
     assert.ok(!`${text}${result.stdout}${result.stderr}`.includes(secret), 'probe evidence and output must exclude credentials and mailbox content');
