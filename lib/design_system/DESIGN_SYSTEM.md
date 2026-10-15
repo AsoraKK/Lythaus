@@ -24,6 +24,30 @@ image failure. It leaves the source media unchanged. Reaction controls use nativ
 outlined buttons with selected semantics and meaningful icons; public subscription
 labels remain distinct from authorship and private reputation.
 
+## App identity
+
+Use `LythBrandMark` and `LythBrandWordmark` from `widgets/lyth_brand.dart`.
+They render the approved website artwork in `onSurface`, with a single accessible
+Lythaus name and reserved geometry. The circular LH mark is copied unchanged;
+the static wordmark extracts the existing homepage vector path without its
+decorative lighting. Its viewBox includes the original path's negative top edge.
+Do not recreate the logo using text, icon fonts or a filled tile. The old
+`LythWordmark` text/glow widget is retained for compatibility, not new app use.
+
+`LythausTopBar` is the existing feed header. It honors `useWordmark` within that
+header and keeps all existing callbacks. At enlarged mobile text it separates
+the section title from the brand/actions row, preserving native reading-order
+keyboard traversal and 48-pixel targets. Shared icon controls have a contrasting
+two-pixel keyboard focus outline. Other surfaces should reuse the same components
+at their existing brand location rather than add duplicate headers.
+
+Run `node scripts/sync-app-brand-assets.mjs` to synchronize the app's SVGs and
+favicon/install icons from the existing marketing source. The app favicon uses
+the valid 192-pixel approved icon; the marketing 64-pixel favicon has a broken
+PNG stream and is not copied. Marketing files remain unchanged. Tests verify
+byte-for-byte icon/mark provenance, exact wordmark path geometry and manifest
+dimensions. `web/index.html` retains its existing icon paths and release wiring.
+
 ## Semantic colors
 
 | Role | Flutter use | Meaning |

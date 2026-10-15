@@ -1,10 +1,10 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:lythaus/design_system/components/lyth_icon_button.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
+import 'package:lythaus/design_system/widgets/lyth_brand.dart';
 
 class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
   const LythausTopBar({
@@ -31,12 +31,53 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
   final bool useWordmark;
 
   @override
-  Size get preferredSize => const Size.fromHeight(56);
+  Size get preferredSize => Size.fromHeight(useWordmark ? 72 : 56);
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final spacing = context.spacing;
+    final logo = IconButton(
+      focusNode: logoFocusNode,
+      onPressed: onLogoTap,
+      tooltip: 'Feed controls',
+      icon: const LythBrandMark(excludeFromSemantics: true),
+    );
+    final actions = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        LythIconButton(
+          icon: Icons.search,
+          tooltip: 'Search',
+          onPressed: onSearchTap,
+        ),
+        LythIconButton(
+          icon: Icons.trending_up_outlined,
+          tooltip: 'Trending',
+          onPressed: onTrendingTap,
+        ),
+      ],
+    );
+    Widget titleButton({required bool includeWordmark}) => TextButton(
+      focusNode: titleFocusNode,
+      onPressed: onTitleTap,
+      style: TextButton.styleFrom(
+        alignment: Alignment.centerLeft,
+        foregroundColor: theme.colorScheme.onSurface,
+        padding: EdgeInsets.all(spacing.sm),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (includeWordmark) ...[
+            const LythBrandWordmark(height: 12),
+            SizedBox(height: spacing.xs),
+          ],
+          Text(title, style: theme.textTheme.titleLarge),
+        ],
+      ),
+    );
     return Container(
       constraints: BoxConstraints(minHeight: preferredSize.height),
       decoration: BoxDecoration(
@@ -46,54 +87,44 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
             : null,
       ),
       padding: EdgeInsets.symmetric(horizontal: spacing.lg),
-      child: Row(
-        children: [
-          IconButton(
-            focusNode: logoFocusNode,
-            onPressed: onLogoTap,
-            tooltip: 'Feed controls',
-            icon: SvgPicture.asset(
-              'assets/brand/lythaus_mark.svg',
-              height: 20,
-              width: 20,
-              colorFilter: ColorFilter.mode(
-                theme.colorScheme.primary,
-                BlendMode.srcIn,
-              ),
-              placeholderBuilder: (context) => Icon(
-                Icons.blur_on,
-                size: 18,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-          ),
-          SizedBox(width: spacing.sm),
-          Expanded(
-            child: TextButton(
-              focusNode: titleFocusNode,
-              onPressed: onTitleTap,
-              style: TextButton.styleFrom(
-                alignment: Alignment.centerLeft,
-                foregroundColor: theme.colorScheme.onSurface,
-              ),
-              child: Text(title, style: theme.textTheme.titleLarge),
-            ),
-          ),
-          Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final expandedText =
+              constraints.maxWidth < 480 &&
+              MediaQuery.textScalerOf(context).scale(18) > 24;
+          if (expandedText) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    logo,
+                    SizedBox(width: spacing.sm),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: useWordmark
+                            ? const LythBrandWordmark()
+                            : const SizedBox.shrink(),
+                      ),
+                    ),
+                    actions,
+                  ],
+                ),
+                titleButton(includeWordmark: false),
+              ],
+            );
+          }
+          return Row(
             children: [
-              LythIconButton(
-                icon: Icons.search,
-                tooltip: 'Search',
-                onPressed: onSearchTap,
-              ),
-              LythIconButton(
-                icon: Icons.trending_up_outlined,
-                tooltip: 'Trending',
-                onPressed: onTrendingTap,
-              ),
+              logo,
+              SizedBox(width: spacing.sm),
+              Expanded(child: titleButton(includeWordmark: useWordmark)),
+              actions,
             ],
-          ),
-        ],
+          );
+        },
       ),
     );
   }

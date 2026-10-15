@@ -100,8 +100,13 @@ class LythIconButton extends StatelessWidget {
         onPressed: callback,
         tooltip: tooltip,
         style: style.copyWith(
-          side: WidgetStatePropertyAll(
-            BorderSide(color: context.colorScheme.outline),
+          side: WidgetStateProperty.resolveWith(
+            (states) => BorderSide(
+              color: states.contains(WidgetState.focused)
+                  ? context.colorScheme.primary
+                  : context.colorScheme.outline,
+              width: states.contains(WidgetState.focused) ? 2 : 1,
+            ),
           ),
         ),
       ),
