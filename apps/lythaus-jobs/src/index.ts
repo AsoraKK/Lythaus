@@ -3,6 +3,8 @@ import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { evaluateAuthenticity, type AuthenticityEvaluation } from '@lythaus/authenticity';
 import { ACTIVITY_POLICY_VERSION, APPEAL_POLICY, evaluateAppeal, selectAppealReviewers, type ActivityEventInput, type AppealReviewerCandidate, type AppealRiskClass, type AppealVote, type ReputationSignalType } from '@lythaus/contracts';
 import { MAX_IMAGE_BYTES } from '@lythaus/media';
+import { verifyStandardUploadBytes, UploadIntegrityError } from '../../../packages/media/src/standard-upload.ts';
+import { detectMediaMime, readBoundedRequestBody } from '../../../packages/authenticity/src/media-intake.ts';
 import { json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, decryptField, uuidv7 } from '@lythaus/security';
 import { buildPrivacyDataPassport, decryptPrivatePassportIdentity, ensureWorkflowCreate, isCurrentContentModerationRevision, isCurrentProfileModerationRevision, legalHoldPlan, lockedAppealVote, moderationReputationSignal, parseContentModerationRevision, parseProfileModerationRevision, privacyRequestLifecyclePlan, queueRouteForEvent, reconcilePrivacyRequestPayload, reputationActivity, retentionCleanupPlan, reviewerReplacementPlan, securityAuditRetentionPlan, type PrivacyRequestPayload, type WorkflowCreateBinding } from './runtime-policy.ts';
@@ -828,14 +830,6 @@ const MAX_IMAGE_PIXELS = 40_000_000;
 const AUTHENTICITY_PROVIDER = 'lythaus-authenticity-ai';
 const AUTHENTICITY_POLICY = 'evaluation-only-v1';
 
-function hasMagicBytes(bytes: Uint8Array, contentType: string): boolean {
-  if (contentType === 'image/jpeg') return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
-  if (contentType === 'image/png') return bytes.length >= 8 && bytes.slice(0, 8).join(',') === '137,80,78,71,13,10,26,10';
-  if (contentType === 'image/webp') return bytes.length >= 12 && new TextDecoder().decode(bytes.slice(0, 4)) === 'RIFF' && new TextDecoder().decode(bytes.slice(8, 12)) === 'WEBP';
-  if (contentType === 'image/avif') return bytes.length >= 12 && new TextDecoder().decode(bytes.slice(4, 8)) === 'ftyp' && ['avif', 'avis'].includes(new TextDecoder().decode(bytes.slice(8, 12)));
-  return false;
-}
-
 function manualReviewEvaluation(kind: 'text' | 'image' | 'profile', modelId: string, reason: string): AuthenticityEvaluation {
   return {
     schemaVersion: 'lythaus-authenticity-v1',
@@ -1138,7 +1132,7 @@ async function processCommentModeration(message: QueueMessage, env: Env): Promis
 }
 
 async function processMediaUpload(message: QueueMessage, env: Env): Promise<void> {
-  if (env.MEDIA_PROCESSING_ENABLED !== 'true') return;
+  if (env.MEDIA_PROCESSING_ENABLED !== 'true') throw new Error('media_processing_disabled');
   const payload = (message.body.payload ?? message.body) as { uploadSessionId?: unknown; objectKey?: unknown };
   const sessionId = typeof payload.uploadSessionId === 'string' ? payload.uploadSessionId : undefined;
   const objectKey = typeof payload.objectKey === 'string' ? payload.objectKey : undefined;
@@ -1146,9 +1140,10 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
   const correlationId = typeof message.body.correlationId === 'string' ? message.body.correlationId : eventId;
   if (!sessionId || !objectKey || !env.MEDIA_QUARANTINE || !env.MEDIA_APPROVED || !env.IMAGES) throw new Error('media_processing_not_configured');
 
-  const session = await query<{ user_id: string; content_type: string; expected_bytes: number; status: string }>(
+  const session = await query<{ user_id: string; content_type: string; expected_bytes: number; checksum_sha256: string; status: string }>(
     env.DB_JOBS_FRESH,
-    `SELECT user_id, content_type, expected_bytes, status FROM media.upload_sessions WHERE id = $1 AND object_key = $2`,
+    `SELECT user_id, content_type, expected_bytes, checksum_sha256, status FROM media.upload_sessions
+      WHERE id = $1 AND object_key = $2 AND purpose = 'standard'`,
     [sessionId, objectKey]
   );
   const row = session.rows[0];
@@ -1161,7 +1156,8 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
 
   const settleRejected = async (reasonCode: string): Promise<void> => {
     await transaction(env.DB_JOBS_FRESH, async (client) => {
-      const updated = await client.query(`UPDATE media.upload_sessions SET status = 'rejected' WHERE id = $1 AND status = 'queued' RETURNING id`, [sessionId]);
+      const updated = await client.query(`UPDATE media.upload_sessions SET status = 'rejected'
+        WHERE id = $1 AND user_id = $2 AND object_key = $3 AND status = 'queued' AND purpose = 'standard' RETURNING id`, [sessionId, row.user_id, objectKey]);
       if (updated.rowCount !== 0) {
         await client.query(
         `UPDATE media.storage_ledger SET bytes_reserved = greatest(bytes_reserved - $1, 0), bytes_rejected = bytes_rejected + $1, last_reconciled_at = now() WHERE user_id = $2`,
@@ -1170,7 +1166,7 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
           id: uuidv7(), userId: row.user_id, eventType: 'content.media_upload_rejected',
           category: 'content', source: 'jobs', sourceEventId: eventId, correlationId,
           title: 'Media upload rejected',
-          explanation: 'The uploaded file did not pass required integrity and safety checks and was removed from quarantine.',
+          explanation: 'The uploaded file did not pass required integrity checks. Private quarantine cleanup will be retried if needed.',
           result: 'failed', reasonCode, policyVersion: AUTHENTICITY_POLICY,
           objectType: 'upload_session', objectId: sessionId, reputationEffect: 'none', appealable: true,
           retentionClass: 'moderation', metadata: { contentType: row.content_type, moderationState: 'rejected' },
@@ -1182,28 +1178,29 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
 
   const source = await env.MEDIA_QUARANTINE.get(objectKey);
   if (!source) throw new Error('quarantine_object_missing');
-  if (source.size !== Number(row.expected_bytes) || source.size > MAX_IMAGE_BYTES) {
-    await settleRejected('MEDIA_SIZE_MISMATCH');
-    await env.MEDIA_QUARANTINE.delete(objectKey);
-    return;
-  }
-  const bytes = new Uint8Array(await new Response(source.body).arrayBuffer());
-  if (bytes.byteLength !== Number(row.expected_bytes) || !hasMagicBytes(bytes, row.content_type)) {
-    await settleRejected('MEDIA_SIGNATURE_INVALID');
+  let bytes: Uint8Array;
+  try {
+    bytes = await verifyStandardUploadBytes(source, row);
+  } catch (error) {
+    if (!(error instanceof UploadIntegrityError)) throw error;
+    await settleRejected(error.message === 'upload_checksum_invalid' ? 'MEDIA_CHECKSUM_INVALID'
+      : error.message === 'unsupported_media_type' ? 'MEDIA_SIGNATURE_INVALID' : 'MEDIA_SIZE_MISMATCH');
     await env.MEDIA_QUARANTINE.delete(objectKey);
     return;
   }
 
   const sourceInfo = await env.IMAGES.info(new Response(bytes).body!);
-  if (!sourceInfo.width || !sourceInfo.height || sourceInfo.width * sourceInfo.height > MAX_IMAGE_PIXELS) {
+  if (typeof sourceInfo.width !== 'number' || typeof sourceInfo.height !== 'number'
+    || !Number.isSafeInteger(sourceInfo.width) || !Number.isSafeInteger(sourceInfo.height)
+    || sourceInfo.width < 1 || sourceInfo.height < 1 || sourceInfo.width * sourceInfo.height > MAX_IMAGE_PIXELS) {
     await settleRejected('MEDIA_DIMENSIONS_INVALID');
     await env.MEDIA_QUARANTINE.delete(objectKey);
     return;
   }
 
   const transformed = await (await env.IMAGES.input(new Response(bytes).body!).output({ format: 'image/webp', quality: 85 })).image();
-  const approvedBytes = new Uint8Array(await new Response(transformed).arrayBuffer());
-  if (approvedBytes.byteLength === 0 || approvedBytes.byteLength > 10 * 1024 * 1024) throw new Error('media_transform_invalid');
+  const approvedBytes = await readBoundedRequestBody({ headers: new Headers(), body: transformed }, MAX_IMAGE_BYTES);
+  if (detectMediaMime(approvedBytes) !== 'image/webp') throw new Error('media_transform_invalid');
   const digest = await crypto.subtle.digest('SHA-256', approvedBytes);
   const sha256 = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, '0')).join('');
   const approvedKey = `approved/${row.user_id}/${sessionId}.webp`;
@@ -1234,6 +1231,13 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
   const moderationSignal = JSON.stringify(evaluation);
 
   await transaction(env.DB_JOBS_FRESH, async (client) => {
+    const current = await client.query<{ status: string }>(
+      `SELECT status FROM media.upload_sessions
+        WHERE id = $1 AND user_id = $2 AND object_key = $3 AND purpose = 'standard'
+          AND expected_bytes = $4 AND checksum_sha256 = $5 AND content_type = $6 FOR UPDATE`,
+      [sessionId, row.user_id, objectKey, row.expected_bytes, row.checksum_sha256, row.content_type]);
+    if (current.rows[0]?.status === 'approved') return;
+    if (current.rows[0]?.status !== 'queued') throw new Error('upload_session_not_queued');
     const inserted = await client.query<{ id: string }>(
       `INSERT INTO media.objects (id, owner_id, object_key, content_type, byte_size, sha256, state)
        VALUES ($1, $2, $3, 'image/webp', $4, $5, $6) ON CONFLICT (object_key) DO NOTHING RETURNING id`,
@@ -1266,11 +1270,11 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
     if (approved.rowCount === 1) await recordUserActivity(client, {
       id: uuidv7(), userId: row.user_id, eventType: 'content.media_upload_approved',
       category: 'content', source: 'jobs', sourceEventId: eventId, correlationId,
-      title: 'Media upload approved',
-      explanation: 'The uploaded media passed integrity processing and entered the approved private media store.',
-      result: 'succeeded', policyVersion: AUTHENTICITY_POLICY,
+      title: 'Media upload processed; review pending',
+      explanation: 'The uploaded media passed integrity processing and remains private pending safety and authenticity review. Processing does not authorize publication.',
+      result: 'pending', policyVersion: AUTHENTICITY_POLICY,
       objectType: 'upload_session', objectId: sessionId, reputationEffect: 'none', appealable: false,
-      retentionClass: 'ordinary', metadata: { contentType: 'image/webp', moderationState: 'approved' },
+      retentionClass: 'ordinary', metadata: { contentType: 'image/webp', moderationState: 'under_review' },
       createdAt: new Date().toISOString(),
     });
   });

@@ -134,6 +134,14 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
         run: npm run test:publication:pg17
+      - name: Verify gated standard image integrity and unchanged role boundaries
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
+        run: >-
+          node --experimental-strip-types --test --test-concurrency=1
+          packages/media/tests/standard-upload.test.mjs
+          packages/media/tests/standard-upload.workerd.mjs
+          packages/media/tests/standard-upload.postgres.mjs
       - name: Verify publication CI target isolation
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control

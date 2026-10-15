@@ -464,9 +464,15 @@ test('Workers bound request and R2 bytes before materializing untrusted payloads
   assert.doesNotMatch(readJson, /request\.arrayBuffer\(\)/);
 
   const media = between(jobs, 'async function processMediaUpload', 'async function processProfileModeration');
-  const sizeGuard = media.indexOf('source.size !== Number(row.expected_bytes) || source.size > MAX_IMAGE_BYTES');
-  const bufferedRead = media.indexOf('new Response(source.body).arrayBuffer()');
-  assert.ok(sizeGuard >= 0 && bufferedRead > sizeGuard, 'R2 object metadata must reject oversized or mismatched objects before buffering');
+  const verifier = fs.readFileSync(path.join(root, 'packages/media/src/standard-upload.ts'), 'utf8');
+  assert.match(media, /await verifyStandardUploadBytes\(source, row\)/);
+  const finalise = between(publicApi, 'async function finaliseUpload', 'async function rejectUploadReservation');
+  assert.match(finalise, /await verifyStandardUploadBytes\(source, session\)/);
+  const sizeGuard = verifier.indexOf('expected > MAX_IMAGE_BYTES || source.size !== expected');
+  const boundedRead = verifier.indexOf('await readBoundedRequestBody');
+  assert.ok(sizeGuard >= 0 && boundedRead > sizeGuard, 'R2 metadata must be checked before the bounded read');
+  assert.match(verifier, /readBoundedRequestBody\([\s\S]*body: source\.body \}, expected\)/);
+  assert.doesNotMatch(media + finalise, /new Response\(source\.body\)\.arrayBuffer\(\)/);
 });
 
 test('retention database mutations and their audit/ledger effects commit together after idempotent R2 deletion', () => {
