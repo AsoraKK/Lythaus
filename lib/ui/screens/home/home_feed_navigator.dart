@@ -147,6 +147,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
                 itemBuilder: (context, index) => _FeedPage(
                   key: ValueKey((feeds[index].id, session)),
                   feed: feeds[index],
+                  session: session,
                 ),
               ),
             ),
@@ -163,6 +164,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   }
 
   void _selectFeed(FeedModel feed) {
+    final session = ref.read(feedReadSessionProvider);
     final allFeeds = ref.read(feedListProvider);
     final globalIndex = allFeeds.indexWhere((item) => item.id == feed.id);
     if (globalIndex < 0) return;
@@ -182,7 +184,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     });
     ref.read(currentFeedIndexProvider.notifier).state = globalIndex;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_pageController.hasClients) return;
+      if (!mounted || !session.isCurrent || !_pageController.hasClients) return;
       if (disableAnimations) {
         _pageController.jumpToPage(index);
         return;
@@ -506,9 +508,10 @@ class _FeedSwitchRail extends StatelessWidget {
 }
 
 class _FeedPage extends ConsumerStatefulWidget {
-  const _FeedPage({super.key, required this.feed});
+  const _FeedPage({super.key, required this.feed, required this.session});
 
   final FeedModel feed;
+  final FeedReadSession session;
 
   @override
   ConsumerState<_FeedPage> createState() => _FeedPageState();
@@ -693,7 +696,10 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
     _restoreCallbackScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _restoreCallbackScheduled = false;
-      if (!mounted || _restoreApplied || !_scrollController.hasClients) {
+      if (!mounted ||
+          !widget.session.isCurrent ||
+          _restoreApplied ||
+          !_scrollController.hasClients) {
         return;
       }
 
@@ -739,7 +745,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
   }
 
   void _persistRestoreSnapshot() {
-    if (!_scrollController.hasClients) {
+    if (!widget.session.isCurrent || !_scrollController.hasClients) {
       return;
     }
 
@@ -766,6 +772,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
     required double offset,
     required bool showNewPostsPill,
   }) {
+    if (!widget.session.isCurrent) return;
     final snapshots = ref.read(feedRestoreSnapshotsProvider);
     ref.read(feedRestoreSnapshotsProvider.notifier).state = {
       ...snapshots,
@@ -794,6 +801,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
   }
 
   Future<void> _openPostDetail(BuildContext context, String postId) async {
+    if (!widget.session.isCurrent) return;
     await Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => PostDetailScreen(postId: postId)),
     );
@@ -804,6 +812,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
     WidgetRef ref,
     FeedItem item,
   ) async {
+    if (!widget.session.isCurrent) return;
     final actor = ref.read(currentUserProvider)?.id;
     if (actor == null || actor.isEmpty || actor != item.authorId) return;
     final revised = await Navigator.of(context).push<Map<String, dynamic>>(
@@ -812,7 +821,9 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
             ContentEditorScreen(contentId: item.id, text: item.body),
       ),
     );
-    if (!context.mounted || revised == null) return;
+    if (!context.mounted || !widget.session.isCurrent || revised == null) {
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(

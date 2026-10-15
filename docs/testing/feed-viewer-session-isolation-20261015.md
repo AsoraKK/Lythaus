@@ -41,11 +41,12 @@ successful empty list.
 
 Runtime edits are confined to the new feed session helper, the feed providers,
 and the existing feed navigator. The earlier Discover presentation changes are
-preserved. The browser test entry point passes the new session argument.
+preserved. The browser test entry point passes the new session argument and
+uses consistent synthetic authentication state and current-user projection.
 PR #1023's authentication/root reload patch was inspected read-only; this PR
 does not edit its root lifecycle, auth providers or session revision helper.
-Their combined revision still needs integration validation and independent
-security review. Custom-feed creation writes and unrelated legacy feed
+PR #1023 subsequently merged as `53ac0f4e`; combined integration validation
+and independent security review remain required. Custom-feed creation writes and unrelated legacy feed
 providers are not certified by this read-cache repair.
 
 ## Validation
@@ -61,6 +62,9 @@ Pinned Flutter 3.41.1 was used with synthetic identities and loopback fixtures.
   token rotation, explicit invalidation, News/custom late responses, private
   list/entitlement caches, duplicate/overlapping pagination, refresh races,
   access revocation and cursor loops. Three tests use the real mobile navigator.
+  The final navigator guard also rejects an old scroll callback before the new
+  frame, so it cannot repopulate B's cleared restore state. Its combined
+  provider/navigator regression run passes 47 tests.
 - Full `flutter analyze`, pinned formatting and `git diff --check` pass.
 - Backend feed/content policy contracts pass 14 tests, preserving private cache
   policy, block/mute/visibility checks and publication gates.
