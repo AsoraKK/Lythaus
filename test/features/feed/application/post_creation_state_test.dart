@@ -19,6 +19,51 @@ void main() {
       expect(state.aiLabel, isNull);
     });
 
+    test('reload safety requires a settled and recoverable text draft', () {
+      expect(const PostCreationState().canSafelyReload, isTrue);
+      expect(const PostCreationState(text: 'unsaved').canSafelyReload, isFalse);
+      expect(
+        const PostCreationState(aiLabel: 'human').canSafelyReload,
+        isFalse,
+      );
+      expect(
+        const PostCreationState(
+          text: 'saved',
+          draftStatus: 'Draft saved on this device.',
+        ).canSafelyReload,
+        isTrue,
+      );
+      expect(
+        const PostCreationState(
+          text: 'saving',
+          draftStatus: 'Saving draft…',
+        ).canSafelyReload,
+        isFalse,
+      );
+      expect(
+        const PostCreationState(
+          text: 'pending',
+          isSubmitting: true,
+        ).canSafelyReload,
+        isFalse,
+      );
+      expect(
+        const PostCreationState(mediaUrl: 'private-upload').canSafelyReload,
+        isFalse,
+      );
+      expect(const PostCreationState(isNews: true).canSafelyReload, isFalse);
+      expect(
+        const PostCreationState(contentType: 'media').canSafelyReload,
+        isFalse,
+      );
+      expect(
+        const PostCreationState(
+          proofSignals: ProofSignals(captureMetadataHash: 'proof'),
+        ).canSafelyReload,
+        isFalse,
+      );
+    });
+
     test('copyWith preserves values', () {
       const state = PostCreationState(text: 'hello', isNews: true);
       final copy = state.copyWith(mediaUrl: 'http://img.png');
