@@ -3,11 +3,18 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { installReputationLockFunctionFixture } from '../../../apps/lythaus-jobs/tests/helpers/install-reputation-lock-fixture.mjs';
 
 export async function publicationAdmissionFixture(connectionString, bindings) {
   const target = new URL(connectionString);
   assert.ok(['localhost', '127.0.0.1'].includes(target.hostname));
   assert.match(target.pathname, /^\/lythaus_auth_test_post_[a-z0-9_]+$/);
+  const installer = new pg.Client({ connectionString, ssl: false, connectionTimeoutMillis: 5000 });
+  await installer.connect();
+  try {
+    assert.equal((await installer.query('SELECT current_user AS role')).rows[0].role, 'postgres');
+    await installReputationLockFunctionFixture(installer, 'lythaus_jobs');
+  } finally { await installer.end(); }
   const require = createRequire(new URL('../../../node_modules/wrangler/package.json', import.meta.url));
   const { build } = require('esbuild');
   const { Miniflare, convertV4MiniflareOptions } = require('miniflare');
