@@ -93,6 +93,8 @@ void main() {
       final auth = _AuthService();
       when(() => auth.getCurrentUser()).thenAnswer((_) async => user);
       when(() => auth.getJwtToken()).thenAnswer((_) async => null);
+      when(() => auth.logout()).thenAnswer((_) async {});
+      when(() => auth.remoteLogoutConfirmed).thenReturn(true);
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -110,7 +112,10 @@ void main() {
       final field = find.byType(TextField);
       await tester.enterText(field, 'Synthetic unfinished draft');
       final controller = tester.widget<TextField>(field).controller!;
-      controller.selection = const TextSelection(baseOffset: 2, extentOffset: 9);
+      controller.selection = const TextSelection(
+        baseOffset: 2,
+        extentOffset: 9,
+      );
       for (final width in [1024.0, 1440.0, 320.0, 390.0]) {
         await tester.binding.setSurfaceSize(Size(width, 844));
         await tester.pumpAndSettle();
@@ -129,6 +134,19 @@ void main() {
         expect(controller.text, 'Synthetic unfinished draft');
         expect(tester.takeException(), isNull);
       }
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(AdaptiveShell)),
+      );
+      expect(container.read(currentUserProvider), same(user));
+      await container.read(authStateProvider.notifier).signOut();
+      await tester.binding.setSurfaceSize(const Size(1440, 844));
+      await tester.pumpAndSettle();
+      expect(container.read(currentUserProvider), isNull);
+      expect(find.byType(CreatePostScreen), findsNothing);
+      expect(find.text('Sign in to create a post.'), findsOneWidget);
+      expect(find.text('Synthetic unfinished draft'), findsNothing);
+      verify(() => auth.logout()).called(1);
+      expect(tester.takeException(), isNull);
     });
 
     for (final width in [1024.0, 1440.0]) {

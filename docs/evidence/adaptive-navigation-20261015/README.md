@@ -1,5 +1,8 @@
 # Adaptive desktop navigation: retained review
 
+[Resumed verification and 320px captures](resumed/README.md) document the later
+composer-preservation fix and its tests. The comparisons below are historical.
+
 This is a dependent change on PR1024. That branding PR remains held pending the
 separate final-asset review and independent review. Kyle selected the A+E Balanced
 connection uppercase LH direction; wordmark spacing remains with the logo lane.
