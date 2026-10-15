@@ -1,0 +1,133 @@
+{
+  "method": "Tesseract read-only OCR; supplementary to manual inspection and Flutter state assertions",
+  "results": [
+    {
+      "file": "chromium-dark-1x-1024.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "chromium-dark-1x-1440.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "chromium-dark-1x-320.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "chromium-dark-1x-390.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "chromium-dark-2x-1024.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "chromium-dark-2x-1440.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "chromium-dark-2x-320.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "chromium-dark-2x-390.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "chromium-light-1x-1024.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "chromium-light-1x-1440.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "chromium-light-1x-320.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "chromium-light-1x-390.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "chromium-light-2x-1024.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "chromium-light-2x-1440.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "chromium-light-2x-320.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "chromium-light-2x-390.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "webkit-dark-1x-1024.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "webkit-dark-1x-1440.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "webkit-dark-1x-320.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "webkit-dark-1x-390.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "webkit-dark-2x-1024.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "webkit-dark-2x-1440.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "webkit-dark-2x-320.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "webkit-dark-2x-390.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "webkit-light-1x-1024.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "webkit-light-1x-1440.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "webkit-light-1x-320.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "webkit-light-1x-390.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "webkit-light-2x-1024.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "webkit-light-2x-1440.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "webkit-light-2x-320.png",
+      "composerTextVisible": true
+    },
+    {
+      "file": "webkit-light-2x-390.png",
+      "composerTextVisible": true
+    }
+  ]
+}

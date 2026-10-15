@@ -42,14 +42,22 @@ the exact candidate SHA. Source SHA and compiled JavaScript hash are recorded
 in each browser receipt. Screenshots and local results are added after the clean
 source build; subsequent evidence-only commits do not change the application.
 
-Source `fa33ed132118a3c6bb3ea6d8e5c3ce54943b4bfb` passed all 32 rendered cases,
+Source `30fa6bc959f2ecb35b485f11f29c6c8c4142bebf` passed all 32 rendered cases,
 with no unexpected errors or external requests. Receipts:
 [Chromium](chromium-results.json), [WebKit](webkit-results.json).
-[SHA-256 manifest](sha256.json) covers 40 generated artifacts. The full local
+[SHA-256 manifest](sha256.json) covers 42 generated artifacts. The full local
 Flutter suite passed **3,365 tests, six skipped, zero failures**; the expanded
 native shell suite passed all 18 tests. Analysis and pinned formatting passed.
 See [full-suite summary](full-suite-summary.txt), [native log](native-shell.txt)
 and [analysis](analyze.txt).
+
+Visual review caught one earlier WebKit capture from `38d39c7a` showing the
+preceding frame despite passing state assertions. Current images were all
+regenerated after two animation frames and a 250ms compositor settling interval.
+Manual inspection and [read-only OCR](capture-text-check.json) confirm visible
+composer draft text in all 32 current captures. Application code remains identical
+to `fa33ed13`; only the capture timing and evidence changed. Do not use the earlier
+unsettled screenshots as current visual evidence.
 
 | Width | Chromium 100% | Chromium 200% | WebKit 100% | WebKit 200% |
 | --- | --- | --- | --- | --- |
@@ -90,3 +98,16 @@ combines navigation source `fa33ed132118a3c6bb3ea6d8e5c3ce54943b4bfb` with feed
 isolation/presentation tests. That feed head adds diagnostics, not a confirmed
 logout fix. This local synthetic tree is not pushed or merged to main. The final
 feed fix and its combined production-browser checks remain separate gates.
+
+The first combined production WebKit 390px run passed both baseline and delayed
+owner-response scenarios. Repetition then reproduced the existing feed-lane
+blocker: baseline failed on an unexpected cancelled `GET /api/feed/discover`
+during protected return, after sign-out intent. The delayed-owner case passed.
+No assertion was weakened. [Combined receipt](combined-result.json) records the
+exact source/tree and compiled hash, failure event, raw local trace hashes and
+the harness's `local` head fallback. Use `GITHUB_SHA=82733d10636b799a1c76dfb8756c6c2455d36758`
+when reproducing with `node --experimental-strip-types --test
+--test-name-pattern='webkit 390' --test-timeout=600000
+scripts/tests/flutter-auth.browser.mjs`. The feed lane has the diagnostic and
+owns the fix. Combined release readiness remains blocked until its final fix is
+retested; navigation's fixture pass is not a substitute.

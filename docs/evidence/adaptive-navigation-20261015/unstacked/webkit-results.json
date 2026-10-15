@@ -1,8 +1,8 @@
 {
-  "source": "fa33ed132118a3c6bb3ea6d8e5c3ce54943b4bfb",
+  "source": "30fa6bc959f2ecb35b485f11f29c6c8c4142bebf",
   "engine": "webkit",
   "browser": "26.5",
-  "capturedAt": "2026-10-15T21:49:25.468Z",
+  "capturedAt": "2026-10-15T21:53:40.824Z",
   "compiledSha256": "a3a6fc2148943c44062ec3336b44f534e50f08732ccbb29b89e5dc5b75e7eab6",
   "scenarios": [
     {
@@ -47,7 +47,7 @@
       "filename": "webkit-light-1x-320.png",
       "state": {
         "fields": 1,
-        "controller": 341564201,
+        "controller": 274845992,
         "text": "Synthetic unfinished draft",
         "base": 2,
         "extent": 9,
@@ -62,7 +62,7 @@
       "filename": "webkit-light-1x-390.png",
       "state": {
         "fields": 1,
-        "controller": 341564201,
+        "controller": 274845992,
         "text": "Synthetic unfinished draft",
         "base": 2,
         "extent": 9,
@@ -77,7 +77,7 @@
       "filename": "webkit-light-1x-1024.png",
       "state": {
         "fields": 1,
-        "controller": 341564201,
+        "controller": 274845992,
         "text": "Synthetic unfinished draft",
         "base": 2,
         "extent": 9,
@@ -92,7 +92,7 @@
       "filename": "webkit-light-1x-1440.png",
       "state": {
         "fields": 1,
-        "controller": 341564201,
+        "controller": 274845992,
         "text": "Synthetic unfinished draft",
         "base": 2,
         "extent": 9,
@@ -107,7 +107,7 @@
       "filename": "webkit-light-2x-320.png",
       "state": {
         "fields": 1,
-        "controller": 990326418,
+        "controller": 475038164,
         "text": "Synthetic unfinished draft",
         "base": 2,
         "extent": 9,
@@ -122,7 +122,7 @@
       "filename": "webkit-light-2x-390.png",
       "state": {
         "fields": 1,
-        "controller": 990326418,
+        "controller": 475038164,
         "text": "Synthetic unfinished draft",
         "base": 2,
         "extent": 9,
@@ -137,7 +137,7 @@
       "filename": "webkit-light-2x-1024.png",
       "state": {
         "fields": 1,
-        "controller": 990326418,
+        "controller": 475038164,
         "text": "Synthetic unfinished draft",
         "base": 2,
         "extent": 9,
@@ -152,7 +152,7 @@
       "filename": "webkit-light-2x-1440.png",
       "state": {
         "fields": 1,
-        "controller": 990326418,
+        "controller": 475038164,
         "text": "Synthetic unfinished draft",
         "base": 2,
         "extent": 9,
@@ -167,7 +167,7 @@
       "filename": "webkit-dark-1x-320.png",
       "state": {
         "fields": 1,
-        "controller": 509973867,
+        "controller": 415241028,
         "text": "Synthetic unfinished draft",
         "base": 2,
         "extent": 9,
@@ -182,7 +182,7 @@
       "filename": "webkit-dark-1x-390.png",
       "state": {
         "fields": 1,
-        "controller": 509973867,
+        "controller": 415241028,
         "text": "Synthetic unfinished draft",
         "base": 2,
         "extent": 9,
@@ -197,7 +197,7 @@
       "filename": "webkit-dark-1x-1024.png",
       "state": {
         "fields": 1,
-        "controller": 509973867,
+        "controller": 415241028,
         "text": "Synthetic unfinished draft",
         "base": 2,
         "extent": 9,
@@ -212,7 +212,7 @@
       "filename": "webkit-dark-1x-1440.png",
       "state": {
         "fields": 1,
-        "controller": 509973867,
+        "controller": 415241028,
         "text": "Synthetic unfinished draft",
         "base": 2,
         "extent": 9,
@@ -227,7 +227,7 @@
       "filename": "webkit-dark-2x-320.png",
       "state": {
         "fields": 1,
-        "controller": 106084980,
+        "controller": 999599784,
         "text": "Synthetic unfinished draft",
         "base": 2,
         "extent": 9,
@@ -242,7 +242,7 @@
       "filename": "webkit-dark-2x-390.png",
       "state": {
         "fields": 1,
-        "controller": 106084980,
+        "controller": 999599784,
         "text": "Synthetic unfinished draft",
         "base": 2,
         "extent": 9,
@@ -257,7 +257,7 @@
       "filename": "webkit-dark-2x-1024.png",
       "state": {
         "fields": 1,
-        "controller": 106084980,
+        "controller": 999599784,
         "text": "Synthetic unfinished draft",
         "base": 2,
         "extent": 9,
@@ -272,7 +272,7 @@
       "filename": "webkit-dark-2x-1440.png",
       "state": {
         "fields": 1,
-        "controller": 106084980,
+        "controller": 999599784,
         "text": "Synthetic unfinished draft",
         "base": 2,
         "extent": 9,
