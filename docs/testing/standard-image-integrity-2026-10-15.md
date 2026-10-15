@@ -162,8 +162,9 @@ constitutes hosted production acceptance.
 Current local results on this branch: dedicated unit/Workerd and PG17 suites
 **46/46**; product-integrity checks **22/22**; homepage protection **30/30**;
 marketing **84/84**; attachment/preparation/product-policy **55/55**; native
-architecture/runtime **376/376**. Native typecheck, workflow action pins,
-canonical migration manifest and whitespace checks pass. The first native run
+architecture/runtime **376/376**; Public API native privacy Workflow PG17
+regressions **6/6**. Native typecheck, workflow action pins, canonical migration
+manifest and whitespace checks pass. The first native run
 could not write npm's default cache; rerunning with a writable `/tmp` cache
 passed the full suite. The marketing workspace was restored using its unchanged
 lockfile before its full-suite pass. Hosted exact-head CI and independent review

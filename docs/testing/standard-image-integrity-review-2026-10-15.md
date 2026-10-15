@@ -162,8 +162,9 @@ throwaway database, and revoked before database teardown.
 - Product-integrity checks: **22/22**, including the account-deletion fence
   ordering guard. Homepage protection: **30/30**; marketing: **84/84**;
   attachment/preparation/product-policy: **55/55**; native architecture/runtime:
-  **376/376**. Native typecheck, workflow action pins, canonical migration
-  manifest and whitespace checks pass for this proposed head. The native suite
+  **376/376**; Public API native privacy Workflow PG17 regressions: **6/6**.
+  Native typecheck, workflow action pins, canonical migration manifest and
+  whitespace checks pass for this proposed head. The native suite
   required a writable `/tmp` npm cache, and the marketing app dependencies were
   restored from its unchanged lockfile before its full-suite pass.
 
