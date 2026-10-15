@@ -156,6 +156,8 @@ void main() {
               MemoryContentRecoveryStorage(),
             ),
             feedListProvider.overrideWith((ref) => const []),
+            customFeedsProvider.overrideWith((ref) async => const []),
+            feedEntitlementsProvider.overrideWith((ref) async => null),
           ],
           child: MaterialApp(
             key: ValueKey(section),
@@ -197,6 +199,29 @@ void main() {
       await tester.pump();
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('unverified session offers sign-in without cached cards', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildWithState(
+          stateForFeed: (_) => const LiveFeedState(
+            requiresSignIn: true,
+            errorMessage: 'Sign in again to load posts.',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Sign in'), findsOneWidget);
+      expect(
+        find.text(
+          'Your session could not be verified. Sign in again or continue as a guest.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Retry'), findsNothing);
+      expect(find.text('No posts yet'), findsNothing);
     });
 
     testWidgets(

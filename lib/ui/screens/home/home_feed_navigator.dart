@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/feed/presentation/content_editor_screen.dart';
 import 'package:lythaus/features/feed/application/content_mutation.dart';
+import 'package:lythaus/features/feed/application/feed_read_session.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
@@ -17,6 +18,7 @@ import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/ui/components/lythaus_top_bar.dart';
 import 'package:lythaus/ui/components/feed_control_panel.dart';
+import 'package:lythaus/ui/components/sign_in_required.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 import 'package:lythaus/design_system/tokens/motion.dart';
 import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
@@ -46,6 +48,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   int _activeIndex = 0;
   late AlphaFeedSection _activeSection;
   bool _feedControlsOpen = false;
+  FeedReadSession? _lastSession;
   final _feedControlsFocus = FocusNode(debugLabel: 'Feed controls');
   final _feedTitleFocus = FocusNode(debugLabel: 'Feed title');
 
@@ -80,6 +83,19 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
 
   @override
   Widget build(BuildContext context) {
+    final session = ref.watch(feedReadSessionProvider);
+    if (_lastSession != null && !identical(_lastSession, session)) {
+      _activeIndex = 0;
+      _activeSection = widget.section;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            identical(_lastSession, session) &&
+            _pageController.hasClients) {
+          _pageController.jumpToPage(0);
+        }
+      });
+    }
+    _lastSession = session;
     final allFeeds = ref.watch(feedListProvider);
     final feeds = _feedsForSection(allFeeds, _activeSection);
     final canSwitchFeeds = _canSwitchFeeds(allFeeds);
@@ -129,7 +145,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
                 },
                 itemCount: feeds.length,
                 itemBuilder: (context, index) => _FeedPage(
-                  key: ValueKey(feeds[index].id),
+                  key: ValueKey((feeds[index].id, session)),
                   feed: feeds[index],
                 ),
               ),
@@ -196,24 +212,41 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   Widget _buildEmptySection(BuildContext context) {
     final canSwitchFeeds = _canSwitchFeeds(ref.watch(feedListProvider));
     final isMyFeeds = _activeSection == AlphaFeedSection.myFeeds;
+    final isPrivateSection = _activeSection != AlphaFeedSection.discover;
+    final entitlements = isPrivateSection
+        ? ref.watch(feedEntitlementsProvider)
+        : null;
+    final customFeeds = isMyFeeds ? ref.watch(customFeedsProvider) : null;
+    final isLoading =
+        (entitlements?.isLoading ?? false) || (customFeeds?.isLoading ?? false);
+    final hasError =
+        (entitlements?.hasError ?? false) || (customFeeds?.hasError ?? false);
     final title = switch (_activeSection) {
       AlphaFeedSection.discover => 'Discover',
       AlphaFeedSection.myFeeds => 'My Feeds',
       AlphaFeedSection.newsBoard => 'News Board',
     };
-    final heading = switch (_activeSection) {
-      AlphaFeedSection.discover => 'Discover unavailable',
-      AlphaFeedSection.myFeeds => 'No custom feeds yet',
-      AlphaFeedSection.newsBoard => 'News Board is Black-only',
-    };
-    final description = switch (_activeSection) {
-      AlphaFeedSection.discover =>
-        'Try again when the Discover service is available.',
-      AlphaFeedSection.myFeeds =>
-        'Create a feed to follow the topics and accounts you choose.',
-      AlphaFeedSection.newsBoard =>
-        'News Board is available only to Black accounts. Lythaus confirms access before content loads.',
-    };
+    final heading = isLoading
+        ? 'Loading your feeds'
+        : hasError
+        ? 'Couldn’t load your feeds'
+        : switch (_activeSection) {
+            AlphaFeedSection.discover => 'Discover unavailable',
+            AlphaFeedSection.myFeeds => 'No custom feeds yet',
+            AlphaFeedSection.newsBoard => 'News Board is Black-only',
+          };
+    final description = isLoading
+        ? 'Checking which feeds are available.'
+        : hasError
+        ? 'Try again to confirm access and load your feeds.'
+        : switch (_activeSection) {
+            AlphaFeedSection.discover =>
+              'Try again when the Discover service is available.',
+            AlphaFeedSection.myFeeds =>
+              'Create a feed to follow the topics and accounts you choose.',
+            AlphaFeedSection.newsBoard =>
+              'News Board is available only to Black accounts. Lythaus confirms access before content loads.',
+          };
     final icon = switch (_activeSection) {
       AlphaFeedSection.discover => Icons.explore_outlined,
       AlphaFeedSection.myFeeds => Icons.dynamic_feed_outlined,
@@ -245,7 +278,10 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(icon, size: 48),
+                      if (isLoading)
+                        const CircularProgressIndicator()
+                      else
+                        Icon(icon, size: 48),
                       const SizedBox(height: 12),
                       Text(
                         heading,
@@ -253,7 +289,16 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
                       ),
                       const SizedBox(height: 8),
                       Text(description, textAlign: TextAlign.center),
-                      if (isMyFeeds) ...[
+                      if (hasError) ...[
+                        const SizedBox(height: 16),
+                        FilledButton(
+                          onPressed: () {
+                            ref.invalidate(feedEntitlementsProvider);
+                            ref.invalidate(customFeedsProvider);
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ] else if (isMyFeeds && !isLoading) ...[
                         const SizedBox(height: 16),
                         FilledButton.icon(
                           onPressed: () => Navigator.of(context).push(
@@ -280,6 +325,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
       feeds.where((feed) => feed.type != FeedType.moderation).length > 1;
 
   void _openFeedControl(FocusNode triggerFocus) {
+    final session = ref.read(feedReadSessionProvider);
     final allFeeds = ref.read(feedListProvider);
     if (_feedControlsOpen || !_canSwitchFeeds(allFeeds)) return;
     _feedControlsOpen = true;
@@ -293,38 +339,52 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
       useSafeArea: true,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (sheetContext) => CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.escape): () {
-            Navigator.of(sheetContext).maybePop();
-          },
-        },
-        child: Focus(
-          autofocus: true,
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            heightFactor: 1,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: 640,
-                maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.72,
-              ),
-              child: Material(
-                child: SingleChildScrollView(
-                  child: FeedControlPanel(
-                    availableFeeds: allFeeds,
-                    selectedFeedId: activeFeed?.id,
-                    onSelect: (feed) {
-                      Navigator.of(sheetContext).pop();
-                      _selectFeed(feed);
-                    },
-                    onClose: () => Navigator.of(sheetContext).maybePop(),
+      builder: (sheetContext) => Consumer(
+        builder: (context, sheetRef, _) {
+          if (!identical(sheetRef.watch(feedReadSessionProvider), session)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (sheetContext.mounted &&
+                  ModalRoute.of(sheetContext)?.isCurrent == true) {
+                Navigator.of(sheetContext).pop();
+              }
+            });
+            return const SizedBox.shrink();
+          }
+          return CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.escape): () {
+                Navigator.of(sheetContext).maybePop();
+              },
+            },
+            child: Focus(
+              autofocus: true,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                heightFactor: 1,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 640,
+                    maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.72,
+                  ),
+                  child: Material(
+                    child: SingleChildScrollView(
+                      child: FeedControlPanel(
+                        availableFeeds: allFeeds,
+                        selectedFeedId: activeFeed?.id,
+                        onSelect: (feed) {
+                          Navigator.of(sheetContext).pop();
+                          if (!session.isCurrent) return;
+                          _selectFeed(feed);
+                        },
+                        onClose: () => Navigator.of(sheetContext).maybePop(),
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     ).whenComplete(() {
       _feedControlsOpen = false;
@@ -491,6 +551,14 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
 
     _logFirstFeedLoad(liveState);
     _applyRestoreIfReady(liveState: liveState, restoreResult: restoreResult);
+
+    if (liveState.requiresSignIn) {
+      return const SignInRequired(
+        message:
+            'Your session could not be verified. Sign in again or continue as a guest.',
+        returnTo: '/',
+      );
+    }
 
     if (feed.type != FeedType.discover && liveState.isInitialLoading) {
       return const Center(child: CircularProgressIndicator());

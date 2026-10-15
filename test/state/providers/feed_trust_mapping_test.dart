@@ -9,6 +9,7 @@ import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/models/post_feed_item_mapper.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/ui/components/feed_card.dart';
+import '../../helpers/feed_session.dart';
 
 const feed = FeedModel(
   id: 'discover',
@@ -65,6 +66,7 @@ class Repository extends Fake implements SocialFeedRepository {
 
 ProviderContainer container() => ProviderContainer(
   overrides: [
+    authStateProvider.overrideWith((_) => FeedTestAuth(null)),
     socialFeedServiceProvider.overrideWithValue(Repository()),
     jwtProvider.overrideWith((ref) async => null),
   ],
