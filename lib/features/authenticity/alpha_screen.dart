@@ -7,6 +7,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lythaus/features/authenticity/alpha_api.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 
 final privateAlphaImagePickerProvider = Provider<Future<XFile?> Function()>(
@@ -35,6 +36,9 @@ class _PrivateAlphaScreenState
     with WidgetsBindingObserver {
   final _text = TextEditingController();
   final _feedback = TextEditingController();
+  late final String _reloadBlockKey =
+      'authenticity-alpha:${identityHashCode(this)}';
+  ContentMutationRegistry? _reloadRegistry;
   List<Map<String, dynamic>> _cases = [];
   Map<String, dynamic>? _selected;
   Uint8List? _preview;
@@ -52,6 +56,9 @@ class _PrivateAlphaScreenState
   @override
   void initState() {
     super.initState();
+    _reloadRegistry = ref.read(contentMutationRegistryProvider);
+    _text.addListener(_syncReloadBlock);
+    _feedback.addListener(_syncReloadBlock);
     WidgetsBinding.instance.addObserver(this);
     unawaited(_load());
   }
@@ -59,6 +66,9 @@ class _PrivateAlphaScreenState
   @override
   void dispose() {
     _poll?.cancel();
+    _text.removeListener(_syncReloadBlock);
+    _feedback.removeListener(_syncReloadBlock);
+    if (!_busy) _reloadRegistry?.setReloadBlocked(_reloadBlockKey, false);
     _text.dispose();
     _feedback.dispose();
     WidgetsBinding.instance.removeObserver(this);
@@ -123,6 +133,7 @@ class _PrivateAlphaScreenState
       _error = null;
       _progress = null;
     });
+    _syncReloadBlock();
     try {
       final api = ref.read(privateAlphaApiProvider);
       late final String id;
@@ -185,8 +196,24 @@ class _PrivateAlphaScreenState
           _busy = false;
           _progress = null;
         });
+      } else {
+        _busy = false;
       }
+      _syncReloadBlock();
     }
+  }
+
+  void _syncReloadBlock() {
+    final registry = _reloadRegistry;
+    if (registry == null) return;
+    if (!mounted) {
+      registry.setReloadBlocked(_reloadBlockKey, false);
+      return;
+    }
+    registry.setReloadBlocked(
+      _reloadBlockKey,
+      _busy || _text.text.isNotEmpty || _feedback.text.isNotEmpty,
+    );
   }
 
   Future<void> _select(String id) async {
@@ -221,6 +248,7 @@ class _PrivateAlphaScreenState
       _busy = true;
       _error = null;
     });
+    _syncReloadBlock();
     try {
       final id = selected['caseId'] as String;
       final deleting = action == 'delete';
@@ -241,7 +269,12 @@ class _PrivateAlphaScreenState
         setState(() => _error = 'That case action could not finish.');
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() => _busy = false);
+      } else {
+        _busy = false;
+      }
+      _syncReloadBlock();
     }
   }
 

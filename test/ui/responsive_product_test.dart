@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lythaus/core/routing/deeplink_router.dart';
 import 'package:lythaus/design_system/index.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/auth_required_exception.dart';
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 import 'package:lythaus/features/feed/domain/models.dart';
 import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
@@ -44,6 +45,12 @@ class _UnavailableSearchNotifier extends FeedSearchNotifier {
       );
 }
 
+class _UnauthorizedSearchNotifier extends FeedSearchNotifier {
+  @override
+  Future<FeedResponse> build(FeedSearchKey arg) async =>
+      throw const AuthRequiredException();
+}
+
 void main() {
   test('notification links require an existing supported target', () {
     for (final link in [
@@ -75,6 +82,7 @@ void main() {
       'settings',
       'rewards-error',
       'search-unavailable',
+      'search-auth-required',
     ]) {
       testWidgets('$screen supports 320px and 200% in $dark theme', (
         tester,
@@ -101,7 +109,11 @@ void main() {
           ProviderScope(
             overrides: [
               currentUserProvider.overrideWithValue(null),
-              feedSearchProvider.overrideWith(_UnavailableSearchNotifier.new),
+              feedSearchProvider.overrideWith(
+                screen == 'search-auth-required'
+                    ? _UnauthorizedSearchNotifier.new
+                    : _UnavailableSearchNotifier.new,
+              ),
               rewardsSnapshotProvider.overrideWith(
                 (ref, _) => Future<RewardsSnapshot>.error(
                   StateError('private fixture error'),
@@ -121,9 +133,8 @@ void main() {
                 'post' => Scaffold(
                   body: SingleChildScrollView(child: FeedCard(item: post)),
                 ),
-                'search-unavailable' => const FeedSearchScreen(
-                  initialQuery: 'civic',
-                ),
+                'search-unavailable' || 'search-auth-required' =>
+                  const FeedSearchScreen(initialQuery: 'civic'),
                 'settings' => const SettingsScreen(),
                 _ => const RewardsDashboardScreen(),
               },
@@ -146,6 +157,15 @@ void main() {
             find.text('Tag search is temporarily unavailable.'),
             findsOneWidget,
           );
+        }
+        if (screen == 'search-auth-required') {
+          expect(
+            find.text(
+              'Your session could not be verified. Sign in again or continue as a guest.',
+            ),
+            findsOneWidget,
+          );
+          expect(find.text('Sign in'), findsOneWidget);
         }
       });
     }

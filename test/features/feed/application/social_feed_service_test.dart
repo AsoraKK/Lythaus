@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:lythaus/features/auth/domain/auth_required_exception.dart';
 import 'package:lythaus/features/feed/application/social_feed_service.dart';
 import 'package:lythaus/features/feed/domain/models.dart';
 import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
@@ -175,6 +176,31 @@ void main() {
       );
     },
   );
+
+  test('tag discovery reports an unauthorized session explicitly', () async {
+    final request = RequestOptions(path: '/feed/discover');
+    final apiError = DioException(
+      requestOptions: request,
+      response: Response<Map<String, dynamic>>(
+        requestOptions: request,
+        statusCode: 401,
+        data: {'error': 'unauthorized'},
+      ),
+      type: DioExceptionType.badResponse,
+    );
+    when(
+      () => dio.get<Map<String, dynamic>>(
+        '/feed/discover',
+        queryParameters: any(named: 'queryParameters'),
+        options: any(named: 'options'),
+      ),
+    ).thenThrow(apiError);
+
+    await expectLater(
+      service.getDiscoverFeed(tag: 'civic', token: 'session-token'),
+      throwsA(isA<AuthRequiredException>()),
+    );
+  });
 
   test('getFeed handles success and failure', () async {
     when(

@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/features/support/application/support_feedback_api.dart';
 import 'package:lythaus/features/support/application/support_feedback_providers.dart';
 import 'package:lythaus/ui/components/reading_pane.dart';
@@ -34,6 +35,9 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
   final _secondDetail = TextEditingController();
   final _reproductionSteps = TextEditingController();
   final _reply = TextEditingController();
+  late final String _reloadBlockKey =
+      'support-feedback:${identityHashCode(this)}';
+  ContentMutationRegistry? _reloadRegistry;
   Map<String, dynamic>? _options;
   late String _kind;
   String? _category;
@@ -69,6 +73,17 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
   void initState() {
     super.initState();
     _kind = widget.initialKind;
+    _reloadRegistry = ref.read(contentMutationRegistryProvider);
+    for (final controller in [
+      _title,
+      _firstDetail,
+      _secondDetail,
+      _reproductionSteps,
+      _reply,
+    ]) {
+      controller.addListener(_syncReloadBlock);
+    }
+    _syncReloadBlock();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _loadInitial();
     });
@@ -76,6 +91,16 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
 
   @override
   void dispose() {
+    _reloadRegistry?.setReloadBlocked(_reloadBlockKey, false);
+    for (final controller in [
+      _title,
+      _firstDetail,
+      _secondDetail,
+      _reproductionSteps,
+      _reply,
+    ]) {
+      controller.removeListener(_syncReloadBlock);
+    }
     _title.dispose();
     _firstDetail.dispose();
     _secondDetail.dispose();
@@ -214,7 +239,10 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
                     .toList(growable: false),
                 onChanged: categories.isEmpty
                     ? null
-                    : (value) => setState(() => _category = value),
+                    : (value) {
+                        setState(() => _category = value);
+                        _syncReloadBlock();
+                      },
               ),
               const SizedBox(height: 12),
               TextField(
@@ -397,6 +425,9 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
         ),
       ),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncReloadBlock();
+    });
     return PopScope(
       canPop: _allowPop,
       onPopInvokedWithResult: (didPop, _) {
@@ -413,6 +444,13 @@ class _SupportFeedbackScreenState extends ConsumerState<SupportFeedbackScreen> {
       _secondDetail.text.isNotEmpty ||
       _reproductionSteps.text.isNotEmpty ||
       _reply.text.isNotEmpty;
+
+  void _syncReloadBlock() {
+    _reloadRegistry?.setReloadBlocked(
+      _reloadBlockKey,
+      _busy || _replyRefreshing || _hasDraft,
+    );
+  }
 
   Future<void> _confirmLeave() async {
     if (_confirmingLeave || !mounted) return;

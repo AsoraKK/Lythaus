@@ -7,6 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lythaus/features/authenticity/beta_api.dart';
 import 'package:lythaus/features/authenticity/beta_screen.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
+import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
+import '../../helpers/content_recovery.dart';
 
 class _Api extends BetaApi {
   _Api() : super(Dio(), () async => 'test');
@@ -16,7 +19,8 @@ class _Api extends BetaApi {
   bool empty = false,
       unavailable = false,
       failAction = false,
-      failDetail = false;
+      failDetail = false,
+      failUpload = false;
   Uint8List? uploaded;
   Completer<String>? pendingUpload;
   @override
@@ -29,6 +33,7 @@ class _Api extends BetaApi {
     calls.add('UPLOAD $mime');
     progress(bytes.length, bytes.length);
     if (pendingUpload != null) await pendingUpload!.future;
+    if (failUpload) throw StateError('synthetic upload failure');
     empty = false;
     status = 'queued';
     return 'fixture-case';
@@ -73,7 +78,7 @@ class _Api extends BetaApi {
   }
 }
 
-Future<void> _openScreen(
+Future<ProviderContainer> _openScreen(
   WidgetTester tester,
   _Api api, {
   Future<XFile?> Function()? picker,
@@ -82,16 +87,24 @@ Future<void> _openScreen(
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
+  final container = ProviderContainer(
+    overrides: [
+      betaApiProvider.overrideWithValue(api),
+      contentRecoveryStorageProvider.overrideWithValue(
+        MemoryContentRecoveryStorage(),
+      ),
+      if (picker != null) betaImagePickerProvider.overrideWithValue(picker),
+    ],
+  );
+  addTearDown(container.dispose);
   await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-        betaApiProvider.overrideWithValue(api),
-        if (picker != null) betaImagePickerProvider.overrideWithValue(picker),
-      ],
+    UncontrolledProviderScope(
+      container: container,
       child: const MaterialApp(home: AuthenticityBetaScreen()),
     ),
   );
   await tester.pumpAndSettle();
+  return container;
 }
 
 Future<void> _tapVisible(WidgetTester tester, String text) async {
@@ -141,6 +154,34 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     },
   );
+  testWidgets('failed upload after unmount releases its reload block', (
+    tester,
+  ) async {
+    final api = _Api()
+      ..pendingUpload = Completer<String>()
+      ..failUpload = true;
+    final bytes = Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10, 42]);
+    final container = await _openScreen(
+      tester,
+      api,
+      picker: () async => XFile.fromData(bytes, name: 'authorized.png'),
+    );
+    final registry = container.read(contentMutationRegistryProvider);
+    await registry.ready;
+
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Select and upload image'));
+    await tester.pump();
+    expect(registry.canSafelyReload, isFalse);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    expect(registry.canSafelyReload, isFalse);
+    api.pendingUpload!.complete('fixture-case');
+    await tester.pump();
+    await tester.pump();
+    expect(registry.canSafelyReload, isTrue);
+  });
   testWidgets('cancelled picker and unsupported bytes never submit a case', (
     tester,
   ) async {

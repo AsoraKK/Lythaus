@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -8,6 +9,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lythaus/features/authenticity/alpha_api.dart';
 import 'package:lythaus/features/authenticity/alpha_screen.dart';
+import 'package:lythaus/features/feed/application/content_mutation.dart';
+import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
+import '../../helpers/content_recovery.dart';
 
 class _Api extends PrivateAlphaApi {
   _Api() : super(Dio(), () async => 'test-token');
@@ -15,6 +19,8 @@ class _Api extends PrivateAlphaApi {
   final calls = <String>[];
   bool empty = false;
   bool fail = false;
+  bool failTextSubmit = false;
+  Completer<void>? pendingTextSubmit;
   String status = 'complete';
   String adviserStatus = 'not_requested';
   String contentKind = 'image';
@@ -104,6 +110,8 @@ class _Api extends PrivateAlphaApi {
     required bool explanationRequested,
   }) async {
     calls.add('POST text');
+    if (pendingTextSubmit != null) await pendingTextSubmit!.future;
+    if (failTextSubmit) throw StateError('synthetic text submission failure');
     empty = false;
     status = 'queued';
     contentKind = 'text';
@@ -136,7 +144,7 @@ class _Api extends PrivateAlphaApi {
   }
 }
 
-Future<void> _openScreen(
+Future<ProviderContainer> _openScreen(
   WidgetTester tester,
   _Api api, {
   Future<XFile?> Function()? picker,
@@ -145,17 +153,25 @@ Future<void> _openScreen(
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
+  final container = ProviderContainer(
+    overrides: [
+      privateAlphaApiProvider.overrideWithValue(api),
+      contentRecoveryStorageProvider.overrideWithValue(
+        MemoryContentRecoveryStorage(),
+      ),
+      if (picker != null)
+        privateAlphaImagePickerProvider.overrideWithValue(picker),
+    ],
+  );
+  addTearDown(container.dispose);
   await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-        privateAlphaApiProvider.overrideWithValue(api),
-        if (picker != null)
-          privateAlphaImagePickerProvider.overrideWithValue(picker),
-      ],
+    UncontrolledProviderScope(
+      container: container,
       child: const MaterialApp(home: AuthenticityPrivateAlphaScreen()),
     ),
   );
   await tester.pumpAndSettle();
+  return container;
 }
 
 Future<void> _tapVisible(WidgetTester tester, Finder finder) async {
@@ -217,6 +233,40 @@ void main() {
     await _tapVisible(tester, find.widgetWithText(TextButton, 'Delete case'));
     expect(find.text('No private alpha cases yet.'), findsOneWidget);
   });
+
+  testWidgets(
+    'failed text submission after unmount releases its reload block',
+    (tester) async {
+      final api = _Api()
+        ..empty = true
+        ..failTextSubmit = true
+        ..pendingTextSubmit = Completer<void>();
+      final container = await _openScreen(tester, api);
+      final registry = container.read(contentMutationRegistryProvider);
+      await registry.ready;
+
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Text only').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byType(TextField).first,
+        'Private alpha text',
+      );
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Submit text'));
+      await tester.pump();
+      expect(registry.canSafelyReload, isFalse);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(registry.canSafelyReload, isFalse);
+      api.pendingTextSubmit!.complete();
+      await tester.pump();
+      await tester.pump();
+      expect(registry.canSafelyReload, isTrue);
+    },
+  );
 
   testWidgets(
     'image alpha preserves upload progress and renders observations',
