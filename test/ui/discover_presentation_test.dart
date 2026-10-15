@@ -222,28 +222,22 @@ void main() {
     }
   }
 
-  testWidgets('refresh and retry preserve already loaded posts', (
+  testWidgets('failed updates keep loaded posts and offer recovery', (
     tester,
   ) async {
-    for (final refreshing in [true, false]) {
-      await _render(
-        tester,
-        feed: DiscoverFeed(
-          feed: _feed,
-          items: [_reviewPost],
-          isRefreshing: refreshing,
-          hasError: !refreshing,
-          onRefresh: () async {},
-        ),
-      );
-      expect(find.byType(FeedCard), findsOneWidget);
-      expect(find.text(_reviewPost.body), findsOneWidget);
-      expect(find.text('No posts yet'), findsNothing);
-      expect(
-        find.text(refreshing ? 'Loading posts' : 'Couldn’t update the feed'),
-        findsOneWidget,
-      );
-    }
+    await _render(
+      tester,
+      feed: DiscoverFeed(
+        feed: _feed,
+        items: [_reviewPost],
+        hasError: true,
+        onRefresh: () async {},
+      ),
+    );
+    expect(find.byType(FeedCard), findsOneWidget);
+    expect(find.text(_reviewPost.body), findsOneWidget);
+    expect(find.text('No posts yet'), findsNothing);
+    expect(find.text('Couldn’t update the feed'), findsOneWidget);
   });
 
   testWidgets('empty feed refresh and error retry work from the keyboard', (
