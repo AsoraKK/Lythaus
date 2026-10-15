@@ -17,10 +17,24 @@ import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/state/providers/settings_providers.dart';
 import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/design_system/theme/lyth_theme.dart';
 
 import '../../helpers/content_recovery.dart';
 
 class _AuthService extends Mock implements AuthService {}
+
+bool _navigationHasFocus() {
+  final context = FocusManager.instance.primaryFocus?.context;
+  if (context is! Element) return false;
+  var found = false;
+  context.visitAncestorElements((element) {
+    found =
+        element.widget is LythausSideNavigation ||
+        element.widget is BottomNavigationBar;
+    return !found;
+  });
+  return found;
+}
 
 class _StaticLiveFeedNotifier extends LiveFeedController {
   _StaticLiveFeedNotifier(List<FeedItem> items)
@@ -81,6 +95,8 @@ void main() {
     ) async {
       await tester.binding.setSurfaceSize(const Size(390, 844));
       addTearDown(() => tester.binding.setSurfaceSize(null));
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       final user = User(
         id: '018f0000-0000-7000-8000-000000000001',
         email: 'synthetic@example.invalid',
@@ -104,7 +120,11 @@ void main() {
               MemoryContentRecoveryStorage(),
             ),
           ],
-          child: const MaterialApp(home: AdaptiveShell(initialIndex: 1)),
+          child: MaterialApp(
+            theme: LythausTheme.light(),
+            darkTheme: LythausTheme.dark(),
+            home: const AdaptiveShell(initialIndex: 1),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -116,28 +136,62 @@ void main() {
         baseOffset: 2,
         extentOffset: 9,
       );
-      for (final width in [1024.0, 1440.0, 320.0, 390.0]) {
-        await tester.binding.setSurfaceSize(Size(width, 844));
+      for (final scenario in [
+        for (final brightness in Brightness.values)
+          for (final scale in [1.0, 2.0])
+            for (final width in [320.0, 390.0, 1024.0, 1440.0])
+              (brightness, scale, width),
+      ]) {
+        tester.platformDispatcher.platformBrightnessTestValue = scenario.$1;
+        tester.platformDispatcher.textScaleFactorTestValue = scenario.$2;
+        await tester.binding.setSurfaceSize(Size(scenario.$3, 844));
         await tester.pumpAndSettle();
         expect(tester.state(find.byType(CreatePostScreen)), same(composer));
         expect(tester.widget<TextField>(field).controller, same(controller));
         expect(controller.text, 'Synthetic unfinished draft');
+        expect(tester.widget<TextField>(field).focusNode!.hasFocus, isTrue);
         expect(
           controller.selection,
           const TextSelection(baseOffset: 2, extentOffset: 9),
         );
         await tester.tap(find.text('Discover').last);
         await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<TextField>(find.byType(TextField, skipOffstage: false))
+              .focusNode!
+              .hasFocus,
+          isFalse,
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
         await tester.tap(find.text('Create').last);
         await tester.pumpAndSettle();
         expect(tester.state(find.byType(CreatePostScreen)), same(composer));
         expect(controller.text, 'Synthetic unfinished draft');
+        expect(
+          controller.selection,
+          const TextSelection(baseOffset: 2, extentOffset: 9),
+        );
+        expect(tester.widget<TextField>(field).focusNode!.hasFocus, isTrue);
         expect(tester.takeException(), isNull);
+        for (var step = 0; step < 40 && !_navigationHasFocus(); step++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.pump();
+        }
+        expect(_navigationHasFocus(), isTrue);
+        tester.widget<TextField>(field).focusNode!.requestFocus();
+        await tester.pump();
       }
       final container = ProviderScope.containerOf(
         tester.element(find.byType(AdaptiveShell)),
       );
       expect(container.read(currentUserProvider), same(user));
+      final navigation = tester.widget<BottomNavigationBar>(
+        find.byType(BottomNavigationBar),
+      );
+      navigation.onTap!(0);
+      navigation.onTap!(1);
       await container.read(authStateProvider.notifier).signOut();
       await tester.binding.setSurfaceSize(const Size(1440, 844));
       await tester.pumpAndSettle();
@@ -428,13 +482,14 @@ void main() {
               data: MediaQuery.of(context).copyWith(disableAnimations: true),
               child: child!,
             ),
-            home: const AdaptiveShell(),
+            home: const AdaptiveShell(brand: Text('Fixture identity')),
           ),
         ),
       );
       await tester.pumpAndSettle();
 
       expect(find.byType(LythausSideNavigation), findsOneWidget);
+      expect(find.text('Fixture identity'), findsOneWidget);
       expect(
         tester
             .widget<LythausSideNavigation>(find.byType(LythausSideNavigation))

@@ -1,5 +1,11 @@
 # Adaptive desktop navigation: retained review
 
+The current navigation is independent of PR1024. It uses main's existing plain
+Lythaus text, with an optional injected brand widget; no logo or font selection is
+activated. [Unstacked verification](unstacked/README.md) supersedes the historical
+stacked captures below. The old stack remains preserved at
+`archive/navigation-stacked-1804d117`; PR1024 is unchanged.
+
 [Resumed verification and 320px captures](resumed/README.md) document the later
 composer-preservation fix and its tests. The comparisons below are historical.
 

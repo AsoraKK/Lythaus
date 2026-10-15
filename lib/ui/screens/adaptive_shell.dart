@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lythaus/design_system/widgets/lyth_brand.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
@@ -20,9 +19,10 @@ import 'package:lythaus/ui/screens/rewards/rewards_dashboard.dart';
 const double kDesktopBreakpoint = 768;
 
 class AdaptiveShell extends ConsumerStatefulWidget {
-  const AdaptiveShell({super.key, this.initialIndex = 0});
+  const AdaptiveShell({super.key, this.initialIndex = 0, this.brand});
 
   final int initialIndex;
+  final Widget? brand;
 
   @override
   ConsumerState<AdaptiveShell> createState() => _AdaptiveShellState();
@@ -33,6 +33,37 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
   final Set<int> _visited = {0};
   final List<int> _history = [];
   final _contentKey = GlobalKey();
+  final _tabFocusScopes = List.generate(
+    4,
+    (_) => FocusScopeNode(
+      traversalEdgeBehavior: TraversalEdgeBehavior.parentScope,
+    ),
+  );
+  final _rememberedFocus = List<FocusNode?>.filled(4, null);
+
+  void _prepareTabFocus(int nextIndex) {
+    if (nextIndex == _currentIndex) return;
+    final focused = _tabFocusScopes[_currentIndex].focusedChild;
+    if (focused != null) _rememberedFocus[_currentIndex] = focused;
+    final target = _rememberedFocus[nextIndex];
+    if (target == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted &&
+          _currentIndex == nextIndex &&
+          target.context != null &&
+          target.canRequestFocus) {
+        target.requestFocus();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    for (final scope in _tabFocusScopes) {
+      scope.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -45,6 +76,7 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
   void didUpdateWidget(AdaptiveShell oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialIndex != widget.initialIndex) {
+      _prepareTabFocus(widget.initialIndex.clamp(0, 3));
       if (_history.isNotEmpty && _history.last == widget.initialIndex) {
         _history.removeLast();
       }
@@ -55,6 +87,7 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
 
   void _onTabTapped(int index) {
     if (index == _currentIndex) return;
+    _prepareTabFocus(index);
     setState(() {
       _history.add(_currentIndex);
       _currentIndex = index;
@@ -129,7 +162,15 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
         children: [
           for (var i = 0; i < tabs.length; i += 1)
             _visited.contains(i)
-                ? TickerMode(enabled: _currentIndex == i, child: tabs[i])
+                ? FocusScope(
+                    node: _tabFocusScopes[i],
+                    skipTraversal: _currentIndex != i,
+                    descendantsAreFocusable: _currentIndex == i,
+                    child: TickerMode(
+                      enabled: _currentIndex == i,
+                      child: tabs[i],
+                    ),
+                  )
                 : const SizedBox.shrink(),
         ],
       ),
@@ -138,6 +179,7 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
       canPop: _history.isEmpty,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop && _history.isNotEmpty) {
+          _prepareTabFocus(_history.last);
           setState(() => _currentIndex = _history.removeLast());
           final router = GoRouter.maybeOf(context);
           if (router != null) {
@@ -173,16 +215,7 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
                         onSettings: _openSettings,
                         onHelp: _openHelp,
                         extended: constraints.maxWidth >= 1100,
-                        brand: constraints.maxWidth >= 1100
-                            ? const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  LythBrandMark(excludeFromSemantics: true),
-                                  SizedBox(width: 12),
-                                  LythBrandWordmark(),
-                                ],
-                              )
-                            : const LythBrandMark(),
+                        brand: widget.brand ?? const Text('Lythaus'),
                       ),
                       const VerticalDivider(width: 1),
                       Expanded(child: content),

@@ -54,16 +54,7 @@ void main() {
                           child: LythausSideNavigation(
                             currentIndex: 0,
                             extended: extended,
-                            brand: extended
-                                ? const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      LythBrandMark(excludeFromSemantics: true),
-                                      SizedBox(width: 12),
-                                      LythBrandWordmark(),
-                                    ],
-                                  )
-                                : const LythBrandMark(),
+                            brand: const Text('Lythaus'),
                             onDestinationSelected: (index) =>
                                 calls.add('$index'),
                             onSettings: () => calls.add('settings'),
