@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createHash } from 'node:crypto';
 import { MAX_IMAGE_BYTES } from '../src/index.ts';
-import { parseStandardUpload, verifyStandardUploadBytes, UploadIntegrityError } from '../src/standard-upload.ts';
+import { parseStandardUpload, verifyStandardUploadBytes, UploadIntegrityError, readStandardDerivative, standardDerivativeMetadata } from '../src/standard-upload.ts';
 
 const png = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 0]);
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -61,4 +61,21 @@ test('storage read failures stay transient rather than becoming integrity reject
 test('matching a file signature is only an integrity check, not a full decode or safety verdict', async () => {
   const nonDecodable = png.slice(0, 8);
   assert.deepEqual(await verifyStandardUploadBytes(source(nonDecodable), metadata(nonDecodable)), nonDecodable);
+});
+
+test('cached derivatives bind exact bytes and source identity within the existing reservation', async () => {
+  const bytes = Uint8Array.from([82,73,70,70,4,0,0,0,87,69,66,80]);
+  const derivative = { bytes, sha256: digest(bytes), width: 1, height: 1 };
+  const customMetadata = standardDerivativeMetadata(derivative, metadata());
+  const stored = patch => ({ ...source(bytes), customMetadata: { ...customMetadata, ...patch } });
+  assert.deepEqual(await readStandardDerivative(stored(), metadata()), derivative);
+  for (const patch of [{ transform: 'unknown' }, { sourceSha256: '0'.repeat(64) }, { sourceBytes: '13' },
+    { sourceContentType: 'image/jpeg' }, { width: '1.5' }, { height: '-1' }, { sha256: 'invalid' }]) {
+    await assert.rejects(readStandardDerivative(stored(patch), metadata()), /media_derivative_conflict/);
+  }
+  await assert.rejects(readStandardDerivative(stored({ sha256: '0'.repeat(64) }), metadata()), /upload_checksum_invalid/);
+  const smallerReservation = { ...metadata(), expected_bytes: bytes.length - 1 };
+  await assert.rejects(readStandardDerivative({ ...source(bytes), customMetadata: standardDerivativeMetadata(derivative, smallerReservation) },
+    smallerReservation), /media_derivative_conflict/);
+  await assert.rejects(readStandardDerivative(source(bytes), metadata()), /media_derivative_conflict/);
 });

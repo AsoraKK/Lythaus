@@ -30,8 +30,8 @@ const nativeModerationWorkerdTest = 'packages/authenticity/tests/openai-moderati
 const publicationPg17Script = 'node scripts/ci/run-publication-pg17.mjs';
 const allocatedJobsDiagnosticTests = 'apps/lythaus-jobs/tests/reputation-session-diagnostic.test.mjs apps/lythaus-jobs/tests/reputation-session-diagnostic.workerd.mjs';
 const allocatedJobsDiagnosticFiles = new Map([
-  ['apps/lythaus-jobs/src/index.ts', '8a6487ab099287f151fc8594b3b9ff846a9226b7'],
-  ['apps/lythaus-public-api/src/index.ts', '7a941be1765e82b5cbf00294b114952ab6ea27a1'],
+  ['apps/lythaus-jobs/src/index.ts', '79b96b2a830b4c0df3231a6c78d4ac4e59534db1'],
+  ['apps/lythaus-public-api/src/index.ts', '39b25edcffabf06d64caf12b5301cb515e9662d9'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],
@@ -784,6 +784,19 @@ test('allocated Jobs pins reject altered historical and unrelated source paths',
     allocatedJobsDiagnosticFiles.values().next().value), assert.AssertionError);
   assert.throws(() => assertAllocatedJobsDiagnosticFile('apps/lythaus-public-api/src/auth-runtime-policy.ts',
     allocatedJobsDiagnosticFiles.values().next().value), assert.AssertionError);
+});
+
+test('image-integrity allocation rejects superseded Worker bytes without broadening the diagnostic scope', () => {
+  for (const filename of ['apps/lythaus-jobs/src/index.ts', 'apps/lythaus-public-api/src/index.ts']) {
+    assert.throws(() => assertAllocatedJobsDiagnosticFile(filename,
+      git('rev-parse', `489aef297ff0b1a40744504594122c9ebc43930d:${filename}`)), assert.AssertionError);
+  }
+  assert.throws(() => assertAllocatedJobsDiagnosticFile('apps/lythaus-jobs/src/index.ts',
+    git('rev-parse', 'fecdd6f6b19ad5ea9dd17afa70e420e6deb147b8:apps/lythaus-jobs/src/index.ts')), assert.AssertionError);
+  for (const filename of ['packages/media/src/standard-upload.ts', 'apps/marketing-site/src/pages/index.astro']) {
+    assert.throws(() => assertAllocatedJobsDiagnosticFile(filename,
+      allocatedJobsDiagnosticFiles.get('apps/lythaus-jobs/src/index.ts')), assert.AssertionError);
+  }
 });
 
 test('reviewed reputation exception rejects changed bytes, historical bytes and every other dependency path', () => {

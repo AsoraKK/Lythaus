@@ -12,9 +12,11 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
   const name = `lythaus_auth_test_post_media_${randomUUID().replaceAll('-', '')}`;
   const local = new URL(target); local.pathname = '/' + name;
   const connections = new Map(), failures = [];
-  let admin, fixture, created = false, beforeQuery;
+  let admin, fixture, created = false, beforeQuery, effectHandler;
+  const effects = [];
   const open = async role => {
     const client = new pg.Client({ connectionString: local.toString(), ssl: false, connectionTimeoutMillis: 5000 });
+    client.on('error', () => {});
     await client.connect();
     await client.query("SET statement_timeout='5s'");
     if (role) {
@@ -61,11 +63,13 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
           connections.delete(input.transactionId); await client?.end();
         }
       }
-    });
+    }, async effect => { effects.push(effect); await effectHandler?.(effect); });
     const png = Uint8Array.from([137,80,78,71,13,10,26,10,0,0,0,0]);
     const checksum = createHash('sha256').update(png).digest('hex');
     async function seed(status = 'pending', purpose = 'standard') {
       beforeQuery = undefined;
+      effectHandler = undefined;
+      effects.length = 0;
       const userId = randomUUID(), sessionId = randomUUID(), eventId = randomUUID();
       const objectKey = `quarantine/${userId}/${sessionId}`;
       await admin.query("INSERT INTO identity.users(id,status) VALUES($1,'active')", [userId]);
@@ -142,16 +146,98 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
       assert.equal(Number(ledger.bytes_reserved), 0); assert.equal(Number(ledger.bytes_rejected), png.length);
       assert.equal(await fixture.quarantine.head(input.objectKey), null);
     });
-    await t.test('an expired session at the final lock cannot create a review row', async () => {
+    await t.test('an expired session at the initial lock cannot reach processing', async () => {
       const input = await seed('queued');
       beforeQuery = async request => {
-        if (request.text.includes('SELECT status FROM media.upload_sessions')) {
+        if (request.text.includes('FROM media.upload_sessions') && request.text.includes('FOR UPDATE NOWAIT')) {
           beforeQuery = undefined;
           await admin.query("UPDATE media.upload_sessions SET status='expired' WHERE id=$1", [input.sessionId]);
         }
       };
-      assert.deepEqual(await queue(input), { ack: 0, retry: 1, imageCalls: 1 });
+      assert.deepEqual(await queue(input), { ack: 0, retry: 1, imageCalls: 0 });
       assert.equal((await session(input)).status, 'expired');
+      assert.equal((await admin.query('SELECT count(*)::integer AS n FROM media.objects WHERE owner_id=$1', [input.userId])).rows[0].n, 0);
+    });
+    await t.test('derivative growth is rejected within the reservation before storage or inference', async () => {
+      const input = await seed('queued');
+      const expanded = [82,73,70,70,5,0,0,0,87,69,66,80,0];
+      assert.deepEqual(await queue({ ...input, transformed: expanded, aiEnabled: true }), { ack: 1, retry: 0, imageCalls: 1 });
+      assert.equal((await session(input)).status, 'rejected');
+      assert.equal(await fixture.approved.head(`approved/${input.userId}/${input.sessionId}.webp`), null);
+      const ledger = (await admin.query('SELECT bytes_reserved,bytes_approved,bytes_rejected FROM media.storage_ledger WHERE user_id=$1', [input.userId])).rows[0];
+      assert.deepEqual(Object.values(ledger).map(Number), [0, 0, png.length]);
+      assert.equal(effects.filter(effect => effect.type === 'beforePut').length, 0);
+    });
+    for (const delivery of ['different-event', 'reclaimed-event']) {
+      await t.test(`${delivery} cannot repeat Images work while the first transaction owns the session`, async () => {
+        const input = await seed('queued');
+        const reached = Promise.withResolvers(), release = Promise.withResolvers();
+        effectHandler = async effect => {
+          if (effect.type === 'info' && effect.input.attempt === 'first') { reached.resolve(); await release.promise; }
+        };
+        const first = queue({ ...input, attempt: 'first', transformed: [82,73,70,70,5,0,0,0,87,69,66,80,0] });
+        try {
+          await reached.promise;
+          const event = delivery === 'different-event' ? { ...input.event, eventId: randomUUID() } : input.event;
+          if (delivery === 'reclaimed-event') await admin.query("UPDATE system.consumer_inbox SET claimed_at=now()-interval '6 minutes' WHERE event_id=$1", [event.eventId]);
+          assert.deepEqual(await queue({ ...input, event, attempt: 'second' }), { ack: 0, retry: 1, imageCalls: 0 });
+          assert.equal(effects.filter(effect => effect.type === 'info').length, 1);
+          assert.ok(failures.some(error => error.code === '55P03' && error.statement.includes('FOR UPDATE NOWAIT')));
+        } finally { release.resolve(); }
+        assert.deepEqual(await first, { ack: 1, retry: 0, imageCalls: 1 });
+        assert.deepEqual(await queue(input), { ack: 1, retry: 0, imageCalls: 0 });
+        assert.equal(effects.filter(effect => effect.type === 'transform').length, 1);
+        assert.equal((await session(input)).status, 'rejected');
+      });
+    }
+    await t.test('a persisted derivative is reused after canonical grant failure with zero repeated Images work', async () => {
+      const input = await seed('queued');
+      assert.deepEqual(await queue({ ...input, aiEnabled: true }), { ack: 0, retry: 1, imageCalls: 1 });
+      const key = `approved/${input.userId}/${input.sessionId}.webp`;
+      const stored = await fixture.approved.get(key);
+      const original = await stored.arrayBuffer();
+      assert.deepEqual(await queue({ ...input, decoderFailure: true, aiEnabled: true }), { ack: 0, retry: 1, imageCalls: 0 });
+      assert.deepEqual(await (await fixture.approved.get(key)).arrayBuffer(), original);
+      assert.equal(effects.filter(effect => effect.type === 'transform').length, 1);
+      assert.equal(effects.filter(effect => effect.type === 'beforePut').length, 1);
+      assert.equal((await session(input)).status, 'queued');
+      assert.ok(!fixture.statements.some(input => /system\.cost_/.test(input.text ?? '')));
+    });
+    await t.test('an unbound older derivative fails closed without overwrite or decoding', async () => {
+      const input = await seed('queued');
+      const key = `approved/${input.userId}/${input.sessionId}.webp`;
+      await fixture.approved.put(key, png);
+      assert.deepEqual(await queue(input), { ack: 0, retry: 1, imageCalls: 0 });
+      assert.deepEqual(new Uint8Array(await (await fixture.approved.get(key)).arrayBuffer()), png);
+      assert.equal(effects.length, 0);
+    });
+    await t.test('lost transaction and overlapping late PUT cannot overwrite the winning derivative', async () => {
+      const input = await seed('queued');
+      const reached = Promise.withResolvers(), release = Promise.withResolvers();
+      let firstTransaction;
+      beforeQuery = request => {
+        if (!firstTransaction && request.text.includes('FOR UPDATE NOWAIT')) firstTransaction = request.transactionId;
+      };
+      effectHandler = async effect => {
+        if (effect.type === 'beforePut' && effect.input.attempt === 'stale') { reached.resolve(); await release.promise; }
+      };
+      const stale = queue({ ...input, attempt: 'stale' });
+      const winnerBytes = [82,73,70,70,4,0,0,0,87,69,66,80];
+      winnerBytes[4] = 5;
+      try {
+        await reached.promise;
+        assert.ok(firstTransaction);
+        const backend = connections.get(firstTransaction).processID;
+        assert.equal((await admin.query('SELECT pg_terminate_backend($1) AS terminated', [backend])).rows[0].terminated, true);
+        const event = { ...input.event, eventId: randomUUID() };
+        assert.deepEqual(await queue({ ...input, event, attempt: 'winner', transformed: winnerBytes }), { ack: 0, retry: 1, imageCalls: 1 });
+      } finally { release.resolve(); }
+      assert.deepEqual(await stale, { ack: 0, retry: 1, imageCalls: 1 });
+      const stored = await fixture.approved.get(`approved/${input.userId}/${input.sessionId}.webp`);
+      assert.deepEqual(new Uint8Array(await stored.arrayBuffer()), Uint8Array.from(winnerBytes));
+      assert.equal(effects.filter(effect => effect.type === 'stored').length, 1);
+      assert.equal(effects.filter(effect => effect.type === 'conflict').length, 1);
+      assert.equal((await session(input)).status, 'queued');
       assert.equal((await admin.query('SELECT count(*)::integer AS n FROM media.objects WHERE owner_id=$1', [input.userId])).rows[0].n, 0);
     });
     assert.equal(fixture.outbound.length, 0);

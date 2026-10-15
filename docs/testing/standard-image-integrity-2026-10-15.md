@@ -18,7 +18,11 @@ files, the standard upload functions in Public API `src/index.ts`, and the
 ordinary `processMediaUpload` function in Jobs `src/index.ts`. The only shared
 test maintenance is the existing byte-boundary assertion in
 `scripts/tests/product-integrity-runtime-invariants.test.mjs` and one additive
-CI step in `.github/workflows/ci.yml`. No Flutter or generated SDK files change.
+CI step in `.github/workflows/ci.yml`. Revision 2 also reconciles the two exact
+Worker blob pins in `apps/marketing-site/tests/homepage-protection.test.mjs`,
+with all existing negative controls preserved. No Flutter or generated SDK
+files change. The [revision 2 review packet](standard-image-integrity-review-2026-10-15.md)
+records the independent findings, exact blob identities and true race evidence.
 
 ## Verified path on main
 
@@ -35,9 +39,11 @@ CI step in `.github/workflows/ci.yml`. No Flutter or generated SDK files change.
 | Privacy | Jobs `AccountDeleteWorkflow` / `RetentionCleanupWorkflow` | Existing hold checks, private storage deletion and database tombstones remain. Rejected/abandoned upload cleanup, in-flight derivative writes, account fencing and future attachment locators still need complete acceptance. |
 
 Checked-in `MEDIA_UPLOADS_ENABLED` and `MEDIA_PROCESSING_ENABLED` are both false.
-Jobs `AUTHENTICITY_AI_ENABLED` is true in source, so enabling media processing
-would also make the existing generic evaluator reachable. This work does not
-change any of those values. Live configuration and grants were not inspected;
+Jobs `AUTHENTICITY_AI_ENABLED` is true in source. The original main path would
+call its generic metadata evaluator if media processing were enabled. Revision 2
+removes that call from ordinary image processing and records explicit unavailable
+review evidence with `modelId: not-executed`, even when the AI flag is true.
+No flag value changes. Live configuration and grants were not inspected;
 checked-in values are not a claim about deployment state.
 
 ## Implemented
@@ -54,12 +60,18 @@ checked-in values are not a claim about deployment state.
   the final state transition. Revalidate owner, standard purpose and recorded
   source metadata in that transition.
 - Recheck checksum after queue delay, isolate standard uploads from private
-  alpha/beta purposes, bound transformed output, and reject invalid dimensions
-  or non-WebP output before storing a derivative.
-- Lock/revalidate the upload session inside the review persistence transaction.
-  A session already expired/rejected at that lock cannot create new review
-  records or settle the ledger. A concurrent completed upload adds no repeated
-  database effects.
+  alpha/beta purposes, and reject invalid dimensions or non-WebP output. Bound
+  transformed bytes to the existing intake reservation, rejecting growth rather
+  than inventing an unapproved extra reservation. Final settlement must consume
+  an existing sufficient reservation; it cannot create a missing ledger.
+- Lock the upload session with `FOR UPDATE NOWAIT` before R2/Images work, keeping
+  the same transaction through review persistence. A contender retries before
+  decoding; terminal sessions perform only idempotent post-commit cleanup.
+- Store derivatives conditionally with source-bound private metadata. Retry
+  verifies and reuses existing bytes without another Images call. Unknown,
+  mismatched or older unbound derivatives remain blocked, never overwritten.
+- Do not call metadata-only image inference. Persist explicit unavailable/review
+  evidence using the existing contract, without claiming a model was executed.
 - Preserve retry on disabled processing and on failed quarantine deletion.
   Activity now says private review is pending; rejection activity no longer
   claims safety analysis or completed cleanup before deletion succeeds.
@@ -120,12 +132,17 @@ npm run test:product-integrity-runtime
 Set `PLANETSCALE_PG17_TEST_DATABASE_URL` to the existing disposable loopback
 `lythaus_auth_test_post_control` database. The dedicated test fails if the target
 is absent or unsafe. CI registers the same three suites. Local unit/Workerd
-coverage includes 20 tests; PG17 includes seven scenario groups plus their
+coverage includes 22 tests; PG17 includes thirteen scenario groups plus their
 parent test. Passing expected-denial tests is **not** a successful image journey.
 
-Local results on the review source: combined dedicated suites **28/28** pass;
+Local results on revision 2: combined dedicated suites **36/36** pass;
 existing attachment byte-boundary/preparation and product-policy suites **55/55**;
 product-integrity checks **21/21**; native architecture/runtime **376/376**.
+Homepage protection is **30/30**; the full marketing suite is **84/84** after
+restoring dependencies from its unchanged lockfile. Its first run had nine
+cache-policy failures because the local install resolved upstream
+`http-cache-semantics` instead of the pinned local adapter; no cache assertion,
+dependency version or lockfile was changed.
 Typechecking, workflow action pins, provider/naming hygiene, canonical migration
 manifest validation and whitespace checks pass. The first native run had one
 npm default-cache filesystem failure (375/376); a writable `/tmp` npm-cache
@@ -143,19 +160,26 @@ review remain separate from these local results.
    requires its own review; no grant is changed here.
 2. **Detection/safety:** pixel-bound qualified/calibrated evidence, separate
    safety and authenticity results, durable current-revision persistence and
-   applicable acceptance/approval remain missing. Generic metadata evaluation
-   cannot fill that gap. No new threshold, provider request or spend is added.
+   applicable acceptance/approval remain missing. The prior metadata-only image
+   evaluation is now replaced by explicit unavailable evidence; it did not fill
+   that gap. No new threshold, provider request or spend is added.
 3. **Byte/privacy acceptance:** source signature alone is incomplete. Full
    decoder behavior, orientation and GPS/EXIF removal, presigned PUT ingress
    bounds/replay, original retention, rejected/abandoned cleanup and bounded
    storage/decoder waits still need validation and approved contracts.
-4. **Deletion/concurrency:** the new session lock rejects a committed expired
-   state but is not an account/deletion fence. A private derivative is written
-   before the DB transaction and can remain orphaned after failure or deletion.
+4. **Deletion/concurrency:** the early session lock rejects an expired state but
+   is not an account/deletion fence. It retains a DB transaction across external
+   Images work; hosted timeout/connection behavior needs acceptance. A private
+   derivative is written before its DB transaction commits and can remain
+   orphaned after failure or deletion.
    It is not automatically deleted on uncertain commit because another attempt
    may have committed it. Canonical queue-source event binding, current-account
    fencing, full account-delete/hold/retention races, cleanup
    reconciliation and attachment tombstones remain blocked.
+   If the transaction is lost before a derivative is stored, Images work can
+   repeat. Conditional PUT prevents overwrite but cannot supply exactly-once
+   external execution. The tests demonstrate this boundary rather than hiding
+   it. Physical orphan storage is not a certified aggregate-quota bound.
 5. **Publication integration:** unresolved attachment policy, unapplied relation,
    authoritative evidence binding, transaction/revision locks, moderator/appeal
    authority, private reads, feed projection and complete global publishing

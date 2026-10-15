@@ -8,7 +8,7 @@ const { build } = require('esbuild');
 const { Miniflare, convertV4MiniflareOptions } = require('miniflare');
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 
-export async function standardUploadFixture(database) {
+export async function standardUploadFixture(database, onEffect = async () => {}) {
   const statements = [], outbound = [];
   const bundle = await build({ absWorkingDir: root, bundle: true, write: false, format: 'esm', platform: 'node',
     target: 'es2022', external: ['cloudflare:workers'],
@@ -57,20 +57,36 @@ export async function standardUploadFixture(database) {
         const input = await request.json();
         const env = { ...bindings, DB_APP_FRESH: { role: 'lythaus_runtime' }, DB_JOBS_FRESH: { role: 'lythaus_jobs' },
           MEDIA_PROCESSING_ENABLED: input.enabled === false ? 'false' : 'true',
-          AUTHENTICITY_AI_ENABLED: 'false', MEDIA_QUOTA_BYTES: '10485760',
+          AUTHENTICITY_AI_ENABLED: input.aiEnabled ? 'true' : 'false', MEDIA_QUOTA_BYTES: '10485760',
           R2_ACCOUNT_ID: 'synthetic', R2_ACCESS_KEY_ID: 'synthetic', R2_SECRET_ACCESS_KEY: 'synthetic',
           MEDIA_QUARANTINE_BUCKET: 'synthetic-private-quarantine',
+        };
+        const effect = async type => {
+          const response = await bindings.FIXTURE_EFFECT.fetch('https://fixture.invalid/effect', {
+            method: 'POST', body: JSON.stringify({ type, input }),
+          });
+          if (!response.ok) throw new Error('synthetic_effect_failed');
+        };
+        env.MEDIA_APPROVED = {
+          get: (...args) => bindings.MEDIA_APPROVED.get(...args),
+          put: async (...args) => {
+            await effect('beforePut');
+            const result = await bindings.MEDIA_APPROVED.put(...args);
+            await effect(result ? 'stored' : 'conflict');
+            return result;
+          },
         };
         let imageCalls = 0;
         env.IMAGES = {
           async info() {
             imageCalls++;
+            await effect('info');
             if (input.decoderFailure) throw new Error('synthetic_decode_unavailable');
             return input.dimensions ?? { width: 1, height: 1 };
           },
-          input() { return { output: async () => ({ image: async () => new Response(input.oversizedTransform
+          input() { return { output: async () => { await effect('transform'); return { image: async () => new Response(input.oversizedTransform
             ? new Uint8Array(10 * 1024 * 1024 + 1)
-            : Uint8Array.from(input.transformed ?? [82,73,70,70,4,0,0,0,87,69,66,80])).body }) }; },
+            : Uint8Array.from(input.transformed ?? [82,73,70,70,4,0,0,0,87,69,66,80])).body }; } }; },
         };
         if (input.failDelete) env.MEDIA_QUARANTINE = {
           get: (...args) => bindings.MEDIA_QUARANTINE.get(...args),
@@ -100,7 +116,10 @@ export async function standardUploadFixture(database) {
     r2Buckets: ['MEDIA_QUARANTINE', 'MEDIA_APPROVED'],
     bindings: { EXPECTED_HOSTNAMES: 'local.test', CORS_ALLOWED_ORIGINS: 'https://local.test' },
     outboundService: request => { outbound.push(request.url); throw new Error('fixture denies all external requests'); },
-    serviceBindings: { FIXTURE_DB: async request => {
+    serviceBindings: { FIXTURE_EFFECT: async request => {
+      try { await onEffect(await request.json()); return new Response(null, { status: 204 }); }
+      catch { return new Response(null, { status: 500 }); }
+    }, FIXTURE_DB: async request => {
       const input = await request.json();
       statements.push(input);
       try { return Response.json(await database(input)); }

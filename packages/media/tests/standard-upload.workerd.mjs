@@ -15,6 +15,7 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
     if (input.action === 'rollback') { state = snapshot; return {}; }
     const sql = input.text.replace(/\s+/g, ' ').trim(), values = input.values;
     if (beforeQuery) await beforeQuery(sql, values);
+    if (sql === 'SELECT 1') return result([{}]);
     if (sql.startsWith('INSERT INTO system.consumer_inbox')) {
       if (state.inbox) return result([]);
       state.inbox = 'processing'; return result([{}]);
@@ -26,7 +27,7 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       if (state.session.purpose !== 'standard' || state.session.id !== values[0]) return result([]);
       if (sql.includes('object_key = $2') && values[1] !== state.session.object_key) return result([]);
       if (sql.includes('user_id = $2') && values[1] !== state.session.user_id) return result([]);
-      if (sql.includes('FOR UPDATE') && (values[2] !== state.session.object_key || values[4] !== state.session.checksum_sha256)) return result([]);
+      if (sql.includes('expected_bytes = $4') && (values[2] !== state.session.object_key || values[4] !== state.session.checksum_sha256)) return result([]);
       return result([{ ...state.session }]);
     }
     if (sql.startsWith('UPDATE media.upload_sessions')) {
@@ -44,6 +45,10 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       state.activity.push({ title: values[8], result: values[10], metadata: JSON.parse(values[17]) }); return result([{ id: values[0] }]);
     }
     if (sql.includes('INSERT INTO system.outbox_events')) { state.outbox.push({ id: values[0] }); return result([{}]); }
+    if (sql.startsWith('UPDATE media.storage_ledger SET bytes_uploaded')) {
+      if (state.reservationMissing) return result([]);
+      state.ledgerWrites++; return result([{}]);
+    }
     if (sql.startsWith('UPDATE media.storage_ledger')) { state.rejections++; return result([{}]); }
     if (sql.startsWith('INSERT INTO media.storage_ledger')) { state.ledgerWrites++; return result([{}]); }
     if (sql.startsWith('SELECT bytes_reserved')) return result([{ bytes_reserved: 0, bytes_approved: 0 }]);
@@ -146,7 +151,7 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       assert.deepEqual(await queue({ ...input, decoderFailure: true }), { ack: 0, retry: 1, imageCalls: 1 });
       assert.ok(await fixture.quarantine.head(state.session.object_key));
       assert.deepEqual(await queue({ ...input, transformed: [0, 1, 2] }), { ack: 0, retry: 1, imageCalls: 1 });
-      assert.deepEqual(await queue({ ...input, oversizedTransform: true }), { ack: 0, retry: 1, imageCalls: 1 });
+      assert.deepEqual(await queue({ ...input, oversizedTransform: true }), { ack: 1, retry: 0, imageCalls: 1 });
       assert.equal(state.objects.length, 0);
       assert.equal(await fixture.approved.head(`approved/${input.userId}/${input.sessionId}.webp`), null);
     });
@@ -158,10 +163,10 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
         assert.equal(state.objects.length, 0);
       }
     });
-    await t.test('late deletion state blocks database resurrection before review persistence', async () => {
+    await t.test('deleted session state blocks processing at the initial lock', async () => {
       const input = await seed();
-      beforeQuery = sql => { if (sql.startsWith('SELECT status FROM media.upload_sessions')) state.session.status = 'expired'; };
-      assert.deepEqual(await queue(input), { ack: 0, retry: 1, imageCalls: 1 });
+      beforeQuery = sql => { if (sql.includes('FROM media.upload_sessions') && sql.includes('FOR UPDATE NOWAIT')) state.session.status = 'expired'; };
+      assert.deepEqual(await queue(input), { ack: 0, retry: 1, imageCalls: 0 });
       assert.equal(state.objects.length, 0);
       assert.equal(state.evidence.length, 0);
       assert.equal(state.ledgerWrites, 0);
@@ -176,9 +181,18 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       assert.equal(state.ledgerWrites, 0);
       assert.ok(await fixture.quarantine.head(state.session.object_key));
       beforeQuery = undefined;
-      assert.deepEqual(await queue(input), { ack: 1, retry: 0, imageCalls: 1 });
+      assert.deepEqual(await queue(input), { ack: 1, retry: 0, imageCalls: 0 });
       assert.equal(state.objects.length, 1);
       assert.equal(state.evidence.length, 1);
+    });
+    await t.test('a missing reservation cannot settle a review object or invent a ledger', async () => {
+      const input = await seed();
+      state.reservationMissing = true;
+      assert.deepEqual(await queue(input), { ack: 0, retry: 1, imageCalls: 1 });
+      assert.equal(state.session.status, 'queued');
+      assert.equal(state.objects.length, 0);
+      assert.equal(state.evidence.length, 0);
+      assert.equal(state.ledgerWrites, 0);
     });
     await t.test('processing remains private review with unavailable evidence, and duplicate delivery has no repeated effect', async () => {
       const input = await seed();
@@ -189,6 +203,7 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       assert.equal(state.evidence[0].recommendation, 'review');
       assert.equal(state.evidence[0].reviewRequired, true);
       assert.equal(state.evidence[0].policyVersion, 'evaluation-only-v1');
+      assert.equal(state.evidence[0].modelId, 'not-executed');
       assert.equal(state.activity.at(-1).metadata.moderationState, 'under_review');
       assert.equal(state.activity.at(-1).result, 'pending');
       assert.deepEqual(await queue(input), { ack: 1, retry: 0, imageCalls: 0 });
