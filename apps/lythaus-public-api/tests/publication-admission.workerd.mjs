@@ -445,11 +445,17 @@ test('historical appeal authority stays fail-closed across admin, outbox, Jobs a
 
     await t.test('stale revision and independent penalties survive old canonical overturn events, retries and forged authority labels', async () => {
       const f = await prepare();
-      const role = (await client.query("SELECT has_table_privilege('lythaus_jobs','identity.users','UPDATE') AS can_lock_users")).rows[0];
+      const role = (await client.query(`SELECT
+        has_table_privilege('lythaus_jobs','identity.users','UPDATE') AS can_lock_users,
+        has_function_privilege('lythaus_jobs','trust.lock_reputation_subject(uuid)','EXECUTE') AS can_use_subject_lock`)).rows[0];
       assert.equal(role.can_lock_users, false);
+      assert.equal(role.can_use_subject_lock, true);
       const empty = await snapshot();
-      assert.deepEqual(await deliver(f.blockEvent), { ack: 0, retry: 1 });
-      assert.deepEqual(await snapshot(), empty, 'canonical Jobs cannot apply a penalty without its required user-lock privilege');
+      assert.deepEqual(await deliver(f.blockEvent), { ack: 1, retry: 0 });
+      const queuedPenalty = (await client.query(`SELECT event_type,status,source_event_id
+        FROM trust.reputation_events WHERE subject_user_id=$1 AND source_event_id=$2`, [f.item.owner.id, f.blockEvent.id])).rows;
+      assert.deepEqual(queuedPenalty, [{ event_type: 'confirmed_spam', status: 'effective', source_event_id: f.blockEvent.id }]);
+      assert.notDeepEqual(await snapshot(), empty, 'Jobs applies a canonical penalty through the narrow subject-lock capability');
       await seedHistoricalPenalty(f, f.blockEvent, 'confirmed_spam');
       const initialPenalty = (await client.query("SELECT id,status,moderation_decision_id FROM trust.reputation_events WHERE subject_user_id=$1 AND impact<0", [f.item.owner.id])).rows[0];
       assert.equal(initialPenalty.status, 'effective');
@@ -546,7 +552,7 @@ test('historical appeal authority stays fail-closed across admin, outbox, Jobs a
       await unavailable(f.appealId);
     });
 
-    await t.test('historical uphold rolls back on audit failure; its actual admin outbox retries safely under canonical Jobs privileges', async () => {
+    await t.test('historical uphold rolls back on audit failure; canonical Jobs applies eligible reviews and dedupes forged replays', async () => {
       const f = await prepare({ decision: 'uphold' });
       fixture.interruptAfterSql = /INSERT INTO system\.audit_events/;
       await rejected(() => adjudicate(f.appealId, 'uphold'), 500, 'admin_request_failed');
@@ -558,11 +564,15 @@ test('historical appeal authority stays fail-closed across admin, outbox, Jobs a
       const event = (await client.query("SELECT id,event_type,payload FROM system.outbox_events WHERE event_type='moderation.appeal.resolved' AND aggregate_id=$1", [f.appealId])).rows[0];
       assert.equal(event.payload.finalDecision, 'uphold');
       const before = await snapshot();
-      assert.deepEqual(await deliver(event), { ack: 0, retry: 1 });
-      assert.equal((await client.query('SELECT 1 FROM trust.reputation_events WHERE appeal_id=$1', [f.appealId])).rowCount, 0);
-      assert.deepEqual(await snapshot(), before);
-      assert.deepEqual(await deliver(event, { finalDecision: 'overturn' }), { ack: 0, retry: 1 });
-      assert.deepEqual(await snapshot(), before);
+      assert.deepEqual(await deliver(event), { ack: 1, retry: 0 });
+      const reviewerSignals = (await client.query(`SELECT event_type,status FROM trust.reputation_events
+        WHERE appeal_id=$1`, [f.appealId])).rows;
+      assert.equal(reviewerSignals.length, reviewers.length);
+      assert.ok(reviewerSignals.every(row => row.event_type === 'reliable_review' && row.status === 'effective'));
+      const after = await snapshot();
+      assert.notDeepEqual(after, before);
+      assert.deepEqual(await deliver(event, { finalDecision: 'overturn' }), { ack: 1, retry: 0 });
+      assert.deepEqual(await snapshot(), after);
       await rejected(() => adjudicate(f.appealId, 'uphold'), 409, 'appeal_already_resolved');
       assert.ok((await refresh(f.item.owner.id)).promotionBlockers.includes('unresolved_serious_enforcement'));
       const audit = (await client.query("SELECT metadata FROM system.audit_events WHERE target_id=$1 AND action='moderation.appeal.outcome_applied'", [f.appealId])).rows[0].metadata;

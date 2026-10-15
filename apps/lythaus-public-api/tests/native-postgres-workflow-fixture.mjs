@@ -4,12 +4,19 @@ import { createRequire } from 'node:module';
 import { setTimeout } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { installReputationLockFunctionFixture } from '../../lythaus-jobs/tests/helpers/install-reputation-lock-fixture.mjs';
 
 export async function nativePostgresPrivacyWorkflowFixture(connectionString, { supportPolicy, onStep, afterQuery } = {}) {
   const target = new URL(connectionString);
   assert.ok(['127.0.0.1', 'localhost'].includes(target.hostname));
   assert.ok(target.pathname.startsWith('/lythaus_auth_test') || target.pathname.startsWith('/lythaus_support_test_workflow_')
     || (process.env.GITHUB_ACTIONS === 'true' && target.pathname === '/postgres'));
+  const installer = new pg.Client({ connectionString, ssl: false, connectionTimeoutMillis: 5000 });
+  await installer.connect();
+  try {
+    assert.equal((await installer.query('SELECT current_user AS role')).rows[0].role, 'postgres');
+    await installReputationLockFunctionFixture(installer, 'lythaus_jobs');
+  } finally { await installer.end(); }
   const require = createRequire(new URL('../../../node_modules/wrangler/package.json', import.meta.url));
   const { build } = require('esbuild');
   const { Miniflare, convertV4MiniflareOptions } = require('miniflare');

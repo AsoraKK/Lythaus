@@ -1,0 +1,176 @@
+{
+  "format": "length-prefixed UTF8 fields, ordered; PostgreSQL 17 catalog expectations, unrun",
+  "fingerprint": "e013d9425ab7c2cd0c74de9d2a03da1526848ea8fff993477fe72cf5a0fb63cb",
+  "fields": [
+    {
+      "name": "schema",
+      "expression": "namespace.nspname",
+      "value": "trust"
+    },
+    {
+      "name": "name",
+      "expression": "function_row.proname",
+      "value": "lock_reputation_subject"
+    },
+    {
+      "name": "owner",
+      "expression": "owner_role.rolname",
+      "value": "postgres"
+    },
+    {
+      "name": "language",
+      "expression": "language.lanname",
+      "value": "plpgsql"
+    },
+    {
+      "name": "body",
+      "expression": "function_row.prosrc",
+      "value": "\nBEGIN\n  IF pg_catalog.current_setting('transaction_isolation') <> 'read committed' THEN\n    RAISE EXCEPTION USING ERRCODE = '25000', MESSAGE = 'reputation_lock_isolation_unsupported';\n  END IF;\n  RETURN QUERY SELECT users.status FROM identity.users AS users\n  WHERE users.id = p_subject_id\n  FOR UPDATE OF users;\nEND;\n"
+    },
+    {
+      "name": "kind",
+      "expression": "function_row.prokind::pg_catalog.text",
+      "value": "f"
+    },
+    {
+      "name": "input_count",
+      "expression": "function_row.pronargs::pg_catalog.text",
+      "value": "1"
+    },
+    {
+      "name": "input_types",
+      "expression": "function_row.proargtypes::pg_catalog.text",
+      "value": "2950"
+    },
+    {
+      "name": "all_types",
+      "expression": "function_row.proallargtypes::pg_catalog.text",
+      "value": "{2950,25}"
+    },
+    {
+      "name": "argument_modes",
+      "expression": "function_row.proargmodes::pg_catalog.text",
+      "value": "{i,t}"
+    },
+    {
+      "name": "argument_names",
+      "expression": "function_row.proargnames::pg_catalog.text",
+      "value": "{p_subject_id,status}"
+    },
+    {
+      "name": "result_type",
+      "expression": "function_row.prorettype::pg_catalog.text",
+      "value": "25"
+    },
+    {
+      "name": "returns_set",
+      "expression": "function_row.proretset::pg_catalog.text",
+      "value": "true"
+    },
+    {
+      "name": "result",
+      "expression": "pg_catalog.pg_get_function_result(function_row.oid)",
+      "value": "TABLE(status text)"
+    },
+    {
+      "name": "default_count",
+      "expression": "function_row.pronargdefaults::pg_catalog.text",
+      "value": "0"
+    },
+    {
+      "name": "defaults",
+      "expression": "COALESCE(function_row.proargdefaults::pg_catalog.text, '<null>')",
+      "value": "<null>"
+    },
+    {
+      "name": "variadic",
+      "expression": "function_row.provariadic::pg_catalog.text",
+      "value": "0"
+    },
+    {
+      "name": "strict",
+      "expression": "function_row.proisstrict::pg_catalog.text",
+      "value": "true"
+    },
+    {
+      "name": "definer",
+      "expression": "function_row.prosecdef::pg_catalog.text",
+      "value": "true"
+    },
+    {
+      "name": "volatility",
+      "expression": "function_row.provolatile::pg_catalog.text",
+      "value": "v"
+    },
+    {
+      "name": "parallel",
+      "expression": "function_row.proparallel::pg_catalog.text",
+      "value": "u"
+    },
+    {
+      "name": "leakproof",
+      "expression": "function_row.proleakproof::pg_catalog.text",
+      "value": "false"
+    },
+    {
+      "name": "config",
+      "expression": "pg_catalog.array_to_string(function_row.proconfig, E'\\n')",
+      "value": "search_path=pg_catalog, pg_temp"
+    },
+    {
+      "name": "cost",
+      "expression": "function_row.procost::pg_catalog.text",
+      "value": "100"
+    },
+    {
+      "name": "rows",
+      "expression": "function_row.prorows::pg_catalog.text",
+      "value": "1000"
+    },
+    {
+      "name": "binary",
+      "expression": "COALESCE(function_row.probin, '<null>')",
+      "value": "<null>"
+    },
+    {
+      "name": "sql_body",
+      "expression": "COALESCE(function_row.prosqlbody::pg_catalog.text, '<null>')",
+      "value": "<null>"
+    },
+    {
+      "name": "support",
+      "expression": "function_row.prosupport::pg_catalog.oid::pg_catalog.text",
+      "value": "0"
+    },
+    {
+      "name": "owner_super",
+      "expression": "owner_role.rolsuper::pg_catalog.text",
+      "value": "false"
+    },
+    {
+      "name": "owner_bypass",
+      "expression": "owner_role.rolbypassrls::pg_catalog.text",
+      "value": "true"
+    },
+    {
+      "name": "owner_createrole",
+      "expression": "owner_role.rolcreaterole::pg_catalog.text",
+      "value": "true"
+    },
+    {
+      "name": "owner_createdb",
+      "expression": "owner_role.rolcreatedb::pg_catalog.text",
+      "value": "true"
+    },
+    {
+      "name": "owner_inherit",
+      "expression": "owner_role.rolinherit::pg_catalog.text",
+      "value": "true"
+    },
+    {
+      "name": "acl",
+      "expression": "acl_snapshot.canonical_acl",
+      "value": "8:postgres8:postgres7:EXECUTE5:false8:postgres23:pscale_api_9jfbtij9y4b27:EXECUTE5:false"
+    }
+  ]
+}

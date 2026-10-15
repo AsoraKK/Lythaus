@@ -1,6 +1,8 @@
 # Standard image upload integrity and posting handoff
 
-Inspected base: `53ac0f4ece621605762cde8d9a42f7dde8362ca9` on `main`.
+Inspected original base: `53ac0f4ece621605762cde8d9a42f7dde8362ca9` on `main`.
+Integrated current `main` tip `c47ecdbf35d3dc3e7e8305f6a1c2acd49ff87dbb`, which
+contains merged PR #1022.
 This is source preparation for independent review, not a posting release.
 Public image posting remains blocked. No provider calls, deployment, merge,
 feature activation, hosted schema/grant change, credential change or new
@@ -11,9 +13,9 @@ database and revoked before teardown. Model output does not prove human authorsh
 
 ## Ownership and existing work
 
-Open PRs were inspected before editing. #989 owns the ordinary post-review
+PR ownership was inspected before editing. #989 owns the ordinary post-review
 transaction/fence and publication PG17 runner; #886 owns private alpha hardening;
-#1000 updates moderation evaluation evidence; #1022 owns reputation transaction
+#1000 updates moderation evaluation evidence; merged PR #1022 owns reputation transaction
 cleanup/lock work, including the shared database transaction wrapper; #1023
 touches composer-adjacent Flutter release gates. This lane leaves #1022's
 transaction wrapper files unchanged. It adds a separate named standard-media
@@ -22,15 +24,17 @@ its existing per-session lock and deletes private bytes only after a terminal
 DB result commits. The PRs have separate steps and SQL scopes in the shared Jobs
 entrypoint and additive CI workflow registration.
 
-Cleanup coordination with #1022 stays narrow: this PR's cleanup addition is
-only the separate standard-session scheduled reconciler and its migration.
-#1022 retains the account-deletion transaction wrapper and immediate owner
-purge. The reconciler is a retry path for legacy upload capabilities and
-orphaned quarantine bytes; it does not replace account deletion or change its
-transaction semantics.
-Integrate the reviewed #1022 changes with this PR, apply migration `0021`
-before the Worker code that reads its marker, and rerun the combined exact-head
-suite before any coordinated deployment. Media flags remain disabled.
+PR #1022 merged to main as `c47ecdbf35d3dc3e7e8305f6a1c2acd49ff87dbb`. This
+branch now includes that base update and preserves its Jobs lock/receipt logic,
+account-deletion ordering, and exact-source protection checks. The merge
+conflict was limited to the Jobs/Public API pin values; they were recomputed
+from the combined source blobs and verified by the homepage protection suite.
+This lane adds only the separate standard-session scheduled reconciler and its
+migration for cleanup. The reconciler retries session-bound quarantine cleanup;
+it does not replace account deletion or change its transaction semantics.
+Apply migration `0021` before Worker code reads its marker, and rerun the
+combined exact-head suite before any coordinated deployment. Media flags remain
+disabled.
 
 This lane owns `packages/media/src/standard-upload.ts`, its four test/fixture
 files, the standard upload functions in Public API `src/index.ts`, and the
@@ -47,7 +51,7 @@ the new authenticated upload endpoint contract and bundled OpenAPI output, and
 the lifecycle, retry and still-valid-URL replay assertions in the PG17/Workerd
 fixtures.
 
-## Verified path on main
+## Verified original media path on the inspected base
 
 | Stage | Source owner | Behavior and missing acceptance |
 | --- | --- | --- |
@@ -172,23 +176,27 @@ path, not production acceptance. The transport shim uses explicit local
 transactions; it does not certify the production pg/Hyperdrive connection or
 cleanup wrapper, hosted R2, Images or Queues.
 
-Commands verified on this PR head:
+Commands verified on the merged tree:
 
 ```sh
 node --test packages/media/tests/standard-upload.test.mjs packages/media/tests/standard-upload.workerd.mjs
 PLANETSCALE_PG17_TEST_DATABASE_URL=<loopback disposable PG17 control database> \
   node --experimental-strip-types --test --test-concurrency=1 packages/media/tests/standard-upload.postgres.mjs
 node --test scripts/tests/planetscale-production-migrations.test.mjs
+npm run test:reputation:pg17
+node --test apps/marketing-site/tests/homepage-protection.test.mjs
 ```
 
-Local results on this PR head: unit/Workerd **28/28**, disposable PG17 **24/24**
+Local results on the merged tree: unit/Workerd **28/28**, disposable PG17 **24/24**
 on PostgreSQL 17.11 with migrations `0000`–`0021`, migration/schema-verifier
 tests **23/23**, product-integrity runtime **22/22**, and native architecture
-**376/376**. Native typecheck passes. The PostgreSQL suite confirms the canonical
+**376/376**. Native typecheck passes. The merged #1022 synthetic managed-owner
+PG17 cleanup/lifecycle runner passes, as does homepage protection **30/30**
+with combined source pins. The PostgreSQL media suite confirms the canonical
 `42501` failures before temporarily applying the two proposed column grants in
 its disposable database; it revokes both grants before teardown. The new schema
-remains unapplied to any hosted database. Exact-head hosted CI and independent
-review remain separate gates.
+remains unapplied to any hosted database. Hosted exact-head CI and independent
+review remain separate gates; the local results do not replace either gate.
 
 ## Remaining release blockers
 

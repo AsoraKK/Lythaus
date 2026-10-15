@@ -32,6 +32,7 @@ import { exportOwnSupportContributionsForPrivacy } from '../../../packages/db/sr
 import { activityMeasurementPrivacyExport, activityMeasurementPrivacyDelete, activityMeasurementPrivacyReconcile, activityMeasurementRetentionCleanup, activityMeasurementScheduledWork } from './activity-measurement.ts';
 import { handleJobsReputationSessionDiagnostic } from './reputation-session-diagnostic.ts';
 import { JOBS_SESSION_PATH } from '../../../packages/contracts/src/jobs-reputation-session.ts';
+import { runReputationTransaction } from './reputation-deleted-terminal.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -623,7 +624,7 @@ async function processNotificationSource(message: QueueMessage, env: Env, eventI
 }
 
 async function processAccountStandingRefresh(message: QueueMessage, env: Env, eventId: string): Promise<void> {
-  await transaction(env.DB_JOBS_FRESH, async (client) => {
+  await runReputationTransaction(env.DB_JOBS_FRESH, async (client) => {
     const source = await canonicalOutboxEvent(client, eventId, 'identity.account.status_changed');
     const userId = stringValue(source.payload.userId);
     if (!userId) throw new Error('account_status_event_invalid');
@@ -684,7 +685,7 @@ async function processSingleReputationSignal(
     correlationId: string;
   },
 ): Promise<void> {
-  await transaction(env.DB_JOBS_FRESH, async (client) => {
+  await runReputationTransaction(env.DB_JOBS_FRESH, async (client) => {
     const mutation = await recordReputationSignal(client, {
       id: uuidv7(),
       subjectUserId: input.subjectUserId,
@@ -2272,6 +2273,9 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         );
       });
       await transaction(this.env.DB_PRIVACY_FRESH, async (client) => {
+        const subject = await client.query<{ id: string }>(
+          `SELECT id FROM identity.users WHERE id = $1 FOR UPDATE`, [subjectId]);
+        if (!subject.rows[0]) throw new Error('privacy_subject_not_found');
         await client.query(`DELETE FROM identity.auth_sessions WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.refresh_token_families WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM identity.provider_links WHERE user_id = $1`, [subjectId]);
@@ -2293,6 +2297,16 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
         await client.query(`DELETE FROM trust.reputation_profiles WHERE user_id = $1`, [subjectId]);
         await client.query(`DELETE FROM trust.reward_redemptions WHERE user_id = $1`, [subjectId]);
         await client.query(`UPDATE identity.users SET status = 'deleted', display_name = '[deleted]', deleted_at = COALESCE(deleted_at, now()), updated_at = now() WHERE id = $1`, [subjectId]);
+      });
+      return true;
+    });
+
+    await step.do('purge-terminal-reputation-balance', async () => {
+      await transaction(this.env.DB_JOBS_FRESH, async (client) => {
+        const subject = await client.query<{ status: string }>(
+          `SELECT status FROM trust.lock_reputation_subject($1::pg_catalog.uuid)`, [subjectId]);
+        if (subject.rows[0]?.status !== 'deleted') throw new Error('privacy_subject_not_terminal');
+        await client.query(`DELETE FROM trust.reputation_balances WHERE user_id = $1`, [subjectId]);
       });
       return true;
     });

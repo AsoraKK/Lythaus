@@ -138,7 +138,12 @@ test('native full export and delete use private preferences, R2, canonical grant
   assert.equal((await sql('SELECT count(*)::integer AS count FROM privacy.export_manifests WHERE request_id=$1', [exported.requestId])).rows[0].count, 0);
   assert.equal((await sql('SELECT count(*)::integer AS count FROM system.idempotency_keys WHERE key=$1', [subjectId])).rows[0].count, 0);
   assert.equal((await sql('SELECT count(*)::integer AS count FROM privacy.deletion_tombstones WHERE subject_id=$1', [subjectId])).rows[0].count, 1);
-  const successfulSteps = fixture.steps.slice(stepStart).filter(s => s.state === 'succeeded').map(s => s.name);
+  const allSuccessfulSteps = fixture.steps.slice(stepStart).filter(s => s.state === 'succeeded').map(s => s.name);
+  const balancePurgeIndex = allSuccessfulSteps.indexOf('purge-terminal-reputation-balance');
+  assert.equal(allSuccessfulSteps.filter(name => name === 'purge-terminal-reputation-balance').length, 1);
+  assert.equal(allSuccessfulSteps[balancePurgeIndex - 1], 'redact-authoritative-content');
+  assert.equal(allSuccessfulSteps[balancePurgeIndex + 1], 'reset-presentation-preferences');
+  const successfulSteps = allSuccessfulSteps.filter(name => name !== 'purge-terminal-reputation-balance');
   assert.deepEqual(successfulSteps, ['resolve-request', 'lock-account-and-revoke-sessions', 'evaluate-legal-holds',
     'purge-account-activity-for-deletion', 'purge-support-feedback-for-deletion', 'tombstone-private-beta', 'wait-private-beta-upload-expiry', 'purge-private-beta',
     'redact-authoritative-content', 'reset-presentation-preferences', 'fence-standard-media-sessions-for-deletion',
