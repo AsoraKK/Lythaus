@@ -146,7 +146,6 @@ class _LythausAppState extends ConsumerState<LythausApp> {
 
   @override
   Widget build(BuildContext context) {
-    ref.watch(contentMutationRegistryProvider);
     final router = ref.watch(appRouterProvider);
 
     return ForegroundActivityObserver(
