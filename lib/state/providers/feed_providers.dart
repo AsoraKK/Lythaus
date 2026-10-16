@@ -155,7 +155,13 @@ final liveFeedItemsProvider = FutureProvider.family<List<FeedItem>, FeedModel>((
   feed,
 ) async {
   final session = ref.watch(feedReadSessionProvider);
-  if (session.isLoading) return const [];
+  if (session.isLoading && !session.isGuest) return const [];
+  if (session.hasError && !session.isGuest) {
+    throw const AuthRequiredException();
+  }
+  if (!session.canRead && feed.type == FeedType.discover) {
+    return const [];
+  }
   final authToken = await session.readToken();
   session.requireCurrent();
   final service = ref.read(socialFeedServiceProvider);
@@ -266,10 +272,19 @@ class _FeedUnavailable implements Exception {
 }
 
 class LiveFeedNotifier extends LiveFeedController {
-  LiveFeedNotifier(this._ref, this._feed, this._session)
-    : super(const LiveFeedState(isInitialLoading: true)) {
+  LiveFeedNotifier(Ref ref, FeedModel feed, FeedReadSession session)
+    : _ref = ref,
+      _feed = feed,
+      _session = session,
+      super(
+        _canStartRead(feed, session)
+            ? const LiveFeedState(isInitialLoading: true)
+            : const LiveFeedState(),
+      ) {
     _stopSession = _session.onInvalidated(_clearSession);
-    if (!_session.isLoading) Future<void>.microtask(refresh);
+    if (!_session.isLoading && _canStartRead(_feed, _session)) {
+      Future<void>.microtask(refresh);
+    }
   }
 
   final Ref _ref;
@@ -281,7 +296,13 @@ class LiveFeedNotifier extends LiveFeedController {
   final _visitedCursors = <String>{};
   int _generation = 0;
 
-  bool get _ownsSession => mounted && _session.isCurrent;
+  static bool _canStartRead(FeedModel feed, FeedReadSession session) =>
+      feed.type != FeedType.discover || session.canRead;
+
+  bool get _ownsSession =>
+      mounted &&
+      _session.isCurrent &&
+      _canStartRead(_feed, _session);
 
   bool _ownsRequest(int generation, FeedRequestCancellation cancellation) =>
       _ownsSession &&
