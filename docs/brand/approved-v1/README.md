@@ -62,14 +62,24 @@ favicon responses, and screenshots. The existing navigation browser test
 additionally checks draft text, selection and focus across resizing/tab changes,
 keyboard navigation, and sign-out.
 
-Screenshots now require painted pixels inside the accessible brand bounds,
-in addition to checking its label and dimensions. Local WebKit 26.5 initially
-leaves the onboarding artwork blank at 320px/2x text until a real scroll.
-The same failure occurs with an unchanged approved PNG, so its cause is not
-isolated to SVG decoding. Raster rendering, a repaint boundary, foregrounding,
-and extended capture waits did not resolve it and are not included as fixes.
-This initial-paint regression remains a release blocker; earlier screenshots
-and interaction-only success must not be treated as complete visual evidence.
+Screenshots require painted pixels inside the accessible brand bounds, in
+addition to checking its label and dimensions. WebKit 26.5 with the pinned
+Flutter 3.41.1 CanvasKit GPU renderer retained an earlier frame without the
+asynchronously loaded artwork, both locally and in hosted CI. Frame tracing
+confirmed an active lifecycle and a scheduled asset-update frame; another real
+interaction made the artwork visible. Untouched PNGs and HTML-image platform
+views also reproduced the failure. Longer waits and repaint boundaries did not
+fix it. These diagnostic approaches are not included as product workarounds.
+
+The app bootstrap now selects Flutter's supported `canvasKitForceCpuOnly`
+configuration for WebKit (the Apple browser vendor), retaining the default
+renderer elsewhere. This paints the approved SVG before interaction without
+changing its bytes, adding animation, or weakening the pixel assertion. The
+bootstrap preserves the existing service-worker version token and goes through
+the same immutable release hashing. This affects the whole WebKit web renderer;
+real-device scrolling performance and power use remain unmeasured. Native
+rendering is unchanged. Re-evaluate this fallback when upgrading Flutter/WebKit,
+using the same initial-paint gate before restoring GPU rendering.
 
 Native byte/mapping validation does not prove compilation or device rendering.
 Android, iOS, macOS and Windows packaging must be checked on their native

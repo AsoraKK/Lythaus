@@ -374,7 +374,7 @@ jobs:
             -g '!.dart_tool/**' \
             | xargs -r dart format --output=none --set-exit-if-changed
       - run: flutter analyze
-      - run: node --test scripts/tests/version-web-entrypoints.test.mjs scripts/tests/approved-brand-assets.test.mjs
+      - run: node --test scripts/tests/version-web-entrypoints.test.mjs scripts/tests/approved-brand-assets.test.mjs scripts/tests/flutter-bootstrap.test.mjs
       - run: bash scripts/test-with-coverage.sh
       - run: bash scripts/check_coverage_gates.sh
       - name: Build immutable web release artifact
