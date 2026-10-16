@@ -56,6 +56,13 @@ try {
       await page.locator('flt-semantics-placeholder').evaluate(element => element.click());
       const field = page.getByRole('textbox', { name: /Your post/ });
       await field.click();
+      await page.waitForFunction(() => {
+        const editor = document.activeElement;
+        const state = JSON.parse(window.lythausNavigationSnapshot());
+        return state.focused &&
+          (editor instanceof HTMLTextAreaElement || editor instanceof HTMLInputElement) &&
+          editor.isConnected && !editor.disabled && !editor.readOnly;
+      });
       await page.keyboard.insertText('Synthetic unfinished draft');
       await page.waitForFunction(() => JSON.parse(window.lythausNavigationSnapshot()).text === 'Synthetic unfinished draft');
       for (const key of ['ControlOrMeta+Home', 'ArrowRight', 'ArrowRight', ...Array(7).fill('Shift+ArrowRight')]) {
@@ -106,7 +113,13 @@ try {
       scenario.status = 'failed';
       scenario.failure = error.message;
       await page.screenshot({ path: path.join(output, `${engine}-${theme}-${scale}x-failure.png`) });
-      console.error(JSON.stringify({ errors, blocked, snapshot: await snapshot(page).catch(() => null) }));
+      const input = await page.evaluate(() => {
+        const editor = document.activeElement;
+        return { tag: editor?.tagName, role: editor?.getAttribute('role'),
+          connected: editor?.isConnected, disabled: editor?.disabled,
+          readOnly: editor?.readOnly };
+      }).catch(() => null);
+      console.error(JSON.stringify({ errors, blocked, input, snapshot: await snapshot(page).catch(() => null) }));
       throw error;
     } finally { await context.close(); }
   }
