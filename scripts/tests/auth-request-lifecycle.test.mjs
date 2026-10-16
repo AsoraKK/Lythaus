@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { classifyExpectedProtectedReturnDiscoverCancellation, createAuthRequestLifecycle, describeFailureWindow } from './auth-request-lifecycle.mjs';
 
@@ -47,7 +48,7 @@ test('auth lifecycle: snapshots are bounded and cannot mutate recorder state', (
 });
 
 function protectedReturnCancellationTrace() {
-  return { events: [
+  return { dropped: 0, events: [
     { sequence: 1, type: 'logout_response_finished', phase: 'logout_armed' },
     { sequence: 2, type: 'both_tabs_signed_out', phase: 'logout_armed' },
     { sequence: 3, type: 'phase', phase: 'protected_return' },
@@ -57,7 +58,8 @@ function protectedReturnCancellationTrace() {
     { sequence: 6, type: 'xhr_send', phase: 'protected_return', pageId: 1, xhrId: 2,
       method: 'GET', path: '/api/feed/discover', query: 'limit=25' },
     { sequence: 7, type: 'uncaught_page_error', phase: 'protected_return', pageId: 1,
-      pageErrorIndex: 0, name: 'XMLHttpRequest cannot load https', path: '/login' },
+      pageErrorIndex: 0, name: 'XMLHttpRequest cannot load https',
+      message: '/api.lythaus.co/api/feed/discover?limit=25 due to access control checks.', path: '/login' },
     { sequence: 8, type: 'xhr_error', phase: 'protected_return', pageId: 1, xhrId: 2,
       method: 'GET', path: '/api/feed/discover', query: 'limit=25', xhrReadyState: 4, xhrStatus: 0 },
     { sequence: 9, type: 'xhr_loadend', phase: 'protected_return', pageId: 1, xhrId: 2,
@@ -72,12 +74,32 @@ test('auth lifecycle: classifies only the correlated Discover XHR canceled by co
   assert.deepEqual([...classifyExpectedProtectedReturnDiscoverCancellation(protectedReturnCancellationTrace())], [0]);
 });
 
+test('auth lifecycle: accepts the recorded WebKit cancellation trace without adding synthetic events', async () => {
+  const trace = JSON.parse(await readFile(
+    new URL('./fixtures/protected-return-discover-cancellation.webkit.json', import.meta.url), 'utf8'));
+  assert.deepEqual(trace.provenance, {
+    workflow_run_id: 38811914382,
+    workflow_job_id: 116686972282,
+    diagnostic_head: '1a344334a4991a05b359bfb27dc03d61a4d36407',
+    engine: 'webkit',
+    viewport_width: 390,
+    scenario: 'baseline',
+    complete: false,
+    dropped: 0,
+    captured_event_range: [446, 466],
+    note: 'Events are copied from the real Flutter auth browser job diagnostic; the stack field is omitted. The old test failed because it treated every page error as unexpected.',
+  });
+  assert.deepEqual([...classifyExpectedProtectedReturnDiscoverCancellation(trace)], [0]);
+});
+
 test('auth lifecycle: real Discover network activity remains an unexpected CORS failure', () => {
   for (const activity of [
     { sequence: 6.5, type: 'request_start', phase: 'protected_return', pageId: 1,
       method: 'OPTIONS', path: '/api/feed/discover' },
     { sequence: 8.5, type: 'server_response', phase: 'protected_return', method: 'GET',
       path: '/api/feed/discover', status: 200 },
+    { sequence: 8.5, type: 'request_failed', phase: 'protected_return', pageId: 1,
+      method: 'GET', path: '/api/feed/discover', error: 'other_network_failure' },
   ]) {
     const trace = protectedReturnCancellationTrace();
     trace.events.push(activity);
@@ -94,6 +116,8 @@ test('auth lifecycle: incomplete logout, wrong request, or missing document navi
     trace => { trace.events.find(event => event.type === 'request_start').isNavigationRequest = false; },
     trace => { trace.events.find(event => event.type === 'xhr_error').xhrStatus = 200; },
     trace => { trace.events.find(event => event.type === 'uncaught_page_error').path = '/settings/security'; },
+    trace => { trace.events.find(event => event.type === 'uncaught_page_error').message = 'different CORS failure'; },
+    trace => { trace.dropped = 1; },
   ];
   for (const mutate of mutations) {
     const trace = protectedReturnCancellationTrace();

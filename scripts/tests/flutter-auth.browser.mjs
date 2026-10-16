@@ -25,7 +25,7 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     let delayNextOwnerResponse=false;
     const recordPageError=(target,error)=>{
       const detail={pageErrorIndex:pageErrors.length,name:error.name,message:error.message,
-        stack:error.stack?.slice(0,3000),path:new URL(target.url()).pathname};
+        stack:error.stack?.slice(0,3000),pageId:lifecycle.identifyPage(target),path:new URL(target.url()).pathname};
       errors.push(error.message);pageErrors.push(detail);lifecycle.record('uncaught_page_error',detail);
     };
     const fixture=await localAuthBrowserServer(async route=>{
@@ -267,37 +267,72 @@ for(const [engineName,engine] of Object.entries({chromium,webkit})) for(const co
   {name:'Access-Control-Allow-Origin',omitted:'access-control-allow-origin'},
   {name:'Access-Control-Allow-Credentials',omitted:'access-control-allow-credentials'},
 ]) {
-  test(`${engineName}: credentialed Discover fetch rejects missing ${control.name}`,{timeout:30000},async()=>{
-    const requests=[];
+  test(`${engineName}: missing ${control.name} keeps a real Discover XHR failure fatal`,{timeout:30000},async t=>{
+    const lifecycle=createAuthRequestLifecycle({ownerId:user.id});
+    const requests=[],pageErrors=[];
+    const waitForSnapshot=async predicate=>{
+      const deadline=Date.now()+5000;
+      while(Date.now()<deadline){
+        const snapshot=lifecycle.snapshot();
+        if(predicate(snapshot))return snapshot;
+        await new Promise(resolve=>setTimeout(resolve,10));
+      }
+      throw new Error('Timed out waiting for the browser lifecycle collector');
+    };
     const fixture=await localAuthBrowserServer(async route=>{
       const req=route.request(),url=new URL(req.url()),requestHeaders=await req.allHeaders();
       if(url.hostname==='app.lythaus.co')return route.fulfill({contentType:'text/html',body:'<!doctype html><title>CORS negative control</title>'});
       if(url.hostname==='api.lythaus.co'&&url.pathname==='/api/feed/discover'){
+        lifecycle.server(req);
         const headers={'access-control-allow-origin':'https://app.lythaus.co','access-control-allow-credentials':'true'};
         delete headers[control.omitted];
         requests.push({method:req.method(),origin:requestHeaders.origin??null,status:200,
           allowOrigin:headers['access-control-allow-origin']??null,
           allowCredentials:headers['access-control-allow-credentials']??null});
+        lifecycle.server(req,200);
         return route.fulfill({status:200,headers:{...headers,'content-type':'application/json'},body:'{"items":[],"hasMore":false,"nextCursor":null}'});
       }
       return route.fulfill({status:404,body:'not found'});
     });
     let browser;
     try {
-      browser=await engine.launch({headless:true,proxy:{server:fixture.proxy}});
+      browser=await engine.launch({headless:true,proxy:{server:fixture.proxy},
+        ...(engineName==='webkit'&&process.env.WEBKIT_EXECUTABLE?{executablePath:process.env.WEBKIT_EXECUTABLE}:{})});
       const context=await browser.newContext({serviceWorkers:'block',ignoreHTTPSErrors:true});
+      await lifecycle.install(context);
       const page=await context.newPage();
-      await page.goto('https://app.lythaus.co/');
-      const result=await page.evaluate(async()=>{
-        try {
-          const response=await fetch('https://api.lythaus.co/api/feed/discover?limit=25',{mode:'cors',credentials:'include'});
-          return {accepted:true,status:response.status};
-        } catch(error) { return {accepted:false,name:error.name}; }
+      page.on('pageerror',error=>{
+        const detail={pageErrorIndex:pageErrors.length,name:error.name,message:error.message,
+          pageId:lifecycle.identifyPage(page),path:new URL(page.url()).pathname};
+        pageErrors.push(detail);lifecycle.record('uncaught_page_error',detail);
       });
+      await page.goto('https://app.lythaus.co/login');
+      lifecycle.phase('protected_return');
+      const result=await page.evaluate(()=>new Promise(resolve=>{
+        const xhr=new XMLHttpRequest();
+        xhr.open('GET','https://api.lythaus.co/api/feed/discover?limit=25');
+        xhr.withCredentials=true;
+        let outcome;
+        xhr.addEventListener('error',()=>{outcome={event:'error',readyState:xhr.readyState,status:xhr.status};});
+        xhr.addEventListener('loadend',()=>resolve(outcome));
+        xhr.send();
+      }));
+      assert.deepEqual(result,{event:'error',readyState:4,status:0});
+      const snapshot=await waitForSnapshot(snapshot=>snapshot.events.some(event=>event.type==='xhr_loadend'
+        &&event.path==='/api/feed/discover'&&event.xhrStatus===0));
+      const discoverEvents=snapshot.events.filter(event=>event.path==='/api/feed/discover');
       assert.deepEqual(requests,[{method:'GET',origin:'https://app.lythaus.co',status:200,
         allowOrigin:control.omitted==='access-control-allow-origin'?null:'https://app.lythaus.co',
         allowCredentials:control.omitted==='access-control-allow-credentials'?null:'true'}]);
-      assert.deepEqual(result,{accepted:false,name:'TypeError'});
+      assert.ok(discoverEvents.some(event=>event.type==='request_start'),JSON.stringify(discoverEvents));
+      assert.ok(discoverEvents.some(event=>event.type==='server_request'),JSON.stringify(discoverEvents));
+      assert.ok(discoverEvents.some(event=>event.type==='server_response'&&event.status===200),JSON.stringify(discoverEvents));
+      assert.ok(discoverEvents.some(event=>event.type==='xhr_error'&&event.xhrReadyState===4&&event.xhrStatus===0),JSON.stringify(discoverEvents));
+      assert.ok(discoverEvents.some(event=>event.type==='xhr_loadend'&&event.xhrReadyState===4&&event.xhrStatus===0),JSON.stringify(discoverEvents));
+      assert.deepEqual([...classifyExpectedProtectedReturnDiscoverCancellation(snapshot)],[]);
+      const accepted=classifyExpectedProtectedReturnDiscoverCancellation(snapshot);
+      assert.deepEqual(pageErrors.filter((_,index)=>!accepted.has(index)),pageErrors,
+        'no CORS page error may be marked as an expected navigation cancellation');
     } finally {
       await browser?.close();
       await fixture.close();
