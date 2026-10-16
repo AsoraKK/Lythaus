@@ -297,7 +297,7 @@ class LiveFeedNotifier extends LiveFeedController {
   int _generation = 0;
 
   static bool _canStartRead(FeedModel feed, FeedReadSession session) =>
-      feed.type != FeedType.discover || session.canRead;
+      feed.type != FeedType.discover || session.canRead || session.hasError;
 
   bool get _ownsSession =>
       mounted && _session.isCurrent && _canStartRead(_feed, _session);
