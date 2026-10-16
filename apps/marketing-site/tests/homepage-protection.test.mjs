@@ -31,7 +31,7 @@ const publicationPg17Script = 'node scripts/ci/run-publication-pg17.mjs';
 const reputationPg17Script = 'node scripts/ci/run-reputation-managed-lock-cluster.mjs --synthetic-managed-cluster --execute-local-sql';
 const allocatedJobsDiagnosticTests = 'apps/lythaus-jobs/tests/reputation-session-diagnostic.test.mjs apps/lythaus-jobs/tests/reputation-session-diagnostic.workerd.mjs';
 const allocatedJobsDiagnosticFiles = new Map([
-  ['apps/lythaus-jobs/src/index.ts', 'a6f886c1678debae9647901e9be502a5c7b656b7'],
+  ['apps/lythaus-jobs/src/index.ts', '7b25af78fc1e227b85d1758b0cb31fd0aec09d24'],
   ['apps/lythaus-public-api/src/index.ts', '5ca637b72d241d89df5178bec6f0f730aafe41cd'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
