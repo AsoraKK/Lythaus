@@ -32,7 +32,9 @@ void main() {
   setUpAll(() {
     registerFallbackValue(
       const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        android: AndroidInitializationSettings(
+          '@drawable/ic_launcher_monochrome',
+        ),
         iOS: DarwinInitializationSettings(),
       ),
     );
@@ -75,6 +77,12 @@ void main() {
         ),
       ),
     ).thenAnswer((invocation) async {
+      expect(
+        (invocation.positionalArguments.single as InitializationSettings)
+            .android!
+            .defaultIcon,
+        '@drawable/ic_launcher_monochrome',
+      );
       responseCallback =
           invocation.namedArguments[#onDidReceiveNotificationResponse]
               as void Function(NotificationResponse)?;

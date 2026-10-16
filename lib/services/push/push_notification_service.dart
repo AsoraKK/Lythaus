@@ -103,7 +103,7 @@ class PushNotificationService {
     if (kIsWeb) return;
 
     const androidSettings = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
+      '@drawable/ic_launcher_monochrome',
     );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: false, // We handle permission separately

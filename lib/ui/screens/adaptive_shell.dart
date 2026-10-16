@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:lythaus/design_system/widgets/lyth_brand.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/ui/components/lythaus_bottom_nav.dart';
@@ -215,7 +216,13 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
                         onSettings: _openSettings,
                         onHelp: _openHelp,
                         extended: constraints.maxWidth >= 1100,
-                        brand: widget.brand ?? const Text('Lythaus'),
+                        brand:
+                            widget.brand ??
+                            LythBrand(
+                              variant: constraints.maxWidth >= 1100
+                                  ? LythBrandVariant.lockup
+                                  : LythBrandVariant.symbol,
+                            ),
                       ),
                       const VerticalDivider(width: 1),
                       Expanded(child: content),
