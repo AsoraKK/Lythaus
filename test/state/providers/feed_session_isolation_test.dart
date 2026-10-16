@@ -311,19 +311,22 @@ void main() {
       expect(h.feeds.requests, hasLength(1));
       expect(h.feeds.requests.single.token, 'synthetic-token-a');
       h.feeds.requests.single.complete(
-        List.generate(8, (index) => 'a-private-card-${index + 1}'),
+        List.generate(24, (index) => 'a-private-card-${index + 1}'),
         cursor: 'a-private-cursor',
       );
       await tester.pump();
       await tester.pump();
       expect(find.text('Synthetic post a-private-card-1'), findsOneWidget);
 
-      final feedScrollable = find.descendant(
-        of: find.byType(DiscoverFeed),
-        matching: find.byType(Scrollable),
-      ).first;
-      await tester.drag(feedScrollable, const Offset(0, -1200));
-      await tester.pumpAndSettle();
+      final feedScrollable = find
+          .descendant(
+            of: find.byType(DiscoverFeed),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      await tester.drag(feedScrollable, const Offset(0, -300));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump();
       final aPosition = tester.state<ScrollableState>(feedScrollable).position;
       expect(aPosition.pixels, greaterThan(0));
       expect(
@@ -359,13 +362,16 @@ void main() {
       await tester.pump();
 
       await tester.tap(find.text('Discover').last);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump();
       expect(find.text('Synthetic post b-current-card'), findsOneWidget);
       expect(find.textContaining('a-private-card'), findsNothing);
-      final bScrollable = find.descendant(
-        of: find.byType(DiscoverFeed),
-        matching: find.byType(Scrollable),
-      ).first;
+      final bScrollable = find
+          .descendant(
+            of: find.byType(DiscoverFeed),
+            matching: find.byType(Scrollable),
+          )
+          .first;
       expect(tester.state<ScrollableState>(bScrollable).position.pixels, 0);
       expect(h.container.read(feedRestoreSnapshotsProvider), isEmpty);
     },
