@@ -35,6 +35,11 @@ class LythBrand extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
+    final aspectRatio = switch (variant) {
+      LythBrandVariant.lockup => 627.24944891 / 130.6866688,
+      LythBrandVariant.symbol => 1.0,
+      LythBrandVariant.wordmark => 470.28944891 / 130.6866688,
+    };
     final file = switch (variant) {
       LythBrandVariant.lockup =>
         dark
@@ -52,6 +57,7 @@ class LythBrand extends StatelessWidget {
     return SvgPicture.asset(
       'assets/brand/lythaus-v1/$file',
       height: height,
+      width: height * aspectRatio,
       fit: BoxFit.contain,
       semanticsLabel: decorative ? null : 'Lythaus',
       excludeFromSemantics: decorative,

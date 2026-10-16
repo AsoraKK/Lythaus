@@ -62,6 +62,15 @@ favicon responses, and screenshots. The existing navigation browser test
 additionally checks draft text, selection and focus across resizing/tab changes,
 keyboard navigation, and sign-out.
 
+Screenshots now require painted pixels inside the accessible brand bounds,
+in addition to checking its label and dimensions. Local WebKit 26.5 initially
+leaves the onboarding artwork blank at 320px/2x text until a real scroll.
+The same failure occurs with an unchanged approved PNG, so its cause is not
+isolated to SVG decoding. Raster rendering, a repaint boundary, foregrounding,
+and extended capture waits did not resolve it and are not included as fixes.
+This initial-paint regression remains a release blocker; earlier screenshots
+and interaction-only success must not be treated as complete visual evidence.
+
 Native byte/mapping validation does not prove compilation or device rendering.
 Android, iOS, macOS and Windows packaging must be checked on their native
 toolchains before any native release. This Linux environment lacks the Android

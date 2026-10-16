@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { createRequire } from 'node:module';
 import { chromium, webkit } from 'playwright';
 import { installFlutterEngineFonts } from './flutter-engine-font-fixture.mjs';
 
@@ -45,14 +46,38 @@ await mkdir(output, { recursive: true });
 const appServer = await serve(build), adminServer = await serve(admin);
 const browser = await (engine === 'webkit' ? webkit : chromium).launch({ headless: true });
 const results = [];
-async function capture(page, name) {
+const { PNG } = createRequire(import.meta.url)('playwright-core/lib/utilsBundle');
+async function capture(page, name, validate = true) {
   await page.evaluate(() => {
     const label = document.createElement('div');
     label.textContent = 'LOCAL SYNTHETIC BRAND QA';
     label.style.cssText = 'position:fixed;bottom:0;right:0;z-index:99999;background:#111;color:#fff;padding:4px;font:10px sans-serif;pointer-events:none';
     document.body.append(label);
   });
-  await page.screenshot({ path: path.join(output, name + '.png') });
+  const image = page.getByRole('img', { name: 'Lythaus', exact: true }).first();
+  const brand = await image.count() ? image : page.getByRole('button', { name: 'Feed controls', exact: true });
+  for (let attempt = 0; attempt < 20; attempt++) {
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await page.waitForTimeout(250);
+    const bytes = await page.screenshot({ path: path.join(output, name + '.png') });
+    if (!validate) return;
+    const rect = await brand.boundingBox();
+    assert.ok(rect && rect.width > 0 && rect.height > 0, 'Brand has a visible layout box');
+    const png = PNG.sync.read(bytes);
+    const colors = new Map();
+    let pixels = 0;
+    for (let y = Math.max(0, Math.ceil(rect.y)); y < Math.min(png.height, rect.y + rect.height); y++) {
+      for (let x = Math.max(0, Math.ceil(rect.x)); x < Math.min(png.width, rect.x + rect.width); x++) {
+        const offset = (y * png.width + x) * 4;
+        const color = png.data.readUInt32BE(offset);
+        colors.set(color, (colors.get(color) ?? 0) + 1);
+        pixels++;
+      }
+    }
+    const painted = pixels - Math.max(0, ...colors.values());
+    if (colors.size >= 4 && painted >= 16 && painted / pixels > 0.003) return;
+  }
+  assert.fail('Brand artwork did not paint; refusing a blank screenshot: ' + name);
 }
 try {
   for (const theme of ['light', 'dark']) {
@@ -90,6 +115,9 @@ try {
             await page.setViewportSize({ width: width === 1440 ? 1024 : width + 20, height: 960 });
             await page.setViewportSize({ width, height: 960 });
             await page.waitForFunction(() => document.activeElement?.value === 'draft@example.invalid');
+            await page.mouse.move(width / 2, 300);
+            await page.mouse.wheel(0, -10000);
+            await page.waitForTimeout(250);
           }
           await capture(page, engine + '-' + screen + '-' + theme + '-' + width);
           await verifyIcons(page, context);
@@ -109,7 +137,7 @@ try {
           assert.deepEqual(blocked, []);
           results.push({ screen, theme, width, status: 'passed' });
         } catch (error) {
-          await capture(page, engine + '-' + screen + '-' + theme + '-' + width + '-failed');
+          await capture(page, engine + '-' + screen + '-' + theme + '-' + width + '-failed', false);
           results.push({ screen, theme, width, status: 'failed', error: error.message, errors, blocked });
           throw error;
         } finally { await context.close(); }

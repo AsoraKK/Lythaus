@@ -30,6 +30,17 @@ void main() {
             final svg = tester.widget<SvgPicture>(find.byType(SvgPicture));
             final asset = (svg.bytesLoader as SvgAssetLoader).assetName;
             final source = await rootBundle.loadString(asset);
+            final viewBox = RegExp(r'viewBox="([^"]+)"')
+                .firstMatch(source)!
+                .group(1)!
+                .split(RegExp(r'\s+'))
+                .map(double.parse)
+                .toList();
+            final size = tester.getSize(find.byType(SvgPicture));
+            expect(
+              size.width / size.height,
+              closeTo(viewBox[2] / viewBox[3], 0.00001),
+            );
             final fill = RegExp(
               r'fill="#([0-9a-fA-F]{6})"',
             ).firstMatch(source)!;
