@@ -331,10 +331,12 @@ async function searchUsers(request: Request, env: Env): Promise<Response> {
 async function setUserTier(request: Request, env: Env, actor: { userId: string; role: string }, userId: string, correlation: string): Promise<Response> {
   if (actor.role !== 'administrator') throw new Error('admin_role_required');
   const input = await readBoundedJson<{ tier?: 'free' | 'premium' | 'black'; reasonCode?: string }>(request);
+  rejectUnknownFields(input, ['tier', 'reasonCode']);
   if (!input.tier || !['free', 'premium', 'black'].includes(input.tier)) throw new Error('invalid_subscription_tier');
   if (!input.reasonCode || !/^[A-Z0-9_.:-]{2,80}$/.test(input.reasonCode)) throw new Error('reason_code_required');
   const sourceEventId = uuidv7();
   const changed = await transaction(env.DB_ADMIN_FRESH, async (client) => {
+    await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))`, [`user-entitlement:${userId}`]);
     const current = await client.query<{ subscription_tier: string }>(
       `SELECT subscription_tier FROM identity.user_entitlements WHERE user_id = $1 FOR UPDATE`,
       [userId],

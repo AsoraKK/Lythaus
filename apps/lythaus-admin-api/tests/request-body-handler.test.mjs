@@ -118,6 +118,27 @@ test('admin request admission keeps Access and rate protections before body vali
   assertNoDomainWork();
 });
 
+test('manual tier grants reject provider lifecycle and unavailable-state claims', async () => {
+  const path = `/api/admin/users/${targetId}/tier`;
+  for (const lifecycle of [
+    { status: 'pending' },
+    { status: 'expired' },
+    { status: 'cancelled' },
+    { status: 'unavailable' },
+    { provider: 'stripe' },
+    { currentPeriodEnd: '2099-01-01T00:00:00Z' },
+    { cancelAtPeriodEnd: true },
+    { manualGrantExpiresAt: '2099-01-01T00:00:00Z' },
+  ]) {
+    reset();
+    const body = { tier: 'black', reasonCode: 'SYNTHETIC_TEST', ...lifecycle };
+    const response = await worker.fetch(request(path, JSON.stringify(body)), env);
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).error, 'unknown_field');
+    assertNoDomainWork();
+  }
+});
+
 test('actual workerd admin decoder rejects invalid shape and UTF-8 with its byte bound intact', { timeout: 60_000 }, async () => {
   const require = createRequire(new URL('../../../node_modules/wrangler/package.json', import.meta.url));
   const { build } = require('esbuild');
