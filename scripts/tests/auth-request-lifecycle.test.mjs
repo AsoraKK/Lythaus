@@ -99,7 +99,7 @@ test('auth lifecycle: real Discover network activity remains an unexpected CORS 
     { sequence: 8.5, type: 'server_response', phase: 'protected_return', method: 'GET',
       path: '/api/feed/discover', status: 200 },
     { sequence: 8.5, type: 'request_failed', phase: 'protected_return', pageId: 1,
-      method: 'GET', path: '/api/feed/discover', error: 'other_network_failure' },
+      method: 'GET', path: '/api/feed/discover', error: 'Load request cancelled' },
   ]) {
     const trace = protectedReturnCancellationTrace();
     trace.events.push(activity);

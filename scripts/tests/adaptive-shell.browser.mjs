@@ -94,6 +94,8 @@ try {
       const discover = nav(page, 'Discover');
       for (let i = 0; i < 40; i++) {
         await page.keyboard.press('Tab');
+        await page.evaluate(() => new Promise(resolve =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve))));
         if (await discover.evaluate(element => element === document.activeElement)) break;
       }
       assert.ok(await discover.evaluate(element => element === document.activeElement), 'Tab reaches navigation');
