@@ -6,8 +6,10 @@ contains merged PR #1022.
 This is source preparation for independent review, not a posting release.
 Public image posting remains blocked. No provider calls, deployment, merge,
 feature activation, hosted schema/grant change, credential change or new
-resource is part of this work. Migration `0021_media_quarantine_cleanup.sql` is
-pending review and has not been applied to a hosted database. The two narrow
+resource is part of this work. Migration `0021_media_quarantine_cleanup.sql` remains
+on hold and has not been applied to a hosted database; see the separate
+[rollout proposal](standard-media-quarantine-rollout-proposal-2026-10-16.md).
+The two narrow
 grant candidates are exercised only in the uniquely named disposable PG17 test
 database and revoked before teardown. Model output does not prove human authorship.
 
@@ -201,10 +203,10 @@ npm run openapi:gen:dart
 npm run openapi:test:contract
 ```
 
-Local results on the merged tree: unit/Workerd **28/28**, disposable PG17 **24/24**
+Local results on the current tree: unit/Workerd **28/28**, disposable PG17 **25/25**
 on PostgreSQL 17.11 with migrations `0000`–`0021`, migration/schema-verifier
 tests **23/23**, product-integrity runtime **22/22**, and native architecture
-**376/376**. Native typecheck passes. The merged #1022 synthetic managed-owner
+**377/377**. Native typecheck passes. The merged #1022 synthetic managed-owner
 PG17 cleanup/lifecycle runner passes, as does homepage protection **30/30**
 with combined source pins. The release-schema identity contract passes **7/7**;
 runtime probe scenarios pass **65/65**; combined production-release and provider
@@ -220,6 +222,43 @@ The local OpenAPI Dart-client validator's unit checks pass, but its final
 `dart pub get` step cannot run in this executor because the Dart executable is
 not installed. Exact-head hosted OpenAPI CI includes Flutter setup and must
 complete the generated-client validation.
+
+## Follow-up evidence (2026-10-16)
+
+The Jobs expiry reconciler now removes a deterministic approved-bucket key for
+expired, rejected or cancelled standard sessions only when no `media.objects`
+or `media.variants` row references that key. The key is derived from the locked
+session owner and UUID; message-supplied keys are not used. An `approved` session
+retains its derivative. The existing cleanup marker is written only after the
+quarantine delete and any eligible derivative delete both succeed, so either
+R2 failure leaves cleanup retryable. Expiry releases the reservation once; the
+cleanup does not increase uploaded or approved byte accounting.
+
+The new PG17 case fails settlement after the first conditional R2 derivative
+write, repeats failed queue deliveries while confirming the same immutable
+derivative is reused without another Images call, expires the session, injects
+an approved-bucket delete failure, and verifies the next scheduled cleanup
+removes the orphan before writing the marker. It also verifies that an
+approved derivative and a derivative with a canonical object/variant reference
+are retained. This is synthetic local R2/PG17 evidence, not hosted R2
+acceptance.
+
+## Migration 0021 rollout hold
+
+`0021_media_quarantine_cleanup.sql` remains unapplied. The production migration
+runner begins a transaction, executes the complete migration file, validates
+postconditions and records the manifest before commit. Its `ALTER TABLE ... ADD
+COLUMN` therefore retains the table's `ACCESS EXCLUSIVE` lock through the
+following index build. Do not run this migration with the current transactional
+applier.
+
+The separate [rollout proposal](standard-media-quarantine-rollout-proposal-2026-10-16.md)
+describes a staged design for owner/provider review: commit the nullable marker
+column in a short DDL transaction, then build the partial index through a
+provider-supported online or concurrent path outside that transaction, verify
+both postconditions, and only then release Worker readiness. If the provider or
+migration tooling cannot support that split safely, keep the migration held.
+This work changes no migration SQL, schema, manifest, or hosted database.
 
 ## Remaining release blockers
 
@@ -248,19 +287,18 @@ complete the generated-client validation.
    replay of legacy URLs but does not certify hosted R2 behavior or aggregate
    physical-storage bounds. Canonical `bytes_rejected` denial still blocks
    production-role rejection settlement.
-4. **Deletion/concurrency:** standard-session expiry and account-deletion
-   fencing are implemented and covered with local session-lock/race tests, but
-   the full hosted account-delete/hold/retention workflow and restart acceptance
-   remain open. It retains a DB transaction across external Images work; hosted
-   timeout/connection behavior needs acceptance. A private derivative written
-   before DB commit can remain orphaned after connection or process loss; the
-   new janitor reconciles source quarantine only. Hosted account-delete/retention
-   restart acceptance, derivative-orphan reconciliation, canonical queue-source
-   event binding and attachment tombstones remain blocked. If the transaction is
-   lost before a derivative is stored, Images work can repeat. Conditional PUT
-   prevents overwrite but cannot supply exactly-once external execution. The
-   tests demonstrate this boundary rather than hiding
-   it. Physical orphan storage is not a certified aggregate-quota bound.
+4. **Deletion/concurrency:** standard-session expiry, account-deletion fencing,
+   and local derivative-orphan reconciliation are covered by session-lock,
+   transaction-loss and retry tests. The scheduled janitor deletes an
+   unreferenced derivative after the session expires and the existing grace
+   period; hosted account-delete/hold/retention restart acceptance and R2
+   timeout behavior remain open. A failed transaction before the derivative
+   write can repeat Images work, and conditional PUT cannot supply exactly-once
+   external execution. Hosted queue-source event binding, attachment tombstones,
+   derivative cleanup and physical aggregate-quota acceptance remain blocked.
+   Hosted R2 derivative-cleanup acceptance and physical aggregate-quota bounds
+   remain blocked. Local synthetic cleanup retries do not certify hosted orphan
+   bounds.
 5. **Publication integration:** unresolved attachment policy, unapplied relation,
    authoritative evidence binding, transaction/revision locks, moderator/appeal
    authority, private reads, feed projection and complete global publishing

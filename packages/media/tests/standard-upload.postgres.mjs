@@ -272,6 +272,14 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
         assert.equal(await fixture.quarantine.head(input.objectKey), null);
         assert.ok(!fixture.statements.some(query => /(?:INSERT INTO|UPDATE) (?:content|feed)\./.test(query.text ?? '')));
         assert.equal(fixture.outbound.length, 0);
+
+        await admin.query("UPDATE media.upload_sessions SET expires_at=clock_timestamp()-interval '20 minutes' WHERE id=$1", [input.sessionId]);
+        assert.equal((await fixture.cleanup()).status, 204);
+        assert.ok(await fixture.approved.head(object.object_key), 'janitor preserves a derivative with a canonical database reference');
+        assert.ok((await admin.query('SELECT quarantine_deleted_at FROM media.upload_sessions WHERE id=$1', [input.sessionId])).rows[0].quarantine_deleted_at);
+        await admin.query("UPDATE media.upload_sessions SET status='cancelled', quarantine_deleted_at=NULL WHERE id=$1", [input.sessionId]);
+        assert.equal((await fixture.cleanup()).status, 204);
+        assert.ok(await fixture.approved.head(object.object_key), 'terminal cleanup preserves derivatives referenced by media rows');
       } finally {
         await admin.query('REVOKE INSERT (object_id, owner_id) ON media.ownership FROM lythaus_jobs');
         await admin.query('REVOKE UPDATE (bytes_rejected) ON media.storage_ledger FROM lythaus_runtime');
@@ -503,6 +511,41 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
       assert.equal(effects.filter(effect => effect.type === 'conflict').length, 1);
       assert.equal((await session(input)).status, 'queued');
       assert.equal((await admin.query('SELECT count(*)::integer AS n FROM media.objects WHERE owner_id=$1', [input.userId])).rows[0].n, 0);
+    });
+    await t.test('expiry janitor retries cleanup of an unreferenced derivative after queue retries exhaust', async () => {
+      const input = await seed('queued');
+      const derivativeKey = `approved/${input.userId}/${input.sessionId}.webp`;
+      for (const imageCalls of [1, 0, 0]) {
+        beforeQuery = request => {
+          if (request.text.includes('INSERT INTO media.objects')) {
+            beforeQuery = undefined;
+            throw new Error('synthetic_settlement_lost_after_derivative_write');
+          }
+        };
+        assert.deepEqual(await queue(input), { ack: 0, retry: 1, imageCalls });
+        assert.equal((await session(input)).status, 'queued');
+        assert.ok(await fixture.quarantine.head(input.objectKey));
+        assert.ok(await fixture.approved.head(derivativeKey));
+        assert.equal(Number((await admin.query('SELECT bytes_reserved FROM media.storage_ledger WHERE user_id=$1', [input.userId])).rows[0].bytes_reserved), png.length);
+      }
+      beforeQuery = undefined;
+      assert.equal((await admin.query('SELECT count(*)::integer AS n FROM media.objects WHERE owner_id=$1', [input.userId])).rows[0].n, 0);
+      assert.equal(effects.filter(effect => effect.type === 'transform').length, 1);
+
+      await admin.query("UPDATE media.upload_sessions SET expires_at=clock_timestamp()-interval '20 minutes' WHERE id=$1", [input.sessionId]);
+      assert.equal((await fixture.cleanup({ failApprovedDelete: true })).status, 204);
+      assert.equal((await session(input)).status, 'expired');
+      assert.equal(await fixture.quarantine.head(input.objectKey), null);
+      assert.ok(await fixture.approved.head(derivativeKey));
+      assert.equal((await admin.query('SELECT quarantine_deleted_at FROM media.upload_sessions WHERE id=$1', [input.sessionId])).rows[0].quarantine_deleted_at, null);
+      assert.equal(Number((await admin.query('SELECT bytes_reserved FROM media.storage_ledger WHERE user_id=$1', [input.userId])).rows[0].bytes_reserved), 0);
+
+      assert.equal((await fixture.cleanup()).status, 204);
+      assert.equal(await fixture.approved.head(derivativeKey), null);
+      assert.ok((await admin.query('SELECT quarantine_deleted_at FROM media.upload_sessions WHERE id=$1', [input.sessionId])).rows[0].quarantine_deleted_at);
+      assert.equal(Number((await admin.query('SELECT bytes_reserved FROM media.storage_ledger WHERE user_id=$1', [input.userId])).rows[0].bytes_reserved), 0);
+      assert.equal((await fixture.cleanup()).status, 204);
+      assert.equal(await fixture.approved.head(derivativeKey), null);
     });
     assert.equal(fixture.outbound.length, 0);
     assert.ok(!fixture.statements.some(input => /(?:INSERT INTO|UPDATE) (?:content|feed)\./.test(input.text ?? '')));

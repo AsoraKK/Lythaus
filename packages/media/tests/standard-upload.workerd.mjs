@@ -24,6 +24,11 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
     if (sql.startsWith('UPDATE system.consumer_inbox SET state')) { state.inbox = 'completed'; return result([{}]); }
     if (sql.startsWith('DELETE FROM system.consumer_inbox')) { state.inbox = null; return result([{}]); }
     if (sql.startsWith('SELECT status, deleted_at FROM identity.users')) return result([state.account]);
+    if (sql.startsWith('SELECT EXISTS (SELECT 1 FROM media.objects')) {
+      const key = values[0];
+      return result([{ referenced: state.objects.some(object => object.object_key === key)
+        || state.variants.some(variant => variant.object_key === key) }]);
+    }
     if (sql.startsWith('SELECT') && sql.includes('FROM media.upload_sessions')) {
       if (!state.session) return result([]);
       if (sql.startsWith('SELECT id, user_id FROM media.upload_sessions')) {
@@ -62,7 +67,7 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
     }
     if (sql.startsWith('INSERT INTO media.objects')) {
       if (state.objects.length) return result([]);
-      state.objects.push({ id: values[0], state: values[5], sha256: values[4] }); return result([{ id: values[0] }]);
+      state.objects.push({ id: values[0], object_key: values[2], state: values[5], sha256: values[4] }); return result([{ id: values[0] }]);
     }
     if (sql.includes('INSERT INTO media.moderation_results')) { state.evidence.push(JSON.parse(values[4])); return result([{}]); }
     if (sql.includes('INSERT INTO trust.user_activity_events')) {
@@ -98,7 +103,10 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
         status: 'pending', unexpired: true, cleanupDue: false, quarantine_deleted_at: null };
       return result([{}]);
     }
-    if (sql.startsWith('INSERT INTO media.ownership') || sql.startsWith('INSERT INTO media.variants') || sql.startsWith('INSERT INTO system.rate_limit_windows')) return result([{}]);
+    if (sql.startsWith('INSERT INTO media.variants')) {
+      state.variants.push({ object_key: values[2] }); return result([{}]);
+    }
+    if (sql.startsWith('INSERT INTO media.ownership') || sql.startsWith('INSERT INTO system.rate_limit_windows')) return result([{}]);
     throw new Error('unexpected_fixture_sql:' + sql.slice(0, 90));
   });
   async function seed(status = 'queued', overrides = {}) {
@@ -108,7 +116,7 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       ledgerUploaded: 0, ledgerApproved: 0, session: { id, user_id, object_key: `quarantine/${user_id}/${id}`, expected_bytes: png.length,
       checksum_sha256: digest(png), content_type: 'image/png', purpose: 'standard', status, unexpired: true,
       expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), cleanupDue: false, quarantine_deleted_at: null, ...overrides },
-      inbox: null, objects: [], evidence: [], activity: [], outbox: [], ledgerWrites: 0, rejections: 0 };
+      inbox: null, objects: [], variants: [], evidence: [], activity: [], outbox: [], ledgerWrites: 0, rejections: 0 };
     if (status === 'queued' || overrides.withObject !== false) {
       await fixture.quarantine.put(state.session.object_key, png, { httpMetadata: { contentType: 'image/png' } });
     }

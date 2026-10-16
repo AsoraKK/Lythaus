@@ -1966,7 +1966,7 @@ export async function reconcileExpiredStandardMediaSessions(env: Env): Promise<v
       ORDER BY expires_at, id LIMIT $1`, [STANDARD_MEDIA_CLEANUP_BATCH_SIZE]);
   for (const candidate of due.rows) {
     try {
-      const cleanupKey = await transaction<string | null>(env.DB_JOBS_FRESH, async client => {
+      const cleanup = await transaction<{ quarantineKey: string; orphanDerivativeKey: string | null } | null>(env.DB_JOBS_FRESH, async client => {
         const selected = await client.query<{
           object_key: string; expected_bytes: number; status: string; expired: boolean;
           cleanup_due: boolean; cleanup_pending: boolean;
@@ -1981,6 +1981,7 @@ export async function reconcileExpiredStandardMediaSessions(env: Env): Promise<v
           [candidate.id, candidate.user_id]);
         const row = selected.rows[0];
         if (!row) return null;
+        let terminalStatus = row.status;
         if (row.status === 'pending' || row.status === 'queued') {
           if (!row.expired) return null;
           const expired = await client.query(
@@ -1995,15 +1996,29 @@ export async function reconcileExpiredStandardMediaSessions(env: Env): Promise<v
             [row.expected_bytes, candidate.user_id]);
           if (released.rowCount !== 1) throw new Error('media_reservation_unavailable');
           if (!row.cleanup_due) return null;
+          terminalStatus = 'expired';
         } else if (!['approved', 'rejected', 'expired', 'cancelled'].includes(row.status)
           || !row.cleanup_pending || !row.cleanup_due) {
           return null;
         }
-        return row.object_key;
+        let orphanDerivativeKey: string | null = null;
+        if (terminalStatus !== 'approved') {
+          const derivativeKey = `approved/${candidate.user_id}/${candidate.id}.webp`;
+          const references = await client.query<{ referenced: boolean }>(
+            `SELECT EXISTS (SELECT 1 FROM media.objects WHERE object_key = $1)
+                    OR EXISTS (SELECT 1 FROM media.variants WHERE object_key = $1) AS referenced`,
+            [derivativeKey]);
+          if (references.rows[0]?.referenced !== true) orphanDerivativeKey = derivativeKey;
+        }
+        return { quarantineKey: row.object_key, orphanDerivativeKey };
       });
-      if (!cleanupKey) continue;
+      if (!cleanup) continue;
       if (!env.MEDIA_QUARANTINE) throw new Error('media_quarantine_not_configured');
-      await env.MEDIA_QUARANTINE.delete(cleanupKey);
+      await env.MEDIA_QUARANTINE.delete(cleanup.quarantineKey);
+      if (cleanup.orphanDerivativeKey) {
+        if (!env.MEDIA_APPROVED) throw new Error('media_approved_not_configured');
+        await env.MEDIA_APPROVED.delete(cleanup.orphanDerivativeKey);
+      }
       await transaction(env.DB_JOBS_FRESH, async client => {
         await client.query(
           `UPDATE media.upload_sessions SET quarantine_deleted_at = clock_timestamp()

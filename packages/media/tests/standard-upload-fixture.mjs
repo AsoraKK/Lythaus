@@ -63,6 +63,9 @@ export async function standardUploadFixture(database, onEffect = async () => {})
           if (request.headers.get('x-fail-delete') === 'true') {
             env.MEDIA_QUARANTINE = { delete: async () => { throw new Error('synthetic_quarantine_delete_failed'); } };
           }
+          if (request.headers.get('x-fail-approved-delete') === 'true') {
+            env.MEDIA_APPROVED = { delete: async () => { throw new Error('synthetic_approved_delete_failed'); } };
+          }
           await reconcileExpiredStandardMediaSessions(env);
           return new Response(null, { status: 204 });
         }
@@ -154,8 +157,9 @@ export async function standardUploadFixture(database, onEffect = async () => {})
       return runtime.dispatchFetch(`https://local.test/fixture/upload/${sessionId}`, { method: 'PUT', body: bytes,
         headers: { 'x-fixture-user-id': userId, 'content-type': contentType } });
     },
-    cleanup({ failDelete = false } = {}) { return runtime.dispatchFetch('https://local.test/fixture/cleanup', { method: 'POST',
-      headers: { 'x-fail-delete': failDelete ? 'true' : 'false' } }); },
+    cleanup({ failDelete = false, failApprovedDelete = false } = {}) { return runtime.dispatchFetch('https://local.test/fixture/cleanup', { method: 'POST',
+      headers: { 'x-fail-delete': failDelete ? 'true' : 'false',
+        'x-fail-approved-delete': failApprovedDelete ? 'true' : 'false' } }); },
     dispose: () => runtime.dispose(),
   };
 }
