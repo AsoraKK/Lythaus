@@ -352,6 +352,29 @@ const approvedHomepageVisualEdits = new Map([
     'hero wordmark width',
   )}\n`],
 ]);
+const approvedMarketingBrandAssets = new Map([
+  ['apps/marketing-site/public/brand/lythaus-v1/lythaus-lockup-black.9518c6eeb03b.svg', '9518c6eeb03bb718b6f43c23b44f6a08020bd93f4bf85d75c81fa6b9716d24f3'],
+  ['apps/marketing-site/public/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg', '57df30b168bcf5b36b67e033b1924ddf1a891fc28d8fc41d88f2b3db4798031a'],
+  ['apps/marketing-site/public/brand/lythaus-v1/lythaus-social-card-1200x630.c20d3b1b40a8.png', 'c20d3b1b40a870640abdb88c049b68df565cda71d6f883064655116af1d6fa8e'],
+  ['apps/marketing-site/public/icons/lythaus-v1/favicon.e3dfdd675a74.ico', 'e3dfdd675a7450c028317d74caeedaf03f613b73a34f50a3950ba4972bbdb67c'],
+  ['apps/marketing-site/public/icons/lythaus-v1/favicon.116ff3e020c6.svg', '116ff3e020c6b7f8539644880c8bc810d1a6278709b5f273c2a8d354d5f33cb7'],
+  ['apps/marketing-site/public/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png', '572a7b9a0d35f57d71c9f5a7d5f6d5b11a58b67a8bfd55d36416d447476c85ef'],
+  ['apps/marketing-site/public/icons/lythaus-v1/apple-touch-icon.19122fd8c91b.png', '19122fd8c91b3ce51b5a6a00d5840b3fa0f8a02416c0b997c283f9aba42a83bd'],
+  ['apps/marketing-site/public/icons/lythaus-v1/pwa-icon-192x192.5c5c7622a5f7.png', '5c5c7622a5f762e0f0251fc7e806cd51a9f9b95c779f5fda9cc38cb6c658d7b8'],
+  ['apps/marketing-site/public/icons/lythaus-v1/pwa-icon-512x512.27a8dadec032.png', '27a8dadec032e03ffca0953feaac6e800d7b737da5e5e3ec15b822841d2fe04d'],
+  ['apps/marketing-site/public/icons/lythaus-v1/pwa-maskable-192x192.36698aff23fb.png', '36698aff23fb111d8e81ac90c4f6fe1ed34c22aece93ed0833573b81caa6879f'],
+  ['apps/marketing-site/public/icons/lythaus-v1/pwa-maskable-512x512.10ec5b6e6764.png', '10ec5b6e6764cc1935d8909f6f54fe107efb370edf056d33c94718536aaee54d'],
+  ['apps/marketing-site/public/favicon.ico', 'e3dfdd675a7450c028317d74caeedaf03f613b73a34f50a3950ba4972bbdb67c'],
+  ['apps/marketing-site/public/favicon.png', '572a7b9a0d35f57d71c9f5a7d5f6d5b11a58b67a8bfd55d36416d447476c85ef'],
+  ['apps/marketing-site/public/apple-touch-icon.png', '19122fd8c91b3ce51b5a6a00d5840b3fa0f8a02416c0b997c283f9aba42a83bd'],
+  ['apps/marketing-site/public/icons/lythaus-192.png', '5c5c7622a5f762e0f0251fc7e806cd51a9f9b95c779f5fda9cc38cb6c658d7b8'],
+  ['apps/marketing-site/public/icons/lythaus-512.png', '27a8dadec032e03ffca0953feaac6e800d7b737da5e5e3ec15b822841d2fe04d'],
+  ['apps/marketing-site/public/icons/lythaus-512-maskable.png', '10ec5b6e6764cc1935d8909f6f54fe107efb370edf056d33c94718536aaee54d'],
+  ['apps/marketing-site/public/site.webmanifest', '7ce2960d28a1d17f25b84ab42e09d105efe627568b4adfb524d47b1cf8d5ab2a'],
+]);
+const approvedMarketingBrandRemovals = new Set([
+  'apps/marketing-site/public/brand/lythaus-mark.svg',
+]);
 function replaceExactText(source, before, after, label) {
   assert.equal(source.split(before).length - 1, 1, `The ${label} baseline must remain exact`);
   return source.replace(before, after);
@@ -394,6 +417,15 @@ export function assertHomepageFrozen() {
       continue;
     }
     if (authRepairPaths.has(filename)) continue;
+    if (approvedMarketingBrandRemovals.has(filename)) {
+      assert.equal(existsSync(path.join(root, filename)), false, `${filename} must not retain the retired mark`);
+      continue;
+    }
+    if (approvedMarketingBrandAssets.has(filename)) {
+      const current = createHash('sha256').update(readFileSync(path.join(root, filename))).digest('hex');
+      assert.equal(current, approvedMarketingBrandAssets.get(filename), `${filename} must match the approved brand asset bytes`);
+      continue;
+    }
     if (approvedHomepageVisualEdits.has(filename)) {
       const original = git('show', `${baselineSha}:${filename}`);
       const expected = approvedHomepageVisualEdits.get(filename)(original);
@@ -417,6 +449,11 @@ export function assertHomepageFrozen() {
       continue;
     }
     if (!existsSync(path.join(root, filename)) || git('hash-object', `--path=${filename}`, filename) !== expected) changed.push(filename);
+  }
+  for (const [filename, expected] of approvedMarketingBrandAssets) {
+    assert.ok(existsSync(path.join(root, filename)), `${filename} must be present for the approved brand integration`);
+    const current = createHash('sha256').update(readFileSync(path.join(root, filename))).digest('hex');
+    assert.equal(current, expected, `${filename} must match the approved brand asset bytes`);
   }
   assert.deepEqual(changed, [], 'Homepage dependencies changed from the explicit frozen revision');
   assertRootToolingLockOnlyHasSecurityPatches();
@@ -582,14 +619,31 @@ test('Spectral security replacement rejects changed targets, metadata or resurre
 test('approved copy refresh preserves homepage scripts, waitlist controls and metadata wiring', () => {
   const read = filename => readFileSync(path.join(root, filename), 'utf8').replaceAll('\r\n', '\n');
   const scripts = source => [...source.replace(/<script\b[^>]*\/>/g, '').matchAll(/<script\b[^>]*>[\s\S]*?<\/script>/g)].map(match => match[0]).join('\n');
+  const frontmatter = source => source.split('---')[1].trim();
+  const normalizeBrandFrontmatter = source => frontmatter(source)
+    .replace("const socialImageUrl = `${siteUrl}/brand/lythaus-v1/lythaus-social-card-1200x630.c20d3b1b40a8.png`;\n", '')
+    .replace("import '../styles/brand.css';", '')
+    .trim();
+  const normalizeBrandHead = source => source
+    .replace(/^[ \t]*<link rel="icon"[^>]*\/>[ \t]*\n/gmu, '')
+    .replace(/^[ \t]*<link rel="apple-touch-icon"[^>]*\/>[ \t]*\n/gmu, '')
+    .replace(/^[ \t]*<meta property="og:image(?::[^"]+)?"[^>]*\/>[ \t]*\n/gmu, '')
+    .replace(/^[ \t]*<meta name="twitter:image(?::alt)?"[^>]*\/>[ \t]*\n/gmu, '')
+    .replace('content="summary_large_image"', 'content="summary"')
+    .replace(/\n{2,}/gu, '\n')
+    .trim();
   for (const filename of ['apps/marketing-site/src/pages/index.astro', 'apps/marketing-site/src/layouts/BaseLayout.astro']) {
     const original = git('show', `${baselineSha}:${filename}`);
     const current = read(filename);
     assert.equal(scripts(current), scripts(original).replaceAll('Join the private beta', 'Join the waitlist'));
-    const frontmatter = source => source.split('---')[1].trim();
-    assert.equal(frontmatter(current), frontmatter(original));
     if (filename.endsWith('BaseLayout.astro')) {
-      assert.equal(current.match(/<head>[\s\S]*?<\/head>/)[0], original.match(/<head>[\s\S]*?<\/head>/)[0]);
+      assert.equal(normalizeBrandFrontmatter(current), frontmatter(original), 'Only the approved lockup stylesheet and social image URL may be added to layout frontmatter');
+    } else {
+      assert.equal(frontmatter(current), frontmatter(original));
+    }
+    if (filename.endsWith('BaseLayout.astro')) {
+      assert.equal(normalizeBrandHead(current.match(/<head>[\s\S]*?<\/head>/)[0]), normalizeBrandHead(original.match(/<head>[\s\S]*?<\/head>/)[0]),
+        'Only the approved favicon and social image tags may change in the shared head');
     }
   }
   const filename = 'apps/marketing-site/src/pages/index.astro';

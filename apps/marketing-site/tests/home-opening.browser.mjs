@@ -7,7 +7,7 @@ import { chromium, firefox, webkit } from 'playwright';
 
 const dist = path.resolve(import.meta.dirname, '../dist');
 const evidence = process.env.HOMEPAGE_QA_DIR;
-const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
+const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json', '.ttf': 'font/ttf', '.woff2': 'font/woff2' };
 let server;
 let origin;
 
@@ -70,7 +70,10 @@ async function finished(page) {
 
 for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })) {
   test(engineName + ' homepage opening', { timeout: 120000 }, async (t) => {
-    const browser = await engine.launch();
+    const launchOptions = engineName === 'chromium' && process.env.CHROMIUM_PATH
+      ? { executablePath: process.env.CHROMIUM_PATH, args: ['--no-sandbox'] }
+      : {};
+    const browser = await engine.launch(launchOptions);
     const open = async (options = {}, setup) => {
       const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, ...options });
       // Font delivery is tested separately; optical geometry must also work offline.
@@ -315,3 +318,87 @@ for (const [engineName, engine] of Object.entries({ chromium, firefox, webkit })
     } finally { await browser.close(); }
   });
 }
+
+test('marketing brand assets render responsively with correct theme and MIME', { timeout: 60000 }, async () => {
+  const browser = await chromium.launch(process.env.CHROMIUM_PATH ? {
+    executablePath: process.env.CHROMIUM_PATH,
+    args: ['--no-sandbox'],
+  } : {});
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(error.message));
+  await context.route('https://api.lythaus.co/**', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ fixture: 'synthetic-brand-qa' }),
+  }));
+  await context.route('https://challenges.cloudflare.com/**', route => route.abort());
+
+  try {
+    await page.goto(origin, { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => document.documentElement.dataset.opening === 'resolved', null, { timeout: 5000 });
+    assert.match(await page.title(), /For the living internet/u);
+    assert.equal(await page.locator('.site-header .brand-lockup').getAttribute('alt'), '');
+    assert.equal(await page.locator('.site-header .brand').getAttribute('aria-label'), 'Lythaus home');
+    const logo = await page.locator('.site-header .brand-lockup').evaluate(element => {
+      const bounds = element.getBoundingClientRect();
+      return { complete: element.complete, naturalWidth: element.naturalWidth, width: bounds.width, height: bounds.height };
+    });
+    assert.equal(logo.complete, true);
+    assert.ok(logo.naturalWidth > 0);
+    assert.ok(logo.width >= 150 && logo.width <= 155);
+    assert.ok(logo.height >= 30 && logo.height <= 34);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+
+    const assetTypes = await page.evaluate(async (urls) => Promise.all(urls.map(async url => {
+      const response = await fetch(url);
+      return { url, status: response.status, type: response.headers.get('content-type')?.split(';')[0] };
+    })), [
+      '/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg',
+      '/icons/lythaus-v1/favicon.116ff3e020c6.svg',
+      '/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png',
+      '/icons/lythaus-v1/favicon.e3dfdd675a74.ico',
+    ]);
+    assert.deepEqual(assetTypes.map(asset => [asset.status, asset.type]), [
+      [200, 'image/svg+xml'],
+      [200, 'image/svg+xml'],
+      [200, 'image/png'],
+      [200, 'image/x-icon'],
+    ]);
+
+    if (evidence) await page.screenshot({ path: path.join(evidence, 'marketing-brand-home-desktop.png'), fullPage: false });
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileHome = await page.locator('.site-header .brand-lockup').boundingBox();
+    assert.ok(mobileHome.width > 0 && mobileHome.height > 0);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+    if (evidence) await page.screenshot({ path: path.join(evidence, 'marketing-brand-home-mobile.png'), fullPage: false });
+    await page.setViewportSize({ width: 320, height: 800 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.goto(`${origin}/about`, { waitUntil: 'domcontentloaded' });
+    const lightLogo = page.locator('.secondary-header .secondary-brand-art');
+    await lightLogo.waitFor();
+    assert.match(await lightLogo.evaluate(element => getComputedStyle(element).backgroundImage), /lythaus-lockup-black\.9518c6eeb03b\.svg/u);
+    assert.equal(await page.locator('.secondary-header .secondary-brand').getAttribute('aria-label'), 'Lythaus home');
+    assert.equal(await page.locator('.secondary-header .secondary-brand-art').getAttribute('aria-hidden'), 'true');
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+    if (evidence) await page.screenshot({ path: path.join(evidence, 'marketing-brand-secondary-light-mobile.png'), fullPage: false });
+
+    await page.evaluate(() => { document.documentElement.dataset.appearance = 'dark'; });
+    assert.match(await lightLogo.evaluate(element => getComputedStyle(element).backgroundImage), /lythaus-lockup-white\.57df30b168bc\.svg/u);
+    if (evidence) await page.screenshot({ path: path.join(evidence, 'marketing-brand-secondary-dark-mobile.png'), fullPage: false });
+    await page.evaluate(() => { document.documentElement.dataset.appearance = 'light'; });
+    assert.match(await lightLogo.evaluate(element => getComputedStyle(element).backgroundImage), /lythaus-lockup-black\.9518c6eeb03b\.svg/u);
+    const footerLogo = page.locator('.secondary-footer .secondary-brand-art');
+    assert.equal(await footerLogo.count(), 1);
+    const footerBounds = await footerLogo.boundingBox();
+    assert.ok(footerBounds.width > 0 && footerBounds.height > 0);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+    assert.equal(pageErrors.length, 0, pageErrors.join('\n'));
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+});
