@@ -29,6 +29,8 @@
   let pollTimer = null;
   let reloadRetryTimer = null;
   let reloadRetryDelayMs = initialRetryDelayMs;
+  let coalescedFollowUpRequested = false;
+  let coalescedFollowUpActive = false;
   let banner = null;
   let bannerMessage = null;
   let reloadButton = null;
@@ -410,8 +412,11 @@
   }
 
   async function checkNow() {
-    if (state.checking || !releaseIdPattern.test(currentReleaseId) ||
-        !window.navigator.onLine) {
+    if (state.checking) {
+      if (!coalescedFollowUpActive) coalescedFollowUpRequested = true;
+      return;
+    }
+    if (!releaseIdPattern.test(currentReleaseId) || !window.navigator.onLine) {
       return;
     }
     state.checking = true;
@@ -426,6 +431,14 @@
     } finally {
       state.checking = false;
       renderBanner();
+      if (coalescedFollowUpRequested) {
+        coalescedFollowUpRequested = false;
+        coalescedFollowUpActive = true;
+        void checkNow().finally(() => {
+          coalescedFollowUpActive = false;
+        });
+        return;
+      }
       if (state.available && state.canReload) {
         void tryReload(state.targetReleaseId, false);
       }

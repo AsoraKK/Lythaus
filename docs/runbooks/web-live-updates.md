@@ -14,6 +14,8 @@ If the deployed release changes while a candidate is being verified, the
 watcher rechecks the newest candidate with a bounded exponential delay from 250
 milliseconds up to five seconds. Ordinary failed or offline checks wait for the
 next resume, connectivity event, or visible five-minute poll.
+Foreground and reconnect signals arriving during a manifest check coalesce into
+at most one follow-up check.
 
 The reload uses normal browser navigation. The app does not invoke or promise a
 browser hard refresh. The HTML document and release manifest revalidate without

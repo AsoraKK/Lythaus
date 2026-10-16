@@ -33,6 +33,7 @@ const serverState = {
   staleNextDocumentHtml: null,
   staleManifestAfterDocument: null,
   pausedHead: null,
+  pausedManifests: [],
   manifestSequence: null,
   manifestSequenceIndex: 0,
   requests: [],
@@ -91,6 +92,18 @@ function pauseHeadFor(file) {
   };
 }
 
+function pauseManifestFor(manifest) {
+  let entered;
+  let resume;
+  return {
+    manifest,
+    entered: new Promise((resolve) => { entered = resolve; }),
+    resume: new Promise((resolve) => { resume = resolve; }),
+    signalEntered: () => entered(),
+    release: () => resume(),
+  };
+}
+
 const server = createServer((request, response) => {
   const url = new URL(request.url, 'http://127.0.0.1');
   serverState.requests.push({
@@ -107,6 +120,17 @@ const server = createServer((request, response) => {
     return;
   }
   if (url.pathname === '/web-release-assets.json') {
+    const pausedManifest = serverState.pausedManifests.shift();
+    if (pausedManifest) {
+      pausedManifest.signalEntered();
+      void pausedManifest.resume.then(() => {
+        response.writeHead(200, {
+          'content-type': 'application/json; charset=utf-8',
+          'cache-control': 'no-store',
+        }).end(JSON.stringify(pausedManifest.manifest));
+      });
+      return;
+    }
     if (serverState.manifestSequence !== null) {
       const sequence = serverState.manifestSequence;
       const manifest = sequence[
@@ -208,6 +232,20 @@ async function waitForRelease(page, release) {
     release,
     { timeout: 10000 },
   );
+}
+
+async function waitForPausedRequest(pause, timeoutMessage) {
+  let timeout;
+  try {
+    await Promise.race([
+      pause.entered,
+      new Promise((_, reject) => {
+        timeout = setTimeout(() => reject(new Error(timeoutMessage)), 3000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 try {
@@ -672,6 +710,90 @@ try {
   await waitForRelease(foregroundTab.page, 'v12');
   assert.equal(foregroundTab.navigationCount(), focusNavs + 1);
 
+  const followUpContext = await browser.newContext();
+  const followUpTab = await openTab(followUpContext, 'v12');
+  await followUpTab.page.waitForFunction(
+    () => !window.lythausReleaseUpdates.snapshot().checking,
+  );
+  await followUpTab.page.evaluate(() =>
+    window.lythausReleaseUpdates.setCanReload(false),
+  );
+  const coalescedRelease = deployRelease('v13');
+  const staleManifestPause = pauseManifestFor(focusRelease.manifest);
+  const followUpManifestPause = pauseManifestFor(coalescedRelease.manifest);
+  serverState.pausedManifests.push(staleManifestPause, followUpManifestPause);
+  const requestsBeforeCoalescedCheck = serverState.requests.filter(
+    ({ url }) => url.startsWith('/web-release-assets.json?check='),
+  ).length;
+  const coalescedNavs = followUpTab.navigationCount();
+  const initialCheck = followUpTab.page.evaluate(
+    () => window.lythausReleaseUpdates.checkNow(),
+  );
+  await waitForPausedRequest(staleManifestPause,
+    'initial manifest request did not start');
+  await followUpTab.page.evaluate(() => {
+    window.dispatchEvent(new Event('focus'));
+    window.dispatchEvent(
+      new PageTransitionEvent('pageshow', { persisted: true }),
+    );
+    window.dispatchEvent(new Event('focus'));
+  });
+  staleManifestPause.release();
+  await waitForPausedRequest(
+    followUpManifestPause,
+    'foreground signals were dropped instead of scheduling a follow-up check',
+  );
+  await followUpTab.page.evaluate(() => {
+    window.dispatchEvent(new Event('focus'));
+    window.dispatchEvent(
+      new PageTransitionEvent('pageshow', { persisted: true }),
+    );
+    window.dispatchEvent(new Event('focus'));
+  });
+  followUpManifestPause.release();
+  await initialCheck;
+  await followUpTab.page.waitForFunction(
+    (releaseId) => {
+      const snapshot = window.lythausReleaseUpdates.snapshot();
+      return snapshot.available && snapshot.targetReleaseId === releaseId &&
+        !snapshot.checking;
+    },
+    coalescedRelease.manifest.releaseId,
+  );
+  await followUpTab.page.waitForTimeout(150);
+  const coalescedRequests = serverState.requests.filter(
+    ({ url }) => url.startsWith('/web-release-assets.json?check='),
+  ).length - requestsBeforeCoalescedCheck;
+  assert.equal(coalescedRequests, 2,
+    'signals during the initial and follow-up checks must coalesce into one follow-up');
+  assert.equal(followUpTab.navigationCount(), coalescedNavs);
+  assert.equal(
+    await followUpTab.page.evaluate(
+      () => window.lythausReleaseUpdates.snapshot().canReload,
+    ),
+    false,
+  );
+  await followUpTab.page.evaluate(() =>
+    window.lythausReleaseUpdates.setCanReload(true),
+  );
+  await waitForRelease(followUpTab.page, 'v13');
+  assert.equal(followUpTab.navigationCount(), coalescedNavs + 1);
+  await followUpTab.page.waitForFunction(
+    () => !window.lythausReleaseUpdates.snapshot().checking,
+  );
+  await followUpTab.page.evaluate(() => {
+    window.dispatchEvent(new Event('focus'));
+    window.dispatchEvent(
+      new PageTransitionEvent('pageshow', { persisted: true }),
+    );
+  });
+  await followUpTab.page.waitForFunction(
+    () => !window.lythausReleaseUpdates.snapshot().checking,
+  );
+  await followUpTab.page.waitForTimeout(250);
+  assert.equal(followUpTab.navigationCount(), coalescedNavs + 1,
+    'signals after the target release loads must not create a reload loop');
+
   await checkForUpdate(workerTab.page);
   assert.equal(
     await workerTab.page.evaluate(() => window.release),
@@ -709,6 +831,8 @@ try {
         'visible tabs check for releases when they return to the foreground',
         'BFCache pageshow checks for releases while polling is active',
         'window focus checks for a newer release',
+        'focus and pageshow signals coalesce into one bounded follow-up check',
+        'a closed safety gate blocks the follow-up reload until safe',
         'manifest reads bypass stale cache keys',
         'service-worker activation does not navigate live tabs',
       ],
@@ -727,6 +851,7 @@ try {
     offlineContext.close(),
     workerContext.close(),
     foregroundContext.close(),
+    followUpContext.close(),
     candidateRaceContext.close(),
     loadedCandidateContext.close(),
     rollbackRaceContext.close(),
