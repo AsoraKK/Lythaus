@@ -119,6 +119,13 @@ test('server enforces Free, Premium, and Black limits and Black-only News Board 
   assert.equal(requireNewsBoardAccess('black'), 'full');
 });
 
+test('Black member can fetch News Board content when the runtime publication read is provisioned', {
+  skip: 'blocked: the CI runtime role lacks USAGE on editorial; see membership entitlement boundary notes',
+}, async () => {
+  const response = await call('black', 'GET', '/api/news-board');
+  assert.equal(response.status, 200, await response.clone().text());
+});
+
 test('forged tier, pending, expired, cancelled, and provider claims do not change the server tier', async () => {
   const firstKey = uuidv7();
   const first = await createFeed('forged', 'forged-black-claim', firstKey, { tier: 'black', status: 'active', provider: 'stripe' });
