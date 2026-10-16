@@ -67,6 +67,7 @@ class Repository extends Fake implements SocialFeedRepository {
 ProviderContainer container() => ProviderContainer(
   overrides: [
     authStateProvider.overrideWith((_) => FeedTestAuth(null)),
+    guestModeProvider.overrideWith((_) => true),
     socialFeedServiceProvider.overrideWithValue(Repository()),
     jwtProvider.overrideWith((ref) async => null),
   ],
