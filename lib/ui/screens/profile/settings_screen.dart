@@ -68,6 +68,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           padding: const EdgeInsets.all(Spacing.md),
           children: [
             Semantics(
+              container: true,
               header: true,
               child: Text(
                 'Account',
@@ -186,6 +187,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const PresentationPreferencesSection(),
             const Divider(height: Spacing.xl),
             Semantics(
+              container: true,
               header: true,
               child: Text(
                 'Public profile',
@@ -258,6 +260,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const Divider(height: Spacing.xl),
             if (currentUser != null) ...[
               Semantics(
+                container: true,
                 header: true,
                 child: Text(
                   'Experimental',

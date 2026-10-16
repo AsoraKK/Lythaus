@@ -470,7 +470,14 @@ class _OwnerPostsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Your posts', style: Theme.of(context).textTheme.titleLarge),
+        Semantics(
+          container: true,
+          header: true,
+          child: Text(
+            'Your posts',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+        ),
         const SizedBox(height: Spacing.sm),
         postsState.when(
           loading: () => const ProfileContentStatus(

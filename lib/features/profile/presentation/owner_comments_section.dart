@@ -38,7 +38,14 @@ class OwnerCommentsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Your comments', style: Theme.of(context).textTheme.titleLarge),
+        Semantics(
+          container: true,
+          header: true,
+          child: Text(
+            'Your comments',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+        ),
         const SizedBox(height: Spacing.sm),
         state.when(
           loading: () => const ProfileContentStatus(
