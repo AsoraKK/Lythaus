@@ -28,6 +28,7 @@ import 'package:lythaus/features/profile/domain/owner_profile.dart';
 import 'package:lythaus/features/profile/domain/owner_post.dart';
 import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
 import 'package:lythaus/features/profile/presentation/profile_tab_view.dart';
+import 'package:lythaus/features/profile/presentation/profile_content_status.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/moderation/presentation/moderation_console/moderation_console_screen.dart';
 import 'package:lythaus/design_system/components/lyth_button.dart';
@@ -469,32 +470,29 @@ class _OwnerPostsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Your posts', style: Theme.of(context).textTheme.titleLarge),
+        Semantics(
+          header: true,
+          child: Text(
+            'Your posts',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+        ),
         const SizedBox(height: Spacing.sm),
         postsState.when(
-          loading: () => Padding(
-            padding: const EdgeInsets.symmetric(vertical: Spacing.md),
-            child: Semantics(
-              label: 'Loading your posts',
-              child: const LinearProgressIndicator(minHeight: 2),
-            ),
+          loading: () => const ProfileContentStatus(
+            title: 'Loading your posts',
+            icon: Icons.article_outlined,
+            loading: true,
           ),
-          error: (error, stackTrace) => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                ownerContentIsOffline(error)
-                    ? 'You appear to be offline. Connect to load your posts.'
-                    : 'Unable to load your posts. Your profile is still available.',
-              ),
-              TextButton.icon(
-                onPressed: () => ref
-                    .read(ownerPostsTimelineProvider(key).notifier)
-                    .refresh(),
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry posts'),
-              ),
-            ],
+          error: (error, stackTrace) => ProfileContentStatus(
+            title: 'Posts could not be loaded',
+            icon: Icons.article_outlined,
+            message: ownerContentIsOffline(error)
+                ? 'You appear to be offline. Connect to load your posts.'
+                : 'Unable to load your posts. Your profile is still available.',
+            onRetry: () =>
+                ref.read(ownerPostsTimelineProvider(key).notifier).refresh(),
+            retryLabel: 'Retry posts',
           ),
           data: (timeline) => _buildTimeline(context, ref, key, timeline),
         ),
@@ -509,14 +507,10 @@ class _OwnerPostsSection extends ConsumerWidget {
     OwnerPostsTimeline timeline,
   ) {
     if (timeline.items.isEmpty && !timeline.hasMore) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
-        child: Text(
-          'No posts are available in this list.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
+      return const ProfileContentStatus(
+        title: 'No posts to show',
+        icon: Icons.article_outlined,
+        message: 'No posts are available in this list.',
       );
     }
     return Column(

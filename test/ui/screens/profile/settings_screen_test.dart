@@ -18,6 +18,31 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class _MockDio extends Mock implements Dio {}
 
 void main() {
+  testWidgets('security and privacy precede notification controls', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(child: MaterialApp(home: SettingsScreen())),
+    );
+    await tester.pumpAndSettle();
+    final security = tester.getTopLeft(find.text('Account security')).dy;
+    final privacy = tester.getTopLeft(find.text('Privacy and your data')).dy;
+    final notifications = tester.getTopLeft(find.text('Notifications')).dy;
+    expect(security, lessThan(privacy));
+    expect(privacy, lessThan(notifications));
+    final semantics = tester.ensureSemantics();
+    await tester.pump();
+    expect(
+      tester
+          .getSemantics(find.text('Account'))
+          .getSemanticsData()
+          .flagsCollection
+          .isHeader,
+      isTrue,
+    );
+    semantics.dispose();
+  });
+
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
   setUpAll(() {
     registerFallbackValue(RequestOptions(path: '/api/users/me'));

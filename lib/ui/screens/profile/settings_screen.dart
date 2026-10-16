@@ -67,11 +67,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         body: ListView(
           padding: const EdgeInsets.all(Spacing.md),
           children: [
-            Text('Account', style: Theme.of(context).textTheme.titleLarge),
+            Semantics(
+              header: true,
+              child: Text(
+                'Account',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
             const SizedBox(height: Spacing.sm),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.security_outlined),
+              trailing: const Icon(Icons.chevron_right),
               title: const Text('Account security'),
               onTap: () {
                 final router = GoRouter.maybeOf(context);
@@ -92,24 +99,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.notifications_none),
-              title: const Text('Notifications'),
+              leading: const Icon(Icons.privacy_tip_outlined),
+              trailing: const Icon(Icons.chevron_right),
+              title: const Text('Privacy and your data'),
+              subtitle: const Text(
+                'Visibility, data export, and account deletion',
+              ),
               onTap: () {
                 final router = GoRouter.maybeOf(context);
                 if (router != null) {
-                  router.go('/notifications');
-                } else {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const NotificationsScreen(),
-                    ),
+                  router.go(
+                    GoRouterState.of(
+                      context,
+                    ).uri.replace(path: '/settings/privacy').toString(),
                   );
+                  return;
                 }
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const PrivacySettingsScreen(),
+                  ),
+                );
               },
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.notifications_outlined),
+              trailing: const Icon(Icons.chevron_right),
               title: const Text('Notification settings'),
               onTap: () {
                 final router = GoRouter.maybeOf(context);
@@ -130,26 +146,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.privacy_tip_outlined),
-              title: const Text('Privacy and your data'),
-              subtitle: const Text(
-                'Visibility, data export, and account deletion',
-              ),
+              leading: const Icon(Icons.notifications_none),
+              trailing: const Icon(Icons.chevron_right),
+              title: const Text('Notifications'),
               onTap: () {
                 final router = GoRouter.maybeOf(context);
                 if (router != null) {
-                  router.go(
-                    GoRouterState.of(
-                      context,
-                    ).uri.replace(path: '/settings/privacy').toString(),
+                  router.go('/notifications');
+                } else {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const NotificationsScreen(),
+                    ),
                   );
-                  return;
                 }
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const PrivacySettingsScreen(),
-                  ),
-                );
               },
             ),
             if (currentUser != null && supportFeedbackEnabled) ...<Widget>[
@@ -175,9 +185,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const Divider(height: Spacing.xl),
             const PresentationPreferencesSection(),
             const Divider(height: Spacing.xl),
-            Text(
-              'Public profile',
-              style: Theme.of(context).textTheme.titleLarge,
+            Semantics(
+              header: true,
+              child: Text(
+                'Public profile',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
@@ -189,12 +202,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
             if (profileState?.isLoading == true)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: Spacing.sm),
-                child: LinearProgressIndicator(minHeight: 2),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
+                child: Semantics(
+                  liveRegion: true,
+                  label: 'Loading saved profile visibility',
+                  child: const ExcludeSemantics(
+                    child: LinearProgressIndicator(minHeight: 2),
+                  ),
+                ),
               ),
             if (profileState?.hasError == true) ...[
-              const Text('Unable to load your saved visibility.'),
+              Semantics(
+                liveRegion: true,
+                child: const Text('Unable to load your saved visibility.'),
+              ),
               TextButton(
                 onPressed: () => ref.invalidate(ownerProfileProvider),
                 child: const Text('Retry visibility'),
@@ -230,14 +252,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             const SizedBox(height: Spacing.xs),
             Text(
-              'This setting changes profile presentation only. It does not change core feed ranking.',
+              'This controls what others see on your profile. It does not change which posts appear in your feed.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const Divider(height: Spacing.xl),
             if (currentUser != null) ...[
-              Text(
-                'Experimental',
-                style: Theme.of(context).textTheme.titleLarge,
+              Semantics(
+                header: true,
+                child: Text(
+                  'Experimental',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,

@@ -94,15 +94,25 @@ class _ProfileTabViewState extends ConsumerState<ProfileTabView>
     return FocusTraversalGroup(
       child: Column(
         children: [
-          TabBar(
-            controller: _controller,
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            tabs: const [
-              Tab(text: 'Overview'),
-              Tab(text: 'Posts'),
-              Tab(text: 'Comments'),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final scrollable =
+                  constraints.maxWidth <
+                  360 * MediaQuery.textScalerOf(context).scale(1);
+              return TabBar(
+                controller: _controller,
+                isScrollable: scrollable,
+                tabAlignment: scrollable
+                    ? TabAlignment.start
+                    : TabAlignment.fill,
+                indicatorSize: TabBarIndicatorSize.tab,
+                tabs: const [
+                  Tab(text: 'Overview'),
+                  Tab(text: 'Posts'),
+                  Tab(text: 'Comments'),
+                ],
+              );
+            },
           ),
           Expanded(
             child: TabBarView(
