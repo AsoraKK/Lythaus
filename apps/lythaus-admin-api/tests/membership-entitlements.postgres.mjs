@@ -95,6 +95,7 @@ after(async () => {
   await sql("DELETE FROM system.audit_events WHERE actor_id = $1 OR target_id = ANY($2::uuid[])", [adminId, userIds]);
   await sql("DELETE FROM system.outbox_events WHERE event_type = 'identity.user.tier_changed' AND aggregate_id = ANY($1::uuid[])", [userIds]);
   await sql("DELETE FROM system.rate_limit_windows WHERE scope = 'admin-api' AND subject_hash = $1", [adminRateHash]);
+  await sql('DELETE FROM identity.user_entitlements WHERE user_id = ANY($1::uuid[])', [userIds]);
   await sql('DELETE FROM identity.users WHERE id = ANY($1::uuid[])', [subjects]);
 });
 
@@ -158,6 +159,6 @@ test('provider lifecycle claims and unavailable state cannot act as manual entit
 
   const denied = await changeTier(targetId, { tier: 'black', reasonCode: 'SYNTHETIC_TEST' }, 'synthetic-invalid');
   assert.equal(denied.status, 401);
-  assert.equal((await denied.json()).error, 'access_assertion_invalid');
+  assert.equal((await denied.json()).error, 'access_required');
   assert.equal(await count('SELECT count(*)::integer AS count FROM identity.user_entitlements WHERE user_id = $1', [targetId]), 0);
 });

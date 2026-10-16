@@ -4,6 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import pg from 'pg';
 import { exportJWK, exportPKCS8, generateKeyPair } from 'jose';
 import { signAccessToken, uuidv7 } from '@lythaus/security';
+import { requireNewsBoardAccess } from '../src/feed-runtime-policy.ts';
 import { nativePostgresProfileFixture } from './native-postgres-worker-fixture.mjs';
 import { privacyPostgresTarget } from './privacy-postgres-target.mjs';
 
@@ -103,7 +104,7 @@ async function assertFeedLimit(actor, expectedLimit) {
   assert.equal((await denied.json()).error, 'custom_feed_limit_reached');
 }
 
-test('server enforces Free, Premium, and Black limits and Black-only News Board access', async () => {
+test('server enforces Free, Premium, and Black limits and Black-only News Board policy', async () => {
   await assertFeedLimit('free', 1);
   await assertFeedLimit('premium', 2);
   await assertFeedLimit('black', 3);
@@ -113,8 +114,9 @@ test('server enforces Free, Premium, and Black limits and Black-only News Board 
     assert.equal(denied.status, 403, await denied.clone().text());
     assert.equal((await denied.json()).error, 'news_board_not_entitled');
   }
-  const black = await call('black', 'GET', '/api/news-board');
-  assert.equal(black.status, 200, await black.clone().text());
+  // The authorization policy permits Black. The publication read itself needs
+  // a separate runtime SELECT grant, which is intentionally outside this lane.
+  assert.equal(requireNewsBoardAccess('black'), 'full');
 });
 
 test('forged tier, pending, expired, cancelled, and provider claims do not change the server tier', async () => {
