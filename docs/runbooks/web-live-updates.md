@@ -96,8 +96,8 @@ flutter test test/features/feed/application/content_mutation_test.dart test/feat
 
 The JavaScript browser test covers stale bundles and manifests, per-tab reload
 fences, rollback, release and safety-gate races, changing manifest candidates,
-bounded retries, repeated version signals, an HTML SPA fallback, and offline
-recovery. The compiled Flutter browser test runs the real
-Dart reload gate and web bridge while editing a post draft, saving it to the
-recovery journal, holding an authenticated operation, and switching accounts
-while a journal write is pending.
+bounded retries, repeated version signals, visible/focused/BFCache resume,
+reconnect, an HTML SPA fallback, and offline recovery. The compiled Flutter
+browser test runs the real Dart reload gate and web bridge while editing a post
+draft, saving it to the recovery journal, holding an authenticated operation,
+and switching accounts while a journal write is pending.

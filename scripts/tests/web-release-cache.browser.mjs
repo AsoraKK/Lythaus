@@ -621,6 +621,57 @@ try {
   assert.equal(alternatingManifestTab.navigationCount(), alternatingNavs + 1);
   await alternatingManifestContext.close();
 
+  const foregroundContext = await browser.newContext();
+  const foregroundTab = await openTab(foregroundContext, 'v9');
+  await foregroundTab.page.waitForFunction(
+    () => !window.lythausReleaseUpdates.snapshot().checking,
+  );
+  await foregroundTab.page.evaluate(() => {
+    window.lythausReleaseUpdates.setCanReload(true);
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'hidden',
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  const visibleRelease = deployRelease('v10');
+  const visibleNavs = foregroundTab.navigationCount();
+  await foregroundTab.page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible',
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await waitForRelease(foregroundTab.page, 'v10');
+  assert.equal(foregroundTab.navigationCount(), visibleNavs + 1);
+  await foregroundTab.page.evaluate(() =>
+    window.lythausReleaseUpdates.setCanReload(true),
+  );
+
+  const pageShowRelease = deployRelease('v11');
+  assert.notEqual(visibleRelease.manifest.releaseId, pageShowRelease.manifest.releaseId);
+  const pageShowNavs = foregroundTab.navigationCount();
+  await foregroundTab.page.evaluate(() => {
+    window.dispatchEvent(
+      new PageTransitionEvent('pageshow', { persisted: true }),
+    );
+  });
+  await waitForRelease(foregroundTab.page, 'v11');
+  assert.equal(foregroundTab.navigationCount(), pageShowNavs + 1);
+  await foregroundTab.page.evaluate(() =>
+    window.lythausReleaseUpdates.setCanReload(true),
+  );
+
+  const focusRelease = deployRelease('v12');
+  assert.notEqual(pageShowRelease.manifest.releaseId, focusRelease.manifest.releaseId);
+  const focusNavs = foregroundTab.navigationCount();
+  await foregroundTab.page.evaluate(() =>
+    window.dispatchEvent(new Event('focus')),
+  );
+  await waitForRelease(foregroundTab.page, 'v12');
+  assert.equal(foregroundTab.navigationCount(), focusNavs + 1);
+
   await checkForUpdate(workerTab.page);
   assert.equal(
     await workerTab.page.evaluate(() => window.release),
@@ -655,6 +706,9 @@ try {
         'blocked session storage pauses reload until the loop guard is available',
         'HTML SPA fallback is not accepted as a manifest',
         'offline polling waits for connectivity',
+        'visible tabs check for releases when they return to the foreground',
+        'BFCache pageshow checks for releases while polling is active',
+        'window focus checks for a newer release',
         'manifest reads bypass stale cache keys',
         'service-worker activation does not navigate live tabs',
       ],
@@ -672,6 +726,7 @@ try {
     restrictedContext.close(),
     offlineContext.close(),
     workerContext.close(),
+    foregroundContext.close(),
     candidateRaceContext.close(),
     loadedCandidateContext.close(),
     rollbackRaceContext.close(),

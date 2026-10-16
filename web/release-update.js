@@ -478,8 +478,12 @@
     }
   }, true);
   document.addEventListener('visibilitychange', syncPolling);
+  window.addEventListener('focus', () => void checkNow());
   window.addEventListener('online', () => void checkNow());
-  window.addEventListener('pageshow', syncPolling);
+  window.addEventListener('pageshow', () => {
+    syncPolling();
+    void checkNow();
+  });
 
   window.lythausReleaseUpdates = Object.freeze({
     checkNow,
