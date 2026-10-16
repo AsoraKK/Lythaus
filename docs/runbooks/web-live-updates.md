@@ -14,6 +14,8 @@ If the deployed release changes while a candidate is being verified, the
 watcher rechecks the newest candidate with a bounded exponential delay from 250
 milliseconds up to five seconds. Ordinary failed or offline checks wait for the
 next resume, connectivity event, or visible five-minute poll.
+Foreground and reconnect signals arriving during a manifest check coalesce into
+at most one follow-up check.
 
 The reload uses normal browser navigation. The app does not invoke or promise a
 browser hard refresh. The HTML document and release manifest revalidate without
@@ -96,8 +98,8 @@ flutter test test/features/feed/application/content_mutation_test.dart test/feat
 
 The JavaScript browser test covers stale bundles and manifests, per-tab reload
 fences, rollback, release and safety-gate races, changing manifest candidates,
-bounded retries, repeated version signals, an HTML SPA fallback, and offline
-recovery. The compiled Flutter browser test runs the real
-Dart reload gate and web bridge while editing a post draft, saving it to the
-recovery journal, holding an authenticated operation, and switching accounts
-while a journal write is pending.
+bounded retries, repeated version signals, visible/focused/BFCache resume,
+reconnect, an HTML SPA fallback, and offline recovery. The compiled Flutter
+browser test runs the real Dart reload gate and web bridge while editing a post
+draft, saving it to the recovery journal, holding an authenticated operation,
+and switching accounts while a journal write is pending.
