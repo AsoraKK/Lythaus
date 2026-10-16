@@ -755,7 +755,14 @@ test('public dispatcher invokes private monthly JSON, CSV, and rewards routes wi
   const report=await call(owner,'GET','/api/reputation/me/reports/monthly/2026-08');
   assert.equal(report.status,200,await report.clone().text());
   assert.match(report.headers.get('cache-control')??'',/private.*no-store/);
-  assert.equal((await report.json()).reportState,'pending');
+  const reportBody=await report.json();matches('MonthlyReputationReportResponse',reportBody);
+  assert.equal(reportBody.reportState,'pending');assert.equal(reportBody.preparedResponse,null);
+  assert.deepEqual(reportBody.responsePreparation,{
+    state:'disabled',reasonCode:'activation_not_approved',responseVersion:'monthly-rewards-response-v2-preparation',
+    policyVersion:'lythaus-monthly-rewards-2026-10-v2',
+    catalogueHash:'26213abccce99ee51be6c0623406c28aaa7d39ed3ea3b4ac630b7cffd859db67',
+    dataVersion:2,maximumSourceMonth:13650,preparationOnly:true,runtimeActivationAllowed:false,appliedPoints:0,
+  });
 
   const csv=await call(owner,'GET','/api/reputation/me/reports/monthly/2026-08/export.csv');
   assert.equal(csv.status,200,await csv.clone().text());
@@ -766,8 +773,10 @@ test('public dispatcher invokes private monthly JSON, CSV, and rewards routes wi
   const rewards=await call(owner,'GET','/api/rewards/me/monthly');
   assert.equal(rewards.status,200,await rewards.clone().text());
   assert.match(rewards.headers.get('cache-control')??'',/private.*no-store/);
-  assert.deepEqual(await rewards.json(),{
+  const rewardsBody=await rewards.json();matches('MonthlyRewardsMeResponse',rewardsBody);
+  assert.deepEqual(rewardsBody,{
     state:'pending',reasonCode:'approval_unavailable',effectiveMonth:null,currentLevel:null,sourceMonth:null,sourceScore:null,
     snapshot:{state:'unavailable',reasonCode:'approval_unavailable'},selection:{state:'unavailable',reasonCode:'approval_unavailable'},
+    responsePreparation:reportBody.responsePreparation,preparedResponse:null,
   });
 });

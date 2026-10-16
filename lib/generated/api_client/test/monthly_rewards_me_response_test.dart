@@ -47,5 +47,15 @@ void main() {
       // TODO
     });
 
+    // MonthlyResponsePreparationReadiness responsePreparation
+    test('to test the property `responsePreparation`', () async {
+      // TODO
+    });
+
+    // MonthlyRewardsResponsePreparation preparedResponse
+    test('to test the property `preparedResponse`', () async {
+      // TODO
+    });
+
   });
 }

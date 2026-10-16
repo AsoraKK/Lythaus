@@ -175,7 +175,6 @@ test('prepared report keeps null and absent captured versions as unavailable evi
   assert.equal(explicitNull.report.weekly.periodPolicyVersion, null);
   assert.equal(explicitNull.report.weekly.periodPolicyStatus, 'unavailable');
 });
-
 test('prepared snapshot readers reuse the SQL settlement clock and never trust client time or latest progress', async () => {
   const client = preparedClient({ settled: false });
   const read = await readOwnMonthlyRewardSnapshot(client, { subjectId, effectiveMonth: '2027-01', rulesVersion: input.snapshotRulesVersion }, disposable);

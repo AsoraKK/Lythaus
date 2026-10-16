@@ -16,5 +16,7 @@ Name | Type | Description | Notes
 **sourceScore** | **int** |  |
 **snapshot** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
 **selection** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
+**responsePreparation** | [**MonthlyResponsePreparationReadiness**](MonthlyResponsePreparationReadiness.md) |  | [optional]
+**preparedResponse** | [**MonthlyRewardsResponsePreparation**](MonthlyRewardsResponsePreparation.md) |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

@@ -6,6 +6,7 @@ import { readOwnMonthlyRewardSnapshot } from '../../../packages/db/src/monthly-r
 import { readOwnMonthlyRewardSelections } from '../../../packages/db/src/monthly-reward-selections.ts';
 import { requireSourceMonth } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
 import { serializeMonthlyReputationReportCsv, serializeMonthlyReputationReportJson } from './monthly-reputation-report-export.ts';
+import { monthlyRewardsResponseReadiness } from '../../../packages/contracts/src/monthly-rewards-response-readiness.ts';
 
 export interface MonthlyReputationRouteDependencies {
   authenticate: (request: Request) => Promise<{ userId: string }>;
@@ -21,6 +22,12 @@ function privateResponse(dependencies: MonthlyReputationRouteDependencies, body:
   const response = dependencies.respond(body, status, headers);
   response.headers.set('cache-control', 'private, no-store');
   return response;
+}
+
+function monthlyJsonResponse(dependencies: MonthlyReputationRouteDependencies, body: object): Response {
+  return privateResponse(dependencies, serializeMonthlyReputationReportJson({ ...body,
+    responsePreparation: monthlyRewardsResponseReadiness(), preparedResponse: null,
+  }, dependencies.reportBounds), 200, { 'content-type': 'application/json; charset=utf-8' });
 }
 
 function errorResponse(dependencies: MonthlyReputationRouteDependencies, error: unknown): Response {
@@ -74,19 +81,18 @@ export async function handleMonthlyReputationRead(request: Request,
           'content-disposition': `attachment; filename="monthly-reputation-${sourceMonth}.csv"`,
         });
       }
-      return privateResponse(dependencies, serializeMonthlyReputationReportJson(report, dependencies.reportBounds), 200,
-        { 'content-type': 'application/json; charset=utf-8' });
+      return monthlyJsonResponse(dependencies, report);
     }
 
     // No configured server rules means no monthly-reward table reads. In particular,
     // owner identity and score values never come from query or body parameters.
     if (!dependencies.snapshotRulesVersion || !dependencies.selectionRulesVersion) {
-      return privateResponse(dependencies, {
+      return monthlyJsonResponse(dependencies, {
         state: 'pending', reasonCode: 'approval_unavailable', effectiveMonth: null,
         currentLevel: null, sourceMonth: null, sourceScore: null,
         snapshot: { state: 'unavailable', reasonCode: 'approval_unavailable' },
         selection: { state: 'unavailable', reasonCode: 'approval_unavailable' },
-      }, 200, { 'content-type': 'application/json; charset=utf-8' });
+      });
     }
     const monthly = await dependencies.transaction(async client => {
       const selection = await readOwnMonthlyRewardSelections(client, {
@@ -103,7 +109,7 @@ export async function handleMonthlyReputationRead(request: Request,
       return { snapshot, selection };
     });
     const ready = monthly.snapshot.state === 'confirmed' && monthly.selection.state === 'ready';
-    return privateResponse(dependencies, {
+    return monthlyJsonResponse(dependencies, {
       state: ready ? 'ready' : 'pending',
       reasonCode: ready ? null : monthly.selection.reasonCode ?? monthly.snapshot.reasonCode ?? 'approval_unavailable',
       effectiveMonth: monthly.snapshot.effectiveMonth ?? monthly.selection.effectiveMonth ?? null,
@@ -112,7 +118,7 @@ export async function handleMonthlyReputationRead(request: Request,
       sourceScore: monthly.snapshot.sourceScore ?? null,
       snapshot: monthly.snapshot,
       selection: monthly.selection,
-    }, 200, { 'content-type': 'application/json; charset=utf-8' });
+    });
   } catch (error) {
     if (error instanceof Error && error.message === 'monthly_report_format_invalid') {
       return privateResponse(dependencies, { error: error.message }, 400);
