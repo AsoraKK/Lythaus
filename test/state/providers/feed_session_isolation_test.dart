@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/profile/application/profile_providers.dart';
 import 'package:lythaus/features/feed/application/custom_feed_service.dart';
 import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
 import 'package:lythaus/features/feed/application/feed_read_session.dart';
@@ -23,6 +24,7 @@ import 'package:lythaus/design_system/theme/lyth_theme.dart';
 import 'package:lythaus/ui/components/lythaus_top_bar.dart';
 import 'package:lythaus/ui/screens/home/discover_feed.dart';
 import 'package:lythaus/ui/screens/home/home_feed_navigator.dart';
+import 'package:lythaus/ui/screens/adaptive_shell.dart';
 
 import '../../helpers/feed_session.dart';
 import '../../helpers/content_recovery.dart';
@@ -145,7 +147,11 @@ SubscriptionStatus _entitlements(String owner, {bool black = true}) =>
     });
 
 class _Harness {
-  _Harness({String? owner = 'a', Future<String?>? initialToken}) {
+  _Harness({
+    String? owner = 'a',
+    Future<String?>? initialToken,
+    List<Override> additionalOverrides = const [],
+  }) {
     auth = FeedTestAuth(owner == null ? null : feedTestUser(owner));
     tokens = StateProvider<Future<String?>>(
       (_) => initialToken ?? Future.value('synthetic-token-$owner'),
@@ -160,6 +166,7 @@ class _Harness {
         socialFeedServiceProvider.overrideWithValue(feeds),
         customFeedServiceProvider.overrideWithValue(custom),
         subscriptionServiceProvider.overrideWithValue(subscriptions),
+        ...additionalOverrides,
       ],
     );
     addTearDown(container.dispose);
@@ -230,6 +237,23 @@ Future<GlobalKey> _renderViewer(
   return boundary;
 }
 
+Future<void> _renderAdaptiveShell(WidgetTester tester, _Harness h) async {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = const Size(390, 844);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  addTearDown(tester.view.resetPhysicalSize);
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: h.container,
+      child: MaterialApp(
+        theme: LythausTheme.light(),
+        home: const AdaptiveShell(),
+      ),
+    ),
+  );
+  await tester.pump();
+}
+
 Future<void> _capture(WidgetTester tester, GlobalKey key, String name) async {
   final output = Platform.environment['LYTHAUS_FEED_EVIDENCE'];
   if (output == null) return;
@@ -262,6 +286,91 @@ void main() {
       'MaterialIcons',
     )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
   });
+  testWidgets(
+    'adaptive tab navigation discards A feed data and scroll state before B is shown',
+    (tester) async {
+      final h = _Harness(
+        additionalOverrides: [
+          ownerProfileProvider.overrideWith((ref) async {
+            throw StateError('Synthetic profile unavailable');
+          }),
+        ],
+      );
+      await _renderAdaptiveShell(tester, h);
+      await tester.pump();
+      expect(h.custom.lists, hasLength(1));
+      expect(h.subscriptions.requests, hasLength(1));
+      h.custom.lists.single.result.complete(const []);
+      h.subscriptions.requests.single.result.complete(_entitlements('a'));
+      await tester.pump();
+      await tester.pump();
+
+      final discover = h.container
+          .read(feedListProvider)
+          .singleWhere((feed) => feed.id == 'discover');
+      expect(h.feeds.requests, hasLength(1));
+      expect(h.feeds.requests.single.token, 'synthetic-token-a');
+      h.feeds.requests.single.complete(
+        List.generate(8, (index) => 'a-private-card-${index + 1}'),
+        cursor: 'a-private-cursor',
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('Synthetic post a-private-card-1'), findsOneWidget);
+
+      final feedScrollable = find.descendant(
+        of: find.byType(DiscoverFeed),
+        matching: find.byType(Scrollable),
+      ).first;
+      await tester.drag(feedScrollable, const Offset(0, -1200));
+      await tester.pumpAndSettle();
+      final aPosition = tester.state<ScrollableState>(feedScrollable).position;
+      expect(aPosition.pixels, greaterThan(0));
+      expect(
+        h.container.read(feedRestoreSnapshotsProvider)['discover']?.offset,
+        greaterThan(0),
+      );
+
+      await tester.tap(find.text('Profile').last);
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('Unable to load profile'), findsOneWidget);
+
+      h.switchTo('b');
+      expect(h.container.read(liveFeedStateProvider(discover)).items, isEmpty);
+      expect(
+        h.container.read(liveFeedStateProvider(discover)).nextCursor,
+        isNull,
+      );
+      expect(h.container.read(feedRestoreSnapshotsProvider), isEmpty);
+      await tester.pump();
+      await tester.pump();
+      expect(h.feeds.requests, hasLength(2));
+      expect(h.feeds.requests.last.token, 'synthetic-token-b');
+      expect(h.feeds.requests.last.cursor, isNull);
+      if (h.custom.lists.length > 1) {
+        h.custom.lists.last.result.complete(const []);
+      }
+      if (h.subscriptions.requests.length > 1) {
+        h.subscriptions.requests.last.result.complete(_entitlements('b'));
+      }
+      h.feeds.requests.last.complete(['b-current-card']);
+      await tester.pump();
+      await tester.pump();
+
+      await tester.tap(find.text('Discover').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Synthetic post b-current-card'), findsOneWidget);
+      expect(find.textContaining('a-private-card'), findsNothing);
+      final bScrollable = find.descendant(
+        of: find.byType(DiscoverFeed),
+        matching: find.byType(Scrollable),
+      ).first;
+      expect(tester.state<ScrollableState>(bScrollable).position.pixels, 0);
+      expect(h.container.read(feedRestoreSnapshotsProvider), isEmpty);
+    },
+  );
+
   test('A to B clears loaded cards and cursor before the next frame', () async {
     final h = _Harness();
     await h.loadA();

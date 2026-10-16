@@ -1,0 +1,38 @@
+{
+  "provenance": {
+    "workflow_run_id": 38811914382,
+    "workflow_job_id": 116686972282,
+    "diagnostic_head": "1a344334a4991a05b359bfb27dc03d61a4d36407",
+    "engine": "webkit",
+    "viewport_width": 390,
+    "scenario": "baseline",
+    "complete": false,
+    "dropped": 0,
+    "captured_event_range": [446, 466],
+    "note": "Events are copied from the real Flutter auth browser job diagnostic; the stack field is omitted. The old test failed because it treated every page error as unexpected."
+  },
+  "dropped": 0,
+  "events": [
+    { "sequence": 446, "ms": 33009.998, "phase": "logout_armed", "type": "logout_response_finished" },
+    { "sequence": 447, "ms": 33116.335, "phase": "logout_armed", "type": "both_tabs_signed_out" },
+    { "sequence": 448, "ms": 33116.343, "phase": "protected_return", "type": "phase" },
+    { "sequence": 449, "ms": 33136.587, "phase": "protected_return", "type": "request_start", "requestId": 58, "pageId": 1, "method": "GET", "path": "/settings/security", "startedAt": 33136.564 },
+    { "sequence": 450, "ms": 33137.64, "phase": "protected_return", "type": "xhr_send", "pageId": 1, "path": "/api/feed/discover", "browserEpochMs": 1792101442787, "xhrId": 10, "method": "GET" },
+    { "sequence": 451, "ms": 33139.7, "phase": "protected_return", "type": "uncaught_page_error", "name": "XMLHttpRequest cannot load https", "message": "/api.lythaus.co/api/feed/discover?limit=25 due to access control checks.", "path": "/login" },
+    { "sequence": 452, "ms": 33145.414, "phase": "protected_return", "type": "xhr_error", "pageId": 1, "path": "/api/feed/discover", "browserEpochMs": 1792101442794, "xhrId": 10, "method": "GET", "xhrReadyState": 4, "xhrStatus": 0 },
+    { "sequence": 453, "ms": 33149.219, "phase": "protected_return", "type": "xhr_loadend", "pageId": 1, "path": "/api/feed/discover", "browserEpochMs": 1792101442796, "xhrId": 10, "method": "GET", "xhrReadyState": 4, "xhrStatus": 0 },
+    { "sequence": 454, "ms": 33154.443, "phase": "protected_return", "type": "response_headers", "requestId": 58, "pageId": 1, "method": "GET", "path": "/settings/security", "startedAt": 33136.564, "status": 200 },
+    { "sequence": 455, "ms": 33179.287, "phase": "protected_return", "type": "navigation", "pageId": 1, "path": "/settings/security" },
+    { "sequence": 456, "ms": 33179.533, "phase": "protected_return", "type": "request_finished", "requestId": 58, "pageId": 1, "method": "GET", "path": "/settings/security", "startedAt": 33136.564 },
+    { "sequence": 457, "ms": 33936.252, "phase": "protected_return", "type": "navigation", "pageId": 1, "path": "/settings/security" },
+    { "sequence": 458, "ms": 34231.552, "phase": "protected_return", "type": "navigation", "pageId": 1, "path": "/login" },
+    { "sequence": 459, "ms": 34594.428, "phase": "protected_return", "type": "request_start", "requestId": 59, "pageId": 1, "method": "POST", "path": "/api/auth/refresh", "startedAt": 34594.406 },
+    { "sequence": 460, "ms": 34596.954, "phase": "protected_return", "type": "server_request", "method": "OPTIONS", "path": "/api/auth/refresh" },
+    { "sequence": 461, "ms": 34642.285, "phase": "protected_return", "type": "server_request", "method": "POST", "path": "/api/auth/refresh" },
+    { "sequence": 462, "ms": 34717.52, "phase": "protected_return", "type": "server_response", "method": "POST", "path": "/api/auth/refresh", "status": 401 },
+    { "sequence": 463, "ms": 34723.138, "phase": "protected_return", "type": "response_headers", "requestId": 59, "pageId": 1, "method": "POST", "path": "/api/auth/refresh", "startedAt": 34594.406, "status": 401 },
+    { "sequence": 464, "ms": 34726.602, "phase": "protected_return", "type": "request_finished", "requestId": 59, "pageId": 1, "method": "POST", "path": "/api/auth/refresh", "startedAt": 34594.406 },
+    { "sequence": 465, "ms": 34832.099, "phase": "protected_return", "type": "teardown_start" },
+    { "sequence": 466, "ms": 35055.278, "phase": "protected_return", "type": "teardown_finished" }
+  ]
+}

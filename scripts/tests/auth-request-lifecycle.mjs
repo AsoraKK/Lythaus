@@ -17,11 +17,15 @@ export function describeFailureWindow(request, marks, ownerId) {
 
 export function classifyExpectedProtectedReturnDiscoverCancellation(snapshot) {
   const events = Array.isArray(snapshot?.events) ? snapshot.events : [];
+  if (snapshot?.dropped !== 0) return new Set();
   const pageErrors = events.filter(event => event.type === 'uncaught_page_error');
   if (pageErrors.length !== 1) return new Set();
   const pageError = pageErrors[0];
-  if (!Number.isInteger(pageError.pageErrorIndex)
+  const pageErrorIndex = pageErrors.indexOf(pageError);
+  if (!Number.isInteger(pageError.sequence)
+      || (pageError.pageErrorIndex != null && pageError.pageErrorIndex !== pageErrorIndex)
       || pageError.name !== 'XMLHttpRequest cannot load https'
+      || pageError.message !== '/api.lythaus.co/api/feed/discover?limit=25 due to access control checks.'
       || pageError.path !== '/login'
       || pageError.phase !== 'protected_return') return new Set();
 
@@ -36,54 +40,61 @@ export function classifyExpectedProtectedReturnDiscoverCancellation(snapshot) {
   const protectedReturn = exactlyOne('phase', event => event.phase === 'protected_return'
     && event.sequence > bothTabsSignedOut.sequence);
   if (!protectedReturn) return new Set();
-  const navigationRequested = exactlyOne('protected_return_navigation_requested', event =>
-    event.phase === 'protected_return' && event.path === '/settings/security'
-      && event.sequence > protectedReturn.sequence);
-  if (!navigationRequested) return new Set();
 
-  const navigationStart = exactlyOne('request_start', event => event.pageId === pageError.pageId
-    && event.isNavigationRequest === true && event.method === 'GET'
+  // The original captured WebKit trace predates the isNavigationRequest and
+  // pageError pageId fields. Correlate that trace through the completed 200
+  // document response and commit; reject an explicit non-navigation flag.
+  const navigationStart = exactlyOne('request_start', event => Number.isInteger(event.pageId)
+    && Number.isInteger(event.requestId)
+    && (pageError.pageId == null || event.pageId === pageError.pageId)
+    && event.isNavigationRequest !== false && event.method === 'GET'
     && event.path === '/settings/security' && event.phase === 'protected_return'
-    && event.sequence > navigationRequested.sequence);
+    && event.sequence > protectedReturn.sequence);
   if (!navigationStart) return new Set();
-  const navigationResponse = exactlyOne('response_headers', event => event.pageId === pageError.pageId
+  const navigationResponse = exactlyOne('response_headers', event => event.pageId === navigationStart.pageId
+    && (pageError.pageId == null || event.pageId === pageError.pageId)
     && event.requestId === navigationStart.requestId && event.method === 'GET'
-    && event.path === '/settings/security' && event.status === 200
+    && event.path === '/settings/security' && event.status === 200 && event.phase === 'protected_return'
     && event.sequence > navigationStart.sequence);
   if (!navigationResponse) return new Set();
-  const navigationCommit = exactlyOne('navigation', event => event.pageId === pageError.pageId
-    && event.path === '/settings/security' && event.sequence > navigationResponse.sequence);
+  const navigationCommit = events.filter(event => event.type === 'navigation'
+    && event.pageId === navigationStart.pageId && event.path === '/settings/security'
+    && event.phase === 'protected_return'
+    && event.sequence > navigationResponse.sequence).sort((left, right) => left.sequence - right.sequence)[0];
   if (!navigationCommit) return new Set();
 
-  const xhrSend = exactlyOne('xhr_send', event => event.pageId === pageError.pageId
-    && event.method === 'GET' && event.path === '/api/feed/discover' && event.query === 'limit=25'
+  const xhrSend = exactlyOne('xhr_send', event => event.pageId === navigationStart.pageId
+    && Number.isInteger(event.xhrId) && event.method === 'GET' && event.path === '/api/feed/discover'
+    && (event.query == null || event.query === 'limit=25')
     && event.phase === 'protected_return' && event.sequence > navigationStart.sequence
     && event.sequence < navigationCommit.sequence);
   if (!xhrSend) return new Set();
-  const xhrError = exactlyOne('xhr_error', event => event.pageId === pageError.pageId
+  if (pageError.sequence <= xhrSend.sequence || pageError.sequence >= navigationCommit.sequence
+      || (pageError.pageId != null && pageError.pageId !== xhrSend.pageId)) return new Set();
+  const xhrError = exactlyOne('xhr_error', event => event.pageId === xhrSend.pageId
     && event.xhrId === xhrSend.xhrId && event.method === 'GET'
-    && event.path === '/api/feed/discover' && event.query === 'limit=25'
+    && event.path === '/api/feed/discover'
+    && (event.query == null || event.query === 'limit=25')
     && event.xhrReadyState === 4 && event.xhrStatus === 0
     && event.phase === 'protected_return' && event.sequence > xhrSend.sequence
     && event.sequence < navigationResponse.sequence);
   if (!xhrError) return new Set();
-  const xhrLoadEnd = exactlyOne('xhr_loadend', event => event.pageId === pageError.pageId
+  const xhrLoadEnd = exactlyOne('xhr_loadend', event => event.pageId === xhrSend.pageId
     && event.xhrId === xhrSend.xhrId && event.method === 'GET'
-    && event.path === '/api/feed/discover' && event.query === 'limit=25'
+    && event.path === '/api/feed/discover'
+    && (event.query == null || event.query === 'limit=25')
     && event.xhrReadyState === 4 && event.xhrStatus === 0
     && event.phase === 'protected_return' && event.sequence > xhrError.sequence
     && event.sequence < navigationCommit.sequence);
-  if (!xhrLoadEnd || pageError.sequence <= xhrSend.sequence || pageError.sequence >= xhrError.sequence) {
-    return new Set();
-  }
+  if (!xhrLoadEnd || pageError.sequence >= xhrError.sequence) return new Set();
 
   const networkEvents = new Set([
     'request_start', 'request_failed', 'response_headers', 'request_finished', 'server_request', 'server_response',
   ]);
-  if (events.some(event => event.sequence > navigationRequested.sequence
+  if (events.some(event => event.sequence > protectedReturn.sequence
       && networkEvents.has(event.type) && event.path === '/api/feed/discover')) return new Set();
 
-  return new Set([pageError.pageErrorIndex]);
+  return new Set([pageErrorIndex]);
 }
 
 export function createAuthRequestLifecycle({ ownerId, clock = () => performance.now(), limit = 1024 }) {
@@ -130,6 +141,7 @@ export function createAuthRequestLifecycle({ ownerId, clock = () => performance.
     isNavigationRequest: item.isNavigationRequest, startedAt: item.startedAt });
   return {
     record,
+    identifyPage(page) { return pageId(page); },
     phase(name) { phase = name; record('phase'); },
     server(request, status) { record(status == null ? 'server_request' : 'server_response', {
       method: request.method(), path: safePath(request.url()),
