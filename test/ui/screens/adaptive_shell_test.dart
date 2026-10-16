@@ -2,6 +2,7 @@ import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/ui/screens/adaptive_shell.dart';
+import 'package:lythaus/ui/components/lythaus_side_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,31 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lythaus/ui/screens/profile/settings_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:lythaus/features/auth/application/auth_service.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/features/profile/application/profile_providers.dart';
+import 'package:lythaus/state/providers/settings_providers.dart';
+import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
+import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
+import 'package:lythaus/design_system/theme/lyth_theme.dart';
+
+import '../../helpers/content_recovery.dart';
+
+class _AuthService extends Mock implements AuthService {}
+
+bool _navigationHasFocus() {
+  final context = FocusManager.instance.primaryFocus?.context;
+  if (context is! Element) return false;
+  var found = false;
+  context.visitAncestorElements((element) {
+    found =
+        element.widget is LythausSideNavigation ||
+        element.widget is BottomNavigationBar;
+    return !found;
+  });
+  return found;
+}
 
 class _StaticLiveFeedNotifier extends LiveFeedController {
   _StaticLiveFeedNotifier(List<FeedItem> items)
@@ -64,6 +90,234 @@ List<Override> _baseOverrides({bool guest = false}) => [
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
   group('AdaptiveShell', () {
+    testWidgets('resizing and tab changes preserve the active composer', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final user = User(
+        id: '018f0000-0000-7000-8000-000000000001',
+        email: 'synthetic@example.invalid',
+        role: UserRole.user,
+        tier: UserTier.bronze,
+        reputationScore: 0,
+        createdAt: DateTime.utc(2026, 10, 15),
+        lastLoginAt: DateTime.utc(2026, 10, 15),
+      );
+      final auth = _AuthService();
+      when(() => auth.getCurrentUser()).thenAnswer((_) async => user);
+      when(() => auth.getJwtToken()).thenAnswer((_) async => null);
+      when(() => auth.logout()).thenAnswer((_) async {});
+      when(() => auth.remoteLogoutConfirmed).thenReturn(true);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ..._baseOverrides(),
+            enhancedAuthServiceProvider.overrideWithValue(auth),
+            contentRecoveryStorageProvider.overrideWithValue(
+              MemoryContentRecoveryStorage(),
+            ),
+          ],
+          child: MaterialApp(
+            theme: LythausTheme.light(),
+            darkTheme: LythausTheme.dark(),
+            home: const AdaptiveShell(initialIndex: 1),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final composer = tester.state(find.byType(CreatePostScreen));
+      final field = find.byType(TextField);
+      await tester.enterText(field, 'Synthetic unfinished draft');
+      final controller = tester.widget<TextField>(field).controller!;
+      controller.selection = const TextSelection(
+        baseOffset: 2,
+        extentOffset: 9,
+      );
+      for (final scenario in [
+        for (final brightness in Brightness.values)
+          for (final scale in [1.0, 2.0])
+            for (final width in [320.0, 390.0, 1024.0, 1440.0])
+              (brightness, scale, width),
+      ]) {
+        tester.platformDispatcher.platformBrightnessTestValue = scenario.$1;
+        tester.platformDispatcher.textScaleFactorTestValue = scenario.$2;
+        await tester.binding.setSurfaceSize(Size(scenario.$3, 844));
+        await tester.pumpAndSettle();
+        expect(tester.state(find.byType(CreatePostScreen)), same(composer));
+        expect(tester.widget<TextField>(field).controller, same(controller));
+        expect(controller.text, 'Synthetic unfinished draft');
+        expect(tester.widget<TextField>(field).focusNode!.hasFocus, isTrue);
+        expect(
+          controller.selection,
+          const TextSelection(baseOffset: 2, extentOffset: 9),
+        );
+        await tester.tap(find.text('Discover').last);
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<TextField>(find.byType(TextField, skipOffstage: false))
+              .focusNode!
+              .hasFocus,
+          isFalse,
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        await tester.tap(find.text('Create').last);
+        await tester.pumpAndSettle();
+        expect(tester.state(find.byType(CreatePostScreen)), same(composer));
+        expect(controller.text, 'Synthetic unfinished draft');
+        expect(
+          controller.selection,
+          const TextSelection(baseOffset: 2, extentOffset: 9),
+        );
+        expect(tester.widget<TextField>(field).focusNode!.hasFocus, isTrue);
+        expect(tester.takeException(), isNull);
+        for (var step = 0; step < 40 && !_navigationHasFocus(); step++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.pump();
+        }
+        expect(_navigationHasFocus(), isTrue);
+        tester.widget<TextField>(field).focusNode!.requestFocus();
+        await tester.pump();
+      }
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(AdaptiveShell)),
+      );
+      expect(container.read(currentUserProvider), same(user));
+      final navigation = tester.widget<BottomNavigationBar>(
+        find.byType(BottomNavigationBar),
+      );
+      navigation.onTap!(0);
+      navigation.onTap!(1);
+      await container.read(authStateProvider.notifier).signOut();
+      await tester.binding.setSurfaceSize(const Size(1440, 844));
+      await tester.pumpAndSettle();
+      expect(container.read(currentUserProvider), isNull);
+      expect(find.byType(CreatePostScreen), findsNothing);
+      expect(find.text('Sign in to create a post.'), findsOneWidget);
+      expect(find.text('Synthetic unfinished draft'), findsNothing);
+      verify(() => auth.logout()).called(1);
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final width in [1024.0, 1440.0]) {
+      for (final signedIn in [false, true]) {
+        testWidgets(
+          'Settings keeps sign-out reachable at $width signedIn=$signedIn',
+          (tester) async {
+            await tester.binding.setSurfaceSize(Size(width, 900));
+            addTearDown(() => tester.binding.setSurfaceSize(null));
+            final user = signedIn
+                ? User(
+                    id: '018f0000-0000-7000-8000-000000000001',
+                    email: 'synthetic@example.invalid',
+                    role: UserRole.user,
+                    tier: UserTier.bronze,
+                    reputationScore: 0,
+                    createdAt: DateTime.utc(2026, 10, 15),
+                    lastLoginAt: DateTime.utc(2026, 10, 15),
+                  )
+                : null;
+            final auth = _AuthService();
+            when(() => auth.getCurrentUser()).thenAnswer((_) async => user);
+            when(() => auth.getJwtToken()).thenAnswer((_) async => null);
+            when(() => auth.logout()).thenAnswer((_) async {});
+            when(() => auth.remoteLogoutConfirmed).thenReturn(true);
+            await tester.pumpWidget(
+              ProviderScope(
+                overrides: [
+                  ..._baseOverrides(guest: !signedIn),
+                  enhancedAuthServiceProvider.overrideWithValue(auth),
+                  ownerProfileProvider.overrideWith(
+                    (ref) async =>
+                        throw StateError('Synthetic profile unavailable'),
+                  ),
+                ],
+                child: const MaterialApp(home: AdaptiveShell()),
+              ),
+            );
+            await tester.pumpAndSettle();
+            await tester.tap(find.widgetWithText(TextButton, 'Settings'));
+            await tester.pumpAndSettle();
+            await tester.tap(find.text('Account security'));
+            await tester.pumpAndSettle();
+            final action = find.widgetWithText(
+              FilledButton,
+              'Sign out of all sessions',
+            );
+            expect(action.hitTestable(), findsOneWidget);
+            expect(
+              tester.widget<FilledButton>(action).onPressed != null,
+              signedIn,
+            );
+            if (signedIn) {
+              await tester.tap(action);
+              await tester.pumpAndSettle();
+              verify(() => auth.logout()).called(1);
+              expect(find.byType(AdaptiveShell), findsOneWidget);
+              expect(find.byType(SettingsScreen), findsNothing);
+              final container = ProviderScope.containerOf(
+                tester.element(find.byType(AdaptiveShell)),
+              );
+              expect(container.read(currentUserProvider), isNull);
+            } else {
+              verifyNever(() => auth.logout());
+            }
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
+    }
+
+    for (final leftHanded in [false, true]) {
+      for (final scenario in [(390.0, 1.0), (1440.0, 2.0)]) {
+        testWidgets(
+          'mobile order respects leftHanded=$leftHanded at $scenario',
+          (tester) async {
+            await tester.binding.setSurfaceSize(Size(scenario.$1, 960));
+            addTearDown(() => tester.binding.setSurfaceSize(null));
+            await tester.pumpWidget(
+              ProviderScope(
+                overrides: [
+                  ..._baseOverrides(guest: true),
+                  currentUserProvider.overrideWithValue(null),
+                  leftHandedModeProvider.overrideWithValue(leftHanded),
+                ],
+                child: MaterialApp(
+                  builder: (context, child) => MediaQuery(
+                    data: MediaQuery.of(
+                      context,
+                    ).copyWith(textScaler: TextScaler.linear(scenario.$2)),
+                    child: child!,
+                  ),
+                  home: const AdaptiveShell(initialIndex: 3),
+                ),
+              ),
+            );
+            await tester.pumpAndSettle();
+            expect(find.byType(LythausSideNavigation), findsNothing);
+            final nav = tester.widget<BottomNavigationBar>(
+              find.byType(BottomNavigationBar),
+            );
+            expect(
+              nav.items.map((item) => item.label),
+              leftHanded
+                  ? ['Rewards', 'Profile', 'Create', 'Discover']
+                  : ['Discover', 'Create', 'Profile', 'Rewards'],
+            );
+            expect(nav.currentIndex, leftHanded ? 0 : 3);
+            await tester.tap(find.text('Create'));
+            await tester.pumpAndSettle();
+            expect(find.text('Sign in to create a post.'), findsOneWidget);
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
+    }
+
     for (final outcome in ['opened', 'unavailable', 'exception']) {
       testWidgets('desktop Help handles $outcome without losing rewards', (
         tester,
@@ -211,11 +465,12 @@ void main() {
 
       // Bottom nav should be present on narrow viewport
       expect(find.byType(BottomNavigationBar), findsOneWidget);
-      // Navigation rail should not be present
-      expect(find.byType(NavigationRail), findsNothing);
+      expect(find.byType(LythausSideNavigation), findsNothing);
     });
 
-    testWidgets('renders navigation rail on wide viewport', (tester) async {
+    testWidgets('renders compact side navigation on wide viewport', (
+      tester,
+    ) async {
       await tester.binding.setSurfaceSize(const Size(1024, 768));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -227,14 +482,20 @@ void main() {
               data: MediaQuery.of(context).copyWith(disableAnimations: true),
               child: child!,
             ),
-            home: const AdaptiveShell(),
+            home: const AdaptiveShell(brand: Text('Fixture identity')),
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      // Navigation rail should be present on wide viewport
-      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.byType(LythausSideNavigation), findsOneWidget);
+      expect(find.text('Fixture identity'), findsOneWidget);
+      expect(
+        tester
+            .widget<LythausSideNavigation>(find.byType(LythausSideNavigation))
+            .extended,
+        isFalse,
+      );
       // Bottom nav should not be present
       expect(find.byType(BottomNavigationBar), findsNothing);
     });
@@ -257,7 +518,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Tap the Create destination on the NavigationRail
+      // The desktop action keeps the existing account-entry gate.
       await tester.tap(find.text('Create'));
       await tester.pump();
 

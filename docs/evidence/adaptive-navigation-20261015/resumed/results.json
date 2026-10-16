@@ -1,0 +1,525 @@
+{
+  "sourceCommit": "7c6045ebc0bfc44f27a9ceef71ea8929d87958bf",
+  "compiledSha256": "2d57210794ca8e120f644cbcfc29d769f90a0eb9a94f89211384bb3d3e834541",
+  "browser": "151.0.7922.34",
+  "results": [
+    {
+      "theme": "light",
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "url": "https://app.lythaus.co/",
+      "title": "Lythaus",
+      "errors": [],
+      "icons": [
+        {
+          "source": "favicon.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-192.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        {
+          "source": "icons/Icon-maskable-512.png",
+          "width": 512,
+          "height": 512
+        }
+      ],
+      "navigation": "Mobile ordering and left-handed preference verified by Flutter tests",
+      "keyboard": "Tab reaches Feed controls, Enter opens the sheet, close restores the header",
+      "text": [
+        "Feed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4",
+        "Feed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4",
+        "Feed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4",
+        "Feed controls",
+        "",
+        "",
+        "Search",
+        "Trending",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.",
+        "No posts yet",
+        "Check back soon for new updates.",
+        "Discover\nTab 1 of 4",
+        "Create\nTab 2 of 4",
+        "Profile\nTab 3 of 4",
+        "Rewards\nTab 4 of 4"
+      ]
+    },
+    {
+      "theme": "light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://app.lythaus.co/",
+      "title": "Lythaus",
+      "errors": [],
+      "icons": [
+        {
+          "source": "favicon.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-192.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        {
+          "source": "icons/Icon-maskable-512.png",
+          "width": 512,
+          "height": 512
+        }
+      ],
+      "navigation": "Mobile ordering and left-handed preference verified by Flutter tests",
+      "keyboard": "Tab reaches Feed controls, Enter opens the sheet, close restores the header",
+      "text": [
+        "Feed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4",
+        "Feed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4",
+        "Feed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4",
+        "Feed controls",
+        "",
+        "",
+        "Search",
+        "Trending",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.",
+        "No posts yet",
+        "Check back soon for new updates.",
+        "Discover\nTab 1 of 4",
+        "Create\nTab 2 of 4",
+        "Profile\nTab 3 of 4",
+        "Rewards\nTab 4 of 4"
+      ]
+    },
+    {
+      "theme": "light",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "url": "https://app.lythaus.co/settings/security?tab=discover",
+      "title": "Lythaus",
+      "errors": [],
+      "icons": [
+        {
+          "source": "favicon.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-192.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        {
+          "source": "icons/Icon-maskable-512.png",
+          "width": 512,
+          "height": 512
+        }
+      ],
+      "navigation": "Rewards/Create guest gates; Discover return; Tab/Enter Settings; Account security; guest sign-out disabled",
+      "keyboard": "Tab reaches Feed controls, Enter opens the sheet, close restores the header",
+      "text": [
+        "BackAccount securitySigned-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "BackAccount securitySigned-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "BackAccount securitySigned-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "BackAccount security",
+        "Back",
+        "Signed-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "Signed-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "Signed-in account\nNo active account",
+        "Account role\nNone",
+        "Session expiry\nNot available",
+        "",
+        "Sign out of all sessions",
+        "Sign out of all sessions"
+      ]
+    },
+    {
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "url": "https://app.lythaus.co/settings/security?tab=discover",
+      "title": "Lythaus",
+      "errors": [],
+      "icons": [
+        {
+          "source": "favicon.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-192.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        {
+          "source": "icons/Icon-maskable-512.png",
+          "width": 512,
+          "height": 512
+        }
+      ],
+      "navigation": "Rewards/Create guest gates; Discover return; Tab/Enter Settings; Account security; guest sign-out disabled",
+      "keyboard": "Tab reaches Feed controls, Enter opens the sheet, close restores the header",
+      "text": [
+        "BackAccount securitySigned-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "BackAccount securitySigned-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "BackAccount securitySigned-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "BackAccount security",
+        "Back",
+        "Signed-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "Signed-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "Signed-in account\nNo active account",
+        "Account role\nNone",
+        "Session expiry\nNot available",
+        "",
+        "Sign out of all sessions",
+        "Sign out of all sessions"
+      ]
+    },
+    {
+      "theme": "dark",
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "url": "https://app.lythaus.co/",
+      "title": "Lythaus",
+      "errors": [],
+      "icons": [
+        {
+          "source": "favicon.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-192.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        {
+          "source": "icons/Icon-maskable-512.png",
+          "width": 512,
+          "height": 512
+        }
+      ],
+      "navigation": "Mobile ordering and left-handed preference verified by Flutter tests",
+      "keyboard": "Tab reaches Feed controls, Enter opens the sheet, close restores the header",
+      "text": [
+        "Feed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4",
+        "Feed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4",
+        "Feed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4",
+        "Feed controls",
+        "",
+        "",
+        "Search",
+        "Trending",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.",
+        "No posts yet",
+        "Check back soon for new updates.",
+        "Discover\nTab 1 of 4",
+        "Create\nTab 2 of 4",
+        "Profile\nTab 3 of 4",
+        "Rewards\nTab 4 of 4"
+      ]
+    },
+    {
+      "theme": "dark",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://app.lythaus.co/",
+      "title": "Lythaus",
+      "errors": [],
+      "icons": [
+        {
+          "source": "favicon.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-192.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        {
+          "source": "icons/Icon-maskable-512.png",
+          "width": 512,
+          "height": 512
+        }
+      ],
+      "navigation": "Mobile ordering and left-handed preference verified by Flutter tests",
+      "keyboard": "Tab reaches Feed controls, Enter opens the sheet, close restores the header",
+      "text": [
+        "Feed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4",
+        "Feed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4",
+        "Feed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4",
+        "Feed controls",
+        "",
+        "",
+        "Search",
+        "Trending",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.",
+        "No posts yet",
+        "Check back soon for new updates.",
+        "Discover\nTab 1 of 4",
+        "Create\nTab 2 of 4",
+        "Profile\nTab 3 of 4",
+        "Rewards\nTab 4 of 4"
+      ]
+    },
+    {
+      "theme": "dark",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "url": "https://app.lythaus.co/settings/security?tab=discover",
+      "title": "Lythaus",
+      "errors": [],
+      "icons": [
+        {
+          "source": "favicon.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-192.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        {
+          "source": "icons/Icon-maskable-512.png",
+          "width": 512,
+          "height": 512
+        }
+      ],
+      "navigation": "Rewards/Create guest gates; Discover return; Tab/Enter Settings; Account security; guest sign-out disabled",
+      "keyboard": "Tab reaches Feed controls, Enter opens the sheet, close restores the header",
+      "text": [
+        "BackAccount securitySigned-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "BackAccount securitySigned-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "BackAccount securitySigned-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "BackAccount security",
+        "Back",
+        "Signed-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "Signed-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "Signed-in account\nNo active account",
+        "Account role\nNone",
+        "Session expiry\nNot available",
+        "",
+        "Sign out of all sessions",
+        "Sign out of all sessions"
+      ]
+    },
+    {
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "url": "https://app.lythaus.co/settings/security?tab=discover",
+      "title": "Lythaus",
+      "errors": [],
+      "icons": [
+        {
+          "source": "favicon.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-192.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        {
+          "source": "icons/Icon-maskable-512.png",
+          "width": 512,
+          "height": 512
+        }
+      ],
+      "navigation": "Rewards/Create guest gates; Discover return; Tab/Enter Settings; Account security; guest sign-out disabled",
+      "keyboard": "Tab reaches Feed controls, Enter opens the sheet, close restores the header",
+      "text": [
+        "BackAccount securitySigned-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "BackAccount securitySigned-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "BackAccount securitySigned-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "BackAccount security",
+        "Back",
+        "Signed-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "Signed-in account\nNo active accountAccount role\nNoneSession expiry\nNot availableSign out of all sessions",
+        "Signed-in account\nNo active account",
+        "Account role\nNone",
+        "Session expiry\nNot available",
+        "",
+        "Sign out of all sessions",
+        "Sign out of all sessions"
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/feed/discover"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/feed/discover"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/feed/discover"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/feed/discover"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/feed/discover"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/feed/discover"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/feed/discover"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/feed/discover"
+    }
+  ]
+}

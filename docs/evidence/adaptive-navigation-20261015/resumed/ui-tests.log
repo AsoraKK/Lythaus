@@ -1,0 +1,221 @@
+00:00 +0: loading /workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart
+00:00 +0: /workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart: AdaptiveShell resizing and tab changes preserve the active composer
+00:02 +1: /workspace/lythaus-ui-review/test/ui/components/lythaus_side_navigation_test.dart: light-compact-1x has named, reachable actions and visible keyboard focus
+00:02 +2: /workspace/lythaus-ui-review/test/ui/components/lythaus_side_navigation_test.dart: light-compact-1x has named, reachable actions and visible keyboard focus
+00:02 +3: /workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart: AdaptiveShell Settings keeps sign-out reachable at 1024.0 signedIn=true
+00:02 +4: /workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart: AdaptiveShell Settings keeps sign-out reachable at 1024.0 signedIn=true
+00:03 +5: /workspace/lythaus-ui-review/test/ui/components/lythaus_side_navigation_test.dart: light-expanded-1x has named, reachable actions and visible keyboard focus
+00:03 +6: /workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart: AdaptiveShell Settings keeps sign-out reachable at 1440.0 signedIn=false
+00:03 +7: /workspace/lythaus-ui-review/test/ui/components/lythaus_side_navigation_test.dart: light-expanded-2x has named, reachable actions and visible keyboard focus
+00:03 +8: /workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart: AdaptiveShell Settings keeps sign-out reachable at 1440.0 signedIn=true
+00:03 +9: /workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart: AdaptiveShell Settings keeps sign-out reachable at 1440.0 signedIn=true
+00:03 +10: /workspace/lythaus-ui-review/test/ui/components/lythaus_side_navigation_test.dart: dark-compact-2x has named, reachable actions and visible keyboard focus
+00:03 +11: /workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart: AdaptiveShell mobile order respects leftHanded=false at (390.0, 1.0)
+00:03 +12: /workspace/lythaus-ui-review/test/ui/components/lythaus_side_navigation_test.dart: dark-expanded-1x has named, reachable actions and visible keyboard focus
+00:03 +13: /workspace/lythaus-ui-review/test/ui/components/lythaus_side_navigation_test.dart: dark-expanded-1x has named, reachable actions and visible keyboard focus
+00:03 +14: /workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart: AdaptiveShell mobile order respects leftHanded=true at (390.0, 1.0)
+00:04 +15: /workspace/lythaus-ui-review/test/ui/components/lythaus_side_navigation_test.dart: dark-expanded-2x has named, reachable actions and visible keyboard focus
+00:04 +16: /workspace/lythaus-ui-review/test/ui/components/lythaus_side_navigation_test.dart: dark-expanded-2x has named, reachable actions and visible keyboard focus
+00:04 +17: /workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart: AdaptiveShell desktop Help handles opened without losing rewards
+00:04 +18: /workspace/lythaus-ui-review/test/ui/components/lythaus_side_navigation_test.dart: short viewport scrolls utilities into view and accepts any brand widget
+00:04 +19: /workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart: AdaptiveShell desktop Help handles unavailable without losing rewards
+00:04 +20: /workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart: AdaptiveShell desktop Help handles exception without losing rewards
+00:04 +21: /workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart: AdaptiveShell desktop Settings returns to the selected rewards screen
+00:04 +22: /workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart: AdaptiveShell native back restores tab and query without losing route context
+00:04 +23: /workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart: AdaptiveShell renders bottom nav on narrow viewport
+00:04 +24: /workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart: AdaptiveShell renders compact side navigation on wide viewport
+00:04 +25: /workspace/lythaus-ui-review/test/ui/components/lythaus_bottom_nav_test.dart: renders default order and maps taps in right-handed mode
+00:05 +26: /workspace/lythaus-ui-review/test/ui/components/lythaus_bottom_nav_test.dart: renders default order and maps taps in right-handed mode
+00:05 +27: /workspace/lythaus-ui-review/test/ui/components/lythaus_bottom_nav_test.dart: renders default order and maps taps in right-handed mode
+00:05 +28: /workspace/lythaus-ui-review/test/ui/components/lythaus_bottom_nav_test.dart: mirrors order and tap mapping in left-handed mode
+00:05 +29: /workspace/lythaus-ui-review/test/ui/responsive_product_test.dart: notification links require an existing supported target
+00:05 +30: /workspace/lythaus-ui-review/test/ui/responsive_product_test.dart: post supports 320px and 200% in false theme
+00:06 +31: /workspace/lythaus-ui-review/test/screens/guest_account_entry_test.dart: guest profile exposes one large-text sign-in action without protected reads
+00:06 +32: /workspace/lythaus-ui-review/test/screens/guest_account_entry_test.dart: guest profile exposes one large-text sign-in action without protected reads
+00:06 +33: /workspace/lythaus-ui-review/test/screens/guest_account_entry_test.dart: guest profile exposes one large-text sign-in action without protected reads
+00:07 +34: /workspace/lythaus-ui-review/test/screens/guest_account_entry_test.dart: guest profile exposes one large-text sign-in action without protected reads
+00:07 +35: /workspace/lythaus-ui-review/test/ui/responsive_product_test.dart: search-auth-required supports 320px and 200% in false theme
+00:07 +36: /workspace/lythaus-ui-review/test/screens/guest_account_entry_test.dart: guest notifications exposes one large-text sign-in action without protected reads
+00:07 +37: /workspace/lythaus-ui-review/test/ui/responsive_product_test.dart: post supports 320px and 200% in true theme
+00:07 +38: /workspace/lythaus-ui-review/test/screens/guest_account_entry_test.dart: guest tag search shows a public retry state without a sign-in gate
+00:07 +39: /workspace/lythaus-ui-review/test/screens/guest_account_entry_test.dart: guest tag search shows a public retry state without a sign-in gate
+00:07 +40: /workspace/lythaus-ui-review/test/screens/guest_account_entry_test.dart: guest tag search shows a public retry state without a sign-in gate
+00:07 +41: /workspace/lythaus-ui-review/test/screens/guest_account_entry_test.dart: guest tag search shows a public retry state without a sign-in gate
+00:07 +42: /workspace/lythaus-ui-review/test/screens/guest_account_entry_test.dart: guest tag search shows a public retry state without a sign-in gate
+00:07 +43: /workspace/lythaus-ui-review/test/ui/responsive_product_test.dart: search distinguishes an empty response from a failed request
+00:07 +44: /workspace/lythaus-ui-review/test/ui/responsive_product_test.dart: search distinguishes an empty response from a failed request
+00:08 +45: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: home feed navigator switches feeds and renders views
+00:09 +46: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: home feed navigator switches feeds and renders views
+00:09 +47: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: home feed navigator switches feeds and renders views
+00:10 +48: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +49: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +50: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +51: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +52: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +53: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +54: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +55: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +56: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +57: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +58: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +59: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +60: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +61: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +62: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +63: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +64: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +65: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +66: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +67: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +68: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +69: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +70: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +71: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +72: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +73: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +74: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +75: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +76: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +77: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +78: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +79: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +80: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +81: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +82: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +83: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +84: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed page state follows feed identity across section switches
+00:10 +85: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed control sheet stays content-sized and dismisses outside
+00:11 +86: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed control sheet stays content-sized and dismisses outside
+00:12 +87: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed control sheet stays content-sized and dismisses outside
+00:12 +88: /workspace/lythaus-ui-review/test/screens/home_feed_navigator_test.dart: feed control sheet stays content-sized and dismisses outside
+00:12 +89: /workspace/lythaus-ui-review/test/design_system/lyth_button_golden_test.dart: (setUpAll)
+00:12 +89: /workspace/lythaus-ui-review/test/design_system/lyth_button_golden_test.dart: LythButton variants - light
+00:13 +90: /workspace/lythaus-ui-review/test/design_system/lyth_text_input_test.dart: LythTextInput renders label, helper, and icons
+00:13 +91: /workspace/lythaus-ui-review/test/design_system/lyth_text_input_test.dart: LythTextInput renders label, helper, and icons
+00:13 +92: /workspace/lythaus-ui-review/test/design_system/lyth_text_input_test.dart: LythTextInput password supports error and disabled
+00:13 +93: /workspace/lythaus-ui-review/test/design_system/lyth_text_input_test.dart: LythTextInput updates controller when value changes
+00:14 +94: /workspace/lythaus-ui-review/test/design_system/brand_accessibility_test.dart: (setUpAll)
+00:14 +94: /workspace/lythaus-ui-review/test/design_system/brand_accessibility_test.dart: light standalone mark announces Lythaus once
+00:14 +95: /workspace/lythaus-ui-review/test/design_system/lyth_snackbar_test.dart: LythSnackbar success uses semantic feedback colors
+00:14 +96: /workspace/lythaus-ui-review/test/design_system/lyth_snackbar_test.dart: LythSnackbar success uses semantic feedback colors
+00:15 +97: /workspace/lythaus-ui-review/test/design_system/lyth_snackbar_test.dart: LythSnackbar success uses semantic feedback colors
+00:15 +98: /workspace/lythaus-ui-review/test/design_system/lyth_snackbar_test.dart: LythSnackbar success uses semantic feedback colors
+00:15 +99: /workspace/lythaus-ui-review/test/design_system/brand_accessibility_test.dart: light standard icon focus contrasts on rendered fill
+00:15 +100: /workspace/lythaus-ui-review/test/design_system/brand_accessibility_test.dart: light standard icon focus contrasts on rendered fill
+00:15 +101: /workspace/lythaus-ui-review/test/design_system/brand_accessibility_test.dart: light standard icon focus contrasts on rendered fill
+00:15 +102: /workspace/lythaus-ui-review/test/design_system/lyth_snackbar_test.dart: LythSnackbar warning uses surface color
+00:15 +103: /workspace/lythaus-ui-review/test/design_system/brand_accessibility_test.dart: light filled icon focus contrasts on rendered fill
+00:15 +104: /workspace/lythaus-ui-review/test/design_system/brand_accessibility_test.dart: light outlined icon focus contrasts on rendered fill
+00:15 +105: /workspace/lythaus-ui-review/test/design_system/brand_accessibility_test.dart: dark standalone mark announces Lythaus once
+00:15 +106: /workspace/lythaus-ui-review/test/design_system/brand_accessibility_test.dart: dark standalone wordmark announces Lythaus once
+00:15 +107: /workspace/lythaus-ui-review/test/design_system/brand_accessibility_test.dart: dark header has distinct action names at 1.0x
+00:15 +108: /workspace/lythaus-ui-review/test/design_system/brand_accessibility_test.dart: dark header has distinct action names at 2.0x
+00:15 +109: /workspace/lythaus-ui-review/test/design_system/brand_accessibility_test.dart: dark standard icon focus contrasts on rendered fill
+00:15 +110: /workspace/lythaus-ui-review/test/design_system/brand_accessibility_test.dart: dark filled icon focus contrasts on rendered fill
+00:15 +111: /workspace/lythaus-ui-review/test/design_system/brand_accessibility_test.dart: dark outlined icon focus contrasts on rendered fill
+00:15 +112: /workspace/lythaus-ui-review/test/design_system/brand_accessibility_test.dart: (tearDownAll)
+00:16 +112: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: LythThemeExtension light() constructs without error
+00:16 +113: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: LythThemeExtension dark() constructs without error
+00:16 +114: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: LythThemeExtension copyWith overrides spacing
+00:16 +115: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: LythThemeExtension copyWith preserves other fields when only one is overridden
+00:16 +116: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: LythThemeExtension lerp with non-LythThemeExtension returns self
+00:16 +117: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: LythThemeExtension lerp with same type returns LythThemeExtension
+00:16 +118: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: SpacingTokens xs delegates to LythSpacing.xs
+00:16 +119: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: SpacingTokens sm delegates to LythSpacing.sm
+00:16 +120: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: SpacingTokens md delegates to LythSpacing.md
+00:16 +121: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: SpacingTokens lg delegates to LythSpacing.lg
+00:16 +122: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: SpacingTokens cardPadding delegates to LythSpacing.cardPadding
+00:16 +123: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: SpacingTokens screenHorizontal delegates to LythSpacing.screenHorizontal
+00:16 +124: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: SpacingTokens minTapTarget delegates to LythSpacing.minTapTarget
+00:16 +125: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: RadiusTokens xs delegates to LythRadius.xs
+00:16 +126: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: RadiusTokens md delegates to LythRadius.md
+00:16 +127: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: RadiusTokens card delegates to LythRadius.card
+00:16 +128: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: RadiusTokens button delegates to LythRadius.button
+00:16 +129: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: RadiusTokens pill delegates to LythRadius.pill
+00:16 +130: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: MotionTokens quick delegates to LythMotion.quick
+00:16 +131: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: MotionTokens standard delegates to LythMotion.standard
+00:16 +132: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: MotionTokens standardCurve delegates to LythMotion.standardCurve
+00:16 +133: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: MotionTokens emphasisCurve delegates to LythMotion.emphasisCurve
+00:16 +134: /workspace/lythaus-ui-review/test/design_system/lyth_theme_extensions_test.dart: MotionTokens wordmarkPulseInterval delegates to LythMotion.wordmarkPulseInterval
+00:16 +135: /workspace/lythaus-ui-review/test/design_system/lyth_components_test.dart: (setUpAll)
+00:16 +135: /workspace/lythaus-ui-review/test/design_system/lyth_components_test.dart: LythWordmarkStatic uses onSurface color
+00:17 +136: /workspace/lythaus-ui-review/test/design_system/lyth_card_chip_test.dart: LythCard returns plain container when not clickable
+00:17 +137: /workspace/lythaus-ui-review/test/design_system/lyth_card_chip_test.dart: LythCard returns plain container when not clickable
+00:17 +138: /workspace/lythaus-ui-review/test/design_system/lyth_card_chip_test.dart: LythCard returns plain container when not clickable
+00:17 +139: /workspace/lythaus-ui-review/test/design_system/lyth_card_chip_test.dart: LythCard returns plain container when not clickable
+00:17 +140: /workspace/lythaus-ui-review/test/design_system/lyth_card_chip_test.dart: LythCard returns plain container when not clickable
+00:17 +141: /workspace/lythaus-ui-review/test/design_system/lyth_card_chip_test.dart: LythCard.clickable wraps InkWell and reacts to taps
+00:17 +142: /workspace/lythaus-ui-review/test/design_system/lyth_card_chip_test.dart: LythChip.filter renders FilterChip and calls onSelected
+00:17 +143: /workspace/lythaus-ui-review/test/design_system/lyth_card_chip_test.dart: LythChip.input renders InputChip and calls onDeleted
+00:17 +144: /workspace/lythaus-ui-review/test/design_system/lyth_card_chip_test.dart: LythChip defaults to static Chip when no callbacks
+00:18 +145: /workspace/lythaus-ui-review/test/design_system/lyth_text_field_golden_test.dart: (setUpAll)
+00:18 +145: /workspace/lythaus-ui-review/test/design_system/lyth_text_field_golden_test.dart: LythTextField states - light
+00:18 +146: /workspace/lythaus-ui-review/test/design_system/lyth_text_field_golden_test.dart: LythTextField states - light
+00:18 +147: /workspace/lythaus-ui-review/test/design_system/brand_foundation_test.dart: light header 320.0 at 100.0% text
+00:19 +148: /workspace/lythaus-ui-review/test/design_system/brand_foundation_test.dart: light header 320.0 at 100.0% text
+00:19 +149: /workspace/lythaus-ui-review/test/design_system/brand_foundation_test.dart: light header 320.0 at 200.0% text
+00:19 +150: /workspace/lythaus-ui-review/test/design_system/brand_foundation_test.dart: light header 390.0 at 100.0% text
+00:19 +151: /workspace/lythaus-ui-review/test/design_system/brand_foundation_test.dart: light header 390.0 at 100.0% text
+00:19 +152: /workspace/lythaus-ui-review/test/design_system/brand_foundation_test.dart: light header 390.0 at 100.0% text
+00:19 +153: /workspace/lythaus-ui-review/test/design_system/semantic_foundations_test.dart: light rows preserve trailing actions at enlarged text
+00:20 +154: /workspace/lythaus-ui-review/test/design_system/semantic_foundations_test.dart: light rows preserve trailing actions at enlarged text
+00:20 +155: /workspace/lythaus-ui-review/test/design_system/semantic_foundations_test.dart: light rows preserve trailing actions at enlarged text
+00:20 +156: /workspace/lythaus-ui-review/test/design_system/semantic_foundations_test.dart: light rows preserve trailing actions at enlarged text
+00:20 +157: /workspace/lythaus-ui-review/test/design_system/semantic_foundations_test.dart: light rows preserve trailing actions at enlarged text
+00:20 +158: /workspace/lythaus-ui-review/test/design_system/semantic_foundations_test.dart: light rows preserve trailing actions at enlarged text
+00:20 +159: /workspace/lythaus-ui-review/test/design_system/brand_foundation_test.dart: dark header 320.0 at 200.0% text
+00:20 +160: /workspace/lythaus-ui-review/test/design_system/brand_foundation_test.dart: dark header 320.0 at 200.0% text
+00:20 +161: /workspace/lythaus-ui-review/test/design_system/semantic_foundations_test.dart: light long controls reflow at 320 pixels and 200% text
+00:20 +162: /workspace/lythaus-ui-review/test/design_system/semantic_foundations_test.dart: light long controls reflow at 320 pixels and 200% text
+00:20 +163: /workspace/lythaus-ui-review/test/design_system/brand_foundation_test.dart: dark header 390.0 at 200.0% text
+00:20 +164: /workspace/lythaus-ui-review/test/design_system/semantic_foundations_test.dart: light loading buttons preserve geometry and reduced motion
+00:20 +165: /workspace/lythaus-ui-review/test/design_system/semantic_foundations_test.dart: light loading buttons preserve geometry and reduced motion
+00:20 +166: /workspace/lythaus-ui-review/test/design_system/brand_foundation_test.dart: dark header 1440.0 at 200.0% text
+00:20 +167: /workspace/lythaus-ui-review/test/design_system/brand_foundation_test.dart: dark header 1440.0 at 200.0% text
+00:20 +168: /workspace/lythaus-ui-review/test/design_system/brand_foundation_test.dart: dark header 1440.0 at 200.0% text
+00:20 +169: /workspace/lythaus-ui-review/test/design_system/semantic_foundations_test.dart: dark long controls reflow at 320 pixels and 200% text
+00:20 +170: /workspace/lythaus-ui-review/test/design_system/semantic_foundations_test.dart: dark loading buttons preserve geometry and reduced motion
+00:21 +171: /workspace/lythaus-ui-review/test/design_system/semantic_foundations_test.dart: password visibility is named, reversible and preserves the value
+00:21 +172: /workspace/lythaus-ui-review/test/design_system/semantic_foundations_test.dart: skeleton reacts when reduced motion preference changes
+00:21 +173: /workspace/lythaus-ui-review/test/design_system/lyth_icon_slider_test.dart: icon variant false supports keyboard when false
+00:22 +174: /workspace/lythaus-ui-review/test/design_system/lyth_button_test.dart: primary button renders ElevatedButton and responds to taps
+00:22 +175: /workspace/lythaus-ui-review/test/design_system/lyth_button_test.dart: primary button renders ElevatedButton and responds to taps
+00:22 +176: /workspace/lythaus-ui-review/test/design_system/lyth_button_test.dart: primary button renders ElevatedButton and responds to taps
+00:22 +177: /workspace/lythaus-ui-review/test/design_system/lyth_button_test.dart: primary button renders ElevatedButton and responds to taps
+00:22 +178: /workspace/lythaus-ui-review/test/design_system/lyth_button_test.dart: primary button renders ElevatedButton and responds to taps
+00:22 +179: /workspace/lythaus-ui-review/test/design_system/lyth_button_test.dart: primary button renders ElevatedButton and responds to taps
+00:22 +180: /workspace/lythaus-ui-review/test/design_system/lyth_icon_slider_test.dart: LythSlider displays label and updates value
+00:22 +181: /workspace/lythaus-ui-review/test/design_system/lyth_button_test.dart: secondary variant uses OutlinedButton
+00:22 +182: /workspace/lythaus-ui-review/test/design_system/lyth_icon_slider_test.dart: LythRangeSlider shows range label and triggers onChanged
+00:22 +183: /workspace/lythaus-ui-review/test/design_system/lyth_button_test.dart: loading state preserves hidden label and blocks submission
+00:22 +184: /workspace/lythaus-ui-review/test/design_system/lyth_button_test.dart: iconAfter renders icon after label
+00:22 +185: /workspace/lythaus-ui-review/test/design_system/lyth_button_test.dart: tooltip wraps button when provided
+00:23 +186: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: (setUpAll)
+00:23 +186: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythEmptyState renders icon and title
+00:23 +187: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythEmptyState renders subtitle when provided
+00:23 +188: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythEmptyState does not render subtitle when omitted
+00:24 +189: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythEmptyState renders action button and triggers callback
+00:24 +190: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythEmptyState does not render action button when actionLabel is null
+00:24 +191: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythEmptyState respects custom iconSize
+00:24 +192: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythEmptyState respects custom iconColor
+00:24 +193: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythCard renders child content
+00:24 +194: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythCard clickable variant fires onTap
+00:24 +195: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythCard non-clickable card does not contain InkWell
+00:24 +196: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythCard renders LythCardElevated with child
+00:24 +197: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythCard LythCardElevated clickable fires onTap
+00:24 +198: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythCard LythCard with onLongPress fires callback
+00:24 +199: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythCard LythCard with custom backgroundColor renders
+00:24 +200: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythCard LythCard with onTap (no .clickable) fires callback
+00:24 +201: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythConfirmDialog renders title and confirm label
+00:24 +202: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythConfirmDialog renders message when provided
+00:24 +203: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythConfirmDialog cancel button dismisses dialog
+00:24 +204: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythConfirmDialog onCancel callback is invoked
+00:24 +205: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythConfirmDialog onConfirm callback is invoked
+00:24 +206: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythConfirmDialog destructive constructor sets isDestructive=true
+00:24 +207: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythConfirmDialog renders icon when provided
+00:24 +208: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythSkeleton LythSkeleton.line renders with given height
+00:24 +209: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythSkeleton LythSkeleton.box renders with given size
+00:25 +210: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythSkeleton LythSkeleton.circle renders
+00:25 +211: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: LythSkeleton renders AnimatedBuilder for animation
+00:25 +212: /workspace/lythaus-ui-review/test/design_system/lyth_design_components_test.dart: (tearDownAll)
+00:25 +212: All tests passed!

@@ -1,0 +1,61 @@
+{
+  "baseline_head": "da612c489b99ad540bbb7abca8d0d8b348c17e16",
+  "description": "Historical evidence preserved; old Queue classifier is unsafe and superseded by v3, not execution approval.",
+  "files": [
+    {
+      "path": "packages/db/src/index.ts",
+      "bytes": 6622,
+      "sha256": "72299ede9a9e2c07f51de34ee21c821333c6195cca303a69a01d4c6700d21e02"
+    },
+    {
+      "path": "database/planetscale/proposals/reputation_subject_lock.sql.proposal",
+      "bytes": 3954,
+      "sha256": "71a4fc9a7945cd683bc1b70ad01e958d6d0735a6ab9a37f8c254669244732d62"
+    },
+    {
+      "path": "database/planetscale/proposals/reputation_subject_lock.rollback.sql.proposal",
+      "bytes": 514,
+      "sha256": "b28eacc41c8c5b77311cd0dc3ef14467e7c515aac53e908186080e7c9a56796f"
+    },
+    {
+      "path": "database/planetscale/proposals/reputation_subject_lock.verify.sql.proposal",
+      "bytes": 1832,
+      "sha256": "35f8fe76fa3bab02c2388fba45a49352aa6918e04e38e2ed4a9be38b133e87fd"
+    },
+    {
+      "path": "database/planetscale/proposals/reputation_subject_lock.patch.proposal",
+      "bytes": 1265,
+      "sha256": "7739004a2198740908ae99e82682890c18edb00222de3595e137e135ef5835d1"
+    },
+    {
+      "path": "database/planetscale/proposals/reputation_subject_lock.v2.sql.proposal",
+      "bytes": 10905,
+      "sha256": "5220a5e176c6d753c3a322449d4ba048c7edabb26a5fb9850567a3e8041b0215"
+    },
+    {
+      "path": "database/planetscale/proposals/reputation_subject_lock.v2.verify.sql.proposal",
+      "bytes": 8914,
+      "sha256": "365e8cf5d2d6707b6520be797011bb518b84b5452078be39b167248948f113cb"
+    },
+    {
+      "path": "database/planetscale/proposals/reputation_subject_lock.v2.rollback.sql.proposal",
+      "bytes": 4673,
+      "sha256": "eafcbec1bfbbb36ec71db9179491f09df44176a98945789256f22497b82662a9"
+    },
+    {
+      "path": "database/planetscale/proposals/reputation_subject_lock.v2.patch.proposal",
+      "bytes": 2424,
+      "sha256": "144ca6caee566bcd0b32ff4a5eec6a1573103aaab898cfb38ba44cc782436e25"
+    },
+    {
+      "path": "database/planetscale/proposals/reputation_subject_lock.queue.patch.proposal",
+      "bytes": 3018,
+      "sha256": "55d75e68a780e73347df24811f7140b6c9d61e56f5c815bf569d22523361954e"
+    },
+    {
+      "path": "database/planetscale/proposals/reputation_subject_lock.privacy.patch.proposal",
+      "bytes": 1970,
+      "sha256": "28cd8c1ccab76dc2d9ad3fb943fe31e119c2e1268bc42b5f4b198de1724c0b7d"
+    }
+  ]
+}

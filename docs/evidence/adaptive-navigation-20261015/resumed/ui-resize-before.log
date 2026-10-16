@@ -1,0 +1,28 @@
+00:00 +0: loading /workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart
+00:00 +0: AdaptiveShell resizing and tab changes preserve the active composer
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: same instance as _CreatePostScreenState:<_CreatePostScreenState#4e8f5(lifecycle state:
+defunct, not mounted)>
+  Actual: _CreatePostScreenState:<_CreatePostScreenState#ba3d3>
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart:117:9)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1682:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///workspace/lythaus-ui-review/test/ui/screens/adaptive_shell_test.dart line 117
+The test description was:
+  resizing and tab changes preserve the active composer
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +0 -1: AdaptiveShell resizing and tab changes preserve the active composer [E]
+  Test failed. See exception logs above.
+  The test description was: resizing and tab changes preserve the active composer
+  
+00:01 +0 -1: Some tests failed.

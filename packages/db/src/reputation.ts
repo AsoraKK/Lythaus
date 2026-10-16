@@ -12,6 +12,19 @@ import {
 } from '@lythaus/contracts';
 import type { Client } from 'pg';
 
+export class ReputationSubjectDeletedError extends Error {
+  readonly code = 'reputation_subject_deleted';
+
+  constructor() {
+    super('reputation_subject_deleted');
+    this.name = 'ReputationSubjectDeletedError';
+  }
+}
+
+export function isReputationSubjectDeletedError(error: unknown): error is ReputationSubjectDeletedError {
+  return error instanceof ReputationSubjectDeletedError;
+}
+
 export interface ReputationSignalInput {
   id: string;
   subjectUserId: string;
@@ -150,6 +163,12 @@ export async function refreshReputationProfile(
   client: Client,
   userId: string,
 ): Promise<{ profile: ReputationProfileSnapshot; previousLevel: ReputationLevel }> {
+  const subject = await client.query<{ status: string }>(
+    `SELECT status FROM trust.lock_reputation_subject($1::pg_catalog.uuid)`,
+    [userId],
+  );
+  if (!subject.rows[0]) throw new Error('reputation_subject_not_found');
+  if (subject.rows[0].status === 'deleted') throw new ReputationSubjectDeletedError();
   const previous = await client.query<{ current_level: ReputationLevel }>(
     `SELECT current_level FROM trust.reputation_profiles WHERE user_id = $1`,
     [userId],
@@ -324,10 +343,11 @@ export async function recordReputationSignal(
 ): Promise<ReputationMutationResult> {
   if (!Number.isFinite(Date.parse(input.occurredAt))) throw new Error('reputation_event_time_invalid');
   const subject = await client.query<{ status: string }>(
-    `SELECT status FROM identity.users WHERE id = $1 FOR UPDATE`,
+    `SELECT status FROM trust.lock_reputation_subject($1::pg_catalog.uuid)`,
     [input.subjectUserId],
   );
   if (!subject.rows[0]) throw new Error('reputation_subject_not_found');
+  if (subject.rows[0].status === 'deleted') throw new ReputationSubjectDeletedError();
   const existing = await findEventBySource(client, input.subjectUserId, input.sourceEventId, input.signalType);
   if (existing) {
     const recomputed = await refreshReputationProfile(client, input.subjectUserId);

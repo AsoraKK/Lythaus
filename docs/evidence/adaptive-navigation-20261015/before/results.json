@@ -1,0 +1,433 @@
+{
+  "sourceCommit": "ed56f6d11b41bc9cb29d45309a0d85ffd606001c",
+  "compiledSha256": "6583e1143bc2cf0b610d4630e5d3a32dcd63fa11f99e11906ac068494ec449b2",
+  "browser": "151.0.7922.34",
+  "results": [
+    {
+      "theme": "light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://app.lythaus.co/",
+      "title": "Lythaus",
+      "errors": [],
+      "icons": [
+        {
+          "source": "favicon.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-192.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        {
+          "source": "icons/Icon-maskable-512.png",
+          "width": 512,
+          "height": 512
+        }
+      ],
+      "keyboard": "Tab reaches Feed controls, Enter opens the sheet, close restores the header",
+      "text": [
+        "Feed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4",
+        "Feed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4",
+        "Feed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4",
+        "Feed controls",
+        "",
+        "",
+        "Search",
+        "Trending",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.",
+        "No posts yet",
+        "Check back soon for new updates.",
+        "Discover\nTab 1 of 4",
+        "Create\nTab 2 of 4",
+        "Profile\nTab 3 of 4",
+        "Rewards\nTab 4 of 4"
+      ]
+    },
+    {
+      "theme": "light",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "url": "https://app.lythaus.co/",
+      "title": "Lythaus",
+      "errors": [],
+      "icons": [
+        {
+          "source": "favicon.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-192.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        {
+          "source": "icons/Icon-maskable-512.png",
+          "width": 512,
+          "height": 512
+        }
+      ],
+      "keyboard": "Tab reaches Feed controls, Enter opens the sheet, close restores the header",
+      "text": [
+        "Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4SettingsHelpFeed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4SettingsHelpFeed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4SettingsHelpFeed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4SettingsHelp",
+        "Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4SettingsHelp",
+        "Discover\nTab 1 of 4",
+        "Create\nTab 2 of 4",
+        "Profile\nTab 3 of 4",
+        "Rewards\nTab 4 of 4",
+        "Settings",
+        "Help",
+        "",
+        "",
+        "Feed controls",
+        "Search",
+        "Trending",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.",
+        "No posts yet",
+        "Check back soon for new updates."
+      ]
+    },
+    {
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "url": "https://app.lythaus.co/",
+      "title": "Lythaus",
+      "errors": [],
+      "icons": [
+        {
+          "source": "favicon.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-192.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        {
+          "source": "icons/Icon-maskable-512.png",
+          "width": 512,
+          "height": 512
+        }
+      ],
+      "keyboard": "Tab reaches Feed controls, Enter opens the sheet, close restores the header",
+      "text": [
+        "LythausDiscoverCreateProfileRewardsSettingsHelpFeed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "LythausDiscoverCreateProfileRewardsSettingsHelpFeed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "LythausDiscoverCreateProfileRewardsSettingsHelpFeed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "LythausDiscoverCreateProfileRewardsSettingsHelp",
+        "LythausDiscoverCreateProfileRewardsSettingsHelp",
+        "Lythaus",
+        "Discover",
+        "Create",
+        "Profile",
+        "Rewards",
+        "",
+        "Settings",
+        "Help",
+        "",
+        "",
+        "Feed controls",
+        "Search",
+        "Trending",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.",
+        "No posts yet",
+        "Check back soon for new updates."
+      ]
+    },
+    {
+      "theme": "dark",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "url": "https://app.lythaus.co/",
+      "title": "Lythaus",
+      "errors": [],
+      "icons": [
+        {
+          "source": "favicon.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-192.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        {
+          "source": "icons/Icon-maskable-512.png",
+          "width": 512,
+          "height": 512
+        }
+      ],
+      "keyboard": "Tab reaches Feed controls, Enter opens the sheet, close restores the header",
+      "text": [
+        "Feed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4",
+        "Feed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4",
+        "Feed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4",
+        "Feed controls",
+        "",
+        "",
+        "Search",
+        "Trending",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.",
+        "No posts yet",
+        "Check back soon for new updates.",
+        "Discover\nTab 1 of 4",
+        "Create\nTab 2 of 4",
+        "Profile\nTab 3 of 4",
+        "Rewards\nTab 4 of 4"
+      ]
+    },
+    {
+      "theme": "dark",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "url": "https://app.lythaus.co/",
+      "title": "Lythaus",
+      "errors": [],
+      "icons": [
+        {
+          "source": "favicon.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-192.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        {
+          "source": "icons/Icon-maskable-512.png",
+          "width": 512,
+          "height": 512
+        }
+      ],
+      "keyboard": "Tab reaches Feed controls, Enter opens the sheet, close restores the header",
+      "text": [
+        "Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4SettingsHelpFeed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4SettingsHelpFeed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4SettingsHelpFeed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4SettingsHelp",
+        "Discover\nTab 1 of 4Create\nTab 2 of 4Profile\nTab 3 of 4Rewards\nTab 4 of 4SettingsHelp",
+        "Discover\nTab 1 of 4",
+        "Create\nTab 2 of 4",
+        "Profile\nTab 3 of 4",
+        "Rewards\nTab 4 of 4",
+        "Settings",
+        "Help",
+        "",
+        "",
+        "Feed controls",
+        "Search",
+        "Trending",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.",
+        "No posts yet",
+        "Check back soon for new updates."
+      ]
+    },
+    {
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "url": "https://app.lythaus.co/",
+      "title": "Lythaus",
+      "errors": [],
+      "icons": [
+        {
+          "source": "favicon.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-192.png",
+          "width": 192,
+          "height": 192
+        },
+        {
+          "source": "icons/Icon-512.png",
+          "width": 512,
+          "height": 512
+        },
+        {
+          "source": "icons/Icon-maskable-512.png",
+          "width": 512,
+          "height": 512
+        }
+      ],
+      "keyboard": "Tab reaches Feed controls, Enter opens the sheet, close restores the header",
+      "text": [
+        "LythausDiscoverCreateProfileRewardsSettingsHelpFeed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "LythausDiscoverCreateProfileRewardsSettingsHelpFeed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "LythausDiscoverCreateProfileRewardsSettingsHelpFeed controlsSearchTrendingDiscover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "LythausDiscoverCreateProfileRewardsSettingsHelp",
+        "LythausDiscoverCreateProfileRewardsSettingsHelp",
+        "Lythaus",
+        "Discover",
+        "Create",
+        "Profile",
+        "Rewards",
+        "",
+        "Settings",
+        "Help",
+        "",
+        "",
+        "Feed controls",
+        "Search",
+        "Trending",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.No posts yetCheck back soon for new updates.",
+        "Discover calm, trustworthy updates tailored to you.",
+        "No posts yet",
+        "Check back soon for new updates."
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/feed/discover"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/feed/discover"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/feed/discover"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/feed/discover"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/feed/discover"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/feed/discover"
+    }
+  ],
+  "requestedComparisonBase": "828ac58ddf7b49dd63339a677e2bdc4f7f2b82b3",
+  "provenanceNote": "The source value originally supplied to the capture command was comparison base 828ac58d. The already-compiled baseline binary was built at ed56f6d. git diff confirms identical app/assets/test/pubspec/web content between those revisions; only evidence/reproducer files changed."
+}

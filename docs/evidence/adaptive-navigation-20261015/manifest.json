@@ -1,0 +1,199 @@
+{
+  "schemaVersion": 1,
+  "dependencyBase": "828ac58ddf7b49dd63339a677e2bdc4f7f2b82b3",
+  "beforeCompiledSource": "ed56f6d11b41bc9cb29d45309a0d85ffd606001c",
+  "afterSource": "35e54f1e34099ae7a750404f98ec038f6e4f26de",
+  "fixture": "Local TLS and synthetic empty guest API; production requests blocked",
+  "native": "Clean source capture; actual TextScaler.linear(1/2)",
+  "artifacts": [
+    {
+      "path": "before/light-390.png",
+      "bytes": 23925,
+      "sha256": "47bd4e6dd0ad99de5f8f7fcf49c9881aaa658bba0250808c44df27fda2ef4a67",
+      "capturedAt": "2026-10-15T06:01:16.299Z",
+      "sourceCommit": "ed56f6d11b41bc9cb29d45309a0d85ffd606001c"
+    },
+    {
+      "path": "before/light-1024.png",
+      "bytes": 30215,
+      "sha256": "5bc7c098875bf94a4654e53f9ebcbd892928e115ea2c9d59750e8cb4ebdce8cc",
+      "capturedAt": "2026-10-15T06:01:19.099Z",
+      "sourceCommit": "ed56f6d11b41bc9cb29d45309a0d85ffd606001c"
+    },
+    {
+      "path": "before/light-1440.png",
+      "bytes": 36500,
+      "sha256": "333ad8e5d925fa8e9cf2e36263f37abaf7443b1ef8fe2c79829e0601ee1924ed",
+      "capturedAt": "2026-10-15T06:01:22.147Z",
+      "sourceCommit": "ed56f6d11b41bc9cb29d45309a0d85ffd606001c"
+    },
+    {
+      "path": "before/dark-390.png",
+      "bytes": 24210,
+      "sha256": "502b4732a1072e7405a13c08a873ede1fd5185e5e97c6d04a2f5ae13ff63d775",
+      "capturedAt": "2026-10-15T06:01:25.183Z",
+      "sourceCommit": "ed56f6d11b41bc9cb29d45309a0d85ffd606001c"
+    },
+    {
+      "path": "before/dark-1024.png",
+      "bytes": 30644,
+      "sha256": "599a7dbb7591b7534969b33330017618f49ac1df8c2d6a1d34a591332f5e6efa",
+      "capturedAt": "2026-10-15T06:01:27.843Z",
+      "sourceCommit": "ed56f6d11b41bc9cb29d45309a0d85ffd606001c"
+    },
+    {
+      "path": "before/dark-1440.png",
+      "bytes": 36710,
+      "sha256": "022fa88dbe24bf12c79f15e1afa7c94916c728a327551eaee4ccac8f826a728b",
+      "capturedAt": "2026-10-15T06:01:30.759Z",
+      "sourceCommit": "ed56f6d11b41bc9cb29d45309a0d85ffd606001c"
+    },
+    {
+      "path": "before/results.json",
+      "bytes": 16274,
+      "sha256": "1b08735b97ae387d1d1c296ba521e83c7c5ce7c01167f2dc1d4510253c0eeec4",
+      "capturedAt": "2026-10-15T06:01:31.831Z",
+      "sourceCommit": "ed56f6d11b41bc9cb29d45309a0d85ffd606001c"
+    },
+    {
+      "path": "after/light-390.png",
+      "bytes": 23925,
+      "sha256": "47bd4e6dd0ad99de5f8f7fcf49c9881aaa658bba0250808c44df27fda2ef4a67",
+      "capturedAt": "2026-10-15T06:09:04.747Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "after/light-1024.png",
+      "bytes": 30617,
+      "sha256": "44f746f9bba1e8f1a5fe0032dfd9a668b608f754e979382068274909778a5656",
+      "capturedAt": "2026-10-15T06:09:07.559Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "after/light-1440.png",
+      "bytes": 35265,
+      "sha256": "69e5bb650b97e20617cc8b35f3efd204252a369afce88dc815b5d7c21ffb3f47",
+      "capturedAt": "2026-10-15T06:09:12.871Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "after/dark-390.png",
+      "bytes": 24210,
+      "sha256": "502b4732a1072e7405a13c08a873ede1fd5185e5e97c6d04a2f5ae13ff63d775",
+      "capturedAt": "2026-10-15T06:09:18.947Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "after/dark-1024.png",
+      "bytes": 31113,
+      "sha256": "a21bf57488d9006b4d9c496c488781368db06ee643cb8e4d35bbb5d07504dcf8",
+      "capturedAt": "2026-10-15T06:09:21.584Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "after/dark-1440.png",
+      "bytes": 35678,
+      "sha256": "f942dfcbef5a3b56db1b644ed69c2ea11686d43be4aef727d8e206dcd065f008",
+      "capturedAt": "2026-10-15T06:09:27.000Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "after/light-1024-settings-focus.png",
+      "bytes": 31102,
+      "sha256": "6bc010a8f020267cd27548dfe61676e6b5ce649b876eb8e78a07d41e811b6e13",
+      "capturedAt": "2026-10-15T06:09:09.999Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "after/light-1440-settings-focus.png",
+      "bytes": 35776,
+      "sha256": "507d489acc54f27e2198908815b09b55261f605ab826d3b334f131f4261177fc",
+      "capturedAt": "2026-10-15T06:09:16.319Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "after/dark-1024-settings-focus.png",
+      "bytes": 31642,
+      "sha256": "f2ade0969bfc6c73848c6c01c1b9c2e795d4bea072f86d6c146775fab196cde0",
+      "capturedAt": "2026-10-15T06:09:24.328Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "after/dark-1440-settings-focus.png",
+      "bytes": 36277,
+      "sha256": "f0937921175a3a24656aae43a0b55f11aba442dd54506d42c017f504004ff21d",
+      "capturedAt": "2026-10-15T06:09:30.152Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "after/results.json",
+      "bytes": 13676,
+      "sha256": "a24a1e382dd3c8d9b7dd1fcc9491b7685dcfe0cffbc648e5337fbab5dddaeaa9",
+      "capturedAt": "2026-10-15T06:09:30.900Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "native/light-compact-1x.png",
+      "bytes": 13847,
+      "sha256": "d205cccca68e6239fbfd9777e2c64837c1a2c15520d53295bbec698d1750cd14",
+      "capturedAt": "2026-10-15T06:08:08.078Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "native/light-compact-2x.png",
+      "bytes": 21951,
+      "sha256": "38769ac0d48f8d3ba3c6c3cff5fee20819c206fba4d55e272dd87178ca3cb831",
+      "capturedAt": "2026-10-15T06:08:08.310Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "native/light-expanded-1x.png",
+      "bytes": 18077,
+      "sha256": "fb531a262e9886ece563712561aa9589d7c08cb0b17fea0ef20096dff9e6d446",
+      "capturedAt": "2026-10-15T06:08:08.530Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "native/light-expanded-2x.png",
+      "bytes": 28385,
+      "sha256": "3b0c201087e0f2d5717b7c20d8bd0e201455da4c12395c723848b27dfe7db80e",
+      "capturedAt": "2026-10-15T06:08:08.706Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "native/dark-compact-1x.png",
+      "bytes": 14032,
+      "sha256": "5937139830623b11fe484c3e713082b4c46d1a2a9b42e4e70eb7601c32c2d919",
+      "capturedAt": "2026-10-15T06:08:08.874Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "native/dark-compact-2x.png",
+      "bytes": 21903,
+      "sha256": "4d0165d957e9d47def49a52f2a4989978c7eca1fa37c462cc7171dd645196ee8",
+      "capturedAt": "2026-10-15T06:08:09.042Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "native/dark-expanded-1x.png",
+      "bytes": 18122,
+      "sha256": "a3877c85ecbeb66766122603f9fc0424ba67c74437f11c36b6112cfebfe9fe84",
+      "capturedAt": "2026-10-15T06:08:09.202Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "native/dark-expanded-2x.png",
+      "bytes": 28337,
+      "sha256": "0670635f773104cf800469c4159d6b1db1d0c71dbae1cb8cec2a455ce3fbde2b",
+      "capturedAt": "2026-10-15T06:08:09.370Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    },
+    {
+      "path": "native/results.json",
+      "bytes": 5176,
+      "sha256": "1a0ddca5869113656041e9ef718a6180fcf38dc97220bc27b7020356f39a4b6e",
+      "capturedAt": "2026-10-15T06:08:09.714Z",
+      "sourceCommit": "35e54f1e34099ae7a750404f98ec038f6e4f26de"
+    }
+  ]
+}
