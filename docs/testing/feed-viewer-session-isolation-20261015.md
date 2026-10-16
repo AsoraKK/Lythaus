@@ -27,8 +27,10 @@ successful empty list.
 - `feed_providers.dart` clears retired cards, cursors and restore state,
   cancels cancellable transport, and checks ownership after each await before
   dispatch or publication. News and custom transports also reject late results
-  even when their underlying calls ignore cancellation. Guest reads never use
-  a retained member token. Loading, failed authentication and missing member
+  even when their underlying calls ignore cancellation. Discover reads require
+  either a current member session or explicit guest mode, preventing a transient
+  signed-out shell from dispatching a request during logout. Guest reads never
+  use a retained member token. Loading, failed authentication and missing member
   credentials fail closed.
 - Duplicate refresh and pagination requests coalesce. Refresh supersedes an
   old page. Overlapping post IDs are deduplicated; repeated or cyclic cursors

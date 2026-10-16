@@ -156,12 +156,14 @@ class _Harness {
     tokens = StateProvider<Future<String?>>(
       (_) => initialToken ?? Future.value('synthetic-token-$owner'),
     );
+    guest = StateProvider<bool>((_) => false);
     container = ProviderContainer(
       overrides: [
         contentRecoveryStorageProvider.overrideWithValue(
           MemoryContentRecoveryStorage(),
         ),
         authStateProvider.overrideWith((_) => auth),
+        guestModeProvider.overrideWith((ref) => ref.watch(guest)),
         jwtProvider.overrideWith((ref) => ref.watch(tokens)),
         socialFeedServiceProvider.overrideWithValue(feeds),
         customFeedServiceProvider.overrideWithValue(custom),
@@ -174,6 +176,7 @@ class _Harness {
 
   late final FeedTestAuth auth;
   late final StateProvider<Future<String?>> tokens;
+  late final StateProvider<bool> guest;
   late final ProviderContainer container;
   final feeds = _Feeds();
   final custom = _CustomFeeds();
@@ -184,9 +187,10 @@ class _Harness {
       container.read(liveFeedStateProvider(_discover).notifier);
   List<String> get ids => state.items.map((item) => item.id).toList();
 
-  void switchTo(String? owner, {Future<String?>? token}) {
+  void switchTo(String? owner, {Future<String?>? token, bool guest = false}) {
     container.read(tokens.notifier).state =
         token ?? Future.value('synthetic-token-$owner');
+    container.read(this.guest.notifier).state = guest;
     auth.change(AsyncData(owner == null ? null : feedTestUser(owner)));
     container.read(tokenVersionProvider.notifier).state++;
   }
@@ -397,19 +401,28 @@ void main() {
   });
 
   test(
-    'logout clears member data and never sends the stored member token',
+    'logout clears member data and never starts a signed-out feed request',
     () async {
       final h = _Harness();
       await h.loadA();
+      final requestCount = h.feeds.requests.length;
       h.switchTo(null, token: Future.value('synthetic-token-a'));
       expect(h.state.items, isEmpty);
       await h.flush();
-      expect(h.feeds.requests.last.token, isNull);
-      h.feeds.requests.last.complete(['guest-public']);
-      await h.flush();
-      expect(h.ids, ['guest-public']);
+      expect(h.feeds.requests, hasLength(requestCount));
     },
   );
+
+  test('explicit guest reads Discover without member credentials', () async {
+    final h = _Harness(owner: null);
+    h.switchTo(null, guest: true);
+    await h.start();
+    expect(h.feeds.requests, hasLength(1));
+    expect(h.feeds.requests.single.token, isNull);
+    h.feeds.requests.single.complete(['guest-public']);
+    await h.flush();
+    expect(h.ids, ['guest-public']);
+  });
 
   for (final fails in [false, true]) {
     test('late A ${fails ? 'failure' : 'response'} cannot replace B', () async {
@@ -888,7 +901,11 @@ void main() {
     h.feeds.requests.single.complete(['member-a']);
     await tester.pumpAndSettle();
     expect(find.text('Synthetic post member-a'), findsOneWidget);
-    h.switchTo(null, token: Future.value('synthetic-retained-member-token'));
+    h.switchTo(
+      null,
+      token: Future.value('synthetic-retained-member-token'),
+      guest: true,
+    );
     await tester.pump();
     expect(find.text('Synthetic post member-a'), findsNothing);
     expect(h.feeds.requests.last.token, isNull);
