@@ -107,6 +107,7 @@ try {
             await page.getByRole('img', { name: 'Lythaus', exact: true }).waitFor();
           }
           await page.waitForTimeout(300);
+          await capture(page, engine + '-' + screen + '-' + theme + '-' + width);
           if (screen === 'login') {
             const email = page.getByRole('textbox', { name: 'Email', exact: true });
             await email.click();
@@ -115,11 +116,7 @@ try {
             await page.setViewportSize({ width: width === 1440 ? 1024 : width + 20, height: 960 });
             await page.setViewportSize({ width, height: 960 });
             await page.waitForFunction(() => document.activeElement?.value === 'draft@example.invalid');
-            await page.mouse.move(width / 2, 300);
-            await page.mouse.wheel(0, -10000);
-            await page.waitForTimeout(250);
           }
-          await capture(page, engine + '-' + screen + '-' + theme + '-' + width);
           await verifyIcons(page, context);
           if (screen !== 'shell') {
           const action = page.getByRole('button', { name: screen === 'login' ? 'Continue as guest' : 'Continue', exact: true });
