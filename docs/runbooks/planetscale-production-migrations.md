@@ -103,8 +103,13 @@ or states stop before DDL.
 
 ## Failure and rollback
 
-Each migration runs in a transaction. A failed migration rolls back and stops
-the deployment before any Worker is deployed. Do not edit an applied
-migration; create a new numbered migration after reviewing the failed release.
-Restore into an approved temporary recovery environment for validation, then
-use the normal release rollback procedure. No retired-provider fallback exists.
+Ordinary migrations run in a transaction. Staged 0021 commits its nullable
+column before building its index concurrently; an index failure can leave the
+column and an invalid index behind without a registry marker. A failed run
+stops before Worker deployment. Preserve the additive state and use the
+[0021 contingency and cutover sequence](planetscale-0021-cutover-preparation.md)
+to distinguish safe roll-forward states from drift. Do not edit an applied
+migration or delete registry history. A different repair requires a reviewed
+new numbered migration. Recovery restores require the separately approved
+target, cost and recovery decision in the
+[restore runbook](planetscale-restore.md).
