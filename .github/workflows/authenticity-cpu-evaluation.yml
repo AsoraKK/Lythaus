@@ -67,7 +67,7 @@ jobs:
       - name: Validate frozen model, rights, fixture and runtime preflight
         run: node scripts/authenticity/validate-private-evaluation-approval.mjs --approval "$RUNNER_TEMP/authenticity-evaluation/approval.json" --root "$RUNNER_TEMP/authenticity-evaluation" --output "$RUNNER_TEMP/authenticity-preflight-identity.json" --source-sha "$RELEASE_SHA"
       - name: Pin evaluation client Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.13.5'
       - name: Install the hash-pinned smoke client
