@@ -339,29 +339,44 @@ test('marketing brand assets render responsively with correct theme and MIME', {
     await page.goto(origin, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => document.documentElement.dataset.opening === 'resolved', null, { timeout: 5000 });
     assert.match(await page.title(), /For the living internet/u);
-    assert.equal(await page.locator('.site-header .brand-lockup').getAttribute('alt'), '');
+    assert.equal(await page.locator('.site-header .brand-wordmark').getAttribute('alt'), '');
     assert.equal(await page.locator('.site-header .brand').getAttribute('aria-label'), 'Lythaus home');
-    const logo = await page.locator('.site-header .brand-lockup').evaluate(element => {
-      const bounds = element.getBoundingClientRect();
-      return { complete: element.complete, naturalWidth: element.naturalWidth, width: bounds.width, height: bounds.height };
+    const logo = await page.locator('.site-header .brand-wordmark-slot').evaluate(element => {
+      const slot = element.getBoundingClientRect();
+      const image = element.querySelector('img');
+      const art = image.getBoundingClientRect();
+      return {
+        complete: image.complete,
+        naturalWidth: image.naturalWidth,
+        slotWidth: slot.width,
+        slotHeight: slot.height,
+        width: art.width,
+        height: art.height,
+      };
     });
     assert.equal(logo.complete, true);
     assert.ok(logo.naturalWidth > 0);
-    assert.ok(logo.width >= 150 && logo.width <= 155);
-    assert.ok(logo.height >= 30 && logo.height <= 34);
+    assert.ok(logo.slotWidth >= 153 && logo.slotWidth <= 155);
+    assert.ok(logo.slotHeight >= 31 && logo.slotHeight <= 33);
+    assert.ok(logo.width >= 113 && logo.width <= 117);
+    assert.ok(logo.height >= 31 && logo.height <= 33);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
 
+    const socialImage = await page.locator('meta[property="og:image"]').getAttribute('content');
+    assert.match(socialImage, /lythaus-social-card-1200x630\.78f698ef4283\.png$/u);
     const assetTypes = await page.evaluate(async (urls) => Promise.all(urls.map(async url => {
       const response = await fetch(url);
       return { url, status: response.status, type: response.headers.get('content-type')?.split(';')[0] };
     })), [
-      '/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg',
+      '/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg',
+      '/brand/lythaus-v1/lythaus-social-card-1200x630.78f698ef4283.png',
       '/icons/lythaus-v1/favicon.116ff3e020c6.svg',
       '/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png',
       '/icons/lythaus-v1/favicon.e3dfdd675a74.ico',
     ]);
     assert.deepEqual(assetTypes.map(asset => [asset.status, asset.type]), [
       [200, 'image/svg+xml'],
+      [200, 'image/png'],
       [200, 'image/svg+xml'],
       [200, 'image/png'],
       [200, 'image/x-icon'],
@@ -369,8 +384,9 @@ test('marketing brand assets render responsively with correct theme and MIME', {
 
     if (evidence) await page.screenshot({ path: path.join(evidence, 'marketing-brand-home-desktop.png'), fullPage: false });
     await page.setViewportSize({ width: 390, height: 844 });
-    const mobileHome = await page.locator('.site-header .brand-lockup').boundingBox();
-    assert.ok(mobileHome.width > 0 && mobileHome.height > 0);
+    const mobileHome = await page.locator('.site-header .brand-wordmark-slot').boundingBox();
+    assert.ok(mobileHome.width >= 153 && mobileHome.height >= 31);
+    assert.ok(await page.locator('.site-header .brand-wordmark').evaluate(element => element.getBoundingClientRect().height >= 31));
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
     if (evidence) await page.screenshot({ path: path.join(evidence, 'marketing-brand-home-mobile.png'), fullPage: false });
     await page.setViewportSize({ width: 320, height: 800 });
@@ -378,24 +394,34 @@ test('marketing brand assets render responsively with correct theme and MIME', {
 
     await page.emulateMedia({ colorScheme: 'light' });
     await page.goto(`${origin}/about`, { waitUntil: 'domcontentloaded' });
-    const lightLogo = page.locator('.secondary-header .secondary-brand-art');
+    const lightLogo = page.locator('.secondary-header .secondary-brand-wordmark');
     await lightLogo.waitFor();
-    assert.match(await lightLogo.evaluate(element => getComputedStyle(element).backgroundImage), /lythaus-lockup-black\.9518c6eeb03b\.svg/u);
+    assert.match(await lightLogo.evaluate(element => getComputedStyle(element).backgroundImage), /lythaus-wordmark-black\.e450176663e0\.svg/u);
     assert.equal(await page.locator('.secondary-header .secondary-brand').getAttribute('aria-label'), 'Lythaus home');
-    assert.equal(await page.locator('.secondary-header .secondary-brand-art').getAttribute('aria-hidden'), 'true');
+    assert.equal(await page.locator('.secondary-header .secondary-brand-wordmark').getAttribute('aria-hidden'), 'true');
+    const secondaryBounds = await lightLogo.boundingBox();
+    const expectedSecondaryWidth = await page.evaluate(() => Math.min(154, window.innerWidth * 0.4));
+    assert.ok(Math.abs(secondaryBounds.width - expectedSecondaryWidth) < 1);
+    assert.ok(Math.abs(secondaryBounds.height - secondaryBounds.width / (627.24944891 / 130.6866688)) < 1);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
     if (evidence) await page.screenshot({ path: path.join(evidence, 'marketing-brand-secondary-light-mobile.png'), fullPage: false });
 
     await page.evaluate(() => { document.documentElement.dataset.appearance = 'dark'; });
-    assert.match(await lightLogo.evaluate(element => getComputedStyle(element).backgroundImage), /lythaus-lockup-white\.57df30b168bc\.svg/u);
+    assert.match(await lightLogo.evaluate(element => getComputedStyle(element).backgroundImage), /lythaus-wordmark-white\.5ba0451347e2\.svg/u);
     if (evidence) await page.screenshot({ path: path.join(evidence, 'marketing-brand-secondary-dark-mobile.png'), fullPage: false });
     await page.evaluate(() => { document.documentElement.dataset.appearance = 'light'; });
-    assert.match(await lightLogo.evaluate(element => getComputedStyle(element).backgroundImage), /lythaus-lockup-black\.9518c6eeb03b\.svg/u);
-    const footerLogo = page.locator('.secondary-footer .secondary-brand-art');
+    assert.match(await lightLogo.evaluate(element => getComputedStyle(element).backgroundImage), /lythaus-wordmark-black\.e450176663e0\.svg/u);
+    const footerLogo = page.locator('.secondary-footer .secondary-brand-wordmark');
     assert.equal(await footerLogo.count(), 1);
     const footerBounds = await footerLogo.boundingBox();
     assert.ok(footerBounds.width > 0 && footerBounds.height > 0);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+    await Promise.all([
+      page.waitForURL(url => url.pathname === '/'),
+      page.locator('.secondary-header .secondary-brand').click(),
+    ]);
+    assert.equal(await page.locator('.site-header .brand').getAttribute('aria-label'), 'Lythaus home');
+    assert.equal(await page.getByRole('heading', { level: 1, name: 'Lythaus', exact: true }).count(), 1);
     assert.equal(pageErrors.length, 0, pageErrors.join('\n'));
   } finally {
     await context.close();
