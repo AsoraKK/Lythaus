@@ -62,6 +62,7 @@ processing flags remain disabled.
 
 - Standard upload unit + Workerd/local R2: 30/30 passed.
 - Disposable PostgreSQL 17.11 acceptance suite: 25/25 passed.
+- Marketing/homepage protection suite: 90/90 passed, including the exact Jobs source-blob allocation guard.
 - `npm run typecheck:native` passed.
 - Native Worker config validation passed (4 configs, 3 generated type files).
 - `git diff --check` passed.
