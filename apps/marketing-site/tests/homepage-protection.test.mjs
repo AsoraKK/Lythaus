@@ -32,7 +32,9 @@ const publicationPg17Script = 'node scripts/ci/run-publication-pg17.mjs';
 const reputationPg17Script = 'node scripts/ci/run-reputation-managed-lock-cluster.mjs --synthetic-managed-cluster --execute-local-sql';
 const allocatedJobsDiagnosticTests = 'apps/lythaus-jobs/tests/reputation-session-diagnostic.test.mjs apps/lythaus-jobs/tests/reputation-session-diagnostic.workerd.mjs';
 const allocatedJobsDiagnosticFiles = new Map([
-  ['apps/lythaus-jobs/src/index.ts', '7b25af78fc1e227b85d1758b0cb31fd0aec09d24'],
+  // PR #1044 head 75d22de8640ba0d1d687a873746820ee7c39ec10 passed 57/57 media CI checks and received independent review.
+  // This exact Jobs blob supersedes the prior allocation.
+  ['apps/lythaus-jobs/src/index.ts', 'da112b2d2c869251ed48941d31d4ac854bb93fa1'],
   // Membership-only createCustomFeed now shares the canonical account lock and keeps tier/count/cap checks,
   // inserts, and matching activity in one transaction; the Jobs bridge and handler remain unchanged.
   ['apps/lythaus-public-api/src/index.ts', '6ba74610a691ece3783d953290e54a677d9b08cd'],
@@ -886,7 +888,7 @@ test('image-integrity allocation rejects superseded Worker bytes without broaden
   // and fecdd6f6b19ad5ea9dd17afa70e420e6deb147b8 (Jobs); the guard compares IDs,
   // so these superseded PR commits need not survive squash.
   const supersededWorkerBlobs = new Map([
-    ['apps/lythaus-jobs/src/index.ts', ['8a6487ab099287f151fc8594b3b9ff846a9226b7', 'a842e8c3654a26adcaae7c8e72efae3d20102cbb']],
+    ['apps/lythaus-jobs/src/index.ts', ['8a6487ab099287f151fc8594b3b9ff846a9226b7', 'a842e8c3654a26adcaae7c8e72efae3d20102cbb', '7b25af78fc1e227b85d1758b0cb31fd0aec09d24']],
     ['apps/lythaus-public-api/src/index.ts', ['7a941be1765e82b5cbf00294b114952ab6ea27a1']],
   ]);
   for (const [filename, superseded] of supersededWorkerBlobs) {
