@@ -9,6 +9,7 @@ import { chromium, webkit } from 'playwright';
 import { installFlutterEngineFonts } from './flutter-engine-font-fixture.mjs';
 import {observeRenderHealth, assertRenderHealth} from './brand-render-health.mjs';
 import {compareApprovedArtwork} from './brand-reference.mjs';
+import {containedWordmarkRect} from './brand-artwork-pixels.mjs';
 
 const output = path.resolve(process.env.BRAND_EVIDENCE ?? 'build/brand-evidence');
 const build = path.resolve(process.env.BRAND_WEB_BUILD ?? 'build/brand-web');
@@ -71,11 +72,7 @@ async function capture(page, name, validate = true) {
     assert.ok(rect && rect.width > 0 && rect.height > 0, 'Brand has a visible layout box');
     const symbol = !(await image.count());
     if (symbol) rect = {x:rect.x+(rect.width-24)/2,y:rect.y+(rect.height-24)/2,width:24,height:24};
-    if(name.includes('-admin-')){
-      const width=Math.min(rect.width,rect.height*470.28944891/130.6866688);
-      const height=width*130.6866688/470.28944891;
-      rect={x:rect.x+(rect.width-width)/2,y:rect.y+(rect.height-height)/2,width,height};
-    }
+    if(!symbol) rect=containedWordmarkRect(rect);
     const png = PNG.sync.read(bytes);
     const colors = new Map();
     let pixels = 0;

@@ -1,5 +1,12 @@
 import assert from 'node:assert/strict';
 
+export function containedWordmarkRect(rect) {
+  const aspectRatio=470.28944891/130.6866688;
+  const width=Math.min(rect.width,rect.height*aspectRatio);
+  const height=width/aspectRatio;
+  return {x:rect.x+(rect.width-width)/2,y:rect.y+(rect.height-height)/2,width,height};
+}
+
 // Compare only the artwork rectangle. A one-pixel edge allowance accommodates
 // rasterizer antialiasing; it does not excuse missing or unrelated artwork.
 export function artworkFidelity(actual, reference, background) {
