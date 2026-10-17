@@ -1,6 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
+import 'package:lythaus/design_system/widgets/lyth_brand.dart';
 
 import 'package:lythaus/ui/theme/spacing.dart';
 
@@ -21,48 +22,61 @@ class OnboardingIntroScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(Spacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Spacer(),
-            Text(
-              'Welcome to Lythaus',
-              style: Theme.of(
-                context,
-              ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: Spacing.sm),
-            Text(
-              'The authentic social network. Curated feeds, credible voices, '
-              'and calm interactions.',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            const SizedBox(height: Spacing.lg),
-            Text(
-              'Before you post',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: Spacing.sm),
-            ...policyLines.map(
-              (line) => Padding(
-                padding: const EdgeInsets.only(bottom: Spacing.xs),
-                child: Text(
-                  line,
-                  style: Theme.of(context).textTheme.bodyMedium,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Padding(
+                  padding: const EdgeInsets.all(Spacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Spacer(),
+                      const LythBrand(),
+                      const SizedBox(height: Spacing.lg),
+                      Text(
+                        'Welcome to Lythaus',
+                        style: Theme.of(context).textTheme.displaySmall
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: Spacing.sm),
+                      Text(
+                        'The authentic social network. Curated feeds, credible voices, '
+                        'and calm interactions.',
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                      const SizedBox(height: Spacing.lg),
+                      Text(
+                        'Before you post',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: Spacing.sm),
+                      ...policyLines.map(
+                        (line) => Padding(
+                          padding: const EdgeInsets.only(bottom: Spacing.xs),
+                          child: Text(
+                            line,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      FilledButton(
+                        onPressed:
+                            onContinue ??
+                            () => Navigator.of(context).maybePop(),
+                        child: const Text('Continue'),
+                      ),
+                      const SizedBox(height: Spacing.md),
+                    ],
+                  ),
                 ),
               ),
             ),
-            const Spacer(),
-            FilledButton(
-              onPressed: onContinue ?? () => Navigator.of(context).maybePop(),
-              child: const Text('Continue'),
-            ),
-            const SizedBox(height: Spacing.md),
-          ],
+          ),
         ),
       ),
     );

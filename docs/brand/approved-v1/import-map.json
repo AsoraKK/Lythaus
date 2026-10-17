@@ -1,0 +1,490 @@
+{
+  "package_sha256": "5e39cb394ce182f540a5434f8e14267a51b40977a05c1ed3816918d85ff22995",
+  "files": [
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-lockup-black.9518c6eeb03b.svg",
+      "repository_path": "web/brand/lythaus-v1/lythaus-lockup-black.9518c6eeb03b.svg",
+      "sha256": "9518c6eeb03bb718b6f43c23b44f6a08020bd93f4bf85d75c81fa6b9716d24f3"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-lockup-black.9518c6eeb03b.svg",
+      "repository_path": "apps/control-panel/public/brand/lythaus-v1/lythaus-lockup-black.9518c6eeb03b.svg",
+      "sha256": "9518c6eeb03bb718b6f43c23b44f6a08020bd93f4bf85d75c81fa6b9716d24f3"
+    },
+    {
+      "package_path": "brand/svg/lythaus-lockup-black.svg",
+      "repository_path": "assets/brand/lythaus-v1/lythaus-lockup-black.9518c6eeb03b.svg",
+      "sha256": "9518c6eeb03bb718b6f43c23b44f6a08020bd93f4bf85d75c81fa6b9716d24f3"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-lockup-warm.9ea2e22bfb4b.svg",
+      "repository_path": "web/brand/lythaus-v1/lythaus-lockup-warm.9ea2e22bfb4b.svg",
+      "sha256": "9ea2e22bfb4b7d67b92a9ab5d0b8ae4837bc76525ee306209da928dc382289fb"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-lockup-warm.9ea2e22bfb4b.svg",
+      "repository_path": "apps/control-panel/public/brand/lythaus-v1/lythaus-lockup-warm.9ea2e22bfb4b.svg",
+      "sha256": "9ea2e22bfb4b7d67b92a9ab5d0b8ae4837bc76525ee306209da928dc382289fb"
+    },
+    {
+      "package_path": "brand/svg/lythaus-lockup-warm.svg",
+      "repository_path": "assets/brand/lythaus-v1/lythaus-lockup-warm.9ea2e22bfb4b.svg",
+      "sha256": "9ea2e22bfb4b7d67b92a9ab5d0b8ae4837bc76525ee306209da928dc382289fb"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg",
+      "repository_path": "web/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg",
+      "sha256": "57df30b168bcf5b36b67e033b1924ddf1a891fc28d8fc41d88f2b3db4798031a"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg",
+      "repository_path": "apps/control-panel/public/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg",
+      "sha256": "57df30b168bcf5b36b67e033b1924ddf1a891fc28d8fc41d88f2b3db4798031a"
+    },
+    {
+      "package_path": "brand/svg/lythaus-lockup-white.svg",
+      "repository_path": "assets/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg",
+      "sha256": "57df30b168bcf5b36b67e033b1924ddf1a891fc28d8fc41d88f2b3db4798031a"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-symbol-black.d12dd266d00b.svg",
+      "repository_path": "web/brand/lythaus-v1/lythaus-symbol-black.d12dd266d00b.svg",
+      "sha256": "d12dd266d00bf0dbe98c300d32c105cd20d16489e21ce0c656ec29b13ca7629d"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-symbol-black.d12dd266d00b.svg",
+      "repository_path": "apps/control-panel/public/brand/lythaus-v1/lythaus-symbol-black.d12dd266d00b.svg",
+      "sha256": "d12dd266d00bf0dbe98c300d32c105cd20d16489e21ce0c656ec29b13ca7629d"
+    },
+    {
+      "package_path": "brand/svg/lythaus-symbol-black.svg",
+      "repository_path": "assets/brand/lythaus-v1/lythaus-symbol-black.d12dd266d00b.svg",
+      "sha256": "d12dd266d00bf0dbe98c300d32c105cd20d16489e21ce0c656ec29b13ca7629d"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-symbol-square-black.6a1b6d025e69.svg",
+      "repository_path": "web/brand/lythaus-v1/lythaus-symbol-square-black.6a1b6d025e69.svg",
+      "sha256": "6a1b6d025e69ce0e0d601a75a6437ea6f04aa4da2e1c403d3de7880575d54caa"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-symbol-square-black.6a1b6d025e69.svg",
+      "repository_path": "apps/control-panel/public/brand/lythaus-v1/lythaus-symbol-square-black.6a1b6d025e69.svg",
+      "sha256": "6a1b6d025e69ce0e0d601a75a6437ea6f04aa4da2e1c403d3de7880575d54caa"
+    },
+    {
+      "package_path": "brand/svg/lythaus-symbol-square-black.svg",
+      "repository_path": "assets/brand/lythaus-v1/lythaus-symbol-square-black.6a1b6d025e69.svg",
+      "sha256": "6a1b6d025e69ce0e0d601a75a6437ea6f04aa4da2e1c403d3de7880575d54caa"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-symbol-square-warm.fb697a91817f.svg",
+      "repository_path": "web/brand/lythaus-v1/lythaus-symbol-square-warm.fb697a91817f.svg",
+      "sha256": "fb697a91817f02c2d731c1401fd5a3f07a0b52cf2c7b05148e5e446a4b5507e7"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-symbol-square-warm.fb697a91817f.svg",
+      "repository_path": "apps/control-panel/public/brand/lythaus-v1/lythaus-symbol-square-warm.fb697a91817f.svg",
+      "sha256": "fb697a91817f02c2d731c1401fd5a3f07a0b52cf2c7b05148e5e446a4b5507e7"
+    },
+    {
+      "package_path": "brand/svg/lythaus-symbol-square-warm.svg",
+      "repository_path": "assets/brand/lythaus-v1/lythaus-symbol-square-warm.fb697a91817f.svg",
+      "sha256": "fb697a91817f02c2d731c1401fd5a3f07a0b52cf2c7b05148e5e446a4b5507e7"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-symbol-square-white.14d43a906a24.svg",
+      "repository_path": "web/brand/lythaus-v1/lythaus-symbol-square-white.14d43a906a24.svg",
+      "sha256": "14d43a906a24fc134c65aada9304967db94af274f399eb6ad23f8af5859d437f"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-symbol-square-white.14d43a906a24.svg",
+      "repository_path": "apps/control-panel/public/brand/lythaus-v1/lythaus-symbol-square-white.14d43a906a24.svg",
+      "sha256": "14d43a906a24fc134c65aada9304967db94af274f399eb6ad23f8af5859d437f"
+    },
+    {
+      "package_path": "brand/svg/lythaus-symbol-square-white.svg",
+      "repository_path": "assets/brand/lythaus-v1/lythaus-symbol-square-white.14d43a906a24.svg",
+      "sha256": "14d43a906a24fc134c65aada9304967db94af274f399eb6ad23f8af5859d437f"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-symbol-warm.3fa2e07bac40.svg",
+      "repository_path": "web/brand/lythaus-v1/lythaus-symbol-warm.3fa2e07bac40.svg",
+      "sha256": "3fa2e07bac402bf62dbb97a503a5621b82f3f6ce7dce3fc41be8f439e5f1fe7c"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-symbol-warm.3fa2e07bac40.svg",
+      "repository_path": "apps/control-panel/public/brand/lythaus-v1/lythaus-symbol-warm.3fa2e07bac40.svg",
+      "sha256": "3fa2e07bac402bf62dbb97a503a5621b82f3f6ce7dce3fc41be8f439e5f1fe7c"
+    },
+    {
+      "package_path": "brand/svg/lythaus-symbol-warm.svg",
+      "repository_path": "assets/brand/lythaus-v1/lythaus-symbol-warm.3fa2e07bac40.svg",
+      "sha256": "3fa2e07bac402bf62dbb97a503a5621b82f3f6ce7dce3fc41be8f439e5f1fe7c"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-symbol-white.8e20f9650ccb.svg",
+      "repository_path": "web/brand/lythaus-v1/lythaus-symbol-white.8e20f9650ccb.svg",
+      "sha256": "8e20f9650ccb88053ff757e2b18cbd2b618e5a0e922bc61288c27e09ab3c6436"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-symbol-white.8e20f9650ccb.svg",
+      "repository_path": "apps/control-panel/public/brand/lythaus-v1/lythaus-symbol-white.8e20f9650ccb.svg",
+      "sha256": "8e20f9650ccb88053ff757e2b18cbd2b618e5a0e922bc61288c27e09ab3c6436"
+    },
+    {
+      "package_path": "brand/svg/lythaus-symbol-white.svg",
+      "repository_path": "assets/brand/lythaus-v1/lythaus-symbol-white.8e20f9650ccb.svg",
+      "sha256": "8e20f9650ccb88053ff757e2b18cbd2b618e5a0e922bc61288c27e09ab3c6436"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg",
+      "repository_path": "web/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg",
+      "sha256": "e450176663e057e99bf66b822425eb0e1cf1ef90928f4b10b123e521bab63750"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg",
+      "repository_path": "apps/control-panel/public/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg",
+      "sha256": "e450176663e057e99bf66b822425eb0e1cf1ef90928f4b10b123e521bab63750"
+    },
+    {
+      "package_path": "brand/svg/lythaus-wordmark-black.svg",
+      "repository_path": "assets/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg",
+      "sha256": "e450176663e057e99bf66b822425eb0e1cf1ef90928f4b10b123e521bab63750"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-wordmark-warm.9dd50f09167b.svg",
+      "repository_path": "web/brand/lythaus-v1/lythaus-wordmark-warm.9dd50f09167b.svg",
+      "sha256": "9dd50f09167b49d2e0b90dbe57a8bde76e045565d7c5622e03856cdd99b11d9e"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-wordmark-warm.9dd50f09167b.svg",
+      "repository_path": "apps/control-panel/public/brand/lythaus-v1/lythaus-wordmark-warm.9dd50f09167b.svg",
+      "sha256": "9dd50f09167b49d2e0b90dbe57a8bde76e045565d7c5622e03856cdd99b11d9e"
+    },
+    {
+      "package_path": "brand/svg/lythaus-wordmark-warm.svg",
+      "repository_path": "assets/brand/lythaus-v1/lythaus-wordmark-warm.9dd50f09167b.svg",
+      "sha256": "9dd50f09167b49d2e0b90dbe57a8bde76e045565d7c5622e03856cdd99b11d9e"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg",
+      "repository_path": "web/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg",
+      "sha256": "5ba0451347e24615f10bfc362b84285767f51eea3621cc702f64e93ff0047ff7"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg",
+      "repository_path": "apps/control-panel/public/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg",
+      "sha256": "5ba0451347e24615f10bfc362b84285767f51eea3621cc702f64e93ff0047ff7"
+    },
+    {
+      "package_path": "brand/svg/lythaus-wordmark-white.svg",
+      "repository_path": "assets/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg",
+      "sha256": "5ba0451347e24615f10bfc362b84285767f51eea3621cc702f64e93ff0047ff7"
+    },
+    {
+      "package_path": "integration/web-public/icons/lythaus-v1/favicon.e3dfdd675a74.ico",
+      "repository_path": "web/icons/lythaus-v1/favicon.e3dfdd675a74.ico",
+      "sha256": "e3dfdd675a7450c028317d74caeedaf03f613b73a34f50a3950ba4972bbdb67c"
+    },
+    {
+      "package_path": "icons/favicon.ico",
+      "repository_path": "web/favicon.ico",
+      "sha256": "e3dfdd675a7450c028317d74caeedaf03f613b73a34f50a3950ba4972bbdb67c"
+    },
+    {
+      "package_path": "integration/web-public/icons/lythaus-v1/favicon.e3dfdd675a74.ico",
+      "repository_path": "apps/control-panel/public/icons/lythaus-v1/favicon.e3dfdd675a74.ico",
+      "sha256": "e3dfdd675a7450c028317d74caeedaf03f613b73a34f50a3950ba4972bbdb67c"
+    },
+    {
+      "package_path": "icons/favicon.ico",
+      "repository_path": "apps/control-panel/public/favicon.ico",
+      "sha256": "e3dfdd675a7450c028317d74caeedaf03f613b73a34f50a3950ba4972bbdb67c"
+    },
+    {
+      "package_path": "integration/web-public/icons/lythaus-v1/favicon.116ff3e020c6.svg",
+      "repository_path": "web/icons/lythaus-v1/favicon.116ff3e020c6.svg",
+      "sha256": "116ff3e020c6b7f8539644880c8bc810d1a6278709b5f273c2a8d354d5f33cb7"
+    },
+    {
+      "package_path": "integration/web-public/icons/lythaus-v1/favicon.116ff3e020c6.svg",
+      "repository_path": "apps/control-panel/public/icons/lythaus-v1/favicon.116ff3e020c6.svg",
+      "sha256": "116ff3e020c6b7f8539644880c8bc810d1a6278709b5f273c2a8d354d5f33cb7"
+    },
+    {
+      "package_path": "integration/web-public/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png",
+      "repository_path": "web/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png",
+      "sha256": "572a7b9a0d35f57d71c9f5a7d5f6d5b11a58b67a8bfd55d36416d447476c85ef"
+    },
+    {
+      "package_path": "integration/web-public/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png",
+      "repository_path": "apps/control-panel/public/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png",
+      "sha256": "572a7b9a0d35f57d71c9f5a7d5f6d5b11a58b67a8bfd55d36416d447476c85ef"
+    },
+    {
+      "package_path": "integration/web-public/icons/lythaus-v1/apple-touch-icon.19122fd8c91b.png",
+      "repository_path": "web/icons/lythaus-v1/apple-touch-icon.19122fd8c91b.png",
+      "sha256": "19122fd8c91b3ce51b5a6a00d5840b3fa0f8a02416c0b997c283f9aba42a83bd"
+    },
+    {
+      "package_path": "icons/apple-touch-icon.png",
+      "repository_path": "web/apple-touch-icon.png",
+      "sha256": "19122fd8c91b3ce51b5a6a00d5840b3fa0f8a02416c0b997c283f9aba42a83bd"
+    },
+    {
+      "package_path": "integration/web-public/icons/lythaus-v1/apple-touch-icon.19122fd8c91b.png",
+      "repository_path": "apps/control-panel/public/icons/lythaus-v1/apple-touch-icon.19122fd8c91b.png",
+      "sha256": "19122fd8c91b3ce51b5a6a00d5840b3fa0f8a02416c0b997c283f9aba42a83bd"
+    },
+    {
+      "package_path": "icons/apple-touch-icon.png",
+      "repository_path": "apps/control-panel/public/apple-touch-icon.png",
+      "sha256": "19122fd8c91b3ce51b5a6a00d5840b3fa0f8a02416c0b997c283f9aba42a83bd"
+    },
+    {
+      "package_path": "integration/web-public/icons/lythaus-v1/pwa-icon-192x192.5c5c7622a5f7.png",
+      "repository_path": "web/icons/lythaus-v1/pwa-icon-192x192.5c5c7622a5f7.png",
+      "sha256": "5c5c7622a5f762e0f0251fc7e806cd51a9f9b95c779f5fda9cc38cb6c658d7b8"
+    },
+    {
+      "package_path": "integration/web-public/icons/lythaus-v1/pwa-icon-192x192.5c5c7622a5f7.png",
+      "repository_path": "apps/control-panel/public/icons/lythaus-v1/pwa-icon-192x192.5c5c7622a5f7.png",
+      "sha256": "5c5c7622a5f762e0f0251fc7e806cd51a9f9b95c779f5fda9cc38cb6c658d7b8"
+    },
+    {
+      "package_path": "integration/web-public/icons/lythaus-v1/pwa-icon-512x512.27a8dadec032.png",
+      "repository_path": "web/icons/lythaus-v1/pwa-icon-512x512.27a8dadec032.png",
+      "sha256": "27a8dadec032e03ffca0953feaac6e800d7b737da5e5e3ec15b822841d2fe04d"
+    },
+    {
+      "package_path": "integration/web-public/icons/lythaus-v1/pwa-icon-512x512.27a8dadec032.png",
+      "repository_path": "apps/control-panel/public/icons/lythaus-v1/pwa-icon-512x512.27a8dadec032.png",
+      "sha256": "27a8dadec032e03ffca0953feaac6e800d7b737da5e5e3ec15b822841d2fe04d"
+    },
+    {
+      "package_path": "integration/web-public/icons/lythaus-v1/pwa-maskable-192x192.36698aff23fb.png",
+      "repository_path": "web/icons/lythaus-v1/pwa-maskable-192x192.36698aff23fb.png",
+      "sha256": "36698aff23fb111d8e81ac90c4f6fe1ed34c22aece93ed0833573b81caa6879f"
+    },
+    {
+      "package_path": "integration/web-public/icons/lythaus-v1/pwa-maskable-192x192.36698aff23fb.png",
+      "repository_path": "apps/control-panel/public/icons/lythaus-v1/pwa-maskable-192x192.36698aff23fb.png",
+      "sha256": "36698aff23fb111d8e81ac90c4f6fe1ed34c22aece93ed0833573b81caa6879f"
+    },
+    {
+      "package_path": "integration/web-public/icons/lythaus-v1/pwa-maskable-512x512.10ec5b6e6764.png",
+      "repository_path": "web/icons/lythaus-v1/pwa-maskable-512x512.10ec5b6e6764.png",
+      "sha256": "10ec5b6e6764cc1935d8909f6f54fe107efb370edf056d33c94718536aaee54d"
+    },
+    {
+      "package_path": "integration/web-public/icons/lythaus-v1/pwa-maskable-512x512.10ec5b6e6764.png",
+      "repository_path": "apps/control-panel/public/icons/lythaus-v1/pwa-maskable-512x512.10ec5b6e6764.png",
+      "sha256": "10ec5b6e6764cc1935d8909f6f54fe107efb370edf056d33c94718536aaee54d"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-social-card-1200x630.c20d3b1b40a8.png",
+      "repository_path": "web/brand/lythaus-v1/lythaus-social-card-1200x630.c20d3b1b40a8.png",
+      "sha256": "c20d3b1b40a870640abdb88c049b68df565cda71d6f883064655116af1d6fa8e"
+    },
+    {
+      "package_path": "integration/web-public/brand/lythaus-v1/lythaus-social-card-1200x630.c20d3b1b40a8.png",
+      "repository_path": "apps/control-panel/public/brand/lythaus-v1/lythaus-social-card-1200x630.c20d3b1b40a8.png",
+      "sha256": "c20d3b1b40a870640abdb88c049b68df565cda71d6f883064655116af1d6fa8e"
+    },
+    {
+      "package_path": "native/android/mipmap-mdpi/ic_launcher.png",
+      "repository_path": "android/app/src/main/res/mipmap-mdpi/ic_launcher.png",
+      "sha256": "00fbf41cb3e5e117cd325262a2d434d09eadbbe48d9b13bb4a15299f75bee368"
+    },
+    {
+      "package_path": "native/android/mipmap-hdpi/ic_launcher.png",
+      "repository_path": "android/app/src/main/res/mipmap-hdpi/ic_launcher.png",
+      "sha256": "9cad537f743a87179d3eecb4527c38ed91140241b46fec6ee872af7575679892"
+    },
+    {
+      "package_path": "native/android/mipmap-xhdpi/ic_launcher.png",
+      "repository_path": "android/app/src/main/res/mipmap-xhdpi/ic_launcher.png",
+      "sha256": "50bab416003d578c368019ffedb92838ff5500700e0c07000ea09897e9590de9"
+    },
+    {
+      "package_path": "native/android/mipmap-xxhdpi/ic_launcher.png",
+      "repository_path": "android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png",
+      "sha256": "b3608d4928bb8a6153c1d20321ce9c0d94618c0ad2631b5994c11204f2e2ea9c"
+    },
+    {
+      "package_path": "native/android/mipmap-xxxhdpi/ic_launcher.png",
+      "repository_path": "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png",
+      "sha256": "5c5c7622a5f762e0f0251fc7e806cd51a9f9b95c779f5fda9cc38cb6c658d7b8"
+    },
+    {
+      "package_path": "native/ios/Icon-App-20x20@1x.png",
+      "repository_path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png",
+      "sha256": "9ec167c5ccca4adb6afce4ebba525500d09ba18b9f2cf44d5a03b71c2d306183"
+    },
+    {
+      "package_path": "native/ios/Icon-App-20x20@2x.png",
+      "repository_path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@2x.png",
+      "sha256": "b9156f41ee6ffead2c49d5c0074e86981ee08d3e5ff0a97faa587975cf5145a3"
+    },
+    {
+      "package_path": "native/ios/Icon-App-20x20@3x.png",
+      "repository_path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@3x.png",
+      "sha256": "483a51bff293d75fa470ec92acaad595f4d9252e58b86475d7f53a1436d247ef"
+    },
+    {
+      "package_path": "native/ios/Icon-App-29x29@1x.png",
+      "repository_path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@1x.png",
+      "sha256": "d9e12f11b256112dcd7c25c05cc15641883fa7f7de04e1bcf1654c2ceb5a4d93"
+    },
+    {
+      "package_path": "native/ios/Icon-App-29x29@2x.png",
+      "repository_path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@2x.png",
+      "sha256": "60b5687c31fc286492d4651c9c2255e87f33441ad8e65d7584845281aa63a815"
+    },
+    {
+      "package_path": "native/ios/Icon-App-29x29@3x.png",
+      "repository_path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@3x.png",
+      "sha256": "6d119119e5657a21e3f17ea338fecfe32f99e793a8e9f03788f96d25401c5923"
+    },
+    {
+      "package_path": "native/ios/Icon-App-40x40@1x.png",
+      "repository_path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@1x.png",
+      "sha256": "b9156f41ee6ffead2c49d5c0074e86981ee08d3e5ff0a97faa587975cf5145a3"
+    },
+    {
+      "package_path": "native/ios/Icon-App-40x40@2x.png",
+      "repository_path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@2x.png",
+      "sha256": "b2dc44f4565f0fca2e35c8d8cde2108ea4c572b166c91c1c952deeec39175066"
+    },
+    {
+      "package_path": "native/ios/Icon-App-40x40@3x.png",
+      "repository_path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@3x.png",
+      "sha256": "3893c37862c5a313af0e173894f8cda9b11b19f295c2d0dadaa190c8f8b5afdf"
+    },
+    {
+      "package_path": "native/ios/Icon-App-60x60@2x.png",
+      "repository_path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@2x.png",
+      "sha256": "3893c37862c5a313af0e173894f8cda9b11b19f295c2d0dadaa190c8f8b5afdf"
+    },
+    {
+      "package_path": "native/ios/Icon-App-60x60@3x.png",
+      "repository_path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@3x.png",
+      "sha256": "19122fd8c91b3ce51b5a6a00d5840b3fa0f8a02416c0b997c283f9aba42a83bd"
+    },
+    {
+      "package_path": "native/ios/Icon-App-76x76@1x.png",
+      "repository_path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@1x.png",
+      "sha256": "346cd9faab9e1e69d16003353045bad93837c0e42855f0cc5895e68a008a8e85"
+    },
+    {
+      "package_path": "native/ios/Icon-App-76x76@2x.png",
+      "repository_path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@2x.png",
+      "sha256": "f7b7c63b29d16fcd4bbba88218ddaacaa6b8e67aadd8bd7c66ec40ab2ea4176c"
+    },
+    {
+      "package_path": "native/ios/Icon-App-83.5x83.5@2x.png",
+      "repository_path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png",
+      "sha256": "19273567da62d7c301cd3ee1588185671b737abaa121f9ec80234e8c82d3ba43"
+    },
+    {
+      "package_path": "native/ios/Icon-App-1024x1024@1x.png",
+      "repository_path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png",
+      "sha256": "d4c351982a026595a759c1a42cdb024fd23420f48a17236430298a22cd9b25a4"
+    },
+    {
+      "package_path": "native/macos/app_icon_16.png",
+      "repository_path": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_16.png",
+      "sha256": "f3fdd49f5d44284cbc4e779cb6c99d08ee764d14a20689c5d78e7d76263ff1f7"
+    },
+    {
+      "package_path": "native/macos/app_icon_32.png",
+      "repository_path": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_32.png",
+      "sha256": "8bdd1c050011d04222f2c9acb0ed808bfb0e78ecc602e9db547eb31db899b545"
+    },
+    {
+      "package_path": "native/macos/app_icon_64.png",
+      "repository_path": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_64.png",
+      "sha256": "db6687f8697f0c07e908611f2f06cd2110301b8e00b5dd31fd4ffbdf49a7ea99"
+    },
+    {
+      "package_path": "native/macos/app_icon_128.png",
+      "repository_path": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_128.png",
+      "sha256": "2f3395ab79f06b600de1abaea66a0051c4e049e8ed5a101dd817890738522d5d"
+    },
+    {
+      "package_path": "native/macos/app_icon_256.png",
+      "repository_path": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png",
+      "sha256": "1d9251e5ea10ec4b0be4bb2e2e88077ba6315ebedfb0801d09b7eff67570f870"
+    },
+    {
+      "package_path": "native/macos/app_icon_512.png",
+      "repository_path": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_512.png",
+      "sha256": "27a8dadec032e03ffca0953feaac6e800d7b737da5e5e3ec15b822841d2fe04d"
+    },
+    {
+      "package_path": "native/macos/app_icon_1024.png",
+      "repository_path": "macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_1024.png",
+      "sha256": "d4c351982a026595a759c1a42cdb024fd23420f48a17236430298a22cd9b25a4"
+    },
+    {
+      "package_path": "native/windows/app_icon.ico",
+      "repository_path": "windows/runner/resources/app_icon.ico",
+      "sha256": "cb1eac9916cf54dd5fdd88c2893419c9fd331b778284fd1c250d4989bf7c3b01"
+    },
+    {
+      "package_path": "icons/favicon-16x16.png",
+      "repository_path": "web/favicon.png",
+      "sha256": "6f2fbb96941d35dd4a3f1bcc201bfc64267b8501e70a56e6eb00da38f4eeb2d9"
+    },
+    {
+      "package_path": "icons/pwa-icon-192x192.png",
+      "repository_path": "web/icons/Icon-192.png",
+      "sha256": "5c5c7622a5f762e0f0251fc7e806cd51a9f9b95c779f5fda9cc38cb6c658d7b8"
+    },
+    {
+      "package_path": "icons/pwa-icon-512x512.png",
+      "repository_path": "web/icons/Icon-512.png",
+      "sha256": "27a8dadec032e03ffca0953feaac6e800d7b737da5e5e3ec15b822841d2fe04d"
+    },
+    {
+      "package_path": "icons/pwa-maskable-192x192.png",
+      "repository_path": "web/icons/Icon-maskable-192.png",
+      "sha256": "36698aff23fb111d8e81ac90c4f6fe1ed34c22aece93ed0833573b81caa6879f"
+    },
+    {
+      "package_path": "icons/pwa-maskable-512x512.png",
+      "repository_path": "web/icons/Icon-maskable-512.png",
+      "sha256": "10ec5b6e6764cc1935d8909f6f54fe107efb370edf056d33c94718536aaee54d"
+    },
+    {
+      "package_path": "native/android-adaptive/ic_launcher_foreground.xml",
+      "repository_path": "android/app/src/main/res/drawable/ic_launcher_foreground.xml",
+      "sha256": "9d60c123b6f065a47a9d90613ed394819fbf64eb640113ab7895a19491ea7b27"
+    },
+    {
+      "package_path": "native/android-adaptive/ic_launcher_monochrome.xml",
+      "repository_path": "android/app/src/main/res/drawable/ic_launcher_monochrome.xml",
+      "sha256": "6a669cce27cde0dc06405ab43895def0ca7e07a25b0016e7456415b2f58aeb00"
+    },
+    {
+      "package_path": "integration/INTEGRATION-MANIFEST.json",
+      "repository_path": "docs/brand/approved-v1/INTEGRATION-MANIFEST.json",
+      "sha256": "68634bebbfbe2c2cf8026a0e8a7eb157a59de4e8433a88bd355d850dbaf115b9"
+    },
+    {
+      "package_path": "SHA256SUMS.txt",
+      "repository_path": "docs/brand/approved-v1/SHA256SUMS.txt",
+      "sha256": "cb448382f3df6d64b8de3ef391de924e1d196372816e8791410d0b5b8ddb6cfd"
+    },
+    {
+      "package_path": "licenses/Inter-OFL.txt",
+      "repository_path": "docs/brand/approved-v1/Inter-OFL.txt",
+      "sha256": "5b9321a4298cfeb6b34354164a1c3afc3db114569984c502b9b35d988fd58c57"
+    },
+    {
+      "package_path": "licenses/Manrope-OFL.txt",
+      "repository_path": "docs/brand/approved-v1/Manrope-OFL.txt",
+      "sha256": "58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b"
+    }
+  ]
+}
