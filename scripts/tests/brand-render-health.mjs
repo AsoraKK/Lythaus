@@ -16,6 +16,7 @@ export async function observeRenderHealth(context, origin) {
   }));
   context.on('page', page => {
     page.on('pageerror', error => network.errors.push(error.message));
+    page.on('console', message => {if(message.type()==='error')network.errors.push(message.text());});
     page.on('crash', () => network.crashes++);
   });
   await context.addInitScript(() => {

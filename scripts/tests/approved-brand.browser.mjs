@@ -71,6 +71,11 @@ async function capture(page, name, validate = true) {
     assert.ok(rect && rect.width > 0 && rect.height > 0, 'Brand has a visible layout box');
     const symbol = !(await image.count());
     if (symbol) rect = {x:rect.x+(rect.width-24)/2,y:rect.y+(rect.height-24)/2,width:24,height:24};
+    if(name.includes('-admin-')){
+      const width=Math.min(rect.width,rect.height*470.28944891/130.6866688);
+      const height=width*130.6866688/470.28944891;
+      rect={x:rect.x+(rect.width-width)/2,y:rect.y+(rect.height-height)/2,width,height};
+    }
     const png = PNG.sync.read(bytes);
     const colors = new Map();
     let pixels = 0;
