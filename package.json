@@ -105,6 +105,7 @@
     "authenticity:neutral-png": "node scripts/authenticity/create-neutral-png.mjs",
     "authenticity:geometry-fixture": "node scripts/authenticity/create-geometry-occlusion-fixture.mjs",
     "test:product-contracts": "node --experimental-strip-types --test packages/contracts/tests/product-policy.test.mjs",
+    "test:membership-entitlements:pg17": "node --experimental-strip-types --experimental-test-module-mocks --test --test-concurrency=1 apps/lythaus-admin-api/tests/membership-entitlements.postgres.mjs apps/lythaus-public-api/tests/membership-entitlements.postgres.mjs",
     "test:product-integrity-runtime": "node --test scripts/tests/product-integrity-runtime-invariants.test.mjs",
     "test:publication:pg17": "node scripts/ci/run-publication-pg17.mjs",
     "test:reputation:pg17": "node scripts/ci/run-reputation-managed-lock-cluster.mjs --synthetic-managed-cluster --execute-local-sql",
