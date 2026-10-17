@@ -117,10 +117,10 @@
     "benchmark:native-endpoints": "node scripts/benchmarks/native-endpoint-benchmark.mjs",
     "validate:planetscale-ci-script": "node --check scripts/ci/apply-planetscale-migrations.mjs",
     "validate:planetscale-production-script": "node --check scripts/ci/apply-planetscale-production-migrations.mjs",
-    "validate:planetscale-0021-only": "node --check scripts/ci/planetscale-0021-only-contract.mjs && node --check scripts/ci/planetscale-0021-only-plan.mjs && node --check scripts/ci/apply-planetscale-0021-only.mjs && node --check scripts/ci/planetscale-media-quarantine-migration.mjs && node --check scripts/ci/product-integrity-schema-contract.mjs && node --experimental-strip-types --check packages/db/src/identity-schema-policy.ts && node --experimental-strip-types --check packages/db/src/identity.ts",
+    "validate:planetscale-0021-only": "node --check scripts/ci/planetscale-0021-only-contract.mjs && node --check scripts/ci/planetscale-0021-target-identity.mjs && node --check scripts/ci/planetscale-0021-registry-marker.mjs && node --check scripts/ci/planetscale-0021-only-plan.mjs && node --check scripts/ci/apply-planetscale-0021-only.mjs && node --check scripts/ci/planetscale-media-quarantine-migration.mjs && node --check scripts/ci/product-integrity-schema-contract.mjs && node --experimental-strip-types --check packages/db/src/identity.ts",
     "apply:planetscale-production-migrations": "node scripts/ci/apply-planetscale-production-migrations.mjs",
     "reconcile:planetscale-migrations": "node scripts/ci/reconcile-planetscale-migration-state.mjs",
-    "test:planetscale-production-migrations": "node --experimental-strip-types --test scripts/tests/planetscale-production-migrations.test.mjs scripts/tests/planetscale-schema-verifier-views.test.mjs scripts/tests/planetscale-0021-only-contract.test.mjs scripts/tests/planetscale-schema-identity-allowlist.test.mjs scripts/tests/planetscale-0021-only-workflow.test.mjs"
+    "test:planetscale-production-migrations": "node --experimental-strip-types --test scripts/tests/planetscale-production-migrations.test.mjs scripts/tests/planetscale-schema-verifier-views.test.mjs scripts/tests/planetscale-0021-only-contract.test.mjs scripts/tests/planetscale-0021-only-workflow.test.mjs"
   },
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "^2.41.0",

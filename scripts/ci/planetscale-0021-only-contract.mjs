@@ -4,6 +4,19 @@ export const MIGRATION_0020 = '0020_auth_recovery_delivery.sql';
 export const MIGRATION_0021 = '0021_media_quarantine_cleanup.sql';
 export const RETRYABLE_0021_STATES = Object.freeze(['NOT_APPLIED', 'COLUMN_ONLY', 'INVALID_INDEX_RETRYABLE']);
 
+export function serialize0021PlanReadyOutput(blockers) {
+  return (blockers.length === 0).toString();
+}
+
+export function is0021PlanReadyOutput(value) {
+  return value === 'true';
+}
+
+export function resolve0021BackupId(requestedId, existingId) {
+  return (typeof requestedId === 'string' ? requestedId.trim() : '')
+    || (typeof existingId === 'string' ? existingId.trim() : '');
+}
+
 function timestamp(value) {
   if (typeof value !== 'string' || value.trim() === '') return null;
   const parsed = Date.parse(value);
@@ -41,6 +54,7 @@ export function assessPlanetScaleBackupEvidence({ branch, backup, backupId, now 
     ok: blockers.length === 0,
     blockers,
     branch: {
+      id: safeBranch.id ?? null,
       name: safeBranch.name ?? null,
       kind: safeBranch.kind ?? null,
       state: safeBranch.state ?? null,
@@ -83,43 +97,6 @@ export function assessOperatorCostEstimate({ estimateUsd, reference, ceilingUsd 
   };
 }
 
-export function assessCompatibilityDeploymentEvidence({ releaseSha, deploymentRunUrl }) {
-  const blockers = [];
-  const sha = typeof releaseSha === 'string' ? releaseSha.trim() : '';
-  const runUrl = typeof deploymentRunUrl === 'string' ? deploymentRunUrl.trim() : '';
-  if (!/^[0-9a-f]{40}$/.test(sha)) blockers.push('compatible_worker_release_sha_missing_or_invalid');
-  if (!/^https:\/\/github\.com\/AsoraKK\/Lythaus\/actions\/runs\/[0-9]+$/.test(runUrl)) blockers.push('compatible_worker_deployment_run_url_missing_or_invalid');
-  return { ok: blockers.length === 0, blockers, releaseSha: sha || null, deploymentRunUrl: runUrl || null, evidenceSemantics: 'Operator supplied evidence requiring review by the protected production environment; it is not independently authenticated by this plan.' };
-}
-
-export function assessCompatibilityWiring({ workerConfigs, probeFiles, expectedIdentities }) {
-  const blockers = [];
-  const expected = [...expectedIdentities]
-    .map(({ schemaVersion, schemaFingerprint, relationCount }) => ({ schemaVersion, schemaFingerprint, relationCount }))
-    .sort((left, right) => left.schemaVersion.localeCompare(right.schemaVersion));
-  const configurations = workerConfigs ?? {};
-  for (const [name, config] of Object.entries(configurations)) {
-    const raw = config?.vars?.EXPECTED_DATABASE_SCHEMA_IDENTITIES_JSON;
-    let identities;
-    try { identities = JSON.parse(raw); } catch { identities = null; }
-    const exactTupleShape = Array.isArray(identities) && identities.every((identity) => (
-      typeof identity === 'object' && identity !== null && !Array.isArray(identity)
-      && Object.keys(identity).sort().join(',') === 'relationCount,schemaFingerprint,schemaVersion'
-    ));
-    const normalized = Array.isArray(identities)
-      ? identities.map(({ schemaVersion, schemaFingerprint, relationCount }) => ({ schemaVersion, schemaFingerprint, relationCount }))
-        .sort((left, right) => String(left.schemaVersion).localeCompare(String(right.schemaVersion)))
-      : null;
-    if (!exactTupleShape || JSON.stringify(normalized) !== JSON.stringify(expected)) blockers.push(`worker_config_allowlist_missing_or_mismatched:${name}`);
-  }
-  for (const [name, content] of Object.entries(probeFiles ?? {})) {
-    if (typeof content !== 'string' || !content.includes('EXPECTED_DATABASE_SCHEMA_IDENTITIES_JSON')) {
-      blockers.push(`release_probe_allowlist_missing:${name}`);
-    }
-  }
-  return { ok: blockers.length === 0, blockers, expectedIdentities: expected };
-}
-
 export function assess0021RegistryState(rows, stagedState) {
   const registryRows = Array.isArray(rows) ? rows : [];
   if (exactRegistryPrefix(registryRows, MIGRATION_0021)) {
@@ -129,11 +106,11 @@ export function assess0021RegistryState(rows, stagedState) {
   if (!exactRegistryPrefix(registryRows, MIGRATION_0020)) {
     return { state: 'REGISTRY_PREFIX_MISMATCH', ok: false, needsApply: false, blockers: ['registry_must_be_exact_through_0020_or_0021'] };
   }
+  if (stagedState === 'FULLY_APPLIED') {
+    return { state: 'RECOVERY_REQUIRED', ok: true, needsApply: false, needsRecovery: true, blockers: [] };
+  }
   if (RETRYABLE_0021_STATES.includes(stagedState)) {
     return { state: stagedState, ok: true, needsApply: true, blockers: [] };
-  }
-  if (stagedState === 'FULLY_APPLIED') {
-    return { state: 'UNRECORDED_DDL', ok: false, needsApply: false, blockers: ['0021_schema_is_fully_applied_but_registry_marker_is_missing'] };
   }
   return { state: stagedState ?? 'UNKNOWN', ok: false, needsApply: false, blockers: [`0021_schema_state_not_retryable:${stagedState ?? 'unknown'}`] };
 }

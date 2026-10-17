@@ -1,8 +1,5 @@
 import type { Client } from 'pg';
 import { transaction, type HyperdriveBinding } from './index.ts';
-import { isDatabaseSchemaIdentityAllowed, parseDatabaseSchemaIdentityAllowlist, type DatabaseSchemaIdentityAllowlist, type DatabaseSchemaIdentityTuple } from './identity-schema-policy.ts';
-
-export type { DatabaseSchemaIdentityAllowlist, DatabaseSchemaIdentityTuple } from './identity-schema-policy.ts';
 
 export interface DatabaseIdentityExpectations {
   target: string;
@@ -11,7 +8,6 @@ export interface DatabaseIdentityExpectations {
   schemaVersion: string;
   roleClass: string;
   budgetLedgerApplied?: boolean;
-  schemaIdentityAllowlist?: DatabaseSchemaIdentityAllowlist;
 }
 
 export interface DatabaseIdentityReport {
@@ -76,7 +72,6 @@ export function databaseExpectationsFromEnv(env: {
   EXPECTED_DATABASE_SCHEMA_FINGERPRINT?: string;
   EXPECTED_DATABASE_RELATION_COUNT?: string;
   EXPECTED_DATABASE_SCHEMA_VERSION?: string;
-  EXPECTED_DATABASE_SCHEMA_IDENTITIES_JSON?: string;
   EXPECTED_DATABASE_ROLE_CLASS?: string;
   EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED?: string;
 }): DatabaseIdentityExpectations {
@@ -87,7 +82,6 @@ export function databaseExpectationsFromEnv(env: {
     relationCount: Number.isInteger(relationCount) && relationCount > 0 ? relationCount : 0,
     schemaVersion: env.EXPECTED_DATABASE_SCHEMA_VERSION ?? 'unknown',
     roleClass: env.EXPECTED_DATABASE_ROLE_CLASS ?? 'unknown',
-    schemaIdentityAllowlist: parseDatabaseSchemaIdentityAllowlist(env.EXPECTED_DATABASE_SCHEMA_IDENTITIES_JSON),
     budgetLedgerApplied: env.EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED === undefined
       ? undefined
       : env.EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED === 'true',
@@ -133,12 +127,8 @@ export function buildSchemaFingerprint(relations: RelationRow[], migrations: Mig
 
 export function isDatabaseIdentityReady(report: Omit<DatabaseIdentityReport, 'readiness'>, expected: DatabaseIdentityExpectations): boolean {
   return report.databaseEnvironment === expected.target
-    && isDatabaseSchemaIdentityAllowed(report, {
-      schemaVersion: expected.schemaVersion,
-      schemaFingerprint: expected.schemaFingerprint,
-      relationCount: expected.relationCount,
-      schemaIdentityAllowlist: expected.schemaIdentityAllowlist,
-    })
+    && report.schemaFingerprint === expected.schemaFingerprint
+    && report.relationCount === expected.relationCount
     && report.identityContactEmails
     && (expected.budgetLedgerApplied === undefined || report.budgetLedgerApplied === expected.budgetLedgerApplied)
     && report.schemaVersion === expected.schemaVersion

@@ -32,14 +32,6 @@ on:
         description: Link or short reference for the operator estimate
         required: false
         type: string
-      compatible_worker_release_sha:
-        description: Exact source SHA of the deployed dual-identity compatibility release
-        required: false
-        type: string
-      compatible_worker_deployment_run_url:
-        description: Successful protected production deployment run URL for that compatibility release
-        required: false
-        type: string
 
 permissions:
   contents: read
@@ -269,8 +261,6 @@ jobs:
           PLANETSCALE_0021_OPERATOR_COST_ESTIMATE_USD: ${{ inputs.planetscale_0021_operator_cost_estimate_usd }}
           PLANETSCALE_0021_COST_ESTIMATE_REFERENCE: ${{ inputs.planetscale_0021_cost_estimate_reference }}
           PLANETSCALE_MIGRATION_USAGE_MAX_USD: ${{ vars.PLANETSCALE_MIGRATION_USAGE_MAX_USD }}
-          COMPATIBLE_WORKER_RELEASE_SHA: ${{ inputs.compatible_worker_release_sha }}
-          COMPATIBLE_WORKER_DEPLOYMENT_RUN_URL: ${{ inputs.compatible_worker_deployment_run_url }}
           MIGRATION_PLAN_REPORT_FILE: ${{ runner.temp }}/planetscale-0021/plan.json
         run: node scripts/ci/planetscale-0021-only-plan.mjs
       - name: Upload sanitized 0021 plan evidence
@@ -324,8 +314,6 @@ jobs:
           PLANETSCALE_0021_OPERATOR_COST_ESTIMATE_USD: ${{ inputs.planetscale_0021_operator_cost_estimate_usd }}
           PLANETSCALE_0021_COST_ESTIMATE_REFERENCE: ${{ inputs.planetscale_0021_cost_estimate_reference }}
           PLANETSCALE_MIGRATION_USAGE_MAX_USD: ${{ vars.PLANETSCALE_MIGRATION_USAGE_MAX_USD }}
-          COMPATIBLE_WORKER_RELEASE_SHA: ${{ inputs.compatible_worker_release_sha }}
-          COMPATIBLE_WORKER_DEPLOYMENT_RUN_URL: ${{ inputs.compatible_worker_deployment_run_url }}
           MIGRATION_PLAN_REPORT_FILE: ${{ runner.temp }}/planetscale-0021/plan-before-execution.json
         run: |
           node scripts/ci/planetscale-0021-only-plan.mjs
@@ -336,9 +324,8 @@ jobs:
           PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
           PLANETSCALE_0021_EXECUTION_APPROVED: ${{ inputs.execute_0021 && 'approved' || '' }}
           PLANETSCALE_0021_PLAN_READY: ${{ steps.plan.outputs.ready }}
-          COMPATIBLE_WORKER_RELEASE_SHA: ${{ inputs.compatible_worker_release_sha }}
-          COMPATIBLE_WORKER_DEPLOYMENT_RUN_URL: ${{ inputs.compatible_worker_deployment_run_url }}
           PLANETSCALE_0021_EXECUTION_REPORT_FILE: ${{ runner.temp }}/planetscale-0021/execution.json
+          PLANETSCALE_0021_PLAN_TARGET_IDENTITY: ${{ steps.plan.outputs.target_identity }}
         run: node scripts/ci/apply-planetscale-0021-only.mjs
       - name: Upload sanitized 0021 execution evidence
         if: always()

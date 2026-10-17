@@ -152,7 +152,11 @@ async function addColumnInBriefTransaction(client, columnSql) {
   }
 }
 
-export async function applyMediaQuarantineMigration(client, migration, { beforeApply, afterVerified } = {}) {
+export async function applyMediaQuarantineMigration(client, migration, {
+  beforeApply,
+  afterVerified,
+  verifyPostconditions = verifyMediaQuarantineMigration,
+} = {}) {
   if (migration.name !== MEDIA_QUARANTINE_MIGRATION_NAME) throw new Error(`unexpected staged migration: ${migration.name}`);
   const { columnSql, concurrentIndexSql } = splitMediaQuarantineMigration(migration.contents.toString('utf8'));
   const lock = await client.query('SELECT pg_try_advisory_lock(hashtext($1)) AS locked', [migrationLockKey]);
@@ -166,7 +170,7 @@ export async function applyMediaQuarantineMigration(client, migration, { beforeA
       const shouldApply = await beforeApply();
       if (shouldApply !== true && shouldApply !== false) throw new Error('0021 staged migration preflight must return a boolean');
       if (!shouldApply) {
-        await verifyMediaQuarantineMigration(client);
+        await verifyPostconditions(client);
         if (afterVerified) await afterVerified({ applied: false });
         return { applied: false };
       }
@@ -192,7 +196,7 @@ export async function applyMediaQuarantineMigration(client, migration, { beforeA
     }
 
     if (state.state !== 'FULLY_APPLIED') throw new Error(`0021 exact staged postconditions failed: ${state.reason ?? state.state}`);
-    await verifyMediaQuarantineMigration(client);
+    await verifyPostconditions(client);
     if (afterVerified) await afterVerified({ applied: true });
     return { applied: true };
   } finally {

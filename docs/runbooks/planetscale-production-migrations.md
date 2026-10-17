@@ -66,38 +66,17 @@ the ceiling does not enforce or cap actual provider spend. The plan requires
 an exact migration registry prefix through 0020 with staged state
 `NOT_APPLIED`, `COLUMN_ONLY`, or `INVALID_INDEX_RETRYABLE`. It accepts an
 already recorded 0021 only when the exact staged schema and migration
-postconditions verify. Active builds, hidden index progress, drift, an
-unrecorded fully applied schema, any checksum mismatch, and provider
-unavailability block execution.
+postconditions verify. If the exact 0021 schema is fully applied while the
+registry remains exact through 0020, it classifies the state as
+`RECOVERY_REQUIRED`. Under the existing session advisory lock, the executor
+rechecks those postconditions and may insert only the canonical 0021 registry
+marker; it does not rerun DDL in this recovery path. Active builds, hidden
+index progress, drift, any checksum mismatch, and provider unavailability
+block execution.
 
-The plan also fails closed until the 0020/0021 compatibility identity is wired
-through all four Worker configurations and both release probes. The runtime
-accepts a configured allowlist only as exact tuples with exact fingerprints,
-counts, and schema versions; malformed lists and mixed tuple fields fail
-closed. The required tuple set is:
-
-```json
-[
-  {"schemaVersion":"0020_auth_recovery_delivery.sql","schemaFingerprint":"d60ce56eda3165e4c21e880e594700b92425b75b0e6eec963caf75fc72d8c1e0","relationCount":103},
-  {"schemaVersion":"0021_media_quarantine_cleanup.sql","schemaFingerprint":"7fdff3474c152317336d2201626b3b69aac79387264e6481576e103f82e8342d","relationCount":103}
-]
-```
-
-The 0020 tuple matches the sanitized identity captured in the successful
-[3880 production deployment run, job 117332044313](https://github.com/AsoraKK/Lythaus/actions/runs/117332044313)
-and the committed migration contract test. That historical deployment evidence
-does not establish the current production database identity. The 0021 tuple is
-generated from the committed migration manifest and checked by the same test.
-
-Before a 0021 plan can be ready, deploy and verify a compatibility release
-whose Worker config and readiness probes both accept exactly those two tuples.
-Record its exact release SHA and successful deployment run URL for the
-protected environment reviewer. Keep all active workers and rollback
-candidates compatible with 0020 while the database may still be at 0020. After
-0021 is applied and exact postconditions are verified, keep the dual tuple
-allowlist until every active or retained rollback release has moved to the
-0021 identity. Only then can a later release return to one exact 0021 tuple.
-This sequence makes no zero-downtime claim.
+An unconditional `0021_cutover_owner_decision_pending` blocker keeps the plan
+from becoming ready. Completing read-only evidence does not authorize a
+migration or release action.
 
 ## Scoped 0021 execution
 
@@ -107,10 +86,12 @@ rechecks the current main SHA, rebuilds the read-only plan, and uses only the
 pre-provisioned `PLANETSCALE_ADMIN_DATABASE_URL`; it creates no PlanetScale
 role and does not reconcile grants. It applies only the existing pinned 0021
 payload through the staged migration helper. Under the helper's session
-advisory lock, it rechecks the exact 0020 registry prefix and retryable staged
-state immediately before DDL. It records the 0021 checksum only after exact
-postconditions pass. An already recorded and verified 0021 is an idempotent
-no-op. All other prefixes or states stop before DDL.
+advisory lock, it rechecks the exact 0020 registry prefix and staged state.
+Retryable states proceed through DDL. If the exact schema is already fully
+applied with the registry only through 0020, it verifies the exact
+postconditions and writes the canonical 0021 registry marker without DDL. An
+already recorded and verified 0021 is an idempotent no-op. All other prefixes
+or states stop before DDL.
 
 ## Failure and rollback
 

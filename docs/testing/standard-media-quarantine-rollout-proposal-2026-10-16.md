@@ -2,11 +2,10 @@
 
 **Status (2026-10-17):** The staged 0021 helper remains validated on disposable
 PostgreSQL 17. A separate read-only production plan and protected 0021-only
-executor are now implemented. Hosted execution remains blocked until the exact
-0020/0021 identity allowlist reaches all four Worker configs and the release
-probes, the dual-identity compatibility release is deployed, and provider
-evidence is available. This document authorizes no hosted schema change, role
-grant, feature activation, merge, or deployment.
+executor are implemented. Hosted execution remains blocked by the unconditional
+owner cutover decision gate and unavailable provider evidence. This document
+authorizes no hosted schema change, role grant, feature activation, merge, or
+deployment.
 
 ## Staged runner behavior
 
@@ -54,38 +53,28 @@ proof. A column-only state and an exact inactive invalid index are the only
 partial states eligible for resume. Other partially applied migrations retain
 their existing fail-closed behavior.
 
-## Production scope and identity sequencing
+## Production scope and recovery
 
 The all-migrations workflow remains the default. The separate `0021-only`
 scope first creates a read-only plan from provider GETs, the existing
 Cloudflare Hyperdrive verifier, and a read-only PlanetScale registry/catalog
 session. The optional execution job has its own `production` environment gate,
-uses a pre-provisioned admin connection, rechecks the exact registry prefix
-under the staged helper's advisory lock, and does not create roles or apply
-grants. A completed exact 0021 state is a verified no-op.
+uses a pre-provisioned admin connection, and does not create roles or apply
+grants. The plan binds that connection to the planned branch, database, and
+origin fingerprint.
 
-The plan refuses to proceed until the exact 0020 and 0021 schema identity
-tuples are installed in all four Worker configs and accepted by the release
-probe tooling. It also requires a successful compatibility release SHA and run
-URL for protected environment review. Preserve the dual tuple until no active
-or retained rollback worker expects 0020. Then a later release can narrow to
-the exact 0021 tuple. No zero-downtime claim is made.
-
-The supplied sanitized 3880 production deploy log for job 117332044313 reports
-the 0020 tuple `d60ce56eda3165e4c21e880e594700b92425b75b0e6eec963caf75fc72d8c1e0`
-with relation count 103. The committed contract test reproduces that exact
-tuple. This proves the historical tuple matches the source contract; it does
-not prove the live production schema. The committed 0021 tuple is
-`7fdff3474c152317336d2201626b3b69aac79387264e6481576e103f82e8342d`, also with
-relation count 103.
+An unconditional `0021_cutover_owner_decision_pending` blocker keeps the plan
+from becoming ready. Once that gate is addressed, a fully applied 0021 schema
+with the exact registry prefix through 0020 can recover by writing only the
+canonical registry marker after exact postconditions pass under the existing
+advisory lock. It does not rerun DDL in this recovery path.
 
 ## Local evidence
 
-- `npm run test:planetscale-production-migrations`: 40/40 tests pass, including
-  staged ordering, failed-build retry, invalid-index handling, drift refusal,
-  active-build refusal, migration-byte pinning, read-only plan blockers,
-  protected executor gates, exact 0020/0021 identity matching, and the captured
-  3880 tuple comparison against the committed contract.
+- `npm run test:planetscale-production-migrations`: 42/42 tests pass, covering
+  staged ordering, failed-build retry, invalid-index handling, drift
+  refusal, active-build refusal, migration-byte pinning, the owner-blocked
+  read-only plan, target binding, and marker recovery with injected failures.
 - `node --test scripts/tests/planetscale-media-quarantine.postgres.mjs`:
   7/7 pass on disposable PostgreSQL 17.11. Separate login connections prove
   `MEMBER = true` with `USAGE = false` hides a real concurrent build's progress

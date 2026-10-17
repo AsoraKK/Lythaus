@@ -3,8 +3,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { planetScaleServiceTokenAuthorizationHeader } from '../planetscale/service-token-auth.mjs';
-import { canonicalSchemaIdentityForVersion } from './product-integrity-schema-contract.mjs';
-import { assess0021RegistryState, assessCompatibilityDeploymentEvidence, assessCompatibilityWiring, assessOperatorCostEstimate, assessPlanetScaleBackupEvidence, MIGRATION_0020, MIGRATION_0021 } from './planetscale-0021-only-contract.mjs';
+import { assess0021RegistryState, assessOperatorCostEstimate, assessPlanetScaleBackupEvidence, MIGRATION_0020, MIGRATION_0021, resolve0021BackupId, serialize0021PlanReadyOutput } from './planetscale-0021-only-contract.mjs';
+import { branchQualifiedDatabaseTarget, buildPlanetScaleTargetIdentity } from './planetscale-0021-target-identity.mjs';
 import { inspectMediaQuarantineMigration, verifyMediaQuarantineMigration } from './planetscale-media-quarantine-migration.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -14,6 +14,7 @@ const evidence = {
   mode: 'read-only-0021-plan',
   targetBranch: 'main',
   migration: MIGRATION_0021,
+  executionEligibility: 'blocked_pending_owner_decision',
   databaseWrites: false,
   providerMutations: false,
   generatedAt: new Date(now).toISOString(),
@@ -33,12 +34,12 @@ function report() {
     fs.writeFileSync(reportPath, serialized, { mode: 0o600 });
   }
   console.log(serialized.trimEnd());
-  if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `ready=${blockers.length === 0}\n`, 'utf8');
+  if (process.env.GITHUB_OUTPUT) {
+    const outputs = [`ready=${serialize0021PlanReadyOutput(blockers)}`];
+    if (evidence.targetIdentity) outputs.push(`target_identity=${JSON.stringify(evidence.targetIdentity)}`);
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `${outputs.join('\n')}\n`, 'utf8');
+  }
   return output;
-}
-
-function parseJsonc(source) {
-  return JSON.parse(source.replace(/^\s*\/\/.*$/gm, '').replace(/,\s*([}\]])/g, '$1'));
 }
 
 async function planetscaleGet(resourcePath, authorization) {
@@ -53,7 +54,7 @@ async function planetscaleGet(resourcePath, authorization) {
 
 async function inspectProviderEvidence() {
   const token = process.env.PLANETSCALE_API_TOKEN ?? '';
-  const backupId = process.env.PLANETSCALE_0021_BACKUP_ID ?? process.env.PLANETSCALE_PRODUCTION_BACKUP_ID ?? '';
+  const backupId = resolve0021BackupId(process.env.PLANETSCALE_0021_BACKUP_ID, process.env.PLANETSCALE_PRODUCTION_BACKUP_ID);
   if (!token) {
     blockers.push('PLANETSCALE_API_TOKEN_missing_for_read_branch_and_backup_evidence');
     return;
@@ -97,6 +98,9 @@ function connectionConfig(raw, purpose) {
 async function inspectDatabaseReadOnly() {
   let client;
   try {
+    const target = branchQualifiedDatabaseTarget(process.env.PLANETSCALE_SCHEMA_READ_DATABASE_URL ?? '');
+    const providerBranchId = evidence.planetscale?.branch?.id ?? '';
+    if (!providerBranchId || target.branchId !== providerBranchId) throw new Error('schema_read_database_branch_id_mismatch');
     const database = connectionConfig(process.env.PLANETSCALE_SCHEMA_READ_DATABASE_URL ?? '', 'PLANETSCALE_SCHEMA_READ');
     const { default: pg } = await import('pg');
     client = new pg.Client(database);
@@ -104,16 +108,22 @@ async function inspectDatabaseReadOnly() {
     await client.query('SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY');
     const readOnly = await client.query('SHOW transaction_read_only');
     if (readOnly.rows[0]?.transaction_read_only !== 'on') throw new Error('read_only_session_not_confirmed');
+    const session = await client.query('SELECT current_database() AS database_name, current_user AS user_name');
+    const sessionRow = session.rows[0] ?? {};
+    if (sessionRow.database_name !== target.database || ![target.username, target.role].includes(sessionRow.user_name)) {
+      throw new Error('schema_read_database_session_target_mismatch');
+    }
     const registryExists = await client.query("SELECT to_regclass('system.schema_migrations') AS registry");
     const registry = registryExists.rows[0]?.registry
       ? await client.query('SELECT version, checksum FROM system.schema_migrations ORDER BY version')
       : { rows: [] };
     const staged = await inspectMediaQuarantineMigration(client);
     const migration = assess0021RegistryState(registry.rows, staged.state);
-    if (migration.state === 'COMPLETE') await verifyMediaQuarantineMigration(client);
+    if (['COMPLETE', 'RECOVERY_REQUIRED'].includes(migration.state)) await verifyMediaQuarantineMigration(client);
     evidence.database = {
       readOnly: true,
       branch: 'main',
+      target: { branchId: target.branchId, database: target.database, originFingerprint: target.originFingerprint },
       registryHead: registry.rows.at(-1)?.version ?? null,
       registryCount: registry.rows.length,
       stagedState: staged.state,
@@ -128,41 +138,29 @@ async function inspectDatabaseReadOnly() {
   }
 }
 
-function inspectCompatibilityWiring() {
-  const identityVersions = [MIGRATION_0020, MIGRATION_0021].map((version) => {
-    const identity = canonicalSchemaIdentityForVersion(version, { root, committedOnly: process.env.CI === 'true' });
-    return { schemaVersion: identity.schemaVersion, schemaFingerprint: identity.fingerprint, relationCount: identity.relationCount };
-  });
-  evidence.requiredRuntimeSchemaIdentities = identityVersions;
-  const workerConfigPaths = [
-    'apps/lythaus-public-api/wrangler.jsonc',
-    'apps/lythaus-admin-api/wrangler.jsonc',
-    'apps/lythaus-jobs/wrangler.jsonc',
-    'apps/lythaus-auth-acceptance-coordinator/wrangler.jsonc',
-  ];
-  const probePaths = [
-    '.github/workflows/native-workers-deploy.yml',
-    '.github/workflows/production-release.yml',
-    'scripts/ci/probe-production-workers.mjs',
-  ];
-  const workerConfigs = {};
-  for (const relativePath of workerConfigPaths) {
-    try { workerConfigs[relativePath] = parseJsonc(fs.readFileSync(path.join(root, relativePath), 'utf8')); }
-    catch { workerConfigs[relativePath] = null; }
+function finalizeTargetIdentity() {
+  const providerBranch = evidence.planetscale?.branch;
+  const databaseTarget = evidence.database?.target;
+  const hyperdrive = evidence.hyperdriveOrigins;
+  if (!providerBranch?.id || !databaseTarget || hyperdrive?.status !== 'pass') {
+    blockers.push('main_target_identity_evidence_incomplete');
+    return;
   }
-  const probeFiles = {};
-  for (const relativePath of probePaths) {
-    try { probeFiles[relativePath] = fs.readFileSync(path.join(root, relativePath), 'utf8'); }
-    catch { probeFiles[relativePath] = ''; }
+  if (providerBranch.id !== databaseTarget.branchId || hyperdrive.originFingerprint !== databaseTarget.originFingerprint) {
+    blockers.push('main_target_identity_evidence_mismatch');
+    return;
   }
-  evidence.compatibilityWiring = assessCompatibilityWiring({ workerConfigs, probeFiles, expectedIdentities: identityVersions });
-  addBlockers(evidence.compatibilityWiring.blockers);
-  const deployment = assessCompatibilityDeploymentEvidence({
-    releaseSha: process.env.COMPATIBLE_WORKER_RELEASE_SHA,
-    deploymentRunUrl: process.env.COMPATIBLE_WORKER_DEPLOYMENT_RUN_URL,
-  });
-  evidence.compatibilityDeployment = deployment;
-  addBlockers(deployment.blockers);
+  try {
+    evidence.targetIdentity = buildPlanetScaleTargetIdentity({
+      organization: process.env.PLANETSCALE_ORGANIZATION ?? 'lythaus',
+      database: process.env.PLANETSCALE_DATABASE ?? 'lythaus-core',
+      branchName: 'main',
+      branchId: providerBranch.id,
+      originFingerprint: databaseTarget.originFingerprint,
+    });
+  } catch {
+    blockers.push('main_target_identity_invalid');
+  }
 }
 
 function inspectCostEstimate() {
@@ -225,9 +223,10 @@ function verifyHyperdriveOriginsReadOnly() {
 
 if (process.env.PSCALE_BRANCH_NAME !== 'main') blockers.push('PSCALE_BRANCH_NAME_must_be_main');
 if (!/^[0-9a-f]{40}$/.test(evidence.sourceMainSha ?? '')) blockers.push('release_sha_missing_or_invalid');
-inspectCompatibilityWiring();
+blockers.push('0021_cutover_owner_decision_pending');
 inspectCostEstimate();
 await inspectProviderEvidence();
 await inspectDatabaseReadOnly();
 verifyHyperdriveOriginsReadOnly();
+finalizeTargetIdentity();
 report();
