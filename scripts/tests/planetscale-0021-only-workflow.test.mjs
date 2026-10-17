@@ -28,6 +28,31 @@ test('keeps all-migrations as the default and scopes plan and execution to expli
   assert.match(jobBlock('execute-0021-only'), /environment: production/);
 });
 
+test('scoped workflow runs 0021 syntax and tests without changing root npm registrations', () => {
+  const planText = jobBlock('plan-0021-only');
+  const syntaxChecks = [
+    'node --check scripts/ci/planetscale-0021-only-contract.mjs',
+    'node --check scripts/ci/planetscale-0021-target-identity.mjs',
+    'node --check scripts/ci/planetscale-0021-registry-marker.mjs',
+    'node --check scripts/ci/planetscale-0021-only-plan.mjs',
+    'node --check scripts/ci/apply-planetscale-0021-only.mjs',
+    'node --check scripts/ci/planetscale-media-quarantine-migration.mjs',
+    'node --check scripts/ci/product-integrity-schema-contract.mjs',
+    'node --experimental-strip-types --check packages/db/src/identity.ts',
+  ];
+  for (const check of syntaxChecks) assert.ok(planText.includes(check), `missing scoped syntax check: ${check}`);
+  const existingSuite = planText.indexOf('npm run test:planetscale-production-migrations');
+  const scopedSuite = planText.indexOf('node --experimental-strip-types --test scripts/tests/planetscale-0021-only-contract.test.mjs scripts/tests/planetscale-0021-only-workflow.test.mjs');
+  assert.ok(existingSuite >= 0);
+  assert.ok(scopedSuite > existingSuite, 'the direct scoped suite must follow the unchanged root suite');
+  assert.doesNotMatch(planText, /npm run validate:planetscale-0021-only/);
+
+  const rootPackage = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  assert.equal(rootPackage.scripts['test:planetscale-production-migrations'],
+    'node --test scripts/tests/planetscale-production-migrations.test.mjs scripts/tests/planetscale-schema-verifier-views.test.mjs');
+  assert.equal(Object.hasOwn(rootPackage.scripts, 'validate:planetscale-0021-only'), false);
+});
+
 test('plan job has no administrative database credential and executor has no service-token role creation path', () => {
   const planText = jobBlock('plan-0021-only');
   assert.doesNotMatch(planText, /PLANETSCALE_ADMIN_DATABASE_URL/);

@@ -240,8 +240,16 @@ jobs:
       - name: Validate immutable scoped migration candidate
         run: |
           npm run validate:planetscale-migrations
-          npm run validate:planetscale-0021-only
+          node --check scripts/ci/planetscale-0021-only-contract.mjs
+          node --check scripts/ci/planetscale-0021-target-identity.mjs
+          node --check scripts/ci/planetscale-0021-registry-marker.mjs
+          node --check scripts/ci/planetscale-0021-only-plan.mjs
+          node --check scripts/ci/apply-planetscale-0021-only.mjs
+          node --check scripts/ci/planetscale-media-quarantine-migration.mjs
+          node --check scripts/ci/product-integrity-schema-contract.mjs
+          node --experimental-strip-types --check packages/db/src/identity.ts
           npm run test:planetscale-production-migrations
+          node --experimental-strip-types --test scripts/tests/planetscale-0021-only-contract.test.mjs scripts/tests/planetscale-0021-only-workflow.test.mjs
           npm run validate:cloudflare-hyperdrive-targets:manifest
           node scripts/ci/verify-planetscale-production-schema.mjs --manifest-only
       - name: Build read-only 0021 evidence and plan
