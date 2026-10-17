@@ -3,6 +3,23 @@ import { APPROVED_MIGRATIONS, expectedMigrationPrefix, loadApprovedMigrations } 
 
 export const REQUIRED_RELEASE_SCHEMA_VERSION = APPROVED_MIGRATIONS.at(-1).name;
 
+// Generate one exact runtime identity tuple for an approved migration prefix.
+// This lets narrowly scoped rollout plans verify compatibility across a schema
+// transition without weakening the runtime fingerprint comparison.
+export function canonicalSchemaIdentityForVersion(version, { root = process.cwd(), committedOnly = false } = {}) {
+  const manifest = loadApprovedMigrations({ root, committedOnly });
+  const migrationPrefix = expectedMigrationPrefix(version);
+  const relations = relationInventory(manifest.migrations.slice(0, migrationPrefix.length));
+  const migrations = migrationPrefix.map(({ name, appliedSha256 }) => ({ version: name, checksum: appliedSha256 }));
+  return Object.freeze({
+    schemaVersion: version,
+    fingerprint: runtimeSchemaFingerprint(relations, migrations),
+    relationCount: relations.length,
+    relations: Object.freeze(relations),
+    migrations: Object.freeze(migrations),
+  });
+}
+
 export function canonicalReleaseSchemaContract({ root = process.cwd(), committedOnly = false } = {}) {
   const manifest = loadApprovedMigrations({ root, committedOnly });
   const migrationPrefix = expectedMigrationPrefix(REQUIRED_RELEASE_SCHEMA_VERSION);

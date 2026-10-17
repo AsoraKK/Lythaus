@@ -99,6 +99,25 @@ test('staged 0021 commits the nullable column before concurrent index build', as
   assert.ok(client.calls.some((sql) => sql.includes('media_upload_quarantine_cleanup_index')));
 });
 
+test('staged 0021 runs exact-prefix preflight under its advisory lock and supports a verified no-op', async () => {
+  const migration = loadApprovedMigrations().migrations.at(-1);
+  const client = createStagedMigrationClient(['FULLY_APPLIED', 'FULLY_APPLIED']);
+  let preflightRan = false;
+  let callbackResult;
+  const result = await applyMediaQuarantineMigration(client, migration, {
+    beforeApply: async () => {
+      preflightRan = true;
+      assert.ok(client.calls.some((sql) => sql.includes('pg_try_advisory_lock')));
+      return false;
+    },
+    afterVerified: async (value) => { callbackResult = value; },
+  });
+  assert.equal(preflightRan, true);
+  assert.deepEqual(result, { applied: false });
+  assert.deepEqual(callbackResult, { applied: false });
+  assert.ok(!client.calls.some((sql) => sql.startsWith('ALTER TABLE') || sql.startsWith('CREATE INDEX CONCURRENTLY')));
+});
+
 test('staged 0021 drops only an exact inactive invalid index before retrying', async () => {
   const migration = loadApprovedMigrations().migrations.at(-1);
   const client = createStagedMigrationClient(['INVALID_INDEX_RETRYABLE', 'COLUMN_ONLY', 'FULLY_APPLIED']);

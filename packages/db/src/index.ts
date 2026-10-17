@@ -196,7 +196,7 @@ export function verifyFullConnectionString(connectionString: string): string {
   return verifiedConnectionString;
 }
 
-export { buildSchemaFingerprint, classifyDatabaseIdentityError, classifyRole, databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, isDatabaseIdentityReady, type DatabaseIdentityDiagnosticCode, type DatabaseIdentityExpectations, type DatabaseIdentityReport, type DatabaseReadinessResponse } from './identity.ts';
+export { buildSchemaFingerprint, classifyDatabaseIdentityError, classifyRole, databaseExpectationsFromEnv, databaseReadinessResponse, inspectDatabaseIdentity, isDatabaseIdentityReady, type DatabaseIdentityDiagnosticCode, type DatabaseIdentityExpectations, type DatabaseIdentityReport, type DatabaseReadinessResponse, type DatabaseSchemaIdentityAllowlist, type DatabaseSchemaIdentityTuple } from './identity.ts';
 export {
   BUDGET_RESERVATION_STATUSES,
   expireBudgetReservations,
