@@ -88,10 +88,11 @@ That heartbeat is not a Flutter raster/frame counter. Worker-only context
 events are not instrumented. Build-file inventories and sampled live process/library
 hashes supplement browser-bundle and font hashes; they do not attest real hardware.
 
-In matched local headed controls, baseline f2c8712d and the candidate both painted
+In earlier local headed controls, baseline f2c8712d and the candidate both painted
 rectangle/text and passed direct/production/SVG artwork fidelity, with working DOM,
-2D and no-brand controls. No whole-Flutter loss, network failure, page error or
-observed context loss occurred. The PNG region painted on baseline but was blank
+2D and no-brand controls. No whole-Flutter loss was seen. Later console telemetry
+exposed a diagnostic-server CSS MIME error that earlier telemetry missed; those
+samples are not healthy-environment comparisons. The PNG region painted on baseline but was blank
 on candidate in this bounded sample before image readiness was instrumented;
 loading, decoding and presentation were not distinguished. This does not establish
 an image-path regression or whole-surface candidate causation. Both actual dark-390 onboarding pages
@@ -124,6 +125,17 @@ and error signals are explicit. Diagnostics wait at most ten seconds for these
 signals, retain readiness timeouts/errors as failures, and do not infer an image
 presentation failure from an unready image. This instrumentation is fixture-only;
 no production renderer, frame scheduling or CPU workaround is changed.
+The diagnostic server now serves Flutter's semantics stylesheet as text/css;
+the run that exposed its prior MIME error is retained as failed setup evidence.
+
+With the CSS correction and readiness instrumentation, the bounded matched run
+painted the PNG on BOTH baseline and candidate after decode/frame-ready signals.
+Each branded fixture recorded five Dart frame callbacks and three per-region paint
+callbacks; both no-brand fixtures also painted their controls. DOM/2D, direct,
+production and SVG fidelity checks passed, without recorded health errors. This
+supersedes the earlier unready/invalid-setup comparison as diagnostic evidence,
+but does not erase historical failures or establish their cause. Whole-surface
+candidate specificity remains unresolved; no real Safari or release clearance.
 
 Raw measurements, scripts, approved-geometry comparisons and screenshots:
 [preserved review bundle](https://chatgpt.com/api/library/files/libfile_a7127ffd29b481919131f9e4a3853e17/download).
