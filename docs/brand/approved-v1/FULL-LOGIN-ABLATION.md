@@ -147,4 +147,3 @@ Its static wait-only and untouched required controls stay white through 5250 ms;
 one diagnostic frame request restores the direct scene without semantics or a
 second brand paint; the unmodified real entry paints at default scale. The
 required WPE gate remains red.
-
