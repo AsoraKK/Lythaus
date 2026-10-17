@@ -106,6 +106,8 @@ jobs:
       - name: Verify credential-bearing provider redirect boundaries in workerd
         run: node --test --test-timeout=60000 scripts/tests/auth-provider-redirects.workerd.mjs
       - run: npm run test:native-architecture
+      - name: Verify resolved moderation re-review authorization and request contract
+        run: node --experimental-strip-types --experimental-test-module-mocks --test apps/lythaus-admin-api/tests/moderation-rereview-handler.test.mjs
       - name: Verify owner-only read-only account support
         run: node --experimental-strip-types --experimental-test-module-mocks --test packages/contracts/tests/account-support.test.mjs apps/lythaus-admin-api/tests/account-support-runtime.test.mjs apps/lythaus-admin-api/tests/account-support-handler.test.mjs
       - name: Verify bounded owner-only Overview analytics

@@ -61,6 +61,7 @@ read-only admin surface. Paths in this table are relative to
 | POST | `/admin/privacy/legal-holds/<holdId>/clear` | Clear only the named legal hold after the required approval. |
 | POST | `/admin/editorial/publications` | Existing News Board contract using `EditorialPublicationCreate`; public publishing remains withheld pending full pipeline validation and activation approval. |
 | POST | `/admin/moderation/cases/<caseId>/decision` | Apply a staff moderation decision using `ModerationDecisionRequest`. |
+| POST | `/admin/moderation/cases/<caseId>/rereview` | Reopen a resolved case for review using its current revision, expected state, and structured reason code. |
 | POST | `/admin/appeals/<appealId>/adjudications` | Historical `appeals-v1.0.0`: record a trained editorial adjudication. |
 | GET | `/admin/appeals/pending-adjudication` | Historical `appeals-v1.0.0`: list durable reviewer-panel outcomes awaiting adjudication. |
 | GET | `/admin/appeals/community/queue` | Candidate new-policy triage queue, including restricted and unresolved work; activation-gated. |
@@ -73,8 +74,21 @@ read-only admin surface. Paths in this table are relative to
 
 ## Moderation cases
 
-Use `GET /admin/moderation/cases` to identify the exact case ID, then submit a
-documented `ModerationDecisionRequest` only through the decision endpoint. A
+Use `GET /admin/moderation/cases` to identify the exact case ID and its current
+state. Submit a documented `ModerationDecisionRequest` through the decision
+endpoint for an open case. A resolved case may return to review only through
+`POST /admin/moderation/cases/<caseId>/rereview`, with
+`expectedCaseState: "resolved"`, the listed `revision` as `expectedRevision`,
+and a structured `reasonCode`. The revision combines the exact resolution
+timestamp, source event ID, and latest decision ID; stale state or revision
+returns a conflict.
+
+Re-review atomically reopens the case and changes its current content state to
+`under_review`. For a post it clears `published_at` while preserving visibility,
+declaration, provenance, existing decisions, enforcement records, and their
+actors. It appends an audit event with the requesting admin and reason code.
+Continue through the normal decision endpoint to finish review; a normal allow
+decision can restore feed visibility under the existing publication rules. A
 moderation decision does not resolve an associated appeal: that appeal remains
 open until its own versioned appeal lifecycle resolves it. Do not treat a staff
 case decision as authority to replace either historical or new-policy outcomes.

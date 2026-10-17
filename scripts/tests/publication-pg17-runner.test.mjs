@@ -5,10 +5,10 @@ import test from 'node:test';
 import { publicationControlTarget, publicationFailureAnnotation } from '../ci/run-publication-pg17.mjs';
 
 test('publication failure annotations identify only fixed runner stages without caller data', () => {
-  for (const stage of ['control', 'moderation.create', 'moderation.baseline', 'admission.suite', 'safety.suite', 'tx.drop', 'attach.suite']) {
+  for (const stage of ['control', 'moderation.create', 'moderation.baseline', 'rereview.suite', 'admission.suite', 'safety.suite', 'tx.drop', 'attach.suite']) {
     assert.equal(publicationFailureAnnotation(stage), `::error title=Publication fixture failure::${stage} failed; inspect this stage's child output.`);
   }
-  for (const stage of ['unknown', 'admission.suite\n::error::injected', 'postgresql://user:secret@remote.invalid/private', 'moderation.suite?token=secret']) {
+  for (const stage of ['unknown', 'admission.suite\n::error::injected', 'postgresql://user:secret@remote.invalid/private', 'rereview.suite?token=secret']) {
     assert.throws(() => publicationFailureAnnotation(stage));
   }
 });
@@ -46,7 +46,7 @@ test('required native CI runs each publication and direct-client suite once thro
   assert.match(native, /image: postgres:17/);
   assert.match(native, /POSTGRES_DB: lythaus_auth_test_post_control/);
   assert.match(native, /npm run test:publication:pg17/);
-  for (const suite of ['post-moderation.workerd.mjs', 'publication-admission.workerd.mjs', 'post-safety-evidence.workerd.mjs',
+  for (const suite of ['post-moderation.workerd.mjs', 'moderation-rereview.postgres.mjs', 'publication-admission.workerd.mjs', 'post-safety-evidence.workerd.mjs',
     'transaction-client.postgres.mjs', 'post-attachment-preparation.postgres.mjs']) {
     assert.equal(runner.split(suite).length - 1, 1);
   }
