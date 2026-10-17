@@ -73,6 +73,10 @@ surface blank with the DOM QA label visible. The earlier passes do not supersede
 this failure. Matching main.dart.js alone did not attest the whole environment.
 
 The combined hosted Chromium/WebKit brand step at 623c48cf subsequently failed.
+Independent review also confirmed a separate Web frontends rendered-email-
+authentication controls timeout at 60 seconds in run 39061136619. That failure is
+not attributed to branding. Dependency audits passed; the failed aggregate summary
+reflects launch blockers rather than a dependency-audit failure.
 The evidence artifact exists, but log/artifact downloads returned Forbidden; the
 available step status cannot identify the failing engine or assertion. Hosted
 CI installs browsers with --with-deps. Local host validation instead reports missing
