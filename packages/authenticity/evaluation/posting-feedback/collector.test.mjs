@@ -63,6 +63,25 @@ test('live preflight rejects unresolved source/authority/cost/data/retention/led
   }finally{ambient.mock.restore();}
 });
 
+test('live collection requires the exact seven-day database ledger; local ledgers remain synthetic-only',async()=>{
+  const ambient=mock.method(globalThis,'fetch',()=>{throw Error('OUTBOUND_DENIED');});
+  let databaseClaims=0;
+  const databaseLedger={durability:'DURABLE_DATABASE',async claimProbe(){databaseClaims++;return false;},
+    async claimAttempt(){throw Error('UNEXPECTED_ATTEMPT');},async persistReceipt(){throw Error('UNEXPECTED_RECEIPT');}};
+  try{
+    await assert.rejects(collectApprovedTextProbe(await make()),/seven_day_database_retention_required/);
+    for(const retentionDays of [1,6,8]){
+      const options=await make({fetchImpl:async()=>{throw Error('UNEXPECTED_SYNTHETIC_REQUEST');}});
+      options.gate.retentionDays=retentionDays;
+      await assert.rejects(simulateTextProbe(options),/collection_data_or_retention_unresolved/);
+    }
+    const database=await make({ledger:databaseLedger});
+    await assert.rejects(collectApprovedTextProbe(database),/collection_probe_already_claimed/);
+    assert.equal(databaseClaims,1);
+    assert.equal(ambient.mock.callCount(),0);
+  }finally{ambient.mock.restore();}
+});
+
 test('changed/private/reordered/incomplete selection cannot transmit; input snapshot resists caller races',async()=>{
   let calls=0;const fetchImpl=async()=>{calls++;return scriptedResponse({response:'ok'});};
   for(const mutate of [rows=>rows.pop(),rows=>rows.reverse(),rows=>{rows[0].body='PRIVATE_MUST_NOT_SEND';},rows=>{rows[0].revision++;}]){
@@ -166,7 +185,7 @@ test('response provenance hashes exact bytes including BOM; invalid UTF8 retains
   assert.equal(failed.receipts[0].schemaValid,false);assert.equal(failed.receipts[0].safetyBand,'ABSTAIN');
 });
 
-test('unsafe preexisting root and selection modes fail live preflight without requests or permission repair',async()=>{
+test('unsafe preexisting root and selection modes fail synthetic preflight without requests or permission repair',async()=>{
   const ambient=mock.method(globalThis,'fetch',()=>{throw Error('OUTBOUND_DENIED');});
   try{
     for(const target of ['root','selection'])for(const mode of [0o777,0o755,0o750,0o710,0o701,0o2700]){
@@ -174,7 +193,8 @@ test('unsafe preexisting root and selection modes fail live preflight without re
       const path=target==='root'?root:join(root,PROBE_SELECTION_HASH);
       if(target==='selection')await mkdir(path,{mode:0o700});
       await chmod(path,mode);
-      await assert.rejects(collectApprovedTextProbe(await make({ledger:createLocalReceiptLedger(root)})),/private_storage_required/);
+      await assert.rejects(simulateTextProbe(await make({ledger:createLocalReceiptLedger(root),
+        fetchImpl:async()=>{throw Error('UNEXPECTED_TRANSPORT');}})),/private_storage_required/);
       assert.equal((await stat(path)).mode&0o7777,mode);assert.deepEqual(await readdir(path),[]);
     }
     assert.equal(ambient.mock.callCount(),0);
