@@ -188,7 +188,7 @@ test('forged tier, pending, expired, cancelled, and provider claims do not chang
   assert.equal(replay.status, 201, await replay.clone().text());
   assert.deepEqual(await replay.json(), created);
 
-  for (const status of ['pending', 'expired', 'cancelled', 'unavailable']) {
+  for (const status of ['pending', 'active', 'confirmed', 'expired', 'cancelled', 'unavailable']) {
     const denied = await createFeed('forged', `forged-${status}`, uuidv7(), { tier: 'black', status, provider: 'stripe' });
     assert.equal(denied.status, 400, await denied.clone().text());
     assert.equal((await denied.json()).error, 'custom_feed_limit_reached');

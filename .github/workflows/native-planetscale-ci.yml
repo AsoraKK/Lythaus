@@ -119,6 +119,14 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
         run: npm run validate:planetscale-postgres17
+      - name: Verify membership entitlement boundaries on disposable PostgreSQL 17
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
+        run: >-
+          node --experimental-strip-types --experimental-test-module-mocks
+          --test --test-concurrency=1
+          apps/lythaus-admin-api/tests/membership-entitlements.postgres.mjs
+          apps/lythaus-public-api/tests/membership-entitlements.postgres.mjs
       - name: Prove staged 0021 effective progress visibility and marker drift refusal
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
