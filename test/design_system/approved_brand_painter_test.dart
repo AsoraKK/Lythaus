@@ -9,8 +9,8 @@ import 'package:lythaus/design_system/widgets/lyth_brand.dart';
 
 void main() {
   for (final asset in approvedBrandViewBoxes.keys) {
-    for (final height in [16.0, 32.0, 64.0, 128.0]) {
-      for (final widthFactor in [1.0, 1.25]) {
+    for (final height in [16.0, 24.0, 32.0, 40.0, 64.0, 128.0]) {
+      for (final widthFactor in [0.5, 1.0, 1.25]) {
         testWidgets(
           '$asset matches approved SVG at height $height, width factor $widthFactor',
           (tester) async {

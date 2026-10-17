@@ -72,7 +72,10 @@ def generate():
             assert tag in {'svg', 'g', 'path', 'title', 'desc'}, tag
             if tag in {'title', 'desc'}:
                 return
-            assert not any(key in node.attrib for key in ['opacity', 'stroke', 'style', 'clip-path', 'fill-rule'])
+            assert not any(key in node.attrib for key in [
+                'opacity', 'fill-opacity', 'stroke', 'stroke-width', 'style',
+                'clip-path', 'fill-rule', 'filter', 'mask',
+            ]), 'Unsupported SVG paint or compositing attribute'
             fill = node.get('fill', fill)
             lines.append('  canvas.save();')
             transform = node.get('transform', '')

@@ -17,6 +17,11 @@ import-map.json records each imported repository path and source digest.
   Their imported files remain unchanged for source provenance.
 - Flutter uses these standalone variants through LythBrand. It keeps the supplied
   aspect ratio and does not tint, animate, reconstruct, or alter the artwork.
+- On web, the approved SVG paths and transforms are generated into direct Canvas
+  operations. This avoids the failing intermediate SVG/image painting path in
+  Linux WebKit while keeping Flutter's normal renderer. Native platforms retain
+  SvgPicture. Source SVG files remain unchanged; generation checks and 72 pixel
+  comparisons verify the derived operations against all four approved treatments.
 - Desktop navigation retains its injectable passive brand slot. The feed mark
   remains the existing **Feed controls** button, with that action label; the
   child image is decorative. Standalone artwork has one **Lythaus** image label.
@@ -42,6 +47,9 @@ import-map.json records each imported repository path and source digest.
 Run from the repository root:
 
     node --test scripts/tests/approved-brand-assets.test.mjs scripts/tests/version-web-entrypoints.test.mjs
+    python3 scripts/tests/approved-brand-path-generator.test.py
+    python3 scripts/generate-approved-brand-paths.py --check
+    flutter test test/design_system/approved_brand_painter_test.dart
 
 The asset checks verify the pinned source manifest, every imported byte,
 browser references, native dimensions/catalogs, ICO frames and cache policy.
@@ -72,16 +80,19 @@ normal Flutter renderer; the prior global WebKit CPU workaround is unacceptable
 because of measured composer regression. The service-worker version token and
 immutable release hashing are preserved.
 
-Release remains held: the strict WebKit pixel gate is unresolved. A later Linux
-headed capture ran Xorg, WebKitGTK and independent X11 capture in one IPC namespace.
-That path passed red/green HTML and blue WebGL pixel calibration, then showed the
-login content with absent wordmark pixels using the normal renderer. The earlier
-black desktop captures used separate IPC namespaces and are not rendering evidence.
-The headed fixture also needs an explicit valid locale (tested with en-US).
-An isolated native-image alternative failed the same gate and is not selected.
-No CPU, preserved-buffer, repaint-loop or retry workaround is used to clear this
-gate. Real Safari/macOS behavior and device performance remain unverified; the
-Linux result must not be generalized to Apple devices without that validation.
+Release remains held pending the existing headless WebKit gate and exact-head CI.
+A calibrated Linux headed capture runs Xorg, WebKitGTK and independent X11 capture
+in one IPC namespace with an explicit valid locale (en-US). The original SVG
+widget omitted the wordmark there; a minimal reproduction showed the approved
+direct Canvas paths painting correctly. With the generated painter, all 24 headed
+brand scenarios pass both the unchanged protocol pixel assertion and an additional
+independent desktop pixel assertion. Chromium's 24 brand scenarios also pass.
+The existing headless WPE WebKit screenshot assertion still fails. It has not been
+removed, weakened or replaced by the headed evidence. Earlier black desktop
+captures used separate IPC namespaces and are not rendering evidence. The failed
+native-image experiment is not selected. No CPU, preserved-buffer, repaint-loop or
+retry workaround is used. Real Safari/macOS and device performance remain separate
+validation needs; Linux results must not be generalized to Apple devices.
 
 Native byte/mapping validation does not prove compilation or device rendering.
 Android, iOS, macOS and Windows packaging must be checked on their native
