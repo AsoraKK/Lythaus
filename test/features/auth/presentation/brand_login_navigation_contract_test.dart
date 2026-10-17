@@ -119,6 +119,12 @@ void main() {
           expect(find.text('Synthetic continuation completed'), findsOneWidget);
           verify(() => auth.logout()).called(1);
           expect(tester.takeException(), isNull);
+          // The concurrent full-suite reporter can omit individual test names.
+          // Emit this only after every assertion passes so hosted logs retain all six.
+          debugPrint(
+            'VERIFIED brand login companion $theme ${width.toInt()} '
+            '${scale.toInt()}x: awaited auth, one callback, one Navigator push',
+          );
         },
       );
     }

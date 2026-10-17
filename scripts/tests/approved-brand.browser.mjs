@@ -249,7 +249,7 @@ try {
           results.push({ screen, theme, width, scale, status: 'passed', health:renderHealth, ...(login?{firstPaint:initialPaint,requests,expectedConsoleErrors,guestDestination:new URL(page.url()).pathname}:{}) });
         } catch (error) {
           await capture(page, name + '-failed', false).catch(()=>{});
-          results.push({ screen, theme, width, scale, status: 'failed', error: error.message, errors, blocked, requests, expectedConsoleErrors, health:await health(page) });
+          results.push({ screen, theme, width, scale, status: 'failed', error: error.message, errors, blocked, requests, expectedConsoleErrors, health:await health(page).catch(error=>({observationError:error.message})) });
         } finally { await saveCase(results.at(-1)); await context.close(); }
       }
       if (selectedCase && selectedCase !== `admin-${theme}-${width}`) continue;
