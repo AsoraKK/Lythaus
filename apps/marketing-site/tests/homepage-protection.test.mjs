@@ -353,9 +353,9 @@ const approvedHomepageVisualEdits = new Map([
   )}\n`],
 ]);
 const approvedMarketingBrandAssets = new Map([
-  ['apps/marketing-site/public/brand/lythaus-v1/lythaus-lockup-black.9518c6eeb03b.svg', '9518c6eeb03bb718b6f43c23b44f6a08020bd93f4bf85d75c81fa6b9716d24f3'],
-  ['apps/marketing-site/public/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg', '57df30b168bcf5b36b67e033b1924ddf1a891fc28d8fc41d88f2b3db4798031a'],
-  ['apps/marketing-site/public/brand/lythaus-v1/lythaus-social-card-1200x630.c20d3b1b40a8.png', 'c20d3b1b40a870640abdb88c049b68df565cda71d6f883064655116af1d6fa8e'],
+  ['apps/marketing-site/public/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg', 'e450176663e057e99bf66b822425eb0e1cf1ef90928f4b10b123e521bab63750'],
+  ['apps/marketing-site/public/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg', '5ba0451347e24615f10bfc362b84285767f51eea3621cc702f64e93ff0047ff7'],
+  ['apps/marketing-site/public/brand/lythaus-v1/lythaus-social-card-1200x630.78f698ef4283.png', '78f698ef4283dcc19de07672fe95bbfd6655da04bc45f93fdc7ceff181402eab'],
   ['apps/marketing-site/public/icons/lythaus-v1/favicon.e3dfdd675a74.ico', 'e3dfdd675a7450c028317d74caeedaf03f613b73a34f50a3950ba4972bbdb67c'],
   ['apps/marketing-site/public/icons/lythaus-v1/favicon.116ff3e020c6.svg', '116ff3e020c6b7f8539644880c8bc810d1a6278709b5f273c2a8d354d5f33cb7'],
   ['apps/marketing-site/public/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png', '572a7b9a0d35f57d71c9f5a7d5f6d5b11a58b67a8bfd55d36416d447476c85ef'],
@@ -374,6 +374,9 @@ const approvedMarketingBrandAssets = new Map([
 ]);
 const approvedMarketingBrandRemovals = new Set([
   'apps/marketing-site/public/brand/lythaus-mark.svg',
+  'apps/marketing-site/public/brand/lythaus-v1/lythaus-lockup-black.9518c6eeb03b.svg',
+  'apps/marketing-site/public/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg',
+  'apps/marketing-site/public/brand/lythaus-v1/lythaus-social-card-1200x630.c20d3b1b40a8.png',
 ]);
 function replaceExactText(source, before, after, label) {
   assert.equal(source.split(before).length - 1, 1, `The ${label} baseline must remain exact`);
@@ -621,7 +624,7 @@ test('approved copy refresh preserves homepage scripts, waitlist controls and me
   const scripts = source => [...source.replace(/<script\b[^>]*\/>/g, '').matchAll(/<script\b[^>]*>[\s\S]*?<\/script>/g)].map(match => match[0]).join('\n');
   const frontmatter = source => source.split('---')[1].trim();
   const normalizeBrandFrontmatter = source => frontmatter(source)
-    .replace("const socialImageUrl = `${siteUrl}/brand/lythaus-v1/lythaus-social-card-1200x630.c20d3b1b40a8.png`;\n", '')
+    .replace("const socialImageUrl = `${siteUrl}/brand/lythaus-v1/lythaus-social-card-1200x630.78f698ef4283.png`;\n", '')
     .replace("import '../styles/brand.css';", '')
     .trim();
   const normalizeBrandHead = source => source
@@ -637,7 +640,7 @@ test('approved copy refresh preserves homepage scripts, waitlist controls and me
     const current = read(filename);
     assert.equal(scripts(current), scripts(original).replaceAll('Join the private beta', 'Join the waitlist'));
     if (filename.endsWith('BaseLayout.astro')) {
-      assert.equal(normalizeBrandFrontmatter(current), frontmatter(original), 'Only the approved lockup stylesheet and social image URL may be added to layout frontmatter');
+      assert.equal(normalizeBrandFrontmatter(current), frontmatter(original), 'Only the approved wordmark stylesheet and social image URL may be added to layout frontmatter');
     } else {
       assert.equal(frontmatter(current), frontmatter(original));
     }

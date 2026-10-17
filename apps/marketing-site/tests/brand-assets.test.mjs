@@ -8,9 +8,9 @@ const root = path.resolve(import.meta.dirname, '..');
 const publicFile = (url) => path.join(root, 'public', url.replace(/^\//u, ''));
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const assets = [
-  { url: '/brand/lythaus-v1/lythaus-lockup-black.9518c6eeb03b.svg', sha256: '9518c6eeb03bb718b6f43c23b44f6a08020bd93f4bf85d75c81fa6b9716d24f3', mime: 'image/svg+xml' },
-  { url: '/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg', sha256: '57df30b168bcf5b36b67e033b1924ddf1a891fc28d8fc41d88f2b3db4798031a', mime: 'image/svg+xml' },
-  { url: '/brand/lythaus-v1/lythaus-social-card-1200x630.c20d3b1b40a8.png', sha256: 'c20d3b1b40a870640abdb88c049b68df565cda71d6f883064655116af1d6fa8e', mime: 'image/png' },
+  { url: '/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg', sha256: 'e450176663e057e99bf66b822425eb0e1cf1ef90928f4b10b123e521bab63750', mime: 'image/svg+xml' },
+  { url: '/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg', sha256: '5ba0451347e24615f10bfc362b84285767f51eea3621cc702f64e93ff0047ff7', mime: 'image/svg+xml' },
+  { url: '/brand/lythaus-v1/lythaus-social-card-1200x630.78f698ef4283.png', sha256: '78f698ef4283dcc19de07672fe95bbfd6655da04bc45f93fdc7ceff181402eab', mime: 'image/png' },
   { url: '/icons/lythaus-v1/favicon.e3dfdd675a74.ico', sha256: 'e3dfdd675a7450c028317d74caeedaf03f613b73a34f50a3950ba4972bbdb67c', mime: 'image/x-icon' },
   { url: '/icons/lythaus-v1/favicon.116ff3e020c6.svg', sha256: '116ff3e020c6b7f8539644880c8bc810d1a6278709b5f273c2a8d354d5f33cb7', mime: 'image/svg+xml' },
   { url: '/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png', sha256: '572a7b9a0d35f57d71c9f5a7d5f6d5b11a58b67a8bfd55d36416d447476c85ef', mime: 'image/png' },
@@ -24,6 +24,7 @@ const baseLayout = readFileSync(path.join(root, 'src/layouts/BaseLayout.astro'),
 const secondaryLayout = readFileSync(path.join(root, 'src/layouts/SecondaryLayout.astro'), 'utf8');
 const secondaryStyles = readFileSync(path.join(root, 'src/styles/secondary.css'), 'utf8');
 const brandStyles = readFileSync(path.join(root, 'src/styles/brand.css'), 'utf8');
+const faviconSvg = readFileSync(publicFile('/icons/lythaus-v1/favicon.116ff3e020c6.svg'), 'utf8');
 const manifest = JSON.parse(readFileSync(path.join(root, 'public/site.webmanifest'), 'utf8'));
 
 function assertMimeSignature(bytes, mime, filename) {
@@ -46,7 +47,7 @@ test('fingerprinted brand assets match approved hashes and MIME signatures', () 
     assertMimeSignature(bytes, asset.mime, asset.url);
   }
 
-  const socialCard = readFileSync(publicFile('/brand/lythaus-v1/lythaus-social-card-1200x630.c20d3b1b40a8.png'));
+  const socialCard = readFileSync(publicFile('/brand/lythaus-v1/lythaus-social-card-1200x630.78f698ef4283.png'));
   assert.equal(socialCard.readUInt32BE(16), 1200);
   assert.equal(socialCard.readUInt32BE(20), 630);
 });
@@ -63,26 +64,34 @@ test('both marketing layouts use versioned icons and social metadata', () => {
   assert.match(layouts, /type="image\/svg\+xml"/u);
   assert.match(layouts, /type="image\/png"/u);
   assert.match(layouts, /type="image\/x-icon"/u);
-  assert.match(layouts, /const socialImageUrl = `\$\{siteUrl\}\/brand\/lythaus-v1\/lythaus-social-card-1200x630\.c20d3b1b40a8\.png`/u);
+  assert.match(layouts, /const socialImageUrl = `\$\{siteUrl\}\/brand\/lythaus-v1\/lythaus-social-card-1200x630\.78f698ef4283\.png`/u);
   assert.match(layouts, /property="og:image" content=\{socialImageUrl\}/u);
+  assert.match(layouts, /property="og:image:alt" content="Lythaus wordmark"/u);
   assert.match(layouts, /name="twitter:image" content=\{socialImageUrl\}/u);
+  assert.match(layouts, /name="twitter:image:alt" content="Lythaus wordmark"/u);
   assert.match(layouts, /name="twitter:card" content="summary_large_image"/u);
   assert.doesNotMatch(layouts, /href="\/(?:favicon\.(?:ico|png)|brand\/lythaus-mark\.svg)"/u);
 });
 
-test('single accessible lockups preserve theme contrast and responsive sizing', () => {
-  assert.equal((baseLayout.match(/class="brand-lockup"/gu) ?? []).length, 2);
-  assert.equal((secondaryLayout.match(/class="secondary-brand-art"/gu) ?? []).length, 2);
-  assert.match(baseLayout, /class="brand" href="\/" aria-label="Lythaus home"[\s\S]*?class="brand-lockup"[^>]*alt=""/u);
-  assert.match(secondaryLayout, /class="secondary-brand" href="\/" aria-label="Lythaus home"[\s\S]*?class="secondary-brand-art" aria-hidden="true"/u);
-  assert.doesNotMatch(`${baseLayout}\n${secondaryLayout}`, /<span>Lythaus<\/span>|lythaus-mark\.svg/u);
-  assert.ok(secondaryStyles.includes('/brand/lythaus-v1/lythaus-lockup-black.9518c6eeb03b.svg'));
-  assert.ok(secondaryStyles.includes('/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg'));
-  assert.match(secondaryStyles, /data-appearance="dark"[^\n]*secondary-brand-lockup/u);
+test('accessible wordmarks remain standalone, theme-aware, and responsive', () => {
+  assert.equal((baseLayout.match(/class="brand-wordmark-slot"/gu) ?? []).length, 2);
+  assert.equal((baseLayout.match(/class="brand-wordmark"/gu) ?? []).length, 2);
+  assert.equal((secondaryLayout.match(/class="secondary-brand-wordmark"/gu) ?? []).length, 2);
+  assert.match(baseLayout, /class="brand" href="\/" aria-label="Lythaus home"[\s\S]*?class="brand-wordmark-slot"[\s\S]*?class="brand-wordmark"[^>]*alt=""/u);
+  assert.match(secondaryLayout, /class="secondary-brand" href="\/" aria-label="Lythaus home"[\s\S]*?class="secondary-brand-wordmark" aria-hidden="true"/u);
+  assert.doesNotMatch(`${baseLayout}\n${secondaryLayout}\n${secondaryStyles}`, /lythaus-lockup|brand-lockup|<span>Lythaus<\/span>/u);
+  assert.ok(secondaryStyles.includes('/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg'));
+  assert.ok(secondaryStyles.includes('/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg'));
+  assert.match(secondaryStyles, /data-appearance="dark"[^\n]*secondary-brand-wordmark/u);
   assert.match(secondaryStyles, /prefers-color-scheme:\s*dark/u);
-  assert.match(secondaryStyles, /secondary-brand-art[^\n]*aspect-ratio/u);
+  assert.match(secondaryStyles, /secondary-brand-wordmark[^\n]*aspect-ratio/u);
+  assert.match(brandStyles, /brand-wordmark-slot[\s\S]*?aspect-ratio:\s*627\.24944891 \/ 130\.68666880/u);
   assert.match(brandStyles, /width:\s*min\(154px,\s*42vw\)/u);
-  assert.match(brandStyles, /height:\s*auto/u);
+  assert.match(brandStyles, /height:\s*100%/u);
+  assert.doesNotMatch(brandStyles, /lythaus-lockup|brand-lockup/u);
+  assert.match(faviconSvg, /aria-label="Lythaus favicon icon"/u);
+  assert.match(faviconSvg, /Selected LH monogram/u);
+  assert.doesNotMatch(faviconSvg, /data-letter=|wordmark/u);
 });
 
 test('web manifest preserves identity and maps any and maskable icons separately', () => {
@@ -119,4 +128,9 @@ test('legacy root icon paths stay exact approved fallbacks', () => {
     assert.equal(sha256(readFileSync(publicFile(alias))), sha256(readFileSync(publicFile(approved))), `${alias} must remain an approved fallback`);
   }
   assert.equal(existsSync(publicFile('/brand/lythaus-mark.svg')), false, 'the retired unversioned mark must not remain public');
+  for (const combined of [
+    '/brand/lythaus-v1/lythaus-lockup-black.9518c6eeb03b.svg',
+    '/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg',
+    '/brand/lythaus-v1/lythaus-social-card-1200x630.c20d3b1b40a8.png',
+  ]) assert.equal(existsSync(publicFile(combined)), false, `${combined} must not remain public`);
 });

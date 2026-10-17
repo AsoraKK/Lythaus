@@ -1,11 +1,11 @@
 html[data-secondary] {
-  --secondary-brand-lockup: url('/brand/lythaus-v1/lythaus-lockup-black.9518c6eeb03b.svg');
+  --secondary-brand-wordmark: url('/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg');
   scroll-behavior: smooth;
   scroll-padding-top: 24px;
 }
-html[data-secondary][data-appearance="dark"] { --secondary-brand-lockup: url('/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg'); }
+html[data-secondary][data-appearance="dark"] { --secondary-brand-wordmark: url('/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg'); }
 @media (prefers-color-scheme: dark) {
-  html[data-secondary]:not([data-appearance]) { --secondary-brand-lockup: url('/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg'); }
+  html[data-secondary]:not([data-appearance]) { --secondary-brand-wordmark: url('/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg'); }
 }
 html[data-secondary] *, html[data-secondary] *::before, html[data-secondary] *::after { box-sizing: border-box; }
 .secondary-page { margin: 0; min-height: 100vh; display: flex; flex-direction: column; background: var(--ds-canvas); color: var(--ds-text); font-family: "Lythaus Interface", "Segoe UI", sans-serif; font-size: 1rem; line-height: 1.65; -webkit-font-smoothing: antialiased; overflow-wrap: anywhere; }
@@ -28,7 +28,7 @@ html[data-secondary] *, html[data-secondary] *::before, html[data-secondary] *::
 .secondary-header, .secondary-main, .secondary-footer { width: min(calc(100% - 64px), 1120px); margin-inline: auto; }
 .secondary-header { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 32px; min-height: 88px; padding-block: 12px; border-bottom: 1px solid var(--ds-border); }
 .secondary-brand { display: inline-flex; align-items: center; gap: 12px; min-height: var(--ds-target); font-size: 1.125rem; font-weight: 600; letter-spacing: -.03em; text-decoration: none; color: var(--ds-text) !important; }
-.secondary-brand-art { display: block; width: min(154px, 40vw); aspect-ratio: 627.24944891 / 130.68666880; flex: 0 1 154px; background-image: var(--secondary-brand-lockup); background-position: center; background-repeat: no-repeat; background-size: contain; }
+.secondary-brand-wordmark { display: block; width: min(154px, 40vw); aspect-ratio: 627.24944891 / 130.68666880; flex: 0 1 154px; background-image: var(--secondary-brand-wordmark); background-position: center; background-repeat: no-repeat; background-size: contain; }
 .secondary-nav { display: flex; align-items: center; gap: 24px; margin-left: auto; }
 .secondary-nav a, .secondary-menu a { position: relative; display: flex; align-items: center; min-height: var(--ds-target); color: var(--ds-secondary); text-decoration: none; font-size: .875rem; }
 .secondary-nav a:hover, .secondary-menu a:hover { color: var(--ds-text); }
