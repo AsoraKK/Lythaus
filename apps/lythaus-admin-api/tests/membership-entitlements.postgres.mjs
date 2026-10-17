@@ -290,6 +290,8 @@ test('provider lifecycle claims and unavailable state cannot act as manual entit
   const targetId = userIds[2];
   for (const field of [
     { status: 'pending' },
+    { status: 'active' },
+    { status: 'confirmed' },
     { status: 'expired' },
     { status: 'cancelled' },
     { status: 'unavailable' },
