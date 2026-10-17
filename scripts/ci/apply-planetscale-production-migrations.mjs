@@ -3,6 +3,8 @@ import path from 'node:path';
 import pg from 'pg';
 import { APPROVED_MIGRATIONS, loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
 import { assertCompleteMigrationPostconditions, assertMigrationDataPreconditions, classifyMigrationState, exactRegistryPrefix, incrementalMigrationNames, incrementalRegistryHead, migrationDataRiskReport } from './planetscale-migration-reconciliation.mjs';
+import { applyMediaQuarantineMigration, inspectMediaQuarantineMigration } from './planetscale-media-quarantine-migration.mjs';
+import { MEDIA_QUARANTINE_MIGRATION_NAME } from './planetscale-media-quarantine-contract.mjs';
 
 const { Client } = pg;
 const root = process.cwd();
@@ -87,13 +89,13 @@ async function applyMigration(client, migration, pendingRegistry = [], verifyPos
   }
 }
 
-async function recordFullyAppliedMigration(client, migration) {
+async function recordFullyAppliedMigration(client, migration, pendingRegistry = []) {
   await client.query('BEGIN');
   try {
     await acquireMigrationLock(client);
     const [state] = await classifyMigrationState(client, [migration.name]);
     verifyMigrationPostconditions(state);
-    await recordInsertOnly(client, migration);
+    for (const row of [...pendingRegistry, migration]) await recordInsertOnly(client, row);
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK').catch(() => undefined);
@@ -173,10 +175,21 @@ try {
   } else if (incrementalRegistryHead(registry) === migrations.at(-1).name) {
     mode = 'verified';
     pending = [];
+    const [latestState] = await classifyMigrationState(client, [MEDIA_QUARANTINE_MIGRATION_NAME]);
+    verifyMigrationPostconditions(latestState);
   } else if (incrementalRegistryHead(registry)) {
     const remainingNames = incrementalMigrationNames(incrementalRegistryHead(registry));
     const states = await classifyMigrationState(client, remainingNames);
-    const unsafe = states.filter(({ state }) => state === 'PARTIALLY_APPLIED');
+    const unsafe = [];
+    for (const state of states.filter(({ state: status }) => status === 'PARTIALLY_APPLIED')) {
+      if (state.name === MEDIA_QUARANTINE_MIGRATION_NAME) {
+        const staged = await inspectMediaQuarantineMigration(client);
+        if (['COLUMN_ONLY', 'INVALID_INDEX_RETRYABLE'].includes(staged.state)) continue;
+        unsafe.push({ name: state.name, state: state.state, staged });
+        continue;
+      }
+      unsafe.push(state);
+    }
     if (unsafe.length) throw new Error(`incremental migration reconciliation failed: ${JSON.stringify(unsafe)}`);
     const dataRisks = await migrationDataRiskReport(client);
     assertMigrationDataPreconditions(dataRisks);
@@ -194,7 +207,11 @@ try {
   for (const item of pending) {
     const migration = item.migration ?? item;
     process.stdout.write(`Applying ${migration.name} (${mode})\n`);
-    if (mode === 'incremental' && item.initialState === 'FULLY_APPLIED') {
+    if (migration.name === MEDIA_QUARANTINE_MIGRATION_NAME) {
+      await applyMediaQuarantineMigration(client, migration, {
+        afterVerified: () => recordFullyAppliedMigration(client, migration, mode === 'bootstrap' ? bootstrapPending.splice(0) : []),
+      });
+    } else if (mode === 'incremental' && item.initialState === 'FULLY_APPLIED') {
       await recordFullyAppliedMigration(client, migration);
     } else if (mode === 'bootstrap' && !['0000_preflight.sql', '0001_extensions_and_schemas.sql', '0002_core_tables.sql', '0003_domain_extensions.sql'].includes(migration.name)) {
       await applyMigration(client, migration, bootstrapPending.splice(0));

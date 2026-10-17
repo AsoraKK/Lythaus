@@ -2,6 +2,64 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { APPROVED_MIGRATIONS, EXPECTED_MIGRATION_BYTES, EXPECTED_MIGRATION_SET_SHA256, loadApprovedMigrations } from '../ci/planetscale-migration-manifest.mjs';
 import { assertCompleteMigrationPostconditions, assertMigrationDataPreconditions, classifyArtifacts, classifyMigrationState, exactRegistryPrefix, incrementalMigrationNames, incrementalRegistryHead, migrationPostconditions } from '../ci/planetscale-migration-reconciliation.mjs';
+import { applyMediaQuarantineMigration, inspectMediaQuarantineMigration } from '../ci/planetscale-media-quarantine-migration.mjs';
+import { MEDIA_QUARANTINE_MIGRATION_NAME, splitMediaQuarantineMigration } from '../ci/planetscale-media-quarantine-contract.mjs';
+
+function stagedCatalogState(state) {
+  const column = {
+    table_exists: true,
+    table_is_regular: true,
+    marker_exists: true,
+    marker_type_matches: true,
+    marker_nullable: true,
+    marker_has_no_generation_or_default: true,
+  };
+  const index = {
+    index_object_exists: true,
+    index_is_regular: true,
+    index_targets_table: true,
+    index_uses_btree: true,
+    index_has_exact_key_count: true,
+    index_is_nonunique: true,
+    index_definition_matches: true,
+    index_predicate_matches: true,
+    index_is_not_constraint_backed: true,
+    index_is_valid: true,
+    index_is_ready: true,
+    index_build_is_active: false,
+    index_progress_visibility_complete: true,
+  };
+  if (state === 'NOT_APPLIED') return { table_exists: true, table_is_regular: true, marker_exists: false, index_object_exists: false };
+  if (state === 'COLUMN_ONLY') return { ...column, index_object_exists: false };
+  if (state === 'INVALID_INDEX_RETRYABLE') return { ...column, ...index, index_is_valid: false, index_is_ready: false };
+  if (state === 'INVALID_INDEX_ACTIVE') return { ...column, ...index, index_is_valid: false, index_is_ready: false, index_build_is_active: true };
+  if (state === 'INVALID_INDEX_REVIEW_REQUIRED') return { ...column, ...index, index_is_valid: false, index_is_ready: false, index_progress_visibility_complete: false };
+  if (state === 'DRIFT') return { ...column, ...index, index_predicate_matches: false };
+  return { ...column, ...index };
+}
+
+function createStagedMigrationClient(states, { failConcurrentCreate = false, lockAcquired = true } = {}) {
+  const calls = [];
+  let transactionOpen = false;
+  return {
+    calls,
+    async query(sql) {
+      calls.push(sql);
+      if (sql.includes('migration-artifact:media_quarantine_staged_state')) {
+        return { rows: [stagedCatalogState(states.shift() ?? 'FULLY_APPLIED')] };
+      }
+      if (sql.includes('SELECT pg_try_advisory_lock')) return { rows: [{ locked: lockAcquired }] };
+      if (sql === 'BEGIN') transactionOpen = true;
+      if (sql === 'COMMIT' || sql === 'ROLLBACK') transactionOpen = false;
+      if (sql.includes('CREATE INDEX CONCURRENTLY') || sql.includes('DROP INDEX CONCURRENTLY')) {
+        assert.equal(transactionOpen, false, 'concurrent index DDL must run outside a transaction');
+        if (failConcurrentCreate && sql.includes('CREATE INDEX CONCURRENTLY')) throw new Error('synthetic concurrent build failure');
+      }
+      if (/migration-artifact:/.test(sql) && !sql.includes('media_quarantine_staged_state')) return { rows: [{ present: true }] };
+      return { rows: [{}], rowCount: 1 };
+    },
+  };
+}
 
 test('loads the immutable canonical migration payload and checksum set', () => {
   const manifest = loadApprovedMigrations();
@@ -9,6 +67,71 @@ test('loads the immutable canonical migration payload and checksum set', () => {
   assert.equal(manifest.bytes, EXPECTED_MIGRATION_BYTES);
   assert.equal(manifest.checksum, EXPECTED_MIGRATION_SET_SHA256);
   assert.equal(manifest.migrations.at(-1)?.name, '0021_media_quarantine_cleanup.sql');
+});
+
+test('keeps 0021 bytes pinned while staging its exact index concurrently', () => {
+  const migration = loadApprovedMigrations().migrations.at(-1);
+  const staged = splitMediaQuarantineMigration(migration.contents.toString('utf8'));
+  assert.equal(migration.name, MEDIA_QUARANTINE_MIGRATION_NAME);
+  assert.match(staged.columnSql, /^ALTER TABLE media\.upload_sessions/);
+  assert.match(staged.concurrentIndexSql, /^CREATE INDEX CONCURRENTLY media_upload_quarantine_cleanup_idx/);
+  assert.match(staged.indexPredicate, /status = ANY \(ARRAY\['pending'::text/);
+  assert.throws(() => splitMediaQuarantineMigration(`${migration.contents.toString('utf8')}-- drift\n`), /do not match the staged migration contract/);
+});
+
+test('staged 0021 commits the nullable column before concurrent index build', async () => {
+  const migration = loadApprovedMigrations().migrations.at(-1);
+  const client = createStagedMigrationClient(['NOT_APPLIED', 'COLUMN_ONLY', 'FULLY_APPLIED']);
+  await applyMediaQuarantineMigration(client, migration, {
+    afterVerified: async () => {
+      await client.query('BEGIN');
+      await client.query('INSERT INTO system.schema_migrations (version, checksum) VALUES ($1, $2)');
+      await client.query('COMMIT');
+    },
+  });
+  const alterIndex = client.calls.findIndex((sql) => sql.startsWith('ALTER TABLE media.upload_sessions'));
+  const commitIndex = client.calls.findIndex((sql, index) => index > alterIndex && sql === 'COMMIT');
+  const concurrentIndex = client.calls.findIndex((sql) => sql.startsWith('CREATE INDEX CONCURRENTLY'));
+  const registryInsert = client.calls.findIndex((sql) => sql.startsWith('INSERT INTO system.schema_migrations'));
+  const unlock = client.calls.findIndex((sql) => sql.includes('pg_advisory_unlock'));
+  assert.ok(alterIndex >= 0 && commitIndex > alterIndex && concurrentIndex > commitIndex);
+  assert.ok(registryInsert > concurrentIndex && unlock > registryInsert);
+  assert.ok(client.calls.some((sql) => sql.includes('media_upload_quarantine_cleanup_index')));
+});
+
+test('staged 0021 drops only an exact inactive invalid index before retrying', async () => {
+  const migration = loadApprovedMigrations().migrations.at(-1);
+  const client = createStagedMigrationClient(['INVALID_INDEX_RETRYABLE', 'COLUMN_ONLY', 'FULLY_APPLIED']);
+  await applyMediaQuarantineMigration(client, migration);
+  const dropIndex = client.calls.findIndex((sql) => sql.startsWith('DROP INDEX CONCURRENTLY'));
+  const createIndex = client.calls.findIndex((sql) => sql.startsWith('CREATE INDEX CONCURRENTLY'));
+  assert.ok(dropIndex >= 0 && createIndex > dropIndex);
+});
+
+test('staged 0021 preserves failed builds for safe retry and refuses active or drifted indexes', async () => {
+  const migration = loadApprovedMigrations().migrations.at(-1);
+  const failedBuild = createStagedMigrationClient(['COLUMN_ONLY'], { failConcurrentCreate: true });
+  let recordedAfterFailure = false;
+  await assert.rejects(applyMediaQuarantineMigration(failedBuild, migration, { afterVerified: async () => { recordedAfterFailure = true; } }), /synthetic concurrent build failure/);
+  assert.equal(recordedAfterFailure, false);
+  assert.ok(!failedBuild.calls.some((sql) => sql.startsWith('INSERT INTO system.schema_migrations')));
+
+  for (const state of ['INVALID_INDEX_ACTIVE', 'INVALID_INDEX_REVIEW_REQUIRED', 'DRIFT']) {
+    const client = createStagedMigrationClient([state]);
+    const inspected = await inspectMediaQuarantineMigration({
+      async query(sql) {
+        assert.ok(sql.includes('media_quarantine_staged_state'));
+        return { rows: [stagedCatalogState(state)] };
+      },
+    });
+    assert.notEqual(inspected.state, 'INVALID_INDEX_RETRYABLE');
+    await assert.rejects(applyMediaQuarantineMigration(client, migration), /0021 staged migration stopped/);
+    assert.ok(!client.calls.some((sql) => sql.startsWith('DROP INDEX CONCURRENTLY') || sql.startsWith('CREATE INDEX CONCURRENTLY')));
+  }
+
+  const contended = createStagedMigrationClient([], { lockAcquired: false });
+  await assert.rejects(applyMediaQuarantineMigration(contended, migration), /another schema migration is active/);
+  assert.ok(!contended.calls.some((sql) => sql.startsWith('ALTER TABLE') || sql.startsWith('CREATE INDEX')));
 });
 
 test('requires the nullable quarantine cleanup marker and bounded partial index in 0021', async () => {
@@ -214,6 +337,9 @@ test('production runner preserves immutable registry history', async () => {
   assert.match(source, /incrementalRegistryHead\(registry\)/);
   assert.match(source, /classifyMigrationState/);
   assert.match(source, /recordFullyAppliedMigration/);
+  assert.match(source, /applyMediaQuarantineMigration/);
+  assert.match(source, /inspectMediaQuarantineMigration/);
+  assert.match(source, /MEDIA_QUARANTINE_MIGRATION_NAME/);
   assert.match(source, /assertCompleteMigrationPostconditions/);
   assert.match(source, /verifyWaitlistPrivileges/);
   assert.match(source, /verifyRuntimeRateLimitPrivileges/);

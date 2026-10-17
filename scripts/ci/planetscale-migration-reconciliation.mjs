@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { APPROVED_MIGRATIONS, expectedMigrationPrefix } from './planetscale-migration-manifest.mjs';
+import { MEDIA_QUARANTINE_INDEX_DEFINITION, MEDIA_QUARANTINE_INDEX_PREDICATE } from './planetscale-media-quarantine-contract.mjs';
 
 const root = process.cwd();
+const sqlStringLiteral = (value) => `'${value.replace(/'/g, "''")}'`;
 
 // Relation fingerprints enforce complete canonical shapes for relations that later
 // migrations do not evolve. Evolved relations use stable migration invariants below.
@@ -325,19 +327,18 @@ const artifacts = {
         FROM pg_index index_entry
         JOIN pg_class index_relation ON index_relation.oid = index_entry.indexrelid
         JOIN pg_namespace index_namespace ON index_namespace.oid = index_relation.relnamespace
+        JOIN pg_am access_method ON access_method.oid = index_relation.relam
        WHERE index_namespace.nspname = 'media'
          AND index_relation.relname = 'media_upload_quarantine_cleanup_idx'
+         AND index_relation.relkind = 'i'
          AND index_entry.indrelid = to_regclass('media.upload_sessions')
          AND index_entry.indisvalid AND index_entry.indisready
-         AND pg_get_indexdef(index_entry.indexrelid) ILIKE '%USING btree (expires_at, id)%'
-         AND pg_get_expr(index_entry.indpred, index_entry.indrelid) ILIKE '%purpose = ''standard''%'
-         AND pg_get_expr(index_entry.indpred, index_entry.indrelid) ILIKE '%quarantine_deleted_at IS NULL%'
-         AND pg_get_expr(index_entry.indpred, index_entry.indrelid) ILIKE '%pending%'
-         AND pg_get_expr(index_entry.indpred, index_entry.indrelid) ILIKE '%queued%'
-         AND pg_get_expr(index_entry.indpred, index_entry.indrelid) ILIKE '%approved%'
-         AND pg_get_expr(index_entry.indpred, index_entry.indrelid) ILIKE '%rejected%'
-         AND pg_get_expr(index_entry.indpred, index_entry.indrelid) ILIKE '%expired%'
-         AND pg_get_expr(index_entry.indpred, index_entry.indrelid) ILIKE '%cancelled%'
+         AND access_method.amname = 'btree'
+         AND index_entry.indnatts = 2 AND index_entry.indnkeyatts = 2
+         AND NOT index_entry.indisunique AND NOT index_entry.indisprimary AND NOT index_entry.indisexclusion
+         AND pg_get_indexdef(index_entry.indexrelid) = ${sqlStringLiteral(MEDIA_QUARANTINE_INDEX_DEFINITION)}
+         AND pg_get_expr(index_entry.indpred, index_entry.indrelid) = ${sqlStringLiteral(MEDIA_QUARANTINE_INDEX_PREDICATE)}
+         AND NOT EXISTS (SELECT 1 FROM pg_constraint constraint_entry WHERE constraint_entry.conindid = index_entry.indexrelid)
     ) AS present` },
   ],
 };
