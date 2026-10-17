@@ -11,13 +11,17 @@ import-map.json records each imported repository path and source digest.
 
 ## Integration
 
-- Flutter uses the supplied black/white horizontal lockups, black/warm compact
-  symbols, and black/white wordmarks through LythBrand. It keeps the supplied
+- Kyle's 17 October either/or requirement selects standalone black/white
+  wordmarks for named headers and entry screens, and standalone black/warm LH
+  symbols for compact surfaces. Combined LH+wordmark lockups are not displayed.
+  Their imported files remain unchanged for source provenance.
+- Flutter uses these standalone variants through LythBrand. It keeps the supplied
   aspect ratio and does not tint, animate, reconstruct, or alter the artwork.
 - Desktop navigation retains its injectable passive brand slot. The feed mark
   remains the existing **Feed controls** button, with that action label; the
   child image is decorative. Standalone artwork has one **Lythaus** image label.
-- Login and onboarding use the shared lockup. Onboarding remains scrollable at
+- Login, onboarding and expanded desktop navigation use the standalone wordmark.
+  The control-panel header also uses the standalone wordmark. Onboarding remains scrollable at
   320px with enlarged text. Authentication and composer state logic is unchanged.
 - App and admin headers/icons use the manifest's fingerprinted paths.
   Fingerprinted paths are immutable; stable fallback aliases keep their existing
@@ -62,24 +66,19 @@ favicon responses, and screenshots. The existing navigation browser test
 additionally checks draft text, selection and focus across resizing/tab changes,
 keyboard navigation, and sign-out.
 
-Screenshots require painted pixels inside the accessible brand bounds, in
-addition to checking its label and dimensions. WebKit 26.5 with the pinned
-Flutter 3.41.1 CanvasKit GPU renderer retained an earlier frame without the
-asynchronously loaded artwork, both locally and in hosted CI. Frame tracing
-confirmed an active lifecycle and a scheduled asset-update frame; another real
-interaction made the artwork visible. Untouched PNGs and HTML-image platform
-views also reproduced the failure. Longer waits and repaint boundaries did not
-fix it. These diagnostic approaches are not included as product workarounds.
+Screenshots still require painted pixels inside the accessible brand bounds,
+in addition to checking the label and dimensions. This candidate retains the
+normal Flutter renderer; the prior global WebKit CPU workaround is unacceptable
+because of measured composer regression. The service-worker version token and
+immutable release hashing are preserved.
 
-The app bootstrap now selects Flutter's supported `canvasKitForceCpuOnly`
-configuration for WebKit (the Apple browser vendor), retaining the default
-renderer elsewhere. This paints the approved SVG before interaction without
-changing its bytes, adding animation, or weakening the pixel assertion. The
-bootstrap preserves the existing service-worker version token and goes through
-the same immutable release hashing. This affects the whole WebKit web renderer;
-real-device scrolling performance and power use remain unmeasured. Native
-rendering is unchanged. Re-evaluate this fallback when upgrading Flutter/WebKit,
-using the same initial-paint gate before restoring GPU rendering.
+Release remains held: the strict WebKit pixel gate is unresolved. Static WebGL
+protocol snapshots differ across engines, but sampling a non-preserved drawing
+buffer after presentation does not prove the displayed UI is blank. The available
+headed WebKit desktop-capture path also fails plain-HTML calibration. A trustworthy
+independent visible-layer capture is needed before release validation can be
+completed. No CPU, preserved-buffer, repaint-loop or retry workaround is used to
+clear this gate. Real Safari behavior and device performance remain unverified.
 
 Native byte/mapping validation does not prove compilation or device rendering.
 Android, iOS, macOS and Windows packaging must be checked on their native

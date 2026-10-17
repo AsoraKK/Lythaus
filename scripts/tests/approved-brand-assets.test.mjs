@@ -88,6 +88,21 @@ test('native catalogs retain their size, scale and resource mappings', () => {
   assert.match(read('lib/services/push/push_notification_service.dart').toString(), /@drawable\/ic_launcher_monochrome/);
 });
 
+test('named admin headers use approved standalone wordmarks, never combined lockups', () => {
+  const nav = read('apps/control-panel/src/components/Nav.jsx').toString();
+  const images = [...nav.matchAll(/<img[^>]*src="([^"]+)"[^>]*alt="Lythaus"/g)];
+  assert.deepEqual(images.map(match => match[1]), [
+    '/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg',
+    '/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg',
+  ]);
+  for (const [, asset] of images) {
+    const supplied = manifest.web_copy_map.find(entry => entry.public_url === asset);
+    assert.ok(supplied);
+    assert.equal(sha(read('apps/control-panel/public' + asset)), supplied.sha256);
+  }
+  assert.ok(!nav.includes('lockup'));
+});
+
 test('fingerprinted assets are immutable while stable aliases and documents revalidate', () => {
   for (const file of ['web/_headers', 'apps/control-panel/public/_headers']) {
     const headers = read(file).toString();

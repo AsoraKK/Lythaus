@@ -9,10 +9,10 @@ const script = template
   .replace('{{flutter_build_config}}', '')
   .replace('{{flutter_service_worker_version}}', '"test-release"');
 
-for (const [browser, vendor, cpu] of [
-  ['WebKit', 'Apple Computer, Inc.', true],
-  ['Chromium', 'Google Inc.', false],
-  ['Firefox', '', false],
+for (const [browser, vendor] of [
+  ['WebKit', 'Apple Computer, Inc.'],
+  ['Chromium', 'Google Inc.'],
+  ['Firefox', ''],
 ]) {
   test(`${browser} selects its rendering path without changing release startup`, () => {
     const calls = [];
@@ -21,7 +21,7 @@ for (const [browser, vendor, cpu] of [
       _flutter: { loader: { load: options => calls.push(options) } },
     });
     assert.equal(calls.length, 1);
-    assert.equal(calls[0].config.canvasKitForceCpuOnly, cpu);
+    assert.equal(calls[0].config?.canvasKitForceCpuOnly, undefined);
     assert.equal(calls[0].serviceWorkerSettings.serviceWorkerVersion, 'test-release');
   });
 }

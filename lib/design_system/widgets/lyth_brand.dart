@@ -3,9 +3,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 /// Approved artwork treatments; the supplied outlines are never recolored.
 enum LythBrandVariant {
-  /// Horizontal symbol and wordmark.
-  lockup,
-
   /// Square compact LH symbol.
   symbol,
 
@@ -18,7 +15,7 @@ class LythBrand extends StatelessWidget {
   /// Use [decorative] when a containing control already describes its action.
   const LythBrand({
     super.key,
-    this.variant = LythBrandVariant.lockup,
+    this.variant = LythBrandVariant.wordmark,
     this.height = 32,
     this.decorative = false,
   });
@@ -36,15 +33,10 @@ class LythBrand extends StatelessWidget {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final aspectRatio = switch (variant) {
-      LythBrandVariant.lockup => 627.24944891 / 130.6866688,
       LythBrandVariant.symbol => 1.0,
       LythBrandVariant.wordmark => 470.28944891 / 130.6866688,
     };
     final file = switch (variant) {
-      LythBrandVariant.lockup =>
-        dark
-            ? 'lythaus-lockup-white.57df30b168bc.svg'
-            : 'lythaus-lockup-black.9518c6eeb03b.svg',
       LythBrandVariant.symbol =>
         dark
             ? 'lythaus-symbol-square-warm.fb697a91817f.svg'

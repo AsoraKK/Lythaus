@@ -220,7 +220,7 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
                             widget.brand ??
                             LythBrand(
                               variant: constraints.maxWidth >= 1100
-                                  ? LythBrandVariant.lockup
+                                  ? LythBrandVariant.wordmark
                                   : LythBrandVariant.symbol,
                             ),
                       ),

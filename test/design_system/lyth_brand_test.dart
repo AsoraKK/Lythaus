@@ -11,6 +11,23 @@ import 'package:lythaus/ui/screens/onboarding/onboarding_intro.dart';
 
 void main() {
   setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
+  testWidgets('named branding defaults to the standalone approved wordmark', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: LythBrand())),
+    );
+    await tester.pumpAndSettle();
+    final svg = tester.widget<SvgPicture>(find.byType(SvgPicture));
+    expect(
+      (svg.bytesLoader as SvgAssetLoader).assetName,
+      'assets/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg',
+    );
+    expect(LythBrandVariant.values, [
+      LythBrandVariant.symbol,
+      LythBrandVariant.wordmark,
+    ]);
+  });
   for (final dark in [false, true]) {
     for (final variant in LythBrandVariant.values) {
       testWidgets(
