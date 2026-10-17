@@ -15,7 +15,7 @@ const output=path.resolve(process.env.BRAND_DIAGNOSTIC_OUTPUT??'build/brand-diag
 const builds=JSON.parse(process.env.BRAND_DIAGNOSTIC_BUILDS);
 const engine=process.env.BRAND_BROWSER??'webkit', headed=process.env.BRAND_DIAGNOSTIC_HEADED==='1';
 await mkdir(output,{recursive:true});
-const types={'.js':'text/javascript','.html':'text/html','.wasm':'application/wasm','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.ttf':'font/ttf','.otf':'font/otf'};
+const types={'.js':'text/javascript','.html':'text/html','.css':'text/css','.wasm':'application/wasm','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.ttf':'font/ttf','.otf':'font/otf'};
 async function inventory(root,prefix='') {
   const result={};
   for(const entry of await readdir(path.join(root,prefix),{withFileTypes:true})){
