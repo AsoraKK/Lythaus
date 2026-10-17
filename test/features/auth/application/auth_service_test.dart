@@ -182,6 +182,87 @@ Future<void> _expectStaleGetCurrentUserRefreshToPreserveReplacement({
   expect(logoutCredentials, [('Bearer account-a-access', 'account-a-refresh')]);
 }
 
+Future<void>
+_expectRestorationDuringReplacementCommitToRespectOwnerRevision() async {
+  final accountBRefreshWriteStarted = Completer<void>();
+  final releaseAccountBRefreshWrite = Completer<void>();
+  final storage = _AuthTestSecureStorage(
+    {'jwt': 'account-a-access', 'refreshToken': 'account-a-refresh'},
+    refreshTokenWriteStarted: accountBRefreshWriteStarted,
+    releaseRefreshTokenWrite: releaseAccountBRefreshWrite,
+  );
+  final refreshStarted = Completer<void>();
+  final refreshResponse = Completer<http.Response>();
+  var accountBUserinfoCalls = 0;
+  var logoutCalls = 0;
+  final service = AuthService(
+    secureStorage: storage,
+    httpClient: MockClient((request) async {
+      if (request.url.path == '/api/auth/email') {
+        return http.Response(
+          '{"accessToken":"account-b-access","refreshToken":"account-b-refresh"}',
+          200,
+        );
+      }
+      if (request.url.path == '/api/auth/userinfo') {
+        expect(request.headers['Authorization'], 'Bearer account-b-access');
+        accountBUserinfoCalls++;
+        if (accountBUserinfoCalls == 1) {
+          return http.Response(
+            jsonEncode({
+              'id': '018f0000-0000-7000-8000-000000000007',
+              'email': 'account-b@example.invalid',
+              'role': 'user',
+              'tier': 'bronze',
+              'created_at': '2026-08-01T00:00:00Z',
+              'last_login_at': '2026-08-01T00:00:00Z',
+            }),
+            200,
+          );
+        }
+        return http.Response('{}', 401);
+      }
+      if (request.url.path == '/api/auth/refresh') {
+        expect(
+          (jsonDecode(request.body) as Map<String, dynamic>)['refreshToken'],
+          'account-a-refresh',
+        );
+        refreshStarted.complete();
+        return refreshResponse.future;
+      }
+      if (request.url.path == '/api/auth/logout') {
+        logoutCalls++;
+        return http.Response('{"loggedOut":true}', 200);
+      }
+      throw StateError('Unexpected request ${request.url.path}');
+    }),
+    authUrl: 'https://api.lythaus.co/api',
+  );
+
+  final accountBLogin = service.loginWithEmail(
+    'account-b@example.invalid',
+    'correct-horse-battery-staple',
+  );
+  await accountBRefreshWriteStarted.future;
+  final restoration = service.getCurrentUser();
+  await refreshStarted.future;
+  final restorationOutcome = _resultOrError(restoration);
+
+  releaseAccountBRefreshWrite.complete();
+  expect((await accountBLogin).id, '018f0000-0000-7000-8000-000000000007');
+  refreshResponse.complete(
+    http.Response(
+      '{"accessToken":"late-account-a-access","refreshToken":"late-account-a-refresh"}',
+      200,
+    ),
+  );
+
+  expect(await restorationOutcome, isNull);
+  expect(await service.getJwtToken(), 'account-b-access');
+  expect(storage.values['refreshToken'], 'account-b-refresh');
+  expect(logoutCalls, 0);
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -539,6 +620,11 @@ void main() {
     () => _expectStaleGetCurrentUserRefreshToPreserveReplacement(
       transportError: true,
     ),
+  );
+
+  test(
+    'getCurrentUser begun during replacement storage commit stays bound to the old owner',
+    _expectRestorationDuringReplacementCommitToRespectOwnerRevision,
   );
 
   test(
