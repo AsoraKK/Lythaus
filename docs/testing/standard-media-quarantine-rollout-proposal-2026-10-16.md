@@ -1,9 +1,11 @@
 # Standard-media quarantine cleanup staged rollout
 
-**Status (2026-10-17):** The 0021-specific staged migration path is implemented
-and validated on disposable PostgreSQL 17. Hosted migration execution remains
-held for database-owner and provider review. This document authorizes no hosted
-schema change, role grant, feature activation, merge, or deployment.
+**Status (2026-10-17):** The staged 0021 helper remains validated on disposable
+PostgreSQL 17. A separate read-only production plan and protected 0021-only
+executor are implemented. Hosted execution remains blocked by the unconditional
+owner cutover decision gate and unavailable provider evidence. This document
+authorizes no hosted schema change, role grant, feature activation, merge, or
+deployment.
 
 ## Staged runner behavior
 
@@ -51,11 +53,29 @@ proof. A column-only state and an exact inactive invalid index are the only
 partial states eligible for resume. Other partially applied migrations retain
 their existing fail-closed behavior.
 
+## Production scope and recovery
+
+The all-migrations workflow remains the default. The separate `0021-only`
+scope first creates a read-only plan from provider GETs, the existing
+Cloudflare Hyperdrive verifier, and a read-only PlanetScale registry/catalog
+session. The optional execution job has its own `production` environment gate,
+uses a pre-provisioned admin connection, and does not create roles or apply
+grants. The plan binds that connection to the planned branch, database, and
+origin fingerprint. Provider database slug and branch ID remain distinct from
+the physical PostgreSQL database name in the SQL connection.
+
+An unconditional `0021_cutover_owner_decision_pending` blocker keeps the plan
+from becoming ready. Once that gate is addressed, a fully applied 0021 schema
+with the exact registry prefix through 0020 can recover by writing only the
+canonical registry marker after exact postconditions pass under the existing
+advisory lock. It does not rerun DDL in this recovery path.
+
 ## Local evidence
 
-- `npm run test:planetscale-production-migrations`: 27/27 tests pass, including
-  staged ordering, failed-build retry, invalid-index handling, drift refusal,
-  active-build refusal, and migration-byte pinning.
+- `npm run test:planetscale-production-migrations`: 42/42 tests pass, covering
+  staged ordering, failed-build retry, invalid-index handling, drift
+  refusal, active-build refusal, migration-byte pinning, the owner-blocked
+  read-only plan, target binding, and marker recovery with injected failures.
 - `node --test scripts/tests/planetscale-media-quarantine.postgres.mjs`:
   7/7 pass on disposable PostgreSQL 17.11. Separate login connections prove
   `MEMBER = true` with `USAGE = false` hides a real concurrent build's progress
