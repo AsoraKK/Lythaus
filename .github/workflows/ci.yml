@@ -442,7 +442,7 @@ jobs:
       - name: Build approved brand browser fixtures
         run: |
           python3 scripts/tests/approved-brand-path-generator.test.py
-          node --test scripts/tests/brand-artwork-pixels.test.mjs scripts/tests/brand-diagnostic-pair.test.mjs
+          node --test scripts/tests/brand-artwork-pixels.test.mjs scripts/tests/brand-diagnostic-pair.test.mjs scripts/tests/full-login-source.test.mjs scripts/tests/full-login-pixels.test.mjs
           python3 scripts/generate-approved-brand-paths.py --check
           flutter build web --release --no-pub --no-tree-shake-icons --no-wasm-dry-run --no-web-resources-cdn --target test/browser/approved_brand_entry.dart --output build/brand-web
           npm ci --ignore-scripts --no-audit --prefix apps/control-panel
@@ -459,13 +459,14 @@ jobs:
         timeout-minutes: 15
         env:
           DIAGNOSTIC_REVIEW_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: bash scripts/run-brand-failure-diagnostic.sh
+          FULL_LOGIN_ENGINE: webkit
+        run: bash scripts/run-full-login-failure-diagnostic.sh
       - name: Upload failure-only WPE diagnosis
         if: ${{ always() && steps.approved_brand_gate.outcome == 'failure' }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
-          name: brand-failure-wpe-diagnostic
-          path: build/brand-failure-diagnostic
+          name: full-login-wpe-ablation
+          path: build/full-login-ablation
           if-no-files-found: warn
           retention-days: 7
       - name: Upload approved brand screenshots

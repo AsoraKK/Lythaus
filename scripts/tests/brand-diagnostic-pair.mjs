@@ -33,7 +33,7 @@ await writeFile(path.join(baseline,'flutter_bootstrap.js'),b);
 const after={baseline:await inventory(baseline),candidate:await inventory(candidate)};
 const differences=[...new Set([...Object.keys(after.baseline),...Object.keys(after.candidate)])].filter(k=>after.baseline[k]!==after.candidate[k]);
 await writeFile(path.join(output,'paired-resources.json'),JSON.stringify({source:sha,reviewHead:process.env.DIAGNOSTIC_REVIEW_HEAD,
- baselineRenderer:process.env.BRAND_DIAGNOSTIC_RENDERER_BASE,construction:'Same current tree; only baseline LythBrand replaced with the pinned SVG renderer. Same fixture/dependencies/resources.',
+ baselineRenderer:process.env.BRAND_DIAGNOSTIC_RENDERER_BASE,construction:process.env.BRAND_DIAGNOSTIC_DESCRIPTION??'Same current tree; only baseline LythBrand replaced with the pinned SVG renderer. Same fixture/dependencies/resources.',
  bootstrapOriginal:{baseline:hash(a),candidate:hash(b)},before,after,differences},null,2));
 assert.deepEqual(differences,['main.dart.js'],'Non-application resources must match exactly');
 await writeFile(path.join(output,'builds.json'),JSON.stringify([
