@@ -124,6 +124,7 @@ const runtimeRoutes: RuntimeRoute[] = [
   { path: '/admin/privacy/legal-holds/{holdId}/clear', method: 'post', worker: 'admin', dispatcherNeedle: 'const legalHoldClear =' },
   { path: '/admin/editorial/publications', method: 'post', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/editorial/publications'" },
   { path: '/admin/moderation/cases/{caseId}/decision', method: 'post', worker: 'admin', dispatcherNeedle: 'const moderation =' },
+  { path: '/admin/moderation/cases/{caseId}/rereview', method: 'post', worker: 'admin', dispatcherNeedle: 'const moderationRereview =' },
   { path: '/admin/appeals/{appealId}/adjudications', method: 'post', worker: 'admin', dispatcherNeedle: 'const appealAdjudication =' },
   { path: '/admin/appeals/pending-adjudication', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/appeals/pending-adjudication'" },
   { path: '/admin/reviewers/{reviewerId}/qualification', method: 'post', worker: 'admin', dispatcherNeedle: 'const reviewerQualification =' },

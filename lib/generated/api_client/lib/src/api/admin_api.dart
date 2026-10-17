@@ -59,6 +59,8 @@ import 'package:lythaus_api_client/src/model/legal_hold_create.dart';
 import 'package:lythaus_api_client/src/model/legal_hold_response.dart';
 import 'package:lythaus_api_client/src/model/moderation_decision_request.dart';
 import 'package:lythaus_api_client/src/model/moderation_decision_response.dart';
+import 'package:lythaus_api_client/src/model/moderation_rereview_request.dart';
+import 'package:lythaus_api_client/src/model/moderation_rereview_response.dart';
 import 'package:lythaus_api_client/src/model/monthly_context_review_error.dart';
 import 'package:lythaus_api_client/src/model/monthly_context_review_request.dart';
 import 'package:lythaus_api_client/src/model/monthly_context_review_response.dart';
@@ -1744,8 +1746,115 @@ class AdminApi {
     );
   }
 
-  /// List moderation cases
+  /// Reopen a resolved moderation case for review
+  /// Reopens only a currently resolved case when both the expected state and its exact composite revision match. The transition appends an audit event and puts current content under review; posts are excluded from public feeds until a subsequent moderation decision restores eligibility.
   ///
+  /// Parameters:
+  /// * [origin] - Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
+  /// * [caseId]
+  /// * [moderationRereviewRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [ModerationRereviewResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<ModerationRereviewResponse>> adminModerationCaseRereview({
+    String origin = 'https://admin.lythaus.co',
+    required String caseId,
+    required ModerationRereviewRequest moderationRereviewRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/moderation/cases/{caseId}/rereview'.replaceAll('{' r'caseId' '}', encodeQueryParameter(_serializers, caseId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        r'Origin': origin,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'cloudflareAccess',
+            'keyName': 'CF-Access-Jwt-Assertion',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(ModerationRereviewRequest);
+      _bodyData = _serializers.serialize(moderationRereviewRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    ModerationRereviewResponse? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(ModerationRereviewResponse),
+      ) as ModerationRereviewResponse;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<ModerationRereviewResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// List moderation cases
+  /// Each resolved item includes a &#x60;revision&#x60; token containing its exact &#x60;resolvedAt&#x60; timestamp, &#x60;sourceEventId&#x60;, and latest &#x60;decisionId&#x60;. Use that token with the re-review operation to compare-and-set the case back into review.
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
