@@ -160,6 +160,9 @@ was tested. Both builds retain the identical new diagnostic fixture/direct contr
 Original bootstrap hashes are retained, and the build-specific service-worker
 version is equalized only after proving it is the sole loader difference. Every
 non-main.dart.js build resource must then match exactly, or comparison stops.
+The first hosted attempt stopped on differing `.last_build_id` metadata before
+launching WPE. Both hidden Flutter build markers are now preserved as evidence
+outside the served roots; all actual served non-application bytes still must match.
 The hosted comparison uses headless WPE, light scheme, width 320, brand/no-brand
 controls, Dart frame/paint callbacks and PNG readiness. It does not rerun GTK,
 force CPU rendering, change fidelity tolerance or grant release clearance.

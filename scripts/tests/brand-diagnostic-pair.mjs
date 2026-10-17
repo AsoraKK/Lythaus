@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {readFile,writeFile,readdir} from 'node:fs/promises';
+import {readFile,writeFile,readdir,rename} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import path from 'node:path';
@@ -16,6 +16,12 @@ async function inventory(root,prefix=''){
  }return result;
 }
 const before={baseline:await inventory(baseline),candidate:await inventory(candidate)};
+// Flutter's hidden incremental-build marker is not a browser resource. Preserve
+// both originals in the evidence directory and keep it out of both served roots.
+for(const [name,root] of [['baseline',baseline],['candidate',candidate]]){
+ if(Object.hasOwn(before[name],'.last_build_id'))
+  await rename(path.join(root,'.last_build_id'),path.join(output,name+'-last-build-id.txt'));
+}
 // Flutter embeds a build-specific service-worker version in otherwise identical
 // loader bytes. Record both originals and use exactly the candidate loader for
 // both synthetic fixtures only after validating this is the sole difference.

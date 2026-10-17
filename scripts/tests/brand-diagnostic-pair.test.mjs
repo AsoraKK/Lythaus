@@ -10,6 +10,7 @@ for(const change of ['version-only','wasm','loader'])test('paired resource contr
   for(const name of ['baseline','candidate','output'])await mkdir(path.join(root,name));
   for(const name of ['baseline','candidate']){
    await writeFile(path.join(root,name,'main.dart.js'),name);
+   await writeFile(path.join(root,name,'.last_build_id'),name+'-build-marker');
    await writeFile(path.join(root,name,'canvaskit.wasm'),change==='wasm'?name:'same WASM');
    await writeFile(path.join(root,name,'flutter_bootstrap.js'),`loader(${change==='loader'?name:'same'}); serviceWorkerVersion: "${name==='baseline'?123:456}"`);
   }
@@ -20,6 +21,9 @@ for(const change of ['version-only','wasm','loader'])test('paired resource contr
    const report=JSON.parse(await readFile(path.join(root,'output','paired-resources.json'),'utf8'));
    assert.deepEqual(report.differences,['main.dart.js']);
    assert.notEqual(report.bootstrapOriginal.baseline,report.bootstrapOriginal.candidate);
+   assert.equal(await readFile(path.join(root,'output','baseline-last-build-id.txt'),'utf8'),'baseline-build-marker');
+   assert.equal(await readFile(path.join(root,'output','candidate-last-build-id.txt'),'utf8'),'candidate-build-marker');
+   assert.equal(Object.hasOwn(report.after.baseline,'.last_build_id'),false);
   }else assert.notEqual(result.status,0,'Resource mismatch must stop diagnostic comparison');
  }finally{await rm(root,{recursive:true,force:true});}
 });
