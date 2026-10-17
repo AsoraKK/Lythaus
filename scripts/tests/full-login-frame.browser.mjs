@@ -19,7 +19,7 @@ const source=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
 assert.ok(['chromium','webkit'].includes(engine));
 await mkdir(output,{recursive:true});
 const roots={direct:path.resolve(process.env.FRAME_DIRECT_ROOT),required:path.resolve(process.env.FRAME_REQUIRED_ROOT),real:path.resolve(process.env.FRAME_REAL_APP_ROOT)};
-const sources={direct:source,required:process.env.FRAME_REQUIRED_SOURCE??source,real:process.env.FRAME_REAL_APP_SOURCE??source};
+const sources={direct:process.env.FRAME_DIRECT_SOURCE??source,required:process.env.FRAME_REQUIRED_SOURCE??source,real:process.env.FRAME_REAL_APP_SOURCE??source};
 async function inventory(root,prefix=''){
  const result={};
  for(const entry of await readdir(path.join(root,prefix),{withFileTypes:true})){
@@ -54,7 +54,7 @@ for(const config of cases){
  // cannot be bypassed. Its service-worker lifecycle is therefore not certified.
  const context=await browser.newContext({locale:'en-US',viewport:{width:320,height:960},colorScheme:'light',reducedMotion:'reduce',serviceWorkers:config.real?'block':'allow'});
  const health=await observeRenderHealth(context,origin);
- await installPresentationProbe(context);
+ await installPresentationProbe(context,instrumented);
  await context.addInitScript(()=>{
   const state=window.__fullLogin={events:[],counts:{},renderBoxes:[]};
   window.__fullLoginProbeEvent=(name,detail,extra)=>{

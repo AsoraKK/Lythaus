@@ -92,6 +92,10 @@ requests fail isolation and remain in evidence.
 
 Read-only telemetry records GL call counts/times, canvas dimensions/attachment,
 canvas resize setters and the framework's first-frame DOM notification. In the
+pinned-byte frame arms only, GL methods and dimension setters are observed; the
+two uninstrumented controls have no Dart frame hook or GL/resize wrappers. They
+retain the existing network/canvas health observation and first-frame event
+listener. In the
 pinned Flutter SDK, RendererBinding invokes the `flutter/service_worker` method
 from a post-frame callback; the engine dispatches `flutter-first-frame` from that
 message. The DOM event is a framework milestone, not a GPU presentation receipt.

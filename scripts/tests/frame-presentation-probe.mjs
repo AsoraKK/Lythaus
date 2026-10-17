@@ -1,9 +1,10 @@
 // Observe GL calls and the framework's first-frame notification without drawing.
-export async function installPresentationProbe(context){
- await context.addInitScript(()=>{
-  const state=window.__presentation={firstFrameAt:null,contexts:[],resizes:[],errors:[]};
+export async function installPresentationProbe(context,observeGL=true){
+ await context.addInitScript(observeGL=>{
+  const state=window.__presentation={firstFrameAt:null,glObservation:observeGL,contexts:[],resizes:[],errors:[]};
   window.addEventListener('flutter-first-frame',()=>{state.firstFrameAt??=performance.now();});
   window.addEventListener('error',event=>state.errors.push(event.message));
+  if(!observeGL)return;
   const contexts=new WeakMap();
   const canvases=new WeakMap();let nextCanvas=0;
   const canvasId=canvas=>{if(!canvases.has(canvas))canvases.set(canvas,++nextCanvas);return canvases.get(canvas);};
@@ -31,5 +32,5 @@ export async function installPresentationProbe(context){
      return original.apply(this,args);
     };
    }
- });
+ },observeGL);
 }
