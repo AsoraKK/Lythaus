@@ -9,6 +9,67 @@ import 'package:http/testing.dart';
 import 'package:lythaus/features/auth/application/auth_service.dart';
 import 'package:lythaus/features/auth/domain/auth_failure.dart';
 
+class _AuthTestSecureStorage extends FlutterSecureStorage {
+  _AuthTestSecureStorage(Map<String, String> initialValues, {this.jwtRead})
+    : values = {...initialValues};
+
+  final Map<String, String> values;
+  final Completer<String?>? jwtRead;
+
+  @override
+  Future<String?> read({
+    required String key,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    if (key == 'jwt' && jwtRead != null) return jwtRead!.future;
+    return values[key];
+  }
+
+  @override
+  Future<void> write({
+    required String key,
+    required String? value,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    if (value == null) {
+      values.remove(key);
+    } else {
+      values[key] = value;
+    }
+  }
+
+  @override
+  Future<void> delete({
+    required String key,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    values.remove(key);
+  }
+}
+
+Future<Object?> _resultOrError<T>(Future<T> future) async {
+  try {
+    return await future;
+  } on Object catch (error) {
+    return error;
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -577,6 +638,163 @@ void main() {
       ]);
       expect(secondRequestStarted, isTrue);
       expect(await service.getJwtToken(), 'account-b-renewed');
+    },
+  );
+
+  test(
+    'direct account replacement fences refreshes started while login is pending',
+    () async {
+      FlutterSecureStorage.setMockInitialValues({
+        'jwt': 'account-a-access',
+        'refreshToken': 'account-a-refresh',
+      });
+      final accountARefresh0Started = Completer<void>();
+      final accountARefresh0Response = Completer<http.Response>();
+      final accountARefresh1Started = Completer<void>();
+      final accountARefresh1Response = Completer<http.Response>();
+      final accountBLoginStarted = Completer<void>();
+      final accountBLoginResponse = Completer<http.Response>();
+      var refreshCalls = 0;
+      final service = AuthService(
+        httpClient: MockClient((request) async {
+          if (request.url.path == '/api/auth/refresh') {
+            expect(
+              (jsonDecode(request.body)
+                  as Map<String, dynamic>)['refreshToken'],
+              'account-a-refresh',
+            );
+            refreshCalls++;
+            if (refreshCalls == 1) {
+              accountARefresh0Started.complete();
+              return accountARefresh0Response.future;
+            }
+            accountARefresh1Started.complete();
+            return accountARefresh1Response.future;
+          }
+          if (request.url.path == '/api/auth/email') {
+            accountBLoginStarted.complete();
+            return accountBLoginResponse.future;
+          }
+          if (request.url.path == '/api/auth/userinfo') {
+            expect(request.headers['Authorization'], 'Bearer account-b-access');
+            return http.Response(
+              jsonEncode({
+                'id': '018f0000-0000-7000-8000-000000000003',
+                'email': 'account-b@example.invalid',
+                'role': 'user',
+                'tier': 'bronze',
+                'created_at': '2026-08-01T00:00:00Z',
+                'last_login_at': '2026-08-01T00:00:00Z',
+              }),
+              200,
+            );
+          }
+          throw StateError('Unexpected request ${request.url.path}');
+        }),
+        authUrl: 'https://api.lythaus.co/api',
+      );
+
+      final accountARefresh0 = service.refreshSession();
+      await accountARefresh0Started.future;
+      final accountBLogin = service.loginWithEmail(
+        'account-b@example.invalid',
+        'correct-horse-battery-staple',
+      );
+      await accountBLoginStarted.future;
+      final accountARefresh1 = service.refreshSession();
+      await accountARefresh1Started.future;
+
+      accountBLoginResponse.complete(
+        http.Response(
+          '{"accessToken":"account-b-access","refreshToken":"account-b-refresh"}',
+          200,
+        ),
+      );
+      expect((await accountBLogin).id, '018f0000-0000-7000-8000-000000000003');
+      expect(await service.getJwtToken(), 'account-b-access');
+
+      final accountARefresh1Outcome = _resultOrError(accountARefresh1);
+      final accountARefresh0Outcome = _resultOrError(accountARefresh0);
+      accountARefresh1Response.complete(
+        http.Response(
+          '{"accessToken":"late-account-a-access","refreshToken":"late-account-a-refresh"}',
+          200,
+        ),
+      );
+      accountARefresh0Response.complete(http.Response('{}', 503));
+      expect(await accountARefresh1Outcome, isFalse);
+      expect(await accountARefresh0Outcome, isFalse);
+      expect(await service.getJwtToken(), 'account-b-access');
+      expect(
+        await const FlutterSecureStorage().read(key: 'refreshToken'),
+        'account-b-refresh',
+      );
+      expect(refreshCalls, 2);
+    },
+  );
+
+  test(
+    'refresh started during logout cannot restore the signed-out account',
+    () async {
+      final jwtRead = Completer<String?>();
+      final storage = _AuthTestSecureStorage({
+        'jwt': 'account-a-access',
+        'refreshToken': 'account-a-refresh',
+      }, jwtRead: jwtRead);
+      final accountARefresh0Started = Completer<void>();
+      final accountARefresh0Response = Completer<http.Response>();
+      final accountARefresh1Started = Completer<void>();
+      final accountARefresh1Response = Completer<http.Response>();
+      var refreshCalls = 0;
+      final service = AuthService(
+        secureStorage: storage,
+        httpClient: MockClient((request) async {
+          if (request.url.path == '/api/auth/refresh') {
+            expect(
+              (jsonDecode(request.body)
+                  as Map<String, dynamic>)['refreshToken'],
+              'account-a-refresh',
+            );
+            refreshCalls++;
+            if (refreshCalls == 1) {
+              accountARefresh0Started.complete();
+              return accountARefresh0Response.future;
+            }
+            accountARefresh1Started.complete();
+            return accountARefresh1Response.future;
+          }
+          if (request.url.path == '/api/auth/logout') {
+            return http.Response('{}', 200);
+          }
+          throw StateError('Unexpected request ${request.url.path}');
+        }),
+        authUrl: 'https://api.lythaus.co/api',
+      );
+
+      final accountARefresh0 = service.refreshSession();
+      await accountARefresh0Started.future;
+      final logout = service.logout();
+      final accountARefresh1 = service.refreshSession();
+      await accountARefresh1Started.future;
+      jwtRead.complete('account-a-access');
+      await logout;
+
+      final accountARefresh1Outcome = _resultOrError(accountARefresh1);
+      final accountARefresh0Outcome = _resultOrError(accountARefresh0);
+      accountARefresh1Response.complete(
+        http.Response(
+          '{"accessToken":"late-account-a-access","refreshToken":"late-account-a-refresh"}',
+          200,
+        ),
+      );
+      accountARefresh0Response.completeError(
+        StateError('account A transport failed after sign-out'),
+      );
+      expect(await accountARefresh1Outcome, isFalse);
+      expect(await accountARefresh0Outcome, isFalse);
+      expect(await service.getJwtToken(), isNull);
+      expect(storage.values, isEmpty);
+      expect(refreshCalls, 2);
     },
   );
 
