@@ -7,6 +7,7 @@ const original=await readFile('lib/main.dart','utf8'),prepared=prepareBrandLogin
 const geometry=await readFile('test/browser/brand_login_geometry.dart','utf8');
 const hash=value=>createHash('sha256').update(value).digest('hex');
 await writeFile(path.join(root,'lib/main.dart'),prepared);
+await writeFile(path.join(root,'lib/brand_login_geometry.dart'),geometry);
 await writeFile(path.join(output,'prepared-main.dart'),prepared);
 await writeFile(path.join(output,'brand-login-geometry.dart'),geometry);
 await writeFile(path.join(output,'source-construction.json'),JSON.stringify({originalMainSha256:hash(original),preparedMainSha256:hash(prepared),geometrySha256:hash(geometry),
