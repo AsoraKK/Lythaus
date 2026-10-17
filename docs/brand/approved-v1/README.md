@@ -16,7 +16,7 @@ import-map.json records each imported repository path and source digest.
   symbols for compact surfaces. Combined LH+wordmark lockups are not displayed.
   Their imported files remain unchanged for source provenance.
 - Flutter uses these standalone variants through LythBrand. It keeps the supplied
-  aspect ratio and does not tint, animate, reconstruct, or alter the artwork.
+  aspect ratio and does not tint, animate, or alter the supplied geometry.
 - On web, the approved SVG paths and transforms are generated into direct Canvas
   operations. This avoids the failing intermediate SVG/image painting path in
   Linux WebKit while keeping Flutter's normal renderer. Native platforms retain
