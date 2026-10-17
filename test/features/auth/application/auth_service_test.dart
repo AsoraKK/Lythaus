@@ -92,6 +92,96 @@ Future<Object?> _resultOrError<T>(Future<T> future) async {
   }
 }
 
+Future<void> _expectStaleGetCurrentUserRefreshToPreserveReplacement({
+  required bool transportError,
+}) async {
+  FlutterSecureStorage.setMockInitialValues({
+    'jwt': 'account-a-access',
+    'refreshToken': 'account-a-refresh',
+  });
+  final refreshStarted = Completer<void>();
+  final refreshResponse = Completer<http.Response>();
+  final logoutCredentials = <(String?, String?)>[];
+  final service = AuthService(
+    httpClient: MockClient((request) async {
+      if (request.url.path == '/api/auth/userinfo') {
+        if (request.headers['Authorization'] == 'Bearer account-a-access') {
+          return http.Response('{}', 401);
+        }
+        expect(request.headers['Authorization'], 'Bearer account-b-access');
+        return http.Response(
+          jsonEncode({
+            'id': '018f0000-0000-7000-8000-000000000006',
+            'email': 'account-b@example.invalid',
+            'role': 'user',
+            'tier': 'bronze',
+            'created_at': '2026-08-01T00:00:00Z',
+            'last_login_at': '2026-08-01T00:00:00Z',
+          }),
+          200,
+        );
+      }
+      if (request.url.path == '/api/auth/refresh') {
+        expect(
+          (jsonDecode(request.body) as Map<String, dynamic>)['refreshToken'],
+          'account-a-refresh',
+        );
+        refreshStarted.complete();
+        return refreshResponse.future;
+      }
+      if (request.url.path == '/api/auth/email') {
+        return http.Response(
+          '{"accessToken":"account-b-access","refreshToken":"account-b-refresh"}',
+          200,
+        );
+      }
+      if (request.url.path == '/api/auth/logout') {
+        logoutCredentials.add((
+          request.headers['Authorization'],
+          (jsonDecode(request.body) as Map<String, dynamic>)['refreshToken']
+              as String?,
+        ));
+        return http.Response('{"loggedOut":true}', 200);
+      }
+      throw StateError('Unexpected request ${request.url.path}');
+    }),
+    authUrl: 'https://api.lythaus.co/api',
+  );
+
+  final staleGetCurrentUser = service.getCurrentUser();
+  await refreshStarted.future;
+  final staleGetCurrentUserOutcome = _resultOrError(staleGetCurrentUser);
+  await service.logout();
+  expect(
+    (await service.loginWithEmail(
+      'account-b@example.invalid',
+      'correct-horse-battery-staple',
+    )).id,
+    '018f0000-0000-7000-8000-000000000006',
+  );
+
+  if (transportError) {
+    refreshResponse.completeError(
+      StateError('account A refresh transport failed'),
+    );
+  } else {
+    refreshResponse.complete(
+      http.Response(
+        '{"accessToken":"late-account-a-access","refreshToken":"late-account-a-refresh"}',
+        200,
+      ),
+    );
+  }
+
+  expect(await staleGetCurrentUserOutcome, isNull);
+  expect(await service.getJwtToken(), 'account-b-access');
+  expect(
+    await const FlutterSecureStorage().read(key: 'refreshToken'),
+    'account-b-refresh',
+  );
+  expect(logoutCredentials, [('Bearer account-a-access', 'account-a-refresh')]);
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -435,6 +525,20 @@ void main() {
       expect(calls, ['/api/auth/userinfo']);
       expect(await service.getJwtToken(), 'access');
     },
+  );
+
+  test(
+    'stale successful refresh cannot make getCurrentUser log out the replacement account',
+    () => _expectStaleGetCurrentUserRefreshToPreserveReplacement(
+      transportError: false,
+    ),
+  );
+
+  test(
+    'stale refresh transport failure cannot make getCurrentUser log out the replacement account',
+    () => _expectStaleGetCurrentUserRefreshToPreserveReplacement(
+      transportError: true,
+    ),
   );
 
   test(

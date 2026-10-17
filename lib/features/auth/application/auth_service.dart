@@ -257,17 +257,21 @@ class AuthService {
       return null;
     }
     final epoch = _sessionEpoch;
+    final ownerRevision = _sessionOwnerRevision;
     var token = await getJwtToken();
+    if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
     if (token == null && _useWebSession && await refreshSession()) {
+      if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
       token = await getJwtToken();
+      if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
     }
     if (token == null) return null;
     try {
       final user = await _fetchCurrentUser(token);
-      if (epoch != _sessionEpoch) return null;
+      if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
       if (!_useWebSession) {
         await _serializeStorage(() async {
-          if (epoch == _sessionEpoch) {
+          if (_ownsCurrentSession(epoch, ownerRevision)) {
             await _secureStorage.write(
               key: _userKey,
               value: jsonEncode(user.toJson()),
@@ -279,14 +283,15 @@ class AuthService {
     } on AuthFailure catch (error) {
       if (!error.invalidSession) rethrow;
       if (await refreshSession()) {
+        if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
         final replacement = await getJwtToken();
         if (replacement != null) {
           try {
             final user = await _fetchCurrentUser(replacement);
-            if (epoch != _sessionEpoch) return null;
+            if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
             if (!_useWebSession) {
               await _serializeStorage(() async {
-                if (epoch == _sessionEpoch) {
+                if (_ownsCurrentSession(epoch, ownerRevision)) {
                   await _secureStorage.write(
                     key: _userKey,
                     value: jsonEncode(user.toJson()),
@@ -301,6 +306,7 @@ class AuthService {
           }
         }
       }
+      if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
       await logout();
       return null;
     } catch (_) {
@@ -359,6 +365,9 @@ class AuthService {
       ownerRevision == _sessionOwnerRevision &&
       !_signedOut &&
       !_logoutFenceIsActive;
+
+  bool _ownsCurrentSession(int epoch, int ownerRevision) =>
+      epoch == _sessionEpoch && ownerRevision == _sessionOwnerRevision;
 
   Future<bool> _refreshSession(int epoch, int ownerRevision) async {
     if (epoch != _sessionEpoch || _signedOut) return false;
