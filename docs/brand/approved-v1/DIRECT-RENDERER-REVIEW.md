@@ -65,5 +65,50 @@ with paired independent desktop/protocol evidence. Required headless WebKit stil
 fails. Hosted exact-head CI, real Safari/device review, performance acceptance and
 coordinated release approval remain outstanding. This document grants no clearance.
 
+## Diagnostic follow-up (17 October)
+
+The integrated 623c48cf headed run passed 17 cases then failed dark onboarding at
+390px. Both independent desktop and protocol captures showed the entire Flutter
+surface blank with the DOM QA label visible. The earlier passes do not supersede
+this failure. Matching main.dart.js alone did not attest the whole environment.
+
+The combined hosted Chromium/WebKit brand step at 623c48cf subsequently failed.
+The evidence artifact exists, but log/artifact downloads returned Forbidden; the
+available step status cannot identify the failing engine or assertion. Hosted
+CI installs browsers with --with-deps. Local host validation instead reports missing
+libGLESv2.so.2 despite the bundled library and launcher library paths. Local runs
+that skip this validation remain diagnostic evidence, never release clearance.
+
+The new bounded fixture isolates a Flutter rectangle, text, direct vector artwork,
+production brand widget, SVG and PNG image, with independent DOM/2D controls. It
+also runs without any brand/image region. Telemetry installed before navigation
+records HTTP statuses and response hashes, request failures, page errors/crashes,
+HTML/OffscreenCanvas context events and a frame heartbeat. Worker-only context
+events are not instrumented. Build-file inventories and sampled live process/library
+hashes supplement browser-bundle and font hashes; they do not attest real hardware.
+
+In matched local headed controls, baseline f2c8712d and the candidate both painted
+rectangle/text and passed direct/production/SVG artwork fidelity, with working DOM,
+2D and no-brand controls. No whole-Flutter loss, network failure, page error or
+observed context loss occurred. The PNG region painted on baseline but was blank
+on candidate in this bounded sample; this remains an image-path observation, not
+proof of whole-surface candidate causation. Both actual dark-390 onboarding pages
+also passed a single fresh-context artwork check. Candidate specificity of the
+earlier whole-surface loss therefore remains UNRESOLVED, not disproved.
+
+An initial diagnostic server root-route error and initial expanded-semantics crop
+errors are preserved as invalid setup evidence. Corrected fixture crops use its
+fixed geometry independently of semantics. No failed production gate was retried
+until green, removed, weakened or replaced. No preceding-sequence replay is claimed.
+
+The production browser harness retains its nonblank threshold and additionally
+compares tight artwork pixels against the approved SVG: mask precision/recall >=90%
+with one-pixel edge allowance, and normalized RGB difference <4%. Shell assertions
+crop the centered 24px artwork, never the whole control. Native 0.5% geometry tests
+remain unchanged. Negative tests reject blank, border-only, wrong-icon and solid
+fills. Named-image counts and decorative duplicate checks are explicit. The SVG
+generator accepts only its documented pinned subset, rejects unknown attributes
+and malformed/nonfinite transform arguments, and is not a general SVG translator.
+
 Raw measurements, scripts, approved-geometry comparisons and screenshots:
 [preserved review bundle](https://chatgpt.com/api/library/files/libfile_a7127ffd29b481919131f9e4a3853e17/download).

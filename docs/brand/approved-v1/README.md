@@ -93,9 +93,13 @@ failure does not establish a candidate-specific defect. Original failures remain
 evidence; earlier passing runs do not supersede them.
 
 Local runs used custom library paths and skipped Playwright host validation;
-hosted CI installs browsers with `--with-deps`. Hosted Flutter rendering results
-were still pending when the diagnostic was introduced. JavaScript hash equality
+hosted CI installs browsers with `--with-deps`. The combined hosted brand browser
+step at 623c48cf failed; its artifact exists but downloads were denied, so the
+failing hosted engine/assertion is unconfirmed. JavaScript hash equality
 alone does not attest bootstrap, CanvasKit/WASM, fonts, browser or graphics bytes.
+See [diagnostic follow-up](DIRECT-RENDERER-REVIEW.md#diagnostic-follow-up-17-october)
+for the bounded baseline/candidate comparison, complete resource inventories,
+context/process telemetry, stricter artwork checks and unresolved attribution.
 The existing headless WPE WebKit screenshot assertion still fails. It has not been
 removed, weakened or replaced by the headed evidence. Earlier black desktop
 captures used separate IPC namespaces and are not rendering evidence. The failed
