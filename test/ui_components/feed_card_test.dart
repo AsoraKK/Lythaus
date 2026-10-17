@@ -38,7 +38,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byIcon(Icons.push_pin_outlined), findsOneWidget);
-    expect(find.text('Image'), findsOneWidget);
+    expect(find.text('Image'), findsNothing);
     expect(find.text('Alice'), findsOneWidget);
     expect(find.byTooltip('View Alice profile'), findsOneWidget);
   });
@@ -166,7 +166,7 @@ void main() {
 
       expect(find.text('Preview'), findsOneWidget);
       expect(find.text('Bob'), findsOneWidget);
-      expect(find.text('Video'), findsOneWidget);
+      expect(find.text('Video'), findsNothing);
     },
   );
 
@@ -232,7 +232,40 @@ void main() {
     }
   });
 
-  testWidgets('renders mixed content label', (tester) async {
+  testWidgets('internal source labels never replace real post text', (
+    tester,
+  ) async {
+    const internalId = '01922222-3333-7444-8555-666666666666';
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FeedCard(
+            item: FeedItem(
+              id: 'synthetic-source',
+              feedId: 'discover',
+              author: internalId,
+              authorId: internalId,
+              sourceName: internalId,
+              contentType: ContentType.text,
+              title: 'Update',
+              body: 'ADR-003 acceptance fixture: $internalId',
+              publishedAt: DateTime.utc(2026, 10, 15),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Lythaus member'), findsOneWidget);
+    expect(find.text('Source: $internalId'), findsNothing);
+    expect(find.text(internalId), findsNothing);
+    expect(
+      find.text('ADR-003 acceptance fixture: $internalId'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('omits redundant mixed content label', (tester) async {
     final feedItem = FeedItem(
       id: 'feed-4',
       feedId: 'mixed',
@@ -255,7 +288,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Mixed'), findsOneWidget);
+    expect(find.text('Mixed'), findsNothing);
   });
 
   testWidgets('shows source metadata label and link indicator for news item', (

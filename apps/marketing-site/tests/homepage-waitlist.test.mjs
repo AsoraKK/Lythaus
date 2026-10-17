@@ -169,10 +169,11 @@ test('secondary story sections use tighter pacing without flattening the primary
 });
 
 test('shared layout declares Lythaus browser and home-screen assets', () => {
-  assert.match(layout, /<link rel="icon" href="\/favicon\.ico" sizes="any" \/>/);
-  assert.match(layout, /<link rel="icon" type="image\/png" href="\/favicon\.png" sizes="64x64" \/>/);
+  assert.match(layout, /<link rel="icon" type="image\/svg\+xml" href="\/icons\/lythaus-v1\/favicon\.116ff3e020c6\.svg" \/>/);
+  assert.match(layout, /<link rel="icon" type="image\/png" href="\/icons\/lythaus-v1\/favicon-96x96\.572a7b9a0d35\.png" sizes="96x96" \/>/);
+  assert.match(layout, /<link rel="icon" type="image\/x-icon" href="\/icons\/lythaus-v1\/favicon\.e3dfdd675a74\.ico" sizes="any" \/>/);
   assert.match(layout, /<link rel="manifest" href="\/site\.webmanifest" \/>/);
-  assert.match(layout, /<link rel="apple-touch-icon" type="image\/png" href="\/apple-touch-icon\.png" sizes="180x180" \/>/);
+  assert.match(layout, /<link rel="apple-touch-icon" type="image\/png" href="\/icons\/lythaus-v1\/apple-touch-icon\.19122fd8c91b\.png" sizes="180x180" \/>/);
   assert.ok(fs.existsSync(path.join(root, 'public/favicon.ico')));
   assert.ok(fs.existsSync(path.join(root, 'public/favicon.png')));
   assert.ok(fs.existsSync(path.join(root, 'public/apple-touch-icon.png')));
@@ -186,9 +187,10 @@ test('shared layout declares Lythaus browser and home-screen assets', () => {
   assert.equal(appManifest.theme_color, '#070706');
   assert.equal(appManifest.background_color, '#070706');
   assert.deepEqual(appManifest.icons, [
-    { src: '/icons/lythaus-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-    { src: '/icons/lythaus-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-    { src: '/icons/lythaus-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    { src: '/icons/lythaus-v1/pwa-icon-192x192.5c5c7622a5f7.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+    { src: '/icons/lythaus-v1/pwa-icon-512x512.27a8dadec032.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+    { src: '/icons/lythaus-v1/pwa-maskable-192x192.36698aff23fb.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+    { src: '/icons/lythaus-v1/pwa-maskable-512x512.10ec5b6e6764.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
   ]);
   for (const [file, size] of [
     ['public/icons/lythaus-192.png', 192],

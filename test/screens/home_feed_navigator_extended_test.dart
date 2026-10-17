@@ -9,6 +9,7 @@ import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/ui/screens/home/home_feed_navigator.dart';
+import 'package:lythaus/ui/components/lythaus_top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -82,13 +83,14 @@ void main() {
   Widget buildWithState({
     required LiveFeedState Function(FeedModel) stateForFeed,
     User? user,
+    List<FeedModel>? feeds,
   }) {
     final container = ProviderContainer(
       overrides: [
         contentRecoveryStorageProvider.overrideWithValue(
           MemoryContentRecoveryStorage(),
         ),
-        feedListProvider.overrideWith((ref) => _feeds),
+        feedListProvider.overrideWith((ref) => feeds ?? _feeds),
         liveFeedStateProvider.overrideWith(
           (ref, feed) => _StaticLiveFeedNotifier(stateForFeed(feed)),
         ),
@@ -112,6 +114,33 @@ void main() {
   }
 
   group('_FeedPage states', () {
+    testWidgets('single feed has no redundant selector callback', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildWithState(
+          feeds: [_feeds.first, _feeds.last],
+          stateForFeed: (_) => const LiveFeedState(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final bar = tester.widget<LythausTopBar>(find.byType(LythausTopBar));
+      expect(bar.onLogoTap, isNull);
+      expect(bar.onTitleTap, isNull);
+    });
+
+    testWidgets('multiple available feeds keep selector callbacks', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildWithState(stateForFeed: (_) => const LiveFeedState()),
+      );
+      await tester.pumpAndSettle();
+      final bar = tester.widget<LythausTopBar>(find.byType(LythausTopBar));
+      expect(bar.onLogoTap, isNotNull);
+      expect(bar.onTitleTap, isNotNull);
+    });
+
     testWidgets('empty Alpha sections render scoped recovery states', (
       tester,
     ) async {
@@ -127,6 +156,8 @@ void main() {
               MemoryContentRecoveryStorage(),
             ),
             feedListProvider.overrideWith((ref) => const []),
+            customFeedsProvider.overrideWith((ref) async => const []),
+            feedEntitlementsProvider.overrideWith((ref) async => null),
           ],
           child: MaterialApp(
             key: ValueKey(section),
@@ -170,6 +201,54 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
+    testWidgets('unverified session offers sign-in without cached cards', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildWithState(
+          stateForFeed: (_) => const LiveFeedState(
+            requiresSignIn: true,
+            errorMessage: 'Sign in again to load posts.',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Sign in'), findsOneWidget);
+      expect(
+        find.text(
+          'Your session could not be verified. Sign in again or continue as a guest.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Retry'), findsNothing);
+      expect(find.text('No posts yet'), findsNothing);
+    });
+
+    testWidgets(
+      'refresh keeps cached cards hidden until the request resolves',
+      (tester) async {
+        final cachedPost = FeedItem(
+          id: 'cached-public-post',
+          feedId: 'discover',
+          author: 'Synthetic member',
+          contentType: ContentType.text,
+          title: 'Update',
+          body: 'Previously loaded post',
+          publishedAt: DateTime.utc(2026, 10, 15),
+        );
+        await tester.pumpWidget(
+          buildWithState(
+            stateForFeed: (_) =>
+                LiveFeedState(items: [cachedPost], isInitialLoading: true),
+          ),
+        );
+        await tester.pump();
+        expect(find.text('Loading posts'), findsOneWidget);
+        expect(find.text(cachedPost.body), findsNothing);
+        expect(find.text('No posts yet'), findsNothing);
+      },
+    );
+
     testWidgets('shows error message with retry button on error', (
       tester,
     ) async {
@@ -188,7 +267,8 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('Unable to load feed right now.'), findsOneWidget);
+      expect(find.text('Couldn’t load posts'), findsOneWidget);
+      expect(find.text('Unable to load feed right now.'), findsNothing);
       expect(find.text('Retry'), findsOneWidget);
     });
 

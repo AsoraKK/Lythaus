@@ -32,18 +32,35 @@ class FeedCard extends StatelessWidget {
     final theme = Theme.of(context);
     final spacing = context.spacing;
     final authorLabel = publicAuthorLabel(item.author, authorId: item.authorId);
-    final sourceLabel =
-        (item.sourceName != null && item.sourceName!.trim().isNotEmpty)
-        ? item.sourceName!.trim()
-        : authorLabel;
+    final sourceLabel = publicAuthorLabel(
+      item.sourceName,
+      authorId: item.authorId,
+    );
     final headline = theme.textTheme.titleMedium?.copyWith(
       fontWeight: FontWeight.w700,
     );
     final body = theme.textTheme.bodyLarge;
 
+    final author = item.authorId?.trim().isNotEmpty == true
+        ? AuthorProfileLink(
+            userId: item.authorId!,
+            label: authorLabel,
+            textStyle: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          )
+        : Text(authorLabel, style: theme.textTheme.titleSmall);
+    final date = Tooltip(
+      message: DateFormat.yMMMd().add_jm().format(item.publishedAt.toLocal()),
+      child: Text(
+        DateFormat.yMMMd().format(item.publishedAt.toLocal()),
+        style: theme.textTheme.bodySmall,
+      ),
+    );
+
     return Padding(
       padding: EdgeInsets.symmetric(
-        horizontal: spacing.lg,
+        horizontal: spacing.md,
         vertical: spacing.xs,
       ),
       child: Column(
@@ -69,24 +86,30 @@ class FeedCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (item.authorId?.trim().isNotEmpty == true)
-                            AuthorProfileLink(
-                              userId: item.authorId!,
-                              label: authorLabel,
-                              textStyle: theme.textTheme.titleSmall,
-                            )
-                          else
-                            Text(
-                              authorLabel,
-                              style: theme.textTheme.titleSmall,
-                            ),
-                          Text(
-                            DateFormat.yMMMd().add_jm().format(
-                              item.publishedAt.toLocal(),
-                            ),
-                            style: theme.textTheme.bodySmall,
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final stacked =
+                                  MediaQuery.textScalerOf(context).scale(14) >
+                                      18 ||
+                                  constraints.maxWidth < 260;
+                              if (stacked) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [author, date],
+                                );
+                              }
+                              return Row(
+                                children: [
+                                  Expanded(child: author),
+                                  SizedBox(width: spacing.sm),
+                                  date,
+                                ],
+                              );
+                            },
                           ),
-                          if (showSource && sourceLabel != authorLabel)
+                          if (showSource &&
+                              sourceLabel != authorLabel &&
+                              sourceLabel != 'Lythaus member')
                             Wrap(
                               spacing: spacing.xs,
                               crossAxisAlignment: WrapCrossAlignment.center,
@@ -140,13 +163,6 @@ class FeedCard extends StatelessWidget {
                   SizedBox(height: spacing.sm),
                   Text(item.body, style: body),
                 ],
-                if (item.contentType != ContentType.text) ...[
-                  SizedBox(height: spacing.xs),
-                  Text(
-                    _contentLabel(item.contentType),
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ],
                 SizedBox(height: spacing.sm),
                 TrustStripRow(
                   key: ValueKey('trust-${item.id}'),
@@ -162,23 +178,9 @@ class FeedCard extends StatelessWidget {
               ],
             ),
           ),
-          Divider(height: 1, color: theme.colorScheme.outlineVariant),
         ],
       ),
     );
-  }
-
-  String _contentLabel(ContentType type) {
-    switch (type) {
-      case ContentType.text:
-        return 'Text';
-      case ContentType.image:
-        return 'Image';
-      case ContentType.video:
-        return 'Video';
-      case ContentType.mixed:
-        return 'Mixed';
-    }
   }
 }
 
@@ -216,15 +218,17 @@ class _FeedEntrySurfaceState extends State<_FeedEntrySurface> {
   @override
   Widget build(BuildContext context) {
     final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(context.radius.sm),
+      borderRadius: BorderRadius.circular(context.radius.md),
       side: BorderSide(
-        color: _focused ? context.colorScheme.primary : Colors.transparent,
-        width: 2,
+        color: _focused
+            ? context.colorScheme.primary
+            : context.colorScheme.outlineVariant,
+        width: _focused ? 2 : 1,
       ),
     );
 
     return Material(
-      color: Theme.of(context).scaffoldBackgroundColor,
+      color: context.colorScheme.surfaceContainerLow,
       shape: shape,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -233,7 +237,7 @@ class _FeedEntrySurfaceState extends State<_FeedEntrySurface> {
         customBorder: shape,
         child: Padding(
           padding: EdgeInsets.symmetric(
-            horizontal: context.spacing.sm,
+            horizontal: context.spacing.md,
             vertical: context.spacing.md,
           ),
           child: widget.child,

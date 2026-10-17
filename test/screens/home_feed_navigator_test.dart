@@ -168,10 +168,7 @@ void main() {
         container.read(analyticsEventTrackerProvider) as _RecordingEventTracker;
     expect(tracker.onceEvents, contains(AnalyticsEvents.feedFirstLoad));
 
-    expect(
-      find.text('Discover calm, trustworthy updates tailored to you.'),
-      findsOneWidget,
-    );
+    expect(find.text('Public posts, newest first.'), findsOneWidget);
     expect(find.byType(FeedCard), findsWidgets);
 
     await tester.tap(find.byTooltip('Feed controls'));
