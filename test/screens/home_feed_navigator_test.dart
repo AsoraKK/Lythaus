@@ -409,7 +409,14 @@ void main() {
       await tester.tap(find.byTooltip('Close feed controls').last);
       await tester.pumpAndSettle();
       expect(find.text('Choose a feed'), findsNothing);
-      final controlsFocus = Focus.of(tester.element(find.byType(SvgPicture)));
+      final controlsFocus = Focus.of(
+        tester.element(
+          find.descendant(
+            of: find.byTooltip('Feed controls'),
+            matching: find.byType(SvgPicture),
+          ),
+        ),
+      );
       final titleFocus = Focus.of(
         tester.element(
           find.descendant(

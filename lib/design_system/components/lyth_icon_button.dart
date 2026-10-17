@@ -93,15 +93,31 @@ class LythIconButton extends StatelessWidget {
         icon: child,
         onPressed: callback,
         tooltip: tooltip,
-        style: style,
+        style: style.copyWith(
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.disabled)
+                ? context.colorScheme.onSurface.withValues(alpha: 0.38)
+                : color ?? context.colorScheme.onPrimary,
+          ),
+          side: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.focused)
+                ? BorderSide(color: context.colorScheme.onPrimary, width: 2)
+                : BorderSide.none,
+          ),
+        ),
       ),
       2 => IconButton.outlined(
         icon: child,
         onPressed: callback,
         tooltip: tooltip,
         style: style.copyWith(
-          side: WidgetStatePropertyAll(
-            BorderSide(color: context.colorScheme.outline),
+          side: WidgetStateProperty.resolveWith(
+            (states) => BorderSide(
+              color: states.contains(WidgetState.focused)
+                  ? context.colorScheme.primary
+                  : context.colorScheme.outline,
+              width: states.contains(WidgetState.focused) ? 2 : 1,
+            ),
           ),
         ),
       ),

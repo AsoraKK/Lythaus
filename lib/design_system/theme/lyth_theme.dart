@@ -137,11 +137,18 @@ class LythausTheme {
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
-        style: IconButton.styleFrom(
-          minimumSize: const Size(48, 48),
-          foregroundColor: colors.onSurfaceVariant,
-          shape: shape,
-        ),
+        style:
+            IconButton.styleFrom(
+              minimumSize: const Size(48, 48),
+              foregroundColor: colors.onSurfaceVariant,
+              shape: shape,
+            ).copyWith(
+              side: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.focused)
+                    ? BorderSide(color: colors.primary, width: 2)
+                    : BorderSide.none,
+              ),
+            ),
       ),
       cardTheme: CardThemeData(
         color: colors.surfaceContainer,

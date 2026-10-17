@@ -27,4 +27,5 @@ export 'components/lyth_text_input.dart';
 export 'components/lyth_card.dart';
 
 // Widgets
+export 'widgets/lyth_brand.dart';
 export 'widgets/lyth_wordmark.dart';
