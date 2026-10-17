@@ -4,8 +4,11 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
+import {execFileSync} from 'node:child_process';
 import { chromium, webkit } from 'playwright';
 import { installFlutterEngineFonts } from './flutter-engine-font-fixture.mjs';
+import {observeRenderHealth, assertRenderHealth} from './brand-render-health.mjs';
+import {compareApprovedArtwork} from './brand-reference.mjs';
 
 const output = path.resolve(process.env.BRAND_EVIDENCE ?? 'build/brand-evidence');
 const build = path.resolve(process.env.BRAND_WEB_BUILD ?? 'build/brand-web');
@@ -13,6 +16,7 @@ const admin = path.resolve('apps/control-panel/dist');
 const engine = process.env.BRAND_BROWSER ?? 'chromium';
 assert.ok(['chromium', 'webkit'].includes(engine));
 const source = process.env.BRAND_SOURCE;
+const selectedCase = process.env.BRAND_CASE;
 assert.match(source ?? '', /^[a-f0-9]{40}$/);
 const approved = JSON.parse(await readFile('docs/brand/approved-v1/INTEGRATION-MANIFEST.json', 'utf8'));
 async function verifyIcons(page, context) {
@@ -35,7 +39,7 @@ async function serve(root) {
       assert.ok(file === root || file.startsWith(root + path.sep));
       if (!path.extname(file)) file = path.join(root, 'index.html');
       const bytes = await readFile(file);
-      response.writeHead(200, { 'Content-Type': types[path.extname(file)] ?? 'application/octet-stream' });
+      response.writeHead(200, { 'Content-Type': types[path.extname(file)] ?? 'application/octet-stream', 'Access-Control-Allow-Origin': '*' });
       response.end(bytes);
     } catch { response.writeHead(404); response.end(); }
   });
@@ -44,7 +48,8 @@ async function serve(root) {
 }
 await mkdir(output, { recursive: true });
 const appServer = await serve(build), adminServer = await serve(admin);
-const browser = await (engine === 'webkit' ? webkit : chromium).launch({ headless: true });
+const headed = process.env.BRAND_CAPTURE_HEADED === '1';
+const browser = await (engine === 'webkit' ? webkit : chromium).launch({ headless: !headed });
 const results = [];
 const { PNG } = createRequire(import.meta.url)('playwright-core/lib/utilsBundle');
 async function capture(page, name, validate = true) {
@@ -60,9 +65,12 @@ async function capture(page, name, validate = true) {
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await page.waitForTimeout(250);
     const bytes = await page.screenshot({ path: path.join(output, name + '.png') });
+    if(headed)execFileSync('import',['-window','root',path.join(output,name+'-desktop.png')]);
     if (!validate) return;
-    const rect = await brand.boundingBox();
+    let rect = await brand.boundingBox();
     assert.ok(rect && rect.width > 0 && rect.height > 0, 'Brand has a visible layout box');
+    const symbol = !(await image.count());
+    if (symbol) rect = {x:rect.x+(rect.width-24)/2,y:rect.y+(rect.height-24)/2,width:24,height:24};
     const png = PNG.sync.read(bytes);
     const colors = new Map();
     let pixels = 0;
@@ -75,7 +83,14 @@ async function capture(page, name, validate = true) {
       }
     }
     const painted = pixels - Math.max(0, ...colors.values());
-    if (colors.size >= 4 && painted >= 16 && painted / pixels > 0.003) return;
+    if (colors.size >= 4 && painted >= 16 && painted / pixels > 0.003) {
+      const dark=name.includes('-dark-');
+      const file=symbol ? (dark?'lythaus-symbol-square-warm.fb697a91817f.svg':'lythaus-symbol-square-black.6a1b6d025e69.svg')
+        : (dark?'lythaus-wordmark-white.5ba0451347e2.svg':'lythaus-wordmark-black.e450176663e0.svg');
+      const url=name.includes('-admin-') ? await image.getAttribute('src') : '/assets/assets/brand/lythaus-v1/'+file;
+      await compareApprovedArtwork(page,png,rect,new URL(url,page.url()).href,PNG);
+      return;
+    }
   }
   assert.fail('Brand artwork did not paint; refusing a blank screenshot: ' + name);
 }
@@ -83,8 +98,10 @@ try {
   for (const theme of ['light', 'dark']) {
     for (const width of [320, 390, 1440]) {
       for (const screen of ['login', 'onboarding', 'shell']) {
-        const context = await browser.newContext({ viewport: { width, height: 960 }, colorScheme: theme, reducedMotion: 'reduce' });
+        if (selectedCase && selectedCase !== `${screen}-${theme}-${width}`) continue;
+        const context = await browser.newContext({ locale:'en-US', viewport: { width, height: 960 }, colorScheme: theme, reducedMotion: 'reduce' });
         const errors = [], blocked = [];
+        const health = await observeRenderHealth(context,appServer.origin);
         await context.route('**/*', async route => {
           if (new URL(route.request().url()).origin === appServer.origin) return route.continue();
           blocked.push(route.request().url()); return route.abort();
@@ -105,6 +122,8 @@ try {
           } else {
             await page.getByRole('img', { name: 'Lythaus', exact: true }).waitFor();
           }
+          assert.equal(await page.getByRole('img',{name:'Lythaus',exact:true}).count(), screen==='shell'&&width<768?0:1,
+            'Exactly one named brand where present; decorative controls add no duplicate');
           await page.waitForTimeout(300);
           await capture(page, engine + '-' + screen + '-' + theme + '-' + width);
           if (screen === 'login') {
@@ -131,13 +150,15 @@ try {
           }
           assert.deepEqual(errors, []);
           assert.deepEqual(blocked, []);
+          assertRenderHealth(await health(page));
           results.push({ screen, theme, width, status: 'passed' });
         } catch (error) {
           await capture(page, engine + '-' + screen + '-' + theme + '-' + width + '-failed', false);
-          results.push({ screen, theme, width, status: 'failed', error: error.message, errors, blocked });
+          results.push({ screen, theme, width, status: 'failed', error: error.message, errors, blocked, health:await health(page) });
           throw error;
         } finally { await context.close(); }
       }
+      if (selectedCase && selectedCase !== `admin-${theme}-${width}`) continue;
       const context = await browser.newContext({ viewport: { width, height: 960 }, colorScheme: theme, reducedMotion: 'reduce' });
       const page = await context.newPage();
       const errors = [];
@@ -162,7 +183,7 @@ try {
       } finally { await context.close(); }
     }
   }
-  assert.equal(results.length, 24);
+  assert.equal(results.length, selectedCase ? 1 : 24);
 } finally {
   await browser.close();
   await Promise.all([appServer, adminServer].map(({ server }) => new Promise(resolve => server.close(resolve))));

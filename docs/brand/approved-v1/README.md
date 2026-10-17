@@ -84,9 +84,18 @@ Release remains held pending the existing headless WebKit gate and exact-head CI
 A calibrated Linux headed capture runs Xorg, WebKitGTK and independent X11 capture
 in one IPC namespace with an explicit valid locale (en-US). The original SVG
 widget omitted the wordmark there; a minimal reproduction showed the approved
-direct Canvas paths painting correctly. With the generated painter, all 24 headed
-brand scenarios pass both the unchanged protocol pixel assertion and an additional
-independent desktop pixel assertion. Chromium's 24 brand scenarios also pass.
+direct Canvas paths painting correctly. Two pre-integration runs passed all 24
+headed brand scenarios with protocol and independent desktop assertions. The later
+integrated run at 623c48cf passed 17 cases then failed dark onboarding at 390px:
+both captures showed the entire Flutter surface blank, with the HTML QA label
+visible. Chromium's 24 integrated cases passed. The intermittent whole-surface
+failure does not establish a candidate-specific defect. Original failures remain
+evidence; earlier passing runs do not supersede them.
+
+Local runs used custom library paths and skipped Playwright host validation;
+hosted CI installs browsers with `--with-deps`. Hosted Flutter rendering results
+were still pending when the diagnostic was introduced. JavaScript hash equality
+alone does not attest bootstrap, CanvasKit/WASM, fonts, browser or graphics bytes.
 The existing headless WPE WebKit screenshot assertion still fails. It has not been
 removed, weakened or replaced by the headed evidence. Earlier black desktop
 captures used separate IPC namespaces and are not rendering evidence. The failed

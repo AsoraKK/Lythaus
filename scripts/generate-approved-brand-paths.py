@@ -1,6 +1,7 @@
 """Translate the approved SVG subset to synchronous Flutter Canvas operations."""
 import argparse
 import hashlib
+import math
 import re
 import subprocess
 from pathlib import Path
@@ -20,7 +21,9 @@ COMMANDS = {'M': ('moveTo', 2), 'L': ('lineTo', 2), 'H': ('lineTo', 1),
             'V': ('lineTo', 1), 'C': ('cubicTo', 6), 'Q': ('quadraticBezierTo', 4)}
 
 def number(value):
-    return repr(float(value))
+    parsed = float(value)
+    assert math.isfinite(parsed), 'Nonfinite coordinate'
+    return repr(parsed)
 
 def path_calls(source):
     tokens = re.findall(r'[A-Za-z]|' + NUMBER, source)
@@ -70,6 +73,15 @@ def generate():
         def walk(node, fill=None):
             tag = node.tag.rsplit('}', 1)[-1]
             assert tag in {'svg', 'g', 'path', 'title', 'desc'}, tag
+            allowed = {
+                'svg': {'width', 'height', 'viewBox', 'preserveAspectRatio', 'role', 'aria-label'},
+                'g': {'fill', 'transform', 'aria-label'},
+                'path': {'d', 'fill', 'transform', 'data-letter'},
+                'title': set(), 'desc': set(),
+            }
+            assert set(node.attrib) <= allowed[tag], 'Unknown SVG attribute'
+            if tag == 'svg':
+                assert node.get('preserveAspectRatio', 'xMidYMid meet') == 'xMidYMid meet'
             if tag in {'title', 'desc'}:
                 return
             assert not any(key in node.attrib for key in [
@@ -82,6 +94,7 @@ def generate():
             operations = re.findall(r'(translate|scale)\(([^)]*)\)', transform)
             assert not re.sub(r'(translate|scale)\([^)]*\)|\s', '', transform), transform
             for operation, args in operations:
+                assert re.fullmatch(r'\s*' + NUMBER + r'(?:(?:\s*,\s*|\s+)' + NUMBER + r')?\s*', args), 'Malformed transform arguments'
                 nums = re.findall(NUMBER, args)
                 assert len(nums) in (1, 2)
                 if len(nums) == 1:

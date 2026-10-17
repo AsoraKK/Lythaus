@@ -20,7 +20,9 @@ class GeneratorRejectionTests(unittest.TestCase):
     def test_unsupported_paint_and_transforms_fail_closed(self):
         for attr in ['opacity="0.5"', 'fill-opacity="0.5"', 'filter="url(#blur)"',
                      'mask="url(#mask)"', 'fill-rule="evenodd"', 'stroke="red"',
-                     'transform="rotate(30)"']:
+                     'transform="rotate(30)"', 'unknown="ignored"',
+                     'transform="translate(1 rubbish 2)"', 'transform="scale(1 2 3)"',
+                     'transform="scale(1,)"', 'transform="scale(1e999)"']:
             with self.subTest(attr=attr), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 for name in generator.FILES:

@@ -442,6 +442,7 @@ jobs:
       - name: Build approved brand browser fixtures
         run: |
           python3 scripts/tests/approved-brand-path-generator.test.py
+          node --test scripts/tests/brand-artwork-pixels.test.mjs
           python3 scripts/generate-approved-brand-paths.py --check
           flutter build web --release --no-pub --no-tree-shake-icons --no-wasm-dry-run --no-web-resources-cdn --target test/browser/approved_brand_entry.dart --output build/brand-web
           npm ci --ignore-scripts --no-audit --prefix apps/control-panel
