@@ -40,6 +40,7 @@ class AuthService {
   String? _memoryAccessToken;
   Future<void> _storageWrites = Future.value();
   Future<bool>? _refreshInFlight;
+  int? _refreshInFlightEpoch;
   int _sessionEpoch = 0;
   bool remoteLogoutConfirmed = true;
   bool _signedOut = false;
@@ -279,17 +280,30 @@ class AuthService {
     return User.fromJson(_payload(response));
   }
 
-  Future<bool> refreshSession() => _refreshInFlight ??= withSessionLock(
-    _refreshSession,
-  ).whenComplete(() => _refreshInFlight = null);
-
-  Future<bool> _refreshSession() async {
-    if (_signedOut) return false;
-    if (_useWebSession && pendingBrowserLogout()) return false;
+  Future<bool> refreshSession() {
     final epoch = _sessionEpoch;
+    final inFlight = _refreshInFlight;
+    if (inFlight != null && _refreshInFlightEpoch == epoch) return inFlight;
+
+    late final Future<bool> next;
+    next = withSessionLock(() => _refreshSession(epoch)).whenComplete(() {
+      if (identical(_refreshInFlight, next)) {
+        _refreshInFlight = null;
+        _refreshInFlightEpoch = null;
+      }
+    });
+    _refreshInFlight = next;
+    _refreshInFlightEpoch = epoch;
+    return next;
+  }
+
+  Future<bool> _refreshSession(int epoch) async {
+    if (epoch != _sessionEpoch || _signedOut) return false;
+    if (_useWebSession && pendingBrowserLogout()) return false;
     final refreshToken = _useWebSession
         ? null
         : await _secureStorage.read(key: _refreshTokenKey);
+    if (epoch != _sessionEpoch || _signedOut) return false;
     if (!_useWebSession && refreshToken == null) return false;
     try {
       final response = await _httpClient
