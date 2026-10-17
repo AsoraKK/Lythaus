@@ -64,7 +64,7 @@ SELECT target.oid IS NOT NULL AS table_exists,
        index_state.indisready AS index_is_ready,
        (
          COALESCE((SELECT role_entry.rolsuper FROM pg_roles role_entry WHERE role_entry.rolname = current_user), false)
-         OR pg_has_role(current_user, 'pg_read_all_stats', 'MEMBER')
+         OR pg_has_role(current_user, 'pg_read_all_stats', 'USAGE')
        ) AS index_progress_visibility_complete,
        EXISTS (
          SELECT 1
@@ -126,6 +126,13 @@ export async function inspectMediaQuarantineMigration(client) {
   return { state: 'FULLY_APPLIED' };
 }
 
+export async function verifyMediaQuarantineMigration(client) {
+  const state = await inspectMediaQuarantineMigration(client);
+  if (state.state !== 'FULLY_APPLIED') throw new Error(`0021 exact staged postconditions failed: ${state.reason ?? state.state}`);
+  const [postconditions] = await classifyMigrationState(client, [MEDIA_QUARANTINE_MIGRATION_NAME]);
+  assertCompleteMigrationPostconditions(postconditions);
+}
+
 function assertRetryableState(state) {
   if (['NOT_APPLIED', 'COLUMN_ONLY', 'INVALID_INDEX_RETRYABLE', 'FULLY_APPLIED'].includes(state.state)) return;
   throw new Error(`0021 staged migration stopped: ${state.reason ?? state.state}`);
@@ -175,8 +182,7 @@ export async function applyMediaQuarantineMigration(client, migration, { afterVe
     }
 
     if (state.state !== 'FULLY_APPLIED') throw new Error(`0021 exact staged postconditions failed: ${state.reason ?? state.state}`);
-    const [postconditions] = await classifyMigrationState(client, [migration.name]);
-    assertCompleteMigrationPostconditions(postconditions);
+    await verifyMediaQuarantineMigration(client);
     if (afterVerified) await afterVerified();
   } finally {
     await client.query('RESET statement_timeout').catch(() => undefined);

@@ -138,7 +138,7 @@ test('requires the nullable quarantine cleanup marker and bounded partial index 
   const checks = migrationPostconditions['0021_media_quarantine_cleanup.sql'];
   assert.deepEqual(checks.map(({ artifact, kind }) => ({ artifact, kind })), [
     { artifact: 'column:media.upload_sessions.quarantine_deleted_at', kind: 'column_contract' },
-    { artifact: 'media_quarantine_deleted_at_is_nullable', kind: 'schema_artifact' },
+    { artifact: 'media_quarantine_marker_contract', kind: 'schema_artifact' },
     { artifact: 'media_upload_quarantine_cleanup_index', kind: 'schema_artifact' },
   ]);
   const missingIndex = {
@@ -339,6 +339,7 @@ test('production runner preserves immutable registry history', async () => {
   assert.match(source, /recordFullyAppliedMigration/);
   assert.match(source, /applyMediaQuarantineMigration/);
   assert.match(source, /inspectMediaQuarantineMigration/);
+  assert.match(source, /await verifyMediaQuarantineMigration\(client\)/);
   assert.match(source, /MEDIA_QUARANTINE_MIGRATION_NAME/);
   assert.match(source, /assertCompleteMigrationPostconditions/);
   assert.match(source, /verifyWaitlistPrivileges/);

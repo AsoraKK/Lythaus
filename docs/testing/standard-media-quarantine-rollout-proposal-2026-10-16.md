@@ -34,11 +34,17 @@ The index predicate is pinned as:
 If a concurrent build fails, 0021 remains unrecorded. A later run may remove an
 invalid index concurrently and retry only when the existing index has the exact
 canonical definition, no matching build is active, and the migration identity
-can see all index-build progress (superuser or `pg_read_all_stats`). If activity
+can see all index-build progress (superuser or effective `pg_read_all_stats`
+privileges, verified with `pg_has_role(..., 'USAGE')`). Membership through a
+`NOINHERIT` grant does not prove visibility. If activity
 is hidden or visibility is unavailable, the runner stops for owner review. A valid, ready exact
 index is reused. An active build, unexpected index object, column mismatch, or
 predicate/definition drift stops the runner without dropping the object or
 recording the migration. The new column is not an automatic rollback target.
+
+Recorded and unrecorded migrations both require a regular table and the complete
+nullable marker shape: timestamptz, no default, no generated expression, and no
+identity. A valid index cannot compensate for marker drift.
 
 Reconciliation reports partial states without treating predicate fragments as
 proof. A column-only state and an exact inactive invalid index are the only
@@ -50,6 +56,13 @@ their existing fail-closed behavior.
 - `npm run test:planetscale-production-migrations`: 27/27 tests pass, including
   staged ordering, failed-build retry, invalid-index handling, drift refusal,
   active-build refusal, and migration-byte pinning.
+- `node --test scripts/tests/planetscale-media-quarantine.postgres.mjs`:
+  7/7 pass on disposable PostgreSQL 17.11. Separate login connections prove
+  `MEMBER = true` with `USAGE = false` hides a real concurrent build's progress
+  and refuses cleanup. Effective visibility refuses the active build, then
+  recovers its cancelled invalid index. Recorded and unrecorded default and
+  generated marker drift, and a partitioned relation, refuse verification
+  without attempted DDL or registry mutation. Native PG17 CI runs this suite.
 - `npm run validate:planetscale-postgres17` on a fresh local PostgreSQL 17.11
   database: all 22 approved migrations and postconditions pass; 0021 records its
   exact pinned checksum after the concurrent index succeeds.

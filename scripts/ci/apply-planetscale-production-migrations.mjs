@@ -3,7 +3,7 @@ import path from 'node:path';
 import pg from 'pg';
 import { APPROVED_MIGRATIONS, loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
 import { assertCompleteMigrationPostconditions, assertMigrationDataPreconditions, classifyMigrationState, exactRegistryPrefix, incrementalMigrationNames, incrementalRegistryHead, migrationDataRiskReport } from './planetscale-migration-reconciliation.mjs';
-import { applyMediaQuarantineMigration, inspectMediaQuarantineMigration } from './planetscale-media-quarantine-migration.mjs';
+import { applyMediaQuarantineMigration, inspectMediaQuarantineMigration, verifyMediaQuarantineMigration } from './planetscale-media-quarantine-migration.mjs';
 import { MEDIA_QUARANTINE_MIGRATION_NAME } from './planetscale-media-quarantine-contract.mjs';
 
 const { Client } = pg;
@@ -93,8 +93,12 @@ async function recordFullyAppliedMigration(client, migration, pendingRegistry = 
   await client.query('BEGIN');
   try {
     await acquireMigrationLock(client);
-    const [state] = await classifyMigrationState(client, [migration.name]);
-    verifyMigrationPostconditions(state);
+    if (migration.name === MEDIA_QUARANTINE_MIGRATION_NAME) {
+      await verifyMediaQuarantineMigration(client);
+    } else {
+      const [state] = await classifyMigrationState(client, [migration.name]);
+      verifyMigrationPostconditions(state);
+    }
     for (const row of [...pendingRegistry, migration]) await recordInsertOnly(client, row);
     await client.query('COMMIT');
   } catch (error) {
@@ -175,8 +179,7 @@ try {
   } else if (incrementalRegistryHead(registry) === migrations.at(-1).name) {
     mode = 'verified';
     pending = [];
-    const [latestState] = await classifyMigrationState(client, [MEDIA_QUARANTINE_MIGRATION_NAME]);
-    verifyMigrationPostconditions(latestState);
+    await verifyMediaQuarantineMigration(client);
   } else if (incrementalRegistryHead(registry)) {
     const remainingNames = incrementalMigrationNames(incrementalRegistryHead(registry));
     const states = await classifyMigrationState(client, remainingNames);

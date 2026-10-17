@@ -315,12 +315,18 @@ const artifacts = {
   ],
   '0021_media_quarantine_cleanup.sql': [
     ...contractArtifacts['0021_media_quarantine_cleanup.sql'],
-    { artifact: 'media_quarantine_deleted_at_is_nullable', kind: 'schema_artifact', sql: `/* migration-artifact:media_quarantine_deleted_at_is_nullable */ SELECT EXISTS (
+    { artifact: 'media_quarantine_marker_contract', kind: 'schema_artifact', sql: `/* migration-artifact:media_quarantine_marker_contract */ SELECT EXISTS (
       SELECT 1 FROM pg_attribute attribute
-       WHERE attribute.attrelid = to_regclass('media.upload_sessions')
+        JOIN pg_class relation_entry ON relation_entry.oid = attribute.attrelid
+        LEFT JOIN pg_attrdef default_value ON default_value.adrelid = attribute.attrelid AND default_value.adnum = attribute.attnum
+       WHERE relation_entry.oid = to_regclass('media.upload_sessions')
+         AND relation_entry.relkind = 'r'
          AND attribute.attname = 'quarantine_deleted_at'
          AND attribute.attnum > 0 AND NOT attribute.attisdropped
+         AND format_type(attribute.atttypid, attribute.atttypmod) = 'timestamp with time zone'
          AND NOT attribute.attnotnull
+         AND attribute.attgenerated = '' AND attribute.attidentity = ''
+         AND default_value.oid IS NULL
     ) AS present` },
     { artifact: 'media_upload_quarantine_cleanup_index', kind: 'schema_artifact', sql: `/* migration-artifact:media_upload_quarantine_cleanup_index */ SELECT EXISTS (
       SELECT 1
