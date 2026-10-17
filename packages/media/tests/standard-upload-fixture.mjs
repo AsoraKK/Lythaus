@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
 
 const require = createRequire(new URL('../../../node_modules/wrangler/package.json', import.meta.url));
 const { build } = require('esbuild');
@@ -76,9 +77,9 @@ export async function standardUploadFixture(database, onEffect = async () => {})
           R2_ACCOUNT_ID: 'synthetic', R2_ACCESS_KEY_ID: 'synthetic', R2_SECRET_ACCESS_KEY: 'synthetic',
           MEDIA_QUARANTINE_BUCKET: 'synthetic-private-quarantine',
         };
-        const effect = async type => {
+        const effect = async (type, details = {}) => {
           const response = await bindings.FIXTURE_EFFECT.fetch('https://fixture.invalid/effect', {
-            method: 'POST', body: JSON.stringify({ type, input }),
+            method: 'POST', body: JSON.stringify({ type, input, ...details }),
           });
           if (!response.ok) throw new Error('synthetic_effect_failed');
         };
@@ -92,17 +93,33 @@ export async function standardUploadFixture(database, onEffect = async () => {})
             return result;
           },
         };
-        let imageCalls = 0;
+        let imageCalls = 0, imageInfoCalls = 0;
         env.IMAGES = {
-          async info() {
-            imageCalls++;
-            await effect('info');
-            if (input.decoderFailure) throw new Error('synthetic_decode_unavailable');
-            return input.dimensions ?? { width: 1, height: 1 };
+          async info(stream) {
+            imageInfoCalls++;
+            if (imageInfoCalls === 1) imageCalls++;
+            await effect('info', { stage: imageInfoCalls });
+            const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+            if (input.decoderFailure && imageInfoCalls === 1) throw new Error('synthetic_decode_unavailable');
+            if (imageInfoCalls === 1 && input.dimensions) return input.dimensions;
+            if (imageInfoCalls > 1 && input.outputDimensions) return input.outputDimensions;
+            const response = await bindings.FIXTURE_IMAGES.fetch(new Request('https://fixture.invalid/info', {
+              method: 'POST', body: bytes,
+            }));
+            if (!response.ok) throw new Error('synthetic_decode_unavailable');
+            return response.json();
           },
-          input() { return { output: async () => { await effect('transform'); return { image: async () => new Response(input.oversizedTransform
-            ? new Uint8Array(10 * 1024 * 1024 + 1)
-            : Uint8Array.from(input.transformed ?? [82,73,70,70,4,0,0,0,87,69,66,80])).body }; } }; },
+          input(stream) { return { output: async options => {
+            await effect('transform', { options });
+            if (input.oversizedTransform) return { image: async () => new Response(new Uint8Array(10 * 1024 * 1024 + 1)).body };
+            if (input.transformed) return { image: async () => new Response(Uint8Array.from(input.transformed)).body };
+            const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+            const response = await bindings.FIXTURE_IMAGES.fetch(new Request('https://fixture.invalid/transform', {
+              method: 'POST', headers: { 'x-fixture-quality': String(options.quality ?? 85) }, body: bytes,
+            }));
+            if (!response.ok) throw new Error('synthetic_transform_unavailable');
+            return { image: async () => response.body };
+          } }; },
         };
         if (input.failDelete) env.MEDIA_QUARANTINE = {
           get: (...args) => bindings.MEDIA_QUARANTINE.get(...args),
@@ -139,6 +156,25 @@ export async function standardUploadFixture(database, onEffect = async () => {})
     serviceBindings: { FIXTURE_EFFECT: async request => {
       try { await onEffect(await request.json()); return new Response(null, { status: 204 }); }
       catch { return new Response(null, { status: 500 }); }
+    }, FIXTURE_IMAGES: async request => {
+      try {
+        const bytes = Buffer.from(await request.arrayBuffer());
+        const source = sharp(bytes, { failOn: 'error', limitInputPixels: 40000000 });
+        const url = new URL(request.url);
+        if (url.pathname === '/info') {
+          const metadata = await source.metadata();
+          if (!metadata.width || !metadata.height || !metadata.format) return new Response(null, { status: 422 });
+          return Response.json({ format: `image/${metadata.format}`, fileSize: bytes.byteLength,
+            width: metadata.width, height: metadata.height });
+        }
+        if (url.pathname === '/transform') {
+          const quality = Number(request.headers.get('x-fixture-quality') ?? 85);
+          if (!Number.isInteger(quality) || quality < 1 || quality > 100) return new Response(null, { status: 400 });
+          const output = await source.rotate().webp({ quality }).toBuffer();
+          return new Response(output, { headers: { 'content-type': 'image/webp' } });
+        }
+        return new Response(null, { status: 404 });
+      } catch { return new Response(null, { status: 422 }); }
     }, FIXTURE_DB: async request => {
       const input = await request.json();
       statements.push(input);

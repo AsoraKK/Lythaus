@@ -6,6 +6,9 @@
   "dependencies": {
     "aws4fetch": "^1.0.19"
   },
+  "devDependencies": {
+    "sharp": "0.35.5"
+  },
   "exports": {
     ".": "./src/index.ts"
   }

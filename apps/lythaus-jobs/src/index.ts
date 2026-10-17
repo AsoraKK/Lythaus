@@ -1235,7 +1235,7 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
         return 'rejected';
       }
       await checkTransactionHealth(client);
-      const transformed = await (await images.input(new Response(bytes).body!).output({ format: 'image/webp', quality: 85 })).image();
+      const transformed = await (await images.input(new Response(bytes).body!).output({ format: 'image/webp', quality: 85, anim: false })).image();
       let approvedBytes: Uint8Array;
       try {
         approvedBytes = await readBoundedRequestBody({ headers: new Headers(), body: transformed }, Number(row.expected_bytes));
@@ -1245,11 +1245,15 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
         return 'rejected';
       }
       if (detectMediaMime(approvedBytes) !== 'image/webp') throw new Error('media_transform_invalid');
+      const derivativeInfo = await images.info(new Response(approvedBytes).body!);
+      const derivativeWidth = derivativeInfo.width, derivativeHeight = derivativeInfo.height;
+      if (typeof derivativeWidth !== 'number' || typeof derivativeHeight !== 'number'
+        || !validStandardImageDimensions(derivativeWidth, derivativeHeight)) throw new Error('media_transform_invalid');
       if (!await sessionIsUnexpired()) {
         await expireQueued();
         return 'expired';
       }
-      derivative = { bytes: approvedBytes, sha256: await mediaSha256Hex(approvedBytes), width: sourceInfo.width!, height: sourceInfo.height! };
+      derivative = { bytes: approvedBytes, sha256: await mediaSha256Hex(approvedBytes), width: derivativeWidth, height: derivativeHeight };
       await checkTransactionHealth(client);
       const stored = await approved.put(approvedKey, approvedBytes, {
         onlyIf: { etagDoesNotMatch: '*' }, httpMetadata: { contentType: 'image/webp' },
