@@ -8,7 +8,7 @@ import 'package:lythaus_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**resolvedAt** | [**DateTime**](DateTime.md) |  |
+**resolvedAt** | **String** | Opaque exact UTC revision component. Preserve all six fractional digits, including trailing zeroes. |
 **sourceEventId** | **String** |  |
 **decisionId** | **String** |  |
 

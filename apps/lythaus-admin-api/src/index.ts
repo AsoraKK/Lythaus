@@ -17,6 +17,7 @@ import { communityTriageQueue, readCommunityTriageEvidence } from '../../../pack
 import { handleMonthlyContextReview } from './monthly-context-review.ts';
 import { appealOutcomeAuditPlan, assertActionableModerationCase, evaluateAppealFromRecords, parseAppealAdjudicationRequest, type AppealAdjudicationRecord, type AppealVoteRecord } from './runtime-policy.ts';
 import { reopenModerationCase } from './moderation-rereview-runtime.ts';
+import { assertExpectedModerationReviewCycle } from '../../../packages/db/src/moderation-review-cycle.ts';
 import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, parseWaitlistRetentionHoldUpdate, parseWaitlistStatusUpdate, requireWaitlistEncryptionKey, waitlistAuditMetadata, waitlistPageRequest, WAITLIST_SEARCH_MAX_CANDIDATES } from './waitlist-runtime-policy.ts';
 import {
   createWaitlistEntry,
@@ -144,7 +145,7 @@ async function listModerationCases(env: Env): Promise<unknown[]> {
                 'decisionId', latest_decision.id::text
               )
               ELSE NULL
-            END AS revision,
+            END AS revision, review_cycle.id::text AS "reviewCycleId",
             count(f.id)::integer AS flag_count
      FROM moderation.cases c
      LEFT JOIN moderation.content_flags f ON f.content_type = c.content_type AND f.content_id = c.content_id
@@ -154,8 +155,14 @@ async function listModerationCases(env: Env): Promise<unknown[]> {
         ORDER BY decision.created_at DESC, decision.id DESC
         LIMIT 1
      ) latest_decision ON true
+     LEFT JOIN LATERAL (
+       SELECT audit.id FROM system.audit_events audit
+        WHERE audit.target_type = 'moderation_case' AND audit.target_id = c.id
+          AND audit.action = 'moderation.case.reopened'
+        ORDER BY audit.created_at DESC, audit.id DESC LIMIT 1
+     ) review_cycle ON true
      GROUP BY c.id, c.content_type, c.content_id, c.state, c.policy_version, c.created_at,
-              c.resolved_at, c.source_event_id, latest_decision.id
+              c.resolved_at, c.source_event_id, latest_decision.id, review_cycle.id
      ORDER BY (c.state = 'open') DESC, c.created_at ASC LIMIT 200`);
   return result.rows;
 }
@@ -475,7 +482,7 @@ function moderationState(outcome: 'allow' | 'block' | 'queue'): 'allowed' | 'blo
 }
 
 async function decideModeration(request: Request, env: Env, actor: { userId: string; role: string }, caseId: string, correlation: string): Promise<Response> {
-  const input = await readBoundedJson<{ outcome?: 'allow' | 'block' | 'queue'; reasonCode?: string; publicLabel?: string }>(request);
+  const input = await readBoundedJson<{ outcome?: 'allow' | 'block' | 'queue'; reasonCode?: string; publicLabel?: string; expectedReviewCycleId?: unknown }>(request);
   if (!input.outcome || !['allow', 'block', 'queue'].includes(input.outcome)) throw new Error('invalid_moderation_outcome');
   if (!input.reasonCode || !/^[A-Z0-9_.:-]{2,80}$/.test(input.reasonCode)) throw new Error('reason_code_required');
   const outcome = input.outcome;
@@ -538,6 +545,7 @@ async function decideModeration(request: Request, env: Env, actor: { userId: str
       currentSourceEventId: contentRecord?.current_source_event_id,
       contentActive: contentRecord?.content_active === true,
     });
+    const reviewCycleId = await assertExpectedModerationReviewCycle(client, caseId, input.expectedReviewCycleId);
     const moderationCase = { ...caseRecord, ...contentRecord } as ModerationCaseRecord & ModerationContentRecord;
     if (input.publicLabel !== undefined
       && (outcome !== 'allow' || !['post', 'comment'].includes(moderationCase.content_type))
@@ -559,8 +567,14 @@ async function decideModeration(request: Request, env: Env, actor: { userId: str
     const caseUpdate = await client.query(
       `UPDATE moderation.cases
           SET state = $1, resolved_at = CASE WHEN $1 = 'open' THEN NULL ELSE now() END
-        WHERE id = $2 AND state = 'open' AND source_event_id = $3`,
-      [outcome === 'queue' ? 'open' : 'resolved', caseId, moderationCase.source_event_id],
+        WHERE id = $2 AND state = 'open' AND source_event_id = $3
+          AND $4::uuid IS NOT DISTINCT FROM (
+            SELECT audit.id FROM system.audit_events audit
+             WHERE audit.target_type = 'moderation_case' AND audit.target_id = moderation.cases.id
+               AND audit.action = 'moderation.case.reopened'
+             ORDER BY audit.created_at DESC, audit.id DESC LIMIT 1
+          )`,
+      [outcome === 'queue' ? 'open' : 'resolved', caseId, moderationCase.source_event_id, reviewCycleId],
     );
     if (caseUpdate.rowCount !== 1) throw new Error('moderation_case_superseded');
     // Appeals remain open until the independently recorded review and adjudication policy resolves them.
@@ -674,7 +688,7 @@ async function decideModeration(request: Request, env: Env, actor: { userId: str
     await client.query(
       `INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
        VALUES ($1, $2, 'moderation.decision', 'moderation_case', $3, $4, $5, $6::jsonb)`,
-      [uuidv7(), actor.userId, caseId, input.reasonCode, correlation, JSON.stringify({ outcome, role: actor.role, decisionId })],
+      [uuidv7(), actor.userId, caseId, input.reasonCode, correlation, JSON.stringify({ outcome, role: actor.role, decisionId, reviewCycleId })],
     );
     return { publicLabel };
   });

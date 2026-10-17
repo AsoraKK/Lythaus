@@ -3,7 +3,9 @@ import { createHash, randomBytes } from 'node:crypto';
 import { after, before, mock, test } from 'node:test';
 import pg from 'pg';
 import * as database from '@lythaus/db';
-import { hmacLookup, uuidv7 } from '@lythaus/security';
+import { hmacLookup, signAccessToken, uuidv7 } from '@lythaus/security';
+import { exportJWK, exportPKCS8, generateKeyPair } from 'jose';
+import { reopenModerationCase } from '../src/moderation-rereview-runtime.ts';
 import { nativePostgresProfileFixture } from '../../lythaus-public-api/tests/native-postgres-worker-fixture.mjs';
 import { privacyPostgresTarget } from '../../lythaus-public-api/tests/privacy-postgres-target.mjs';
 
@@ -21,7 +23,11 @@ const accessSubject = 'synthetic-moderation-reviewer';
 const accessKey = randomBytes(32).toString('base64');
 const accessHmac = Buffer.from(hmacLookup(accessSubject, accessKey), 'base64');
 const actorRateHash = createHash('sha256').update(`admin:${actorId}`).digest('hex');
-const state = { failAudit: false };
+const state = { failAudit: false, beforeContentLock: undefined, beforeDecisionCaseLock: undefined };
+const { privateKey, publicKey } = await generateKeyPair('ES256', { extractable: true });
+const keyId = 'synthetic-rereview-owner';
+const privateKeyPem = await exportPKCS8(privateKey);
+const tokens = new Map();
 let control, publicApi;
 
 async function connect(role) {
@@ -42,9 +48,20 @@ async function adminTransaction(_binding, work) {
   const client = await connect('lythaus_admin');
   try {
     await client.query('BEGIN');
-    const result = await work({ query: (text, values = []) => {
+    const result = await work({ query: async (text, values = []) => {
       if (state.failAudit && text.includes('INSERT INTO system.audit_events')) {
         throw new Error('synthetic_audit_failure');
+      }
+      if (state.beforeContentLock && text.includes('FROM content.posts') && text.includes('FOR UPDATE')) {
+        const before = state.beforeContentLock;
+        state.beforeContentLock = undefined;
+        await before();
+      }
+      if (state.beforeDecisionCaseLock && text.includes('FROM moderation.cases')
+        && text.includes('FOR UPDATE') && !text.includes('resolved_at_revision')) {
+        const before = state.beforeDecisionCaseLock;
+        state.beforeDecisionCaseLock = undefined;
+        await before();
       }
       return client.query(text, values);
     } });
@@ -151,6 +168,25 @@ async function publicFeed() {
   });
 }
 
+async function memberRead(userId, path) {
+  if (!tokens.has(userId)) tokens.set(userId, await signAccessToken({ userId, privateKeyPem, keyId }));
+  return publicApi.dispatchFetch(`https://api.lythaus.test${path}`, {
+    headers: { authorization: `Bearer ${tokens.get(userId)}`, origin: 'https://app.lythaus.test' },
+  });
+}
+
+async function caseItem() {
+  const result = await adminCall('GET', '/api/admin/moderation/cases');
+  assert.equal(result.response.status, 200);
+  return result.body.items.find(item => item.id === caseId);
+}
+
+async function decide(outcome, expectedReviewCycleId) {
+  return adminCall('POST', `/api/admin/moderation/cases/${caseId}/decision`, {
+    outcome, reasonCode: 'REREVIEW.CLEARED', expectedReviewCycleId,
+  });
+}
+
 async function reopenRequest(revision) {
   return adminCall('POST', `/api/admin/moderation/cases/${caseId}/rereview`, {
     expectedCaseState: 'resolved',
@@ -202,6 +238,7 @@ before(async () => {
     EXPECTED_HOSTNAMES: 'api.lythaus.test',
     CORS_ALLOWED_ORIGINS: 'https://app.lythaus.test',
     WORKER_VERSION: { id: uuidv7(), tag: 'synthetic-rereview-feed' },
+    JWT_PUBLIC_JWKS: JSON.stringify({ keys: [{ ...await exportJWK(publicKey), kid: keyId, alg: 'ES256', use: 'sig' }] }),
   });
 });
 
@@ -272,6 +309,13 @@ test('resolved case re-review is guarded, atomic, auditable, and reversible thro
   assert.equal(reopened.body.state, 'open');
   assert.equal(reopened.body.moderationState, 'under_review');
   assert.equal(conflict.body.error, 'moderation_case_state_conflict');
+  const reviewCycleId = reopened.body.reviewCycleId;
+  assert.equal((await caseItem()).reviewCycleId, reviewCycleId);
+  for (const outcome of ['allow', 'block']) {
+    const delayed = await decide(outcome, null);
+    assert.equal(delayed.response.status, 409);
+    assert.equal(delayed.body.error, 'moderation_case_revision_conflict');
+  }
 
   const afterRereviewHistory = await historySnapshot();
   assert.deepEqual(afterRereviewHistory, beforeHistory);
@@ -296,6 +340,19 @@ test('resolved case re-review is guarded, atomic, auditable, and reversible thro
   const withdrawnFeedResponse = await publicFeed();
   assert.equal(withdrawnFeedResponse.status, 200, await withdrawnFeedResponse.clone().text());
   assert.equal((await withdrawnFeedResponse.json()).items.some(item => item.id === postId), false);
+  const ownId = await memberRead(authorId, `/api/posts/${postId}/owner-view`);
+  assert.equal(ownId.status, 200, await ownId.clone().text());
+  const ownList = await memberRead(authorId, '/api/users/me/posts');
+  assert.equal(ownList.status, 200);
+  assert.match(ownList.headers.get('cache-control'), /private.*no-store/);
+  assert.ok((await ownList.json()).items.some(item => item.id === postId && item.moderationState === 'under_review'));
+  assert.equal((await publicApi.dispatchFetch(`https://api.lythaus.test/api/posts/${postId}`)).status, 404);
+  assert.equal((await memberRead(actorId, `/api/posts/${postId}`)).status, 404);
+  assert.equal((await publicApi.dispatchFetch(`https://api.lythaus.test/api/posts/${postId}/owner-view`)).status, 401);
+  assert.equal((await memberRead(actorId, `/api/posts/${postId}/owner-view`)).status, 404);
+  const otherList = await memberRead(actorId, '/api/users/me/posts');
+  assert.equal(otherList.status, 200);
+  assert.equal((await otherList.json()).items.some(item => item.id === postId), false);
 
   const repeat = await reopenRequest(initialRevision);
   assert.equal(repeat.response.status, 409);
@@ -306,9 +363,7 @@ test('resolved case re-review is guarded, atomic, auditable, and reversible thro
   assert.equal(wrongExpectedState.response.status, 409);
   assert.equal(wrongExpectedState.body.error, 'moderation_case_state_conflict');
 
-  const decision = await adminCall('POST', `/api/admin/moderation/cases/${caseId}/decision`, {
-    outcome: 'allow', reasonCode: 'REREVIEW.CLEARED',
-  });
+  const decision = await decide('allow', reviewCycleId);
   assert.equal(decision.response.status, 200, JSON.stringify(decision.body));
   assert.equal(decision.body.outcome, 'allow');
   const allowedPost = await readPostState();
@@ -331,4 +386,135 @@ test('resolved case re-review is guarded, atomic, auditable, and reversible thro
   assert.deepEqual(finalHistory.provenance, beforeHistory.provenance);
   assert.equal(finalHistory.decisions.length, 2);
   assert.equal(finalHistory.enforcement.length, 2);
+});
+
+test('exact zero-padded revision components survive transport and earlier-cycle allow/block stay stale', async () => {
+  let priorCycle = (await caseItem()).reviewCycleId;
+  for (const fraction of ['123000', '000000']) {
+    const resolvedAt = `2026-10-17T00:00:00.${fraction}Z`;
+    await sql('UPDATE moderation.cases SET resolved_at = $2::timestamptz WHERE id = $1', [caseId, resolvedAt]);
+    const revision = await revisionForCase();
+    assert.equal(revision.resolvedAt, resolvedAt);
+    const reopened = await reopenRequest(JSON.parse(JSON.stringify(revision)));
+    assert.equal(reopened.response.status, 200, JSON.stringify(reopened.body));
+    const before = { history: await historySnapshot(), post: await readPostState() };
+    for (const outcome of ['allow', 'block']) {
+      const delayed = await decide(outcome, priorCycle);
+      assert.equal(delayed.response.status, 409);
+      assert.equal(delayed.body.error, 'moderation_case_revision_conflict');
+    }
+    assert.deepEqual({ history: await historySnapshot(), post: await readPostState() }, before);
+    const allowed = await decide('allow', reopened.body.reviewCycleId);
+    assert.equal(allowed.response.status, 200, JSON.stringify(allowed.body));
+    const replay = await decide('block', reopened.body.reviewCycleId);
+    assert.equal(replay.response.status, 409);
+    assert.equal(replay.body.error, 'moderation_case_already_resolved');
+    priorCycle = reopened.body.reviewCycleId;
+  }
+});
+
+test('source-change and deletion races before the content lock cannot reopen or append an audit', async () => {
+  for (const change of ['source', 'deletion']) {
+    const revision = await revisionForCase();
+    const beforeHistory = await historySnapshot();
+    const beforeAudit = await sql('SELECT count(*)::integer AS n FROM system.audit_events WHERE target_id = $1', [caseId]);
+    state.beforeContentLock = () => change === 'source'
+      ? sql('UPDATE content.posts SET moderation_source_event_id = $2 WHERE id = $1', [postId, uuidv7()])
+      : sql('UPDATE content.posts SET deleted_at = clock_timestamp() WHERE id = $1', [postId]);
+    try {
+      const result = await reopenRequest(revision);
+      assert.equal(result.response.status, 409);
+      assert.equal(result.body.error, 'moderation_case_superseded');
+      assert.deepEqual(await historySnapshot(), beforeHistory);
+      assert.equal((await sql('SELECT state FROM moderation.cases WHERE id = $1', [caseId])).rows[0].state, 'resolved');
+      assert.deepEqual((await sql('SELECT count(*)::integer AS n FROM system.audit_events WHERE target_id = $1', [caseId])).rows, beforeAudit.rows);
+    } finally {
+      state.beforeContentLock = undefined;
+      await sql('UPDATE content.posts SET moderation_source_event_id = $2, deleted_at = NULL WHERE id = $1', [postId, sourceEventId]);
+    }
+  }
+});
+
+test('old-cycle allow and block transactions delayed before the case lock cannot act after reopening', async () => {
+  for (const outcome of ['allow', 'block']) {
+    const item = await caseItem();
+    const arrived = Promise.withResolvers(), resume = Promise.withResolvers();
+    state.beforeDecisionCaseLock = async () => { arrived.resolve(); await resume.promise; };
+    const delayed = decide(outcome, item.reviewCycleId);
+    let reopened, before;
+    try {
+      await arrived.promise;
+      reopened = await reopenRequest(item.revision);
+      assert.equal(reopened.response.status, 200, JSON.stringify(reopened.body));
+      before = { history: await historySnapshot(), post: await readPostState() };
+    } finally {
+      state.beforeDecisionCaseLock = undefined;
+      resume.resolve();
+    }
+    const stale = await delayed;
+    assert.equal(stale.response.status, 409);
+    assert.equal(stale.body.error, 'moderation_case_revision_conflict');
+    assert.deepEqual({ history: await historySnapshot(), post: await readPostState() }, before);
+    assert.equal((await decide('allow', reopened.body.reviewCycleId)).response.status, 200);
+  }
+});
+
+test('comment and profile re-review branches reject changed or inactive sources without writing history', async () => {
+  for (const type of ['comment', 'profile']) {
+    const client = await connect();
+    try {
+      await client.query('BEGIN');
+      const content = type === 'profile' ? authorId : uuidv7(), source = uuidv7(), target = uuidv7(), decision = uuidv7();
+      if (type === 'comment') {
+        await client.query(`INSERT INTO content.comments (id, post_id, author_id, body, declared_creation_mode, moderation_state, moderation_source_event_id)
+          VALUES ($1, $2, $3, 'Synthetic re-review comment', 'human', 'allowed', $4)`, [content, postId, authorId, source]);
+      } else {
+        await client.query('UPDATE social.profiles SET moderation_source_event_id = $2 WHERE user_id = $1', [authorId, source]);
+      }
+      await client.query(`INSERT INTO moderation.cases (id, content_type, content_id, state, policy_version, source_event_id, resolved_at)
+        VALUES ($1, $2, $3, 'resolved', $4, $5, '2026-10-17T00:00:00.000000Z')`, [target, type, content, policyVersion, source]);
+      await client.query(`INSERT INTO moderation.decisions (id, case_id, outcome, policy_version, decided_by)
+        VALUES ($1, $2, 'allow', $3, $4)`, [decision, target, policyVersion, actorId]);
+      if (type === 'comment') await client.query('UPDATE content.comments SET deleted_at = now() WHERE id = $1', [content]);
+      else await client.query("UPDATE identity.users SET status = 'suspended' WHERE id = $1", [authorId]);
+      await client.query('SET LOCAL ROLE lythaus_admin');
+      await assert.rejects(reopenModerationCase(client, target, { userId: actorId, role: 'moderator' }, uuidv7(), {
+        expectedCaseState: 'resolved', reasonCode: 'MODERATION.REREVIEW_REQUESTED',
+        expectedRevision: { resolvedAt: '2026-10-17T00:00:00.000000Z', sourceEventId: source, decisionId: decision },
+      }), type === 'profile' ? /profile_editing_unavailable/ : /moderation_case_superseded/);
+      assert.equal((await client.query('SELECT state FROM moderation.cases WHERE id = $1', [target])).rows[0].state, 'resolved');
+      assert.equal((await client.query('SELECT count(*)::integer AS n FROM system.audit_events WHERE target_id = $1', [target])).rows[0].n, 0);
+    } finally {
+      await client.query('ROLLBACK');
+      await client.end();
+    }
+  }
+});
+
+test('active comment re-review preserves source and history while withholding public comments', async () => {
+  const client = await connect();
+  try {
+    await client.query('BEGIN');
+    const comment = uuidv7(), source = uuidv7(), target = uuidv7(), decision = uuidv7();
+    await client.query(`INSERT INTO content.comments (id, post_id, author_id, body, declared_creation_mode, moderation_state, moderation_source_event_id)
+      VALUES ($1, $2, $3, 'Synthetic active re-review comment', 'human', 'allowed', $4)`, [comment, postId, authorId, source]);
+    await client.query(`INSERT INTO moderation.cases (id, content_type, content_id, state, policy_version, source_event_id, resolved_at)
+      VALUES ($1, 'comment', $2, 'resolved', $3, $4, '2026-10-17T00:00:00.123000Z')`, [target, comment, policyVersion, source]);
+    await client.query(`INSERT INTO moderation.decisions (id, case_id, outcome, policy_version, decided_by)
+      VALUES ($1, $2, 'allow', $3, $4)`, [decision, target, policyVersion, actorId]);
+    await client.query('SET LOCAL ROLE lythaus_admin');
+    const reopened = await reopenModerationCase(client, target, { userId: actorId, role: 'moderator' }, uuidv7(), {
+      expectedCaseState: 'resolved', reasonCode: 'MODERATION.REREVIEW_REQUESTED',
+      expectedRevision: { resolvedAt: '2026-10-17T00:00:00.123000Z', sourceEventId: source, decisionId: decision },
+    });
+    assert.equal(reopened.state, 'open');
+    const stored = (await client.query('SELECT moderation_state, moderation_source_event_id FROM content.comments WHERE id = $1', [comment])).rows[0];
+    assert.equal(stored.moderation_state, 'under_review');
+    assert.equal(stored.moderation_source_event_id, source);
+    assert.equal((await client.query('SELECT id FROM moderation.decisions WHERE case_id = $1', [target])).rows[0].id, decision);
+    assert.equal((await client.query("SELECT id FROM content.comments WHERE id = $1 AND moderation_state = 'allowed' AND deleted_at IS NULL", [comment])).rowCount, 0);
+  } finally {
+    await client.query('ROLLBACK');
+    await client.end();
+  }
 });

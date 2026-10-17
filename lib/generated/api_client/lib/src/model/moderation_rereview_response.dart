@@ -17,6 +17,7 @@ part 'moderation_rereview_response.g.dart';
 /// * [state]
 /// * [moderationState]
 /// * [revision]
+/// * [reviewCycleId]
 @BuiltValue()
 abstract class ModerationRereviewResponse implements Built<ModerationRereviewResponse, ModerationRereviewResponseBuilder> {
   @BuiltValueField(wireName: r'caseId')
@@ -32,6 +33,9 @@ abstract class ModerationRereviewResponse implements Built<ModerationRereviewRes
 
   @BuiltValueField(wireName: r'revision')
   JsonObject? get revision;
+
+  @BuiltValueField(wireName: r'reviewCycleId')
+  String get reviewCycleId;
 
   ModerationRereviewResponse._();
 
@@ -75,6 +79,11 @@ class _$ModerationRereviewResponseSerializer implements PrimitiveSerializer<Mode
     yield object.revision == null ? null : serializers.serialize(
       object.revision,
       specifiedType: const FullType.nullable(JsonObject),
+    );
+    yield r'reviewCycleId';
+    yield serializers.serialize(
+      object.reviewCycleId,
+      specifiedType: const FullType(String),
     );
   }
 
@@ -127,6 +136,13 @@ class _$ModerationRereviewResponseSerializer implements PrimitiveSerializer<Mode
           ) as JsonObject?;
           if (valueDes == null) continue;
           result.revision = valueDes;
+          break;
+        case r'reviewCycleId':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.reviewCycleId = valueDes;
           break;
         default:
           unhandled.add(key);

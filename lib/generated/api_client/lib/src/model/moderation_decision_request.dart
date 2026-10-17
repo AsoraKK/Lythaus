@@ -14,6 +14,7 @@ part 'moderation_decision_request.g.dart';
 /// Properties:
 /// * [outcome]
 /// * [reasonCode]
+/// * [expectedReviewCycleId] - Required after re-review; copy reviewCycleId from the current case list or re-review response. An earlier cycle cannot issue a decision.
 /// * [publicLabel] - Public categorical label. AI-generated content cannot be allowed for publication.
 @BuiltValue()
 abstract class ModerationDecisionRequest implements Built<ModerationDecisionRequest, ModerationDecisionRequestBuilder> {
@@ -23,6 +24,10 @@ abstract class ModerationDecisionRequest implements Built<ModerationDecisionRequ
 
   @BuiltValueField(wireName: r'reasonCode')
   String get reasonCode;
+
+  /// Required after re-review; copy reviewCycleId from the current case list or re-review response. An earlier cycle cannot issue a decision.
+  @BuiltValueField(wireName: r'expectedReviewCycleId')
+  String? get expectedReviewCycleId;
 
   /// Public categorical label. AI-generated content cannot be allowed for publication.
   @BuiltValueField(wireName: r'publicLabel')
@@ -62,6 +67,13 @@ class _$ModerationDecisionRequestSerializer implements PrimitiveSerializer<Moder
       object.reasonCode,
       specifiedType: const FullType(String),
     );
+    if (object.expectedReviewCycleId != null) {
+      yield r'expectedReviewCycleId';
+      yield serializers.serialize(
+        object.expectedReviewCycleId,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
     if (object.publicLabel != null) {
       yield r'publicLabel';
       yield serializers.serialize(
@@ -105,6 +117,14 @@ class _$ModerationDecisionRequestSerializer implements PrimitiveSerializer<Moder
             specifiedType: const FullType(String),
           ) as String;
           result.reasonCode = valueDes;
+          break;
+        case r'expectedReviewCycleId':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.expectedReviewCycleId = valueDes;
           break;
         case r'publicLabel':
           final valueDes = serializers.deserialize(

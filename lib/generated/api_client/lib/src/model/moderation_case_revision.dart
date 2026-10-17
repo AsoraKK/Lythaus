@@ -11,13 +11,14 @@ part 'moderation_case_revision.g.dart';
 /// ModerationCaseRevision
 ///
 /// Properties:
-/// * [resolvedAt]
+/// * [resolvedAt] - Opaque exact UTC revision component. Preserve all six fractional digits, including trailing zeroes.
 /// * [sourceEventId]
 /// * [decisionId]
 @BuiltValue()
 abstract class ModerationCaseRevision implements Built<ModerationCaseRevision, ModerationCaseRevisionBuilder> {
+  /// Opaque exact UTC revision component. Preserve all six fractional digits, including trailing zeroes.
   @BuiltValueField(wireName: r'resolvedAt')
-  DateTime get resolvedAt;
+  String get resolvedAt;
 
   @BuiltValueField(wireName: r'sourceEventId')
   String get sourceEventId;
@@ -51,7 +52,7 @@ class _$ModerationCaseRevisionSerializer implements PrimitiveSerializer<Moderati
     yield r'resolvedAt';
     yield serializers.serialize(
       object.resolvedAt,
-      specifiedType: const FullType(DateTime),
+      specifiedType: const FullType(String),
     );
     yield r'sourceEventId';
     yield serializers.serialize(
@@ -89,8 +90,8 @@ class _$ModerationCaseRevisionSerializer implements PrimitiveSerializer<Moderati
         case r'resolvedAt':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
+            specifiedType: const FullType(String),
+          ) as String;
           result.resolvedAt = valueDes;
           break;
         case r'sourceEventId':

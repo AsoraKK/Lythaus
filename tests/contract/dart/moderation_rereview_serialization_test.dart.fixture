@@ -1,0 +1,121 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
+import 'package:lythaus_api_client/lythaus_api_client.dart';
+import 'package:test/test.dart';
+
+const caseId = '01900000-0000-7000-8000-000000000010';
+const cycleId = '01900000-0000-7000-8000-000000000020';
+
+class RereviewAdapter implements HttpClientAdapter {
+  Map<String, dynamic>? accepted;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    final bytes = await requestStream!.expand((chunk) => chunk).toList();
+    final harness = Platform.environment['LYTHAUS_MODERATION_REVISION_GUARD'];
+    if (harness == null) throw StateError('revision guard harness is required');
+    final process = await Process.start('node', [
+      '--experimental-strip-types',
+      harness,
+    ]);
+    final output = process.stdout.transform(utf8.decoder).join();
+    final errors = process.stderr.transform(utf8.decoder).join();
+    process.stdin.add(bytes);
+    await process.stdin.close();
+    if (await process.exitCode != 0) throw StateError(await errors);
+    accepted = jsonDecode(await output) as Map<String, dynamic>;
+    return ResponseBody.fromString(
+      jsonEncode({
+        'caseId': caseId,
+        'state': 'open',
+        'moderationState': 'under_review',
+        'revision': null,
+        'reviewCycleId': cycleId,
+      }),
+      200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+void main() {
+  for (final fraction in ['123000', '000000']) {
+    test(
+      'generated re-review client preserves exact .$fraction revision',
+      () async {
+        final revision = <String, Object?>{
+          'resolvedAt': '2026-10-17T00:00:00.${fraction}Z',
+          'sourceEventId': '01900000-0000-7000-8000-000000000030',
+          'decisionId': '01900000-0000-7000-8000-000000000040',
+        };
+        final decoded = standardSerializers.deserializeWith(
+          ModerationCaseRevision.serializer,
+          revision,
+        )!;
+        expect(decoded.resolvedAt, revision['resolvedAt']);
+        expect(
+          standardSerializers.serializeWith(
+            ModerationCaseRevision.serializer,
+            decoded,
+          ),
+          revision,
+        );
+        final wire = <String, Object?>{
+          'expectedCaseState': 'resolved',
+          'expectedRevision': revision,
+          'reasonCode': 'MODERATION.REREVIEW_REQUESTED',
+        };
+        final request = standardSerializers.deserializeWith(
+          ModerationRereviewRequest.serializer,
+          wire,
+        )!;
+        final adapter = RereviewAdapter();
+        final client = LythausApiClient(
+          basePathOverride: 'https://admin.lythaus.co/api',
+        );
+        client.dio.httpClientAdapter = adapter;
+        try {
+          final response =
+              await client.getAdminApi().adminModerationCaseRereview(
+                    caseId: caseId,
+                    moderationRereviewRequest: request,
+                  );
+          expect(response.statusCode, 200);
+          expect(response.data!.reviewCycleId, cycleId);
+          expect(adapter.accepted, wire);
+        } finally {
+          client.dio.close();
+        }
+      },
+    );
+  }
+
+  test('generated decision request preserves its expected review cycle', () {
+    final wire = <String, Object?>{
+      'outcome': 'allow',
+      'reasonCode': 'MODERATION.REVIEW',
+      'expectedReviewCycleId': cycleId,
+    };
+    final request = standardSerializers.deserializeWith(
+      ModerationDecisionRequest.serializer,
+      wire,
+    )!;
+    final encoded = standardSerializers.serializeWith(
+      ModerationDecisionRequest.serializer,
+      request,
+    ) as Map;
+    expect(encoded['expectedReviewCycleId'], cycleId);
+  });
+}

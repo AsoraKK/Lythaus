@@ -1207,6 +1207,11 @@ components:
       properties:
         outcome: { type: string, enum: [allow, block, queue] }
         reasonCode: { type: string, pattern: '^[A-Z0-9_.:-]{2,80}$' }
+        expectedReviewCycleId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Required after re-review; copy reviewCycleId from the current case list or re-review response. An earlier cycle cannot issue a decision.
         publicLabel:
           type: string
           description: Public categorical label. AI-generated content cannot be allowed for publication.
@@ -1223,7 +1228,10 @@ components:
       additionalProperties: false
       required: [resolvedAt, sourceEventId, decisionId]
       properties:
-        resolvedAt: { type: string, format: date-time }
+        resolvedAt:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$'
+          description: Opaque exact UTC revision component. Preserve all six fractional digits, including trailing zeroes.
         sourceEventId: { type: string, format: uuid }
         decisionId: { type: string, format: uuid }
     ModerationRereviewRequest:
@@ -1237,12 +1245,13 @@ components:
     ModerationRereviewResponse:
       type: object
       additionalProperties: false
-      required: [caseId, state, moderationState, revision]
+      required: [caseId, state, moderationState, revision, reviewCycleId]
       properties:
         caseId: { type: string, format: uuid }
         state: { type: string, enum: [open] }
         moderationState: { type: string, enum: [under_review] }
         revision: { type: object, nullable: true }
+        reviewCycleId: { type: string, format: uuid }
     AccountStatusUpdate:
       type: object
       additionalProperties: false
@@ -1352,7 +1361,8 @@ paths:
         Each resolved item includes a `revision` token containing its exact
         `resolvedAt` timestamp, `sourceEventId`, and latest `decisionId`. Use
         that token with the re-review operation to compare-and-set the case
-        back into review.
+        back into review. Each item also includes reviewCycleId, null until the
+        first re-review; copy its current value to expectedReviewCycleId on decisions.
       responses:
         '200':
           description: Recent moderation cases.
@@ -1910,6 +1920,7 @@ paths:
         and its exact composite revision match. The transition appends an audit
         event and puts current content under review; posts are excluded from
         public feeds until a subsequent moderation decision restores eligibility.
+        Profile re-review remains unavailable under the canonical admin grants.
       tags: [Admin]
       security:
         - cloudflareAccess: []

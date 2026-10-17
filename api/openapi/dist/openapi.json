@@ -8786,7 +8786,7 @@
             "cloudflareAccess": []
           }
         ],
-        "description": "Each resolved item includes a `revision` token containing its exact `resolvedAt` timestamp, `sourceEventId`, and latest `decisionId`. Use that token with the re-review operation to compare-and-set the case back into review.\n",
+        "description": "Each resolved item includes a `revision` token containing its exact `resolvedAt` timestamp, `sourceEventId`, and latest `decisionId`. Use that token with the re-review operation to compare-and-set the case back into review. Each item also includes reviewCycleId, null until the first re-review; copy its current value to expectedReviewCycleId on decisions.\n",
         "responses": {
           "200": {
             "description": "Recent moderation cases.",
@@ -12290,7 +12290,7 @@
       "post": {
         "operationId": "adminModerationCaseRereview",
         "summary": "Reopen a resolved moderation case for review",
-        "description": "Reopens only a currently resolved case when both the expected state and its exact composite revision match. The transition appends an audit event and puts current content under review; posts are excluded from public feeds until a subsequent moderation decision restores eligibility.\n",
+        "description": "Reopens only a currently resolved case when both the expected state and its exact composite revision match. The transition appends an audit event and puts current content under review; posts are excluded from public feeds until a subsequent moderation decision restores eligibility. Profile re-review remains unavailable under the canonical admin grants.\n",
         "tags": [
           "Admin"
         ],
@@ -21110,6 +21110,12 @@
             "type": "string",
             "pattern": "^[A-Z0-9_.:-]{2,80}$"
           },
+          "expectedReviewCycleId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Required after re-review; copy reviewCycleId from the current case list or re-review response. An earlier cycle cannot issue a decision."
+          },
           "publicLabel": {
             "type": "string",
             "description": "Public categorical label. AI-generated content cannot be allowed for publication.",
@@ -21157,7 +21163,8 @@
         "properties": {
           "resolvedAt": {
             "type": "string",
-            "format": "date-time"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$",
+            "description": "Opaque exact UTC revision component. Preserve all six fractional digits, including trailing zeroes."
           },
           "sourceEventId": {
             "type": "string",
@@ -21200,7 +21207,8 @@
           "caseId",
           "state",
           "moderationState",
-          "revision"
+          "revision",
+          "reviewCycleId"
         ],
         "properties": {
           "caseId": {
@@ -21222,6 +21230,10 @@
           "revision": {
             "type": "object",
             "nullable": true
+          },
+          "reviewCycleId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },

@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict';
 import test, { mock } from 'node:test';
 import * as database from '@lythaus/db';
+import { parseModerationRereviewRequest } from '../src/moderation-rereview-runtime.ts';
 
 const actorId = '01900000-0000-7000-8000-000000000099';
-const state = { member: true, reads: [], transactions: 0, clientQueries: 0 };
+const state = { member: true, limited: false, reads: [], transactions: 0, clientQueries: 0 };
 const result = rows => ({ rows, rowCount: rows.length });
 
 function reset() {
   state.member = true;
+  state.limited = false;
   state.reads = [];
   state.transactions = 0;
   state.clientQueries = 0;
@@ -18,7 +20,7 @@ async function query(sql, values = []) {
   if (sql.includes('identity.admin_memberships')) {
     return state.member ? result([{ user_id: actorId, role: 'moderator' }]) : result([]);
   }
-  if (sql.includes('system.rate_limit_windows')) return result([{ request_count: 1 }]);
+  if (sql.includes('system.rate_limit_windows')) return state.limited ? result([]) : result([{ request_count: 1 }]);
   throw new Error('unexpected_test_query');
 }
 
@@ -59,13 +61,14 @@ const env = {
   DB_ADMIN_FRESH: {},
 };
 
-function request(body, assertion = 'synthetic-valid') {
+function request(body, assertion = 'synthetic-valid', headers = {}) {
   return new Request('https://admin.lythaus.test/api/admin/moderation/cases/01900000-0000-7000-8000-000000000001/rereview', {
     method: 'POST',
     headers: {
       origin: 'https://admin.lythaus.test',
       'content-type': 'application/json',
       ...(assertion ? { 'cf-access-jwt-assertion': assertion } : {}),
+      ...headers,
     },
     body: JSON.stringify(body),
   });
@@ -109,4 +112,40 @@ test('re-review route requires resolved state, a complete revision token, and a 
     assert.equal((await response.json()).error, code);
   }
   assert.equal(state.clientQueries, 0);
+});
+
+test('exact revision parser preserves trailing zeroes and rejects shortened timestamp tokens', () => {
+  for (const fraction of ['123000', '000000']) {
+    const input = {
+      expectedCaseState: 'resolved', reasonCode: 'MODERATION.REREVIEW_REQUESTED',
+      expectedRevision: {
+        resolvedAt: `2026-10-17T07:00:00.${fraction}Z`,
+        sourceEventId: '01900000-0000-7000-8000-000000000002',
+        decisionId: '01900000-0000-7000-8000-000000000003',
+      },
+    };
+    assert.deepEqual(parseModerationRereviewRequest(input), input);
+    assert.throws(() => parseModerationRereviewRequest({ ...input,
+      expectedRevision: { ...input.expectedRevision, resolvedAt: new Date(input.expectedRevision.resolvedAt).toISOString() },
+    }), /moderation_case_revision_conflict/);
+  }
+});
+
+test('re-review keeps same-origin JSON and rate-limit gates before domain work', async () => {
+  for (const [headers, status, code] of [
+    [{ origin: 'https://untrusted.invalid' }, 403, 'admin_mutation_origin_invalid'],
+    [{ 'content-type': 'text/plain' }, 415, 'admin_mutation_content_type_invalid'],
+  ]) {
+    reset();
+    const response = await worker.fetch(request({}, 'synthetic-valid', headers), env);
+    assert.equal(response.status, status);
+    assert.equal((await response.json()).error, code);
+    assert.equal(state.transactions, 0);
+  }
+  reset();
+  state.limited = true;
+  const response = await worker.fetch(request({}), env);
+  assert.equal(response.status, 429);
+  assert.equal((await response.json()).error, 'rate_limit_exceeded');
+  assert.equal(state.transactions, 0);
 });

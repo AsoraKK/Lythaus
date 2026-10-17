@@ -2,6 +2,7 @@ import type { Client } from 'pg';
 import { uuidv7 } from '@lythaus/security';
 import { enforceContentDeclaration } from '../../contracts/src/content-policy.ts';
 import { MONTHLY_REPUTATION_POLICY_VERSION } from '../../contracts/src/monthly-reputation-policy.ts';
+import { moderationReviewNeedsStaffDecision } from './moderation-review-cycle.ts';
 import { evaluateProposedCommunityAppeal, isEligibleCommunityVoter, type CommunityBallotRevision } from '../../contracts/src/monthly-peer-appeal-policy.ts';
 import { communityAudit, communityClassifierEvidence, communityConfiguration, communityDigest, communityEligibility,
   communityIso, communityNow, communityOutbox, communitySession, type CommunitySession } from './community-appeal-access.ts';
@@ -65,6 +66,17 @@ export async function closeCommunityAppeal(client: Client, appealId: string) {
   const configuration = await communityConfiguration(client, session.rules_version);
   const now = await communityNow(client);
   if (!session.closes_at || !session.opens_at || now < communityIso(session.closes_at)) return { state: session.state, created: false };
+  const cases = await client.query<{ id: string }>(
+    `SELECT id FROM moderation.cases
+      WHERE id = $1 OR (content_type = $2 AND content_id = $3 AND source_event_id = $4 AND state <> 'superseded')
+      ORDER BY id FOR UPDATE`,
+    [session.case_id, session.content_type, session.content_id, session.source_event_id],
+  );
+  for (const row of cases.rows) {
+    if (await moderationReviewNeedsStaffDecision(client, row.id)) {
+      return { state: session.state, created: false, reason: 'staff_review_required' };
+    }
+  }
   await client.query("UPDATE moderation.community_appeal_sessions SET state = 'closing' WHERE appeal_id = $1", [appealId]);
   const rows = (await client.query<{ id: string; ballot_id: string; voter_user_id: string; revision: number; choice: CommunityBallotRevision['choice']; cast_at: Date }>(
     `SELECT r.id, b.id AS ballot_id, b.voter_user_id, r.revision, r.choice, r.cast_at FROM moderation.community_appeal_ballots b

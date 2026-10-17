@@ -73,7 +73,7 @@ export async function reopenModerationCase(
   actor: { userId: string; role: string },
   correlation: string,
   input: unknown,
-): Promise<{ caseId: string; state: 'open'; moderationState: 'under_review'; revision: null }> {
+): Promise<{ caseId: string; state: 'open'; moderationState: 'under_review'; revision: null; reviewCycleId: string }> {
   const request = parseModerationRereviewRequest(input);
   const existing = await client.query<ModerationCaseRow>(
     `SELECT content_type, content_id, policy_version, state, source_event_id::text AS source_event_id,
@@ -125,15 +125,7 @@ export async function reopenModerationCase(
       [moderationCase.content_id],
     );
   } else if (moderationCase.content_type === 'profile') {
-    contentResult = await client.query<ModerationContentRow>(
-      `SELECT profile.moderation_source_event_id::text AS current_source_event_id,
-              users.status = 'active' AS content_active
-         FROM social.profiles profile
-         JOIN identity.users users ON users.id = profile.user_id
-        WHERE profile.user_id = $1
-        FOR UPDATE OF profile, users`,
-      [moderationCase.content_id],
-    );
+    throw new Error('profile_editing_unavailable');
   } else {
     throw new Error('moderation_case_superseded');
   }
@@ -166,28 +158,22 @@ export async function reopenModerationCase(
         WHERE id = $1 AND moderation_source_event_id = $2::uuid AND deleted_at IS NULL`,
       [moderationCase.content_id, expectedRevision.sourceEventId],
     );
-  } else if (moderationCase.content_type === 'comment') {
+  } else {
     contentUpdate = await client.query(
       `UPDATE content.comments
           SET moderation_state = 'under_review', updated_at = now()
         WHERE id = $1 AND moderation_source_event_id = $2::uuid AND deleted_at IS NULL`,
       [moderationCase.content_id, expectedRevision.sourceEventId],
     );
-  } else {
-    contentUpdate = await client.query(
-      `UPDATE social.profiles
-          SET moderation_state = 'under_review', updated_at = now()
-        WHERE user_id = $1 AND moderation_source_event_id = $2::uuid`,
-      [moderationCase.content_id, expectedRevision.sourceEventId],
-    );
   }
   if (contentUpdate.rowCount !== 1) throw new Error('moderation_case_superseded');
 
+  const reviewCycleId = uuidv7();
   await client.query(
     `INSERT INTO system.audit_events
-       (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
-     VALUES ($1, $2, 'moderation.case.reopened', 'moderation_case', $3, $4, $5, $6::jsonb)`,
-    [uuidv7(), actor.userId, caseId, request.reasonCode, correlation, JSON.stringify({
+       (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata, created_at)
+     VALUES ($1, $2, 'moderation.case.reopened', 'moderation_case', $3, $4, $5, $6::jsonb, clock_timestamp())`,
+    [reviewCycleId, actor.userId, caseId, request.reasonCode, correlation, JSON.stringify({
       role: actor.role,
       expectedCaseState: request.expectedCaseState,
       previousState: 'resolved',
@@ -200,5 +186,5 @@ export async function reopenModerationCase(
     })],
   );
 
-  return { caseId, state: 'open', moderationState: 'under_review', revision: null };
+  return { caseId, state: 'open', moderationState: 'under_review', revision: null, reviewCycleId };
 }

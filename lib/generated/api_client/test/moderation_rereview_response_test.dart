@@ -27,5 +27,10 @@ void main() {
       // TODO
     });
 
+    // String reviewCycleId
+    test('to test the property `reviewCycleId`', () async {
+      // TODO
+    });
+
   });
 }

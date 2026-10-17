@@ -7,7 +7,8 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ModerationCaseRevision, () {
-    // DateTime resolvedAt
+    // Opaque exact UTC revision component. Preserve all six fractional digits, including trailing zeroes.
+    // String resolvedAt
     test('to test the property `resolvedAt`', () async {
       // TODO
     });

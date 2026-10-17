@@ -17,6 +17,12 @@ void main() {
       // TODO
     });
 
+    // Required after re-review; copy reviewCycleId from the current case list or re-review response. An earlier cycle cannot issue a decision.
+    // String expectedReviewCycleId
+    test('to test the property `expectedReviewCycleId`', () async {
+      // TODO
+    });
+
     // Public categorical label. AI-generated content cannot be allowed for publication.
     // String publicLabel
     test('to test the property `publicLabel`', () async {

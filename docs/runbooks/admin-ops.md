@@ -83,6 +83,17 @@ and a structured `reasonCode`. The revision combines the exact resolution
 timestamp, source event ID, and latest decision ID; stale state or revision
 returns a conflict.
 
+Treat `revision.resolvedAt` as an opaque string and retain its six fractional
+digits, including trailing zeroes. Re-review returns a `reviewCycleId`, also
+available on the current case list. Decisions for a reopened case must send
+that value as `expectedReviewCycleId`; requests from any earlier review cycle
+conflict. Community appeal closure waits for a fresh eligible staff decision
+recorded against that cycle and continues to respect independent holds.
+For this closure guard, the recorded decision actor must remain active with an
+active owner, administrator, or moderator membership.
+Profile re-review remains unavailable under the canonical admin grant boundary;
+this endpoint does not expand profile permissions.
+
 Re-review atomically reopens the case and changes its current content state to
 `under_review`. For a post it clears `published_at` while preserving visibility,
 declaration, provenance, existing decisions, enforcement records, and their
