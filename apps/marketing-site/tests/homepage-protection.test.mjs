@@ -33,9 +33,8 @@ const reputationPg17Script = 'node scripts/ci/run-reputation-managed-lock-cluste
 const allocatedJobsDiagnosticTests = 'apps/lythaus-jobs/tests/reputation-session-diagnostic.test.mjs apps/lythaus-jobs/tests/reputation-session-diagnostic.workerd.mjs';
 const allocatedJobsDiagnosticFiles = new Map([
   ['apps/lythaus-jobs/src/index.ts', '7b25af78fc1e227b85d1758b0cb31fd0aec09d24'],
-  // Membership-only createCustomFeed now shares the canonical account lock and keeps tier/count/cap checks,
-  // inserts, and matching activity in one transaction; the Jobs bridge and handler remain unchanged.
-  ['apps/lythaus-public-api/src/index.ts', '6ba74610a691ece3783d953290e54a677d9b08cd'],
+  // Scoped to privacy-request active-status revalidation under the existing account lock.
+  ['apps/lythaus-public-api/src/index.ts', '1a231c953f23159e922346760510c8eaee96873a'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],
