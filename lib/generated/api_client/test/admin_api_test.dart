@@ -155,7 +155,18 @@ void main() {
       // TODO
     });
 
+    // Reopen a resolved moderation case for review
+    //
+    // Reopens only a currently resolved case when both the expected state and its exact composite revision match. The transition appends an audit event and puts current content under review; posts are excluded from public feeds until a subsequent moderation decision restores eligibility. Profile re-review remains unavailable under the canonical admin grants.
+    //
+    //Future<ModerationRereviewResponse> adminModerationCaseRereview(String origin, String caseId, ModerationRereviewRequest moderationRereviewRequest) async
+    test('test adminModerationCaseRereview', () async {
+      // TODO
+    });
+
     // List moderation cases
+    //
+    // Each resolved item includes a `revision` token containing its exact `resolvedAt` timestamp, `sourceEventId`, and latest `decisionId`. Use that token with the re-review operation to compare-and-set the case back into review. Each item also includes reviewCycleId, null until the first re-review; copy its current value to expectedReviewCycleId on decisions.
     //
     //Future<AdminItems> adminModerationCasesList() async
     test('test adminModerationCasesList', () async {

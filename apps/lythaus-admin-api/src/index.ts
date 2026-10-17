@@ -16,6 +16,8 @@ import { triageCommunityAppeal } from '../../../packages/db/src/community-appeal
 import { communityTriageQueue, readCommunityTriageEvidence } from '../../../packages/db/src/community-appeal-access.ts';
 import { handleMonthlyContextReview } from './monthly-context-review.ts';
 import { appealOutcomeAuditPlan, assertActionableModerationCase, evaluateAppealFromRecords, parseAppealAdjudicationRequest, type AppealAdjudicationRecord, type AppealVoteRecord } from './runtime-policy.ts';
+import { reopenModerationCase } from './moderation-rereview-runtime.ts';
+import { assertExpectedModerationReviewCycle } from '../../../packages/db/src/moderation-review-cycle.ts';
 import { assertWaitlistAdminRole, assertWaitlistStatusTransition, parseWaitlistId, parseWaitlistRetentionHoldUpdate, parseWaitlistStatusUpdate, requireWaitlistEncryptionKey, waitlistAuditMetadata, waitlistPageRequest, WAITLIST_SEARCH_MAX_CANDIDATES } from './waitlist-runtime-policy.ts';
 import {
   createWaitlistEntry,
@@ -53,6 +55,7 @@ const ADMIN_ERROR_CODES = new Set([
   'monthly_context_request_invalid', 'monthly_context_rubric_mismatch', 'monthly_context_idempotency_reused',
   'monthly_context_revision_conflict', 'monthly_context_rules_locked', 'monthly_context_scope_changed',
   'monthly_context_publication_ineligible',
+  'moderation_case_revision_conflict', 'moderation_case_state_conflict',
   'account_support_owner_required', 'account_support_unavailable', 'account_support_invalid_filter',
   'overview_owner_required', 'overview_unavailable', 'overview_invalid_period',
   'admin_mutation_content_type_invalid', 'admin_mutation_origin_invalid', 'admin_role_required', 'admin_subject_key_not_configured',
@@ -85,7 +88,7 @@ function adminError(error: unknown): { exposedCode: string; internalCode: string
       : ['auth_data_unavailable', 'auth_email_dispatch_unavailable'].includes(exposedCode) ? 503
         : ['admin_role_required', 'admin_mutation_origin_invalid', 'account_support_owner_required', 'overview_owner_required', 'community_appeal_triage_not_allowed', 'monthly_context_actor_not_allowed', 'appeal_adjudication_list_forbidden', 'profile_editing_unavailable'].includes(exposedCode) ? 403
           : ['appeal_profile_access_unavailable', 'appeal_resolution_unavailable', 'community_appeals_unavailable', 'monthly_context_unavailable'].includes(exposedCode) ? 503
-            : ['community_appeal_state_conflict', 'monthly_context_idempotency_reused', 'monthly_context_revision_conflict', 'monthly_context_rules_locked', 'monthly_context_scope_changed'].includes(exposedCode) ? 409
+            : ['community_appeal_state_conflict', 'monthly_context_idempotency_reused', 'monthly_context_revision_conflict', 'monthly_context_rules_locked', 'monthly_context_scope_changed', 'moderation_case_revision_conflict', 'moderation_case_state_conflict'].includes(exposedCode) ? 409
           : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
               : ['appeal_adjudication_locked', 'appeal_already_resolved', 'email_already_verified', 'idempotency_in_progress', 'idempotency_key_reused', 'moderation_case_already_resolved', 'moderation_case_superseded', 'moderation_declaration_missing', 'user_email_exists', 'waitlist_duplicate', 'waitlist_status_transition_invalid'].includes(exposedCode) ? 409
               : exposedCode === 'waitlist_search_limit_exceeded' ? 422
@@ -134,10 +137,32 @@ async function enforceAdminRateLimit(request: Request, env: Env, actorId: string
 async function listModerationCases(env: Env): Promise<unknown[]> {
   const result = await query(env.DB_ADMIN_FRESH,
     `SELECT c.id, c.content_type, c.content_id, c.state, c.policy_version, c.created_at,
+            CASE WHEN c.state = 'resolved' AND c.resolved_at IS NOT NULL
+                       AND c.source_event_id IS NOT NULL AND latest_decision.id IS NOT NULL
+              THEN jsonb_build_object(
+                'resolvedAt', to_char(c.resolved_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
+                'sourceEventId', c.source_event_id::text,
+                'decisionId', latest_decision.id::text
+              )
+              ELSE NULL
+            END AS revision, review_cycle.id::text AS "reviewCycleId",
             count(f.id)::integer AS flag_count
      FROM moderation.cases c
      LEFT JOIN moderation.content_flags f ON f.content_type = c.content_type AND f.content_id = c.content_id
-     GROUP BY c.id, c.content_type, c.content_id, c.state, c.policy_version, c.created_at
+     LEFT JOIN LATERAL (
+       SELECT decision.id FROM moderation.decisions decision
+        WHERE decision.case_id = c.id
+        ORDER BY decision.created_at DESC, decision.id DESC
+        LIMIT 1
+     ) latest_decision ON true
+     LEFT JOIN LATERAL (
+       SELECT audit.id FROM system.audit_events audit
+        WHERE audit.target_type = 'moderation_case' AND audit.target_id = c.id
+          AND audit.action = 'moderation.case.reopened'
+        ORDER BY audit.created_at DESC, audit.id DESC LIMIT 1
+     ) review_cycle ON true
+     GROUP BY c.id, c.content_type, c.content_id, c.state, c.policy_version, c.created_at,
+              c.resolved_at, c.source_event_id, latest_decision.id, review_cycle.id
      ORDER BY (c.state = 'open') DESC, c.created_at ASC LIMIT 200`);
   return result.rows;
 }
@@ -457,7 +482,7 @@ function moderationState(outcome: 'allow' | 'block' | 'queue'): 'allowed' | 'blo
 }
 
 async function decideModeration(request: Request, env: Env, actor: { userId: string; role: string }, caseId: string, correlation: string): Promise<Response> {
-  const input = await readBoundedJson<{ outcome?: 'allow' | 'block' | 'queue'; reasonCode?: string; publicLabel?: string }>(request);
+  const input = await readBoundedJson<{ outcome?: 'allow' | 'block' | 'queue'; reasonCode?: string; publicLabel?: string; expectedReviewCycleId?: unknown }>(request);
   if (!input.outcome || !['allow', 'block', 'queue'].includes(input.outcome)) throw new Error('invalid_moderation_outcome');
   if (!input.reasonCode || !/^[A-Z0-9_.:-]{2,80}$/.test(input.reasonCode)) throw new Error('reason_code_required');
   const outcome = input.outcome;
@@ -520,6 +545,7 @@ async function decideModeration(request: Request, env: Env, actor: { userId: str
       currentSourceEventId: contentRecord?.current_source_event_id,
       contentActive: contentRecord?.content_active === true,
     });
+    const reviewCycleId = await assertExpectedModerationReviewCycle(client, caseId, input.expectedReviewCycleId);
     const moderationCase = { ...caseRecord, ...contentRecord } as ModerationCaseRecord & ModerationContentRecord;
     if (input.publicLabel !== undefined
       && (outcome !== 'allow' || !['post', 'comment'].includes(moderationCase.content_type))
@@ -541,8 +567,14 @@ async function decideModeration(request: Request, env: Env, actor: { userId: str
     const caseUpdate = await client.query(
       `UPDATE moderation.cases
           SET state = $1, resolved_at = CASE WHEN $1 = 'open' THEN NULL ELSE now() END
-        WHERE id = $2 AND state = 'open' AND source_event_id = $3`,
-      [outcome === 'queue' ? 'open' : 'resolved', caseId, moderationCase.source_event_id],
+        WHERE id = $2 AND state = 'open' AND source_event_id = $3
+          AND $4::uuid IS NOT DISTINCT FROM (
+            SELECT audit.id FROM system.audit_events audit
+             WHERE audit.target_type = 'moderation_case' AND audit.target_id = moderation.cases.id
+               AND audit.action = 'moderation.case.reopened'
+             ORDER BY audit.created_at DESC, audit.id DESC LIMIT 1
+          )`,
+      [outcome === 'queue' ? 'open' : 'resolved', caseId, moderationCase.source_event_id, reviewCycleId],
     );
     if (caseUpdate.rowCount !== 1) throw new Error('moderation_case_superseded');
     // Appeals remain open until the independently recorded review and adjudication policy resolves them.
@@ -656,7 +688,7 @@ async function decideModeration(request: Request, env: Env, actor: { userId: str
     await client.query(
       `INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
        VALUES ($1, $2, 'moderation.decision', 'moderation_case', $3, $4, $5, $6::jsonb)`,
-      [uuidv7(), actor.userId, caseId, input.reasonCode, correlation, JSON.stringify({ outcome, role: actor.role, decisionId })],
+      [uuidv7(), actor.userId, caseId, input.reasonCode, correlation, JSON.stringify({ outcome, role: actor.role, decisionId, reviewCycleId })],
     );
     return { publicLabel };
   });
@@ -1230,6 +1262,15 @@ export default {
       }
       if (request.method === 'GET' && url.pathname === '/api/admin/moderation/cases') {
         return cors(json({ items: await listModerationCases(env) }, { headers: { 'x-correlation-id': id, 'cache-control': 'private, no-store' } }));
+      }
+      const moderationRereview = url.pathname.match(/^\/api\/admin\/moderation\/cases\/([^/]+)\/rereview$/);
+      if (request.method === 'POST' && moderationRereview) {
+        assertAdminMutationRequest(request, env.CORS_ALLOWED_ORIGINS);
+        const input = await readBoundedJson<unknown>(request);
+        const reopened = await transaction(env.DB_ADMIN_FRESH, client => reopenModerationCase(
+          client, moderationRereview[1], actor, id, input,
+        ));
+        return cors(json(reopened, { headers: { 'x-correlation-id': id, 'cache-control': 'private, no-store' } }));
       }
       if (request.method === 'GET' && url.pathname === '/api/admin/audit') {
         const result = await query(env.DB_ADMIN_FRESH,

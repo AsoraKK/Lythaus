@@ -172,6 +172,8 @@ after(async () => {
   await sql('DROP FUNCTION IF EXISTS moderation.reject_community_appeal_update()');
   await sql('DROP FUNCTION IF EXISTS moderation.freeze_community_appeal_packet()');
   await sql('DELETE FROM moderation.appeals WHERE appellant_id = $1', [owner?.id]);
+  await sql('DELETE FROM system.audit_events WHERE target_id = ANY($1::uuid[])', [cases]);
+  await sql('DELETE FROM moderation.enforcement_events WHERE case_id = ANY($1::uuid[])', [cases]);
   await sql('DELETE FROM moderation.decisions WHERE case_id = ANY($1::uuid[])', [cases]);
   await sql('DELETE FROM moderation.cases WHERE id = ANY($1::uuid[])', [cases]);
   await sql('DELETE FROM content.posts WHERE id = ANY($1::uuid[])', [posts]);
@@ -182,6 +184,7 @@ after(async () => {
   await sql('DELETE FROM system.idempotency_keys WHERE actor_id = ANY($1::uuid[])', [users]);
   await sql('DELETE FROM feed.notifications WHERE recipient_id = ANY($1::uuid[])', [users]);
   await sql('DELETE FROM identity.admin_memberships WHERE user_id = ANY($1::uuid[])', [users]);
+  await sql('DELETE FROM trust.user_activity_events WHERE user_id = ANY($1::uuid[]) OR actor_user_id = ANY($1::uuid[])', [users]);
   await sql('DELETE FROM identity.email_credentials WHERE user_id = ANY($1::uuid[])', [users]);
   await sql('DELETE FROM identity.users WHERE id = ANY($1::uuid[])', [users]);
   for (const statement of grantRestores) await sql(statement);
@@ -210,6 +213,69 @@ test('APP-01: pending defaults, missing approval and disabled flag cannot activa
   await assert.rejects(submit(fixture), /unavailable/);
   await sql('UPDATE system.feature_flags SET enabled = true WHERE flag_key = $1', [flag]);
   assert.deepEqual(await tx(client => communityReviewQueue(client, voters[0].id, rules)), { state: 'no_case_available', items: [] });
+});
+
+test('reopened review cycle blocks enabled community closure until a fresh eligible staff decision', async () => {
+  const fixture = await opened();
+  await majority(fixture.appealId);
+  await due(fixture.appealId);
+  await sql('UPDATE moderation.cases SET resolved_at = clock_timestamp() WHERE id = $1', [fixture.caseId]);
+  const token = await new SignJWT({}).setProtectedHeader({ alg: 'ES256', kid: keyId }).setSubject(triager.id)
+    .setAudience(adminEnv.ACCESS_AUDIENCES).setIssuer(`https://${adminEnv.ACCESS_TEAM_DOMAIN}`).setIssuedAt().setExpirationTime('10m').sign(privateKey);
+  const staff = (method, path, body) => adminWorker.fetch(new Request(`https://admin-api.lythaus.test/api/admin${path}`, {
+    method, headers: { 'CF-Access-Jwt-Assertion': token, Origin: 'https://admin-api.lythaus.test', 'Content-Type': 'application/json' },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  }), adminEnv);
+  const listed = await staff('GET', '/moderation/cases');
+  assert.equal(listed.status, 200);
+  const revision = (await listed.json()).items.find(item => item.id === fixture.caseId).revision;
+  const reopened = await staff('POST', `/moderation/cases/${fixture.caseId}/rereview`, {
+    expectedCaseState: 'resolved', expectedRevision: revision, reasonCode: 'MODERATION.REREVIEW_REQUESTED',
+  });
+  assert.equal(reopened.status, 200, await reopened.clone().text());
+  const cycle = (await reopened.json()).reviewCycleId;
+  const before = (await sql(`SELECT
+    (SELECT count(*) FROM moderation.community_appeal_outcomes WHERE appeal_id = $1) AS outcomes,
+    (SELECT count(*) FROM moderation.community_appeal_overrides WHERE appeal_id = $1) AS overrides,
+    (SELECT count(*) FROM system.outbox_events WHERE aggregate_id = $1 AND event_type = 'moderation.community_appeal.resolved') AS closures,
+    (SELECT count(*) FROM system.outbox_events WHERE aggregate_id = $2 AND event_type = 'content.post.published') AS publications`,
+  [fixture.appealId, fixture.id])).rows[0];
+  assert.deepEqual(await close(fixture.appealId), { state: 'open', created: false, reason: 'staff_review_required' });
+  const delayed = await staff('POST', `/moderation/cases/${fixture.caseId}/decision`, {
+    outcome: 'allow', reasonCode: 'MODERATION.REVIEW', expectedReviewCycleId: null,
+  });
+  assert.equal(delayed.status, 409);
+  await sql(`INSERT INTO moderation.decisions (id, case_id, outcome, policy_version)
+    VALUES ($1, $2, 'queue', 'synthetic-automated-prehold')`, [uuidv7(), fixture.caseId]);
+  assert.deepEqual(await close(fixture.appealId), { state: 'open', created: false, reason: 'staff_review_required' });
+  const after = (await sql(`SELECT
+    (SELECT count(*) FROM moderation.community_appeal_outcomes WHERE appeal_id = $1) AS outcomes,
+    (SELECT count(*) FROM moderation.community_appeal_overrides WHERE appeal_id = $1) AS overrides,
+    (SELECT count(*) FROM system.outbox_events WHERE aggregate_id = $1 AND event_type = 'moderation.community_appeal.resolved') AS closures,
+    (SELECT count(*) FROM system.outbox_events WHERE aggregate_id = $2 AND event_type = 'content.post.published') AS publications`,
+  [fixture.appealId, fixture.id])).rows[0];
+  assert.deepEqual(after, before);
+  assert.equal((await sql('SELECT moderation_state FROM content.posts WHERE id = $1', [fixture.id])).rows[0].moderation_state, 'under_review');
+  const fresh = await staff('POST', `/moderation/cases/${fixture.caseId}/decision`, {
+    outcome: 'block', reasonCode: 'MODERATION.REVIEW', expectedReviewCycleId: cycle,
+  });
+  assert.equal(fresh.status, 200, await fresh.clone().text());
+  await sql('UPDATE identity.admin_memberships SET active = false WHERE user_id = $1', [triager.id]);
+  try {
+    assert.deepEqual(await close(fixture.appealId), { state: 'open', created: false, reason: 'staff_review_required' });
+  } finally {
+    await sql('UPDATE identity.admin_memberships SET active = true WHERE user_id = $1', [triager.id]);
+  }
+  await sql("UPDATE identity.admin_memberships SET role = 'privacy_operator' WHERE user_id = $1", [triager.id]);
+  try {
+    assert.deepEqual(await close(fixture.appealId), { state: 'open', created: false, reason: 'staff_review_required' });
+  } finally {
+    await sql("UPDATE identity.admin_memberships SET role = 'moderator' WHERE user_id = $1", [triager.id]);
+  }
+  const closed = await close(fixture.appealId);
+  assert.equal(closed.created, true);
+  assert.equal(closed.restoration, 'independent_hold');
+  assert.equal((await sql('SELECT moderation_state FROM content.posts WHERE id = $1', [fixture.id])).rows[0].moderation_state, 'blocked');
 });
 
 test('APP-04/07/12: JWT ownership, frozen evidence, safe triage and private reads use real API routes', async () => {

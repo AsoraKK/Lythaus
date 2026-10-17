@@ -1439,6 +1439,8 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1admin~1editorial~1publications'
   /admin/moderation/cases/{caseId}/decision:
     $ref: './product-integrity.yaml#/paths/~1admin~1moderation~1cases~1{caseId}~1decision'
+  /admin/moderation/cases/{caseId}/rereview:
+    $ref: './product-integrity.yaml#/paths/~1admin~1moderation~1cases~1{caseId}~1rereview'
   /admin/appeals/{appealId}/adjudications:
     $ref: './product-integrity.yaml#/paths/~1admin~1appeals~1{appealId}~1adjudications'
   /admin/appeals/pending-adjudication:

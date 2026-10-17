@@ -16,6 +16,7 @@ export function publicationControlTarget(value) {
 
 const suites = [
   ['moderation', 'apps/lythaus-jobs/tests/post-moderation.workerd.mjs'],
+  ['rereview', 'apps/lythaus-admin-api/tests/moderation-rereview.postgres.mjs', 240000],
   ['admission', 'apps/lythaus-public-api/tests/publication-admission.workerd.mjs', 240000],
   ['safety', 'apps/lythaus-jobs/tests/post-safety-evidence.workerd.mjs'],
   ['tx', 'packages/db/tests/transaction-client.postgres.mjs'],
@@ -23,7 +24,7 @@ const suites = [
 ];
 
 export function publicationFailureAnnotation(stage) {
-  assert.match(stage, /^(control|(?:moderation|admission|safety|tx|attach)\.(?:create|baseline|suite|drop))$/);
+  assert.match(stage, /^(control|(?:moderation|rereview|admission|safety|tx|attach)\.(?:create|baseline|suite|drop))$/);
   return `::error title=Publication fixture failure::${stage} failed; inspect this stage's child output.`;
 }
 
@@ -61,7 +62,7 @@ export async function runPublicationSuites(value) {
       stage = `${label}.baseline`;
       await run(['scripts/ci/validate-planetscale-postgres17.mjs'], local.toString());
       stage = `${label}.suite`;
-      await run(['--experimental-strip-types', '--test', '--test-concurrency=1', `--test-timeout=${testTimeout}`, suite], local.toString());
+      await run(['--experimental-strip-types', '--experimental-test-module-mocks', '--test', '--test-concurrency=1', `--test-timeout=${testTimeout}`, suite], local.toString());
       stage = `${label}.drop`;
       await control.query(`DROP DATABASE ${name} WITH (FORCE)`);
       owned.delete(name);

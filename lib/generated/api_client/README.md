@@ -91,6 +91,7 @@ Class | Method | HTTP request | Description
 [*AdminApi*](doc/AdminApi.md) | [**adminLegalHoldsClear**](doc/AdminApi.md#adminlegalholdsclear) | **POST** /admin/privacy/legal-holds/{holdId}/clear | Clear a legal hold
 [*AdminApi*](doc/AdminApi.md) | [**adminLegalHoldsCreate**](doc/AdminApi.md#adminlegalholdscreate) | **POST** /admin/privacy/legal-holds | Place a legal hold
 [*AdminApi*](doc/AdminApi.md) | [**adminLegalHoldsList**](doc/AdminApi.md#adminlegalholdslist) | **GET** /admin/privacy/legal-holds | List active and released legal holds
+[*AdminApi*](doc/AdminApi.md) | [**adminModerationCaseRereview**](doc/AdminApi.md#adminmoderationcaserereview) | **POST** /admin/moderation/cases/{caseId}/rereview | Reopen a resolved moderation case for review
 [*AdminApi*](doc/AdminApi.md) | [**adminModerationCasesList**](doc/AdminApi.md#adminmoderationcaseslist) | **GET** /admin/moderation/cases | List moderation cases
 [*AdminApi*](doc/AdminApi.md) | [**adminModerationDecision**](doc/AdminApi.md#adminmoderationdecision) | **POST** /admin/moderation/cases/{caseId}/decision | Apply a moderation decision
 [*AdminApi*](doc/AdminApi.md) | [**adminMonthlyContextReview**](doc/AdminApi.md#adminmonthlycontextreview) | **POST** /admin/reputation/comments/{commentId}/context-review | Record a scoped contextual contribution review
@@ -427,8 +428,11 @@ Class | Method | HTTP request | Description
  - [MemberRequestPage](doc/MemberRequestPage.md)
  - [MemberSuggestionRequest](doc/MemberSuggestionRequest.md)
  - [MemberSupportRequest](doc/MemberSupportRequest.md)
+ - [ModerationCaseRevision](doc/ModerationCaseRevision.md)
  - [ModerationDecisionRequest](doc/ModerationDecisionRequest.md)
  - [ModerationDecisionResponse](doc/ModerationDecisionResponse.md)
+ - [ModerationRereviewRequest](doc/ModerationRereviewRequest.md)
+ - [ModerationRereviewResponse](doc/ModerationRereviewResponse.md)
  - [ModerationState](doc/ModerationState.md)
  - [MonthlyContextReviewError](doc/MonthlyContextReviewError.md)
  - [MonthlyContextReviewRequest](doc/MonthlyContextReviewRequest.md)

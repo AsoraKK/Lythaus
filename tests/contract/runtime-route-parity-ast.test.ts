@@ -368,7 +368,7 @@ describe('source-derived OpenAPI route parity', () => {
       public: publicExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
       admin: adminExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
     };
-    expect(routeCounts).toEqual({ public: 129, admin: 64 });
+    expect(routeCounts).toEqual({ public: 129, admin: 65 });
     expect(runtimeRoutes.map(routeKey)).toEqual(expect.arrayContaining([
       'GET /.well-known/jwks.json',
       'PUT /media/uploads/{param}/bytes',
@@ -399,6 +399,7 @@ describe('source-derived OpenAPI route parity', () => {
       'GET /admin/appeals/community/queue',
       'GET /admin/appeals/{param}/evidence',
       'POST /admin/appeals/{param}/triage',
+      'POST /admin/moderation/cases/{param}/rereview',
       'POST /admin/reputation/comments/{param}/context-review',
       'PUT /admin/reviewers/{param}/qualification',
     ]));
