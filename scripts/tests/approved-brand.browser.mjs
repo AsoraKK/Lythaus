@@ -100,9 +100,8 @@ try {
             await page.getByRole('textbox', { name: /Your post/ }).waitFor();
             await page.getByRole('button', { name: /^Discover(?:$|\s+Tab)/ }).click();
             await page.locator('flt-semantics').getByText('No posts yet', { exact: true }).waitFor();
-            await page.getByRole('button', { name: 'Feed controls', exact: true }).click();
-            await page.getByText('Choose a feed', { exact: true }).waitFor();
-            await page.getByRole('button', { name: 'Close feed controls', exact: true }).click();
+            assert.equal(await page.getByRole('button', { name: 'Feed controls', exact: true }).isDisabled(), true,
+              'The single-feed fixture must not offer unavailable feed switching');
           } else {
             await page.getByRole('img', { name: 'Lythaus', exact: true }).waitFor();
           }
