@@ -235,7 +235,7 @@ try {
           if(login){
             await page.waitForURL(url=>url.pathname==='/');
             assert.equal(new URL(page.url()).pathname,'/','Real GoRouter guest destination');
-            await page.getByRole('button',{name:/^Discover(?:$|\s+Tab)/}).waitFor();
+            await page.getByRole('button',{name:/^Discover(?:$|\s+Tab)/}).and(page.locator('[aria-current="true"]')).waitFor();
             await page.locator('flt-semantics').getByText('No posts yet',{exact:true}).waitFor();
             assert.equal(requests.filter(r=>r.url===refreshUrl&&r.method==='POST').length,1,'Real signed-out refresh');
             assert.equal(requests.filter(r=>r.url===logoutUrl&&r.method==='POST').length,1,'One real guest logout');

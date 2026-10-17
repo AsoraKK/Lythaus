@@ -3,7 +3,7 @@
 Only the six login browser cases move from `test/browser/approved_brand_entry.dart`
 to the real `lib/main.dart` bootstrap, router and providers. The detached fixture
 adds a fixed text-scale wrapper and an on-demand, read-only layout getter. The
-production source is unchanged. No frame requests, painter changes or CPU
+production source is unchanged. No Dart frame requests, painter changes or CPU
 rendering overrides are introduced.
 
 Each browser engine must execute 24 unique cases: login, onboarding, shell and
@@ -31,6 +31,10 @@ after capture, and against the subsequently activated named-image semantics.
 A failed first-paint PNG is never replaced by a later capture. Per-case JSON,
 the PNG hash, original geometry, fidelity, raw health and compiled source hashes
 are retained with the required browser artifact.
+The existing browser render-health observer remains in place, including its
+JavaScript RAF heartbeat and context-loss observation. It does not request a
+Dart frame; the startup diagnostic without these observers remains separately
+preserved evidence.
 
 The six widget test names begin `brand login companion`, followed by theme,
 width and scale. They live under `test/` and run through the existing
