@@ -72,13 +72,16 @@ normal Flutter renderer; the prior global WebKit CPU workaround is unacceptable
 because of measured composer regression. The service-worker version token and
 immutable release hashing are preserved.
 
-Release remains held: the strict WebKit pixel gate is unresolved. Static WebGL
-protocol snapshots differ across engines, but sampling a non-preserved drawing
-buffer after presentation does not prove the displayed UI is blank. The available
-headed WebKit desktop-capture path also fails plain-HTML calibration. A trustworthy
-independent visible-layer capture is needed before release validation can be
-completed. No CPU, preserved-buffer, repaint-loop or retry workaround is used to
-clear this gate. Real Safari behavior and device performance remain unverified.
+Release remains held: the strict WebKit pixel gate is unresolved. A later Linux
+headed capture ran Xorg, WebKitGTK and independent X11 capture in one IPC namespace.
+That path passed red/green HTML and blue WebGL pixel calibration, then showed the
+login content with absent wordmark pixels using the normal renderer. The earlier
+black desktop captures used separate IPC namespaces and are not rendering evidence.
+The headed fixture also needs an explicit valid locale (tested with en-US).
+An isolated native-image alternative failed the same gate and is not selected.
+No CPU, preserved-buffer, repaint-loop or retry workaround is used to clear this
+gate. Real Safari/macOS behavior and device performance remain unverified; the
+Linux result must not be generalized to Apple devices without that validation.
 
 Native byte/mapping validation does not prove compilation or device rendering.
 Android, iOS, macOS and Windows packaging must be checked on their native
