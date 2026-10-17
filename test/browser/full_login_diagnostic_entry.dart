@@ -8,6 +8,8 @@ import 'approved_brand_entry.dart' as original;
 
 @JS('globalThis.__fullLoginProbeEvent')
 external JSFunction? get probeCallback;
+@JS('globalThis.__scheduleFullLoginDiagnosticFrame')
+external set scheduleDiagnosticFrame(JSFunction callback);
 void report(String name, [String detail = '']) =>
     probeCallback?.callAsFunction(null, name.toJS, detail.toJS);
 
@@ -91,6 +93,10 @@ class FullLoginProbeBinding extends WidgetsFlutterBinding {
 }
 
 void main() {
-  FullLoginProbeBinding();
+  final binding = FullLoginProbeBinding();
+  scheduleDiagnosticFrame = (() {
+    report('diagnosticFrame:request');
+    binding.scheduleFrame();
+  }).toJS;
   original.main();
 }

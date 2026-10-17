@@ -62,3 +62,39 @@ exist. No new repaint wrapper, geometry/path transform, renderer override or
 production source change is introduced. Resource parity remains enforced.
 The earlier required gate and its startup order stay unchanged; this is a
 diagnosis of ordering, not a new readiness wait that makes the gate pass.
+
+## No-semantics dwell and single-frame control
+
+The ce0697c9 observation showed both variants white immediately after two Dart
+frames and painted after semantics activation/third frame, with one brand-paint
+invocation. That immediate screenshot did not establish a persistent normal
+startup failure. Its immutable evidence remains in Library
+`libfile_577e9963a4408191a00ea8403f4fa28e` (archive SHA256
+`d4bcfab098bf4acc35cd8bd78ca84fa178282ed6c66f874760c3c3d7cd6961b3`).
+
+The next hook uses one direct build in two fresh contexts: wait-only, and exactly
+one diagnostic `scheduleFrame` after initial capture. Both remain without
+semantics, with fixed 250/5250 ms observations after that initial capture. The
+frame bridge exists only in the diagnostic Dart entry. There is no paint
+invalidation, new widget wrapper, geometry change, raster-mode change or automatic
+frame loop. Contracts reject a shortened dwell, accessibility activation or an
+unexpected/repeated frame request. Both arms share all compiled bytes.
+
+Two additional untouched controls run without accessibility activation: the
+existing required `approved_brand_entry` build and the already-built immutable
+`lib/main.dart` release. Their resources are inventoried separately; the real
+app's own auth/router/crash-reporting/reload startup and default text scale are
+not equated with the synthetic 2× static login. Its signed-out refresh response is
+fulfilled locally as 401, and its service workers are blocked to guarantee that
+no production API/auth traffic escapes interception. That control does not
+certify deployed service-worker or authenticated behavior. Unexpected external
+requests fail isolation and remain in evidence.
+
+Read-only telemetry records GL call counts/times, canvas dimensions/attachment,
+canvas resize setters and the framework's first-frame DOM notification. In the
+pinned Flutter SDK, RendererBinding invokes the `flutter/service_worker` method
+from a post-frame callback; the engine dispatches `flutter-first-frame` from that
+message. The DOM event is a framework milestone, not a GPU presentation receipt.
+No production correction is selected until the dwell and frame controls identify
+a smaller supported cause. The required gate and all pixel thresholds remain
+unchanged.
