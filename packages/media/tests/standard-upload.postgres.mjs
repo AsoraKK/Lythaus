@@ -522,6 +522,53 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
       assert.equal((await session(input)).status, 'queued');
       assert.ok(!fixture.statements.some(input => /system\.cost_/.test(input.text ?? '')));
     });
+    await t.test('legacy v1 cached EXIF derivative is revalidated across SQL retry before variant persistence', async () => {
+      const jpeg = new Uint8Array(await createExifGpsJpeg());
+      const derivativeBytes = new Uint8Array(await sharp(Buffer.from(jpeg)).rotate().webp({ quality: 85 }).toBuffer());
+      const derivativeMetadata = await sharp(derivativeBytes).metadata();
+      assert.deepEqual([derivativeMetadata.width, derivativeMetadata.height], [2, 3]);
+      const input = await seed('queued', 'standard', jpeg, 'image/jpeg');
+      const key = `approved/${input.userId}/${input.sessionId}.webp`;
+      const sourceSha256 = createHash('sha256').update(jpeg).digest('hex');
+      const derivativeSha256 = createHash('sha256').update(derivativeBytes).digest('hex');
+      await fixture.approved.put(key, derivativeBytes, {
+        httpMetadata: { contentType: 'image/webp' },
+        customMetadata: { transform: 'standard-webp-v1', sourceSha256, sourceBytes: String(jpeg.length),
+          sourceContentType: 'image/jpeg', sha256: derivativeSha256, width: '3', height: '2' },
+      });
+      await admin.query('GRANT INSERT (object_id, owner_id) ON media.ownership TO lythaus_jobs');
+      try {
+        beforeQuery = request => {
+          if (request.text.includes('INSERT INTO media.objects')) {
+            beforeQuery = undefined;
+            throw new Error('synthetic_sql_loss_after_legacy_derivative_read');
+          }
+        };
+        assert.deepEqual(await queue(input), { ack: 0, retry: 1, imageCalls: 1 });
+        assert.equal((await session(input)).status, 'queued');
+        assert.equal((await admin.query('SELECT count(*)::integer AS n FROM media.objects WHERE object_key=$1', [key])).rows[0].n, 0);
+        assert.equal(effects.filter(effect => effect.type === 'transform').length, 0);
+        assert.equal(effects.filter(effect => effect.type === 'info').length, 1);
+
+        assert.deepEqual(await queue(input), { ack: 1, retry: 0, imageCalls: 1 });
+        assert.equal((await session(input)).status, 'approved');
+        const object = (await admin.query('SELECT id,state,byte_size,sha256 FROM media.objects WHERE object_key=$1', [key])).rows[0];
+        assert.equal(object.state, 'review');
+        assert.equal(Number(object.byte_size), derivativeBytes.byteLength);
+        assert.equal(object.sha256, derivativeSha256);
+        const variant = (await admin.query('SELECT width,height FROM media.variants WHERE object_id=$1', [object.id])).rows[0];
+        assert.deepEqual(Object.values(variant).map(Number), [2, 3]);
+        assert.equal(effects.filter(effect => effect.type === 'transform').length, 0);
+        assert.equal(effects.filter(effect => effect.type === 'info').length, 2);
+        const cached = await fixture.approved.head(key);
+        assert.equal(cached.customMetadata.transform, 'standard-webp-v1');
+        assert.deepEqual([cached.customMetadata.width, cached.customMetadata.height], ['3', '2']);
+        assert.ok(!fixture.statements.some(input => /(?:INSERT INTO|UPDATE) (?:content|feed)\./.test(input.text ?? '')));
+      } finally {
+        beforeQuery = undefined;
+        await admin.query('REVOKE INSERT (object_id, owner_id) ON media.ownership FROM lythaus_jobs');
+      }
+    });
     await t.test('an unbound older derivative fails closed without overwrite or decoding', async () => {
       const input = await seed('queued');
       const key = `approved/${input.userId}/${input.sessionId}.webp`;

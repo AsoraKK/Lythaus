@@ -101,8 +101,12 @@ export async function standardUploadFixture(database, onEffect = async () => {})
             await effect('info', { stage: imageInfoCalls });
             const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
             if (input.decoderFailure && imageInfoCalls === 1) throw new Error('synthetic_decode_unavailable');
+            if (input.outputInfoFailure && imageInfoCalls > 1) throw new Error('synthetic_output_info_unavailable');
             if (imageInfoCalls === 1 && input.dimensions) return input.dimensions;
-            if (imageInfoCalls > 1 && input.outputDimensions) return input.outputDimensions;
+            if (imageInfoCalls > 1 && input.outputDimensions) {
+              if (input.outputDimensions.width === 'NaN') return { ...input.outputDimensions, width: Number.NaN };
+              return input.outputDimensions;
+            }
             const response = await bindings.FIXTURE_IMAGES.fetch(new Request('https://fixture.invalid/info', {
               method: 'POST', body: bytes,
             }));

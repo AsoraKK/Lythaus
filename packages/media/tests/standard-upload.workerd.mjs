@@ -252,15 +252,24 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       assert.ok(!fixture.statements.some(statement => /(?:INSERT INTO|UPDATE) (?:content|feed)\./.test(statement.text ?? '')));
       assert.equal(fixture.outbound.length, 0);
     });
-    await t.test('invalid transformed dimensions retry without persisting or exposing a derivative', async () => {
-      const input = await seed();
-      const key = `approved/${input.userId}/${input.sessionId}.webp`;
-      assert.deepEqual(await queue({ ...input, outputDimensions: { width: 0, height: 3 } }),
-        { ack: 0, retry: 1, imageCalls: 1 });
-      assert.equal(state.session.status, 'queued');
-      assert.equal(state.objects.length, 0);
-      assert.equal(await fixture.approved.head(key), null);
-      assert.ok(await fixture.quarantine.head(state.session.object_key));
+    await t.test('output info failures and invalid dimensions retry without persisting or exposing a derivative', async () => {
+      const invalid = [
+        ['output info exception', { outputInfoFailure: true }],
+        ['missing width', { outputDimensions: { height: 3 } }],
+        ['zero width', { outputDimensions: { width: 0, height: 3 } }],
+        ['fractional width', { outputDimensions: { width: 1.5, height: 3 } }],
+        ['NaN width', { outputDimensions: { width: 'NaN', height: 3 } }],
+        ['over-limit pixels', { outputDimensions: { width: 40000001, height: 1 } }],
+      ];
+      for (const [label, overrides] of invalid) {
+        const input = await seed();
+        const key = `approved/${input.userId}/${input.sessionId}.webp`;
+        assert.deepEqual(await queue({ ...input, ...overrides }), { ack: 0, retry: 1, imageCalls: 1 }, label);
+        assert.equal(state.session.status, 'queued', label);
+        assert.equal(state.objects.length, 0, label);
+        assert.equal(await fixture.approved.head(key), null, label);
+        assert.ok(await fixture.quarantine.head(state.session.object_key), label);
+      }
     });
     await t.test('still-valid upload URL cannot recreate bytes after account deletion', async () => {
       await seed('pending', { withObject: false });

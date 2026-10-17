@@ -65,10 +65,12 @@ test('matching a file signature is only an integrity check, not a full decode or
 
 test('cached derivatives bind exact bytes and source identity within the existing reservation', async () => {
   const bytes = Uint8Array.from([82,73,70,70,4,0,0,0,87,69,66,80]);
-  const derivative = { bytes, sha256: digest(bytes), width: 1, height: 1 };
+  const derivative = { bytes, sha256: digest(bytes), width: 1, height: 1, needsDimensionRevalidation: false };
   const customMetadata = standardDerivativeMetadata(derivative, metadata());
   const stored = patch => ({ ...source(bytes), customMetadata: { ...customMetadata, ...patch } });
   assert.deepEqual(await readStandardDerivative(stored(), metadata()), derivative);
+  assert.deepEqual(await readStandardDerivative(stored({ transform: 'standard-webp-v1', width: '3', height: '2' }), metadata()),
+    { ...derivative, width: 3, height: 2, needsDimensionRevalidation: true });
   for (const patch of [{ transform: 'unknown' }, { sourceSha256: '0'.repeat(64) }, { sourceBytes: '13' },
     { sourceContentType: 'image/jpeg' }, { width: '1.5' }, { height: '-1' }, { sha256: 'invalid' }]) {
     await assert.rejects(readStandardDerivative(stored(patch), metadata()), /media_derivative_conflict/);

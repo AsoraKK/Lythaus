@@ -1,8 +1,9 @@
 # Standard image decoder and storage acceptance follow-up
 
-Branch: `codex/media-acceptance-20261017`
+Review branch: `codex/media-handler-review-20261017` (draft PR #1044)
 
-Inspected base: `da6515d13f2d46950a8211008f89909f23b64a80`
+Candidate base: `da6515d13f2d46950a8211008f89909f23b64a80`
+Current PR base: `main` at `96bac288e8794d0d4bf9d82db86dfbf71db73929` after PR #1039.
 Scope: ordinary private image upload/processing acceptance only.
 
 This follow-up changes the media Jobs handler and deterministic local test
@@ -35,18 +36,38 @@ The detector still has no pixel input or qualified output: persisted evidence
 remains `not-executed` and review-required. Metadata, MIME, dimensions,
 checksums, and signatures are not image-pixel detection or authorship proof.
 
+## Mixed-version derivative retries
+
+New derivatives use `standard-webp-v2` metadata whose dimensions come from the
+actual normalized WebP bytes. A cached `standard-webp-v1` derivative remains
+eligible only after its bounded bytes, checksum, MIME, source checksum, and
+reservation are verified. Because v1 dimensions may describe the pre-rotation
+source, every v1 cache read re-inspects those verified WebP bytes with the
+Images `info()` binding before any object or variant write. The handler does
+not overwrite a valid cached object or repeat its transform. Missing or
+invalid output info remains retryable.
+
+The PG17 regression seeds a real EXIF JPEG's normalized 2×3 WebP bytes with
+legacy v1 metadata claiming 3×2, forces SQL loss after the cache read, and
+redelivers the queued job. Both attempts re-inspect the existing derivative;
+the persisted variant is 2×3, no transform repeats, and the original legacy
+R2 metadata remains unchanged. Workerd cases also cover an output-info
+exception and missing, zero, fractional, NaN, and over-limit dimensions; each
+retries without persisting or exposing a derivative.
+
 ## Exact-file ownership gate
 
-The candidate changes `apps/lythaus-jobs/src/index.ts` from the main blob
+The candidate changes `apps/lythaus-jobs/src/index.ts` from the base blob
 `7b25af78fc1e227b85d1758b0cb31fd0aec09d24` to
-`c09e6ac96b366ef36ff63f153f58c8b5d025dd3a`. The checked-in
+`da112b2d2c869251ed48941d31d4ac854bb93fa1`. The checked-in
 `apps/marketing-site/tests/homepage-protection.test.mjs` pins that file to the
-main blob for another allocated lane. Running
+main blob for another allocated lane. The guard remains unchanged. Running
 `node --test --test-name-pattern='image-integrity rejection survives a fresh squashed checkout' apps/marketing-site/tests/homepage-protection.test.mjs`
-fails with `Jobs diagnostic bytes must match the exact allocated review
-revision`. This candidate keeps the guard unchanged and is not pushed. Its
-source delta needs independent review before the parent can arrange a narrowly
-scoped allocation update with provenance and the existing negative controls.
+fails because the nested exact-source assertion sees the new Jobs blob instead
+of the pinned blob, with `Jobs diagnostic bytes must match the exact allocated
+review revision`. No ownership guard was bypassed or edited. The Jobs delta is
+published on draft PR #1044 for independent review. Exact-head CI and the
+remaining allocation gate are recorded in the PR.
 
 ## Storage boundary
 
@@ -84,11 +105,13 @@ remain false.
 
 Validated on PostgreSQL 17.11 and local Workerd/Miniflare R2:
 
-- `node --experimental-strip-types --test --test-concurrency=1 packages/media/tests/standard-upload.test.mjs packages/media/tests/standard-upload.workerd.mjs` — 31/31 passed.
-- `PLANETSCALE_PG17_TEST_DATABASE_URL=<loopback disposable PG17 control database> node --experimental-strip-types --test --test-concurrency=1 packages/media/tests/standard-upload.postgres.mjs` — 25/25 passed. Includes canonical role denials, temporary candidate grants in the disposable database, concurrent reservations, lock contention, lost transaction recovery, retry reuse, and cleanup retry.
+- `node --experimental-strip-types --test --test-concurrency=1 packages/media/tests/standard-upload.test.mjs packages/media/tests/standard-upload.workerd.mjs` — 31/31 passed, including output-info failure and invalid-dimension cases.
+- `PLANETSCALE_PG17_TEST_DATABASE_URL=<loopback disposable PG17 control database> node --experimental-strip-types --test --test-concurrency=1 packages/media/tests/standard-upload.postgres.mjs` — 26/26 passed. Includes the legacy v1 cached derivative across SQL loss/retry, canonical role denials, temporary candidate grants in the disposable database, concurrent reservations, lock contention, retry reuse, and cleanup retry.
 - `npm run typecheck:native` — passed.
 - `XDG_CONFIG_HOME=/tmp/lythaus-media-wrangler-config npm_config_cache=/workspace/.lythaus-cache/npm npm run validate:native-workers` — validated four Worker configs and three generated Worker type files.
 - `git diff --check` — passed.
 
-These are local checks, not hosted exact-head CI or release acceptance. No
-deployment, merge, public posting, or detector qualification is claimed.
+These local checks do not establish live production role binding or hosted
+Cloudflare R2/Images/Queue acceptance. Exact-head CI is tracked on draft PR
+#1044. No deployment, merge, public posting, live privilege change, or
+detector qualification is claimed.

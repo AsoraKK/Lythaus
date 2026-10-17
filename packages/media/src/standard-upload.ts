@@ -17,12 +17,13 @@ export interface StandardDerivative {
   sha256: string;
   width: number;
   height: number;
+  needsDimensionRevalidation: boolean;
 }
 
 export function standardDerivativeMetadata(derivative: StandardDerivative, session: {
   expected_bytes: number | string; content_type: string; checksum_sha256: string;
 }): Record<string, string> {
-  return { transform: 'standard-webp-v1', sourceSha256: session.checksum_sha256,
+  return { transform: 'standard-webp-v2', sourceSha256: session.checksum_sha256,
     sourceBytes: String(session.expected_bytes), sourceContentType: session.content_type,
     sha256: derivative.sha256, width: String(derivative.width), height: String(derivative.height) };
 }
@@ -32,8 +33,9 @@ export async function readStandardDerivative(source: {
 }, session: { expected_bytes: number | string; content_type: string; checksum_sha256: string }): Promise<StandardDerivative> {
   const metadata = source.customMetadata ?? {};
   const width = Number(metadata.width), height = Number(metadata.height), reserved = Number(session.expected_bytes);
+  const legacyDimensions = metadata.transform === 'standard-webp-v1';
   if (!Number.isSafeInteger(reserved) || reserved < 1 || reserved > MAX_IMAGE_BYTES || source.size > reserved
-    || metadata.transform !== 'standard-webp-v1' || metadata.sourceSha256 !== session.checksum_sha256
+    || (!legacyDimensions && metadata.transform !== 'standard-webp-v2') || metadata.sourceSha256 !== session.checksum_sha256
     || metadata.sourceBytes !== String(session.expected_bytes) || metadata.sourceContentType !== session.content_type
     || !/^[0-9a-f]{64}$/.test(metadata.sha256 ?? '') || !validStandardImageDimensions(width, height)) {
     void source.body.cancel().catch(() => undefined);
@@ -42,7 +44,7 @@ export async function readStandardDerivative(source: {
   const bytes = await verifyStandardUploadBytes(source, {
     expected_bytes: source.size, content_type: 'image/webp', checksum_sha256: metadata.sha256,
   });
-  return { bytes, sha256: metadata.sha256, width, height };
+  return { bytes, sha256: metadata.sha256, width, height, needsDimensionRevalidation: legacyDimensions };
 }
 
 export function parseStandardUpload(input: { contentType?: unknown; size?: unknown; checksumSha256?: unknown }): {
