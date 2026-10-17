@@ -7,6 +7,7 @@ import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/profile/application/owner_comments.dart';
 import 'package:lythaus/features/profile/domain/owner_comment.dart';
+import 'package:lythaus/features/profile/presentation/profile_content_status.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 
 bool ownerContentIsOffline(Object error) =>
@@ -37,30 +38,30 @@ class OwnerCommentsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Your comments', style: Theme.of(context).textTheme.titleLarge),
+        Semantics(
+          container: true,
+          header: true,
+          child: Text(
+            'Your comments',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+        ),
         const SizedBox(height: Spacing.sm),
         state.when(
-          loading: () => Semantics(
-            liveRegion: true,
-            label: 'Loading your comments',
-            child: const LinearProgressIndicator(minHeight: 2),
+          loading: () => const ProfileContentStatus(
+            title: 'Loading your comments',
+            icon: Icons.chat_bubble_outline,
+            loading: true,
           ),
-          error: (error, stack) => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                ownerContentIsOffline(error)
-                    ? 'You appear to be offline. Connect to load your comments.'
-                    : 'Unable to load your comments. Your profile is still available.',
-              ),
-              TextButton.icon(
-                onPressed: () => ref
-                    .read(ownerCommentsTimelineProvider(key).notifier)
-                    .refresh(),
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry comments'),
-              ),
-            ],
+          error: (error, stack) => ProfileContentStatus(
+            title: 'Comments could not be loaded',
+            icon: Icons.chat_bubble_outline,
+            message: ownerContentIsOffline(error)
+                ? 'You appear to be offline. Connect to load your comments.'
+                : 'Unable to load your comments. Your profile is still available.',
+            onRetry: () =>
+                ref.read(ownerCommentsTimelineProvider(key).notifier).refresh(),
+            retryLabel: 'Retry comments',
           ),
           data: (timeline) => _timeline(context, ref, key, timeline),
         ),
@@ -75,9 +76,10 @@ class OwnerCommentsSection extends ConsumerWidget {
     OwnerCommentsTimeline timeline,
   ) {
     if (timeline.items.isEmpty && !timeline.hasMore) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: Spacing.sm),
-        child: Text('No comments are available in this list.'),
+      return const ProfileContentStatus(
+        title: 'No comments to show',
+        icon: Icons.chat_bubble_outline,
+        message: 'No comments are available in this list.',
       );
     }
     return Column(

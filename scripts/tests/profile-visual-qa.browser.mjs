@@ -484,7 +484,7 @@ test(
               })
               .click();
             const profileTab = page
-              .getByRole('button', { name: /^Profile(?:\b|$)/ })
+              .getByRole('button', { name: /^Profile(?:$|\s+Tab)/ })
               .first();
             await profileTab.waitFor({ timeout: 90000 });
             await profileTab.click();
@@ -613,7 +613,7 @@ test(
           await openApp();
           await signIn();
           const profileTab = page
-            .getByRole('button', { name: /^Profile(?:\b|$)/ })
+            .getByRole('button', { name: /^Profile(?:$|\s+Tab)/ })
             .first();
           assert.ok(await profileTab.isVisible());
           assert.ok(await page.getByText(owner.displayName, { exact: true }).count() >= 1);
@@ -640,6 +640,7 @@ test(
           const loadedCommentsCalls = ownerCommentsCalls.length;
           await page.getByRole('tab', { name: /^Posts/ }).click();
           await moveHeadingNearTop('Your posts');
+          await page.getByText('No posts are available in this list.', { exact: false }).waitFor();
           assert.ok((await profileText()).includes('No posts are available in this list.'));
           await screenshot('owner-empty');
           await page.getByRole('tab', { name: /^Comments/ }).click();
@@ -808,7 +809,7 @@ test(
             height: window.innerHeight,
           }));
           const zoomedNavBox = await page
-            .getByRole('button', { name: /^Profile(?:\b|$)/ })
+            .getByRole('button', { name: /^Profile(?:$|\s+Tab)/ })
             .first()
             .boundingBox();
           const contentBottom = zoomedNavBox?.y ?? zoomViewport.height;

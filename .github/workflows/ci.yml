@@ -106,6 +106,8 @@ jobs:
       - name: Verify credential-bearing provider redirect boundaries in workerd
         run: node --test --test-timeout=60000 scripts/tests/auth-provider-redirects.workerd.mjs
       - run: npm run test:native-architecture
+      - name: Verify resolved moderation re-review authorization and request contract
+        run: node --experimental-strip-types --experimental-test-module-mocks --test apps/lythaus-admin-api/tests/moderation-rereview-handler.test.mjs
       - name: Verify owner-only read-only account support
         run: node --experimental-strip-types --experimental-test-module-mocks --test packages/contracts/tests/account-support.test.mjs apps/lythaus-admin-api/tests/account-support-runtime.test.mjs apps/lythaus-admin-api/tests/account-support-handler.test.mjs
       - name: Verify bounded owner-only Overview analytics
@@ -134,6 +136,14 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
         run: npm run test:publication:pg17
+      - name: Verify gated standard image integrity and unchanged role boundaries
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
+        run: >-
+          node --experimental-strip-types --test --test-concurrency=1
+          packages/media/tests/standard-upload.test.mjs
+          packages/media/tests/standard-upload.workerd.mjs
+          packages/media/tests/standard-upload.postgres.mjs
       - name: Verify publication CI target isolation
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control

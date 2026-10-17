@@ -9,7 +9,7 @@ void main() {
   group(MediaApi, () {
     // Create a quarantined media upload session
     //
-    // Creates a signed private upload session; the uploaded object remains quarantined until finalisation and review.
+    // Creates a private upload session and returns an authenticated Worker route. The response includes no object key or reusable R2 signature.
     //
     //Future<MediaUploadSessionCreated> mediaUploadsCreate(MediaUploadSessionCreateRequest mediaUploadSessionCreateRequest, { String idempotencyKey }) async
     test('test mediaUploadsCreate', () async {
@@ -22,6 +22,15 @@ void main() {
     //
     //Future<MediaUploadFinaliseResponse> mediaUploadsFinalise(String uploadSessionId, { String idempotencyKey }) async
     test('test mediaUploadsFinalise', () async {
+      // TODO
+    });
+
+    // Upload bytes to a private session
+    //
+    // Rechecks the active owner and pending session, bounds the body before R2, and verifies exact size, SHA-256 and MIME before storing bytes in quarantine.
+    //
+    //Future<MediaUploadBytesResponse> mediaUploadsPutBytes(String uploadSessionId, MultipartFile body) async
+    test('test mediaUploadsPutBytes', () async {
       // TODO
     });
 

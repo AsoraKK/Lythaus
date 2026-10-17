@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
@@ -31,8 +32,10 @@ const publicationPg17Script = 'node scripts/ci/run-publication-pg17.mjs';
 const reputationPg17Script = 'node scripts/ci/run-reputation-managed-lock-cluster.mjs --synthetic-managed-cluster --execute-local-sql';
 const allocatedJobsDiagnosticTests = 'apps/lythaus-jobs/tests/reputation-session-diagnostic.test.mjs apps/lythaus-jobs/tests/reputation-session-diagnostic.workerd.mjs';
 const allocatedJobsDiagnosticFiles = new Map([
-  ['apps/lythaus-jobs/src/index.ts', 'b06faa54bf72c300a4922dc9202c40a66b5c71de'],
-  ['apps/lythaus-public-api/src/index.ts', '7a941be1765e82b5cbf00294b114952ab6ea27a1'],
+  ['apps/lythaus-jobs/src/index.ts', '7b25af78fc1e227b85d1758b0cb31fd0aec09d24'],
+  // Membership-only createCustomFeed now shares the canonical account lock and keeps tier/count/cap checks,
+  // inserts, and matching activity in one transaction; the Jobs bridge and handler remain unchanged.
+  ['apps/lythaus-public-api/src/index.ts', '6ba74610a691ece3783d953290e54a677d9b08cd'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],
@@ -352,6 +355,32 @@ const approvedHomepageVisualEdits = new Map([
     'hero wordmark width',
   )}\n`],
 ]);
+const approvedMarketingBrandAssets = new Map([
+  ['apps/marketing-site/public/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg', 'e450176663e057e99bf66b822425eb0e1cf1ef90928f4b10b123e521bab63750'],
+  ['apps/marketing-site/public/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg', '5ba0451347e24615f10bfc362b84285767f51eea3621cc702f64e93ff0047ff7'],
+  ['apps/marketing-site/public/brand/lythaus-v1/lythaus-social-card-1200x630.78f698ef4283.png', '78f698ef4283dcc19de07672fe95bbfd6655da04bc45f93fdc7ceff181402eab'],
+  ['apps/marketing-site/public/icons/lythaus-v1/favicon.e3dfdd675a74.ico', 'e3dfdd675a7450c028317d74caeedaf03f613b73a34f50a3950ba4972bbdb67c'],
+  ['apps/marketing-site/public/icons/lythaus-v1/favicon.116ff3e020c6.svg', '116ff3e020c6b7f8539644880c8bc810d1a6278709b5f273c2a8d354d5f33cb7'],
+  ['apps/marketing-site/public/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png', '572a7b9a0d35f57d71c9f5a7d5f6d5b11a58b67a8bfd55d36416d447476c85ef'],
+  ['apps/marketing-site/public/icons/lythaus-v1/apple-touch-icon.19122fd8c91b.png', '19122fd8c91b3ce51b5a6a00d5840b3fa0f8a02416c0b997c283f9aba42a83bd'],
+  ['apps/marketing-site/public/icons/lythaus-v1/pwa-icon-192x192.5c5c7622a5f7.png', '5c5c7622a5f762e0f0251fc7e806cd51a9f9b95c779f5fda9cc38cb6c658d7b8'],
+  ['apps/marketing-site/public/icons/lythaus-v1/pwa-icon-512x512.27a8dadec032.png', '27a8dadec032e03ffca0953feaac6e800d7b737da5e5e3ec15b822841d2fe04d'],
+  ['apps/marketing-site/public/icons/lythaus-v1/pwa-maskable-192x192.36698aff23fb.png', '36698aff23fb111d8e81ac90c4f6fe1ed34c22aece93ed0833573b81caa6879f'],
+  ['apps/marketing-site/public/icons/lythaus-v1/pwa-maskable-512x512.10ec5b6e6764.png', '10ec5b6e6764cc1935d8909f6f54fe107efb370edf056d33c94718536aaee54d'],
+  ['apps/marketing-site/public/favicon.ico', 'e3dfdd675a7450c028317d74caeedaf03f613b73a34f50a3950ba4972bbdb67c'],
+  ['apps/marketing-site/public/favicon.png', '572a7b9a0d35f57d71c9f5a7d5f6d5b11a58b67a8bfd55d36416d447476c85ef'],
+  ['apps/marketing-site/public/apple-touch-icon.png', '19122fd8c91b3ce51b5a6a00d5840b3fa0f8a02416c0b997c283f9aba42a83bd'],
+  ['apps/marketing-site/public/icons/lythaus-192.png', '5c5c7622a5f762e0f0251fc7e806cd51a9f9b95c779f5fda9cc38cb6c658d7b8'],
+  ['apps/marketing-site/public/icons/lythaus-512.png', '27a8dadec032e03ffca0953feaac6e800d7b737da5e5e3ec15b822841d2fe04d'],
+  ['apps/marketing-site/public/icons/lythaus-512-maskable.png', '10ec5b6e6764cc1935d8909f6f54fe107efb370edf056d33c94718536aaee54d'],
+  ['apps/marketing-site/public/site.webmanifest', '7ce2960d28a1d17f25b84ab42e09d105efe627568b4adfb524d47b1cf8d5ab2a'],
+]);
+const approvedMarketingBrandRemovals = new Set([
+  'apps/marketing-site/public/brand/lythaus-mark.svg',
+  'apps/marketing-site/public/brand/lythaus-v1/lythaus-lockup-black.9518c6eeb03b.svg',
+  'apps/marketing-site/public/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg',
+  'apps/marketing-site/public/brand/lythaus-v1/lythaus-social-card-1200x630.c20d3b1b40a8.png',
+]);
 function replaceExactText(source, before, after, label) {
   assert.equal(source.split(before).length - 1, 1, `The ${label} baseline must remain exact`);
   return source.replace(before, after);
@@ -394,6 +423,15 @@ export function assertHomepageFrozen() {
       continue;
     }
     if (authRepairPaths.has(filename)) continue;
+    if (approvedMarketingBrandRemovals.has(filename)) {
+      assert.equal(existsSync(path.join(root, filename)), false, `${filename} must not retain the retired mark`);
+      continue;
+    }
+    if (approvedMarketingBrandAssets.has(filename)) {
+      const current = createHash('sha256').update(readFileSync(path.join(root, filename))).digest('hex');
+      assert.equal(current, approvedMarketingBrandAssets.get(filename), `${filename} must match the approved brand asset bytes`);
+      continue;
+    }
     if (approvedHomepageVisualEdits.has(filename)) {
       const original = git('show', `${baselineSha}:${filename}`);
       const expected = approvedHomepageVisualEdits.get(filename)(original);
@@ -417,6 +455,11 @@ export function assertHomepageFrozen() {
       continue;
     }
     if (!existsSync(path.join(root, filename)) || git('hash-object', `--path=${filename}`, filename) !== expected) changed.push(filename);
+  }
+  for (const [filename, expected] of approvedMarketingBrandAssets) {
+    assert.ok(existsSync(path.join(root, filename)), `${filename} must be present for the approved brand integration`);
+    const current = createHash('sha256').update(readFileSync(path.join(root, filename))).digest('hex');
+    assert.equal(current, expected, `${filename} must match the approved brand asset bytes`);
   }
   assert.deepEqual(changed, [], 'Homepage dependencies changed from the explicit frozen revision');
   assertRootToolingLockOnlyHasSecurityPatches();
@@ -582,14 +625,31 @@ test('Spectral security replacement rejects changed targets, metadata or resurre
 test('approved copy refresh preserves homepage scripts, waitlist controls and metadata wiring', () => {
   const read = filename => readFileSync(path.join(root, filename), 'utf8').replaceAll('\r\n', '\n');
   const scripts = source => [...source.replace(/<script\b[^>]*\/>/g, '').matchAll(/<script\b[^>]*>[\s\S]*?<\/script>/g)].map(match => match[0]).join('\n');
+  const frontmatter = source => source.split('---')[1].trim();
+  const normalizeBrandFrontmatter = source => frontmatter(source)
+    .replace("const socialImageUrl = `${siteUrl}/brand/lythaus-v1/lythaus-social-card-1200x630.78f698ef4283.png`;\n", '')
+    .replace("import '../styles/brand.css';", '')
+    .trim();
+  const normalizeBrandHead = source => source
+    .replace(/^[ \t]*<link rel="icon"[^>]*\/>[ \t]*\n/gmu, '')
+    .replace(/^[ \t]*<link rel="apple-touch-icon"[^>]*\/>[ \t]*\n/gmu, '')
+    .replace(/^[ \t]*<meta property="og:image(?::[^"]+)?"[^>]*\/>[ \t]*\n/gmu, '')
+    .replace(/^[ \t]*<meta name="twitter:image(?::alt)?"[^>]*\/>[ \t]*\n/gmu, '')
+    .replace('content="summary_large_image"', 'content="summary"')
+    .replace(/\n{2,}/gu, '\n')
+    .trim();
   for (const filename of ['apps/marketing-site/src/pages/index.astro', 'apps/marketing-site/src/layouts/BaseLayout.astro']) {
     const original = git('show', `${baselineSha}:${filename}`);
     const current = read(filename);
     assert.equal(scripts(current), scripts(original).replaceAll('Join the private beta', 'Join the waitlist'));
-    const frontmatter = source => source.split('---')[1].trim();
-    assert.equal(frontmatter(current), frontmatter(original));
     if (filename.endsWith('BaseLayout.astro')) {
-      assert.equal(current.match(/<head>[\s\S]*?<\/head>/)[0], original.match(/<head>[\s\S]*?<\/head>/)[0]);
+      assert.equal(normalizeBrandFrontmatter(current), frontmatter(original), 'Only the approved wordmark stylesheet and social image URL may be added to layout frontmatter');
+    } else {
+      assert.equal(frontmatter(current), frontmatter(original));
+    }
+    if (filename.endsWith('BaseLayout.astro')) {
+      assert.equal(normalizeBrandHead(current.match(/<head>[\s\S]*?<\/head>/)[0]), normalizeBrandHead(original.match(/<head>[\s\S]*?<\/head>/)[0]),
+        'Only the approved favicon and social image tags may change in the shared head');
     }
   }
   const filename = 'apps/marketing-site/src/pages/index.astro';
@@ -617,12 +677,27 @@ test('auth repair exceptions cannot alter homepage assets or waitlist routing', 
         source = source.replace(approved, '');
       }
     }
-    const updated = source
-      .replaceAll('0020_auth_recovery_delivery', '0017_authenticity_beta')
-      .replaceAll('POST_0020', 'POST_0017').replaceAll('post-0020', 'post-0017')
-      .replaceAll('migration 0020', 'migration 0017')
+    let updated = source
+      .replaceAll('0021_media_quarantine_cleanup', '0017_authenticity_beta')
+      .replaceAll('POST_0021', 'POST_0017').replaceAll('post-0021', 'post-0017')
+      .replaceAll('migration 0021', 'migration 0017')
       .replace('"main": "src/worker.ts"', '"main": "src/index.ts"')
       .replaceAll('approvedReleaseExpectation', 'approvedPost0017Expectation');
+    if (file === 'scripts/ci/materialize-public-waitlist-deploy.mjs') {
+      updated = updated
+        .replace("import { approvedPost0017Expectation, REQUIRED_RELEASE_SCHEMA_VERSION } from './product-integrity-schema-contract.mjs';",
+          "import { approvedPost0017Expectation } from './product-integrity-schema-contract.mjs';")
+        .replace('const releaseVersionNumber = REQUIRED_RELEASE_SCHEMA_VERSION.slice(0, 4);\n', '')
+        .replace("const fingerprintPlaceholder = `REPLACE_WITH_POST_${releaseVersionNumber}_SCHEMA_FINGERPRINT`;",
+          "const fingerprintPlaceholder = 'REPLACE_WITH_POST_0017_SCHEMA_FINGERPRINT';")
+        .replace("const relationCountPlaceholder = `REPLACE_WITH_POST_${releaseVersionNumber}_RELATION_COUNT`;",
+          "const relationCountPlaceholder = 'REPLACE_WITH_POST_0017_RELATION_COUNT';")
+        .replace("!== REQUIRED_RELEASE_SCHEMA_VERSION)", "!== '0017_authenticity_beta.sql')")
+        .replace('throw new Error(`public waitlist deployment requires ${REQUIRED_RELEASE_SCHEMA_VERSION}`);',
+          "throw new Error('public waitlist deployment requires migration 0017');")
+        .replace('new RegExp(`REPLACE_WITH_POST_${releaseVersionNumber}_`)', '/REPLACE_WITH_POST_0017_/')
+        .replace('schemaVersion: REQUIRED_RELEASE_SCHEMA_VERSION,', "schemaVersion: '0017_authenticity_beta.sql',");
+    }
     const frozen = git('show', `${upstreamBaselineSha}:${file}`);
     if (file === 'apps/lythaus-public-api/wrangler.jsonc') assertOnlyHostedDevelopmentRemoval(updated, frozen);
     else assert.equal(updated.trim(), frozen);
@@ -702,7 +777,9 @@ for (const [label, mutate] of [
   test(`deployment isolation freeze rejects ${label}`, () => {
     const file = 'apps/lythaus-public-api/wrangler.jsonc';
     const source = readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
-    const frozen = git('show', `49cca9caa34b34c7ded7f4842792f698be9bd41f:${file}`);
+    const frozen = git('show', `49cca9caa34b34c7ded7f4842792f698be9bd41f:${file}`)
+      .replaceAll('POST_0020', 'POST_0021')
+      .replace('0020_auth_recovery_delivery.sql', '0021_media_quarantine_cleanup.sql');
     assertOnlyHostedDevelopmentRemoval(source, frozen);
     const changed = mutate(source);
     assert.notEqual(changed, source, 'Mutation must alter the actual configuration');
@@ -789,6 +866,11 @@ test('allocated Jobs pins reject altered historical and unrelated source paths',
     const changed = execFileSync('git', ['hash-object', '--stdin'], { cwd: root, encoding: 'utf8', input: source }).trim();
     assert.notEqual(changed, expected);
     assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, changed), assert.AssertionError);
+    if (filename === 'apps/lythaus-public-api/src/index.ts') {
+      const previousPublicApiBlob = '5ca637b72d241d89df5178bec6f0f730aafe41cd';
+      assert.notEqual(previousPublicApiBlob, expected, 'The integrated membership-only source bytes replace the previous exact allocation');
+      assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, previousPublicApiBlob), assert.AssertionError);
+    }
     if (filename.endsWith('/index.ts')) {
       assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, git('rev-parse', `4b32a00cde7a940ec7fcc4134368bda80d78f699:${filename}`)), assert.AssertionError);
     }
@@ -797,6 +879,61 @@ test('allocated Jobs pins reject altered historical and unrelated source paths',
     allocatedJobsDiagnosticFiles.values().next().value), assert.AssertionError);
   assert.throws(() => assertAllocatedJobsDiagnosticFile('apps/lythaus-public-api/src/auth-runtime-policy.ts',
     allocatedJobsDiagnosticFiles.values().next().value), assert.AssertionError);
+});
+
+test('image-integrity allocation rejects superseded Worker bytes without broadening the diagnostic scope', () => {
+  // Exact blob IDs from 489aef297ff0b1a40744504594122c9ebc43930d (both Workers)
+  // and fecdd6f6b19ad5ea9dd17afa70e420e6deb147b8 (Jobs); the guard compares IDs,
+  // so these superseded PR commits need not survive squash.
+  const supersededWorkerBlobs = new Map([
+    ['apps/lythaus-jobs/src/index.ts', ['8a6487ab099287f151fc8594b3b9ff846a9226b7', 'a842e8c3654a26adcaae7c8e72efae3d20102cbb']],
+    ['apps/lythaus-public-api/src/index.ts', ['7a941be1765e82b5cbf00294b114952ab6ea27a1']],
+  ]);
+  for (const [filename, superseded] of supersededWorkerBlobs) {
+    const current = git('hash-object', `--path=${filename}`, filename);
+    assert.doesNotThrow(() => assertAllocatedJobsDiagnosticFile(filename, current));
+    for (const blob of superseded) {
+      assert.notEqual(blob, current, 'The superseded Worker bytes must differ from the exact allocated review revision');
+      assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, blob), assert.AssertionError);
+    }
+  }
+  for (const filename of ['packages/media/src/standard-upload.ts', 'apps/marketing-site/src/pages/index.astro']) {
+    assert.throws(() => assertAllocatedJobsDiagnosticFile(filename,
+      allocatedJobsDiagnosticFiles.get('apps/lythaus-jobs/src/index.ts')), assert.AssertionError);
+  }
+});
+
+test('image-integrity rejection survives a fresh squashed checkout', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'lythaus-image-integrity-squash-'));
+  const environment = { ...process.env };
+  for (const name of ['NODE_TEST_CONTEXT', 'GIT_DIR', 'GIT_WORK_TREE', 'GIT_COMMON_DIR', 'GIT_INDEX_FILE',
+    'GIT_OBJECT_DIRECTORY', 'GIT_ALTERNATE_OBJECT_DIRECTORIES']) delete environment[name];
+  const fixtureGit = (...args) => execFileSync('git', args, { cwd: directory, env: environment, encoding: 'utf8' }).trim();
+  try {
+    fixtureGit('init', '--quiet');
+    const testPath = 'apps/marketing-site/tests/homepage-protection.test.mjs';
+    for (const filename of ['.gitattributes', testPath, 'apps/lythaus-jobs/src/index.ts', 'apps/lythaus-public-api/src/index.ts']) {
+      mkdirSync(path.dirname(path.join(directory, filename)), { recursive: true });
+      copyFileSync(path.join(root, filename), path.join(directory, filename));
+    }
+    fixtureGit('add', '.');
+    fixtureGit('-c', 'user.name=Lythaus synthetic fixture', '-c', 'user.email=fixture@example.invalid',
+      '-c', 'core.hooksPath=/dev/null', 'commit', '--quiet', '--no-gpg-sign', '-m', 'Synthetic squash');
+    assert.equal(fixtureGit('rev-list', '--all', '--count'), '1');
+    for (const revision of ['489aef297ff0b1a40744504594122c9ebc43930d', 'fecdd6f6b19ad5ea9dd17afa70e420e6deb147b8']) {
+      const historical = spawnSync('git', ['cat-file', '-e', `${revision}^{commit}`], { cwd: directory, env: environment });
+      assert.equal(historical.error, undefined);
+      assert.notEqual(historical.status, 0, 'The squash fixture must contain no superseded PR commits');
+    }
+    const name = 'image-integrity allocation rejects superseded Worker bytes without broadening the diagnostic scope';
+    const result = spawnSync(process.execPath, ['--test', '--test-reporter=tap', `--test-name-pattern=^${name}$`, testPath],
+      { cwd: directory, env: environment, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 0, `${result.stdout ?? ''}${result.stderr ?? ''}`);
+    assert.match(result.stdout, new RegExp(`ok \\d+ - ${name}\\r?\\n`));
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test('reviewed reputation exception rejects changed bytes, historical bytes and every other dependency path', () => {

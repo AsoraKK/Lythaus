@@ -7,6 +7,31 @@ on:
         description: Exact merged main commit SHA whose migrations will be applied
         required: true
         type: string
+      migration_scope:
+        description: Select the existing all-migrations path or the isolated 0021 plan
+        required: true
+        type: choice
+        default: all-migrations
+        options:
+          - all-migrations
+          - 0021-only
+      execute_0021:
+        description: Request the separately protected 0021 execution job after a ready plan
+        required: true
+        type: boolean
+        default: false
+      planetscale_0021_backup_id:
+        description: Optional current protected backup ID; defaults to PLANETSCALE_PRODUCTION_BACKUP_ID
+        required: false
+        type: string
+      planetscale_0021_operator_cost_estimate_usd:
+        description: Operator estimate in USD, reviewed against the existing positive usage ceiling
+        required: false
+        type: string
+      planetscale_0021_cost_estimate_reference:
+        description: Link or short reference for the operator estimate
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -17,6 +42,7 @@ concurrency:
 
 jobs:
   migrate:
+    if: inputs.migration_scope != '0021-only'
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 30
@@ -182,4 +208,137 @@ jobs:
         with:
           name: planetscale-migration-${{ inputs.release_sha }}
           path: ${{ runner.temp }}/planetscale-migration
+          if-no-files-found: ignore
+
+  plan-0021-only:
+    if: inputs.migration_scope == '0021-only'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    outputs:
+      ready: ${{ steps.plan.outputs.ready }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Require exact current main SHA
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$RELEASE_SHA" == "$(git rev-parse HEAD)" ]]
+          [[ "$RELEASE_SHA" == "$(git rev-parse origin/main)" ]]
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Validate immutable scoped migration candidate
+        run: |
+          npm run validate:planetscale-migrations
+          node --check scripts/ci/planetscale-0021-only-contract.mjs
+          node --check scripts/ci/planetscale-0021-target-identity.mjs
+          node --check scripts/ci/planetscale-0021-registry-marker.mjs
+          node --check scripts/ci/planetscale-0021-only-plan.mjs
+          node --check scripts/ci/apply-planetscale-0021-only.mjs
+          node --check scripts/ci/planetscale-media-quarantine-migration.mjs
+          node --check scripts/ci/product-integrity-schema-contract.mjs
+          node --experimental-strip-types --check packages/db/src/identity.ts
+          npm run test:planetscale-production-migrations
+          node --experimental-strip-types --test scripts/tests/planetscale-0021-only-contract.test.mjs scripts/tests/planetscale-0021-only-workflow.test.mjs
+          npm run validate:cloudflare-hyperdrive-targets:manifest
+          node scripts/ci/verify-planetscale-production-schema.mjs --manifest-only
+      - name: Build read-only 0021 evidence and plan
+        id: plan
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          PSCALE_BRANCH_NAME: main
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          PLANETSCALE_ORGANIZATION: lythaus
+          PLANETSCALE_DATABASE: lythaus-core
+          PLANETSCALE_0021_BACKUP_ID: ${{ inputs.planetscale_0021_backup_id }}
+          PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          PLANETSCALE_0021_OPERATOR_COST_ESTIMATE_USD: ${{ inputs.planetscale_0021_operator_cost_estimate_usd }}
+          PLANETSCALE_0021_COST_ESTIMATE_REFERENCE: ${{ inputs.planetscale_0021_cost_estimate_reference }}
+          PLANETSCALE_MIGRATION_USAGE_MAX_USD: ${{ vars.PLANETSCALE_MIGRATION_USAGE_MAX_USD }}
+          MIGRATION_PLAN_REPORT_FILE: ${{ runner.temp }}/planetscale-0021/plan.json
+        run: node scripts/ci/planetscale-0021-only-plan.mjs
+      - name: Upload sanitized 0021 plan evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: planetscale-0021-plan-${{ inputs.release_sha }}
+          path: ${{ runner.temp }}/planetscale-0021
+          if-no-files-found: ignore
+
+  execute-0021-only:
+    if: inputs.migration_scope == '0021-only' && inputs.execute_0021 == true && needs.plan-0021-only.outputs.ready == 'true'
+    needs: plan-0021-only
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Require exact current main SHA
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$RELEASE_SHA" == "$(git rev-parse HEAD)" ]]
+          [[ "$RELEASE_SHA" == "$(git rev-parse origin/main)" ]]
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Rebuild read-only 0021 plan immediately before execution
+        id: plan
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          PSCALE_BRANCH_NAME: main
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          PLANETSCALE_ORGANIZATION: lythaus
+          PLANETSCALE_DATABASE: lythaus-core
+          PLANETSCALE_0021_BACKUP_ID: ${{ inputs.planetscale_0021_backup_id }}
+          PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
+          PLANETSCALE_SCHEMA_READ_DATABASE_URL: ${{ secrets.PLANETSCALE_SCHEMA_READ_DATABASE_URL }}
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          PLANETSCALE_0021_OPERATOR_COST_ESTIMATE_USD: ${{ inputs.planetscale_0021_operator_cost_estimate_usd }}
+          PLANETSCALE_0021_COST_ESTIMATE_REFERENCE: ${{ inputs.planetscale_0021_cost_estimate_reference }}
+          PLANETSCALE_MIGRATION_USAGE_MAX_USD: ${{ vars.PLANETSCALE_MIGRATION_USAGE_MAX_USD }}
+          MIGRATION_PLAN_REPORT_FILE: ${{ runner.temp }}/planetscale-0021/plan-before-execution.json
+        run: |
+          node scripts/ci/planetscale-0021-only-plan.mjs
+          test "$(sed -n 's/^ready=//p' "$GITHUB_OUTPUT" | tail -n 1)" = true
+      - name: Apply only the pinned staged 0021 migration
+        env:
+          PSCALE_BRANCH_NAME: main
+          PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
+          PLANETSCALE_0021_EXECUTION_APPROVED: ${{ inputs.execute_0021 && 'approved' || '' }}
+          PLANETSCALE_0021_PLAN_READY: ${{ steps.plan.outputs.ready }}
+          PLANETSCALE_0021_EXECUTION_REPORT_FILE: ${{ runner.temp }}/planetscale-0021/execution.json
+          PLANETSCALE_0021_PLAN_TARGET_IDENTITY: ${{ steps.plan.outputs.target_identity }}
+        run: node scripts/ci/apply-planetscale-0021-only.mjs
+      - name: Upload sanitized 0021 execution evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: planetscale-0021-execution-${{ inputs.release_sha }}
+          path: ${{ runner.temp }}/planetscale-0021
           if-no-files-found: ignore

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import pg from 'pg';
 import { expectedMigrationPrefix, loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
-import { APPLICATION_SCHEMAS, approvedReleaseExpectation, runtimeSchemaFingerprint } from './product-integrity-schema-contract.mjs';
+import { APPLICATION_SCHEMAS, approvedReleaseExpectation, REQUIRED_RELEASE_SCHEMA_VERSION, runtimeSchemaFingerprint } from './product-integrity-schema-contract.mjs';
 import { classifyMigrationState, assertCompleteMigrationPostconditions } from './planetscale-migration-reconciliation.mjs';
 
 const { Client } = pg;
@@ -12,6 +12,8 @@ const emitContract = process.argv.includes('--emit-contract');
 const committedOnly = process.argv.includes('--committed') || process.env.CI === 'true';
 const requireBudgetMigration = process.env.REQUIRE_BUDGET_MIGRATION === 'true';
 const requireProductIntegrityMigration = process.env.REQUIRE_PRODUCT_INTEGRITY_MIGRATION === 'true';
+const releaseVersionNumber = REQUIRED_RELEASE_SCHEMA_VERSION.slice(0, 4);
+const releaseLabel = `post-${releaseVersionNumber}`;
 const manifest = loadApprovedMigrations({ committedOnly });
 const releaseExpectation = requireProductIntegrityMigration || emitContract
   ? approvedReleaseExpectation(
@@ -97,7 +99,7 @@ function fingerprintMismatch(contract, expectation) {
   const missing = [...expected].filter((key) => !observed.has(key)).sort();
   const extra = [...observed].filter((key) => !expected.has(key)).sort();
   return new Error(
-    `production post-0020 schema fingerprint mismatch: observed=${contract.fingerprint}; expected=${expectation.fingerprint}; `
+    `production ${releaseLabel} schema fingerprint mismatch: observed=${contract.fingerprint}; expected=${expectation.fingerprint}; `
     + `relations=${contract.relationCount}/${expectation.relationCount}; missing=${JSON.stringify(missing)}; extra=${JSON.stringify(extra)}`,
   );
 }
@@ -137,7 +139,7 @@ async function verifyWaitlistCatalog(client) {
        WHERE table_schema = 'system' AND table_name = 'transactional_email_outbox'
          AND column_name = 'acceptance_run_id' AND udt_name = 'uuid'
     ) AS acceptance_outbox_run_binding`);
-  if (Object.values(result.rows[0] ?? {}).some((value) => value !== true)) throw new Error('production post-0020 catalog contract is incomplete');
+  if (Object.values(result.rows[0] ?? {}).some((value) => value !== true)) throw new Error(`production ${releaseLabel} catalog contract is incomplete`);
 }
 
 async function verifyWaitlistPrivileges(client) {
@@ -147,7 +149,7 @@ async function verifyWaitlistPrivileges(client) {
   const privacy = roleIdentifiers.lythaus_privacy;
   const jobs = roleIdentifiers.lythaus_jobs;
   if (![runtime, admin, privacy, jobs].every((value) => /^pscale_api_[a-z0-9]+$/.test(value ?? ''))) {
-    throw new Error('post-0020 privilege verification requires canonical PlanetScale role identifiers');
+    throw new Error(`${releaseLabel} privilege verification requires canonical PlanetScale role identifiers`);
   }
   const result = await client.query(`SELECT
     has_schema_privilege($1, 'system', 'USAGE') AS runtime_system_usage,
@@ -222,7 +224,7 @@ await client.connect();
 try {
   await client.query('BEGIN READ ONLY');
   const registry = await client.query('SELECT version, checksum FROM system.schema_migrations ORDER BY version');
-  const through = requireProductIntegrityMigration || emitContract ? '0020_auth_recovery_delivery.sql' : requireBudgetMigration ? '0009_cost_budget_enforcement.sql' : '0008_legacy_relink_status.sql';
+  const through = requireProductIntegrityMigration || emitContract ? REQUIRED_RELEASE_SCHEMA_VERSION : requireBudgetMigration ? '0009_cost_budget_enforcement.sql' : '0008_legacy_relink_status.sql';
   const expected = expectedMigrationPrefix(through);
   if (registry.rows.length !== expected.length) throw new Error(`production migration registry contains ${registry.rows.length} entries; expected ${expected.length}`);
   expected.forEach((migration, index) => {
@@ -240,11 +242,11 @@ try {
     } else {
       if (contract.fingerprint !== releaseExpectation.fingerprint) throw fingerprintMismatch(contract, releaseExpectation);
       if (contract.relationCount !== releaseExpectation.relationCount) {
-        throw new Error(`production post-0020 relation count is ${contract.relationCount}; expected ${releaseExpectation.relationCount}`);
+        throw new Error(`production ${releaseLabel} relation count is ${contract.relationCount}; expected ${releaseExpectation.relationCount}`);
       }
-      console.log(`Observed post-0020 schema fingerprint: ${contract.fingerprint}`);
-      console.log(`Observed post-0020 relation count: ${contract.relationCount}`);
-      console.log(`Observed post-0020 catalog SHA-256: ${contract.catalogFingerprint}`);
+      console.log(`Observed ${releaseLabel} schema fingerprint: ${contract.fingerprint}`);
+      console.log(`Observed ${releaseLabel} relation count: ${contract.relationCount}`);
+      console.log(`Observed ${releaseLabel} catalog SHA-256: ${contract.catalogFingerprint}`);
     }
   }
   await client.query('ROLLBACK');

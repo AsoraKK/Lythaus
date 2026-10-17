@@ -157,6 +157,7 @@ doc/LegacyRefreshTokenRequest.md
 doc/LegalHoldCreate.md
 doc/LegalHoldResponse.md
 doc/MediaApi.md
+doc/MediaUploadBytesResponse.md
 doc/MediaUploadFinaliseResponse.md
 doc/MediaUploadSessionCreateRequest.md
 doc/MediaUploadSessionCreated.md
@@ -167,8 +168,11 @@ doc/MemberRequestPage.md
 doc/MemberSuggestionRequest.md
 doc/MemberSupportRequest.md
 doc/ModerationApi.md
+doc/ModerationCaseRevision.md
 doc/ModerationDecisionRequest.md
 doc/ModerationDecisionResponse.md
+doc/ModerationRereviewRequest.md
+doc/ModerationRereviewResponse.md
 doc/ModerationState.md
 doc/MonthlyContextReviewError.md
 doc/MonthlyContextReviewRequest.md
@@ -485,6 +489,7 @@ lib/src/model/legacy_appeal_vote_response.dart
 lib/src/model/legacy_refresh_token_request.dart
 lib/src/model/legal_hold_create.dart
 lib/src/model/legal_hold_response.dart
+lib/src/model/media_upload_bytes_response.dart
 lib/src/model/media_upload_finalise_response.dart
 lib/src/model/media_upload_session_create_request.dart
 lib/src/model/media_upload_session_created.dart
@@ -494,8 +499,11 @@ lib/src/model/member_problem_request.dart
 lib/src/model/member_request_page.dart
 lib/src/model/member_suggestion_request.dart
 lib/src/model/member_support_request.dart
+lib/src/model/moderation_case_revision.dart
 lib/src/model/moderation_decision_request.dart
 lib/src/model/moderation_decision_response.dart
+lib/src/model/moderation_rereview_request.dart
+lib/src/model/moderation_rereview_response.dart
 lib/src/model/moderation_state.dart
 lib/src/model/monthly_context_review_error.dart
 lib/src/model/monthly_context_review_request.dart
@@ -784,6 +792,7 @@ test/legacy_refresh_token_request_test.dart
 test/legal_hold_create_test.dart
 test/legal_hold_response_test.dart
 test/media_api_test.dart
+test/media_upload_bytes_response_test.dart
 test/media_upload_finalise_response_test.dart
 test/media_upload_session_create_request_test.dart
 test/media_upload_session_created_test.dart
@@ -794,8 +803,11 @@ test/member_request_page_test.dart
 test/member_suggestion_request_test.dart
 test/member_support_request_test.dart
 test/moderation_api_test.dart
+test/moderation_case_revision_test.dart
 test/moderation_decision_request_test.dart
 test/moderation_decision_response_test.dart
+test/moderation_rereview_request_test.dart
+test/moderation_rereview_response_test.dart
 test/moderation_state_test.dart
 test/monthly_context_review_error_test.dart
 test/monthly_context_review_request_test.dart

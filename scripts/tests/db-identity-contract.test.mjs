@@ -11,7 +11,7 @@ import { approvedPost0016Expectation, canonicalPost0016SchemaContract, canonical
 
 test('current release derives its identity from the approved complete migration prefix', async () => {
   const canonical = canonicalReleaseSchemaContract();
-  assert.equal(REQUIRED_RELEASE_SCHEMA_VERSION, '0020_auth_recovery_delivery.sql');
+  assert.equal(REQUIRED_RELEASE_SCHEMA_VERSION, '0021_media_quarantine_cleanup.sql');
   assert.equal(canonical.migrations.at(-1).version, REQUIRED_RELEASE_SCHEMA_VERSION);
   assert.equal(canonical.relationCount, canonical.relations.length);
   assert.equal(await buildSchemaFingerprint(canonical.relations, canonical.migrations), canonical.fingerprint);

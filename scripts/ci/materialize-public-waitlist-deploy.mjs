@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import fs from 'node:fs';
-import { approvedReleaseExpectation } from './product-integrity-schema-contract.mjs';
+import { approvedReleaseExpectation, REQUIRED_RELEASE_SCHEMA_VERSION } from './product-integrity-schema-contract.mjs';
 
 const configPath = 'apps/lythaus-public-api/wrangler.jsonc';
 const materialize = process.env.MATERIALIZE_PUBLIC_WAITLIST_CONFIG === 'true';
@@ -10,8 +10,9 @@ const expectation = approvedReleaseExpectation(
   process.env.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT ?? '',
 );
 
-const fingerprintPlaceholder = 'REPLACE_WITH_POST_0020_SCHEMA_FINGERPRINT';
-const relationCountPlaceholder = 'REPLACE_WITH_POST_0020_RELATION_COUNT';
+const releaseVersionNumber = REQUIRED_RELEASE_SCHEMA_VERSION.slice(0, 4);
+const fingerprintPlaceholder = `REPLACE_WITH_POST_${releaseVersionNumber}_SCHEMA_FINGERPRINT`;
+const relationCountPlaceholder = `REPLACE_WITH_POST_${releaseVersionNumber}_RELATION_COUNT`;
 
 function productionValue(source, key) {
   const production = source.slice(0, source.indexOf('"env"') === -1 ? source.length : source.indexOf('"env"'));
@@ -25,8 +26,8 @@ if (productionValue(committedSource, 'EXPECTED_DATABASE_SCHEMA_FINGERPRINT') !==
 if (productionValue(committedSource, 'EXPECTED_DATABASE_RELATION_COUNT') !== relationCountPlaceholder) {
   throw new Error('public Worker must retain the canonical database relation-count placeholder before release materialization');
 }
-if (productionValue(committedSource, 'EXPECTED_DATABASE_SCHEMA_VERSION') !== '0020_auth_recovery_delivery.sql') {
-  throw new Error('public waitlist deployment requires migration 0020');
+if (productionValue(committedSource, 'EXPECTED_DATABASE_SCHEMA_VERSION') !== REQUIRED_RELEASE_SCHEMA_VERSION) {
+  throw new Error(`public waitlist deployment requires ${REQUIRED_RELEASE_SCHEMA_VERSION}`);
 }
 if (productionValue(committedSource, 'EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED') !== 'true') {
   throw new Error('public waitlist deployment requires the production budget ledger');
@@ -61,7 +62,7 @@ if (productionValue(source, 'EXPECTED_DATABASE_RELATION_COUNT') !== String(expec
 if (productionValue(source, 'AUTHENTICATED_ACCEPTANCE_PROVEN') !== 'false') {
   throw new Error('public waitlist cutover must not falsely assert full authenticated acceptance');
 }
-if (/REPLACE_WITH_POST_0020_/.test(source.slice(0, source.indexOf('"env"')))) {
+if (new RegExp(`REPLACE_WITH_POST_${releaseVersionNumber}_`).test(source.slice(0, source.indexOf('"env"')))) {
   throw new Error('public waitlist production database identity contains an unresolved placeholder');
 }
 
@@ -69,7 +70,7 @@ if (materialize) fs.writeFileSync(configPath, source, 'utf8');
 console.log(JSON.stringify({
   status: 'pass',
   materialized: materialize,
-  schemaVersion: '0020_auth_recovery_delivery.sql',
+  schemaVersion: REQUIRED_RELEASE_SCHEMA_VERSION,
   relationCount: expectation.relationCount,
   fingerprint: expectation.fingerprint,
   authenticatedAcceptanceProven: false,

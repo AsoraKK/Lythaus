@@ -538,15 +538,20 @@ components:
         checksumSha256: { type: string, pattern: '^[0-9A-Fa-f]{64}$' }
     MediaUploadSessionCreated:
       type: object
-      required: [uploadSessionId, objectKey, putUrl, expiresAt, contentType, maxBytes, checksumSha256]
+      required: [uploadSessionId, uploadUrl, expiresAt, contentType, maxBytes, checksumSha256]
       properties:
         uploadSessionId: { type: string, format: uuid }
-        objectKey: { type: string }
-        putUrl: { type: string, format: uri }
+        uploadUrl: { type: string, format: uri, description: Authenticated Worker route bound to this upload session. }
         expiresAt: { type: string, format: date-time }
         contentType: { type: string, enum: [image/jpeg, image/png, image/webp, image/avif] }
         maxBytes: { type: integer, maximum: 10485760 }
         checksumSha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+    MediaUploadBytesResponse:
+      type: object
+      required: [uploadSessionId, status]
+      properties:
+        uploadSessionId: { type: string, format: uuid }
+        status: { type: string, enum: [stored] }
     MediaUploadFinaliseResponse:
       type: object
       required: [uploadSessionId, status, eventId]
@@ -1202,6 +1207,11 @@ components:
       properties:
         outcome: { type: string, enum: [allow, block, queue] }
         reasonCode: { type: string, pattern: '^[A-Z0-9_.:-]{2,80}$' }
+        expectedReviewCycleId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Required after re-review; copy reviewCycleId from the current case list or re-review response. An earlier cycle cannot issue a decision.
         publicLabel:
           type: string
           description: Public categorical label. AI-generated content cannot be allowed for publication.
@@ -1213,6 +1223,35 @@ components:
         caseId: { type: string, format: uuid }
         outcome: { type: string, enum: [allow, block, queue] }
         publicLabel: { type: string, nullable: true }
+    ModerationCaseRevision:
+      type: object
+      additionalProperties: false
+      required: [resolvedAt, sourceEventId, decisionId]
+      properties:
+        resolvedAt:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$'
+          description: Opaque exact UTC revision component. Preserve all six fractional digits, including trailing zeroes.
+        sourceEventId: { type: string, format: uuid }
+        decisionId: { type: string, format: uuid }
+    ModerationRereviewRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedCaseState, expectedRevision, reasonCode]
+      properties:
+        expectedCaseState: { type: string, enum: [resolved] }
+        expectedRevision: { $ref: '#/components/schemas/ModerationCaseRevision' }
+        reasonCode: { type: string, pattern: '^[A-Z0-9_.:-]{2,80}$' }
+    ModerationRereviewResponse:
+      type: object
+      additionalProperties: false
+      required: [caseId, state, moderationState, revision, reviewCycleId]
+      properties:
+        caseId: { type: string, format: uuid }
+        state: { type: string, enum: [open] }
+        moderationState: { type: string, enum: [under_review] }
+        revision: { type: object, nullable: true }
+        reviewCycleId: { type: string, format: uuid }
     AccountStatusUpdate:
       type: object
       additionalProperties: false
@@ -1318,6 +1357,12 @@ paths:
       tags: [Admin]
       security:
         - cloudflareAccess: []
+      description: >
+        Each resolved item includes a `revision` token containing its exact
+        `resolvedAt` timestamp, `sourceEventId`, and latest `decisionId`. Use
+        that token with the re-review operation to compare-and-set the case
+        back into review. Each item also includes reviewCycleId, null until the
+        first re-review; copy its current value to expectedReviewCycleId on decisions.
       responses:
         '200':
           description: Recent moderation cases.
@@ -1864,6 +1909,57 @@ paths:
           $ref: '#/components/responses/AdminMutationForbidden'
         '415':
           $ref: '#/components/responses/AdminMutationUnsupportedMediaType'
+  /admin/moderation/cases/{caseId}/rereview:
+    servers:
+      - url: https://admin.lythaus.co/api
+    post:
+      operationId: adminModerationCaseRereview
+      summary: Reopen a resolved moderation case for review
+      description: >
+        Reopens only a currently resolved case when both the expected state
+        and its exact composite revision match. The transition appends an audit
+        event and puts current content under review; posts are excluded from
+        public feeds until a subsequent moderation decision restores eligibility.
+        Profile re-review remains unavailable under the canonical admin grants.
+      tags: [Admin]
+      security:
+        - cloudflareAccess: []
+      parameters:
+        - $ref: '#/components/parameters/adminMutationOrigin'
+        - name: caseId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModerationRereviewRequest'
+      responses:
+        '200':
+          description: The case is open and its current content is under review.
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: ['private, no-store'] }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerationRereviewResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/AdminMutationForbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/AdminMutationUnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/SafetyLimited'
   /admin/appeals/{appealId}/adjudications:
     servers:
       - url: https://admin.lythaus.co/api
@@ -3781,7 +3877,7 @@ paths:
     post:
       operationId: mediaUploadsCreate
       summary: Create a quarantined media upload session
-      description: Creates a signed private upload session; the uploaded object remains quarantined until finalisation and review.
+      description: Creates a private upload session and returns an authenticated Worker route. The response includes no object key or reusable R2 signature.
       tags: [Media]
       security:
         - bearerAuth: []
@@ -3818,6 +3914,66 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SafetyLimitError'
+
+  /media/uploads/{uploadSessionId}/bytes:
+    put:
+      operationId: mediaUploadsPutBytes
+      summary: Upload bytes to a private session
+      description: Rechecks the active owner and pending session, bounds the body before R2, and verifies exact size, SHA-256 and MIME before storing bytes in quarantine.
+      tags: [Media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uploadSessionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema: { type: string, format: binary }
+          image/png:
+            schema: { type: string, format: binary }
+          image/webp:
+            schema: { type: string, format: binary }
+          image/avif:
+            schema: { type: string, format: binary }
+      responses:
+        '201':
+          description: Verified bytes were stored in private quarantine.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaUploadBytesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Media uploads are disabled for this deployment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: The upload session is missing, terminal, expired or no longer active for this account.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '413':
+          description: The request body exceeds the reserved size or 10 MiB engineering cap.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '415':
+          description: Request MIME does not match the session MIME.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
 
   /media/uploads/{uploadSessionId}/finalise:
     post:

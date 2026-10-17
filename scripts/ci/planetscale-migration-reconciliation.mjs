@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { APPROVED_MIGRATIONS, expectedMigrationPrefix } from './planetscale-migration-manifest.mjs';
+import { MEDIA_QUARANTINE_INDEX_DEFINITION, MEDIA_QUARANTINE_INDEX_PREDICATE } from './planetscale-media-quarantine-contract.mjs';
 
 const root = process.cwd();
+const sqlStringLiteral = (value) => `'${value.replace(/'/g, "''")}'`;
 
 // Relation fingerprints enforce complete canonical shapes for relations that later
 // migrations do not evolve. Evolved relations use stable migration invariants below.
@@ -134,6 +136,9 @@ const columnContracts = {
     ['moderation.authenticity_alpha', 'purge_last_error', 'text'],
     ['moderation.authenticity_alpha', 'storage_released_at', 'timestamp with time zone'],
     ['moderation.authenticity_alpha_steps', 'reservation_id', 'uuid'],
+  ],
+  '0021_media_quarantine_cleanup.sql': [
+    ['media.upload_sessions', 'quarantine_deleted_at', 'timestamp with time zone'],
   ],
 };
 
@@ -307,6 +312,40 @@ const artifacts = {
   ],
   '0020_auth_recovery_delivery.sql': [
     { artifact: 'password_changed_notification_purpose', kind: 'schema_artifact', sql: "SELECT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='system.transactional_email_outbox'::regclass AND conname='transactional_email_outbox_purpose_check' AND convalidated AND pg_get_constraintdef(oid) ILIKE '%password_changed%') AS present" },
+  ],
+  '0021_media_quarantine_cleanup.sql': [
+    ...contractArtifacts['0021_media_quarantine_cleanup.sql'],
+    { artifact: 'media_quarantine_marker_contract', kind: 'schema_artifact', sql: `/* migration-artifact:media_quarantine_marker_contract */ SELECT EXISTS (
+      SELECT 1 FROM pg_attribute attribute
+        JOIN pg_class relation_entry ON relation_entry.oid = attribute.attrelid
+        LEFT JOIN pg_attrdef default_value ON default_value.adrelid = attribute.attrelid AND default_value.adnum = attribute.attnum
+       WHERE relation_entry.oid = to_regclass('media.upload_sessions')
+         AND relation_entry.relkind = 'r'
+         AND attribute.attname = 'quarantine_deleted_at'
+         AND attribute.attnum > 0 AND NOT attribute.attisdropped
+         AND format_type(attribute.atttypid, attribute.atttypmod) = 'timestamp with time zone'
+         AND NOT attribute.attnotnull
+         AND attribute.attgenerated = '' AND attribute.attidentity = ''
+         AND default_value.oid IS NULL
+    ) AS present` },
+    { artifact: 'media_upload_quarantine_cleanup_index', kind: 'schema_artifact', sql: `/* migration-artifact:media_upload_quarantine_cleanup_index */ SELECT EXISTS (
+      SELECT 1
+        FROM pg_index index_entry
+        JOIN pg_class index_relation ON index_relation.oid = index_entry.indexrelid
+        JOIN pg_namespace index_namespace ON index_namespace.oid = index_relation.relnamespace
+        JOIN pg_am access_method ON access_method.oid = index_relation.relam
+       WHERE index_namespace.nspname = 'media'
+         AND index_relation.relname = 'media_upload_quarantine_cleanup_idx'
+         AND index_relation.relkind = 'i'
+         AND index_entry.indrelid = to_regclass('media.upload_sessions')
+         AND index_entry.indisvalid AND index_entry.indisready
+         AND access_method.amname = 'btree'
+         AND index_entry.indnatts = 2 AND index_entry.indnkeyatts = 2
+         AND NOT index_entry.indisunique AND NOT index_entry.indisprimary AND NOT index_entry.indisexclusion
+         AND pg_get_indexdef(index_entry.indexrelid) = ${sqlStringLiteral(MEDIA_QUARANTINE_INDEX_DEFINITION)}
+         AND pg_get_expr(index_entry.indpred, index_entry.indrelid) = ${sqlStringLiteral(MEDIA_QUARANTINE_INDEX_PREDICATE)}
+         AND NOT EXISTS (SELECT 1 FROM pg_constraint constraint_entry WHERE constraint_entry.conindid = index_entry.indexrelid)
+    ) AS present` },
   ],
 };
 

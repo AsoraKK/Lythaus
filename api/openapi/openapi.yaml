@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Lythaus API
-  version: v11
+  version: v12
   description: >
     HTTP contract for the Lythaus API. The active runtime is Cloudflare Workers
     backed by PlanetScale PostgreSQL through Hyperdrive. Initial authentication
@@ -175,6 +175,8 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1content~1flags'
   /media/uploads:
     $ref: './product-integrity.yaml#/paths/~1media~1uploads'
+  /media/uploads/{uploadSessionId}/bytes:
+    $ref: './product-integrity.yaml#/paths/~1media~1uploads~1{uploadSessionId}~1bytes'
   /media/uploads/{uploadSessionId}/finalise:
     $ref: './product-integrity.yaml#/paths/~1media~1uploads~1{uploadSessionId}~1finalise'
   /health:
@@ -1437,6 +1439,8 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1admin~1editorial~1publications'
   /admin/moderation/cases/{caseId}/decision:
     $ref: './product-integrity.yaml#/paths/~1admin~1moderation~1cases~1{caseId}~1decision'
+  /admin/moderation/cases/{caseId}/rereview:
+    $ref: './product-integrity.yaml#/paths/~1admin~1moderation~1cases~1{caseId}~1rereview'
   /admin/appeals/{appealId}/adjudications:
     $ref: './product-integrity.yaml#/paths/~1admin~1appeals~1{appealId}~1adjudications'
   /admin/appeals/pending-adjudication:

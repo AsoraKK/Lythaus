@@ -158,6 +158,7 @@ import 'package:lythaus_api_client/src/model/legacy_appeal_vote_response.dart';
 import 'package:lythaus_api_client/src/model/legacy_refresh_token_request.dart';
 import 'package:lythaus_api_client/src/model/legal_hold_create.dart';
 import 'package:lythaus_api_client/src/model/legal_hold_response.dart';
+import 'package:lythaus_api_client/src/model/media_upload_bytes_response.dart';
 import 'package:lythaus_api_client/src/model/media_upload_finalise_response.dart';
 import 'package:lythaus_api_client/src/model/media_upload_session_create_request.dart';
 import 'package:lythaus_api_client/src/model/media_upload_session_created.dart';
@@ -167,8 +168,11 @@ import 'package:lythaus_api_client/src/model/member_problem_request.dart';
 import 'package:lythaus_api_client/src/model/member_request_page.dart';
 import 'package:lythaus_api_client/src/model/member_suggestion_request.dart';
 import 'package:lythaus_api_client/src/model/member_support_request.dart';
+import 'package:lythaus_api_client/src/model/moderation_case_revision.dart';
 import 'package:lythaus_api_client/src/model/moderation_decision_request.dart';
 import 'package:lythaus_api_client/src/model/moderation_decision_response.dart';
+import 'package:lythaus_api_client/src/model/moderation_rereview_request.dart';
+import 'package:lythaus_api_client/src/model/moderation_rereview_response.dart';
 import 'package:lythaus_api_client/src/model/moderation_state.dart';
 import 'package:lythaus_api_client/src/model/monthly_context_review_error.dart';
 import 'package:lythaus_api_client/src/model/monthly_context_review_request.dart';
@@ -447,6 +451,7 @@ part 'serializers.g.dart';
   LegacyRefreshTokenRequest,
   LegalHoldCreate,
   LegalHoldResponse,
+  MediaUploadBytesResponse,
   MediaUploadFinaliseResponse,
   MediaUploadSessionCreateRequest,
   MediaUploadSessionCreated,
@@ -456,8 +461,11 @@ part 'serializers.g.dart';
   MemberRequestPage,
   MemberSuggestionRequest,
   MemberSupportRequest,
+  ModerationCaseRevision,
   ModerationDecisionRequest,
   ModerationDecisionResponse,
+  ModerationRereviewRequest,
+  ModerationRereviewResponse,
   ModerationState,
   MonthlyContextReviewError,
   MonthlyContextReviewRequest,

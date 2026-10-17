@@ -106,10 +106,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(
-        find.text('Discover calm, trustworthy updates tailored to you.'),
-        findsOneWidget,
-      );
+      expect(find.text('Public posts, newest first.'), findsOneWidget);
       expect(find.text('Body 0'), findsOneWidget);
       expect(find.text('author-0'), findsOneWidget);
       expect(find.text('Authorship: Under review'), findsWidgets);
@@ -123,7 +120,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('No posts yet'), findsOneWidget);
-      expect(find.text('Check back soon for new updates.'), findsOneWidget);
+      expect(find.text('New public posts will appear here.'), findsOneWidget);
     });
 
     testWidgets('triggers onLoadMore near scroll end', (tester) async {

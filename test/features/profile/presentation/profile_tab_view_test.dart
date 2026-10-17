@@ -45,6 +45,40 @@ Future<GoRouter> _open(
 }
 
 void main() {
+  testWidgets('tabs remain reachable at narrow widths and large text', (
+    tester,
+  ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    for (final width in [320.0, 390.0, 1024.0]) {
+      for (final scale in [1.0, 2.0]) {
+        await tester.binding.setSurfaceSize(Size(width, 640));
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              home: MediaQuery(
+                data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+                child: Scaffold(body: _pages()),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final comments = find.widgetWithText(Tab, 'Comments');
+        await tester.ensureVisible(comments);
+        await tester.tap(comments);
+        await tester.pumpAndSettle();
+        expect(find.text('Comments unavailable').hitTestable(), findsOneWidget);
+        final posts = find.widgetWithText(Tab, 'Posts');
+        await tester.ensureVisible(posts);
+        await tester.tap(posts);
+        await tester.pumpAndSettle();
+        expect(find.text('Saved own posts').hitTestable(), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      }
+    }
+  });
+
   testWidgets(
     'tabs restore URL selection and preserve other query parameters',
     (tester) async {

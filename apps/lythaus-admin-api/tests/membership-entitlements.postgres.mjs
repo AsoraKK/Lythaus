@@ -1,0 +1,313 @@
+import assert from 'node:assert/strict';
+import { after, before, test, mock } from 'node:test';
+import { createHash, randomBytes } from 'node:crypto';
+import pg from 'pg';
+import { exportJWK, exportPKCS8, generateKeyPair } from 'jose';
+import * as database from '@lythaus/db';
+import { signAccessToken, uuidv7 } from '@lythaus/security';
+import * as accessPolicy from '../src/admin-access-runtime-policy.ts';
+import { nativePostgresProfileFixture } from '../../lythaus-public-api/tests/native-postgres-worker-fixture.mjs';
+
+const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
+const target = new URL(connectionString ?? 'file:///missing');
+if (!['localhost', '127.0.0.1'].includes(target.hostname)
+  || !(target.pathname.startsWith('/lythaus_auth_test') || (process.env.GITHUB_ACTIONS === 'true' && target.pathname === '/postgres'))) {
+  throw new Error('Membership entitlement tests require explicitly local disposable PostgreSQL');
+}
+
+const adminId = uuidv7();
+const subject = 'synthetic-membership-entitlement-admin';
+const userIds = [uuidv7(), uuidv7(), uuidv7(), uuidv7()];
+const adminRateHash = createHash('sha256').update(`admin:${adminId}`).digest('hex');
+let onTierAdvisoryLockAcquired;
+
+async function withClient(work, role) {
+  const client = new pg.Client({ connectionString, ssl: false });
+  await client.connect();
+  try {
+    await client.query("SET statement_timeout = '5s'");
+    if (role) await client.query(`SET ROLE ${role}`);
+    return await work(client);
+  } finally { await client.end(); }
+}
+
+const sql = (text, values = []) => withClient(client => client.query(text, values));
+const query = (binding, text, values = []) => text.includes('FROM identity.admin_memberships')
+  ? Promise.resolve({ rows: [{ user_id: adminId, role: 'administrator' }], rowCount: 1 })
+  : withClient(client => client.query(text, values), binding.role);
+const transaction = (binding, work) => withClient(async client => {
+  await client.query('BEGIN');
+  try {
+    const transactionClient = {
+      query: async (text, values = []) => {
+        const result = await client.query(text, values);
+        if (text.includes('pg_advisory_xact_lock')) onTierAdvisoryLockAcquired?.();
+        return result;
+      },
+    };
+    const result = await work(transactionClient);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  }
+}, binding.role);
+
+mock.module('@lythaus/db', { cache: true, namedExports: { ...database, query, transaction } });
+mock.module(new URL('../src/admin-access-runtime-policy.ts', import.meta.url), {
+  cache: true,
+  namedExports: {
+    ...accessPolicy,
+    verifiedAccessSubject: async request => {
+      if (request.headers.get('cf-access-jwt-assertion') !== 'synthetic-valid') throw new Error('access_required');
+      return subject;
+    },
+  },
+});
+
+const { default: worker } = await import('../src/index.ts');
+const env = {
+  ACCESS_SUBJECT_HMAC_KEY: 'synthetic-membership-entitlement-key',
+  EXPECTED_HOSTNAMES: 'admin.lythaus.co',
+  CORS_ALLOWED_ORIGINS: 'https://admin.lythaus.co',
+  DB_ADMIN_FRESH: { role: 'lythaus_admin' },
+  DB_PRIVACY_FRESH: { role: 'lythaus_admin' },
+  WORKER_VERSION: { id: uuidv7(), tag: 'synthetic-membership-entitlement-test' },
+};
+
+async function changeTier(userId, body, assertion = 'synthetic-valid') {
+  return worker.fetch(new Request(`https://admin.lythaus.co/api/admin/users/${userId}/tier`, {
+    method: 'POST',
+    headers: {
+      origin: 'https://admin.lythaus.co',
+      'content-type': 'application/json',
+      'cf-access-jwt-assertion': assertion,
+    },
+    body: JSON.stringify(body),
+  }), env);
+}
+
+async function count(sqlText, values) {
+  return Number((await sql(sqlText, values)).rows[0].count);
+}
+
+before(async () => {
+  const version = Number((await sql('SHOW server_version_num')).rows[0].server_version_num);
+  assert.ok(version >= 170000 && version < 180000, 'membership fixtures require PostgreSQL 17');
+  await sql('INSERT INTO identity.users (id) VALUES ($1)', [adminId]);
+  for (const id of userIds) await sql("INSERT INTO identity.users (id, status) VALUES ($1, 'active')", [id]);
+});
+
+after(async () => {
+  const subjects = [adminId, ...userIds];
+  await sql('DELETE FROM trust.user_activity_events WHERE user_id = ANY($1::uuid[]) OR actor_user_id = ANY($1::uuid[])', [subjects]);
+  await sql("DELETE FROM system.audit_events WHERE actor_id = $1 OR target_id = ANY($2::uuid[])", [adminId, userIds]);
+  await sql("DELETE FROM system.outbox_events WHERE event_type = 'identity.user.tier_changed' AND aggregate_id = ANY($1::uuid[])", [userIds]);
+  await sql('DELETE FROM social.custom_feeds WHERE user_id = ANY($1::uuid[])', [userIds]);
+  await sql("DELETE FROM system.rate_limit_windows WHERE scope = 'admin-api' AND subject_hash = $1", [adminRateHash]);
+  await sql('DELETE FROM identity.user_entitlements WHERE user_id = ANY($1::uuid[])', [userIds]);
+  await sql('DELETE FROM identity.users WHERE id = ANY($1::uuid[])', [subjects]);
+});
+
+test('first manual grants with lower- and upper-case UUID spellings serialize and retries emit one entitlement event', async () => {
+  const uppercaseUserId = userIds[0].toUpperCase();
+  assert.notEqual(uppercaseUserId, userIds[0], 'synthetic UUID must exercise case-insensitive spellings');
+  const gate = new pg.Client({ connectionString, ssl: false });
+  await gate.connect();
+  await gate.query("SET statement_timeout = '5s'");
+  await gate.query('BEGIN');
+  let pendingGrants;
+  let results;
+  try {
+    await gate.query('LOCK TABLE identity.user_entitlements IN SHARE MODE');
+    let grantsSettled = false;
+    pendingGrants = Promise.all([
+      changeTier(userIds[0], { tier: 'premium', reasonCode: 'SYNTHETIC_TEST' }),
+      changeTier(uppercaseUserId, { tier: 'premium', reasonCode: 'SYNTHETIC_TEST' }),
+    ]).then(responses => {
+      grantsSettled = true;
+      return responses;
+    });
+    let serializedByCanonicalLock = false;
+    const deadline = Date.now() + 3000;
+    while (Date.now() < deadline && !grantsSettled) {
+      const waiters = await gate.query(`
+        SELECT count(*) FILTER (WHERE locktype = 'relation' AND relation = 'identity.user_entitlements'::regclass)::integer AS insert_waiters,
+               count(*) FILTER (WHERE locktype = 'advisory')::integer AS account_waiters
+          FROM pg_locks WHERE NOT granted`);
+      if (Number(waiters.rows[0]?.insert_waiters) === 1 && Number(waiters.rows[0]?.account_waiters) === 1) {
+        serializedByCanonicalLock = true;
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    assert.equal(serializedByCanonicalLock, true, 'one grant must wait to insert while the other waits on the canonical account lock');
+    await gate.query('COMMIT');
+    results = await pendingGrants;
+  } catch (error) {
+    await gate.query('ROLLBACK').catch(() => undefined);
+    await pendingGrants?.catch(() => undefined);
+    throw error;
+  } finally {
+    await gate.end();
+  }
+  for (const response of results) assert.equal(response.status, 200, await response.clone().text());
+  const bodies = await Promise.all(results.map(response => response.json()));
+  assert.deepEqual(bodies.map(body => body.changed).sort(), [false, true]);
+  for (const body of bodies) assert.equal(body.userId, userIds[0]);
+
+  const retry = await changeTier(userIds[0], { tier: 'premium', reasonCode: 'SYNTHETIC_TEST' });
+  assert.equal(retry.status, 200, await retry.clone().text());
+  assert.deepEqual(await retry.json(), { userId: userIds[0], tier: 'premium', changed: false });
+
+  for (const [table, predicate] of [
+    ['system.audit_events', "action = 'user.tier_changed'"],
+    ['system.outbox_events', "event_type = 'identity.user.tier_changed'"],
+    ['trust.user_activity_events', "event_type = 'rewards.subscription_tier_changed'"],
+  ]) {
+    assert.equal(await count(`SELECT count(*)::integer AS count FROM ${table} WHERE ${predicate} AND ${table === 'system.outbox_events' ? 'aggregate_id' : table === 'system.audit_events' ? 'target_id' : 'user_id'} = $1`, [userIds[0]]), 1, table);
+  }
+});
+
+test('tier writes are account-scoped and downgrade changes only the target authority', async () => {
+  const otherBefore = await sql('SELECT subscription_tier FROM identity.user_entitlements WHERE user_id = $1', [userIds[1]]);
+  assert.equal(otherBefore.rowCount, 0);
+
+  const black = await changeTier(userIds[0], { tier: 'black', reasonCode: 'SYNTHETIC_TEST' });
+  assert.deepEqual(await black.json(), { userId: userIds[0], tier: 'black', changed: true });
+  const premium = await changeTier(userIds[1], { tier: 'premium', reasonCode: 'SYNTHETIC_TEST' });
+  assert.deepEqual(await premium.json(), { userId: userIds[1], tier: 'premium', changed: true });
+  const downgrade = await changeTier(userIds[0], { tier: 'free', reasonCode: 'SYNTHETIC_TEST' });
+  assert.deepEqual(await downgrade.json(), { userId: userIds[0], tier: 'free', changed: true });
+
+  const rows = (await sql('SELECT user_id, subscription_tier FROM identity.user_entitlements WHERE user_id = ANY($1::uuid[]) ORDER BY user_id', [userIds])).rows;
+  assert.deepEqual(rows, [
+    { user_id: userIds[0], subscription_tier: 'free' },
+    { user_id: userIds[1], subscription_tier: 'premium' },
+  ].sort((left, right) => left.user_id.localeCompare(right.user_id)));
+});
+
+test('admin API downgrade serializes with public feed creation and preserves existing feeds', async () => {
+  const userId = userIds[3];
+  const grant = await changeTier(userId, { tier: 'black', reasonCode: 'SYNTHETIC_TEST' });
+  assert.deepEqual(await grant.json(), { userId, tier: 'black', changed: true });
+
+  const { privateKey, publicKey } = await generateKeyPair('ES256', { extractable: true });
+  const keyId = 'synthetic-membership-entitlement-downgrade-race';
+  const publicFixture = await nativePostgresProfileFixture(connectionString, {
+    ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test',
+    CORS_ALLOWED_ORIGINS: 'https://app.lythaus.test',
+    WORKER_VERSION: { id: uuidv7(), tag: 'synthetic-membership-entitlement-downgrade-race' },
+    JWT_PUBLIC_JWKS: JSON.stringify({ keys: [{ ...await exportJWK(publicKey), kid: keyId, alg: 'ES256', use: 'sig' }] }),
+    PII_ENCRYPTION_KEY_V1: randomBytes(32).toString('base64'),
+  });
+  const token = await signAccessToken({ userId, privateKeyPem: await exportPKCS8(privateKey), keyId });
+  const createPublicFeed = name => publicFixture.dispatchFetch('https://api.lythaus.test/api/custom-feeds', {
+    method: 'POST',
+    headers: {
+      origin: 'https://app.lythaus.test',
+      'cf-connecting-ip': '2001:db8::1234',
+      authorization: `Bearer ${token}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ name, rules: [] }),
+  });
+  let gate;
+  let pendingDowngrade;
+  let pendingCreate;
+  try {
+    for (const name of ['existing-black-feed-one', 'existing-black-feed-two']) {
+      const response = await createPublicFeed(name);
+      assert.equal(response.status, 201, await response.clone().text());
+    }
+
+    gate = new pg.Client({ connectionString, ssl: false });
+    await gate.connect();
+    await gate.query("SET statement_timeout = '5s'");
+    await gate.query('BEGIN');
+    await gate.query('SELECT user_id FROM identity.user_entitlements WHERE user_id = $1 FOR UPDATE', [userId]);
+
+    let resolveTierLockAcquired;
+    const tierLockAcquired = new Promise(resolve => { resolveTierLockAcquired = resolve; });
+    onTierAdvisoryLockAcquired = resolveTierLockAcquired;
+    pendingDowngrade = changeTier(userId, { tier: 'free', reasonCode: 'SYNTHETIC_TEST' });
+    let lockTimeout;
+    try {
+      await Promise.race([tierLockAcquired, new Promise((_, reject) => {
+        lockTimeout = setTimeout(() => reject(new Error('admin API did not acquire the entitlement lock')), 3000);
+      })]);
+    } finally {
+      clearTimeout(lockTimeout);
+    }
+    onTierAdvisoryLockAcquired = undefined;
+
+    let createSettled = false;
+    pendingCreate = createPublicFeed('racing-after-downgrade').then(response => {
+      createSettled = true;
+      return response;
+    });
+    let blockedOnSharedLock = false;
+    const deadline = Date.now() + 3000;
+    while (Date.now() < deadline && !createSettled) {
+      const waiters = await gate.query("SELECT count(*)::integer AS count FROM pg_locks WHERE locktype = 'advisory' AND NOT granted");
+      if (Number(waiters.rows[0]?.count) > 0) {
+        blockedOnSharedLock = true;
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    assert.equal(blockedOnSharedLock, true, 'public create must wait behind the admin API downgrade lock');
+    await gate.query('COMMIT');
+
+    const [downgrade, racedCreate] = await Promise.all([pendingDowngrade, pendingCreate]);
+    assert.equal(downgrade.status, 200, await downgrade.clone().text());
+    assert.deepEqual(await downgrade.json(), { userId, tier: 'free', changed: true });
+    assert.equal(racedCreate.status, 400, await racedCreate.clone().text());
+    assert.equal((await racedCreate.json()).error, 'custom_feed_limit_reached');
+
+    const preserved = await sql('SELECT name FROM social.custom_feeds WHERE user_id = $1 ORDER BY name', [userId]);
+    assert.deepEqual(preserved.rows, [{ name: 'existing-black-feed-one' }, { name: 'existing-black-feed-two' }]);
+    const denied = await createPublicFeed('subsequent-after-downgrade');
+    assert.equal(denied.status, 400, await denied.clone().text());
+    assert.equal((await denied.json()).error, 'custom_feed_limit_reached');
+    const feedCount = Number((await sql('SELECT count(*)::integer AS count FROM social.custom_feeds WHERE user_id = $1', [userId])).rows[0].count);
+    const feedActivityCount = Number((await sql("SELECT count(*)::integer AS count FROM trust.user_activity_events WHERE user_id = $1 AND event_type = 'social.custom_feed_created'", [userId])).rows[0].count);
+    assert.equal(feedCount, 2);
+    assert.equal(feedActivityCount, 2);
+  } catch (error) {
+    await gate?.query('ROLLBACK').catch(() => undefined);
+    await Promise.allSettled([pendingDowngrade, pendingCreate].filter(Boolean));
+    throw error;
+  } finally {
+    onTierAdvisoryLockAcquired = undefined;
+    await gate?.end();
+    await publicFixture.dispose();
+  }
+});
+
+test('provider lifecycle claims and unavailable state cannot act as manual entitlement inputs', async () => {
+  const targetId = userIds[2];
+  for (const field of [
+    { status: 'pending' },
+    { status: 'active' },
+    { status: 'confirmed' },
+    { status: 'expired' },
+    { status: 'cancelled' },
+    { status: 'unavailable' },
+    { provider: 'stripe' },
+    { currentPeriodEnd: '2099-01-01T00:00:00Z' },
+    { cancelAtPeriodEnd: true },
+    { manualGrantExpiresAt: '2099-01-01T00:00:00Z' },
+  ]) {
+    const response = await changeTier(targetId, { tier: 'black', reasonCode: 'SYNTHETIC_TEST', ...field });
+    assert.equal(response.status, 400, await response.clone().text());
+    assert.equal((await response.json()).error, 'unknown_field');
+  }
+  assert.equal(await count('SELECT count(*)::integer AS count FROM identity.user_entitlements WHERE user_id = $1', [targetId]), 0);
+
+  const denied = await changeTier(targetId, { tier: 'black', reasonCode: 'SYNTHETIC_TEST' }, 'synthetic-invalid');
+  assert.equal(denied.status, 401);
+  assert.equal((await denied.json()).error, 'access_required');
+  assert.equal(await count('SELECT count(*)::integer AS count FROM identity.user_entitlements WHERE user_id = $1', [targetId]), 0);
+});

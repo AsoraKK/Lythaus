@@ -27,6 +27,7 @@ Method | HTTP request | Description
 [**adminLegalHoldsClear**](AdminApi.md#adminlegalholdsclear) | **POST** /admin/privacy/legal-holds/{holdId}/clear | Clear a legal hold
 [**adminLegalHoldsCreate**](AdminApi.md#adminlegalholdscreate) | **POST** /admin/privacy/legal-holds | Place a legal hold
 [**adminLegalHoldsList**](AdminApi.md#adminlegalholdslist) | **GET** /admin/privacy/legal-holds | List active and released legal holds
+[**adminModerationCaseRereview**](AdminApi.md#adminmoderationcaserereview) | **POST** /admin/moderation/cases/{caseId}/rereview | Reopen a resolved moderation case for review
 [**adminModerationCasesList**](AdminApi.md#adminmoderationcaseslist) | **GET** /admin/moderation/cases | List moderation cases
 [**adminModerationDecision**](AdminApi.md#adminmoderationdecision) | **POST** /admin/moderation/cases/{caseId}/decision | Apply a moderation decision
 [**adminMonthlyContextReview**](AdminApi.md#adminmonthlycontextreview) | **POST** /admin/reputation/comments/{commentId}/context-review | Record a scoped contextual contribution review
@@ -882,10 +883,63 @@ This endpoint does not need any parameter.
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **adminModerationCaseRereview**
+> ModerationRereviewResponse adminModerationCaseRereview(origin, caseId, moderationRereviewRequest)
+
+Reopen a resolved moderation case for review
+
+Reopens only a currently resolved case when both the expected state and its exact composite revision match. The transition appends an audit event and puts current content under review; posts are excluded from public feeds until a subsequent moderation decision restores eligibility. Profile re-review remains unavailable under the canonical admin grants.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+// TODO Configure API key authorization: cloudflareAccess
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('cloudflareAccess').apiKeyPrefix = 'Bearer';
+
+final api = LythausApiClient().getAdminApi();
+final String origin = origin_example; // String | Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it.
+final String caseId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final ModerationRereviewRequest moderationRereviewRequest = ; // ModerationRereviewRequest |
+
+try {
+    final response = api.adminModerationCaseRereview(origin, caseId, moderationRereviewRequest);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling AdminApi->adminModerationCaseRereview: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **origin** | **String**| Must equal the request URL origin and an approved configured admin origin. Browsers supply their actual origin; approved direct clients must provide it. | [default to 'https://admin.lythaus.co']
+ **caseId** | **String**|  |
+ **moderationRereviewRequest** | [**ModerationRereviewRequest**](ModerationRereviewRequest.md)|  |
+
+### Return type
+
+[**ModerationRereviewResponse**](ModerationRereviewResponse.md)
+
+### Authorization
+
+[cloudflareAccess](../README.md#cloudflareAccess)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **adminModerationCasesList**
 > AdminItems adminModerationCasesList()
 
 List moderation cases
+
+Each resolved item includes a `revision` token containing its exact `resolvedAt` timestamp, `sourceEventId`, and latest `decisionId`. Use that token with the re-review operation to compare-and-set the case back into review. Each item also includes reviewCycleId, null until the first re-review; copy its current value to expectedReviewCycleId on decisions.
 
 ### Example
 ```dart

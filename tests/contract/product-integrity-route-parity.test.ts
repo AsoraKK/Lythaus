@@ -29,6 +29,7 @@ const runtimeRoutes: RuntimeRoute[] = [
   { path: '/flags', method: 'post', worker: 'public', dispatcherNeedle: "url.pathname === '/api/flags'" },
   { path: '/content/flags', method: 'post', worker: 'public', dispatcherNeedle: "url.pathname === '/api/content/flags'" },
   { path: '/media/uploads', method: 'post', worker: 'public', dispatcherNeedle: "url.pathname === '/api/media/uploads'" },
+  { path: '/media/uploads/{uploadSessionId}/bytes', method: 'put', worker: 'public', dispatcherNeedle: 'const uploadBytes =' },
   { path: '/media/uploads/{uploadSessionId}/finalise', method: 'post', worker: 'public', dispatcherNeedle: 'const finalise =' },
   { path: '/feed', method: 'get', worker: 'public', dispatcherNeedle: "url.pathname === '/api/feed'" },
   { path: '/feed/discover', method: 'get', worker: 'public', dispatcherNeedle: "url.pathname === '/api/feed/discover'" },
@@ -123,6 +124,7 @@ const runtimeRoutes: RuntimeRoute[] = [
   { path: '/admin/privacy/legal-holds/{holdId}/clear', method: 'post', worker: 'admin', dispatcherNeedle: 'const legalHoldClear =' },
   { path: '/admin/editorial/publications', method: 'post', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/editorial/publications'" },
   { path: '/admin/moderation/cases/{caseId}/decision', method: 'post', worker: 'admin', dispatcherNeedle: 'const moderation =' },
+  { path: '/admin/moderation/cases/{caseId}/rereview', method: 'post', worker: 'admin', dispatcherNeedle: 'const moderationRereview =' },
   { path: '/admin/appeals/{appealId}/adjudications', method: 'post', worker: 'admin', dispatcherNeedle: 'const appealAdjudication =' },
   { path: '/admin/appeals/pending-adjudication', method: 'get', worker: 'admin', dispatcherNeedle: "url.pathname === '/api/admin/appeals/pending-adjudication'" },
   { path: '/admin/reviewers/{reviewerId}/qualification', method: 'post', worker: 'admin', dispatcherNeedle: 'const reviewerQualification =' },
@@ -278,7 +280,7 @@ describe('product-integrity OpenAPI parity', () => {
     const publicProfile = productIntegritySpec.components.schemas.ProductIntegrityPublicProfileUser;
     expect(publicProfile.additionalProperties).toBe(false);
     expect(Object.keys(publicProfile.properties.reputation.properties).sort()).toEqual(['label', 'level']);
-    expect(spec.info.version).toBe('v11');
+    expect(spec.info.version).toBe('v12');
   });
 
   test('private accountability and governance outbox contracts do not disclose sensitive fields', () => {
