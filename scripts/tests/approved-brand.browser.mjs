@@ -99,7 +99,7 @@ try {
           if (screen === 'shell') {
             await page.getByRole('textbox', { name: /Your post/ }).waitFor();
             await page.getByRole('button', { name: /^Discover(?:$|\s+Tab)/ }).click();
-            await page.getByText('No posts yet', { exact: true }).waitFor();
+            await page.locator('flt-semantics').getByText('No posts yet', { exact: true }).waitFor();
             await page.getByRole('button', { name: 'Feed controls', exact: true }).click();
             await page.getByText('Choose a feed', { exact: true }).waitFor();
             await page.getByRole('button', { name: 'Close feed controls', exact: true }).click();
