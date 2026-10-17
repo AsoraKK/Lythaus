@@ -3,13 +3,17 @@
 This follow-up is separate from the reviewed offline PR992. Importing it makes no
 request. There is no live CLI, runtime route, Jobs wiring, credential lookup,
 deployment, enforcement or public-posting activation. All executed tests use
-scripted transports. No real provider observation has been collected.
+scripted transports. No real provider observation has been collected. Any future
+provider collection requires the exact approved seven-day duration and the
+database ledger that records its expiry; the local receipt ledger is synthetic-test-only.
 
 The owner's bounded request already covers testing feedback on nonsensitive
 artificial text. Another text-consent gate is not being requested. Remaining facts
 are existing credential authority, exact provider/project scope, frozen reviewed
 source, no private data, verified zero incremental execution/storage spend and
-resolved local retention. Seven-day retention remains proposed, not automatic.
+resolved retention. Seven-day result retention is approved, but database schema
+and cleanup are not active. The local receipt ledger has no expiry and cannot be
+used for provider collection.
 
 ## Exact existing-access blocker
 

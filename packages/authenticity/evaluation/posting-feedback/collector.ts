@@ -62,7 +62,8 @@ export async function verifyProbeSelection(fixtures: readonly Fixture[]): Promis
   if (await hash(JSON.stringify(selected)) !== PROBE_SELECTION_HASH) throw new Error('collection_wrong_selection');
 }
 
-export function assertCollectionGate(gate: CollectionGate, apiKey: string, ledger: ReceiptLedger): void {
+export function assertCollectionGate(gate: CollectionGate, apiKey: string, ledger: ReceiptLedger,
+  mode: 'ACTUAL_PROVIDER_OBSERVATION' | 'SYNTHETIC_TRANSPORT_TEST_ONLY'): void {
   if (!gate || !/^[a-f0-9]{40}$/.test(gate.reviewedSourceSha) || gate.reviewedSourceSha !== gate.observedSourceSha
     || !/^[a-f0-9]{64}$/.test(gate.reviewedCollectorHash) || gate.reviewedCollectorHash !== gate.observedCollectorHash)
     throw new Error('collection_unreviewed_source');
@@ -72,10 +73,12 @@ export function assertCollectionGate(gate: CollectionGate, apiKey: string, ledge
   if (!gate.includedExecutionAndStorageVerified || gate.providerPriceVerifiedUsd !== 0 || gate.maxIncrementalTotalUsd !== 0
     || !/^[a-zA-Z0-9_./:-]{1,160}$/.test(gate.existingExecutionResource)
     || !/^[a-zA-Z0-9_./:-]{1,160}$/.test(gate.evidenceReference)) throw new Error('collection_zero_cost_unverified');
-  if (!gate.privateDataExcluded || !gate.retentionResolved || !Number.isSafeInteger(gate.retentionDays)
-    || gate.retentionDays < 1 || gate.retentionDays > 7) throw new Error('collection_data_or_retention_unresolved');
+  if (!gate.privateDataExcluded || !gate.retentionResolved || gate.retentionDays !== 7)
+    throw new Error('collection_data_or_retention_unresolved');
   if (ledger.durability !== 'DURABLE_LOCAL' && ledger.durability !== 'DURABLE_DATABASE')
     throw new Error('collection_durable_ledger_required');
+  if (mode === 'ACTUAL_PROVIDER_OBSERVATION' && ledger.durability !== 'DURABLE_DATABASE')
+    throw new Error('collection_seven_day_database_retention_required');
 }
 
 interface CollectorOptions {
@@ -131,7 +134,7 @@ async function collect(options: CollectorOptions, mode: 'ACTUAL_PROVIDER_OBSERVA
   const apiKey = options.apiKey;
   await verifyProbeSelection(fixtures);
   const gate = structuredClone(options.gate);
-  assertCollectionGate(gate, apiKey, options.ledger);
+  assertCollectionGate(gate, apiKey, options.ledger, mode);
   if (options.signal?.aborted) throw new Error('collection_interrupted');
   if (!await options.ledger.claimProbe({ selectionHash: PROBE_SELECTION_HASH, sourceSha: gate.observedSourceSha,
     collectorHash: gate.observedCollectorHash })) throw new Error('collection_probe_already_claimed');
