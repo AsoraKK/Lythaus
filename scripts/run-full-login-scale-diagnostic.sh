@@ -24,4 +24,6 @@ export SCALE_DIAGNOSTIC_OUTPUT="$evidence_root"
 export SCALE_STATIC_ROOT="${SCALE_STATIC_ROOT:-$source_root/build/brand-web}"
 export SCALE_PRODUCTION_ONE_ROOT="$fixture_root/build/scale-1"
 export SCALE_PRODUCTION_TWO_ROOT="$fixture_root/build/scale-2"
+export SCALE_PRODUCTION_SOURCE
+SCALE_PRODUCTION_SOURCE="$(git -C "$fixture_root" rev-parse HEAD)"
 FULL_LOGIN_ENGINE="${FULL_LOGIN_ENGINE:-webkit}" node scripts/tests/full-login-scale.browser.mjs

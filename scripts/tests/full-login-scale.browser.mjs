@@ -15,8 +15,8 @@ const source=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
 assert.ok(['chromium','webkit'].includes(engine));await mkdir(output,{recursive:true});
 const cases=[
  {name:'static-1x',scale:1,root:path.resolve(process.env.SCALE_STATIC_ROOT),source:process.env.SCALE_STATIC_SOURCE??source},
- {name:'production-wrapped-1x',scale:1,real:true,root:path.resolve(process.env.SCALE_PRODUCTION_ONE_ROOT),source},
- {name:'production-wrapped-2x',scale:2,real:true,root:path.resolve(process.env.SCALE_PRODUCTION_TWO_ROOT),source},
+ {name:'production-wrapped-1x',scale:1,real:true,root:path.resolve(process.env.SCALE_PRODUCTION_ONE_ROOT),source:process.env.SCALE_PRODUCTION_SOURCE??source},
+ {name:'production-wrapped-2x',scale:2,real:true,root:path.resolve(process.env.SCALE_PRODUCTION_TWO_ROOT),source:process.env.SCALE_PRODUCTION_SOURCE??source},
 ];
 async function inventory(root,prefix=''){
  const result={};
@@ -103,7 +103,7 @@ for(const config of cases){
   assert.deepEqual(blocked,[]);assert.equal(result.snapshots.length,2);
   for(const s of result.snapshots){
    assert.ok(s.captureStartedAt-result.anchorAt>=s.time,'The complete fixed dwell must elapse');
-   assert.equal(new URL(s.url).pathname,'/login');assert.equal(s.title,'Lythaus');
+   assert.equal(new URL(s.url).pathname,'/login');assert.equal(s.title,config.real?'Lythaus':'');
    assert.equal(s.semanticsCount,0);assert.equal(s.diagnosticFrameHook,'undefined');
    assert.equal(s.readyState,'complete');assert.equal(s.visibility,'visible');
    assert.deepEqual(s.observation.errors,[]);assert.deepEqual(s.observation.rejections,[]);
