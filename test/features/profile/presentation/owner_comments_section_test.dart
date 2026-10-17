@@ -135,18 +135,30 @@ Future<void> _capture(WidgetTester tester, String name) async {
 void main() {
   setUpAll(loadFontsForGoldenTests);
   testWidgets('loading is distinct from empty', (tester) async {
+    final semantics = tester.ensureSemantics();
     final pending = Completer<OwnerCommentsPage>();
     final service = _Service((_) => pending.future);
     await _open(tester, service);
+    final loadingHeading = tester
+        .getSemantics(find.text('Your comments'))
+        .getSemanticsData();
+    expect(loadingHeading.label, 'Your comments');
+    expect(loadingHeading.flagsCollection.isHeader, isTrue);
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
     expect(find.text('No comments are available in this list.'), findsNothing);
     pending.complete(const OwnerCommentsPage(items: [], nextCursor: null));
     await tester.pumpAndSettle();
+    final emptyHeading = tester
+        .getSemantics(find.text('Your comments'))
+        .getSemanticsData();
+    expect(emptyHeading.label, 'Your comments');
+    expect(emptyHeading.flagsCollection.isHeader, isTrue);
     expect(
       find.text('No comments are available in this list.'),
       findsOneWidget,
     );
     await _capture(tester, 'comments-empty');
+    semantics.dispose();
   });
 
   for (final offline in [false, true]) {
