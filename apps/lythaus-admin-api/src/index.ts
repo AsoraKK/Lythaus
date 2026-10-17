@@ -330,14 +330,20 @@ async function searchUsers(request: Request, env: Env): Promise<Response> {
 
 async function setUserTier(request: Request, env: Env, actor: { userId: string; role: string }, userId: string, correlation: string): Promise<Response> {
   if (actor.role !== 'administrator') throw new Error('admin_role_required');
+  const targetUserId = parseAdminUserId(userId).toLowerCase();
   const input = await readBoundedJson<{ tier?: 'free' | 'premium' | 'black'; reasonCode?: string }>(request);
+  rejectUnknownFields(input, ['tier', 'reasonCode']);
   if (!input.tier || !['free', 'premium', 'black'].includes(input.tier)) throw new Error('invalid_subscription_tier');
   if (!input.reasonCode || !/^[A-Z0-9_.:-]{2,80}$/.test(input.reasonCode)) throw new Error('reason_code_required');
   const sourceEventId = uuidv7();
   const changed = await transaction(env.DB_ADMIN_FRESH, async (client) => {
+    await client.query(
+      `SELECT pg_advisory_xact_lock(hashtextextended('user-entitlement:' || $1::uuid::text, 0))`,
+      [targetUserId],
+    );
     const current = await client.query<{ subscription_tier: string }>(
       `SELECT subscription_tier FROM identity.user_entitlements WHERE user_id = $1 FOR UPDATE`,
-      [userId],
+      [targetUserId],
     );
     const tierBefore = current.rows[0]?.subscription_tier ?? 'free';
     if (tierBefore === input.tier) return false;
@@ -345,31 +351,31 @@ async function setUserTier(request: Request, env: Env, actor: { userId: string; 
       `INSERT INTO identity.user_entitlements (user_id, subscription_tier, updated_by)
        VALUES ($1, $2, $3)
        ON CONFLICT (user_id) DO UPDATE SET subscription_tier = EXCLUDED.subscription_tier,
-         updated_by = EXCLUDED.updated_by, updated_at = now()`, [userId, input.tier, actor.userId]);
+         updated_by = EXCLUDED.updated_by, updated_at = now()`, [targetUserId, input.tier, actor.userId]);
     await client.query(
       `INSERT INTO system.audit_events (id, actor_id, action, target_type, target_id, reason_code, correlation_id, metadata)
        VALUES ($1, $2, 'user.tier_changed', 'user', $3, $4, $5, $6::jsonb)`,
-      [sourceEventId, actor.userId, userId, input.reasonCode, correlation, JSON.stringify({ tier: input.tier })]);
+      [sourceEventId, actor.userId, targetUserId, input.reasonCode, correlation, JSON.stringify({ tier: input.tier })]);
     await client.query(
       `INSERT INTO system.outbox_events (id, event_type, aggregate_type, aggregate_id, actor_id, payload, correlation_id)
        VALUES ($1, 'identity.user.tier_changed', 'user', $2, $3, $4::jsonb, $5)`,
-      [sourceEventId, userId, actor.userId, JSON.stringify({ userId, tier: input.tier }), correlation],
+      [sourceEventId, targetUserId, actor.userId, JSON.stringify({ userId: targetUserId, tier: input.tier }), correlation],
     );
     await recordUserActivity(client, {
-      id: uuidv7(), userId, actorUserId: actor.userId,
+      id: uuidv7(), userId: targetUserId, actorUserId: actor.userId,
       eventType: 'rewards.subscription_tier_changed', category: 'rewards', source: 'admin_api',
       sourceEventId, correlationId: correlation,
       title: 'Subscription tier changed',
       explanation: 'An authorised administrator changed your subscription entitlement. This does not change reputation.',
       result: 'succeeded', reasonCode: input.reasonCode, policyVersion: ACTIVITY_POLICY_VERSION,
-      objectType: 'subscription_tier', objectId: userId, reputationEffect: 'none', appealable: false,
+      objectType: 'subscription_tier', objectId: targetUserId, reputationEffect: 'none', appealable: false,
       retentionClass: 'security',
       metadata: { tierBefore, tierAfter: input.tier, entitlementType: 'subscription_tier' },
       createdAt: new Date().toISOString(),
     });
     return true;
   });
-  return json({ userId, tier: input.tier, changed }, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
+  return json({ userId: targetUserId, tier: input.tier, changed }, { headers: { 'x-correlation-id': correlation, 'cache-control': 'private, no-store' } });
 }
 
 async function legalHolds(request: Request, env: Env, actor: { userId: string; role: string }, correlation: string): Promise<Response> {

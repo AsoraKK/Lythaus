@@ -33,7 +33,9 @@ const reputationPg17Script = 'node scripts/ci/run-reputation-managed-lock-cluste
 const allocatedJobsDiagnosticTests = 'apps/lythaus-jobs/tests/reputation-session-diagnostic.test.mjs apps/lythaus-jobs/tests/reputation-session-diagnostic.workerd.mjs';
 const allocatedJobsDiagnosticFiles = new Map([
   ['apps/lythaus-jobs/src/index.ts', '7b25af78fc1e227b85d1758b0cb31fd0aec09d24'],
-  ['apps/lythaus-public-api/src/index.ts', '5ca637b72d241d89df5178bec6f0f730aafe41cd'],
+  // Membership-only createCustomFeed now shares the canonical account lock and keeps tier/count/cap checks,
+  // inserts, and matching activity in one transaction; the Jobs bridge and handler remain unchanged.
+  ['apps/lythaus-public-api/src/index.ts', '6ba74610a691ece3783d953290e54a677d9b08cd'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],
@@ -864,6 +866,11 @@ test('allocated Jobs pins reject altered historical and unrelated source paths',
     const changed = execFileSync('git', ['hash-object', '--stdin'], { cwd: root, encoding: 'utf8', input: source }).trim();
     assert.notEqual(changed, expected);
     assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, changed), assert.AssertionError);
+    if (filename === 'apps/lythaus-public-api/src/index.ts') {
+      const previousPublicApiBlob = '5ca637b72d241d89df5178bec6f0f730aafe41cd';
+      assert.notEqual(previousPublicApiBlob, expected, 'The integrated membership-only source bytes replace the previous exact allocation');
+      assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, previousPublicApiBlob), assert.AssertionError);
+    }
     if (filename.endsWith('/index.ts')) {
       assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, git('rev-parse', `4b32a00cde7a940ec7fcc4134368bda80d78f699:${filename}`)), assert.AssertionError);
     }

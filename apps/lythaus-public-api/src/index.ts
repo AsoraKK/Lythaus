@@ -2667,18 +2667,25 @@ async function createCustomFeed(request: Request, env: Env, user: Principal): Pr
   const name = input.name?.trim() ?? '';
   if (!name || name.length > 120 || !Array.isArray(input.rules)) throw new Error('invalid_custom_feed');
   const rules = normalizeCustomFeedRules(input.rules);
-  const tier = await tierForUser(env, user.userId);
-  const existing = await query<{ count: string }>(env.DB_APP_FRESH,
-    `SELECT count(*)::text AS count FROM social.custom_feeds WHERE user_id = $1`, [user.userId]);
-  assertCustomFeedAvailable(tier, Number(existing.rows[0]?.count ?? 0));
+  const targetUserId = user.userId.toLowerCase();
   const feedId = uuidv7();
   const sourceEventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
-    await client.query(`INSERT INTO social.custom_feeds (id, user_id, name) VALUES ($1, $2, $3)`, [feedId, user.userId, name]);
+    await client.query(
+      `SELECT pg_advisory_xact_lock(hashtextextended('user-entitlement:' || $1::uuid::text, 0))`,
+      [targetUserId],
+    );
+    const entitlement = await client.query<{ subscription_tier: string }>(
+      `SELECT subscription_tier FROM identity.user_entitlements WHERE user_id = $1`, [targetUserId]);
+    const tier = normalizeUserTier(entitlement.rows[0]?.subscription_tier);
+    const existing = await client.query<{ count: string }>(
+      `SELECT count(*)::text AS count FROM social.custom_feeds WHERE user_id = $1`, [targetUserId]);
+    assertCustomFeedAvailable(tier, Number(existing.rows[0]?.count ?? 0));
+    await client.query(`INSERT INTO social.custom_feeds (id, user_id, name) VALUES ($1, $2, $3)`, [feedId, targetUserId, name]);
     for (const rule of rules) {
       await client.query(`INSERT INTO social.custom_feed_rules (id, feed_id, rule) VALUES ($1, $2, $3::jsonb)`, [uuidv7(), feedId, JSON.stringify(rule)]);
     }
-    await writeActivity(client, request, user, sourceEventId, {
+    await writeActivity(client, request, { ...user, userId: targetUserId }, sourceEventId, {
       eventType: 'social.custom_feed_created', category: 'social', title: 'You created a custom feed',
       explanation: 'The custom feed and its selected rules were saved.', objectType: 'custom_feed', objectId: feedId,
       metadata: { relationshipType: 'custom_feed', targetType: 'feed' },
