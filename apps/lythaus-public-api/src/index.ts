@@ -2439,7 +2439,9 @@ async function createPrivacyRequest(request: Request, env: Env, user: Principal)
   const plan = privacyRequestPlan(input.requestType);
   const requestId = uuidv7();
   const acceptedAt = await transaction(env.DB_APP_FRESH, async (client) => {
-    await client.query(`SELECT id FROM identity.users WHERE id = $1 FOR UPDATE`, [user.userId]);
+    const account = await client.query<{ status: string }>(
+      `SELECT status FROM identity.users WHERE id = $1 FOR UPDATE`, [user.userId]);
+    if (account.rows[0]?.status !== 'active') throw new Error('authentication_required');
     const active = await client.query(
       `SELECT 1 FROM privacy.requests
         WHERE subject_id = $1
