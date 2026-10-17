@@ -445,6 +445,8 @@ jobs:
           node --test scripts/tests/brand-artwork-pixels.test.mjs scripts/tests/brand-diagnostic-pair.test.mjs scripts/tests/full-login-source.test.mjs scripts/tests/full-login-pixels.test.mjs scripts/tests/full-login-startup-contract.test.mjs scripts/tests/frame-dwell-contract.test.mjs
           python3 scripts/generate-approved-brand-paths.py --check
           flutter build web --release --no-pub --no-tree-shake-icons --no-wasm-dry-run --no-web-resources-cdn --target test/browser/approved_brand_entry.dart --output build/brand-web
+          node --test scripts/tests/brand-login-contracts.test.mjs
+          bash scripts/build-brand-login-fixtures.sh
           npm ci --ignore-scripts --no-audit --prefix apps/control-panel
           npm run build --prefix apps/control-panel
       - name: Verify approved brand rendering in Chromium and WebKit
@@ -452,8 +454,10 @@ jobs:
         env:
           BRAND_SOURCE: ${{ github.sha }}
         run: |
-          node scripts/tests/approved-brand.browser.mjs
-          BRAND_BROWSER=webkit node scripts/tests/approved-brand.browser.mjs
+          brand_status=0
+          node scripts/tests/approved-brand.browser.mjs || brand_status=$?
+          BRAND_BROWSER=webkit node scripts/tests/approved-brand.browser.mjs || brand_status=$?
+          exit "$brand_status"
       - name: Diagnose failed brand gate in hosted WPE
         if: ${{ failure() && steps.approved_brand_gate.outcome == 'failure' }}
         timeout-minutes: 15

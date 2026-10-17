@@ -10,9 +10,13 @@ import { installFlutterEngineFonts } from './flutter-engine-font-fixture.mjs';
 import {observeRenderHealth, assertRenderHealth} from './brand-render-health.mjs';
 import {compareApprovedArtwork} from './brand-reference.mjs';
 import {containedWordmarkRect} from './brand-artwork-pixels.mjs';
+import {assertBrandCaseMatrix} from './brand-case-matrix.mjs';
+import {loginFixtureResponse,expectedRefreshConsole,refreshUrl,logoutUrl,discoverUrl} from './brand-login-transport.mjs';
+import {assertLoginLayout,assertMatchingLoginLayout,loginFirstPaintPixels,assertLoginFirstPaintPixels} from './brand-login-first-paint.mjs';
 
 const output = path.resolve(process.env.BRAND_EVIDENCE ?? 'build/brand-evidence');
 const build = path.resolve(process.env.BRAND_WEB_BUILD ?? 'build/brand-web');
+const loginBuilds = [1,2].map(scale => path.resolve(`build/brand-login-${scale}`));
 const admin = path.resolve('apps/control-panel/dist');
 const engine = process.env.BRAND_BROWSER ?? 'chromium';
 assert.ok(['chromium', 'webkit'].includes(engine));
@@ -49,10 +53,55 @@ async function serve(root) {
 }
 await mkdir(output, { recursive: true });
 const appServer = await serve(build), adminServer = await serve(admin);
+const loginServers = await Promise.all(loginBuilds.map(serve));
 const headed = process.env.BRAND_CAPTURE_HEADED === '1';
 const browser = await (engine === 'webkit' ? webkit : chromium).launch({ headless: !headed });
 const results = [];
 const { PNG } = createRequire(import.meta.url)('playwright-core/lib/utilsBundle');
+const readLoginLayout = page => page.evaluate(() => JSON.parse(window.__readBrandLoginLayout()));
+async function firstPaint(page, name, scale, theme) {
+  const record = {status:'pending', protocol:'One original PNG before semantics, interaction or resize; real fractional layout, no ink-derived crop'};
+  try {
+    await page.waitForFunction(() => window.__brandFirstFrameAt !== null && typeof window.__readBrandLoginLayout === 'function' &&
+      JSON.parse(window.__readBrandLoginLayout()).brands.length === 1);
+    record.firstFrameAt = await page.evaluate(() => window.__brandFirstFrameAt);
+    await page.waitForTimeout(Math.max(0, 250 - (await page.evaluate(() => performance.now()) - record.firstFrameAt)));
+    record.before = await readLoginLayout(page);
+    assertLoginLayout(record.before, scale);
+    assert.equal(await page.locator('flt-semantics').count(), 0, 'First paint precedes DOM semantics');
+    record.captureStartedAt = await page.evaluate(() => performance.now());
+    const file = path.join(output, name + '-first-paint.png');
+    await page.screenshot({path:file});
+    record.captureFinishedAt = await page.evaluate(() => performance.now());
+    record.after = await readLoginLayout(page);
+    assertLoginLayout(record.after, scale);
+    assertMatchingLoginLayout(record.before, record.after);
+    // Read the saved bytes: later semantic/interaction captures cannot replace them.
+    const bytes = await readFile(file), png = PNG.sync.read(bytes);
+    record.pngSha256 = createHash('sha256').update(bytes).digest('hex');
+    Object.assign(record, loginFirstPaintPixels(png, record.before));
+    assertLoginFirstPaintPixels(record);
+    const artworkFile = theme === 'dark' ? 'lythaus-wordmark-white.5ba0451347e2.svg' : 'lythaus-wordmark-black.e450176663e0.svg';
+    record.fidelity = await compareApprovedArtwork(page,png,record.artwork,new URL('/assets/assets/brand/lythaus-v1/'+artworkFile,page.url()).href,PNG);
+    record.status = 'passed';
+    return record;
+  } catch (error) {record.status='failed';record.error=error.message;throw error;}
+  finally {await writeFile(path.join(output,name+'-first-paint.json'),JSON.stringify(record,null,2)+'\n');}
+}
+function checkedLoginHealth(raw, expectedConsoleErrors, requests) {
+  const errors = [...raw.errors];
+  for (const expected of expectedConsoleErrors) {
+    const index = errors.indexOf(expected.text);
+    assert.ok(index >= 0, 'Expected resource error is present in raw health evidence');
+    errors.splice(index,1);
+  }
+  return {...raw,errors,responses:raw.responses.filter(r => !(r.url===refreshUrl && r.status===401 &&
+    requests.some(request=>request.url===r.url&&request.method==='POST'&&request.status===r.status)))};
+}
+async function saveCase(result) {
+  await writeFile(path.join(output,`${engine}-${result.screen}-${result.theme}-${result.width}.json`),JSON.stringify(result,null,2)+'\n');
+  console.log(`${engine} ${result.screen} ${result.theme} ${result.width}: ${result.status}${result.error?' — '+result.error:''}`);
+}
 async function capture(page, name, validate = true) {
   await page.evaluate(() => {
     const label = document.createElement('div');
@@ -109,19 +158,41 @@ try {
     for (const width of [320, 390, 1440]) {
       for (const screen of ['login', 'onboarding', 'shell']) {
         if (selectedCase && selectedCase !== `${screen}-${theme}-${width}`) continue;
-        const context = await browser.newContext({ locale:'en-US', viewport: { width, height: 960 }, colorScheme: theme, reducedMotion: 'reduce' });
-        const errors = [], blocked = [];
-        const health = await observeRenderHealth(context,appServer.origin);
+        const login = screen === 'login', scale = width === 320 ? 2 : 1;
+        const origin = login ? loginServers[scale-1].origin : appServer.origin;
+        const name = `${engine}-${screen}-${theme}-${width}`;
+        const context = await browser.newContext({ locale:'en-US', viewport: { width, height: 960 }, colorScheme: theme, reducedMotion: 'reduce', ...(login?{serviceWorkers:'block'}:{}) });
+        const errors = [], blocked = [], requests = [], expectedConsoleErrors = [];
+        const health = await observeRenderHealth(context,origin);
+        if (login) await context.addInitScript(() => {
+          window.__brandFirstFrameAt = null;
+          window.addEventListener('flutter-first-frame',()=>{window.__brandFirstFrameAt ??= performance.now();});
+        });
         await context.route('**/*', async route => {
-          if (new URL(route.request().url()).origin === appServer.origin) return route.continue();
-          blocked.push(route.request().url()); return route.abort();
+          const request=route.request(),url=request.url(),method=request.method();
+          if (new URL(url).origin === origin) return route.continue();
+          const response=login && loginFixtureResponse(url,method,request.headers()['access-control-request-method']);
+          if(response){
+            requests.push({url,method,status:response.status});
+            return route.fulfill({status:response.status,contentType:'application/json',headers:{
+              'access-control-allow-origin':origin,'access-control-allow-credentials':'true',
+              'access-control-allow-methods':response.method,
+              'access-control-allow-headers':request.headers()['access-control-request-headers']??'content-type',
+            },body:response.body===null?'':JSON.stringify(response.body)});
+          }
+          blocked.push(url); return route.abort();
         });
         await installFlutterEngineFonts(context);
         const page = await context.newPage();
         page.on('pageerror', error => errors.push(error.message));
-        page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+        page.on('console', message => { if (message.type() === 'error') {
+          const error={text:message.text(),url:message.location().url};
+          if(login&&expectedRefreshConsole(error,requests))expectedConsoleErrors.push(error);else errors.push(error.text);
+        } });
+        let initialPaint;
         try {
-          await page.goto(appServer.origin + '/?screen=' + screen + '&theme=' + theme + '&scale=' + (width === 320 ? '2' : '1'));
+          await page.goto(login ? origin+'/login' : origin + '/?screen=' + screen + '&theme=' + theme + '&scale=' + scale);
+          if(login)initialPaint=await firstPaint(page,name,scale,theme);
           await page.locator('flt-semantics-placeholder').evaluate(element => element.click());
           if (screen === 'shell') {
             await page.getByRole('textbox', { name: /Your post/ }).waitFor();
@@ -134,6 +205,11 @@ try {
           }
           assert.equal(await page.getByRole('img',{name:'Lythaus',exact:true}).count(), screen==='shell'&&width<768?0:1,
             'Exactly one named brand where present; decorative controls add no duplicate');
+          if(login){
+            const semanticBox=await page.getByRole('img',{name:'Lythaus',exact:true}).boundingBox();
+            for(const key of ['x','y','width','height'])assert.ok(Math.abs(semanticBox[key]-initialPaint.before.brands[0][key])<0.02,'Named image matches original fractional '+key);
+            assertMatchingLoginLayout(initialPaint.before,await readLoginLayout(page),0.02);
+          }
           await page.waitForTimeout(300);
           await capture(page, engine + '-' + screen + '-' + theme + '-' + width);
           if (screen === 'login') {
@@ -156,18 +232,25 @@ try {
             await page.waitForTimeout(120);
           }
           await action.click();
-          await page.getByText('Synthetic continuation completed', { exact: true }).waitFor();
+          if(login){
+            await page.waitForURL(url=>url.pathname==='/');
+            assert.equal(new URL(page.url()).pathname,'/','Real GoRouter guest destination');
+            await page.getByRole('button',{name:/^Discover(?:$|\s+Tab)/}).waitFor();
+            await page.locator('flt-semantics').getByText('No posts yet',{exact:true}).waitFor();
+            assert.equal(requests.filter(r=>r.url===refreshUrl&&r.method==='POST').length,1,'Real signed-out refresh');
+            assert.equal(requests.filter(r=>r.url===logoutUrl&&r.method==='POST').length,1,'One real guest logout');
+            assert.ok(requests.some(r=>r.url===discoverUrl&&r.method==='GET'),'Real public Discover request');
+          }else await page.getByText('Synthetic continuation completed', { exact: true }).waitFor();
           }
           assert.deepEqual(errors, []);
           assert.deepEqual(blocked, []);
           const renderHealth=await health(page);
-          assertRenderHealth(renderHealth);
-          results.push({ screen, theme, width, status: 'passed', health:renderHealth });
+          assertRenderHealth(login?checkedLoginHealth(renderHealth,expectedConsoleErrors,requests):renderHealth);
+          results.push({ screen, theme, width, scale, status: 'passed', health:renderHealth, ...(login?{firstPaint:initialPaint,requests,expectedConsoleErrors,guestDestination:new URL(page.url()).pathname}:{}) });
         } catch (error) {
-          await capture(page, engine + '-' + screen + '-' + theme + '-' + width + '-failed', false);
-          results.push({ screen, theme, width, status: 'failed', error: error.message, errors, blocked, health:await health(page) });
-          throw error;
-        } finally { await context.close(); }
+          await capture(page, name + '-failed', false).catch(()=>{});
+          results.push({ screen, theme, width, scale, status: 'failed', error: error.message, errors, blocked, requests, expectedConsoleErrors, health:await health(page) });
+        } finally { await saveCase(results.at(-1)); await context.close(); }
       }
       if (selectedCase && selectedCase !== `admin-${theme}-${width}`) continue;
       const context = await browser.newContext({ viewport: { width, height: 960 }, colorScheme: theme, reducedMotion: 'reduce' });
@@ -191,15 +274,20 @@ try {
         await verifyIcons(page, context);
         assert.deepEqual(errors, []);
         results.push({ screen: 'admin', theme, width, status: 'passed' });
-      } finally { await context.close(); }
+      } catch(error) {
+        await page.screenshot({path:path.join(output,`${engine}-admin-${theme}-${width}-failed.png`)}).catch(()=>{});
+        results.push({screen:'admin',theme,width,status:'failed',error:error.message,errors});
+      } finally { await saveCase(results.at(-1)); await context.close(); }
     }
   }
-  assert.equal(results.length, selectedCase ? 1 : 24);
+  assertBrandCaseMatrix(results,selectedCase);
+  assert.deepEqual(results.filter(result=>result.status!=='passed').map(({screen,theme,width,error})=>({screen,theme,width,error})),[],'All required brand cases must pass');
 } finally {
   await browser.close();
-  await Promise.all([appServer, adminServer].map(({ server }) => new Promise(resolve => server.close(resolve))));
+  await Promise.all([appServer, adminServer, ...loginServers].map(({ server }) => new Promise(resolve => server.close(resolve))));
   await writeFile(path.join(output, engine + '-results.json'), JSON.stringify({
     source, engine, browser: browser.version(), results,
     compiledSha256: createHash('sha256').update(await readFile(path.join(build, 'main.dart.js'))).digest('hex'),
+    loginCompiledSha256: await Promise.all(loginBuilds.map(async(root,index)=>({scale:index+1,sha256:createHash('sha256').update(await readFile(path.join(root,'main.dart.js'))).digest('hex')}))),
   }, null, 2) + '\n');
 }
