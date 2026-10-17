@@ -29,7 +29,7 @@ for(const build of builds){
  const root=path.resolve(build.root);
  const server=createServer(async(req,res)=>{try{
    let file=path.resolve(root,'.'+new URL(req.url,'http://localhost').pathname);
-   assert.ok(file.startsWith(root+path.sep));if(!path.extname(file))file=path.join(file,'index.html');
+   assert.ok(file===root||file.startsWith(root+path.sep));if(!path.extname(file))file=path.join(file,'index.html');
    res.writeHead(200,{'content-type':types[path.extname(file)]??'application/octet-stream','access-control-allow-origin':'*'}).end(await readFile(file));
  }catch{res.writeHead(404).end();}});
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
