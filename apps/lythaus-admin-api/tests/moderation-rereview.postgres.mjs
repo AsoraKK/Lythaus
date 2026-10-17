@@ -155,7 +155,7 @@ async function reopenRequest(revision) {
   return adminCall('POST', `/api/admin/moderation/cases/${caseId}/rereview`, {
     expectedCaseState: 'resolved',
     expectedRevision: revision,
-    reasonCode: ' moderation.rereview_requested ',
+    reasonCode: 'MODERATION.REREVIEW_REQUESTED',
   });
 }
 
