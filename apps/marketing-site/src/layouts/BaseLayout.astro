@@ -11,8 +11,10 @@ const {
 const pageTitle = absoluteTitle ? title : title ? `${title} | Lythaus` : 'Lythaus';
 const siteUrl = Astro.site?.origin ?? 'https://lythaus.co';
 const canonicalUrl = `${siteUrl}${canonicalPath}`;
+const socialImageUrl = `${siteUrl}/brand/lythaus-v1/lythaus-social-card-1200x630.c20d3b1b40a8.png`;
 import '../styles/global.css';
 import homeOpening from '../scripts/home-opening.js?raw';
+import '../styles/brand.css';
 ---
 <!doctype html>
 <html lang="en">
@@ -26,20 +28,28 @@ import homeOpening from '../scripts/home-opening.js?raw';
     <meta name="theme-color" content={homePage ? '#070706' : '#090a0b'} />
     <title>{pageTitle}</title>
     <link rel="canonical" href={canonicalUrl} />
-    <link rel="icon" href="/favicon.ico" sizes="any" />
-    <link rel="icon" type="image/png" href="/favicon.png" sizes="64x64" />
+    <link rel="icon" type="image/svg+xml" href="/icons/lythaus-v1/favicon.116ff3e020c6.svg" />
+    <link rel="icon" type="image/png" href="/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png" sizes="96x96" />
+    <link rel="icon" type="image/x-icon" href="/icons/lythaus-v1/favicon.e3dfdd675a74.ico" sizes="any" />
     <link rel="manifest" href="/site.webmanifest" />
-    <link rel="apple-touch-icon" type="image/png" href="/apple-touch-icon.png" sizes="180x180" />
+    <link rel="apple-touch-icon" type="image/png" href="/icons/lythaus-v1/apple-touch-icon.19122fd8c91b.png" sizes="180x180" />
 
     <meta property="og:type" content="website" />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:site_name" content="Lythaus" />
+    <meta property="og:image" content={socialImageUrl} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Lythaus social card" />
 
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImageUrl} />
+    <meta name="twitter:image:alt" content="Lythaus social card" />
 
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     {homePage ? (
@@ -60,8 +70,7 @@ import homeOpening from '../scripts/home-opening.js?raw';
   <body class:list={{ 'home-page': homePage }}>
     <header class="site-header">
       <a class="brand" href="/" aria-label="Lythaus home">
-        <img src="/brand/lythaus-mark.svg" alt="" width="34" height="34" />
-        <span>Lythaus</span>
+        <img class="brand-lockup" src="/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg" alt="" width="627" height="131" />
       </a>
       <nav class="site-nav" aria-label="Main navigation">
         {homePage ? (
@@ -125,8 +134,7 @@ import homeOpening from '../scripts/home-opening.js?raw';
     ) : (
       <footer class="site-footer">
         <a class="brand footer-brand" href="/" aria-label="Lythaus home">
-          <img src="/brand/lythaus-mark.svg" alt="" width="28" height="28" />
-          <span>Lythaus</span>
+          <img class="brand-lockup" src="/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg" alt="" width="627" height="131" />
         </a>
         <p>A calmer place for human ideas.</p>
         <div class="footer-links">

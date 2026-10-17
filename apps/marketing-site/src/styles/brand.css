@@ -1,0 +1,17 @@
+.site-header .brand img.brand-lockup {
+  display: block;
+  width: min(154px, 42vw);
+  height: auto;
+  max-width: 100%;
+}
+
+.home-page .site-header .brand img.brand-lockup {
+  width: min(154px, 42vw);
+  height: auto;
+}
+
+.site-footer .brand img.brand-lockup {
+  width: min(134px, 42vw);
+  height: auto;
+  max-width: 100%;
+}
