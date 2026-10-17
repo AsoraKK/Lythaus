@@ -875,6 +875,9 @@ test('allocated Jobs pins reject altered historical and unrelated source paths',
 });
 
 test('image-integrity allocation rejects superseded Worker bytes without broadening the diagnostic scope', () => {
+  // Exact blob IDs from 489aef297ff0b1a40744504594122c9ebc43930d (both Workers)
+  // and fecdd6f6b19ad5ea9dd17afa70e420e6deb147b8 (Jobs); the guard compares IDs,
+  // so these superseded PR commits need not survive squash.
   const supersededWorkerBlobs = new Map([
     ['apps/lythaus-jobs/src/index.ts', ['8a6487ab099287f151fc8594b3b9ff846a9226b7', 'a842e8c3654a26adcaae7c8e72efae3d20102cbb']],
     ['apps/lythaus-public-api/src/index.ts', ['7a941be1765e82b5cbf00294b114952ab6ea27a1']],
