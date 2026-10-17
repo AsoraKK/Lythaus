@@ -442,17 +442,32 @@ jobs:
       - name: Build approved brand browser fixtures
         run: |
           python3 scripts/tests/approved-brand-path-generator.test.py
-          node --test scripts/tests/brand-artwork-pixels.test.mjs
+          node --test scripts/tests/brand-artwork-pixels.test.mjs scripts/tests/brand-diagnostic-pair.test.mjs
           python3 scripts/generate-approved-brand-paths.py --check
           flutter build web --release --no-pub --no-tree-shake-icons --no-wasm-dry-run --no-web-resources-cdn --target test/browser/approved_brand_entry.dart --output build/brand-web
           npm ci --ignore-scripts --no-audit --prefix apps/control-panel
           npm run build --prefix apps/control-panel
       - name: Verify approved brand rendering in Chromium and WebKit
+        id: approved_brand_gate
         env:
           BRAND_SOURCE: ${{ github.sha }}
         run: |
           node scripts/tests/approved-brand.browser.mjs
           BRAND_BROWSER=webkit node scripts/tests/approved-brand.browser.mjs
+      - name: Diagnose failed brand gate in hosted WPE
+        if: ${{ failure() && steps.approved_brand_gate.outcome == 'failure' }}
+        timeout-minutes: 15
+        env:
+          DIAGNOSTIC_REVIEW_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/run-brand-failure-diagnostic.sh
+      - name: Upload failure-only WPE diagnosis
+        if: ${{ always() && steps.approved_brand_gate.outcome == 'failure' }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: brand-failure-wpe-diagnostic
+          path: build/brand-failure-diagnostic
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload approved brand screenshots
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f

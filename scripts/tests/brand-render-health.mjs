@@ -45,6 +45,10 @@ export async function observeRenderHealth(context, origin) {
     ...window.__brandHealth, now: performance.now(), readyState: document.readyState,
     visibility: document.visibilityState, semantics: document.querySelectorAll('flt-semantics').length,
     canvases: [...document.querySelectorAll('canvas')].map(c => ({width:c.width,height:c.height})),
+    canvasInventoryScope:'canvases lists light DOM only; empty is not evidence of no canvas. Open shadow roots listed separately; workers/closed roots remain opaque.',
+    openShadowCanvases:(()=>{const result=[];const visit=root=>{for(const element of root.querySelectorAll('*'))if(element.shadowRoot){
+      for(const canvas of element.shadowRoot.querySelectorAll('canvas'))result.push({width:canvas.width,height:canvas.height});visit(element.shadowRoot);
+    }};visit(document);return result;})(),
   })) });};
 }
 

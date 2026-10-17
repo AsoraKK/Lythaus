@@ -14,6 +14,8 @@ const {PNG}=createRequire(import.meta.url)('playwright-core/lib/utilsBundle');
 const output=path.resolve(process.env.BRAND_DIAGNOSTIC_OUTPUT??'build/brand-diagnostic-evidence');
 const builds=JSON.parse(process.env.BRAND_DIAGNOSTIC_BUILDS);
 const engine=process.env.BRAND_BROWSER??'webkit', headed=process.env.BRAND_DIAGNOSTIC_HEADED==='1';
+const viewportWidth=Number(process.env.BRAND_DIAGNOSTIC_WIDTH??390);
+const colorScheme=process.env.BRAND_DIAGNOSTIC_THEME??'dark';
 await mkdir(output,{recursive:true});
 const types={'.js':'text/javascript','.html':'text/html','.css':'text/css','.wasm':'application/wasm','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.ttf':'font/ttf','.otf':'font/otf'};
 async function inventory(root,prefix='') {
@@ -54,7 +56,7 @@ for(const build of builds){
   const browserType=engine==='webkit'?webkit:chromium;
   const browserServer=await browserType.launchServer({headless:!headed});
   const browser=await browserType.connect(browserServer.wsEndpoint());
-  const context=await browser.newContext({locale:'en-US',viewport:{width:390,height:960},colorScheme:'dark',reducedMotion:'reduce'});
+  const context=await browser.newContext({locale:'en-US',viewport:{width:viewportWidth,height:960},colorScheme,reducedMotion:'reduce'});
   const health=await observeRenderHealth(context,origin);
   await context.addInitScript(()=>{
     const state=window.__flutterProbe={frames:0,paints:{},image:{}};
@@ -73,7 +75,7 @@ for(const build of builds){
     const ctx=canvas.getContext('2d');ctx.fillStyle='rgb(0,0,255)';ctx.fillRect(0,0,40,40);
   }));
   const page=await context.newPage();const name=build.name+(noBrand?'-no-brand':'-brand');
-  const result={name,source:build.sha,engine,headed,browser:browser.version(),regions:{},browserPid:browserServer.process().pid};
+  const result={name,source:build.sha,renderer:build.renderer??build.sha,viewportWidth,colorScheme,engine,headed,browser:browser.version(),regions:{},browserPid:browserServer.process().pid};
   try{
    await page.goto(origin+'/?noBrand='+(noBrand?'1':'0')+'&screen=onboarding&theme=dark&scale=1');
    await page.locator('flt-semantics-placeholder').evaluate(e=>e.click());
@@ -96,11 +98,14 @@ for(const build of builds){
     // Fixed fixture geometry, independent of semantics merging/expanded bounds.
     const index=['rectangle','text','direct-brand','production-brand','svg','image'].indexOf(region);
     let rect={x:30,y:132+index*130,width:240,height:60};
-    let ink=0;
+    let ink=0,green=0;
     for(let y=Math.ceil(rect.y);y<rect.y+rect.height;y++)for(let x=Math.ceil(rect.x);x<rect.x+rect.width;x++){
       const i=(y*png.width+x)*4;if([0,1,2].some(c=>png.data[i+c]<200))ink++;
+      if(png.data[i]===0&&png.data[i+1]===170&&png.data[i+2]===68)green++;
     }
-    result.regions[region]={ink,painted:ink>=16,rect,semanticRect};
+    const painted=region==='rectangle'?green>=rect.width*rect.height*0.99:
+      region==='text'?ink>=16&&ink<rect.width*rect.height*0.5:ink>=16;
+    result.regions[region]={ink,green,painted,rect,semanticRect};
     if(['direct-brand','production-brand','svg'].includes(region)){
       const width=rect.height*470.28944891/130.6866688;rect={...rect,x:rect.x+(rect.width-width)/2,width};
       try{result.regions[region].fidelity=await compareApprovedArtwork(page,png,rect,origin+'/assets/assets/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg',PNG);}

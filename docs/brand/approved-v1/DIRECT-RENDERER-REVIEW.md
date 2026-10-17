@@ -141,5 +141,28 @@ supersedes the earlier unready/invalid-setup comparison as diagnostic evidence,
 but does not erase historical failures or establish their cause. Whole-surface
 candidate specificity remains unresolved; no real Safari or release clearance.
 
+## Hosted WPE follow-up
+
+Independent review verified run 39063337879 at 58692536: Chromium passed all 24
+brand cases and Web frontends email controls passed. The first headless WPE
+login-light-320 case failed the original nonblank guard. Artifact 12111554790
+showed the whole Flutter surface white with the DOM label visible, 17 HTTP 200
+resources with hashes, no recorded errors/crashes/context loss, five WebGL2
+requests and 23 semantics nodes. Empty light-DOM canvas inventory is not evidence
+of absent canvas rendering; shadow roots, offscreen contexts and workers differ.
+
+The workflow now runs supplemental WPE diagnostics only after that required gate
+fails, then uploads all build/resource/health/pixel evidence. The original failed
+step remains failed. Both fixtures use the same current tree and dependency lock;
+only the baseline LythBrand source is replaced with the pinned f2c8712d SVG widget.
+This counterfactual baseline is not a claim that the entire old application tree
+was tested. Both builds retain the identical new diagnostic fixture/direct control.
+Original bootstrap hashes are retained, and the build-specific service-worker
+version is equalized only after proving it is the sole loader difference. Every
+non-main.dart.js build resource must then match exactly, or comparison stops.
+The hosted comparison uses headless WPE, light scheme, width 320, brand/no-brand
+controls, Dart frame/paint callbacks and PNG readiness. It does not rerun GTK,
+force CPU rendering, change fidelity tolerance or grant release clearance.
+
 Raw measurements, scripts, approved-geometry comparisons and screenshots:
 [preserved review bundle](https://chatgpt.com/api/library/files/libfile_a7127ffd29b481919131f9e4a3853e17/download).
