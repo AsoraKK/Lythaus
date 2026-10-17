@@ -83,7 +83,8 @@ The new bounded fixture isolates a Flutter rectangle, text, direct vector artwor
 production brand widget, SVG and PNG image, with independent DOM/2D controls. It
 also runs without any brand/image region. Telemetry installed before navigation
 records HTTP statuses and response hashes, request failures, page errors/crashes,
-HTML/OffscreenCanvas context events and a frame heartbeat. Worker-only context
+HTML/OffscreenCanvas context events and a browser requestAnimationFrame heartbeat.
+That heartbeat is not a Flutter raster/frame counter. Worker-only context
 events are not instrumented. Build-file inventories and sampled live process/library
 hashes supplement browser-bundle and font hashes; they do not attest real hardware.
 
@@ -91,8 +92,9 @@ In matched local headed controls, baseline f2c8712d and the candidate both paint
 rectangle/text and passed direct/production/SVG artwork fidelity, with working DOM,
 2D and no-brand controls. No whole-Flutter loss, network failure, page error or
 observed context loss occurred. The PNG region painted on baseline but was blank
-on candidate in this bounded sample; this remains an image-path observation, not
-proof of whole-surface candidate causation. Both actual dark-390 onboarding pages
+on candidate in this bounded sample before image readiness was instrumented;
+loading, decoding and presentation were not distinguished. This does not establish
+an image-path regression or whole-surface candidate causation. Both actual dark-390 onboarding pages
 also passed a single fresh-context artwork check. Candidate specificity of the
 earlier whole-surface loss therefore remains UNRESOLVED, not disproved.
 
@@ -109,6 +111,19 @@ remain unchanged. Negative tests reject blank, border-only, wrong-icon and solid
 fills. Named-image counts and decorative duplicate checks are explicit. The SVG
 generator accepts only its documented pinned subset, rejects unknown attributes
 and malformed/nonfinite transform arguments, and is not a general SVG translator.
+
+The named-wordmark crop now applies BoxFit.contain geometry to every named slot,
+including login's stretched 272x40 semantics box (centered artwork about 144x40).
+Positive stretched and width-limited container tests complement the unchanged
+negative controls and fidelity thresholds.
+
+The fixture now separately records Dart persistent-frame callbacks and per-region
+CustomPainter callbacks. These attest Dart frame/paint execution, not GPU raster
+completion or physical presentation. PNG ImageStream decode, frameBuilder-ready
+and error signals are explicit. Diagnostics wait at most ten seconds for these
+signals, retain readiness timeouts/errors as failures, and do not infer an image
+presentation failure from an unready image. This instrumentation is fixture-only;
+no production renderer, frame scheduling or CPU workaround is changed.
 
 Raw measurements, scripts, approved-geometry comparisons and screenshots:
 [preserved review bundle](https://chatgpt.com/api/library/files/libfile_a7127ffd29b481919131f9e4a3853e17/download).

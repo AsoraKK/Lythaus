@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {artworkFidelity,containedWordmarkRect} from './brand-artwork-pixels.mjs';
-import {assertRenderHealth} from './brand-render-health.mjs';
+import {assertRenderHealth,assertFlutterFixtureReady} from './brand-render-health.mjs';
 const png=draw=>{const data=Buffer.alloc(40*40*4,255);for(let y=0;y<40;y++)for(let x=0;x<40;x++)if(draw(x,y))for(let c=0;c<3;c++)data[(y*40+x)*4+c]=0;return {width:40,height:40,data};};
 const reference=png((x,y)=>(x>=8&&x<13&&y>=8&&y<32)||(y>=27&&y<32&&x>=8&&x<31));
 test('identical artwork passes',()=>artworkFidelity(reference,reference,[255,255,255]));
@@ -36,4 +36,12 @@ test('network and context failures fail health assertions',()=>{
   const good={crashes:0,errors:[],failed:[],responses:[{status:200}],page:{events:[],frames:10,readyState:'complete'}};
   assertRenderHealth(good);
   for(const bad of [{responses:[{status:404}]},{failed:[{error:'reset'}]},{crashes:1},{page:{...good.page,events:[{name:'webglcontextlost'}]}},{page:{...good.page,frames:0}}])assert.throws(()=>assertRenderHealth({...good,...bad}));
+});
+test('browser heartbeat or PNG download alone cannot certify Flutter/image readiness',()=>{
+  const ready={frames:1,paints:{rectangle:1,text:1},image:{decoded:true,frameReady:true}};
+  assertFlutterFixtureReady(ready);
+  for(const state of [{frames:10}, {...ready,image:{decoded:true}}, {...ready,image:{frameReady:true}},
+    {...ready,image:{...ready.image,error:'decode failed'}}, {...ready,frames:0}])
+    assert.throws(()=>assertFlutterFixtureReady(state));
+  assertFlutterFixtureReady({...ready,image:{}},false);
 });

@@ -8,7 +8,7 @@ import {createRequire} from 'node:module';
 import path from 'node:path';
 import {webkit,chromium} from 'playwright';
 import {installFlutterEngineFonts} from './flutter-engine-font-fixture.mjs';
-import {observeRenderHealth,assertRenderHealth} from './brand-render-health.mjs';
+import {observeRenderHealth,assertRenderHealth,assertFlutterFixtureReady} from './brand-render-health.mjs';
 import {compareApprovedArtwork} from './brand-reference.mjs';
 const {PNG}=createRequire(import.meta.url)('playwright-core/lib/utilsBundle');
 const output=path.resolve(process.env.BRAND_DIAGNOSTIC_OUTPUT??'build/brand-diagnostic-evidence');
@@ -56,6 +56,16 @@ for(const build of builds){
   const browser=await browserType.connect(browserServer.wsEndpoint());
   const context=await browser.newContext({locale:'en-US',viewport:{width:390,height:960},colorScheme:'dark',reducedMotion:'reduce'});
   const health=await observeRenderHealth(context,origin);
+  await context.addInitScript(()=>{
+    const state=window.__flutterProbe={frames:0,paints:{},image:{}};
+    window.__recordFlutterProbe=(name,value)=>{
+      if(name==='frame')state.frames++;
+      if(name.startsWith('paint:')){const key=name.slice(6);state.paints[key]=(state.paints[key]??0)+1;}
+      if(name==='imageDecoded')state.image={...state.image,decoded:true,width:value};
+      if(name==='imageFrameReady')state.image={...state.image,frameReady:true,frame:value};
+      if(name==='imageError')state.image.error=value;
+    };
+  });
   await installFlutterEngineFonts(context);
   await context.addInitScript(()=>document.addEventListener('DOMContentLoaded',()=>{
     const dom=document.createElement('div');dom.id='dom-control';dom.style.cssText='position:fixed;z-index:9999;top:0;left:0;width:40px;height:40px;background:rgb(255,0,0)';document.body.append(dom);
@@ -68,7 +78,14 @@ for(const build of builds){
    await page.goto(origin+'/?noBrand='+(noBrand?'1':'0')+'&screen=onboarding&theme=dark&scale=1');
    await page.locator('flt-semantics-placeholder').evaluate(e=>e.click());
    await page.getByRole('img',{name:'diagnostic-rectangle',exact:true}).waitFor();
-   const first=await health(page);await page.waitForTimeout(1000);
+   const first=await health(page);
+   try{await page.waitForFunction(noBrand=>{
+     const s=window.__flutterProbe;
+     return s?.frames>0&&s.paints.rectangle>0&&s.paints.text>0&&
+       (noBrand||s.image.error||(s.image.decoded&&s.image.frameReady));
+   },noBrand,{timeout:10000});}catch(error){result.readinessTimeout=error.message;}
+   result.flutter=await page.evaluate(()=>window.__flutterProbe);
+   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
    const png=PNG.sync.read(await page.screenshot({path:path.join(output,name+'.png')}));
    if(headed)execFileSync('import',['-window','root',path.join(output,name+'-desktop.png')]);
    for(const [label,x,color] of [['dom',20,[255,0,0]],['canvas2d',70,[0,0,255]]]){
@@ -92,6 +109,7 @@ for(const build of builds){
    }
    result.health=await health(page);result.live=result.health.page.frames>first.page.frames;
    assertRenderHealth(result.health);assert.ok(result.live);
+   assertFlutterFixtureReady(result.flutter,!noBrand);
    result.classification=!result.regions.dom||!result.regions.canvas2d?'browser-control-loss':
     !result.regions.rectangle.painted&&!result.regions.text.painted?'whole-Flutter-loss':
     !noBrand&&!result.regions['production-brand'].painted?'brand-only-loss':'controls-painted';

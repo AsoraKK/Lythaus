@@ -58,3 +58,12 @@ export function assertRenderHealth(health) {
   assert.ok(health.page.frames > 2, 'Animation frame heartbeat');
   assert.equal(health.page.readyState, 'complete');
 }
+
+export function assertFlutterFixtureReady(state, requireImage=true) {
+  assert.ok(state?.frames>0, 'No Dart Flutter frame callback');
+  assert.ok(state.paints?.rectangle>0 && state.paints?.text>0, 'No Dart control paint callbacks');
+  if(requireImage){
+    assert.ok(!state.image?.error, 'ImageStream decode error: '+state.image?.error);
+    assert.ok(state.image?.decoded && state.image?.frameReady, 'PNG decode/frame-ready timeout; presentation undetermined');
+  }
+}
