@@ -314,9 +314,11 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
         assert.equal(orientedMetadata.exif, undefined);
         assert.equal(orientedMetadata.xmp, undefined);
         const orientedVariant = (await admin.query('SELECT width,height FROM media.variants WHERE object_id=$1', [orientedObject.id])).rows[0];
-        assert.deepEqual(Object.values(orientedVariant).map(Number), [2, 3]);
+        assert.deepEqual(Object.values(orientedVariant).map(Number), [3, 2]);
+        assert.notDeepEqual(Object.values(orientedVariant).map(Number), [orientedMetadata.width, orientedMetadata.height],
+          'the guarded Jobs handler still records source dimensions');
         assert.equal(Number((await admin.query('SELECT byte_size FROM media.objects WHERE id=$1', [orientedObject.id])).rows[0].byte_size), orientedBytes.length);
-        assert.deepEqual(effects.find(effect => effect.type === 'transform').options, { format: 'image/webp', quality: 85, anim: false });
+        assert.deepEqual(effects.find(effect => effect.type === 'transform').options, { format: 'image/webp', quality: 85 });
         assert.ok(!fixture.statements.some(query => /(?:INSERT INTO|UPDATE) (?:content|feed)\./.test(query.text ?? '')));
 
         await admin.query("UPDATE media.upload_sessions SET expires_at=clock_timestamp()-interval '20 minutes' WHERE id=$1", [input.sessionId]);

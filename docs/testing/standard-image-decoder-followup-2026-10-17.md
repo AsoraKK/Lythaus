@@ -3,79 +3,68 @@
 Branch: `codex/media-acceptance-20261017`
 
 Inspected base: `da6515d13f2d46950a8211008f89909f23b64a80`
-Scope: ordinary private image upload/processing acceptance only.
 
-This follow-up changes the media Jobs handler and deterministic local test
-fixtures. It does not change migration SQL, schema, privileges, Worker feature
-flags, public attachment/display routes, branding, or shared transaction
-wrappers. Upload and processing flags remain disabled. No hosted image service,
-bucket, database, or detector was activated or written.
+This branch adds local decoder/EXIF and byte-reservation evidence. It does not
+change the production Jobs handler, migration SQL, schema, privileges, Worker
+feature flags, public attachment/display routes, branding, or shared
+transaction wrappers. No hosted image service, bucket, database, or detector
+was activated or written.
 
-## Decoder and EXIF coverage
+## Implementable local evidence
 
-The Jobs handler requests WebP output with animation disabled, then asks the
-Images binding to inspect the actual transformed bytes. Missing or invalid
-output dimensions are retryable transform failures. Variant dimensions now
-come from the normalized derivative, so EXIF orientation is reflected in the
-stored metadata rather than copied from the source.
+The Workerd and disposable PG17 suites send a real 3×2 JPEG through the
+existing upload/finalize/queue handlers. The source EXIF contains orientation
+6, a Make field, and a GPS IFD with coordinates. A root-pinned local
+Sharp/libvips fixture decodes and rotates it into a 2×3 WebP; the derivative
+contains no EXIF/XMP metadata. The test also exercises a 6 MiB body in local
+R2 and races actual PG17 per-owner quota reservations. Existing failure,
+transaction-loss, derivative-reuse, retry, and cleanup tests remain active.
 
-The Workerd and disposable PG17 suites send a real 3×2 JPEG through the actual
-upload/finalize/queue handlers. Its EXIF contains orientation 6, a Make field,
-and a GPS IFD with coordinates. A pinned local Sharp/libvips fixture performs
-the decode, orientation normalization, and WebP encoding. The checks verify a
-2×3 WebP derivative, no EXIF/XMP metadata in the derivative, matching object
-and variant dimensions, bounded derivative bytes, and removal of the private
-quarantine source after settlement. The object remains `review`; tests assert
-that no `content` or `feed` write occurs.
+These checks are local fixtures, not hosted Cloudflare Images/R2/Queue
+acceptance. The per-owner test is not a global physical-bucket cap or a peak
+bound while quarantine source and derivative coexist. The repository has no
+approved global storage ceiling, shared reservation authority, or role/schema
+design for accounting transient and cross-owner physical R2 bytes. Those
+contracts are prerequisites to a global cap; no value or privilege change is
+inferred here.
 
-Sharp/libvips is a deterministic local decoder/encoder fixture. It is not the
-hosted Cloudflare Images service. These tests do not certify hosted decoding,
-resource limits, animation behavior, billing, queue delivery, or R2 cleanup.
-The detector still has no pixel input or qualified output: persisted evidence
-remains `not-executed` and review-required. Metadata, MIME, dimensions,
-checksums, and signatures are not image-pixel detection or authorship proof.
+## Production acceptance blocker
 
-## Storage boundary
+The current Jobs handler still records source dimensions after WebP
+normalization and does not explicitly disable animation. The EXIF integration
+test shows the actual derivative is 2×3 while the persisted variant/object
+metadata remains 3×2. This is a known acceptance gap, not a passing result.
 
-The new physical-byte test uploads a real 6 MiB body into local R2 and proves
-that the existing per-owner 10 MiB fixture reservation rejects a second
-reservation. The PG17 race test also proves simultaneous first reservations
-cannot exceed that per-owner quota. This is evidence for the existing
-per-owner ledger path only. It is not a global physical bucket cap or a bound
-on the peak while quarantine source and derivative coexist.
-
-A global cap remains unimplemented because the repository supplies no approved
-global capacity value, shared reservation authority, or role/schema design for
-accounting physical R2 bytes across owners and transient objects. Defining
-those would be a quota and privilege contract decision. No such value or
-persistent privilege change is inferred in this branch. Hosted R2 capacity and
-aggregate-storage acceptance remain open.
-
-## Display and release boundaries
+The handler lives in `apps/lythaus-jobs/src/index.ts`. The checked-in
+`homepage-protection` test pins that file to blob
+`7b25af78fc1e227b85d1758b0cb31fd0aec09d24` for another allocated lane. Editing
+the handler changed the blob and caused exact-head CI to fail its
+`image-integrity rejection survives a fresh squashed checkout` ownership
+guard. This branch restores the pinned blob and does not relax or update the
+guard. The missing prerequisite is release of that exact-file ownership gate
+before the media handler change can land.
 
 The Public API exposes the upload-session route only. No private media reader,
 post attachment relation, or public display route exists in this path. The
-processor does not emit a public URL, change the review state, or publish into
-feed/content. Display acceptance therefore remains blocked on an approved
-attachment/read contract; this branch does not fabricate a publishing path.
+processor does not emit a public URL, change review state, or publish to
+feed/content. Display acceptance remains blocked on an approved attachment and
+read contract.
 
 Canonical runtime `UPDATE media.storage_ledger.bytes_rejected` and Jobs
-`INSERT media.ownership` remain denied. The PG17 suite asserts those denials
-and retries on the Jobs ownership failure. The two narrow candidate column
-grants are exercised only in the disposable local PG17 acceptance database;
-the test revokes them before teardown. No canonical or hosted role was changed.
-Migration 0021 remains outside this branch. Production upload/processing flags
-remain false.
+`INSERT media.ownership` remain denied. PG17 asserts those denials; candidate
+column grants are exercised only in the disposable local acceptance database
+and revoked before teardown. Pixel detection remains unavailable
+(`not-executed`, review required). Metadata, MIME, dimensions, checksums, and
+signatures are not image-pixel detection or authorship proof. Upload and
+processing flags remain disabled.
 
-## Local evidence
+## Local validation
 
-Validated on PostgreSQL 17.11 and local Workerd/Miniflare R2:
-
-- `node --experimental-strip-types --test --test-concurrency=1 packages/media/tests/standard-upload.test.mjs packages/media/tests/standard-upload.workerd.mjs` — 31/31 passed.
-- `PLANETSCALE_PG17_TEST_DATABASE_URL=<loopback disposable PG17 control database> node --experimental-strip-types --test --test-concurrency=1 packages/media/tests/standard-upload.postgres.mjs` — 25/25 passed. Includes canonical role denials, temporary candidate grants in the disposable database, concurrent reservations, lock contention, lost transaction recovery, retry reuse, and cleanup retry.
-- `npm run typecheck:native` — passed.
-- `XDG_CONFIG_HOME=/tmp/lythaus-media-wrangler-config npm_config_cache=/workspace/.lythaus-cache/npm npm run validate:native-workers` — validated four Worker configs and three generated Worker type files.
-- `git diff --check` — passed.
+- Standard upload unit + Workerd/local R2: 30/30 passed.
+- Disposable PostgreSQL 17.11 acceptance suite: 25/25 passed.
+- `npm run typecheck:native` passed.
+- Native Worker config validation passed (4 configs, 3 generated type files).
+- `git diff --check` passed.
 
 These are local checks, not hosted exact-head CI or release acceptance. No
 deployment, merge, public posting, or detector qualification is claimed.

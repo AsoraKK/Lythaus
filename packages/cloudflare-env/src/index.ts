@@ -140,7 +140,7 @@ export interface Queue {
 export interface ImagesBindingLike {
   info(stream: ReadableStream<Uint8Array>): Promise<{ format: string; fileSize?: number; width?: number; height?: number }>;
   input(stream: ReadableStream<Uint8Array>): {
-    output(options: { format: 'image/webp'; quality?: number; anim?: boolean }): Promise<{
+    output(options: { format: 'image/webp'; quality?: number }): Promise<{
       contentType(): string;
       image(): ReadableStream<Uint8Array>;
     }>;

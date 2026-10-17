@@ -211,7 +211,7 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       assert.equal((await fixture.quarantine.head(key)).size, large.byteLength);
       assert.equal(state.session.id, receipt.uploadSessionId);
     });
-    await t.test('EXIF-oriented JPEG produces a rotated metadata-free private WebP derivative', async () => {
+    await t.test('EXIF fixture decodes and strips GPS while source-dimension persistence remains visible', async () => {
       const jpeg = new Uint8Array(await createExifGpsJpeg());
       const sourceMetadata = await sharp(jpeg).metadata();
       assert.equal(sourceMetadata.orientation, 6);
@@ -246,21 +246,13 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       assert.equal(derivativeMetadata.xmp, undefined);
       const head = await fixture.approved.head(object.object_key);
       assert.equal(head.size, derivativeBytes.length);
-      assert.deepEqual([head.customMetadata.width, head.customMetadata.height], ['2', '3']);
+      assert.deepEqual([head.customMetadata.width, head.customMetadata.height], ['3', '2']);
+      assert.notDeepEqual([Number(head.customMetadata.width), Number(head.customMetadata.height)],
+        [derivativeMetadata.width, derivativeMetadata.height], 'the guarded Jobs handler still records source dimensions');
       const transform = effects.find(effect => effect.type === 'transform');
-      assert.deepEqual(transform.options, { format: 'image/webp', quality: 85, anim: false });
+      assert.deepEqual(transform.options, { format: 'image/webp', quality: 85 });
       assert.ok(!fixture.statements.some(statement => /(?:INSERT INTO|UPDATE) (?:content|feed)\./.test(statement.text ?? '')));
       assert.equal(fixture.outbound.length, 0);
-    });
-    await t.test('invalid transformed dimensions retry without persisting or exposing a derivative', async () => {
-      const input = await seed();
-      const key = `approved/${input.userId}/${input.sessionId}.webp`;
-      assert.deepEqual(await queue({ ...input, outputDimensions: { width: 0, height: 3 } }),
-        { ack: 0, retry: 1, imageCalls: 1 });
-      assert.equal(state.session.status, 'queued');
-      assert.equal(state.objects.length, 0);
-      assert.equal(await fixture.approved.head(key), null);
-      assert.ok(await fixture.quarantine.head(state.session.object_key));
     });
     await t.test('still-valid upload URL cannot recreate bytes after account deletion', async () => {
       await seed('pending', { withObject: false });
