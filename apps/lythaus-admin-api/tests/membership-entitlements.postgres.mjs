@@ -99,14 +99,52 @@ after(async () => {
   await sql('DELETE FROM identity.users WHERE id = ANY($1::uuid[])', [subjects]);
 });
 
-test('first manual grant races serialize and retries emit one entitlement event', async () => {
-  const results = await Promise.all([
-    changeTier(userIds[0], { tier: 'premium', reasonCode: 'SYNTHETIC_TEST' }),
-    changeTier(userIds[0], { tier: 'premium', reasonCode: 'SYNTHETIC_TEST' }),
-  ]);
+test('first manual grants with lower- and upper-case UUID spellings serialize and retries emit one entitlement event', async () => {
+  const uppercaseUserId = userIds[0].toUpperCase();
+  assert.notEqual(uppercaseUserId, userIds[0], 'synthetic UUID must exercise case-insensitive spellings');
+  const gate = new pg.Client({ connectionString, ssl: false });
+  await gate.connect();
+  await gate.query("SET statement_timeout = '5s'");
+  await gate.query('BEGIN');
+  let pendingGrants;
+  let results;
+  try {
+    await gate.query('LOCK TABLE identity.user_entitlements IN SHARE MODE');
+    let grantsSettled = false;
+    pendingGrants = Promise.all([
+      changeTier(userIds[0], { tier: 'premium', reasonCode: 'SYNTHETIC_TEST' }),
+      changeTier(uppercaseUserId, { tier: 'premium', reasonCode: 'SYNTHETIC_TEST' }),
+    ]).then(responses => {
+      grantsSettled = true;
+      return responses;
+    });
+    let serializedByCanonicalLock = false;
+    const deadline = Date.now() + 3000;
+    while (Date.now() < deadline && !grantsSettled) {
+      const waiters = await gate.query(`
+        SELECT count(*) FILTER (WHERE locktype = 'relation' AND relation = 'identity.user_entitlements'::regclass)::integer AS insert_waiters,
+               count(*) FILTER (WHERE locktype = 'advisory')::integer AS account_waiters
+          FROM pg_locks WHERE NOT granted`);
+      if (Number(waiters.rows[0]?.insert_waiters) === 1 && Number(waiters.rows[0]?.account_waiters) === 1) {
+        serializedByCanonicalLock = true;
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    assert.equal(serializedByCanonicalLock, true, 'one grant must wait to insert while the other waits on the canonical account lock');
+    await gate.query('COMMIT');
+    results = await pendingGrants;
+  } catch (error) {
+    await gate.query('ROLLBACK').catch(() => undefined);
+    await pendingGrants?.catch(() => undefined);
+    throw error;
+  } finally {
+    await gate.end();
+  }
   for (const response of results) assert.equal(response.status, 200, await response.clone().text());
   const bodies = await Promise.all(results.map(response => response.json()));
   assert.deepEqual(bodies.map(body => body.changed).sort(), [false, true]);
+  for (const body of bodies) assert.equal(body.userId, userIds[0]);
 
   const retry = await changeTier(userIds[0], { tier: 'premium', reasonCode: 'SYNTHETIC_TEST' });
   assert.equal(retry.status, 200, await retry.clone().text());

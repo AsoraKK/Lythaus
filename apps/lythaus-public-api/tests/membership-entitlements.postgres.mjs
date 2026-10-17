@@ -9,7 +9,7 @@ import { nativePostgresProfileFixture } from './native-postgres-worker-fixture.m
 import { privacyPostgresTarget } from './privacy-postgres-target.mjs';
 
 const connectionString = privacyPostgresTarget(process.env.PLANETSCALE_PG17_TEST_DATABASE_URL).toString();
-const actors = Object.fromEntries(['free', 'premium', 'black', 'forged', 'unavailable'].map(name => [name, { id: uuidv7() }]));
+const actors = Object.fromEntries(['free', 'premium', 'black', 'forged', 'unavailable', 'racing', 'downgradeRace'].map(name => [name, { id: uuidv7() }]));
 const users = Object.values(actors).map(actor => actor.id);
 const ips = Object.fromEntries(Object.keys(actors).map(name => [name,
   '2001:db8:' + uuidv7().replaceAll('-', '').slice(-16).match(/.{4}/g).join(':') + '::1']));
@@ -32,7 +32,7 @@ before(async () => {
   await control.query('BEGIN');
   try {
     for (const actor of Object.values(actors)) await control.query("INSERT INTO identity.users (id, status) VALUES ($1, 'active')", [actor.id]);
-    await control.query("INSERT INTO identity.user_entitlements (user_id, subscription_tier) VALUES ($1, 'premium'), ($2, 'black')", [actors.premium.id, actors.black.id]);
+    await control.query("INSERT INTO identity.user_entitlements (user_id, subscription_tier) VALUES ($1, 'premium'), ($2, 'black'), ($3, 'black')", [actors.premium.id, actors.black.id, actors.downgradeRace.id]);
     await control.query('COMMIT');
   } catch (error) { await control.query('ROLLBACK'); throw error; }
 
@@ -119,6 +119,58 @@ test('server enforces Free, Premium, and Black limits and Black-only News Board 
   assert.equal(requireNewsBoardAccess('black'), 'full');
 });
 
+test('concurrent distinct creates cannot exceed the remaining Free feed capacity', async () => {
+  await control.query('BEGIN');
+  let pendingCreates;
+  try {
+    await control.query('LOCK TABLE social.custom_feeds IN SHARE MODE');
+    let createsSettled = false;
+    pendingCreates = Promise.all([
+      createFeed('racing', 'race-one', undefined),
+      createFeed('racing', 'race-two', undefined),
+    ]).then(responses => {
+      createsSettled = true;
+      return responses;
+    });
+    let serializedAtCapacity = false;
+    const deadline = Date.now() + 3000;
+    while (Date.now() < deadline && !createsSettled) {
+      const waiters = await control.query(`
+        SELECT count(*) FILTER (WHERE locktype = 'relation' AND relation = 'social.custom_feeds'::regclass)::integer AS insert_waiters,
+               count(*) FILTER (WHERE locktype = 'advisory')::integer AS account_waiters
+          FROM pg_locks WHERE NOT granted`);
+      const insertWaiters = Number(waiters.rows[0]?.insert_waiters ?? 0);
+      const accountWaiters = Number(waiters.rows[0]?.account_waiters ?? 0);
+      if (insertWaiters === 1 && accountWaiters === 1) {
+        serializedAtCapacity = true;
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    assert.equal(serializedAtCapacity, true, 'one create must hold the account lock while the other waits');
+    await control.query('COMMIT');
+  } catch (error) {
+    await control.query('ROLLBACK').catch(() => undefined);
+    await pendingCreates?.catch(() => undefined);
+    throw error;
+  }
+  const responses = await pendingCreates;
+  assert.deepEqual(responses.map(response => response.status).sort(), [201, 400]);
+  const successful = responses.find(response => response.status === 201);
+  const denied = responses.find(response => response.status === 400);
+  assert.equal((await denied.json()).error, 'custom_feed_limit_reached');
+  const created = await successful.json();
+
+  const feeds = await sql('SELECT id, name FROM social.custom_feeds WHERE user_id = $1 ORDER BY name', [actors.racing.id]);
+  assert.equal(feeds.rowCount, 1);
+  assert.deepEqual(feeds.rows, [{ id: created.id, name: created.name }]);
+  const activities = await sql(
+    `SELECT event_type, object_id FROM trust.user_activity_events WHERE user_id = $1 ORDER BY created_at`,
+    [actors.racing.id],
+  );
+  assert.deepEqual(activities.rows, [{ event_type: 'social.custom_feed_created', object_id: created.id }]);
+});
+
 test('Black member can fetch News Board content when the runtime publication read is provisioned', {
   skip: 'blocked: the CI runtime role lacks USAGE on editorial; see membership entitlement boundary notes',
 }, async () => {
@@ -158,6 +210,63 @@ test('subscription status and custom feeds remain owner-scoped across accounts',
   const denied = await call('free', 'GET', `/api/custom-feeds/${blackFeeds[0].id}`);
   assert.equal(denied.status, 404, await denied.clone().text());
   assert.equal((await denied.json()).error, 'custom_feed_not_found');
+});
+
+test('feed creation waits for a committed downgrade and preserves existing feeds above the new cap', async () => {
+  for (const name of ['pre-existing-one', 'pre-existing-two']) {
+    const response = await createFeed('downgradeRace', name, uuidv7());
+    assert.equal(response.status, 201, await response.clone().text());
+  }
+
+  const before = await sql('SELECT name FROM social.custom_feeds WHERE user_id = $1 ORDER BY name', [actors.downgradeRace.id]);
+  assert.deepEqual(before.rows, [{ name: 'pre-existing-one' }, { name: 'pre-existing-two' }]);
+  await control.query('BEGIN');
+  let pendingCreate;
+  try {
+    await control.query(
+      `SELECT pg_advisory_xact_lock(hashtextextended('user-entitlement:' || $1::uuid::text, 0))`,
+      [actors.downgradeRace.id],
+    );
+    await control.query("UPDATE identity.user_entitlements SET subscription_tier = 'free' WHERE user_id = $1", [actors.downgradeRace.id]);
+
+    let createSettled = false;
+    pendingCreate = createFeed('downgradeRace', 'racing-create', undefined).then(response => {
+      createSettled = true;
+      return response;
+    });
+    let blockedOnSharedLock = false;
+    const deadline = Date.now() + 3000;
+    while (Date.now() < deadline && !createSettled) {
+      const waiters = await control.query("SELECT count(*)::integer AS count FROM pg_locks WHERE locktype = 'advisory' AND NOT granted");
+      if (Number(waiters.rows[0]?.count) > 0) {
+        blockedOnSharedLock = true;
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    assert.equal(blockedOnSharedLock, true, 'feed creation must wait behind the account entitlement lock');
+    await control.query('COMMIT');
+    const raced = await pendingCreate;
+    assert.equal(raced.status, 400, await raced.clone().text());
+    assert.equal((await raced.json()).error, 'custom_feed_limit_reached');
+  } catch (error) {
+    await control.query('ROLLBACK').catch(() => undefined);
+    await pendingCreate?.catch(() => undefined);
+    throw error;
+  }
+
+  const tier = await sql('SELECT subscription_tier FROM identity.user_entitlements WHERE user_id = $1', [actors.downgradeRace.id]);
+  assert.equal(tier.rows[0]?.subscription_tier, 'free');
+  const afterRace = await sql('SELECT name FROM social.custom_feeds WHERE user_id = $1 ORDER BY name', [actors.downgradeRace.id]);
+  assert.deepEqual(afterRace.rows, [{ name: 'pre-existing-one' }, { name: 'pre-existing-two' }]);
+
+  const subsequent = await createFeed('downgradeRace', 'after-downgrade', undefined);
+  assert.equal(subsequent.status, 400, await subsequent.clone().text());
+  assert.equal((await subsequent.json()).error, 'custom_feed_limit_reached');
+  const finalCount = Number((await sql('SELECT count(*)::integer AS count FROM social.custom_feeds WHERE user_id = $1', [actors.downgradeRace.id])).rows[0].count);
+  const activityCount = Number((await sql("SELECT count(*)::integer AS count FROM trust.user_activity_events WHERE user_id = $1 AND event_type = 'social.custom_feed_created'", [actors.downgradeRace.id])).rows[0].count);
+  assert.equal(finalCount, 2);
+  assert.equal(activityCount, 2);
 });
 
 test('downgrade removes future capacity and unavailable entitlement authority fails closed', async () => {
