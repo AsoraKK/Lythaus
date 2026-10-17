@@ -40,3 +40,25 @@ paths fail, isolate that painter. If the observed direct variant does not
 reproduce the uninstrumented gate failure, do not assign candidate causation.
 No browser retry-to-green, CPU forcing, tolerance relaxation, independent merge,
 deployment or real Safari/device certification is authorized by this evidence.
+
+## Delayed-semantics follow-up
+
+Head `38371f911f90682d1485adabe5a06dc8087fe1f9`, run `39070683274`, reproduced the
+direct-path whole-page whiteout. SVG and placeholder forms painted identically;
+SVG artwork was blank and placeholder colors were correct. The source and
+artifacts remain preserved in the repository history and durable archive
+`libfile_d600888f13b88191877b9ec3672f3f9e` (archive SHA256
+`cdef82ef4570c701699053e9897a9b0c738fc006973f0224bda098f779784ed7`).
+Frame/semantics timing differed, so a startup-order race remains possible.
+
+The next failure-only hook runs direct paths and placeholder once each. It waits
+for an observed Dart frame and read-only layout snapshot, captures the original
+scene with semantics disabled, then clicks the semantics placeholder and captures
+at 250/5250 ms. It records screenshot start/completion, activation and frame times,
+plus Dart semantics state. Ordering assertions reject pre-enabled semantics,
+activation during the initial screenshot, or capture before the first frame.
+The first brand crop uses Dart render geometry because semantic nodes do not yet
+exist. No new repaint wrapper, geometry/path transform, renderer override or
+production source change is introduced. Resource parity remains enforced.
+The earlier required gate and its startup order stay unchanged; this is a
+diagnosis of ordering, not a new readiness wait that makes the gate pass.

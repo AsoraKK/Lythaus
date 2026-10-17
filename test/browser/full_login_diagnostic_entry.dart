@@ -55,6 +55,7 @@ class FullLoginProbeBinding extends WidgetsFlutterBinding {
     report('frame:start');
     super.drawFrame();
     report('frame:end');
+    report('semanticsState', semanticsEnabled ? 'enabled' : 'disabled');
     if (++observedFrames <= 8) {
       final boxes = <Map<String, Object>>[];
       void visit(RenderObject object) {
