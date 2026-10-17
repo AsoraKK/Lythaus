@@ -35,9 +35,8 @@ const allocatedJobsDiagnosticFiles = new Map([
   // PR #1044 head 75d22de8640ba0d1d687a873746820ee7c39ec10 passed 57/57 media CI checks and received independent review.
   // This exact Jobs blob supersedes the prior allocation.
   ['apps/lythaus-jobs/src/index.ts', 'da112b2d2c869251ed48941d31d4ac854bb93fa1'],
-  // Membership-only createCustomFeed now shares the canonical account lock and keeps tier/count/cap checks,
-  // inserts, and matching activity in one transaction; the Jobs bridge and handler remain unchanged.
-  ['apps/lythaus-public-api/src/index.ts', '6ba74610a691ece3783d953290e54a677d9b08cd'],
+  // Scoped to privacy-request active-status revalidation under the existing account lock.
+  ['apps/lythaus-public-api/src/index.ts', '1a231c953f23159e922346760510c8eaee96873a'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],

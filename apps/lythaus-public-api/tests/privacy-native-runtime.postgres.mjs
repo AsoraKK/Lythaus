@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { after, before, test } from 'node:test';
+import { setTimeout } from 'node:timers/promises';
 import pg from 'pg';
 import { exportJWK, exportPKCS8, generateKeyPair } from 'jose';
 import { signAccessToken, uuidv7 } from '@lythaus/security';
@@ -109,6 +110,14 @@ async function privateError(response, status, error) {
   return { status, body: { error }, headers };
 }
 
+async function waitFor(predicate) {
+  const deadline = Date.now() + 10_000;
+  while (!await predicate()) {
+    if (Date.now() >= deadline) throw new Error('Timed out waiting for the synthetic privacy request lock');
+    await setTimeout(20);
+  }
+}
+
 test('native Workerd serves exact owner exports and makes malformed, missing and foreign IDs indistinguishable', async () => {
   for (const actor of ['a', 'b', 'a']) {
     const item = exportsByActor[actor], other = exportsByActor[actor === 'a' ? 'b' : 'a'];
@@ -190,6 +199,34 @@ test('native export and deletion requests, replay and status remain account-boun
   }
   assert.equal((await control.query('SELECT status FROM identity.users WHERE id=$1', [ids.c])).rows[0].status, 'active');
   assert.equal((await control.query('SELECT count(*)::integer AS count FROM privacy.requests WHERE subject_id=$1', [ids.d])).rows[0].count, 0);
+});
+
+test('a privacy request rechecks active account state after waiting behind deletion', async () => {
+  await control.query('BEGIN');
+  await control.query("UPDATE identity.users SET status='locked' WHERE id=$1", [ids.d]);
+  const queryStart = queries.length;
+  const outcome = call('d', '', { requestType: 'export' }, uuidv7());
+  let reachedAccountLock = false;
+  try {
+    await Promise.race([
+      waitFor(() => queries.slice(queryStart).some(query => query.text.includes('FROM identity.users')
+        && query.text.includes('FOR UPDATE') && query.values[0] === ids.d))
+        .then(() => { reachedAccountLock = true; }),
+      outcome.then(async response => {
+        if (reachedAccountLock) return;
+        throw new Error(`privacy request stopped before account lock: ${response.status} ${await response.text()} ${JSON.stringify(queries.slice(queryStart))}`);
+      }),
+    ]);
+    await control.query('COMMIT');
+  } catch (error) {
+    await control.query('ROLLBACK');
+    await outcome.catch(() => undefined);
+    throw error;
+  }
+  const response = await outcome;
+  await privateError(response, 401, 'authentication_required');
+  assert.equal((await control.query('SELECT count(*)::integer AS count FROM privacy.requests WHERE subject_id=$1', [ids.d])).rows[0].count, 0);
+  assert.equal((await control.query("SELECT count(*)::integer AS count FROM system.outbox_events WHERE actor_id=$1 AND event_type='privacy.request.created'", [ids.d])).rows[0].count, 0);
 });
 
 test('native privacy SQL uses only the restricted canonical runtime role and no outbound destinations', () => {
