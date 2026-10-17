@@ -12,13 +12,9 @@ void main() {
       // TODO
     });
 
-    // String objectKey
-    test('to test the property `objectKey`', () async {
-      // TODO
-    });
-
-    // String putUrl
-    test('to test the property `putUrl`', () async {
+    // Authenticated Worker route bound to this upload session.
+    // String uploadUrl
+    test('to test the property `uploadUrl`', () async {
       // TODO
     });
 

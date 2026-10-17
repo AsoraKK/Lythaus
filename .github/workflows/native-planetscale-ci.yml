@@ -73,6 +73,9 @@ on:
       - 'apps/lythaus-jobs/tests/monthly-reputation-report.cases.mjs'
       - 'apps/lythaus-public-api/src/monthly-reputation-report-export.ts'
       - 'scripts/ci/planetscale-migration-*.mjs'
+      - 'scripts/ci/planetscale-media-quarantine-*.mjs'
+      - 'scripts/ci/apply-planetscale-production-migrations.mjs'
+      - 'scripts/tests/planetscale-media-quarantine.postgres.mjs'
       - 'scripts/ci/auth-incident-database-contract.mjs'
       - 'scripts/ci/audit-production-auth-incident.mjs'
       - 'scripts/ci/reconcile-planetscale-schema-verifier.mjs'
@@ -116,6 +119,10 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
         run: npm run validate:planetscale-postgres17
+      - name: Prove staged 0021 effective progress visibility and marker drift refusal
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
+        run: node --test scripts/tests/planetscale-media-quarantine.postgres.mjs
       - name: Validate disabled monthly rewards response contracts and adapters
         run: >-
           node --experimental-strip-types --experimental-test-coverage

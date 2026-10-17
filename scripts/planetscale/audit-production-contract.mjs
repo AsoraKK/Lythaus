@@ -3,10 +3,14 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import pg from 'pg';
+import { REQUIRED_RELEASE_SCHEMA_VERSION } from '../ci/product-integrity-schema-contract.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.PLANETSCALE_SCHEMA_READ_DATABASE_URL ?? '';
 const outputPath = process.env.PLANETSCALE_CONTRACT_AUDIT_OUTPUT ?? '.artifacts/provider-inventory/planetscale-production-contract.json';
+const releaseVersionNumber = REQUIRED_RELEASE_SCHEMA_VERSION.slice(0, 4);
+const releaseLabel = `post-${releaseVersionNumber}`;
+const releaseRequirementKey = `post${releaseVersionNumber}Required`;
 
 if (!databaseUrl) throw new Error('PLANETSCALE_SCHEMA_READ_DATABASE_URL is required');
 const connection = new URL(databaseUrl);
@@ -52,18 +56,18 @@ try {
   const migrationsPayload = migrationsResult.rows.map(({ version, checksum }) => `${version}:${checksum}`).join('\n');
   const verifierOutput = String(verifier.stdout ?? '')
     .split(/\r?\n/)
-    .filter((line) => line.startsWith('Observed post-0020 schema fingerprint:')
-      || line.startsWith('Observed post-0020 relation count:')
-      || line.startsWith('Observed post-0020 catalog SHA-256:')
+    .filter((line) => line.startsWith(`Observed ${releaseLabel} schema fingerprint:`)
+      || line.startsWith(`Observed ${releaseLabel} relation count:`)
+      || line.startsWith(`Observed ${releaseLabel} catalog SHA-256:`)
       || line.startsWith('Approved migration-set SHA-256:')
       || line.startsWith('Verified read-only PlanetScale migration registry'));
   report = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     capturedAt: new Date().toISOString(),
     branch: 'main',
     transactionReadOnly: true,
     verifierPassed: true,
-    post0020Required: true,
+    [releaseRequirementKey]: true,
     postgresVersion: versionResult.rows[0]?.server_version ?? null,
     extensions: extensionsResult.rows,
     migrationLedger: {

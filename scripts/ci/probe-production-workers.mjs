@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { setTimeout } from 'node:timers/promises';
-import { approvedReleaseExpectation } from './product-integrity-schema-contract.mjs';
+import { approvedReleaseExpectation, REQUIRED_RELEASE_SCHEMA_VERSION } from './product-integrity-schema-contract.mjs';
 import { parseProductionDeploymentState } from './resolve-production-version-state.mjs';
 
 const token = process.env.DATABASE_READINESS_TOKEN ?? '';
@@ -59,7 +59,7 @@ if (!/^[0-9a-f]{40}$/.test(releaseSha)) throw new Error('RELEASE_SHA must be the
 if (!/^[0-9a-f]{40}$/.test(expectedWorkerSourceSha)) throw new Error('EXPECTED_WORKER_SOURCE_SHA must be a full source SHA');
 if (!/^[0-9a-f-]{36}$/.test(expectedWorkerVersionId)) throw new Error('PRODUCTION_WORKER_VERSION_ID is required');
 if (requestedWorker === 'lythaus-admin-api-development' && !/^[0-9a-f-]{36}$/.test(expectedPublicVersion)) throw new Error('PUBLIC_WORKER_VERSION_ID is required for the private Admin email binding proof');
-if (expectedSchemaVersion !== '0020_auth_recovery_delivery.sql') throw new Error('production probes require migration 0020');
+if (expectedSchemaVersion !== REQUIRED_RELEASE_SCHEMA_VERSION) throw new Error(`production probes require ${REQUIRED_RELEASE_SCHEMA_VERSION}`);
 if (expectedBranch !== 'main') throw new Error('HYPERDRIVE_VERIFIED_MAIN=true is required before runtime probe acceptance');
 if (ownerTestingCandidate && !ownerTestingDeployment) throw new Error('OWNER_TESTING_CANDIDATE=true requires OWNER_TESTING_DEPLOYMENT=true');
 if (ownerTestingCandidate && authenticatedAcceptanceProven) throw new Error('owner-testing candidates cannot claim authenticated acceptance');

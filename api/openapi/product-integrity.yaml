@@ -538,15 +538,20 @@ components:
         checksumSha256: { type: string, pattern: '^[0-9A-Fa-f]{64}$' }
     MediaUploadSessionCreated:
       type: object
-      required: [uploadSessionId, objectKey, putUrl, expiresAt, contentType, maxBytes, checksumSha256]
+      required: [uploadSessionId, uploadUrl, expiresAt, contentType, maxBytes, checksumSha256]
       properties:
         uploadSessionId: { type: string, format: uuid }
-        objectKey: { type: string }
-        putUrl: { type: string, format: uri }
+        uploadUrl: { type: string, format: uri, description: Authenticated Worker route bound to this upload session. }
         expiresAt: { type: string, format: date-time }
         contentType: { type: string, enum: [image/jpeg, image/png, image/webp, image/avif] }
         maxBytes: { type: integer, maximum: 10485760 }
         checksumSha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+    MediaUploadBytesResponse:
+      type: object
+      required: [uploadSessionId, status]
+      properties:
+        uploadSessionId: { type: string, format: uuid }
+        status: { type: string, enum: [stored] }
     MediaUploadFinaliseResponse:
       type: object
       required: [uploadSessionId, status, eventId]
@@ -3781,7 +3786,7 @@ paths:
     post:
       operationId: mediaUploadsCreate
       summary: Create a quarantined media upload session
-      description: Creates a signed private upload session; the uploaded object remains quarantined until finalisation and review.
+      description: Creates a private upload session and returns an authenticated Worker route. The response includes no object key or reusable R2 signature.
       tags: [Media]
       security:
         - bearerAuth: []
@@ -3818,6 +3823,66 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SafetyLimitError'
+
+  /media/uploads/{uploadSessionId}/bytes:
+    put:
+      operationId: mediaUploadsPutBytes
+      summary: Upload bytes to a private session
+      description: Rechecks the active owner and pending session, bounds the body before R2, and verifies exact size, SHA-256 and MIME before storing bytes in quarantine.
+      tags: [Media]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uploadSessionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema: { type: string, format: binary }
+          image/png:
+            schema: { type: string, format: binary }
+          image/webp:
+            schema: { type: string, format: binary }
+          image/avif:
+            schema: { type: string, format: binary }
+      responses:
+        '201':
+          description: Verified bytes were stored in private quarantine.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaUploadBytesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Media uploads are disabled for this deployment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: The upload session is missing, terminal, expired or no longer active for this account.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '413':
+          description: The request body exceeds the reserved size or 10 MiB engineering cap.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '415':
+          description: Request MIME does not match the session MIME.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
 
   /media/uploads/{uploadSessionId}/finalise:
     post:

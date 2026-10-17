@@ -13,8 +13,7 @@ part 'media_upload_session_created.g.dart';
 ///
 /// Properties:
 /// * [uploadSessionId]
-/// * [objectKey]
-/// * [putUrl]
+/// * [uploadUrl] - Authenticated Worker route bound to this upload session.
 /// * [expiresAt]
 /// * [contentType]
 /// * [maxBytes]
@@ -24,11 +23,9 @@ abstract class MediaUploadSessionCreated implements Built<MediaUploadSessionCrea
   @BuiltValueField(wireName: r'uploadSessionId')
   String get uploadSessionId;
 
-  @BuiltValueField(wireName: r'objectKey')
-  String get objectKey;
-
-  @BuiltValueField(wireName: r'putUrl')
-  String get putUrl;
+  /// Authenticated Worker route bound to this upload session.
+  @BuiltValueField(wireName: r'uploadUrl')
+  String get uploadUrl;
 
   @BuiltValueField(wireName: r'expiresAt')
   DateTime get expiresAt;
@@ -71,14 +68,9 @@ class _$MediaUploadSessionCreatedSerializer implements PrimitiveSerializer<Media
       object.uploadSessionId,
       specifiedType: const FullType(String),
     );
-    yield r'objectKey';
+    yield r'uploadUrl';
     yield serializers.serialize(
-      object.objectKey,
-      specifiedType: const FullType(String),
-    );
-    yield r'putUrl';
-    yield serializers.serialize(
-      object.putUrl,
+      object.uploadUrl,
       specifiedType: const FullType(String),
     );
     yield r'expiresAt';
@@ -131,19 +123,12 @@ class _$MediaUploadSessionCreatedSerializer implements PrimitiveSerializer<Media
           ) as String;
           result.uploadSessionId = valueDes;
           break;
-        case r'objectKey':
+        case r'uploadUrl':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(String),
           ) as String;
-          result.objectKey = valueDes;
-          break;
-        case r'putUrl':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.putUrl = valueDes;
+          result.uploadUrl = valueDes;
           break;
         case r'expiresAt':
           final valueDes = serializers.deserialize(

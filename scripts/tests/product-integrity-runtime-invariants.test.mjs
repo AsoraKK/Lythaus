@@ -457,6 +457,18 @@ test('DSR recursive event cleanup matches only exact subject UUID values and pre
   assert.match(deletion, /UPDATE system\.outbox_events[\s\S]*actor_id = NULL[\s\S]*payload = '\{\}'::jsonb[\s\S]*jsonb_path_exists/);
 });
 
+test('account deletion fences standard upload sessions before private-media purge', () => {
+  const deletion = between(jobs, 'export class AccountDeleteWorkflow', 'export class AccountExportWorkflow');
+  const fence = deletion.indexOf("step.do('fence-standard-media-sessions-for-deletion'");
+  const purge = deletion.indexOf("step.do('purge-media-and-mark-locator'");
+  assert.ok(fence >= 0 && purge > fence, 'session fence must complete before storage purge');
+  const fenceStep = deletion.slice(fence, purge);
+  assert.match(fenceStep, /UPDATE media\.upload_sessions SET status = 'expired'[\s\S]*WHERE user_id = \$1 AND purpose = 'standard' AND status IN \('pending', 'queued'\)/);
+  const purgeStep = deletion.slice(purge);
+  assert.match(purgeStep, /SELECT id, object_key FROM media\.upload_sessions WHERE user_id = \$1 AND purpose = 'standard'/);
+  assert.match(purgeStep, /MEDIA_QUARANTINE\.delete\(upload\.object_key\)[\s\S]*MEDIA_APPROVED\.delete\(`approved\/\$\{subjectId\}\/\$\{upload\.id\}\.webp`\)/);
+});
+
 test('Workers bound request and R2 bytes before materializing untrusted payloads', () => {
   assert.match(publicApi, /import \{ readBoundedJson \} from '\.\/request-body-runtime\.ts'/);
   const readJson = between(publicApi, 'async function readJson', 'function feedResponse');
@@ -464,9 +476,15 @@ test('Workers bound request and R2 bytes before materializing untrusted payloads
   assert.doesNotMatch(readJson, /request\.arrayBuffer\(\)/);
 
   const media = between(jobs, 'async function processMediaUpload', 'async function processProfileModeration');
-  const sizeGuard = media.indexOf('source.size !== Number(row.expected_bytes) || source.size > MAX_IMAGE_BYTES');
-  const bufferedRead = media.indexOf('new Response(source.body).arrayBuffer()');
-  assert.ok(sizeGuard >= 0 && bufferedRead > sizeGuard, 'R2 object metadata must reject oversized or mismatched objects before buffering');
+  const verifier = fs.readFileSync(path.join(root, 'packages/media/src/standard-upload.ts'), 'utf8');
+  assert.match(media, /await verifyStandardUploadBytes\(source, row\)/);
+  const finalise = between(publicApi, 'async function finaliseUpload', 'async function rejectUploadReservation');
+  assert.match(finalise, /await verifyStandardUploadBytes\(source, session\)/);
+  const sizeGuard = verifier.indexOf('expected > MAX_IMAGE_BYTES || source.size !== expected');
+  const boundedRead = verifier.indexOf('await readBoundedRequestBody');
+  assert.ok(sizeGuard >= 0 && boundedRead > sizeGuard, 'R2 metadata must be checked before the bounded read');
+  assert.match(verifier, /readBoundedRequestBody\([\s\S]*body: source\.body \}, expected\)/);
+  assert.doesNotMatch(media + finalise, /new Response\(source\.body\)\.arrayBuffer\(\)/);
 });
 
 test('retention database mutations and their audit/ledger effects commit together after idempotent R2 deletion', () => {

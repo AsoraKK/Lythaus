@@ -52,12 +52,11 @@ test('Cloudflare inventory cannot pass as empty when provider evidence is incomp
   assert.match(cloudflareWorkflow, /provider state remains UNKNOWN\/BLOCKED/);
 });
 
-test('PlanetScale contract audit is read-only and delegates exact post-0020 verification', () => {
+test('PlanetScale contract audit is read-only and delegates exact post-0021 verification', () => {
   assert.match(planetscaleContractAudit, /verify-planetscale-production-schema\.mjs/);
   assert.match(planetscaleContractAudit, /REQUIRE_PRODUCT_INTEGRITY_MIGRATION: 'true'/);
-  assert.match(planetscaleContractAudit, /post0020Required: true/);
-  assert.match(planetscaleContractAudit, /Observed post-0020 schema fingerprint:/);
-  assert.match(planetscaleContractAudit, /Observed post-0020 relation count:/);
+  assert.match(planetscaleContractAudit, /\[releaseRequirementKey\]: true/);
+  assert.match(planetscaleContractAudit, /releaseLabel/);
   assert.match(planetscaleContractAudit, /BEGIN READ ONLY/);
   assert.match(planetscaleContractAudit, /SHOW transaction_read_only/);
   assert.match(planetscaleContractAudit, /SHOW server_version/);
@@ -70,10 +69,10 @@ test('PlanetScale contract audit is read-only and delegates exact post-0020 veri
   );
 });
 
-test('canonical production release requires the exact post-0020 schema identity', () => {
-  assert.match(productionReleaseWorkflow, /\.post0020Required == true/);
-  assert.match(productionReleaseWorkflow, /Observed post-0020 schema fingerprint:/);
-  assert.match(productionReleaseWorkflow, /Observed post-0020 relation count:/);
+test('canonical production release requires the exact post-0021 schema identity', () => {
+  assert.match(productionReleaseWorkflow, /\.post0021Required == true/);
+  assert.match(productionReleaseWorkflow, /Observed post-0021 schema fingerprint:/);
+  assert.match(productionReleaseWorkflow, /Observed post-0021 relation count:/);
   assert.match(productionReleaseWorkflow, /EXPECTED_DATABASE_SCHEMA_FINGERPRINT/);
   assert.match(productionReleaseWorkflow, /EXPECTED_DATABASE_RELATION_COUNT/);
   assert.doesNotMatch(productionReleaseWorkflow, /post0016Required|Observed post-0016/);
@@ -88,8 +87,8 @@ test('PlanetScale account audit supplies verifier evidence without mutation or D
   assert.match(planetscaleWorkflow, /PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT/);
   assert.match(planetscaleWorkflow, /PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT/);
   assert.match(planetscaleWorkflow, /audit-production-contract\.mjs/);
-  assert.match(planetscaleWorkflow, /post0020Required/);
-  assert.match(planetscaleWorkflow, /\.post0020Required == true/);
+  assert.match(planetscaleWorkflow, /post0021Required/);
+  assert.match(planetscaleWorkflow, /\.post0021Required == true/);
   assert.match(planetscaleWorkflow, /No provider mutation or DDL is performed/);
   assert.doesNotMatch(planetscaleWorkflow, /--request\s+(?:POST|PUT|PATCH|DELETE)/i);
 });

@@ -1,0 +1,12 @@
+diff --git a/database/planetscale/grants/roles.sql b/database/planetscale/grants/roles.sql
+--- a/database/planetscale/grants/roles.sql
++++ b/database/planetscale/grants/roles.sql
+@@ -136,6 +136,8 @@ GRANT UPDATE (status, observed_bytes, finalised_at) ON media.upload_sessions TO lythaus_runtime;
+ GRANT UPDATE (state, deleted_at) ON media.objects TO lythaus_runtime;
+ GRANT UPDATE (state, resolved_at) ON moderation.cases TO lythaus_runtime;
+ GRANT UPDATE (bytes_reserved, bytes_approved, object_count, last_reconciled_at) ON media.storage_ledger TO lythaus_runtime;
++GRANT UPDATE (bytes_rejected) ON media.storage_ledger TO lythaus_runtime;
+ GRANT SELECT, INSERT ON media.ownership TO lythaus_runtime;
++GRANT INSERT (object_id, owner_id) ON media.ownership TO lythaus_jobs;
+ GRANT SELECT (content_type, content_id, provider), UPDATE (signal) ON moderation.detector_runs TO lythaus_runtime;
+ GRANT INSERT, UPDATE ON system.cost_budget_periods TO lythaus_runtime, lythaus_jobs;

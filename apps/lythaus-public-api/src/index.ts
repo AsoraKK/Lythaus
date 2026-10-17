@@ -1,7 +1,8 @@
 import { databaseExpectationsFromEnv, databaseReadinessResponse, enqueueTransactionalEmailIntent, inspectDatabaseIdentity, listUserActivity, recordUserActivity, transaction, query, createSupportFeedbackRuntime, handleSupportFeedbackRequest, isSupportFeedbackPath, supportAuthentication, type DatabaseClient, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { APPEAL_POLICY, PLATFORM_SAFETY_LIMITS, REPUTATION_POLICY, REWARD_ACCESS_POLICY, REWARD_CATALOG, normalizeUserTier, validateTurnstileResponse, type ActivityCategory, type ActivityEventType, type CreatePostInput, type ReputationEffect, type UserTier } from '@lythaus/contracts';
-import { createPresignedPutUrl, ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type AllowedImageType } from '@lythaus/media';
+import { MAX_IMAGE_BYTES } from '@lythaus/media';
+import { parseStandardUpload, verifyStandardUploadBytes, UploadIntegrityError, readBoundedRequestBody } from '../../../packages/media/src/standard-upload.ts';
 import { assertExpectedHostname, correlationId, json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, decryptField, encryptField, hashAuthToken, hashPassword, hashResetToken, hmacLookup, needsPasswordRehash, randomToken, signAccessToken, uuidv7, verifyAccessToken, verifyLoginPassword, verifyPassword, type PasswordHash, type Principal } from '@lythaus/security';
 import { classifyPublicError, idempotencyKey, isCurrentActivePrincipal, normalizeEmailAddress, planEmailLogin, planEmailRegistration, planExistingIdempotencyRecord, prepareEmailAuthAttempt, rateLimitPlan, requireAuthSecrets, requireRefreshToken, requireResetPassword, requireToken, requiresTurnstileVerification } from './auth-runtime-policy.ts';
@@ -1260,31 +1261,17 @@ async function createPost(request: Request, env: Env, user: Principal): Promise<
 
 async function createUploadSession(request: Request, env: Env, user: Principal): Promise<Response> {
   await enforceDailyAction(env, user.userId, 'media');
-  const input = await readJson<{ contentType?: string; size?: number }>(request, 16 * 1024);
-  if (!input.contentType || !ALLOWED_IMAGE_TYPES.includes(input.contentType as AllowedImageType)) {
-    throw new Error('unsupported_media_type');
-  }
-  if (!input.size || input.size < 1 || input.size > MAX_IMAGE_BYTES) throw new Error('media_size_exceeded');
+  const input = parseStandardUpload(await readJson(request, 16 * 1024));
   const requestedBytes = input.size;
-  const requestedContentType = input.contentType as AllowedImageType;
-  const checksumSha256 = typeof (input as { checksumSha256?: unknown }).checksumSha256 === 'string'
-    ? (input as { checksumSha256: string }).checksumSha256.toLowerCase()
-    : '';
-  if (!/^[0-9a-f]{64}$/.test(checksumSha256)) throw new Error('checksum_required');
-  if (!env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY) throw new Error('media_signing_not_configured');
+  const requestedContentType = input.contentType;
+  const checksumSha256 = input.checksumSha256;
   const quotaBytes = Number(env.MEDIA_QUOTA_BYTES);
   if (!Number.isSafeInteger(quotaBytes) || quotaBytes < 1) throw new Error('storage_quota_not_configured');
   const uploadSessionId = uuidv7();
   const objectKey = `quarantine/${user.userId}/${uploadSessionId}`;
-  const signed = await createPresignedPutUrl({
-    accountId: env.R2_ACCOUNT_ID,
-    bucket: env.MEDIA_QUARANTINE_BUCKET ?? 'lythaus-media-quarantine',
-    key: objectKey,
-    contentType: input.contentType as AllowedImageType,
-    accessKeyId: env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env.R2_SECRET_ACCESS_KEY,
-  });
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
   await transaction(env.DB_APP_FRESH, async (client) => {
+    await client.query(`INSERT INTO media.storage_ledger (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, [user.userId]);
     const ledger = await client.query<{ bytes_reserved: number; bytes_approved: number }>(
       `SELECT bytes_reserved, bytes_approved FROM media.storage_ledger WHERE user_id = $1 FOR UPDATE`, [user.userId]);
     const current = ledger.rows[0] ?? { bytes_reserved: 0, bytes_approved: 0 };
@@ -1297,7 +1284,7 @@ async function createUploadSession(request: Request, env: Env, user: Principal):
     await client.query(
       `INSERT INTO media.upload_sessions (id, user_id, object_key, content_type, expected_bytes, checksum_sha256, expires_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [uploadSessionId, user.userId, objectKey, requestedContentType, requestedBytes, checksumSha256, signed.expiresAt]
+      [uploadSessionId, user.userId, objectKey, requestedContentType, requestedBytes, checksumSha256, expiresAt]
     );
     await writeActivity(client, request, user, uploadSessionId, {
       eventType: 'content.media_upload_started', category: 'content',
@@ -1309,41 +1296,157 @@ async function createUploadSession(request: Request, env: Env, user: Principal):
   });
   return privateResponse(request, env, {
     uploadSessionId,
-    objectKey,
-    putUrl: signed.url,
-    expiresAt: signed.expiresAt,
+    uploadUrl: new URL(`/api/media/uploads/${uploadSessionId}/bytes`, request.url).toString(),
+    expiresAt,
     contentType: input.contentType,
     maxBytes: MAX_IMAGE_BYTES,
     checksumSha256,
   }, { status: 201 });
 }
 
+async function uploadSessionBytes(request: Request, env: Env, user: Principal, sessionId: string): Promise<Response> {
+  const sessionResult = await query<{
+    object_key: string; expected_bytes: number; checksum_sha256: string; content_type: string; status: string; unexpired: boolean;
+  }>(env.DB_APP_FRESH,
+    `SELECT object_key, expected_bytes, checksum_sha256, content_type, status,
+            expires_at > clock_timestamp() AS unexpired
+       FROM media.upload_sessions WHERE id = $1 AND user_id = $2 AND purpose = 'standard'`,
+    [sessionId, user.userId]);
+  const session = sessionResult.rows[0];
+  if (!session || session.status !== 'pending' || session.unexpired !== true) {
+    return privateResponse(request, env, { error: 'upload_session_invalid' }, { status: 409 });
+  }
+  const account = await query<{ status: string; deleted_at: string | null }>(env.DB_APP_FRESH,
+    `SELECT status, deleted_at FROM identity.users WHERE id = $1`, [user.userId]);
+  if (!account.rows[0] || account.rows[0].status !== 'active' || account.rows[0].deleted_at !== null) {
+    return privateResponse(request, env, { error: 'upload_session_invalid' }, { status: 409 });
+  }
+  const requestContentType = request.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase();
+  if (requestContentType !== session.content_type) {
+    return privateResponse(request, env, { error: 'unsupported_media_type' }, { status: 415 });
+  }
+
+  let bytes: Uint8Array;
+  try {
+    bytes = await readBoundedRequestBody(request, Math.min(Number(session.expected_bytes), MAX_IMAGE_BYTES));
+  } catch (error) {
+    if (error instanceof Error && error.message === 'media_size_limit_exceeded') {
+      return privateResponse(request, env, { error: 'media_size_exceeded' }, { status: 413 });
+    }
+    throw error;
+  }
+  try {
+    await verifyStandardUploadBytes({ size: bytes.byteLength, body: new Response(bytes).body! }, session);
+  } catch (error) {
+    if (error instanceof UploadIntegrityError) {
+      return privateResponse(request, env, { error: error.message }, { status: 400 });
+    }
+    throw error;
+  }
+
+  const stored = await transaction<'stored' | 'expired' | 'invalid'>(env.DB_APP_FRESH, async (client) => {
+    const locked = await client.query<{
+      object_key: string; expected_bytes: number; checksum_sha256: string; content_type: string; status: string; unexpired: boolean;
+    }>(
+      `SELECT object_key, expected_bytes, checksum_sha256, content_type, status,
+              expires_at > clock_timestamp() AS unexpired
+         FROM media.upload_sessions
+        WHERE id = $1 AND user_id = $2 AND purpose = 'standard'
+        FOR UPDATE NOWAIT`,
+      [sessionId, user.userId]);
+    const current = locked.rows[0];
+    if (!current) return 'invalid';
+    if (current.status !== 'pending' || current.unexpired !== true) return 'invalid';
+    const active = await client.query<{ status: string; deleted_at: string | null }>(
+      `SELECT status, deleted_at FROM identity.users WHERE id = $1`, [user.userId]);
+    if (!active.rows[0] || active.rows[0].status !== 'active' || active.rows[0].deleted_at !== null) {
+      const expired = await client.query(
+        `UPDATE media.upload_sessions SET status = 'expired'
+          WHERE id = $1 AND user_id = $2 AND purpose = 'standard' AND status = 'pending' RETURNING id`,
+        [sessionId, user.userId]);
+      if (expired.rowCount === 1) {
+        const released = await client.query(
+          `UPDATE media.storage_ledger SET bytes_reserved = bytes_reserved - $1, last_reconciled_at = now()
+            WHERE user_id = $2 AND bytes_reserved >= $1 RETURNING user_id`,
+          [current.expected_bytes, user.userId]);
+        if (released.rowCount !== 1) throw new Error('media_reservation_unavailable');
+      }
+      return 'expired';
+    }
+
+    const existing = await env.MEDIA_QUARANTINE.get(current.object_key);
+    if (existing) {
+      if (!existing.body) throw new Error('upload_object_conflict');
+      try {
+        await verifyStandardUploadBytes(existing, current);
+      } catch {
+        throw new Error('upload_object_conflict');
+      }
+    } else {
+      const created = await env.MEDIA_QUARANTINE.put(current.object_key, bytes, {
+        onlyIf: { etagDoesNotMatch: '*' },
+        httpMetadata: { contentType: current.content_type },
+        customMetadata: { uploadSessionId: sessionId, checksumSha256: current.checksum_sha256 },
+      });
+      if (!created) {
+        const winner = await env.MEDIA_QUARANTINE.get(current.object_key);
+        if (!winner?.body) throw new Error('upload_object_conflict');
+        try {
+          await verifyStandardUploadBytes(winner, current);
+        } catch {
+          throw new Error('upload_object_conflict');
+        }
+      }
+    }
+    const observed = await client.query(
+      `UPDATE media.upload_sessions SET observed_bytes = $1
+        WHERE id = $2 AND user_id = $3 AND status = 'pending' AND purpose = 'standard'
+          AND expires_at > clock_timestamp() RETURNING id`,
+      [bytes.byteLength, sessionId, user.userId]);
+    if (observed.rowCount !== 1) throw new Error('upload_session_changed');
+    return 'stored';
+  });
+  if (stored !== 'stored') return privateResponse(request, env, { error: 'upload_session_invalid' }, { status: 409 });
+  return privateResponse(request, env, { uploadSessionId: sessionId, status: 'stored' }, { status: 201 });
+}
+
 async function finaliseUpload(request: Request, env: Env, user: Principal, sessionId: string): Promise<Response> {
-  const result = await query<{ object_key: string; expected_bytes: number; checksum_sha256: string; status: string }>(env.DB_APP_FRESH,
-    `SELECT object_key, expected_bytes, checksum_sha256, status FROM media.upload_sessions WHERE id = $1 AND user_id = $2 AND purpose = 'standard'`,
+  const result = await query<{ object_key: string; expected_bytes: number; checksum_sha256: string; content_type: string; status: string; unexpired: boolean }>(env.DB_APP_FRESH,
+    `SELECT object_key, expected_bytes, checksum_sha256, content_type, status, expires_at > clock_timestamp() AS unexpired
+       FROM media.upload_sessions WHERE id = $1 AND user_id = $2 AND purpose = 'standard'`,
     [sessionId, user.userId]
   );
   const session = result.rows[0];
-  if (!session || session.status !== 'pending') throw new Error('upload_session_invalid');
-  const object = await env.MEDIA_QUARANTINE.head(session.object_key);
-  if (!object || object.size !== Number(session.expected_bytes)) {
-    await rejectUploadReservation(env, user.userId, sessionId, Number(session.expected_bytes));
-    throw new Error('upload_object_invalid');
+  if (!session) throw new Error('upload_session_invalid');
+  if (session.status === 'expired' || session.status === 'rejected' || session.status === 'cancelled') {
+    await env.MEDIA_QUARANTINE.delete(session.object_key);
+    throw new Error('upload_session_invalid');
+  }
+  if (session.status !== 'pending') throw new Error('upload_session_invalid');
+  if (session.unexpired !== true) {
+    const expired = await expirePendingUploadReservation(env, user.userId, sessionId, Number(session.expected_bytes));
+    if (expired) await env.MEDIA_QUARANTINE.delete(session.object_key);
+    throw new Error('upload_session_invalid');
   }
   const source = await env.MEDIA_QUARANTINE.get(session.object_key);
   if (!source) throw new Error('upload_object_invalid');
-  const digest = await crypto.subtle.digest('SHA-256', await new Response(source.body).arrayBuffer());
-  const checksum = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, '0')).join('');
-  if (checksum !== session.checksum_sha256) {
-    await rejectUploadReservation(env, user.userId, sessionId, Number(session.expected_bytes));
-    throw new Error('upload_checksum_invalid');
+  try {
+    await verifyStandardUploadBytes(source, session);
+  } catch (error) {
+    if (error instanceof UploadIntegrityError) {
+      const rejected = await rejectUploadReservation(env, user.userId, sessionId, Number(session.expected_bytes));
+      if (rejected) await env.MEDIA_QUARANTINE.delete(session.object_key);
+    }
+    throw error;
   }
   const eventId = uuidv7();
   await transaction(env.DB_APP_FRESH, async (client) => {
     const updated = await client.query(
       `UPDATE media.upload_sessions SET status = 'queued', observed_bytes = $1, finalised_at = now()
-        WHERE id = $2 AND user_id = $3 AND status = 'pending'`,
-      [object.size, sessionId, user.userId]
+        WHERE id = $2 AND user_id = $3 AND status = 'pending' AND purpose = 'standard'
+          AND expires_at > clock_timestamp() AND object_key = $4 AND expected_bytes = $1
+          AND checksum_sha256 = $5 AND content_type = $6`,
+      [source.size, sessionId, user.userId, session.object_key, session.checksum_sha256, session.content_type]
     );
     if (updated.rowCount === 0) throw new Error('upload_session_invalid');
     await client.query(
@@ -1362,14 +1465,34 @@ async function finaliseUpload(request: Request, env: Env, user: Principal, sessi
   return privateResponse(request, env, { uploadSessionId: sessionId, status: 'queued', eventId });
 }
 
-async function rejectUploadReservation(env: Env, userId: string, sessionId: string, bytes: number): Promise<void> {
-  await transaction(env.DB_APP_FRESH, async (client) => {
+async function expirePendingUploadReservation(env: Env, userId: string, sessionId: string, bytes: number): Promise<boolean> {
+  return transaction(env.DB_APP_FRESH, async (client) => {
     const updated = await client.query(
-      `UPDATE media.upload_sessions SET status = 'rejected' WHERE id = $1 AND user_id = $2 AND status = 'pending'`,
+      `UPDATE media.upload_sessions SET status = 'expired'
+        WHERE id = $1 AND user_id = $2 AND status = 'pending' AND purpose = 'standard'
+          AND expires_at <= clock_timestamp() RETURNING id`,
       [sessionId, userId]);
-    if (updated.rowCount !== 0) await client.query(
-      `UPDATE media.storage_ledger SET bytes_reserved = greatest(bytes_reserved - $1, 0), bytes_rejected = bytes_rejected + $1, last_reconciled_at = now() WHERE user_id = $2`,
-      [bytes, userId]);
+    if (updated.rowCount === 0) return false;
+    const released = await client.query(
+      `UPDATE media.storage_ledger SET bytes_reserved = bytes_reserved - $1, last_reconciled_at = now()
+        WHERE user_id = $2 AND bytes_reserved >= $1 RETURNING user_id`, [bytes, userId]);
+    if (released.rowCount !== 1) throw new Error('media_reservation_unavailable');
+    return true;
+  });
+}
+
+async function rejectUploadReservation(env: Env, userId: string, sessionId: string, bytes: number): Promise<boolean> {
+  return transaction(env.DB_APP_FRESH, async (client) => {
+    const updated = await client.query(
+      `UPDATE media.upload_sessions SET status = 'rejected'
+        WHERE id = $1 AND user_id = $2 AND status = 'pending' AND purpose = 'standard' RETURNING id`,
+      [sessionId, userId]);
+    if (updated.rowCount === 0) return false;
+    const released = await client.query(
+      `UPDATE media.storage_ledger SET bytes_reserved = bytes_reserved - $1, bytes_rejected = bytes_rejected + $1, last_reconciled_at = now()
+        WHERE user_id = $2 AND bytes_reserved >= $1 RETURNING user_id`, [bytes, userId]);
+    if (released.rowCount !== 1) throw new Error('media_reservation_unavailable');
+    return true;
   });
 }
 
@@ -3642,6 +3765,12 @@ export default {
       if (request.method === 'POST' && url.pathname === '/api/media/uploads') {
         const user = await principal(request, env);
         return await idempotentMutation(request, env, user.userId, 'media.upload.create', () => createUploadSession(request, env, user));
+      }
+      const uploadBytes = url.pathname.match(/^\/api\/media\/uploads\/([^/]+)\/bytes$/);
+      if (request.method === 'PUT' && uploadBytes && env.MEDIA_UPLOADS_ENABLED !== 'true') return response(request, env, { error: 'feature_disabled', feature: 'media_uploads', correlationId: id }, { status: 404 });
+      if (request.method === 'PUT' && uploadBytes) {
+        const user = await principal(request, env);
+        return await uploadSessionBytes(request, env, user, uploadBytes[1]);
       }
       const finalise = url.pathname.match(/^\/api\/media\/uploads\/([^/]+)\/finalise$/);
       if (request.method === 'POST' && finalise && env.MEDIA_UPLOADS_ENABLED !== 'true') return response(request, env, { error: 'feature_disabled', feature: 'media_uploads', correlationId: id }, { status: 404 });

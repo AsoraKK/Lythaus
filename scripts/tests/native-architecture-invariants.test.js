@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import './native-worker-config.test.mjs';
+import { REQUIRED_RELEASE_SCHEMA_VERSION } from '../ci/product-integrity-schema-contract.mjs';
 
 const root = path.resolve(import.meta.dirname, '../..');
 const retiredBrand = ['as', 'ora'].join('');
@@ -14,6 +15,22 @@ const configs = [
   'apps/lythaus-admin-api/wrangler.jsonc',
   'apps/lythaus-jobs/wrangler.jsonc',
 ];
+const schemaVersionWorkflows = [
+  '.github/workflows/native-adr003-acceptance.yml',
+  '.github/workflows/native-budget-acceptance.yml',
+  '.github/workflows/native-worker-readiness-diagnostic.yml',
+  '.github/workflows/native-workers-deploy.yml',
+];
+
+test('native readiness workflows require the exact manifest release schema version', () => {
+  for (const relative of schemaVersionWorkflows) {
+    const source = fs.readFileSync(path.join(root, relative), 'utf8');
+    const versions = [...source.matchAll(/EXPECTED_DATABASE_SCHEMA_VERSION:\s*([^\s]+)/g)]
+      .map(([, value]) => value.replace(/^['"]|['"]$/g, ''));
+    assert.ok(versions.length > 0, `${relative} must configure its schema version`);
+    assert.deepEqual([...new Set(versions)], [REQUIRED_RELEASE_SCHEMA_VERSION], `${relative} must require the current manifest version`);
+  }
+});
 
 test('native Workers disable production workers.dev and preview URLs', () => {
   for (const relative of configs) {
@@ -200,7 +217,12 @@ test('launch schema and media boundary are explicit', () => {
   assert.match(launch, /CREATE TABLE social\.profiles/);
   assert.match(launch, /CREATE TABLE content\.content_declarations/);
   assert.match(launch, /CREATE TABLE system\.feature_flags/);
-  assert.match(media, /createPresignedPutUrl/);
+  assert.match(media, /async function uploadSessionBytes/);
+  assert.match(media, /readBoundedRequestBody\(request, Math\.min\(Number\(session\.expected_bytes\), MAX_IMAGE_BYTES\)\)/);
+  assert.match(media, /onlyIf: \{ etagDoesNotMatch: '\*' \}/);
+  assert.match(media, /const uploadBytes = url\.pathname\.match/);
+  assert.match(media, /uploadSessionBytes\(request, env, user, uploadBytes\[1\]\)/);
+  assert.doesNotMatch(media, /createPresignedPutUrl/);
   assert.match(media, /uploadSessionId/);
   assert.doesNotMatch(media, /arrayBuffer\(\).*MEDIA_QUARANTINE\.put/s);
 });
@@ -455,16 +477,16 @@ test('production migrations remain explicit while Worker deployment verifies rea
   assert.match(verifier, /searchParams\.delete\('sslrootcert'\)/);
   assert.match(verifier, /ssl: \{ rejectUnauthorized: true \}/);
   assert.match(verifier, /REQUIRE_PRODUCT_INTEGRITY_MIGRATION/);
-  assert.match(verifier, /0020_auth_recovery_delivery\.sql/);
-  assert.match(verifier, /production post-0020 schema fingerprint mismatch/);
-  assert.match(verifier, /production post-0020 relation count/);
+  assert.match(verifier, /REQUIRED_RELEASE_SCHEMA_VERSION/);
+  assert.match(verifier, /production \$\{releaseLabel\} schema fingerprint mismatch/);
+  assert.match(verifier, /production \$\{releaseLabel\} relation count/);
   assert.match(verifier, /to_regclass\('marketing\.waitlist_signups'\)/);
   assert.match(verifier, /system\.rate_limit_windows/);
   const deployIdentity = fs.readFileSync(path.join(root, 'scripts/ci/validate-product-integrity-deploy-identity.mjs'), 'utf8');
   assert.match(workflow, /MATERIALIZE_PRODUCT_INTEGRITY_DEPLOY_CONFIGS: 'true'/);
   assert.match(workflow, /node scripts\/ci\/validate-product-integrity-deploy-identity\.mjs[\s\S]*validate:native-workers:provisioned/);
-  assert.match(deployIdentity, /REPLACE_WITH_POST_0020_SCHEMA_FINGERPRINT/);
-  assert.match(deployIdentity, /REPLACE_WITH_POST_0020_RELATION_COUNT/);
+  assert.match(deployIdentity, /REPLACE_WITH_POST_\$\{releaseVersionNumber\}_SCHEMA_FINGERPRINT/);
+  assert.match(deployIdentity, /REPLACE_WITH_POST_\$\{releaseVersionNumber\}_RELATION_COUNT/);
   assert.match(deployIdentity, /fs\.writeFileSync\(configPath, source/);
   assert.match(workflow, /Capture predeployment Worker state/);
   assert.match(workflow, /Roll back partial Worker deployment on failure/);

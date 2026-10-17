@@ -29,6 +29,7 @@ const runtimeRoutes: RuntimeRoute[] = [
   { path: '/flags', method: 'post', worker: 'public', dispatcherNeedle: "url.pathname === '/api/flags'" },
   { path: '/content/flags', method: 'post', worker: 'public', dispatcherNeedle: "url.pathname === '/api/content/flags'" },
   { path: '/media/uploads', method: 'post', worker: 'public', dispatcherNeedle: "url.pathname === '/api/media/uploads'" },
+  { path: '/media/uploads/{uploadSessionId}/bytes', method: 'put', worker: 'public', dispatcherNeedle: 'const uploadBytes =' },
   { path: '/media/uploads/{uploadSessionId}/finalise', method: 'post', worker: 'public', dispatcherNeedle: 'const finalise =' },
   { path: '/feed', method: 'get', worker: 'public', dispatcherNeedle: "url.pathname === '/api/feed'" },
   { path: '/feed/discover', method: 'get', worker: 'public', dispatcherNeedle: "url.pathname === '/api/feed/discover'" },
@@ -278,7 +279,7 @@ describe('product-integrity OpenAPI parity', () => {
     const publicProfile = productIntegritySpec.components.schemas.ProductIntegrityPublicProfileUser;
     expect(publicProfile.additionalProperties).toBe(false);
     expect(Object.keys(publicProfile.properties.reputation.properties).sort()).toEqual(['label', 'level']);
-    expect(spec.info.version).toBe('v11');
+    expect(spec.info.version).toBe('v12');
   });
 
   test('private accountability and governance outbox contracts do not disclose sensitive fields', () => {

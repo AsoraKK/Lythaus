@@ -3,6 +3,8 @@ import path from 'node:path';
 import pg from 'pg';
 import { loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
 import { assertCompleteMigrationPostconditions, classifyMigrationState } from './planetscale-migration-reconciliation.mjs';
+import { applyMediaQuarantineMigration } from './planetscale-media-quarantine-migration.mjs';
+import { MEDIA_QUARANTINE_MIGRATION_NAME } from './planetscale-media-quarantine-contract.mjs';
 
 const { Client } = pg;
 
@@ -38,6 +40,29 @@ try {
   const bootstrapPending = [];
   for (const migration of migrations) {
     process.stdout.write(`Applying ${migration.name}\n`);
+    if (migration.name === MEDIA_QUARANTINE_MIGRATION_NAME) {
+      await applyMediaQuarantineMigration(client, migration, {
+        afterVerified: async () => {
+          await client.query('BEGIN');
+          try {
+            await client.query("SELECT pg_advisory_xact_lock(hashtext('lythaus-schema-migrations'))");
+            const [state] = await classifyMigrationState(client, [migration.name]);
+            assertCompleteMigrationPostconditions(state);
+            const inserted = await client.query(
+              `INSERT INTO system.schema_migrations (version, checksum)
+               VALUES ($1, $2) ON CONFLICT (version) DO NOTHING RETURNING version`,
+              [migration.name, migration.checksum],
+            );
+            if (inserted.rowCount !== 1) throw new Error(`PostgreSQL 17 registry already contains ${migration.name}`);
+            await client.query('COMMIT');
+          } catch (error) {
+            await client.query('ROLLBACK').catch(() => undefined);
+            throw error;
+          }
+        },
+      });
+      continue;
+    }
     await client.query('BEGIN');
     try {
       await client.query("SELECT pg_advisory_xact_lock(hashtext('lythaus-schema-migrations'))");

@@ -415,7 +415,7 @@ jobs:
           else
             node scripts/cloudflare/waitlist-turnstile.mjs ensure
           fi
-      - name: Materialize approved post-0020 deployment identity
+      - name: Materialize approved post-0021 deployment identity
         env:
           PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
           PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
@@ -431,7 +431,7 @@ jobs:
           # shellcheck disable=SC2129
           echo 'RELEASE_FAILURE_GATE=INFRASTRUCTURE' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_CODE=deployment_identity_materialization_failed' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=approved post-0020 deployment identity materialization failed' >> "$GITHUB_ENV"
+          echo 'RELEASE_FAILURE_MESSAGE=approved post-0021 deployment identity materialization failed' >> "$GITHUB_ENV"
           node scripts/ci/validate-product-integrity-deploy-identity.mjs
       - name: Prepare approved authenticity runtime
         if: inputs.owner_testing_deployment != true && inputs.acceptance_run_id == '' && vars.AUTHENTICITY_BETA_RELEASE_RECEIPT_SHA256 != '' && contains(steps.release_plan.outputs.changed_components_json, '"jobs"')
@@ -1070,7 +1070,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0020_auth_recovery_delivery.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0021_media_quarantine_cleanup.sql
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_TARGET: main
           EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
@@ -1098,7 +1098,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0020_auth_recovery_delivery.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0021_media_quarantine_cleanup.sql
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_TARGET: main
           EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
@@ -1130,7 +1130,7 @@ jobs:
           RELEASE_SHA: ${{ inputs.release_sha }}
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0020_auth_recovery_delivery.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0021_media_quarantine_cleanup.sql
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_TARGET: main
           EXPECTED_DATABASE_ROLE_CLASS: login_non_superuser
@@ -1380,7 +1380,7 @@ jobs:
           DATABASE_READINESS_TOKEN: ${{ secrets.DATABASE_READINESS_TOKEN }}
           EXPECTED_DATABASE_RELATION_COUNT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_RELATION_COUNT }}
           EXPECTED_DATABASE_SCHEMA_FINGERPRINT: ${{ vars.PRODUCT_INTEGRITY_DATABASE_SCHEMA_FINGERPRINT }}
-          EXPECTED_DATABASE_SCHEMA_VERSION: 0020_auth_recovery_delivery.sql
+          EXPECTED_DATABASE_SCHEMA_VERSION: 0021_media_quarantine_cleanup.sql
           EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED: 'true'
           HYPERDRIVE_VERIFIED_MAIN: 'true'
           ADR003_TEST_EMAIL: ${{ secrets.CODEX_TEST_EMAIL }}

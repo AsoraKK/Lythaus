@@ -1,3 +1,5 @@
+import { REQUIRED_RELEASE_SCHEMA_VERSION } from './ci/product-integrity-schema-contract.mjs';
+
 export function nativeWorkerSelectionFailures(environment, args = []) {
   const failures = [];
   if (environment.CLOUDFLARE_ENV) failures.push('CLOUDFLARE_ENV must be unset or empty; native releases use the top-level configuration');
@@ -23,7 +25,7 @@ export function nativeWorkerDeploymentFailures(config, relative) {
     EXPECTED_DATABASE_TARGET: 'main',
     HYPERDRIVE_QUERY_CACHE_MODE: 'disabled',
     EXPECTED_DATABASE_ROLE_CLASS: 'login_non_superuser',
-    EXPECTED_DATABASE_SCHEMA_VERSION: '0020_auth_recovery_delivery.sql',
+    EXPECTED_DATABASE_SCHEMA_VERSION: REQUIRED_RELEASE_SCHEMA_VERSION,
     EXPECTED_DATABASE_BUDGET_LEDGER_APPLIED: 'true',
   };
   if (relative.includes('public-api')) {

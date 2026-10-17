@@ -31,8 +31,8 @@ const publicationPg17Script = 'node scripts/ci/run-publication-pg17.mjs';
 const reputationPg17Script = 'node scripts/ci/run-reputation-managed-lock-cluster.mjs --synthetic-managed-cluster --execute-local-sql';
 const allocatedJobsDiagnosticTests = 'apps/lythaus-jobs/tests/reputation-session-diagnostic.test.mjs apps/lythaus-jobs/tests/reputation-session-diagnostic.workerd.mjs';
 const allocatedJobsDiagnosticFiles = new Map([
-  ['apps/lythaus-jobs/src/index.ts', 'b06faa54bf72c300a4922dc9202c40a66b5c71de'],
-  ['apps/lythaus-public-api/src/index.ts', '7a941be1765e82b5cbf00294b114952ab6ea27a1'],
+  ['apps/lythaus-jobs/src/index.ts', '7b25af78fc1e227b85d1758b0cb31fd0aec09d24'],
+  ['apps/lythaus-public-api/src/index.ts', '5ca637b72d241d89df5178bec6f0f730aafe41cd'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],
@@ -674,12 +674,27 @@ test('auth repair exceptions cannot alter homepage assets or waitlist routing', 
         source = source.replace(approved, '');
       }
     }
-    const updated = source
-      .replaceAll('0020_auth_recovery_delivery', '0017_authenticity_beta')
-      .replaceAll('POST_0020', 'POST_0017').replaceAll('post-0020', 'post-0017')
-      .replaceAll('migration 0020', 'migration 0017')
+    let updated = source
+      .replaceAll('0021_media_quarantine_cleanup', '0017_authenticity_beta')
+      .replaceAll('POST_0021', 'POST_0017').replaceAll('post-0021', 'post-0017')
+      .replaceAll('migration 0021', 'migration 0017')
       .replace('"main": "src/worker.ts"', '"main": "src/index.ts"')
       .replaceAll('approvedReleaseExpectation', 'approvedPost0017Expectation');
+    if (file === 'scripts/ci/materialize-public-waitlist-deploy.mjs') {
+      updated = updated
+        .replace("import { approvedPost0017Expectation, REQUIRED_RELEASE_SCHEMA_VERSION } from './product-integrity-schema-contract.mjs';",
+          "import { approvedPost0017Expectation } from './product-integrity-schema-contract.mjs';")
+        .replace('const releaseVersionNumber = REQUIRED_RELEASE_SCHEMA_VERSION.slice(0, 4);\n', '')
+        .replace("const fingerprintPlaceholder = `REPLACE_WITH_POST_${releaseVersionNumber}_SCHEMA_FINGERPRINT`;",
+          "const fingerprintPlaceholder = 'REPLACE_WITH_POST_0017_SCHEMA_FINGERPRINT';")
+        .replace("const relationCountPlaceholder = `REPLACE_WITH_POST_${releaseVersionNumber}_RELATION_COUNT`;",
+          "const relationCountPlaceholder = 'REPLACE_WITH_POST_0017_RELATION_COUNT';")
+        .replace("!== REQUIRED_RELEASE_SCHEMA_VERSION)", "!== '0017_authenticity_beta.sql')")
+        .replace('throw new Error(`public waitlist deployment requires ${REQUIRED_RELEASE_SCHEMA_VERSION}`);',
+          "throw new Error('public waitlist deployment requires migration 0017');")
+        .replace('new RegExp(`REPLACE_WITH_POST_${releaseVersionNumber}_`)', '/REPLACE_WITH_POST_0017_/')
+        .replace('schemaVersion: REQUIRED_RELEASE_SCHEMA_VERSION,', "schemaVersion: '0017_authenticity_beta.sql',");
+    }
     const frozen = git('show', `${upstreamBaselineSha}:${file}`);
     if (file === 'apps/lythaus-public-api/wrangler.jsonc') assertOnlyHostedDevelopmentRemoval(updated, frozen);
     else assert.equal(updated.trim(), frozen);
@@ -759,7 +774,9 @@ for (const [label, mutate] of [
   test(`deployment isolation freeze rejects ${label}`, () => {
     const file = 'apps/lythaus-public-api/wrangler.jsonc';
     const source = readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
-    const frozen = git('show', `49cca9caa34b34c7ded7f4842792f698be9bd41f:${file}`);
+    const frozen = git('show', `49cca9caa34b34c7ded7f4842792f698be9bd41f:${file}`)
+      .replaceAll('POST_0020', 'POST_0021')
+      .replace('0020_auth_recovery_delivery.sql', '0021_media_quarantine_cleanup.sql');
     assertOnlyHostedDevelopmentRemoval(source, frozen);
     const changed = mutate(source);
     assert.notEqual(changed, source, 'Mutation must alter the actual configuration');
@@ -854,6 +871,19 @@ test('allocated Jobs pins reject altered historical and unrelated source paths',
     allocatedJobsDiagnosticFiles.values().next().value), assert.AssertionError);
   assert.throws(() => assertAllocatedJobsDiagnosticFile('apps/lythaus-public-api/src/auth-runtime-policy.ts',
     allocatedJobsDiagnosticFiles.values().next().value), assert.AssertionError);
+});
+
+test('image-integrity allocation rejects superseded Worker bytes without broadening the diagnostic scope', () => {
+  for (const filename of ['apps/lythaus-jobs/src/index.ts', 'apps/lythaus-public-api/src/index.ts']) {
+    assert.throws(() => assertAllocatedJobsDiagnosticFile(filename,
+      git('rev-parse', `489aef297ff0b1a40744504594122c9ebc43930d:${filename}`)), assert.AssertionError);
+  }
+  assert.throws(() => assertAllocatedJobsDiagnosticFile('apps/lythaus-jobs/src/index.ts',
+    git('rev-parse', 'fecdd6f6b19ad5ea9dd17afa70e420e6deb147b8:apps/lythaus-jobs/src/index.ts')), assert.AssertionError);
+  for (const filename of ['packages/media/src/standard-upload.ts', 'apps/marketing-site/src/pages/index.astro']) {
+    assert.throws(() => assertAllocatedJobsDiagnosticFile(filename,
+      allocatedJobsDiagnosticFiles.get('apps/lythaus-jobs/src/index.ts')), assert.AssertionError);
+  }
 });
 
 test('reviewed reputation exception rejects changed bytes, historical bytes and every other dependency path', () => {

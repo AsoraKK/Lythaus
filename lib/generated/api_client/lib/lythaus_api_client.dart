@@ -176,6 +176,7 @@ export 'package:lythaus_api_client/src/model/legacy_appeal_vote_response.dart';
 export 'package:lythaus_api_client/src/model/legacy_refresh_token_request.dart';
 export 'package:lythaus_api_client/src/model/legal_hold_create.dart';
 export 'package:lythaus_api_client/src/model/legal_hold_response.dart';
+export 'package:lythaus_api_client/src/model/media_upload_bytes_response.dart';
 export 'package:lythaus_api_client/src/model/media_upload_finalise_response.dart';
 export 'package:lythaus_api_client/src/model/media_upload_session_create_request.dart';
 export 'package:lythaus_api_client/src/model/media_upload_session_created.dart';

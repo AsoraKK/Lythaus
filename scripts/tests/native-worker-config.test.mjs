@@ -32,9 +32,9 @@ if (releaseParser) {
   console.log(`Offline release parser: Wrangler ${releaseWranglerVersion}`);
 }
 const productionDigests = {
-  'public-api': 'b369a50b3fb283f3fc5418945d50f2ff4b4f2dee862734af5de521b8f924cb43',
-  'admin-api': '99ea36a9b91fa468e62c937aba1ebc8b5169216d2f4ca4cb6692c153f7b0e395',
-  jobs: '15c402fb47575cecf2915f7665175c9d6788965982e5ac7b0c46983fbf3e32e1',
+  'public-api': '8ce2bd15dd078534d5fca0b0cf61844fb3970aabdcce4dd962f46498b17783f0',
+  'admin-api': 'ac347213540fa10382594d5fba63139bc7840b2e66ebeb2224a2166685430ee5',
+  jobs: '249337f971e6185e01d9fc2a4d1b34d734fa33ef17f8b9bf347c6a28113fd34e',
 };
 
 if (!releaseParser) {
@@ -65,7 +65,7 @@ for (const [worker, digest] of Object.entries(productionDigests)) {
   const configPath = path.join(root, relative);
   const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
-  test(`${worker}: canonical top-level configuration matches reviewed 49cca9ca`, () => {
+  test(`${worker}: canonical top-level configuration matches the reviewed post-0021 pin`, () => {
     const { env, ...production } = config;
     assert.deepEqual(env, {});
     assert.equal(createHash('sha256').update(JSON.stringify(production)).digest('hex'), digest);
