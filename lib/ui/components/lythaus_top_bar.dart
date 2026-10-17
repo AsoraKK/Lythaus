@@ -1,7 +1,7 @@
 // ignore_for_file: public_member_api_docs
 
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:lythaus/design_system/widgets/lyth_brand.dart';
 
 import 'package:lythaus/design_system/components/lyth_icon_button.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
@@ -52,19 +52,10 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
             focusNode: logoFocusNode,
             onPressed: onLogoTap,
             tooltip: 'Feed controls',
-            icon: SvgPicture.asset(
-              'assets/brand/lythaus_mark.svg',
-              height: 20,
-              width: 20,
-              colorFilter: ColorFilter.mode(
-                theme.colorScheme.primary,
-                BlendMode.srcIn,
-              ),
-              placeholderBuilder: (context) => Icon(
-                Icons.blur_on,
-                size: 18,
-                color: theme.colorScheme.primary,
-              ),
+            icon: const LythBrand(
+              variant: LythBrandVariant.symbol,
+              height: 24,
+              decorative: true,
             ),
           ),
           SizedBox(width: spacing.sm),

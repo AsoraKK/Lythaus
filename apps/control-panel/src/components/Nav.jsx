@@ -17,7 +17,8 @@ function Nav() {
   return (
     <header className="nav">
       <div className="brand">
-        <span className="brand-mark">Lythaus</span>
+        <img className="brand-logo brand-logo--dark" src="/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg" alt="Lythaus" width="154" height="32" />
+        <img className="brand-logo brand-logo--light" src="/brand/lythaus-v1/lythaus-lockup-black.9518c6eeb03b.svg" alt="Lythaus" width="154" height="32" />
         <span className="brand-sub">Control Panel</span>
       </div>
       <nav className="nav-links">

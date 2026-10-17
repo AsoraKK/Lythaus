@@ -384,7 +384,7 @@ jobs:
             -g '!.dart_tool/**' \
             | xargs -r dart format --output=none --set-exit-if-changed
       - run: flutter analyze
-      - run: node --test scripts/tests/version-web-entrypoints.test.mjs
+      - run: node --test scripts/tests/version-web-entrypoints.test.mjs scripts/tests/approved-brand-assets.test.mjs scripts/tests/flutter-bootstrap.test.mjs
       - run: bash scripts/test-with-coverage.sh
       - run: bash scripts/check_coverage_gates.sh
       - name: Build immutable web release artifact
@@ -437,6 +437,25 @@ jobs:
         with:
           name: adaptive-shell-browser-evidence
           path: build/adaptive-shell-evidence
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Build approved brand browser fixtures
+        run: |
+          flutter build web --release --no-pub --no-tree-shake-icons --no-wasm-dry-run --no-web-resources-cdn --target test/browser/approved_brand_entry.dart --output build/brand-web
+          npm ci --ignore-scripts --no-audit --prefix apps/control-panel
+          npm run build --prefix apps/control-panel
+      - name: Verify approved brand rendering in Chromium and WebKit
+        env:
+          BRAND_SOURCE: ${{ github.sha }}
+        run: |
+          node scripts/tests/approved-brand.browser.mjs
+          BRAND_BROWSER=webkit node scripts/tests/approved-brand.browser.mjs
+      - name: Upload approved brand screenshots
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: approved-brand-browser-evidence
+          path: build/brand-evidence
           if-no-files-found: warn
           retention-days: 7
       - name: Verify rendered Flutter authentication journey
