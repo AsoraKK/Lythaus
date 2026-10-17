@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
@@ -874,15 +875,54 @@ test('allocated Jobs pins reject altered historical and unrelated source paths',
 });
 
 test('image-integrity allocation rejects superseded Worker bytes without broadening the diagnostic scope', () => {
-  for (const filename of ['apps/lythaus-jobs/src/index.ts', 'apps/lythaus-public-api/src/index.ts']) {
-    assert.throws(() => assertAllocatedJobsDiagnosticFile(filename,
-      git('rev-parse', `489aef297ff0b1a40744504594122c9ebc43930d:${filename}`)), assert.AssertionError);
+  const supersededWorkerBlobs = new Map([
+    ['apps/lythaus-jobs/src/index.ts', ['8a6487ab099287f151fc8594b3b9ff846a9226b7', 'a842e8c3654a26adcaae7c8e72efae3d20102cbb']],
+    ['apps/lythaus-public-api/src/index.ts', ['7a941be1765e82b5cbf00294b114952ab6ea27a1']],
+  ]);
+  for (const [filename, superseded] of supersededWorkerBlobs) {
+    const current = git('hash-object', `--path=${filename}`, filename);
+    assert.doesNotThrow(() => assertAllocatedJobsDiagnosticFile(filename, current));
+    for (const blob of superseded) {
+      assert.notEqual(blob, current, 'The superseded Worker bytes must differ from the exact allocated review revision');
+      assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, blob), assert.AssertionError);
+    }
   }
-  assert.throws(() => assertAllocatedJobsDiagnosticFile('apps/lythaus-jobs/src/index.ts',
-    git('rev-parse', 'fecdd6f6b19ad5ea9dd17afa70e420e6deb147b8:apps/lythaus-jobs/src/index.ts')), assert.AssertionError);
   for (const filename of ['packages/media/src/standard-upload.ts', 'apps/marketing-site/src/pages/index.astro']) {
     assert.throws(() => assertAllocatedJobsDiagnosticFile(filename,
       allocatedJobsDiagnosticFiles.get('apps/lythaus-jobs/src/index.ts')), assert.AssertionError);
+  }
+});
+
+test('image-integrity rejection survives a fresh squashed checkout', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'lythaus-image-integrity-squash-'));
+  const environment = { ...process.env };
+  for (const name of ['NODE_TEST_CONTEXT', 'GIT_DIR', 'GIT_WORK_TREE', 'GIT_COMMON_DIR', 'GIT_INDEX_FILE',
+    'GIT_OBJECT_DIRECTORY', 'GIT_ALTERNATE_OBJECT_DIRECTORIES']) delete environment[name];
+  const fixtureGit = (...args) => execFileSync('git', args, { cwd: directory, env: environment, encoding: 'utf8' }).trim();
+  try {
+    fixtureGit('init', '--quiet');
+    const testPath = 'apps/marketing-site/tests/homepage-protection.test.mjs';
+    for (const filename of ['.gitattributes', testPath, 'apps/lythaus-jobs/src/index.ts', 'apps/lythaus-public-api/src/index.ts']) {
+      mkdirSync(path.dirname(path.join(directory, filename)), { recursive: true });
+      copyFileSync(path.join(root, filename), path.join(directory, filename));
+    }
+    fixtureGit('add', '.');
+    fixtureGit('-c', 'user.name=Lythaus synthetic fixture', '-c', 'user.email=fixture@example.invalid',
+      '-c', 'core.hooksPath=/dev/null', 'commit', '--quiet', '--no-gpg-sign', '-m', 'Synthetic squash');
+    assert.equal(fixtureGit('rev-list', '--all', '--count'), '1');
+    for (const revision of ['489aef297ff0b1a40744504594122c9ebc43930d', 'fecdd6f6b19ad5ea9dd17afa70e420e6deb147b8']) {
+      const historical = spawnSync('git', ['cat-file', '-e', `${revision}^{commit}`], { cwd: directory, env: environment });
+      assert.equal(historical.error, undefined);
+      assert.notEqual(historical.status, 0, 'The squash fixture must contain no superseded PR commits');
+    }
+    const name = 'image-integrity allocation rejects superseded Worker bytes without broadening the diagnostic scope';
+    const result = spawnSync(process.execPath, ['--test', '--test-reporter=tap', `--test-name-pattern=^${name}$`, testPath],
+      { cwd: directory, env: environment, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 0, `${result.stdout ?? ''}${result.stderr ?? ''}`);
+    assert.match(result.stdout, new RegExp(`ok \\d+ - ${name}\\r?\\n`));
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 });
 
