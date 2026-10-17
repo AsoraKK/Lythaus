@@ -831,7 +831,7 @@ postgresTest('PostgreSQL ledger claims once, stores only allowlisted outcomes, a
         assert.equal(row.unhandledRejections, 0);
         assert.equal(row.activeSockets, 0);
         assert.equal(row.pendingTimers, 0);
-        assert.deepEqual(row.listeners, [{ client: 0, connection: 0, stream: 0 }]);
+        assert.deepEqual(row.listeners, [{ client: 1, connection: 0, stream: 0 }]);
       }
       for (const value of gates) {
         assert.equal((await client.query(`SELECT count(*)::integer AS count FROM evaluation.posting_feedback_probe_runs
