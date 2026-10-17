@@ -460,13 +460,13 @@ jobs:
         env:
           DIAGNOSTIC_REVIEW_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
           FULL_LOGIN_ENGINE: webkit
-        run: bash scripts/run-full-login-frame-diagnostic.sh
+        run: bash scripts/run-full-login-scale-diagnostic.sh
       - name: Upload failure-only WPE diagnosis
         if: ${{ always() && steps.approved_brand_gate.outcome == 'failure' }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
-          name: full-login-frame-wpe
-          path: build/full-login-frame
+          name: full-login-scale-wpe
+          path: build/full-login-scale
           if-no-files-found: warn
           retention-days: 7
       - name: Upload approved brand screenshots

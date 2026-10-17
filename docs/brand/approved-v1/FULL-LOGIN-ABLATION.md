@@ -102,3 +102,49 @@ message. The DOM event is a framework milestone, not a GPU presentation receipt.
 No production correction is selected until the dwell and frame controls identify
 a smaller supported cause. The required gate and all pixel thresholds remain
 unchanged.
+# Matched scale controls after f27ce7f6
+
+Independent review identified that the persistent static-fixture failure used
+2× text while the successful real-entry control used 1×. The next failure-only
+diagnostic runs exactly three fresh observations: untouched static fixture at
+1×, wrapped production bootstrap at 1×, and the identical wrapped production
+bootstrap at 2×. It does not repeat the preceding frame-request experiment.
+
+In a detached temporary worktree, `prepare-full-login-scale.mjs` replaces only
+the original `runApp` root in `lib/main.dart`, wrapping `LythausApp` under the
+existing `ProviderScope` with public `MediaQuery.withClampedTextScaling` and
+identical minimum/maximum scale. One source builds both twins with identical
+release flags except `DIAGNOSTIC_TEXT_SCALE=1` or `2`. The complete production
+bootstrap, router, providers, auth and reload path stays intact. The working
+branch's production source is unchanged. Both outputs receive the normal
+release service worker and entrypoint versioning. All Flutter/CanvasKit asset
+hashes must match across the three controls.
+
+All three use 320×960/light/reduced-motion, blocked service workers, no
+semantics activation, no interaction and no frame requests or Dart/GL hooks.
+Only the framework first-frame DOM notification anchors fixed 250/5250 ms
+captures. Unlike the preceding diagnostic, no browser RAF heartbeat or canvas
+method wrapper is installed. The production refresh request is fulfilled
+locally as a synthetic signed-out 401; unexpected external traffic is rejected.
+No live API/auth traffic. These controls do not certify deployed service-worker
+or authenticated behavior.
+
+The observations require `/login` and record separate surface/form/brand pixels.
+Dark-ink brand/heading row bounds are compared with the verified f27ce7f6 1×
+and 2× images (one raster-pixel tolerance) to verify the effective scene scale.
+The unchanged native-SVG comparison is applied after the observation window.
+Blank captures remain explicit outcomes; diagnostic completion is not rendering
+acceptance. If wrapped 1× fails, the wrapper may perturb startup. If wrapped 2×
+fails, scale/scene remains implicated. Evidence must be reported before any
+production-faithful acceptance-fixture repair. No required gate, case,
+navigation assertion, fidelity threshold or production code is changed here.
+
+Verified preceding head: `f27ce7f6abfbce1a0bcb733825934135b9323b2e`, run
+39074924193, merge source `68c343f7f1ec8a55f6a6a5c7c6ea7052512e1735`.
+[Preserved frame-control evidence](https://chatgpt.com/api/library/files/libfile_d77b7c7bf7388191948622029bdd62fd/download),
+archive SHA256 `15cdca2ebc0b07481892d7f0cf92d0020bd4881c208713e37ccc8ff17da59cd4`.
+Its static wait-only and untouched required controls stay white through 5250 ms;
+one diagnostic frame request restores the direct scene without semantics or a
+second brand paint; the unmodified real entry paints at default scale. The
+required WPE gate remains red.
+
