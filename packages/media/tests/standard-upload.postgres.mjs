@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
+import sharp from 'sharp';
 import test from 'node:test';
 import pg from 'pg';
+import { createExifGpsJpeg } from './image-fixtures.mjs';
 import { publicationControlTarget } from '../../../scripts/ci/run-publication-pg17.mjs';
 import { standardUploadFixture } from './standard-upload-fixture.mjs';
 
@@ -64,9 +66,12 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
         }
       }
     }, async effect => { effects.push(effect); await effectHandler?.(effect); });
-    const png = Uint8Array.from([137,80,78,71,13,10,26,10,0,0,0,0]);
+    const png = new Uint8Array(await sharp({ create: { width: 1, height: 1, channels: 4,
+      background: { r: 12, g: 34, b: 56, alpha: 1 } } }).png().toBuffer());
+    const alternateWebp = new Uint8Array(await sharp({ create: { width: 1, height: 1, channels: 4,
+      background: { r: 210, g: 90, b: 40, alpha: 1 } } }).webp({ quality: 85 }).toBuffer());
     const checksum = createHash('sha256').update(png).digest('hex');
-    async function seed(status = 'pending', purpose = 'standard') {
+    async function seed(status = 'pending', purpose = 'standard', sourceBytes = png, contentType = 'image/png') {
       beforeQuery = undefined;
       effectHandler = undefined;
       effects.length = 0;
@@ -75,17 +80,18 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
       await admin.query("INSERT INTO identity.users(id,status) VALUES($1,'active')", [userId]);
       await admin.query(`INSERT INTO media.upload_sessions
         (id,user_id,object_key,content_type,expected_bytes,checksum_sha256,expires_at,purpose,status)
-        VALUES($1,$2,$3,'image/png',$4,$5,now()+interval '10 minutes',$6,$7)`,
-      [sessionId, userId, objectKey, png.length, checksum, purpose, status]);
-      await admin.query('INSERT INTO media.storage_ledger(user_id,bytes_reserved) VALUES($1,$2)', [userId, png.length]);
-      await fixture.quarantine.put(objectKey, png);
+        VALUES($1,$2,$3,$4,$5,$6,now()+interval '10 minutes',$7,$8)`,
+      [sessionId, userId, objectKey, contentType, sourceBytes.length,
+        createHash('sha256').update(sourceBytes).digest('hex'), purpose, status]);
+      await admin.query('INSERT INTO media.storage_ledger(user_id,bytes_reserved) VALUES($1,$2)', [userId, sourceBytes.length]);
+      await fixture.quarantine.put(objectKey, sourceBytes, { httpMetadata: { contentType } });
       return { userId, sessionId, objectKey, event: { eventId, eventType: 'media.upload.finalised',
         payload: { uploadSessionId: sessionId, objectKey } } };
     }
     const session = async input => (await admin.query('SELECT status FROM media.upload_sessions WHERE id=$1', [input.sessionId])).rows[0];
     const queue = async input => (await fixture.request('/fixture/queue', input)).json();
-    const create = async userId => fixture.request('/fixture/create', { userId,
-      upload: { contentType: 'image/png', size: png.length, checksumSha256: checksum } });
+    const create = async (userId, sourceBytes = png, contentType = 'image/png') => fixture.request('/fixture/create', { userId,
+      upload: { contentType, size: sourceBytes.length, checksumSha256: createHash('sha256').update(sourceBytes).digest('hex') } });
 
     await t.test('Worker ingress bounds bytes before R2 and retries after a lost SQL transition', async () => {
       const userId = randomUUID();
@@ -193,10 +199,15 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
     await t.test('first-ledger concurrent quota reservations cannot exceed the configured quota', async () => {
       const userId = randomUUID();
       await admin.query('INSERT INTO identity.users(id) VALUES($1)', [userId]);
-      const input = { userId, upload: { contentType: 'image/png', size: 6 * 1024 * 1024, checksumSha256: checksum } };
-      const responses = await Promise.all([fixture.request('/fixture/create', input), fixture.request('/fixture/create', input)]);
+      const large = new Uint8Array(6 * 1024 * 1024);
+      large.set([137, 80, 78, 71, 13, 10, 26, 10]);
+      const responses = await Promise.all([create(userId, large), create(userId, large)]);
       assert.deepEqual(responses.map(response => response.status).sort(), [201, 400]);
-      assert.equal(Number((await admin.query('SELECT bytes_reserved FROM media.storage_ledger WHERE user_id=$1', [userId])).rows[0].bytes_reserved), input.upload.size);
+      const receipt = await responses[responses.findIndex(response => response.status === 201)].json();
+      assert.equal((await fixture.upload(receipt.uploadUrl, userId, large)).status, 201);
+      const stored = (await admin.query('SELECT object_key FROM media.upload_sessions WHERE id=$1', [receipt.uploadSessionId])).rows[0];
+      assert.equal((await fixture.quarantine.head(stored.object_key)).size, large.byteLength);
+      assert.equal(Number((await admin.query('SELECT bytes_reserved FROM media.storage_ledger WHERE user_id=$1', [userId])).rows[0].bytes_reserved), large.byteLength);
     });
     await t.test('canonical runtime rejection permission gap remains fail-closed and is not bypassed', async () => {
       const input = await seed();
@@ -255,15 +266,16 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
         const object = (await admin.query('SELECT id, object_key, content_type, byte_size, sha256, state FROM media.objects WHERE owner_id=$1', [input.userId])).rows[0];
         assert.equal(object.state, 'review');
         assert.equal(object.content_type, 'image/webp');
-        assert.equal(Number(object.byte_size), 12);
-        assert.equal(object.sha256, createHash('sha256').update(Uint8Array.from([82,73,70,70,4,0,0,0,87,69,66,80])).digest('hex'));
+        const derivativeBytes = new Uint8Array(await (await fixture.approved.get(object.object_key)).arrayBuffer());
+        assert.equal(Number(object.byte_size), derivativeBytes.byteLength);
+        assert.equal(object.sha256, createHash('sha256').update(derivativeBytes).digest('hex'));
         assert.equal((await admin.query('SELECT owner_id FROM media.ownership WHERE object_id=$1', [object.id])).rows[0].owner_id, input.userId);
         const evidence = (await admin.query('SELECT model_version, signal FROM media.moderation_results WHERE object_id=$1', [object.id])).rows[0];
         assert.equal(evidence.model_version, 'not-executed');
         assert.equal(evidence.signal.modelId, 'not-executed');
         assert.equal(evidence.signal.reviewRequired, true);
         const ledger = (await admin.query('SELECT bytes_reserved,bytes_uploaded,bytes_approved,bytes_rejected,object_count FROM media.storage_ledger WHERE user_id=$1', [input.userId])).rows[0];
-        assert.deepEqual(Object.values(ledger).map(Number), [0, 12, 12, 0, 1]);
+        assert.deepEqual(Object.values(ledger).map(Number), [0, derivativeBytes.byteLength, derivativeBytes.byteLength, 0, 1]);
         assert.equal((await admin.query('SELECT count(*)::integer AS n FROM system.outbox_events WHERE aggregate_id=$1', [input.sessionId])).rows[0].n, 1);
         assert.equal(await fixture.quarantine.head(input.objectKey), null);
         assert.ok(await fixture.approved.head(object.object_key));
@@ -272,6 +284,40 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
         assert.equal(await fixture.quarantine.head(input.objectKey), null);
         assert.ok(!fixture.statements.some(query => /(?:INSERT INTO|UPDATE) (?:content|feed)\./.test(query.text ?? '')));
         assert.equal(fixture.outbound.length, 0);
+
+        const orientedJpeg = new Uint8Array(await createExifGpsJpeg());
+        const sourceMetadata = await sharp(orientedJpeg).metadata();
+        assert.equal(sourceMetadata.orientation, 6);
+        assert.ok(sourceMetadata.exif?.byteLength);
+        assert.ok(sourceMetadata.exif.includes(Buffer.from('Lythaus fixture')));
+        assert.ok(sourceMetadata.exif.includes(Buffer.from([0x25, 0x88])), 'source contains an EXIF GPSInfo IFD');
+        const orientedUser = randomUUID();
+        await admin.query("INSERT INTO identity.users(id,status) VALUES($1,'active')", [orientedUser]);
+        const orientedCreate = await create(orientedUser, orientedJpeg, 'image/jpeg');
+        assert.equal(orientedCreate.status, 201);
+        const orientedReceipt = await orientedCreate.json();
+        const orientedSession = (await admin.query('SELECT object_key FROM media.upload_sessions WHERE id=$1', [orientedReceipt.uploadSessionId])).rows[0];
+        assert.equal((await fixture.upload(orientedReceipt.uploadUrl, orientedUser, orientedJpeg, 'image/jpeg')).status, 201);
+        const orientedInput = { userId: orientedUser, sessionId: orientedReceipt.uploadSessionId,
+          objectKey: orientedSession.object_key, event: { eventId: randomUUID(), eventType: 'media.upload.finalised',
+            payload: { uploadSessionId: orientedReceipt.uploadSessionId, objectKey: orientedSession.object_key } } };
+        assert.equal((await fixture.request('/fixture/finalise', orientedInput)).status, 200);
+        effects.length = 0;
+        assert.deepEqual(await queue(orientedInput), { ack: 1, retry: 0, imageCalls: 1 });
+        const orientedObject = (await admin.query('SELECT id, object_key, state FROM media.objects WHERE owner_id=$1', [orientedUser])).rows[0];
+        assert.equal(orientedObject.state, 'review');
+        const orientedBytes = new Uint8Array(await (await fixture.approved.get(orientedObject.object_key)).arrayBuffer());
+        const orientedMetadata = await sharp(orientedBytes).metadata();
+        assert.equal(orientedMetadata.format, 'webp');
+        assert.deepEqual([orientedMetadata.width, orientedMetadata.height], [2, 3]);
+        assert.equal(orientedMetadata.orientation, undefined);
+        assert.equal(orientedMetadata.exif, undefined);
+        assert.equal(orientedMetadata.xmp, undefined);
+        const orientedVariant = (await admin.query('SELECT width,height FROM media.variants WHERE object_id=$1', [orientedObject.id])).rows[0];
+        assert.deepEqual(Object.values(orientedVariant).map(Number), [2, 3]);
+        assert.equal(Number((await admin.query('SELECT byte_size FROM media.objects WHERE id=$1', [orientedObject.id])).rows[0].byte_size), orientedBytes.length);
+        assert.deepEqual(effects.find(effect => effect.type === 'transform').options, { format: 'image/webp', quality: 85, anim: false });
+        assert.ok(!fixture.statements.some(query => /(?:INSERT INTO|UPDATE) (?:content|feed)\./.test(query.text ?? '')));
 
         await admin.query("UPDATE media.upload_sessions SET expires_at=clock_timestamp()-interval '20 minutes' WHERE id=$1", [input.sessionId]);
         assert.equal((await fixture.cleanup()).status, 204);
@@ -432,8 +478,9 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
     });
     await t.test('derivative growth is rejected within the reservation before storage or inference', async () => {
       const input = await seed('queued');
-      const expanded = [82,73,70,70,5,0,0,0,87,69,66,80,0];
-      assert.deepEqual(await queue({ ...input, transformed: expanded, aiEnabled: true }), { ack: 1, retry: 0, imageCalls: 1 });
+      const expanded = new Uint8Array(png.length + 1);
+      expanded.set([82,73,70,70,5,0,0,0,87,69,66,80,0]);
+      assert.deepEqual(await queue({ ...input, transformed: Array.from(expanded), aiEnabled: true }), { ack: 1, retry: 0, imageCalls: 1 });
       assert.equal((await session(input)).status, 'rejected');
       assert.equal(await fixture.approved.head(`approved/${input.userId}/${input.sessionId}.webp`), null);
       const ledger = (await admin.query('SELECT bytes_reserved,bytes_approved,bytes_rejected FROM media.storage_ledger WHERE user_id=$1', [input.userId])).rows[0];
@@ -447,7 +494,7 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
         effectHandler = async effect => {
           if (effect.type === 'info' && effect.input.attempt === 'first') { reached.resolve(); await release.promise; }
         };
-        const first = queue({ ...input, attempt: 'first', transformed: [82,73,70,70,5,0,0,0,87,69,66,80,0] });
+        const first = queue({ ...input, attempt: 'first', transformed: Array.from(alternateWebp) });
         try {
           await reached.promise;
           const event = delivery === 'different-event' ? { ...input.event, eventId: randomUUID() } : input.event;
@@ -456,10 +503,10 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
           assert.equal(effects.filter(effect => effect.type === 'info').length, 1);
           assert.ok(failures.some(error => error.code === '55P03' && error.statement.includes('FOR UPDATE NOWAIT')));
         } finally { release.resolve(); }
-        assert.deepEqual(await first, { ack: 1, retry: 0, imageCalls: 1 });
-        assert.deepEqual(await queue(input), { ack: 1, retry: 0, imageCalls: 0 });
+        assert.deepEqual(await first, { ack: 0, retry: 1, imageCalls: 1 });
+        assert.deepEqual(await queue(input), { ack: 0, retry: 1, imageCalls: 0 });
         assert.equal(effects.filter(effect => effect.type === 'transform').length, 1);
-        assert.equal((await session(input)).status, 'rejected');
+        assert.equal((await session(input)).status, 'queued');
       });
     }
     await t.test('a persisted derivative is reused after canonical grant failure with zero repeated Images work', async () => {
@@ -474,6 +521,53 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
       assert.equal(effects.filter(effect => effect.type === 'beforePut').length, 1);
       assert.equal((await session(input)).status, 'queued');
       assert.ok(!fixture.statements.some(input => /system\.cost_/.test(input.text ?? '')));
+    });
+    await t.test('legacy v1 cached EXIF derivative is revalidated across SQL retry before variant persistence', async () => {
+      const jpeg = new Uint8Array(await createExifGpsJpeg());
+      const derivativeBytes = new Uint8Array(await sharp(Buffer.from(jpeg)).rotate().webp({ quality: 85 }).toBuffer());
+      const derivativeMetadata = await sharp(derivativeBytes).metadata();
+      assert.deepEqual([derivativeMetadata.width, derivativeMetadata.height], [2, 3]);
+      const input = await seed('queued', 'standard', jpeg, 'image/jpeg');
+      const key = `approved/${input.userId}/${input.sessionId}.webp`;
+      const sourceSha256 = createHash('sha256').update(jpeg).digest('hex');
+      const derivativeSha256 = createHash('sha256').update(derivativeBytes).digest('hex');
+      await fixture.approved.put(key, derivativeBytes, {
+        httpMetadata: { contentType: 'image/webp' },
+        customMetadata: { transform: 'standard-webp-v1', sourceSha256, sourceBytes: String(jpeg.length),
+          sourceContentType: 'image/jpeg', sha256: derivativeSha256, width: '3', height: '2' },
+      });
+      await admin.query('GRANT INSERT (object_id, owner_id) ON media.ownership TO lythaus_jobs');
+      try {
+        beforeQuery = request => {
+          if (request.text.includes('INSERT INTO media.objects')) {
+            beforeQuery = undefined;
+            throw new Error('synthetic_sql_loss_after_legacy_derivative_read');
+          }
+        };
+        assert.deepEqual(await queue(input), { ack: 0, retry: 1, imageCalls: 1 });
+        assert.equal((await session(input)).status, 'queued');
+        assert.equal((await admin.query('SELECT count(*)::integer AS n FROM media.objects WHERE object_key=$1', [key])).rows[0].n, 0);
+        assert.equal(effects.filter(effect => effect.type === 'transform').length, 0);
+        assert.equal(effects.filter(effect => effect.type === 'info').length, 1);
+
+        assert.deepEqual(await queue(input), { ack: 1, retry: 0, imageCalls: 1 });
+        assert.equal((await session(input)).status, 'approved');
+        const object = (await admin.query('SELECT id,state,byte_size,sha256 FROM media.objects WHERE object_key=$1', [key])).rows[0];
+        assert.equal(object.state, 'review');
+        assert.equal(Number(object.byte_size), derivativeBytes.byteLength);
+        assert.equal(object.sha256, derivativeSha256);
+        const variant = (await admin.query('SELECT width,height FROM media.variants WHERE object_id=$1', [object.id])).rows[0];
+        assert.deepEqual(Object.values(variant).map(Number), [2, 3]);
+        assert.equal(effects.filter(effect => effect.type === 'transform').length, 0);
+        assert.equal(effects.filter(effect => effect.type === 'info').length, 2);
+        const cached = await fixture.approved.head(key);
+        assert.equal(cached.customMetadata.transform, 'standard-webp-v1');
+        assert.deepEqual([cached.customMetadata.width, cached.customMetadata.height], ['3', '2']);
+        assert.ok(!fixture.statements.some(input => /(?:INSERT INTO|UPDATE) (?:content|feed)\./.test(input.text ?? '')));
+      } finally {
+        beforeQuery = undefined;
+        await admin.query('REVOKE INSERT (object_id, owner_id) ON media.ownership FROM lythaus_jobs');
+      }
     });
     await t.test('an unbound older derivative fails closed without overwrite or decoding', async () => {
       const input = await seed('queued');
@@ -494,19 +588,18 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
         if (effect.type === 'beforePut' && effect.input.attempt === 'stale') { reached.resolve(); await release.promise; }
       };
       const stale = queue({ ...input, attempt: 'stale' });
-      const winnerBytes = [82,73,70,70,4,0,0,0,87,69,66,80];
-      winnerBytes[4] = 5;
+      const winnerBytes = alternateWebp;
       try {
         await reached.promise;
         assert.ok(firstTransaction);
         const backend = connections.get(firstTransaction).processID;
         assert.equal((await admin.query('SELECT pg_terminate_backend($1) AS terminated', [backend])).rows[0].terminated, true);
         const event = { ...input.event, eventId: randomUUID() };
-        assert.deepEqual(await queue({ ...input, event, attempt: 'winner', transformed: winnerBytes }), { ack: 0, retry: 1, imageCalls: 1 });
+        assert.deepEqual(await queue({ ...input, event, attempt: 'winner', transformed: Array.from(winnerBytes) }), { ack: 0, retry: 1, imageCalls: 1 });
       } finally { release.resolve(); }
       assert.deepEqual(await stale, { ack: 0, retry: 1, imageCalls: 1 });
       const stored = await fixture.approved.get(`approved/${input.userId}/${input.sessionId}.webp`);
-      assert.deepEqual(new Uint8Array(await stored.arrayBuffer()), Uint8Array.from(winnerBytes));
+      assert.deepEqual(new Uint8Array(await stored.arrayBuffer()), winnerBytes);
       assert.equal(effects.filter(effect => effect.type === 'stored').length, 1);
       assert.equal(effects.filter(effect => effect.type === 'conflict').length, 1);
       assert.equal((await session(input)).status, 'queued');
