@@ -391,7 +391,7 @@ test('catalogue-keyed authoritative mutations write user activity in the same tr
     { operation: 'createPrivacyRequest', next: 'async function getPrivacyRequestStatus', mutations: [/INSERT INTO privacy\.requests/], eventIds: ['sourceEventId'], eventPatterns: [/eventType: plan\.activityEvent/], catalogueEvents: ['privacy.export_requested', 'privacy.deletion_requested', 'privacy.rectification_requested'] },
     { operation: 'updateRegionPreferences', next: 'async function updateRetentionRule', mutations: [/INSERT INTO identity\.user_region_preferences/], eventIds: ['sourceEventId'], eventPatterns: [/eventType: 'profile\.region_changed'/], catalogueEvents: ['profile.region_changed'] },
     { operation: 'updateRetentionRule', next: 'async function listCustomFeeds', mutations: [/privacy\.set_retention_rule/], eventIds: ['sourceEventId'], eventPatterns: [/eventType: 'profile\.retention_preference_changed'/], catalogueEvents: ['profile.retention_preference_changed'] },
-    { operation: 'createCustomFeed', next: 'async function customFeed', mutations: [/INSERT INTO social\.custom_feeds/, /INSERT INTO social\.custom_feed_rules/], eventIds: ['sourceEventId'], eventPatterns: [/eventType: 'social\.custom_feed_created'/], catalogueEvents: ['social.custom_feed_created'] },
+    { operation: 'createCustomFeed', next: 'async function customFeed', mutations: [/INSERT INTO social\.custom_feeds/, /INSERT INTO social\.custom_feed_rules/], eventIds: ['sourceEventId'], activityUserPattern: /\{\s*\.\.\.user,\s*userId:\s*targetUserId\s*\}/, eventPatterns: [/eventType: 'social\.custom_feed_created'/], catalogueEvents: ['social.custom_feed_created'] },
     { operation: 'customFeed', next: 'async function customFeedItems', mutations: [/DELETE FROM social\.custom_feeds/, /UPDATE social\.custom_feeds/], eventIds: ['sourceEventId'], eventPatterns: [/eventType: 'social\.custom_feed_deleted'/, /eventType: 'social\.custom_feed_updated'/], catalogueEvents: ['social.custom_feed_deleted', 'social.custom_feed_updated'] },
     { operation: 'notificationPreferences', next: 'async function notificationDevices', mutations: [/INSERT INTO feed\.notification_preferences/], eventIds: ['sourceEventId'], eventPatterns: [/eventType: 'profile\.notification_preference_changed'/], catalogueEvents: ['profile.notification_preference_changed'] },
     { operation: 'notificationDevices', next: 'async function reputationSummary', mutations: [/INSERT INTO feed\.notification_devices/], eventIds: ['sourceEventId'], eventPatterns: [/eventType: 'profile\.notification_device_registered'/], catalogueEvents: ['profile.notification_device_registered'] },
@@ -406,14 +406,37 @@ test('catalogue-keyed authoritative mutations write user activity in the same tr
   assert.match(commentMutation, /declaration\.body === current\.rows\[0\]\.body/);
 
   const catalogueKeys = new Set(activityCatalogue.events.map((entry) => entry.key));
-  for (const { operation, next, mutations, eventIds, eventPatterns, catalogueEvents } of inventory) {
+  for (const { operation, next, mutations, eventIds, activityUserPattern, eventPatterns, catalogueEvents } of inventory) {
     const source = between(publicApi, `async function ${operation}`, next);
     assert.match(source, /transaction\(env\.DB_APP_FRESH, async \(client\) => \{/, `${operation} must mutate and write activity in one transaction`);
     for (const mutation of mutations) assert.match(source, mutation, `${operation} must mutate every authoritative relation`);
-    for (const eventId of eventIds) assert.match(source, new RegExp(`await writeActivity\\(client, request, user, ${eventId.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')},`), `${operation} must write activity with its mutation event identity`);
+    const activityUserArgument = activityUserPattern?.source ?? 'user';
+    for (const eventId of eventIds) assert.match(source, new RegExp(`await writeActivity\\(client, request, ${activityUserArgument}, ${eventId.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')},`), `${operation} must write activity with its mutation event identity`);
     for (const eventPattern of eventPatterns) assert.match(source, eventPattern, `${operation} must emit its catalogue event`);
     for (const eventType of catalogueEvents) assert.equal(catalogueKeys.has(eventType), true, `${operation} emits undocumented activity event ${eventType}`);
   }
+
+  const customFeedMutation = between(publicApi, 'async function createCustomFeed', 'async function customFeed');
+  const customFeedTransactionStart = customFeedMutation.indexOf('await transaction(env.DB_APP_FRESH, async (client) => {');
+  const customFeedTransactionEnd = customFeedMutation.indexOf('\n  });', customFeedTransactionStart);
+  assert.ok(customFeedTransactionStart >= 0 && customFeedTransactionEnd > customFeedTransactionStart,
+    'custom-feed entitlement checks and writes must be bounded by their transaction');
+  const customFeedTransaction = customFeedMutation.slice(customFeedTransactionStart, customFeedTransactionEnd);
+  const customFeedTransactionSteps = [
+    /pg_advisory_xact_lock\(hashtextextended\('user-entitlement:' \|\| \$1::uuid::text, 0\)\)/,
+    /SELECT subscription_tier FROM identity\.user_entitlements WHERE user_id = \$1/,
+    /SELECT count\(\*\)::text AS count FROM social\.custom_feeds WHERE user_id = \$1/,
+    /assertCustomFeedAvailable\(tier, Number\(existing\.rows\[0\]\?\.count \?\? 0\)\)/,
+    /INSERT INTO social\.custom_feeds/,
+    /INSERT INTO social\.custom_feed_rules/,
+    /await writeActivity\(client, request, \{\s*\.\.\.user, userId: targetUserId\s*\}, sourceEventId,/,
+  ];
+  const customFeedTransactionPositions = customFeedTransactionSteps.map((pattern) => {
+    assert.match(customFeedTransaction, pattern, 'custom-feed entitlement enforcement and writes must share the account transaction');
+    return customFeedTransaction.search(pattern);
+  });
+  assert.ok(customFeedTransactionPositions.every((position, index) => index === 0 || position > customFeedTransactionPositions[index - 1]),
+    'custom-feed lock, entitlement read, capacity check, inserts and activity must remain ordered in one transaction');
 
   const dynamicEventPolicies = `${contentRuntimePolicy}\n${privacyRuntimePolicy}`;
   for (const eventType of ['social.block_created', 'social.block_removed', 'social.mute_created', 'social.mute_removed', 'content.comment_created', 'content.reply_created', 'content.post_deleted', 'content.comment_deleted', 'privacy.export_requested', 'privacy.deletion_requested', 'privacy.rectification_requested']) {
