@@ -1,12 +1,15 @@
 // ignore_for_file: public_member_api_docs
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:lythaus/core/network/dio_client.dart';
-import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/feed/application/custom_feed_service.dart';
+import 'package:lythaus/features/feed/application/feed_read_session.dart';
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 import 'package:lythaus/features/feed/domain/models.dart' as domain;
+import 'package:lythaus/features/feed/domain/social_feed_repository.dart';
+import 'package:lythaus/features/auth/domain/auth_required_exception.dart';
 import 'package:lythaus/services/service_providers.dart';
 import 'package:lythaus/services/subscription/subscription_service.dart';
 import 'package:lythaus/state/models/feed_models.dart';
@@ -70,13 +73,18 @@ class CustomFeedCapacity {
 
 /// Server-issued feed limits for the signed-in account.
 final feedEntitlementsProvider = FutureProvider<FeedEntitlements?>((ref) async {
-  final token = await ref.watch(jwtProvider.future);
-  if (token == null || token.isEmpty) {
+  final session = ref.watch(feedReadSessionProvider);
+  if (session.isLoading) return null;
+  if (session.hasError) throw const AuthRequiredException();
+  if (!session.isAuthenticated) {
     return null;
   }
+  final token = await session.readToken();
+  session.requireCurrent();
   final status = await ref
       .read(subscriptionServiceProvider)
-      .checkStatus(token: token);
+      .checkStatus(token: token!);
+  session.requireCurrent();
   return FeedEntitlements.fromSubscription(status);
 });
 
@@ -86,22 +94,30 @@ final customFeedServiceProvider = Provider<CustomFeedService>((ref) {
 });
 
 final customFeedsProvider = FutureProvider<List<FeedModel>>((ref) async {
-  try {
-    final token = await ref.read(jwtProvider.future);
-    if (token == null || token.isEmpty) {
-      return const [];
-    }
-    return ref
-        .read(customFeedServiceProvider)
-        .listCustomFeeds(token: token, limit: 20);
-  } catch (_) {
+  final session = ref.watch(feedReadSessionProvider);
+  if (session.isLoading) return const [];
+  if (session.hasError) throw const AuthRequiredException();
+  if (!session.isAuthenticated) {
     return const [];
   }
+  final token = await session.readToken();
+  session.requireCurrent();
+  final feeds = await ref
+      .read(customFeedServiceProvider)
+      .listCustomFeeds(token: token!, limit: 20);
+  session.requireCurrent();
+  return feeds;
 });
 
 final feedListProvider = Provider<List<FeedModel>>((ref) {
-  final entitlements = ref.watch(feedEntitlementsProvider).valueOrNull;
-  final customFeeds = ref.watch(customFeedsProvider).valueOrNull ?? const [];
+  final entitlementState = ref.watch(feedEntitlementsProvider);
+  final customState = ref.watch(customFeedsProvider);
+  final entitlements = entitlementState.isLoading
+      ? null
+      : entitlementState.asData?.value;
+  final customFeeds = customState.isLoading
+      ? const <FeedModel>[]
+      : customState.asData?.value ?? const <FeedModel>[];
   final systemFeeds = <FeedModel>[
     _discoverFeed,
     if (entitlements?.canAccessNewsBoard ?? false) _newsBoardFeed,
@@ -120,8 +136,14 @@ final feedListProvider = Provider<List<FeedModel>>((ref) {
 });
 
 final customFeedCapacityProvider = Provider<CustomFeedCapacity>((ref) {
-  final customFeeds = ref.watch(customFeedsProvider).valueOrNull ?? const [];
-  final entitlements = ref.watch(feedEntitlementsProvider).valueOrNull;
+  final customState = ref.watch(customFeedsProvider);
+  final entitlementState = ref.watch(feedEntitlementsProvider);
+  final customFeeds = customState.isLoading
+      ? const <FeedModel>[]
+      : customState.asData?.value ?? const <FeedModel>[];
+  final entitlements = entitlementState.isLoading
+      ? null
+      : entitlementState.asData?.value;
   return CustomFeedCapacity(
     used: customFeeds.length,
     maximum: entitlements?.maxCustomFeeds,
@@ -132,9 +154,17 @@ final liveFeedItemsProvider = FutureProvider.family<List<FeedItem>, FeedModel>((
   ref,
   feed,
 ) async {
+  final session = ref.watch(feedReadSessionProvider);
+  if (session.isLoading && !session.isGuest) return const [];
+  if (session.hasError && !session.isGuest) {
+    throw const AuthRequiredException();
+  }
+  if (!session.canRead && feed.type == FeedType.discover) {
+    return const [];
+  }
+  final authToken = await session.readToken();
+  session.requireCurrent();
   final service = ref.read(socialFeedServiceProvider);
-  final token = await ref.read(jwtProvider.future);
-  final authToken = token?.isNotEmpty == true ? token : null;
   List<domain.Post> posts;
 
   switch (feed.type) {
@@ -146,6 +176,7 @@ final liveFeedItemsProvider = FutureProvider.family<List<FeedItem>, FeedModel>((
       break;
     case FeedType.news:
       final entitlements = await ref.read(feedEntitlementsProvider.future);
+      session.requireCurrent();
       if (entitlements == null || !entitlements.canAccessNewsBoard) {
         throw StateError('News Board is available to Black accounts only.');
       }
@@ -153,7 +184,7 @@ final liveFeedItemsProvider = FutureProvider.family<List<FeedItem>, FeedModel>((
       break;
     case FeedType.custom:
       if (authToken == null) {
-        return const [];
+        throw const AuthRequiredException();
       }
       posts =
           (await ref
@@ -169,10 +200,12 @@ final liveFeedItemsProvider = FutureProvider.family<List<FeedItem>, FeedModel>((
       return const [];
   }
 
+  session.requireCurrent();
   return posts.map(_mapPostToFeedItem).toList();
 });
 
 final currentFeedIndexProvider = StateProvider<int>((ref) {
+  ref.watch(feedReadSessionProvider);
   final feeds = ref.read(feedListProvider);
   final homeIndex = feeds.indexWhere((feed) => feed.isHome);
   return homeIndex >= 0 ? homeIndex : 0;
@@ -192,6 +225,7 @@ class LiveFeedState {
     this.isInitialLoading = false,
     this.isLoadingMore = false,
     this.errorMessage,
+    this.requiresSignIn = false,
   });
 
   final List<FeedItem> items;
@@ -199,6 +233,7 @@ class LiveFeedState {
   final bool isInitialLoading;
   final bool isLoadingMore;
   final String? errorMessage;
+  final bool requiresSignIn;
 
   bool get hasMore => nextCursor != null && nextCursor!.isNotEmpty;
 
@@ -208,6 +243,7 @@ class LiveFeedState {
     bool? isInitialLoading,
     bool? isLoadingMore,
     String? errorMessage,
+    bool? requiresSignIn,
     bool clearCursor = false,
     bool clearError = false,
   }) {
@@ -217,6 +253,9 @@ class LiveFeedState {
       isInitialLoading: isInitialLoading ?? this.isInitialLoading,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      requiresSignIn: clearError
+          ? false
+          : (requiresSignIn ?? this.requiresSignIn),
     );
   }
 }
@@ -228,125 +267,232 @@ abstract class LiveFeedController extends StateNotifier<LiveFeedState> {
   Future<void> loadMore();
 }
 
+class _FeedUnavailable implements Exception {
+  const _FeedUnavailable();
+}
+
 class LiveFeedNotifier extends LiveFeedController {
-  LiveFeedNotifier(this._ref, this._feed)
-    : super(const LiveFeedState(isInitialLoading: true)) {
-    Future<void>.microtask(_loadInitial);
+  LiveFeedNotifier(Ref ref, FeedModel feed, FeedReadSession session)
+    : _ref = ref,
+      _feed = feed,
+      _session = session,
+      super(
+        _canStartRead(feed, session)
+            ? const LiveFeedState(isInitialLoading: true)
+            : const LiveFeedState(),
+      ) {
+    _stopSession = _session.onInvalidated(_clearSession);
+    if (!_session.isLoading && _canStartRead(_feed, _session)) {
+      Future<void>.microtask(refresh);
+    }
   }
 
   final Ref _ref;
   final FeedModel _feed;
+  final FeedReadSession _session;
+  late final void Function() _stopSession;
+  FeedRequestCancellation? _cancellation;
+  Future<void>? _refreshing;
+  final _visitedCursors = <String>{};
+  int _generation = 0;
 
-  Future<void> _loadInitial() async {
-    try {
-      if (_feed.type == FeedType.moderation) {
-        state = state.copyWith(
-          items: const [],
-          clearCursor: true,
-          isInitialLoading: false,
-          isLoadingMore: false,
-          clearError: true,
-        );
-        return;
-      }
+  static bool _canStartRead(FeedModel feed, FeedReadSession session) =>
+      feed.type != FeedType.discover || session.canRead || session.hasError;
 
-      final response = await _fetchRemote();
-      state = state.copyWith(
-        items: response.posts.map(_mapPostToFeedItem).toList(),
-        nextCursor: response.nextCursor,
-        clearCursor: response.nextCursor == null,
-        isInitialLoading: false,
-        isLoadingMore: false,
-        clearError: true,
-      );
-    } catch (_) {
-      state = state.copyWith(
-        isInitialLoading: false,
-        isLoadingMore: false,
-        errorMessage: 'Unable to load feed right now.',
-      );
-    }
+  bool get _ownsSession =>
+      mounted && _session.isCurrent && _canStartRead(_feed, _session);
+
+  bool _ownsRequest(int generation, FeedRequestCancellation cancellation) =>
+      _ownsSession &&
+      generation == _generation &&
+      identical(cancellation, _cancellation) &&
+      !cancellation.isCancelled;
+
+  void _clearSession() {
+    _generation++;
+    _cancellation?.cancel();
+    _visitedCursors.clear();
+    if (mounted) state = const LiveFeedState(isInitialLoading: true);
   }
 
   @override
-  Future<void> refresh() async {
-    state = state.copyWith(isInitialLoading: true, clearError: true);
-    await _loadInitial();
+  void dispose() {
+    _stopSession();
+    _generation++;
+    _cancellation?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Future<void> refresh() {
+    if (!_ownsSession || _session.isLoading) return Future<void>.value();
+    final pending = _refreshing;
+    if (pending != null) return pending;
+    final request = _loadInitial();
+    _refreshing = request;
+    return request.whenComplete(() {
+      if (identical(_refreshing, request)) _refreshing = null;
+    });
+  }
+
+  Future<void> _loadInitial() async {
+    final generation = ++_generation;
+    _cancellation?.cancel();
+    final cancellation = _cancellation = FeedRequestCancellation();
+    _visitedCursors.clear();
+    state = state.copyWith(
+      isInitialLoading: true,
+      isLoadingMore: false,
+      clearCursor: true,
+      clearError: true,
+    );
+    try {
+      final response = await _fetchRemote(generation, cancellation);
+      if (!_ownsRequest(generation, cancellation)) return;
+      state = LiveFeedState(
+        items: response.posts.map(_mapPostToFeedItem).toList(),
+        nextCursor: _nextCursor(response),
+      );
+    } catch (error) {
+      if (_ownsRequest(generation, cancellation)) {
+        _showError(error, loadingMore: false);
+      }
+    }
   }
 
   @override
   Future<void> loadMore() async {
-    if (state.isLoadingMore || state.isInitialLoading || !state.hasMore) {
+    if (!_ownsSession ||
+        state.isLoadingMore ||
+        state.isInitialLoading ||
+        !state.hasMore) {
       return;
     }
-
-    final cursor = state.nextCursor;
-    if (cursor == null || cursor.isEmpty) {
-      return;
-    }
-
+    final cursor = state.nextCursor!;
+    final generation = ++_generation;
+    _cancellation?.cancel();
+    final cancellation = _cancellation = FeedRequestCancellation();
     state = state.copyWith(isLoadingMore: true, clearError: true);
     try {
-      final response = await _fetchRemote(cursor: cursor);
-      state = state.copyWith(
-        items: [...state.items, ...response.posts.map(_mapPostToFeedItem)],
-        nextCursor: response.nextCursor,
-        clearCursor: response.nextCursor == null,
-        isLoadingMore: false,
+      final response = await _fetchRemote(
+        generation,
+        cancellation,
+        cursor: cursor,
       );
-    } catch (_) {
+      if (!_ownsRequest(generation, cancellation)) return;
+      final nextCursor = _nextCursor(response);
+      if (nextCursor != null &&
+          (nextCursor == cursor || _visitedCursors.contains(nextCursor))) {
+        throw const FormatException('Feed cursor did not advance');
+      }
+      final seenIds = state.items.map((item) => item.id).toSet();
+      final additions = response.posts
+          .where((post) => seenIds.add(post.id))
+          .map(_mapPostToFeedItem);
       state = state.copyWith(
+        items: [...state.items, ...additions],
+        nextCursor: nextCursor,
+        clearCursor: nextCursor == null,
         isLoadingMore: false,
-        errorMessage: 'Unable to load more items.',
+        clearError: true,
       );
+      _visitedCursors.add(cursor);
+    } catch (error) {
+      if (_ownsRequest(generation, cancellation)) {
+        _showError(error, loadingMore: true);
+      }
     }
   }
 
-  Future<domain.FeedResponse> _fetchRemote({String? cursor}) async {
-    final service = _ref.read(socialFeedServiceProvider);
-    final token = await _ref.read(jwtProvider.future);
-    final authToken = token?.isNotEmpty == true ? token : null;
+  String? _nextCursor(domain.FeedResponse response) {
+    final cursor = response.nextCursor;
+    return cursor == null || cursor.isEmpty ? null : cursor;
+  }
 
+  void _showError(Object error, {required bool loadingMore}) {
+    final original = error is SocialFeedException ? error.originalError : error;
+    final status = original is DioException
+        ? original.response?.statusCode
+        : null;
+    final authentication = error is AuthRequiredException || status == 401;
+    if (authentication ||
+        error is _FeedUnavailable ||
+        status == 403 ||
+        status == 404) {
+      state = LiveFeedState(
+        requiresSignIn: authentication,
+        errorMessage: authentication
+            ? 'Sign in again to load posts.'
+            : 'This feed is no longer available.',
+      );
+      return;
+    }
+    state = state.copyWith(
+      isInitialLoading: false,
+      isLoadingMore: false,
+      errorMessage: loadingMore
+          ? 'Unable to load more items.'
+          : 'Unable to load feed right now.',
+    );
+  }
+
+  Future<domain.FeedResponse> _fetchRemote(
+    int generation,
+    FeedRequestCancellation cancellation, {
+    String? cursor,
+  }) async {
+    if (_feed.type == FeedType.moderation) {
+      return const domain.FeedResponse(
+        posts: [],
+        totalCount: 0,
+        hasMore: false,
+        page: 1,
+        pageSize: 25,
+      );
+    }
+    final token = await _session.readToken();
+    if (!_ownsRequest(generation, cancellation)) {
+      throw const AuthRequiredException();
+    }
+    final service = _ref.read(socialFeedServiceProvider);
     switch (_feed.type) {
       case FeedType.discover:
         return service.getDiscoverFeed(
           cursor: cursor,
           limit: 25,
-          token: authToken,
+          token: token,
+          cancellation: cancellation,
         );
       case FeedType.news:
         final entitlements = await _ref.read(feedEntitlementsProvider.future);
+        if (!_ownsRequest(generation, cancellation)) {
+          throw const AuthRequiredException();
+        }
+        if (token == null) throw const AuthRequiredException();
         if (entitlements == null || !entitlements.canAccessNewsBoard) {
-          throw StateError('News Board is available to Black accounts only.');
+          throw const _FeedUnavailable();
         }
-        return service.getNewsFeed(cursor: cursor, limit: 25, token: authToken);
+        return service.getNewsFeed(cursor: cursor, limit: 25, token: token);
       case FeedType.custom:
-        if (authToken == null) {
-          throw StateError('Sign in to access custom feeds');
-        }
+        if (token == null) throw const AuthRequiredException();
         return _ref
             .read(customFeedServiceProvider)
             .getCustomFeedItems(
-              token: authToken,
+              token: token,
               feedId: _feed.id,
               cursor: cursor,
               limit: 25,
             );
       case FeedType.moderation:
-        return const domain.FeedResponse(
-          posts: [],
-          totalCount: 0,
-          hasMore: false,
-          page: 1,
-          pageSize: 25,
-        );
+        throw StateError('Moderation feed has no member request');
     }
   }
 }
 
 final liveFeedStateProvider =
     StateNotifierProvider.family<LiveFeedController, LiveFeedState, FeedModel>(
-      (ref, feed) => LiveFeedNotifier(ref, feed),
+      (ref, feed) =>
+          LiveFeedNotifier(ref, feed, ref.watch(feedReadSessionProvider)),
     );
 
 class CustomFeedDraftNotifier extends StateNotifier<CustomFeedDraft> {
@@ -456,7 +602,10 @@ FeedRestoreResult computeFeedRestoreResult({
 }
 
 final feedRestoreSnapshotsProvider =
-    StateProvider<Map<String, FeedRestoreSnapshot>>((ref) => const {});
+    StateProvider<Map<String, FeedRestoreSnapshot>>((ref) {
+      ref.watch(feedReadSessionProvider);
+      return const {};
+    });
 
 final feedRestoreResultProvider = Provider.family<FeedRestoreResult, FeedModel>(
   (ref, feed) {

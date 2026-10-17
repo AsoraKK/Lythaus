@@ -91,7 +91,14 @@ class _PresentationPreferencesSectionState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Preferences', style: Theme.of(context).textTheme.titleLarge),
+          Semantics(
+            container: true,
+            header: true,
+            child: Text(
+              'Preferences',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+          ),
           Text(
             account
                 ? 'Save these choices to your account for signed-in devices.'

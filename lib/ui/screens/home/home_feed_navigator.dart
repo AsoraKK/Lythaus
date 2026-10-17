@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/feed/presentation/content_editor_screen.dart';
 import 'package:lythaus/features/feed/application/content_mutation.dart';
+import 'package:lythaus/features/feed/application/feed_read_session.dart';
 import 'package:lythaus/features/feed/presentation/create_post_screen.dart';
 import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
@@ -17,6 +18,7 @@ import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/ui/components/lythaus_top_bar.dart';
 import 'package:lythaus/ui/components/feed_control_panel.dart';
+import 'package:lythaus/ui/components/sign_in_required.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 import 'package:lythaus/design_system/tokens/motion.dart';
 import 'package:lythaus/features/feed/presentation/post_detail_screen.dart';
@@ -46,6 +48,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   int _activeIndex = 0;
   late AlphaFeedSection _activeSection;
   bool _feedControlsOpen = false;
+  FeedReadSession? _lastSession;
   final _feedControlsFocus = FocusNode(debugLabel: 'Feed controls');
   final _feedTitleFocus = FocusNode(debugLabel: 'Feed title');
 
@@ -80,7 +83,22 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
 
   @override
   Widget build(BuildContext context) {
-    final feeds = _feedsForSection(ref.watch(feedListProvider), _activeSection);
+    final session = ref.watch(feedReadSessionProvider);
+    if (_lastSession != null && !identical(_lastSession, session)) {
+      _activeIndex = 0;
+      _activeSection = widget.section;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            identical(_lastSession, session) &&
+            _pageController.hasClients) {
+          _pageController.jumpToPage(0);
+        }
+      });
+    }
+    _lastSession = session;
+    final allFeeds = ref.watch(feedListProvider);
+    final feeds = _feedsForSection(allFeeds, _activeSection);
+    final canSwitchFeeds = _canSwitchFeeds(allFeeds);
     final spacing = context.spacing;
 
     if (feeds.isEmpty) {
@@ -98,8 +116,12 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
               title: activeFeed.name,
               logoFocusNode: _feedControlsFocus,
               titleFocusNode: _feedTitleFocus,
-              onLogoTap: () => _openFeedControl(_feedControlsFocus),
-              onTitleTap: () => _openFeedControl(_feedTitleFocus),
+              onLogoTap: canSwitchFeeds
+                  ? () => _openFeedControl(_feedControlsFocus)
+                  : null,
+              onTitleTap: canSwitchFeeds
+                  ? () => _openFeedControl(_feedTitleFocus)
+                  : null,
               onSearchTap: _openSearch,
               onTrendingTap: _openTrending,
               useWordmark: true,
@@ -123,8 +145,9 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
                 },
                 itemCount: feeds.length,
                 itemBuilder: (context, index) => _FeedPage(
-                  key: ValueKey(feeds[index].id),
+                  key: ValueKey((feeds[index].id, session)),
                   feed: feeds[index],
+                  session: session,
                 ),
               ),
             ),
@@ -141,6 +164,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   }
 
   void _selectFeed(FeedModel feed) {
+    final session = ref.read(feedReadSessionProvider);
     final allFeeds = ref.read(feedListProvider);
     final globalIndex = allFeeds.indexWhere((item) => item.id == feed.id);
     if (globalIndex < 0) return;
@@ -160,7 +184,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     });
     ref.read(currentFeedIndexProvider.notifier).state = globalIndex;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_pageController.hasClients) return;
+      if (!mounted || !session.isCurrent || !_pageController.hasClients) return;
       if (disableAnimations) {
         _pageController.jumpToPage(index);
         return;
@@ -188,25 +212,43 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   }
 
   Widget _buildEmptySection(BuildContext context) {
+    final canSwitchFeeds = _canSwitchFeeds(ref.watch(feedListProvider));
     final isMyFeeds = _activeSection == AlphaFeedSection.myFeeds;
+    final isPrivateSection = _activeSection != AlphaFeedSection.discover;
+    final entitlements = isPrivateSection
+        ? ref.watch(feedEntitlementsProvider)
+        : null;
+    final customFeeds = isMyFeeds ? ref.watch(customFeedsProvider) : null;
+    final isLoading =
+        (entitlements?.isLoading ?? false) || (customFeeds?.isLoading ?? false);
+    final hasError =
+        (entitlements?.hasError ?? false) || (customFeeds?.hasError ?? false);
     final title = switch (_activeSection) {
       AlphaFeedSection.discover => 'Discover',
       AlphaFeedSection.myFeeds => 'My Feeds',
       AlphaFeedSection.newsBoard => 'News Board',
     };
-    final heading = switch (_activeSection) {
-      AlphaFeedSection.discover => 'Discover unavailable',
-      AlphaFeedSection.myFeeds => 'No custom feeds yet',
-      AlphaFeedSection.newsBoard => 'News Board is Black-only',
-    };
-    final description = switch (_activeSection) {
-      AlphaFeedSection.discover =>
-        'Try again when the Discover service is available.',
-      AlphaFeedSection.myFeeds =>
-        'Create a feed to follow the topics and accounts you choose.',
-      AlphaFeedSection.newsBoard =>
-        'News Board is available only to Black accounts. Lythaus confirms access before content loads.',
-    };
+    final heading = isLoading
+        ? 'Loading your feeds'
+        : hasError
+        ? 'Couldn’t load your feeds'
+        : switch (_activeSection) {
+            AlphaFeedSection.discover => 'Discover unavailable',
+            AlphaFeedSection.myFeeds => 'No custom feeds yet',
+            AlphaFeedSection.newsBoard => 'News Board is Black-only',
+          };
+    final description = isLoading
+        ? 'Checking which feeds are available.'
+        : hasError
+        ? 'Try again to confirm access and load your feeds.'
+        : switch (_activeSection) {
+            AlphaFeedSection.discover =>
+              'Try again when the Discover service is available.',
+            AlphaFeedSection.myFeeds =>
+              'Create a feed to follow the topics and accounts you choose.',
+            AlphaFeedSection.newsBoard =>
+              'News Board is available only to Black accounts. Lythaus confirms access before content loads.',
+          };
     final icon = switch (_activeSection) {
       AlphaFeedSection.discover => Icons.explore_outlined,
       AlphaFeedSection.myFeeds => Icons.dynamic_feed_outlined,
@@ -220,8 +262,12 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
               title: title,
               logoFocusNode: _feedControlsFocus,
               titleFocusNode: _feedTitleFocus,
-              onLogoTap: () => _openFeedControl(_feedControlsFocus),
-              onTitleTap: () => _openFeedControl(_feedTitleFocus),
+              onLogoTap: canSwitchFeeds
+                  ? () => _openFeedControl(_feedControlsFocus)
+                  : null,
+              onTitleTap: canSwitchFeeds
+                  ? () => _openFeedControl(_feedTitleFocus)
+                  : null,
               onSearchTap: _openSearch,
               onTrendingTap: _openTrending,
               useWordmark: true,
@@ -234,7 +280,10 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(icon, size: 48),
+                      if (isLoading)
+                        const CircularProgressIndicator()
+                      else
+                        Icon(icon, size: 48),
                       const SizedBox(height: 12),
                       Text(
                         heading,
@@ -242,7 +291,16 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
                       ),
                       const SizedBox(height: 8),
                       Text(description, textAlign: TextAlign.center),
-                      if (isMyFeeds) ...[
+                      if (hasError) ...[
+                        const SizedBox(height: 16),
+                        FilledButton(
+                          onPressed: () {
+                            ref.invalidate(feedEntitlementsProvider);
+                            ref.invalidate(customFeedsProvider);
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ] else if (isMyFeeds && !isLoading) ...[
                         const SizedBox(height: 16),
                         FilledButton.icon(
                           onPressed: () => Navigator.of(context).push(
@@ -265,11 +323,15 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
     );
   }
 
+  bool _canSwitchFeeds(List<FeedModel> feeds) =>
+      feeds.where((feed) => feed.type != FeedType.moderation).length > 1;
+
   void _openFeedControl(FocusNode triggerFocus) {
-    if (_feedControlsOpen) return;
+    final session = ref.read(feedReadSessionProvider);
+    final allFeeds = ref.read(feedListProvider);
+    if (_feedControlsOpen || !_canSwitchFeeds(allFeeds)) return;
     _feedControlsOpen = true;
     triggerFocus.requestFocus();
-    final allFeeds = ref.read(feedListProvider);
     final sectionFeeds = _feedsForSection(allFeeds, _activeSection);
     final activeFeed = sectionFeeds.isEmpty
         ? null
@@ -279,38 +341,52 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
       useSafeArea: true,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (sheetContext) => CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.escape): () {
-            Navigator.of(sheetContext).maybePop();
-          },
-        },
-        child: Focus(
-          autofocus: true,
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            heightFactor: 1,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: 640,
-                maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.72,
-              ),
-              child: Material(
-                child: SingleChildScrollView(
-                  child: FeedControlPanel(
-                    availableFeeds: allFeeds,
-                    selectedFeedId: activeFeed?.id,
-                    onSelect: (feed) {
-                      Navigator.of(sheetContext).pop();
-                      _selectFeed(feed);
-                    },
-                    onClose: () => Navigator.of(sheetContext).maybePop(),
+      builder: (sheetContext) => Consumer(
+        builder: (context, sheetRef, _) {
+          if (!identical(sheetRef.watch(feedReadSessionProvider), session)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (sheetContext.mounted &&
+                  ModalRoute.of(sheetContext)?.isCurrent == true) {
+                Navigator.of(sheetContext).pop();
+              }
+            });
+            return const SizedBox.shrink();
+          }
+          return CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.escape): () {
+                Navigator.of(sheetContext).maybePop();
+              },
+            },
+            child: Focus(
+              autofocus: true,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                heightFactor: 1,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 640,
+                    maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.72,
+                  ),
+                  child: Material(
+                    child: SingleChildScrollView(
+                      child: FeedControlPanel(
+                        availableFeeds: allFeeds,
+                        selectedFeedId: activeFeed?.id,
+                        onSelect: (feed) {
+                          Navigator.of(sheetContext).pop();
+                          if (!session.isCurrent) return;
+                          _selectFeed(feed);
+                        },
+                        onClose: () => Navigator.of(sheetContext).maybePop(),
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     ).whenComplete(() {
       _feedControlsOpen = false;
@@ -432,9 +508,10 @@ class _FeedSwitchRail extends StatelessWidget {
 }
 
 class _FeedPage extends ConsumerStatefulWidget {
-  const _FeedPage({super.key, required this.feed});
+  const _FeedPage({super.key, required this.feed, required this.session});
 
   final FeedModel feed;
+  final FeedReadSession session;
 
   @override
   ConsumerState<_FeedPage> createState() => _FeedPageState();
@@ -478,10 +555,20 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
     _logFirstFeedLoad(liveState);
     _applyRestoreIfReady(liveState: liveState, restoreResult: restoreResult);
 
-    if (liveState.isInitialLoading) {
+    if (liveState.requiresSignIn) {
+      return const SignInRequired(
+        message:
+            'Your session could not be verified. Sign in again or continue as a guest.',
+        returnTo: '/',
+      );
+    }
+
+    if (feed.type != FeedType.discover && liveState.isInitialLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (liveState.errorMessage != null && liveState.items.isEmpty) {
+    if (feed.type != FeedType.discover &&
+        liveState.errorMessage != null &&
+        liveState.items.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -503,9 +590,11 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
     return _buildLiveFeed(
       context,
       ref,
-      items: liveState.items,
+      items: liveState.isInitialLoading ? const [] : liveState.items,
       hasMore: liveState.hasMore,
       isLoadingMore: liveState.isLoadingMore,
+      isRefreshing: liveState.isInitialLoading,
+      hasError: liveState.errorMessage != null,
       showNewPostsPill: restoreResult.showNewPostsPill,
       onNewPostsPillTap: _onNewPostsPillTap,
       controller: _scrollController,
@@ -518,6 +607,8 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
     required List<FeedItem> items,
     required bool hasMore,
     required bool isLoadingMore,
+    required bool isRefreshing,
+    required bool hasError,
     required bool showNewPostsPill,
     required VoidCallback onNewPostsPillTap,
     required ScrollController controller,
@@ -536,6 +627,8 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
           onEditItem: (item) => _showEditPostDialog(context, ref, item),
           hasMore: hasMore,
           isLoadingMore: isLoadingMore,
+          isRefreshing: isRefreshing,
+          hasError: hasError,
           showNewPostsPill: showNewPostsPill,
           onNewPostsPillTap: onNewPostsPillTap,
           onLoadMore: () =>
@@ -603,7 +696,10 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
     _restoreCallbackScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _restoreCallbackScheduled = false;
-      if (!mounted || _restoreApplied || !_scrollController.hasClients) {
+      if (!mounted ||
+          !widget.session.isCurrent ||
+          _restoreApplied ||
+          !_scrollController.hasClients) {
         return;
       }
 
@@ -649,7 +745,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
   }
 
   void _persistRestoreSnapshot() {
-    if (!_scrollController.hasClients) {
+    if (!widget.session.isCurrent || !_scrollController.hasClients) {
       return;
     }
 
@@ -676,6 +772,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
     required double offset,
     required bool showNewPostsPill,
   }) {
+    if (!widget.session.isCurrent) return;
     final snapshots = ref.read(feedRestoreSnapshotsProvider);
     ref.read(feedRestoreSnapshotsProvider.notifier).state = {
       ...snapshots,
@@ -704,6 +801,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
   }
 
   Future<void> _openPostDetail(BuildContext context, String postId) async {
+    if (!widget.session.isCurrent) return;
     await Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => PostDetailScreen(postId: postId)),
     );
@@ -714,6 +812,7 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
     WidgetRef ref,
     FeedItem item,
   ) async {
+    if (!widget.session.isCurrent) return;
     final actor = ref.read(currentUserProvider)?.id;
     if (actor == null || actor.isEmpty || actor != item.authorId) return;
     final revised = await Navigator.of(context).push<Map<String, dynamic>>(
@@ -722,7 +821,9 @@ class _FeedPageState extends ConsumerState<_FeedPage> {
             ContentEditorScreen(contentId: item.id, text: item.body),
       ),
     );
-    if (!context.mounted || revised == null) return;
+    if (!context.mounted || !widget.session.isCurrent || revised == null) {
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
