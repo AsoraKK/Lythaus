@@ -33,6 +33,8 @@ const results = [];
 const scenarios = [];
 const snapshot = page => page.evaluate(() => JSON.parse(window.lythausNavigationSnapshot()));
 const nav = (page, name) => page.getByRole('button', { name: new RegExp(`^${name}(?:$|\\s+Tab)`) });
+const waitForTwoFrames = page => page.evaluate(() => new Promise(resolve =>
+  requestAnimationFrame(() => requestAnimationFrame(resolve))));
 try {
   for (const theme of ['light', 'dark']) for (const scale of [1, 2]) {
     const context = await browser.newContext({ viewport: { width: 390, height: 960 },
@@ -85,7 +87,7 @@ try {
         await field.waitFor();
         await page.waitForFunction(() => JSON.parse(window.lythausNavigationSnapshot()).focused);
         assert.deepEqual(await snapshot(page), initial, 'Tab return preserves controller, text, selection and focus');
-        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        await waitForTwoFrames(page);
         await page.waitForTimeout(250);
         const filename = `${engine}-${theme}-${scale}x-${width}.png`;
         await page.screenshot({ path: path.join(output, filename) });
@@ -94,8 +96,7 @@ try {
       const discover = nav(page, 'Discover');
       for (let i = 0; i < 40; i++) {
         await page.keyboard.press('Tab');
-        await page.evaluate(() => new Promise(resolve =>
-          requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        await waitForTwoFrames(page);
         if (await discover.evaluate(element => element === document.activeElement)) break;
       }
       assert.ok(await discover.evaluate(element => element === document.activeElement), 'Tab reaches navigation');
