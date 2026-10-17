@@ -20,9 +20,10 @@ export async function observeRenderHealth(context, origin) {
   });
   await context.addInitScript(() => {
     const health = window.__brandHealth = { frames: 0, events: [], contexts: [], started: performance.now() };
-    const original = HTMLCanvasElement.prototype.getContext;
     const observed = new WeakSet();
-    HTMLCanvasElement.prototype.getContext = function(type, ...args) {
+    const instrument=prototype=>{
+    const original = prototype.getContext;
+    prototype.getContext = function(type, ...args) {
       if (!observed.has(this)) {
         observed.add(this);
         for (const name of ['webglcontextlost', 'webglcontextrestored', 'contextlost', 'contextrestored'])
@@ -32,6 +33,9 @@ export async function observeRenderHealth(context, origin) {
       health.contexts.push({ type, available: !!result });
       return result;
     };
+    };
+    instrument(HTMLCanvasElement.prototype);
+    if(typeof OffscreenCanvas!=='undefined')instrument(OffscreenCanvas.prototype);
     const frame = () => { health.frames++; requestAnimationFrame(frame); };
     requestAnimationFrame(frame);
     window.addEventListener('unhandledrejection', event => health.events.push({ name: 'unhandledrejection', reason: String(event.reason) }));

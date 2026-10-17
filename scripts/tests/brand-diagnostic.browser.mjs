@@ -25,6 +25,22 @@ async function inventory(root,prefix='') {
   }return result;
 }
 const results=[];
+async function processHealth(rootPid){
+ const table=[];
+ for(const pid of (await readdir('/proc')).filter(p=>/^\d+$/.test(p)))try{
+  const status=await readFile('/proc/'+pid+'/status','utf8');
+  table.push({pid:Number(pid),parent:Number(status.match(/^PPid:\s+(\d+)/m)?.[1]),rssKiB:Number(status.match(/^VmRSS:\s+(\d+)/m)?.[1]??0)});
+ }catch{}
+ const ids=new Set([rootPid]);let changed=true;
+ while(changed){changed=false;for(const p of table)if(ids.has(p.parent)&&!ids.has(p.pid)){ids.add(p.pid);changed=true;}}
+ const files=new Set();
+ for(const pid of ids)try{for(const line of (await readFile('/proc/'+pid+'/maps','utf8')).split('\n')){
+  const file=line.match(/\s(\/[^\n]+)$/)?.[1];if(file&&!file.endsWith(' (deleted)'))files.add(file);
+ }}catch{}
+ const hashes={};
+ for(const file of files)try{hashes[file]=createHash('sha256').update(await readFile(file)).digest('hex');}catch{}
+ return {processes:table.filter(p=>ids.has(p.pid)),mappedFileHashes:hashes};
+}
 for(const build of builds){
  const root=path.resolve(build.root);
  const server=createServer(async(req,res)=>{try{
@@ -59,12 +75,15 @@ for(const build of builds){
      const i=(20*png.width+x)*4;result.regions[label]=color.every((v,c)=>png.data[i+c]===v);
    }
    for(const region of ['rectangle','text',...(!noBrand?['direct-brand','production-brand','svg','image']:[])]){
-    let rect=await page.getByRole('img',{name:'diagnostic-'+region,exact:true}).boundingBox();
+    const semanticRect=await page.getByRole('img',{name:'diagnostic-'+region,exact:true}).boundingBox();
+    // Fixed fixture geometry, independent of semantics merging/expanded bounds.
+    const index=['rectangle','text','direct-brand','production-brand','svg','image'].indexOf(region);
+    let rect={x:30,y:132+index*130,width:240,height:60};
     let ink=0;
     for(let y=Math.ceil(rect.y);y<rect.y+rect.height;y++)for(let x=Math.ceil(rect.x);x<rect.x+rect.width;x++){
       const i=(y*png.width+x)*4;if([0,1,2].some(c=>png.data[i+c]<200))ink++;
     }
-    result.regions[region]={ink,painted:ink>=16};
+    result.regions[region]={ink,painted:ink>=16,rect,semanticRect};
     if(['direct-brand','production-brand','svg'].includes(region)){
       const width=rect.height*470.28944891/130.6866688;rect={...rect,x:rect.x+(rect.width-width)/2,width};
       try{result.regions[region].fidelity=await compareApprovedArtwork(page,png,rect,origin+'/assets/assets/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg',PNG);}
@@ -73,10 +92,12 @@ for(const build of builds){
    }
    result.health=await health(page);result.live=result.health.page.frames>first.page.frames;
    assertRenderHealth(result.health);assert.ok(result.live);
-   result.classification=!result.regions.rectangle.painted&&!result.regions.text.painted?'whole-Flutter-loss':
+   result.classification=!result.regions.dom||!result.regions.canvas2d?'browser-control-loss':
+    !result.regions.rectangle.painted&&!result.regions.text.painted?'whole-Flutter-loss':
     !noBrand&&!result.regions['production-brand'].painted?'brand-only-loss':'controls-painted';
   }catch(error){result.error=error.message;result.health=await health(page).catch(e=>({unavailable:e.message}));}
   finally{
+    result.processHealth=await processHealth(browserServer.process().pid);
     result.processAlive=browserServer.process().exitCode===null;
     result.processExitCode=browserServer.process().exitCode;
     results.push(result);await browser.close();await browserServer.close();

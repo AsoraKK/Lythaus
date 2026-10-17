@@ -1,8 +1,11 @@
 import {artworkFidelity} from './brand-artwork-pixels.mjs';
+import assert from 'node:assert/strict';
 
 export async function compareApprovedArtwork(page, png, rect, url, PNG) {
   const x=Math.floor(rect.x), y=Math.floor(rect.y);
   const width=Math.ceil(rect.x+rect.width)-x, height=Math.ceil(rect.y+rect.height)-y;
+  assert.ok(x>=0&&y>=0&&x+width<=png.width&&y+height<=png.height,
+    `Artwork crop outside screenshot: ${JSON.stringify({rect,width,height,image:[png.width,png.height]})}`);
   const actual=new PNG({width,height});
   PNG.bitblt(png,actual,x,y,width,height,0,0);
   const frequencies=new Map();

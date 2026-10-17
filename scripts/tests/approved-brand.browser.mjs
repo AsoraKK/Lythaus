@@ -89,6 +89,14 @@ async function capture(page, name, validate = true) {
         : (dark?'lythaus-wordmark-white.5ba0451347e2.svg':'lythaus-wordmark-black.e450176663e0.svg');
       const url=name.includes('-admin-') ? await image.getAttribute('src') : '/assets/assets/brand/lythaus-v1/'+file;
       await compareApprovedArtwork(page,png,rect,new URL(url,page.url()).href,PNG);
+      if(name.includes('-shell-')&&!symbol){
+        const button=page.getByRole('button',{name:'Feed controls',exact:true});
+        assert.equal(await button.getByRole('img').count(),0,'Decorative brand adds no named image');
+        const box=await button.boundingBox();
+        const icon={x:box.x+(box.width-24)/2,y:box.y+(box.height-24)/2,width:24,height:24};
+        const symbolFile=dark?'lythaus-symbol-square-warm.fb697a91817f.svg':'lythaus-symbol-square-black.6a1b6d025e69.svg';
+        await compareApprovedArtwork(page,png,icon,new URL('/assets/assets/brand/lythaus-v1/'+symbolFile,page.url()).href,PNG);
+      }
       return;
     }
   }
@@ -150,8 +158,9 @@ try {
           }
           assert.deepEqual(errors, []);
           assert.deepEqual(blocked, []);
-          assertRenderHealth(await health(page));
-          results.push({ screen, theme, width, status: 'passed' });
+          const renderHealth=await health(page);
+          assertRenderHealth(renderHealth);
+          results.push({ screen, theme, width, status: 'passed', health:renderHealth });
         } catch (error) {
           await capture(page, engine + '-' + screen + '-' + theme + '-' + width + '-failed', false);
           results.push({ screen, theme, width, status: 'failed', error: error.message, errors, blocked, health:await health(page) });
