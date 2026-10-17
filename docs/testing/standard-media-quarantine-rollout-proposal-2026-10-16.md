@@ -61,7 +61,8 @@ Cloudflare Hyperdrive verifier, and a read-only PlanetScale registry/catalog
 session. The optional execution job has its own `production` environment gate,
 uses a pre-provisioned admin connection, and does not create roles or apply
 grants. The plan binds that connection to the planned branch, database, and
-origin fingerprint.
+origin fingerprint. Provider database slug and branch ID remain distinct from
+the physical PostgreSQL database name in the SQL connection.
 
 An unconditional `0021_cutover_owner_decision_pending` blocker keeps the plan
 from becoming ready. Once that gate is addressed, a fully applied 0021 schema

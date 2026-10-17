@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import parsePgConnectionString from 'pg-connection-string';
 import test from 'node:test';
 import { expectedMigrationPrefix, loadApprovedMigrations } from '../ci/planetscale-migration-manifest.mjs';
 import {
@@ -12,7 +13,12 @@ import {
   serialize0021PlanReadyOutput,
 } from '../ci/planetscale-0021-only-contract.mjs';
 import { classifyLocked0021State, recordCanonical0021RegistryMarker } from '../ci/planetscale-0021-registry-marker.mjs';
-import { assertAdminDatabaseTarget, branchQualifiedDatabaseTarget, buildPlanetScaleTargetIdentity } from '../ci/planetscale-0021-target-identity.mjs';
+import {
+  adminDatabaseConnectionConfig,
+  assertConnectedAdminDatabaseTarget,
+  branchQualifiedDatabaseTarget,
+  buildPlanetScaleTargetIdentity,
+} from '../ci/planetscale-0021-target-identity.mjs';
 import { applyMediaQuarantineMigration } from '../ci/planetscale-media-quarantine-migration.mjs';
 
 const registryThrough = (version) => expectedMigrationPrefix(version).map(({ name, appliedSha256 }) => ({ version: name, checksum: appliedSha256 }));
@@ -104,26 +110,82 @@ test('serializes readiness exactly as GitHub true/false strings and accepts only
   assert.equal(is0021PlanReadyOutput('TRUE'), false);
 });
 
-test('binds the planned target to the actual branch-qualified admin connection', () => {
-  const connectionString = 'postgresql://admin.branch123@db.example:5432/lythaus-core?sslmode=verify-full';
+test('binds provider identity separately from the physical database using the PostgreSQL snake_case session row', async () => {
+  const connectionString = 'postgresql://admin.branch123@db.example:5432/postgres?sslmode=verify-full&sslrootcert=system';
   const actual = branchQualifiedDatabaseTarget(connectionString);
   const plannedTarget = buildPlanetScaleTargetIdentity({
-    organization: 'lythaus',
-    database: 'lythaus-core',
-    branchName: 'main',
-    branchId: actual.branchId,
-    originFingerprint: actual.originFingerprint,
+    provider: { organization: 'lythaus', database: 'lythaus-core', branchName: 'main', branchId: actual.branchId },
+    sql: { databaseName: actual.sqlDatabaseName, originFingerprint: actual.originFingerprint },
   });
-  assert.deepEqual(assertAdminDatabaseTarget({
+  const driverConfig = parsePgConnectionString(adminDatabaseConnectionConfig(connectionString).connectionString);
+  assert.deepEqual({
+    host: driverConfig.host,
+    port: Number(driverConfig.port),
+    user: driverConfig.user,
+    database: driverConfig.database,
+  }, { host: 'db.example', port: 5432, user: 'admin.branch123', database: 'postgres' });
+  const queries = [];
+  const target = await assertConnectedAdminDatabaseTarget({
+    async query(sql) {
+      queries.push(sql);
+      return { rows: [{ database_name: 'postgres', user_name: 'admin.branch123' }] };
+    },
+  }, {
     connectionString,
     plannedTarget,
-    session: { databaseName: 'lythaus-core', userName: 'admin.branch123' },
-  }), { branchId: 'branch123', database: 'lythaus-core', originFingerprint: actual.originFingerprint });
-  assert.throws(() => assertAdminDatabaseTarget({
-    connectionString: 'postgresql://admin.branch999@db.example:5432/lythaus-core?sslmode=verify-full',
+  });
+  assert.deepEqual(target, {
+    provider: { organization: 'lythaus', database: 'lythaus-core', branchName: 'main', branchId: 'branch123' },
+    sql: { databaseName: 'postgres', originFingerprint: actual.originFingerprint },
+  });
+  assert.deepEqual(queries, ['SELECT current_database() AS database_name, current_user AS user_name']);
+});
+
+test('rejects a same-schema wrong-branch admin connection before any registry or DDL query', async () => {
+  const plannedConnection = 'postgresql://admin.branch123@db.example:5432/postgres?sslmode=verify-full';
+  const wrongBranchConnection = 'postgresql://admin.branch999@db.example:5432/postgres?sslmode=verify-full';
+  const actual = branchQualifiedDatabaseTarget(plannedConnection);
+  const wrongBranch = branchQualifiedDatabaseTarget(wrongBranchConnection);
+  assert.equal(wrongBranch.sqlDatabaseName, actual.sqlDatabaseName);
+  assert.equal(wrongBranch.originFingerprint, actual.originFingerprint);
+  const plannedTarget = buildPlanetScaleTargetIdentity({
+    provider: { organization: 'lythaus', database: 'lythaus-core', branchName: 'main', branchId: actual.branchId },
+    sql: { databaseName: actual.sqlDatabaseName, originFingerprint: actual.originFingerprint },
+  });
+  const queries = [];
+  await assert.rejects(assertConnectedAdminDatabaseTarget({
+    async query(sql) {
+      queries.push(sql);
+      return { rows: [{ database_name: 'postgres', user_name: 'admin.branch999' }] };
+    },
+  }, {
+    connectionString: wrongBranchConnection,
     plannedTarget,
-    session: { databaseName: 'lythaus-core', userName: 'admin.branch999' },
   }), { message: 'admin_database_branch_id_mismatch' });
+  assert.deepEqual(queries, ['SELECT current_database() AS database_name, current_user AS user_name']);
+  assert.equal(queries.some((sql) => sql.includes('system.schema_migrations') || sql.includes('ALTER TABLE') || sql.includes('CREATE INDEX')), false);
+});
+
+test('rejects pg-connection-string routing overrides, encoded parameters, and duplicate parameters', () => {
+  const base = 'postgresql://admin.branch123@db.example:5432/postgres?sslmode=verify-full';
+  const overrides = [
+    { url: base + '&host=clone.example', key: 'host', value: 'clone.example' },
+    { url: base + '&user=admin.branch999', key: 'user', value: 'admin.branch999' },
+    { url: base + '&port=6432', key: 'port', value: '6432' },
+    { url: base + '&dbname=clone_db', key: 'dbname', value: 'clone_db' },
+    { url: base + '&%68ost=clone.example', key: 'host', value: 'clone.example' },
+    { url: base + '&host=clone%2Eexample', key: 'host', value: 'clone.example' },
+    { url: base + '&sslmode=verify-full', duplicate: true },
+  ];
+  for (const override of overrides) {
+    const parsed = parsePgConnectionString(override.url);
+    if (override.key) assert.equal(parsed[override.key], override.value);
+    assert.throws(() => adminDatabaseConnectionConfig(override.url), {
+      message: override.duplicate
+        ? 'database_target_duplicate_query_parameter'
+        : 'database_target_query_parameter_not_allowed',
+    });
+  }
 });
 
 function createRegistryTestClient({ hideInsertedMarker = false } = {}) {

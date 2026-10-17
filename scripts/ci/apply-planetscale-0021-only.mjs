@@ -5,7 +5,7 @@ import pg from 'pg';
 import { loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
 import { exactRegistryPrefix } from './planetscale-migration-reconciliation.mjs';
 import { assess0021RegistryState, is0021PlanReadyOutput, MIGRATION_0020, MIGRATION_0021 } from './planetscale-0021-only-contract.mjs';
-import { assertAdminDatabaseTarget } from './planetscale-0021-target-identity.mjs';
+import { adminDatabaseConnectionConfig, assertConnectedAdminDatabaseTarget } from './planetscale-0021-target-identity.mjs';
 import { classifyLocked0021State, recordCanonical0021RegistryMarker } from './planetscale-0021-registry-marker.mjs';
 import { applyMediaQuarantineMigration, inspectMediaQuarantineMigration, verifyMediaQuarantineMigration } from './planetscale-media-quarantine-migration.mjs';
 
@@ -37,18 +37,21 @@ function assertExecutionGate() {
   if (!is0021PlanReadyOutput(process.env.PLANETSCALE_0021_PLAN_READY)) throw new Error('read_only_plan_not_ready');
   let plannedTarget;
   try { plannedTarget = JSON.parse(process.env.PLANETSCALE_0021_PLAN_TARGET_IDENTITY ?? ''); } catch { plannedTarget = null; }
-  if (!plannedTarget || plannedTarget.organization !== 'lythaus' || plannedTarget.database !== 'lythaus-core' || plannedTarget.branchName !== 'main' || !/^[a-f0-9]{64}$/.test(plannedTarget.sha256 ?? '')) {
+  if (plannedTarget?.provider?.organization !== 'lythaus'
+    || plannedTarget.provider.database !== 'lythaus-core'
+    || plannedTarget.provider.branchName !== 'main'
+    || !/^[a-z0-9]+$/.test(plannedTarget.provider.branchId ?? '')
+    || typeof plannedTarget.sql?.databaseName !== 'string'
+    || plannedTarget.sql.databaseName.trim() === ''
+    || !/^[a-f0-9]{64}$/.test(plannedTarget.sql.originFingerprint ?? '')
+    || !/^[a-f0-9]{64}$/.test(plannedTarget.sha256 ?? '')) {
     throw new Error('plan_target_identity_missing_or_invalid');
   }
   return plannedTarget;
 }
 
 function adminConnection(raw) {
-  if (!raw) throw new Error('PLANETSCALE_ADMIN_DATABASE_URL_missing');
-  const url = new URL(raw);
-  if (url.searchParams.get('sslmode') !== 'verify-full') throw new Error('admin_database_url_requires_sslmode_verify_full');
-  if (url.searchParams.get('sslrootcert') === 'system') url.searchParams.delete('sslrootcert');
-  return { connectionString: url.toString(), ssl: { rejectUnauthorized: true } };
+  return adminDatabaseConnectionConfig(raw);
 }
 
 async function readRegistry(client) {
@@ -62,9 +65,12 @@ function safeFailureCode(error) {
   const controlled = new Set([
     'execution_gate_not_approved', 'target_branch_not_main', 'read_only_plan_not_ready',
     'PLANETSCALE_ADMIN_DATABASE_URL_missing', 'admin_database_url_requires_sslmode_verify_full',
+    'database_target_url_missing', 'database_target_url_scheme_invalid', 'database_target_url_requires_verify_full',
+    'database_target_query_parameter_not_allowed', 'database_target_duplicate_query_parameter', 'database_target_query_parameter_value_invalid',
+    'database_target_sql_name_missing', 'database_target_sql_name_invalid',
     'plan_target_identity_missing_or_invalid', 'database_target_username_not_branch_qualified',
     'database_target_branch_id_invalid', 'database_target_origin_fingerprint_invalid',
-    'admin_database_branch_id_mismatch', 'admin_database_name_mismatch', 'admin_database_origin_mismatch',
+    'admin_database_branch_id_mismatch', 'admin_database_sql_name_mismatch', 'admin_database_origin_mismatch',
     'admin_database_target_identity_mismatch', 'admin_database_session_name_mismatch', 'admin_database_session_role_mismatch',
     'database_connection_is_read_only', 'migration_registry_missing',
     '0021_registry_prefix_changed_before_lock_acquisition', '0021_registry_prefix_changed_under_lock',
@@ -84,11 +90,9 @@ async function execute() {
   const client = new Client(adminConnection(process.env.PLANETSCALE_ADMIN_DATABASE_URL ?? ''));
   await client.connect();
   try {
-    const session = await client.query('SELECT current_database() AS database_name, current_user AS user_name');
-    const target = assertAdminDatabaseTarget({
+    const target = await assertConnectedAdminDatabaseTarget(client, {
       connectionString: process.env.PLANETSCALE_ADMIN_DATABASE_URL,
       plannedTarget,
-      session: session.rows[0],
     });
     report.target = target;
     const readOnly = await client.query('SHOW transaction_read_only');

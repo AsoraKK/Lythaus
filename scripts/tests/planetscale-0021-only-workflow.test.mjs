@@ -57,11 +57,8 @@ test('workflow passes the plan boolean unchanged and executor accepts true while
   assert.equal(JSON.parse(blocked.stdout).failureCode, 'read_only_plan_not_ready');
 
   const plannedTarget = buildPlanetScaleTargetIdentity({
-    organization: 'lythaus',
-    database: 'lythaus-core',
-    branchName: 'main',
-    branchId: 'branch123',
-    originFingerprint: 'a'.repeat(64),
+    provider: { organization: 'lythaus', database: 'lythaus-core', branchName: 'main', branchId: 'branch123' },
+    sql: { databaseName: 'postgres', originFingerprint: 'a'.repeat(64) },
   });
   const accepted = spawnSync(process.execPath, [executor], {
     cwd: root,
@@ -106,4 +103,11 @@ test('read-only plan and gated executor use exact scoped operations', () => {
   assert.match(executor, /lockedState\.action === 'RECOVER_MARKER'/);
   assert.match(executor, /recordCanonical0021RegistryMarker\(client, migration/);
   assert.doesNotMatch(executor, /applyGrants|PLANETSCALE_SERVICE_TOKEN|create.*role/i);
+  const connectionValidation = executor.indexOf('new Client(adminConnection(');
+  const targetValidation = executor.indexOf('const target = await assertConnectedAdminDatabaseTarget(client,');
+  assert.ok(connectionValidation >= 0);
+  assert.ok(targetValidation > connectionValidation);
+  assert.ok(targetValidation < executor.indexOf('const initialRegistry = await readRegistry(client)'));
+  assert.ok(targetValidation < executor.indexOf('await applyMediaQuarantineMigration(client'));
+  assert.match(executor, /return adminDatabaseConnectionConfig\(raw\)/);
 });

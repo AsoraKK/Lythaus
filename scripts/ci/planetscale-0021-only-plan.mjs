@@ -110,7 +110,7 @@ async function inspectDatabaseReadOnly() {
     if (readOnly.rows[0]?.transaction_read_only !== 'on') throw new Error('read_only_session_not_confirmed');
     const session = await client.query('SELECT current_database() AS database_name, current_user AS user_name');
     const sessionRow = session.rows[0] ?? {};
-    if (sessionRow.database_name !== target.database || ![target.username, target.role].includes(sessionRow.user_name)) {
+    if (sessionRow.database_name !== target.sqlDatabaseName || ![target.username, target.role].includes(sessionRow.user_name)) {
       throw new Error('schema_read_database_session_target_mismatch');
     }
     const registryExists = await client.query("SELECT to_regclass('system.schema_migrations') AS registry");
@@ -123,7 +123,7 @@ async function inspectDatabaseReadOnly() {
     evidence.database = {
       readOnly: true,
       branch: 'main',
-      target: { branchId: target.branchId, database: target.database, originFingerprint: target.originFingerprint },
+      target: { branchId: target.branchId, sqlDatabaseName: target.sqlDatabaseName, originFingerprint: target.originFingerprint },
       registryHead: registry.rows.at(-1)?.version ?? null,
       registryCount: registry.rows.length,
       stagedState: staged.state,
@@ -152,11 +152,16 @@ function finalizeTargetIdentity() {
   }
   try {
     evidence.targetIdentity = buildPlanetScaleTargetIdentity({
-      organization: process.env.PLANETSCALE_ORGANIZATION ?? 'lythaus',
-      database: process.env.PLANETSCALE_DATABASE ?? 'lythaus-core',
-      branchName: 'main',
-      branchId: providerBranch.id,
-      originFingerprint: databaseTarget.originFingerprint,
+      provider: {
+        organization: process.env.PLANETSCALE_ORGANIZATION ?? 'lythaus',
+        database: process.env.PLANETSCALE_DATABASE ?? 'lythaus-core',
+        branchName: 'main',
+        branchId: providerBranch.id,
+      },
+      sql: {
+        databaseName: databaseTarget.sqlDatabaseName,
+        originFingerprint: databaseTarget.originFingerprint,
+      },
     });
   } catch {
     blockers.push('main_target_identity_invalid');

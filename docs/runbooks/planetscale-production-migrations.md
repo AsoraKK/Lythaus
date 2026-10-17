@@ -60,6 +60,14 @@ ID, be successful and deletion-protected, belong to `main`, be undeleted, and
 remain unexpired. These checks use the [PlanetScale branch API](https://planetscale.com/docs/api/reference/get_branch)
 and [backup API](https://planetscale.com/docs/api/reference/get_backup).
 
+The target identity carries the PlanetScale database slug and branch ID
+separately from the physical PostgreSQL database name and origin fingerprint.
+The executor checks its branch-qualified admin URL and the connected session
+against both identities. The URL accepts only the literal
+`sslmode=verify-full` and optional `sslrootcert=system` query parameters; host,
+user, port, database routing overrides, encoded parameters, and duplicate
+parameters fail closed before the admin connection is created.
+
 Supply an operator cost estimate, its reference, and the existing positive
 `PLANETSCALE_MIGRATION_USAGE_MAX_USD` ceiling. This is a review comparison;
 the ceiling does not enforce or cap actual provider spend. The plan requires
