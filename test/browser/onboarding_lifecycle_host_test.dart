@@ -16,7 +16,8 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: LythausTheme.light(),
-        builder: (context, child) => OnboardingLifecycleHost(child: child!),
+        builder: (context, child) =>
+            OnboardingLifecycleHost(child: FocusTraversalGroup(child: child!)),
         home: Scaffold(
           body: TextButton(
             focusNode: underlyingFocus,

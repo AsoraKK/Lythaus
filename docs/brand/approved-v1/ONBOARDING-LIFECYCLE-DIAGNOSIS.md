@@ -18,6 +18,10 @@ Four controls run at each of those four theme/width/scale conditions:
    existing router stays mounted offstage. The real signed-out URL remains `/login`;
    it is not an onboarding URL. The visible widget is verified to be onboarding.
 
+Both wrapped controls isolate the hidden app in a disabled focus scope and give
+the visible fixture Navigator its own Hero scope. The companion test proves the
+background stays mounted but cannot take focus, and Continue reaches its marker.
+
 All controls add the same on-demand read-only geometry getter. It changes
 compiled bytes, and cannot exclude an observation effect. The original static
 fixture's auth override remains unchanged; no artificial auth transitions are

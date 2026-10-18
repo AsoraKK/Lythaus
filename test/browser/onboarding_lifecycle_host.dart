@@ -12,7 +12,13 @@ class OnboardingLifecycleHost extends StatelessWidget {
   Widget build(BuildContext context) => Stack(
     fit: StackFit.expand,
     children: [
-      ExcludeFocus(child: Offstage(child: child)),
+      FocusScope(
+        canRequestFocus: false,
+        skipTraversal: true,
+        descendantsAreFocusable: false,
+        descendantsAreTraversable: false,
+        child: Offstage(child: child),
+      ),
       HeroControllerScope.none(
         child: Navigator(
           onGenerateRoute: (_) => MaterialPageRoute<void>(
