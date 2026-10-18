@@ -25,7 +25,9 @@ introduced. The production host uses real auth initialization, with only the exa
 refresh POST fulfilled locally as signed out. All other external traffic is
 rejected except existing pinned engine fonts.
 
-Each observation starts a fresh browser process, blocks service workers, uses
+Control order rotates across the four conditions, so each variant runs first,
+second, third and fourth once. Each observation starts a fresh browser process,
+blocks service workers, uses
 reduced motion and captures once at 250ms and once at 5250ms after the natural
 `flutter-first-frame` event. Semantics stays disabled throughout. No input,
 scroll, resize, frame request, callback pump, RAF loop, canvas wrapper or repaint

@@ -32,7 +32,8 @@ for(const files of Object.values(resources))assert.deepEqual(assets(files),asset
 await writeFile(path.join(output,'resources.json'),JSON.stringify({source,reviewHead:process.env.ONBOARDING_REVIEW_HEAD,resources,matchedAssetCount:Object.keys(assets(resources['static-original-1'])).length},null,2)+'\n');
 const types={'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.wasm':'application/wasm','.ttf':'font/ttf','.otf':'font/otf','.ico':'image/x-icon'};
 const results=[];
-for(const condition of conditions)for(const kind of variants){
+// Rotate control order across the four conditions; no host is always last.
+for(const [conditionIndex,condition] of conditions.entries())for(const kind of [...variants.slice(conditionIndex),...variants.slice(0,conditionIndex)]){
  const {width,theme,scale}=condition,real=kind==='production-host';
  const root=roots[kind][real?scale-1:0],name=`${kind}-${theme}-${width}`;
  const server=createServer(async(req,res)=>{try{
@@ -81,6 +82,7 @@ for(const condition of conditions)for(const kind of variants){
    result.snapshots.push(snapshot);images.push({snapshot,png});
    assert.ok(before.now-result.firstFrameAt>=dwell,'Complete fixed dwell');
    for(const state of [before,after]){
+    assert.equal(new URL(state.url).pathname,real?'/login':'/','Existing host URL; no onboarding route is invented');
     assert.equal(state.semanticsCount,0);assert.equal(state.layout.semanticsEnabled,false);assert.equal(state.layout.visibleAuthChoices,0,'The visible surface is onboarding, never login');
     assert.equal(state.layout.screens.length,1);assert.equal(state.layout.screens[0].brands.length,1);assert.equal(state.layout.screens[0].scale,scale);
     assert.equal(state.readyState,'complete');assert.equal(state.visibility,'visible');assert.deepEqual(state.observation.errors,[]);assert.deepEqual(state.observation.rejections,[]);
