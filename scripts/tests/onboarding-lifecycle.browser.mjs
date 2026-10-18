@@ -49,13 +49,13 @@ for(const [conditionIndex,condition] of conditions.entries())for(const kind of [
  context.on('response',response=>{const item={url:response.url(),status:response.status()};health.responses.push(item);pending.push(response.body().then(bytes=>{item.sha256=createHash('sha256').update(bytes).digest('hex');}).catch(error=>{item.bodyError=error.message;}));});
  context.on('requestfailed',request=>health.failed.push({url:request.url(),error:request.failure()?.errorText}));
  context.on('page',page=>{
-  page.on('pageerror',error=>health.pageErrors.push(error.message));page.on('crash',()=>health.crashes++);
+  page.on('pageerror',error=>health.pageErrors.push({message:error.message,stack:error.stack}));page.on('crash',()=>health.crashes++);
   page.on('console',message=>{if(message.type()==='error')health.consoleErrors.push({text:message.text(),url:message.location().url});});
  });
  await context.addInitScript(()=>{
   window.__onboardingObservation={firstFrameAt:null,errors:[],rejections:[]};
   window.addEventListener('flutter-first-frame',()=>{window.__onboardingObservation.firstFrameAt??=performance.now();});
-  window.addEventListener('error',event=>window.__onboardingObservation.errors.push(event.message));
+  window.addEventListener('error',event=>window.__onboardingObservation.errors.push({message:event.message,error:String(event.error),stack:event.error?.stack,filename:event.filename,line:event.lineno}));
   window.addEventListener('unhandledrejection',event=>window.__onboardingObservation.rejections.push(String(event.reason)));
  });
  await context.route('**/*',route=>{

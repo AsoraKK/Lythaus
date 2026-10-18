@@ -11,11 +11,19 @@ void main() {
     tester,
   ) async {
     GoogleFonts.config.allowRuntimeFetching = false;
+    final underlyingFocus = FocusNode();
+    addTearDown(underlyingFocus.dispose);
     await tester.pumpWidget(
       MaterialApp(
         theme: LythausTheme.light(),
         builder: (context, child) => OnboardingLifecycleHost(child: child!),
-        home: const Scaffold(body: Text('Underlying app stays mounted')),
+        home: Scaffold(
+          body: TextButton(
+            focusNode: underlyingFocus,
+            onPressed: () {},
+            child: const Text('Underlying app stays mounted'),
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -26,6 +34,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Synthetic continuation completed'), findsNothing);
+    expect(underlyingFocus.canRequestFocus, isFalse);
     await tester.ensureVisible(find.text('Continue'));
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
