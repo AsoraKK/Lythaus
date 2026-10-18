@@ -82,13 +82,26 @@ marker; it does not rerun DDL in this recovery path. Active builds, hidden
 index progress, drift, any checksum mismatch, and provider unavailability
 block execution.
 
-An unconditional `0021_cutover_owner_decision_pending` blocker keeps the plan
-from becoming ready. Completing read-only evidence does not authorize a
-migration or release action.
+The plan requires candidate-specific execution consent from
+`PLANETSCALE_0021_EXECUTION_APPROVED_SHA` and
+`PLANETSCALE_0021_EXECUTION_APPROVAL_REFERENCE`, configured in the protected
+`production` environment after the specific hosted 0021 action is approved.
+The first must be the exact lowercase 40-character `release_sha`; the second
+must identify that approval. Neither is a dispatch input. Missing, malformed
+or stale approval keeps the plan blocked. A new main SHA needs its own approval.
+The executor independently checks the same consent before connecting, even
+when a caller supplies `PLANETSCALE_0021_PLAN_READY=true`.
+
+Maintenance-gap consent resolves downtime choice only. It does not populate
+execution consent, authorize spending or credential/configuration changes,
+or establish any backup, restore, role or target evidence. A matching approval
+removes only the consent blocker; every other plan blocker still applies.
+Keep the existing production environment review and exact-main checks.
 
 ## Scoped 0021 execution
 
-Set `execute_0021=true` only after the read-only plan is ready. GitHub evaluates
+Set `execute_0021=true` only after the read-only plan is ready and consent is
+recorded for that exact candidate. GitHub evaluates
 the `production` environment again for the separate execution job. That job
 rechecks the current main SHA, rebuilds the read-only plan, and uses only the
 pre-provisioned `PLANETSCALE_ADMIN_DATABASE_URL`; it creates no PlanetScale

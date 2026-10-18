@@ -3,7 +3,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { planetScaleServiceTokenAuthorizationHeader } from '../planetscale/service-token-auth.mjs';
-import { assess0021RegistryState, assessOperatorCostEstimate, assessPlanetScaleBackupEvidence, MIGRATION_0020, MIGRATION_0021, resolve0021BackupId, serialize0021PlanReadyOutput } from './planetscale-0021-only-contract.mjs';
+import { assess0021ExecutionConsent, assess0021RegistryState, assessOperatorCostEstimate, assessPlanetScaleBackupEvidence, MIGRATION_0020, MIGRATION_0021, resolve0021BackupId, serialize0021PlanReadyOutput } from './planetscale-0021-only-contract.mjs';
 import { branchQualifiedDatabaseTarget, buildPlanetScaleTargetIdentity } from './planetscale-0021-target-identity.mjs';
 import { inspectMediaQuarantineMigration, verifyMediaQuarantineMigration } from './planetscale-media-quarantine-migration.mjs';
 
@@ -14,7 +14,6 @@ const evidence = {
   mode: 'read-only-0021-plan',
   targetBranch: 'main',
   migration: MIGRATION_0021,
-  executionEligibility: 'blocked_pending_owner_decision',
   databaseWrites: false,
   providerMutations: false,
   generatedAt: new Date(now).toISOString(),
@@ -26,7 +25,12 @@ function addBlockers(items) {
 }
 
 function report() {
-  const output = { ...evidence, blockers, readyForProtectedExecutionReview: blockers.length === 0 };
+  const output = {
+    ...evidence,
+    executionEligibility: blockers.length === 0 ? 'ready_for_protected_execution_review' : 'blocked_pending_prerequisites',
+    blockers,
+    readyForProtectedExecutionReview: blockers.length === 0,
+  };
   const serialized = `${JSON.stringify(output, null, 2)}\n`;
   const reportPath = process.env.MIGRATION_PLAN_REPORT_FILE ?? '';
   if (reportPath) {
@@ -228,7 +232,12 @@ function verifyHyperdriveOriginsReadOnly() {
 
 if (process.env.PSCALE_BRANCH_NAME !== 'main') blockers.push('PSCALE_BRANCH_NAME_must_be_main');
 if (!/^[0-9a-f]{40}$/.test(evidence.sourceMainSha ?? '')) blockers.push('release_sha_missing_or_invalid');
-blockers.push('0021_cutover_owner_decision_pending');
+evidence.ownerExecutionConsent = assess0021ExecutionConsent({
+  releaseSha: evidence.sourceMainSha,
+  approvedSha: process.env.PLANETSCALE_0021_EXECUTION_APPROVED_SHA,
+  approvalReference: process.env.PLANETSCALE_0021_EXECUTION_APPROVAL_REFERENCE,
+});
+addBlockers(evidence.ownerExecutionConsent.blockers);
 inspectCostEstimate();
 await inspectProviderEvidence();
 await inspectDatabaseReadOnly();

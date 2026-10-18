@@ -256,6 +256,8 @@ jobs:
         id: plan
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
+          PLANETSCALE_0021_EXECUTION_APPROVED_SHA: ${{ vars.PLANETSCALE_0021_EXECUTION_APPROVED_SHA }}
+          PLANETSCALE_0021_EXECUTION_APPROVAL_REFERENCE: ${{ vars.PLANETSCALE_0021_EXECUTION_APPROVAL_REFERENCE }}
           PSCALE_BRANCH_NAME: main
           PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
           PLANETSCALE_ORGANIZATION: lythaus
@@ -309,6 +311,8 @@ jobs:
         id: plan
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
+          PLANETSCALE_0021_EXECUTION_APPROVED_SHA: ${{ vars.PLANETSCALE_0021_EXECUTION_APPROVED_SHA }}
+          PLANETSCALE_0021_EXECUTION_APPROVAL_REFERENCE: ${{ vars.PLANETSCALE_0021_EXECUTION_APPROVAL_REFERENCE }}
           PSCALE_BRANCH_NAME: main
           PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
           PLANETSCALE_ORGANIZATION: lythaus
@@ -328,6 +332,9 @@ jobs:
           test "$(sed -n 's/^ready=//p' "$GITHUB_OUTPUT" | tail -n 1)" = true
       - name: Apply only the pinned staged 0021 migration
         env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          PLANETSCALE_0021_EXECUTION_APPROVED_SHA: ${{ vars.PLANETSCALE_0021_EXECUTION_APPROVED_SHA }}
+          PLANETSCALE_0021_EXECUTION_APPROVAL_REFERENCE: ${{ vars.PLANETSCALE_0021_EXECUTION_APPROVAL_REFERENCE }}
           PSCALE_BRANCH_NAME: main
           PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
           PLANETSCALE_0021_EXECUTION_APPROVED: ${{ inputs.execute_0021 && 'approved' || '' }}
