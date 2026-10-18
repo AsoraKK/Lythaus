@@ -78,6 +78,13 @@ class _ProfileTabViewState extends ConsumerState<ProfileTabView>
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
+    final keyboard = HardwareKeyboard.instance;
+    if (keyboard.isAltPressed ||
+        keyboard.isControlPressed ||
+        keyboard.isMetaPressed ||
+        keyboard.isShiftPressed) {
+      return KeyEventResult.ignored;
+    }
     final direction = Directionality.of(context);
     final previous = direction == TextDirection.ltr ? -1 : 1;
     final next = -previous;

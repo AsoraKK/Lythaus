@@ -1,4 +1,4 @@
-import 'dart:ui' show SemanticsRole, Tristate;
+import 'dart:ui' show SemanticsRole, TextDirection, Tristate;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -26,20 +26,50 @@ Widget _pages() => ProfileTabView(
 Future<GoRouter> _open(
   WidgetTester tester, {
   String location = '/user/a?tab=profile',
+  TextDirection textDirection = TextDirection.ltr,
+  bool includeOutsideControl = false,
+  FocusNode? outsideFocusNode,
+  ValueChanged<KeyEvent>? onUnhandledKey,
 }) async {
   final router = GoRouter(
     initialLocation: location,
     routes: [
       GoRoute(
         path: '/user/:id',
-        builder: (context, state) => Scaffold(body: _pages()),
+        builder: (context, state) => Directionality(
+          textDirection: textDirection,
+          child: Scaffold(
+            body: includeOutsideControl
+                ? Column(
+                    children: [
+                      Focus(
+                        focusNode: outsideFocusNode,
+                        child: TextButton(
+                          onPressed: () {},
+                          child: const Text('Outside tabs'),
+                        ),
+                      ),
+                      Expanded(child: _pages()),
+                    ],
+                  )
+                : _pages(),
+          ),
+        ),
       ),
     ],
   );
   addTearDown(router.dispose);
-  await tester.pumpWidget(
-    ProviderScope(child: MaterialApp.router(routerConfig: router)),
-  );
+  Widget app = ProviderScope(child: MaterialApp.router(routerConfig: router));
+  if (onUnhandledKey != null) {
+    app = Focus(
+      onKeyEvent: (node, event) {
+        onUnhandledKey(event);
+        return KeyEventResult.ignored;
+      },
+      child: app,
+    );
+  }
+  await tester.pumpWidget(app);
   await tester.pumpAndSettle();
   return router;
 }
@@ -248,6 +278,236 @@ void main() {
       }
     },
   );
+
+  testWidgets(
+    'modified keys do not navigate tabs and Alt arrows pass through',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      final unhandledNavigationKeys =
+          <(LogicalKeyboardKey, bool, bool, bool, bool)>[];
+      try {
+        final router = await _open(
+          tester,
+          onUnhandledKey: (event) {
+            if ((event is KeyDownEvent || event is KeyRepeatEvent) &&
+                (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
+                    event.logicalKey == LogicalKeyboardKey.arrowRight ||
+                    event.logicalKey == LogicalKeyboardKey.home ||
+                    event.logicalKey == LogicalKeyboardKey.end)) {
+              final keyboard = HardwareKeyboard.instance;
+              unhandledNavigationKeys.add((
+                event.logicalKey,
+                keyboard.isAltPressed,
+                keyboard.isControlPressed,
+                keyboard.isMetaPressed,
+                keyboard.isShiftPressed,
+              ));
+            }
+          },
+        );
+        final overview = find.widgetWithText(Tab, 'Overview');
+        Focus.of(tester.element(overview)).requestFocus();
+        await tester.pump();
+
+        Future<void> expectPassThrough(
+          LogicalKeyboardKey modifier,
+          LogicalKeyboardKey key, {
+          bool shouldBubble = false,
+          required bool alt,
+          required bool control,
+          required bool meta,
+          required bool shift,
+        }) async {
+          final oldEventCount = unhandledNavigationKeys.length;
+          await tester.sendKeyDownEvent(modifier);
+          await tester.sendKeyEvent(key);
+          await tester.sendKeyUpEvent(modifier);
+          await tester.pumpAndSettle();
+
+          if (shouldBubble) {
+            expect(unhandledNavigationKeys, hasLength(oldEventCount + 1));
+            final observed = unhandledNavigationKeys.last;
+            expect(observed.$1, key);
+            expect(observed.$2, alt);
+            expect(observed.$3, control);
+            expect(observed.$4, meta);
+            expect(observed.$5, shift);
+          }
+          final overviewSemantics = tester.getSemantics(overview);
+          expect(overviewSemantics.flagsCollection.isFocused, Tristate.isTrue);
+          expect(overviewSemantics.flagsCollection.isSelected, Tristate.isTrue);
+          expect(
+            router
+                .routeInformationProvider
+                .value
+                .uri
+                .queryParameters['profileTab'],
+            isNull,
+          );
+        }
+
+        await expectPassThrough(
+          LogicalKeyboardKey.altLeft,
+          LogicalKeyboardKey.arrowLeft,
+          shouldBubble: true,
+          alt: true,
+          control: false,
+          meta: false,
+          shift: false,
+        );
+        await expectPassThrough(
+          LogicalKeyboardKey.altLeft,
+          LogicalKeyboardKey.arrowRight,
+          shouldBubble: true,
+          alt: true,
+          control: false,
+          meta: false,
+          shift: false,
+        );
+        await expectPassThrough(
+          LogicalKeyboardKey.controlLeft,
+          LogicalKeyboardKey.arrowLeft,
+          alt: false,
+          control: true,
+          meta: false,
+          shift: false,
+        );
+        await expectPassThrough(
+          LogicalKeyboardKey.controlLeft,
+          LogicalKeyboardKey.arrowRight,
+          alt: false,
+          control: true,
+          meta: false,
+          shift: false,
+        );
+        await expectPassThrough(
+          LogicalKeyboardKey.shiftLeft,
+          LogicalKeyboardKey.home,
+          alt: false,
+          control: false,
+          meta: false,
+          shift: true,
+        );
+        await expectPassThrough(
+          LogicalKeyboardKey.metaLeft,
+          LogicalKeyboardKey.end,
+          alt: false,
+          control: false,
+          meta: true,
+          shift: false,
+        );
+        expect(tester.takeException(), isNull);
+      } finally {
+        semantics.dispose();
+      }
+    },
+  );
+
+  testWidgets('tab arrows follow RTL direction', (tester) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      final router = await _open(tester, textDirection: TextDirection.rtl);
+      final posts = find.widgetWithText(Tab, 'Posts');
+      Focus.of(tester.element(posts)).requestFocus();
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      final overview = find.widgetWithText(Tab, 'Overview');
+      expect(
+        tester.getSemantics(overview).flagsCollection.isFocused,
+        Tristate.isTrue,
+      );
+      expect(
+        tester.getSemantics(overview).flagsCollection.isSelected,
+        Tristate.isTrue,
+      );
+      expect(find.text('Overview row 1').hitTestable(), findsOneWidget);
+      expect(
+        router.routeInformationProvider.value.uri.queryParameters['profileTab'],
+        isNull,
+      );
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSemantics(posts).flagsCollection.isFocused,
+        Tristate.isTrue,
+      );
+      expect(
+        tester.getSemantics(posts).flagsCollection.isSelected,
+        Tristate.isTrue,
+      );
+      expect(find.text('Saved own posts').hitTestable(), findsOneWidget);
+      expect(
+        router.routeInformationProvider.value.uri.queryParameters['profileTab'],
+        'posts',
+      );
+      expect(tester.takeException(), isNull);
+    } finally {
+      semantics.dispose();
+    }
+  });
+
+  testWidgets('navigation keys outside the tab list do not select a tab', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      final outsideFocusNode = FocusNode();
+      addTearDown(outsideFocusNode.dispose);
+      final router = await _open(
+        tester,
+        includeOutsideControl: true,
+        outsideFocusNode: outsideFocusNode,
+      );
+      expect(find.text('Outside tabs'), findsOneWidget);
+
+      for (final key in [
+        LogicalKeyboardKey.arrowRight,
+        LogicalKeyboardKey.arrowLeft,
+        LogicalKeyboardKey.home,
+        LogicalKeyboardKey.end,
+      ]) {
+        outsideFocusNode.requestFocus();
+        await tester.pump();
+        expect(outsideFocusNode.hasFocus, isTrue);
+        await tester.sendKeyEvent(key);
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .getSemantics(find.widgetWithText(Tab, 'Overview'))
+              .flagsCollection
+              .isSelected,
+          Tristate.isTrue,
+        );
+        expect(
+          router
+              .routeInformationProvider
+              .value
+              .uri
+              .queryParameters['profileTab'],
+          isNull,
+        );
+      }
+
+      expect(
+        tester
+            .getSemantics(find.widgetWithText(Tab, 'Overview'))
+            .flagsCollection
+            .isSelected,
+        Tristate.isTrue,
+      );
+      expect(
+        router.routeInformationProvider.value.uri.queryParameters['profileTab'],
+        isNull,
+      );
+      expect(find.text('Overview row 1').hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    } finally {
+      semantics.dispose();
+    }
+  });
 
   testWidgets('narrow large text and reduced motion keep tabs reachable', (
     tester,
