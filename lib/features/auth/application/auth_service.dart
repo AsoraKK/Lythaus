@@ -40,7 +40,12 @@ class AuthService {
   String? _memoryAccessToken;
   Future<void> _storageWrites = Future.value();
   Future<bool>? _refreshInFlight;
+  int? _refreshInFlightEpoch;
+  int? _refreshInFlightOwnerRevision;
   int _sessionEpoch = 0;
+  int _sessionOwnerRevision = 0;
+  int? _logoutFenceOwnerRevision;
+  int? _activeLogoutEpoch;
   bool remoteLogoutConfirmed = true;
   bool _signedOut = false;
 
@@ -54,38 +59,75 @@ class AuthService {
     if (_useWebSession) 'X-Lythaus-Auth-Transport': 'cookie-v1',
   };
 
-  Future<void> _serializeStorage(Future<void> Function() operation) {
+  Future<T> _serializeStorage<T>(Future<T> Function() operation) {
     final result = _storageWrites.then((_) => operation());
-    _storageWrites = result.catchError((Object _) {});
+    _storageWrites = result.then<void>((_) {}).catchError((Object _) {});
     return result;
   }
 
-  Future<void> _storeSession(
+  bool get _logoutFenceIsActive =>
+      _logoutFenceOwnerRevision != null &&
+      _logoutFenceOwnerRevision == _sessionOwnerRevision;
+
+  Future<bool> _storeSession(
     int epoch,
     String access,
-    String? refresh, [
+    String? refresh, {
     User? user,
-  ]) => _serializeStorage(() async {
-    if (epoch != _sessionEpoch) throw AuthFailure.cancelledByUser();
-    if (_useWebSession) {
-      _memoryAccessToken = access;
+    bool loginCommit = false,
+    int? expectedOwnerRevision,
+    String? expectedRefreshToken,
+  }) async {
+    var committed = false;
+    await _serializeStorage(() async {
+      if (epoch != _sessionEpoch ||
+          (expectedOwnerRevision != null &&
+              expectedOwnerRevision != _sessionOwnerRevision) ||
+          (!loginCommit && _logoutFenceIsActive)) {
+        return;
+      }
+      if (expectedRefreshToken != null && !_useWebSession) {
+        final currentRefreshToken = await _secureStorage.read(
+          key: _refreshTokenKey,
+        );
+        if (epoch != _sessionEpoch ||
+            expectedOwnerRevision != _sessionOwnerRevision ||
+            currentRefreshToken != expectedRefreshToken ||
+            _logoutFenceIsActive) {
+          return;
+        }
+      }
+      if (_useWebSession) {
+        await Future.wait([
+          _safeDelete(_jwtKey),
+          _safeDelete(_refreshTokenKey),
+          _safeDelete(_userKey),
+        ]);
+        if (epoch != _sessionEpoch) return;
+        _memoryAccessToken = access;
+        markBrowserLogout(false);
+      } else {
+        await Future.wait([
+          _secureStorage.write(key: _jwtKey, value: access),
+          _secureStorage.write(key: _refreshTokenKey, value: refresh),
+          if (user != null)
+            _secureStorage.write(
+              key: _userKey,
+              value: jsonEncode(user.toJson()),
+            ),
+        ]);
+        if (epoch != _sessionEpoch) return;
+      }
       _signedOut = false;
-      markBrowserLogout(false);
-      await Future.wait([
-        _safeDelete(_jwtKey),
-        _safeDelete(_refreshTokenKey),
-        _safeDelete(_userKey),
-      ]);
-      return;
-    }
-    await Future.wait([
-      _secureStorage.write(key: _jwtKey, value: access),
-      _secureStorage.write(key: _refreshTokenKey, value: refresh),
-      if (user != null)
-        _secureStorage.write(key: _userKey, value: jsonEncode(user.toJson())),
-    ]);
-    _signedOut = false;
-  });
+      if (loginCommit) {
+        _sessionOwnerRevision += 1;
+        _logoutFenceOwnerRevision = null;
+        _activeLogoutEpoch = null;
+      }
+      committed = true;
+    });
+    return committed;
+  }
 
   static String _resolveAuthUrl(String configured) {
     final value = configured.trim().isEmpty
@@ -142,7 +184,15 @@ class AuthService {
       }
       final user = await _fetchCurrentUser(accessToken);
       if (epoch != _sessionEpoch) throw AuthFailure.cancelledByUser();
-      await _storeSession(epoch, accessToken, refreshToken, user);
+      final sessionEpoch = ++_sessionEpoch;
+      final stored = await _storeSession(
+        sessionEpoch,
+        accessToken,
+        refreshToken,
+        user: user,
+        loginCommit: true,
+      );
+      if (!stored) throw AuthFailure.cancelledByUser();
       return user;
     } on AuthFailure {
       rethrow;
@@ -207,17 +257,21 @@ class AuthService {
       return null;
     }
     final epoch = _sessionEpoch;
+    final ownerRevision = _sessionOwnerRevision;
     var token = await getJwtToken();
+    if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
     if (token == null && _useWebSession && await refreshSession()) {
+      if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
       token = await getJwtToken();
+      if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
     }
     if (token == null) return null;
     try {
       final user = await _fetchCurrentUser(token);
-      if (epoch != _sessionEpoch) return null;
+      if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
       if (!_useWebSession) {
         await _serializeStorage(() async {
-          if (epoch == _sessionEpoch) {
+          if (_ownsCurrentSession(epoch, ownerRevision)) {
             await _secureStorage.write(
               key: _userKey,
               value: jsonEncode(user.toJson()),
@@ -229,14 +283,15 @@ class AuthService {
     } on AuthFailure catch (error) {
       if (!error.invalidSession) rethrow;
       if (await refreshSession()) {
+        if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
         final replacement = await getJwtToken();
         if (replacement != null) {
           try {
             final user = await _fetchCurrentUser(replacement);
-            if (epoch != _sessionEpoch) return null;
+            if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
             if (!_useWebSession) {
               await _serializeStorage(() async {
-                if (epoch == _sessionEpoch) {
+                if (_ownsCurrentSession(epoch, ownerRevision)) {
                   await _secureStorage.write(
                     key: _userKey,
                     value: jsonEncode(user.toJson()),
@@ -251,6 +306,7 @@ class AuthService {
           }
         }
       }
+      if (!_ownsCurrentSession(epoch, ownerRevision)) return null;
       await logout();
       return null;
     } catch (_) {
@@ -279,19 +335,53 @@ class AuthService {
     return User.fromJson(_payload(response));
   }
 
-  Future<bool> refreshSession() => _refreshInFlight ??= withSessionLock(
-    _refreshSession,
-  ).whenComplete(() => _refreshInFlight = null);
-
-  Future<bool> _refreshSession() async {
-    if (_signedOut) return false;
-    if (_useWebSession && pendingBrowserLogout()) return false;
+  Future<bool> refreshSession() {
     final epoch = _sessionEpoch;
-    final refreshToken = _useWebSession
-        ? null
-        : await _secureStorage.read(key: _refreshTokenKey);
-    if (!_useWebSession && refreshToken == null) return false;
+    final ownerRevision = _sessionOwnerRevision;
+    final inFlight = _refreshInFlight;
+    if (inFlight != null &&
+        _refreshInFlightEpoch == epoch &&
+        _refreshInFlightOwnerRevision == ownerRevision) {
+      return inFlight;
+    }
+
+    late final Future<bool> next;
+    next = withSessionLock(() => _refreshSession(epoch, ownerRevision))
+        .whenComplete(() {
+          if (identical(_refreshInFlight, next)) {
+            _refreshInFlight = null;
+            _refreshInFlightEpoch = null;
+            _refreshInFlightOwnerRevision = null;
+          }
+        });
+    _refreshInFlight = next;
+    _refreshInFlightEpoch = epoch;
+    _refreshInFlightOwnerRevision = ownerRevision;
+    return next;
+  }
+
+  bool _canCommitRefresh(int epoch, int ownerRevision) =>
+      epoch == _sessionEpoch &&
+      ownerRevision == _sessionOwnerRevision &&
+      !_signedOut &&
+      !_logoutFenceIsActive;
+
+  bool _ownsCurrentSession(int epoch, int ownerRevision) =>
+      epoch == _sessionEpoch && ownerRevision == _sessionOwnerRevision;
+
+  Future<bool> _refreshSession(int epoch, int ownerRevision) async {
+    if (epoch != _sessionEpoch || _signedOut) return false;
+    if (_useWebSession && pendingBrowserLogout()) return false;
     try {
+      final refreshToken = _useWebSession
+          ? null
+          : await _secureStorage.read(key: _refreshTokenKey);
+      if (epoch != _sessionEpoch ||
+          ownerRevision != _sessionOwnerRevision ||
+          _signedOut) {
+        return false;
+      }
+      if (!_useWebSession && refreshToken == null) return false;
       final response = await _httpClient
           .post(
             Uri.parse('$_authUrl/auth/refresh'),
@@ -301,6 +391,7 @@ class AuthService {
             ),
           )
           .timeout(_requestTimeout);
+      if (!_canCommitRefresh(epoch, ownerRevision)) return false;
       if (response.statusCode == 401) return false;
       if (response.statusCode != 200) {
         throw AuthFailure.serverError(_errorMessage(response));
@@ -315,14 +406,21 @@ class AuthService {
       if (accessToken == null ||
           (!_useWebSession && replacement == null) ||
           (_useWebSession && payload['sessionTransport'] != 'cookie-v1') ||
-          epoch != _sessionEpoch) {
+          !_canCommitRefresh(epoch, ownerRevision)) {
         return false;
       }
-      await _storeSession(epoch, accessToken, replacement);
-      return true;
+      return _storeSession(
+        epoch,
+        accessToken,
+        replacement,
+        expectedOwnerRevision: ownerRevision,
+        expectedRefreshToken: _useWebSession ? null : refreshToken,
+      );
     } on AuthFailure {
+      if (!_canCommitRefresh(epoch, ownerRevision)) return false;
       rethrow;
     } catch (_) {
+      if (!_canCommitRefresh(epoch, ownerRevision)) return false;
       throw AuthFailure.networkError(
         'Unable to refresh your session. Please check your connection and try again.',
       );
@@ -330,24 +428,33 @@ class AuthService {
   }
 
   Future<void> logout() async {
-    _sessionEpoch += 1;
+    final logoutEpoch = ++_sessionEpoch;
+    final logoutOwnerRevision = _sessionOwnerRevision;
+    _logoutFenceOwnerRevision = logoutOwnerRevision;
+    _activeLogoutEpoch = logoutEpoch;
     if (_useWebSession) markBrowserLogout(true);
     remoteLogoutConfirmed = false;
-    final token = await getJwtToken();
-    final refreshToken = _useWebSession
-        ? null
-        : await _secureStorage
-              .read(key: _refreshTokenKey)
-              .catchError((_) => null);
-    _signedOut = true;
-    _memoryAccessToken = null;
-    await _serializeStorage(
-      () => Future.wait([
-        _safeDelete(_jwtKey),
-        _safeDelete(_refreshTokenKey),
-        _safeDelete(_userKey),
-      ]),
-    );
+    final (token, refreshToken) = await _serializeStorage(() async {
+      final token = await _readStoredAccessToken();
+      final refreshToken = _useWebSession
+          ? null
+          : await _secureStorage
+                .read(key: _refreshTokenKey)
+                .catchError((_) => null);
+      return (token, refreshToken);
+    });
+    if (logoutOwnerRevision == _sessionOwnerRevision) {
+      await _serializeStorage(() async {
+        if (logoutOwnerRevision != _sessionOwnerRevision) return;
+        _signedOut = true;
+        _memoryAccessToken = null;
+        await Future.wait([
+          _safeDelete(_jwtKey),
+          _safeDelete(_refreshTokenKey),
+          _safeDelete(_userKey),
+        ]);
+      });
+    }
     if (token != null || refreshToken != null || _useWebSession) {
       try {
         final result = await withSessionLock(
@@ -364,12 +471,18 @@ class AuthService {
               )
               .timeout(_requestTimeout),
         );
-        remoteLogoutConfirmed = result.statusCode == 200;
-        if (_useWebSession && remoteLogoutConfirmed) markBrowserLogout(false);
+        if (logoutOwnerRevision == _sessionOwnerRevision &&
+            _activeLogoutEpoch == logoutEpoch) {
+          remoteLogoutConfirmed = result.statusCode == 200;
+          if (_useWebSession && remoteLogoutConfirmed) {
+            markBrowserLogout(false);
+          }
+        }
       } catch (_) {
         // Local session removal remains authoritative for the client.
       }
-    } else {
+    } else if (logoutOwnerRevision == _sessionOwnerRevision &&
+        _activeLogoutEpoch == logoutEpoch) {
       remoteLogoutConfirmed = true;
     }
   }
@@ -397,14 +510,25 @@ class AuthService {
 
   Future<bool> isAuthenticated() async => (await getJwtToken()) != null;
 
-  Future<String?> getJwtToken() async {
-    if (_signedOut) return null;
+  Future<String?> _readStoredAccessToken() async {
     if (_useWebSession) return _memoryAccessToken;
     try {
       return await _secureStorage.read(key: _jwtKey);
     } catch (_) {
       return null;
     }
+  }
+
+  Future<String?> getJwtToken() async {
+    final ownerRevision = _sessionOwnerRevision;
+    if (_signedOut || _logoutFenceIsActive) return null;
+    final token = await _readStoredAccessToken();
+    if (ownerRevision != _sessionOwnerRevision ||
+        _signedOut ||
+        _logoutFenceIsActive) {
+      return null;
+    }
+    return token;
   }
 
   Future<bool> validateAndRefreshToken() async {

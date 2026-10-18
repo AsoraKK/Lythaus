@@ -1153,6 +1153,16 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
     if (!row) throw new Error('upload_session_not_found');
     const approvedKey = `approved/${row.user_id}/${sessionId}.webp`;
     cleanupDerivativeKey = approvedKey;
+    const readCachedDerivative = async (source: {
+      size: number; body: ReadableStream<Uint8Array>; customMetadata?: Record<string, string>;
+    }): Promise<StandardDerivative> => {
+      const cached = await readStandardDerivative(source, row);
+      if (!cached.needsDimensionRevalidation) return cached;
+      const info = await images.info(new Response(cached.bytes).body!);
+      if (typeof info.width !== 'number' || typeof info.height !== 'number'
+        || !validStandardImageDimensions(info.width, info.height)) throw new Error('media_transform_invalid');
+      return { ...cached, width: info.width, height: info.height, needsDimensionRevalidation: false };
+    };
     if (row.status === 'approved') return 'approved';
     if (row.status === 'rejected') return 'rejected';
     if (row.status === 'expired' || row.status === 'cancelled') return row.status;
@@ -1212,7 +1222,7 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
     const existing = await approved.get(approvedKey);
     let derivative: StandardDerivative;
     if (existing) {
-      derivative = await readStandardDerivative(existing, row);
+      derivative = await readCachedDerivative(existing);
     } else {
       const source = await quarantine.get(objectKey);
       if (!source) throw new Error('quarantine_object_missing');
@@ -1235,7 +1245,8 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
         return 'rejected';
       }
       await checkTransactionHealth(client);
-      const transformed = await (await images.input(new Response(bytes).body!).output({ format: 'image/webp', quality: 85 })).image();
+      const outputOptions = { format: 'image/webp', quality: 85, anim: false } as const;
+      const transformed = await (await images.input(new Response(bytes).body!).output(outputOptions)).image();
       let approvedBytes: Uint8Array;
       try {
         approvedBytes = await readBoundedRequestBody({ headers: new Headers(), body: transformed }, Number(row.expected_bytes));
@@ -1245,11 +1256,16 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
         return 'rejected';
       }
       if (detectMediaMime(approvedBytes) !== 'image/webp') throw new Error('media_transform_invalid');
+      const derivativeInfo = await images.info(new Response(approvedBytes).body!);
+      const derivativeWidth = derivativeInfo.width, derivativeHeight = derivativeInfo.height;
+      if (typeof derivativeWidth !== 'number' || typeof derivativeHeight !== 'number'
+        || !validStandardImageDimensions(derivativeWidth, derivativeHeight)) throw new Error('media_transform_invalid');
       if (!await sessionIsUnexpired()) {
         await expireQueued();
         return 'expired';
       }
-      derivative = { bytes: approvedBytes, sha256: await mediaSha256Hex(approvedBytes), width: sourceInfo.width!, height: sourceInfo.height! };
+      derivative = { bytes: approvedBytes, sha256: await mediaSha256Hex(approvedBytes),
+        width: derivativeWidth, height: derivativeHeight, needsDimensionRevalidation: false };
       await checkTransactionHealth(client);
       const stored = await approved.put(approvedKey, approvedBytes, {
         onlyIf: { etagDoesNotMatch: '*' }, httpMetadata: { contentType: 'image/webp' },
@@ -1258,7 +1274,7 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
       if (!stored) {
         const winner = await approved.get(approvedKey);
         if (!winner) throw new Error('media_derivative_conflict');
-        derivative = await readStandardDerivative(winner, row);
+        derivative = await readCachedDerivative(winner);
       }
     }
     await checkTransactionHealth(client);

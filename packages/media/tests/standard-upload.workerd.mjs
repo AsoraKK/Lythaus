@@ -1,13 +1,16 @@
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
+import sharp from 'sharp';
 import test from 'node:test';
 import { standardUploadFixture } from './standard-upload-fixture.mjs';
+import { createExifGpsJpeg } from './image-fixtures.mjs';
 
-const png = Uint8Array.from([137,80,78,71,13,10,26,10,0,0,0,0]);
+const png = new Uint8Array(await sharp({ create: { width: 1, height: 1, channels: 4, background: { r: 12, g: 34, b: 56, alpha: 1 } } }).png().toBuffer());
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 
 test('actual standard-upload handlers, Queue dispatcher and local private R2', { timeout: 60_000 }, async t => {
   let state, snapshot, beforeQuery;
+  const effects = [];
   const result = rows => ({ rows, rowCount: rows.length });
   const fixture = await standardUploadFixture(async input => {
     if (input.action === 'begin') { snapshot = structuredClone(state); return { transactionId: 'synthetic' }; }
@@ -108,7 +111,7 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
     }
     if (sql.startsWith('INSERT INTO media.ownership') || sql.startsWith('INSERT INTO system.rate_limit_windows')) return result([{}]);
     throw new Error('unexpected_fixture_sql:' + sql.slice(0, 90));
-  });
+  }, async effect => effects.push(effect));
   async function seed(status = 'queued', overrides = {}) {
     beforeQuery = undefined;
     const id = randomUUID(), user_id = randomUUID();
@@ -126,8 +129,8 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
         payload: { uploadSessionId: state.session.id, objectKey: state.session.object_key } } };
   }
   const queue = async input => (await fixture.request('/fixture/queue', input)).json();
-  const create = async userId => fixture.request('/fixture/create', { userId,
-    upload: { contentType: 'image/png', size: png.length, checksumSha256: digest(png) } });
+  const create = async (userId, bytes = png, contentType = 'image/png') => fixture.request('/fixture/create', { userId,
+    upload: { contentType, size: bytes.length, checksumSha256: digest(bytes) } });
   try {
     await t.test('disabled routes expose feature_disabled and enabled guest routes require authentication', async () => {
       for (const path of ['/api/media/uploads', `/api/media/uploads/${randomUUID()}/finalise`]) {
@@ -189,6 +192,84 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       const replay = await fixture.upload(receipt.uploadUrl, userId, png);
       assert.equal(replay.status, 409);
       assert.equal(await fixture.quarantine.head(originalKey), null);
+    });
+    await t.test('actual quarantine bytes obey the configured per-owner aggregate reservation cap', async () => {
+      await seed('pending', { withObject: false });
+      state.ledgerReserved = 0;
+      const userId = randomUUID();
+      const large = new Uint8Array(6 * 1024 * 1024);
+      large.set([137, 80, 78, 71, 13, 10, 26, 10]);
+      const first = await create(userId, large);
+      assert.equal(first.status, 201);
+      const receipt = await first.json();
+      assert.equal((await fixture.upload(receipt.uploadUrl, userId, large)).status, 201);
+      const key = state.session.object_key;
+      const second = await create(userId, large);
+      assert.equal(second.status, 400);
+      assert.equal((await second.json()).error, 'storage_quota_exceeded');
+      assert.equal(Number(state.ledgerReserved), large.byteLength);
+      assert.equal((await fixture.quarantine.head(key)).size, large.byteLength);
+      assert.equal(state.session.id, receipt.uploadSessionId);
+    });
+    await t.test('EXIF-oriented JPEG produces a rotated metadata-free private WebP derivative', async () => {
+      const jpeg = new Uint8Array(await createExifGpsJpeg());
+      const sourceMetadata = await sharp(jpeg).metadata();
+      assert.equal(sourceMetadata.orientation, 6);
+      assert.ok(sourceMetadata.exif?.byteLength);
+      assert.ok(sourceMetadata.exif.includes(Buffer.from('Lythaus fixture')));
+      assert.ok(sourceMetadata.exif.includes(Buffer.from([0x25, 0x88])), 'source contains an EXIF GPSInfo IFD');
+      await seed('pending', { withObject: false });
+      state.ledgerReserved = 0;
+      const userId = randomUUID();
+      const created = await create(userId, jpeg, 'image/jpeg');
+      assert.equal(created.status, 201);
+      const receipt = await created.json();
+      const upload = await fixture.upload(receipt.uploadUrl, userId, jpeg, 'image/jpeg');
+      assert.equal(upload.status, 201);
+      const originalKey = state.session.object_key;
+      const input = { userId, sessionId: state.session.id, event: { eventId: randomUUID(), eventType: 'media.upload.finalised',
+        payload: { uploadSessionId: state.session.id, objectKey: originalKey } } };
+      assert.equal((await fixture.request('/fixture/finalise', input)).status, 200);
+      effects.length = 0;
+      assert.deepEqual(await queue(input), { ack: 1, retry: 0, imageCalls: 1 });
+      const object = state.objects[0];
+      assert.equal(object.state, 'review');
+      assert.equal(await fixture.quarantine.head(originalKey), null);
+      const stored = await fixture.approved.get(object.object_key);
+      assert.ok(stored);
+      const derivativeBytes = new Uint8Array(await stored.arrayBuffer());
+      const derivativeMetadata = await sharp(derivativeBytes).metadata();
+      assert.equal(derivativeMetadata.format, 'webp');
+      assert.deepEqual([derivativeMetadata.width, derivativeMetadata.height], [2, 3]);
+      assert.equal(derivativeMetadata.orientation, undefined);
+      assert.equal(derivativeMetadata.exif, undefined);
+      assert.equal(derivativeMetadata.xmp, undefined);
+      const head = await fixture.approved.head(object.object_key);
+      assert.equal(head.size, derivativeBytes.length);
+      assert.deepEqual([head.customMetadata.width, head.customMetadata.height], ['2', '3']);
+      const transform = effects.find(effect => effect.type === 'transform');
+      assert.deepEqual(transform.options, { format: 'image/webp', quality: 85, anim: false });
+      assert.ok(!fixture.statements.some(statement => /(?:INSERT INTO|UPDATE) (?:content|feed)\./.test(statement.text ?? '')));
+      assert.equal(fixture.outbound.length, 0);
+    });
+    await t.test('output info failures and invalid dimensions retry without persisting or exposing a derivative', async () => {
+      const invalid = [
+        ['output info exception', { outputInfoFailure: true }],
+        ['missing width', { outputDimensions: { height: 3 } }],
+        ['zero width', { outputDimensions: { width: 0, height: 3 } }],
+        ['fractional width', { outputDimensions: { width: 1.5, height: 3 } }],
+        ['NaN width', { outputDimensions: { width: 'NaN', height: 3 } }],
+        ['over-limit pixels', { outputDimensions: { width: 40000001, height: 1 } }],
+      ];
+      for (const [label, overrides] of invalid) {
+        const input = await seed();
+        const key = `approved/${input.userId}/${input.sessionId}.webp`;
+        assert.deepEqual(await queue({ ...input, ...overrides }), { ack: 0, retry: 1, imageCalls: 1 }, label);
+        assert.equal(state.session.status, 'queued', label);
+        assert.equal(state.objects.length, 0, label);
+        assert.equal(await fixture.approved.head(key), null, label);
+        assert.ok(await fixture.quarantine.head(state.session.object_key), label);
+      }
     });
     await t.test('still-valid upload URL cannot recreate bytes after account deletion', async () => {
       await seed('pending', { withObject: false });
