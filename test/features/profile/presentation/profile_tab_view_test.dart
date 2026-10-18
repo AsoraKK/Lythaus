@@ -1,4 +1,4 @@
-import 'dart:ui' show Tristate;
+import 'dart:ui' show SemanticsRole, Tristate;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -131,6 +131,15 @@ void main() {
     await tester.drag(find.text('Overview row 1'), const Offset(0, -800));
     await tester.pumpAndSettle();
     final position = tester.getTopLeft(find.text('Overview row 15'));
+    final overview = find.widgetWithText(Tab, 'Overview');
+    Focus.of(tester.element(overview)).requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(find.text('Saved own posts').hitTestable(), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(find.text('Overview row 15')), position);
     await tester.tap(find.widgetWithText(Tab, 'Posts'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(Tab, 'Overview'));
@@ -138,24 +147,105 @@ void main() {
     expect(tester.getTopLeft(find.text('Overview row 15')), position);
   });
 
+  testWidgets('tab list and panels expose accessible roles and names', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      await _open(tester);
+      final tabList = tester
+          .getSemantics(find.byType(TabBar))
+          .getSemanticsData();
+      expect(tabList.label, 'Profile sections');
+
+      final overview = tester
+          .getSemantics(find.widgetWithText(Tab, 'Overview'))
+          .getSemanticsData();
+      expect(overview.identifier, 'profile-overview-tab');
+      expect(overview.role, SemanticsRole.tab);
+
+      final panel = tester
+          .getSemantics(find.bySemanticsIdentifier('profile-overview-panel'))
+          .getSemanticsData();
+      expect(panel.role, SemanticsRole.tabPanel);
+      expect(panel.label, 'Overview');
+      expect(tester.takeException(), isNull);
+    } finally {
+      semantics.dispose();
+    }
+  });
+
   testWidgets(
-    'tab controls expose selected semantics and keyboard activation',
+    'tab arrows move focus and selection in both directions and wrap',
     (tester) async {
       final semantics = tester.ensureSemantics();
-      await _open(tester);
-      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-      await tester.pumpAndSettle();
-      expect(find.text('Saved own posts').hitTestable(), findsOneWidget);
-      expect(
-        tester
-            .getSemantics(find.widgetWithText(Tab, 'Posts'))
-            .flagsCollection
-            .isSelected,
-        Tristate.isTrue,
-      );
-      semantics.dispose();
+      try {
+        final router = await _open(tester);
+        final overview = find.widgetWithText(Tab, 'Overview');
+        Focus.of(tester.element(overview)).requestFocus();
+        await tester.pump();
+
+        Future<void> expectNavigation(
+          LogicalKeyboardKey key,
+          String label,
+          String content,
+        ) async {
+          await tester.sendKeyEvent(key);
+          await tester.pumpAndSettle();
+          final tab = find.widgetWithText(Tab, label);
+          final tabSemantics = tester.getSemantics(tab);
+          expect(tabSemantics.flagsCollection.isFocused, Tristate.isTrue);
+          expect(tabSemantics.flagsCollection.isSelected, Tristate.isTrue);
+          expect(find.text(content).hitTestable(), findsOneWidget);
+          expect(
+            router
+                .routeInformationProvider
+                .value
+                .uri
+                .queryParameters['profileTab'],
+            label.toLowerCase(),
+          );
+        }
+
+        await expectNavigation(
+          LogicalKeyboardKey.arrowRight,
+          'Posts',
+          'Saved own posts',
+        );
+        await expectNavigation(
+          LogicalKeyboardKey.arrowRight,
+          'Comments',
+          'Comments unavailable',
+        );
+        await expectNavigation(
+          LogicalKeyboardKey.arrowRight,
+          'Overview',
+          'Overview row 1',
+        );
+        await expectNavigation(
+          LogicalKeyboardKey.arrowLeft,
+          'Comments',
+          'Comments unavailable',
+        );
+        await expectNavigation(
+          LogicalKeyboardKey.arrowLeft,
+          'Posts',
+          'Saved own posts',
+        );
+        await expectNavigation(
+          LogicalKeyboardKey.home,
+          'Overview',
+          'Overview row 1',
+        );
+        await expectNavigation(
+          LogicalKeyboardKey.end,
+          'Comments',
+          'Comments unavailable',
+        );
+        expect(tester.takeException(), isNull);
+      } finally {
+        semantics.dispose();
+      }
     },
   );
 
