@@ -9,17 +9,27 @@ failures. Existing successful CI was inspected for locators, never rerun.
 
 **2026-10-18 update:** The owner approved a maintenance gap and beginning
 preparation immediately. That choice is resolved. The
-[current consent proposal and readiness packet](../testing/planetscale-0021-candidate-consent-2026-10-18.md)
+[dated consent-gate proposal and readiness packet](../testing/planetscale-0021-candidate-consent-2026-10-18.md)
 separately tracks candidate-specific hosted execution consent, access, recovery
 evidence and cost. The observations below describe the dated 2026-10-17 snapshot.
+
+**2026-10-18 21:17:41 UTC single-node decision:** The owner approved retaining
+the existing PS-5 single-node topology for the bounded `0021-only` migration,
+with no HA upgrade or other topology change. This reconciles the HA wording
+only for this migration. It does not establish general HA acceptance, authorize
+DDL execution, or waive protection, backup and recovery, role and Hyperdrive,
+budget, concurrency, exact-candidate approval, or protected production gates.
 
 ## Observed state and missing evidence
 
 PlanetScale metadata confirms the sole production PostgreSQL branch
 `lythaus/lythaus-core/main`, ID `vqa2g2xc9wsl`, ready on PS-5 ARM in
-`eu-central`. It reports zero replicas, deletion protection disabled on both
-database and branch, and `restore_checklist_completed_at=null`. The documented
-HA precondition is therefore unsatisfied. A production label does not prove HA.
+`eu-central`. The dated snapshot reports zero replicas, deletion protection
+disabled on both database and branch, and `restore_checklist_completed_at=null`.
+That state does not meet the general HA precondition, and a production label
+does not prove HA. The later owner decision permits retaining the existing
+topology only for `0021-only`; it does not mark the general HA precondition
+passed or satisfy the separate protection and recovery gates.
 The provider's 102-table count and schema update timestamp do not establish
 the exact migration registry or whether 0021 has run.
 
@@ -139,14 +149,18 @@ dispatch a workflow or mutate a provider.
    backup ID. Verify source branch ID, successful completion, creation/expiry,
    deletion protection, retention and restore evidence. A checklist marker
    alone is not a successful restore test. Inspect the independent destination
-   and backup-health evidence separately; no restore or export is authorized.
-3. Resolve zero-replica topology against the documented HA precondition and
-   obtain the named action, cost and recovery decisions. The maintenance gap
-   is approved as of 2026-10-18; record the specific hosted 0021 permission and
-   `AUTHORISE MIGRATION USAGE: maximum additional cost US$___`. Grants,
+   and backup-health evidence separately. This cutover step authorizes no
+   restore or export; recovery actions retain their separately scoped target,
+   cost and approval requirements, and acceptance requires verified results.
+3. Keep the existing PS-5 single-node topology for this `0021-only` maintenance
+   path, with no HA upgrade or topology change, under the 2026-10-18 owner
+   decision above. This is not general HA acceptance or execution approval.
+   Complete and verify the separate protection, backup/recovery, role/target,
+   cost and candidate-consent gates. Record the specific hosted 0021 permission
+   and `AUTHORISE MIGRATION USAGE: maximum additional cost US$___`. Grants,
    credential/configuration changes, protection/retention changes and recovery
-   restores require their own specific approval. Preparation continues while
-   these remain pending.
+   restores retain their separate approvals; preparation continues until all
+   required evidence and approvals are complete.
 4. The scoped plan and executor require
    `PLANETSCALE_0021_EXECUTION_APPROVED_SHA` to match the final exact candidate
    and `PLANETSCALE_0021_EXECUTION_APPROVAL_REFERENCE` to identify its specific

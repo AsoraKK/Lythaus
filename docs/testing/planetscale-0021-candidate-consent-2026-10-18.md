@@ -1,10 +1,19 @@
 # 0021 candidate execution consent proposal
 
-The owner approved a maintenance gap and beginning preparation now. Current
-main `116812fdc51d9aef7dae4c36354c75b097fc7533` has terminal green candidate
-checks according to the parent's 05:57 UTC verification: CI `39100426688`, all
-eight jobs and five ancillary push workflows. That evidence is recorded in the
-[dated packet](../evidence/production-cutover/2026-10-18-0021-maintenance-readiness.json).
+> **Status update, 2026-10-18:** The consent-gate proposal merged in #1050 at
+> `be75bb4c354bbf576b93a9b26f38716379075d1b`. The owner later approved keeping
+> the existing PS-5 single-node topology only for `0021-only` maintenance, as
+> recorded in the [cutover runbook](../runbooks/planetscale-0021-cutover-preparation.md).
+> This resolves only the migration-specific HA wording; it is not general HA
+> acceptance or execution consent. The evidence and blocker list below remain
+> a historical readiness snapshot and do not prove protection, restore, role,
+> cost, or final-candidate approval.
+
+The owner approved a maintenance gap and beginning preparation now. At the
+parent's 05:57 UTC verification, main
+`116812fdc51d9aef7dae4c36354c75b097fc7533` had terminal green candidate checks:
+CI `39100426688`, all eight jobs and five ancillary push workflows. That
+evidence is recorded in the [dated packet](../evidence/production-cutover/2026-10-18-0021-maintenance-readiness.json).
 It does not cover the new commit that would result from merging this proposal.
 
 ## Proposed consent gate
@@ -86,9 +95,11 @@ protection plus existing restore/independent-recovery evidence; and current
 disk/index/WAL/egress measurements. Supply no passwords or connection strings.
 This obtains missing proof without issuing agent credentials or expanding grants.
 
-Then reconcile the disabled protection/missing checklist and HA precondition
-through their separately reviewed configuration/topology decisions. Establish
-the measured additional-usage estimate and exact approved positive ceiling;
+Resolve protection and recovery evidence separately through their specific
+approvals. The `0021-only` single-node decision removes only the topology
+conflict; it grants no topology change and establishes no general HA acceptance.
+Establish the measured additional-usage estimate and exact approved positive
+ceiling;
 maintenance consent supplies neither spending nor configuration permission.
 Only after those proofs and decisions are complete should the parent coordinate
 the final merged candidate and record its specific execution approval SHA and

@@ -8,6 +8,10 @@ import { buildPlanetScaleTargetIdentity } from '../ci/planetscale-0021-target-id
 const root = process.cwd();
 const workflowPath = path.join(root, '.github/workflows/planetscale-production-migrations.yml');
 const workflowSource = fs.readFileSync(workflowPath, 'utf8');
+const productionRunbook = fs.readFileSync(path.join(root, 'docs/runbooks/planetscale-production-migrations.md'), 'utf8');
+const cutoverRunbook = fs.readFileSync(path.join(root, 'docs/runbooks/planetscale-0021-cutover-preparation.md'), 'utf8');
+const consentReadiness = fs.readFileSync(path.join(root, 'docs/testing/planetscale-0021-candidate-consent-2026-10-18.md'), 'utf8');
+const databaseBaseline = fs.readFileSync(path.join(root, 'database/planetscale/README.md'), 'utf8');
 
 function jobBlock(name) {
   const marker = `  ${name}:`;
@@ -26,6 +30,30 @@ test('keeps all-migrations as the default and scopes plan and execution to expli
   assert.match(jobBlock('plan-0021-only'), /environment: production/);
   assert.match(jobBlock('execute-0021-only'), /if: inputs\.migration_scope == '0021-only' && inputs\.execute_0021 == true && needs\.plan-0021-only\.outputs\.ready == 'true'/);
   assert.match(jobBlock('execute-0021-only'), /environment: production/);
+});
+
+test('limits the single-node exception to 0021 and preserves the other gates', () => {
+  assert.match(productionRunbook, /Required PlanetScale extensions, backups, and role grants must pass their\s+acceptance gates/);
+  assert.match(productionRunbook, /General `all-migrations` releases also require an approved HA topology/);
+  assert.match(productionRunbook, /narrowly approved maintenance-policy\s+exception:[\s\S]*?existing PS-5 single-node topology,[\s\S]*?no HA upgrade[\s\S]*?other topology change/);
+  assert.match(productionRunbook, /does not certify single-node as generally[\s\S]*?HA-compliant/);
+  for (const gate of [
+    /protected main and backup, verified[\s\S]*?recovery evidence/,
+    /exact role and\s+Hyperdrive bindings/,
+    /measured usage and a positive ceiling/,
+    /exact-candidate\s+consent/,
+    /concurrent-index safety/,
+    /protected production review remain\s+required/,
+  ]) assert.match(productionRunbook, gate);
+  assert.match(productionRunbook, /restore_checklist_completed_at/);
+  assert.match(productionRunbook, /deletion-protected/);
+  assert.match(productionRunbook, /index concurrently/);
+  assert.match(productionRunbook, /PLANETSCALE_0021_EXECUTION_APPROVED_SHA/);
+  assert.match(cutoverRunbook, /2026-10-18 21:17:41 UTC single-node decision[\s\S]*?no HA upgrade or other topology change/);
+  assert.match(cutoverRunbook, /This is not general HA acceptance or execution approval/);
+  assert.match(cutoverRunbook, /Complete and verify the separate protection, backup\/recovery, role\/target,[\s\S]*?cost and candidate-consent gates/);
+  assert.match(consentReadiness, /historical readiness snapshot[\s\S]*?do not prove protection, restore, role,[\s\S]*?final-candidate approval/);
+  assert.match(databaseBaseline, /Do not\nupgrade its engine, region, compute, replicas, or billing plan/);
 });
 
 test('scoped workflow runs 0021 syntax and tests without changing root npm registrations', () => {
