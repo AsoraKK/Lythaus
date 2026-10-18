@@ -1,0 +1,45 @@
+name: Onboarding animation policy diagnosis
+on:
+  pull_request:
+    branches: [ui/onboarding-animation-baseline]
+    paths:
+      - .github/workflows/onboarding-animation-diagnostic.yml
+      - scripts/prepare-onboarding-animation.mjs
+      - scripts/run-onboarding-animation-diagnostic.sh
+      - scripts/tests/onboarding-animation*
+permissions:
+  contents: read
+concurrency:
+  group: onboarding-animation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  diagnosis:
+    name: Isolated Flutter animation policy observations
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: ./.github/actions/flutter-setup
+        with:
+          flutter-version-file: .fvmrc
+          channel: stable
+          cache: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: flutter pub get
+      - run: npm ci --ignore-scripts --no-audit
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Compare one static fixture with animation disabled and enabled
+        env:
+          ONBOARDING_REVIEW_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: bash scripts/run-onboarding-animation-diagnostic.sh
+      - name: Preserve original captures and source construction
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: onboarding-animation-diagnosis
+          path: build/onboarding-animation
+          if-no-files-found: error
+          retention-days: 7
