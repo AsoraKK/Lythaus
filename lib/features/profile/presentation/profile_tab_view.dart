@@ -70,7 +70,6 @@ class _ProfileTabViewState extends ConsumerState<ProfileTabView>
     final index = _tabs.indexOf(selected ?? 'overview');
     _syncingRoute = true;
     _controller.index = index < 0 ? 0 : index;
-    _focusedTabIndex = _controller.index;
     _syncingRoute = false;
   }
 

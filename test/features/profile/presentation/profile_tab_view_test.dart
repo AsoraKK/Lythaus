@@ -449,6 +449,57 @@ void main() {
     }
   });
 
+  testWidgets('route selection changes keep navigation anchored to focus', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      final router = await _open(tester);
+      final overview = find.widgetWithText(Tab, 'Overview');
+      final posts = find.widgetWithText(Tab, 'Posts');
+      final comments = find.widgetWithText(Tab, 'Comments');
+      Focus.of(tester.element(overview)).requestFocus();
+      await tester.pump();
+
+      router.go('/user/a?tab=profile&profileTab=posts');
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSemantics(overview).flagsCollection.isFocused,
+        Tristate.isTrue,
+      );
+      expect(
+        tester.getSemantics(overview).flagsCollection.isSelected,
+        Tristate.isFalse,
+      );
+      expect(
+        tester.getSemantics(posts).flagsCollection.isSelected,
+        Tristate.isTrue,
+      );
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSemantics(posts).flagsCollection.isFocused,
+        Tristate.isTrue,
+      );
+      expect(
+        tester.getSemantics(posts).flagsCollection.isSelected,
+        Tristate.isTrue,
+      );
+      expect(
+        tester.getSemantics(comments).flagsCollection.isSelected,
+        Tristate.isFalse,
+      );
+      expect(
+        router.routeInformationProvider.value.uri.queryParameters['profileTab'],
+        'posts',
+      );
+      expect(tester.takeException(), isNull);
+    } finally {
+      semantics.dispose();
+    }
+  });
+
   testWidgets('navigation keys outside the tab list do not select a tab', (
     tester,
   ) async {
