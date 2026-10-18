@@ -1,0 +1,35 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:lythaus/design_system/theme/lyth_theme.dart';
+import 'package:lythaus/ui/screens/onboarding/onboarding_intro.dart';
+
+import 'onboarding_lifecycle_host.dart';
+
+void main() {
+  testWidgets('diagnostic host retains actual onboarding and Continue marker', (
+    tester,
+  ) async {
+    GoogleFonts.config.allowRuntimeFetching = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: LythausTheme.light(),
+        builder: (context, child) => OnboardingLifecycleHost(child: child!),
+        home: const Scaffold(body: Text('Underlying app stays mounted')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(OnboardingIntroScreen), findsOneWidget);
+    expect(find.text('Underlying app stays mounted'), findsNothing);
+    expect(
+      find.text('Underlying app stays mounted', skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(find.text('Synthetic continuation completed'), findsNothing);
+    await tester.ensureVisible(find.text('Continue'));
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Synthetic continuation completed'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+}

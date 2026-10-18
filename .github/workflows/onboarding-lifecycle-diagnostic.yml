@@ -1,0 +1,49 @@
+name: Onboarding lifecycle diagnosis
+on:
+  pull_request:
+    branches: [ui/onboarding-lifecycle-baseline]
+    paths:
+      - .github/workflows/onboarding-lifecycle-diagnostic.yml
+      - scripts/prepare-onboarding-lifecycle.mjs
+      - scripts/run-onboarding-lifecycle-diagnostic.sh
+      - scripts/tests/onboarding-lifecycle*
+      - test/browser/onboarding_lifecycle*
+permissions:
+  contents: read
+concurrency:
+  group: onboarding-diagnosis-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  diagnosis:
+    name: Controlled onboarding startup observations
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: ./.github/actions/flutter-setup
+        with:
+          flutter-version-file: .fvmrc
+          channel: stable
+          cache: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed test/browser/onboarding_lifecycle*.dart
+      - run: flutter analyze --no-pub test/browser/onboarding_lifecycle_host.dart test/browser/onboarding_lifecycle_geometry.dart test/browser/onboarding_lifecycle_host_test.dart
+      - run: flutter test --no-pub test/browser/onboarding_lifecycle_host_test.dart --reporter expanded
+      - run: npm ci --ignore-scripts --no-audit
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Observe original, configured, wrapped-static and real-host controls
+        env:
+          ONBOARDING_REVIEW_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: bash scripts/run-onboarding-lifecycle-diagnostic.sh
+      - name: Preserve all observations including blank outcomes
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: onboarding-lifecycle-diagnosis
+          path: build/onboarding-lifecycle
+          if-no-files-found: error
+          retention-days: 7
