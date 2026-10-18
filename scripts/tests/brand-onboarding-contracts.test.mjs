@@ -2,9 +2,10 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
+import {runInNewContext} from 'node:vm';
 import {prepareVisibleOnboardingSource,prepareOnboardingReference,onboardingImport,visibleImport,visibleInstall,referenceInstall} from './onboarding-visible-source.mjs';
 import {prepareBrandLoginSource} from './brand-login-source.mjs';
-import {originalCaptureEvents,onboardingCopy,assertSignedOutHost,assertUntouchedPresentation,assertOnboardingLayout,onboardingPixels,assertOnboardingPaint,assertCompletedRefresh} from './brand-onboarding-contract.mjs';
+import {originalCaptureEvents,onboardingCopy,waitForOriginalDwell,assertSignedOutHost,assertUntouchedPresentation,assertOnboardingLayout,onboardingPixels,assertOnboardingPaint,assertCompletedRefresh} from './brand-onboarding-contract.mjs';
 import {refreshUrl,loginFixtureResponse} from './brand-login-transport.mjs';
 
 test('detached component source preserves deployed main, router and login preparation',async()=>{
@@ -24,6 +25,19 @@ test('component helpers introduce no app, Navigator, override, frame or focus st
  assert.match(route,/OnboardingIntroScreen/);assert.match(route,/Synthetic continuation completed/);assert.match(route,/Navigator\.of\(context\)\.push/);
 });
 const host=()=>({materialApps:1,navigators:1,navigatorId:7,auth:'signed-out',guest:false,pendingAuthenticatedWork:false,focusedEditable:false,semanticsEnabled:false});
+test('a wakeup 0.1ms before the deadline cannot release an original capture',async()=>{
+ for(const dwell of [250,5250]){
+  const anchor=927.6,deadline=anchor+dwell,decisions=[];
+  const page={waitForFunction:async(predicate,actualDeadline,options)=>{
+   assert.equal(actualDeadline,deadline);assert.equal(options.polling,10);
+   for(const now of [deadline-0.1,deadline,deadline+0.1]){
+    const read=runInNewContext('('+predicate.toString()+')',{performance:{now:()=>now}});decisions.push(read(actualDeadline));
+   }
+  }};
+  await waitForOriginalDwell(page,anchor,dwell);assert.deepEqual(decisions,[false,true,true]);
+ }
+ await assert.rejects(waitForOriginalDwell({},NaN,250));
+});
 test('guest, auth, app count, Navigator identity and pending work fail closed',()=>{
  assertSignedOutHost(host(),7);
  for(const [key,value] of Object.entries({materialApps:2,navigators:2,navigatorId:8,auth:'loading',guest:true,pendingAuthenticatedWork:true,focusedEditable:true}))assert.throws(()=>assertSignedOutHost({...host(),[key]:value},7));

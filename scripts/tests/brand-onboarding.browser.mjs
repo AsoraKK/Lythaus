@@ -8,7 +8,7 @@ import {observeRenderHealth,assertRenderHealth} from './brand-render-health.mjs'
 import {compareApprovedArtwork} from './brand-reference.mjs';
 import {assertLoginLayout,assertMatchingLoginLayout,loginFirstPaintPixels,assertLoginFirstPaintPixels} from './brand-login-first-paint.mjs';
 import {refreshUrl,loginFixtureResponse,expectedRefreshConsole} from './brand-login-transport.mjs';
-import {originalCaptureEvents,onboardingCopy,assertSignedOutHost,assertUntouchedPresentation,assertOnboardingLayout,onboardingPixels,assertOnboardingPaint,assertCompletedRefresh} from './brand-onboarding-contract.mjs';
+import {originalCaptureEvents,onboardingCopy,waitForOriginalDwell,assertSignedOutHost,assertUntouchedPresentation,assertOnboardingLayout,onboardingPixels,assertOnboardingPaint,assertCompletedRefresh} from './brand-onboarding-contract.mjs';
 
 const {PNG}=createRequire(import.meta.url)('playwright-core/lib/utilsBundle');
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -54,7 +54,7 @@ async function observedContext(browser,origin,condition,real){
 const readState=(page,stage,real)=>page.evaluate(({stage,real})=>({now:performance.now(),epochMs:performance.timeOrigin+performance.now(),url:location.href,viewport:[innerWidth,innerHeight],scroll:[scrollX,scrollY],activeElement:document.activeElement?.tagName,activeInput:document.activeElement instanceof HTMLInputElement,semanticsCount:document.querySelectorAll('flt-semantics').length,layout:JSON.parse(window.__readOnboardingLayout()),login:stage==='login'?JSON.parse(window.__readBrandLoginLayout()):null,host:real?JSON.parse(window.__readVisibleHostState()):null,observation:structuredClone(window.__onboardingObservation)}),{stage,real});
 async function originalCapture(observation,condition,result,stage,dwell,anchor,output,name,real,reference){
  const {page,health,checkHealth}=observation;
- await page.waitForTimeout(Math.max(0,anchor+dwell-await page.evaluate(()=>performance.now())));
+ await waitForOriginalDwell(page,anchor,dwell);
  const before=await readState(page,stage,real),file=path.join(output,`${name}-${stage}-${dwell}.png`);
  await page.screenshot({path:file});const after=await readState(page,stage,real),bytes=await readFile(file),png=PNG.sync.read(bytes),raw=await health(page);
  const snapshot={stage,dwell,anchor,before,after,pngSha256:hash(bytes),health:structuredClone(raw)};result.snapshots.push(snapshot);

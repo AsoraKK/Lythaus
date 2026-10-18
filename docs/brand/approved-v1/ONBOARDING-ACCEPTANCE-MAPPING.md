@@ -58,6 +58,9 @@ All40 asset/CanvasKit hashes must match the two real scale builds. Complete
 inventories, source construction and compiled script hashes are saved.
 
 The real host saves original login images at250/5250ms from natural first frame.
+Capture timing waits for the browser's monotonic clock to reach the exact
+minimum deadline, using a read-only10ms timer poll. The strict elapsed-time
+assertion remains unchanged; an early timer wakeup cannot release a capture.
 Brand, Email and Password must paint with original fractional geometry. Only
 after exact refresh completion and settled-state checks does one zero-transition
 presentation request start the component captures. All SVG reference pages,
