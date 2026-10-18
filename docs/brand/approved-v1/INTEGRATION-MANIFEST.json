@@ -1,0 +1,767 @@
+{
+  "version": "lythaus-approved-2026-10-16-v1",
+  "approval": "Titlecase Lythaus with original-size L, approved lowercase h, tightened Lyt spacing [-15,8,14,8,8,8], unchanged LH symbol",
+  "status": "Asset package only; not deployed",
+  "colors": {
+    "ink": "#11110F",
+    "warm": "#F2C98D",
+    "white": "#FFFFFF",
+    "paper": "#F7F1E6"
+  },
+  "master_viewboxes": {
+    "symbol-black": [
+      23.99,
+      23.99,
+      106.02,
+      98.02
+    ],
+    "symbol-white": [
+      23.99,
+      23.99,
+      106.02,
+      98.02
+    ],
+    "symbol-warm": [
+      23.99,
+      23.99,
+      106.02,
+      98.02
+    ],
+    "wordmark-black": [
+      23.99,
+      23.99,
+      470.28944891000003,
+      130.6866688
+    ],
+    "wordmark-white": [
+      23.99,
+      23.99,
+      470.28944891000003,
+      130.6866688
+    ],
+    "wordmark-warm": [
+      23.99,
+      23.99,
+      470.28944891000003,
+      130.6866688
+    ],
+    "lockup-black": [
+      24.3753,
+      23.99,
+      627.24944891,
+      130.6866688
+    ],
+    "lockup-white": [
+      24.3753,
+      23.99,
+      627.24944891,
+      130.6866688
+    ],
+    "lockup-warm": [
+      24.3753,
+      23.99,
+      627.24944891,
+      130.6866688
+    ]
+  },
+  "recommended_ui_assets": {
+    "primary_header_light": "/brand/lythaus-v1/lythaus-lockup-black.9518c6eeb03b.svg",
+    "primary_header_dark": "/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg",
+    "brand_header_dark_warm": "/brand/lythaus-v1/lythaus-lockup-warm.9ea2e22bfb4b.svg",
+    "compact_nav_light": "/brand/lythaus-v1/lythaus-symbol-square-black.6a1b6d025e69.svg",
+    "compact_nav_dark": "/brand/lythaus-v1/lythaus-symbol-square-warm.fb697a91817f.svg",
+    "wordmark_only_light": "/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg",
+    "wordmark_only_dark": "/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg"
+  },
+  "recommended_header_svg_css": {
+    "height_px": 32,
+    "width": "auto",
+    "minimum_height_px": 24,
+    "actual_letter_cap_at_height_32px": 23.9963,
+    "note": "Tight vector viewBoxes include y descender; full viewBox height is about 4/3 of letter cap height. Add clear space in layout."
+  },
+  "web_copy_map": [
+    {
+      "package_path": "brand/svg/lythaus-lockup-black.svg",
+      "deployment_file": "integration/web-public/brand/lythaus-v1/lythaus-lockup-black.9518c6eeb03b.svg",
+      "public_url": "/brand/lythaus-v1/lythaus-lockup-black.9518c6eeb03b.svg",
+      "sha256": "9518c6eeb03bb718b6f43c23b44f6a08020bd93f4bf85d75c81fa6b9716d24f3",
+      "required_for_brand_integration": true
+    },
+    {
+      "package_path": "brand/svg/lythaus-lockup-warm.svg",
+      "deployment_file": "integration/web-public/brand/lythaus-v1/lythaus-lockup-warm.9ea2e22bfb4b.svg",
+      "public_url": "/brand/lythaus-v1/lythaus-lockup-warm.9ea2e22bfb4b.svg",
+      "sha256": "9ea2e22bfb4b7d67b92a9ab5d0b8ae4837bc76525ee306209da928dc382289fb",
+      "required_for_brand_integration": true
+    },
+    {
+      "package_path": "brand/svg/lythaus-lockup-white.svg",
+      "deployment_file": "integration/web-public/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg",
+      "public_url": "/brand/lythaus-v1/lythaus-lockup-white.57df30b168bc.svg",
+      "sha256": "57df30b168bcf5b36b67e033b1924ddf1a891fc28d8fc41d88f2b3db4798031a",
+      "required_for_brand_integration": true
+    },
+    {
+      "package_path": "brand/svg/lythaus-symbol-black.svg",
+      "deployment_file": "integration/web-public/brand/lythaus-v1/lythaus-symbol-black.d12dd266d00b.svg",
+      "public_url": "/brand/lythaus-v1/lythaus-symbol-black.d12dd266d00b.svg",
+      "sha256": "d12dd266d00bf0dbe98c300d32c105cd20d16489e21ce0c656ec29b13ca7629d",
+      "required_for_brand_integration": true
+    },
+    {
+      "package_path": "brand/svg/lythaus-symbol-square-black.svg",
+      "deployment_file": "integration/web-public/brand/lythaus-v1/lythaus-symbol-square-black.6a1b6d025e69.svg",
+      "public_url": "/brand/lythaus-v1/lythaus-symbol-square-black.6a1b6d025e69.svg",
+      "sha256": "6a1b6d025e69ce0e0d601a75a6437ea6f04aa4da2e1c403d3de7880575d54caa",
+      "required_for_brand_integration": true
+    },
+    {
+      "package_path": "brand/svg/lythaus-symbol-square-warm.svg",
+      "deployment_file": "integration/web-public/brand/lythaus-v1/lythaus-symbol-square-warm.fb697a91817f.svg",
+      "public_url": "/brand/lythaus-v1/lythaus-symbol-square-warm.fb697a91817f.svg",
+      "sha256": "fb697a91817f02c2d731c1401fd5a3f07a0b52cf2c7b05148e5e446a4b5507e7",
+      "required_for_brand_integration": true
+    },
+    {
+      "package_path": "brand/svg/lythaus-symbol-square-white.svg",
+      "deployment_file": "integration/web-public/brand/lythaus-v1/lythaus-symbol-square-white.14d43a906a24.svg",
+      "public_url": "/brand/lythaus-v1/lythaus-symbol-square-white.14d43a906a24.svg",
+      "sha256": "14d43a906a24fc134c65aada9304967db94af274f399eb6ad23f8af5859d437f",
+      "required_for_brand_integration": true
+    },
+    {
+      "package_path": "brand/svg/lythaus-symbol-warm.svg",
+      "deployment_file": "integration/web-public/brand/lythaus-v1/lythaus-symbol-warm.3fa2e07bac40.svg",
+      "public_url": "/brand/lythaus-v1/lythaus-symbol-warm.3fa2e07bac40.svg",
+      "sha256": "3fa2e07bac402bf62dbb97a503a5621b82f3f6ce7dce3fc41be8f439e5f1fe7c",
+      "required_for_brand_integration": true
+    },
+    {
+      "package_path": "brand/svg/lythaus-symbol-white.svg",
+      "deployment_file": "integration/web-public/brand/lythaus-v1/lythaus-symbol-white.8e20f9650ccb.svg",
+      "public_url": "/brand/lythaus-v1/lythaus-symbol-white.8e20f9650ccb.svg",
+      "sha256": "8e20f9650ccb88053ff757e2b18cbd2b618e5a0e922bc61288c27e09ab3c6436",
+      "required_for_brand_integration": true
+    },
+    {
+      "package_path": "brand/svg/lythaus-wordmark-black.svg",
+      "deployment_file": "integration/web-public/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg",
+      "public_url": "/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg",
+      "sha256": "e450176663e057e99bf66b822425eb0e1cf1ef90928f4b10b123e521bab63750",
+      "required_for_brand_integration": true
+    },
+    {
+      "package_path": "brand/svg/lythaus-wordmark-warm.svg",
+      "deployment_file": "integration/web-public/brand/lythaus-v1/lythaus-wordmark-warm.9dd50f09167b.svg",
+      "public_url": "/brand/lythaus-v1/lythaus-wordmark-warm.9dd50f09167b.svg",
+      "sha256": "9dd50f09167b49d2e0b90dbe57a8bde76e045565d7c5622e03856cdd99b11d9e",
+      "required_for_brand_integration": true
+    },
+    {
+      "package_path": "brand/svg/lythaus-wordmark-white.svg",
+      "deployment_file": "integration/web-public/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg",
+      "public_url": "/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg",
+      "sha256": "5ba0451347e24615f10bfc362b84285767f51eea3621cc702f64e93ff0047ff7",
+      "required_for_brand_integration": true
+    },
+    {
+      "package_path": "icons/favicon.ico",
+      "deployment_file": "integration/web-public/icons/lythaus-v1/favicon.e3dfdd675a74.ico",
+      "public_url": "/icons/lythaus-v1/favicon.e3dfdd675a74.ico",
+      "sha256": "e3dfdd675a7450c028317d74caeedaf03f613b73a34f50a3950ba4972bbdb67c",
+      "required_for_brand_integration": true,
+      "root_fallback_alias": "/favicon.ico"
+    },
+    {
+      "package_path": "icons/favicon.svg",
+      "deployment_file": "integration/web-public/icons/lythaus-v1/favicon.116ff3e020c6.svg",
+      "public_url": "/icons/lythaus-v1/favicon.116ff3e020c6.svg",
+      "sha256": "116ff3e020c6b7f8539644880c8bc810d1a6278709b5f273c2a8d354d5f33cb7",
+      "required_for_brand_integration": true
+    },
+    {
+      "package_path": "icons/favicon-96x96.png",
+      "deployment_file": "integration/web-public/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png",
+      "public_url": "/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png",
+      "sha256": "572a7b9a0d35f57d71c9f5a7d5f6d5b11a58b67a8bfd55d36416d447476c85ef",
+      "required_for_brand_integration": true
+    },
+    {
+      "package_path": "icons/apple-touch-icon.png",
+      "deployment_file": "integration/web-public/icons/lythaus-v1/apple-touch-icon.19122fd8c91b.png",
+      "public_url": "/icons/lythaus-v1/apple-touch-icon.19122fd8c91b.png",
+      "sha256": "19122fd8c91b3ce51b5a6a00d5840b3fa0f8a02416c0b997c283f9aba42a83bd",
+      "required_for_brand_integration": true,
+      "root_fallback_alias": "/apple-touch-icon.png"
+    },
+    {
+      "package_path": "icons/pwa-icon-192x192.png",
+      "deployment_file": "integration/web-public/icons/lythaus-v1/pwa-icon-192x192.5c5c7622a5f7.png",
+      "public_url": "/icons/lythaus-v1/pwa-icon-192x192.5c5c7622a5f7.png",
+      "sha256": "5c5c7622a5f762e0f0251fc7e806cd51a9f9b95c779f5fda9cc38cb6c658d7b8",
+      "required_for_brand_integration": true
+    },
+    {
+      "package_path": "icons/pwa-icon-512x512.png",
+      "deployment_file": "integration/web-public/icons/lythaus-v1/pwa-icon-512x512.27a8dadec032.png",
+      "public_url": "/icons/lythaus-v1/pwa-icon-512x512.27a8dadec032.png",
+      "sha256": "27a8dadec032e03ffca0953feaac6e800d7b737da5e5e3ec15b822841d2fe04d",
+      "required_for_brand_integration": true
+    },
+    {
+      "package_path": "icons/pwa-maskable-192x192.png",
+      "deployment_file": "integration/web-public/icons/lythaus-v1/pwa-maskable-192x192.36698aff23fb.png",
+      "public_url": "/icons/lythaus-v1/pwa-maskable-192x192.36698aff23fb.png",
+      "sha256": "36698aff23fb111d8e81ac90c4f6fe1ed34c22aece93ed0833573b81caa6879f",
+      "required_for_brand_integration": true
+    },
+    {
+      "package_path": "icons/pwa-maskable-512x512.png",
+      "deployment_file": "integration/web-public/icons/lythaus-v1/pwa-maskable-512x512.10ec5b6e6764.png",
+      "public_url": "/icons/lythaus-v1/pwa-maskable-512x512.10ec5b6e6764.png",
+      "sha256": "10ec5b6e6764cc1935d8909f6f54fe107efb370edf056d33c94718536aaee54d",
+      "required_for_brand_integration": true
+    },
+    {
+      "package_path": "icons/lythaus-social-card-1200x630.png",
+      "deployment_file": "integration/web-public/brand/lythaus-v1/lythaus-social-card-1200x630.c20d3b1b40a8.png",
+      "public_url": "/brand/lythaus-v1/lythaus-social-card-1200x630.c20d3b1b40a8.png",
+      "sha256": "c20d3b1b40a870640abdb88c049b68df565cda71d6f883064655116af1d6fa8e",
+      "required_for_brand_integration": false
+    }
+  ],
+  "web_manifest_icons": [
+    {
+      "src": "/icons/lythaus-v1/pwa-icon-192x192.5c5c7622a5f7.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/lythaus-v1/pwa-icon-512x512.27a8dadec032.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/lythaus-v1/pwa-maskable-192x192.36698aff23fb.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/lythaus-v1/pwa-maskable-512x512.10ec5b6e6764.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "native_exports": [
+    {
+      "platform": "android",
+      "package_path": "native/android/mipmap-mdpi/ic_launcher.png",
+      "pixels": [
+        48,
+        48
+      ],
+      "opaque": true,
+      "density": "mdpi",
+      "use": "legacy launcher",
+      "sha256": "00fbf41cb3e5e117cd325262a2d434d09eadbbe48d9b13bb4a15299f75bee368"
+    },
+    {
+      "platform": "android",
+      "package_path": "native/android/mipmap-hdpi/ic_launcher.png",
+      "pixels": [
+        72,
+        72
+      ],
+      "opaque": true,
+      "density": "hdpi",
+      "use": "legacy launcher",
+      "sha256": "9cad537f743a87179d3eecb4527c38ed91140241b46fec6ee872af7575679892"
+    },
+    {
+      "platform": "android",
+      "package_path": "native/android/mipmap-xhdpi/ic_launcher.png",
+      "pixels": [
+        96,
+        96
+      ],
+      "opaque": true,
+      "density": "xhdpi",
+      "use": "legacy launcher",
+      "sha256": "50bab416003d578c368019ffedb92838ff5500700e0c07000ea09897e9590de9"
+    },
+    {
+      "platform": "android",
+      "package_path": "native/android/mipmap-xxhdpi/ic_launcher.png",
+      "pixels": [
+        144,
+        144
+      ],
+      "opaque": true,
+      "density": "xxhdpi",
+      "use": "legacy launcher",
+      "sha256": "b3608d4928bb8a6153c1d20321ce9c0d94618c0ad2631b5994c11204f2e2ea9c"
+    },
+    {
+      "platform": "android",
+      "package_path": "native/android/mipmap-xxxhdpi/ic_launcher.png",
+      "pixels": [
+        192,
+        192
+      ],
+      "opaque": true,
+      "density": "xxxhdpi",
+      "use": "legacy launcher",
+      "sha256": "5c5c7622a5f762e0f0251fc7e806cd51a9f9b95c779f5fda9cc38cb6c658d7b8"
+    },
+    {
+      "platform": "ios",
+      "package_path": "native/ios/Icon-App-20x20@1x.png",
+      "pixels": [
+        20,
+        20
+      ],
+      "opaque": true,
+      "logical_size": "20x20",
+      "scale": "1x",
+      "idiom": "ipad",
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "9ec167c5ccca4adb6afce4ebba525500d09ba18b9f2cf44d5a03b71c2d306183"
+    },
+    {
+      "platform": "ios",
+      "package_path": "native/ios/Icon-App-20x20@2x.png",
+      "pixels": [
+        40,
+        40
+      ],
+      "opaque": true,
+      "logical_size": "20x20",
+      "scale": "2x",
+      "idiom": "iphone/ipad",
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "b9156f41ee6ffead2c49d5c0074e86981ee08d3e5ff0a97faa587975cf5145a3"
+    },
+    {
+      "platform": "ios",
+      "package_path": "native/ios/Icon-App-20x20@3x.png",
+      "pixels": [
+        60,
+        60
+      ],
+      "opaque": true,
+      "logical_size": "20x20",
+      "scale": "3x",
+      "idiom": "iphone",
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "483a51bff293d75fa470ec92acaad595f4d9252e58b86475d7f53a1436d247ef"
+    },
+    {
+      "platform": "ios",
+      "package_path": "native/ios/Icon-App-29x29@1x.png",
+      "pixels": [
+        29,
+        29
+      ],
+      "opaque": true,
+      "logical_size": "29x29",
+      "scale": "1x",
+      "idiom": "ipad",
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "d9e12f11b256112dcd7c25c05cc15641883fa7f7de04e1bcf1654c2ceb5a4d93"
+    },
+    {
+      "platform": "ios",
+      "package_path": "native/ios/Icon-App-29x29@2x.png",
+      "pixels": [
+        58,
+        58
+      ],
+      "opaque": true,
+      "logical_size": "29x29",
+      "scale": "2x",
+      "idiom": "iphone/ipad",
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "60b5687c31fc286492d4651c9c2255e87f33441ad8e65d7584845281aa63a815"
+    },
+    {
+      "platform": "ios",
+      "package_path": "native/ios/Icon-App-29x29@3x.png",
+      "pixels": [
+        87,
+        87
+      ],
+      "opaque": true,
+      "logical_size": "29x29",
+      "scale": "3x",
+      "idiom": "iphone",
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "6d119119e5657a21e3f17ea338fecfe32f99e793a8e9f03788f96d25401c5923"
+    },
+    {
+      "platform": "ios",
+      "package_path": "native/ios/Icon-App-40x40@1x.png",
+      "pixels": [
+        40,
+        40
+      ],
+      "opaque": true,
+      "logical_size": "40x40",
+      "scale": "1x",
+      "idiom": "ipad",
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "b9156f41ee6ffead2c49d5c0074e86981ee08d3e5ff0a97faa587975cf5145a3"
+    },
+    {
+      "platform": "ios",
+      "package_path": "native/ios/Icon-App-40x40@2x.png",
+      "pixels": [
+        80,
+        80
+      ],
+      "opaque": true,
+      "logical_size": "40x40",
+      "scale": "2x",
+      "idiom": "iphone/ipad",
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "b2dc44f4565f0fca2e35c8d8cde2108ea4c572b166c91c1c952deeec39175066"
+    },
+    {
+      "platform": "ios",
+      "package_path": "native/ios/Icon-App-40x40@3x.png",
+      "pixels": [
+        120,
+        120
+      ],
+      "opaque": true,
+      "logical_size": "40x40",
+      "scale": "3x",
+      "idiom": "iphone",
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "3893c37862c5a313af0e173894f8cda9b11b19f295c2d0dadaa190c8f8b5afdf"
+    },
+    {
+      "platform": "ios",
+      "package_path": "native/ios/Icon-App-60x60@2x.png",
+      "pixels": [
+        120,
+        120
+      ],
+      "opaque": true,
+      "logical_size": "60x60",
+      "scale": "2x",
+      "idiom": "iphone",
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "3893c37862c5a313af0e173894f8cda9b11b19f295c2d0dadaa190c8f8b5afdf"
+    },
+    {
+      "platform": "ios",
+      "package_path": "native/ios/Icon-App-60x60@3x.png",
+      "pixels": [
+        180,
+        180
+      ],
+      "opaque": true,
+      "logical_size": "60x60",
+      "scale": "3x",
+      "idiom": "iphone",
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "19122fd8c91b3ce51b5a6a00d5840b3fa0f8a02416c0b997c283f9aba42a83bd"
+    },
+    {
+      "platform": "ios",
+      "package_path": "native/ios/Icon-App-76x76@1x.png",
+      "pixels": [
+        76,
+        76
+      ],
+      "opaque": true,
+      "logical_size": "76x76",
+      "scale": "1x",
+      "idiom": "ipad",
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "346cd9faab9e1e69d16003353045bad93837c0e42855f0cc5895e68a008a8e85"
+    },
+    {
+      "platform": "ios",
+      "package_path": "native/ios/Icon-App-76x76@2x.png",
+      "pixels": [
+        152,
+        152
+      ],
+      "opaque": true,
+      "logical_size": "76x76",
+      "scale": "2x",
+      "idiom": "ipad",
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "f7b7c63b29d16fcd4bbba88218ddaacaa6b8e67aadd8bd7c66ec40ab2ea4176c"
+    },
+    {
+      "platform": "ios",
+      "package_path": "native/ios/Icon-App-83.5x83.5@2x.png",
+      "pixels": [
+        167,
+        167
+      ],
+      "opaque": true,
+      "logical_size": "83.5x83.5",
+      "scale": "2x",
+      "idiom": "ipad",
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "19273567da62d7c301cd3ee1588185671b737abaa121f9ec80234e8c82d3ba43"
+    },
+    {
+      "platform": "ios",
+      "package_path": "native/ios/Icon-App-1024x1024@1x.png",
+      "pixels": [
+        1024,
+        1024
+      ],
+      "opaque": true,
+      "logical_size": "1024x1024",
+      "scale": "1x",
+      "idiom": "ios-marketing",
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "d4c351982a026595a759c1a42cdb024fd23420f48a17236430298a22cd9b25a4"
+    },
+    {
+      "platform": "macos",
+      "package_path": "native/macos/app_icon_16.png",
+      "pixels": [
+        16,
+        16
+      ],
+      "opaque": true,
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "f3fdd49f5d44284cbc4e779cb6c99d08ee764d14a20689c5d78e7d76263ff1f7"
+    },
+    {
+      "platform": "macos",
+      "package_path": "native/macos/app_icon_32.png",
+      "pixels": [
+        32,
+        32
+      ],
+      "opaque": true,
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "8bdd1c050011d04222f2c9acb0ed808bfb0e78ecc602e9db547eb31db899b545"
+    },
+    {
+      "platform": "macos",
+      "package_path": "native/macos/app_icon_64.png",
+      "pixels": [
+        64,
+        64
+      ],
+      "opaque": true,
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "db6687f8697f0c07e908611f2f06cd2110301b8e00b5dd31fd4ffbdf49a7ea99"
+    },
+    {
+      "platform": "macos",
+      "package_path": "native/macos/app_icon_128.png",
+      "pixels": [
+        128,
+        128
+      ],
+      "opaque": true,
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "2f3395ab79f06b600de1abaea66a0051c4e049e8ed5a101dd817890738522d5d"
+    },
+    {
+      "platform": "macos",
+      "package_path": "native/macos/app_icon_256.png",
+      "pixels": [
+        256,
+        256
+      ],
+      "opaque": true,
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "1d9251e5ea10ec4b0be4bb2e2e88077ba6315ebedfb0801d09b7eff67570f870"
+    },
+    {
+      "platform": "macos",
+      "package_path": "native/macos/app_icon_512.png",
+      "pixels": [
+        512,
+        512
+      ],
+      "opaque": true,
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "27a8dadec032e03ffca0953feaac6e800d7b737da5e5e3ec15b822841d2fe04d"
+    },
+    {
+      "platform": "macos",
+      "package_path": "native/macos/app_icon_1024.png",
+      "pixels": [
+        1024,
+        1024
+      ],
+      "opaque": true,
+      "use": "map to existing AppIcon Contents.json",
+      "sha256": "d4c351982a026595a759c1a42cdb024fd23420f48a17236430298a22cd9b25a4"
+    },
+    {
+      "platform": "android-adaptive",
+      "package_path": "native/android-adaptive/mipmap-mdpi/ic_launcher_foreground.png",
+      "pixels": [
+        108,
+        108
+      ],
+      "opaque": false,
+      "density": "mdpi",
+      "use": "optional adaptive foreground; merge with existing adaptive resources",
+      "sha256": "7e92b092b59ea6f0ed0c5a64dbf46a9bdd42ddaed31c6be816bda6ac7c07059a"
+    },
+    {
+      "platform": "android-adaptive",
+      "package_path": "native/android-adaptive/mipmap-hdpi/ic_launcher_foreground.png",
+      "pixels": [
+        162,
+        162
+      ],
+      "opaque": false,
+      "density": "hdpi",
+      "use": "optional adaptive foreground; merge with existing adaptive resources",
+      "sha256": "6794bd5f3ef792e84e22bf31be7b3e45951d97a096262656241cfb78d515182a"
+    },
+    {
+      "platform": "android-adaptive",
+      "package_path": "native/android-adaptive/mipmap-xhdpi/ic_launcher_foreground.png",
+      "pixels": [
+        216,
+        216
+      ],
+      "opaque": false,
+      "density": "xhdpi",
+      "use": "optional adaptive foreground; merge with existing adaptive resources",
+      "sha256": "66aa35530e2fad54e6f062474e2dfb3b88aaf83c7437834ae1e5894c7f411654"
+    },
+    {
+      "platform": "android-adaptive",
+      "package_path": "native/android-adaptive/mipmap-xxhdpi/ic_launcher_foreground.png",
+      "pixels": [
+        324,
+        324
+      ],
+      "opaque": false,
+      "density": "xxhdpi",
+      "use": "optional adaptive foreground; merge with existing adaptive resources",
+      "sha256": "2edd9935ed3dd013ff672203b5af26021eaacafc1531789f7b5fa027630b762c"
+    },
+    {
+      "platform": "android-adaptive",
+      "package_path": "native/android-adaptive/mipmap-xxxhdpi/ic_launcher_foreground.png",
+      "pixels": [
+        432,
+        432
+      ],
+      "opaque": false,
+      "density": "xxxhdpi",
+      "use": "optional adaptive foreground; merge with existing adaptive resources",
+      "sha256": "d9c2eea6c5f43293e4c27bc571f5484dd039e69d311a961ca6f0bf825e70d5da"
+    },
+    {
+      "platform": "windows",
+      "package_path": "native/windows/app_icon.ico",
+      "frames": [
+        [
+          16,
+          16
+        ],
+        [
+          20,
+          20
+        ],
+        [
+          24,
+          24
+        ],
+        [
+          32,
+          32
+        ],
+        [
+          40,
+          40
+        ],
+        [
+          48,
+          48
+        ],
+        [
+          64,
+          64
+        ],
+        [
+          96,
+          96
+        ],
+        [
+          128,
+          128
+        ],
+        [
+          256,
+          256
+        ]
+      ],
+      "use": "replace existing Windows runner icon resource without changing resource ID",
+      "sha256": "cb1eac9916cf54dd5fdd88c2893419c9fd331b778284fd1c250d4989bf7c3b01"
+    },
+    {
+      "platform": "android-adaptive-vector",
+      "package_path": "native/android-adaptive/ic_launcher_foreground.xml",
+      "viewport_dp": [
+        108,
+        108
+      ],
+      "use": "optional adaptive foreground VectorDrawable; integrate into existing adaptive icon resource",
+      "sha256": "9d60c123b6f065a47a9d90613ed394819fbf64eb640113ab7895a19491ea7b27"
+    },
+    {
+      "platform": "android-adaptive-vector",
+      "package_path": "native/android-adaptive/ic_launcher_monochrome.xml",
+      "viewport_dp": [
+        108,
+        108
+      ],
+      "use": "optional adaptive monochrome VectorDrawable; integrate into existing adaptive icon resource",
+      "sha256": "6a669cce27cde0dc06405ab43895def0ca7e07a25b0016e7456415b2f58aeb00"
+    },
+    {
+      "platform": "android-adaptive-background",
+      "package_path": "native/android-adaptive/background-color.txt",
+      "use": "full-bleed opaque #11110F background, declared in existing Android resources",
+      "sha256": "0b5a461981ff1e31b355446f8b722eb4d19aeb8e40ab37dcbf9c9a619f31b2c1"
+    }
+  ],
+  "adaptive_android": {
+    "foreground_canvas_dp": 108,
+    "safe_circle_diameter_dp": 66,
+    "mark_width_fraction": 0.44,
+    "max_bounding_corner_radius_dp": 32.358578007473035,
+    "safe_radius_dp": 33,
+    "background": "#11110F",
+    "important": "Do not substitute the 58%-width PWA maskable asset for the Android adaptive foreground."
+  },
+  "integration_scope": [
+    "User-facing app branding, launcher and browser icons",
+    "Admin header and favicon",
+    "Marketing homepage unchanged"
+  ],
+  "integration_rules": [
+    "Copy fingerprinted web assets under each app/admin public root using web_copy_map. Root aliases are fallbacks.",
+    "Merge icons into the existing web manifest; preserve name, id, start_url, scope, display, orientation, shortcuts and unrelated settings.",
+    "Use the existing Android/iOS/macOS/Windows resource declarations as source of truth; map by size and scale, preserve resource IDs and unrelated assets.",
+    "Preserve aspect ratio; do not stretch, redraw, reconstruct with live fonts, reduce y\u2013t gap, add effects or apply CSS color filters.",
+    "Do not treat all UI slots as maskable; use the correct any/maskable/adaptive purpose.",
+    "Invalidate only relevant build/service-worker caches through normal release behavior; verify new hashes load from the deployed app and admin pages.",
+    "Native packaging should be validated with the current Flutter/Xcode/Android project; 1024 PNG is a source asset, not a full modern Icon Composer project.",
+    "Production deployment and existing release gates remain the integration task\u2019s responsibility."
+  ]
+}

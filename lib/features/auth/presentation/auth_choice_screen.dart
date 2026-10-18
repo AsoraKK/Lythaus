@@ -14,6 +14,7 @@ import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/core/security/device_integrity_guard.dart';
 import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/widgets/lyth_brand.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/auth_failure.dart';
 import 'package:lythaus/features/auth/domain/password_policy.dart';
@@ -246,7 +247,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Icon(Icons.auto_awesome, size: 56),
+                      const LythBrand(height: 40),
                       const SizedBox(height: 12),
                       Text(
                         'Welcome to Lythaus',

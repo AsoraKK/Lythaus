@@ -33,3 +33,9 @@
 
 /release-update.*.js
   Cache-Control: public, max-age=31536000, immutable
+
+/brand/lythaus-v1/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/icons/lythaus-v1/*
+  Cache-Control: public, max-age=31536000, immutable

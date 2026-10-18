@@ -16,6 +16,7 @@ void main() {
       child: const LythWordmarkStatic(size: LythWordmarkSize.large),
     );
 
+    await tester.pumpAndSettle();
     await expectLater(
       find.byType(Scaffold),
       matchesGoldenFile('goldens/lyth_wordmark_light.png'),
@@ -29,6 +30,7 @@ void main() {
       child: const LythWordmarkStatic(size: LythWordmarkSize.large),
     );
 
+    await tester.pumpAndSettle();
     await expectLater(
       find.byType(Scaffold),
       matchesGoldenFile('goldens/lyth_wordmark_dark.png'),

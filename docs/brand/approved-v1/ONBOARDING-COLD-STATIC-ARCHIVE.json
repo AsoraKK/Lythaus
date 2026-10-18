@@ -1,0 +1,46 @@
+{
+  "reviewHead": "65c54da2fed08cd9121fd1158d9557e345c911d2",
+  "testedMerge": "d8bc4611b18db864b9c0e2a124cc8d9134df29ee",
+  "run": 39079706325,
+  "evidenceUrl": "https://chatgpt.com/api/library/files/libfile_549ddb29b1dc81918bf97fa478649caf/download",
+  "archiveSha256": "439128aaafea077e40cf10d567426e7f5fd118cdde744377d09c2d724561c633",
+  "scope": "Original cold-static onboarding failures are archived, not repaired or reclassified by component-host acceptance.",
+  "cases": [
+    {
+      "case": "webkit-onboarding-light-320",
+      "status": "failed",
+      "png": "webkit-onboarding-light-320.png",
+      "pngSha256": "bb16ee635c2498c89c95a27fcb43793c964d189e7eeb95b92ed80e5049948a46"
+    },
+    {
+      "case": "webkit-onboarding-light-390",
+      "status": "failed",
+      "png": "webkit-onboarding-light-390.png",
+      "pngSha256": "bd8c226965c1ec60698fcf896f1837e1f784708487ec7c4640304700b7d83252"
+    },
+    {
+      "case": "webkit-onboarding-light-1440",
+      "status": "failed",
+      "png": "webkit-onboarding-light-1440.png",
+      "pngSha256": "a073dd17344a3f1347845e37625937faa0a95f054ae6cff4e168e4f84d9d72cc"
+    },
+    {
+      "case": "webkit-onboarding-dark-320",
+      "status": "failed",
+      "png": "webkit-onboarding-dark-320.png",
+      "pngSha256": "bb16ee635c2498c89c95a27fcb43793c964d189e7eeb95b92ed80e5049948a46"
+    },
+    {
+      "case": "webkit-onboarding-dark-390",
+      "status": "passed",
+      "png": "webkit-onboarding-dark-390.png",
+      "pngSha256": "f1b84544c5c7272500f819cfc56b68c102eef10e71bada36f1eff836c12fcc4e"
+    },
+    {
+      "case": "webkit-onboarding-dark-1440",
+      "status": "passed",
+      "png": "webkit-onboarding-dark-1440.png",
+      "pngSha256": "b51a763f7aa09df80231b1f4a6bfb67f4daf32557e61330775f811e762f612a9"
+    }
+  ]
+}

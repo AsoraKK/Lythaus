@@ -3,30 +3,32 @@
     "short_name": "Lythaus",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
+    "background_color": "#11110F",
+    "theme_color": "#11110F",
     "description": "A social platform for human-authored content.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
         {
-            "src": "icons/Icon-192.png",
+            "src": "icons/lythaus-v1/pwa-icon-192x192.5c5c7622a5f7.png",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any"
         },
         {
-            "src": "icons/Icon-512.png",
+            "src": "icons/lythaus-v1/pwa-icon-512x512.27a8dadec032.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any"
         },
         {
-            "src": "icons/Icon-maskable-192.png",
+            "src": "icons/lythaus-v1/pwa-maskable-192x192.36698aff23fb.png",
             "sizes": "192x192",
             "type": "image/png",
             "purpose": "maskable"
         },
         {
-            "src": "icons/Icon-maskable-512.png",
+            "src": "icons/lythaus-v1/pwa-maskable-512x512.10ec5b6e6764.png",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"

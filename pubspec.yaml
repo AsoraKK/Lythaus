@@ -91,7 +91,7 @@ flutter:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
   assets:
-    - assets/brand/lythaus_mark.svg
+    - assets/brand/lythaus-v1/
     - assets/fonts/
 
   # Bundled Manrope fonts for consistent rendering in tests and production

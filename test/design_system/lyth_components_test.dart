@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:lythaus/design_system/index.dart';
 
@@ -9,7 +10,9 @@ void main() {
     GoogleFonts.config.allowRuntimeFetching = false;
   });
 
-  testWidgets('LythWordmarkStatic uses onSurface color', (tester) async {
+  testWidgets('LythWordmarkStatic preserves approved outlines and colors', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: LythausTheme.light(),
@@ -19,16 +22,11 @@ void main() {
     );
     await tester.pump();
 
-    // LythWordmarkStatic has a single text widget (no glow layer)
-    expect(find.text('Lyt haus'), findsOneWidget);
-
-    final context = tester.element(find.byType(LythWordmarkStatic));
-    final expectedColor = Theme.of(
-      context,
-    ).colorScheme.onSurface.withValues(alpha: 0.9);
-
-    final text = tester.widget<Text>(find.text('Lyt haus'));
-    expect(text.style?.color, expectedColor);
+    await tester.pumpAndSettle();
+    final image = tester.widget<SvgPicture>(find.byType(SvgPicture));
+    expect(image.colorFilter, isNull);
+    expect(image.semanticsLabel, 'Lythaus');
+    expect(find.text('Lyt haus'), findsNothing);
   });
 
   testWidgets('LythButton primary uses colorScheme.primary', (tester) async {
