@@ -6,7 +6,7 @@ const [root,output]=process.argv.slice(2),original=await readFile('lib/main.dart
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 await mkdir(output,{recursive:true});await writeFile(path.join(root,'lib/main.dart'),prepared);
 const helpers={};
-for(const name of ['brand_login_geometry.dart','onboarding_lifecycle_geometry.dart','onboarding_visible_route.dart','onboarding_visible_probe.dart']){
+for(const name of ['brand_login_geometry.dart','onboarding_visible_geometry.dart','onboarding_visible_route.dart','onboarding_visible_probe.dart']){
  const bytes=await readFile('test/browser/'+name);helpers[name]=hash(bytes);
  await writeFile(path.join(root,'lib',name),bytes);await writeFile(path.join(output,name),bytes);
 }

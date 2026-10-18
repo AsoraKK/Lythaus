@@ -19,3 +19,8 @@ test('navigation helper has no added app, Navigator, provider override or frame 
  assert.match(route,/transitionDuration: Duration.zero/);assert.match(route,/requestFocus: false/);assert.match(route,/disableAnimations: true/);
  assert.match(route,/Synthetic continuation completed/);assert.match(route,/Navigator\.of\(context\)\.push/);
 });
+test('component geometry differs only by read-only onstage traversal',async()=>{
+ const original=await readFile('test/browser/onboarding_lifecycle_geometry.dart','utf8');
+ const visible=await readFile('test/browser/onboarding_visible_geometry.dart','utf8');
+ assert.equal(visible.replace('element.debugVisitOnstageChildren(visit);','element.visitChildElements(visit);'),original);
+});

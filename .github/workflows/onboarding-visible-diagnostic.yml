@@ -31,7 +31,7 @@ jobs:
           cache: npm
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed test/browser/onboarding_visible*.dart
-      - run: flutter analyze --no-pub test/browser/onboarding_visible_route.dart test/browser/onboarding_visible_probe.dart test/browser/onboarding_visible_route_test.dart
+      - run: flutter analyze --no-pub test/browser/onboarding_visible_route.dart test/browser/onboarding_visible_probe.dart test/browser/onboarding_visible_geometry.dart test/browser/onboarding_visible_route_test.dart
       - run: flutter test --no-pub test/browser/onboarding_visible_route_test.dart --reporter expanded
       - run: npm ci --ignore-scripts --no-audit
       - run: npx playwright install --with-deps chromium webkit

@@ -34,6 +34,20 @@ void main() {
     navigator.push(route);
     await tester.pumpAndSettle();
     expect(find.byType(Navigator), findsOneWidget);
+    final onstageText = <String>[];
+    void visitOnstage(Element element) {
+      final widget = element.widget;
+      if (widget is Text && widget.data != null) onstageText.add(widget.data!);
+      element.debugVisitOnstageChildren(visitOnstage);
+    }
+
+    visitOnstage(WidgetsBinding.instance.rootElement!);
+    expect(onstageText, isNot(contains('Original visible host')));
+    expect(onstageText, contains('Welcome to Lythaus'));
+    expect(
+      find.text('Original visible host', skipOffstage: false),
+      findsOneWidget,
+    );
     final component = tester.element(find.byType(OnboardingIntroScreen));
     expect(Navigator.of(component), same(navigator));
     expect(MediaQuery.of(component).disableAnimations, isTrue);

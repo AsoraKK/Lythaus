@@ -54,6 +54,13 @@ without changing state. A widget companion verifies zero transition, no requeste
 focus, one Navigator, inherited theme/scale, true animation policy, Continue and
 normal stack restoration. The browser does not claim a shipping Back journey.
 
+The visible-host probe uses Flutter's read-only debugVisitOnstageChildren traversal
+so an ordinary retained Navigator route underneath the current route is not
+misreported as visible. It registers no inherited-widget dependencies. The visible
+geometry helper differs from the frozen static helper only in this traversal;
+the shared coordinate calculation is identical. The companion test proves the
+underlying host remains mounted while onstage traversal excludes it.
+
 No frame request, repaint loop, new animation pump, focus/scroll/resize stimulus or
 semantics activation is added before original captures. Normal route presentation
 is the intended stimulus. Existing health instrumentation is explicitly retained.

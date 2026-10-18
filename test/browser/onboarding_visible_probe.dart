@@ -31,7 +31,7 @@ void installVisibleOnboardingProbe() {
       if (matches(widget)) {
         found.add(element);
       }
-      element.visitChildElements(visit);
+      element.debugVisitOnstageChildren(visit);
     }
 
     final root = WidgetsBinding.instance.rootElement;
