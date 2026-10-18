@@ -8,7 +8,7 @@ export const originalCaptureEvents=['pointerdown','pointerup','mousedown','mouse
 export const onboardingCopy=['Welcome to Lythaus','The authentic social network. Curated feeds, credible voices, and calm interactions.','Before you post','Choose Human-authored or AI-assisted before posting.','AI-generated public content cannot be posted.','AI-assisted public text is limited to 249 user-perceived characters.','Disclosure conflicts may enter Under review.','Appeal outcomes are recorded by Lythaus.','This is an invite-only Alpha.','Continue'];
 export async function waitForOriginalDwell(page,anchor,dwell){
  assert.ok(Number.isFinite(anchor)&&Number.isFinite(dwell)&&anchor>=0&&dwell>=0);
- await page.waitForFunction(deadline=>performance.now()>=deadline,anchor+dwell,{polling:10});
+ await page.waitForFunction(({anchor,dwell})=>performance.now()-anchor>=dwell,{anchor,dwell},{polling:10});
 }
 export function assertSignedOutHost(host,navigatorId){
  assert.equal(host.materialApps,1);assert.equal(host.navigators,1);

@@ -27,14 +27,15 @@ test('component helpers introduce no app, Navigator, override, frame or focus st
 const host=()=>({materialApps:1,navigators:1,navigatorId:7,auth:'signed-out',guest:false,pendingAuthenticatedWork:false,focusedEditable:false,semanticsEnabled:false});
 test('a wakeup 0.1ms before the deadline cannot release an original capture',async()=>{
  for(const dwell of [250,5250]){
-  const anchor=927.6,deadline=anchor+dwell,decisions=[];
-  const page={waitForFunction:async(predicate,actualDeadline,options)=>{
-   assert.equal(actualDeadline,deadline);assert.equal(options.polling,10);
-   for(const now of [deadline-0.1,deadline,deadline+0.1]){
-    const read=runInNewContext('('+predicate.toString()+')',{performance:{now:()=>now}});decisions.push(read(actualDeadline));
+  const anchor=927.6000000000931,decisions=[];
+  const page={waitForFunction:async(predicate,timing,options)=>{
+   assert.deepEqual(timing,{anchor,dwell});assert.equal(options.polling,10);
+   for(const now of [anchor+dwell-0.1,anchor+dwell+0.1]){
+    const read=runInNewContext('('+predicate.toString()+')',{performance:{now:()=>now}});decisions.push(read(timing));
    }
+   const exact=runInNewContext('('+predicate.toString()+')',{performance:{now:()=>dwell}});assert.equal(exact({anchor:0,dwell}),true);
   }};
-  await waitForOriginalDwell(page,anchor,dwell);assert.deepEqual(decisions,[false,true,true]);
+  await waitForOriginalDwell(page,anchor,dwell);assert.deepEqual(decisions,[false,true]);
  }
  await assert.rejects(waitForOriginalDwell({},NaN,250));
 });
