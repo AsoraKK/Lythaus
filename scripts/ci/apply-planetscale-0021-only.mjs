@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { loadApprovedMigrations } from './planetscale-migration-manifest.mjs';
 import { exactRegistryPrefix } from './planetscale-migration-reconciliation.mjs';
-import { assess0021RegistryState, is0021PlanReadyOutput, MIGRATION_0020, MIGRATION_0021 } from './planetscale-0021-only-contract.mjs';
+import { assess0021ExecutionConsent, assess0021RegistryState, is0021PlanReadyOutput, MIGRATION_0020, MIGRATION_0021 } from './planetscale-0021-only-contract.mjs';
 import { adminDatabaseConnectionConfig, assertConnectedAdminDatabaseTarget } from './planetscale-0021-target-identity.mjs';
 import { classifyLocked0021State, recordCanonical0021RegistryMarker } from './planetscale-0021-registry-marker.mjs';
 import { applyMediaQuarantineMigration, inspectMediaQuarantineMigration, verifyMediaQuarantineMigration } from './planetscale-media-quarantine-migration.mjs';
@@ -35,6 +35,12 @@ function assertExecutionGate() {
   if (process.env.PLANETSCALE_0021_EXECUTION_APPROVED !== 'approved') throw new Error('execution_gate_not_approved');
   if (process.env.PSCALE_BRANCH_NAME !== 'main') throw new Error('target_branch_not_main');
   if (!is0021PlanReadyOutput(process.env.PLANETSCALE_0021_PLAN_READY)) throw new Error('read_only_plan_not_ready');
+  report.ownerExecutionConsent = assess0021ExecutionConsent({
+    releaseSha: process.env.RELEASE_SHA,
+    approvedSha: process.env.PLANETSCALE_0021_EXECUTION_APPROVED_SHA,
+    approvalReference: process.env.PLANETSCALE_0021_EXECUTION_APPROVAL_REFERENCE,
+  });
+  if (!report.ownerExecutionConsent.ok) throw new Error(report.ownerExecutionConsent.blockers[0]);
   let plannedTarget;
   try { plannedTarget = JSON.parse(process.env.PLANETSCALE_0021_PLAN_TARGET_IDENTITY ?? ''); } catch { plannedTarget = null; }
   if (plannedTarget?.provider?.organization !== 'lythaus'
@@ -63,6 +69,8 @@ async function readRegistry(client) {
 function safeFailureCode(error) {
   const message = error instanceof Error ? error.message : '';
   const controlled = new Set([
+    'release_sha_missing_or_invalid', '0021_execution_approved_sha_missing_or_invalid',
+    '0021_execution_approved_sha_does_not_match_release', '0021_execution_approval_reference_missing',
     'execution_gate_not_approved', 'target_branch_not_main', 'read_only_plan_not_ready',
     'PLANETSCALE_ADMIN_DATABASE_URL_missing', 'admin_database_url_requires_sslmode_verify_full',
     'database_target_url_missing', 'database_target_url_scheme_invalid', 'database_target_url_requires_verify_full',

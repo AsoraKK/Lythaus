@@ -3,6 +3,7 @@ import parsePgConnectionString from 'pg-connection-string';
 import test from 'node:test';
 import { expectedMigrationPrefix, loadApprovedMigrations } from '../ci/planetscale-migration-manifest.mjs';
 import {
+  assess0021ExecutionConsent,
   assess0021RegistryState,
   assessOperatorCostEstimate,
   assessPlanetScaleBackupEvidence,
@@ -34,6 +35,18 @@ const validBackup = {
   deleted_at: null, protected: true,
   database_branch: { id: 'main-branch-id', name: 'main', deleted_at: null },
 };
+
+test('0021 execution consent requires an exact candidate SHA and an approval reference', () => {
+  const valid = { releaseSha: 'a'.repeat(40), approvedSha: 'a'.repeat(40), approvalReference: 'owner execution approval record' };
+  assert.equal(assess0021ExecutionConsent(valid).ok, true);
+  assert.equal(assess0021ExecutionConsent(valid).migration, MIGRATION_0021);
+  for (const override of [
+    { approvedSha: undefined }, { approvedSha: 'approved' }, { approvedSha: 'b'.repeat(40) },
+    { approvedSha: 'A'.repeat(40) }, { approvedSha: ` ${valid.approvedSha}` },
+    { releaseSha: undefined }, { releaseSha: 'main' }, { approvalReference: '' }, { approvalReference: '   ' },
+  ]) assert.equal(assess0021ExecutionConsent({ ...valid, ...override }).ok, false);
+  assert.equal(assess0021ExecutionConsent({ releaseSha: valid.releaseSha, approvalReference: 'maintenance gap approved' }).ok, false);
+});
 
 test('accepts only fresh, protected backup evidence for the ready protected production main branch', () => {
   const evidence = assessPlanetScaleBackupEvidence({ branch: validBranch, backup: validBackup, backupId: validBackup.id, now: Date.parse('2026-10-17T00:00:00Z') });

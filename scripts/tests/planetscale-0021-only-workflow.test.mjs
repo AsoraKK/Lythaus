@@ -65,6 +65,17 @@ test('plan job has no administrative database credential and executor has no ser
   assert.doesNotMatch(executionText, /reconcile-planetscale-schema-verifier/);
 });
 
+test('both plans and the executor consume approval from protected variables rather than dispatch inputs', () => {
+  for (const [job, count] of [['plan-0021-only', 1], ['execute-0021-only', 2]]) {
+    const text = jobBlock(job);
+    for (const key of ['PLANETSCALE_0021_EXECUTION_APPROVED_SHA', 'PLANETSCALE_0021_EXECUTION_APPROVAL_REFERENCE']) {
+      assert.equal(text.split(`${key}: \${{ vars.${key} }}`).length - 1, count);
+      assert.equal(text.includes(`\${{ inputs.${key}`), false);
+    }
+  }
+  assert.doesNotMatch(jobBlock('migrate'), /PLANETSCALE_0021_EXECUTION_APPROVED_SHA/);
+});
+
 test('workflow passes the plan boolean unchanged and executor accepts true while false blocks before DB access', () => {
   const executionText = jobBlock('execute-0021-only');
   assert.ok(executionText.includes('PLANETSCALE_0021_PLAN_READY: ${{ steps.plan.outputs.ready }}'));
@@ -74,6 +85,9 @@ test('workflow passes the plan boolean unchanged and executor accepts true while
     PATH: process.env.PATH ?? '',
     PLANETSCALE_0021_EXECUTION_APPROVED: 'approved',
     PSCALE_BRANCH_NAME: 'main',
+    RELEASE_SHA: 'a'.repeat(40),
+    PLANETSCALE_0021_EXECUTION_APPROVED_SHA: 'a'.repeat(40),
+    PLANETSCALE_0021_EXECUTION_APPROVAL_REFERENCE: 'synthetic owner execution approval',
   };
   const blocked = spawnSync(process.execPath, [executor], {
     cwd: root, encoding: 'utf8', env: { ...common, PLANETSCALE_0021_PLAN_READY: 'false' }, timeout: 15_000,
@@ -85,6 +99,19 @@ test('workflow passes the plan boolean unchanged and executor accepts true while
     provider: { organization: 'lythaus', database: 'lythaus-core', branchName: 'main', branchId: 'branch123' },
     sql: { databaseName: 'postgres', originFingerprint: 'a'.repeat(64) },
   });
+  for (const [override, failureCode] of [
+    [{ PLANETSCALE_0021_EXECUTION_APPROVED_SHA: '' }, '0021_execution_approved_sha_missing_or_invalid'],
+    [{ PLANETSCALE_0021_EXECUTION_APPROVED_SHA: 'b'.repeat(40) }, '0021_execution_approved_sha_does_not_match_release'],
+    [{ PLANETSCALE_0021_EXECUTION_APPROVAL_REFERENCE: '' }, '0021_execution_approval_reference_missing'],
+    [{ RELEASE_SHA: '' }, 'release_sha_missing_or_invalid'],
+  ]) {
+    const refused = spawnSync(process.execPath, [executor], {
+      cwd: root, encoding: 'utf8', timeout: 15_000,
+      env: { ...common, PLANETSCALE_0021_PLAN_READY: 'true', PLANETSCALE_0021_PLAN_TARGET_IDENTITY: JSON.stringify(plannedTarget), ...override },
+    });
+    assert.equal(refused.status, 1);
+    assert.equal(JSON.parse(refused.stdout).failureCode, failureCode);
+  }
   const accepted = spawnSync(process.execPath, [executor], {
     cwd: root,
     encoding: 'utf8',
@@ -111,9 +138,30 @@ test('local plan without read-only credentials emits blockers and performs no pr
   assert.equal(report.databaseWrites, false);
   assert.equal(report.providerMutations, false);
   assert.equal(report.readyForProtectedExecutionReview, false);
-  assert.equal(report.executionEligibility, 'blocked_pending_owner_decision');
-  assert.ok(report.blockers.includes('0021_cutover_owner_decision_pending'));
+  assert.equal(report.executionEligibility, 'blocked_pending_prerequisites');
+  assert.ok(report.blockers.includes('0021_execution_approved_sha_missing_or_invalid'));
   assert.ok(report.blockers.includes('PLANETSCALE_API_TOKEN_missing_for_read_branch_and_backup_evidence'));
+});
+
+test('candidate consent alone cannot make a plan ready without backup, budget, catalog and binding proof', () => {
+  const result = spawnSync(process.execPath, ['scripts/ci/planetscale-0021-only-plan.mjs'], {
+    cwd: root, encoding: 'utf8', timeout: 15_000,
+    env: { PATH: process.env.PATH ?? '', CI: 'true', RELEASE_SHA: 'a'.repeat(40), PSCALE_BRANCH_NAME: 'main',
+      PLANETSCALE_0021_EXECUTION_APPROVED_SHA: 'a'.repeat(40),
+      PLANETSCALE_0021_EXECUTION_APPROVAL_REFERENCE: 'synthetic owner execution approval' },
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.ownerExecutionConsent.ok, true);
+  assert.equal(report.readyForProtectedExecutionReview, false);
+  assert.equal(report.costReview.ok, false);
+  for (const blocker of ['positive_cost_ceiling_missing_or_invalid', 'PLANETSCALE_API_TOKEN_missing_for_read_branch_and_backup_evidence',
+    'PLANETSCALE_SCHEMA_READ_DATABASE_URL_catalog_reconciliation_failed_or_unavailable', 'main_target_identity_evidence_incomplete']) {
+    assert.ok(report.blockers.includes(blocker));
+  }
+  assert.equal(report.hyperdriveOrigins.status, 'unavailable');
+  assert.equal(report.databaseWrites, false);
+  assert.equal(report.providerMutations, false);
 });
 
 test('read-only plan and gated executor use exact scoped operations', () => {

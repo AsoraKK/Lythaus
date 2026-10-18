@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "lythaus-0021-maintenance-readiness-v1",
+  "capturedAt": "2026-10-18T06:00:20Z",
+  "sourceMainSha": "116812fdc51d9aef7dae4c36354c75b097fc7533",
+  "status": "MAINTENANCE_CHOICE_APPROVED_PREREQUISITES_BLOCKED",
+  "hostedDatabaseOrCloudflareMutationsPerformed": false,
+  "credentialsCreatedOrChanged": false,
+  "maintenanceActivated": false,
+  "workflowDispatched": false,
+  "ownerConsent": {
+    "maintenanceGapApproved": true,
+    "source": "owner statement relayed by parent delegation on 2026-10-18",
+    "statement": "We can do a maintenance gap, we can begin right now.",
+    "specificExecutionApprovalForFinalCandidateRecorded": false,
+    "newCredentialOrSpendingApprovalInferred": false
+  },
+  "candidateChecks": {
+    "source": "parent verification at 2026-10-18T05:57:00Z; not repolled by this task",
+    "mainSha": "116812fdc51d9aef7dae4c36354c75b097fc7533",
+    "postMergeCiRun": 39100426688,
+    "ciJobsPassed": 8,
+    "ancillaryPushWorkflowsPassed": 5,
+    "futureProposalMergeShaCovered": false
+  },
+  "liveRelease": {
+    "source": "parent-supplied release evidence",
+    "number": 128,
+    "sha": "3880a8be4c89459dd7ef831c9385817a887511ef",
+    "schemaVersion": "0020_auth_recovery_delivery.sql"
+  },
+  "freshProviderMetadata": {
+    "source": "PlanetScale MCP metadata and namespace schema GETs",
+    "organization": "lythaus",
+    "database": "lythaus-core",
+    "databaseId": "hzhe0cbn6rxi",
+    "branch": "main",
+    "branchId": "vqa2g2xc9wsl",
+    "kind": "postgresql",
+    "ready": true,
+    "production": true,
+    "branchesCount": 1,
+    "cluster": "PS_5_AWS_ARM",
+    "replicas": 0,
+    "branchDeletionProtected": false,
+    "databaseDeletionProtected": false,
+    "restoreChecklistCompletedAt": null,
+    "restoreChecklistNullProvesBackupAbsence": false,
+    "mediaSchemaNamespace": "postgres.media",
+    "uploadSessionsTableReturned": true,
+    "uploadSessionsQuarantineDeletedAtColumnPresent": false,
+    "schemaExportProvesRegistryOrConnectionRole": false
+  },
+  "remainingReadOnlyProof": {
+    "actualRuntimeApplicationAdminAndMigrationRoleBinding": "UNKNOWN",
+    "connectedSqlSessionDatabaseAndRole": "UNKNOWN",
+    "canonicalRegistryChecksumsAndIndexProgressVisibility": "UNKNOWN",
+    "selectedFreshSuccessfulProtectedBackup": "UNKNOWN",
+    "actualHostedRestoreEvidence": "UNKNOWN",
+    "independentRecoveryDestinationEvidence": "UNKNOWN",
+    "allocatedAndUsedDiskIndexWalAndEgressEstimate": "UNKNOWN",
+    "approvedPositiveAdditionalUsageCeiling": "UNKNOWN"
+  },
+  "accessDiagnosis": {
+    "planetScaleTokenPresent": true,
+    "planetScaleTokenMatchesExistingIdColonTokenFormat": false,
+    "planetScaleDirectHttpRequestAttempted": false,
+    "existingSchemaReadDatabaseUrlPresent": false,
+    "existingAdminDatabaseUrlPresent": false,
+    "existingRoleIdentifierMapPresent": false,
+    "existingBackupIdPresent": false,
+    "existingUsageCeilingPresent": false,
+    "priorCloudflareHyperdriveGet": "HTTP 401; not retried",
+    "priorGitHubProductionVariableGet": "HTTP 403; not retried",
+    "sqlReadToolUsed": false,
+    "sqlReadToolAvoidanceReason": "tool provisions short-lived credentials; current authorization does not permit credential creation"
+  },
+  "freshCostEvidence": {
+    "source": "PlanetScale MCP invoice line-item metadata",
+    "invoiceId": "brd9k35aj1xr",
+    "lineItemId": "01uvowi35j39",
+    "metric": "PS_5_AWS_ARM",
+    "subtotalUsd": "5.0",
+    "cloudflareBilled": true,
+    "additionalMigrationEstimateUsd": null,
+    "approvedAdditionalUsageCeilingUsd": null,
+    "baselineLineItemIsAnAdditionalUsageEstimate": false
+  },
+  "scopedPath": {
+    "canonical0021Sha256": "c2ba4708020de699604373ad0d5a6fff1d113de9d36c747adb731d4667a8f564",
+    "approvedMigrationSetSha256": "49e4497af7c2e8b1bfb4df5208774a68969211187f93ba4e1ef21c03067ab614",
+    "stagedRecoveryPrimitivesUnchangedFromReviewed1040": true,
+    "proposal": "replace unconditional blocker with matching protected candidate execution SHA and approval reference in both plan and executor",
+    "proposalProvidesExecutionApproval": false,
+    "otherPrerequisitesWaived": false
+  }
+}

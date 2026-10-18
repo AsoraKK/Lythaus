@@ -7,6 +7,12 @@ The [sanitized evidence](../evidence/production-cutover/2026-10-17-0021-readines
 records successful reads, unavailable evidence, exact checksums, and access
 failures. Existing successful CI was inspected for locators, never rerun.
 
+**2026-10-18 update:** The owner approved a maintenance gap and beginning
+preparation immediately. That choice is resolved. The
+[current consent proposal and readiness packet](../testing/planetscale-0021-candidate-consent-2026-10-18.md)
+separately tracks candidate-specific hosted execution consent, access, recovery
+evidence and cost. The observations below describe the dated 2026-10-17 snapshot.
+
 ## Observed state and missing evidence
 
 PlanetScale metadata confirms the sole production PostgreSQL branch
@@ -135,22 +141,27 @@ dispatch a workflow or mutate a provider.
    alone is not a successful restore test. Inspect the independent destination
    and backup-health evidence separately; no restore or export is authorized.
 3. Resolve zero-replica topology against the documented HA precondition and
-   obtain the named action, cost and recovery decisions. Record the maintenance
-   preference, the specific hosted 0021 permission and
+   obtain the named action, cost and recovery decisions. The maintenance gap
+   is approved as of 2026-10-18; record the specific hosted 0021 permission and
    `AUTHORISE MIGRATION USAGE: maximum additional cost US$___`. Grants,
    credential/configuration changes, protection/retention changes and recovery
    restores require their own specific approval. Preparation continues while
    these remain pending.
-4. A separately reviewed gate change is required before execution becomes
-   reachable: main currently always adds
-   `0021_cutover_owner_decision_pending`. Preserve that blocker in this packet.
-   Never bypass it by editing `ready`, plan artifacts or environment output.
+4. The scoped plan and executor require
+   `PLANETSCALE_0021_EXECUTION_APPROVED_SHA` to match the final exact candidate
+   and `PLANETSCALE_0021_EXECUTION_APPROVAL_REFERENCE` to identify its specific
+   hosted execution approval. Configure these only after parent coordination
+   and the named action is approved. The former unconditional
+   `0021_cutover_owner_decision_pending` gate is recorded in the historical
+   snapshot; matching maintenance consent alone cannot satisfy the replacement.
+   Never bypass consent by editing `ready`, plan artifacts or environment output.
    After any separately approved protection, role, topology or credential
    correction, repeat only the affected read-only evidence and target checks.
 5. Stage the reviewed protected configuration: existing schema-read/admin
    credential references, reviewed five-role `PSCALE_ROLE_IDENTIFIERS` map,
-   selected `PLANETSCALE_PRODUCTION_BACKUP_ID`, and positive
-   `PLANETSCALE_MIGRATION_USAGE_MAX_USD`. No secret value belongs in Git or an
+   selected `PLANETSCALE_PRODUCTION_BACKUP_ID`, candidate execution approval
+   SHA/reference, and positive `PLANETSCALE_MIGRATION_USAGE_MAX_USD`.
+   No secret value belongs in Git or an
    evidence packet. Configuration must be independently verified after any
    authorized write; its existence is not proof of correct contents.
 6. Once specifically authorized, dispatch

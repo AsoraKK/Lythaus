@@ -12,6 +12,24 @@ export function is0021PlanReadyOutput(value) {
   return value === 'true';
 }
 
+export function assess0021ExecutionConsent({ releaseSha, approvedSha, approvalReference }) {
+  const blockers = [];
+  const validSha = value => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value);
+  const reference = typeof approvalReference === 'string' ? approvalReference.trim() : '';
+  if (!validSha(releaseSha)) blockers.push('release_sha_missing_or_invalid');
+  if (!validSha(approvedSha)) blockers.push('0021_execution_approved_sha_missing_or_invalid');
+  else if (approvedSha !== releaseSha) blockers.push('0021_execution_approved_sha_does_not_match_release');
+  if (!reference) blockers.push('0021_execution_approval_reference_missing');
+  return {
+    ok: blockers.length === 0,
+    blockers,
+    migration: MIGRATION_0021,
+    releaseSha: validSha(releaseSha) ? releaseSha : null,
+    approvedSha: validSha(approvedSha) ? approvedSha : null,
+    approvalReference: reference || null,
+  };
+}
+
 export function resolve0021BackupId(requestedId, existingId) {
   return (typeof requestedId === 'string' ? requestedId.trim() : '')
     || (typeof existingId === 'string' ? existingId.trim() : '');
