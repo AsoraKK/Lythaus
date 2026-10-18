@@ -1,0 +1,15 @@
+import {readFile,writeFile,mkdir} from 'node:fs/promises';
+import path from 'node:path';
+import {createHash} from 'node:crypto';
+import {prepareOnboardingReference} from './tests/onboarding-visible-source.mjs';
+const [root,output]=process.argv.slice(2);
+const original=await readFile('test/browser/approved_brand_entry.dart','utf8'),prepared=prepareOnboardingReference(original);
+const geometry=await readFile('test/browser/onboarding_visible_geometry.dart');
+const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
+await mkdir(output,{recursive:true});
+await writeFile(path.join(root,'test/browser/approved_brand_entry.dart'),prepared);
+await writeFile(path.join(root,'test/browser/onboarding_visible_geometry.dart'),geometry);
+await writeFile(path.join(output,'original-entry.dart'),original);
+await writeFile(path.join(output,'prepared-entry.dart'),prepared);
+await writeFile(path.join(output,'onboarding_visible_geometry.dart'),geometry);
+await writeFile(path.join(output,'construction.json'),JSON.stringify({originalSha256:hash(original),preparedSha256:hash(prepared),geometrySha256:hash(geometry),scope:'Separate original static fixture with read-only geometry observation. Reference geometry only; blank pixels are recorded, never accepted as component paint.'},null,2)+'\n');

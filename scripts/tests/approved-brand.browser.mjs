@@ -13,10 +13,13 @@ import {containedWordmarkRect} from './brand-artwork-pixels.mjs';
 import {assertBrandCaseMatrix} from './brand-case-matrix.mjs';
 import {loginFixtureResponse,expectedRefreshConsole,refreshUrl,logoutUrl,discoverUrl} from './brand-login-transport.mjs';
 import {assertLoginLayout,assertMatchingLoginLayout,loginFirstPaintPixels,assertLoginFirstPaintPixels} from './brand-login-first-paint.mjs';
+import {runOnboardingCase,onboardingInventory} from './brand-onboarding.browser.mjs';
 
 const output = path.resolve(process.env.BRAND_EVIDENCE ?? 'build/brand-evidence');
 const build = path.resolve(process.env.BRAND_WEB_BUILD ?? 'build/brand-web');
 const loginBuilds = [1,2].map(scale => path.resolve(`build/brand-login-${scale}`));
+const onboardingBuilds = [1,2].map(scale => path.resolve(`build/brand-onboarding-${scale}`));
+const onboardingReferenceBuild = path.resolve('build/brand-onboarding-reference');
 const admin = path.resolve('apps/control-panel/dist');
 const engine = process.env.BRAND_BROWSER ?? 'chromium';
 assert.ok(['chromium', 'webkit'].includes(engine));
@@ -54,6 +57,13 @@ async function serve(root) {
 await mkdir(output, { recursive: true });
 const appServer = await serve(build), adminServer = await serve(admin);
 const loginServers = await Promise.all(loginBuilds.map(serve));
+const onboardingServers = await Promise.all(onboardingBuilds.map(serve));
+const onboardingReferenceServer = await serve(onboardingReferenceBuild);
+const onboardingResources = await Promise.all([...onboardingBuilds,onboardingReferenceBuild].map(root => onboardingInventory(root)));
+const assets = files => Object.fromEntries(Object.entries(files).filter(([name]) => name.startsWith('assets/') || name.startsWith('canvaskit/')));
+assert.equal(Object.keys(assets(onboardingResources[2])).length,40,'Complete original asset and CanvasKit inventory');
+for (const resources of onboardingResources.slice(0,2)) assert.deepEqual(assets(resources),assets(onboardingResources[2]));
+await writeFile(path.join(output,engine+'-onboarding-resources.json'),JSON.stringify({source,resources:onboardingResources},null,2)+'\n');
 const headed = process.env.BRAND_CAPTURE_HEADED === '1';
 const browser = await (engine === 'webkit' ? webkit : chromium).launch({ headless: !headed });
 const results = [];
@@ -158,6 +168,13 @@ try {
     for (const width of [320, 390, 1440]) {
       for (const screen of ['login', 'onboarding', 'shell']) {
         if (selectedCase && selectedCase !== `${screen}-${theme}-${width}`) continue;
+        if (screen === 'onboarding') {
+          const scale = width === 320 ? 2 : 1;
+          results.push(await runOnboardingCase({browser,engine,origin:onboardingServers[scale-1].origin,referenceOrigin:onboardingReferenceServer.origin,
+            theme,width,scale,output,source,approved}));
+          await saveCase(results.at(-1));
+          continue;
+        }
         const login = screen === 'login', scale = width === 320 ? 2 : 1;
         const origin = login ? loginServers[scale-1].origin : appServer.origin;
         const name = `${engine}-${screen}-${theme}-${width}`;
@@ -284,10 +301,11 @@ try {
   assert.deepEqual(results.filter(result=>result.status!=='passed').map(({screen,theme,width,error})=>({screen,theme,width,error})),[],'All required brand cases must pass');
 } finally {
   await browser.close();
-  await Promise.all([appServer, adminServer, ...loginServers].map(({ server }) => new Promise(resolve => server.close(resolve))));
+  await Promise.all([appServer, adminServer, ...loginServers, ...onboardingServers, onboardingReferenceServer].map(({ server }) => new Promise(resolve => server.close(resolve))));
   await writeFile(path.join(output, engine + '-results.json'), JSON.stringify({
     source, engine, browser: browser.version(), results,
     compiledSha256: createHash('sha256').update(await readFile(path.join(build, 'main.dart.js'))).digest('hex'),
     loginCompiledSha256: await Promise.all(loginBuilds.map(async(root,index)=>({scale:index+1,sha256:createHash('sha256').update(await readFile(path.join(root,'main.dart.js'))).digest('hex')}))),
+    onboardingCompiledSha256: onboardingResources.map((files,index)=>({fixture:index===2?'static-reference':'settled-component',scale:index<2?index+1:null,sha256:files['main.dart.js']})),
   }, null, 2) + '\n');
 }
