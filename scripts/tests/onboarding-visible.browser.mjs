@@ -135,9 +135,12 @@ for(const kind of ['static','visible']){
   for(let attempt=0;attempt<12;attempt++){const rect=await action.boundingBox();result.scroll.push({attempt,rect});if(rect&&rect.y>=0&&rect.y+rect.height<940)break;await page.mouse.move(160,700);await page.mouse.wheel(0,400);await page.waitForTimeout(120);}
   const actionBox=await action.boundingBox();assert.ok(actionBox&&actionBox.y>=0&&actionBox.y+actionBox.height<940,'Continue is reachable through ordinary scrolling');
   await action.click();await page.getByText('Synthetic continuation completed',{exact:true}).waitFor();
-  await page.screenshot({path:path.join(output,`${kind}-continue-marker.png`)});
-  result.continuation={marker:'Synthetic continuation completed',url:page.url(),host:real?await page.evaluate(()=>JSON.parse(window.__readVisibleHostState())):null};
-  if(real){assert.equal(result.continuation.host.visibleMarker,1);assert.equal(result.continuation.host.navigatorId,result.presentation.result.before.navigatorId);assert.equal(result.continuation.host.navigators,1);assert.equal(result.continuation.host.auth,'signed-out');assert.equal(new URL(page.url()).pathname,'/login');}
+  const markerObservedAt=await page.evaluate(()=>performance.now());
+  await page.waitForTimeout(350);
+  if(real)await page.waitForFunction(()=>{const state=JSON.parse(window.__readVisibleHostState());return state.visibleMarker===1&&state.visibleOnboarding===0;},null,{polling:50,timeout:2000});
+  const markerFile=path.join(output,`${kind}-continue-marker.png`);await page.screenshot({path:markerFile});
+  result.continuation={marker:'Synthetic continuation completed',url:page.url(),markerObservedAt,capturedAt:await page.evaluate(()=>performance.now()),pngSha256:hash(await readFile(markerFile)),host:real?await page.evaluate(()=>JSON.parse(window.__readVisibleHostState())):null};
+  if(real){assert.equal(result.continuation.host.visibleMarker,1);assert.equal(result.continuation.host.visibleOnboarding,0);assert.equal(result.continuation.host.visibleLogin,0);assert.equal(result.continuation.host.navigatorId,result.presentation.result.before.navigatorId);assert.equal(result.continuation.host.navigators,1);assert.equal(result.continuation.host.auth,'signed-out');assert.equal(new URL(page.url()).pathname,'/login');}
   assert.equal(requests.filter(r=>r.method==='POST').length,real?1:0);assert.deepEqual(blocked,[]);assert.deepEqual(pageErrors,[]);result.health=await health(page);result.checkedHealth=checkHealth(result.health);
   result.presentationPassed=result.snapshots.filter(s=>s.stage==='onboarding').every(s=>s.rendered);
   if(real)assert.ok(result.presentationPassed&&result.snapshots.filter(s=>s.stage==='login').every(s=>s.rendered),'Both saved login and component captures must meet original fidelity and pixel thresholds');
