@@ -16,6 +16,15 @@ export function assertSignedOutHost(host,navigatorId){
  assert.equal(host.pendingAuthenticatedWork,false);assert.equal(host.focusedEditable,false);
  if(navigatorId!==undefined)assert.equal(host.navigatorId,navigatorId);
 }
+export function signedOutOnboardingHostReady(navigatorId){
+ const host=JSON.parse(window.__readVisibleHostState());
+ return host.materialApps===1&&host.navigators===1&&host.auth==='signed-out'&&host.guest===false&&
+  host.pendingAuthenticatedWork===false&&host.focusedEditable===false&&host.navigatorId===navigatorId&&
+  host.componentRouteCurrent===true&&host.componentRouteName==='diagnostic-onboarding-component';
+}
+export async function waitForSignedOutOnboardingHost(page,navigatorId){
+ await page.waitForFunction(signedOutOnboardingHostReady,navigatorId,{polling:50,timeout:5000});
+}
 export function assertUntouchedPresentation(state,presentationAt){
  assert.equal(state.semanticsCount,0);assert.equal(state.layout.semanticsEnabled,false);assert.equal(state.host.semanticsEnabled,false);
  assert.equal(state.activeInput,false);assert.deepEqual(state.scroll,[0,0]);

@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 import {runInNewContext} from 'node:vm';
 import {prepareVisibleOnboardingSource,prepareOnboardingReference,onboardingImport,visibleImport,visibleInstall,referenceInstall} from './onboarding-visible-source.mjs';
 import {prepareBrandLoginSource} from './brand-login-source.mjs';
-import {originalCaptureEvents,onboardingCopy,waitForOriginalDwell,assertSignedOutHost,assertUntouchedPresentation,assertOnboardingLayout,onboardingPixels,assertOnboardingPaint,assertCompletedRefresh} from './brand-onboarding-contract.mjs';
+import {originalCaptureEvents,onboardingCopy,waitForOriginalDwell,waitForSignedOutOnboardingHost,signedOutOnboardingHostReady,assertSignedOutHost,assertUntouchedPresentation,assertOnboardingLayout,onboardingPixels,assertOnboardingPaint,assertCompletedRefresh} from './brand-onboarding-contract.mjs';
 import {refreshUrl,loginFixtureResponse} from './brand-login-transport.mjs';
 
 test('detached component source preserves deployed main, router and login preparation',async()=>{
@@ -42,6 +42,28 @@ test('a wakeup 0.1ms before the deadline cannot release an original capture',asy
 test('guest, auth, app count, Navigator identity and pending work fail closed',()=>{
  assertSignedOutHost(host(),7);
  for(const [key,value] of Object.entries({materialApps:2,navigators:2,navigatorId:8,auth:'loading',guest:true,pendingAuthenticatedWork:true,focusedEditable:true}))assert.throws(()=>assertSignedOutHost({...host(),[key]:value},7));
+});
+test('onboarding capture readiness waits for the exact settled signed-out host',async()=>{
+ const settled={...host(),componentRouteCurrent:true,componentRouteName:'diagnostic-onboarding-component'};
+ const states=[
+  {...settled,auth:'loading'},
+  {...settled,guest:true},
+  {...settled,pendingAuthenticatedWork:true},
+  {...settled,focusedEditable:true},
+  {...settled,navigatorId:8},
+  {...settled,componentRouteCurrent:false},
+  {...settled,componentRouteName:'other-route'},
+  settled,
+ ];
+ const page={waitForFunction:async(predicate,navigatorId,options)=>{
+  assert.equal(predicate.toString(),signedOutOnboardingHostReady.toString());
+  assert.equal(navigatorId,7);assert.deepEqual(options,{polling:50,timeout:5000});
+  const decisions=states.map(state=>runInNewContext('('+predicate.toString()+')(navigatorId)',{
+   navigatorId,window:{__readVisibleHostState:()=>JSON.stringify(state)},
+  }));
+  assert.deepEqual(decisions,[false,false,false,false,false,false,false,true]);
+ }};
+ await waitForSignedOutOnboardingHost(page,7);
 });
 test('focusin and resize join input and scroll rejection through both original captures',()=>{
  const state={semanticsCount:0,layout:{semanticsEnabled:false},host:host(),activeInput:false,scroll:[0,0],observation:{events:[{type:'focusin',at:99}]}};

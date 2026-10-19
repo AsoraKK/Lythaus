@@ -8,7 +8,7 @@ import {observeRenderHealth,assertRenderHealth} from './brand-render-health.mjs'
 import {compareApprovedArtwork} from './brand-reference.mjs';
 import {assertLoginLayout,assertMatchingLoginLayout,loginFirstPaintPixels,assertLoginFirstPaintPixels} from './brand-login-first-paint.mjs';
 import {refreshUrl,loginFixtureResponse,expectedRefreshConsole} from './brand-login-transport.mjs';
-import {originalCaptureEvents,onboardingCopy,waitForOriginalDwell,assertSignedOutHost,assertUntouchedPresentation,assertOnboardingLayout,onboardingPixels,assertOnboardingPaint,assertCompletedRefresh} from './brand-onboarding-contract.mjs';
+import {originalCaptureEvents,onboardingCopy,waitForOriginalDwell,waitForSignedOutOnboardingHost,assertSignedOutHost,assertUntouchedPresentation,assertOnboardingLayout,onboardingPixels,assertOnboardingPaint,assertCompletedRefresh} from './brand-onboarding-contract.mjs';
 
 const {PNG}=createRequire(import.meta.url)('playwright-core/lib/utilsBundle');
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -110,6 +110,7 @@ export async function runOnboardingCase({browser,engine,origin,referenceOrigin,t
   assert.equal(result.presentation.result.accepted,true);assertSignedOutHost(result.presentation.result.before);
   assertCompletedRefresh(requests,await health(page),result.presentation.epochMs);
   await page.waitForFunction(()=>JSON.parse(window.__readOnboardingLayout()).screens.length===1&&JSON.parse(window.__readVisibleHostState()).componentRouteCurrent===true,null,{polling:50});
+  await waitForSignedOutOnboardingHost(page,result.presentation.result.before.navigatorId);
   for(const dwell of [250,5250])images.push(await originalCapture(observation,condition,result,'onboarding',dwell,result.presentation.at,output,name,true,reference));
   const originalsCompleted=await readState(page,'onboarding',true);assertUntouchedPresentation(originalsCompleted,result.presentation.at);assertSignedOutHost(originalsCompleted.host,result.presentation.result.before.navigatorId);
   for(const {snapshot,png} of images){
