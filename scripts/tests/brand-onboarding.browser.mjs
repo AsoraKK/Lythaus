@@ -8,7 +8,7 @@ import {observeRenderHealth,assertRenderHealth} from './brand-render-health.mjs'
 import {compareApprovedArtwork} from './brand-reference.mjs';
 import {assertLoginLayout,assertMatchingLoginLayout,loginFirstPaintPixels,assertLoginFirstPaintPixels} from './brand-login-first-paint.mjs';
 import {refreshUrl,loginFixtureResponse,expectedRefreshConsole} from './brand-login-transport.mjs';
-import {originalCaptureEvents,onboardingCopy,waitForOriginalDwell,assertSignedOutHost,assertUntouchedPresentation,assertOnboardingLayout,onboardingPixels,assertOnboardingPaint,assertCompletedRefresh} from './brand-onboarding-contract.mjs';
+import {originalCaptureEvents,onboardingCopy,waitForOriginalDwell,waitForSignedOutOnboardingHost,originalCaptureTiming,assertSignedOutHost,assertUntouchedPresentation,assertOnboardingLayout,onboardingPixels,assertOnboardingPaint,assertCompletedRefresh} from './brand-onboarding-contract.mjs';
 
 const {PNG}=createRequire(import.meta.url)('playwright-core/lib/utilsBundle');
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -57,8 +57,9 @@ async function originalCapture(observation,condition,result,stage,dwell,anchor,o
  await waitForOriginalDwell(page,anchor,dwell);
  const before=await readState(page,stage,real),file=path.join(output,`${name}-${stage}-${dwell}.png`);
  await page.screenshot({path:file});const after=await readState(page,stage,real),bytes=await readFile(file),png=PNG.sync.read(bytes),raw=await health(page);
- const snapshot={stage,dwell,anchor,before,after,pngSha256:hash(bytes),health:structuredClone(raw)};result.snapshots.push(snapshot);
- assert.ok(before.now-anchor>=dwell);checkHealth(raw);
+ const timing=originalCaptureTiming(anchor,before.now,after.now);
+ const snapshot={stage,dwell,anchor,...timing,before,after,pngSha256:hash(bytes),health:structuredClone(raw)};result.snapshots.push(snapshot);
+ assert.ok(timing.actualDwellMs>=dwell);checkHealth(raw);
  assert.equal(png.width,condition.width);assert.equal(png.height,960);
  for(const state of [before,after]){
   assert.equal(new URL(state.url).pathname,real?'/login':'/');assert.deepEqual(state.viewport,[condition.width,960]);assert.deepEqual(state.scroll,[0,0]);assert.equal(state.activeInput,false);
@@ -91,59 +92,74 @@ async function staticReference(browser,origin,condition,output,name){
 export async function runOnboardingCase({browser,engine,origin,referenceOrigin,theme,width,scale,output,source,approved}){
  const name=`${engine}-onboarding-${theme}-${width}`,condition={theme,width,scale};
  const result={screen:'onboarding',...condition,source,scope:'Actual component in a visibly painted settled signed-out app; cold startup and shipping journey deferred',status:'pending',snapshots:[]};
- let observation;
+ let observation,boundary='static reference';
  try{
   result.reference=await staticReference(browser,referenceOrigin,condition,output,name);
   const reference=result.reference.snapshots[0].before.layout.screens[0];
   observation=await observedContext(browser,origin,condition,true);
   const {context,page,health,checkHealth,requests,blocked,pageErrors,expectedConsoleErrors}=observation;
+  boundary='navigate to signed-out login';
   Object.assign(result,{requests,blocked,pageErrors,expectedConsoleErrors});
   await page.goto(origin+'/login');
+  boundary='wait for original login frame and geometry';
   await page.waitForFunction(()=>window.__onboardingObservation.firstFrameAt!==null&&typeof window.__readBrandLoginLayout==='function'&&JSON.parse(window.__readBrandLoginLayout()).brands.length===1,null,{polling:50});
   const firstFrame=await page.evaluate(()=>window.__onboardingObservation.firstFrameAt),images=[];
   result.firstFrameAt=firstFrame;
-  for(const dwell of [250,5250])images.push(await originalCapture(observation,condition,result,'login',dwell,firstFrame,output,name,true));
+  for(const dwell of [250,5250]){boundary=`capture login at ${dwell}ms`;images.push(await originalCapture(observation,condition,result,'login',dwell,firstFrame,output,name,true));}
+  boundary='verify settled signed-out login';
   result.settledHost=await readState(page,'login',true);assertSignedOutHost(result.settledHost.host);
   assert.equal(result.settledHost.host.visibleLogin,1);assert.equal(result.settledHost.host.semanticsEnabled,false);
   result.completedTransport=assertCompletedRefresh(requests,await health(page));
+  boundary='present onboarding component';
   result.presentation=await page.evaluate(()=>{const at=performance.now(),epochMs=performance.timeOrigin+at;return {at,epochMs,result:JSON.parse(window.__presentOnboardingComponent())};});
   assert.equal(result.presentation.result.accepted,true);assertSignedOutHost(result.presentation.result.before);
   assertCompletedRefresh(requests,await health(page),result.presentation.epochMs);
+  boundary='wait for onboarding route and layout';
   await page.waitForFunction(()=>JSON.parse(window.__readOnboardingLayout()).screens.length===1&&JSON.parse(window.__readVisibleHostState()).componentRouteCurrent===true,null,{polling:50});
-  for(const dwell of [250,5250])images.push(await originalCapture(observation,condition,result,'onboarding',dwell,result.presentation.at,output,name,true,reference));
+  boundary='wait for settled signed-out onboarding host';
+  await waitForSignedOutOnboardingHost(page,result.presentation.result.before.navigatorId);
+  for(const dwell of [250,5250]){boundary=`capture onboarding at ${dwell}ms`;images.push(await originalCapture(observation,condition,result,'onboarding',dwell,result.presentation.at,output,name,true,reference));}
+  boundary='verify original onboarding captures';
   const originalsCompleted=await readState(page,'onboarding',true);assertUntouchedPresentation(originalsCompleted,result.presentation.at);assertSignedOutHost(originalsCompleted.host,result.presentation.result.before.navigatorId);
   for(const {snapshot,png} of images){
    if(snapshot.stage==='login')assertLoginFirstPaintPixels(snapshot);else assertOnboardingPaint(snapshot);
    const file=theme==='dark'?'lythaus-wordmark-white.5ba0451347e2.svg':'lythaus-wordmark-black.e450176663e0.svg';
    snapshot.fidelity=await compareApprovedArtwork(page,png,snapshot.artwork,origin+'/assets/assets/brand/lythaus-v1/'+file,PNG);
   }
+  boundary='verify duplicate presentation rejection';
   const beforeDuplicate=await readState(page,'onboarding',true);assertSignedOutHost(beforeDuplicate.host,result.presentation.result.before.navigatorId);
   result.duplicatePresentation=await page.evaluate(()=>JSON.parse(window.__presentOnboardingComponent()));assert.deepEqual(result.duplicatePresentation,{accepted:false,reason:'already-presented'});
   assert.deepEqual(await page.evaluate(()=>JSON.parse(window.__readVisibleHostState())),beforeDuplicate.host);
+  boundary='enable semantics and verify accessible brand';
   await page.locator('flt-semantics-placeholder').evaluate(element=>element.click());
   const brand=page.getByRole('img',{name:'Lythaus',exact:true});await brand.waitFor();assert.equal(await brand.count(),1);
   result.semanticBox=await brand.boundingBox();const originalBox=result.snapshots.find(s=>s.stage==='onboarding').before.layout.screens[0].brands[0];
   for(const key of ['x','y','width','height'])assert.ok(Math.abs(result.semanticBox[key]-originalBox[key])<0.02,'Named image matches original '+key);
+  boundary='verify onboarding policy copy and icons';
   for(const text of onboardingCopy)await page.getByText(text,{exact:true}).waitFor();
   const iconUrls=await page.locator('link[rel="icon"],link[rel="apple-touch-icon"]').evaluateAll(nodes=>nodes.map(n=>n.href));assert.equal(iconUrls.length,4);result.icons=[];
   for(const url of iconUrls){const expected=approved.web_copy_map.find(a=>a.public_url===new URL(url).pathname);assert.ok(expected);const response=await context.request.get(url);assert.equal(response.status(),200);const digest=hash(await response.body());assert.equal(digest,expected.sha256);result.icons.push({path:new URL(url).pathname,status:response.status(),sha256:digest});}
+  boundary='verify host after semantics';
   result.afterSemantics=await readState(page,'onboarding',true);assertSignedOutHost(result.afterSemantics.host,result.presentation.result.before.navigatorId);
   await page.screenshot({path:path.join(output,name+'-after-semantics.png')});
+  boundary='verify Continue reachability';
   const action=page.getByRole('button',{name:'Continue',exact:true});result.scroll=[];
   for(let attempt=0;attempt<12;attempt++){
    const rect=await action.boundingBox(),host=await page.evaluate(()=>JSON.parse(window.__readVisibleHostState()));assertSignedOutHost(host,result.presentation.result.before.navigatorId);result.scroll.push({attempt,rect,host});
    if(rect&&rect.y>=0&&rect.y+rect.height<940)break;await page.mouse.move(width/2,700);await page.mouse.wheel(0,400);await page.waitForTimeout(120);
   }
   const actionBox=await action.boundingBox();assert.ok(actionBox&&actionBox.y>=0&&actionBox.y+actionBox.height<940,'Continue is reachable through bounded ordinary scrolling');
+  boundary='verify Continue transition';
   await action.click();await page.getByText('Synthetic continuation completed',{exact:true}).waitFor();
   const markerObservedAt=await page.evaluate(()=>performance.now());await page.waitForTimeout(350);
   await page.waitForFunction(()=>{const state=JSON.parse(window.__readVisibleHostState());return state.visibleMarker===1&&state.visibleOnboarding===0;},null,{polling:50,timeout:2000});
   const markerFile=path.join(output,name+'-continue-marker.png');await page.screenshot({path:markerFile});
   result.continuation={marker:'Synthetic continuation completed',markerObservedAt,capturedAt:await page.evaluate(()=>performance.now()),pngSha256:hash(await readFile(markerFile)),state:await readState(page,'marker',true)};
   const final=result.continuation.state;assertSignedOutHost(final.host,result.presentation.result.before.navigatorId);assert.equal(final.host.visibleLogin,0);assert.equal(final.host.visibleOnboarding,0);assert.equal(final.host.visibleMarker,1);assert.equal(new URL(final.url).pathname,'/login');
+  boundary='verify final render health';
   result.health=await health(page);result.checkedHealth=checkHealth(result.health);assertCompletedRefresh(requests,result.health,result.presentation.epochMs);
   result.status='passed';
- }catch(error){result.status='failed';result.error=error.message;}
+ }catch(error){result.status='failed';result.failureBoundary=boundary;result.error=error.message;}
  finally{
   if(observation){result.health=await observation.health(observation.page).catch(error=>({observationError:error.message}));await observation.context.close();}
   await writeFile(path.join(output,name+'-component-evidence.json'),JSON.stringify(result,null,2)+'\n');

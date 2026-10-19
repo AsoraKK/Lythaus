@@ -110,7 +110,7 @@ function checkedLoginHealth(raw, expectedConsoleErrors, requests) {
 }
 async function saveCase(result) {
   await writeFile(path.join(output,`${engine}-${result.screen}-${result.theme}-${result.width}.json`),JSON.stringify(result,null,2)+'\n');
-  console.log(`${engine} ${result.screen} ${result.theme} ${result.width}: ${result.status}${result.error?' — '+result.error:''}`);
+  console.log(`${engine} ${result.screen} ${result.theme} ${result.width}: ${result.status}${result.failureBoundary?' at '+result.failureBoundary:''}${result.error?' — '+result.error:''}`);
 }
 async function capture(page, name, validate = true) {
   await page.evaluate(() => {

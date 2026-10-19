@@ -16,6 +16,28 @@ export function assertSignedOutHost(host,navigatorId){
  assert.equal(host.pendingAuthenticatedWork,false);assert.equal(host.focusedEditable,false);
  if(navigatorId!==undefined)assert.equal(host.navigatorId,navigatorId);
 }
+export function signedOutOnboardingHostReady(navigatorId){
+ const host=JSON.parse(window.__readVisibleHostState());
+ if(host.materialApps!==1)throw new Error(`Onboarding readiness failed: materialApps=${host.materialApps}`);
+ if(host.navigators!==1)throw new Error(`Onboarding readiness failed: navigators=${host.navigators}`);
+ if(host.guest!==false)throw new Error(`Onboarding readiness failed: guest=${host.guest}`);
+ if(host.pendingAuthenticatedWork!==false)throw new Error(`Onboarding readiness failed: pendingAuthenticatedWork=${host.pendingAuthenticatedWork}`);
+ if(host.focusedEditable!==false)throw new Error(`Onboarding readiness failed: focusedEditable=${host.focusedEditable}`);
+ if(host.navigatorId!==navigatorId)throw new Error(`Onboarding readiness failed: navigatorId=${host.navigatorId}`);
+ if(host.componentRouteCurrent!==true)throw new Error(`Onboarding readiness failed: componentRouteCurrent=${host.componentRouteCurrent}`);
+ if(host.componentRouteName!=='diagnostic-onboarding-component')throw new Error(`Onboarding readiness failed: componentRouteName=${host.componentRouteName}`);
+ if(host.auth==='signed-out')return true;
+ if(host.auth==='loading')return false;
+ throw new Error(`Onboarding readiness failed: auth=${host.auth}`);
+}
+export async function waitForSignedOutOnboardingHost(page,navigatorId){
+ await page.waitForFunction(signedOutOnboardingHostReady,navigatorId,{polling:50,timeout:5000});
+}
+export function originalCaptureTiming(anchor,captureStartedAt,captureFinishedAt){
+ assert.ok(Number.isFinite(anchor)&&Number.isFinite(captureStartedAt)&&Number.isFinite(captureFinishedAt));
+ assert.ok(captureStartedAt>=anchor);assert.ok(captureFinishedAt>=captureStartedAt);
+ return {actualDwellMs:captureStartedAt-anchor,captureStartedAt,captureFinishedAt};
+}
 export function assertUntouchedPresentation(state,presentationAt){
  assert.equal(state.semanticsCount,0);assert.equal(state.layout.semanticsEnabled,false);assert.equal(state.host.semanticsEnabled,false);
  assert.equal(state.activeInput,false);assert.deepEqual(state.scroll,[0,0]);
