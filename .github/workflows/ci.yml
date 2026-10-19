@@ -457,6 +457,9 @@ jobs:
           BRAND_SOURCE: ${{ github.sha }}
         run: |
           brand_status=0
+          BRAND_BROWSER=chromium BRAND_CASE=login-dark-390 \
+            BRAND_EVIDENCE=build/brand-evidence/login-dark390-repro \
+            node scripts/tests/approved-brand.browser.mjs || brand_status=$?
           node scripts/tests/approved-brand.browser.mjs || brand_status=$?
           BRAND_BROWSER=webkit node scripts/tests/approved-brand.browser.mjs || brand_status=$?
           exit "$brand_status"

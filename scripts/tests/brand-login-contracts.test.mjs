@@ -6,6 +6,7 @@ import {originalRunApp,wrappedRunApp} from './full-login-scale-source.mjs';
 import {loginFixtureResponse,expectedRefreshConsole,refreshUrl,logoutUrl,discoverUrl} from './brand-login-transport.mjs';
 import {assertBrandCaseMatrix,brandCaseKeys} from './brand-case-matrix.mjs';
 import {assertLoginLayout,assertMatchingLoginLayout,loginFirstPaintPixels,assertLoginFirstPaintPixels} from './brand-login-first-paint.mjs';
+import {waitForLoginFunction} from './brand-login-wait-diagnostics.mjs';
 test('login fixture preserves production outside scale and read-only layout setup',async()=>{
  const source=await readFile('lib/main.dart','utf8');
  const prepared=prepareBrandLoginSource(source);
@@ -66,4 +67,32 @@ test('a brand alone cannot certify first-paint form pixels; saved blanks remain 
  assert.throws(()=>assertLoginFirstPaintPixels(loginFirstPaintPixels(png,layout)),/email did not paint/);
  const outside=structuredClone(layout);outside.fields.Password[0].y=950;
  assert.throws(()=>loginFirstPaintPixels(png,outside),/inside the saved PNG/);
+});
+
+test('login wait diagnostics leave successful Playwright waits and default timeout untouched',async()=>{
+ const predicate=()=>true,token={value:'resolved'};let actualArguments,evaluations=0;
+ const page={waitForFunction:async(...args)=>{actualArguments=args;return token;},evaluate:async()=>{evaluations++;return {}; }};
+ assert.equal(await waitForLoginFunction(page,'first-frame-and-brand-geometry',predicate),token);
+ assert.deepEqual(actualArguments,[predicate]);
+ assert.equal(evaluations,0,'Page state is sampled only when a wait fails');
+});
+test('timed-out login waits include their boundary, original stack, and active-element evidence',async()=>{
+ const predicate=()=>false,timeout=new Error('page.waitForFunction: Timeout 30000ms exceeded.');
+ timeout.stack='TimeoutError: page.waitForFunction: Timeout 30000ms exceeded.\n    at fixture stack sentinel';
+ const pageState={url:'http://127.0.0.1/login',readyState:'complete',firstFrameAt:412.5,browserTimeMs:30400,
+  viewport:{width:390,height:960},activeElement:{tagName:'INPUT',id:null,name:'email',type:'email',ariaLabel:'Email',focused:true,valueLength:0,hasExpectedDraft:false}};
+ let actualArguments,evaluations=0;
+ const page={waitForFunction:async(...args)=>{actualArguments=args;throw timeout;},evaluate:async()=>{evaluations++;return pageState;}};
+ await assert.rejects(waitForLoginFunction(page,'active-input-draft-after-resize',predicate),error=>{
+  assert.equal(error.cause,timeout);
+  const marker='Wait diagnostics: ';
+  const diagnostics=JSON.parse(error.message.slice(error.message.indexOf(marker)+marker.length));
+  assert.equal(diagnostics.boundary,'active-input-draft-after-resize');
+  assert.match(diagnostics.errorStack,/fixture stack sentinel/);
+  assert.deepEqual(diagnostics.pageState.activeElement,pageState.activeElement);
+  assert.equal(typeof diagnostics.elapsedMs,'number');
+  return true;
+ });
+ assert.deepEqual(actualArguments,[predicate]);
+ assert.equal(evaluations,1,'Page state is sampled once after the failed wait');
 });

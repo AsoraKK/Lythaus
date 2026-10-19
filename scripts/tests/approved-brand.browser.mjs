@@ -13,6 +13,7 @@ import {containedWordmarkRect} from './brand-artwork-pixels.mjs';
 import {assertBrandCaseMatrix} from './brand-case-matrix.mjs';
 import {loginFixtureResponse,expectedRefreshConsole,refreshUrl,logoutUrl,discoverUrl} from './brand-login-transport.mjs';
 import {assertLoginLayout,assertMatchingLoginLayout,loginFirstPaintPixels,assertLoginFirstPaintPixels} from './brand-login-first-paint.mjs';
+import {waitForLoginFunction} from './brand-login-wait-diagnostics.mjs';
 import {runOnboardingCase,onboardingInventory} from './brand-onboarding.browser.mjs';
 
 const output = path.resolve(process.env.BRAND_EVIDENCE ?? 'build/brand-evidence');
@@ -72,7 +73,7 @@ const readLoginLayout = page => page.evaluate(() => JSON.parse(window.__readBran
 async function firstPaint(page, name, scale, theme) {
   const record = {status:'pending', protocol:'One original PNG before semantics, interaction or resize; real fractional layout, no ink-derived crop'};
   try {
-    await page.waitForFunction(() => window.__brandFirstFrameAt !== null && typeof window.__readBrandLoginLayout === 'function' &&
+    await waitForLoginFunction(page,'first-frame-and-brand-geometry',() => window.__brandFirstFrameAt !== null && typeof window.__readBrandLoginLayout === 'function' &&
       JSON.parse(window.__readBrandLoginLayout()).brands.length === 1);
     record.firstFrameAt = await page.evaluate(() => window.__brandFirstFrameAt);
     await page.waitForTimeout(Math.max(0, 250 - (await page.evaluate(() => performance.now()) - record.firstFrameAt)));
@@ -232,11 +233,11 @@ try {
           if (screen === 'login') {
             const email = page.getByRole('textbox', { name: 'Email', exact: true });
             await email.click();
-            await page.waitForFunction(() => document.activeElement instanceof HTMLInputElement);
+            await waitForLoginFunction(page,'email-input-focus-after-click',() => document.activeElement instanceof HTMLInputElement);
             await page.keyboard.insertText('draft@example.invalid');
             await page.setViewportSize({ width: width === 1440 ? 1024 : width + 20, height: 960 });
             await page.setViewportSize({ width, height: 960 });
-            await page.waitForFunction(() => document.activeElement?.value === 'draft@example.invalid');
+            await waitForLoginFunction(page,'active-input-draft-after-resize',() => document.activeElement?.value === 'draft@example.invalid');
           }
           await verifyIcons(page, context);
           if (screen !== 'shell') {
