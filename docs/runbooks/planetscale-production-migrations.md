@@ -14,8 +14,19 @@ plan and a separately protected execution job for migration 0021.
   and includes `sslmode=verify-full`.
 - The protected environment secret
   `PLANETSCALE_PRODUCTION_MIGRATIONS_APPROVED` is exactly `approved`.
-- Required PlanetScale extensions, HA topology, backups, and role grants have
-  already passed their acceptance gates.
+- Required PlanetScale extensions, backups, and role grants must pass their
+  acceptance gates for the migration path.
+- General `all-migrations` releases also require an approved HA topology.
+- The explicit `0021-only` path has a narrowly approved maintenance-policy
+  exception: retain the existing PS-5 single-node topology, with no HA upgrade
+  or other topology change. This resolves the HA wording only for this pinned
+  maintenance migration; it does not certify single-node as generally
+  HA-compliant or change the general production requirement.
+- The exception waives no other 0021 gate: required PlanetScale extensions,
+  protected main and backup, verified recovery evidence, exact role and
+  Hyperdrive bindings, measured usage and a positive ceiling, exact-candidate
+  consent, concurrent-index safety, and protected production review remain
+  required.
 - `PSCALE_ROLE_IDENTIFIERS` is a reviewed JSON map from each repository role
   label to its generated `pscale_api_*` SQL identifier. The production runner
   validates and substitutes these identifiers before applying grants; display
@@ -41,6 +52,9 @@ The runner:
 7. never applies the synthetic development feature-flag seed.
 
 ## Scoped 0021 plan
+
+This path may retain the existing single-node topology under the exception
+above. Every other readiness and execution condition below remains in force.
 
 Dispatch the production migration workflow with `migration_scope=0021-only` and
 leave `execute_0021=false` to build evidence only. The plan job makes GET
