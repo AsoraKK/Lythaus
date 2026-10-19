@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 import {runInNewContext} from 'node:vm';
 import {prepareVisibleOnboardingSource,prepareOnboardingReference,onboardingImport,visibleImport,visibleInstall,referenceInstall} from './onboarding-visible-source.mjs';
 import {prepareBrandLoginSource} from './brand-login-source.mjs';
-import {originalCaptureEvents,onboardingCopy,waitForOriginalDwell,waitForSignedOutOnboardingHost,signedOutOnboardingHostReady,assertSignedOutHost,assertUntouchedPresentation,assertOnboardingLayout,onboardingPixels,assertOnboardingPaint,assertCompletedRefresh} from './brand-onboarding-contract.mjs';
+import {originalCaptureEvents,onboardingCopy,waitForOriginalDwell,waitForSignedOutOnboardingHost,signedOutOnboardingHostReady,originalCaptureTiming,assertSignedOutHost,assertUntouchedPresentation,assertOnboardingLayout,onboardingPixels,assertOnboardingPaint,assertCompletedRefresh} from './brand-onboarding-contract.mjs';
 import {refreshUrl,loginFixtureResponse} from './brand-login-transport.mjs';
 
 test('detached component source preserves deployed main, router and login preparation',async()=>{
@@ -43,27 +43,53 @@ test('guest, auth, app count, Navigator identity and pending work fail closed',(
  assertSignedOutHost(host(),7);
  for(const [key,value] of Object.entries({materialApps:2,navigators:2,navigatorId:8,auth:'loading',guest:true,pendingAuthenticatedWork:true,focusedEditable:true}))assert.throws(()=>assertSignedOutHost({...host(),[key]:value},7));
 });
-test('onboarding capture readiness waits for the exact settled signed-out host',async()=>{
- const settled={...host(),componentRouteCurrent:true,componentRouteName:'diagnostic-onboarding-component'};
- const states=[
-  {...settled,auth:'loading'},
-  {...settled,guest:true},
-  {...settled,pendingAuthenticatedWork:true},
-  {...settled,focusedEditable:true},
-  {...settled,navigatorId:8},
-  {...settled,componentRouteCurrent:false},
-  {...settled,componentRouteName:'other-route'},
-  settled,
- ];
+const onboardingHost=overrides=>({...host(),componentRouteCurrent:true,componentRouteName:'diagnostic-onboarding-component',...overrides});
+function readinessPage(states){
+ let reads=0;
  const page={waitForFunction:async(predicate,navigatorId,options)=>{
   assert.equal(predicate.toString(),signedOutOnboardingHostReady.toString());
   assert.equal(navigatorId,7);assert.deepEqual(options,{polling:50,timeout:5000});
-  const decisions=states.map(state=>runInNewContext('('+predicate.toString()+')(navigatorId)',{
-   navigatorId,window:{__readVisibleHostState:()=>JSON.stringify(state)},
-  }));
-  assert.deepEqual(decisions,[false,false,false,false,false,false,false,true]);
+  for(const state of states){
+   reads++;
+   if(runInNewContext('('+predicate.toString()+')(navigatorId)',{navigatorId,window:{__readVisibleHostState:()=>JSON.stringify(state)}}))return;
+  }
+  throw new Error(`Timeout ${options.timeout}ms exceeded`);
  }};
- await waitForSignedOutOnboardingHost(page,7);
+ return {page,reads:()=>reads};
+}
+test('onboarding readiness permits loading then signed-out',async()=>{
+ const {page,reads}=readinessPage([onboardingHost({auth:'loading'}),onboardingHost()]);
+ await waitForSignedOutOnboardingHost(page,7);assert.equal(reads(),2);
+});
+test('forbidden host state fails immediately even if the next state recovers',async()=>{
+ for(const forbidden of [
+  {guest:true},{pendingAuthenticatedWork:true},{focusedEditable:true},{materialApps:2},
+  {navigators:2},{navigatorId:8},{componentRouteCurrent:false},
+  {componentRouteName:'other-route'},{auth:'signed-in'},{auth:'error'},
+ ]){
+  const {page,reads}=readinessPage([onboardingHost(forbidden),onboardingHost()]);
+  await assert.rejects(waitForSignedOutOnboardingHost(page,7),/Onboarding readiness failed:/);
+  assert.equal(reads(),1);
+ }
+});
+test('permanent auth loading propagates the bounded wait timeout',async()=>{
+ const loading=onboardingHost({auth:'loading'}),{page,reads}=readinessPage([loading,loading,loading]);
+ await assert.rejects(waitForSignedOutOnboardingHost(page,7),/Timeout 5000ms exceeded/);
+ assert.equal(reads(),3);
+});
+test('capture evidence records elapsed time beyond a delayed nominal dwell',()=>{
+ const timing=originalCaptureTiming(100,5350,5390);
+ assert.deepEqual(timing,{actualDwellMs:5250,captureStartedAt:5350,captureFinishedAt:5390});
+ assert.ok(timing.actualDwellMs>250);
+ assert.throws(()=>originalCaptureTiming(100,99,105));
+});
+test('browser assertion failures retain their stage in case logs',async()=>{
+ const browser=await readFile('scripts/tests/brand-onboarding.browser.mjs','utf8');
+ const runner=await readFile('scripts/tests/approved-brand.browser.mjs','utf8');
+ assert.match(browser,/failureBoundary=boundary/);
+ assert.match(browser,/boundary='wait for settled signed-out onboarding host'/);
+ assert.match(browser,/originalCaptureTiming\(anchor,before\.now,after\.now\)/);
+ assert.match(runner,/result\.failureBoundary\?/);
 });
 test('focusin and resize join input and scroll rejection through both original captures',()=>{
  const state={semanticsCount:0,layout:{semanticsEnabled:false},host:host(),activeInput:false,scroll:[0,0],observation:{events:[{type:'focusin',at:99}]}};
