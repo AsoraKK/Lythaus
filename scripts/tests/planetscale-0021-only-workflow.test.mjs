@@ -63,6 +63,7 @@ test('scoped workflow runs 0021 syntax and tests without changing root npm regis
   const planText = jobBlock('plan-0021-only');
   const syntaxChecks = [
     'node --check scripts/ci/planetscale-0021-only-contract.mjs',
+    'node --check scripts/ci/planetscale-0021-restore-evidence-loader.mjs',
     'node --check scripts/ci/planetscale-0021-target-identity.mjs',
     'node --check scripts/ci/planetscale-0021-registry-marker.mjs',
     'node --check scripts/ci/planetscale-0021-only-plan.mjs',
@@ -73,7 +74,7 @@ test('scoped workflow runs 0021 syntax and tests without changing root npm regis
   ];
   for (const check of syntaxChecks) assert.ok(planText.includes(check), `missing scoped syntax check: ${check}`);
   const existingSuite = planText.indexOf('npm run test:planetscale-production-migrations');
-  const scopedSuite = planText.indexOf('node --experimental-strip-types --test scripts/tests/planetscale-0021-only-contract.test.mjs scripts/tests/planetscale-0021-only-workflow.test.mjs');
+  const scopedSuite = planText.indexOf('node --experimental-strip-types --test scripts/tests/planetscale-0021-only-contract.test.mjs scripts/tests/planetscale-0021-only-workflow.test.mjs scripts/tests/planetscale-0021-restore-evidence-loader.test.mjs');
   assert.ok(existingSuite >= 0);
   assert.ok(scopedSuite > existingSuite, 'the direct scoped suite must follow the unchanged root suite');
   assert.doesNotMatch(planText, /npm run validate:planetscale-0021-only/);
@@ -176,14 +177,10 @@ test('local plan without read-only credentials emits blockers and performs no pr
   assert.ok(report.planetscale.restoreEvidence.blockers.includes('restore_evidence_record_missing_or_invalid'));
 });
 
-test('read-only plan loads restore evidence only from the selected backup ID', () => {
+test('read-only plan passes the selected backup evidence through the production loader', () => {
   const plan = fs.readFileSync(path.join(root, 'scripts/ci/planetscale-0021-only-plan.mjs'), 'utf8');
-  assert.match(plan, /docs\/evidence\/production-cutover\/0021-restore-evidence/);
-  assert.match(plan, /\$\{backupId\}\.json/);
-  assert.match(plan, /git', \['ls-files', '--error-unmatch'/);
-  assert.match(plan, /fs\.lstatSync\(artifactPath\)/);
-  assert.match(plan, /fs\.readFileSync\(resolvedPath\)/);
-  assert.match(plan, /createHash\('sha256'\)\.update\(bytes\)\.digest\('hex'\)/);
+  assert.match(plan, /from '\.\/planetscale-0021-restore-evidence-loader\.mjs'/);
+  assert.match(plan, /read0021RestoreEvidenceRecord\(backupId, root\)/);
   assert.match(plan, /restoreEvidenceArtifact: restoreEvidenceInput\.evidenceArtifact/);
   assert.match(plan, /now: Date\.now\(\)/);
   assert.match(plan, /restoreEvidenceRecord: restoreEvidenceInput\.record/);
