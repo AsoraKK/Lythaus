@@ -715,6 +715,7 @@ async function sessionProof(request: Request, env: Env, id: string): Promise<Res
   if (!primaryLogin.response.ok || !primaryAccess) throw new Error('candidate_primary_switch_login_rejected');
   const primaryLoginAt = new Date().toISOString();
   const primarySubject = await requireCandidateIdentity(env, run, primaryAccess, run.primary_user_id);
+  await recordEvent(env, id, 'password_reset_new_password_accepted');
 
   const secondaryLogin = await candidateJson(env, run, '/api/auth/email', { mode: 'login', email: secondaryEmail, password: secondaryPassword });
   const secondaryAccess = typeof secondaryLogin.body?.accessToken === 'string' ? secondaryLogin.body.accessToken : '';
@@ -733,6 +734,19 @@ async function sessionProof(request: Request, env: Env, id: string): Promise<Res
   const secondaryRejectedAt = new Date().toISOString();
   await requireCandidateIdentity(env, run, primaryAccess, run.primary_user_id);
   const primaryAfterSecondaryLogoutAt = new Date().toISOString();
+
+  const preResetRefresh = await decryptField({
+    ciphertext: run.pre_reset_refresh_ciphertext,
+    encryptionKeyVersion: run.pre_reset_refresh_encryption_key_version,
+  }, requiredSecret(env, 'AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1'));
+  const revokedRefresh = await candidateJson(env, run, '/api/auth/refresh', { refreshToken: preResetRefresh });
+  requireAcceptanceRejection({ status: revokedRefresh.response.status, body: revokedRefresh.body }, 401, ['refresh_token_invalid', 'refresh_token_reuse']);
+  await requireCandidateIdentity(env, run, primaryAccess, run.primary_user_id);
+  await recordEvent(env, id, 'password_reset_sessions_revoked');
+  const email = await runEmail(env, run, 'primary');
+  const oldLogin = await candidateJson(env, run, '/api/auth/email', { mode: 'login', email, password: oldPassword });
+  requireAcceptanceRejection({ status: oldLogin.response.status, body: oldLogin.body }, 401, ['invalid_credentials']);
+  await recordEvent(env, id, 'password_reset_old_password_rejected');
   const primaryLogout = await candidateJson(env, run, '/api/auth/logout', {}, { headers: { authorization: `Bearer ${primaryAccess}` } });
   if (!primaryLogout.response.ok) throw new Error('candidate_primary_switch_logout_rejected');
   const primaryLogoutAt = new Date().toISOString();
@@ -754,25 +768,6 @@ async function sessionProof(request: Request, env: Env, id: string): Promise<Res
     secondarySessionRevoked: true,
     primarySessionRevoked: true,
   });
-
-  const preResetRefresh = await decryptField({
-    ciphertext: run.pre_reset_refresh_ciphertext,
-    encryptionKeyVersion: run.pre_reset_refresh_encryption_key_version,
-  }, requiredSecret(env, 'AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1'));
-  const revokedRefresh = await candidateJson(env, run, '/api/auth/refresh', { refreshToken: preResetRefresh });
-  requireAcceptanceRejection({ status: revokedRefresh.response.status, body: revokedRefresh.body }, 401, ['refresh_token_invalid', 'refresh_token_reuse']);
-  await recordEvent(env, id, 'password_reset_sessions_revoked');
-  const email = await runEmail(env, run, 'primary');
-  const oldLogin = await candidateJson(env, run, '/api/auth/email', { mode: 'login', email, password: oldPassword });
-  requireAcceptanceRejection({ status: oldLogin.response.status, body: oldLogin.body }, 401, ['invalid_credentials']);
-  await recordEvent(env, id, 'password_reset_old_password_rejected');
-  const login = await candidateJson(env, run, '/api/auth/email', { mode: 'login', email, password: newPassword });
-  const accessToken = typeof login.body?.accessToken === 'string' ? login.body.accessToken : '';
-  if (!login.response.ok || !accessToken) throw new Error('candidate_new_password_login_rejected');
-  await requireCandidateIdentity(env, run, accessToken, run.primary_user_id);
-  await recordEvent(env, id, 'password_reset_new_password_accepted');
-  const logout = await candidateJson(env, run, '/api/auth/logout', {}, { headers: { authorization: `Bearer ${accessToken}` } });
-  if (!logout.response.ok) throw new Error('candidate_logout_rejected');
   await recordEvent(env, id, 'logout_completed');
   await query(env.DB_ADMIN_FRESH,
     `UPDATE system.production_auth_acceptance_runs
