@@ -29,6 +29,10 @@ import-map.json records each imported repository path and source digest.
   The control-panel header also uses the standalone wordmark. Onboarding remains scrollable at
   320px with enlarged text. Authentication and composer state logic is unchanged.
 - App and admin headers/icons use the manifest's fingerprinted paths.
+  The app social preview reuses the standalone wordmark card already published
+  by marketing at its absolute fingerprinted `https://lythaus.co` URL
+  (`78f698ef4283`). The original combined social export remains unchanged for
+  provenance but is not selected by app metadata.
   Fingerprinted paths are immutable; stable fallback aliases keep their existing
   revalidation policy. Legacy web icon URLs now serve the corresponding approved
   exports so older documents do not request Flutter artwork.
@@ -79,6 +83,16 @@ in addition to checking the label and dimensions. This candidate retains the
 normal Flutter renderer; the prior global WebKit CPU workaround is unacceptable
 because of measured composer regression. The service-worker version token and
 immutable release hashing are preserved.
+
+Native admin SVG images use an independent native SVG image reference; Flutter
+Canvas artwork retains its Canvas reference. A standalone approved SVG reproduced
+the admin WebKit failure against the old Canvas reference (difference0.04283,
+precision/recall1.0), while the independent native reference matched exactly.
+This isolates a cross-renderer reference mismatch, not an app artwork defect.
+The strict difference<0.04 and precision/recall>=0.9 thresholds are unchanged.
+Both engines additionally verify pinned source hashes and positive/negative
+reference controls: blank, opposite-color, symbol and compressed artwork must
+fail. Admin source URLs must equal the expected canonical standalone asset.
 
 Release remains held pending the existing headless WebKit gate and exact-head CI.
 A calibrated Linux headed capture runs Xorg, WebKitGTK and independent X11 capture
