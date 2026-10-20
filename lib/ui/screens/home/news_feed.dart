@@ -9,6 +9,9 @@ import 'package:lythaus/state/providers/feed_providers.dart';
 import 'package:lythaus/ui/components/news_card.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 
+const _membershipAccessDisclosure =
+    'This view shows access from your account tier. It does not report payment confirmation, pending purchases, or expiry.';
+
 class NewsFeed extends ConsumerWidget {
   const NewsFeed({
     super.key,
@@ -50,8 +53,31 @@ class NewsFeed extends ConsumerWidget {
       );
     }
     if (entitlements.hasError ||
-        entitlements.valueOrNull == null ||
-        !entitlements.valueOrNull!.canAccessNewsBoard) {
+        entitlements.valueOrNull == null) {
+      return Semantics(
+        liveRegion: true,
+        label: 'News Board access could not be verified',
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(Spacing.lg),
+            child: LythEmptyState(
+              icon: Icons.lock_outline,
+              title: 'Couldn’t verify News Board access',
+              subtitle:
+                  'Lythaus couldn’t read your current account tier. Try again to check access.',
+              actionLabel: entitlements.hasError ? 'Retry' : null,
+              onAction: entitlements.hasError
+                  ? () => ref.invalidate(feedEntitlementsProvider)
+                  : null,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final currentEntitlements = entitlements.valueOrNull!;
+    if (!currentEntitlements.canAccessNewsBoard) {
+      final tierLabel = _tierLabel(currentEntitlements.tier);
       return Semantics(
         liveRegion: true,
         label: 'News Board is available to Black accounts only',
@@ -62,12 +88,7 @@ class NewsFeed extends ConsumerWidget {
               icon: Icons.lock_outline,
               title: 'News Board is Black-only',
               subtitle:
-                  'News Board is available only to Black accounts. '
-                  'Your access is always confirmed by Lythaus.',
-              actionLabel: entitlements.hasError ? 'Retry' : null,
-              onAction: entitlements.hasError
-                  ? () => ref.invalidate(feedEntitlementsProvider)
-                  : null,
+                  'Your current account tier is $tierLabel. Free and Premium have no News Board access; Black has full access. $_membershipAccessDisclosure',
             ),
           ),
         ),
@@ -99,6 +120,18 @@ class NewsFeed extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(
+                      'Current account tier: ${_tierLabel(currentEntitlements.tier)}',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: Spacing.xs),
+                    Text(
+                      _membershipAccessDisclosure,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: Spacing.sm),
                     Text(
                       'Editorial coverage from earned, revocable contributors.',
                       style: Theme.of(context).textTheme.bodyLarge,
@@ -174,3 +207,10 @@ class NewsFeed extends ConsumerWidget {
     );
   }
 }
+
+String _tierLabel(String tier) => switch (tier.toLowerCase()) {
+  'free' => 'Free',
+  'premium' => 'Premium',
+  'black' => 'Black',
+  _ => 'Unknown',
+};

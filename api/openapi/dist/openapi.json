@@ -6945,8 +6945,8 @@
     "/subscription/status": {
       "get": {
         "operationId": "subscriptionStatus",
-        "summary": "Get current user subscription status",
-        "description": "Return the authenticated user's subscription tier and alpha entitlements, including custom feed count, News Board access, posting restriction, and reputation reward limits.\n",
+        "summary": "Get current account access tier",
+        "description": "Return the authenticated account's server-recorded access tier and its custom-feed and News Board entitlements. The Worker derives this response from identity.user_entitlements.subscription_tier; missing or unknown stored values resolve to Free. The current contract has no provider, pending-purchase, payment-confirmation, cancellation, or expiry state. Manual tier changes are supported, but this response does not identify how a tier was granted. Unknown extra response fields must not be interpreted as payment lifecycle state.\n",
         "tags": [
           "Subscription"
         ],
@@ -6957,21 +6957,43 @@
         ],
         "responses": {
           "200": {
-            "description": "Current subscription details.",
+            "description": "Current server-issued tier and feed entitlements.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SubscriptionStatus"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "free": {
+                    "summary": "Free tier access",
+                    "value": {
+                      "tier": "free",
+                      "entitlements": {
+                        "maxCustomFeeds": 1,
+                        "newsBoardAccess": "none"
+                      }
+                    }
+                  },
+                  "premium": {
+                    "summary": "Premium tier access",
+                    "value": {
+                      "tier": "premium",
+                      "entitlements": {
+                        "maxCustomFeeds": 2,
+                        "newsBoardAccess": "none"
+                      }
+                    }
+                  },
+                  "black": {
+                    "summary": "Black tier access",
+                    "value": {
+                      "tier": "black",
+                      "entitlements": {
+                        "maxCustomFeeds": 3,
+                        "newsBoardAccess": "full"
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -6981,17 +7003,62 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "error",
+                    "correlationId"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "unauthenticated": {
+                    "value": {
+                      "error": "authentication_required",
+                      "correlationId": "synthetic-membership-unauthorized"
+                    }
+                  }
                 }
               }
             }
           },
-          "403": {
-            "description": "Forbidden",
+          "500": {
+            "description": "The authoritative entitlement read failed; no tier is returned.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "error",
+                    "correlationId"
+                  ],
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "request_failed"
+                      ]
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "unavailable": {
+                    "value": {
+                      "error": "request_failed",
+                      "correlationId": "synthetic-membership-unavailable"
+                    }
+                  }
                 }
               }
             }
@@ -13428,151 +13495,42 @@
       },
       "SubscriptionStatus": {
         "type": "object",
+        "description": "The exact entitlement-only response emitted by GET /api/subscription/status. Legacy or unknown extra keys are not modeled and must be ignored; they do not establish provider, pending, payment-confirmed, cancellation, or expiry state. A future provider lifecycle requires a separately approved contract.\n",
         "required": [
-          "userId",
           "tier",
-          "status",
-          "provider",
-          "currentPeriodEnd",
-          "cancelAtPeriodEnd",
-          "accessLabel",
-          "manualGrantExpiresAt",
-          "manualGrantReviewAt",
           "entitlements"
         ],
         "properties": {
-          "userId": {
-            "type": "string"
-          },
           "tier": {
             "type": "string",
             "enum": [
               "free",
               "premium",
               "black"
-            ]
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "active",
-              "cancelled",
-              "past_due",
-              "expired",
-              "trialing"
-            ]
-          },
-          "provider": {
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "apple",
-              "google",
-              "stripe",
-              "manual"
-            ]
-          },
-          "currentPeriodEnd": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "cancelAtPeriodEnd": {
-            "type": "boolean"
-          },
-          "accessLabel": {
-            "type": "string",
-            "enum": [
-              "Alpha access"
             ],
-            "description": "Manual Alpha entitlement label; no active payment system is implied."
-          },
-          "manualGrantExpiresAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
-          },
-          "manualGrantReviewAt": {
-            "type": "string",
-            "nullable": true,
-            "format": "date-time"
+            "description": "Current server-recorded tier. Unknown stored values resolve to free."
           },
           "entitlements": {
             "type": "object",
+            "description": "Feed entitlements derived from the current tier.",
             "required": [
-              "dailyPosts",
-              "dailyComments",
-              "dailyReactions",
-              "dailyAppeals",
-              "exportCooldownDays",
-              "maxMediaSizeMB",
-              "maxMediaPerPost",
               "maxCustomFeeds",
-              "newsBoardAccessLevel",
-              "newsBoardPreview",
-              "postingRestricted",
-              "rewardLevelCap",
-              "rewardOptionsPerLevel",
-              "rewardChoiceBreadth"
+              "newsBoardAccess"
             ],
             "properties": {
-              "dailyPosts": {
-                "type": "integer"
-              },
-              "dailyComments": {
-                "type": "integer"
-              },
-              "dailyReactions": {
-                "type": "integer"
-              },
-              "dailyAppeals": {
-                "type": "integer"
-              },
-              "exportCooldownDays": {
-                "type": "integer"
-              },
-              "maxMediaSizeMB": {
-                "type": "integer"
-              },
-              "maxMediaPerPost": {
-                "type": "integer"
-              },
               "maxCustomFeeds": {
                 "type": "integer",
+                "minimum": 1,
+                "maximum": 3,
                 "description": "Maximum custom feeds available to this tier."
               },
-              "newsBoardAccessLevel": {
+              "newsBoardAccess": {
                 "type": "string",
                 "enum": [
-                  "preview",
+                  "none",
                   "full"
                 ],
-                "description": "Free receives preview; Premium and Black receive full access."
-              },
-              "newsBoardPreview": {
-                "type": "boolean",
-                "description": "Whether the tier can read the safe News Board preview."
-              },
-              "postingRestricted": {
-                "type": "boolean",
-                "description": "Whether normal posting is product-limited beyond abuse controls."
-              },
-              "rewardLevelCap": {
-                "type": "integer",
-                "description": "Highest reputation reward level available to this tier."
-              },
-              "rewardOptionsPerLevel": {
-                "type": "integer",
-                "nullable": true,
-                "description": "Reward options per reputation level; null means all eligible rewards."
-              },
-              "rewardChoiceBreadth": {
-                "type": "string",
-                "enum": [
-                  "limited",
-                  "increased",
-                  "full"
-                ]
+                "description": "Full News Board access is available to Black accounts only; Free and Premium have none."
               }
             }
           }

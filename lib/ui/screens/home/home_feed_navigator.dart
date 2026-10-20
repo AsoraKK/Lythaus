@@ -247,7 +247,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
             AlphaFeedSection.myFeeds =>
               'Create a feed to follow the topics and accounts you choose.',
             AlphaFeedSection.newsBoard =>
-              'News Board is available only to Black accounts. Lythaus confirms access before content loads.',
+              'News Board is available only to Black accounts. Lythaus checks your current account tier before content loads.',
           };
     final icon = switch (_activeSection) {
       AlphaFeedSection.discover => Icons.explore_outlined,

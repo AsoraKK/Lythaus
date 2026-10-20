@@ -22,7 +22,7 @@ The current table has no payment provider, pending state, cancellation state, or
 
 The manual grant endpoint rejects provider lifecycle fields such as `status`, `provider`, `currentPeriodEnd`, `cancelAtPeriodEnd`, and `manualGrantExpiresAt`. An unavailable provider signal is not a confirmed entitlement.
 
-The existing OpenAPI `SubscriptionStatus` schema is stale: it lists payment lifecycle/provider states and describes Free preview plus Premium/Black full News Board access. Those fields and benefits are not supported by the current table or approved tier copy. This server-only change leaves that API/client contract untouched; it needs a separate contract and generated-client update.
+The OpenAPI and generated Dart contract now match the Worker response: `tier` plus `entitlements.maxCustomFeeds` and `entitlements.newsBoardAccess`. Free, Premium, and Black receive 1/2/3 custom feeds; only Black receives full News Board access. The response has no payment provider, pending, payment-confirmed, cancellation, or expiry state. Its wire payload is unchanged; generated clients ignore unknown extra keys, and those keys must not be reinterpreted as lifecycle state. Future provider lifecycle support requires a separately approved contract and integration.
 
 ## Regression evidence
 

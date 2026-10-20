@@ -56,7 +56,7 @@ class FeedEntitlements {
     return FeedEntitlements(
       tier: status.tier,
       maxCustomFeeds: status.entitlements.maxCustomFeeds,
-      newsBoardAccess: status.entitlements.newsBoardAccessLevel,
+      newsBoardAccess: status.entitlements.newsBoardAccess,
     );
   }
 }

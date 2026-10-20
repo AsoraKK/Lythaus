@@ -256,7 +256,7 @@ Class | Method | HTTP request | Description
 [*SocialApi*](doc/SocialApi.md) | [**usersFollowGet**](doc/SocialApi.md#usersfollowget) | **GET** /users/{id}/follow | Get my relationship with a user
 [*SocialApi*](doc/SocialApi.md) | [**usersFollowLegacyCreate**](doc/SocialApi.md#usersfollowlegacycreate) | **POST** /users/follow | Follow a user
 [*SocialApi*](doc/SocialApi.md) | [**usersMuteCreate**](doc/SocialApi.md#usersmutecreate) | **POST** /users/mute | Mute a user
-[*SubscriptionApi*](doc/SubscriptionApi.md) | [**subscriptionStatus**](doc/SubscriptionApi.md#subscriptionstatus) | **GET** /subscription/status | Get current user subscription status
+[*SubscriptionApi*](doc/SubscriptionApi.md) | [**subscriptionStatus**](doc/SubscriptionApi.md#subscriptionstatus) | **GET** /subscription/status | Get current account access tier
 [*SupportFeedbackApi*](doc/SupportFeedbackApi.md) | [**supportFeedbackOptions**](doc/SupportFeedbackApi.md#supportfeedbackoptions) | **GET** /support/options | Read support form policy
 [*SupportFeedbackApi*](doc/SupportFeedbackApi.md) | [**supportProblemDetail**](doc/SupportFeedbackApi.md#supportproblemdetail) | **GET** /support/problems/{requestId} | Read a private problem report and public messages
 [*SupportFeedbackApi*](doc/SupportFeedbackApi.md) | [**supportProblemList**](doc/SupportFeedbackApi.md#supportproblemlist) | **GET** /support/problems | List the member&#39;s private problem reports

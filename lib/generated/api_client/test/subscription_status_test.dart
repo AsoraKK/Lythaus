@@ -1,62 +1,58 @@
-import 'package:test/test.dart';
+import 'package:built_value/serializer.dart';
 import 'package:lythaus_api_client/lythaus_api_client.dart';
+import 'package:lythaus_api_client/src/serializers.dart';
+import 'package:test/test.dart';
 
-// tests for SubscriptionStatus
+SubscriptionStatus _decode(Map<String, dynamic> json) {
+  return standardSerializers.deserialize(
+        json,
+        specifiedType: const FullType(SubscriptionStatus),
+      )!
+      as SubscriptionStatus;
+}
+
 void main() {
-  final instance = SubscriptionStatusBuilder();
-  // TODO add properties to the builder and call build()
+  group('SubscriptionStatus', () {
+    test('decodes the server-issued Black entitlement response', () {
+      final status = _decode({
+        'tier': 'black',
+        'entitlements': {'maxCustomFeeds': 3, 'newsBoardAccess': 'full'},
+      });
 
-  group(SubscriptionStatus, () {
-    // String userId
-    test('to test the property `userId`', () async {
-      // TODO
+      expect(status.tier, SubscriptionStatusTierEnum.black);
+      expect(status.entitlements.maxCustomFeeds, 3);
+      expect(
+        status.entitlements.newsBoardAccess,
+        SubscriptionStatusEntitlementsNewsBoardAccessEnum.full,
+      );
     });
 
-    // String tier
-    test('to test the property `tier`', () async {
-      // TODO
-    });
+    test('ignores unsupported legacy provider and payment lifecycle keys', () {
+      final status = _decode({
+        'tier': 'premium',
+        'entitlements': {'maxCustomFeeds': 2, 'newsBoardAccess': 'none'},
+        'status': 'pending',
+        'provider': 'manual',
+        'currentPeriodEnd': '2026-12-31T00:00:00Z',
+        'cancelAtPeriodEnd': true,
+        'paymentConfirmed': true,
+      });
 
-    // String status
-    test('to test the property `status`', () async {
-      // TODO
-    });
+      expect(status.tier, SubscriptionStatusTierEnum.premium);
+      expect(status.entitlements.maxCustomFeeds, 2);
+      expect(
+        status.entitlements.newsBoardAccess,
+        SubscriptionStatusEntitlementsNewsBoardAccessEnum.none,
+      );
 
-    // String provider
-    test('to test the property `provider`', () async {
-      // TODO
+      final encoded = standardSerializers.serialize(
+        status,
+        specifiedType: const FullType(SubscriptionStatus),
+      )! as Map<String, dynamic>;
+      expect(encoded.keys, containsAll(['tier', 'entitlements']));
+      expect(encoded.keys, isNot(contains('status')));
+      expect(encoded.keys, isNot(contains('provider')));
+      expect(encoded.keys, isNot(contains('paymentConfirmed')));
     });
-
-    // DateTime currentPeriodEnd
-    test('to test the property `currentPeriodEnd`', () async {
-      // TODO
-    });
-
-    // bool cancelAtPeriodEnd
-    test('to test the property `cancelAtPeriodEnd`', () async {
-      // TODO
-    });
-
-    // Manual Alpha entitlement label; no active payment system is implied.
-    // String accessLabel
-    test('to test the property `accessLabel`', () async {
-      // TODO
-    });
-
-    // DateTime manualGrantExpiresAt
-    test('to test the property `manualGrantExpiresAt`', () async {
-      // TODO
-    });
-
-    // DateTime manualGrantReviewAt
-    test('to test the property `manualGrantReviewAt`', () async {
-      // TODO
-    });
-
-    // SubscriptionStatusEntitlements entitlements
-    test('to test the property `entitlements`', () async {
-      // TODO
-    });
-
   });
 }
