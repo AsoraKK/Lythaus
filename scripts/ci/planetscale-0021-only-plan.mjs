@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { planetScaleServiceTokenAuthorizationHeader } from '../planetscale/service-token-auth.mjs';
 import { assess0021ExecutionConsent, assess0021RegistryState, assessOperatorCostEstimate, assessPlanetScaleBackupEvidence, MIGRATION_0020, MIGRATION_0021, resolve0021BackupId, serialize0021PlanReadyOutput } from './planetscale-0021-only-contract.mjs';
+import { read0021RestoreEvidenceRecord } from './planetscale-0021-restore-evidence-loader.mjs';
 import { branchQualifiedDatabaseTarget, buildPlanetScaleTargetIdentity } from './planetscale-0021-target-identity.mjs';
 import { inspectMediaQuarantineMigration, verifyMediaQuarantineMigration } from './planetscale-media-quarantine-migration.mjs';
 
@@ -23,52 +23,6 @@ const evidence = {
 
 function addBlockers(items) {
   for (const blocker of items) if (!blockers.includes(blocker)) blockers.push(blocker);
-}
-
-function read0021RestoreEvidenceRecord(backupId) {
-  if (typeof backupId !== 'string' || !/^[A-Za-z0-9_-]+$/.test(backupId)) return { record: null, recordPath: null };
-  const relativePath = path.join('docs/evidence/production-cutover/0021-restore-evidence', `${backupId}.json`);
-  try {
-    const recordPath = path.join(root, relativePath);
-    const trackedRecord = spawnSync('git', ['ls-files', '--error-unmatch', '--', relativePath], {
-      cwd: root, encoding: 'utf8', timeout: 5_000, maxBuffer: 10_000,
-    });
-    if (trackedRecord.status !== 0 || trackedRecord.stdout.trim() !== relativePath) return { record: null, recordPath: relativePath };
-    const record = JSON.parse(fs.readFileSync(recordPath, 'utf8'));
-    return {
-      record,
-      recordPath: relativePath,
-      evidenceArtifact: read0021RestoreEvidenceArtifact(record),
-    };
-  } catch {
-    return { record: null, recordPath: relativePath };
-  }
-}
-
-function read0021RestoreEvidenceArtifact(record) {
-  const relativePath = record?.artifactPath;
-  const allowedPrefix = 'docs/evidence/production-cutover/0021-restore-evidence/artifacts/';
-  if (typeof relativePath !== 'string' || !relativePath.startsWith(allowedPrefix)
-    || path.posix.normalize(relativePath) !== relativePath || relativePath.includes('\\')) {
-    return { path: typeof relativePath === 'string' ? relativePath : null, bytes: null };
-  }
-  const allowedRoot = path.resolve(root, 'docs/evidence/production-cutover/0021-restore-evidence/artifacts');
-  const artifactPath = path.resolve(root, relativePath);
-  if (!artifactPath.startsWith(`${allowedRoot}${path.sep}`)) return { path: relativePath, bytes: null };
-  try {
-    const trackedArtifact = spawnSync('git', ['ls-files', '--error-unmatch', '--', relativePath], {
-      cwd: root, encoding: 'utf8', timeout: 5_000, maxBuffer: 10_000,
-    });
-    if (trackedArtifact.status !== 0 || trackedArtifact.stdout.trim() !== relativePath) return { path: relativePath, bytes: null };
-    const fileStat = fs.lstatSync(artifactPath);
-    if (!fileStat.isFile() || fileStat.isSymbolicLink()) return { path: relativePath, bytes: null };
-    const resolvedPath = fs.realpathSync(artifactPath);
-    if (!resolvedPath.startsWith(`${allowedRoot}${path.sep}`)) return { path: relativePath, bytes: null };
-    const bytes = fs.readFileSync(resolvedPath);
-    return { path: relativePath, bytes, sha256: createHash('sha256').update(bytes).digest('hex') };
-  } catch {
-    return { path: relativePath, bytes: null };
-  }
 }
 
 function report() {
@@ -107,7 +61,7 @@ async function inspectProviderEvidence() {
   const token = process.env.PLANETSCALE_API_TOKEN ?? '';
   const backupId = resolve0021BackupId(process.env.PLANETSCALE_0021_BACKUP_ID, process.env.PLANETSCALE_PRODUCTION_BACKUP_ID);
   const assessProviderEvidence = (branch, backup) => {
-    const restoreEvidenceInput = read0021RestoreEvidenceRecord(backupId);
+    const restoreEvidenceInput = read0021RestoreEvidenceRecord(backupId, root);
     const assessment = assessPlanetScaleBackupEvidence({
       branch,
       backup,
