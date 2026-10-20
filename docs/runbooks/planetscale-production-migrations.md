@@ -80,8 +80,9 @@ plan also requires a reviewed restore-evidence record at
 Its source branch ID and selected backup ID must match the live provider reads;
 the restored branch ID is retained as historical identity even after that test
 branch is deleted. The record includes a verification timestamp, the SHA-256
-of the underlying evidence artifact, its own content hash, reviewer and review
-reference, verified scope, and unresolved gates. A hash mismatch, stale or
+of the underlying evidence artifact, its own SHA-256 over canonical JSON with
+`recordSha256` omitted, reviewer and review reference, verified scope, and
+unresolved gates. A hash mismatch, stale or
 future timestamp, missing required scope, or any unresolved gate blocks the
 plan. Required scope covers independent backup-to-restore binding, restore
 completion, extensions/indexes, canonical migration registry, effective

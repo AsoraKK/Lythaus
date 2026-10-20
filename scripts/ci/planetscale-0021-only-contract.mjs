@@ -78,6 +78,8 @@ export function assess0021RestoreEvidence({ record, recordPath = null, sourceBra
   const restoredBranchCreatedAt = timestamp(restoredBranch.createdAt);
   const review = safeRecord?.review && typeof safeRecord.review === 'object' ? safeRecord.review : {};
   const reviewedAt = timestamp(review.reviewedAt);
+  const reviewedBy = typeof review.reviewedBy === 'string' ? review.reviewedBy.trim() : '';
+  const reviewReference = typeof review.reference === 'string' ? review.reference.trim() : '';
   const evidenceSha256 = typeof safeRecord?.evidenceSha256 === 'string' ? safeRecord.evidenceSha256 : '';
   const recordSha256 = typeof safeRecord?.recordSha256 === 'string' ? safeRecord.recordSha256 : '';
   const verifiedScope = Array.isArray(safeRecord?.verifiedScope) ? safeRecord.verifiedScope : null;
@@ -113,8 +115,9 @@ export function assess0021RestoreEvidence({ record, recordPath = null, sourceBra
   if (!/^[a-f0-9]{64}$/.test(recordSha256) || recordSha256 !== hash0021RestoreEvidenceRecord(safeRecord)) {
     blockers.push('restore_evidence_record_hash_missing_or_mismatched');
   }
-  if (!verifiedScope) blockers.push('restore_evidence_verified_scope_missing_or_invalid');
-  else {
+  if (!verifiedScope || verifiedScope.some(scope => typeof scope !== 'string' || scope.trim() === '')) {
+    blockers.push('restore_evidence_verified_scope_missing_or_invalid');
+  } else {
     for (const scope of REQUIRED_0021_RESTORE_SCOPE) {
       if (!verifiedScope.includes(scope)) blockers.push(`restore_evidence_scope_missing:${scope}`);
     }
@@ -124,7 +127,7 @@ export function assess0021RestoreEvidence({ record, recordPath = null, sourceBra
   } else if (unresolvedGates.length > 0) {
     blockers.push('restore_evidence_has_unresolved_gates');
   }
-  if (reviewedAt === null || reviewedAt > now || !String(review.reviewedBy ?? '').trim() || !String(review.reference ?? '').trim()) {
+  if (reviewedAt === null || reviewedAt > now || !reviewedBy || !reviewReference) {
     blockers.push('restore_evidence_review_missing_or_invalid');
   } else if (verifiedAt !== null && reviewedAt < verifiedAt) {
     blockers.push('restore_evidence_review_precedes_verification');
@@ -149,8 +152,8 @@ export function assess0021RestoreEvidence({ record, recordPath = null, sourceBra
     unresolvedGates: unresolvedGates ?? [],
     review: {
       reviewedAt: reviewedAt === null ? null : new Date(reviewedAt).toISOString(),
-      reviewedBy: String(review.reviewedBy ?? '').trim() || null,
-      reference: String(review.reference ?? '').trim() || null,
+      reviewedBy: reviewedBy || null,
+      reference: reviewReference || null,
     },
   };
 }
