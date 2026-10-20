@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import pg from 'pg';
-import { target, runVerifierStats } from '../ci/planetscale-verifier-stats.mjs';
+import { target, repositoryId, runVerifierStats } from '../ci/planetscale-verifier-stats.mjs';
 
 test('PG17 proves authority, attributed grant, fresh visibility, row identity and restricted rollback', { timeout: 60000 }, async () => {
   const configured = new URL(process.env.PLANETSCALE_PG17_TEST_DATABASE_URL ?? 'file:///missing');
@@ -37,7 +37,7 @@ test('PG17 proves authority, attributed grant, fresh visibility, row identity an
     await control.query(`GRANT pg_read_all_stats TO "${target.migrator}" WITH INHERIT TRUE`);
     const sourceSha = 'a'.repeat(40);
     const environment = { STATS_OPERATION: 'inspect', RELEASE_SHA: sourceSha, GITHUB_SHA: sourceSha,
-      GITHUB_REPOSITORY: 'AsoraKK/Lythaus', GITHUB_REF: 'refs/heads/main', GITHUB_RUN_ID: '201',
+      GITHUB_REPOSITORY: 'example/Lythaus', GITHUB_REPOSITORY_ID: repositoryId, GITHUB_REF: 'refs/heads/main', GITHUB_RUN_ID: '201',
       GH_TOKEN: 'synthetic', PLANETSCALE_API_TOKEN: 'synthetic:service-token',
       PLANETSCALE_ADMIN_DATABASE_URL: `postgresql://${target.migrator}.${target.branchId}:synthetic@aws.connect.psdb.cloud/postgres?sslmode=verify-full`,
       PLANETSCALE_SCHEMA_READ_DATABASE_URL: `postgresql://${target.verifier}.${target.branchId}:synthetic@aws.connect.psdb.cloud/postgres?sslmode=verify-full` };

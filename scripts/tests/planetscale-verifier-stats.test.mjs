@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 import YAML from 'yaml';
-import { target, grantSql, runVerifierStats } from '../ci/planetscale-verifier-stats.mjs';
+import { target, grantSql, repositoryId, runVerifierStats } from '../ci/planetscale-verifier-stats.mjs';
 
 const releaseSha = 'a'.repeat(40);
 const url = role => `postgresql://${role}.${target.branchId}:synthetic-password@aws.connect.psdb.cloud/postgres?sslmode=verify-full&sslrootcert=system`;
 const environment = () => ({ STATS_OPERATION: 'grant', RELEASE_SHA: releaseSha, GITHUB_SHA: releaseSha,
-  GITHUB_REPOSITORY: 'AsoraKK/Lythaus', GITHUB_REF: 'refs/heads/main', GITHUB_RUN_ID: '201',
+  GITHUB_REPOSITORY: 'example/Lythaus', GITHUB_REPOSITORY_ID: repositoryId, GITHUB_REF: 'refs/heads/main', GITHUB_RUN_ID: '201',
   GH_TOKEN: 'synthetic-github-token', PLANETSCALE_API_TOKEN: 'synthetic:service-token',
   PLANETSCALE_ADMIN_DATABASE_URL: url(target.migrator), PLANETSCALE_SCHEMA_READ_DATABASE_URL: url(target.verifier) });
 const member = () => ({ role_id: '3375', member_id: '1002', grantor_id: '1001',
@@ -122,6 +122,7 @@ test('a real superuser authority records the bootstrap grantor rather than guess
 test('wrong role, SQL target, provider branch, main SHA, session, version, and options all stop before mutation', async t => {
   const cases = [
     ['configured role', env => { env.PLANETSCALE_SCHEMA_READ_DATABASE_URL = url('pscale_api_other'); }],
+    ['repository identity', env => { env.GITHUB_REPOSITORY_ID = '12345'; }],
     ['SQL branch', env => { env.PLANETSCALE_ADMIN_DATABASE_URL = url(target.migrator).replace(target.branchId, 'other'); }],
     ['connection options', env => { env.PLANETSCALE_ADMIN_DATABASE_URL += '&options=-crole=postgres'; }],
     ['hostname', env => { env.PLANETSCALE_ADMIN_DATABASE_URL = url(target.migrator).replace('aws.connect.psdb.cloud', 'example.com'); }],

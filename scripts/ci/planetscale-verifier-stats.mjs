@@ -9,6 +9,7 @@ export const target = Object.freeze({ organization: 'lythaus', database: 'lythau
   branch: 'main', branchId: 'vqa2g2xc9wsl', sqlDatabase: 'postgres',
   migrator: 'pscale_api_47syed2xlt6p', verifier: 'pscale_api_qodocjs6vgrb', role: 'pg_read_all_stats' });
 export const grantSql = 'GRANT pg_read_all_stats TO "pscale_api_qodocjs6vgrb" WITH INHERIT TRUE';
+export const repositoryId = '1010752912';
 const requireThat = (condition, code) => { if (!condition) throw Object.assign(new Error(code), { safeCode: code }); };
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -27,7 +28,7 @@ async function assertLiveTarget(env, fetchImpl) {
     ['https://api.planetscale.com/v1/organizations/lythaus/databases/lythaus-core/branches/main',
       planetScaleServiceTokenAuthorizationHeader(env.PLANETSCALE_API_TOKEN), value => value.id === target.branchId
         && value.name === 'main' && value.kind === 'postgresql' && value.ready === true && value.production === true],
-    ['https://api.github.com/repos/AsoraKK/Lythaus/git/ref/heads/main',
+    [`https://api.github.com/repos/${env.GITHUB_REPOSITORY}/git/ref/heads/main`,
       `Bearer ${env.GH_TOKEN}`, value => value.object?.sha === env.RELEASE_SHA],
   ];
   for (const [url, authorization, matches] of requests) {
@@ -110,7 +111,8 @@ export async function runVerifierStats({ environment: env = process.env, fetchIm
   try {
     requireThat(['inspect', 'grant', 'revoke'].includes(env.STATS_OPERATION)
       && /^[a-f0-9]{40}$/.test(env.RELEASE_SHA ?? '') && env.GITHUB_SHA === env.RELEASE_SHA
-      && env.GITHUB_REPOSITORY === 'AsoraKK/Lythaus' && env.GITHUB_REF === 'refs/heads/main'
+      && env.GITHUB_REPOSITORY_ID === repositoryId && /^[A-Za-z0-9_.-]+\/Lythaus$/.test(env.GITHUB_REPOSITORY ?? '')
+      && env.GITHUB_REF === 'refs/heads/main'
       && /^[1-9]\d*$/.test(env.GITHUB_RUN_ID ?? '') && env.GH_TOKEN, 'invalid_execution_context');
     requireThat(env.STATS_OPERATION === 'revoke' ? /^[1-9]\d*$/.test(env.GRANT_RUN_ID ?? '') && receipt
       : !env.GRANT_RUN_ID && !receipt, 'unexpected_receipt_input');

@@ -49,6 +49,7 @@ jobs:
           set -euo pipefail
           git fetch --no-tags origin main
           [[ "$GITHUB_REF" == refs/heads/main ]]
+          [[ "$GITHUB_REPOSITORY_ID" == 1010752912 ]]
           [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$RELEASE_SHA" == "$GITHUB_SHA" ]]
           [[ "$RELEASE_SHA" == "$(git rev-parse HEAD)" ]]
@@ -72,9 +73,9 @@ jobs:
         run: |
           set -euo pipefail
           run_file="$RUNNER_TEMP/verifier-stats-grant-run.json"
-          gh api "repos/AsoraKK/Lythaus/actions/runs/$GRANT_RUN_ID" > "$run_file"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GRANT_RUN_ID" > "$run_file"
           jq -e '.path == ".github/workflows/planetscale-verifier-stats.yml" and .event == "workflow_dispatch" and .head_branch == "main" and .status == "completed" and (.head_sha | test("^[0-9a-f]{40}$"))' "$run_file" > /dev/null
-          gh run download "$GRANT_RUN_ID" --repo AsoraKK/Lythaus --name "planetscale-verifier-stats-$GRANT_RUN_ID" --dir "$RUNNER_TEMP/verifier-stats-original"
+          gh run download "$GRANT_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "planetscale-verifier-stats-$GRANT_RUN_ID" --dir "$RUNNER_TEMP/verifier-stats-original"
           echo "VERIFIED_GRANT_RUN_SHA=$(jq -r .head_sha "$run_file")" >> "$GITHUB_ENV"
           echo "STATS_RECEIPT_FILE=$RUNNER_TEMP/verifier-stats-original/summary.json" >> "$GITHUB_ENV"
       - name: Inspect or change only the approved stats membership
