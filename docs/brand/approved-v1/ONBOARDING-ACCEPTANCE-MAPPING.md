@@ -58,6 +58,16 @@ All40 asset/CanvasKit hashes must match the two real scale builds. Complete
 inventories, source construction and compiled script hashes are saved.
 
 The real host saves original login images at250/5250ms from natural first frame.
+Before those captures, a bounded state guard requires the visible login's real
+refresh to settle signed-out with no pending work. It fails immediately for
+signed-in/error auth, guest mode, changed app/route counts, focus or semantics,
+and times out after5s for a refresh that never settles. The original first-frame
+anchor and250/5250ms minimum deadlines remain unchanged; readiness timestamps,
+transport completion, and actual capture times are saved. This repairs the
+startup race in which the250ms before-screenshot observation was still loading
+and the after-screenshot observation was signed-out. It does not replace the
+strict signed-out assertions on either side of any accepted capture, force
+provider state, or alter production authentication.
 Capture timing waits for the browser's monotonic clock to reach the exact
 minimum deadline, using a read-only10ms timer poll. The strict elapsed-time
 assertion remains unchanged; an early timer wakeup cannot release a capture.
