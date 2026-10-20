@@ -329,6 +329,22 @@ async function recordEvent(env: Env, runId: string, eventType: string): Promise<
      ON CONFLICT (run_id, event_type) DO NOTHING`, [uuidv7(), runId, eventType]);
 }
 
+async function recordAuditEvidence(env: Env, runId: string, action: string, targetId: string, metadata: Record<string, unknown>): Promise<void> {
+  await query(env.DB_ADMIN_FRESH,
+    `INSERT INTO system.audit_events (id, action, target_type, target_id, reason_code, correlation_id, metadata)
+     SELECT $1, $2, 'user', $3, 'AUTH_ACCEPTANCE', $4, $5::jsonb
+      WHERE NOT EXISTS (SELECT 1 FROM system.audit_events WHERE action = $2 AND correlation_id = $4)`,
+    [uuidv7(), action, targetId, runId, JSON.stringify(metadata)]);
+}
+
+async function auditEvidence(env: Env, runId: string, action: string, targetId?: string | null): Promise<{ created_at: string | Date; metadata: Record<string, unknown> } | undefined> {
+  const result = await query<{ created_at: string | Date; metadata: Record<string, unknown> }>(env.DB_ADMIN_FRESH,
+    `SELECT created_at, metadata FROM system.audit_events
+      WHERE action = $1 AND correlation_id = $2 AND ($3::uuid IS NULL OR target_id = $3::uuid)
+      ORDER BY created_at LIMIT 1`, [action, runId, targetId ?? null]);
+  return result.rows[0];
+}
+
 async function candidateFetch(env: Env, run: RunRow, path: string, init: RequestInit): Promise<Response> {
   const context = await runContext(env, run);
   const sourceSha = candidateSourceShaFromContext(context, run.release_sha);
@@ -385,13 +401,12 @@ async function createRun(request: Request, env: Env): Promise<Response> {
   const stagedAt = strictTimestamp(body.candidateStagedAt, 'acceptance_candidate_staged_at_invalid');
   if (Date.parse(stagedAt) < Date.parse(uploadedAt)) throw new Error('acceptance_candidate_stage_before_upload');
   if (Date.parse(stagedAt) > Date.now()) throw new Error('acceptance_candidate_stage_in_future');
-  const candidateDependencies = body.candidateDependencies === undefined
-    ? undefined
-    : strictCandidateDependencies(body.candidateDependencies, candidateSourceSha, releaseSha);
+  if (body.candidateDependencies === undefined) throw new Error('acceptance_context_dependencies_required');
+  const candidateDependencies = strictCandidateDependencies(body.candidateDependencies, candidateSourceSha, releaseSha);
   const rollbackSnapshot = body.rollbackSnapshot === undefined
     ? undefined
     : strictRollbackSnapshot(body.rollbackSnapshot, candidateDependencies);
-  if (candidateDependencies && !rollbackSnapshot) throw new Error('acceptance_rollback_snapshot_required');
+  if (!rollbackSnapshot) throw new Error('acceptance_rollback_snapshot_required');
   if (candidateDependencies && (candidateDependencies.public.versionId !== candidateVersion || candidateDependencies.public.workerName !== candidateWorker)) {
     throw new Error('acceptance_context_dependencies_invalid');
   }
@@ -446,6 +461,9 @@ async function runSummary(request: Request, env: Env, id: string): Promise<Respo
       WHERE acceptance_run_id = $1
       GROUP BY purpose, state
       ORDER BY purpose, state`, [id]);
+  const expiredVerification = await auditEvidence(env, id, 'auth.acceptance.expired_verification_rejected', run.resend_fixture_user_id);
+  const resendCooldown = await auditEvidence(env, id, 'auth.acceptance.resend_cooldown_observed', run.resend_fixture_user_id);
+  const accountSwitch = await auditEvidence(env, id, 'auth.acceptance.account_switch_verified', run.primary_user_id);
   return json({
     acceptanceRunId: run.id, releaseSha: run.release_sha, candidate: { workerName: run.candidate_worker, workerVersionId: run.candidate_version, sourceReleaseSha: await candidateSourceSha(env, run), uploadedAt: asIso(run.candidate_uploaded_at), stagedAt: asIso(run.candidate_staged_at) },
     candidateDependencies: await candidateDependencies(env, run) ?? null,
@@ -460,6 +478,13 @@ async function runSummary(request: Request, env: Env, id: string): Promise<Respo
       acceptedCount: Number(row.accepted_count),
       deliveredCount: Number(row.delivered_count),
     })),
+    expiredVerification: expiredVerification ? { status: 'rejected', observedAt: asIso(expiredVerification.created_at) } : { status: 'pending' },
+    resendCooldown: resendCooldown ? {
+      status: 'observed',
+      observedAt: asIso(resendCooldown.created_at),
+      retryAfterSeconds: Number(resendCooldown.metadata.retryAfterSeconds),
+    } : { status: 'pending' },
+    accountSwitch: accountSwitch ? { status: 'verified', observedAt: asIso(accountSwitch.created_at) } : { status: 'pending' },
   });
 }
 
@@ -483,11 +508,33 @@ async function prepareResend(request: Request, env: Env, id: string): Promise<Re
   const body = await readJson(request);
   const turnstileToken = typeof body.turnstileToken === 'string' && body.turnstileToken.length >= 10 ? body.turnstileToken : (() => { throw new Error('turnstile_required'); })();
   const run = await loadRun(env, id);
+  const fixtureNeedsCreation = !run.resend_previous_challenge_id;
   const email = await runEmail(env, run, 'resend');
   const fixture = await candidateJson(env, run, '/internal/production-auth-acceptance/resend-fixture', { email });
   if (fixture.response.status !== 202) throw new Error('candidate_resend_fixture_rejected');
-  if (typeof fixture.body?.retryAfterSeconds === 'number' && fixture.body.retryAfterSeconds > 0) {
-    return json({ state: 'resend_fixture_cooldown', retryAfterSeconds: fixture.body.retryAfterSeconds }, { status: 202 });
+  if (fixtureNeedsCreation) return json({ state: 'expired_verification_fixture_ready' }, { status: 202 });
+
+  const expiredProof = await auditEvidence(env, id, 'auth.acceptance.expired_verification_rejected', run.resend_fixture_user_id);
+  if (!expiredProof) throw new Error('acceptance_expired_link_proof_required');
+  const fixtureRetryAfter = fixture.body?.retryAfterSeconds;
+  const retryAfterSeconds = typeof fixtureRetryAfter === 'number' ? fixtureRetryAfter : 0;
+  if (retryAfterSeconds > 0) {
+    const before = await query<{ count: string }>(env.DB_ADMIN_FRESH,
+      `SELECT count(*)::text AS count FROM system.transactional_email_outbox
+        WHERE acceptance_run_id = $1 AND purpose = 'verification' AND user_id = $2`, [id, run.resend_fixture_user_id]);
+    const candidate = await candidateJson(env, run, '/api/auth/email', { mode: 'resend_verification', email, turnstileToken });
+    if (candidate.response.status !== 202) throw new Error('candidate_resend_rejected');
+    const after = await query<{ count: string }>(env.DB_ADMIN_FRESH,
+      `SELECT count(*)::text AS count FROM system.transactional_email_outbox
+        WHERE acceptance_run_id = $1 AND purpose = 'verification' AND user_id = $2`, [id, run.resend_fixture_user_id]);
+    const outboxDelta = Number(after.rows[0]?.count ?? 0) - Number(before.rows[0]?.count ?? 0);
+    if (outboxDelta !== 0) throw new Error('candidate_resend_cooldown_created_email');
+    await recordAuditEvidence(env, id, 'auth.acceptance.resend_cooldown_observed', run.resend_fixture_user_id!, {
+      retryAfterSeconds,
+      responseStatus: candidate.response.status,
+      outboxDelta,
+    });
+    return json({ state: 'resend_fixture_cooldown', retryAfterSeconds }, { status: 202 });
   }
   const candidate = await candidateJson(env, run, '/api/auth/email', { mode: 'resend_verification', email, turnstileToken });
   if (candidate.response.status !== 202) throw new Error('candidate_resend_rejected');
@@ -554,6 +601,35 @@ async function completeEmail(request: Request, env: Env): Promise<Response> {
   const observed = await candidateJson(env, run, '/internal/production-auth-acceptance/challenge-observation', { token, purpose });
   if (!observed.response.ok || observed.body?.delivered !== true) throw new Error('acceptance_delivery_not_ready');
   const path = purpose === 'verification' ? '/api/auth/email/verify' : '/api/auth/password/reset/complete';
+  if (purpose === 'verification' && observed.body.flow === 'expired_resend_fixture') {
+    if (observed.body.expired !== true) {
+      const age = await candidateJson(env, run, '/internal/production-auth-acceptance/age-resend-fixture', { token });
+      if (age.response.status !== 202 || age.body?.state !== 'expired_resend_fixture_aged') {
+        throw new Error('candidate_expired_fixture_aging_rejected');
+      }
+    }
+    const expired = observed.body.expired === true
+      ? observed
+      : await candidateJson(env, run, '/internal/production-auth-acceptance/challenge-observation', { token, purpose });
+    if (!expired.response.ok || expired.body?.delivered !== true || expired.body?.expired !== true
+      || expired.body?.superseded !== false || expired.body?.consumed !== false) {
+      throw new Error('acceptance_expired_fixture_state_invalid');
+    }
+    const attemptedAt = new Date().toISOString();
+    const rejected = await candidateJson(env, run, path, { token, password: randomToken(32) });
+    requireAcceptanceRejection({ status: rejected.response.status, body: rejected.body }, 400, ['verification_token_invalid']);
+    const rejectedAt = new Date().toISOString();
+    await recordAuditEvidence(env, run.id, 'auth.acceptance.expired_verification_rejected', run.resend_fixture_user_id!, {
+      attemptedAt,
+      rejectedAt,
+      responseStatus: rejected.response.status,
+      errorCode: rejected.body?.error,
+      ageMode: 'controlled_25h_fixture',
+    });
+    return new Response('<!doctype html><title>Lythaus</title><p>Expired verification link rejected. Return to the Keeper and request a fresh resend.</p>', {
+      headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' },
+    });
+  }
   const password = requirePasswordInput(form.get('password'), 'creation');
   if (password !== form.get('passwordConfirmation')) throw new Error('invalid_password');
   const body = { token, password };
@@ -579,10 +655,11 @@ async function completeEmail(request: Request, env: Env): Promise<Response> {
   return new Response('<!doctype html><title>Lythaus</title><p>Completed. Return to the Keeper acceptance screen.</p>', { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' } });
 }
 
-async function requireCandidateIdentity(env: Env, run: RunRow, access: string, expectedId: string | null): Promise<void> {
+async function requireCandidateIdentity(env: Env, run: RunRow, access: string, expectedId: string | null): Promise<string> {
   const response = await candidateFetch(env, run, '/api/auth/userinfo', { method: 'GET', headers: { authorization: `Bearer ${access}` } });
   const body = await response.json().catch(() => null) as { id?: unknown } | null;
   if (!response.ok || !expectedId || body?.id !== expectedId) throw new Error('candidate_session_identity_mismatch');
+  return expectedId;
 }
 
 async function initialSessionProof(request: Request, env: Env, id: string): Promise<Response> {
@@ -618,6 +695,7 @@ async function sessionProof(request: Request, env: Env, id: string): Promise<Res
   const body = await readJson(request);
   const oldPassword = requirePasswordInput(body.oldPassword, 'login');
   const newPassword = requirePasswordInput(body.newPassword, 'creation');
+  const secondaryPassword = requirePasswordInput(body.secondaryPassword, 'login');
   const run = await loadRun(env, id);
   const prerequisites = ['initial_verification_completed', 'initial_verification_replay_rejected', 'login_completed', 'refresh_completed',
     'resend_verification_completed', 'resend_verification_replay_rejected', 'password_reset_completed', 'password_reset_replay_rejected'];
@@ -626,24 +704,70 @@ async function sessionProof(request: Request, env: Env, id: string): Promise<Res
      WHERE run_id=$1 AND event_type=ANY($2::text[])`, [id, prerequisites]);
   if (Number(ready.rows[0]?.count) !== prerequisites.length) throw new Error('acceptance_steps_incomplete');
   if (!run.pre_reset_refresh_ciphertext || !run.pre_reset_refresh_encryption_key_version) throw new Error('candidate_initial_session_proof_required');
+  if (!run.primary_user_id || !run.resend_fixture_user_id || run.primary_user_id === run.resend_fixture_user_id) {
+    throw new Error('acceptance_account_switch_fixtures_invalid');
+  }
+
+  const primaryEmail = await runEmail(env, run, 'primary');
+  const secondaryEmail = await runEmail(env, run, 'resend');
+  const primaryLogin = await candidateJson(env, run, '/api/auth/email', { mode: 'login', email: primaryEmail, password: newPassword });
+  const primaryAccess = typeof primaryLogin.body?.accessToken === 'string' ? primaryLogin.body.accessToken : '';
+  if (!primaryLogin.response.ok || !primaryAccess) throw new Error('candidate_primary_switch_login_rejected');
+  const primaryLoginAt = new Date().toISOString();
+  const primarySubject = await requireCandidateIdentity(env, run, primaryAccess, run.primary_user_id);
+  await recordEvent(env, id, 'password_reset_new_password_accepted');
+
+  const secondaryLogin = await candidateJson(env, run, '/api/auth/email', { mode: 'login', email: secondaryEmail, password: secondaryPassword });
+  const secondaryAccess = typeof secondaryLogin.body?.accessToken === 'string' ? secondaryLogin.body.accessToken : '';
+  if (!secondaryLogin.response.ok || !secondaryAccess) throw new Error('candidate_secondary_switch_login_rejected');
+  const secondaryLoginAt = new Date().toISOString();
+  const secondarySubject = await requireCandidateIdentity(env, run, secondaryAccess, run.resend_fixture_user_id);
+  if (primarySubject === secondarySubject) throw new Error('candidate_account_switch_subjects_not_distinct');
+
+  await requireCandidateIdentity(env, run, primaryAccess, run.primary_user_id);
+  const primaryAfterSecondaryLoginAt = new Date().toISOString();
+  const secondaryLogout = await candidateJson(env, run, '/api/auth/logout', {}, { headers: { authorization: `Bearer ${secondaryAccess}` } });
+  if (!secondaryLogout.response.ok) throw new Error('candidate_secondary_switch_logout_rejected');
+  const secondaryLogoutAt = new Date().toISOString();
+  const secondaryAfterLogout = await candidateFetch(env, run, '/api/auth/userinfo', { method: 'GET', headers: { authorization: `Bearer ${secondaryAccess}` } });
+  if (secondaryAfterLogout.status !== 401) throw new Error('candidate_secondary_switch_session_not_revoked');
+  const secondaryRejectedAt = new Date().toISOString();
+  await requireCandidateIdentity(env, run, primaryAccess, run.primary_user_id);
+  const primaryAfterSecondaryLogoutAt = new Date().toISOString();
+
   const preResetRefresh = await decryptField({
     ciphertext: run.pre_reset_refresh_ciphertext,
     encryptionKeyVersion: run.pre_reset_refresh_encryption_key_version,
   }, requiredSecret(env, 'AUTH_ACCEPTANCE_STATE_ENCRYPTION_KEY_V1'));
   const revokedRefresh = await candidateJson(env, run, '/api/auth/refresh', { refreshToken: preResetRefresh });
   requireAcceptanceRejection({ status: revokedRefresh.response.status, body: revokedRefresh.body }, 401, ['refresh_token_invalid', 'refresh_token_reuse']);
+  await requireCandidateIdentity(env, run, primaryAccess, run.primary_user_id);
   await recordEvent(env, id, 'password_reset_sessions_revoked');
   const email = await runEmail(env, run, 'primary');
   const oldLogin = await candidateJson(env, run, '/api/auth/email', { mode: 'login', email, password: oldPassword });
   requireAcceptanceRejection({ status: oldLogin.response.status, body: oldLogin.body }, 401, ['invalid_credentials']);
   await recordEvent(env, id, 'password_reset_old_password_rejected');
-  const login = await candidateJson(env, run, '/api/auth/email', { mode: 'login', email, password: newPassword });
-  const accessToken = typeof login.body?.accessToken === 'string' ? login.body.accessToken : '';
-  if (!login.response.ok || !accessToken) throw new Error('candidate_new_password_login_rejected');
-  await requireCandidateIdentity(env, run, accessToken, run.primary_user_id);
-  await recordEvent(env, id, 'password_reset_new_password_accepted');
-  const logout = await candidateJson(env, run, '/api/auth/logout', {}, { headers: { authorization: `Bearer ${accessToken}` } });
-  if (!logout.response.ok) throw new Error('candidate_logout_rejected');
+  const primaryLogout = await candidateJson(env, run, '/api/auth/logout', {}, { headers: { authorization: `Bearer ${primaryAccess}` } });
+  if (!primaryLogout.response.ok) throw new Error('candidate_primary_switch_logout_rejected');
+  const primaryLogoutAt = new Date().toISOString();
+  const primaryAfterLogout = await candidateFetch(env, run, '/api/auth/userinfo', { method: 'GET', headers: { authorization: `Bearer ${primaryAccess}` } });
+  if (primaryAfterLogout.status !== 401) throw new Error('candidate_primary_switch_session_not_revoked');
+  const primaryRejectedAt = new Date().toISOString();
+  await recordAuditEvidence(env, id, 'auth.acceptance.account_switch_verified', run.primary_user_id, {
+    primaryLoginAt,
+    secondaryLoginAt,
+    primaryAfterSecondaryLoginAt,
+    secondaryLogoutAt,
+    secondaryRejectedAt,
+    primaryAfterSecondaryLogoutAt,
+    primaryLogoutAt,
+    primaryRejectedAt,
+    distinctSubjects: true,
+    primarySessionRetainedAfterSecondaryLogin: true,
+    primarySessionRetainedAfterSecondaryLogout: true,
+    secondarySessionRevoked: true,
+    primarySessionRevoked: true,
+  });
   await recordEvent(env, id, 'logout_completed');
   await query(env.DB_ADMIN_FRESH,
     `UPDATE system.production_auth_acceptance_runs
@@ -714,19 +838,29 @@ async function observer(request: Request, env: Env): Promise<Response> {
   if (url.searchParams.get('releaseSha') !== run.release_sha || url.searchParams.get('candidateWorker') !== run.candidate_worker || url.searchParams.get('candidateVersion') !== run.candidate_version) throw new Error('acceptance_observer_binding_mismatch');
   const candidate = { workerName: run.candidate_worker, workerVersionId: run.candidate_version, sourceReleaseSha: await candidateSourceSha(env, run), uploadedAt: asIso(run.candidate_uploaded_at), stagedAt: asIso(run.candidate_staged_at) };
   const dependencies = await candidateDependencies(env, run);
+  if (!dependencies) {
+    return json({ formatVersion: 'lythaus-real-email-acceptance-v3', source: 'runtime_observation', status: 'BLOCKED', reason: 'candidate_dependencies_missing', releaseSha: run.release_sha, acceptanceRunId: run.id, candidate }, { status: 428 });
+  }
   const events = await query<{ event_type: string; occurred_at: string | Date }>(env.DB_ADMIN_FRESH, `SELECT event_type, occurred_at FROM system.production_auth_acceptance_events WHERE run_id = $1`, [run.id]);
   const at = new Map(events.rows.map((event) => [event.event_type, asIso(event.occurred_at)!]));
   const required = ['account_created', 'turnstile_verified', 'initial_verification_requested', 'initial_verification_completed', 'initial_verification_replay_rejected', 'resend_fixture_created', 'resend_requested', 'resend_verification_completed', 'resend_verification_replay_rejected', 'password_reset_requested', 'password_reset_completed', 'password_reset_replay_rejected', 'password_reset_sessions_revoked', 'password_reset_old_password_rejected', 'password_reset_new_password_accepted', 'login_completed', 'refresh_completed', 'logout_completed'];
   if (required.some((event) => !at.has(event))) {
-    return json({ formatVersion: 'lythaus-real-email-acceptance-v2', source: 'runtime_observation', status: 'HUMAN_ACCEPTANCE_REQUIRED', reason: 'keeper_flow_incomplete', releaseSha: run.release_sha, acceptanceRunId: run.id, candidate, ...(dependencies ? { candidateDependencies: dependencies } : {}) }, { status: 428 });
+    return json({ formatVersion: 'lythaus-real-email-acceptance-v3', source: 'runtime_observation', status: 'HUMAN_ACCEPTANCE_REQUIRED', reason: 'keeper_flow_incomplete', releaseSha: run.release_sha, acceptanceRunId: run.id, candidate, candidateDependencies: dependencies }, { status: 428 });
   }
   const challenges = [run.initial_verification_challenge_id, run.resend_previous_challenge_id, run.resend_verification_challenge_id, run.password_reset_challenge_id];
-  if (challenges.some((challenge) => !challenge)) return json({ formatVersion: 'lythaus-real-email-acceptance-v2', source: 'runtime_observation', status: 'HUMAN_ACCEPTANCE_REQUIRED', reason: 'candidate_challenge_pending', releaseSha: run.release_sha, acceptanceRunId: run.id, candidate, ...(dependencies ? { candidateDependencies: dependencies } : {}) }, { status: 428 });
-  const outboxes = await query<{ flow: 'initial' | 'resend' | 'reset'; purpose: 'verification' | 'password_reset'; created_at: string | Date; provider: string | null; provider_message_digest: string | null; outbox_digest: string; accepted_at: string | Date | null; delivered_at: string | Date | null; state: string }>(env.DB_ADMIN_FRESH,
+  if (challenges.some((challenge) => !challenge)) return json({ formatVersion: 'lythaus-real-email-acceptance-v3', source: 'runtime_observation', status: 'HUMAN_ACCEPTANCE_REQUIRED', reason: 'candidate_challenge_pending', releaseSha: run.release_sha, acceptanceRunId: run.id, candidate, candidateDependencies: dependencies }, { status: 428 });
+  const expiredAudit = await auditEvidence(env, run.id, 'auth.acceptance.expired_verification_rejected', run.resend_fixture_user_id);
+  const cooldownAudit = await auditEvidence(env, run.id, 'auth.acceptance.resend_cooldown_observed', run.resend_fixture_user_id);
+  const accountSwitchAudit = await auditEvidence(env, run.id, 'auth.acceptance.account_switch_verified', run.primary_user_id);
+  if (!expiredAudit) return json({ formatVersion: 'lythaus-real-email-acceptance-v3', source: 'runtime_observation', status: 'HUMAN_ACCEPTANCE_REQUIRED', reason: 'expired_verification_required', releaseSha: run.release_sha, acceptanceRunId: run.id, candidate, candidateDependencies: dependencies }, { status: 428 });
+  if (!cooldownAudit) return json({ formatVersion: 'lythaus-real-email-acceptance-v3', source: 'runtime_observation', status: 'HUMAN_ACCEPTANCE_REQUIRED', reason: 'resend_cooldown_required', releaseSha: run.release_sha, acceptanceRunId: run.id, candidate, candidateDependencies: dependencies }, { status: 428 });
+  if (!accountSwitchAudit) return json({ formatVersion: 'lythaus-real-email-acceptance-v3', source: 'runtime_observation', status: 'HUMAN_ACCEPTANCE_REQUIRED', reason: 'account_switch_required', releaseSha: run.release_sha, acceptanceRunId: run.id, candidate, candidateDependencies: dependencies }, { status: 428 });
+  const outboxes = await query<{ flow: 'initial' | 'previous' | 'resend' | 'reset'; purpose: 'verification' | 'password_reset'; created_at: string | Date; provider: string | null; provider_message_digest: string | null; outbox_digest: string; accepted_at: string | Date | null; delivered_at: string | Date | null; state: string }>(env.DB_ADMIN_FRESH,
     `SELECT CASE
               WHEN challenge_id = $2::uuid THEN 'initial'
-              WHEN challenge_id = $3::uuid THEN 'resend'
-              WHEN challenge_id = $4::uuid THEN 'reset'
+              WHEN challenge_id = $3::uuid THEN 'previous'
+              WHEN challenge_id = $4::uuid THEN 'resend'
+              WHEN challenge_id = $5::uuid THEN 'reset'
             END AS flow,
             purpose, created_at, provider,
             encode(sha256(convert_to(provider_message_id, 'UTF8')), 'hex') AS provider_message_digest,
@@ -735,17 +869,17 @@ async function observer(request: Request, env: Env): Promise<Response> {
        FROM system.transactional_email_outbox
       WHERE acceptance_run_id = $1
         AND correlation_id = $1::text
-        AND challenge_id = ANY($5::uuid[])`,
-    [run.id, run.initial_verification_challenge_id!, run.resend_verification_challenge_id!, run.password_reset_challenge_id!, [run.initial_verification_challenge_id!, run.resend_verification_challenge_id!, run.password_reset_challenge_id!]],
+        AND challenge_id = ANY($6::uuid[])`,
+    [run.id, run.initial_verification_challenge_id!, run.resend_previous_challenge_id!, run.resend_verification_challenge_id!, run.password_reset_challenge_id!, [run.initial_verification_challenge_id!, run.resend_previous_challenge_id!, run.resend_verification_challenge_id!, run.password_reset_challenge_id!]],
   );
   const outboxByFlow = new Map(outboxes.rows.map((row) => [row.flow, row]));
-  const verificationTokens = await query<{ flow: 'initial' | 'previous' | 'resend'; created_at: string | Date; consumed_at: string | Date | null; superseded_at: string | Date | null }>(env.DB_ADMIN_FRESH,
+  const verificationTokens = await query<{ flow: 'initial' | 'previous' | 'resend'; created_at: string | Date; expires_at: string | Date; consumed_at: string | Date | null; superseded_at: string | Date | null }>(env.DB_ADMIN_FRESH,
     `SELECT CASE
               WHEN id = $1::uuid THEN 'initial'
               WHEN id = $2::uuid THEN 'previous'
               WHEN id = $3::uuid THEN 'resend'
             END AS flow,
-            created_at, consumed_at, superseded_at
+            created_at, expires_at, consumed_at, superseded_at
        FROM identity.email_verification_tokens
       WHERE id = ANY($4::uuid[])`,
     [run.initial_verification_challenge_id!, run.resend_previous_challenge_id!, run.resend_verification_challenge_id!, [run.initial_verification_challenge_id!, run.resend_previous_challenge_id!, run.resend_verification_challenge_id!]],
@@ -755,38 +889,94 @@ async function observer(request: Request, env: Env): Promise<Response> {
        FROM identity.password_reset_tokens WHERE id = $1::uuid`, [run.password_reset_challenge_id!]);
   const tokenByFlow = new Map([...verificationTokens.rows, ...resets.rows].map((row) => [row.flow, row]));
   const primary = await query<{ created_at: string | Date; is_production_acceptance: boolean }>(env.DB_ADMIN_FRESH, `SELECT created_at, is_production_acceptance FROM identity.users WHERE id = $1`, [run.primary_user_id]);
-  const buildFlow = async (flow: 'initial' | 'resend' | 'reset', challengeId: string, requestedAt: string, verifiedAt: string, replayAt: string) => {
+  const mailboxProviders = await observeMailboxProviders(await runEmail(env, run, 'primary'), await runEmail(env, run, 'resend'));
+  const buildFlow = async (flow: 'initial' | 'resend' | 'reset', challengeId: string, verifiedAt: string, replayAt: string, mailboxProvider: string) => {
     const token = tokenByFlow.get(flow);
     const outbox = outboxByFlow.get(flow);
     if (!token || !outbox || outbox.state !== 'delivered' || outbox.provider !== 'cloudflare-email' || !outbox.provider_message_digest || !outbox.accepted_at || !outbox.delivered_at || !token.consumed_at) throw new Error('acceptance_delivery_not_ready');
+    const requestedAt = asIso(outbox.created_at);
+    if (!requestedAt) throw new Error('acceptance_outbox_timestamp_missing');
     const safeChallenge = await opaqueUuid(env, challengeId);
     const safeMessage = opaqueReferenceFromDigest(outbox.provider_message_digest);
     if (Date.parse(verifiedAt) < new Date(token.consumed_at).getTime()) throw new Error('acceptance_completion_observation_before_consumption');
-    return { requestedAt, challenge: { id: safeChallenge, createdAt: asIso(token.created_at), ...(token.superseded_at ? { supersededAt: asIso(token.superseded_at) } : {}) }, outbox: { id: opaqueUuidFromDigest(outbox.outbox_digest), purpose: outbox.purpose, challengeId: safeChallenge, createdAt: asIso(outbox.created_at), provider: 'cloudflare-email', providerMessageId: safeMessage, acceptedAt: asIso(outbox.accepted_at), lifecycle: { eventType: 'message.delivered', providerMessageId: safeMessage, occurredAt: asIso(outbox.delivered_at), observedAt: new Date().toISOString() } }, verification: { challengeId: safeChallenge, completedAt: asIso(token.consumed_at), consumedAt: asIso(token.consumed_at) }, replay: { attemptedAt: replayAt, rejectedAt: replayAt } };
+    return {
+      requestedAt,
+      challenge: { id: safeChallenge, createdAt: asIso(token.created_at), ...(token.superseded_at ? { supersededAt: asIso(token.superseded_at) } : {}) },
+      outbox: {
+        id: opaqueUuidFromDigest(outbox.outbox_digest), purpose: outbox.purpose, challengeId: safeChallenge,
+        createdAt: asIso(outbox.created_at), provider: 'cloudflare-email', providerMessageId: safeMessage,
+        acceptedAt: asIso(outbox.accepted_at),
+        lifecycle: { source: 'cloudflare_email_sending_lifecycle', eventType: 'message.delivered', providerMessageId: safeMessage, occurredAt: asIso(outbox.delivered_at), observedAt: new Date().toISOString() },
+      },
+      mailboxReceipt: { source: 'protected_human_mailbox_link_completion', provider: mailboxProvider, observedAt: verifiedAt },
+      verification: { challengeId: safeChallenge, completedAt: asIso(token.consumed_at), consumedAt: asIso(token.consumed_at) },
+      replay: { attemptedAt: replayAt, rejectedAt: replayAt },
+    };
   };
-  const initial = await buildFlow('initial', run.initial_verification_challenge_id!, at.get('initial_verification_requested')!, at.get('initial_verification_completed')!, at.get('initial_verification_replay_rejected')!);
-  const resend = await buildFlow('resend', run.resend_verification_challenge_id!, at.get('resend_requested')!, at.get('resend_verification_completed')!, at.get('resend_verification_replay_rejected')!);
-  const reset = await buildFlow('reset', run.password_reset_challenge_id!, at.get('password_reset_requested')!, at.get('password_reset_completed')!, at.get('password_reset_replay_rejected')!);
+  const initial = await buildFlow('initial', run.initial_verification_challenge_id!, at.get('initial_verification_completed')!, at.get('initial_verification_replay_rejected')!, mailboxProviders.initial);
+  const resend = await buildFlow('resend', run.resend_verification_challenge_id!, at.get('resend_verification_completed')!, at.get('resend_verification_replay_rejected')!, mailboxProviders.resend);
+  const reset = await buildFlow('reset', run.password_reset_challenge_id!, at.get('password_reset_completed')!, at.get('password_reset_replay_rejected')!, mailboxProviders.initial);
   const previous = tokenByFlow.get('previous');
-  if (!previous?.superseded_at || !primary.rows[0]?.is_production_acceptance || !primary.rows[0]?.created_at) throw new Error('acceptance_observer_state_invalid');
+  const previousOutbox = outboxByFlow.get('previous');
+  if (!previous || previous.flow !== 'previous' || !previous.superseded_at || !previousOutbox || previousOutbox.state !== 'delivered' || previousOutbox.provider !== 'cloudflare-email'
+    || !previousOutbox.provider_message_digest || !previousOutbox.accepted_at || !previousOutbox.delivered_at
+    || !primary.rows[0]?.is_production_acceptance || !primary.rows[0]?.created_at) throw new Error('acceptance_observer_state_invalid');
+  const expiredMetadata = expiredAudit.metadata;
+  const expiredVerification = {
+    source: 'candidate_auth_email_verification_endpoint',
+    challengeId: await opaqueUuid(env, run.resend_previous_challenge_id!),
+    createdAt: asIso(previous.created_at),
+    expiresAt: asIso(previous.expires_at),
+    supersededAt: asIso(previous.superseded_at),
+    provider: 'cloudflare-email',
+    providerMessageId: opaqueReferenceFromDigest(previousOutbox.provider_message_digest),
+    acceptedAt: asIso(previousOutbox.accepted_at),
+    deliveredAt: asIso(previousOutbox.delivered_at),
+    mailboxReceipt: { source: 'protected_human_expired_link_open', provider: mailboxProviders.resend, observedAt: expiredMetadata.attemptedAt },
+    attemptedAt: expiredMetadata.attemptedAt,
+    rejectedAt: expiredMetadata.rejectedAt,
+    responseStatus: expiredMetadata.responseStatus,
+    errorCode: expiredMetadata.errorCode,
+    ageMode: expiredMetadata.ageMode,
+  };
+  const cooldown = {
+    source: 'candidate_api_resend_cooldown_observation',
+    requestedAt: asIso(cooldownAudit.created_at),
+    retryAfterSeconds: Number(cooldownAudit.metadata.retryAfterSeconds),
+    responseStatus: Number(cooldownAudit.metadata.responseStatus),
+    outboxDelta: Number(cooldownAudit.metadata.outboxDelta),
+  };
+  const accountSwitch = {
+    source: 'candidate_api_session_identity_observation',
+    completedAt: asIso(accountSwitchAudit.created_at),
+    primaryAccountRef: await opaqueUuid(env, run.primary_user_id!),
+    secondaryAccountRef: await opaqueUuid(env, run.resend_fixture_user_id!),
+    ...accountSwitchAudit.metadata,
+  };
+  const summaryChallengeRows = await query<{ challenge_id: string }>(env.DB_ADMIN_FRESH,
+    `SELECT DISTINCT challenge_id::text AS challenge_id
+       FROM system.transactional_email_outbox
+      WHERE acceptance_run_id = $1 AND correlation_id = $1::text AND challenge_id IS NOT NULL
+        AND purpose = ANY($2::text[]) AND created_at >= $3::timestamptz AND created_at <= now()`,
+    [run.id, ['verification', 'password_reset'], asIso(run.candidate_staged_at)!]);
+  const summaryChallengeIds = summaryChallengeRows.rows.map((row) => row.challenge_id);
   const summaryRows = await query<{ purpose: string; state: string; provider: string; provider_error_category: string | null; row_count: string; provider_message_id_count: string; distinct_provider_message_id_count: string; accepted_count: string; delivered_count: string }>(env.DB_ADMIN_FRESH,
     `SELECT purpose, state, provider, provider_error_category, count(*)::text AS row_count,
             count(provider_message_id)::text AS provider_message_id_count, count(DISTINCT provider_message_id)::text AS distinct_provider_message_id_count,
             count(*) FILTER (WHERE accepted_at IS NOT NULL)::text AS accepted_count, count(*) FILTER (WHERE delivered_at IS NOT NULL)::text AS delivered_count
        FROM system.transactional_email_outbox
       WHERE correlation_id = $1 AND challenge_id = ANY($2::uuid[]) AND created_at >= $3::timestamptz AND created_at <= now()
-        AND provider = 'cloudflare-email' AND state = 'delivered'
-      GROUP BY purpose, state, provider, provider_error_category`, [run.id, [run.initial_verification_challenge_id!, run.resend_verification_challenge_id!, run.password_reset_challenge_id!], asIso(run.candidate_staged_at)!]);
+      GROUP BY purpose, state, provider, provider_error_category`, [run.id, summaryChallengeIds, asIso(run.candidate_staged_at)!]);
   const lifecycle = await lifecycleSubscription(env);
-  const mailboxProviders = await observeMailboxProviders(await runEmail(env, run, 'primary'), await runEmail(env, run, 'resend'));
   const evidence = {
-    formatVersion: 'lythaus-real-email-acceptance-v2', source: 'runtime_observation', status: 'PASSED', releaseSha: run.release_sha, acceptanceRunId: run.id, candidate, lifecycleSubscription: lifecycle, mailboxProviders,
-    ...(dependencies ? { candidateDependencies: dependencies } : {}),
+    formatVersion: 'lythaus-real-email-acceptance-v3', source: 'runtime_observation', status: 'PASSED', releaseSha: run.release_sha, acceptanceRunId: run.id, candidate, candidateDependencies: dependencies, lifecycleSubscription: lifecycle, mailboxProviders,
     outboxSummary: { source: 'read_only_database_query', lifecycleSource: 'authenticated_lifecycle_handler', capturedAt: new Date().toISOString(), rows: summaryRows.rows.map((row) => ({ purpose: row.purpose, state: row.state, provider: row.provider, providerErrorCategory: row.provider_error_category, rowCount: Number(row.row_count), providerMessageIdCount: Number(row.provider_message_id_count), distinctProviderMessageIdCount: Number(row.distinct_provider_message_id_count), acceptedCount: Number(row.accepted_count), deliveredCount: Number(row.delivered_count) })) },
     acceptanceAccount: { class: 'production_acceptance', createdAt: asIso(primary.rows[0].created_at), metricIsolation: 'excluded' },
     turnstile: { status: 'verified', observedAt: asIso(run.turnstile_verified_at), hostname: run.turnstile_hostname, action: run.turnstile_action },
     initialVerification: initial,
-    resendVerification: { ...resend, fixtureCreatedAt: at.get('resend_fixture_created'), previousChallenge: { id: await opaqueUuid(env, run.resend_previous_challenge_id!), createdAt: asIso(previous.created_at), supersededAt: asIso(previous.superseded_at) } },
+    resendVerification: { ...resend, fixtureCreatedAt: at.get('resend_fixture_created'), previousChallenge: { id: await opaqueUuid(env, run.resend_previous_challenge_id!), createdAt: asIso(previous.created_at), expiresAt: asIso(previous.expires_at), supersededAt: asIso(previous.superseded_at) }, cooldown },
+    expiredVerification,
+    accountSwitch,
     passwordReset: { ...reset, reset: { completedAt: asIso(tokenByFlow.get('reset')?.consumed_at), consumedAt: asIso(tokenByFlow.get('reset')?.consumed_at), replayAttemptedAt: at.get('password_reset_replay_rejected'), replayRejectedAt: at.get('password_reset_replay_rejected'), sessionsRevokedAt: at.get('password_reset_sessions_revoked'), oldPasswordRejectedAt: at.get('password_reset_old_password_rejected'), newPasswordAcceptedAt: at.get('password_reset_new_password_accepted') } },
     login: { completedAt: at.get('login_completed') }, refresh: { completedAt: at.get('refresh_completed') }, logout: { completedAt: at.get('logout_completed') },
   };

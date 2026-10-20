@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { after, mock, test } from 'node:test';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import pg from 'pg';
 import { exportJWK, exportPKCS8, generateKeyPair } from 'jose';
 import * as database from '@lythaus/db';
 import * as telemetry from '@lythaus/observability';
 import { encryptField, hashAuthToken, hashPassword, hmacLookup, uuidv7 } from '@lythaus/security';
+import { parseRealEmailAcceptanceEvidence } from '../../../scripts/ci/real-email-acceptance-evidence.mjs';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
 const target = new URL(connectionString ?? 'file:///missing');
@@ -49,7 +50,6 @@ mock.module('../../lythaus-auth-acceptance-coordinator/src/access-policy.ts', { 
   },
 } });
 const { default: coordinator } = await import('../../lythaus-auth-acceptance-coordinator/src/index.ts');
-const { parseRealEmailAcceptanceEvidence } = await import('../../../scripts/ci/real-email-acceptance-evidence.mjs');
 const { relayTransactionalEmailOutbox, applyTransactionalEmailLifecycle, dispatchTransactionalEmailQueueMessage } = await import('../../lythaus-jobs/src/transactional-email-runtime.ts');
 const { privateKey, publicKey } = await generateKeyPair('ES256', { extractable: true });
 const keyId = 'local-auth-fixture';
@@ -437,7 +437,7 @@ test('real handler diagnoses each support blocker while keeping public intake ne
   });
 });
 
-test('real coordinator + restricted PostgreSQL roles: opaque email, legacy fixture, exact candidate and v2 observer', async () => {
+test('real coordinator + restricted PostgreSQL roles: offline synthetic contract round-trip cannot certify live acceptance', async () => {
   const previousFetch=globalThis.fetch;
   const releaseSha='e'.repeat(40),version=uuidv7();
   const publicEnv={...env,WORKER_VERSION:{id:version,tag:releaseSha},DATABASE_READINESS_TOKEN:randomBytes(32).toString('hex')};
@@ -447,13 +447,14 @@ test('real coordinator + restricted PostgreSQL roles: opaque email, legacy fixtu
     AUTH_ACCEPTANCE_SECONDARY_EMAIL_BASE:`fixture-${uuidv7()}@second.invalid`,
     AUTH_ACCEPTANCE_ROUTE_BASE_URL:'https://admin.lythaus.co',CLOUDFLARE_ACCOUNT_ID:'synthetic',CLOUDFLARE_EMAIL_LIFECYCLE_READ_TOKEN:'synthetic-local-only'};
   publicEnv.AUTH_ACCEPTANCE_EMAIL_LINK_BASE_URL='https://admin.lythaus.co/api/admin/production-auth-acceptance/email';
-  const events=['message.delivered','message.deferred','message.bounced','message.failed','message.rejected','message.complained'];
+  let events=['message.delivered','message.deferred','message.bounced','message.failed','message.rejected','message.complained'];
   const base='https://admin.lythaus.co/api/admin/production-auth-acceptance';
   globalThis.fetch=async(url,init)=>{
     if(String(url).startsWith('https://cloudflare-dns.com/dns-query'))return Response.json({Status:0,Answer:[{type:15,data:`10 ${String(url).includes('second.invalid')?'fixture.mail.protection.outlook.com':'smtp.google.com'}.`}]});
     if(String(url).startsWith('https://api.lythaus.test/')) {
       assert.equal(new Headers(init.headers).get('Cloudflare-Workers-Version-Overrides'),`lythaus-public-api-development="${version}"`);
-      return worker.fetch(new Request(url,init),publicEnv);
+      const headers=new Headers(init.headers);headers.set('cf-connecting-ip',fixtureIp);
+      return worker.fetch(new Request(url,{...init,headers}),publicEnv);
     }
     if(String(url).includes('/accounts/synthetic/queues'))return Response.json({success:true,result:[{queue_name:'lythaus-email-lifecycle-dev',queue_id:'synthetic-queue'}]});
     if(String(url).includes('/accounts/synthetic/event_subscriptions'))return Response.json({success:true,result:[{destination:{queue_id:'synthetic-queue'},source:{type:'email.sending',domain:'mail.lythaus.co'},enabled:true,events}]});
@@ -547,24 +548,51 @@ test('real coordinator + restricted PostgreSQL roles: opaque email, legacy fixtu
       const response=await coordinator.fetch(new Request(`${base}/email/complete`,{method:'POST',headers:{origin:'https://admin.lythaus.co','cf-access-jwt-assertion':'local-synthetic-human'},body:form}),coordinatorEnv);
       if(response.status!==200)assert.fail(`Completion failed: ${response.status} ${(await response.json()).error?.code}`);
     };
+    const completeExpired=async(parameters)=>{
+      const form=new FormData();for(const [key,value]of parameters)form.set(key,value);
+      const response=await coordinator.fetch(new Request(`${base}/email/complete`,{method:'POST',headers:{origin:'https://admin.lythaus.co','cf-access-jwt-assertion':'local-synthetic-human'},body:form}),coordinatorEnv);
+      if(response.status!==200)assert.fail(`Expired-link completion failed: ${response.status} ${(await response.json()).error?.code}`);
+      assert.match(await response.text(),/Expired verification link rejected/u);
+    };
     const first=await deliver('verification');await complete(first,password);
     await checked(await call(`${prefix}/initial-session`,{password}),200);
-    const cooldown=await checked(await call(`${prefix}/resend`,{turnstileToken:'verification_resend'}),202);
-    assert.equal(cooldown.state,'resend_fixture_cooldown');assert.ok(cooldown.retryAfterSeconds>0);
+    const expiredFixture=await checked(await call(`${prefix}/resend`,{turnstileToken:'verification_resend'}),202);
+    assert.equal(expiredFixture.state,'expired_verification_fixture_ready');
+    const expiredLink=await deliver('verification');await completeExpired(expiredLink);
     const fixture=(await sql('SELECT resend_fixture_user_id FROM system.production_auth_acceptance_runs WHERE id=$1',[run.acceptanceRunId])).rows[0].resend_fixture_user_id;
     assert.equal((await sql('SELECT count(*)::integer n FROM identity.email_credentials WHERE user_id=$1',[fixture])).rows[0].n,0);
+    assert.equal((await checked(await call(`${prefix}/resend`,{turnstileToken:'verification_resend'}),202)).state,'resend_verification_email_requested');
+    const beforeCooldown=(await sql("SELECT count(*)::integer n FROM system.transactional_email_outbox WHERE acceptance_run_id=$1 AND purpose='verification'",[run.acceptanceRunId])).rows[0].n;
+    const cooldown=await checked(await call(`${prefix}/resend`,{turnstileToken:'verification_resend'}),202);
+    assert.equal(cooldown.state,'resend_fixture_cooldown');assert.ok(cooldown.retryAfterSeconds>0);
+    const afterCooldown=(await sql("SELECT count(*)::integer n FROM system.transactional_email_outbox WHERE acceptance_run_id=$1 AND purpose='verification'",[run.acceptanceRunId])).rows[0].n;
+    assert.equal(afterCooldown,beforeCooldown,'Immediate cooldown request creates no email intent');
+    await deliver('verification');
     await new Promise(resolve=>setTimeout(resolve,(cooldown.retryAfterSeconds+1)*1000));
-    await checked(await call(`${prefix}/resend`,{turnstileToken:'verification_resend'}),202);
+    assert.equal((await checked(await call(`${prefix}/resend`,{turnstileToken:'verification_resend'}),202)).state,'resend_verification_email_requested');
     await complete(await deliver('verification'),password);
     assert.equal((await sql('SELECT u.status,c.verified_at FROM identity.users u JOIN identity.email_credentials c ON c.user_id=u.id WHERE u.id=$1',[fixture])).rows[0].status,'active');
     await checked(await call(`${prefix}/reset`,{turnstileToken:'password_reset_request'}),202);
     await complete(await deliver('password_reset'),changed);
-    await checked(await call(`${prefix}/session-proof`,{oldPassword:password,newPassword:changed}),200);
-    const evidence=await checked(await coordinator.fetch(observerRequest(),coordinatorEnv),200);
+    await checked(await call(`${prefix}/session-proof`,{oldPassword:password,secondaryPassword:password,newPassword:changed}),200);
+    const offlineEvidence=await checked(await coordinator.fetch(observerRequest(),coordinatorEnv),200);
+    assert.equal(offlineEvidence.status,'PASSED');
+    assert.equal(offlineEvidence.source,'runtime_observation');
+    const expectedCandidate={workerName:'lythaus-public-api-development',workerVersionId:version,sourceReleaseSha:releaseSha,uploadedAt:staged,stagedAt:staged,candidateDependencies};
+    const parsedOfflineEvidence=parseRealEmailAcceptanceEvidence(offlineEvidence,releaseSha,expectedCandidate);
+    assert.equal(parsedOfflineEvidence.status,'PASSED');
+    // This parser round-trip uses synthetic mailbox/provider evidence. It checks
+    // schema compatibility only and is never written to a live acceptance artifact.
+    events=events.filter(event=>event!=='message.complained');
+    const syntheticEvidence=await checked(await coordinator.fetch(observerRequest(),coordinatorEnv),502);
+    assert.equal(syntheticEvidence.error.code,'cloudflare_lifecycle_subscription_drift');
     await checked(await call(prefix),200);
-    assert.equal(parseRealEmailAcceptanceEvidence(evidence,releaseSha,{workerVersionId:version,sourceReleaseSha:releaseSha}).status,'PASSED');
-    const serialized=JSON.stringify(evidence);
-    for(const secret of [password,changed,first.get('context'),first.get('token'),coordinatorEnv.AUTH_ACCEPTANCE_EMAIL_BASE])assert.ok(!serialized.includes(secret));
+    const serialized=JSON.stringify({offlineEvidence,syntheticEvidence});
+    for(const secret of [password,changed,first.get('context'),first.get('token'),expiredLink.get('context'),expiredLink.get('token'),coordinatorEnv.AUTH_ACCEPTANCE_EMAIL_BASE])assert.ok(!serialized.includes(secret));
+    const rateLimitSubjectHash=createHash('sha256').update(`auth:/api/auth/email:${fixtureIp}`).digest('hex');
+    const emailWindows=(await sql("SELECT request_count FROM system.rate_limit_windows WHERE scope='auth:/api/auth/email' AND subject_hash=$1",[rateLimitSubjectHash])).rows;
+    assert.ok(emailWindows.length>0,'Candidate email calls must hit their isolated test address');
+    assert.ok(emailWindows.every(row=>Number(row.request_count)<=10),'Acceptance flow must fit the configured ten requests per minute');
     await sql("UPDATE system.production_auth_acceptance_runs SET created_at=now()-interval '2 hours',expires_at=now()-interval '1 hour' WHERE id=$1",[run.acceptanceRunId]);
     await checked(await coordinator.fetch(observerRequest(),coordinatorEnv),410);
     await checked(await call(`${prefix}/initial-session`,{password:changed}),410);

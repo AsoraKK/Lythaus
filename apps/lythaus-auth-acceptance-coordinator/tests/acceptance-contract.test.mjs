@@ -38,7 +38,7 @@ test('acceptance run validation accepts the uuidv7 identifiers it generates', ()
 
 test('acceptance evidence is server derived and human interaction remains required', () => {
   const pendingResponses = coordinator.split("status: 'HUMAN_ACCEPTANCE_REQUIRED'").slice(1);
-  assert.equal(pendingResponses.length, 2);
+  assert.equal(pendingResponses.length, 5);
   assert.ok(pendingResponses.every((response) => response.slice(0, 320).includes('candidateDependencies: dependencies')));
   assert.match(coordinator, /source: 'runtime_observation'/);
   assert.match(coordinator, /outboxSummary: \{ source: 'read_only_database_query'/);
@@ -50,6 +50,22 @@ test('acceptance evidence is server derived and human interaction remains requir
   assert.match(coordinator, /UPDATE system\.production_auth_acceptance_runs SET status = 'expired'/);
   const observer = coordinator.slice(coordinator.indexOf('async function observer'), coordinator.indexOf('function failure'));
   assert.doesNotMatch(observer, /\b(?:INSERT|UPDATE|DELETE|ALTER|CREATE|DROP)\b/);
+});
+
+test('live acceptance pins dependencies and records expired link, cooldown and account isolation proof', () => {
+  assert.match(coordinator, /body\.candidateDependencies === undefined/);
+  assert.match(coordinator, /acceptance_context_dependencies_required/);
+  assert.match(coordinator, /auth\.acceptance\.expired_verification_rejected/);
+  assert.match(coordinator, /auth\.acceptance\.resend_cooldown_observed/);
+  assert.match(coordinator, /auth\.acceptance\.account_switch_verified/);
+  assert.match(coordinator, /primarySessionRetainedAfterSecondaryLogout: true/);
+  assert.match(coordinator, /password: newPassword/);
+  assert.match(coordinator, /formatVersion: 'lythaus-real-email-acceptance-v3'/);
+  assert.match(coordinator, /source: 'cloudflare_email_sending_lifecycle'/);
+  assert.match(coordinator, /source: 'protected_human_mailbox_link_completion'/);
+  assert.match(coordinator, /expired_verification_required/);
+  assert.match(coordinator, /resend_cooldown_required/);
+  assert.match(coordinator, /account_switch_required/);
 });
 
 test('service readiness authorization survives the Access edge without weakening human Access validation', () => {
