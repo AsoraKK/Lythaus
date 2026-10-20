@@ -106,3 +106,38 @@ auth-owned Workerd test harness and this inventory. Synthetic fixtures blocked
 all unrecognized provider requests; no account or message was created outside
 the disposable local test database. The final candidate commit SHA and fresh
 pull-request CI result are reported by the handoff after publication.
+
+## Protected acceptance harness update — 20 October 2026
+
+The current auth acceptance coordinator and evidence parser now bind the exact
+public/admin/jobs/coordinator dependency versions and provenance, require
+provider lifecycle evidence plus receipts from two independently observed
+mailbox providers, and cover an aged 25-hour verification fixture, an immediate
+resend cooldown with zero new outbox rows, resend after the cooldown, and
+two-account session isolation. The fixture ages a token in the test database;
+it does not model a person waiting 25 hours. The offline synthetic coordinator
+test now round-trips a complete-shaped observation through the v3 parser and
+separately confirms that an incomplete mocked Cloudflare lifecycle subscription
+fails closed. Neither synthetic result is live acceptance evidence.
+
+The integration test also exercises a concrete coordinator defect: after
+password reset, account switching attempted primary sign-in with the old
+password. It now uses the new password for that sign-in and separately verifies
+that the old password fails. This is covered with different old and new test
+passwords.
+
+These additions produce sanitized v3 evidence only after a protected live
+observer succeeds. Local fixtures, unit tests and the harness itself do not
+certify real mailbox acceptance. Issue #720 remains the source of the
+production approval blocker; see the ADR-003 runbook for its latest recorded
+status and the protected operator procedure.
+
+The protected grant reconciliation run `36559940175` completed on 20 October
+2026. The separate read-only incident audit `36544399514` completed but failed
+closed at the production-evidence gate. Issue #720's latest recorded update
+remains dated 29 September 2026 and reported missing `CODEX_TEST_SECONDARY_EMAIL`,
+real receipts from two independent mailbox providers, and exact-candidate
+evidence. Current owner approval and secret inventory were not inspected in
+this task; successful reconciliation does not authorize staging, activation or
+live email. Confirm current protected approval and mailbox access before the
+operator procedure.

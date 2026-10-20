@@ -18,11 +18,15 @@ function at(minutes) {
   return new Date(Date.parse(candidate.uploadedAt) + minutes * 60_000).toISOString();
 }
 
+function hours(value) {
+  return new Date(Date.parse(candidate.uploadedAt) + value * 60 * 60_000).toISOString();
+}
+
 function challenge(id, createdAt, supersededAt) {
   return { id, createdAt, ...(supersededAt ? { supersededAt } : {}) };
 }
 
-function delivery({ challengeId, outboxId, purpose, providerMessageId, requestedAt, fixtureCreatedAt, previousChallenge, challengeCreatedAt, verificationCompletedAt, verificationConsumedAt, replayAttemptedAt, replayRejectedAt, reset }) {
+function delivery({ challengeId, outboxId, purpose, providerMessageId, mailboxProvider = 'google', requestedAt, fixtureCreatedAt, previousChallenge, challengeCreatedAt, verificationCompletedAt, verificationConsumedAt, replayAttemptedAt, replayRejectedAt, reset, cooldown }) {
   const requestOffset = (Date.parse(requestedAt) - Date.parse(candidate.uploadedAt)) / 60_000;
   return {
     requestedAt,
@@ -38,18 +42,21 @@ function delivery({ challengeId, outboxId, purpose, providerMessageId, requested
       providerMessageId,
       acceptedAt: at(requestOffset + 3),
       lifecycle: {
+        source: 'cloudflare_email_sending_lifecycle',
         eventType: 'message.delivered',
         providerMessageId,
         occurredAt: at(requestOffset + 4),
         observedAt: at(requestOffset + 5),
       },
     },
+    mailboxReceipt: { source: 'protected_human_mailbox_link_completion', provider: mailboxProvider, observedAt: verificationCompletedAt },
     verification: {
       challengeId,
       completedAt: verificationCompletedAt,
       consumedAt: verificationConsumedAt,
     },
     replay: { attemptedAt: replayAttemptedAt, rejectedAt: replayRejectedAt },
+    ...(cooldown ? { cooldown } : {}),
     ...(reset ? { reset } : {}),
   };
 }
@@ -59,6 +66,13 @@ function validEvidence() {
   const resendPreviousChallengeId = '33333333-3333-4333-8333-333333333333';
   const resendChallengeId = '44444444-4444-4444-8444-444444444444';
   const resetChallengeId = '55555555-5555-4555-8555-555555555555';
+  const candidateSource = { ...candidate, sourceReleaseSha: releaseSha };
+  const candidateDependencies = {
+    public: { workerName: candidate.workerName, versionId: candidate.workerVersionId, sourceSha: releaseSha, status: 'NEW_CANDIDATE', provenance: 'BUILT_FROM_RELEASE_SHA' },
+    admin: { workerName: 'lythaus-admin-api-development', versionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', sourceSha: releaseSha, status: 'NEW_CANDIDATE', provenance: 'BUILT_FROM_RELEASE_SHA' },
+    jobs: { workerName: 'lythaus-jobs-development', versionId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', sourceSha: releaseSha, status: 'NEW_CANDIDATE', provenance: 'BUILT_FROM_RELEASE_SHA' },
+    coordinator: { workerName: 'lythaus-auth-acceptance-coordinator-development', versionId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', sourceSha: releaseSha, status: 'NEW_CANDIDATE', provenance: 'BUILT_FROM_RELEASE_SHA' },
+  };
   const initial = delivery({
     challengeId: initialChallengeId,
     outboxId: '66666666-6666-4666-8666-666666666666',
@@ -76,34 +90,36 @@ function validEvidence() {
     outboxId: '77777777-7777-4777-8777-777777777777',
     purpose: 'verification',
     providerMessageId: 'cf-msg-resend-002',
+    mailboxProvider: 'microsoft',
     fixtureCreatedAt: at(17),
-    requestedAt: at(18),
-    previousChallenge: challenge(resendPreviousChallengeId, at(17), at(19)),
-    challengeCreatedAt: at(20),
-    verificationCompletedAt: at(25),
-    verificationConsumedAt: at(26),
-    replayAttemptedAt: at(27),
-    replayRejectedAt: at(28),
+    requestedAt: at(44),
+    previousChallenge: { ...challenge(resendPreviousChallengeId, hours(-25), at(41)), expiresAt: hours(-24.5) },
+    challengeCreatedAt: at(44),
+    verificationCompletedAt: at(55),
+    verificationConsumedAt: at(56),
+    replayAttemptedAt: at(57),
+    replayRejectedAt: at(58),
+    cooldown: { source: 'candidate_api_resend_cooldown_observation', requestedAt: at(42), retryAfterSeconds: 1, responseStatus: 202, outboxDelta: 0 },
   });
   const reset = delivery({
     challengeId: resetChallengeId,
     outboxId: '88888888-8888-4888-8888-888888888888',
     purpose: 'password_reset',
     providerMessageId: 'cf-msg-reset-003',
-    requestedAt: at(29),
-    challengeCreatedAt: at(30),
-    verificationCompletedAt: at(35),
-    verificationConsumedAt: at(36),
-    replayAttemptedAt: at(37),
-    replayRejectedAt: at(38),
+    requestedAt: at(60),
+    challengeCreatedAt: at(61),
+    verificationCompletedAt: at(65),
+    verificationConsumedAt: at(66),
+    replayAttemptedAt: at(67),
+    replayRejectedAt: at(68),
     reset: {
-      completedAt: at(35),
-      consumedAt: at(36),
-      replayAttemptedAt: at(37),
-      replayRejectedAt: at(38),
-      sessionsRevokedAt: at(39),
-      oldPasswordRejectedAt: at(40),
-      newPasswordAcceptedAt: at(41),
+      completedAt: at(65),
+      consumedAt: at(66),
+      replayAttemptedAt: at(67),
+      replayRejectedAt: at(68),
+      sessionsRevokedAt: at(69),
+      oldPasswordRejectedAt: at(70),
+      newPasswordAcceptedAt: at(71),
     },
   });
   return {
@@ -112,32 +128,69 @@ function validEvidence() {
     status: 'PASSED',
     releaseSha,
     acceptanceRunId: '99999999-9999-4999-8999-999999999999',
-    candidate: { ...candidate },
-    mailboxProviders: { source: 'dns_mx_observation', initial: 'google', resend: 'microsoft', observedAt: at(43) },
+    candidate: candidateSource,
+    candidateDependencies,
+    mailboxProviders: { source: 'dns_mx_observation', initial: 'google', resend: 'microsoft', observedAt: at(80) },
     lifecycleSubscription: {
       source: 'cloudflare_email_sending_queue_subscription_observation',
       domain: 'mail.lythaus.co',
       status: 'enabled',
       events: ['delivered', 'deferred', 'bounced', 'failed', 'rejected', 'complained'],
-      observedAt: at(43),
+      observedAt: at(80),
     },
     outboxSummary: {
       source: 'read_only_database_query',
       lifecycleSource: 'authenticated_lifecycle_handler',
-      capturedAt: at(42),
+      capturedAt: at(80),
       rows: [
-        { purpose: 'verification', state: 'delivered', provider: 'cloudflare-email', providerErrorCategory: null, rowCount: 2, providerMessageIdCount: 2, distinctProviderMessageIdCount: 2, acceptedCount: 2, deliveredCount: 2 },
+        { purpose: 'verification', state: 'delivered', provider: 'cloudflare-email', providerErrorCategory: null, rowCount: 4, providerMessageIdCount: 4, distinctProviderMessageIdCount: 4, acceptedCount: 4, deliveredCount: 4 },
         { purpose: 'password_reset', state: 'delivered', provider: 'cloudflare-email', providerErrorCategory: null, rowCount: 1, providerMessageIdCount: 1, distinctProviderMessageIdCount: 1, acceptedCount: 1, deliveredCount: 1 },
       ],
     },
     acceptanceAccount: { class: 'production_acceptance', createdAt: at(2), metricIsolation: 'excluded' },
     turnstile: { status: 'verified', observedAt: at(3), hostname: 'api.lythaus.co', action: 'email_auth' },
     initialVerification: initial,
-    resendVerification: resend,
+    resendVerification: { ...resend, cooldown: resend.cooldown },
+    expiredVerification: {
+      source: 'candidate_auth_email_verification_endpoint',
+      challengeId: resendPreviousChallengeId,
+      createdAt: hours(-25),
+      expiresAt: hours(-24.5),
+      supersededAt: at(41),
+      provider: 'cloudflare-email',
+      providerMessageId: 'cf-msg-expired-001',
+      acceptedAt: at(18),
+      deliveredAt: at(19),
+      mailboxReceipt: { source: 'protected_human_expired_link_open', provider: 'microsoft', observedAt: at(20) },
+      attemptedAt: at(20),
+      rejectedAt: at(21),
+      responseStatus: 400,
+      errorCode: 'verification_token_invalid',
+      ageMode: 'controlled_25h_fixture',
+    },
+    accountSwitch: {
+      source: 'candidate_api_session_identity_observation',
+      completedAt: at(78.5),
+      primaryAccountRef: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      secondaryAccountRef: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+      primaryLoginAt: at(72),
+      secondaryLoginAt: at(73),
+      primaryAfterSecondaryLoginAt: at(74),
+      secondaryLogoutAt: at(75),
+      secondaryRejectedAt: at(76),
+      primaryAfterSecondaryLogoutAt: at(77),
+      primaryLogoutAt: at(78),
+      primaryRejectedAt: at(78.2),
+      distinctSubjects: true,
+      primarySessionRetainedAfterSecondaryLogin: true,
+      primarySessionRetainedAfterSecondaryLogout: true,
+      secondarySessionRevoked: true,
+      primarySessionRevoked: true,
+    },
     passwordReset: reset,
     login: { completedAt: at(14) },
     refresh: { completedAt: at(15) },
-    logout: { completedAt: at(16) },
+    logout: { completedAt: at(79) },
   };
 }
 
@@ -146,6 +199,35 @@ test('generated runtime observation accepts complete exact-candidate proof', () 
   assert.equal(evidence.status, 'PASSED');
   assert.equal(evidence.candidate.workerVersionId, candidate.workerVersionId);
   assert.equal(evidence.initialVerification.outbox.provider, 'cloudflare-email');
+});
+
+test('PASSED evidence requires pinned dependencies and real provider and mailbox receipt sources', () => {
+  const missingDependencies = validEvidence();
+  delete missingDependencies.candidateDependencies;
+  assert.throws(() => parseRealEmailAcceptanceEvidence(missingDependencies, releaseSha, candidate), /candidate_dependencies_missing/);
+
+  const mockedLifecycle = validEvidence();
+  mockedLifecycle.resendVerification.outbox.lifecycle.source = 'synthetic_local_provider';
+  assert.throws(() => parseRealEmailAcceptanceEvidence(mockedLifecycle, releaseSha, candidate), /provider_receipt_source_invalid/);
+
+  const mockedMailbox = validEvidence();
+  mockedMailbox.expiredVerification.mailboxReceipt.source = 'synthetic_mailbox_capture';
+  assert.throws(() => parseRealEmailAcceptanceEvidence(mockedMailbox, releaseSha, candidate), /expired_verification_mailbox_receipt_source_invalid/);
+});
+
+test('expired verification and resend cooldown evidence cannot be omitted or relaxed', () => {
+  const missingExpired = validEvidence();
+  delete missingExpired.expiredVerification;
+  assert.throws(() => parseRealEmailAcceptanceEvidence(missingExpired, releaseSha, candidate), /expired_verification_missing/);
+
+  const cooldownSentEmail = validEvidence();
+  cooldownSentEmail.resendVerification.cooldown.outboxDelta = 1;
+  assert.throws(() => parseRealEmailAcceptanceEvidence(cooldownSentEmail, releaseSha, candidate), /resend_cooldown_observation_invalid/);
+
+  const resendTooEarly = validEvidence();
+  resendTooEarly.resendVerification.requestedAt = at(42);
+  resendTooEarly.resendVerification.challenge.createdAt = at(42);
+  assert.throws(() => parseRealEmailAcceptanceEvidence(resendTooEarly, releaseSha, candidate), /resend_before_cooldown_elapsed/);
 });
 
 test('two aliases or domains on the same mailbox provider cannot certify restoration', () => {
