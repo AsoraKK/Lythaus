@@ -29,6 +29,10 @@ import-map.json records each imported repository path and source digest.
   The control-panel header also uses the standalone wordmark. Onboarding remains scrollable at
   320px with enlarged text. Authentication and composer state logic is unchanged.
 - App and admin headers/icons use the manifest's fingerprinted paths.
+  The app social preview reuses the standalone wordmark card already published
+  by marketing at its absolute fingerprinted `https://lythaus.co` URL
+  (`78f698ef4283`). The original combined social export remains unchanged for
+  provenance but is not selected by app metadata.
   Fingerprinted paths are immutable; stable fallback aliases keep their existing
   revalidation policy. Legacy web icon URLs now serve the corresponding approved
   exports so older documents do not request Flutter artwork.
