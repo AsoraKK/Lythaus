@@ -48,7 +48,7 @@ test('limits the single-node exception to 0021 and preserves the other gates', (
   assert.match(productionRunbook, /restore_checklist_completed_at/);
   assert.match(productionRunbook, /informational:[\s\S]*?not proof that source `main` is\s+recoverable/);
   assert.match(productionRunbook, /0021-restore-evidence\/<backup-id>\.json/);
-  assert.match(productionRunbook, /It does not require full-data parity/);
+  assert.match(productionRunbook, /It does not require\s+full-data parity/);
   assert.match(productionRunbook, /deletion-protected/);
   assert.match(productionRunbook, /index concurrently/);
   assert.match(productionRunbook, /PLANETSCALE_0021_EXECUTION_APPROVED_SHA/);
@@ -180,6 +180,12 @@ test('read-only plan loads restore evidence only from the selected backup ID', (
   const plan = fs.readFileSync(path.join(root, 'scripts/ci/planetscale-0021-only-plan.mjs'), 'utf8');
   assert.match(plan, /docs\/evidence\/production-cutover\/0021-restore-evidence/);
   assert.match(plan, /\$\{backupId\}\.json/);
+  assert.match(plan, /git', \['ls-files', '--error-unmatch'/);
+  assert.match(plan, /fs\.lstatSync\(artifactPath\)/);
+  assert.match(plan, /fs\.readFileSync\(resolvedPath\)/);
+  assert.match(plan, /createHash\('sha256'\)\.update\(bytes\)\.digest\('hex'\)/);
+  assert.match(plan, /restoreEvidenceArtifact: restoreEvidenceInput\.evidenceArtifact/);
+  assert.match(plan, /now: Date\.now\(\)/);
   assert.match(plan, /restoreEvidenceRecord: restoreEvidenceInput\.record/);
 });
 
@@ -200,6 +206,9 @@ test('planner keeps the deleted-branch historical receipt visible and blocked', 
   assert.equal(report.planetscale.restoreEvidence.selectedBackupId, 'pa4t6j6s07b7');
   assert.equal(report.planetscale.restoreEvidence.restoredBranch.id, 'n3wdm03vwenu');
   assert.equal(report.planetscale.restoreEvidence.restoredBranch.state, 'deleted');
+  assert.equal(report.planetscale.restoreEvidence.evidenceArtifact.status, 'unavailable');
+  assert.equal(report.planetscale.restoreEvidence.evidenceSha256, '4dfe19aae74be7b29b63a1fadf050327ea84050401d56bf085ba963959b2cb0b');
+  assert.ok(report.blockers.includes('restore_evidence_artifact_unavailable_or_empty'));
   assert.ok(report.blockers.includes('restore_evidence_has_unresolved_gates'));
   assert.ok(report.blockers.includes('restore_evidence_review_missing_or_invalid'));
 });

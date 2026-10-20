@@ -41,8 +41,10 @@ canonical registry through 0020. Independent backup binding, effective runtime
 privileges, application smoke, accepted RPO/RTO and the independent recovery
 destination remain unresolved; the receipt has no evidence review. Owner
 approval to delete the test branch does not close these gates. The planner
-retains this hash-checked historical record but blocks on its missing scope,
-review and unresolved gates.
+retains the supplied artifact SHA-256 as unverified because the original bytes
+were not available in this repository. It blocks on the missing artifact,
+scope, review and unresolved gates. The record's own hash checks consistency;
+it does not establish evidence provenance.
 
 The available PlanetScale API-token value fails the existing `ID:token`
 validator before any network request. No role/backup request was made with an

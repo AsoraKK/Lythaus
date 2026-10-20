@@ -9,6 +9,7 @@ import {
   assess0021RestoreEvidence,
   assessOperatorCostEstimate,
   assessPlanetScaleBackupEvidence,
+  hash0021RestoreEvidenceArtifact,
   hash0021RestoreEvidenceRecord,
   is0021PlanReadyOutput,
   MIGRATION_0020,
@@ -39,6 +40,13 @@ const validBackup = {
   deleted_at: null, protected: true,
   database_branch: { id: 'main-branch-id', name: 'main', deleted_at: null },
 };
+const syntheticArtifactPath = 'docs/evidence/production-cutover/0021-restore-evidence/artifacts/test-contract-fixture.json';
+const syntheticArtifactBytes = Buffer.from('synthetic test-only restore evidence bytes\n', 'utf8');
+const syntheticArtifact = {
+  path: syntheticArtifactPath,
+  bytes: syntheticArtifactBytes,
+  sha256: hash0021RestoreEvidenceArtifact(syntheticArtifactBytes),
+};
 const validRestoreEvidence = () => {
   const record = {
     schemaVersion: 'lythaus-0021-restore-evidence-v1',
@@ -46,7 +54,8 @@ const validRestoreEvidence = () => {
     selectedBackupId: 'backup-123',
     restoredBranch: { id: 'restored-branch-id', state: 'deleted', createdAt: '2026-10-16T13:30:00.000Z' },
     verifiedAt: '2026-10-16T14:00:00.000Z',
-    evidenceSha256: 'a'.repeat(64),
+    artifactPath: syntheticArtifactPath,
+    evidenceSha256: syntheticArtifact.sha256,
     verifiedScope: [...REQUIRED_0021_RESTORE_SCOPE],
     unresolvedGates: [],
     review: { reviewedAt: '2026-10-16T14:10:00.000Z', reviewedBy: 'operator@example.test', reference: 'review PR #123' },
@@ -69,10 +78,13 @@ test('0021 execution consent requires an exact candidate SHA and an approval ref
 test('accepts protected source and backup evidence with a complete reviewed restore record', () => {
   const evidence = assessPlanetScaleBackupEvidence({
     branch: validBranch, backup: validBackup, backupId: validBackup.id, restoreEvidenceRecord: validRestoreEvidence(),
+    restoreEvidenceArtifact: syntheticArtifact,
     now: Date.parse('2026-10-17T00:00:00Z'),
   });
   assert.equal(evidence.ok, true);
   assert.equal(evidence.restoreEvidence.ok, true);
+  assert.equal(evidence.restoreEvidence.evidenceArtifact.status, 'verified');
+  assert.equal(evidence.restoreEvidence.evidenceArtifact.sha256, syntheticArtifact.sha256);
   assert.equal(evidence.restoreEvidence.restoredBranch.state, 'deleted');
   assert.match(evidence.branch.restoreChecklistSemantics, /informational marker/i);
   const noSourceChecklistMarker = assessPlanetScaleBackupEvidence({
@@ -80,6 +92,7 @@ test('accepts protected source and backup evidence with a complete reviewed rest
     backup: validBackup,
     backupId: validBackup.id,
     restoreEvidenceRecord: validRestoreEvidence(),
+    restoreEvidenceArtifact: syntheticArtifact,
     now: Date.parse('2026-10-17T00:00:00Z'),
   });
   assert.equal(noSourceChecklistMarker.ok, true);
@@ -97,6 +110,7 @@ test('accepts protected source and backup evidence with a complete reviewed rest
       backup: override.backup ?? validBackup,
       backupId: validBackup.id,
       restoreEvidenceRecord: validRestoreEvidence(),
+      restoreEvidenceArtifact: syntheticArtifact,
       now: Date.parse('2026-10-17T00:00:00Z'),
     });
     assert.equal(result.ok, false);
@@ -105,7 +119,14 @@ test('accepts protected source and backup evidence with a complete reviewed rest
 
 test('blocks absent, mismatched, stale, incomplete, unreviewed, or tampered restore evidence', () => {
   const now = Date.parse('2026-10-17T00:00:00Z');
-  const assess = record => assessPlanetScaleBackupEvidence({ branch: validBranch, backup: validBackup, backupId: validBackup.id, restoreEvidenceRecord: record, now });
+  const assess = (record, evidenceArtifact = syntheticArtifact, backup = validBackup, assessmentNow = now) => assessPlanetScaleBackupEvidence({
+    branch: validBranch,
+    backup,
+    backupId: validBackup.id,
+    restoreEvidenceRecord: record,
+    restoreEvidenceArtifact: evidenceArtifact,
+    now: assessmentNow,
+  });
   assert.ok(assess(null).blockers.includes('restore_evidence_record_missing_or_invalid'));
   const booleanOverride = assess({ ready: true, verified: true, sourceBranch: true, selectedBackupId: true });
   assert.equal(booleanOverride.ok, false);
@@ -126,6 +147,11 @@ test('blocks absent, mismatched, stale, incomplete, unreviewed, or tampered rest
   stale.recordSha256 = hash0021RestoreEvidenceRecord(stale);
   assert.ok(assess(stale).blockers.includes('restore_evidence_stale_or_precedes_selected_backup'));
 
+  const branchBeforeBackup = validRestoreEvidence();
+  branchBeforeBackup.restoredBranch.createdAt = '2026-10-16T13:05:00.000Z';
+  branchBeforeBackup.recordSha256 = hash0021RestoreEvidenceRecord(branchBeforeBackup);
+  assert.ok(assess(branchBeforeBackup).blockers.includes('restore_evidence_restored_branch_precedes_backup_completion'));
+
   const incomplete = validRestoreEvidence();
   incomplete.verifiedScope = incomplete.verifiedScope.filter(scope => scope !== 'application_smoke');
   incomplete.unresolvedGates = ['application_smoke'];
@@ -139,6 +165,39 @@ test('blocks absent, mismatched, stale, incomplete, unreviewed, or tampered rest
   unreviewed.recordSha256 = hash0021RestoreEvidenceRecord(unreviewed);
   assert.ok(assess(unreviewed).blockers.includes('restore_evidence_review_missing_or_invalid'));
 
+  const reviewBeforeVerification = validRestoreEvidence();
+  reviewBeforeVerification.review.reviewedAt = '2026-10-16T13:59:00.000Z';
+  reviewBeforeVerification.recordSha256 = hash0021RestoreEvidenceRecord(reviewBeforeVerification);
+  assert.ok(assess(reviewBeforeVerification).blockers.includes('restore_evidence_review_precedes_verification'));
+
+  const reviewAfterAssessment = validRestoreEvidence();
+  reviewAfterAssessment.review.reviewedAt = '2026-10-17T00:01:00.000Z';
+  reviewAfterAssessment.recordSha256 = hash0021RestoreEvidenceRecord(reviewAfterAssessment);
+  assert.ok(assess(reviewAfterAssessment, syntheticArtifact, validBackup, now)
+    .blockers.includes('restore_evidence_review_missing_or_invalid'));
+
+  const recomputedForgedDigest = validRestoreEvidence();
+  recomputedForgedDigest.evidenceSha256 = 'b'.repeat(64);
+  recomputedForgedDigest.recordSha256 = hash0021RestoreEvidenceRecord(recomputedForgedDigest);
+  assert.ok(assess(recomputedForgedDigest).blockers.includes('restore_evidence_artifact_hash_mismatch'));
+
+  const tamperedArtifact = assess(validRestoreEvidence(), {
+    path: syntheticArtifactPath,
+    bytes: Buffer.from('tampered test-only restore evidence bytes\n', 'utf8'),
+    sha256: hash0021RestoreEvidenceArtifact(Buffer.from('tampered test-only restore evidence bytes\n', 'utf8')),
+  });
+  assert.ok(tamperedArtifact.blockers.includes('restore_evidence_artifact_hash_mismatch'));
+
+  const outsideAllowlist = validRestoreEvidence();
+  outsideAllowlist.artifactPath = '../untrusted.json';
+  outsideAllowlist.recordSha256 = hash0021RestoreEvidenceRecord(outsideAllowlist);
+  assert.ok(assess(outsideAllowlist).blockers.includes('restore_evidence_artifact_path_missing_or_not_allowlisted'));
+
+  const expiredDuringRequest = assess(validRestoreEvidence(), undefined,
+    { ...validBackup, expires_at: '2026-10-16T14:05:00.000Z' }, Date.parse('2026-10-16T14:11:00Z'));
+  assert.ok(expiredDuringRequest.blockers.includes('backup_expired_or_expiry_invalid'));
+  assert.ok(expiredDuringRequest.blockers.includes('restore_evidence_selected_backup_expired_or_unknown'));
+
   const tampered = validRestoreEvidence();
   tampered.verifiedScope = [];
   assert.ok(assess(tampered).blockers.includes('restore_evidence_record_hash_missing_or_mismatched'));
@@ -150,6 +209,8 @@ test('retains the October 18 receipt as hash-checked historical evidence without
   assert.equal(record.selectedBackupId, 'pa4t6j6s07b7');
   assert.equal(record.restoredBranch.id, 'n3wdm03vwenu');
   assert.equal(record.restoredBranch.state, 'deleted');
+  assert.equal(record.artifactPath, null);
+  assert.equal(record.artifactStatus, 'UNVERIFIED_NOT_RETAINED');
   assert.equal(record.evidenceSha256, '4dfe19aae74be7b29b63a1fadf050327ea84050401d56bf085ba963959b2cb0b');
   assert.equal(record.recordSha256, hash0021RestoreEvidenceRecord(record));
   const assessment = assess0021RestoreEvidence({
@@ -160,6 +221,9 @@ test('retains the October 18 receipt as hash-checked historical evidence without
     now: Date.parse('2026-10-20T00:00:00Z'),
   });
   assert.equal(assessment.ok, false);
+  assert.equal(assessment.evidenceArtifact.status, 'unavailable');
+  assert.equal(assessment.evidenceSha256, '4dfe19aae74be7b29b63a1fadf050327ea84050401d56bf085ba963959b2cb0b');
+  assert.ok(assessment.blockers.includes('restore_evidence_artifact_unavailable_or_empty'));
   assert.ok(assessment.blockers.includes('restore_evidence_has_unresolved_gates'));
   assert.ok(assessment.blockers.includes('restore_evidence_review_missing_or_invalid'));
   assert.ok(assessment.blockers.includes('restore_evidence_scope_missing:backup_binding'));

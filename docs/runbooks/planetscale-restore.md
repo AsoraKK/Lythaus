@@ -53,14 +53,20 @@ For 0021 readiness, preserve a reviewed record under
 deleting a temporary restored branch. Bind it to the source branch ID, exact
 selected backup ID and restored branch ID; record when verification completed,
 the evidence artifact SHA-256, verified scope, unresolved gates, and reviewer,
-review time and review reference. The planner also checks a SHA-256 over the
-record fields, source/backup identity and backup freshness. Record the scope
-that was actually verified; do not infer backup binding from the UI selection
-or mark unresolved checks as passed. The 0021 gate requires verified backup
-binding and restore completion, extensions/indexes, the canonical migration
-registry, effective runtime privileges, approved application smoke, RPO/RTO
-acceptance, and the independent recovery destination. Full-data parity is not
-a required scope. An unresolved gate keeps the plan blocked.
+review time and review reference. Retain the actual sanitized artifact as a
+tracked regular file under
+`docs/evidence/production-cutover/0021-restore-evidence/artifacts/`; the
+planner hashes its bytes and blocks if it is absent, untracked, symlinked,
+outside that directory, empty or mismatched. The planner also checks a
+consistency SHA-256 over the record fields and separately checks source/backup
+identity, timestamp order and backup freshness. The record hash does not
+establish artifact provenance. Record the scope that was actually verified; do
+not infer backup binding from the UI selection or mark unresolved checks as
+passed. The 0021 gate requires verified binding and restore completion,
+extensions/indexes, the canonical migration registry, effective runtime
+privileges, approved application smoke, RPO/RTO acceptance, and the independent
+recovery destination. Full-data parity is not a required scope. An unresolved
+gate keeps the plan blocked.
 
 The jobs Worker `BackupValidationWorkflow` performs the database capability and
 schema-object checks, then calls the configured provider-independent backup

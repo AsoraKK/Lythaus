@@ -80,14 +80,22 @@ plan also requires a reviewed restore-evidence record at
 Its source branch ID and selected backup ID must match the live provider reads;
 the restored branch ID is retained as historical identity even after that test
 branch is deleted. The record includes a verification timestamp, the SHA-256
-of the underlying evidence artifact, its own SHA-256 over canonical JSON with
-`recordSha256` omitted, reviewer and review reference, verified scope, and
-unresolved gates. A hash mismatch, stale or
-future timestamp, missing required scope, or any unresolved gate blocks the
-plan. Required scope covers independent backup-to-restore binding, restore
-completion, extensions/indexes, canonical migration registry, effective
-runtime privileges, application smoke, accepted RPO/RTO, and the independent
-recovery destination. It does not require full-data parity. See the
+of the underlying evidence artifact, reviewer and review reference, verified
+scope, and unresolved gates. Retain the artifact itself as a tracked regular
+file under
+`docs/evidence/production-cutover/0021-restore-evidence/artifacts/`; the
+planner reads its bytes and verifies the SHA-256. It rejects missing,
+untracked, symlinked, out-of-allowlist, empty or tampered artifacts. If the
+historical bytes are unavailable, retain the supplied digest with no artifact
+path and leave it unverified; that record remains blocked. The record's own
+SHA-256 over canonical JSON with `recordSha256` omitted detects inconsistent
+edits; it is not evidence provenance or a substitute for review. A stale or
+future timestamp, incorrect chronological order, missing required scope, or
+any unresolved gate blocks the plan. Required scope covers independent
+backup-to-restore binding, restore completion, extensions/indexes, canonical
+migration registry, effective runtime privileges, application smoke, accepted
+RPO/RTO, and the independent recovery destination. It does not require
+full-data parity. See the
 [restore runbook](planetscale-restore.md) for how to gather the operational
 evidence; the record is reviewed and committed append-only before use.
 

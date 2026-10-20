@@ -68,7 +68,20 @@ export function hash0021RestoreEvidenceRecord(record) {
   return createHash('sha256').update(canonicalJson(body)).digest('hex');
 }
 
-export function assess0021RestoreEvidence({ record, recordPath = null, sourceBranch, backup, selectedBackupId, now = Date.now() }) {
+export function hash0021RestoreEvidenceArtifact(bytes) {
+  if (!ArrayBuffer.isView(bytes) || bytes.byteLength === 0) return null;
+  return createHash('sha256').update(bytes).digest('hex');
+}
+
+const RESTORE_EVIDENCE_ARTIFACT_PREFIX = 'docs/evidence/production-cutover/0021-restore-evidence/artifacts/';
+
+function isAllowlistedRestoreArtifactPath(value) {
+  return typeof value === 'string' && value.startsWith(RESTORE_EVIDENCE_ARTIFACT_PREFIX)
+    && !value.includes('\\')
+    && value.slice(RESTORE_EVIDENCE_ARTIFACT_PREFIX.length).split('/').every(part => part !== '' && part !== '.' && part !== '..');
+}
+
+export function assess0021RestoreEvidence({ record, recordPath = null, evidenceArtifact = null, sourceBranch, backup, selectedBackupId, now = Date.now() }) {
   const blockers = [];
   const safeRecord = record && typeof record === 'object' && !Array.isArray(record) ? record : null;
   const safeSource = sourceBranch && typeof sourceBranch === 'object' ? sourceBranch : {};
@@ -81,6 +94,15 @@ export function assess0021RestoreEvidence({ record, recordPath = null, sourceBra
   const reviewedBy = typeof review.reviewedBy === 'string' ? review.reviewedBy.trim() : '';
   const reviewReference = typeof review.reference === 'string' ? review.reference.trim() : '';
   const evidenceSha256 = typeof safeRecord?.evidenceSha256 === 'string' ? safeRecord.evidenceSha256 : '';
+  const artifactPath = typeof safeRecord?.artifactPath === 'string' ? safeRecord.artifactPath : '';
+  const artifactBytes = evidenceArtifact?.bytes;
+  const computedArtifactSha256 = hash0021RestoreEvidenceArtifact(artifactBytes);
+  const reportedArtifactSha256 = typeof evidenceArtifact?.sha256 === 'string' ? evidenceArtifact.sha256 : '';
+  const artifactPathAllowlisted = isAllowlistedRestoreArtifactPath(artifactPath);
+  const artifactReadPathMatches = Boolean(evidenceArtifact && evidenceArtifact.path === artifactPath);
+  const artifactHashMatches = computedArtifactSha256 !== null
+    && reportedArtifactSha256 === computedArtifactSha256
+    && evidenceSha256 === computedArtifactSha256;
   const recordSha256 = typeof safeRecord?.recordSha256 === 'string' ? safeRecord.recordSha256 : '';
   const verifiedScope = Array.isArray(safeRecord?.verifiedScope) ? safeRecord.verifiedScope : null;
   const unresolvedGates = Array.isArray(safeRecord?.unresolvedGates) ? safeRecord.unresolvedGates : null;
@@ -106,12 +128,21 @@ export function assess0021RestoreEvidence({ record, recordPath = null, sourceBra
   if (verifiedAt !== null && (backupCompletedAt === null || verifiedAt < backupCompletedAt)) {
     blockers.push('restore_evidence_stale_or_precedes_selected_backup');
   }
+  if (restoredBranchCreatedAt !== null && backupCompletedAt !== null && restoredBranchCreatedAt < backupCompletedAt) {
+    blockers.push('restore_evidence_restored_branch_precedes_backup_completion');
+  }
   if (verifiedAt !== null && backupExpiresAt !== null && verifiedAt >= backupExpiresAt) {
     blockers.push('restore_evidence_stale_for_selected_backup');
   }
   if (backupExpiresAt === null || backupExpiresAt <= now) blockers.push('restore_evidence_selected_backup_expired_or_unknown');
 
   if (!/^[a-f0-9]{64}$/.test(evidenceSha256)) blockers.push('restore_evidence_artifact_hash_missing_or_invalid');
+  if (!artifactPathAllowlisted) blockers.push('restore_evidence_artifact_path_missing_or_not_allowlisted');
+  if (!artifactReadPathMatches || computedArtifactSha256 === null || !/^[a-f0-9]{64}$/.test(reportedArtifactSha256)) {
+    blockers.push('restore_evidence_artifact_unavailable_or_empty');
+  } else if (!artifactHashMatches) {
+    blockers.push('restore_evidence_artifact_hash_mismatch');
+  }
   if (!/^[a-f0-9]{64}$/.test(recordSha256) || recordSha256 !== hash0021RestoreEvidenceRecord(safeRecord)) {
     blockers.push('restore_evidence_record_hash_missing_or_mismatched');
   }
@@ -147,6 +178,14 @@ export function assess0021RestoreEvidence({ record, recordPath = null, sourceBra
     },
     verifiedAt: verifiedAt === null ? null : new Date(verifiedAt).toISOString(),
     evidenceSha256: /^[a-f0-9]{64}$/.test(evidenceSha256) ? evidenceSha256 : null,
+    evidenceArtifact: {
+      path: artifactPath || null,
+      status: !artifactPath ? 'unavailable'
+        : !artifactPathAllowlisted ? 'not_allowlisted'
+        : !artifactReadPathMatches || computedArtifactSha256 === null || !/^[a-f0-9]{64}$/.test(reportedArtifactSha256) ? 'unavailable'
+          : artifactHashMatches ? 'verified' : 'hash_mismatch',
+      sha256: computedArtifactSha256,
+    },
     recordSha256: /^[a-f0-9]{64}$/.test(recordSha256) ? recordSha256 : null,
     verifiedScope: verifiedScope ?? [],
     unresolvedGates: unresolvedGates ?? [],
@@ -158,7 +197,7 @@ export function assess0021RestoreEvidence({ record, recordPath = null, sourceBra
   };
 }
 
-export function assessPlanetScaleBackupEvidence({ branch, backup, backupId, restoreEvidenceRecord, restoreEvidenceRecordPath = null, now = Date.now() }) {
+export function assessPlanetScaleBackupEvidence({ branch, backup, backupId, restoreEvidenceRecord, restoreEvidenceRecordPath = null, restoreEvidenceArtifact = null, now = Date.now() }) {
   const blockers = [];
   const safeBranch = branch && typeof branch === 'object' ? branch : {};
   const safeBackup = backup && typeof backup === 'object' ? backup : {};
@@ -187,6 +226,7 @@ export function assessPlanetScaleBackupEvidence({ branch, backup, backupId, rest
   const restoreEvidence = assess0021RestoreEvidence({
     record: restoreEvidenceRecord,
     recordPath: restoreEvidenceRecordPath,
+    evidenceArtifact: restoreEvidenceArtifact,
     sourceBranch: safeBranch,
     backup: safeBackup,
     selectedBackupId: backupId,

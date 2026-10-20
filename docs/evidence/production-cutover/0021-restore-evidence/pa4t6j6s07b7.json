@@ -16,6 +16,8 @@
     "completedAt": "2026-10-18T21:30:32Z"
   },
   "verifiedAt": "2026-10-18T21:30:32Z",
+  "artifactPath": null,
+  "artifactStatus": "UNVERIFIED_NOT_RETAINED",
   "evidenceSha256": "4dfe19aae74be7b29b63a1fadf050327ea84050401d56bf085ba963959b2cb0b",
   "verifiedScope": [
     "schema_extensions_indexes",
@@ -34,5 +36,5 @@
     "reviewedBy": null,
     "reference": null
   },
-  "recordSha256": "fe93696c9479133a17cda24124c267c14330c8d418c294bb59e8d43849726493"
+  "recordSha256": "3acb35c12136a79b54a24ee07fbb1b86f47e8c105a75a369cc112a8a7a495cf7"
 }
