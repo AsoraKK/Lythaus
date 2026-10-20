@@ -1,21 +1,43 @@
-import 'package:test/test.dart';
 import 'package:lythaus_api_client/lythaus_api_client.dart';
+import 'package:built_value/serializer.dart';
+import 'package:test/test.dart';
 
-// tests for SubscriptionStatus401Response
 void main() {
-  final instance = SubscriptionStatus401ResponseBuilder();
-  // TODO add properties to the builder and call build()
+  test('401 error response serializes the active fields', () {
+    final wire = <String, Object?>{
+      'error': 'unauthorized',
+      'correlationId': 'membership-request-401',
+    };
+    final response = standardSerializers.deserializeWith(
+      SubscriptionStatus401Response.serializer,
+      wire,
+    )!;
 
-  group(SubscriptionStatus401Response, () {
-    // String error
-    test('to test the property `error`', () async {
-      // TODO
-    });
+    expect(response.error, 'unauthorized');
+    expect(response.correlationId, 'membership-request-401');
+    expect(
+      standardSerializers.serializeWith(
+        SubscriptionStatus401Response.serializer,
+        response,
+      ),
+      wire,
+    );
+  });
 
-    // String correlationId
-    test('to test the property `correlationId`', () async {
-      // TODO
-    });
-
+  test('401 error response rejects missing or malformed required fields', () {
+    expect(
+      () => standardSerializers.deserializeWith(
+        SubscriptionStatus401Response.serializer,
+        {'error': 'unauthorized'},
+      ),
+      throwsA(isA<DeserializationError>()),
+    );
+    expect(
+      () => standardSerializers.deserializeWith(
+        SubscriptionStatus401Response.serializer,
+        {'error': false, 'correlationId': 'membership-request-401'},
+      ),
+      throwsA(isA<DeserializationError>()),
+    );
   });
 }

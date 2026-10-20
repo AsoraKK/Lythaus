@@ -26,7 +26,9 @@ const FeedModel _discoverFeed = FeedModel(
   isHome: true,
 );
 
-const FeedModel _newsBoardFeed = FeedModel(
+/// News Board model for presentation. Add it to [feedListProvider] only after
+/// the server-issued entitlement confirms Black access.
+const FeedModel newsBoardFeedModel = FeedModel(
   id: 'news',
   name: 'News',
   type: FeedType.news,
@@ -120,7 +122,7 @@ final feedListProvider = Provider<List<FeedModel>>((ref) {
       : customState.asData?.value ?? const <FeedModel>[];
   final systemFeeds = <FeedModel>[
     _discoverFeed,
-    if (entitlements?.canAccessNewsBoard ?? false) _newsBoardFeed,
+    if (entitlements?.canAccessNewsBoard ?? false) newsBoardFeedModel,
   ];
   final visibleCustomFeeds = entitlements == null
       ? const <FeedModel>[]

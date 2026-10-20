@@ -1,21 +1,49 @@
-import 'package:test/test.dart';
 import 'package:lythaus_api_client/lythaus_api_client.dart';
+import 'package:built_value/serializer.dart';
+import 'package:test/test.dart';
 
-// tests for SubscriptionStatus500Response
 void main() {
-  final instance = SubscriptionStatus500ResponseBuilder();
-  // TODO add properties to the builder and call build()
+  test('500 error response round-trips request_failed and correlation id', () {
+    final wire = <String, Object?>{
+      'error': 'request_failed',
+      'correlationId': 'membership-request-500',
+    };
+    final response = standardSerializers.deserializeWith(
+      SubscriptionStatus500Response.serializer,
+      wire,
+    )!;
 
-  group(SubscriptionStatus500Response, () {
-    // String error
-    test('to test the property `error`', () async {
-      // TODO
-    });
+    expect(
+      response.error,
+      SubscriptionStatus500ResponseErrorEnum.requestFailed,
+    );
+    expect(response.correlationId, 'membership-request-500');
+    expect(
+      standardSerializers.serializeWith(
+        SubscriptionStatus500Response.serializer,
+        response,
+      ),
+      wire,
+    );
+  });
 
-    // String correlationId
-    test('to test the property `correlationId`', () async {
-      // TODO
-    });
-
+  test('500 error response rejects unknown enums and missing fields', () {
+    expect(
+      () => standardSerializers.deserializeWith(
+        SubscriptionStatus500Response.serializer,
+        {
+          'error': 'provider_unavailable',
+          'correlationId': 'membership-request'
+        },
+      ),
+      throwsA(isA<DeserializationError>()),
+    );
+    expect(
+      () => standardSerializers.deserializeWith(
+        SubscriptionStatus500Response.serializer,
+        {'error': 'request_failed'},
+      ),
+      throwsA(isA<DeserializationError>()),
+    );
   });
 }

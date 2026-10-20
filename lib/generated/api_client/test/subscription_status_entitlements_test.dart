@@ -1,23 +1,62 @@
-import 'package:test/test.dart';
 import 'package:lythaus_api_client/lythaus_api_client.dart';
+import 'package:built_value/serializer.dart';
+import 'package:test/test.dart';
 
-// tests for SubscriptionStatusEntitlements
 void main() {
-  final instance = SubscriptionStatusEntitlementsBuilder();
-  // TODO add properties to the builder and call build()
+  test('feed entitlements round-trip and drop unknown nested policy fields',
+      () {
+    final wire = <String, Object?>{
+      'maxCustomFeeds': 3,
+      'newsBoardAccess': 'full',
+      'dailyReactions': 100,
+    };
+    final entitlements = standardSerializers.deserializeWith(
+      SubscriptionStatusEntitlements.serializer,
+      wire,
+    )!;
 
-  group(SubscriptionStatusEntitlements, () {
-    // Maximum custom feeds available to this tier.
-    // int maxCustomFeeds
-    test('to test the property `maxCustomFeeds`', () async {
-      // TODO
-    });
+    expect(entitlements.maxCustomFeeds, 3);
+    expect(
+      entitlements.newsBoardAccess,
+      SubscriptionStatusEntitlementsNewsBoardAccessEnum.full,
+    );
+    expect(
+      standardSerializers.serializeWith(
+        SubscriptionStatusEntitlements.serializer,
+        entitlements,
+      ),
+      {'maxCustomFeeds': 3, 'newsBoardAccess': 'full'},
+    );
+  });
 
-    // Full News Board access is available to Black accounts only; Free and Premium have none.
-    // String newsBoardAccess
-    test('to test the property `newsBoardAccess`', () async {
-      // TODO
-    });
-
+  test('missing or malformed required entitlement fields fail decoding', () {
+    expect(
+      () => standardSerializers.deserializeWith(
+        SubscriptionStatusEntitlements.serializer,
+        {'maxCustomFeeds': 1},
+      ),
+      throwsA(isA<DeserializationError>()),
+    );
+    expect(
+      () => standardSerializers.deserializeWith(
+        SubscriptionStatusEntitlements.serializer,
+        {'newsBoardAccess': 'none'},
+      ),
+      throwsA(isA<DeserializationError>()),
+    );
+    expect(
+      () => standardSerializers.deserializeWith(
+        SubscriptionStatusEntitlements.serializer,
+        {'maxCustomFeeds': '3', 'newsBoardAccess': 'full'},
+      ),
+      throwsA(isA<DeserializationError>()),
+    );
+    expect(
+      () => standardSerializers.deserializeWith(
+        SubscriptionStatusEntitlements.serializer,
+        {'maxCustomFeeds': 3, 'newsBoardAccess': 'preview'},
+      ),
+      throwsA(isA<DeserializationError>()),
+    );
   });
 }
