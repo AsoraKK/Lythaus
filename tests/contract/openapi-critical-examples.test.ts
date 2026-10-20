@@ -156,6 +156,11 @@ describe('critical response examples', () => {
   }> = [
     { label: 'email auth', pathKey: '/auth/email', method: 'post', status: '200', exampleKey: 'success' },
     { label: 'auth userinfo', pathKey: '/auth/userinfo', method: 'get', status: '200', exampleKey: 'authenticated' },
+    { label: 'Free membership access', pathKey: '/subscription/status', method: 'get', status: '200', exampleKey: 'free' },
+    { label: 'Premium membership access', pathKey: '/subscription/status', method: 'get', status: '200', exampleKey: 'premium' },
+    { label: 'Black membership access', pathKey: '/subscription/status', method: 'get', status: '200', exampleKey: 'black' },
+    { label: 'membership access unauthorized', pathKey: '/subscription/status', method: 'get', status: '401', exampleKey: 'unauthenticated' },
+    { label: 'membership access unavailable', pathKey: '/subscription/status', method: 'get', status: '500', exampleKey: 'unavailable' },
     {
       label: 'password reset request',
       pathKey: '/auth/password/reset/request',
@@ -210,6 +215,22 @@ describe('critical response examples', () => {
       getExampleValue(content, exampleKey),
       `${method.toUpperCase()} ${pathKey} ${status}`
     );
+  });
+
+  test('membership status exposes only the server-issued tier and feed entitlements', () => {
+    const status = deref(getResponseContent('/subscription/status', 'get', '200').schema);
+    expect(status.required).toEqual(['tier', 'entitlements']);
+    expect(Object.keys(status.properties)).toEqual(['tier', 'entitlements']);
+    expect(status.properties.tier.enum).toEqual(['free', 'premium', 'black']);
+
+    const entitlements = status.properties.entitlements;
+    expect(entitlements.required).toEqual(['maxCustomFeeds', 'newsBoardAccess']);
+    expect(entitlements.properties.maxCustomFeeds.minimum).toBe(1);
+    expect(entitlements.properties.maxCustomFeeds.maximum).toBe(3);
+    expect(entitlements.properties.newsBoardAccess.enum).toEqual(['none', 'full']);
+    const unavailable = deref(getResponseContent('/subscription/status', 'get', '500').schema);
+    expect(unavailable.required).toEqual(['error', 'correlationId']);
+    expect(unavailable.properties.error.enum).toEqual(['request_failed']);
   });
 });
 

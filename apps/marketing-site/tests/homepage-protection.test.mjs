@@ -29,14 +29,15 @@ const upstreamProtectedPaths = [
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const nativeModerationWorkerdTest = 'packages/authenticity/tests/openai-moderation.workerd.mjs';
 const publicationPg17Script = 'node scripts/ci/run-publication-pg17.mjs';
+const textReviewScript = 'node scripts/ci/run-text-review-tests.mjs';
 const reputationPg17Script = 'node scripts/ci/run-reputation-managed-lock-cluster.mjs --synthetic-managed-cluster --execute-local-sql';
 const allocatedJobsDiagnosticTests = 'apps/lythaus-jobs/tests/reputation-session-diagnostic.test.mjs apps/lythaus-jobs/tests/reputation-session-diagnostic.workerd.mjs';
 const allocatedJobsDiagnosticFiles = new Map([
   // PR #1044 head 75d22de8640ba0d1d687a873746820ee7c39ec10 passed 57/57 media CI checks and received independent review.
-  // This exact Jobs blob supersedes the prior allocation.
-  ['apps/lythaus-jobs/src/index.ts', 'da112b2d2c869251ed48941d31d4ac854bb93fa1'],
+  // Proposed PR1063 text allocation; subject-lock support remains separately gated.
+  ['apps/lythaus-jobs/src/index.ts', '50a6d8c3f4dd73f49db3c68b463a19b8c172ebb9'],
   // Scoped to privacy-request active-status revalidation under the existing account lock.
-  ['apps/lythaus-public-api/src/index.ts', '1a231c953f23159e922346760510c8eaee96873a'],
+  ['apps/lythaus-public-api/src/index.ts', '4640957fba06cbecbf8c87640f3d1a52052d1fe4'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],
@@ -116,6 +117,10 @@ function assertOnlyReviewedNativeModerationTestRegistration(before, after) {
     assert.equal(after.scripts['test:reputation:pg17'], reputationPg17Script, 'Reputation tests must retain the exact synthetic PG17 runner');
     before.scripts['test:reputation:pg17'] = reputationPg17Script;
   }
+  if (Object.hasOwn(after.scripts, 'test:text-review')) {
+    assert.equal(after.scripts['test:text-review'], textReviewScript, 'Text review tests must retain the exact unskippable runner');
+    before.scripts['test:text-review'] = textReviewScript;
+  }
   assert.deepEqual(after, before, 'Only the exact native moderation, publication, and reputation commands may be registered; unrelated scripts and dependencies stay frozen');
 }
 const reviewedToolingSecurityPatches = {
@@ -182,6 +187,7 @@ const reviewedOpenApiDartScripts = {
       'node scripts/fix-openapi-dart-nested-builder-assignment.mjs lib/generated/api_client',
       'node scripts/remove-openapi-oauth-support.mjs lib/generated/api_client',
       'node scripts/trim-trailing-whitespace.js lib/generated/api_client',
+      'node scripts/install-openapi-dart-membership-tests.mjs lib/generated/api_client',
     ].join(' && '),
   },
   'openapi:test:dart': {
@@ -804,14 +810,19 @@ test('homepage protection permits only exact native moderation, publication, and
   assert.doesNotThrow(() => assertOnlyReviewedNativeModerationTestRegistration(structuredClone(before), reviewed));
   reviewed.scripts['test:reputation:pg17'] = reputationPg17Script;
   assert.doesNotThrow(() => assertOnlyReviewedNativeModerationTestRegistration(structuredClone(before), reviewed));
+  reviewed.scripts['test:text-review'] = textReviewScript;
+  assert.doesNotThrow(() => assertOnlyReviewedNativeModerationTestRegistration(structuredClone(before), reviewed));
 
   for (const [name, command] of [
     ['publication', publicationPg17Script + ' --skip-admission'],
     ['reputation', reputationPg17Script + ' --execute-production-sql'],
+    ['text-review', textReviewScript + ' --skip-authorship'],
+    ['text-review', textReviewScript + ' scripts/tests/unreviewed.test.mjs'],
     ['unreviewed', 'node scripts/unreviewed.mjs'],
   ]) {
     const changedRunner = structuredClone(reviewed);
-    const script = name === 'reputation' ? 'test:reputation:pg17' : 'test:publication:pg17';
+    const script = name === 'reputation' ? 'test:reputation:pg17'
+      : name === 'text-review' ? 'test:text-review' : 'test:publication:pg17';
     changedRunner.scripts[script] = command;
     assert.throws(() => assertOnlyReviewedNativeModerationTestRegistration(structuredClone(before), changedRunner), assert.AssertionError);
   }
@@ -887,8 +898,8 @@ test('image-integrity allocation rejects superseded Worker bytes without broaden
   // and fecdd6f6b19ad5ea9dd17afa70e420e6deb147b8 (Jobs); the guard compares IDs,
   // so these superseded PR commits need not survive squash.
   const supersededWorkerBlobs = new Map([
-    ['apps/lythaus-jobs/src/index.ts', ['8a6487ab099287f151fc8594b3b9ff846a9226b7', 'a842e8c3654a26adcaae7c8e72efae3d20102cbb', '7b25af78fc1e227b85d1758b0cb31fd0aec09d24']],
-    ['apps/lythaus-public-api/src/index.ts', ['7a941be1765e82b5cbf00294b114952ab6ea27a1']],
+    ['apps/lythaus-jobs/src/index.ts', ['da112b2d2c869251ed48941d31d4ac854bb93fa1', '8a6487ab099287f151fc8594b3b9ff846a9226b7', 'a842e8c3654a26adcaae7c8e72efae3d20102cbb', '7b25af78fc1e227b85d1758b0cb31fd0aec09d24']],
+    ['apps/lythaus-public-api/src/index.ts', ['1a231c953f23159e922346760510c8eaee96873a', '7a941be1765e82b5cbf00294b114952ab6ea27a1']],
   ]);
   for (const [filename, superseded] of supersededWorkerBlobs) {
     const current = git('hash-object', `--path=${filename}`, filename);

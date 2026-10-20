@@ -181,7 +181,8 @@ void main() {
 
       await tester.pumpWidget(buildEmpty(AlphaFeedSection.newsBoard));
       await tester.pumpAndSettle();
-      expect(find.text('News Board is Black-only'), findsOneWidget);
+      expect(find.text('Couldn’t verify News Board access'), findsOneWidget);
+      expect(find.text('News Board is Black-only'), findsNothing);
       expect(find.text('No custom feeds yet'), findsNothing);
     });
 

@@ -127,6 +127,8 @@ jobs:
           packages/contracts/tests/monthly-earning.test.mjs
           packages/contracts/tests/monthly-maintenance.test.mjs
       - run: npm run test:critical-coverage
+      - name: Verify text revision evidence, decision binding and account fencing
+        run: npm run test:text-review
       - name: Verify disabled post media attachment validation
         run: >-
           node --experimental-strip-types --test
@@ -180,6 +182,7 @@ jobs:
       - run: npm run validate:planetscale-migrations
       - run: node scripts/ci/verify-planetscale-production-schema.mjs --manifest-only
       - run: npm run test:planetscale-production-migrations
+      - run: node --test scripts/tests/planetscale-cutover-identity-preflight.test.mjs
       - run: node --test scripts/tests/planetscale-0021-restore-evidence-loader.test.mjs
       - run: npm run validate:planetscale-extensions
       - run: node --test scripts/tests/provider-audit-contract.test.mjs

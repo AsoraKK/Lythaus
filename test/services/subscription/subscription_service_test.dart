@@ -104,58 +104,101 @@ void main() {
   });
 
   group('Subscription models', () {
-    test('parses the current server-issued feed entitlement payload', () {
-      final status = SubscriptionStatus.fromJson({
+    test('parses the current server-issued entitlement response', () {
+      final access = SubscriptionStatus.fromJson({
         'tier': 'black',
         'entitlements': {'maxCustomFeeds': 3, 'newsBoardAccess': 'full'},
       });
 
-      expect(status.tier, 'black');
-      expect(status.entitlements.maxCustomFeeds, 3);
-      expect(status.entitlements.newsBoardAccessLevel, 'full');
-      expect(status.entitlements.newsBoardPreview, isFalse);
+      expect(access.tier, 'black');
+      expect(access.entitlements.maxCustomFeeds, 3);
+      expect(access.entitlements.newsBoardAccess, 'full');
     });
 
-    test('SubscriptionStatus.fromJson parses and identifies expiry', () {
-      final status = SubscriptionStatus.fromJson({
-        'userId': 'u1',
-        'tier': 'pro',
+    test('missing or unknown response tiers are contract errors', () {
+      expect(
+        () => SubscriptionStatus.fromJson({
+          'entitlements': {'maxCustomFeeds': 1, 'newsBoardAccess': 'none'},
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => SubscriptionStatus.fromJson({
+          'tier': 'unknown',
+          'entitlements': {'maxCustomFeeds': 1, 'newsBoardAccess': 'none'},
+        }),
+        throwsFormatException,
+      );
+    });
+
+    test('pending and payment metadata do not add lifecycle state', () {
+      final manualTier = SubscriptionStatus.fromJson({
+        'tier': 'premium',
         'status': 'active',
+        'provider': 'manual',
+        'entitlements': {'maxCustomFeeds': 2, 'newsBoardAccess': 'none'},
+      });
+      final paymentClaim = SubscriptionStatus.fromJson({
+        'tier': 'premium',
+        'status': 'confirmed',
         'provider': 'stripe',
-        'currentPeriodEnd': DateTime.now()
-            .add(const Duration(days: 1))
-            .toIso8601String(),
-        'cancelAtPeriodEnd': true,
-        'entitlements': {
-          'dailyPosts': 10,
-          'maxMediaSizeMB': 20,
-          'maxMediaPerPost': 3,
-        },
+        'paymentConfirmed': true,
+        'entitlements': {'maxCustomFeeds': 2, 'newsBoardAccess': 'none'},
+      });
+      final pendingClaim = SubscriptionStatus.fromJson({
+        'tier': 'free',
+        'status': 'pending',
+        'provider': 'stripe',
+        'entitlements': {'maxCustomFeeds': 1, 'newsBoardAccess': 'none'},
       });
 
-      expect(status.isPaid, isTrue);
-      expect(status.isExpiring, isTrue);
-      expect(status.entitlements.dailyPosts, 10);
+      expect(manualTier.tier, 'premium');
+      expect(paymentClaim.tier, manualTier.tier);
+      expect(pendingClaim.tier, 'free');
+      expect(manualTier.entitlements.maxCustomFeeds, 2);
+      expect(paymentClaim.entitlements.maxCustomFeeds, 2);
     });
 
-    test('SubscriptionStatus.isExpiring is false when period ended', () {
-      final status = SubscriptionStatus.fromJson({
-        'userId': 'u1',
+    test('incomplete entitlement payloads are unavailable, not Free', () {
+      expect(
+        () => SubscriptionStatus.fromJson({'tier': 'premium'}),
+        throwsFormatException,
+      );
+      expect(
+        () => SubscriptionStatus.fromJson({
+          'tier': 'premium',
+          'entitlements': {'maxCustomFeeds': 2, 'newsBoardAccessLevel': 'full'},
+        }),
+        throwsFormatException,
+      );
+    });
+
+    test('invalid entitlement values are rejected', () {
+      expect(
+        () => SubscriptionStatus.fromJson({
+          'tier': 'premium',
+          'entitlements': {'maxCustomFeeds': 9, 'newsBoardAccess': 'full'},
+        }),
+        throwsFormatException,
+      );
+      expect(
+        () => SubscriptionStatus.fromJson({
+          'tier': 'premium',
+          'entitlements': {'maxCustomFeeds': 2, 'newsBoardAccess': 'preview'},
+        }),
+        throwsFormatException,
+      );
+    });
+
+    test('server-issued Free tier remains a valid entitlement state', () {
+      final freeAccess = SubscriptionStatus.fromJson({
         'tier': 'free',
-        'status': 'inactive',
-        'cancelAtPeriodEnd': true,
-        'currentPeriodEnd': DateTime.now()
-            .subtract(const Duration(days: 1))
-            .toIso8601String(),
-        'entitlements': {
-          'dailyPosts': 1,
-          'maxMediaSizeMB': 5,
-          'maxMediaPerPost': 1,
-        },
+        'entitlements': {'maxCustomFeeds': 1, 'newsBoardAccess': 'none'},
       });
 
-      expect(status.isPaid, isFalse);
-      expect(status.isExpiring, isFalse);
+      expect(freeAccess.tier, 'free');
+      expect(freeAccess.entitlements.maxCustomFeeds, 1);
+      expect(freeAccess.entitlements.newsBoardAccess, 'none');
     });
 
     test('Purchase result types are constructible', () {

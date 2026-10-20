@@ -4,6 +4,7 @@ import pg from 'pg';
 import { generateKeyPair, exportJWK, exportPKCS8 } from 'jose';
 import { signAccessToken, uuidv7 } from '@lythaus/security';
 import { postModerationFixture } from './post-moderation-fixture.mjs';
+import { assertTextReviewBundle } from './text-review-pg17-assertions.mjs';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
 const target = new URL(connectionString ?? 'file:///missing');
@@ -19,7 +20,7 @@ before(async () => {
   fixture = await postModerationFixture(connectionString, {
     ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test',
     JWT_PUBLIC_JWKS: JSON.stringify({ keys: [{ ...await exportJWK(publicKey), kid: keyId, alg: 'ES256', use: 'sig' }] }),
-  });
+  }, { simulateSubjectLock: true });
   owner = await actor(); other = await actor();
 });
 after(async () => { await fixture?.dispose(); await client.end(); });
@@ -44,8 +45,8 @@ async function created(body = 'Synthetic human post', postAuthor = owner) {
   const event = (await client.query('SELECT id AS "eventId", event_type AS "eventType", payload FROM system.outbox_events WHERE id=$1', [post.eventId])).rows[0];
   return { post, event, payload, key };
 }
-async function createdComment(postId, body = 'Synthetic human comment') {
-  const response = await call(owner, 'POST', `/api/posts/${postId}/comments`, { body, declaredCreationMode: 'human' });
+async function createdComment(postId, body = 'Synthetic human comment', commentAuthor = owner) {
+  const response = await call(commentAuthor, 'POST', `/api/posts/${postId}/comments`, { body, declaredCreationMode: 'human' });
   assert.equal(response.status, 201, await response.clone().text());
   const comment = await response.json();
   const event = (await client.query(`SELECT id AS "eventId",event_type AS "eventType",payload
@@ -233,4 +234,97 @@ test('failed dispatch retains outbox work for retry and guest submission cannot 
   const response = await call(null, 'POST', '/api/posts', { body: 'Guest write denied', declaredCreationMode: 'human', geoScope: 'none' });
   assert.equal(response.status, 401);
   assert.deepEqual(await counts(post.id), { detectors: 0, cases: 0, state: 'under_review' });
+});
+
+async function reviewItem(type) {
+  const writer = await actor(), parent = await created('Synthetic account fence parent', writer);
+  if (type === 'post') return { id: parent.post.id, event: parent.event, writer };
+  await client.query("UPDATE content.posts SET moderation_state='allowed',published_at=now() WHERE id=$1", [parent.post.id]);
+  await client.query("UPDATE content.content_declarations SET public_label='Human-authored',review_required=false WHERE post_id=$1", [parent.post.id]);
+  const item = await createdComment(parent.post.id, 'Synthetic account-fenced comment', writer);
+  return { id: item.comment.commentId, event: item.event, writer };
+}
+async function privateReview(item, type) {
+  const table = type === 'post' ? 'content.posts' : 'content.comments';
+  assert.equal((await client.query(`SELECT moderation_state FROM ${table} WHERE id=$1`, [item.id])).rows[0].moderation_state, 'under_review');
+  assert.equal((await client.query("SELECT id FROM system.outbox_events WHERE aggregate_id=$1 AND event_type LIKE '%published%'", [item.id])).rowCount, 0);
+}
+async function blocked(waiter, holder) {
+  const deadline = Date.now() + 4000;
+  while (Date.now() < deadline) {
+    if ((await client.query('SELECT $2::integer=ANY(pg_blocking_pids($1)) AS waits', [waiter, holder])).rows[0].waits) return;
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  assert.fail('expected actual PostgreSQL account-lock wait');
+}
+
+test('canonical missing subject capability retries both text kinds without inference or evidence', async () => {
+  assert.equal((await client.query("SELECT to_regprocedure('trust.lock_reputation_subject(uuid)') AS function")).rows[0].function, null);
+  const canonical = await postModerationFixture(connectionString, { ENVIRONMENT: 'local' });
+  try {
+    for (const type of ['post', 'comment']) {
+      const item = await reviewItem(type);
+      const response = await canonical.dispatchFetch('https://fixture.invalid/fixture/queue', { method: 'POST', body: JSON.stringify(item.event) });
+      assert.deepEqual(await response.json(), { ack: 0, retry: 1 });
+      assert.equal((await client.query('SELECT id FROM moderation.detector_runs WHERE content_id=$1', [item.id])).rowCount, 0);
+      assert.equal(await canonical.modelCallCount(), 0); await privateReview(item, type);
+    }
+  } finally { await canonical.dispose(); }
+});
+
+for (const type of ['post', 'comment']) for (const change of ['status', 'deletion']) for (const first of ['writer', 'jobs']) {
+  test(`synthetic capability transport, real PG17 ${type} ${change}: ${first} account lock commits first`, async () => {
+    assert.equal(fixture.simulateSubjectLock, true);
+    const item = await reviewItem(type), writer = new pg.Client({ connectionString, ssl: false });
+    await writer.connect(); await writer.query('SET ROLE lythaus_privacy');
+    const reached = Promise.withResolvers(), resume = Promise.withResolvers();
+    let invocations = 0, delivery, update;
+    const updateSql = change === 'status' ? "UPDATE identity.users SET status='locked' WHERE id=$1"
+      : 'UPDATE identity.users SET deleted_at=now() WHERE id=$1';
+    try {
+      await writer.query('BEGIN');
+      if (first === 'writer') {
+        await writer.query(updateSql, [item.writer.id]);
+        fixture.duringSql = input => { if (input.text === 'SELECT status FROM trust.lock_reputation_subject($1::pg_catalog.uuid)') reached.resolve(input.backendPid); };
+        delivery = deliver(item.event);
+        const waiter = await Promise.race([reached.promise, delivery.then(() => { throw new Error('Jobs did not reach the subject lock'); })]);
+        await blocked(waiter, writer.processID);
+        await writer.query('COMMIT'); assert.deepEqual(await delivery, { ack: 1, retry: 0 });
+        assert.equal((await client.query('SELECT id FROM moderation.detector_runs WHERE content_id=$1', [item.id])).rowCount, 0);
+      } else {
+        fixture.afterSql = async input => {
+          if (input.text === 'SELECT status FROM trust.lock_reputation_subject($1::pg_catalog.uuid)'
+            && ++invocations === (type === 'post' ? 2 : 1)) { reached.resolve(input.backendPid); await resume.promise; }
+        };
+        delivery = deliver(item.event);
+        const holder = await Promise.race([reached.promise, delivery.then(() => { throw new Error('Jobs did not hold its final account lock'); })]);
+        update = writer.query(updateSql, [item.writer.id]); await blocked(writer.processID, holder);
+        resume.resolve(); assert.deepEqual(await delivery, { ack: 1, retry: 0 });
+        await update; await writer.query('COMMIT');
+        await assertTextReviewBundle(client, item.id, item.event.eventId, type);
+      }
+      await privateReview(item, type);
+      assert.ok(!fixture.statements.some(entry => /^\s*(CREATE|ALTER|GRANT)\b/i.test(entry.text)));
+      assert.equal((await client.query("SELECT to_regprocedure('trust.lock_reputation_subject(uuid)') AS function")).rows[0].function, null);
+    } finally {
+      resume.resolve(); fixture.duringSql = undefined; fixture.afterSql = undefined;
+      await writer.query('ROLLBACK').catch(() => undefined);
+      await delivery?.catch(() => undefined); await update?.catch(() => undefined); await writer.end();
+    }
+  });
+}
+
+for (const type of ['post', 'comment']) test(`synthetic capability transport, real PG17 ${type} content contention retries without a deadlock`, async () => {
+  const item = await reviewItem(type), holder = new pg.Client({ connectionString, ssl: false });
+  await holder.connect(); await holder.query('SET ROLE lythaus_admin'); await holder.query('BEGIN');
+  const errors = fixture.sqlErrors.length;
+  try {
+    await holder.query(`SELECT id FROM content.${type === 'post' ? 'posts' : 'comments'} WHERE id=$1 FOR UPDATE`, [item.id]);
+    assert.deepEqual(await deliver(item.event), { ack: 0, retry: 1 });
+    assert.ok(fixture.sqlErrors.slice(errors).some(error => error.code === '55P03'));
+    assert.ok(!fixture.sqlErrors.slice(errors).some(error => error.code === '40P01'));
+    assert.equal((await client.query('SELECT id FROM moderation.detector_runs WHERE content_id=$1', [item.id])).rowCount, 0);
+  } finally { await holder.query('ROLLBACK'); await holder.end(); }
+  assert.deepEqual(await deliver(item.event), { ack: 1, retry: 0 });
+  await assertTextReviewBundle(client, item.id, item.event.eventId, type); await privateReview(item, type);
 });

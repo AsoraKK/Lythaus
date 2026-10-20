@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
-import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 
-export async function postModerationFixture(connectionString, bindings) {
+export async function postModerationFixture(connectionString, bindings, { simulateSubjectLock = false } = {}) {
   const target = new URL(connectionString);
   assert.ok(['localhost', '127.0.0.1'].includes(target.hostname));
   assert.ok(target.pathname.startsWith('/lythaus_auth_test_post_'));
@@ -13,42 +12,34 @@ export async function postModerationFixture(connectionString, bindings) {
   const { build } = require('esbuild');
   const { Miniflare, convertV4MiniflareOptions } = require('miniflare');
   const root = fileURLToPath(new URL('../../../', import.meta.url));
-  const clients = new Map(), deliveries = [];
+  const clients = new Map(), deliveries = [], statements = [], sqlErrors = [];
   const modelCallFixtureId = randomUUID();
   const modelCallMetrics = new pg.Pool({ connectionString, ssl: false, max: 8 });
-  let sequence = 0, failModel = false, failQueue = false;
+  let sequence = 0, failModel = false, failQueue = false, duringSql, afterSql, failSql;
   const bundle = await build({ absWorkingDir: root, bundle: true, write: false,
     format: 'esm', platform: 'node', target: 'es2022', external: ['cloudflare:workers'],
     banner: { js: "import { createRequire } from 'node:module'; const require = createRequire('file:///fixture.mjs');" },
     plugins: [{ name: 'local-postgres', setup(builder) {
-      builder.onLoad({ filter: /packages\/db\/src\/index\.ts$/ }, args => {
-        const original = readFileSync(args.path, 'utf8');
-        const start = original.indexOf('export async function query<');
-        const end = original.indexOf('export function assertVerifyFull(');
-        assert.ok(start > 0 && end > start);
-        return { loader: 'ts', contents: original.slice(0, start) + `
-          import { env as fixtureEnv } from 'cloudflare:workers';
-          async function fixtureSql(input) {
-            const response = await fixtureEnv.DISPOSABLE_POSTGRES.fetch('https://fixture.invalid/sql', {
-              method: 'POST', body: JSON.stringify(input), headers: { 'content-type': 'application/json' },
-            });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error);
-            return result;
-          }
-          export async function query(binding, text, values = []) {
-            return fixtureSql({ action: 'query', role: binding.role, text, values });
-          }
-          export async function transaction(binding, work) {
-            const { transactionId } = await fixtureSql({ action: 'begin', role: binding.role });
-            try {
-              const result = await work({ query: (text, values = []) => fixtureSql({ action: 'query', transactionId, text, values }) });
-              await fixtureSql({ action: 'commit', transactionId });
-              return result;
-            } catch (error) { await fixtureSql({ action: 'rollback', transactionId }); throw error; }
-          }
-        ` + original.slice(end) };
-      });
+      builder.onResolve({ filter: /^pg$/ }, () => ({ path: 'fixture-pg', namespace: 'fixture-pg' }));
+      builder.onLoad({ filter: /.*/, namespace: 'fixture-pg' }, () => ({ loader: 'js', contents: `
+        import { env as fixtureEnv } from 'cloudflare:workers';
+        async function fixtureSql(input) {
+          const response = await fixtureEnv.DISPOSABLE_POSTGRES.fetch('https://fixture.invalid/sql', {
+            method: 'POST', body: JSON.stringify(input), headers: { 'content-type': 'application/json' },
+          });
+          const result = await response.json();
+          if (!response.ok) { const error = new Error(result.error); error.code = result.code; throw error; }
+          return result;
+        }
+        export class DatabaseError extends Error {}
+        export class Client {
+          constructor({ connectionString }) { this.role = new URL(connectionString).username; }
+          on() { return this; } removeListener() { return this; }
+          async connect() { this.id = (await fixtureSql({ action: 'connect', role: this.role })).transactionId; }
+          query(text, values = []) { return fixtureSql({ action: 'query', transactionId: this.id, text, values }); }
+          end() { return fixtureSql({ action: 'close', transactionId: this.id }); }
+        }
+      ` }));
     } }],
     stdin: { resolveDir: root, contents: `
       import api from './apps/lythaus-public-api/src/index.ts';
@@ -85,8 +76,9 @@ export async function postModerationFixture(connectionString, bindings) {
   const runtime = new Miniflare(convertV4MiniflareOptions({ workers: [{
     name: 'post-incident-local', modules: true, script: bundle.outputFiles[0].text,
     compatibilityDate: '2026-07-27', compatibilityFlags: ['nodejs_compat'],
-    bindings: { ...bindings, DB_APP_FRESH: { role: 'lythaus_runtime' },
-      DB_JOBS_FRESH: { role: 'lythaus_jobs' }, DB_PRIVACY_FRESH: { role: 'lythaus_privacy' },
+    bindings: { ...bindings, ...Object.fromEntries([['DB_APP_FRESH', 'lythaus_runtime'],
+      ['DB_JOBS_FRESH', 'lythaus_jobs'], ['DB_PRIVACY_FRESH', 'lythaus_privacy']].map(([name, role]) =>
+        [name, { connectionString: 'postgresql://' + role + '@fixture.hyperdrive.local/fixture?sslmode=disable' }])),
       AUTHENTICITY_AI_ENABLED: 'true', AUTHENTICITY_ALPHA_ENABLED: 'false',
       AUTHENTICITY_BETA_ENABLED: 'false', MEDIA_UPLOADS_ENABLED: 'false',
       AUTHENTICITY_TEXT_MODEL: '@cf/openai/gpt-oss-20b', AI_GATEWAY_ID: 'lythaus-ai',
@@ -118,25 +110,41 @@ export async function postModerationFixture(connectionString, bindings) {
             client = new pg.Client({ connectionString, ssl: false, connectionTimeoutMillis: 5000 });
             await client.connect();
             await client.query("SET statement_timeout='5s'");
-            await client.query('SET ROLE ' + input.role);
+            await client.query('SET ROLE ' + input.role); client.fixtureRole = input.role;
           }
           assert.ok(client);
-          if (input.action === 'begin') {
-            await client.query('BEGIN');
+          if (input.action === 'connect') {
             const transactionId = String(++sequence);
             clients.set(transactionId, client);
             return Response.json({ transactionId });
           }
           if (input.action === 'query') {
-            const result = await client.query(input.text, input.values);
-            return Response.json({ rows: result.rows, rowCount: result.rowCount });
+            const diagnostic = { ...input, role: client.fixtureRole, backendPid: client.processID };
+            statements.push(diagnostic);
+            if (duringSql) await duringSql(diagnostic);
+            if (failSql && input.text.includes(failSql.match) && failSql.remaining > 0) {
+              failSql.remaining--; throw new Error('synthetic_interrupted_database_write');
+            }
+            let result;
+            if (simulateSubjectLock && input.text.includes("to_regprocedure('trust.lock_reputation_subject(uuid)')")) {
+              result = { rows: [{ available: true }], rowCount: 1, command: 'SELECT' };
+            } else if (simulateSubjectLock && input.text === 'SELECT status FROM trust.lock_reputation_subject($1::pg_catalog.uuid)') {
+              assert.equal(client.fixtureRole, 'lythaus_jobs');
+              await client.query('RESET ROLE');
+              try { result = await client.query('SELECT status FROM identity.users WHERE id=$1 FOR UPDATE', input.values); }
+              finally { await client.query('SET ROLE lythaus_jobs'); }
+            } else result = await client.query(input.text, input.values);
+            if (afterSql) await afterSql({ ...diagnostic, command: result.command });
+            return Response.json({ rows: result.rows, rowCount: result.rowCount, command: result.command });
           }
-          assert.ok(['commit', 'rollback'].includes(input.action));
-          await client.query(input.action === 'commit' ? 'COMMIT' : 'ROLLBACK');
+          assert.equal(input.action, 'close');
           return Response.json({ completed: true });
-        } catch (error) { return Response.json({ error: error.message }, { status: 500 }); }
+        } catch (error) {
+          sqlErrors.push({ code: error.code, text: input.text, role: client?.fixtureRole });
+          return Response.json({ error: error.message, code: error.code }, { status: 500 });
+        }
         finally {
-          if ((temporary && input.action !== 'begin') || ['commit', 'rollback'].includes(input.action)) {
+          if ((temporary && input.action !== 'connect') || input.action === 'close') {
             clients.delete(input.transactionId);
             await client?.end();
           }
@@ -144,7 +152,8 @@ export async function postModerationFixture(connectionString, bindings) {
       },
     },
   }] }));
-  return { deliveries,
+  return { deliveries, statements, sqlErrors, simulateSubjectLock,
+    set duringSql(value) { duringSql = value; }, set afterSql(value) { afterSql = value; }, set failSql(value) { failSql = value; },
     async modelCallCount() {
       const result = await modelCallMetrics.query(`SELECT count(*)::int AS count FROM system.audit_events
         WHERE action='test.fixture.authenticity_model_called' AND metadata->>'fixtureId'=$1`, [modelCallFixtureId]);

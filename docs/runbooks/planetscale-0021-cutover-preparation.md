@@ -65,6 +65,35 @@ restore-test evidence, live registry, and approved usage ceiling remain
 
 ## Role and configuration evidence required
 
+### Read-only SQL identity preflight
+
+The protected manual workflow
+`.github/workflows/planetscale-cutover-identity-preflight.yml` accepts only
+`release_sha`, which must equal both the checked-out and freshly fetched
+`origin/main` commit. It reads the existing
+`PLANETSCALE_ADMIN_DATABASE_URL`, `PLANETSCALE_SCHEMA_READ_DATABASE_URL`, and
+`PLANETSCALE_API_TOKEN` references from the protected `production`
+environment. Connection URLs are not workflow inputs.
+
+The script performs a PlanetScale `GET` for `main`, checks each branch-qualified
+SQL target against that live branch ID, then opens each SQL connection in a
+read-only transaction with bounded timeouts. Its bounded catalog checks record
+the connected identities and owners of `media.upload_sessions` and
+`system.schema_migrations`, require separate migrator and verifier identities,
+check the migrator's effective owner access, and verify effective visibility
+of index progress for both identities before checking for an active build. It
+reads no application rows. The sanitized artifact contains role names, owner
+names, booleans, version, branch ID, and blockers; it contains no connection
+URLs, passwords, or API token.
+
+A blocked result leaves permission, credential, migration, and provider state
+unchanged. Do not use a boolean override. Any grant or credential correction
+requires its own reviewed approval and existing protected process. A passing
+result covers only this identity preflight; it does not replace the complete
+role/Hyperdrive mapping, registry reconciliation, backup/recovery, cost,
+concurrency, candidate consent, or production review gates above. The workflow
+is not dispatched as part of code validation.
+
 The repository manifest establishes the intended mapping below. It does not
 establish the current usernames or SQL permissions.
 

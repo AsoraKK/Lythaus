@@ -1,13 +1,9 @@
 // ignore_for_file: public_member_api_docs
 
-/// LYTHAUS SUBSCRIPTION SERVICE
+/// LYTHAUS MEMBERSHIP ACCESS SERVICE
 ///
-/// Architecture-only interface for future IAP/payment integration.
-/// Defines the contract the app will use to check subscription status,
-/// start purchases, and restore previous purchases.
-///
-/// When a payment provider is chosen, implement this interface with
-/// provider-specific logic (RevenueCat SDK, StoreKit 2, Google Billing Library).
+/// Reads the current server-issued tier and feed entitlements. The server does
+/// not report payment-provider lifecycle state or payment confirmation.
 library;
 
 import 'package:dio/dio.dart';
@@ -16,123 +12,63 @@ import 'package:dio/dio.dart';
 // Domain Models
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Active subscription status returned by the backend
+/// Current access tier and feed entitlements returned by the backend.
 class SubscriptionStatus {
-  final String userId;
   final String tier;
-  final String status;
-  final String? provider;
-  final DateTime? currentPeriodEnd;
-  final bool cancelAtPeriodEnd;
-  final String accessLabel;
-  final DateTime? manualGrantExpiresAt;
-  final DateTime? manualGrantReviewAt;
   final SubscriptionEntitlements entitlements;
 
-  const SubscriptionStatus({
-    required this.userId,
-    required this.tier,
-    required this.status,
-    this.provider,
-    this.currentPeriodEnd,
-    required this.cancelAtPeriodEnd,
-    this.accessLabel = 'Alpha access',
-    this.manualGrantExpiresAt,
-    this.manualGrantReviewAt,
-    required this.entitlements,
-  });
+  const SubscriptionStatus({required this.tier, required this.entitlements});
 
   factory SubscriptionStatus.fromJson(Map<String, dynamic> json) {
     final rawEntitlements = json['entitlements'];
+    final tier = json['tier'];
+    if (tier is! String || !{'free', 'premium', 'black'}.contains(tier)) {
+      throw const FormatException(
+        'The server returned an unsupported membership access tier.',
+      );
+    }
+    if (rawEntitlements is! Map) {
+      throw const FormatException(
+        'The server response is missing membership entitlements.',
+      );
+    }
+
     return SubscriptionStatus(
-      userId: json['userId']?.toString() ?? '',
-      tier: json['tier']?.toString() ?? 'free',
-      status: json['status']?.toString() ?? 'active',
-      provider: json['provider'] as String?,
-      currentPeriodEnd: json['currentPeriodEnd'] != null
-          ? DateTime.parse(json['currentPeriodEnd'] as String)
-          : null,
-      cancelAtPeriodEnd: json['cancelAtPeriodEnd'] as bool? ?? false,
-      accessLabel: json['accessLabel'] as String? ?? 'Alpha access',
-      manualGrantExpiresAt: json['manualGrantExpiresAt'] != null
-          ? DateTime.parse(json['manualGrantExpiresAt'] as String)
-          : null,
-      manualGrantReviewAt: json['manualGrantReviewAt'] != null
-          ? DateTime.parse(json['manualGrantReviewAt'] as String)
-          : null,
+      tier: tier,
       entitlements: SubscriptionEntitlements.fromJson(
-        rawEntitlements is Map
-            ? Map<String, dynamic>.from(rawEntitlements)
-            : const <String, dynamic>{},
+        Map<String, dynamic>.from(rawEntitlements),
       ),
     );
   }
-
-  /// Whether the user has an active paid subscription
-  bool get isPaid => tier != 'free' && status == 'active';
-
-  /// Whether the subscription is about to expire
-  bool get isExpiring =>
-      cancelAtPeriodEnd &&
-      currentPeriodEnd != null &&
-      currentPeriodEnd!.isAfter(DateTime.now());
 }
 
-/// Tier-based entitlements derived from the subscription
+/// Feed entitlements returned for the current server-issued tier.
 class SubscriptionEntitlements {
-  final int dailyPosts;
-  final int dailyComments;
-  final int dailyReactions;
-  final int dailyAppeals;
-  final int exportCooldownDays;
-  final int maxMediaSizeMB;
-  final int maxMediaPerPost;
   final int maxCustomFeeds;
-  final String newsBoardAccessLevel;
-  final bool newsBoardPreview;
-  final bool postingRestricted;
-  final int rewardLevelCap;
-  final int? rewardOptionsPerLevel;
-  final String rewardChoiceBreadth;
+  final String newsBoardAccess;
 
   const SubscriptionEntitlements({
-    required this.dailyPosts,
-    required this.dailyComments,
-    required this.dailyReactions,
-    required this.dailyAppeals,
-    required this.exportCooldownDays,
-    required this.maxMediaSizeMB,
-    required this.maxMediaPerPost,
     required this.maxCustomFeeds,
-    required this.newsBoardAccessLevel,
-    required this.newsBoardPreview,
-    required this.postingRestricted,
-    required this.rewardLevelCap,
-    required this.rewardOptionsPerLevel,
-    required this.rewardChoiceBreadth,
+    required this.newsBoardAccess,
   });
 
   factory SubscriptionEntitlements.fromJson(Map<String, dynamic> json) {
+    final maxCustomFeeds = json['maxCustomFeeds'];
+    final newsBoardAccess = json['newsBoardAccess'];
+    if (maxCustomFeeds is! int || maxCustomFeeds < 1 || maxCustomFeeds > 3) {
+      throw const FormatException(
+        'The server returned an invalid custom-feed entitlement.',
+      );
+    }
+    if (newsBoardAccess is! String ||
+        (newsBoardAccess != 'none' && newsBoardAccess != 'full')) {
+      throw const FormatException(
+        'The server returned an invalid News Board entitlement.',
+      );
+    }
     return SubscriptionEntitlements(
-      dailyPosts: _asInt(json['dailyPosts']),
-      dailyComments: _asInt(json['dailyComments']),
-      dailyReactions: _asInt(json['dailyReactions']),
-      dailyAppeals: _asInt(json['dailyAppeals']),
-      exportCooldownDays: _asInt(json['exportCooldownDays'], fallback: 30),
-      maxMediaSizeMB: _asInt(json['maxMediaSizeMB']),
-      maxMediaPerPost: _asInt(json['maxMediaPerPost']),
-      maxCustomFeeds: _asInt(json['maxCustomFeeds'], fallback: 1),
-      newsBoardAccessLevel:
-          json['newsBoardAccess']?.toString() ??
-          json['newsBoardAccessLevel']?.toString() ??
-          'none',
-      newsBoardPreview: json['newsBoardPreview'] as bool? ?? false,
-      postingRestricted: json['postingRestricted'] as bool? ?? false,
-      rewardLevelCap: _asInt(json['rewardLevelCap']),
-      rewardOptionsPerLevel: json['rewardOptionsPerLevel'] == null
-          ? null
-          : _asInt(json['rewardOptionsPerLevel']),
-      rewardChoiceBreadth: json['rewardChoiceBreadth'] as String? ?? 'limited',
+      maxCustomFeeds: maxCustomFeeds,
+      newsBoardAccess: newsBoardAccess,
     );
   }
 }
@@ -255,11 +191,4 @@ class BackendSubscriptionService implements SubscriptionService {
       code: 'PROVIDER_NOT_CONFIGURED',
     );
   }
-}
-
-int _asInt(Object? value, {int fallback = 0}) {
-  if (value is num) {
-    return value.toInt();
-  }
-  return int.tryParse(value?.toString() ?? '') ?? fallback;
 }

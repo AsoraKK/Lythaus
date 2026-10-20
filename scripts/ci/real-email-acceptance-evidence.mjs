@@ -1,4 +1,4 @@
-const FORMAT_VERSION = 'lythaus-real-email-acceptance-v2';
+const FORMAT_VERSION = 'lythaus-real-email-acceptance-v3';
 // RFC 9562 UUIDs include the UUIDv7 identifiers emitted by the acceptance
 // coordinator and auth workers. Keep the variant and shape strict.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -128,7 +128,7 @@ function validateCandidateDependencies(value, candidate, expectedDependencies, r
 
 function validateDelivery(flow, flowName) {
   assertObject(flow, `real_email_acceptance_${flowName}_missing`);
-  assertOnlyKeys(flow, ['requestedAt', 'fixtureCreatedAt', 'previousChallenge', 'challenge', 'outbox', 'verification', 'replay', 'reset'], `real_email_acceptance_${flowName}_unknown_field`);
+  assertOnlyKeys(flow, ['requestedAt', 'fixtureCreatedAt', 'previousChallenge', 'cooldown', 'challenge', 'outbox', 'mailboxReceipt', 'verification', 'replay', 'reset'], `real_email_acceptance_${flowName}_unknown_field`);
   timestamp(flow.requestedAt, `real_email_acceptance_${flowName}_requested_at_invalid`);
   if (flow.fixtureCreatedAt !== undefined) timestamp(flow.fixtureCreatedAt, `real_email_acceptance_${flowName}_fixture_created_at_invalid`);
 
@@ -150,7 +150,8 @@ function validateDelivery(flow, flowName) {
   timestamp(flow.outbox.acceptedAt, `real_email_acceptance_${flowName}_provider_accepted_at_invalid`);
 
   assertObject(flow.outbox.lifecycle, `real_email_acceptance_${flowName}_lifecycle_missing`);
-  assertOnlyKeys(flow.outbox.lifecycle, ['eventType', 'providerMessageId', 'occurredAt', 'observedAt'], `real_email_acceptance_${flowName}_lifecycle_unknown_field`);
+  assertOnlyKeys(flow.outbox.lifecycle, ['source', 'eventType', 'providerMessageId', 'occurredAt', 'observedAt'], `real_email_acceptance_${flowName}_lifecycle_unknown_field`);
+  if (flow.outbox.lifecycle.source !== 'cloudflare_email_sending_lifecycle') throw new Error(`real_email_acceptance_${flowName}_provider_receipt_source_invalid`);
   if (flow.outbox.lifecycle.eventType !== 'message.delivered') throw new Error(`real_email_acceptance_${flowName}_delivery_not_observed`);
   identifier(flow.outbox.lifecycle.providerMessageId, `real_email_acceptance_${flowName}_lifecycle_message_id_invalid`);
   if (flow.outbox.lifecycle.providerMessageId !== flow.outbox.providerMessageId) throw new Error(`real_email_acceptance_${flowName}_lifecycle_message_mismatch`);
@@ -169,6 +170,14 @@ function validateDelivery(flow, flowName) {
   timestamp(flow.replay.attemptedAt, `real_email_acceptance_${flowName}_replay_attempted_at_invalid`);
   timestamp(flow.replay.rejectedAt, `real_email_acceptance_${flowName}_replay_rejected_at_invalid`);
 
+  assertObject(flow.mailboxReceipt, `real_email_acceptance_${flowName}_mailbox_receipt_missing`);
+  assertOnlyKeys(flow.mailboxReceipt, ['source', 'provider', 'observedAt'], `real_email_acceptance_${flowName}_mailbox_receipt_unknown_field`);
+  if (flow.mailboxReceipt.source !== 'protected_human_mailbox_link_completion'
+    || !['google', 'microsoft'].includes(flow.mailboxReceipt.provider)) {
+    throw new Error(`real_email_acceptance_${flowName}_mailbox_receipt_source_invalid`);
+  }
+  timestamp(flow.mailboxReceipt.observedAt, `real_email_acceptance_${flowName}_mailbox_receipt_observed_at_invalid`);
+
   assertAtOrAfter(flow.requestedAt, flow.fixtureCreatedAt ?? flow.requestedAt, `real_email_acceptance_${flowName}_requested_before_fixture`);
   assertAtOrAfter(flow.challenge.createdAt, flow.requestedAt, `real_email_acceptance_${flowName}_challenge_before_request`);
   assertAtOrAfter(flow.outbox.createdAt, flow.challenge.createdAt, `real_email_acceptance_${flowName}_outbox_before_challenge`);
@@ -176,6 +185,8 @@ function validateDelivery(flow, flowName) {
   assertAtOrAfter(flow.outbox.lifecycle.occurredAt, flow.outbox.acceptedAt, `real_email_acceptance_${flowName}_delivery_before_provider_acceptance`);
   assertAtOrAfter(flow.outbox.lifecycle.observedAt, flow.outbox.lifecycle.occurredAt, `real_email_acceptance_${flowName}_delivery_observed_before_event`);
   assertAtOrAfter(flow.verification.completedAt, flow.outbox.lifecycle.occurredAt, `real_email_acceptance_${flowName}_verification_before_delivery`);
+  assertAtOrAfter(flow.mailboxReceipt.observedAt, flow.outbox.lifecycle.occurredAt, `real_email_acceptance_${flowName}_mailbox_receipt_before_delivery`);
+  assertAtOrAfter(flow.mailboxReceipt.observedAt, flow.verification.completedAt, `real_email_acceptance_${flowName}_mailbox_receipt_before_link_completion`);
   assertAtOrAfter(flow.verification.consumedAt, flow.verification.completedAt, `real_email_acceptance_${flowName}_challenge_consumed_before_verification`);
   assertAtOrAfter(flow.replay.attemptedAt, flow.verification.completedAt, `real_email_acceptance_${flowName}_replay_before_verification`);
   assertAtOrAfter(flow.replay.rejectedAt, flow.replay.attemptedAt, `real_email_acceptance_${flowName}_replay_rejection_before_attempt`);
@@ -243,9 +254,96 @@ function validateOutboxSummary(evidence) {
   }
   const verification = totals.get('verification');
   const passwordReset = totals.get('password_reset');
-  if (!verification || verification.rowCount !== 2 || !passwordReset || passwordReset.rowCount !== 1) {
+  if (!verification || verification.rowCount !== 4 || !passwordReset || passwordReset.rowCount !== 1) {
     throw new Error('real_email_acceptance_outbox_summary_expected_flows_missing');
   }
+}
+
+function validateExpiredVerification(evidence) {
+  const expired = evidence.expiredVerification;
+  assertObject(expired, 'real_email_acceptance_expired_verification_missing');
+  assertOnlyKeys(expired, [
+    'source', 'challengeId', 'createdAt', 'expiresAt', 'supersededAt', 'provider', 'providerMessageId',
+    'acceptedAt', 'deliveredAt', 'mailboxReceipt', 'attemptedAt', 'rejectedAt', 'responseStatus', 'errorCode', 'ageMode',
+  ], 'real_email_acceptance_expired_verification_unknown_field');
+  if (expired.source !== 'candidate_auth_email_verification_endpoint') throw new Error('real_email_acceptance_expired_verification_source_invalid');
+  identifier(expired.challengeId, 'real_email_acceptance_expired_verification_challenge_id_invalid', { uuid: true });
+  if (expired.provider !== 'cloudflare-email') throw new Error('real_email_acceptance_expired_verification_provider_invalid');
+  identifier(expired.providerMessageId, 'real_email_acceptance_expired_verification_provider_message_id_invalid');
+  if (expired.responseStatus !== 400 || expired.errorCode !== 'verification_token_invalid') throw new Error('real_email_acceptance_expired_verification_rejection_invalid');
+  if (expired.ageMode !== 'controlled_25h_fixture') throw new Error('real_email_acceptance_expired_verification_age_mode_invalid');
+  const createdAt = timestamp(expired.createdAt, 'real_email_acceptance_expired_verification_created_at_invalid');
+  const expiresAt = timestamp(expired.expiresAt, 'real_email_acceptance_expired_verification_expires_at_invalid');
+  const supersededAt = timestamp(expired.supersededAt, 'real_email_acceptance_expired_verification_superseded_at_invalid');
+  const acceptedAt = timestamp(expired.acceptedAt, 'real_email_acceptance_expired_verification_accepted_at_invalid');
+  const deliveredAt = timestamp(expired.deliveredAt, 'real_email_acceptance_expired_verification_delivered_at_invalid');
+  const attemptedAt = timestamp(expired.attemptedAt, 'real_email_acceptance_expired_verification_attempted_at_invalid');
+  const rejectedAt = timestamp(expired.rejectedAt, 'real_email_acceptance_expired_verification_rejected_at_invalid');
+  assertAtOrAfter(expired.expiresAt, expired.createdAt, 'real_email_acceptance_expired_verification_expiry_before_creation');
+  if (attemptedAt - createdAt < 24 * 60 * 60 * 1000 || expiresAt > attemptedAt || supersededAt <= rejectedAt) {
+    throw new Error('real_email_acceptance_expired_verification_not_expired_before_unsuperseded_rejection');
+  }
+  assertAtOrAfter(expired.acceptedAt, evidence.candidate.stagedAt, 'real_email_acceptance_expired_verification_before_candidate_stage');
+  if (deliveredAt < acceptedAt) throw new Error('real_email_acceptance_expired_verification_delivery_before_acceptance');
+  if (deliveredAt > attemptedAt) throw new Error('real_email_acceptance_expired_verification_attempt_before_delivery');
+  if (rejectedAt < attemptedAt) throw new Error('real_email_acceptance_expired_verification_rejection_before_attempt');
+  assertObject(expired.mailboxReceipt, 'real_email_acceptance_expired_verification_mailbox_receipt_missing');
+  assertOnlyKeys(expired.mailboxReceipt, ['source', 'provider', 'observedAt'], 'real_email_acceptance_expired_verification_mailbox_receipt_unknown_field');
+  if (expired.mailboxReceipt.source !== 'protected_human_expired_link_open'
+    || !['google', 'microsoft'].includes(expired.mailboxReceipt.provider)) {
+    throw new Error('real_email_acceptance_expired_verification_mailbox_receipt_source_invalid');
+  }
+  const openedAt = timestamp(expired.mailboxReceipt.observedAt, 'real_email_acceptance_expired_verification_mailbox_receipt_at_invalid');
+  if (openedAt < deliveredAt || openedAt > attemptedAt) throw new Error('real_email_acceptance_expired_verification_mailbox_receipt_order_invalid');
+}
+
+function validateResendCooldown(resend, expired) {
+  const cooldown = resend.cooldown;
+  assertObject(cooldown, 'real_email_acceptance_resend_cooldown_missing');
+  assertOnlyKeys(cooldown, ['source', 'requestedAt', 'retryAfterSeconds', 'responseStatus', 'outboxDelta'], 'real_email_acceptance_resend_cooldown_unknown_field');
+  if (cooldown.source !== 'candidate_api_resend_cooldown_observation') throw new Error('real_email_acceptance_resend_cooldown_source_invalid');
+  timestamp(cooldown.requestedAt, 'real_email_acceptance_resend_cooldown_requested_at_invalid');
+  if (!Number.isInteger(cooldown.retryAfterSeconds) || cooldown.retryAfterSeconds < 1 || cooldown.retryAfterSeconds > 30
+    || cooldown.responseStatus !== 202 || cooldown.outboxDelta !== 0) {
+    throw new Error('real_email_acceptance_resend_cooldown_observation_invalid');
+  }
+  assertAtOrAfter(cooldown.requestedAt, expired.rejectedAt, 'real_email_acceptance_resend_cooldown_before_expired_rejection');
+  assertAtOrAfter(cooldown.requestedAt, resend.previousChallenge.supersededAt, 'real_email_acceptance_resend_cooldown_before_initial_resend');
+  const latestChallengeAt = timestamp(resend.challenge.createdAt, 'real_email_acceptance_resend_challenge_created_at_invalid');
+  if (latestChallengeAt < timestamp(cooldown.requestedAt, 'real_email_acceptance_resend_cooldown_requested_at_invalid') + cooldown.retryAfterSeconds * 1000) {
+    throw new Error('real_email_acceptance_resend_before_cooldown_elapsed');
+  }
+}
+
+function validateAccountSwitch(evidence) {
+  const accountSwitch = evidence.accountSwitch;
+  assertObject(accountSwitch, 'real_email_acceptance_account_switch_missing');
+  const timeFields = [
+    'primaryLoginAt', 'secondaryLoginAt', 'primaryAfterSecondaryLoginAt', 'secondaryLogoutAt',
+    'secondaryRejectedAt', 'primaryAfterSecondaryLogoutAt', 'primaryLogoutAt', 'primaryRejectedAt',
+  ];
+  assertOnlyKeys(accountSwitch, [
+    'source', 'completedAt', 'primaryAccountRef', 'secondaryAccountRef', ...timeFields,
+    'distinctSubjects', 'primarySessionRetainedAfterSecondaryLogin', 'primarySessionRetainedAfterSecondaryLogout',
+    'secondarySessionRevoked', 'primarySessionRevoked',
+  ], 'real_email_acceptance_account_switch_unknown_field');
+  if (accountSwitch.source !== 'candidate_api_session_identity_observation') throw new Error('real_email_acceptance_account_switch_source_invalid');
+  identifier(accountSwitch.primaryAccountRef, 'real_email_acceptance_account_switch_primary_ref_invalid', { uuid: true });
+  identifier(accountSwitch.secondaryAccountRef, 'real_email_acceptance_account_switch_secondary_ref_invalid', { uuid: true });
+  if (accountSwitch.primaryAccountRef === accountSwitch.secondaryAccountRef) throw new Error('real_email_acceptance_account_switch_subjects_not_distinct');
+  if (accountSwitch.distinctSubjects !== true || accountSwitch.primarySessionRetainedAfterSecondaryLogin !== true
+    || accountSwitch.primarySessionRetainedAfterSecondaryLogout !== true || accountSwitch.secondarySessionRevoked !== true
+    || accountSwitch.primarySessionRevoked !== true) throw new Error('real_email_acceptance_account_switch_outcome_invalid');
+  const times = Object.fromEntries(timeFields.map((key) => [key, timestamp(accountSwitch[key], `real_email_acceptance_account_switch_${key}_invalid`)]));
+  const completedAt = timestamp(accountSwitch.completedAt, 'real_email_acceptance_account_switch_completed_at_invalid');
+  if (times.secondaryLoginAt < times.primaryLoginAt
+    || times.primaryAfterSecondaryLoginAt < times.secondaryLoginAt
+    || times.secondaryLogoutAt < times.secondaryLoginAt
+    || times.secondaryRejectedAt < times.secondaryLogoutAt
+    || times.primaryAfterSecondaryLogoutAt < times.secondaryLogoutAt
+    || times.primaryLogoutAt < times.primaryAfterSecondaryLogoutAt
+    || times.primaryRejectedAt < times.primaryLogoutAt
+    || completedAt < times.primaryRejectedAt) throw new Error('real_email_acceptance_account_switch_chronology_invalid');
 }
 
 function validateLifecycleSubscription(evidence) {
@@ -275,12 +373,15 @@ function validateLifecycleSubscription(evidence) {
 }
 
 function validateCompleteEvidence(evidence, releaseSha) {
-  if (evidence.candidateDependencies !== undefined) validateCandidateDependencies(evidence.candidateDependencies, evidence.candidate, undefined, releaseSha);
+  if (evidence.candidateDependencies === undefined) throw new Error('real_email_acceptance_candidate_dependencies_missing');
+  validateCandidateDependencies(evidence.candidateDependencies, evidence.candidate, undefined, releaseSha);
   validateInitialAndAccount(evidence);
   if (evidence.turnstile.status !== 'verified') throw new Error('real_email_acceptance_turnstile_not_verified');
   validateLifecycleSubscription(evidence);
   validateOutboxSummary(evidence);
   for (const flowName of FLOW_NAMES) validateDelivery(evidence[flowName], flowName);
+  validateExpiredVerification(evidence);
+  validateAccountSwitch(evidence);
   assertObject(evidence.login, 'real_email_acceptance_login_missing');
   assertOnlyKeys(evidence.login, ['completedAt'], 'real_email_acceptance_login_unknown_field');
   timestamp(evidence.login.completedAt, 'real_email_acceptance_login_completed_at_invalid');
@@ -312,14 +413,23 @@ function validateCompleteEvidence(evidence, releaseSha) {
 
   const resend = evidence.resendVerification;
   assertObject(resend.previousChallenge, 'real_email_acceptance_resend_previous_challenge_missing');
-  assertOnlyKeys(resend.previousChallenge, ['id', 'createdAt', 'supersededAt'], 'real_email_acceptance_resend_previous_challenge_unknown_field');
+  assertOnlyKeys(resend.previousChallenge, ['id', 'createdAt', 'expiresAt', 'supersededAt'], 'real_email_acceptance_resend_previous_challenge_unknown_field');
   identifier(resend.previousChallenge.id, 'real_email_acceptance_resend_previous_challenge_id_invalid', { uuid: true });
   timestamp(resend.previousChallenge.createdAt, 'real_email_acceptance_resend_previous_challenge_created_at_invalid');
+  timestamp(resend.previousChallenge.expiresAt, 'real_email_acceptance_resend_previous_challenge_expires_at_invalid');
   timestamp(resend.previousChallenge.supersededAt, 'real_email_acceptance_resend_previous_challenge_superseded_at_invalid');
-  if (resend.previousChallenge.id === resend.challenge.id) throw new Error('real_email_acceptance_resend_challenges_not_distinct');
-  assertAtOrAfter(resend.previousChallenge.supersededAt, resend.requestedAt, 'real_email_acceptance_resend_supersede_before_request');
+  if (resend.previousChallenge.id === resend.challenge.id || resend.previousChallenge.id !== evidence.expiredVerification.challengeId) {
+    throw new Error('real_email_acceptance_resend_challenges_not_distinct');
+  }
+  if (resend.previousChallenge.createdAt !== evidence.expiredVerification.createdAt
+    || resend.previousChallenge.expiresAt !== evidence.expiredVerification.expiresAt
+    || resend.previousChallenge.supersededAt !== evidence.expiredVerification.supersededAt) {
+    throw new Error('real_email_acceptance_resend_expired_fixture_mismatch');
+  }
+  assertAtOrAfter(resend.requestedAt, resend.previousChallenge.supersededAt, 'real_email_acceptance_resend_supersede_before_request');
   assertAtOrAfter(resend.challenge.createdAt, resend.previousChallenge.supersededAt, 'real_email_acceptance_resend_new_challenge_before_supersede');
   assertAtOrAfter(resend.replay.attemptedAt, resend.challenge.createdAt, 'real_email_acceptance_resend_old_replay_before_new_challenge');
+  validateResendCooldown(resend, evidence.expiredVerification);
 
   const reset = evidence.passwordReset;
   assertObject(reset.reset, 'real_email_acceptance_password_reset_missing');
@@ -334,6 +444,8 @@ function validateCompleteEvidence(evidence, releaseSha) {
   assertAtOrAfter(reset.reset.replayRejectedAt, reset.reset.replayAttemptedAt, 'real_email_acceptance_password_reset_replay_rejection_before_attempt');
   assertAtOrAfter(reset.reset.oldPasswordRejectedAt, reset.reset.completedAt, 'real_email_acceptance_password_reset_old_password_before_completion');
   assertAtOrAfter(reset.reset.newPasswordAcceptedAt, reset.reset.completedAt, 'real_email_acceptance_password_reset_new_password_before_completion');
+  assertAtOrAfter(evidence.accountSwitch.completedAt, reset.reset.completedAt, 'real_email_acceptance_account_switch_before_reset');
+  assertAtOrAfter(evidence.logout.completedAt, evidence.accountSwitch.completedAt, 'real_email_acceptance_logout_before_account_switch');
 }
 
 export function parseRealEmailAcceptanceEvidence(value, releaseSha, expectedCandidate = {}) {
@@ -347,7 +459,7 @@ export function parseRealEmailAcceptanceEvidence(value, releaseSha, expectedCand
     'candidateDependencies',
     'lifecycleSubscription', 'outboxSummary', 'mailboxProviders',
     'acceptanceAccount', 'turnstile', 'initialVerification', 'resendVerification', 'passwordReset',
-    'login', 'refresh', 'logout',
+    'expiredVerification', 'accountSwitch', 'login', 'refresh', 'logout',
   ], 'real_email_acceptance_evidence_unknown_field');
   if (evidence.formatVersion !== FORMAT_VERSION) throw new Error('real_email_acceptance_evidence_version_invalid');
   if (evidence.source !== 'runtime_observation') throw new Error('real_email_acceptance_evidence_source_invalid');
@@ -378,6 +490,12 @@ export function parseRealEmailAcceptanceEvidence(value, releaseSha, expectedCand
   if (mailboxes.source !== 'dns_mx_observation' || !['google', 'microsoft'].includes(mailboxes.initial)
     || !['google', 'microsoft'].includes(mailboxes.resend) || mailboxes.initial === mailboxes.resend) throw new Error('real_email_acceptance_independent_mailbox_providers_required');
   assertAtOrAfter(mailboxes.observedAt, evidence.candidate.stagedAt, 'real_email_acceptance_mailbox_observation_before_candidate');
+  if (evidence.initialVerification.mailboxReceipt.provider !== mailboxes.initial
+    || evidence.resendVerification.mailboxReceipt.provider !== mailboxes.resend
+    || evidence.passwordReset.mailboxReceipt.provider !== mailboxes.initial
+    || evidence.expiredVerification.mailboxReceipt.provider !== mailboxes.resend) {
+    throw new Error('real_email_acceptance_mailbox_receipt_provider_mismatch');
+  }
   return evidence;
 }
 

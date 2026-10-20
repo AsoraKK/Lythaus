@@ -273,6 +273,8 @@ import 'package:lythaus_api_client/src/model/simple_error.dart';
 import 'package:lythaus_api_client/src/model/storage_usage_get200_response.dart';
 import 'package:lythaus_api_client/src/model/storage_usage_get200_response_storage.dart';
 import 'package:lythaus_api_client/src/model/subscription_status.dart';
+import 'package:lythaus_api_client/src/model/subscription_status401_response.dart';
+import 'package:lythaus_api_client/src/model/subscription_status500_response.dart';
 import 'package:lythaus_api_client/src/model/subscription_status_entitlements.dart';
 import 'package:lythaus_api_client/src/model/suggestion_submission.dart';
 import 'package:lythaus_api_client/src/model/support_error.dart';
@@ -566,6 +568,8 @@ part 'serializers.g.dart';
   StorageUsageGet200Response,
   StorageUsageGet200ResponseStorage,
   SubscriptionStatus,
+  SubscriptionStatus401Response,
+  SubscriptionStatus500Response,
   SubscriptionStatusEntitlements,
   SuggestionSubmission,
   SupportError,
