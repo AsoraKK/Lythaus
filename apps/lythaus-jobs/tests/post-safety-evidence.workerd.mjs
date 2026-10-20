@@ -371,10 +371,10 @@ test('provider receives canonical server body, including private scope; delivery
   assert.deepEqual(await unchangedState(post), state);
 });
 
-test('ordinary evaluation-only-v1 row/case/decision/declaration remains unchanged and does not count as safety completion', async () => {
+test('ordinary rows with synthetic subject-lock support remain unchanged and do not count as safety completion', async () => {
   const post = await created(), ordinary = await postModerationFixture(connectionString, {
     ENVIRONMENT: 'local', EXPECTED_HOSTNAMES: 'api.lythaus.test',
-  });
+  }, { simulateSubjectLock: true });
   try {
     const response = await ordinary.dispatchFetch('https://api.lythaus.test/fixture/queue', { method: 'POST',
       body: JSON.stringify({ eventId: post.source, eventType: 'content.post.created', payload: post.payload }) });
@@ -382,6 +382,9 @@ test('ordinary evaluation-only-v1 row/case/decision/declaration remains unchange
     assert.equal(await ordinary.modelCallCount(), 1);
     const state = await unchangedState(post);
     assert.equal(state['moderation.detector_runs'][0].provider, 'lythaus-authenticity-ai');
+    assert.equal(state['moderation.detector_runs'][0].signal.textReviewEvidence.safety.state, 'ABSTAIN');
+    assert.equal(state['moderation.detector_runs'][0].signal.textReviewEvidence.authorship.state, 'ABSTAIN');
+    assert.equal(state['moderation.detector_runs'][0].signal.textReviewEvidence.publicationEligible, false);
     assert.equal(state['moderation.cases'][0].policy_version, 'evaluation-only-v1');
     assert.equal(state['content.posts'][0].moderation_state, 'under_review');
     assert.equal((await attempt(post)).result.state, 'evidence');
