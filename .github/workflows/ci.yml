@@ -180,6 +180,7 @@ jobs:
       - run: npm run validate:planetscale-migrations
       - run: node scripts/ci/verify-planetscale-production-schema.mjs --manifest-only
       - run: npm run test:planetscale-production-migrations
+      - run: node --test scripts/tests/planetscale-cutover-identity-preflight.test.mjs
       - run: npm run validate:planetscale-extensions
       - run: node --test scripts/tests/provider-audit-contract.test.mjs
       - run: node --test scripts/tests/production-worker-probe.test.mjs

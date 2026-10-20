@@ -54,6 +54,7 @@ jobs:
           set -euo pipefail
           node --check scripts/ci/planetscale-cutover-identity-preflight.mjs
           npm run test:planetscale-production-migrations
+          node --test scripts/tests/planetscale-cutover-identity-preflight.test.mjs
 
       - name: Inspect current main through existing protected credentials
         env:
