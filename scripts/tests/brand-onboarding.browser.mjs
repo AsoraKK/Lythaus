@@ -8,7 +8,7 @@ import {observeRenderHealth,assertRenderHealth} from './brand-render-health.mjs'
 import {compareApprovedArtwork} from './brand-reference.mjs';
 import {assertLoginLayout,assertMatchingLoginLayout,loginFirstPaintPixels,assertLoginFirstPaintPixels} from './brand-login-first-paint.mjs';
 import {refreshUrl,loginFixtureResponse,expectedRefreshConsole} from './brand-login-transport.mjs';
-import {originalCaptureEvents,onboardingCopy,waitForOriginalDwell,waitForSignedOutOnboardingHost,originalCaptureTiming,assertSignedOutHost,assertUntouchedPresentation,assertOnboardingLayout,onboardingPixels,assertOnboardingPaint,assertCompletedRefresh} from './brand-onboarding-contract.mjs';
+import {originalCaptureEvents,onboardingCopy,waitForOriginalDwell,waitForSignedOutLoginHost,waitForSignedOutOnboardingHost,originalCaptureTiming,assertSignedOutHost,assertUntouchedPresentation,assertOnboardingLayout,onboardingPixels,assertOnboardingPaint,assertCompletedRefresh} from './brand-onboarding-contract.mjs';
 
 const {PNG}=createRequire(import.meta.url)('playwright-core/lib/utilsBundle');
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -105,6 +105,11 @@ export async function runOnboardingCase({browser,engine,origin,referenceOrigin,t
   await page.waitForFunction(()=>window.__onboardingObservation.firstFrameAt!==null&&typeof window.__readBrandLoginLayout==='function'&&JSON.parse(window.__readBrandLoginLayout()).brands.length===1,null,{polling:50});
   const firstFrame=await page.evaluate(()=>window.__onboardingObservation.firstFrameAt),images=[];
   result.firstFrameAt=firstFrame;
+  boundary='wait for settled signed-out login host before original captures';
+  await waitForSignedOutLoginHost(page);
+  result.loginReadiness=await readState(page,'login',true);
+  assertSignedOutHost(result.loginReadiness.host);
+  result.loginReadinessTransport=assertCompletedRefresh(requests,await health(page),result.loginReadiness.epochMs);
   for(const dwell of [250,5250]){boundary=`capture login at ${dwell}ms`;images.push(await originalCapture(observation,condition,result,'login',dwell,firstFrame,output,name,true));}
   boundary='verify settled signed-out login';
   result.settledHost=await readState(page,'login',true);assertSignedOutHost(result.settledHost.host);

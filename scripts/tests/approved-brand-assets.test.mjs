@@ -103,6 +103,19 @@ test('named admin headers use approved standalone wordmarks, never combined lock
   assert.ok(!nav.includes('lockup'));
 });
 
+test('app social previews reuse the standalone wordmark card', () => {
+  const asset = '/brand/lythaus-v1/lythaus-social-card-1200x630.78f698ef4283.png';
+  const card = read('apps/marketing-site/public' + asset);
+  assert.equal(sha(card), '78f698ef4283dcc19de07672fe95bbfd6655da04bc45f93fdc7ceff181402eab');
+  assert.deepEqual(pngSize(card), [1200, 630]);
+  const html = read('web/index.html').toString();
+  for (const [attribute, name] of [['property', 'og:image'], ['name', 'twitter:image']]) {
+    assert.ok(html.includes(`<meta ${attribute}="${name}" content="https://lythaus.co${asset}">`));
+    assert.ok(html.includes(`<meta ${attribute}="${name}:alt" content="Lythaus wordmark">`));
+  }
+  assert.ok(!html.includes('lythaus-social-card-1200x630.c20d3b1b40a8.png'));
+});
+
 test('fingerprinted assets are immutable while stable aliases and documents revalidate', () => {
   for (const file of ['web/_headers', 'apps/control-panel/public/_headers']) {
     const headers = read(file).toString();
