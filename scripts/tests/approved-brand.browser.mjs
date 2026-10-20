@@ -14,6 +14,7 @@ import {assertBrandCaseMatrix} from './brand-case-matrix.mjs';
 import {loginFixtureResponse,expectedRefreshConsole,refreshUrl,logoutUrl,discoverUrl} from './brand-login-transport.mjs';
 import {assertLoginLayout,assertMatchingLoginLayout,loginFirstPaintPixels,assertLoginFirstPaintPixels} from './brand-login-first-paint.mjs';
 import {waitForLoginFunction} from './brand-login-wait-diagnostics.mjs';
+import {installLoginDraftTrace,captureLoginDraftTrace} from './brand-login-draft.mjs';
 import {runOnboardingCase,onboardingInventory} from './brand-onboarding.browser.mjs';
 import {verifyNativeArtworkReference} from './brand-native-reference-controls.mjs';
 
@@ -190,6 +191,7 @@ try {
           window.__brandFirstFrameAt = null;
           window.addEventListener('flutter-first-frame',()=>{window.__brandFirstFrameAt ??= performance.now();});
         });
+        if(login)await installLoginDraftTrace(context);
         await context.route('**/*', async route => {
           const request=route.request(),url=request.url(),method=request.method();
           if (new URL(url).origin === origin) return route.continue();
@@ -211,7 +213,7 @@ try {
           const error={text:message.text(),url:message.location().url};
           if(login&&expectedRefreshConsole(error,requests))expectedConsoleErrors.push(error);else errors.push(error.text);
         } });
-        let initialPaint;
+        let initialPaint,draftTrace;
         try {
           await page.goto(login ? origin+'/login' : origin + '/?screen=' + screen + '&theme=' + theme + '&scale=' + scale);
           if(login)initialPaint=await firstPaint(page,name,scale,theme);
@@ -235,6 +237,7 @@ try {
           await page.waitForTimeout(300);
           const artworkFidelity=await capture(page, engine + '-' + screen + '-' + theme + '-' + width);
           if (screen === 'login') {
+            draftTrace=await captureLoginDraftTrace(page,'before-email-click');
             const email = page.getByRole('textbox', { name: 'Email', exact: true });
             await email.click();
             await waitForLoginFunction(page,'email-input-focus-after-click',() => document.activeElement instanceof HTMLInputElement);
@@ -242,6 +245,7 @@ try {
             await page.setViewportSize({ width: width === 1440 ? 1024 : width + 20, height: 960 });
             await page.setViewportSize({ width, height: 960 });
             await waitForLoginFunction(page,'active-input-draft-after-resize',() => document.activeElement?.value === 'draft@example.invalid');
+            draftTrace=await captureLoginDraftTrace(page,'after-draft-resize-check');
           }
           await verifyIcons(page, context);
           if (screen !== 'shell') {
@@ -268,10 +272,11 @@ try {
           assert.deepEqual(blocked, []);
           const renderHealth=await health(page);
           assertRenderHealth(login?checkedLoginHealth(renderHealth,expectedConsoleErrors,requests):renderHealth);
-          results.push({ screen, theme, width, scale, status: 'passed', artworkFidelity, health:renderHealth, ...(login?{firstPaint:initialPaint,requests,expectedConsoleErrors,guestDestination:new URL(page.url()).pathname}:{}) });
+          results.push({ screen, theme, width, scale, status: 'passed', artworkFidelity, health:renderHealth, ...(login?{firstPaint:initialPaint,draftTrace,requests,expectedConsoleErrors,guestDestination:new URL(page.url()).pathname}:{}) });
         } catch (error) {
+          if(login)draftTrace=await captureLoginDraftTrace(page,'failure').catch(observationError=>({observationError:String(observationError)}));
           await capture(page, name + '-failed', false).catch(()=>{});
-          results.push({ screen, theme, width, scale, status: 'failed', error: error.message, errors, blocked, requests, expectedConsoleErrors, health:await health(page).catch(error=>({observationError:error.message})) });
+          results.push({ screen, theme, width, scale, status: 'failed', error: error.message, draftTrace, errors, blocked, requests, expectedConsoleErrors, health:await health(page).catch(error=>({observationError:error.message})) });
         } finally { await saveCase(results.at(-1)); await context.close(); }
       }
       if (selectedCase && selectedCase !== `admin-${theme}-${width}`) continue;
