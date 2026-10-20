@@ -8,6 +8,7 @@ import { postModerationFixture, postReviewTestOptions } from './post-moderation-
 import { PROPOSED_COMMUNITY_APPEAL_RULES } from '../../../packages/contracts/src/monthly-peer-appeal-policy.ts';
 import { MONTHLY_REPUTATION_POLICY_VERSION } from '../../../packages/contracts/src/monthly-reputation-policy.ts';
 import { APPEAL_POLICY } from '../../../packages/contracts/src/appeal-policy.ts';
+import { assertTextReviewBundle } from './text-review-pg17-assertions.mjs';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
 const requiresAccountLock = await postReviewTestOptions(connectionString);
@@ -474,6 +475,7 @@ async function revisedCommentAppeal() {
     [comment.commentId, original.eventId])).rows[0];
   assert.ok(caseRecord); assert.equal(caseRecord.state, 'open'); assert.equal(caseRecord.outcome, 'queue');
   assert.equal(caseRecord.policy_version, 'evaluation-only-v1'); assert.equal(caseRecord.decided_by, null);
+  await assertTextReviewBundle(client, comment.commentId, original.eventId, 'comment');
   const audit = (await client.query(`SELECT id,correlation_id FROM system.audit_events
     WHERE action='moderation.comment.review_requested' AND target_id=$1 AND correlation_id=$2`, [comment.commentId, original.eventId])).rows[0];
   assert.deepEqual(audit, { id: original.eventId, correlation_id: original.eventId });
@@ -519,6 +521,7 @@ for (const first of ['jobs', 'closure']) test(`real comment review and stale com
     assert.equal(outcome.restoration, 'content_changed_or_deleted');
     const stored = (await client.query('SELECT body,moderation_state,moderation_source_event_id FROM content.comments WHERE id=$1', [item.commentId])).rows[0];
     assert.deepEqual(stored, { body: 'Synthetic revised queued comment', moderation_state: 'under_review', moderation_source_event_id: item.event.eventId });
+    await assertTextReviewBundle(client, item.commentId, item.event.eventId, 'comment');
     const oldCase = (await client.query('SELECT state FROM moderation.cases WHERE id=$1', [item.caseId])).rows[0];
     assert.equal(oldCase.state, 'superseded');
     const newCase = (await client.query(`SELECT c.id,c.state,d.outcome FROM moderation.cases c JOIN moderation.decisions d ON d.case_id=c.id

@@ -8,6 +8,7 @@ import { communityClassifierEvidence, communityDigest } from '../../../packages/
 import { identicalCommunityAppealOverride } from '../../../packages/db/src/community-appeal-closure.ts';
 import { postModerationFixture, postReviewTestOptions } from './post-moderation-fixture.mjs';
 import { installProposedPostReviewCapability, postReviewAuthorLockSignature } from './post-review-author-lock-fixture.mjs';
+import { assertTextReviewBundle } from './text-review-pg17-assertions.mjs';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
 const requiresAccountLock = await postReviewTestOptions(connectionString);
@@ -102,6 +103,7 @@ for (const mode of ['human', 'ai_assisted']) for (const outcome of ['pass', 'rev
     assert.deepEqual(declaration, { public_label: 'Under review', review_required: true });
     const decision = (await client.query('SELECT outcome,policy_version FROM moderation.decisions WHERE case_id IN (SELECT id FROM moderation.cases WHERE content_id=$1)', [item.post.id])).rows[0];
     assert.deepEqual(decision, { outcome: 'queue', policy_version: 'evaluation-only-v1' });
+    await assertTextReviewBundle(client, item.post.id, item.event.eventId);
     const owner = await call(item.token, 'GET', '/api/posts/' + item.post.id + '/owner-view');
     assert.equal(owner.status, 200); assert.equal((await owner.json()).post.moderationState, 'under_review');
     assert.match(owner.headers.get('cache-control'), /private.*no-store/); await pending(item);
@@ -147,6 +149,26 @@ test('revised submissions bind new event and body hash while stale delivery is i
     WHERE aggregate_id=$1 AND event_type='content.post.updated'`, [item.post.id])).rows[0];
   assert.deepEqual(await deliver(event), requiresAccountLock.skip ? { ack: 0, retry: 1 } : { ack: 1, retry: 0 });
   assert.equal((await rows({ ...item, event })).detectors, requiresAccountLock.skip ? 0 : 1); await pending(item);
+});
+
+for (const phase of ['before', 'after']) test(`text evidence binding interruption ${phase} UPDATE rolls back the review bundle and retries`, requiresAccountLock, async () => {
+  const item = await created();
+  if (phase === 'before') fixture.failSql = { match: 'UPDATE moderation.detector_runs r', remaining: 1 };
+  else fixture.afterSql = input => {
+    if (input.text.includes('UPDATE moderation.detector_runs r')) {
+      fixture.afterSql = undefined; throw new Error('synthetic_after_text_binding');
+    }
+  };
+  try { assert.deepEqual(await deliver(item.event), { ack: 0, retry: 1 }); }
+  finally { fixture.failSql = undefined; fixture.afterSql = undefined; }
+  const failed = await rows(item);
+  assert.deepEqual([failed.detectors, failed.cases, failed.provenance, failed.activity, failed.inbox], [0, 0, 0, 0, 0]);
+  await pending(item);
+  assert.deepEqual(await deliver(item.event), { ack: 1, retry: 0 });
+  const evidence = await assertTextReviewBundle(client, item.post.id, item.event.eventId);
+  assert.deepEqual(await deliver(item.event), { ack: 1, retry: 0 });
+  assert.equal((await assertTextReviewBundle(client, item.post.id, item.event.eventId)).evidenceHash, evidence.evidenceHash);
+  await pending(item);
 });
 
 test('preflight commits before inference; final Jobs EXECUTE, ordered cases and post fence one complete review bundle', requiresAccountLock, async () => {
