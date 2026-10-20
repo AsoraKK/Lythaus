@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { planetScaleServiceTokenAuthorizationHeader } from '../planetscale/service-token-auth.mjs';
@@ -22,6 +23,52 @@ const evidence = {
 
 function addBlockers(items) {
   for (const blocker of items) if (!blockers.includes(blocker)) blockers.push(blocker);
+}
+
+function read0021RestoreEvidenceRecord(backupId) {
+  if (typeof backupId !== 'string' || !/^[A-Za-z0-9_-]+$/.test(backupId)) return { record: null, recordPath: null };
+  const relativePath = path.join('docs/evidence/production-cutover/0021-restore-evidence', `${backupId}.json`);
+  try {
+    const recordPath = path.join(root, relativePath);
+    const trackedRecord = spawnSync('git', ['ls-files', '--error-unmatch', '--', relativePath], {
+      cwd: root, encoding: 'utf8', timeout: 5_000, maxBuffer: 10_000,
+    });
+    if (trackedRecord.status !== 0 || trackedRecord.stdout.trim() !== relativePath) return { record: null, recordPath: relativePath };
+    const record = JSON.parse(fs.readFileSync(recordPath, 'utf8'));
+    return {
+      record,
+      recordPath: relativePath,
+      evidenceArtifact: read0021RestoreEvidenceArtifact(record),
+    };
+  } catch {
+    return { record: null, recordPath: relativePath };
+  }
+}
+
+function read0021RestoreEvidenceArtifact(record) {
+  const relativePath = record?.artifactPath;
+  const allowedPrefix = 'docs/evidence/production-cutover/0021-restore-evidence/artifacts/';
+  if (typeof relativePath !== 'string' || !relativePath.startsWith(allowedPrefix)
+    || path.posix.normalize(relativePath) !== relativePath || relativePath.includes('\\')) {
+    return { path: typeof relativePath === 'string' ? relativePath : null, bytes: null };
+  }
+  const allowedRoot = path.resolve(root, 'docs/evidence/production-cutover/0021-restore-evidence/artifacts');
+  const artifactPath = path.resolve(root, relativePath);
+  if (!artifactPath.startsWith(`${allowedRoot}${path.sep}`)) return { path: relativePath, bytes: null };
+  try {
+    const trackedArtifact = spawnSync('git', ['ls-files', '--error-unmatch', '--', relativePath], {
+      cwd: root, encoding: 'utf8', timeout: 5_000, maxBuffer: 10_000,
+    });
+    if (trackedArtifact.status !== 0 || trackedArtifact.stdout.trim() !== relativePath) return { path: relativePath, bytes: null };
+    const fileStat = fs.lstatSync(artifactPath);
+    if (!fileStat.isFile() || fileStat.isSymbolicLink()) return { path: relativePath, bytes: null };
+    const resolvedPath = fs.realpathSync(artifactPath);
+    if (!resolvedPath.startsWith(`${allowedRoot}${path.sep}`)) return { path: relativePath, bytes: null };
+    const bytes = fs.readFileSync(resolvedPath);
+    return { path: relativePath, bytes, sha256: createHash('sha256').update(bytes).digest('hex') };
+  } catch {
+    return { path: relativePath, bytes: null };
+  }
 }
 
 function report() {
@@ -59,8 +106,23 @@ async function planetscaleGet(resourcePath, authorization) {
 async function inspectProviderEvidence() {
   const token = process.env.PLANETSCALE_API_TOKEN ?? '';
   const backupId = resolve0021BackupId(process.env.PLANETSCALE_0021_BACKUP_ID, process.env.PLANETSCALE_PRODUCTION_BACKUP_ID);
+  const assessProviderEvidence = (branch, backup) => {
+    const restoreEvidenceInput = read0021RestoreEvidenceRecord(backupId);
+    const assessment = assessPlanetScaleBackupEvidence({
+      branch,
+      backup,
+      backupId,
+      restoreEvidenceRecord: restoreEvidenceInput.record,
+      restoreEvidenceRecordPath: restoreEvidenceInput.recordPath,
+      restoreEvidenceArtifact: restoreEvidenceInput.evidenceArtifact,
+      now: Date.now(),
+    });
+    evidence.planetscale = assessment;
+    addBlockers(assessment.blockers);
+  };
   if (!token) {
     blockers.push('PLANETSCALE_API_TOKEN_missing_for_read_branch_and_backup_evidence');
+    assessProviderEvidence(null, null);
     return;
   }
   if (!backupId) blockers.push('PLANETSCALE_0021_BACKUP_ID_or_PLANETSCALE_PRODUCTION_BACKUP_ID_missing');
@@ -69,6 +131,7 @@ async function inspectProviderEvidence() {
     authorization = planetScaleServiceTokenAuthorizationHeader(token);
   } catch {
     blockers.push('PLANETSCALE_API_TOKEN_invalid_format');
+    assessProviderEvidence(null, null);
     return;
   }
   const base = `/organizations/${encodeURIComponent(process.env.PLANETSCALE_ORGANIZATION ?? 'lythaus')}/databases/${encodeURIComponent(process.env.PLANETSCALE_DATABASE ?? 'lythaus-core')}/branches/main`;
@@ -82,13 +145,10 @@ async function inspectProviderEvidence() {
   if (backupResult.status !== 'fulfilled') {
     blockers.push(`planetscale_backup_read_failed:${backupResult.reason?.message === 'provider_http_403' ? 'http_403' : backupResult.reason?.message === 'provider_http_401' ? 'http_401' : 'unavailable'}`);
   }
-  if (branchResult.status === 'fulfilled' && backupResult.status === 'fulfilled') {
-    const assessment = assessPlanetScaleBackupEvidence({ branch: branchResult.value, backup: backupResult.value, backupId, now: Date.now() });
-    evidence.planetscale = assessment;
-    addBlockers(assessment.blockers);
-  } else {
-    evidence.planetscale = { status: 'unavailable' };
-  }
+  assessProviderEvidence(
+    branchResult.status === 'fulfilled' ? branchResult.value : null,
+    backupResult.status === 'fulfilled' ? backupResult.value : null,
+  );
 }
 
 function connectionConfig(raw, purpose) {
