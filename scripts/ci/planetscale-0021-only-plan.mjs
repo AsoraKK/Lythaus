@@ -24,6 +24,19 @@ function addBlockers(items) {
   for (const blocker of items) if (!blockers.includes(blocker)) blockers.push(blocker);
 }
 
+function read0021RestoreEvidenceRecord(backupId) {
+  if (typeof backupId !== 'string' || !/^[A-Za-z0-9_-]+$/.test(backupId)) return { record: null, recordPath: null };
+  const relativePath = path.join('docs/evidence/production-cutover/0021-restore-evidence', `${backupId}.json`);
+  try {
+    return {
+      record: JSON.parse(fs.readFileSync(path.join(root, relativePath), 'utf8')),
+      recordPath: relativePath,
+    };
+  } catch {
+    return { record: null, recordPath: relativePath };
+  }
+}
+
 function report() {
   const output = {
     ...evidence,
@@ -59,8 +72,22 @@ async function planetscaleGet(resourcePath, authorization) {
 async function inspectProviderEvidence() {
   const token = process.env.PLANETSCALE_API_TOKEN ?? '';
   const backupId = resolve0021BackupId(process.env.PLANETSCALE_0021_BACKUP_ID, process.env.PLANETSCALE_PRODUCTION_BACKUP_ID);
+  const restoreEvidenceInput = read0021RestoreEvidenceRecord(backupId);
+  const assessProviderEvidence = (branch, backup) => {
+    const assessment = assessPlanetScaleBackupEvidence({
+      branch,
+      backup,
+      backupId,
+      restoreEvidenceRecord: restoreEvidenceInput.record,
+      restoreEvidenceRecordPath: restoreEvidenceInput.recordPath,
+      now,
+    });
+    evidence.planetscale = assessment;
+    addBlockers(assessment.blockers);
+  };
   if (!token) {
     blockers.push('PLANETSCALE_API_TOKEN_missing_for_read_branch_and_backup_evidence');
+    assessProviderEvidence(null, null);
     return;
   }
   if (!backupId) blockers.push('PLANETSCALE_0021_BACKUP_ID_or_PLANETSCALE_PRODUCTION_BACKUP_ID_missing');
@@ -69,6 +96,7 @@ async function inspectProviderEvidence() {
     authorization = planetScaleServiceTokenAuthorizationHeader(token);
   } catch {
     blockers.push('PLANETSCALE_API_TOKEN_invalid_format');
+    assessProviderEvidence(null, null);
     return;
   }
   const base = `/organizations/${encodeURIComponent(process.env.PLANETSCALE_ORGANIZATION ?? 'lythaus')}/databases/${encodeURIComponent(process.env.PLANETSCALE_DATABASE ?? 'lythaus-core')}/branches/main`;
@@ -82,13 +110,10 @@ async function inspectProviderEvidence() {
   if (backupResult.status !== 'fulfilled') {
     blockers.push(`planetscale_backup_read_failed:${backupResult.reason?.message === 'provider_http_403' ? 'http_403' : backupResult.reason?.message === 'provider_http_401' ? 'http_401' : 'unavailable'}`);
   }
-  if (branchResult.status === 'fulfilled' && backupResult.status === 'fulfilled') {
-    const assessment = assessPlanetScaleBackupEvidence({ branch: branchResult.value, backup: backupResult.value, backupId, now: Date.now() });
-    evidence.planetscale = assessment;
-    addBlockers(assessment.blockers);
-  } else {
-    evidence.planetscale = { status: 'unavailable' };
-  }
+  assessProviderEvidence(
+    branchResult.status === 'fulfilled' ? branchResult.value : null,
+    backupResult.status === 'fulfilled' ? backupResult.value : null,
+  );
 }
 
 function connectionConfig(raw, purpose) {

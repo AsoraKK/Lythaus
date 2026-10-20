@@ -33,6 +33,17 @@ passed or satisfy the separate protection and recovery gates.
 The provider's 102-table count and schema update timestamp do not establish
 the exact migration registry or whether 0021 has run.
 
+The retained [October 18 restore receipt](../evidence/production-cutover/0021-restore-evidence/pa4t6j6s07b7.json)
+records source `main` ID `vqa2g2xc9wsl`, the UI-selected backup
+`pa4t6j6s07b7`, restored branch `n3wdm03vwenu`, its creation time, and the
+verification window. It establishes only schema/extensions/indexes and the
+canonical registry through 0020. Independent backup binding, effective runtime
+privileges, application smoke, accepted RPO/RTO and the independent recovery
+destination remain unresolved; the receipt has no evidence review. Owner
+approval to delete the test branch does not close these gates. The planner
+retains this hash-checked historical record but blocks on its missing scope,
+review and unresolved gates.
+
 The available PlanetScale API-token value fails the existing `ID:token`
 validator before any network request. No role/backup request was made with an
 alternative authorization format. Cloudflare's GET for the first existing
@@ -147,11 +158,15 @@ dispatch a workflow or mutate a provider.
    Check existing successful CI evidence at that SHA; do not rerun it to poll.
 2. Complete the read-only mapping/catalog packet above and identify the exact
    backup ID. Verify source branch ID, successful completion, creation/expiry,
-   deletion protection, retention and restore evidence. A checklist marker
-   alone is not a successful restore test. Inspect the independent destination
-   and backup-health evidence separately. This cutover step authorizes no
-   restore or export; recovery actions retain their separately scoped target,
-   cost and approval requirements, and acceptance requires verified results.
+   deletion protection, retention and restore evidence. Treat
+   `restore_checklist_completed_at` as informational; it refers to the restore
+   checklist on a restored replacement branch, not source `main` recoverability.
+   Save the reviewed, backup-ID-keyed record described in the
+   [production migration runbook](planetscale-production-migrations.md),
+   including the independent destination and backup-health evidence. This
+   cutover step authorizes no restore or export; recovery actions retain their
+   separately scoped target, cost and approval requirements, and acceptance
+   requires verified results.
 3. Keep the existing PS-5 single-node topology for this `0021-only` maintenance
    path, with no HA upgrade or topology change, under the 2026-10-18 owner
    decision above. This is not general HA acceptance or execution approval.

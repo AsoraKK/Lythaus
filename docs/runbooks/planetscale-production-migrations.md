@@ -66,13 +66,31 @@ administrative database URL or the service-token role-creation credentials.
 
 The PlanetScale API token must already have read access to branches and
 backups. The plan requires `main` to be PostgreSQL, ready, production-marked,
-not deleted, and deletion-protected. It also requires the provider's
-`restore_checklist_completed_at` marker. PlanetScale defines that marker as
-the time a user last marked the backup restore checklist complete; it does not
-prove that a restore was tested. The selected backup must match the requested
-ID, be successful and deletion-protected, belong to `main`, be undeleted, and
-remain unexpired. These checks use the [PlanetScale branch API](https://planetscale.com/docs/api/reference/get_branch)
-and [backup API](https://planetscale.com/docs/api/reference/get_backup).
+not deleted, and deletion-protected. The branch API's
+`restore_checklist_completed_at` is informational: it records when a user
+marked the restore checklist complete, and is not proof that source `main` is
+recoverable. PlanetScale describes that checklist as a guide on branches
+restored from backups ([changelog](https://planetscale.com/changelog/backup-restore-checklist),
+[branch API](https://planetscale.com/docs/api/reference/get_branch)).
+
+The selected backup must match the requested ID, be successful and
+deletion-protected, belong to `main`, be undeleted, and remain unexpired. The
+plan also requires a reviewed restore-evidence record at
+`docs/evidence/production-cutover/0021-restore-evidence/<backup-id>.json`.
+Its source branch ID and selected backup ID must match the live provider reads;
+the restored branch ID is retained as historical identity even after that test
+branch is deleted. The record includes a verification timestamp, the SHA-256
+of the underlying evidence artifact, its own content hash, reviewer and review
+reference, verified scope, and unresolved gates. A hash mismatch, stale or
+future timestamp, missing required scope, or any unresolved gate blocks the
+plan. Required scope covers independent backup-to-restore binding, restore
+completion, extensions/indexes, canonical migration registry, effective
+runtime privileges, application smoke, accepted RPO/RTO, and the independent
+recovery destination. It does not require full-data parity. See the
+[restore runbook](planetscale-restore.md) for how to gather the operational
+evidence; the record is reviewed and committed append-only before use.
+
+These checks also use the [PlanetScale backup API](https://planetscale.com/docs/api/reference/get_backup).
 
 The target identity carries the PlanetScale database slug and branch ID
 separately from the physical PostgreSQL database name and origin fingerprint.

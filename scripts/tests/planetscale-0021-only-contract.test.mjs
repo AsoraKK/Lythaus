@@ -1,15 +1,19 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import parsePgConnectionString from 'pg-connection-string';
 import test from 'node:test';
 import { expectedMigrationPrefix, loadApprovedMigrations } from '../ci/planetscale-migration-manifest.mjs';
 import {
   assess0021ExecutionConsent,
   assess0021RegistryState,
+  assess0021RestoreEvidence,
   assessOperatorCostEstimate,
   assessPlanetScaleBackupEvidence,
+  hash0021RestoreEvidenceRecord,
   is0021PlanReadyOutput,
   MIGRATION_0020,
   MIGRATION_0021,
+  REQUIRED_0021_RESTORE_SCOPE,
   resolve0021BackupId,
   serialize0021PlanReadyOutput,
 } from '../ci/planetscale-0021-only-contract.mjs';
@@ -35,6 +39,20 @@ const validBackup = {
   deleted_at: null, protected: true,
   database_branch: { id: 'main-branch-id', name: 'main', deleted_at: null },
 };
+const validRestoreEvidence = () => {
+  const record = {
+    schemaVersion: 'lythaus-0021-restore-evidence-v1',
+    sourceBranch: { id: 'main-branch-id', name: 'main' },
+    selectedBackupId: 'backup-123',
+    restoredBranch: { id: 'restored-branch-id', state: 'deleted', createdAt: '2026-10-16T13:30:00.000Z' },
+    verifiedAt: '2026-10-16T14:00:00.000Z',
+    evidenceSha256: 'a'.repeat(64),
+    verifiedScope: [...REQUIRED_0021_RESTORE_SCOPE],
+    unresolvedGates: [],
+    review: { reviewedAt: '2026-10-16T14:10:00.000Z', reviewedBy: 'operator@example.test', reference: 'review PR #123' },
+  };
+  return { ...record, recordSha256: hash0021RestoreEvidenceRecord(record) };
+};
 
 test('0021 execution consent requires an exact candidate SHA and an approval reference', () => {
   const valid = { releaseSha: 'a'.repeat(40), approvedSha: 'a'.repeat(40), approvalReference: 'owner execution approval record' };
@@ -48,22 +66,103 @@ test('0021 execution consent requires an exact candidate SHA and an approval ref
   assert.equal(assess0021ExecutionConsent({ releaseSha: valid.releaseSha, approvalReference: 'maintenance gap approved' }).ok, false);
 });
 
-test('accepts only fresh, protected backup evidence for the ready protected production main branch', () => {
-  const evidence = assessPlanetScaleBackupEvidence({ branch: validBranch, backup: validBackup, backupId: validBackup.id, now: Date.parse('2026-10-17T00:00:00Z') });
+test('accepts protected source and backup evidence with a complete reviewed restore record', () => {
+  const evidence = assessPlanetScaleBackupEvidence({
+    branch: validBranch, backup: validBackup, backupId: validBackup.id, restoreEvidenceRecord: validRestoreEvidence(),
+    now: Date.parse('2026-10-17T00:00:00Z'),
+  });
   assert.equal(evidence.ok, true);
-  assert.equal(evidence.branch.restoreChecklistSemantics.includes('does not prove a restore test'), true);
+  assert.equal(evidence.restoreEvidence.ok, true);
+  assert.equal(evidence.restoreEvidence.restoredBranch.state, 'deleted');
+  assert.match(evidence.branch.restoreChecklistSemantics, /informational marker/i);
+  const noSourceChecklistMarker = assessPlanetScaleBackupEvidence({
+    branch: { ...validBranch, restore_checklist_completed_at: null },
+    backup: validBackup,
+    backupId: validBackup.id,
+    restoreEvidenceRecord: validRestoreEvidence(),
+    now: Date.parse('2026-10-17T00:00:00Z'),
+  });
+  assert.equal(noSourceChecklistMarker.ok, true);
+  assert.equal(noSourceChecklistMarker.branch.restoreChecklistMarkedAt, null);
   for (const override of [
     { branch: { ...validBranch, production: false } },
     { branch: { ...validBranch, deleted_at: undefined } },
-    { branch: { ...validBranch, restore_checklist_completed_at: null } },
     { backup: { ...validBackup, state: 'running' } },
     { backup: { ...validBackup, expires_at: '2026-10-16T23:59:59Z' } },
     { backup: { ...validBackup, protected: false } },
     { backup: { ...validBackup, database_branch: { ...validBackup.database_branch, name: 'development' } } },
   ]) {
-    const result = assessPlanetScaleBackupEvidence({ branch: override.branch ?? validBranch, backup: override.backup ?? validBackup, backupId: validBackup.id, now: Date.parse('2026-10-17T00:00:00Z') });
+    const result = assessPlanetScaleBackupEvidence({
+      branch: override.branch ?? validBranch,
+      backup: override.backup ?? validBackup,
+      backupId: validBackup.id,
+      restoreEvidenceRecord: validRestoreEvidence(),
+      now: Date.parse('2026-10-17T00:00:00Z'),
+    });
     assert.equal(result.ok, false);
   }
+});
+
+test('blocks absent, mismatched, stale, incomplete, unreviewed, or tampered restore evidence', () => {
+  const now = Date.parse('2026-10-17T00:00:00Z');
+  const assess = record => assessPlanetScaleBackupEvidence({ branch: validBranch, backup: validBackup, backupId: validBackup.id, restoreEvidenceRecord: record, now });
+  assert.ok(assess(null).blockers.includes('restore_evidence_record_missing_or_invalid'));
+  const booleanOverride = assess({ ready: true, verified: true, sourceBranch: true, selectedBackupId: true });
+  assert.equal(booleanOverride.ok, false);
+  assert.ok(booleanOverride.blockers.includes('restore_evidence_schema_version_mismatch'));
+
+  const sourceMismatch = validRestoreEvidence();
+  sourceMismatch.sourceBranch.id = 'other-source';
+  sourceMismatch.recordSha256 = hash0021RestoreEvidenceRecord(sourceMismatch);
+  assert.ok(assess(sourceMismatch).blockers.includes('restore_evidence_source_branch_mismatch'));
+
+  const backupMismatch = validRestoreEvidence();
+  backupMismatch.selectedBackupId = 'different-backup';
+  backupMismatch.recordSha256 = hash0021RestoreEvidenceRecord(backupMismatch);
+  assert.ok(assess(backupMismatch).blockers.includes('restore_evidence_selected_backup_mismatch'));
+
+  const stale = validRestoreEvidence();
+  stale.verifiedAt = '2026-10-16T13:05:00.000Z';
+  stale.recordSha256 = hash0021RestoreEvidenceRecord(stale);
+  assert.ok(assess(stale).blockers.includes('restore_evidence_stale_or_precedes_selected_backup'));
+
+  const incomplete = validRestoreEvidence();
+  incomplete.verifiedScope = incomplete.verifiedScope.filter(scope => scope !== 'application_smoke');
+  incomplete.unresolvedGates = ['application_smoke'];
+  incomplete.recordSha256 = hash0021RestoreEvidenceRecord(incomplete);
+  const incompleteAssessment = assess(incomplete);
+  assert.ok(incompleteAssessment.blockers.includes('restore_evidence_scope_missing:application_smoke'));
+  assert.ok(incompleteAssessment.blockers.includes('restore_evidence_has_unresolved_gates'));
+
+  const unreviewed = validRestoreEvidence();
+  unreviewed.review = { reviewedAt: null, reviewedBy: null, reference: null };
+  unreviewed.recordSha256 = hash0021RestoreEvidenceRecord(unreviewed);
+  assert.ok(assess(unreviewed).blockers.includes('restore_evidence_review_missing_or_invalid'));
+
+  const tampered = validRestoreEvidence();
+  tampered.verifiedScope = [];
+  assert.ok(assess(tampered).blockers.includes('restore_evidence_record_hash_missing_or_mismatched'));
+});
+
+test('retains the October 18 receipt as hash-checked historical evidence without certifying it complete', () => {
+  const record = JSON.parse(fs.readFileSync('docs/evidence/production-cutover/0021-restore-evidence/pa4t6j6s07b7.json', 'utf8'));
+  assert.equal(record.sourceBranch.id, 'vqa2g2xc9wsl');
+  assert.equal(record.selectedBackupId, 'pa4t6j6s07b7');
+  assert.equal(record.restoredBranch.id, 'n3wdm03vwenu');
+  assert.equal(record.restoredBranch.state, 'deleted');
+  assert.equal(record.evidenceSha256, '4dfe19aae74be7b29b63a1fadf050327ea84050401d56bf085ba963959b2cb0b');
+  assert.equal(record.recordSha256, hash0021RestoreEvidenceRecord(record));
+  const assessment = assess0021RestoreEvidence({
+    record,
+    sourceBranch: { id: 'vqa2g2xc9wsl', name: 'main' },
+    backup: { id: 'pa4t6j6s07b7', completed_at: '2026-10-18T14:25:03.069Z', expires_at: '2026-11-18T14:25:03.069Z' },
+    selectedBackupId: 'pa4t6j6s07b7',
+    now: Date.parse('2026-10-20T00:00:00Z'),
+  });
+  assert.equal(assessment.ok, false);
+  assert.ok(assessment.blockers.includes('restore_evidence_has_unresolved_gates'));
+  assert.ok(assessment.blockers.includes('restore_evidence_review_missing_or_invalid'));
+  assert.ok(assessment.blockers.includes('restore_evidence_scope_missing:backup_binding'));
 });
 
 test('requires an operator estimate with reference at or below a positive review ceiling', () => {

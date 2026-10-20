@@ -1,8 +1,20 @@
+import { createHash } from 'node:crypto';
 import { exactRegistryPrefix } from './planetscale-migration-reconciliation.mjs';
 
 export const MIGRATION_0020 = '0020_auth_recovery_delivery.sql';
 export const MIGRATION_0021 = '0021_media_quarantine_cleanup.sql';
 export const RETRYABLE_0021_STATES = Object.freeze(['NOT_APPLIED', 'COLUMN_ONLY', 'INVALID_INDEX_RETRYABLE']);
+export const REQUIRED_0021_RESTORE_SCOPE = Object.freeze([
+  'backup_binding',
+  'restore_completion',
+  'schema_extensions_indexes',
+  'canonical_registry',
+  'effective_runtime_privileges',
+  'application_smoke',
+  'rpo_rto_acceptance',
+  'independent_recovery_destination',
+]);
+export const RESTORE_EVIDENCE_SCHEMA = 'lythaus-0021-restore-evidence-v1';
 
 export function serialize0021PlanReadyOutput(blockers) {
   return (blockers.length === 0).toString();
@@ -41,7 +53,109 @@ function timestamp(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export function assessPlanetScaleBackupEvidence({ branch, backup, backupId, now = Date.now() }) {
+function canonicalJson(value) {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).filter(key => value[key] !== undefined).sort()
+      .map(key => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+export function hash0021RestoreEvidenceRecord(record) {
+  const safeRecord = record && typeof record === 'object' && !Array.isArray(record) ? record : {};
+  const { recordSha256: _recordSha256, ...body } = safeRecord;
+  return createHash('sha256').update(canonicalJson(body)).digest('hex');
+}
+
+export function assess0021RestoreEvidence({ record, recordPath = null, sourceBranch, backup, selectedBackupId, now = Date.now() }) {
+  const blockers = [];
+  const safeRecord = record && typeof record === 'object' && !Array.isArray(record) ? record : null;
+  const safeSource = sourceBranch && typeof sourceBranch === 'object' ? sourceBranch : {};
+  const safeBackup = backup && typeof backup === 'object' ? backup : {};
+  const verifiedAt = timestamp(safeRecord?.verifiedAt);
+  const restoredBranch = safeRecord?.restoredBranch && typeof safeRecord.restoredBranch === 'object' ? safeRecord.restoredBranch : {};
+  const restoredBranchCreatedAt = timestamp(restoredBranch.createdAt);
+  const review = safeRecord?.review && typeof safeRecord.review === 'object' ? safeRecord.review : {};
+  const reviewedAt = timestamp(review.reviewedAt);
+  const evidenceSha256 = typeof safeRecord?.evidenceSha256 === 'string' ? safeRecord.evidenceSha256 : '';
+  const recordSha256 = typeof safeRecord?.recordSha256 === 'string' ? safeRecord.recordSha256 : '';
+  const verifiedScope = Array.isArray(safeRecord?.verifiedScope) ? safeRecord.verifiedScope : null;
+  const unresolvedGates = Array.isArray(safeRecord?.unresolvedGates) ? safeRecord.unresolvedGates : null;
+
+  if (!safeRecord) blockers.push('restore_evidence_record_missing_or_invalid');
+  else if (safeRecord.schemaVersion !== RESTORE_EVIDENCE_SCHEMA) blockers.push('restore_evidence_schema_version_mismatch');
+  if (!safeRecord?.sourceBranch || safeRecord.sourceBranch.name !== 'main'
+    || !safeSource.id || safeRecord.sourceBranch.id !== safeSource.id) blockers.push('restore_evidence_source_branch_mismatch');
+  if (typeof selectedBackupId !== 'string' || selectedBackupId.trim() === '') blockers.push('restore_evidence_selected_backup_missing');
+  if (!safeRecord?.selectedBackupId || safeRecord.selectedBackupId !== selectedBackupId
+    || !safeBackup.id || safeBackup.id !== selectedBackupId) blockers.push('restore_evidence_selected_backup_mismatch');
+  if (typeof restoredBranch.id !== 'string' || restoredBranch.id.trim() === '' || restoredBranch.id === safeSource.id) {
+    blockers.push('restore_evidence_restored_branch_missing_or_mismatched');
+  }
+  if (!['ready', 'deleted'].includes(restoredBranch.state)) blockers.push('restore_evidence_restored_branch_state_invalid');
+
+  if (verifiedAt === null || verifiedAt > now) blockers.push('restore_evidence_timestamp_missing_invalid_or_future');
+  if (restoredBranchCreatedAt === null || (verifiedAt !== null && restoredBranchCreatedAt > verifiedAt)) {
+    blockers.push('restore_evidence_restored_branch_timestamp_invalid');
+  }
+  const backupCompletedAt = timestamp(safeBackup.completed_at);
+  const backupExpiresAt = timestamp(safeBackup.expires_at);
+  if (verifiedAt !== null && (backupCompletedAt === null || verifiedAt < backupCompletedAt)) {
+    blockers.push('restore_evidence_stale_or_precedes_selected_backup');
+  }
+  if (verifiedAt !== null && backupExpiresAt !== null && verifiedAt >= backupExpiresAt) {
+    blockers.push('restore_evidence_stale_for_selected_backup');
+  }
+  if (backupExpiresAt === null || backupExpiresAt <= now) blockers.push('restore_evidence_selected_backup_expired_or_unknown');
+
+  if (!/^[a-f0-9]{64}$/.test(evidenceSha256)) blockers.push('restore_evidence_artifact_hash_missing_or_invalid');
+  if (!/^[a-f0-9]{64}$/.test(recordSha256) || recordSha256 !== hash0021RestoreEvidenceRecord(safeRecord)) {
+    blockers.push('restore_evidence_record_hash_missing_or_mismatched');
+  }
+  if (!verifiedScope) blockers.push('restore_evidence_verified_scope_missing_or_invalid');
+  else {
+    for (const scope of REQUIRED_0021_RESTORE_SCOPE) {
+      if (!verifiedScope.includes(scope)) blockers.push(`restore_evidence_scope_missing:${scope}`);
+    }
+  }
+  if (!unresolvedGates || unresolvedGates.some(gate => typeof gate !== 'string' || gate.trim() === '')) {
+    blockers.push('restore_evidence_unresolved_gates_missing_or_invalid');
+  } else if (unresolvedGates.length > 0) {
+    blockers.push('restore_evidence_has_unresolved_gates');
+  }
+  if (reviewedAt === null || reviewedAt > now || !String(review.reviewedBy ?? '').trim() || !String(review.reference ?? '').trim()) {
+    blockers.push('restore_evidence_review_missing_or_invalid');
+  } else if (verifiedAt !== null && reviewedAt < verifiedAt) {
+    blockers.push('restore_evidence_review_precedes_verification');
+  }
+
+  return {
+    ok: blockers.length === 0,
+    blockers,
+    recordPath,
+    schemaVersion: safeRecord?.schemaVersion ?? null,
+    sourceBranch: safeRecord?.sourceBranch ?? null,
+    selectedBackupId: safeRecord?.selectedBackupId ?? null,
+    restoredBranch: {
+      id: restoredBranch.id ?? null,
+      state: restoredBranch.state ?? null,
+      createdAt: restoredBranchCreatedAt === null ? null : new Date(restoredBranchCreatedAt).toISOString(),
+    },
+    verifiedAt: verifiedAt === null ? null : new Date(verifiedAt).toISOString(),
+    evidenceSha256: /^[a-f0-9]{64}$/.test(evidenceSha256) ? evidenceSha256 : null,
+    recordSha256: /^[a-f0-9]{64}$/.test(recordSha256) ? recordSha256 : null,
+    verifiedScope: verifiedScope ?? [],
+    unresolvedGates: unresolvedGates ?? [],
+    review: {
+      reviewedAt: reviewedAt === null ? null : new Date(reviewedAt).toISOString(),
+      reviewedBy: String(review.reviewedBy ?? '').trim() || null,
+      reference: String(review.reference ?? '').trim() || null,
+    },
+  };
+}
+
+export function assessPlanetScaleBackupEvidence({ branch, backup, backupId, restoreEvidenceRecord, restoreEvidenceRecordPath = null, now = Date.now() }) {
   const blockers = [];
   const safeBranch = branch && typeof branch === 'object' ? branch : {};
   const safeBackup = backup && typeof backup === 'object' ? backup : {};
@@ -52,7 +166,6 @@ export function assessPlanetScaleBackupEvidence({ branch, backup, backupId, now 
   if (safeBranch.deleted_at !== null) blockers.push('branch_deleted_or_deletion_state_unknown');
   if (safeBranch.deletion_protected !== true) blockers.push('branch_deletion_protection_missing');
   const restoreChecklistAt = timestamp(safeBranch.restore_checklist_completed_at);
-  if (restoreChecklistAt === null || restoreChecklistAt > now) blockers.push('restore_checklist_marker_missing_or_invalid');
 
   if (typeof backupId !== 'string' || backupId.trim() === '') blockers.push('backup_id_missing');
   if (!safeBackup.id || safeBackup.id !== backupId) blockers.push('backup_id_mismatch');
@@ -68,6 +181,16 @@ export function assessPlanetScaleBackupEvidence({ branch, backup, backupId, now 
   if (safeBackup.database_branch?.name !== 'main' || safeBackup.database_branch?.deleted_at !== null) blockers.push('backup_source_branch_mismatch_or_deleted');
   if (safeBranch.id && safeBackup.database_branch?.id && safeBranch.id !== safeBackup.database_branch.id) blockers.push('backup_source_branch_id_mismatch');
 
+  const restoreEvidence = assess0021RestoreEvidence({
+    record: restoreEvidenceRecord,
+    recordPath: restoreEvidenceRecordPath,
+    sourceBranch: safeBranch,
+    backup: safeBackup,
+    selectedBackupId: backupId,
+    now,
+  });
+  blockers.push(...restoreEvidence.blockers);
+
   return {
     ok: blockers.length === 0,
     blockers,
@@ -80,7 +203,7 @@ export function assessPlanetScaleBackupEvidence({ branch, backup, backupId, now 
       production: safeBranch.production === true,
       deletionProtected: safeBranch.deletion_protected === true,
       restoreChecklistMarkedAt: restoreChecklistAt === null ? null : new Date(restoreChecklistAt).toISOString(),
-      restoreChecklistSemantics: 'PlanetScale API marker records that a user marked the backup restore checklist complete; it does not prove a restore test.',
+      restoreChecklistSemantics: 'Informational marker for the restored replacement branch checklist; it is not proof of source main recoverability.',
     },
     backup: {
       id: safeBackup.id ?? null,
@@ -91,6 +214,7 @@ export function assessPlanetScaleBackupEvidence({ branch, backup, backupId, now 
       protected: safeBackup.protected === true,
       sourceBranch: safeBackup.database_branch?.name ?? null,
     },
+    restoreEvidence,
   };
 }
 

@@ -46,6 +46,9 @@ test('limits the single-node exception to 0021 and preserves the other gates', (
     /protected production review remain\s+required/,
   ]) assert.match(productionRunbook, gate);
   assert.match(productionRunbook, /restore_checklist_completed_at/);
+  assert.match(productionRunbook, /informational:[\s\S]*?not proof that source `main` is\s+recoverable/);
+  assert.match(productionRunbook, /0021-restore-evidence\/<backup-id>\.json/);
+  assert.match(productionRunbook, /It does not require full-data parity/);
   assert.match(productionRunbook, /deletion-protected/);
   assert.match(productionRunbook, /index concurrently/);
   assert.match(productionRunbook, /PLANETSCALE_0021_EXECUTION_APPROVED_SHA/);
@@ -169,6 +172,36 @@ test('local plan without read-only credentials emits blockers and performs no pr
   assert.equal(report.executionEligibility, 'blocked_pending_prerequisites');
   assert.ok(report.blockers.includes('0021_execution_approved_sha_missing_or_invalid'));
   assert.ok(report.blockers.includes('PLANETSCALE_API_TOKEN_missing_for_read_branch_and_backup_evidence'));
+  assert.ok(report.blockers.includes('restore_evidence_record_missing_or_invalid'));
+  assert.ok(report.planetscale.restoreEvidence.blockers.includes('restore_evidence_record_missing_or_invalid'));
+});
+
+test('read-only plan loads restore evidence only from the selected backup ID', () => {
+  const plan = fs.readFileSync(path.join(root, 'scripts/ci/planetscale-0021-only-plan.mjs'), 'utf8');
+  assert.match(plan, /docs\/evidence\/production-cutover\/0021-restore-evidence/);
+  assert.match(plan, /\$\{backupId\}\.json/);
+  assert.match(plan, /restoreEvidenceRecord: restoreEvidenceInput\.record/);
+});
+
+test('planner keeps the deleted-branch historical receipt visible and blocked', () => {
+  const result = spawnSync(process.execPath, ['scripts/ci/planetscale-0021-only-plan.mjs'], {
+    cwd: root,
+    encoding: 'utf8',
+    env: {
+      PATH: process.env.PATH ?? '',
+      CI: 'true',
+      RELEASE_SHA: 'a'.repeat(40),
+      PLANETSCALE_PRODUCTION_BACKUP_ID: 'pa4t6j6s07b7',
+    },
+    timeout: 15_000,
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.planetscale.restoreEvidence.selectedBackupId, 'pa4t6j6s07b7');
+  assert.equal(report.planetscale.restoreEvidence.restoredBranch.id, 'n3wdm03vwenu');
+  assert.equal(report.planetscale.restoreEvidence.restoredBranch.state, 'deleted');
+  assert.ok(report.blockers.includes('restore_evidence_has_unresolved_gates'));
+  assert.ok(report.blockers.includes('restore_evidence_review_missing_or_invalid'));
 });
 
 test('candidate consent alone cannot make a plan ready without backup, budget, catalog and binding proof', () => {
