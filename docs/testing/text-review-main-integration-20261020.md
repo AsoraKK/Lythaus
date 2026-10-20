@@ -59,6 +59,12 @@ rollback retry may rerun an unqualified model with the same source-event budget
 key. A new revision has a different key. No exactly-once provider/billing claim
 or legacy evidence backfill is made.
 
+That atomic boundary ends at review COMMIT. Inherited `recordAiEvidence` runs
+afterward as a separate best-effort query. It can fail or run after an account
+transition and is not covered by the held account fence. This draft does not
+claim that all audit, retention or privacy behavior is fenced; the post-COMMIT
+reasoning audit and full deletion/retention journey remain separate review gates.
+
 ## Required CI and local results
 
 `package.json` now exposes `npm run test:text-review`. The existing required
@@ -84,6 +90,13 @@ Local results on cached Node 24.19.0:
 - The merged restore-evidence loader and 0021 workflow tests pass **18/18** on
   this reconciled base. Their source and migration-workflow files match main
   exactly; the native CI loader step is preserved.
+- The independently reviewed exact Jobs blob
+  `50a6d8c3f4dd73f49db3c68b463a19b8c172ebb9` and exact text test-runner allocation
+  are coordinator-approved in the marketing guard. Its **31/31** tests pass,
+  including changed/skip/unreviewed command and superseded-blob rejection.
+  The complete locked-dependency marketing suite passes **90/90**. No homepage
+  or unrelated pin changed; the text implementation remains byte-identical to
+  the reviewed revision.
 
 ## PostgreSQL test boundary
 
