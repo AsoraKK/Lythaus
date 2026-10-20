@@ -446,7 +446,7 @@ jobs:
           node --test scripts/tests/brand-artwork-pixels.test.mjs scripts/tests/brand-diagnostic-pair.test.mjs scripts/tests/full-login-source.test.mjs scripts/tests/full-login-pixels.test.mjs scripts/tests/full-login-startup-contract.test.mjs scripts/tests/frame-dwell-contract.test.mjs
           python3 scripts/generate-approved-brand-paths.py --check
           flutter build web --release --no-pub --no-tree-shake-icons --no-wasm-dry-run --no-web-resources-cdn --target test/browser/approved_brand_entry.dart --output build/brand-web
-          node --test scripts/tests/brand-login-contracts.test.mjs
+          node --test scripts/tests/brand-login-contracts.test.mjs scripts/tests/brand-login-draft.test.mjs
           bash scripts/build-brand-login-fixtures.sh
           node --test scripts/tests/brand-onboarding-contracts.test.mjs
           bash scripts/build-brand-onboarding-fixtures.sh
