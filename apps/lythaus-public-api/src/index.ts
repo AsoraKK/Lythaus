@@ -627,8 +627,10 @@ async function createAcceptanceResendFixture(request: Request, env: Env): Promis
     const userId = uuidv7();
     const challengeId = uuidv7();
     const token = randomToken(32);
-    const challengeCreatedAt = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
-    const challengeExpiresAt = new Date(Date.now() - (24 * 60 * 60 * 1000 + 30 * 60 * 1000)).toISOString();
+    const challengeCreatedAt = new Date().toISOString();
+    // Keep the fixture deliverable. The protected Keeper ages the challenge
+    // only after the provider has delivered its email.
+    const challengeExpiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
     await client.query(`INSERT INTO identity.users (id, status, is_production_acceptance) VALUES ($1, 'relink_required', true)`, [userId]);
     await client.query(
       `INSERT INTO identity.contact_emails (user_id, email_ciphertext, email_lookup_hmac, encryption_key_version, source_provider, verified_at)
@@ -670,6 +672,51 @@ async function createAcceptanceResendFixture(request: Request, env: Env): Promis
      JOIN identity.email_verification_tokens t ON t.id=COALESCE(r.resend_verification_challenge_id,r.resend_previous_challenge_id)
      WHERE r.id=$1`, [acceptance.runId]);
   return privateResponse(request, env, { state: 'resend_fixture_ready', retryAfterSeconds: cooldown.rows[0]?.seconds ?? 0 }, { status: 202 });
+}
+
+async function ageAcceptanceResendFixture(request: Request, env: Env): Promise<Response> {
+  const acceptance = await acceptanceContext(request, env);
+  if (!acceptance) throw new Error('authentication_required');
+  const input = await readJson<{ token?: string }>(request, 8 * 1024);
+  const token = requireToken(input.token, 'verification_token_invalid');
+  await transaction(env.DB_APP_FRESH, async (client) => {
+    const result = await client.query<{ id: string; created_at: Date | string; expires_at: Date | string; delivered: boolean; consumed: boolean; superseded: boolean }>(
+      `SELECT t.id, t.created_at, t.expires_at,
+         o.state='delivered' AND o.provider='cloudflare-email' AND o.provider_message_id IS NOT NULL
+           AND o.accepted_at IS NOT NULL AND o.delivered_at IS NOT NULL AND o.delivered_at<=now() AS delivered,
+         t.consumed_at IS NOT NULL AS consumed,
+         t.superseded_at IS NOT NULL AS superseded
+       FROM system.production_auth_acceptance_runs r
+       JOIN identity.email_verification_tokens t
+         ON t.id=r.resend_previous_challenge_id AND t.user_id=r.resend_fixture_user_id
+       JOIN system.transactional_email_outbox o
+         ON o.challenge_id=t.id AND o.acceptance_run_id=r.id AND o.purpose='verification'
+       WHERE r.id=$1 AND t.token_hash=decode($2,'base64')
+       FOR UPDATE OF t`,
+      [acceptance.runId, hashAuthToken(token, 'verification')],
+    );
+    const fixture = result.rows[0];
+    const createdAt = fixture ? new Date(fixture.created_at).getTime() : Number.NaN;
+    const expiresAt = fixture ? new Date(fixture.expires_at).getTime() : Number.NaN;
+    const now = Date.now();
+    const needsAging = Number.isFinite(createdAt) && Number.isFinite(expiresAt) && createdAt <= now && expiresAt > now;
+    const alreadyAged = Number.isFinite(createdAt) && Number.isFinite(expiresAt)
+      && createdAt <= now - 24 * 60 * 60 * 1000 && expiresAt <= now;
+    if (!fixture || !fixture.delivered || fixture.consumed || fixture.superseded
+      || (!needsAging && !alreadyAged)) {
+      throw new Error('acceptance_expired_fixture_not_delivered');
+    }
+    if (needsAging) {
+      await client.query(
+        `UPDATE identity.email_verification_tokens
+            SET created_at=clock_timestamp() - interval '25 hours',
+                expires_at=clock_timestamp() - interval '24 hours 30 minutes'
+          WHERE id=$1 AND consumed_at IS NULL AND superseded_at IS NULL`,
+        [fixture.id],
+      );
+    }
+  });
+  return privateResponse(request, env, { state: 'expired_resend_fixture_aged' }, { status: 202 });
 }
 
 async function observeAcceptanceChallenge(request: Request, env: Env): Promise<Response> {
@@ -3771,6 +3818,7 @@ export default {
       }
       if (request.method === 'POST' && url.pathname === '/api/auth/email') return await authIntake(request, env);
       if (request.method === 'POST' && url.pathname === '/internal/production-auth-acceptance/resend-fixture') return await createAcceptanceResendFixture(request, env);
+      if (request.method === 'POST' && url.pathname === '/internal/production-auth-acceptance/age-resend-fixture') return await ageAcceptanceResendFixture(request, env);
       if (request.method === 'POST' && url.pathname === '/internal/production-auth-acceptance/challenge-observation') return await observeAcceptanceChallenge(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/email/verify') return await verifyEmail(request, env);
       if (request.method === 'POST' && url.pathname === '/api/auth/password/reset/request') return await authIntake(request, env, true);

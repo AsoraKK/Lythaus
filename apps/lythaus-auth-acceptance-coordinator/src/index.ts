@@ -602,7 +602,17 @@ async function completeEmail(request: Request, env: Env): Promise<Response> {
   if (!observed.response.ok || observed.body?.delivered !== true) throw new Error('acceptance_delivery_not_ready');
   const path = purpose === 'verification' ? '/api/auth/email/verify' : '/api/auth/password/reset/complete';
   if (purpose === 'verification' && observed.body.flow === 'expired_resend_fixture') {
-    if (observed.body.expired !== true || observed.body.superseded !== false || observed.body.consumed !== false) {
+    if (observed.body.expired !== true) {
+      const age = await candidateJson(env, run, '/internal/production-auth-acceptance/age-resend-fixture', { token });
+      if (age.response.status !== 202 || age.body?.state !== 'expired_resend_fixture_aged') {
+        throw new Error('candidate_expired_fixture_aging_rejected');
+      }
+    }
+    const expired = observed.body.expired === true
+      ? observed
+      : await candidateJson(env, run, '/internal/production-auth-acceptance/challenge-observation', { token, purpose });
+    if (!expired.response.ok || expired.body?.delivered !== true || expired.body?.expired !== true
+      || expired.body?.superseded !== false || expired.body?.consumed !== false) {
       throw new Error('acceptance_expired_fixture_state_invalid');
     }
     const attemptedAt = new Date().toISOString();
