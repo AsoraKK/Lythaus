@@ -4,6 +4,7 @@ import pg from 'pg';
 import { generateKeyPair, exportJWK, exportPKCS8 } from 'jose';
 import { signAccessToken, uuidv7 } from '@lythaus/security';
 import { postModerationFixture, postReviewTestOptions } from './post-moderation-fixture.mjs';
+import { assertTextReviewBundle } from './text-review-pg17-assertions.mjs';
 
 const connectionString = process.env.PLANETSCALE_PG17_TEST_DATABASE_URL;
 const requiresAccountLock = await postReviewTestOptions(connectionString);
@@ -37,9 +38,9 @@ async function call(actor, method, path, body, key = uuidv7()) {
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 }
-async function created(body = 'Synthetic human post') {
+async function created(body = 'Synthetic human post', writer = owner) {
   const key = uuidv7(), payload = { body, declaredCreationMode: 'human', geoScope: 'none' };
-  const response = await call(owner, 'POST', '/api/posts', payload, key);
+  const response = await call(writer, 'POST', '/api/posts', payload, key);
   assert.equal(response.status, 201, await response.clone().text());
   const post = await response.json();
   const event = (await client.query('SELECT id AS "eventId", event_type AS "eventType", payload FROM system.outbox_events WHERE id=$1', [post.eventId])).rows[0];
@@ -148,3 +149,126 @@ test('failed dispatch retains outbox work for retry and guest submission cannot 
   assert.equal(response.status, 401);
   assert.deepEqual(await counts(post.id), { detectors: 0, cases: 0, state: 'under_review' });
 });
+
+async function createdComment() {
+  const writer = await actor(), parent = await created('Synthetic parent admission fixture', writer);
+  await client.query("UPDATE content.posts SET moderation_state='allowed',published_at=now() WHERE id=$1", [parent.post.id]);
+  await client.query("UPDATE content.content_declarations SET public_label='Human-authored',review_required=false WHERE post_id=$1", [parent.post.id]);
+  const response = await call(writer, 'POST', `/api/posts/${parent.post.id}/comments`, {
+    body: 'Synthetic comment evidence', declaredCreationMode: 'human',
+  });
+  assert.equal(response.status, 201, await response.clone().text());
+  const comment = await response.json();
+  const event = (await client.query(`SELECT id AS "eventId",event_type AS "eventType",payload FROM system.outbox_events
+    WHERE aggregate_id=$1 AND event_type='content.comment.created'`, [comment.commentId])).rows[0];
+  return { id: comment.commentId, event, writer, parent };
+}
+
+async function pendingComment(item) {
+  assert.equal((await client.query('SELECT moderation_state FROM content.comments WHERE id=$1', [item.id])).rows[0].moderation_state, 'under_review');
+  assert.equal((await client.query("SELECT id FROM system.outbox_events WHERE aggregate_id=$1 AND event_type='content.comment.published'", [item.id])).rowCount, 0);
+}
+
+test('canonical Jobs binds comment evidence to one persisted queue decision and preserves duplicate identity', async () => {
+  const item = await createdComment(), calls = fixture.modelCalls;
+  const replies = await Promise.all([deliver(item.event), deliver(item.event)]);
+  assert.ok(replies.some(reply => reply.ack === 1));
+  const evidence = await assertTextReviewBundle(client, item.id, item.event.eventId, 'comment');
+  assert.equal(evidence.reasoning.state, 'NOT_RUN');
+  assert.deepEqual(await deliver(item.event), { ack: 1, retry: 0 });
+  assert.equal((await assertTextReviewBundle(client, item.id, item.event.eventId, 'comment')).evidenceHash, evidence.evidenceHash);
+  assert.equal((await client.query('SELECT state FROM system.consumer_inbox WHERE event_id=$1', [item.event.eventId])).rows[0].state, 'completed');
+  assert.equal(fixture.modelCalls, calls); await pendingComment(item);
+});
+
+for (const phase of ['before', 'after']) test(`canonical comment ${phase} binding failure rolls back all review effects before retry`, async () => {
+  const item = await createdComment();
+  const priorActivity = (await client.query('SELECT id FROM trust.user_activity_events WHERE source_event_id=$1 ORDER BY id', [item.event.eventId])).rows;
+  if (phase === 'before') fixture.failSql = { match: 'UPDATE moderation.detector_runs r', remaining: 1 };
+  else fixture.afterSql = input => {
+    if (input.text.includes('UPDATE moderation.detector_runs r')) {
+      fixture.afterSql = undefined; throw new Error('synthetic_after_comment_binding');
+    }
+  };
+  try { assert.deepEqual(await deliver(item.event), { ack: 0, retry: 1 }); }
+  finally { fixture.failSql = undefined; fixture.afterSql = undefined; }
+  for (const table of ['moderation.detector_runs', 'moderation.cases'])
+    assert.equal((await client.query(`SELECT id FROM ${table} WHERE content_id=$1`, [item.id])).rowCount, 0);
+  assert.equal((await client.query('SELECT id FROM system.audit_events WHERE id=$1', [item.event.eventId])).rowCount, 0);
+  assert.deepEqual((await client.query('SELECT id FROM trust.user_activity_events WHERE source_event_id=$1 ORDER BY id', [item.event.eventId])).rows, priorActivity);
+  assert.equal((await client.query('SELECT event_id FROM system.consumer_inbox WHERE event_id=$1', [item.event.eventId])).rowCount, 0);
+  assert.deepEqual(await deliver(item.event), { ack: 1, retry: 0 });
+  await assertTextReviewBundle(client, item.id, item.event.eventId, 'comment'); await pendingComment(item);
+});
+
+test('canonical comment stale delivery cannot bind the superseded body revision', async () => {
+  const item = await createdComment();
+  const response = await call(item.writer, 'PUT', `/api/comments/${item.id}`, { body: 'Synthetic revised comment', declaredCreationMode: 'human' });
+  assert.equal(response.status, 200, await response.clone().text());
+  const current = (await client.query(`SELECT id AS "eventId",event_type AS "eventType",payload FROM system.outbox_events
+    WHERE aggregate_id=$1 AND event_type='content.comment.updated'`, [item.id])).rows[0];
+  assert.deepEqual(await deliver(item.event), { ack: 1, retry: 0 });
+  assert.equal((await client.query('SELECT id FROM moderation.detector_runs WHERE content_id=$1', [item.id])).rowCount, 0);
+  assert.deepEqual(await deliver(current), { ack: 1, retry: 0 });
+  await assertTextReviewBundle(client, item.id, current.eventId, 'comment'); await pendingComment(item);
+});
+
+test('canonical comment lost COMMIT reply reconciles the already durable binding on retry', async () => {
+  const item = await createdComment();
+  let selected, interrupted = false;
+  fixture.afterSql = input => {
+    if (input.text.includes('UPDATE moderation.detector_runs r')) selected = input.transactionId;
+    if (selected && input.transactionId === selected && input.text === 'COMMIT') {
+      assert.equal(input.command, 'COMMIT'); interrupted = true; fixture.afterSql = undefined;
+      throw new Error('synthetic_lost_comment_commit_reply');
+    }
+  };
+  try { assert.deepEqual(await deliver(item.event), { ack: 0, retry: 1 }); }
+  finally { fixture.afterSql = undefined; }
+  assert.equal(interrupted, true);
+  const evidence = await assertTextReviewBundle(client, item.id, item.event.eventId, 'comment');
+  assert.equal((await client.query('SELECT event_id FROM system.consumer_inbox WHERE event_id=$1', [item.event.eventId])).rowCount, 0);
+  assert.deepEqual(await deliver(item.event), { ack: 1, retry: 0 });
+  assert.equal((await assertTextReviewBundle(client, item.id, item.event.eventId, 'comment')).evidenceHash, evidence.evidenceHash);
+  await pendingComment(item);
+});
+
+test('canonical comment late independent case conflict rolls back automated evidence and preserves its hold', async () => {
+  const item = await createdComment(), independentCase = uuidv7(), independentDecision = uuidv7();
+  fixture.duringSql = async input => {
+    if (input.role === 'lythaus_jobs' && input.text.includes('INSERT INTO moderation.detector_runs')) {
+      fixture.duringSql = undefined;
+      await client.query(`INSERT INTO moderation.cases(id,content_type,content_id,state,policy_version,source_event_id)
+        VALUES($1,'comment',$2,'open','synthetic-independent-v1',$3)`, [independentCase, item.id, item.event.eventId]);
+      await client.query(`INSERT INTO moderation.decisions(id,case_id,outcome,policy_version)
+        VALUES($1,$2,'queue','synthetic-independent-v1')`, [independentDecision, independentCase]);
+    }
+  };
+  try { assert.deepEqual(await deliver(item.event), { ack: 0, retry: 1 }); }
+  finally { fixture.duringSql = undefined; }
+  assert.equal((await client.query('SELECT id FROM moderation.detector_runs WHERE content_id=$1', [item.id])).rowCount, 0);
+  assert.equal((await client.query('SELECT id FROM system.audit_events WHERE id=$1', [item.event.eventId])).rowCount, 0);
+  assert.deepEqual(await deliver(item.event), { ack: 1, retry: 0 });
+  assert.deepEqual((await client.query(`SELECT d.id,c.state,d.outcome FROM moderation.cases c JOIN moderation.decisions d ON d.case_id=c.id
+    WHERE c.content_id=$1`, [item.id])).rows, [{ id: independentDecision, state: 'open', outcome: 'queue' }]);
+  await pendingComment(item);
+});
+
+for (const restriction of ['deleted_comment', 'deleted_author', 'inactive_author', 'independent_queue', 'independent_block']) {
+  test(`canonical comment ${restriction} withholds new detector evidence`, async () => {
+    const item = await createdComment();
+    if (restriction === 'deleted_comment') await client.query('UPDATE content.comments SET deleted_at=now() WHERE id=$1', [item.id]);
+    if (restriction === 'deleted_author') await client.query('UPDATE identity.users SET deleted_at=now() WHERE id=$1', [item.writer.id]);
+    if (restriction === 'inactive_author') await client.query("UPDATE identity.users SET status='suspended' WHERE id=$1", [item.writer.id]);
+    if (restriction.startsWith('independent_')) {
+      const caseId = uuidv7();
+      await client.query(`INSERT INTO moderation.cases(id,content_type,content_id,state,policy_version,source_event_id)
+        VALUES($1,'comment',$2,'open','synthetic-independent-v1',$3)`, [caseId, item.id, item.event.eventId]);
+      await client.query(`INSERT INTO moderation.decisions(id,case_id,outcome,policy_version)
+        VALUES($1,$2,$3,'synthetic-independent-v1')`, [uuidv7(), caseId, restriction === 'independent_block' ? 'block' : 'queue']);
+    }
+    assert.deepEqual(await deliver(item.event), { ack: 1, retry: 0 });
+    assert.equal((await client.query('SELECT id FROM moderation.detector_runs WHERE content_id=$1', [item.id])).rowCount, 0);
+    await pendingComment(item);
+  });
+}

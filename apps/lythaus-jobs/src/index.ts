@@ -29,6 +29,8 @@ import { exportOwnSupportContributionsForPrivacy } from '../../../packages/db/sr
 import { activityMeasurementPrivacyExport, activityMeasurementPrivacyDelete, activityMeasurementPrivacyReconcile, activityMeasurementRetentionCleanup, activityMeasurementScheduledWork } from './activity-measurement.ts';
 import { assessPostPublishing, readPostPublishingSnapshot } from './post-publishing.ts';
 import { lockActivePostReviewAuthor } from '@lythaus/db';
+import { createTextReviewEvidence } from '../../../packages/authenticity/src/text-review-evidence.ts';
+import { recordTextReviewDecisionEvidence } from './text-review-evidence.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -857,6 +859,7 @@ async function runAuthenticityEvaluation(env: Env, input: {
   content: string;
   contentId: string;
   declaredCreationMode?: string;
+  textSourceEventId?: string;
 }): Promise<{ evaluation: AuthenticityEvaluation; modelExecuted: boolean; latencyMs: number }> {
   const modelId = input.kind === 'image'
     ? env.AUTHENTICITY_IMAGE_MODEL ?? '@cf/meta/llama-3.1-8b-instruct-fast'
@@ -872,7 +875,8 @@ async function runAuthenticityEvaluation(env: Env, input: {
     const evaluation = await evaluateAuthenticity({
       ...input,
       modelId,
-      runModel: (model, modelInput, idempotencyKey) => runWorkersAiWithBudget(env, model, modelInput, idempotencyKey, estimatedCost),
+      runModel: (model, modelInput, idempotencyKey) => runWorkersAiWithBudget(env, model, modelInput,
+        input.kind === 'text' && input.textSourceEventId ? `${idempotencyKey}:${input.textSourceEventId}` : idempotencyKey, estimatedCost),
     });
     return { evaluation, modelExecuted: true, latencyMs: Date.now() - startedAt };
   } catch (error) {
@@ -912,7 +916,10 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
   if (readiness !== 'locked') return;
   const { evaluation, modelExecuted, latencyMs } = await runAuthenticityEvaluation(env, {
     kind: 'text', content: post.body, contentId: revision.contentId, declaredCreationMode: post.declared_creation_mode,
+    textSourceEventId: revision.sourceEventId,
   });
+  const textReviewEvidence = await createTextReviewEvidence({ contentType: 'post', revision,
+    observation: { evaluation, modelExecuted } });
   const assessment = assessPostPublishing({
     revision, safety: { state: 'disabled', persisted: false, analyseTextCalls: 0 },
     stages: { provenance: { state: 'unavailable' }, specialist: { state: 'unavailable' }, behaviour: { state: 'unavailable' },
@@ -926,7 +933,7 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
   const detectedContentClass = evaluation.signals[0]?.category ?? null;
   const declarationConflict = post.declared_creation_mode === 'human'
     && evaluation.signals.some((item) => /(^|[_:-])(ai|generated|synthetic)([_:-]|$)/i.test(item.category));
-  const signal = JSON.stringify(evaluation);
+  const signal = JSON.stringify({ ...evaluation, textReviewEvidence });
   const applied = await transaction(env.DB_JOBS_FRESH, async (client) => {
     const account = await lockActivePostReviewAuthor(client, authorFence);
     if (account === 'unavailable') throw new Error('post_review_account_fence_unavailable');
@@ -969,15 +976,18 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
       [uuidv7(), revision.contentId, AUTHENTICITY_POLICY, revision.sourceEventId]
     );
     if (caseResult.rowCount !== 1) throw new Error('post_review_case_conflict');
+    const decisionId = uuidv7();
     await client.query(
       `INSERT INTO moderation.decisions (id, case_id, outcome, public_label, policy_version) VALUES ($1, $2, 'queue', 'Under review', $3)`,
-      [uuidv7(), caseResult.rows[0].id, AUTHENTICITY_POLICY]
+      [decisionId, caseResult.rows[0].id, AUTHENTICITY_POLICY]
     );
     await client.query(
       `INSERT INTO trust.provenance_events (id, content_id, author_id, declared_creation_mode, detected_content_class, detector_provider, detector_model_version, policy_version, final_decision, source_event_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'queue', $9)`,
       [uuidv7(), revision.contentId, lockedPost.author_id, lockedPost.declared_creation_mode, detectedContentClass, AUTHENTICITY_PROVIDER, modelVersion, AUTHENTICITY_POLICY, revision.sourceEventId]
     );
+    await recordTextReviewDecisionEvidence(client, { evidence: textReviewEvidence, caseId: caseResult.rows[0].id,
+      decisionId, detectorRunId: detectorRun.rows[0].id });
     await recordUserActivity(client, {
       id: uuidv7(), userId: lockedPost.author_id, actorUserId: lockedPost.author_id,
       eventType: 'moderation.case_opened', category: 'moderation', source: 'jobs',
@@ -997,7 +1007,7 @@ async function processPostModeration(message: QueueMessage, env: Env): Promise<v
     caseId: revision.contentId,
     correlationId: revision.sourceEventId,
     inputHash,
-    evidenceBundleHash: await sha256Hex(`${inputHash}:${modelVersion}:${AUTHENTICITY_POLICY}`),
+    evidenceBundleHash: textReviewEvidence.evidenceHash,
     provider: AUTHENTICITY_PROVIDER,
     modelId: modelVersion,
     gatewayId: env.AI_GATEWAY_ID ?? null,
@@ -1038,6 +1048,22 @@ async function processCommentModeration(message: QueueMessage, env: Env): Promis
     );
     const row = comment.rows[0];
     if (!row) return;
+    const author = (await client.query<{ status: string; deleted_at: string | null }>(
+      'SELECT status, deleted_at FROM identity.users WHERE id = $1', [row.author_id],
+    )).rows[0];
+    if (!author || author.status !== 'active' || author.deleted_at !== null) return;
+    const source = (await client.query<{
+      id: string; event_type: string; aggregate_type: string; aggregate_id: string; actor_id: string | null; payload: unknown;
+    }>('SELECT id, event_type, aggregate_type, aggregate_id, actor_id, payload FROM system.outbox_events WHERE id = $1',
+    [revision.sourceEventId])).rows[0];
+    let sourceRevision: ReturnType<typeof parseContentModerationRevision>;
+    try { sourceRevision = parseContentModerationRevision({ eventId: source?.id, payload: source?.payload, contentIdField: 'commentId' }); }
+    catch { return; }
+    if (!source || !['content.comment.created', 'content.comment.updated'].includes(source.event_type)
+      || source.event_type !== message.body.eventType || source.aggregate_type !== 'comment'
+      || source.aggregate_id !== row.id || source.actor_id !== row.author_id
+      || sourceRevision.contentId !== revision.contentId || sourceRevision.sourceEventId !== revision.sourceEventId
+      || sourceRevision.bodyHash !== revision.bodyHash || sourceRevision.declaredCreationMode !== revision.declaredCreationMode) return;
     if (env.COMMUNITY_APPEAL_RULES_VERSION && await identicalCommunityAppealOverride(client, {
       contentType: 'comment', contentId: row.id, sourceEventId: revision.sourceEventId, body: row.body, declaredCreationMode: row.declared_creation_mode,
     })) return;
@@ -1053,7 +1079,12 @@ async function processCommentModeration(message: QueueMessage, env: Env): Promis
         deletedAt: row.deleted_at,
       },
     })) return;
-    const detectorRun = await client.query(
+    const hold = await client.query(`SELECT 1 FROM moderation.cases
+      WHERE content_type = 'comment' AND content_id = $1 AND source_event_id = $2 AND state <> 'superseded' LIMIT 1`,
+    [revision.contentId, revision.sourceEventId]);
+    if (hold.rowCount) return;
+    const textReviewEvidence = await createTextReviewEvidence({ contentType: 'comment', revision });
+    const detectorRun = await client.query<{ id: string }>(
       `INSERT INTO moderation.detector_runs (id, content_type, content_id, provider, model_version, signal, source_event_id)
        VALUES ($1, 'comment', $2, $3, 'manual-review-v1', $4::jsonb, $5)
        ON CONFLICT DO NOTHING
@@ -1063,6 +1094,7 @@ async function processCommentModeration(message: QueueMessage, env: Env): Promis
         recommendation: 'review',
         reviewRequired: true,
         rationale: 'Comments enter human moderation review before publication.',
+        textReviewEvidence,
       }), revision.sourceEventId],
     );
     if (detectorRun.rowCount !== 1) return;
@@ -1075,7 +1107,7 @@ async function processCommentModeration(message: QueueMessage, env: Env): Promis
        RETURNING id`,
       [eventId, row.author_id, revision.contentId],
     );
-    if (claimed.rowCount === 0) return;
+    if (claimed.rowCount !== 1) throw new Error('comment_review_audit_conflict');
     await client.query(
       `UPDATE moderation.cases
           SET state = 'superseded', resolved_at = COALESCE(resolved_at, now())
@@ -1091,12 +1123,15 @@ async function processCommentModeration(message: QueueMessage, env: Env): Promis
        RETURNING id`,
       [caseId, revision.contentId, AUTHENTICITY_POLICY, revision.sourceEventId],
     );
-    if (caseCreated.rowCount !== 1) return;
+    if (caseCreated.rowCount !== 1) throw new Error('comment_review_case_conflict');
+    const decisionId = uuidv7();
     await client.query(
       `INSERT INTO moderation.decisions (id, case_id, outcome, public_label, policy_version)
        VALUES ($1, $2, 'queue', 'Under review', $3)`,
-      [uuidv7(), caseId, AUTHENTICITY_POLICY],
+      [decisionId, caseId, AUTHENTICITY_POLICY],
     );
+    await recordTextReviewDecisionEvidence(client, { evidence: textReviewEvidence, caseId,
+      decisionId, detectorRunId: detectorRun.rows[0].id });
     await recordUserActivity(client, {
       id: uuidv7(), userId: row.author_id, actorUserId: row.author_id,
       eventType: 'moderation.case_opened', category: 'moderation', source: 'jobs',
