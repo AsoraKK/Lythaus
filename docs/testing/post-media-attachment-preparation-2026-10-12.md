@@ -191,11 +191,11 @@ must perform its own current-state and eligibility check in its transaction.
 `revalidatePostAttachmentSnapshot` is a pure comparison helper; calling it does
 not by itself provide transactional consistency or authorize a write.
 
-The proposal's `BEFORE INSERT` guard does not cover UPDATE or DELETE. A future
-integration must enforce relation immutability with effective runtime-role
-permissions and a separately specified deletion/tombstone flow, or implement
-equivalent UPDATE guards and race tests. Do not claim the INSERT guard alone
-makes row updates safe.
+The lifecycle proposal now includes an unconditional row UPDATE/DELETE rejection
+trigger and no runtime grants. This protects the candidate relation from
+mutation, but it does not define a safe deletion/tombstone operation. Do not
+enable relation writes until the app-role permissions and separate lifecycle
+operation are reviewed together.
 
 The future validated path must bind separate safety and authenticity results
 to current media bytes/state, and validate derivatives for explicit orientation
@@ -206,3 +206,43 @@ and feed lane after `#1005`; this preparation wires none of them. Preserve
 human-image-only policy, block AI-assisted/generated public images, and defer
 video. No fixture or this structural contract certifies detector accuracy or
 permits activation.
+
+## Lifecycle and privacy preparation (2026-10-20)
+
+The unapplied `post_media_attachments.sql.proposal` now adds a server-generated
+opaque relation ID and binds each link to the post's exact
+`moderation_source_event_id` at insert. A later post revision makes the old link
+stale under an exact-revision join; the row remains immutable until an approved
+retention/tombstone operation exists. Media state revision, owner, source
+session and current source/session checks remain required. The proposal still
+hard-checks `publication_eligible = false`, contains no URL or object-key
+projection, and adds no grants.
+
+The proposal includes a separate owner-scoped
+`privacy.reconcile_post_media_attachment_locations` helper. It records one
+locator per relation ID, marks an active legal hold as `active`, and follows the
+existing content/media tombstone convention by marking links to deleted or
+redacted owner content as `retained`. The helper is revoked from `PUBLIC` and
+is not called by any runtime workflow. The canonical export and deletion
+workflows first rebuild locations with `privacy.reconcile_subject_data_locations`;
+that rebuild erases noncanonical locator rows. They must call the new helper
+afterward, and account deletion must classify its resource reference explicitly
+as retained. Those Jobs/export changes and any grants required to call the
+helper are not part of this preparation.
+
+The disposable PG17 contract cases cover exact retry versus conflicting replay,
+stale post revision, immutable rows, foreign-key protection from physical
+orphaning, active-hold locator state, existing hold/delete and hold/retention
+plans, and owner-deletion tombstones. They use synthetic data and do not execute
+the production privacy Workflows. Passing them will prove proposal structure
+and local relational behavior only.
+
+The canonical policy bounds retention rules to `post`, `posts`, or `media` and
+30 days through 10 years. It does not specify which rule applies to an
+attachment link, whether a stale link is later removed or retained, whether
+linkage IDs belong in the owner export, or whether a media object may be reused
+on another post/revision. Those product and retention choices remain
+unresolved. Account deletion currently redacts posts and soft-deletes media
+objects; active legal holds block deletion, and retention cleanup skips held
+owners. No image serving authority, detector result, feature activation, hosted
+schema change, or production permission change follows from this proposal.
