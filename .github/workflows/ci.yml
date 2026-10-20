@@ -127,6 +127,8 @@ jobs:
           packages/contracts/tests/monthly-earning.test.mjs
           packages/contracts/tests/monthly-maintenance.test.mjs
       - run: npm run test:critical-coverage
+      - name: Verify text revision evidence, decision binding and account fencing
+        run: npm run test:text-review
       - name: Verify disabled post media attachment validation
         run: >-
           node --experimental-strip-types --test
