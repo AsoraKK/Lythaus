@@ -52,8 +52,7 @@ class NewsFeed extends ConsumerWidget {
         child: const Center(child: CircularProgressIndicator()),
       );
     }
-    if (entitlements.hasError ||
-        entitlements.valueOrNull == null) {
+    if (entitlements.hasError || entitlements.valueOrNull == null) {
       return Semantics(
         liveRegion: true,
         label: 'News Board access could not be verified',

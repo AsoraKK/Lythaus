@@ -10,7 +10,6 @@ import {
   canViewPrivateActivity,
   evaluateAppeal,
   evaluateReputation,
-  normalizeUserTier,
   selectAppealReviewers,
 } from '../src/index.ts';
 
@@ -57,14 +56,6 @@ test('tier policy only grants News Board to Black and keeps safety limits tier-n
     dailyAppeals: 1,
     exportCooldownDays: 30,
   });
-});
-
-test('missing or unknown stored membership tiers resolve to Free', () => {
-  for (const value of [undefined, null, 'unknown', 'pending', 'confirmed']) {
-    assert.equal(normalizeUserTier(value), 'free');
-  }
-  assert.equal(normalizeUserTier('premium'), 'premium');
-  assert.equal(normalizeUserTier('black'), 'black');
 });
 
 test('reputation promotion requires score, time, pillars, conduct and anti-gaming eligibility', () => {

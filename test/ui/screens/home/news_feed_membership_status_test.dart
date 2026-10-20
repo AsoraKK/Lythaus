@@ -22,7 +22,9 @@ Widget _screen(Future<FeedEntitlements?> Function() loadEntitlements) {
       feedEntitlementsProvider.overrideWith((ref) => loadEntitlements()),
     ],
     child: const MaterialApp(
-      home: Scaffold(body: NewsFeed(feed: _newsFeed, items: [])),
+      home: Scaffold(
+        body: NewsFeed(feed: _newsFeed, items: []),
+      ),
     ),
   );
 }
@@ -61,7 +63,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Couldn’t verify News Board access'), findsOneWidget);
-    expect(find.textContaining('Your current account tier is Free.'), findsNothing);
+    expect(
+      find.textContaining('Your current account tier is Free.'),
+      findsNothing,
+    );
   });
 
   testWidgets('pending status does not change server-issued Free access', (

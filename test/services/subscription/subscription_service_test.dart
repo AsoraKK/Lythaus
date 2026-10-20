@@ -167,10 +167,7 @@ void main() {
       expect(
         () => SubscriptionStatus.fromJson({
           'tier': 'premium',
-          'entitlements': {
-            'maxCustomFeeds': 2,
-            'newsBoardAccessLevel': 'full',
-          },
+          'entitlements': {'maxCustomFeeds': 2, 'newsBoardAccessLevel': 'full'},
         }),
         throwsFormatException,
       );

@@ -17,10 +17,7 @@ class SubscriptionStatus {
   final String tier;
   final SubscriptionEntitlements entitlements;
 
-  const SubscriptionStatus({
-    required this.tier,
-    required this.entitlements,
-  });
+  const SubscriptionStatus({required this.tier, required this.entitlements});
 
   factory SubscriptionStatus.fromJson(Map<String, dynamic> json) {
     final rawEntitlements = json['entitlements'];
@@ -63,7 +60,8 @@ class SubscriptionEntitlements {
         'The server returned an invalid custom-feed entitlement.',
       );
     }
-    if (newsBoardAccess != 'none' && newsBoardAccess != 'full') {
+    if (newsBoardAccess is! String ||
+        (newsBoardAccess != 'none' && newsBoardAccess != 'full')) {
       throw const FormatException(
         'The server returned an invalid News Board entitlement.',
       );

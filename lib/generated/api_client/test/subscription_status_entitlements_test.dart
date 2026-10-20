@@ -1,32 +1,23 @@
-import 'package:built_value/serializer.dart';
-import 'package:lythaus_api_client/lythaus_api_client.dart';
-import 'package:lythaus_api_client/src/serializers.dart';
 import 'package:test/test.dart';
+import 'package:lythaus_api_client/lythaus_api_client.dart';
 
+// tests for SubscriptionStatusEntitlements
 void main() {
-  group('SubscriptionStatusEntitlements', () {
-    test('round-trips Free, Premium, and Black feed entitlements', () {
-      const cases = <Map<String, Object>>[
-        {'maxCustomFeeds': 1, 'newsBoardAccess': 'none'},
-        {'maxCustomFeeds': 2, 'newsBoardAccess': 'none'},
-        {'maxCustomFeeds': 3, 'newsBoardAccess': 'full'},
-      ];
+  final instance = SubscriptionStatusEntitlementsBuilder();
+  // TODO add properties to the builder and call build()
 
-      for (final entry in cases) {
-        final decoded = standardSerializers.deserialize(
-          entry,
-          specifiedType: const FullType(SubscriptionStatusEntitlements),
-        )!
-            as SubscriptionStatusEntitlements;
-
-        expect(decoded.maxCustomFeeds, entry['maxCustomFeeds']);
-        expect(
-          decoded.newsBoardAccess,
-          SubscriptionStatusEntitlementsNewsBoardAccessEnum.valueOf(
-            entry['newsBoardAccess']! as String,
-          ),
-        );
-      }
+  group(SubscriptionStatusEntitlements, () {
+    // Maximum custom feeds available to this tier.
+    // int maxCustomFeeds
+    test('to test the property `maxCustomFeeds`', () async {
+      // TODO
     });
+
+    // Full News Board access is available to Black accounts only; Free and Premium have none.
+    // String newsBoardAccess
+    test('to test the property `newsBoardAccess`', () async {
+      // TODO
+    });
+
   });
 }

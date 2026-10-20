@@ -24,6 +24,10 @@ The manual grant endpoint rejects provider lifecycle fields such as `status`, `p
 
 The OpenAPI and generated Dart contract now match the Worker response: `tier` plus `entitlements.maxCustomFeeds` and `entitlements.newsBoardAccess`. Free, Premium, and Black receive 1/2/3 custom feeds; only Black receives full News Board access. The response has no payment provider, pending, payment-confirmed, cancellation, or expiry state. Its wire payload is unchanged; generated clients ignore unknown extra keys, and those keys must not be reinterpreted as lifecycle state. Future provider lifecycle support requires a separately approved contract and integration.
 
+### OpenAPI v13 consumer migration
+
+OpenAPI v13 is a breaking typed-contract correction because v12 marked unsupported lifecycle and policy properties as required. The runtime route and its JSON payload are unchanged. Regenerate typed clients from v13 and read only `tier` and the two documented entitlement fields. Remove consumers of `status`, `provider`, period-end, cancellation, manual-grant expiry, and unrelated safety/reputation limits from this endpoint. Do not map legacy values such as `pending`, `confirmed`, `active`, or `manual` to an access or payment state; extra response keys are ignored and do not attest to payment. A missing, unknown, or malformed tier in the active response remains unavailable to the client, while the server continues normalizing missing or unknown stored tier values to Free. This migration does not select a provider, define paid purchase behavior, or change entitlements.
+
 ## Regression evidence
 
 `apps/lythaus-admin-api/tests/membership-entitlements.postgres.mjs` uses only synthetic local PostgreSQL 17 fixtures. It covers concurrent first grants, repeated requests, account isolation, downgrade, unsupported provider lifecycle inputs, and unauthenticated changes.
