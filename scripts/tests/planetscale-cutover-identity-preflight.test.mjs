@@ -15,23 +15,23 @@ const adminTarget = branchQualifiedDatabaseTarget(connection('migrator'));
 const verifierTarget = branchQualifiedDatabaseTarget(connection('verifier'));
 const releaseSha = 'a'.repeat(40);
 
-function snapshot({ user, statsVisible = true, activeBuild = false, ownerAccess = true } = {}) {
+function snapshot({ user, isSuperuser = false, statsVisible = true, monitorVisible = false, activeBuild = false, ownerAccess = true } = {}) {
   return {
     databaseName: 'postgres',
     currentUser: user,
     sessionUser: user,
     serverVersionNum: '170006',
     transactionReadOnly: 'on',
-    isSuperuser: false,
+    isSuperuser,
     relationOwners: [
       { schemaName: 'media', relationName: 'upload_sessions', ownerName: 'postgres', effectiveOwnerRole: ownerAccess },
       { schemaName: 'system', relationName: 'schema_migrations', ownerName: 'postgres', effectiveOwnerRole: ownerAccess },
     ],
     indexProgressVisibility: {
-      pgReadAllStatsUsage: false,
-      pgMonitorUsage: statsVisible,
-      effective: statsVisible,
-      activeBuildObserved: statsVisible ? activeBuild : null,
+      pgReadAllStatsUsage: statsVisible,
+      pgMonitorUsage: monitorVisible,
+      effective: isSuperuser || statsVisible,
+      activeBuildObserved: isSuperuser || statsVisible ? activeBuild : null,
     },
   };
 }
@@ -50,27 +50,36 @@ function assess(overrides = {}) {
 }
 
 class FakeClient {
-  constructor({ user, statsVisible = true, activeBuild = false, readOnly = 'on' }) {
+  constructor({ user, isSuperuser = false, statsVisible = true, monitorVisible = false, activeBuild = false, readOnly = 'on', failAt = '', secret = '' }) {
     this.user = user;
+    this.isSuperuser = isSuperuser;
     this.statsVisible = statsVisible;
+    this.monitorVisible = monitorVisible;
     this.activeBuild = activeBuild;
     this.readOnly = readOnly;
+    this.failAt = failAt;
+    this.secret = secret;
     this.queries = [];
     this.connected = false;
     this.closed = false;
   }
 
-  async connect() { this.connected = true; }
+  async connect() {
+    if (this.failAt === 'connect') throw new Error(this.secret);
+    this.connected = true;
+  }
 
   async end() { this.closed = true; }
 
   async query(sql) {
     this.queries.push(sql);
+    if (this.failAt === 'query' && sql.includes('pg_get_userbyid')) throw new Error(this.secret);
+    if (this.failAt === 'rollback' && sql === 'ROLLBACK') throw new Error(this.secret);
     if (sql === 'SHOW transaction_read_only') return { rows: [{ transaction_read_only: this.readOnly }] };
     if (sql.includes('current_database() AS database_name')) {
       return { rows: [{
         database_name: 'postgres', connected_user: this.user, login_user: this.user,
-        server_version_num: '170006', transaction_read_only: 'on', is_superuser: false,
+        server_version_num: '170006', transaction_read_only: 'on', is_superuser: this.isSuperuser,
       }] };
     }
     if (sql.includes('pg_get_userbyid')) {
@@ -80,7 +89,7 @@ class FakeClient {
       ] };
     }
     if (sql.includes("'pg_read_all_stats'")) {
-      return { rows: [{ pg_read_all_stats_usage: false, pg_monitor_usage: this.statsVisible }] };
+      return { rows: [{ pg_read_all_stats_usage: this.statsVisible, pg_monitor_usage: this.monitorVisible }] };
     }
     if (sql.includes('pg_stat_progress_create_index')) {
       return { rows: [{ active_index_build_observed: this.activeBuild }] };
@@ -108,6 +117,7 @@ test('blocks source branch, SQL origin, identity, ownership, stats visibility, a
     [{ verifierSnapshot: snapshot({ user: 'pscale_api_migrator' }) }, 'migrator_and_verifier_connected_identities_are_not_separate'],
     [{ adminSnapshot: snapshot({ user: 'pscale_api_migrator', ownerAccess: false }) }, 'migrator_effective_relation_owner_access_missing'],
     [{ verifierSnapshot: snapshot({ user: 'pscale_api_verifier', statsVisible: false }) }, 'verifier_effective_index_progress_visibility_missing'],
+    [{ verifierSnapshot: snapshot({ user: 'pscale_api_verifier', statsVisible: false, monitorVisible: true }) }, 'verifier_effective_index_progress_visibility_missing'],
     [{ verifierSnapshot: snapshot({ user: 'pscale_api_verifier', activeBuild: true }) }, 'active_index_build_observed'],
     [{ releaseSha: 'not-an-exact-sha' }, 'release_sha_missing_or_invalid'],
   ];
@@ -116,8 +126,8 @@ test('blocks source branch, SQL origin, identity, ownership, stats visibility, a
   }
 });
 
-test('probes use bounded read-only transactions and hide active-build state without visibility', async () => {
-  const client = new FakeClient({ user: 'pscale_api_verifier', statsVisible: false });
+test('probes use bounded read-only transactions and hide active-build state without effective visibility', async () => {
+  const client = new FakeClient({ user: 'pscale_api_verifier', statsVisible: false, monitorVisible: true });
   const observed = await inspectDatabaseIdentity(client);
   assert.equal(observed.indexProgressVisibility.effective, false);
   assert.equal(observed.indexProgressVisibility.activeBuildObserved, null);
@@ -134,6 +144,12 @@ test('probes use bounded read-only transactions and hide active-build state with
   await assert.rejects(inspectDatabaseIdentity(unconfirmed), { code: 'read_only_transaction_not_confirmed' });
   assert.ok(unconfirmed.queries.includes('ROLLBACK'));
   assert.ok(!unconfirmed.queries.some((query) => query.includes('pg_get_userbyid')));
+
+  const superuser = new FakeClient({ user: 'pscale_api_migrator', isSuperuser: true, statsVisible: false });
+  const superuserObserved = await inspectDatabaseIdentity(superuser);
+  assert.equal(superuserObserved.indexProgressVisibility.effective, true);
+  assert.equal(superuserObserved.indexProgressVisibility.activeBuildObserved, false);
+  assert.ok(superuser.queries.some((query) => query.includes('pg_stat_progress_create_index')));
 });
 
 test('requires the live PlanetScale main branch before opening either SQL connection and emits sanitized evidence', async () => {
@@ -180,6 +196,35 @@ test('requires the live PlanetScale main branch before opening either SQL connec
   assert.equal(blocked.status, 'BLOCKED');
   assert.ok(blocked.blockers.includes('migrator_database_branch_id_does_not_match_main'));
   assert.equal(mismatchedClients.length, 0);
+});
+
+test('connection, probe, and rollback failures stay sanitized and close both clients', async () => {
+  const environment = {
+    RELEASE_SHA: releaseSha,
+    PLANETSCALE_API_TOKEN: 'synthetic-id:synthetic-token',
+    PLANETSCALE_ADMIN_DATABASE_URL: connection('migrator'),
+    PLANETSCALE_SCHEMA_READ_DATABASE_URL: connection('verifier'),
+  };
+  for (const failAt of ['connect', 'query', 'rollback']) {
+    const clients = [];
+    const report = await collectCutoverIdentityEvidence({
+      environment,
+      fetchImpl: async () => ({ ok: true, json: async () => ({ name: 'main', id: 'branch123' }) }),
+      clientFactory: (config) => {
+        const user = config.application_name.endsWith('migrator') ? 'pscale_api_migrator' : 'pscale_api_verifier';
+        const client = new FakeClient({ user, failAt, secret: `secret-bearing-${failAt}-failure` });
+        clients.push(client);
+        return client;
+      },
+    });
+    assert.equal(report.status, 'BLOCKED', failAt);
+    assert.equal(clients.length, 2, failAt);
+    assert.ok(clients.every((client) => client.closed), `${failAt} failure should close both clients`);
+    const serialized = JSON.stringify(report);
+    assert.ok(!serialized.includes(`secret-bearing-${failAt}-failure`), failAt);
+    assert.ok(!serialized.includes('synthetic-password'), failAt);
+    assert.ok(!serialized.includes('synthetic-token'), failAt);
+  }
 });
 
 test('manual workflow is protected, exact-SHA gated, read-only, and has no bypass input', () => {

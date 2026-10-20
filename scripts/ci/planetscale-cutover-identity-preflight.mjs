@@ -92,8 +92,7 @@ export async function inspectDatabaseIdentity(client) {
     const visibility = visibilityResult.rows[0] ?? {};
     const isSuperuser = identity.is_superuser === true;
     const hasIndexProgressVisibility = isSuperuser
-      || visibility.pg_read_all_stats_usage === true
-      || visibility.pg_monitor_usage === true;
+      || visibility.pg_read_all_stats_usage === true;
     let activeIndexBuildObserved = null;
     if (hasIndexProgressVisibility) {
       const activeBuildResult = await queryOrFail(client, `SELECT EXISTS (
