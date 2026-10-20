@@ -7,8 +7,9 @@ import 'dart:async';
 import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
-import 'package:lythaus_api_client/src/model/error.dart';
 import 'package:lythaus_api_client/src/model/subscription_status.dart';
+import 'package:lythaus_api_client/src/model/subscription_status401_response.dart';
+import 'package:lythaus_api_client/src/model/subscription_status500_response.dart';
 
 class SubscriptionApi {
 
@@ -18,8 +19,8 @@ class SubscriptionApi {
 
   const SubscriptionApi(this._dio, this._serializers);
 
-  /// Get current user subscription status
-  /// Return the authenticated user&#39;s subscription tier and alpha entitlements, including custom feed count, News Board access, posting restriction, and reputation reward limits.
+  /// Get current account access tier
+  /// Return the authenticated account&#39;s server-recorded access tier and its custom-feed and News Board entitlements. The Worker derives this response from identity.user_entitlements.subscription_tier; missing or unknown stored values resolve to Free. The current contract has no provider, pending-purchase, payment-confirmation, cancellation, or expiry state. Manual tier changes are supported, but this response does not identify how a tier was granted. Unknown extra response fields must not be interpreted as payment lifecycle state.
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation

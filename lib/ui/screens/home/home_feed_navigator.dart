@@ -212,6 +212,10 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
   }
 
   Widget _buildEmptySection(BuildContext context) {
+    if (_activeSection == AlphaFeedSection.newsBoard) {
+      return _buildNewsBoardStatusSection(context);
+    }
+
     final canSwitchFeeds = _canSwitchFeeds(ref.watch(feedListProvider));
     final isMyFeeds = _activeSection == AlphaFeedSection.myFeeds;
     final isPrivateSection = _activeSection != AlphaFeedSection.discover;
@@ -247,7 +251,7 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
             AlphaFeedSection.myFeeds =>
               'Create a feed to follow the topics and accounts you choose.',
             AlphaFeedSection.newsBoard =>
-              'News Board is available only to Black accounts. Lythaus confirms access before content loads.',
+              'News Board is available only to Black accounts. Lythaus checks your current account tier before content loads.',
           };
     final icon = switch (_activeSection) {
       AlphaFeedSection.discover => Icons.explore_outlined,
@@ -316,6 +320,36 @@ class _HomeFeedNavigatorState extends ConsumerState<HomeFeedNavigator> {
                   ),
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNewsBoardStatusSection(BuildContext context) {
+    final canSwitchFeeds = _canSwitchFeeds(ref.watch(feedListProvider));
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            LythausTopBar(
+              title: 'News Board',
+              logoFocusNode: _feedControlsFocus,
+              titleFocusNode: _feedTitleFocus,
+              onLogoTap: canSwitchFeeds
+                  ? () => _openFeedControl(_feedControlsFocus)
+                  : null,
+              onTitleTap: canSwitchFeeds
+                  ? () => _openFeedControl(_feedTitleFocus)
+                  : null,
+              onSearchTap: _openSearch,
+              onTrendingTap: _openTrending,
+              useWordmark: true,
+            ),
+            const _OwnSubmissions(),
+            const Expanded(
+              child: NewsFeed(feed: newsBoardFeedModel, items: []),
             ),
           ],
         ),

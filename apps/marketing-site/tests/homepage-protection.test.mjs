@@ -182,6 +182,7 @@ const reviewedOpenApiDartScripts = {
       'node scripts/fix-openapi-dart-nested-builder-assignment.mjs lib/generated/api_client',
       'node scripts/remove-openapi-oauth-support.mjs lib/generated/api_client',
       'node scripts/trim-trailing-whitespace.js lib/generated/api_client',
+      'node scripts/install-openapi-dart-membership-tests.mjs lib/generated/api_client',
     ].join(' && '),
   },
   'openapi:test:dart': {

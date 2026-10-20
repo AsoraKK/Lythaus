@@ -280,7 +280,7 @@ describe('product-integrity OpenAPI parity', () => {
     const publicProfile = productIntegritySpec.components.schemas.ProductIntegrityPublicProfileUser;
     expect(publicProfile.additionalProperties).toBe(false);
     expect(Object.keys(publicProfile.properties.reputation.properties).sort()).toEqual(['label', 'level']);
-    expect(spec.info.version).toBe('v12');
+    expect(spec.info.version).toBe('v13');
   });
 
   test('private accountability and governance outbox contracts do not disclose sensitive fields', () => {
