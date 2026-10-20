@@ -17,9 +17,11 @@ credential provisioning fallback exists.
 1. Run `operation=inspect`, leaving `grant_run_id` empty. The report must show
    the exact branch, both connected roles, PG17, owner separation, no direct
    verifier stats membership, and actual grantor authority. Effective stats
-   USAGE or CREATEROLE alone is insufficient: the current migrator must hold a
-   direct `ADMIN OPTION` on the stats role or already be a superuser. This path
-   never grants either capability to the migrator.
+   USAGE or CREATEROLE alone is insufficient: PostgreSQL must confirm `MEMBER
+   WITH ADMIN OPTION`, with an existing reachable catalog grantor holding
+   ADMIN OPTION, or the migrator must already be a superuser. Existing
+   inherited ADMIN OPTION is verified explicitly. This path never grants
+   authority to the migrator or changes its current/session role.
 2. Run `operation=grant`, again with no grant run ID. The sole persistent SQL
    change is `GRANT pg_read_all_stats TO "pscale_api_qodocjs6vgrb" WITH INHERIT
    TRUE`. PostgreSQL 17 defaults ADMIN to false and SET to true. Both options

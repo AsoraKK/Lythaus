@@ -54,16 +54,20 @@ export async function readMembershipState(client) {
     && !stats.replication && !stats.bypass_rls, 'unexpected_stats_role_attributes');
   const memberships = await client.query(`SELECT roleid::text AS role_id, member::text AS member_id,
     grantor::text AS grantor_id, admin_option, inherit_option, set_option,
-    xmin::text AS xmin, ctid::text AS tuple_id
+    xmin::text AS xmin, ctid::text AS tuple_id, pg_get_userbyid(grantor) AS grantor_name,
+    pg_has_role(current_user, member, 'USAGE') AS member_usage,
+    pg_has_role(current_user, member, 'SET') AS member_set
     FROM pg_catalog.pg_auth_members
-    WHERE member = $1::oid OR (roleid = $2::oid AND member = $3::oid)
-    ORDER BY roleid, member, grantor LIMIT 256`, [verifier.oid, stats.oid, migrator.oid]);
+    WHERE member = $1::oid OR roleid = $2::oid
+    ORDER BY roleid, member, grantor LIMIT 256`, [verifier.oid, stats.oid]);
   requireThat(memberships.rows.length < 256, 'membership_observation_limit');
   const direct = memberships.rows.filter(row => row.role_id === stats.oid && row.member_id === verifier.oid);
-  const authority = migrator.superuser || memberships.rows.some(row => row.role_id === stats.oid
-    && row.member_id === migrator.oid && row.admin_option === true);
+  const authority = await client.query("SELECT pg_has_role(current_user, 'pg_read_all_stats', 'MEMBER WITH ADMIN OPTION') AS admin_option");
+  const grantorIds = migrator.superuser ? ['10'] : [...new Set(memberships.rows.filter(row => row.role_id === stats.oid
+    && row.admin_option === true && (row.member_id === migrator.oid || row.member_usage || row.member_set)).map(row => row.member_id))];
   return { roles: roles.rows, direct, other: memberships.rows.filter(row => !direct.includes(row)),
-    grantorAuthority: authority, expectedGrantorId: migrator.superuser ? '10' : migrator.oid };
+    adminOptionHeld: authority.rows[0]?.admin_option === true,
+    grantorAuthority: authority.rows[0]?.admin_option === true && grantorIds.length > 0, grantorIds };
 }
 
 function assertSession(snapshot, role, statsVisible) {
@@ -80,7 +84,8 @@ function assertSession(snapshot, role, statsVisible) {
 function assertIntroducedRow(state) {
   const row = state.direct[0];
   requireThat(state.direct.length === 1 && row.admin_option === false && row.inherit_option === true
-    && row.set_option === true && row.grantor_id === state.expectedGrantorId, 'unexpected_direct_membership');
+    && row.set_option === true && state.grantorIds.includes(row.grantor_id)
+    && /^[a-z0-9_]+$/.test(row.grantor_name ?? ''), 'unexpected_direct_membership');
   return row;
 }
 
@@ -149,7 +154,7 @@ export async function runVerifierStats({ environment: env = process.env, fetchIm
     requireThat(same(await readMembershipState(admin), report.before), 'membership_changed_before_mutation');
     if (env.STATS_OPERATION === 'grant') await admin.query(grantSql);
     else {
-      const grantor = report.before.roles.find(row => row.oid === report.before.direct[0].grantor_id)?.name;
+      const grantor = report.before.direct[0].grantor_name;
       requireThat(typeof grantor === 'string' && /^[a-z0-9_]+$/.test(grantor), 'rollback_grantor_unavailable');
       await admin.query(`REVOKE pg_read_all_stats FROM "pscale_api_qodocjs6vgrb" GRANTED BY "${grantor}" RESTRICT`);
     }

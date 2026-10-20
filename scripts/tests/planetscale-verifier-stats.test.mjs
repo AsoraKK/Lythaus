@@ -11,7 +11,8 @@ const environment = () => ({ STATS_OPERATION: 'grant', RELEASE_SHA: releaseSha, 
   GH_TOKEN: 'synthetic-github-token', PLANETSCALE_API_TOKEN: 'synthetic:service-token',
   PLANETSCALE_ADMIN_DATABASE_URL: url(target.migrator), PLANETSCALE_SCHEMA_READ_DATABASE_URL: url(target.verifier) });
 const member = () => ({ role_id: '3375', member_id: '1002', grantor_id: '1001',
-  admin_option: false, inherit_option: true, set_option: true, xmin: '777', tuple_id: '(1,2)' });
+  admin_option: false, inherit_option: true, set_option: true, xmin: '777', tuple_id: '(1,2)',
+  grantor_name: target.migrator, member_usage: false, member_set: false });
 const role = (oid, name, superuser = false) => ({ oid, name, superuser,
   create_role: false, create_db: false, replication: false, bypass_rls: false });
 
@@ -39,7 +40,9 @@ function fixture() {
         this.pending = null; return { rows: [] };
       }
       if (sql === grantSql) { world.mutationCount++; this.pending.push({ ...member(),
-        grantor_id: world.roles[1].superuser ? '10' : '1001', ...world.badGrant }); return { rows: [] }; }
+        grantor_id: world.roles[1].superuser ? '10' : world.recordedGrantor ?? '1001',
+        grantor_name: world.roles[1].superuser ? 'postgres' : world.recordedGrantorName ?? target.migrator,
+        ...world.badGrant }); return { rows: [] }; }
       if (sql.startsWith('REVOKE ')) {
         world.mutationCount++;
         if (world.dependentGrant) throw new Error('dependent grant SQL text');
@@ -53,6 +56,9 @@ function fixture() {
       if (sql.includes('pg_current_xact_id')) return { rows: [{ transaction_id: '777' }] };
       if (sql.includes('FROM pg_catalog.pg_roles WHERE rolname')) return { rows: structuredClone(world.roles) };
       if (sql.includes('FROM pg_catalog.pg_auth_members')) return { rows: structuredClone(this.pending ?? world.memberships) };
+      if (sql.includes('MEMBER WITH ADMIN OPTION')) return { rows: [{ admin_option: world.roles[1].superuser
+        || world.memberships.some(row => row.role_id === '3375' && row.admin_option
+          && (row.member_id === '1001' || row.member_usage || row.member_set)) }] };
       if (sql === 'SHOW transaction_read_only') return { rows: [{ transaction_read_only: 'on' }] };
       if (sql.includes('current_database() AS database_name')) return { rows: [{ database_name: 'postgres',
         connected_user: world.identityDrift ?? this.role, login_user: this.role, server_version_num: world.version ?? '170011',
@@ -117,6 +123,21 @@ test('USAGE and CREATEROLE are not treated as ADMIN OPTION', async () => {
 test('a real superuser authority records the bootstrap grantor rather than guessing the session grantor', async () => {
   const { world, execute } = fixture(); world.roles[1].superuser = true;
   assert.equal((await execute()).introducedGrant.grantor_id, '10');
+});
+
+test('existing inherited ADMIN OPTION is explicitly verified and its actual grantor is retained for rollback', async () => {
+  const { world, execute } = fixture();
+  world.memberships[0].admin_option = false;
+  world.memberships.push({ role_id: '3375', member_id: '9000', grantor_id: '10', admin_option: true,
+    inherit_option: true, set_option: true, member_usage: true, member_set: true });
+  world.recordedGrantor = '9000'; world.recordedGrantorName = 'existing_stats_authority';
+  const receipt = await execute();
+  assert.equal(receipt.status, 'GRANTED_AND_RECONNECTED');
+  assert.equal(receipt.introducedGrant.grantor_id, '9000');
+  const revoked = await execute({ ...environment(), STATS_OPERATION: 'revoke', GITHUB_RUN_ID: '202',
+    GRANT_RUN_ID: '201', VERIFIED_GRANT_RUN_SHA: releaseSha }, receipt);
+  assert.equal(revoked.status, 'INTRODUCED_GRANT_REVOKED');
+  assert.ok(world.queries.includes('REVOKE pg_read_all_stats FROM "pscale_api_qodocjs6vgrb" GRANTED BY "existing_stats_authority" RESTRICT'));
 });
 
 test('wrong role, SQL target, provider branch, main SHA, session, version, and options all stop before mutation', async t => {

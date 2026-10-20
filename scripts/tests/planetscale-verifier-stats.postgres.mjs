@@ -81,6 +81,24 @@ test('PG17 proves authority, attributed grant, fresh visibility, row identity an
     assert.equal(revoke.status, 'INTRODUCED_GRANT_REVOKED', JSON.stringify(revoke.blockers));
     assert.equal(revoke.verifierAfter.indexProgressVisibility.pgReadAllStatsUsage, false);
     assert.equal((await execute()).status, 'READY_FOR_APPROVED_GRANT');
+    let ownedAuthority = false;
+    await control.query('BEGIN');
+    try {
+      await control.query('CREATE ROLE lythaus_stats_inherited_authority_fixture NOLOGIN');
+      await control.query('GRANT pg_read_all_stats TO lythaus_stats_inherited_authority_fixture WITH ADMIN OPTION');
+      await control.query(`GRANT lythaus_stats_inherited_authority_fixture TO "${target.migrator}" WITH INHERIT TRUE`);
+      await control.query(`REVOKE ADMIN OPTION FOR pg_read_all_stats FROM "${target.migrator}" RESTRICT`);
+      await control.query('COMMIT');
+      ownedAuthority = true;
+      const inherited = await execute({ STATS_OPERATION: 'grant' });
+      assert.equal(inherited.status, 'GRANTED_AND_RECONNECTED', JSON.stringify(inherited.blockers));
+      assert.equal(inherited.introducedGrant.grantor_name, 'lythaus_stats_inherited_authority_fixture');
+      assert.equal((await execute({ STATS_OPERATION: 'revoke', GITHUB_RUN_ID: '202',
+        GRANT_RUN_ID: '201', VERIFIED_GRANT_RUN_SHA: sourceSha }, inherited)).status, 'INTRODUCED_GRANT_REVOKED');
+    } finally {
+      await control.query('ROLLBACK');
+      if (ownedAuthority) await control.query('DROP ROLE lythaus_stats_inherited_authority_fixture');
+    }
   } finally {
     for (const client of clients) await client.end().catch(() => {});
     await control.query('ROLLBACK');

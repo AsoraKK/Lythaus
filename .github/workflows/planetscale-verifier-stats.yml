@@ -95,7 +95,7 @@ jobs:
           set -euo pipefail
           report="$RUNNER_TEMP/verifier-stats/summary.json"
           if [[ -f "$report" ]]; then
-            jq '{sourceMainSha,runId,operation,status,mutationOutcome,blockers,target,grantorAuthority:.before.grantorAuthority,directBefore:.before.direct,introducedGrant,directAfter:.afterMembership.direct,visibilityAfter:.verifierAfter.indexProgressVisibility}' "$report" | tee -a "$GITHUB_STEP_SUMMARY"
+            jq '{sourceMainSha,runId,operation,status,mutationOutcome,blockers,target,adminOptionHeld:.before.adminOptionHeld,grantorAuthority:.before.grantorAuthority,grantorIds:.before.grantorIds,directBefore:.before.direct,introducedGrant,directAfter:.afterMembership.direct,visibilityAfter:.verifierAfter.indexProgressVisibility}' "$report" | tee -a "$GITHUB_STEP_SUMMARY"
           fi
       - name: Upload sanitized before and after membership evidence
         if: always()
