@@ -106,3 +106,27 @@ auth-owned Workerd test harness and this inventory. Synthetic fixtures blocked
 all unrecognized provider requests; no account or message was created outside
 the disposable local test database. The final candidate commit SHA and fresh
 pull-request CI result are reported by the handoff after publication.
+
+## Protected acceptance harness update — 20 October 2026
+
+The current auth acceptance coordinator and evidence parser now bind the exact
+public/admin/jobs/coordinator dependency versions and provenance, require
+provider lifecycle evidence plus receipts from two independently observed
+mailbox providers, and cover an aged 25-hour verification fixture, an immediate
+resend cooldown with zero new outbox rows, resend after the cooldown, and
+two-account session isolation. The fixture ages a token in the test database;
+it does not model a person waiting 25 hours. Synthetic coordinator tests are
+deliberately prevented from producing a live `PASSED` observation when their
+mocked Cloudflare lifecycle subscription is incomplete.
+
+The integration test also exercises a concrete coordinator defect: after
+password reset, account switching attempted primary sign-in with the old
+password. It now uses the new password for that sign-in and separately verifies
+that the old password fails. This is covered with different old and new test
+passwords.
+
+These additions produce sanitized v3 evidence only after a protected live
+observer succeeds. Local fixtures, unit tests and the harness itself do not
+certify real mailbox acceptance. Issue #720 remains the source of the
+production approval blocker; see the ADR-003 runbook for its latest recorded
+status and the protected operator procedure.

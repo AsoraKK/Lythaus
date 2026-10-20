@@ -12,8 +12,15 @@ const acceptanceRunId = '22222222-2222-4222-8222-222222222222';
 const candidate = {
   workerName: 'lythaus-public-api-development',
   workerVersionId,
+  sourceReleaseSha: releaseSha,
   uploadedAt: '2026-08-29T10:00:00.000Z',
   stagedAt: '2026-08-29T10:01:00.000Z',
+};
+const candidateDependencies = {
+  public: { workerName: 'lythaus-public-api-development', versionId: workerVersionId, sourceSha: releaseSha, status: 'NEW_CANDIDATE', provenance: 'BUILT_FROM_RELEASE_SHA' },
+  admin: { workerName: 'lythaus-admin-api-development', versionId: '33333333-3333-4333-8333-333333333333', sourceSha: releaseSha, status: 'NEW_CANDIDATE', provenance: 'BUILT_FROM_RELEASE_SHA' },
+  jobs: { workerName: 'lythaus-jobs-development', versionId: '44444444-4444-4444-8444-444444444444', sourceSha: releaseSha, status: 'NEW_CANDIDATE', provenance: 'BUILT_FROM_RELEASE_SHA' },
+  coordinator: { workerName: 'lythaus-auth-acceptance-coordinator-development', versionId: '55555555-5555-4555-8555-555555555555', sourceSha: releaseSha, status: 'NEW_CANDIDATE', provenance: 'BUILT_FROM_RELEASE_SHA' },
 };
 
 test('collector validates a protected read-only query artifact without network access', () => {
@@ -21,7 +28,7 @@ test('collector validates a protected read-only query artifact without network a
   const queryOutputPath = join(directory, 'query-output.json');
   const evidencePath = join(directory, 'evidence.json');
   writeFileSync(queryOutputPath, JSON.stringify({
-    formatVersion: 'lythaus-real-email-acceptance-v2',
+    formatVersion: 'lythaus-real-email-acceptance-v3',
     source: 'runtime_observation',
     status: 'HUMAN_ACCEPTANCE_REQUIRED',
     reason: 'mailbox_requires_human',
@@ -55,17 +62,59 @@ test('collector validates a protected read-only query artifact without network a
   }
 });
 
+test('collector preserves a blocked dependency observation instead of relabeling it as human work', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lythaus-auth-observer-'));
+  const queryOutputPath = join(directory, 'query-output.json');
+  const evidencePath = join(directory, 'evidence.json');
+  writeFileSync(queryOutputPath, JSON.stringify({
+    formatVersion: 'lythaus-real-email-acceptance-v3',
+    source: 'runtime_observation',
+    status: 'BLOCKED',
+    reason: 'candidate_dependencies_missing',
+    releaseSha,
+    acceptanceRunId,
+    candidate,
+  }));
+  try {
+    let result;
+    try {
+      execFileSync(process.execPath, [script], {
+        env: {
+          ...process.env,
+          RELEASE_SHA: releaseSha,
+          ADR003_WORKER_NAME: candidate.workerName,
+          ADR003_WORKER_VERSION_ID: workerVersionId,
+          ADR003_ACCEPTANCE_RUN_ID: acceptanceRunId,
+          ADR003_AUTH_ACCEPTANCE_EVIDENCE_SOURCE: 'read_only_query_artifact',
+          ADR003_AUTH_ACCEPTANCE_QUERY_OUTPUT_PATH: queryOutputPath,
+          ADR003_AUTH_ACCEPTANCE_EVIDENCE_PATH: evidencePath,
+        },
+        encoding: 'utf8',
+      });
+    } catch (error) {
+      result = error;
+    }
+    assert.equal(result?.status, 1);
+    const evidence = JSON.parse(readFileSync(evidencePath, 'utf8'));
+    assert.equal(evidence.status, 'BLOCKED');
+    assert.equal(evidence.reason, 'candidate_dependencies_missing');
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test('collector fails closed when lifecycle queue configuration is not observed', () => {
   const directory = mkdtempSync(join(tmpdir(), 'lythaus-auth-observer-'));
   const queryOutputPath = join(directory, 'query-output.json');
   const evidencePath = join(directory, 'evidence.json');
   writeFileSync(queryOutputPath, JSON.stringify({
-    formatVersion: 'lythaus-real-email-acceptance-v2',
+    formatVersion: 'lythaus-real-email-acceptance-v3',
     source: 'runtime_observation',
     status: 'PASSED',
     releaseSha,
     acceptanceRunId,
     candidate,
+    candidateDependencies,
     acceptanceAccount: { class: 'production_acceptance', createdAt: candidate.stagedAt, metricIsolation: 'excluded' },
     turnstile: { status: 'verified', observedAt: candidate.stagedAt, hostname: 'api.lythaus.co', action: 'email_auth' },
   }));
@@ -104,7 +153,7 @@ test('collector rejects a partial Cloudflare Access service token', () => {
   const queryOutputPath = join(directory, 'query-output.json');
   const evidencePath = join(directory, 'evidence.json');
   writeFileSync(queryOutputPath, JSON.stringify({
-    formatVersion: 'lythaus-real-email-acceptance-v2',
+    formatVersion: 'lythaus-real-email-acceptance-v3',
     source: 'runtime_observation',
     status: 'HUMAN_ACCEPTANCE_REQUIRED',
     reason: 'keeper_flow_incomplete',

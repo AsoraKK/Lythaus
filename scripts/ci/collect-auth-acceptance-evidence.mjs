@@ -64,7 +64,7 @@ function fallbackEvidence(status, reason) {
   const candidate = candidateFromEnvironment();
   if (!candidate) throw new Error('auth_acceptance_candidate_timestamps_missing');
   return {
-    formatVersion: 'lythaus-real-email-acceptance-v2',
+    formatVersion: 'lythaus-real-email-acceptance-v3',
     source: 'runtime_observation',
     status,
     ...(reason ? { reason } : {}),
@@ -109,11 +109,22 @@ async function collect() {
     try { body = raw ? JSON.parse(raw) : null; } catch { body = null; }
   }
 
-  if (response?.status === 428 || body?.status === 'HUMAN_ACCEPTANCE_REQUIRED') {
+  if (body?.status === 'HUMAN_ACCEPTANCE_REQUIRED') {
     const evidence = { ...body, source: 'runtime_observation', status: 'HUMAN_ACCEPTANCE_REQUIRED' };
     const parsed = parseRealEmailAcceptanceEvidence(evidence, releaseSha, expectedCandidate);
     writeEvidence(parsed);
     return parsed;
+  }
+  if (body?.status === 'BLOCKED') {
+    const evidence = { ...body, source: 'runtime_observation', status: 'BLOCKED' };
+    const parsed = parseRealEmailAcceptanceEvidence(evidence, releaseSha, expectedCandidate);
+    writeEvidence(parsed);
+    return parsed;
+  }
+  if (response?.status === 428) {
+    const evidence = fallbackEvidence('BLOCKED', 'auth_acceptance_observer_http_428');
+    writeEvidence(evidence);
+    return evidence;
   }
   if (response && !response.ok) {
     const evidence = fallbackEvidence('BLOCKED', `auth_acceptance_observer_http_${response.status}`);

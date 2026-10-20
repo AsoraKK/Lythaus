@@ -15,7 +15,7 @@ const candidate = {
 
 test('auth acceptance preserves the certified release separately from reused candidate source', () => {
   const evidence = parseRealEmailAcceptanceEvidence({
-    formatVersion: 'lythaus-real-email-acceptance-v2',
+    formatVersion: 'lythaus-real-email-acceptance-v3',
     source: 'runtime_observation',
     status: 'HUMAN_ACCEPTANCE_REQUIRED',
     reason: 'keeper_flow_incomplete',
@@ -29,7 +29,7 @@ test('auth acceptance preserves the certified release separately from reused can
 
 test('auth acceptance rejects a candidate source identity mismatch', () => {
   assert.throws(() => parseRealEmailAcceptanceEvidence({
-    formatVersion: 'lythaus-real-email-acceptance-v2',
+    formatVersion: 'lythaus-real-email-acceptance-v3',
     source: 'runtime_observation',
     status: 'HUMAN_ACCEPTANCE_REQUIRED',
     reason: 'keeper_flow_incomplete',
@@ -37,4 +37,18 @@ test('auth acceptance rejects a candidate source identity mismatch', () => {
     acceptanceRunId: '22222222-2222-4222-8222-222222222222',
     candidate,
   }, releaseSha, { ...candidate, sourceReleaseSha: 'c'.repeat(40) }), /candidate_source_sha_mismatch/);
+});
+
+test('auth acceptance preserves a blocked dependency decision without calling it human work', () => {
+  const evidence = parseRealEmailAcceptanceEvidence({
+    formatVersion: 'lythaus-real-email-acceptance-v3',
+    source: 'runtime_observation',
+    status: 'BLOCKED',
+    reason: 'candidate_dependencies_missing',
+    releaseSha,
+    acceptanceRunId: '22222222-2222-4222-8222-222222222222',
+    candidate,
+  }, releaseSha, { ...candidate });
+  assert.equal(evidence.status, 'BLOCKED');
+  assert.equal(evidence.reason, 'candidate_dependencies_missing');
 });
