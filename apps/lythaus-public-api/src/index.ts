@@ -611,6 +611,7 @@ async function createAcceptanceResendFixture(request: Request, env: Env): Promis
   const input = await readJson<{ email?: string }>(request, 8 * 1024);
   const email = normalizeEmailAddress(input.email);
   const secrets = requireAuthSecrets(env);
+  let outboxId: string | undefined;
   await transaction(env.DB_APP_FRESH, async (client) => {
     const run = await client.query<{
       resend_fixture_user_id: string | null;
@@ -654,7 +655,7 @@ async function createAcceptanceResendFixture(request: Request, env: Env): Promis
        ON CONFLICT (run_id, event_type) DO NOTHING`,
       [uuidv7(), acceptance.runId],
     );
-    await queueTransactionalEmail(client, {
+    outboxId = await queueTransactionalEmail(client, {
       userId,
       purpose: 'verification',
       challengeId,
@@ -666,6 +667,7 @@ async function createAcceptanceResendFixture(request: Request, env: Env): Promis
       recordAcceptanceEvent: false,
     });
   });
+  await publishCommittedEmailDispatch(env, outboxId);
   const cooldown = await query<{ seconds: number }>(env.DB_APP_FRESH,
     `SELECT GREATEST(0, CEIL(EXTRACT(EPOCH FROM t.created_at + interval '30 seconds' - now())))::integer AS seconds
      FROM system.production_auth_acceptance_runs r
