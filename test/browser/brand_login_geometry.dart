@@ -9,7 +9,39 @@ import 'package:lythaus/design_system/widgets/lyth_brand.dart';
 @JS('globalThis.__readBrandLoginLayout')
 external set layoutReader(JSFunction reader);
 
+@JS('globalThis.__readBrandLoginEditing')
+external set editingReader(JSFunction reader);
+
 void installBrandLoginGeometry() {
+  editingReader = (() {
+    final fields = <Map<String, Object?>>[];
+    void visit(Element element) {
+      final widget = element.widget;
+      if (widget is EditableText &&
+          element
+                  .findAncestorWidgetOfExactType<TextField>()
+                  ?.decoration
+                  ?.labelText ==
+              'Email') {
+        final value = widget.controller.value;
+        fields.add({
+          'controllerId': identityHashCode(widget.controller),
+          'elementId': identityHashCode(element),
+          'focused': widget.focusNode.hasFocus,
+          'readOnly': widget.readOnly,
+          'valueLength': value.text.length,
+          'hasExpectedDraft': value.text == 'draft@example.invalid',
+          'selectionBase': value.selection.baseOffset,
+          'selectionExtent': value.selection.extentOffset,
+        });
+      }
+      element.visitChildElements(visit);
+    }
+
+    final root = WidgetsBinding.instance.rootElement;
+    if (root != null) visit(root);
+    return jsonEncode({'email': fields}).toJS;
+  }).toJS;
   layoutReader = (() {
     final brands = <Map<String, double>>[];
     final fields = <String, List<Map<String, double>>>{};
