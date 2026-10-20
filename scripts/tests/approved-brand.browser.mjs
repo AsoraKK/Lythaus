@@ -14,7 +14,7 @@ import {assertBrandCaseMatrix} from './brand-case-matrix.mjs';
 import {loginFixtureResponse,expectedRefreshConsole,refreshUrl,logoutUrl,discoverUrl} from './brand-login-transport.mjs';
 import {assertLoginLayout,assertMatchingLoginLayout,loginFirstPaintPixels,assertLoginFirstPaintPixels} from './brand-login-first-paint.mjs';
 import {waitForLoginFunction} from './brand-login-wait-diagnostics.mjs';
-import {installLoginDraftTrace,captureLoginDraftTrace} from './brand-login-draft.mjs';
+import {installLoginDraftTrace,captureLoginDraftTrace,loginEmailReady,loginDraftAccepted} from './brand-login-draft.mjs';
 import {runOnboardingCase,onboardingInventory} from './brand-onboarding.browser.mjs';
 import {verifyNativeArtworkReference} from './brand-native-reference-controls.mjs';
 
@@ -240,11 +240,22 @@ try {
             draftTrace=await captureLoginDraftTrace(page,'before-email-click');
             const email = page.getByRole('textbox', { name: 'Email', exact: true });
             await email.click();
-            await waitForLoginFunction(page,'email-input-focus-after-click',() => document.activeElement instanceof HTMLInputElement);
+            await waitForLoginFunction(page,'email-input-activated-after-click',loginEmailReady);
+            const editingBefore=await page.evaluate(()=>JSON.parse(window.__readBrandLoginEditing()).email[0]);
+            await captureLoginDraftTrace(page,'email-input-activated-before-insert');
             await page.keyboard.insertText('draft@example.invalid');
+            await waitForLoginFunction(page,'email-controller-accepted-before-resize',loginDraftAccepted);
+            await captureLoginDraftTrace(page,'email-controller-accepted-before-resize');
             await page.setViewportSize({ width: width === 1440 ? 1024 : width + 20, height: 960 });
+            await waitForLoginFunction(page,'email-controller-draft-after-first-resize',loginDraftAccepted);
+            const editingResized=await page.evaluate(()=>JSON.parse(window.__readBrandLoginEditing()).email[0]);
+            assert.equal(editingResized.controllerId,editingBefore.controllerId,'Email controller survives first resize');
+            await captureLoginDraftTrace(page,'email-controller-draft-after-first-resize');
             await page.setViewportSize({ width, height: 960 });
             await waitForLoginFunction(page,'active-input-draft-after-resize',() => document.activeElement?.value === 'draft@example.invalid');
+            await waitForLoginFunction(page,'email-controller-draft-after-restored-size',loginDraftAccepted);
+            const editingRestored=await page.evaluate(()=>JSON.parse(window.__readBrandLoginEditing()).email[0]);
+            assert.equal(editingRestored.controllerId,editingBefore.controllerId,'Email controller survives restored size');
             draftTrace=await captureLoginDraftTrace(page,'after-draft-resize-check');
           }
           await verifyIcons(page, context);

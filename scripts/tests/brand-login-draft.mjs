@@ -1,3 +1,19 @@
+export function loginEmailReady(){
+ const input=document.activeElement;
+ if(!(input instanceof HTMLInputElement)||input.id!=='email'||input.name!=='email'||
+  !input.isConnected||input.disabled||input.readOnly)return false;
+ const fields=JSON.parse(window.__readBrandLoginEditing()).email;
+ return fields.length===1&&fields[0].focused&&!fields[0].readOnly;
+}
+
+export function loginDraftAccepted(){
+ const input=document.activeElement;
+ if(!(input instanceof HTMLInputElement)||input.id!=='email'||input.name!=='email'||
+  !input.isConnected||input.disabled||input.readOnly||input.value!=='draft@example.invalid')return false;
+ const fields=JSON.parse(window.__readBrandLoginEditing()).email;
+ return fields.length===1&&fields[0].focused&&!fields[0].readOnly&&fields[0].hasExpectedDraft;
+}
+
 export async function installLoginDraftTrace(context){
  await context.addInitScript(()=>{
   const nodes=new WeakMap();let nextNode=0;
@@ -5,7 +21,7 @@ export async function installLoginDraftTrace(context){
    if(!(node instanceof Element))return null;
    if(!nodes.has(node))nodes.set(node,++nextNode);
    const input=node instanceof HTMLInputElement||node instanceof HTMLTextAreaElement?node:null;
-   return {nodeId:nodes.get(node),tag:node.tagName,id:node.id,classes:node.className,role:node.getAttribute('role'),
+   return {nodeId:nodes.get(node),tag:node.tagName,id:node.id,name:input?.name??null,classes:node.className,role:node.getAttribute('role'),
     type:input?.type??null,connected:node.isConnected,focused:node===document.activeElement,
     disabled:input?.disabled??null,readOnly:input?.readOnly??null,
     valueLength:input?.value.length??null,hasExpectedDraft:input?.value==='draft@example.invalid'};
