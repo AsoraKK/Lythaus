@@ -41,9 +41,12 @@ it authorizes no grant, credential, purchase, restore or release operation.
 
 The maintenance statement does not set these variables. This proposal does
 not write protected configuration or authorize its own future merge SHA.
-A matching consent only removes the consent blocker: backup/checklist,
-canonical registry, exact provider/SQL identity, role/Hyperdrive binding,
-operator estimate and positive cost-ceiling checks still determine readiness.
+A matching consent only removes the consent blocker: protected backup and
+reviewed restore-evidence record, canonical registry, exact provider/SQL
+identity, role/Hyperdrive binding, operator estimate and positive cost-ceiling
+checks still determine readiness. The source branch's
+`restore_checklist_completed_at` marker is informational and does not establish
+source recoverability.
 No output or plan artifact may be edited to manufacture `ready=true`.
 
 ## Freshly verified safeguards

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "lythaus-0021-restore-evidence-v1",
+  "sourceBranch": {
+    "id": "vqa2g2xc9wsl",
+    "name": "main"
+  },
+  "selectedBackupId": "pa4t6j6s07b7",
+  "selectedBackupUiTimestamp": "2026-10-18T14:25:03.069Z",
+  "restoredBranch": {
+    "id": "n3wdm03vwenu",
+    "state": "deleted",
+    "createdAt": "2026-10-18T21:20:22Z"
+  },
+  "verificationWindow": {
+    "startedAt": "2026-10-18T21:27:46Z",
+    "completedAt": "2026-10-18T21:30:32Z"
+  },
+  "verifiedAt": "2026-10-18T21:30:32Z",
+  "artifactPath": null,
+  "artifactStatus": "UNVERIFIED_NOT_RETAINED",
+  "evidenceSha256": "4dfe19aae74be7b29b63a1fadf050327ea84050401d56bf085ba963959b2cb0b",
+  "verifiedScope": [
+    "schema_extensions_indexes",
+    "canonical_registry"
+  ],
+  "verifiedRegistryHead": "0020_auth_recovery_delivery.sql",
+  "unresolvedGates": [
+    "backup_binding",
+    "effective_runtime_privileges",
+    "application_smoke",
+    "rpo_rto_acceptance",
+    "independent_recovery_destination"
+  ],
+  "review": {
+    "reviewedAt": null,
+    "reviewedBy": null,
+    "reference": null
+  },
+  "recordSha256": "3acb35c12136a79b54a24ee07fbb1b86f47e8c105a75a369cc112a8a7a495cf7"
+}
