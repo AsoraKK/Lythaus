@@ -280,6 +280,8 @@ doc/StorageUsageGet200Response.md
 doc/StorageUsageGet200ResponseStorage.md
 doc/SubscriptionApi.md
 doc/SubscriptionStatus.md
+doc/SubscriptionStatus401Response.md
+doc/SubscriptionStatus500Response.md
 doc/SubscriptionStatusEntitlements.md
 doc/SuggestionSubmission.md
 doc/SupportError.md
@@ -604,6 +606,8 @@ lib/src/model/simple_error.dart
 lib/src/model/storage_usage_get200_response.dart
 lib/src/model/storage_usage_get200_response_storage.dart
 lib/src/model/subscription_status.dart
+lib/src/model/subscription_status401_response.dart
+lib/src/model/subscription_status500_response.dart
 lib/src/model/subscription_status_entitlements.dart
 lib/src/model/suggestion_submission.dart
 lib/src/model/support_error.dart
@@ -914,6 +918,8 @@ test/social_api_test.dart
 test/storage_usage_get200_response_storage_test.dart
 test/storage_usage_get200_response_test.dart
 test/subscription_api_test.dart
+test/subscription_status401_response_test.dart
+test/subscription_status500_response_test.dart
 test/subscription_status_entitlements_test.dart
 test/subscription_status_test.dart
 test/suggestion_submission_test.dart

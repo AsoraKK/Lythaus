@@ -291,6 +291,8 @@ export 'package:lythaus_api_client/src/model/simple_error.dart';
 export 'package:lythaus_api_client/src/model/storage_usage_get200_response.dart';
 export 'package:lythaus_api_client/src/model/storage_usage_get200_response_storage.dart';
 export 'package:lythaus_api_client/src/model/subscription_status.dart';
+export 'package:lythaus_api_client/src/model/subscription_status401_response.dart';
+export 'package:lythaus_api_client/src/model/subscription_status500_response.dart';
 export 'package:lythaus_api_client/src/model/subscription_status_entitlements.dart';
 export 'package:lythaus_api_client/src/model/suggestion_submission.dart';
 export 'package:lythaus_api_client/src/model/support_error.dart';
