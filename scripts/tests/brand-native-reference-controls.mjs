@@ -9,7 +9,8 @@ export async function verifyNativeArtworkReference({browser,engine,origin,approv
  const context=await browser.newContext({viewport:{width:320,height:200},locale:'en-US'});
  const page=await context.newPage(),results=[];
  try{
-  await page.goto(origin+'/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg');
+  await page.route(origin+'/__native-reference-control',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><html><body></body></html>'}));
+  await page.goto(origin+'/__native-reference-control');
   for(const theme of ['light','dark']){
    const file=theme==='light'?'lythaus-wordmark-black.e450176663e0.svg':'lythaus-wordmark-white.5ba0451347e2.svg';
    const url=origin+'/brand/lythaus-v1/'+file,asset=approved.web_copy_map.find(entry=>entry.public_url===new URL(url).pathname);
