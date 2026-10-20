@@ -7,12 +7,15 @@ discovery and reputation eligibility fields remain false.
 ## Replacement strategy and file ownership
 
 This branch starts directly at main
-`dc5f0a9752113ea65b78a385bbb62f89337c09a8`, rather than rebasing or retargeting
+`fc0b6254d970a0badd42825ee0662db76e1914cd`, rather than rebasing or retargeting
 the conflicted PR989/1059 stack. It ports the versioned envelope/link and their
 tests, then implements a smaller current-main text snapshot/fence helper.
 PR989's DB exports, proposed `lock_active_post_review_author`, appeal-lock
 change, proposed-capability fixture, old CI edits and older main snapshot are
 not imported. PR1059 remains preserved as review history, not a merge dependency.
+The merged #1058 restore-evidence loader, its tests and migration-workflow wiring
+are retained unchanged. Native CI includes both its loader regression command
+and this branch's required text suite.
 
 The coordinator requested required-CI wiring and current-main reconciliation,
 and previously authorized text-only Jobs entrypoint changes. The overlapping
@@ -78,6 +81,9 @@ Local results on cached Node 24.19.0:
 - `npm_config_cache=/workspace/.lythaus-cache/npm npm_config_offline=true npm run
   test:native-architecture`: **377 passed**, zero failures/skips.
 - Native typecheck, JavaScript syntax and whitespace checks pass.
+- The merged restore-evidence loader and 0021 workflow tests pass **18/18** on
+  this reconciled base. Their source and migration-workflow files match main
+  exactly; the native CI loader step is preserved.
 
 ## PostgreSQL test boundary
 
