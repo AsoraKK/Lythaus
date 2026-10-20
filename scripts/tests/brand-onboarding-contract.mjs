@@ -16,6 +16,18 @@ export function assertSignedOutHost(host,navigatorId){
  assert.equal(host.pendingAuthenticatedWork,false);assert.equal(host.focusedEditable,false);
  if(navigatorId!==undefined)assert.equal(host.navigatorId,navigatorId);
 }
+export function signedOutLoginHostReady(){
+ const host=JSON.parse(window.__readVisibleHostState());
+ for(const [key,expected] of Object.entries({materialApps:1,navigators:1,visibleLogin:1,visibleOnboarding:0,visibleMarker:0,guest:false,focusedEditable:false,semanticsEnabled:false,presented:false})){
+  if(host[key]!==expected)throw new Error(`Login readiness failed: ${key}=${host[key]}`);
+ }
+ if(host.auth!=='loading'&&host.auth!=='signed-out')throw new Error(`Login readiness failed: auth=${host.auth}`);
+ if(typeof host.pendingAuthenticatedWork!=='boolean')throw new Error(`Login readiness failed: pendingAuthenticatedWork=${host.pendingAuthenticatedWork}`);
+ return host.auth==='signed-out'&&host.pendingAuthenticatedWork===false;
+}
+export async function waitForSignedOutLoginHost(page){
+ await page.waitForFunction(signedOutLoginHostReady,null,{polling:50,timeout:5000});
+}
 export function signedOutOnboardingHostReady(navigatorId){
  const host=JSON.parse(window.__readVisibleHostState());
  if(host.materialApps!==1)throw new Error(`Onboarding readiness failed: materialApps=${host.materialApps}`);

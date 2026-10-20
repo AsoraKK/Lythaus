@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 import {runInNewContext} from 'node:vm';
 import {prepareVisibleOnboardingSource,prepareOnboardingReference,onboardingImport,visibleImport,visibleInstall,referenceInstall} from './onboarding-visible-source.mjs';
 import {prepareBrandLoginSource} from './brand-login-source.mjs';
-import {originalCaptureEvents,onboardingCopy,waitForOriginalDwell,waitForSignedOutOnboardingHost,signedOutOnboardingHostReady,originalCaptureTiming,assertSignedOutHost,assertUntouchedPresentation,assertOnboardingLayout,onboardingPixels,assertOnboardingPaint,assertCompletedRefresh} from './brand-onboarding-contract.mjs';
+import {originalCaptureEvents,onboardingCopy,waitForOriginalDwell,waitForSignedOutLoginHost,signedOutLoginHostReady,waitForSignedOutOnboardingHost,signedOutOnboardingHostReady,originalCaptureTiming,assertSignedOutHost,assertUntouchedPresentation,assertOnboardingLayout,onboardingPixels,assertOnboardingPaint,assertCompletedRefresh} from './brand-onboarding-contract.mjs';
 import {refreshUrl,loginFixtureResponse} from './brand-login-transport.mjs';
 
 test('detached component source preserves deployed main, router and login preparation',async()=>{
@@ -25,6 +25,34 @@ test('component helpers introduce no app, Navigator, override, frame or focus st
  assert.match(route,/OnboardingIntroScreen/);assert.match(route,/Synthetic continuation completed/);assert.match(route,/Navigator\.of\(context\)\.push/);
 });
 const host=()=>({materialApps:1,navigators:1,navigatorId:7,auth:'signed-out',guest:false,pendingAuthenticatedWork:false,focusedEditable:false,semanticsEnabled:false});
+const loginHost=overrides=>({...host(),visibleLogin:1,visibleOnboarding:0,visibleMarker:0,presented:false,...overrides});
+const loginReady=state=>runInNewContext('('+signedOutLoginHostReady.toString()+')()',{window:{__readVisibleHostState:()=>JSON.stringify(state)}});
+test('login capture waits for both auth settlement and completed pending work',()=>{
+ assert.equal(loginReady(loginHost({auth:'loading',pendingAuthenticatedWork:true})),false);
+ assert.equal(loginReady(loginHost({auth:'loading'})),false);
+ assert.equal(loginReady(loginHost({pendingAuthenticatedWork:true})),false);
+ assert.equal(loginReady(loginHost()),true);
+ for(const forbidden of [{guest:true},{auth:'signed-in'},{auth:'error'},{materialApps:2},{navigators:2},{visibleLogin:0},{visibleOnboarding:1},{visibleMarker:1},{focusedEditable:true},{semanticsEnabled:true},{presented:true},{pendingAuthenticatedWork:undefined}]){
+  assert.throws(()=>loginReady(loginHost(forbidden)),/Login readiness failed:/);
+ }
+});
+test('login readiness remains bounded and propagates failure without retry',async()=>{
+ let calls=0;
+ const page={waitForFunction:async(predicate,arg,options)=>{
+  calls++;assert.equal(predicate,signedOutLoginHostReady);assert.equal(arg,null);
+  assert.deepEqual(options,{polling:50,timeout:5000});
+  throw new Error('Timeout 5000ms exceeded');
+ }};
+ await assert.rejects(waitForSignedOutLoginHost(page),/Timeout 5000ms exceeded/);assert.equal(calls,1);
+});
+test('login readiness does not replace first-frame capture anchors or strict host assertions',async()=>{
+ const source=await readFile('scripts/tests/brand-onboarding.browser.mjs','utf8');
+ assert.match(source,/await waitForSignedOutLoginHost\(page\)/);
+ assert.match(source,/assertCompletedRefresh\(requests,await health\(page\),result\.loginReadiness\.epochMs\)/);
+ assert.match(source,/for\(const dwell of \[250,5250\]\).*originalCapture\(observation,condition,result,'login',dwell,firstFrame/);
+ assert.match(source,/if\(real\)assertSignedOutHost\(state\.host/);
+ assert.ok(source.indexOf('await waitForSignedOutLoginHost(page)')<source.indexOf("boundary=`capture login at"));
+});
 test('a wakeup 0.1ms before the deadline cannot release an original capture',async()=>{
  for(const dwell of [250,5250]){
   const anchor=927.6000000000931,decisions=[];

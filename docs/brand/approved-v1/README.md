@@ -84,6 +84,16 @@ normal Flutter renderer; the prior global WebKit CPU workaround is unacceptable
 because of measured composer regression. The service-worker version token and
 immutable release hashing are preserved.
 
+Native admin SVG images use an independent native SVG image reference; Flutter
+Canvas artwork retains its Canvas reference. A standalone approved SVG reproduced
+the admin WebKit failure against the old Canvas reference (difference0.04283,
+precision/recall1.0), while the independent native reference matched exactly.
+This isolates a cross-renderer reference mismatch, not an app artwork defect.
+The strict difference<0.04 and precision/recall>=0.9 thresholds are unchanged.
+Both engines additionally verify pinned source hashes and positive/negative
+reference controls: blank, opposite-color, symbol and compressed artwork must
+fail. Admin source URLs must equal the expected canonical standalone asset.
+
 Release remains held pending the existing headless WebKit gate and exact-head CI.
 A calibrated Linux headed capture runs Xorg, WebKitGTK and independent X11 capture
 in one IPC namespace with an explicit valid locale (en-US). The original SVG

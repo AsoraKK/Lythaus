@@ -15,6 +15,7 @@ import {loginFixtureResponse,expectedRefreshConsole,refreshUrl,logoutUrl,discove
 import {assertLoginLayout,assertMatchingLoginLayout,loginFirstPaintPixels,assertLoginFirstPaintPixels} from './brand-login-first-paint.mjs';
 import {waitForLoginFunction} from './brand-login-wait-diagnostics.mjs';
 import {runOnboardingCase,onboardingInventory} from './brand-onboarding.browser.mjs';
+import {verifyNativeArtworkReference} from './brand-native-reference-controls.mjs';
 
 const output = path.resolve(process.env.BRAND_EVIDENCE ?? 'build/brand-evidence');
 const build = path.resolve(process.env.BRAND_WEB_BUILD ?? 'build/brand-web');
@@ -130,6 +131,7 @@ async function capture(page, name, validate = true) {
     if (!validate) return;
     let rect = await brand.boundingBox();
     assert.ok(rect && rect.width > 0 && rect.height > 0, 'Brand has a visible layout box');
+    const imageBox=rect;
     const symbol = !(await image.count());
     if (symbol) rect = {x:rect.x+(rect.width-24)/2,y:rect.y+(rect.height-24)/2,width:24,height:24};
     if(!symbol) rect=containedWordmarkRect(rect);
@@ -149,8 +151,9 @@ async function capture(page, name, validate = true) {
       const dark=name.includes('-dark-');
       const file=symbol ? (dark?'lythaus-symbol-square-warm.fb697a91817f.svg':'lythaus-symbol-square-black.6a1b6d025e69.svg')
         : (dark?'lythaus-wordmark-white.5ba0451347e2.svg':'lythaus-wordmark-black.e450176663e0.svg');
-      const url=name.includes('-admin-') ? await image.getAttribute('src') : '/assets/assets/brand/lythaus-v1/'+file;
-      await compareApprovedArtwork(page,png,rect,new URL(url,page.url()).href,PNG);
+      const admin=name.includes('-admin-'),url=admin ? '/brand/lythaus-v1/'+file : '/assets/assets/brand/lythaus-v1/'+file;
+      if(admin)assert.equal(await image.getAttribute('src'),url,'Admin selects the canonical standalone artwork');
+      const fidelity=await compareApprovedArtwork(page,png,rect,new URL(url,page.url()).href,PNG,admin?'image':'canvas',imageBox);
       if(name.includes('-shell-')&&!symbol){
         const button=page.getByRole('button',{name:'Feed controls',exact:true});
         assert.equal(await button.getByRole('img').count(),0,'Decorative brand adds no named image');
@@ -159,12 +162,13 @@ async function capture(page, name, validate = true) {
         const symbolFile=dark?'lythaus-symbol-square-warm.fb697a91817f.svg':'lythaus-symbol-square-black.6a1b6d025e69.svg';
         await compareApprovedArtwork(page,png,icon,new URL('/assets/assets/brand/lythaus-v1/'+symbolFile,page.url()).href,PNG);
       }
-      return;
+      return fidelity;
     }
   }
   assert.fail('Brand artwork did not paint; refusing a blank screenshot: ' + name);
 }
 try {
+  await verifyNativeArtworkReference({browser,engine,origin:adminServer.origin,approved,output,PNG});
   for (const theme of ['light', 'dark']) {
     for (const width of [320, 390, 1440]) {
       for (const screen of ['login', 'onboarding', 'shell']) {
@@ -229,7 +233,7 @@ try {
             assertMatchingLoginLayout(initialPaint.before,await readLoginLayout(page),0.02);
           }
           await page.waitForTimeout(300);
-          await capture(page, engine + '-' + screen + '-' + theme + '-' + width);
+          const artworkFidelity=await capture(page, engine + '-' + screen + '-' + theme + '-' + width);
           if (screen === 'login') {
             const email = page.getByRole('textbox', { name: 'Email', exact: true });
             await email.click();
@@ -264,7 +268,7 @@ try {
           assert.deepEqual(blocked, []);
           const renderHealth=await health(page);
           assertRenderHealth(login?checkedLoginHealth(renderHealth,expectedConsoleErrors,requests):renderHealth);
-          results.push({ screen, theme, width, scale, status: 'passed', health:renderHealth, ...(login?{firstPaint:initialPaint,requests,expectedConsoleErrors,guestDestination:new URL(page.url()).pathname}:{}) });
+          results.push({ screen, theme, width, scale, status: 'passed', artworkFidelity, health:renderHealth, ...(login?{firstPaint:initialPaint,requests,expectedConsoleErrors,guestDestination:new URL(page.url()).pathname}:{}) });
         } catch (error) {
           await capture(page, name + '-failed', false).catch(()=>{});
           results.push({ screen, theme, width, scale, status: 'failed', error: error.message, errors, blocked, requests, expectedConsoleErrors, health:await health(page).catch(error=>({observationError:error.message})) });
@@ -286,12 +290,12 @@ try {
         assert.equal(await logo.count(), 1);
         assert.ok(await logo.evaluate(image => image.complete && image.naturalWidth > 0));
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-        await capture(page, engine + '-admin-' + theme + '-' + width);
+        const artworkFidelity=await capture(page, engine + '-admin-' + theme + '-' + width);
         await page.getByRole('link', { name: 'Audit', exact: true }).click();
         assert.equal(new URL(page.url()).pathname, '/audit');
         await verifyIcons(page, context);
         assert.deepEqual(errors, []);
-        results.push({ screen: 'admin', theme, width, status: 'passed' });
+        results.push({ screen: 'admin', theme, width, status: 'passed', artworkFidelity });
       } catch(error) {
         await page.screenshot({path:path.join(output,`${engine}-admin-${theme}-${width}-failed.png`)}).catch(()=>{});
         results.push({screen:'admin',theme,width,status:'failed',error:error.message,errors});
