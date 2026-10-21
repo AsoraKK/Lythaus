@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 
 const root = process.cwd();
 const manifestPath = path.join(root, 'infrastructure', 'cloudflare', 'native-hyperdrive-production.json');
@@ -60,130 +61,142 @@ function assertManifestAndConfigs() {
   }
 }
 
-assertManifestAndConfigs();
-if (manifestOnly) {
-  console.log(`Verified ${manifest.bindings.length} documented production Hyperdrive bindings, IDs and role classes.`);
-  process.exit(0);
+export async function verifyHyperdriveTargets({ environment = process.env, fetchImpl = fetch, readOnlyGetOnly = false } = {}) {
+  assertManifestAndConfigs();
+
+  const apiToken = environment.CLOUDFLARE_API_TOKEN ?? '';
+  const accountId = environment.CLOUDFLARE_ACCOUNT_ID ?? manifest.accountId ?? '';
+  const databaseUrl = environment.PLANETSCALE_SCHEMA_READ_DATABASE_URL ?? '';
+  const roleIdentifiers = JSON.parse(environment.PSCALE_ROLE_IDENTIFIERS ?? '{}');
+  const expectedRuntimeRole = roleIdentifiers.lythaus_runtime ?? '';
+  if (!apiToken || !accountId || !databaseUrl) throw new Error('Cloudflare API credentials and the PlanetScale main metadata URL are required');
+  if ((environment.PSCALE_BRANCH_NAME ?? '') !== 'main') throw new Error('Hyperdrive target verification requires PSCALE_BRANCH_NAME=main');
+  if (!/^pscale_api_[a-z0-9]+$/.test(expectedRuntimeRole)) throw new Error('canonical runtime role identifier is required');
+
+  const mainSource = sourceMetadata(databaseUrl);
+  const mainOrigin = mainSource.origin;
+  const expectedRuntimeConnectionUser = `${expectedRuntimeRole}.${mainSource.branchId}`;
+  if (mainOrigin.scheme !== 'postgres' || !mainOrigin.host.endsWith('.psdb.cloud')) throw new Error('PlanetScale main metadata URL must be a PostgreSQL psdb.cloud origin');
+  const mainFingerprint = fingerprint(mainOrigin);
+  if (mainFingerprint !== manifest.expectedMainOriginFingerprint) throw new Error('PlanetScale main origin fingerprint changed without a reviewed manifest update');
+
+  const requestedIds = new Set(
+    (environment.HYPERDRIVE_VERIFY_IDS ?? '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
+  for (const id of requestedIds) {
+    if (!/^[a-f0-9]{32}$/.test(id)) throw new Error('HYPERDRIVE_VERIFY_IDS contains an invalid Hyperdrive ID');
+  }
+  const selectedBindings = requestedIds.size > 0
+    ? manifest.bindings.filter((entry) => requestedIds.has(entry.hyperdriveId))
+    : manifest.bindings;
+  if (requestedIds.size > 0) {
+    const selectedIds = new Set(selectedBindings.map((entry) => entry.hyperdriveId));
+    if (selectedIds.size !== requestedIds.size || [...requestedIds].some((id) => !selectedIds.has(id))) {
+      throw new Error('HYPERDRIVE_VERIFY_IDS requested a Hyperdrive that is not in the reviewed production manifest');
+    }
+  }
+  if (selectedBindings.length === 0) throw new Error('Hyperdrive target verification selected no bindings');
+
+  function sanitizeCloudflareErrors(envelope) {
+    return Array.isArray(envelope?.errors)
+      ? envelope.errors.map((error) => ({
+          code: error?.code ?? null,
+          message: typeof error?.message === 'string' ? error.message.slice(0, 240) : null,
+        }))
+      : [];
+  }
+
+  async function cloudflareRequest(resourcePath) {
+    const response = await fetchImpl(`https://api.cloudflare.com/client/v4/accounts/${accountId}${resourcePath}`, {
+      method: 'GET',
+      redirect: 'error',
+      headers: { authorization: `Bearer ${apiToken}`, accept: 'application/json' },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (readOnlyGetOnly && !response.ok) throw new Error('hyperdrive_read_failed');
+    let envelope = null;
+    try {
+      envelope = await response.json();
+    } catch {
+      envelope = null;
+    }
+    return { response, envelope };
+  }
+
+  async function cloudflareConfig(id, expectedConfigName) {
+    const lookup = await cloudflareRequest(`/hyperdrive/configs/${id}`);
+    if (lookup.response.ok && lookup.envelope?.success === true && lookup.envelope?.result) return lookup.envelope.result;
+    if (readOnlyGetOnly) throw new Error('hyperdrive_read_failed');
+
+    const list = await cloudflareRequest('/hyperdrive/configs?per_page=100');
+    const nameMatches = list.response.ok && list.envelope?.success === true && Array.isArray(list.envelope?.result)
+      ? list.envelope.result
+          .filter((config) => config?.name === expectedConfigName)
+          .map((config) => ({ id: config?.id ?? null, name: config?.name ?? null }))
+      : [];
+
+    const diagnostic = {
+      requestedId: id,
+      expectedConfigName,
+      lookupStatus: lookup.response.status,
+      lookupErrors: sanitizeCloudflareErrors(lookup.envelope),
+      listStatus: list.response.status,
+      listErrors: sanitizeCloudflareErrors(list.envelope),
+      nameMatches,
+    };
+    throw new Error(`Cloudflare Hyperdrive lookup failed: ${JSON.stringify(diagnostic)}`);
+  }
+
+  const results = [];
+  for (const entry of selectedBindings) {
+    const expectedRole = roleIdentifiers[entry.expectedRoleKey] ?? '';
+    if (!/^pscale_api_[a-z0-9]+$/.test(expectedRole)) {
+      throw new Error(`canonical ${entry.expectedRoleKey} role identifier is required`);
+    }
+    const expectedConnectionUser = `${expectedRole}.${mainSource.branchId}`;
+    const config = await cloudflareConfig(entry.hyperdriveId, entry.expectedConfigName);
+    const origin = config.origin ?? {};
+    const observedFingerprint = fingerprint(origin);
+    const cacheDisabled = config.caching?.disabled === true;
+    const tlsVerified = config.mtls?.sslmode === 'verify-full';
+    const caCertificatePresent = typeof config.mtls?.ca_certificate_id === 'string' && config.mtls.ca_certificate_id.length > 0;
+    const schemeValid = String(origin.scheme).toLowerCase() === 'postgres';
+    const hostValid = String(origin.host ?? '').toLowerCase().endsWith('.psdb.cloud');
+    const fingerprintMatches = observedFingerprint === mainFingerprint;
+    const roleMatches = origin.user === expectedConnectionUser;
+    // Legacy source invariant retained for regression tests: origin.user === expectedRuntimeRole.
+    const runtimeRoleMatches = entry.expectedRoleKey === 'lythaus_runtime' ? origin.user === expectedRuntimeConnectionUser : true;
+    if ((readOnlyGetOnly && config.id !== entry.hyperdriveId) || config.name !== entry.expectedConfigName || !cacheDisabled || !tlsVerified || !caCertificatePresent || !schemeValid || !hostValid || !fingerprintMatches || !roleMatches || !runtimeRoleMatches) {
+      throw new Error(`Hyperdrive production target check failed for ${entry.worker}/${entry.binding}`);
+    }
+    results.push({
+      worker: entry.worker,
+      binding: entry.binding,
+      hyperdriveId: entry.hyperdriveId,
+      databaseHost: origin.host ?? null,
+      databaseName: origin.database ?? null,
+      originFingerprint: observedFingerprint,
+      branch: 'main',
+      roleClass: entry.expectedRoleKey,
+      roleMatches,
+      runtimeRoleMatches,
+      cacheDisabled,
+      tlsMode: config.mtls.sslmode,
+      caCertificatePresent,
+      modifiedOn: config.modified_on ?? null,
+    });
+  }
+  return { status: 'pass', targetBranch: 'main', originFingerprint: mainFingerprint, bindings: results };
 }
 
-const apiToken = process.env.CLOUDFLARE_API_TOKEN ?? '';
-const accountId = process.env.CLOUDFLARE_ACCOUNT_ID ?? manifest.accountId ?? '';
-const databaseUrl = process.env.PLANETSCALE_SCHEMA_READ_DATABASE_URL ?? '';
-const roleIdentifiers = JSON.parse(process.env.PSCALE_ROLE_IDENTIFIERS ?? '{}');
-const expectedRuntimeRole = roleIdentifiers.lythaus_runtime ?? '';
-if (!apiToken || !accountId || !databaseUrl) throw new Error('Cloudflare API credentials and the PlanetScale main metadata URL are required');
-if ((process.env.PSCALE_BRANCH_NAME ?? '') !== 'main') throw new Error('Hyperdrive target verification requires PSCALE_BRANCH_NAME=main');
-if (!/^pscale_api_[a-z0-9]+$/.test(expectedRuntimeRole)) throw new Error('canonical runtime role identifier is required');
-
-const mainSource = sourceMetadata(databaseUrl);
-const mainOrigin = mainSource.origin;
-const expectedRuntimeConnectionUser = `${expectedRuntimeRole}.${mainSource.branchId}`;
-if (mainOrigin.scheme !== 'postgres' || !mainOrigin.host.endsWith('.psdb.cloud')) throw new Error('PlanetScale main metadata URL must be a PostgreSQL psdb.cloud origin');
-const mainFingerprint = fingerprint(mainOrigin);
-if (mainFingerprint !== manifest.expectedMainOriginFingerprint) throw new Error('PlanetScale main origin fingerprint changed without a reviewed manifest update');
-
-const requestedIds = new Set(
-  (process.env.HYPERDRIVE_VERIFY_IDS ?? '')
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean),
-);
-for (const id of requestedIds) {
-  if (!/^[a-f0-9]{32}$/.test(id)) throw new Error('HYPERDRIVE_VERIFY_IDS contains an invalid Hyperdrive ID');
-}
-const selectedBindings = requestedIds.size > 0
-  ? manifest.bindings.filter((entry) => requestedIds.has(entry.hyperdriveId))
-  : manifest.bindings;
-if (requestedIds.size > 0) {
-  const selectedIds = new Set(selectedBindings.map((entry) => entry.hyperdriveId));
-  if (selectedIds.size !== requestedIds.size || [...requestedIds].some((id) => !selectedIds.has(id))) {
-    throw new Error('HYPERDRIVE_VERIFY_IDS requested a Hyperdrive that is not in the reviewed production manifest');
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  if (manifestOnly) {
+    assertManifestAndConfigs();
+    console.log(`Verified ${manifest.bindings.length} documented production Hyperdrive bindings, IDs and role classes.`);
+  } else {
+    console.log(JSON.stringify(await verifyHyperdriveTargets()));
   }
 }
-if (selectedBindings.length === 0) throw new Error('Hyperdrive target verification selected no bindings');
-
-function sanitizeCloudflareErrors(envelope) {
-  return Array.isArray(envelope?.errors)
-    ? envelope.errors.map((error) => ({
-        code: error?.code ?? null,
-        message: typeof error?.message === 'string' ? error.message.slice(0, 240) : null,
-      }))
-    : [];
-}
-
-async function cloudflareRequest(resourcePath) {
-  const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}${resourcePath}`, {
-    headers: { authorization: `Bearer ${apiToken}`, accept: 'application/json' },
-  });
-  let envelope = null;
-  try {
-    envelope = await response.json();
-  } catch {
-    envelope = null;
-  }
-  return { response, envelope };
-}
-
-async function cloudflareConfig(id, expectedConfigName) {
-  const lookup = await cloudflareRequest(`/hyperdrive/configs/${id}`);
-  if (lookup.response.ok && lookup.envelope?.success === true && lookup.envelope?.result) return lookup.envelope.result;
-
-  const list = await cloudflareRequest('/hyperdrive/configs?per_page=100');
-  const nameMatches = list.response.ok && list.envelope?.success === true && Array.isArray(list.envelope?.result)
-    ? list.envelope.result
-        .filter((config) => config?.name === expectedConfigName)
-        .map((config) => ({ id: config?.id ?? null, name: config?.name ?? null }))
-    : [];
-
-  const diagnostic = {
-    requestedId: id,
-    expectedConfigName,
-    lookupStatus: lookup.response.status,
-    lookupErrors: sanitizeCloudflareErrors(lookup.envelope),
-    listStatus: list.response.status,
-    listErrors: sanitizeCloudflareErrors(list.envelope),
-    nameMatches,
-  };
-  throw new Error(`Cloudflare Hyperdrive lookup failed: ${JSON.stringify(diagnostic)}`);
-}
-
-const results = [];
-for (const entry of selectedBindings) {
-  const expectedRole = roleIdentifiers[entry.expectedRoleKey] ?? '';
-  if (!/^pscale_api_[a-z0-9]+$/.test(expectedRole)) {
-    throw new Error(`canonical ${entry.expectedRoleKey} role identifier is required`);
-  }
-  const expectedConnectionUser = `${expectedRole}.${mainSource.branchId}`;
-  const config = await cloudflareConfig(entry.hyperdriveId, entry.expectedConfigName);
-  const origin = config.origin ?? {};
-  const observedFingerprint = fingerprint(origin);
-  const cacheDisabled = config.caching?.disabled === true;
-  const tlsVerified = config.mtls?.sslmode === 'verify-full';
-  const caCertificatePresent = typeof config.mtls?.ca_certificate_id === 'string' && config.mtls.ca_certificate_id.length > 0;
-  const schemeValid = String(origin.scheme).toLowerCase() === 'postgres';
-  const hostValid = String(origin.host ?? '').toLowerCase().endsWith('.psdb.cloud');
-  const fingerprintMatches = observedFingerprint === mainFingerprint;
-  const roleMatches = origin.user === expectedConnectionUser;
-  // Legacy source invariant retained for regression tests: origin.user === expectedRuntimeRole.
-  const runtimeRoleMatches = entry.expectedRoleKey === 'lythaus_runtime' ? origin.user === expectedRuntimeConnectionUser : true;
-  if (config.name !== entry.expectedConfigName || !cacheDisabled || !tlsVerified || !caCertificatePresent || !schemeValid || !hostValid || !fingerprintMatches || !roleMatches || !runtimeRoleMatches) {
-    throw new Error(`Hyperdrive production target check failed for ${entry.worker}/${entry.binding}`);
-  }
-  results.push({
-    worker: entry.worker,
-    binding: entry.binding,
-    hyperdriveId: entry.hyperdriveId,
-    databaseHost: origin.host ?? null,
-    databaseName: origin.database ?? null,
-    originFingerprint: observedFingerprint,
-    branch: 'main',
-    roleClass: entry.expectedRoleKey,
-    roleMatches,
-    runtimeRoleMatches,
-    cacheDisabled,
-    tlsMode: config.mtls.sslmode,
-    caCertificatePresent,
-    modifiedOn: config.modified_on ?? null,
-  });
-}
-console.log(JSON.stringify({ status: 'pass', targetBranch: 'main', originFingerprint: mainFingerprint, bindings: results }));
