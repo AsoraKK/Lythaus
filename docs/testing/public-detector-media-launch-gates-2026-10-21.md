@@ -85,11 +85,22 @@ and [the earlier evidence assessment](moderation-authenticity-evaluation-2026-10
   janitor cleanup and deletion/export/hold races. Keep a sanitized receipt bound
   to the deployed commit and resource identities; retain no media or credentials
   in public artifacts.
-- Resolve physical staging accounting/headroom before activation. Expired
-  reservations can be released before R2 deletion succeeds; a queued transform
-  can temporarily retain both source and derivative. The logical per-owner cap
-  is not a hard aggregate stored-byte or billing cap. Repeated cleanup failure
-  needs a bounded physical-accounting strategy and an approved storage envelope.
+- Standard admission now charges terminal sessions' original expected bytes
+  against the existing per-owner quota until `quarantine_deleted_at` commits.
+  The marker follows both quarantine deletion and any unreferenced derivative
+  deletion. A failed delete or lost marker therefore cannot free capacity for
+  repeated replacement uploads, even after logical settlement counters release
+  their reservation. This read uses the existing owner ledger lock, quota value
+  and SELECT grants; it requires no migration, new limit or provider change.
+  Local Workerd/PG17 tests cover repeated failures, backlog, a lost marker,
+  orphan derivatives and independent owners. This is not live cleanup evidence.
+- From a reconciled starting state, the standard path can still temporarily
+  hold both source and a derivative no larger than its reserved original, up to
+  twice the configured per-owner quota. The admission correction bounds cleanup
+  churn per owner; it does not establish a global stored-byte or billing cap,
+  reconcile historic/provider objects, or replace separate private alpha/beta
+  accounting. An aggregate production storage/usage envelope and actual-provider
+  cleanup acceptance remain required before activation.
 - Resolve image attachment capabilities and original/derivative retention policy
   before connecting the disabled attachment preparation to public posting.
   Its engineering limits and structural synthetic evidence are not product

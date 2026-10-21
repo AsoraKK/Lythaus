@@ -36,6 +36,12 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       return result([{ referenced: state.objects.some(object => object.object_key === key)
         || state.variants.some(variant => variant.object_key === key) }]);
     }
+    if (sql.startsWith('SELECT COALESCE(sum(expected_bytes), 0) AS cleanup_bytes')) {
+      const session = state.session;
+      return result([{ cleanup_bytes: session?.user_id === values[0] && session.purpose === 'standard'
+        && ['approved', 'rejected', 'expired', 'cancelled'].includes(session.status) && !session.quarantine_deleted_at
+        ? session.expected_bytes : 0 }]);
+    }
     if (sql.startsWith('SELECT') && sql.includes('FROM media.upload_sessions')) {
       if (!state.session) return result([]);
       if (sql.startsWith('SELECT id, user_id FROM media.upload_sessions')) {
@@ -324,6 +330,33 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       assert.equal(state.ledgerWrites, writes);
       assert.equal(state.ledgerReserved, 0);
       assert.equal(input.sessionId, state.session.id);
+    });
+    await t.test('cleanup failure and a lost marker keep terminal staging charged to the existing quota', async () => {
+      const input = await seed('pending', { unexpired: false, cleanupDue: true });
+      state.ledgerApproved = 10485760 - png.length;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        assert.equal((await fixture.cleanup({ failDelete: true })).status, 204);
+        assert.equal(state.ledgerReserved, 0);
+        assert.equal(state.session.status, 'expired');
+        assert.equal((await create(input.userId)).status, 400);
+        assert.ok(await fixture.quarantine.head(state.session.object_key));
+        assert.equal(state.session.id, input.sessionId);
+      }
+      beforeQuery = sql => {
+        if (sql.startsWith('UPDATE media.upload_sessions SET quarantine_deleted_at')) {
+          beforeQuery = undefined;
+          throw new Error('synthetic_cleanup_commit_lost');
+        }
+      };
+      const key = state.session.object_key;
+      assert.equal((await fixture.cleanup()).status, 204);
+      assert.equal(await fixture.quarantine.head(key), null);
+      assert.equal(state.session.quarantine_deleted_at, null);
+      assert.equal((await create(input.userId)).status, 400);
+      assert.equal((await fixture.cleanup()).status, 204);
+      assert.equal(state.session.quarantine_deleted_at, true);
+      assert.equal((await create(input.userId)).status, 201);
+      assert.equal(state.ledgerReserved, png.length);
     });
     await t.test('owner finalization returns a private queued receipt, no publication or storage locator', async () => {
       const input = await seed('pending');

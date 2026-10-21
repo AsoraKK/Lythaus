@@ -1343,7 +1343,12 @@ async function createUploadSession(request: Request, env: Env, user: Principal):
     const ledger = await client.query<{ bytes_reserved: number; bytes_approved: number }>(
       `SELECT bytes_reserved, bytes_approved FROM media.storage_ledger WHERE user_id = $1 FOR UPDATE`, [user.userId]);
     const current = ledger.rows[0] ?? { bytes_reserved: 0, bytes_approved: 0 };
-    if (Number(current.bytes_reserved) + Number(current.bytes_approved) + requestedBytes > quotaBytes) throw new Error('storage_quota_exceeded');
+    const cleanup = await client.query<{ cleanup_bytes: string }>(
+      `SELECT COALESCE(sum(expected_bytes), 0) AS cleanup_bytes FROM media.upload_sessions
+        WHERE user_id = $1 AND purpose = 'standard' AND quarantine_deleted_at IS NULL
+          AND status IN ('approved', 'rejected', 'expired', 'cancelled')`, [user.userId]);
+    if (Number(current.bytes_reserved) + Number(current.bytes_approved)
+      + Number(cleanup.rows[0]?.cleanup_bytes ?? 0) + requestedBytes > quotaBytes) throw new Error('storage_quota_exceeded');
     await client.query(
       `INSERT INTO media.storage_ledger (user_id, bytes_reserved) VALUES ($1, $2)
        ON CONFLICT (user_id) DO UPDATE SET bytes_reserved = media.storage_ledger.bytes_reserved + EXCLUDED.bytes_reserved`,
