@@ -41,14 +41,18 @@ this restriction is not proof of a Lythaus R2 outage. See the provider's
 These facts do not authorize a billing upgrade or credential change. No paid
 fallback or Google sign-in should be introduced to address this notice.
 
-The existing guarded browser evidence was captured at 09:05:36 UTC, after the
-reported downgrade, using harness
-`a0599f71928018989e2d579a4931bac5fd68e72d`. Public pages rendered on mobile
-and desktop and guest navigation was observed. Its evidence class is
-`LIVE_PUBLIC_READ_ONLY_UI_OBSERVATION`; it does not prove authentication, email
-delivery, publishing, deployed source identity or TLS validation. Marketing
-retains the separate provider-injected analytics/CSP finding. These observations
-do not establish a whole-app outage or native Firebase health.
+The final guarded browser observation at 10:01:20 UTC, after the reported
+downgrade, used clean harness `1b7cf2a718d161cb6de8c65f38e0e5ff3b856e09`.
+All 14 public page/decoded-visible-wordmark checks passed at mobile and desktop
+widths; both public guest feeds completed with HTTP 200 and a visible card
+counted without collecting its content. The earlier 09:05 run had withheld
+branding assets and did not establish feed completion. See the dated
+[acceptance matrix](public-launch-acceptance-2026-10-21.md) for exact scopes.
+The final evidence remains `LIVE_PUBLIC_READ_ONLY_UI_OBSERVATION` and
+`ATTENTION_REQUIRED` for provider-injected analytics rejected by CSP. It does
+not prove authentication, email delivery, publishing, deployed source identity,
+TLS validation or native Firebase health, and does not establish a whole-app
+outage.
 
 ## Remaining bounded evidence
 
