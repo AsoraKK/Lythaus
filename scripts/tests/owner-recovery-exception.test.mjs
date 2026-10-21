@@ -212,6 +212,9 @@ test('both scoped migration and persistent release gates use protected exception
   assert.match(release, /default: automatic[\s\S]*?- owner_testing_native_recovery_exception/);
   assert.match(release, /OWNER_TESTING_RECOVERY_EXCEPTION: \$\{\{ inputs\.release_mode == 'owner_testing_native_recovery_exception' \}\}/);
   assert.ok(!release.slice(0, release.indexOf('\npermissions:')).includes('owner_testing_recovery_exception:'));
+  const recoveryStep = release.indexOf('Require fresh protected native recovery and public independent recovery readiness');
+  assert.ok(release.indexOf('Require current main and exact successful evidence runs') < recoveryStep);
+  assert.ok(release.indexOf('Verify native branch protection and release governance evidence') < recoveryStep);
   assert.match(release, /Require fresh protected native recovery and public independent recovery readiness[\s\S]*?verify-production-recovery-readiness\.mjs/);
   assert.match(release, /INDEPENDENT_RECOVERY_STATUS: \$\{\{ needs\.preflight\.outputs\.independent_recovery_status/);
   assert.ok(workers.indexOf('Reverify fresh recovery and bounded owner exception before activation') < workers.indexOf('Activate exact candidate Worker versions'));

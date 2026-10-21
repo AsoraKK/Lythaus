@@ -117,23 +117,6 @@ jobs:
           OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
           AUTHENTICITY_BETA_RELEASE_RECEIPT_PRESENT: ${{ vars.AUTHENTICITY_BETA_RELEASE_RECEIPT_SHA256 != '' }}
         run: node scripts/ci/verify-owner-testing-auth-scope.mjs
-      - name: Require fresh protected native recovery and public independent recovery readiness
-        id: recovery
-        env:
-          OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
-          OWNER_TESTING_RECOVERY_EXCEPTION: ${{ inputs.release_mode == 'owner_testing_native_recovery_exception' }}
-          PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON: ${{ vars.PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON }}
-          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
-          PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
-          RECOVERY_READINESS_REPORT_FILE: ${{ runner.temp }}/recovery-readiness.json
-        run: node scripts/ci/verify-production-recovery-readiness.mjs
-      - name: Upload sanitized persistent recovery readiness
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: recovery-readiness-${{ inputs.release_sha }}
-          path: ${{ runner.temp }}/recovery-readiness.json
-          if-no-files-found: ignore
       - name: Resolve canonical Pages configuration from protected production variables
         id: canonical_config
         env:
@@ -339,6 +322,23 @@ jobs:
             echo 'historical_branches_reconciled=true'
             echo 'security_checks_verified=true'
           } >> "$GITHUB_OUTPUT"
+      - name: Require fresh protected native recovery and public independent recovery readiness
+        id: recovery
+        env:
+          OWNER_TESTING_DEPLOYMENT: ${{ (inputs.release_mode == 'owner_testing' || inputs.release_mode == 'owner_testing_native_recovery_exception') }}
+          OWNER_TESTING_RECOVERY_EXCEPTION: ${{ inputs.release_mode == 'owner_testing_native_recovery_exception' }}
+          PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON: ${{ vars.PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON }}
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
+          RECOVERY_READINESS_REPORT_FILE: ${{ runner.temp }}/recovery-readiness.json
+        run: node scripts/ci/verify-production-recovery-readiness.mjs
+      - name: Upload sanitized persistent recovery readiness
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: recovery-readiness-${{ inputs.release_sha }}
+          path: ${{ runner.temp }}/recovery-readiness.json
+          if-no-files-found: ignore
       - name: SOURCE - Resolve deterministic release class and component plan
         id: release_plan
         env:
