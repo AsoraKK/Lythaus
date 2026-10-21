@@ -45,7 +45,7 @@ try {
         const initial = { blocked: blocked.length, console: consoleFindings.length, errors: pageErrors.length };
         const result = { width, route, checks: {} };
         try {
-          const response = await page.goto('https://lythaus.co/' + route, { waitUntil: 'networkidle' });
+          const response = await page.goto('https://lythaus.co/' + route + '/', { waitUntil: 'networkidle' });
           result.httpStatus = response.status();
           result.title = await page.title();
           result.checks.pageIdentity = response.ok() && result.title.toLowerCase().includes(identity.toLowerCase());
@@ -97,7 +97,7 @@ try {
     harnessSourceSha: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repository, encoding: 'utf8' }).trim(),
     deployedSourceSha: null, tlsValidated: false, browserCertificateValidationEnabled: !tlsBypass, environmentProxyCertificateBypass: tlsBypass,
     provesAuthentication: false, provesEmailDelivery: false, provesPublishing: false,
-    notes: 'Fresh unauthenticated contexts. No forms submitted, credentials entered or private storage imported. Non-read requests, WebSockets, private API routes and third-party requests blocked; no responses substituted. This observation cannot satisfy protected exact-candidate acceptance.', reports };
+    notes: 'Fresh unauthenticated contexts. No forms submitted, credentials entered or private storage imported. Non-read requests, redirects, WebSockets, private API routes and third-party requests blocked. Non-redirect upstream responses forwarded unchanged; no synthetic responses supplied. This observation cannot satisfy protected exact-candidate acceptance.', reports };
   await writeFile(path.join(output, 'results.json'), JSON.stringify(result, null, 2) + '\n');
   console.log(JSON.stringify({ evidenceClass: result.evidenceClass, evidencePath: path.join(output, 'results.json'),
     statuses: reports.map(({ width, route, status }) => ({ width, route, status })) }));

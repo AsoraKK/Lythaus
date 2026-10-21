@@ -107,10 +107,14 @@ node scripts/ci/public-read-only-browser-acceptance.mjs
 The runner uses fresh Chromium contexts at 390 and 1440 pixels. It checks signup,
 sign-in, reset request, resend verification, missing-token recovery, privacy, and
 app guest entry. Password reveal is exercised with empty fields. It never submits
-a form, imports private storage, enters credentials, or substitutes an API
-response. An HTTP boundary blocks all non-read methods, private API paths,
+a form, imports private storage, enters credentials, or supplies synthetic API
+responses. An HTTP boundary blocks all non-read methods, private API paths,
 unknown origins, sensitive URL parameters and WebSockets. Service workers are
-blocked so they cannot bypass the boundary. Automatic app refresh and logout
+blocked so they cannot bypass the boundary. Each permitted request is fetched
+with redirect following disabled; all redirect responses are refused before any
+destination is requested. Non-redirect upstream status, headers and body bytes
+are forwarded unchanged. Entry URLs use their canonical trailing slash.
+Automatic app refresh and logout
 requests are blocked too; their failure is an inspection constraint, not an auth
 failure result. Turnstile and other third-party requests are also blocked, so this
 run does not qualify real Turnstile behavior.

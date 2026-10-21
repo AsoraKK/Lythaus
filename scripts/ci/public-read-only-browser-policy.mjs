@@ -41,13 +41,23 @@ export async function installPublicReadOnlyBoundary(context, blocked) {
     blocked.push({ kind: 'websocket', reason: 'websockets_disabled' });
     socket.close();
   });
-  await context.route('**/*', route => {
+  await context.route('**/*', async route => {
     const request = route.request();
     const reason = publicReadOnlyRequestPolicy(request.method(), request.url());
     if (reason) {
       blocked.push({ kind: 'http', method: request.method(), resource: publicReadOnlyResource(request.url()), reason });
       return route.abort('blockedbyclient');
     }
-    return route.continue();
+    let response;
+    try { response = await route.fetch({ maxRedirects: 0 }); }
+    catch {
+      blocked.push({ kind: 'http', method: request.method(), resource: publicReadOnlyResource(request.url()), reason: 'upstream_read_failed' });
+      return route.abort('blockedbyclient');
+    }
+    if (response.status() >= 300 && response.status() < 400) {
+      blocked.push({ kind: 'http', method: request.method(), resource: publicReadOnlyResource(request.url()), reason: 'redirects_disabled' });
+      return route.abort('blockedbyclient');
+    }
+    return route.fulfill({ response });
   });
 }

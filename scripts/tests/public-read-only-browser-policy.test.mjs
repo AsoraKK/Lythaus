@@ -30,6 +30,29 @@ test('public UI boundary permits public pages, release assets and guest feed rea
   }
 });
 
+test('permitted requests disable redirects and forward only the exact non-redirect upstream response', async () => {
+  let http, forwarded;
+  const blocked = [], response = { status: () => 200 };
+  await installPublicReadOnlyBoundary({ route: async (_, callback) => { http = callback; }, routeWebSocket: async () => {} }, blocked);
+  await http({ request: () => ({ method: () => 'GET', url: () => 'https://lythaus.co/signup/' }),
+    fetch: async options => { assert.deepEqual(options, { maxRedirects: 0 }); return response; },
+    fulfill: async options => { forwarded = options.response; }, abort: () => assert.fail('Public response unexpectedly aborted') });
+  assert.equal(forwarded, response);
+  assert.deepEqual(blocked, []);
+});
+
+test('an upstream read failure aborts without exposing raw transport errors', async () => {
+  let http, aborted;
+  const blocked = [];
+  await installPublicReadOnlyBoundary({ route: async (_, callback) => { http = callback; }, routeWebSocket: async () => {} }, blocked);
+  await http({ request: () => ({ method: () => 'GET', url: () => 'https://lythaus.co/signup/' }),
+    fetch: async () => { throw new Error('private transport detail'); },
+    fulfill: () => assert.fail('Failed upstream read must not be forwarded'), abort: async reason => { aborted = reason; } });
+  assert.equal(aborted, 'blockedbyclient');
+  assert.equal(blocked[0].reason, 'upstream_read_failed');
+  assert.equal(JSON.stringify(blocked).includes('private transport detail'), false);
+});
+
 test('public UI boundary blocks authentication, email, privacy and billing mutations before network', async () => {
   let http, websocket;
   const blocked = [], sent = [];
