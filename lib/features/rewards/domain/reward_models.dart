@@ -53,15 +53,23 @@ class RewardRedemption {
   final String status;
 
   factory RewardRedemption.fromJson(Map<String, dynamic> json) {
+    final rawRedeemedAt = json['redeemedAt'];
+    final redeemedAt = rawRedeemedAt is String
+        ? DateTime.tryParse(rawRedeemedAt)
+        : null;
+    final status = json['status'];
+    if (redeemedAt == null || (status != 'redeemed' && status != 'revoked')) {
+      throw const FormatException(
+        'The server returned an invalid reward redemption receipt.',
+      );
+    }
     return RewardRedemption(
       id: json['id'] as String,
       rewardId: json['rewardId'] as String,
       rewardLevel: (json['rewardLevel'] as num?)?.toInt() ?? 1,
       rewardTitle: json['rewardTitle'] as String? ?? 'Reward',
-      redeemedAt:
-          DateTime.tryParse(json['redeemedAt'] as String? ?? '') ??
-          DateTime.now(),
-      status: json['status'] as String? ?? 'redeemed',
+      redeemedAt: redeemedAt,
+      status: status as String,
     );
   }
 }

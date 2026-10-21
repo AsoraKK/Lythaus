@@ -27,10 +27,20 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
     if (sql.startsWith('UPDATE system.consumer_inbox SET state')) { state.inbox = 'completed'; return result([{}]); }
     if (sql.startsWith('DELETE FROM system.consumer_inbox')) { state.inbox = null; return result([{}]); }
     if (sql.startsWith('SELECT status, deleted_at FROM identity.users')) return result([state.account]);
+    if (sql.startsWith('SELECT id FROM system.outbox_events')) {
+      return result(state.outbox.filter(event => event.actorId === values[0] && event.aggregateId === values[1]
+        && event.payload.uploadSessionId === values[1] && event.payload.objectKey === values[2]).slice(0, 2));
+    }
     if (sql.startsWith('SELECT EXISTS (SELECT 1 FROM media.objects')) {
       const key = values[0];
       return result([{ referenced: state.objects.some(object => object.object_key === key)
         || state.variants.some(variant => variant.object_key === key) }]);
+    }
+    if (sql.startsWith('SELECT COALESCE(sum(expected_bytes), 0) AS cleanup_bytes')) {
+      const session = state.session;
+      return result([{ cleanup_bytes: session?.user_id === values[0] && session.purpose === 'standard'
+        && ['approved', 'rejected', 'expired', 'cancelled'].includes(session.status) && !session.quarantine_deleted_at
+        ? session.expected_bytes : 0 }]);
     }
     if (sql.startsWith('SELECT') && sql.includes('FROM media.upload_sessions')) {
       if (!state.session) return result([]);
@@ -76,7 +86,9 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
     if (sql.includes('INSERT INTO trust.user_activity_events')) {
       state.activity.push({ title: values[8], result: values[10], metadata: JSON.parse(values[17]) }); return result([{ id: values[0] }]);
     }
-    if (sql.includes('INSERT INTO system.outbox_events')) { state.outbox.push({ id: values[0] }); return result([{}]); }
+    if (sql.includes('INSERT INTO system.outbox_events')) {
+      state.outbox.push({ id: values[0], aggregateId: values[1], actorId: values[2], payload: JSON.parse(values[3]) }); return result([{}]);
+    }
     if (sql.startsWith('UPDATE media.storage_ledger SET bytes_uploaded')) {
       if (state.reservationMissing || state.ledgerReserved < Number(values[2])) return result([]);
       state.ledgerReserved -= Number(values[2]);
@@ -319,17 +331,71 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       assert.equal(state.ledgerReserved, 0);
       assert.equal(input.sessionId, state.session.id);
     });
+    await t.test('cleanup failure and a lost marker keep terminal staging charged to the existing quota', async () => {
+      const input = await seed('pending', { unexpired: false, cleanupDue: true });
+      state.ledgerApproved = 10485760 - png.length;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        assert.equal((await fixture.cleanup({ failDelete: true })).status, 204);
+        assert.equal(state.ledgerReserved, 0);
+        assert.equal(state.session.status, 'expired');
+        assert.equal((await create(input.userId)).status, 400);
+        assert.ok(await fixture.quarantine.head(state.session.object_key));
+        assert.equal(state.session.id, input.sessionId);
+      }
+      beforeQuery = sql => {
+        if (sql.startsWith('UPDATE media.upload_sessions SET quarantine_deleted_at')) {
+          beforeQuery = undefined;
+          throw new Error('synthetic_cleanup_commit_lost');
+        }
+      };
+      const key = state.session.object_key;
+      assert.equal((await fixture.cleanup()).status, 204);
+      assert.equal(await fixture.quarantine.head(key), null);
+      assert.equal(state.session.quarantine_deleted_at, null);
+      assert.equal((await create(input.userId)).status, 400);
+      assert.equal((await fixture.cleanup()).status, 204);
+      assert.equal(state.session.quarantine_deleted_at, true);
+      assert.equal((await create(input.userId)).status, 201);
+      assert.equal(state.ledgerReserved, png.length);
+    });
     await t.test('owner finalization returns a private queued receipt, no publication or storage locator', async () => {
       const input = await seed('pending');
       const response = await fixture.request('/fixture/finalise', input);
       assert.equal(response.status, 200);
       assert.equal(response.headers.get('cache-control'), 'private, no-store');
       assert.equal(response.headers.get('vary'), 'Origin, Authorization');
-      assert.deepEqual(Object.keys(await response.json()).sort(), ['eventId', 'status', 'uploadSessionId']);
+      const receipt = await response.json();
+      assert.deepEqual(Object.keys(receipt).sort(), ['eventId', 'status', 'uploadSessionId']);
       assert.equal(state.session.status, 'queued');
       assert.equal(state.outbox.length, 1);
-      assert.equal((await fixture.request('/fixture/finalise', input)).status, 400);
+      const retry = await fixture.request('/fixture/finalise', input);
+      assert.equal(retry.status, 200);
+      assert.equal(retry.headers.get('cache-control'), 'private, no-store');
+      assert.deepEqual(await retry.json(), receipt);
       assert.equal(state.outbox.length, 1);
+      assert.equal(state.activity.length, 1);
+      assert.deepEqual(await queue(input), { ack: 1, retry: 0, imageCalls: 1 });
+      assert.equal(await fixture.quarantine.head(state.session.object_key), null);
+      const processedRetry = await fixture.request('/fixture/finalise', input);
+      assert.equal(processedRetry.status, 200);
+      assert.deepEqual(await processedRetry.json(), receipt);
+      assert.equal(state.objects[0].state, 'review');
+      assert.equal(state.evidence[0].modelId, 'not-executed');
+      assert.equal(state.outbox.length, 1);
+    });
+    await t.test('retry receipts require one canonical owner and source-bound event', async () => {
+      for (const alter of [state => { state.outbox.length = 0; },
+        state => { state.outbox.push({ ...state.outbox[0] }); },
+        state => { state.outbox[0].actorId = randomUUID(); },
+        state => { state.outbox[0].payload.objectKey = 'unrelated-private-key'; }]) {
+        const input = await seed('pending');
+        assert.equal((await fixture.request('/fixture/finalise', input)).status, 200);
+        alter(state);
+        const writes = state.activity.length;
+        assert.equal((await fixture.request('/fixture/finalise', input)).status, 400);
+        assert.equal(state.activity.length, writes);
+        assert.equal(state.session.status, 'queued');
+      }
     });
     await t.test('another owner and private-purpose upload cannot finalize or read bytes', async () => {
       for (const scenario of ['other-owner', 'alpha']) {

@@ -92,6 +92,10 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit
       - run: npm run validate:cloudflare-hyperdrive-targets:manifest
+      - name: Verify read-only mapped product privilege preflight
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
+        run: node --test --test-concurrency=1 scripts/tests/product-privilege-preflight.test.mjs scripts/tests/product-privilege-preflight.postgres.mjs
       - run: npm run validate:ai-gateway-paths
       - run: npm run typecheck:native
       - name: Verify file-object safety with synthetic local fixtures
@@ -115,6 +119,7 @@ jobs:
       - name: Verify owner-testing authentication release scope
         run: node --test scripts/tests/owner-testing-auth-scope.test.mjs
       - run: node --test scripts/tests/real-email-acceptance-evidence.test.mjs
+      - run: node --test scripts/tests/public-read-only-browser-policy.test.mjs
       - run: npm run test:product-integrity-runtime
       - run: npm run test:product-contracts
       - name: Verify monthly reputation and candidate peer policy
@@ -138,6 +143,10 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
         run: npm run test:publication:pg17
+      - name: Verify isolated rewards, manual membership and disabled payments on PG17 and Workerd
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
+        run: node scripts/ci/run-publication-pg17.mjs --membership-rewards
       - name: Verify gated standard image integrity and unchanged role boundaries
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
@@ -189,6 +198,8 @@ jobs:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
         run: node --test scripts/tests/planetscale-verifier-stats.postgres.mjs
       - run: node --test scripts/tests/planetscale-0021-restore-evidence-loader.test.mjs
+      - name: Verify bounded owner recovery exception and required CI registration
+        run: node --test scripts/tests/owner-recovery-exception.test.mjs scripts/tests/owner-recovery-ci-registration.test.mjs
       - run: npm run validate:planetscale-extensions
       - run: node --test scripts/tests/provider-audit-contract.test.mjs
       - run: node --test scripts/tests/production-worker-probe.test.mjs
@@ -497,6 +508,8 @@ jobs:
           retention-days: 7
       - name: Verify rendered Flutter authentication journey
         run: node --experimental-strip-types --test --test-timeout=600000 scripts/tests/flutter-auth.browser.mjs scripts/tests/optional-profile.browser.mjs scripts/tests/guest-account-entry.browser.mjs scripts/tests/native-notifications.browser.mjs scripts/tests/privacy-requests.browser.mjs
+      - name: Verify public read-only browser redirect boundary
+        run: node --test scripts/tests/public-read-only-browser-policy.browser.mjs
       - name: Upload guest tag search browser evidence
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f

@@ -73,6 +73,11 @@ on:
         required: false
         default: false
         type: boolean
+      owner_testing_recovery_exception:
+        description: Request the protected independent-recovery exception for this canonical owner-testing release only
+        required: false
+        default: false
+        type: boolean
       ci_run_id:
         description: Successful CI run ID for the exact release SHA
         required: true
@@ -1501,6 +1506,22 @@ jobs:
           echo 'RELEASE_FAILURE_CODE=activation_safety_gate_failed' >> "$GITHUB_ENV"
           echo 'RELEASE_FAILURE_MESSAGE=final production safety gates failed before activation' >> "$GITHUB_ENV"
           npm run validate:production-gates:final
+      - name: ACTIVATION - Reverify fresh recovery and bounded owner exception before activation
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          OWNER_TESTING_RECOVERY_EXCEPTION: ${{ inputs.owner_testing_recovery_exception }}
+          PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON: ${{ vars.PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON }}
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
+          RECOVERY_READINESS_REPORT_FILE: ${{ runner.temp }}/production-cutover/recovery-readiness-before-activation.json
+        run: |
+          {
+            echo 'RELEASE_FAILURE_GATE=ACTIVATION'
+            echo 'RELEASE_FAILURE_CODE=recovery_readiness_failed'
+            echo 'RELEASE_FAILURE_MESSAGE=protected recovery or owner exception failed before activation'
+          } >> "$GITHUB_ENV"
+          node scripts/ci/verify-production-recovery-readiness.mjs
       - name: Activate exact candidate Worker versions (ACTIVATION gate; changed components only)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

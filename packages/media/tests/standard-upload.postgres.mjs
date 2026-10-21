@@ -167,9 +167,16 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
       const response = await fixture.request('/fixture/finalise', input);
       assert.equal(response.status, 200);
       assert.equal(response.headers.get('cache-control'), 'private, no-store');
+      const receipt = await response.json();
       assert.equal((await session(input)).status, 'queued');
       assert.equal((await admin.query('SELECT count(*)::integer AS n FROM system.outbox_events WHERE aggregate_id=$1', [input.sessionId])).rows[0].n, 1);
+      const retry = await fixture.request('/fixture/finalise', input);
+      assert.equal(retry.status, 200);
+      assert.deepEqual(await retry.json(), receipt);
+      assert.equal((await fixture.request('/fixture/finalise', { ...input, userId: randomUUID() })).status, 400);
+      await admin.query("UPDATE system.outbox_events SET payload=jsonb_set(payload,'{objectKey}','\"unrelated-private-key\"') WHERE id=$1", [receipt.eventId]);
       assert.equal((await fixture.request('/fixture/finalise', input)).status, 400);
+      assert.equal((await admin.query('SELECT count(*)::integer AS n FROM system.outbox_events WHERE aggregate_id=$1', [input.sessionId])).rows[0].n, 1);
     });
     await t.test('expiry between byte verification and SQL transition rolls back without an event', async () => {
       const input = await seed();
@@ -278,6 +285,10 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
         assert.deepEqual(Object.values(ledger).map(Number), [0, derivativeBytes.byteLength, derivativeBytes.byteLength, 0, 1]);
         assert.equal((await admin.query('SELECT count(*)::integer AS n FROM system.outbox_events WHERE aggregate_id=$1', [input.sessionId])).rows[0].n, 1);
         assert.equal(await fixture.quarantine.head(input.objectKey), null);
+        const processedRetry = await fixture.request('/fixture/finalise', input);
+        assert.equal(processedRetry.status, 200);
+        assert.equal(processedRetry.headers.get('cache-control'), 'private, no-store');
+        assert.deepEqual(await processedRetry.json(), receipt);
         assert.ok(await fixture.approved.head(object.object_key));
         assert.ok(new Date(storedSession.expires_at).getTime() > Date.now());
         assert.equal((await fixture.upload(uploadReceipt.uploadUrl, userId, png)).status, 409);
@@ -358,6 +369,58 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
       assert.ok((await admin.query('SELECT quarantine_deleted_at FROM media.upload_sessions WHERE id=$1', [input.sessionId])).rows[0].quarantine_deleted_at);
       assert.equal((await fixture.cleanup()).status, 204);
       assert.equal(Number((await admin.query('SELECT bytes_reserved FROM media.storage_ledger WHERE user_id=$1', [input.userId])).rows[0].bytes_reserved), 0);
+    });
+    await t.test('cleanup backlog retains owner capacity across failed deletes and a lost marker without affecting another owner', async () => {
+      const large = new Uint8Array(6 * 1024 * 1024);
+      large.set([137, 80, 78, 71, 13, 10, 26, 10]);
+      const input = await seed('pending', 'standard', large);
+      await admin.query("UPDATE media.upload_sessions SET expires_at=clock_timestamp()-interval '20 minutes' WHERE id=$1", [input.sessionId]);
+      for (let attempt = 0; attempt < 3; attempt++) {
+        assert.equal((await fixture.cleanup({ failDelete: true })).status, 204);
+        assert.equal((await session(input)).status, 'expired');
+        assert.equal(Number((await admin.query('SELECT bytes_reserved FROM media.storage_ledger WHERE user_id=$1', [input.userId])).rows[0].bytes_reserved), 0);
+        const blocked = await create(input.userId, large);
+        assert.equal(blocked.status, 400);
+        assert.equal((await blocked.json()).error, 'storage_quota_exceeded');
+        assert.equal((await admin.query('SELECT count(*)::integer AS n FROM media.upload_sessions WHERE user_id=$1', [input.userId])).rows[0].n, 1);
+        assert.equal((await fixture.quarantine.head(input.objectKey)).size, large.length);
+      }
+      const otherUser = randomUUID();
+      await admin.query("INSERT INTO identity.users(id,status) VALUES($1,'active')", [otherUser]);
+      const other = await create(otherUser);
+      assert.equal(other.status, 201);
+      const otherReceipt = await other.json();
+      assert.equal((await fixture.upload(otherReceipt.uploadUrl, otherUser, png)).status, 201);
+      const otherKey = (await admin.query('SELECT object_key FROM media.upload_sessions WHERE id=$1', [otherReceipt.uploadSessionId])).rows[0].object_key;
+      beforeQuery = async request => {
+        if (request.text.includes('SET quarantine_deleted_at = clock_timestamp()') && request.values[0] === input.sessionId) {
+          beforeQuery = undefined;
+          throw new Error('synthetic_cleanup_commit_lost');
+        }
+      };
+      assert.equal((await fixture.cleanup()).status, 204);
+      assert.equal(await fixture.quarantine.head(input.objectKey), null);
+      assert.equal((await admin.query('SELECT quarantine_deleted_at FROM media.upload_sessions WHERE id=$1', [input.sessionId])).rows[0].quarantine_deleted_at, null);
+      assert.equal((await create(input.userId, large)).status, 400);
+      assert.equal((await fixture.cleanup()).status, 204);
+      assert.ok((await admin.query('SELECT quarantine_deleted_at FROM media.upload_sessions WHERE id=$1', [input.sessionId])).rows[0].quarantine_deleted_at);
+      assert.equal((await create(input.userId, large)).status, 201);
+      assert.equal((await fixture.quarantine.head(otherKey)).size, png.length);
+      assert.equal(Number((await admin.query('SELECT bytes_reserved FROM media.storage_ledger WHERE user_id=$1', [otherUser])).rows[0].bytes_reserved), png.length);
+    });
+    await t.test('every terminal standard status retains capacity while other upload purposes stay isolated', async () => {
+      for (const status of ['approved', 'rejected', 'expired', 'cancelled']) {
+        const input = await seed(status);
+        await admin.query('UPDATE media.storage_ledger SET bytes_reserved=0,bytes_approved=$2 WHERE user_id=$1', [input.userId, 10485760 - png.length]);
+        await admin.query("UPDATE media.upload_sessions SET expires_at=clock_timestamp()-interval '20 minutes' WHERE id=$1", [input.sessionId]);
+        assert.equal((await create(input.userId)).status, 400, status);
+        assert.equal((await fixture.cleanup()).status, 204);
+        assert.ok((await admin.query('SELECT quarantine_deleted_at FROM media.upload_sessions WHERE id=$1', [input.sessionId])).rows[0].quarantine_deleted_at);
+        assert.equal((await create(input.userId)).status, 201, status);
+      }
+      const alpha = await seed('cancelled', 'authenticity_alpha');
+      await admin.query('UPDATE media.storage_ledger SET bytes_reserved=0,bytes_approved=$2 WHERE user_id=$1', [alpha.userId, 10485760 - png.length]);
+      assert.equal((await create(alpha.userId)).status, 201, 'standard admission must not invent a reservation for another purpose');
     });
     await t.test('Jobs checksum rejection, cleanup failure and redelivery settle once with actual SQL', async () => {
       const input = await seed('queued');
@@ -626,12 +689,16 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
       assert.equal(effects.filter(effect => effect.type === 'transform').length, 1);
 
       await admin.query("UPDATE media.upload_sessions SET expires_at=clock_timestamp()-interval '20 minutes' WHERE id=$1", [input.sessionId]);
+      await admin.query('UPDATE media.storage_ledger SET bytes_approved=$2 WHERE user_id=$1', [input.userId, 10485760 - png.length]);
       assert.equal((await fixture.cleanup({ failApprovedDelete: true })).status, 204);
       assert.equal((await session(input)).status, 'expired');
       assert.equal(await fixture.quarantine.head(input.objectKey), null);
       assert.ok(await fixture.approved.head(derivativeKey));
       assert.equal((await admin.query('SELECT quarantine_deleted_at FROM media.upload_sessions WHERE id=$1', [input.sessionId])).rows[0].quarantine_deleted_at, null);
       assert.equal(Number((await admin.query('SELECT bytes_reserved FROM media.storage_ledger WHERE user_id=$1', [input.userId])).rows[0].bytes_reserved), 0);
+      for (let attempt = 0; attempt < 3; attempt++) {
+        assert.equal((await create(input.userId)).status, 400, 'an orphan derivative keeps the original staging reservation until cleanup completes');
+      }
 
       assert.equal((await fixture.cleanup()).status, 204);
       assert.equal(await fixture.approved.head(derivativeKey), null);
@@ -639,6 +706,7 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
       assert.equal(Number((await admin.query('SELECT bytes_reserved FROM media.storage_ledger WHERE user_id=$1', [input.userId])).rows[0].bytes_reserved), 0);
       assert.equal((await fixture.cleanup()).status, 204);
       assert.equal(await fixture.approved.head(derivativeKey), null);
+      assert.equal((await create(input.userId)).status, 201);
     });
     assert.equal(fixture.outbound.length, 0);
     assert.ok(!fixture.statements.some(input => /(?:INSERT INTO|UPDATE) (?:content|feed)\./.test(input.text ?? '')));

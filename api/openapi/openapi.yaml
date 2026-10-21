@@ -1961,7 +1961,7 @@ components:
           format: date-time
         status:
           type: string
-          enum: [redeemed]
+          enum: [redeemed, revoked]
     RewardsMeResponse:
       type: object
       required:

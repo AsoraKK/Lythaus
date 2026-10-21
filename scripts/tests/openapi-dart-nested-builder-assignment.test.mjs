@@ -63,7 +63,7 @@ if (!compatible) process.exit(1);
     const requests = readFileSync(calls, 'utf8').trim().split('\n').map(JSON.parse);
     assert.deepEqual(requests.map(request => request.args), [
       ['pub', 'get'], ['run', 'build_runner', 'build'],
-      ['format', '--output=none', '--set-exit-if-changed', 'test/community_appeal_serialization_test.dart', 'test/admin_mutation_admission_test.dart', 'test/support_feedback_serialization_test.dart', 'test/activity_measurement_serialization_test.dart', 'test/owner_comments_serialization_test.dart', 'test/moderation_rereview_serialization_test.dart', 'test/subscription_status_test.dart', 'test/subscription_status_entitlements_test.dart', 'test/subscription_status401_response_test.dart', 'test/subscription_status500_response_test.dart'],
+      ['format', '--output=none', '--set-exit-if-changed', 'test/community_appeal_serialization_test.dart', 'test/admin_mutation_admission_test.dart', 'test/support_feedback_serialization_test.dart', 'test/activity_measurement_serialization_test.dart', 'test/owner_comments_serialization_test.dart', 'test/moderation_rereview_serialization_test.dart', 'test/subscription_status_test.dart', 'test/subscription_status_entitlements_test.dart', 'test/subscription_status401_response_test.dart', 'test/subscription_status500_response_test.dart', 'test/reward_redemption_serialization_test.dart'],
       ['analyze', '--no-fatal-warnings'], ['test', '--reporter', 'compact'],
     ]);
     assert.ok(requests.every(request => request.compatible));

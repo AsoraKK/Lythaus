@@ -5,7 +5,7 @@ import test from 'node:test';
 import { publicationControlTarget, publicationFailureAnnotation } from '../ci/run-publication-pg17.mjs';
 
 test('publication failure annotations identify only fixed runner stages without caller data', () => {
-  for (const stage of ['control', 'moderation.create', 'moderation.baseline', 'rereview.suite', 'admission.suite', 'safety.suite', 'tx.drop', 'attach.suite']) {
+  for (const stage of ['control', 'moderation.create', 'moderation.baseline', 'rereview.suite', 'admission.suite', 'safety.suite', 'tx.drop', 'attach.suite', 'rewards.suite', 'membership.suite', 'membership_admin.suite']) {
     assert.equal(publicationFailureAnnotation(stage), `::error title=Publication fixture failure::${stage} failed; inspect this stage's child output.`);
   }
   for (const stage of ['unknown', 'admission.suite\n::error::injected', 'postgresql://user:secret@remote.invalid/private', 'rereview.suite?token=secret']) {
@@ -53,4 +53,24 @@ test('required native CI runs each publication and direct-client suite once thro
   assert.match(runner, /CREATE DATABASE/);
   assert.match(runner, /validate-planetscale-postgres17\.mjs/);
   assert.match(runner, /DROP DATABASE/);
+});
+
+test('required native CI runs rewards and membership in fresh databases with no production grant edits', () => {
+  const ci = readFileSync(new URL('../../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  const runner = readFileSync(new URL('../ci/run-publication-pg17.mjs', import.meta.url), 'utf8');
+  assert.match(ci, /run: node scripts\/ci\/run-publication-pg17\.mjs --membership-rewards/);
+  for (const suite of ['rewards-acceptance.postgres.mjs',
+    'apps/lythaus-public-api/tests/membership-entitlements.postgres.mjs',
+    'apps/lythaus-admin-api/tests/membership-entitlements.postgres.mjs']) {
+    assert.equal(runner.split(suite).length - 1, 1);
+  }
+});
+
+test('unsupported runner arguments fail before reaching a local control database', () => {
+  const result = spawnSync(process.execPath, ['scripts/ci/run-publication-pg17.mjs', '--unexpected'], {
+    env: { ...process.env, PLANETSCALE_PG17_TEST_DATABASE_URL: 'postgresql://127.0.0.1:1/lythaus_auth_test_post_control' },
+    encoding: 'utf8', timeout: 5000,
+  });
+  assert.equal(result.status, 1);
+  assert.doesNotMatch(result.stderr, /postgresql:|ECONNREFUSED/);
 });

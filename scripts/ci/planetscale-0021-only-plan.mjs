@@ -7,6 +7,7 @@ import { assess0021ExecutionConsent, assess0021RegistryState, assessOperatorCost
 import { read0021RestoreEvidenceRecord } from './planetscale-0021-restore-evidence-loader.mjs';
 import { branchQualifiedDatabaseTarget, buildPlanetScaleTargetIdentity } from './planetscale-0021-target-identity.mjs';
 import { inspectMediaQuarantineMigration, verifyMediaQuarantineMigration } from './planetscale-media-quarantine-migration.mjs';
+import { ownerRecoveryContextFromEnvironment } from './owner-recovery-exception.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const now = Date.now();
@@ -69,6 +70,7 @@ async function inspectProviderEvidence() {
       restoreEvidenceRecord: restoreEvidenceInput.record,
       restoreEvidenceRecordPath: restoreEvidenceInput.recordPath,
       restoreEvidenceArtifact: restoreEvidenceInput.evidenceArtifact,
+      ownerRecoveryContext: ownerRecoveryContextFromEnvironment(process.env, 'migration'),
       now: Date.now(),
     });
     evidence.planetscale = assessment;

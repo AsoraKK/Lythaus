@@ -1343,7 +1343,12 @@ async function createUploadSession(request: Request, env: Env, user: Principal):
     const ledger = await client.query<{ bytes_reserved: number; bytes_approved: number }>(
       `SELECT bytes_reserved, bytes_approved FROM media.storage_ledger WHERE user_id = $1 FOR UPDATE`, [user.userId]);
     const current = ledger.rows[0] ?? { bytes_reserved: 0, bytes_approved: 0 };
-    if (Number(current.bytes_reserved) + Number(current.bytes_approved) + requestedBytes > quotaBytes) throw new Error('storage_quota_exceeded');
+    const cleanup = await client.query<{ cleanup_bytes: string }>(
+      `SELECT COALESCE(sum(expected_bytes), 0) AS cleanup_bytes FROM media.upload_sessions
+        WHERE user_id = $1 AND purpose = 'standard' AND quarantine_deleted_at IS NULL
+          AND status IN ('approved', 'rejected', 'expired', 'cancelled')`, [user.userId]);
+    if (Number(current.bytes_reserved) + Number(current.bytes_approved)
+      + Number(cleanup.rows[0]?.cleanup_bytes ?? 0) + requestedBytes > quotaBytes) throw new Error('storage_quota_exceeded');
     await client.query(
       `INSERT INTO media.storage_ledger (user_id, bytes_reserved) VALUES ($1, $2)
        ON CONFLICT (user_id) DO UPDATE SET bytes_reserved = media.storage_ledger.bytes_reserved + EXCLUDED.bytes_reserved`,
@@ -1486,6 +1491,16 @@ async function finaliseUpload(request: Request, env: Env, user: Principal, sessi
   );
   const session = result.rows[0];
   if (!session) throw new Error('upload_session_invalid');
+  if (session.status === 'queued' || session.status === 'approved') {
+    const receipt = await query<{ id: string }>(env.DB_APP_FRESH,
+      `SELECT id FROM system.outbox_events
+        WHERE actor_id = $1 AND aggregate_id = $2 AND aggregate_type = 'upload_session'
+          AND event_type = 'media.upload.finalised'
+          AND payload ->> 'uploadSessionId' = $2::text AND payload ->> 'objectKey' = $3
+        LIMIT 2`, [user.userId, sessionId, session.object_key]);
+    if (receipt.rows.length !== 1) throw new Error('upload_session_invalid');
+    return privateResponse(request, env, { uploadSessionId: sessionId, status: 'queued', eventId: receipt.rows[0].id });
+  }
   if (session.status === 'expired' || session.status === 'rejected' || session.status === 'cancelled') {
     await env.MEDIA_QUARANTINE.delete(session.object_key);
     throw new Error('upload_session_invalid');
@@ -3299,7 +3314,15 @@ async function rewardsSnapshot(request: Request, env: Env, user: Principal): Pro
     redemptionStatus: mature ? 'active' : 'restricted',
     fraudRiskStatus: 'normal',
     offers,
-    redemptionHistory: history.rows,
+    redemptionHistory: history.rows.map((item) => ({
+      id: item.id,
+      userId: user.userId,
+      rewardId: item.reward_id,
+      rewardLevel: item.reward_level,
+      rewardTitle: item.reward_title,
+      redeemedAt: item.redeemed_at,
+      status: item.status === 'confirmed' ? 'redeemed' : item.status,
+    })),
     affiliateDisclosure: 'Reward availability and partner relationships are disclosed before redemption.',
   });
 }
@@ -3316,8 +3339,8 @@ async function redeemReward(request: Request, env: Env, user: Principal, rewardI
   if (!mature || offer.rewardLevel > level || offer.rewardLevel > REWARD_ACCESS_POLICY.maximumReputationLevel) throw new Error('reward_locked');
   const redemptionId = uuidv7();
   const sourceEventId = uuidv7();
-  await transaction(env.DB_APP_FRESH, async (client) => {
-    const result = await client.query(
+  const redeemedAt = await transaction(env.DB_APP_FRESH, async (client) => {
+    const result = await client.query<{ redeemed_at: string }>(
       `INSERT INTO trust.reward_redemptions (id, user_id, reward_id, reward_level, reward_title)
        VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (user_id, reward_id) DO NOTHING RETURNING redeemed_at`,
@@ -3328,8 +3351,9 @@ async function redeemReward(request: Request, env: Env, user: Principal, rewardI
       explanation: 'The reward was redeemed based on your authoritative reputation eligibility.',
       objectType: 'reward_redemption', objectId: redemptionId, metadata: { rewardId: offer.id },
     });
+    return result.rows[0].redeemed_at;
   });
-  return privateResponse(request, env, { id: redemptionId, rewardId: offer.id, rewardLevel: offer.rewardLevel, rewardTitle: offer.title, status: 'redeemed' }, { status: 201 });
+  return privateResponse(request, env, { id: redemptionId, userId: user.userId, rewardId: offer.id, rewardLevel: offer.rewardLevel, rewardTitle: offer.title, redeemedAt, status: 'redeemed' }, { status: 201 });
 }
 
 async function getPersonalFeed(request: Request, env: Env, user: Principal): Promise<Response> {

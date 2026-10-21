@@ -36,8 +36,8 @@ const allocatedJobsDiagnosticFiles = new Map([
   // PR #1044 head 75d22de8640ba0d1d687a873746820ee7c39ec10 passed 57/57 media CI checks and received independent review.
   // Proposed PR1063 text allocation; subject-lock support remains separately gated.
   ['apps/lythaus-jobs/src/index.ts', '50a6d8c3f4dd73f49db3c68b463a19b8c172ebb9'],
-  // Scoped to privacy-request active-status revalidation under the existing account lock.
-  ['apps/lythaus-public-api/src/index.ts', '4640957fba06cbecbf8c87640f3d1a52052d1fe4'],
+  // Exact reviewed media retry/quota and rewards receipt integration; waitlist bytes remain frozen.
+  ['apps/lythaus-public-api/src/index.ts', '811a317d8117a87b98ca3e041e19cd348e75bcd5'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],
@@ -67,6 +67,11 @@ function assertOnlyReviewedWaitlistWorkerLock(source, frozen) {
   const after = before.replace('lythaus-public-waitlist-production', 'lythaus-production-workers');
   assert.equal(frozen.split(before).length, 2, 'Frozen waitlist workflow must contain exactly one original concurrency block');
   assert.equal(source, frozen.replace(before, after), 'Only the exact approved shared Worker concurrency group may change');
+}
+function assertReviewedMarketingRecoveryWorkflow(filename, blob) {
+  assert.equal(filename, '.github/workflows/deploy-marketing.yml', 'The recovery exception covers only the marketing deployment workflow');
+  assert.equal(blob, 'db867ebf102d590a95cbb773012047ff55d91f38',
+    'Marketing deployment must match the independently reviewed owner recovery gate and preserve all frozen behavior');
 }
 const protectedPaths = [
   'apps/marketing-site/src/components/OpeningWordmark.astro',
@@ -124,6 +129,16 @@ function assertOnlyReviewedNativeModerationTestRegistration(before, after) {
   assert.deepEqual(after, before, 'Only the exact native moderation, publication, and reputation commands may be registered; unrelated scripts and dependencies stay frozen');
 }
 const reviewedToolingSecurityPatches = {
+  'follow-redirects': {
+    version: '1.16.1',
+    resolved: 'https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.1.tgz',
+    integrity: 'sha512-FNvFGzoMLWmE6Yj9spb/zjd7yiNCHiAW9/Tg9CXrQ8wuu32HtlJOwWO11OJafl5FfY3DxTdQ0vj42zU1kvv5jg==',
+    dev: true,
+    funding: [{ type: 'individual', url: 'https://github.com/sponsors/RubenVerborgh' }],
+    license: 'MIT',
+    engines: { node: '>=4.0' },
+    peerDependenciesMeta: { debug: { optional: true } },
+  },
   handlebars: {
     version: '4.7.10',
     resolved: 'https://registry.npmjs.org/handlebars/-/handlebars-4.7.10.tgz',
@@ -279,6 +294,13 @@ function assertMarketingLockOnlyHasSecurityPatch(current = JSON.parse(readFileSy
   const filename = 'apps/marketing-site/package-lock.json';
   const original = JSON.parse(git('show', `${baselineSha}:${filename}`));
   assertExactImageAndQuotingPatches(current, original, filename);
+  assert.deepEqual(current.packages['node_modules/vite'], {
+    ...original.packages['node_modules/vite'],
+    version: '8.1.6',
+    resolved: 'https://registry.npmjs.org/vite/-/vite-8.1.6.tgz',
+    integrity: 'sha512-aRAHIxx5SW5zc1sMqFwJU/t5qaFfXb5Hj0J7W0VXihu/X99+346tz6080tO1T1xVIJORX/b3zVTXGFqUXh35uw==',
+  }, 'Vite must use the exact reviewed security patch metadata');
+  current.packages['node_modules/vite'] = original.packages['node_modules/vite'];
   assert.deepEqual(current.packages['node_modules/source-map-js'], reviewedSourceMapPatch,
     'source-map-js must use the exact reviewed security patch');
   current.packages['node_modules/source-map-js'] = original.packages['node_modules/source-map-js'];
@@ -448,6 +470,10 @@ export function assertHomepageFrozen() {
     }
     if (filename === 'package-lock.json') continue;
     if (filename === 'apps/marketing-site/package-lock.json') continue;
+    if (filename === '.github/workflows/deploy-marketing.yml') {
+      assertReviewedMarketingRecoveryWorkflow(filename, git('hash-object', `--path=${filename}`, filename));
+      continue;
+    }
     if (filename === '.github/workflows/deploy-public-waitlist.yml') {
       const frozen = execFileSync('git', ['show', `${baselineSha}:${filename}`], { cwd: root, encoding: 'utf8' });
       assertOnlyReviewedWaitlistWorkerLock(readFileSync(path.join(root, filename), 'utf8'), frozen);
@@ -484,6 +510,33 @@ test('waitlist freeze permits only the approved shared Worker lock group', () =>
   assertOnlyReviewedWaitlistWorkerLock(source, frozen);
   assert.throws(() => assertOnlyReviewedWaitlistWorkerLock(frozen, frozen));
 });
+test('marketing recovery gate permits only the independently reviewed workflow bytes', () => {
+  const filename = '.github/workflows/deploy-marketing.yml';
+  const blob = git('hash-object', `--path=${filename}`, filename);
+  assertReviewedMarketingRecoveryWorkflow(filename, blob);
+  assert.throws(() => assertReviewedMarketingRecoveryWorkflow(filename, git('rev-parse', `${baselineSha}:${filename}`)));
+  assert.throws(() => assertReviewedMarketingRecoveryWorkflow('apps/marketing-site/src/pages/index.astro', blob));
+  assert.throws(() => assertReviewedMarketingRecoveryWorkflow('.github/workflows/deploy-public-waitlist.yml', blob));
+});
+for (const [label, mutate] of [
+  ['changed build', source => source.replace('npm run build', 'npm run build -- --unreviewed')],
+  ['changed target', source => source.replace('--project-name "$PAGES_PROJECT"', '--project-name "unreviewed"')],
+  ['changed provider secret', source => source.replace('secrets.PLANETSCALE_API_TOKEN', 'secrets.UNREVIEWED_TOKEN')],
+  ['disabled recovery', source => source.replace("if: inputs.deployment_class == 'production'\n        env:\n          RELEASE_SHA:", "if: false\n        env:\n          RELEASE_SHA:")],
+  ['removed recovery', source => source.replace(/      - name: Require fresh recovery before production Pages activation\n[\s\S]*?(?=      - name: Deploy exact marketing artifact\n)/, '')],
+  ['exception enabled by default', source => source.replace('      owner_testing_recovery_exception:\n        required: false\n        default: false', '      owner_testing_recovery_exception:\n        required: false\n        default: true')],
+  ['exception exposed to direct dispatch', source => source.replace('  workflow_dispatch:\n    inputs:\n', '  workflow_dispatch:\n    inputs:\n      owner_testing_recovery_exception:\n        type: boolean\n')],
+  ['extra bytes', source => source + '\n'],
+]) {
+  test(`marketing recovery workflow pin rejects ${label}`, () => {
+    const filename = '.github/workflows/deploy-marketing.yml';
+    const source = readFileSync(path.join(root, filename), 'utf8');
+    const changed = mutate(source);
+    assert.notEqual(changed, source);
+    const blob = execFileSync('git', ['hash-object', '--stdin'], { cwd: root, encoding: 'utf8', input: changed }).trim();
+    assert.throws(() => assertReviewedMarketingRecoveryWorkflow(filename, blob));
+  });
+}
 for (const [label, mutate] of [
   ['different group', source => source.replace('lythaus-production-workers', 'unreviewed-group')],
   ['cancellation', source => source.replace('cancel-in-progress: false', 'cancel-in-progress: true')],
@@ -550,6 +603,15 @@ test('source-map security patch rejects changed metadata and unrelated dependenc
   const changed = readLock();
   changed.packages['node_modules/astro'].version = '7.3.5';
   assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(changed), /Marketing lock may change only for the exact reviewed security repairs/);
+});
+
+test('reviewed Vite patch rejects different version, registry, integrity and dependency metadata', () => {
+  for (const [field, value] of [['version', '8.1.5'], ['resolved', 'https://example.invalid/vite.tgz'],
+    ['integrity', 'sha512-invalid'], ['dependencies', {}], ['engines', { node: '>=1' }]]) {
+    const changed = JSON.parse(readFileSync(path.join(root, 'apps/marketing-site/package-lock.json'), 'utf8'));
+    changed.packages['node_modules/vite'][field] = value;
+    assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(changed), /Vite must use the exact reviewed security patch metadata/);
+  }
 });
 
 test('reviewed tooling patches keep every other dependency frozen', () => {
@@ -880,7 +942,7 @@ test('allocated Jobs pins reject altered historical and unrelated source paths',
     assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, changed), assert.AssertionError);
     if (filename === 'apps/lythaus-public-api/src/index.ts') {
       const previousPublicApiBlob = '5ca637b72d241d89df5178bec6f0f730aafe41cd';
-      assert.notEqual(previousPublicApiBlob, expected, 'The integrated membership-only source bytes replace the previous exact allocation');
+      assert.notEqual(previousPublicApiBlob, expected, 'The reviewed membership and private media retry bytes replace the previous exact allocation');
       assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, previousPublicApiBlob), assert.AssertionError);
     }
     if (filename.endsWith('/index.ts')) {
@@ -899,7 +961,7 @@ test('image-integrity allocation rejects superseded Worker bytes without broaden
   // so these superseded PR commits need not survive squash.
   const supersededWorkerBlobs = new Map([
     ['apps/lythaus-jobs/src/index.ts', ['da112b2d2c869251ed48941d31d4ac854bb93fa1', '8a6487ab099287f151fc8594b3b9ff846a9226b7', 'a842e8c3654a26adcaae7c8e72efae3d20102cbb', '7b25af78fc1e227b85d1758b0cb31fd0aec09d24']],
-    ['apps/lythaus-public-api/src/index.ts', ['1a231c953f23159e922346760510c8eaee96873a', '7a941be1765e82b5cbf00294b114952ab6ea27a1']],
+    ['apps/lythaus-public-api/src/index.ts', ['1a231c953f23159e922346760510c8eaee96873a', '7a941be1765e82b5cbf00294b114952ab6ea27a1', '4640957fba06cbecbf8c87640f3d1a52052d1fe4', '6d89caa73ab83ea682a2a9796388d8f2f2ed4833']],
   ]);
   for (const [filename, superseded] of supersededWorkerBlobs) {
     const current = git('hash-object', `--path=${filename}`, filename);
