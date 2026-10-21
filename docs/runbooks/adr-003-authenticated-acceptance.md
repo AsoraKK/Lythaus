@@ -119,12 +119,23 @@ requests are blocked too; their failure is an inspection constraint, not an auth
 failure result. Turnstile and other third-party requests are also blocked, so this
 run does not qualify real Turnstile behavior.
 
+The exact versioned light wordmark and three required favicon paths are
+allowlisted without queries; this does not allow the rest of the branding
+directories. The report checks wordmark decoding/visibility and records asset
+HTTP statuses. Guest navigation and feed completion are separate observations;
+the feed result uses response completion, loading/error/empty states and visible
+card counts without collecting post text. An incomplete app observation is a
+failure even when navigation controls already rendered.
+
 Evidence must remain outside the public repository. The JSON records only public
 page identity, check outcomes, sanitized request paths, error categories and
 screenshots of empty public forms. It omits request/response bodies, headers,
 cookies, URL queries and fragments, and raw exception or console text. The harness
-source SHA is recorded separately from the deployed source SHA, which remains
-unknown. A runner commit cannot establish which app commit is deployed.
+source SHA is captured at startup separately from the deployed source SHA, which
+remains unknown. Tracked changes to the runner or policy are recorded as dirty
+and the exact harness source SHA becomes null. A runner commit cannot establish
+which app commit is deployed. The sanitized dated matrix is in
+`docs/testing/public-launch-acceptance-2026-10-21.md`.
 
 The evidence class is `LIVE_PUBLIC_READ_ONLY_UI_OBSERVATION`. `OBSERVED` or
 `GUEST_NAVIGATION_OBSERVED` does not satisfy any authenticated ADR-003 case,
