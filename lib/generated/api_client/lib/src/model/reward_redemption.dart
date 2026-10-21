@@ -206,7 +206,6 @@ class RewardRedemptionStatusEnum extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'redeemed')
   static const RewardRedemptionStatusEnum redeemed = _$rewardRedemptionStatusEnum_redeemed;
-
   @BuiltValueEnumConst(wireName: r'revoked')
   static const RewardRedemptionStatusEnum revoked = _$rewardRedemptionStatusEnum_revoked;
 

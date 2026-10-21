@@ -172,8 +172,10 @@ test('concurrent distinct creates cannot exceed the remaining Free feed capacity
 });
 
 test('Black News Board records the canonical privilege gap and works with a fixture-only publication read', async () => {
-  assert.match(new URL(connectionString).pathname, /^\/lythaus_auth_test_post_membership_[a-f0-9]{32}$/,
-    'publication privilege fixtures require a fresh database owned by the isolated runner');
+  const pathname = new URL(connectionString).pathname;
+  assert.ok(/^\/lythaus_auth_test_post_membership_[a-f0-9]{32}$/.test(pathname)
+    || (process.env.GITHUB_ACTIONS === 'true' && pathname === '/postgres'),
+  'publication privilege fixtures require the isolated runner or disposable Actions PostgreSQL service');
   const privileges = (await sql(`SELECT has_schema_privilege('lythaus_runtime', 'editorial', 'USAGE') AS usage,
     has_column_privilege('lythaus_runtime', 'editorial.publications', 'id', 'SELECT') AS publication_read`)).rows[0];
   assert.deepEqual(privileges, { usage: false, publication_read: false });
