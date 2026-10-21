@@ -30,6 +30,32 @@ test('public UI boundary permits public pages, release assets and guest feed rea
   }
 });
 
+test('public branding exception permits only the four exact required normalized asset paths', () => {
+  const assets = ['/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg',
+    '/icons/lythaus-v1/favicon.116ff3e020c6.svg',
+    '/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png',
+    '/icons/lythaus-v1/favicon.e3dfdd675a74.ico'];
+  for (const asset of assets) {
+    assert.equal(publicReadOnlyRequestPolicy('GET', 'https://lythaus.co' + asset), null);
+    assert.equal(publicReadOnlyRequestPolicy('HEAD', 'https://lythaus.co' + asset), null);
+    for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
+      assert.equal(publicReadOnlyRequestPolicy(method, 'https://lythaus.co' + asset), 'non_read_method');
+    }
+    for (const suffix of ['/', '?unknown=1', '?token=synthetic']) {
+      assert.ok(publicReadOnlyRequestPolicy('GET', 'https://lythaus.co' + asset + suffix));
+    }
+  }
+  assert.equal(publicReadOnlyRequestPolicy('GET', 'https://lythaus.co/brand/./lythaus-v1/lythaus-wordmark-black.e450176663e0.svg'), null);
+  for (const resource of ['https://lythaus.co/brand/lythaus-v1/lythaus-wordmark-black.other.svg',
+    'https://lythaus.co/brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg',
+    'https://lythaus.co/brand/lythaus-v1/private.svg', 'https://lythaus.co/icons/lythaus-v1/private.png',
+    'https://lythaus.co/brand%2flythaus-v1/lythaus-wordmark-black.e450176663e0.svg',
+    'https://lythaus.co/brand//lythaus-v1/lythaus-wordmark-black.e450176663e0.svg',
+    'https://lythaus.co.attacker.invalid/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg']) {
+    assert.ok(publicReadOnlyRequestPolicy('GET', resource), resource);
+  }
+});
+
 test('permitted requests disable redirects and forward only the exact non-redirect upstream response', async () => {
   let http, forwarded;
   const blocked = [], response = { status: () => 200 };

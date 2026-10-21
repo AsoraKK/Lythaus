@@ -8,6 +8,10 @@ assert.equal(process.env.LYTHAUS_PUBLIC_BROWSER_ACCEPTANCE, 'read_only', 'Explic
 const output = path.resolve(process.env.PUBLIC_BROWSER_EVIDENCE_DIR ?? '/tmp/lythaus-public-read-only-acceptance');
 const repository = path.resolve(import.meta.dirname, '../..');
 assert.ok(!output.startsWith(repository + path.sep) && output !== repository, 'Evidence must remain outside the public repository');
+const harnessHeadSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repository, encoding: 'utf8' }).trim();
+const harnessSourceDirty = execFileSync('git', ['status', '--porcelain', '--untracked-files=no', '--',
+  'scripts/ci/public-read-only-browser-acceptance.mjs', 'scripts/ci/public-read-only-browser-policy.mjs'],
+{ cwd: repository, encoding: 'utf8' }).trim().length > 0;
 const { chromium } = await import('playwright');
 await mkdir(output, { recursive: true });
 let proxy;
@@ -28,11 +32,17 @@ try {
   for (const width of [390, 1440]) {
     const context = await browser.newContext({ viewport: { width, height: 1000 }, serviceWorkers: 'block',
       reducedMotion: 'reduce', colorScheme: 'light', ignoreHTTPSErrors: tlsBypass });
-    const blocked = [], consoleFindings = [], pageErrors = [];
+    const blocked = [], consoleFindings = [], pageErrors = [], brandResponses = [];
     await installPublicReadOnlyBoundary(context, blocked);
     const page = await context.newPage();
     page.setDefaultTimeout(15_000);
     page.on('pageerror', () => pageErrors.push('uncaught_page_error'));
+    page.on('response', response => {
+      const url = new URL(response.url());
+      if (url.hostname === 'lythaus.co' && ['/brand/lythaus-v1/', '/icons/lythaus-v1/'].some(prefix => url.pathname.startsWith(prefix))) {
+        brandResponses.push({ resource: publicReadOnlyResource(response.url()), status: response.status() });
+      }
+    });
     page.on('console', message => {
       if (message.type() !== 'error') return;
       const text = message.text();
@@ -42,7 +52,7 @@ try {
     });
     try {
       for (const [route, identity] of pages) {
-        const initial = { blocked: blocked.length, console: consoleFindings.length, errors: pageErrors.length };
+        const initial = { blocked: blocked.length, console: consoleFindings.length, errors: pageErrors.length, brand: brandResponses.length };
         const result = { width, route, checks: {} };
         try {
           const response = await page.goto('https://lythaus.co/' + route + '/', { waitUntil: 'networkidle' });
@@ -52,6 +62,19 @@ try {
           result.checks.meaningfulContent = (await page.locator('main').innerText()).trim().length > 20;
           result.checks.noFrameworkOverlay = await page.locator('astro-error-overlay,vite-error-overlay').count() === 0;
           result.checks.noHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1);
+          result.wordmark = await page.locator('header .secondary-brand-wordmark').evaluate(async node => {
+            const source = getComputedStyle(node).backgroundImage.match(/^url\(["']?(.*?)["']?\)$/u)?.[1];
+            const rect = node.getBoundingClientRect();
+            if (!source) return { decoded: false, visible: false };
+            const image = new Image(); image.src = source;
+            let decoded = false;
+            try { await image.decode(); decoded = image.naturalWidth > 0 && image.naturalHeight > 0; } catch {}
+            return { assetPath: new URL(source, location.href).pathname, decoded,
+              visible: rect.width > 0 && rect.height > 0 && rect.left >= 0 && rect.top >= 0
+                && rect.right <= innerWidth && rect.bottom <= innerHeight };
+          });
+          result.checks.brandWordmarkLoaded = result.wordmark.assetPath === '/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg'
+            && result.wordmark.decoded && result.wordmark.visible;
           if (['signup', 'sign-in'].includes(route)) {
             await page.getByRole('button', { name: /show password/iu }).click();
             assert.equal(await page.locator('input[name=password]').getAttribute('type'), 'text');
@@ -65,12 +88,14 @@ try {
         result.blocked = blocked.slice(initial.blocked);
         result.consoleFindings = consoleFindings.slice(initial.console);
         result.pageErrors = pageErrors.slice(initial.errors);
+        result.brandResponses = brandResponses.slice(initial.brand);
+        result.checks.noBrandAssetFailures = !result.brandResponses.some(item => item.status >= 400);
         result.status = result.failure || Object.values(result.checks).some(value => value !== true) || result.pageErrors.length
           ? 'FAILED' : result.consoleFindings.some(item => item.category !== 'read_only_boundary_block') ? 'ATTENTION_REQUIRED' : 'OBSERVED';
         reports.push(result);
       }
       const initial = { console: consoleFindings.length, errors: pageErrors.length };
-      const app = { width, route: 'https://app.lythaus.co/', status: 'NOT_OBSERVED' };
+      const app = { width, route: 'https://app.lythaus.co/', status: 'NOT_OBSERVED', guestNavigationObserved: false };
       try {
         await page.goto(app.route, { waitUntil: 'load' });
         await page.locator('flt-semantics-placeholder').waitFor({ timeout: 60_000 });
@@ -79,11 +104,32 @@ try {
         app.title = await page.title();
         app.screenshot = path.join(output, `${width}-app-entry.png`);
         await page.screenshot({ path: app.screenshot });
+        const feedResponse = page.waitForResponse(response => response.request().method() === 'GET'
+          && publicReadOnlyResource(response.url()) === 'https://api.lythaus.co/api/feed/discover', { timeout: 30_000 }).catch(() => null);
         await page.getByRole('button', { name: 'Continue as guest', exact: true }).click();
         await page.getByRole('button', { name: /^Profile(?:\b|$)/u }).waitFor();
         app.status = 'GUEST_NAVIGATION_OBSERVED';
+        app.guestNavigationObserved = true;
         app.note = 'Guest navigation controls rendered. Feed data and account-session behavior are not certified.';
-      } catch { app.failure = 'app_observation_incomplete'; }
+        const response = await feedResponse;
+        app.guestFeed = { status: 'FEED_RESPONSE_NOT_OBSERVED', httpStatus: response?.status() ?? null,
+          responseCompleted: response ? (await response.finished()) === null : false };
+        const loading = page.getByText('Loading posts', { exact: true }).first();
+        await loading.waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => {});
+        app.guestFeed.loadingVisible = await loading.isVisible();
+        app.guestFeed.emptyVisible = await page.getByText('No posts yet', { exact: true }).first().isVisible();
+        app.guestFeed.errorVisible = await page.getByText('Couldn’t load posts', { exact: true }).first().isVisible();
+        const cards = page.getByRole('button', { name: 'Trust details', exact: true });
+        app.guestFeed.visiblePostCardCount = (await Promise.all(Array.from({ length: await cards.count() },
+          (_, index) => cards.nth(index).isVisible()))).filter(Boolean).length;
+        app.guestFeed.status = app.guestFeed.loadingVisible ? 'FEED_STILL_LOADING'
+          : app.guestFeed.errorVisible ? 'FEED_UNAVAILABLE'
+          : app.guestFeed.httpStatus === 200 && app.guestFeed.responseCompleted && app.guestFeed.emptyVisible ? 'EMPTY_FEED_OBSERVED'
+          : app.guestFeed.httpStatus === 200 && app.guestFeed.responseCompleted && app.guestFeed.visiblePostCardCount > 0 ? 'POPULATED_FEED_OBSERVED'
+          : app.guestFeed.responseCompleted ? 'FEED_RESPONSE_COMPLETE_UNCLASSIFIED' : 'FEED_RESPONSE_NOT_OBSERVED';
+        app.guestScreenshot = path.join(output, `${width}-app-guest.png`);
+        await page.screenshot({ path: app.guestScreenshot });
+      } catch { app.failure = 'app_observation_incomplete'; app.status = 'FAILED'; }
       app.blocked = blocked.filter(item => item.resource?.startsWith('https://api.lythaus.co/'));
       app.consoleFindings = consoleFindings.slice(initial.console);
       app.pageErrors = pageErrors.slice(initial.errors);
@@ -94,7 +140,7 @@ try {
 } finally {
   await browser.close();
   const result = { evidenceClass: 'LIVE_PUBLIC_READ_ONLY_UI_OBSERVATION', observedAt: new Date().toISOString(),
-    harnessSourceSha: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repository, encoding: 'utf8' }).trim(),
+    harnessSourceSha: harnessSourceDirty ? null : harnessHeadSha, harnessHeadSha, harnessSourceDirty,
     deployedSourceSha: null, tlsValidated: false, browserCertificateValidationEnabled: !tlsBypass, environmentProxyCertificateBypass: tlsBypass,
     provesAuthentication: false, provesEmailDelivery: false, provesPublishing: false,
     notes: 'Fresh unauthenticated contexts. No forms submitted, credentials entered or private storage imported. Non-read requests, redirects, WebSockets, private API routes and third-party requests blocked. Non-redirect upstream responses forwarded unchanged; no synthetic responses supplied. This observation cannot satisfy protected exact-candidate acceptance.', reports };
