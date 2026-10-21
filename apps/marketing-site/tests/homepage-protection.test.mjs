@@ -68,6 +68,11 @@ function assertOnlyReviewedWaitlistWorkerLock(source, frozen) {
   assert.equal(frozen.split(before).length, 2, 'Frozen waitlist workflow must contain exactly one original concurrency block');
   assert.equal(source, frozen.replace(before, after), 'Only the exact approved shared Worker concurrency group may change');
 }
+function assertReviewedMarketingRecoveryWorkflow(filename, blob) {
+  assert.equal(filename, '.github/workflows/deploy-marketing.yml', 'The recovery exception covers only the marketing deployment workflow');
+  assert.equal(blob, 'db867ebf102d590a95cbb773012047ff55d91f38',
+    'Marketing deployment must match the independently reviewed owner recovery gate and preserve all frozen behavior');
+}
 const protectedPaths = [
   'apps/marketing-site/src/components/OpeningWordmark.astro',
   'apps/marketing-site/src/scripts/home-opening.js',
@@ -448,6 +453,10 @@ export function assertHomepageFrozen() {
     }
     if (filename === 'package-lock.json') continue;
     if (filename === 'apps/marketing-site/package-lock.json') continue;
+    if (filename === '.github/workflows/deploy-marketing.yml') {
+      assertReviewedMarketingRecoveryWorkflow(filename, git('hash-object', `--path=${filename}`, filename));
+      continue;
+    }
     if (filename === '.github/workflows/deploy-public-waitlist.yml') {
       const frozen = execFileSync('git', ['show', `${baselineSha}:${filename}`], { cwd: root, encoding: 'utf8' });
       assertOnlyReviewedWaitlistWorkerLock(readFileSync(path.join(root, filename), 'utf8'), frozen);
@@ -484,6 +493,33 @@ test('waitlist freeze permits only the approved shared Worker lock group', () =>
   assertOnlyReviewedWaitlistWorkerLock(source, frozen);
   assert.throws(() => assertOnlyReviewedWaitlistWorkerLock(frozen, frozen));
 });
+test('marketing recovery gate permits only the independently reviewed workflow bytes', () => {
+  const filename = '.github/workflows/deploy-marketing.yml';
+  const blob = git('hash-object', `--path=${filename}`, filename);
+  assertReviewedMarketingRecoveryWorkflow(filename, blob);
+  assert.throws(() => assertReviewedMarketingRecoveryWorkflow(filename, git('rev-parse', `${baselineSha}:${filename}`)));
+  assert.throws(() => assertReviewedMarketingRecoveryWorkflow('apps/marketing-site/src/pages/index.astro', blob));
+  assert.throws(() => assertReviewedMarketingRecoveryWorkflow('.github/workflows/deploy-public-waitlist.yml', blob));
+});
+for (const [label, mutate] of [
+  ['changed build', source => source.replace('npm run build', 'npm run build -- --unreviewed')],
+  ['changed target', source => source.replace('--project-name "$PAGES_PROJECT"', '--project-name "unreviewed"')],
+  ['changed provider secret', source => source.replace('secrets.PLANETSCALE_API_TOKEN', 'secrets.UNREVIEWED_TOKEN')],
+  ['disabled recovery', source => source.replace("if: inputs.deployment_class == 'production'\n        env:\n          RELEASE_SHA:", "if: false\n        env:\n          RELEASE_SHA:")],
+  ['removed recovery', source => source.replace(/      - name: Require fresh recovery before production Pages activation\n[\s\S]*?(?=      - name: Deploy exact marketing artifact\n)/, '')],
+  ['exception enabled by default', source => source.replace('      owner_testing_recovery_exception:\n        required: false\n        default: false', '      owner_testing_recovery_exception:\n        required: false\n        default: true')],
+  ['exception exposed to direct dispatch', source => source.replace('  workflow_dispatch:\n    inputs:\n', '  workflow_dispatch:\n    inputs:\n      owner_testing_recovery_exception:\n        type: boolean\n')],
+  ['extra bytes', source => source + '\n'],
+]) {
+  test(`marketing recovery workflow pin rejects ${label}`, () => {
+    const filename = '.github/workflows/deploy-marketing.yml';
+    const source = readFileSync(path.join(root, filename), 'utf8');
+    const changed = mutate(source);
+    assert.notEqual(changed, source);
+    const blob = execFileSync('git', ['hash-object', '--stdin'], { cwd: root, encoding: 'utf8', input: changed }).trim();
+    assert.throws(() => assertReviewedMarketingRecoveryWorkflow(filename, blob));
+  });
+}
 for (const [label, mutate] of [
   ['different group', source => source.replace('lythaus-production-workers', 'unreviewed-group')],
   ['cancellation', source => source.replace('cancel-in-progress: false', 'cancel-in-progress: true')],
