@@ -1486,6 +1486,16 @@ async function finaliseUpload(request: Request, env: Env, user: Principal, sessi
   );
   const session = result.rows[0];
   if (!session) throw new Error('upload_session_invalid');
+  if (session.status === 'queued' || session.status === 'approved') {
+    const receipt = await query<{ id: string }>(env.DB_APP_FRESH,
+      `SELECT id FROM system.outbox_events
+        WHERE actor_id = $1 AND aggregate_id = $2 AND aggregate_type = 'upload_session'
+          AND event_type = 'media.upload.finalised'
+          AND payload ->> 'uploadSessionId' = $2::text AND payload ->> 'objectKey' = $3
+        LIMIT 2`, [user.userId, sessionId, session.object_key]);
+    if (receipt.rows.length !== 1) throw new Error('upload_session_invalid');
+    return privateResponse(request, env, { uploadSessionId: sessionId, status: 'queued', eventId: receipt.rows[0].id });
+  }
   if (session.status === 'expired' || session.status === 'rejected' || session.status === 'cancelled') {
     await env.MEDIA_QUARANTINE.delete(session.object_key);
     throw new Error('upload_session_invalid');

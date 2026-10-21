@@ -167,9 +167,16 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
       const response = await fixture.request('/fixture/finalise', input);
       assert.equal(response.status, 200);
       assert.equal(response.headers.get('cache-control'), 'private, no-store');
+      const receipt = await response.json();
       assert.equal((await session(input)).status, 'queued');
       assert.equal((await admin.query('SELECT count(*)::integer AS n FROM system.outbox_events WHERE aggregate_id=$1', [input.sessionId])).rows[0].n, 1);
+      const retry = await fixture.request('/fixture/finalise', input);
+      assert.equal(retry.status, 200);
+      assert.deepEqual(await retry.json(), receipt);
+      assert.equal((await fixture.request('/fixture/finalise', { ...input, userId: randomUUID() })).status, 400);
+      await admin.query("UPDATE system.outbox_events SET payload=jsonb_set(payload,'{objectKey}','\"unrelated-private-key\"') WHERE id=$1", [receipt.eventId]);
       assert.equal((await fixture.request('/fixture/finalise', input)).status, 400);
+      assert.equal((await admin.query('SELECT count(*)::integer AS n FROM system.outbox_events WHERE aggregate_id=$1', [input.sessionId])).rows[0].n, 1);
     });
     await t.test('expiry between byte verification and SQL transition rolls back without an event', async () => {
       const input = await seed();
@@ -278,6 +285,10 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
         assert.deepEqual(Object.values(ledger).map(Number), [0, derivativeBytes.byteLength, derivativeBytes.byteLength, 0, 1]);
         assert.equal((await admin.query('SELECT count(*)::integer AS n FROM system.outbox_events WHERE aggregate_id=$1', [input.sessionId])).rows[0].n, 1);
         assert.equal(await fixture.quarantine.head(input.objectKey), null);
+        const processedRetry = await fixture.request('/fixture/finalise', input);
+        assert.equal(processedRetry.status, 200);
+        assert.equal(processedRetry.headers.get('cache-control'), 'private, no-store');
+        assert.deepEqual(await processedRetry.json(), receipt);
         assert.ok(await fixture.approved.head(object.object_key));
         assert.ok(new Date(storedSession.expires_at).getTime() > Date.now());
         assert.equal((await fixture.upload(uploadReceipt.uploadUrl, userId, png)).status, 409);
