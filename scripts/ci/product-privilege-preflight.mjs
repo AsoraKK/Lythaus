@@ -13,6 +13,7 @@ export const PRODUCT_PRIVILEGE_TARGET = Object.freeze({
 const activityColumns = ['id', 'user_id', 'actor_user_id', 'event_type', 'category', 'source', 'source_event_id',
   'correlation_id', 'title', 'explanation', 'result', 'reason_code', 'policy_version', 'object_type', 'object_id',
   'reputation_effect', 'appealable', 'metadata', 'retention_class', 'retention_until', 'created_at'];
+const activityReadColumns = activityColumns.filter(column => column !== 'retention_until');
 export const PRODUCT_PRIVILEGE_REQUIREMENTS = [
   { schema: 'trust', relation: 'reward_redemptions', scope: 'proposed_additional', columns: {
     SELECT: ['id', 'user_id', 'reward_id', 'reward_level', 'reward_title', 'redeemed_at', 'status'],
@@ -35,7 +36,7 @@ export const PRODUCT_PRIVILEGE_REQUIREMENTS = [
     SELECT: ['scope', 'subject_hash', 'window_started_at', 'request_count'],
     INSERT: ['scope', 'subject_hash', 'window_started_at', 'request_count', 'expires_at'], UPDATE: ['request_count'],
   } },
-  { schema: 'trust', relation: 'user_activity_events', scope: 'existing_prerequisite', columns: { SELECT: activityColumns, INSERT: activityColumns } },
+  { schema: 'trust', relation: 'user_activity_events', scope: 'existing_prerequisite', columns: { SELECT: activityReadColumns, INSERT: activityColumns } },
 ];
 
 function fail(code) { const error = new Error(code); error.code = code; throw error; }

@@ -51,6 +51,10 @@ test('PG17 catalog probes distinguish exact column, inherited, schema and RLS ri
     assert.ok(snapshot.missingPrivileges.some(item => item.object === 'editorial' && item.privilege === 'USAGE'));
     assert.ok(snapshot.missingPrivileges.some(item => item.object === 'trust.reward_redemptions' && item.privilege === 'INSERT'));
     assert.ok(snapshot.missingPrivileges.every(item => item.scope === 'proposed_additional'));
+    const retention = (await client.query(`SELECT
+      has_column_privilege($1, 'trust.user_activity_events', 'retention_until', 'SELECT') AS readable,
+      has_column_privilege($1, 'trust.user_activity_events', 'retention_until', 'INSERT') AS insertable`, [runtimeRole])).rows[0];
+    assert.deepEqual(retention, { readable: false, insertable: true });
 
     await client.query(`GRANT USAGE ON SCHEMA editorial TO ${quote(runtimeRole)}`);
     await client.query(`GRANT SELECT (id,user_id,reward_id,reward_level,reward_title,redeemed_at,status) ON trust.reward_redemptions TO ${quote(inheritedRole)}`);
