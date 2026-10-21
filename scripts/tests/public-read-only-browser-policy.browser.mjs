@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { chromium } from 'playwright';
 import { localAuthBrowserServer } from './local-auth-browser-server.mjs';
@@ -48,4 +49,36 @@ test('read-only boundary preserves a real non-redirect response body and status'
   assert.equal(await page.locator('main').innerText(), 'Exact original upstream bytes');
   assert.deepEqual(hits, ['https://lythaus.co/signup/']);
   assert.deepEqual(blocked, []);
+});
+
+test('read-only boundary loads the exact public wordmark while unknown brand assets never reach the server', { timeout: 30_000 }, async t => {
+  const asset = '/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg';
+  const unknown = '/brand/lythaus-v1/private.svg';
+  const svg = await readFile(new URL('../../apps/marketing-site/public' + asset, import.meta.url));
+  const hits = [], blocked = [];
+  const fixture = await localAuthBrowserServer(async route => {
+    const url = new URL(route.request().url()); hits.push(url.pathname);
+    if (url.pathname === asset) return route.fulfill({ contentType: 'image/svg+xml', body: svg });
+    assert.equal(url.pathname, '/signup/');
+    return route.fulfill({ contentType: 'text/html', body: `<!doctype html><title>Public brand boundary</title><link rel="icon" href="data:,"><span id="brand" style="display:block;width:154px;height:33px;background-image:url('${asset}')"></span><img id="denied" src="${unknown}">` });
+  });
+  t.after(() => fixture.close());
+  const browser = await chromium.launch({ headless: true, proxy: { server: fixture.proxy },
+    ...(process.env.CHROME_EXECUTABLE ? { executablePath: process.env.CHROME_EXECUTABLE } : {}) });
+  t.after(() => browser.close());
+  const context = await browser.newContext({ serviceWorkers: 'block', ignoreHTTPSErrors: true });
+  await installPublicReadOnlyBoundary(context, blocked);
+  const page = await context.newPage();
+  const assetResponse = page.waitForResponse(response => new URL(response.url()).pathname === asset);
+  await page.goto('https://lythaus.co/signup/');
+  const response = await assetResponse;
+  assert.equal(response.status(), 200);
+  assert.deepEqual(await response.body(), svg);
+  assert.equal(await page.locator('#brand').evaluate(async node => {
+    const image = new Image(); image.src = getComputedStyle(node).backgroundImage.slice(5, -2);
+    await image.decode(); return image.naturalWidth > 0 && node.getBoundingClientRect().width > 0;
+  }), true);
+  assert.equal(hits.includes(unknown), false);
+  assert.ok(hits.includes(asset));
+  assert.ok(blocked.some(item => item.resource === 'https://lythaus.co' + unknown && item.reason === 'unapproved_path'));
 });

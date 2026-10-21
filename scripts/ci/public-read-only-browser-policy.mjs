@@ -4,6 +4,12 @@ const appPages = new Set(['/', '/login']);
 const staticFile = /\.(?:js|css|json|wasm|ttf|otf|woff2?|png|svg|ico|webp)$/u;
 const appEntrypoint = /^\/(?:main\.dart(?:\.[a-f0-9]{16})?|flutter_bootstrap(?:\.[a-f0-9]{16})?|release-update(?:\.[a-f0-9]{16})?|flutter)\.js$/u;
 const appFiles = new Set(['/web-release-assets.json', '/manifest.json', '/version.json', '/favicon.png', '/flutter-semantics.css']);
+const marketingBrandAssets = new Set([
+  '/brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg',
+  '/icons/lythaus-v1/favicon.116ff3e020c6.svg',
+  '/icons/lythaus-v1/favicon-96x96.572a7b9a0d35.png',
+  '/icons/lythaus-v1/favicon.e3dfdd675a74.ico',
+]);
 
 export function publicReadOnlyRequestPolicy(method, resource) {
   let url;
@@ -15,6 +21,7 @@ export function publicReadOnlyRequestPolicy(method, resource) {
   }
   const route = url.pathname.replace(/\/$/u, '') || '/';
   if (url.hostname === 'lythaus.co') {
+    if (marketingBrandAssets.has(url.pathname)) return url.search ? 'unapproved_asset_query' : null;
     if (pages.has(route) || ((url.pathname.startsWith('/_astro/') || url.pathname.startsWith('/assets/'))
       && staticFile.test(route)) || route === '/favicon.svg' || route === '/favicon.ico') return null;
     return 'unapproved_path';
