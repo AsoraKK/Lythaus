@@ -124,6 +124,16 @@ function assertOnlyReviewedNativeModerationTestRegistration(before, after) {
   assert.deepEqual(after, before, 'Only the exact native moderation, publication, and reputation commands may be registered; unrelated scripts and dependencies stay frozen');
 }
 const reviewedToolingSecurityPatches = {
+  'follow-redirects': {
+    version: '1.16.1',
+    resolved: 'https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.1.tgz',
+    integrity: 'sha512-FNvFGzoMLWmE6Yj9spb/zjd7yiNCHiAW9/Tg9CXrQ8wuu32HtlJOwWO11OJafl5FfY3DxTdQ0vj42zU1kvv5jg==',
+    dev: true,
+    funding: [{ type: 'individual', url: 'https://github.com/sponsors/RubenVerborgh' }],
+    license: 'MIT',
+    engines: { node: '>=4.0' },
+    peerDependenciesMeta: { debug: { optional: true } },
+  },
   handlebars: {
     version: '4.7.10',
     resolved: 'https://registry.npmjs.org/handlebars/-/handlebars-4.7.10.tgz',
@@ -279,6 +289,13 @@ function assertMarketingLockOnlyHasSecurityPatch(current = JSON.parse(readFileSy
   const filename = 'apps/marketing-site/package-lock.json';
   const original = JSON.parse(git('show', `${baselineSha}:${filename}`));
   assertExactImageAndQuotingPatches(current, original, filename);
+  assert.deepEqual(current.packages['node_modules/vite'], {
+    ...original.packages['node_modules/vite'],
+    version: '8.1.6',
+    resolved: 'https://registry.npmjs.org/vite/-/vite-8.1.6.tgz',
+    integrity: 'sha512-aRAHIxx5SW5zc1sMqFwJU/t5qaFfXb5Hj0J7W0VXihu/X99+346tz6080tO1T1xVIJORX/b3zVTXGFqUXh35uw==',
+  }, 'Vite must use the exact reviewed security patch metadata');
+  current.packages['node_modules/vite'] = original.packages['node_modules/vite'];
   assert.deepEqual(current.packages['node_modules/source-map-js'], reviewedSourceMapPatch,
     'source-map-js must use the exact reviewed security patch');
   current.packages['node_modules/source-map-js'] = original.packages['node_modules/source-map-js'];
@@ -550,6 +567,15 @@ test('source-map security patch rejects changed metadata and unrelated dependenc
   const changed = readLock();
   changed.packages['node_modules/astro'].version = '7.3.5';
   assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(changed), /Marketing lock may change only for the exact reviewed security repairs/);
+});
+
+test('reviewed Vite patch rejects different version, registry, integrity and dependency metadata', () => {
+  for (const [field, value] of [['version', '8.1.5'], ['resolved', 'https://example.invalid/vite.tgz'],
+    ['integrity', 'sha512-invalid'], ['dependencies', {}], ['engines', { node: '>=1' }]]) {
+    const changed = JSON.parse(readFileSync(path.join(root, 'apps/marketing-site/package-lock.json'), 'utf8'));
+    changed.packages['node_modules/vite'][field] = value;
+    assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(changed), /Vite must use the exact reviewed security patch metadata/);
+  }
 });
 
 test('reviewed tooling patches keep every other dependency frozen', () => {
