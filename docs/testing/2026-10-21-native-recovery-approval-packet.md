@@ -13,7 +13,7 @@ encryption key. It does not request or grant permission to use that route.
   `vqa2g2xc9wsl`, PS-5 ARM, AWS Frankfurt, zero replicas, ready and production.
   Branch deletion protection is enabled; database-level deletion protection is
   false. No protection setting was changed.
-- A further read-only branch GET at 09:50 UTC reports gp3 storage, 3,000 IOPS,
+- A further read-only branch GET on 21 October reports gp3 storage, 3,000 IOPS,
   125 MiB/s, a 10 GiB minimum and 4 TiB maximum with storage autoscaling enabled.
   It does not report current allocated or used bytes. The minimum is not a
   measured restore size, and the 20 GiB proposal below is not provider-enforced.
