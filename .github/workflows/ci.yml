@@ -115,6 +115,7 @@ jobs:
       - name: Verify owner-testing authentication release scope
         run: node --test scripts/tests/owner-testing-auth-scope.test.mjs
       - run: node --test scripts/tests/real-email-acceptance-evidence.test.mjs
+      - run: node --test scripts/tests/public-read-only-browser-policy.test.mjs
       - run: npm run test:product-integrity-runtime
       - run: npm run test:product-contracts
       - name: Verify monthly reputation and candidate peer policy
