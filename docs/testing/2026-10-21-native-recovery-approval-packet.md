@@ -85,16 +85,26 @@ backup/WAL costs `21.47483648 * 0.023 * 24 / 744`, approximately US$0.01593;
 below **US$0.04**, with the proposed US$1 ceiling providing contingency.
 The additional backup/WAL bound must include the selected source backup's
 protection window and any restore-related retention extension. Existing usage
-must be measured separately. These are proposed limits, not observed sizes.
+must be measured separately. Tax and mandatory fees are currently unknown;
+the operator must obtain them in the provider preview and include them within
+the proposed US$1 total before seeking concrete approval. These are proposed
+limits, not observed sizes or an all-in provider quote.
 
-Stop before provisioning if sizes, retention, performance or the provider
-preview cannot establish these bounds. Stop and seek a revised scope if they
-change. Request explicit cleanup of only this newly created branch after the
-sanitized evidence and review are preserved, and explicit removal of protection
-only from the newly selected rehearsal backup when its approved retention ends.
-Do not change any older protected backup. Without those cleanup permissions,
-two-hour/24-hour estimates cannot be treated as the total. This proposal is not
-an approved ceiling, provider spend enforcement or migration usage consent.
+Stop before provisioning if actual branch disk/settings, retention, performance,
+tax/fees or the provider preview cannot establish these bounds. The two-hour
+estimate assumes deletion has completed; billing continues until deletion.
+The US$1 ceiling is a review gate and is **not enforced by the provider**.
+
+Set an operator checkpoint at 60 minutes, before the proposed two-hour window.
+Preserve and review sanitized evidence, inspect usage and request action-time
+permanent-deletion approval for the exact new branch ID with dependency and
+retention checks. Advance restoration approval is not deletion authority. If
+deletion approval is pending/denied or cost cannot be bounded, stop test traffic
+and report the still-billable resource, rate and remaining headroom immediately;
+do not claim that stopping tests stops billing or automatically delete it.
+Any later removal of backup protection also needs its own exact action-time
+approval. Do not change an older protected backup. This proposal does not
+authorize provisioning, credentials, deletion or migration usage.
 
 ## Temporary credential scope
 
@@ -139,7 +149,8 @@ on the restored target must be individually scoped before execution.
    or retention change with its measured backup/WAL cost.
 2. Approve one specifically named native restore branch, selected backup ID,
    PS-5 ARM single-instance configuration, source region, maximum duration,
-   all-in incremental spending ceiling, data handling and branch cleanup.
+   all-in incremental spending ceiling including tax/fees, data handling and
+   the checkpoint. Permanent cleanup requires a separate action-time decision.
 3. Approve only the restored-target credential/impersonation scope above that
    is actually needed; retain source identities and the previous stats grant.
 4. Supply accepted RPO/RTO, complete native restore/schema/registry/effective
