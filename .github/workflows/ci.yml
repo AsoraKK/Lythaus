@@ -92,6 +92,10 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts --no-audit
       - run: npm run validate:cloudflare-hyperdrive-targets:manifest
+      - name: Verify read-only mapped product privilege preflight
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
+        run: node --test --test-concurrency=1 scripts/tests/product-privilege-preflight.test.mjs scripts/tests/product-privilege-preflight.postgres.mjs
       - run: npm run validate:ai-gateway-paths
       - run: npm run typecheck:native
       - name: Verify file-object safety with synthetic local fixtures
