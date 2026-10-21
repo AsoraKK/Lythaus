@@ -1516,9 +1516,11 @@ jobs:
           PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
           RECOVERY_READINESS_REPORT_FILE: ${{ runner.temp }}/production-cutover/recovery-readiness-before-activation.json
         run: |
-          echo 'RELEASE_FAILURE_GATE=ACTIVATION' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_CODE=recovery_readiness_failed' >> "$GITHUB_ENV"
-          echo 'RELEASE_FAILURE_MESSAGE=protected recovery or owner exception failed before activation' >> "$GITHUB_ENV"
+          {
+            echo 'RELEASE_FAILURE_GATE=ACTIVATION'
+            echo 'RELEASE_FAILURE_CODE=recovery_readiness_failed'
+            echo 'RELEASE_FAILURE_MESSAGE=protected recovery or owner exception failed before activation'
+          } >> "$GITHUB_ENV"
           node scripts/ci/verify-production-recovery-readiness.mjs
       - name: Activate exact candidate Worker versions (ACTIVATION gate; changed components only)
         env:
