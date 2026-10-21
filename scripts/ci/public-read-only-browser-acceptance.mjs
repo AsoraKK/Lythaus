@@ -8,6 +8,10 @@ assert.equal(process.env.LYTHAUS_PUBLIC_BROWSER_ACCEPTANCE, 'read_only', 'Explic
 const output = path.resolve(process.env.PUBLIC_BROWSER_EVIDENCE_DIR ?? '/tmp/lythaus-public-read-only-acceptance');
 const repository = path.resolve(import.meta.dirname, '../..');
 assert.ok(!output.startsWith(repository + path.sep) && output !== repository, 'Evidence must remain outside the public repository');
+const harnessHeadSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repository, encoding: 'utf8' }).trim();
+const harnessSourceDirty = execFileSync('git', ['status', '--porcelain', '--untracked-files=no', '--',
+  'scripts/ci/public-read-only-browser-acceptance.mjs', 'scripts/ci/public-read-only-browser-policy.mjs'],
+{ cwd: repository, encoding: 'utf8' }).trim().length > 0;
 const { chromium } = await import('playwright');
 await mkdir(output, { recursive: true });
 let proxy;
@@ -91,7 +95,7 @@ try {
         reports.push(result);
       }
       const initial = { console: consoleFindings.length, errors: pageErrors.length };
-      const app = { width, route: 'https://app.lythaus.co/', status: 'NOT_OBSERVED' };
+      const app = { width, route: 'https://app.lythaus.co/', status: 'NOT_OBSERVED', guestNavigationObserved: false };
       try {
         await page.goto(app.route, { waitUntil: 'load' });
         await page.locator('flt-semantics-placeholder').waitFor({ timeout: 60_000 });
@@ -105,6 +109,7 @@ try {
         await page.getByRole('button', { name: 'Continue as guest', exact: true }).click();
         await page.getByRole('button', { name: /^Profile(?:\b|$)/u }).waitFor();
         app.status = 'GUEST_NAVIGATION_OBSERVED';
+        app.guestNavigationObserved = true;
         app.note = 'Guest navigation controls rendered. Feed data and account-session behavior are not certified.';
         const response = await feedResponse;
         app.guestFeed = { status: 'FEED_RESPONSE_NOT_OBSERVED', httpStatus: response?.status() ?? null,
@@ -120,7 +125,7 @@ try {
           : app.guestFeed.responseCompleted ? 'FEED_RESPONSE_COMPLETE_UNCLASSIFIED' : 'FEED_RESPONSE_NOT_OBSERVED';
         app.guestScreenshot = path.join(output, `${width}-app-guest.png`);
         await page.screenshot({ path: app.guestScreenshot });
-      } catch { app.failure = 'app_observation_incomplete'; }
+      } catch { app.failure = 'app_observation_incomplete'; app.status = 'FAILED'; }
       app.blocked = blocked.filter(item => item.resource?.startsWith('https://api.lythaus.co/'));
       app.consoleFindings = consoleFindings.slice(initial.console);
       app.pageErrors = pageErrors.slice(initial.errors);
@@ -131,7 +136,7 @@ try {
 } finally {
   await browser.close();
   const result = { evidenceClass: 'LIVE_PUBLIC_READ_ONLY_UI_OBSERVATION', observedAt: new Date().toISOString(),
-    harnessSourceSha: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repository, encoding: 'utf8' }).trim(),
+    harnessSourceSha: harnessSourceDirty ? null : harnessHeadSha, harnessHeadSha, harnessSourceDirty,
     deployedSourceSha: null, tlsValidated: false, browserCertificateValidationEnabled: !tlsBypass, environmentProxyCertificateBypass: tlsBypass,
     provesAuthentication: false, provesEmailDelivery: false, provesPublishing: false,
     notes: 'Fresh unauthenticated contexts. No forms submitted, credentials entered or private storage imported. Non-read requests, redirects, WebSockets, private API routes and third-party requests blocked. Non-redirect upstream responses forwarded unchanged; no synthetic responses supplied. This observation cannot satisfy protected exact-candidate acceptance.', reports };
