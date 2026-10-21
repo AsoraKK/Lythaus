@@ -68,10 +68,22 @@ privileges, approved application smoke, RPO/RTO acceptance, and the independent
 recovery destination. Full-data parity is not a required scope. An unresolved
 gate keeps the plan blocked.
 
+The 2026-10-21 owner decision permits only the
+[one-release owner-testing independent-recovery exception](planetscale-production-migrations.md#one-release-owner-testing-recovery-exception).
+It retains every native scope, actual completed restore and protected backup,
+24-hour backup/verification freshness, accepted RPO/RTO and artifact hash/review.
+The receipt must keep `independent_recovery_destination` unresolved and omit it
+from `verifiedScope`; report `DEFERRED_BY_OWNER_EXCEPTION`. It does not establish
+provider/account-wide recovery, permit new recovery infrastructure or credentials,
+or turn the historical `pa4t6j6s07b7` partial receipt into complete evidence.
+Canonical public-release readiness continues to require verified independent
+recovery after 0021; extra R2 export and a separate encryption key remain deferred.
+
 The jobs Worker `BackupValidationWorkflow` performs the database capability and
 schema-object checks, then calls the configured provider-independent backup
 health endpoint. It fails closed when the endpoint is absent, a required
 extension is unavailable, or the restored schema is incomplete.
 
-If the independent destination is unavailable, the recovery gate remains
-blocked. Do not claim provider-independent disaster recovery.
+If the independent destination is unavailable, the strict recovery gate remains
+blocked; only the bound owner-testing exception above can defer that item. Do
+not claim provider-independent disaster recovery.

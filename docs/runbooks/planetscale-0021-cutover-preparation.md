@@ -20,6 +20,19 @@ only for this migration. It does not establish general HA acceptance, authorize
 DDL execution, or waive protection, backup and recovery, role and Hyperdrive,
 budget, concurrency, exact-candidate approval, or protected production gates.
 
+**2026-10-21 bounded owner-testing decision:** The owner approved implementing
+a one-release exact-commit exception for independent/off-provider recovery
+only. The [protected binding and run staging procedure](planetscale-production-migrations.md#one-release-owner-testing-recovery-exception)
+require an explicit request, exact candidate and named first-attempt migration
+and canonical owner-testing runs, approval reference and at most 24-hour expiry.
+The exception reports `DEFERRED_BY_OWNER_EXCEPTION`; independent recovery stays
+unresolved and blocks non-owner public readiness after 0021. Fresh native backup
+and completed native restore evidence (each at most 24 hours old), all native
+verification scopes, artifact hash/review, accepted RPO/RTO, cost and separate
+candidate consent remain required. The historical October 18 receipt remains
+incomplete. Extra R2 export and a separate encryption key are deferred; no new
+billable provisioning, credentials, permission expansion or deletion is granted.
+
 ## Observed state and missing evidence
 
 PlanetScale metadata confirms the sole production PostgreSQL branch

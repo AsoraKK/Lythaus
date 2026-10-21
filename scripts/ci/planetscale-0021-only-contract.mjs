@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { exactRegistryPrefix } from './planetscale-migration-reconciliation.mjs';
+import { assessOwnerRecoveryException, INDEPENDENT_RECOVERY_SCOPE, OWNER_RECOVERY_EXCEPTION_STATUS } from './owner-recovery-exception.mjs';
 
 export const MIGRATION_0020 = '0020_auth_recovery_delivery.sql';
 export const MIGRATION_0021 = '0021_media_quarantine_cleanup.sql';
@@ -15,6 +16,7 @@ export const REQUIRED_0021_RESTORE_SCOPE = Object.freeze([
   'independent_recovery_destination',
 ]);
 export const RESTORE_EVIDENCE_SCHEMA = 'lythaus-0021-restore-evidence-v1';
+export const MAX_NATIVE_RECOVERY_EVIDENCE_AGE_MS = 24 * 60 * 60 * 1000;
 
 export function serialize0021PlanReadyOutput(blockers) {
   return (blockers.length === 0).toString();
@@ -81,7 +83,7 @@ function isAllowlistedRestoreArtifactPath(value) {
     && value.slice(RESTORE_EVIDENCE_ARTIFACT_PREFIX.length).split('/').every(part => part !== '' && part !== '.' && part !== '..');
 }
 
-export function assess0021RestoreEvidence({ record, recordPath = null, evidenceArtifact = null, sourceBranch, backup, selectedBackupId, now = Date.now() }) {
+export function assess0021RestoreEvidence({ record, recordPath = null, evidenceArtifact = null, sourceBranch, backup, selectedBackupId, ownerRecoveryContext = {}, now = Date.now() }) {
   const blockers = [];
   const safeRecord = record && typeof record === 'object' && !Array.isArray(record) ? record : null;
   const safeSource = sourceBranch && typeof sourceBranch === 'object' ? sourceBranch : {};
@@ -106,6 +108,10 @@ export function assess0021RestoreEvidence({ record, recordPath = null, evidenceA
   const recordSha256 = typeof safeRecord?.recordSha256 === 'string' ? safeRecord.recordSha256 : '';
   const verifiedScope = Array.isArray(safeRecord?.verifiedScope) ? safeRecord.verifiedScope : null;
   const unresolvedGates = Array.isArray(safeRecord?.unresolvedGates) ? safeRecord.unresolvedGates : null;
+  const ownerException = assessOwnerRecoveryException({ ...ownerRecoveryContext, now });
+  blockers.push(...ownerException.blockers);
+  const deferredIndependentRecovery = ownerException.ok && !verifiedScope?.includes(INDEPENDENT_RECOVERY_SCOPE)
+    && unresolvedGates?.includes(INDEPENDENT_RECOVERY_SCOPE);
 
   if (!safeRecord) blockers.push('restore_evidence_record_missing_or_invalid');
   else if (safeRecord.schemaVersion !== RESTORE_EVIDENCE_SCHEMA) blockers.push('restore_evidence_schema_version_mismatch');
@@ -120,6 +126,7 @@ export function assess0021RestoreEvidence({ record, recordPath = null, evidenceA
   if (!['ready', 'deleted'].includes(restoredBranch.state)) blockers.push('restore_evidence_restored_branch_state_invalid');
 
   if (verifiedAt === null || verifiedAt > now) blockers.push('restore_evidence_timestamp_missing_invalid_or_future');
+  if (verifiedAt !== null && now - verifiedAt > MAX_NATIVE_RECOVERY_EVIDENCE_AGE_MS) blockers.push('restore_evidence_older_than_24_hours');
   if (restoredBranchCreatedAt === null || (verifiedAt !== null && restoredBranchCreatedAt > verifiedAt)) {
     blockers.push('restore_evidence_restored_branch_timestamp_invalid');
   }
@@ -150,12 +157,13 @@ export function assess0021RestoreEvidence({ record, recordPath = null, evidenceA
     blockers.push('restore_evidence_verified_scope_missing_or_invalid');
   } else {
     for (const scope of REQUIRED_0021_RESTORE_SCOPE) {
+      if (scope === INDEPENDENT_RECOVERY_SCOPE && deferredIndependentRecovery) continue;
       if (!verifiedScope.includes(scope)) blockers.push(`restore_evidence_scope_missing:${scope}`);
     }
   }
   if (!unresolvedGates || unresolvedGates.some(gate => typeof gate !== 'string' || gate.trim() === '')) {
     blockers.push('restore_evidence_unresolved_gates_missing_or_invalid');
-  } else if (unresolvedGates.length > 0) {
+  } else if (unresolvedGates.some(gate => !(gate === INDEPENDENT_RECOVERY_SCOPE && deferredIndependentRecovery))) {
     blockers.push('restore_evidence_has_unresolved_gates');
   }
   if (reviewedAt === null || reviewedAt > now || !reviewedBy || !reviewReference) {
@@ -189,6 +197,12 @@ export function assess0021RestoreEvidence({ record, recordPath = null, evidenceA
     recordSha256: /^[a-f0-9]{64}$/.test(recordSha256) ? recordSha256 : null,
     verifiedScope: verifiedScope ?? [],
     unresolvedGates: unresolvedGates ?? [],
+    independentRecovery: {
+      status: deferredIndependentRecovery ? OWNER_RECOVERY_EXCEPTION_STATUS
+        : blockers.length === 0 ? 'VERIFIED' : 'BLOCKED',
+      exception: ownerException.requested ? ownerException : null,
+      publicReleaseBlockers: deferredIndependentRecovery || blockers.length > 0 ? [INDEPENDENT_RECOVERY_SCOPE] : [],
+    },
     review: {
       reviewedAt: reviewedAt === null ? null : new Date(reviewedAt).toISOString(),
       reviewedBy: reviewedBy || null,
@@ -197,7 +211,7 @@ export function assess0021RestoreEvidence({ record, recordPath = null, evidenceA
   };
 }
 
-export function assessPlanetScaleBackupEvidence({ branch, backup, backupId, restoreEvidenceRecord, restoreEvidenceRecordPath = null, restoreEvidenceArtifact = null, now = Date.now() }) {
+export function assessPlanetScaleBackupEvidence({ branch, backup, backupId, restoreEvidenceRecord, restoreEvidenceRecordPath = null, restoreEvidenceArtifact = null, ownerRecoveryContext = {}, now = Date.now() }) {
   const blockers = [];
   const safeBranch = branch && typeof branch === 'object' ? branch : {};
   const safeBackup = backup && typeof backup === 'object' ? backup : {};
@@ -217,6 +231,7 @@ export function assessPlanetScaleBackupEvidence({ branch, backup, backupId, rest
   const expiresAt = timestamp(safeBackup.expires_at);
   if (createdAt === null || createdAt > now) blockers.push('backup_created_at_missing_or_invalid');
   if (completedAt === null || completedAt > now || (createdAt !== null && completedAt < createdAt)) blockers.push('backup_completed_at_missing_or_invalid');
+  if (completedAt !== null && now - completedAt > MAX_NATIVE_RECOVERY_EVIDENCE_AGE_MS) blockers.push('backup_older_than_24_hours');
   if (expiresAt === null || expiresAt <= now || (completedAt !== null && expiresAt <= completedAt)) blockers.push('backup_expired_or_expiry_invalid');
   if (safeBackup.deleted_at !== null) blockers.push('backup_deleted_or_deletion_state_unknown');
   if (safeBackup.protected !== true) blockers.push('backup_not_deletion_protected');
@@ -230,6 +245,7 @@ export function assessPlanetScaleBackupEvidence({ branch, backup, backupId, rest
     sourceBranch: safeBranch,
     backup: safeBackup,
     selectedBackupId: backupId,
+    ownerRecoveryContext,
     now,
   });
   blockers.push(...restoreEvidence.blockers);

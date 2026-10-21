@@ -92,6 +92,14 @@ on:
         required: false
         default: false
         type: boolean
+      owner_testing_deployment:
+        required: false
+        default: false
+        type: boolean
+      owner_testing_recovery_exception:
+        required: false
+        default: false
+        type: boolean
       run_browser_smoke:
         description: Optional authenticated browser convenience smoke; never required for release activation
         required: false
@@ -198,6 +206,16 @@ jobs:
           export CODEQL_RUN_ID DEPENDENCY_REVIEW_RUN_ID SECRET_SCAN_RUN_ID HISTORICAL_RECONCILIATION_RUN_ID
           node scripts/ci/verify-exact-release-evidence.mjs
 
+      - name: Require fresh recovery before production Pages activation
+        if: inputs.target_environment == 'production'
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          OWNER_TESTING_RECOVERY_EXCEPTION: ${{ inputs.owner_testing_recovery_exception }}
+          PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON: ${{ vars.PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON }}
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
+        run: node scripts/ci/verify-production-recovery-readiness.mjs
       - name: Deploy immutable Pages artifact
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

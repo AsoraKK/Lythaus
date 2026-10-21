@@ -194,6 +194,8 @@ jobs:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
         run: node --test scripts/tests/planetscale-verifier-stats.postgres.mjs
       - run: node --test scripts/tests/planetscale-0021-restore-evidence-loader.test.mjs
+      - name: Verify bounded owner recovery exception and required CI registration
+        run: node --test scripts/tests/owner-recovery-exception.test.mjs scripts/tests/owner-recovery-ci-registration.test.mjs
       - run: npm run validate:planetscale-extensions
       - run: node --test scripts/tests/provider-audit-contract.test.mjs
       - run: node --test scripts/tests/production-worker-probe.test.mjs

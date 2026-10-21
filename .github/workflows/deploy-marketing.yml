@@ -53,6 +53,14 @@ on:
         required: false
         default: false
         type: boolean
+      owner_testing_deployment:
+        required: false
+        default: false
+        type: boolean
+      owner_testing_recovery_exception:
+        required: false
+        default: false
+        type: boolean
       ci_run_id:
         description: Successful CI run ID for a production release
         required: false
@@ -191,6 +199,16 @@ jobs:
             rg -F 'waitlist_signup' dist/index.html
           fi
 
+      - name: Require fresh recovery before production Pages activation
+        if: inputs.deployment_class == 'production'
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          OWNER_TESTING_DEPLOYMENT: ${{ inputs.owner_testing_deployment }}
+          OWNER_TESTING_RECOVERY_EXCEPTION: ${{ inputs.owner_testing_recovery_exception }}
+          PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON: ${{ vars.PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON }}
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          PLANETSCALE_PRODUCTION_BACKUP_ID: ${{ vars.PLANETSCALE_PRODUCTION_BACKUP_ID }}
+        run: node scripts/ci/verify-production-recovery-readiness.mjs
       - name: Deploy exact marketing artifact
         id: deploy
         env:

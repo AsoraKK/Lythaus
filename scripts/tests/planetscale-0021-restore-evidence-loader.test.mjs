@@ -25,7 +25,7 @@ const BACKUP = {
   completed_at: '2026-10-18T10:00:00.000Z',
   expires_at: '2026-11-18T10:00:00.000Z',
 };
-const NOW = Date.parse('2026-10-20T00:00:00.000Z');
+const NOW = Date.parse('2026-10-19T00:00:00.000Z');
 
 function runGit(root, args) {
   const result = spawnSync('git', args, { cwd: root, encoding: 'utf8', timeout: 10_000 });

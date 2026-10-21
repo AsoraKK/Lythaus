@@ -61,6 +61,26 @@ test('release manifest records native and release governance independently', () 
   assert.equal(manifest.github.previousProductionShaAncestorVerified, true);
 });
 
+test('post-0021 manifest keeps independent recovery deferred and blocks public release claims', t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lythaus-recovery-manifest-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const output = path.join(directory, 'release-manifest.json');
+  const env = { ...process.env, RELEASE_SHA: releaseSha, OWNER_TESTING_DEPLOYMENT: 'true',
+    RECOVERY_READINESS_STATUS: 'PASS', INDEPENDENT_RECOVERY_STATUS: 'DEFERRED_BY_OWNER_EXCEPTION',
+    LYTHAUS_TEST_ALLOW_WORKTREE_MIGRATIONS: 'true', CI: 'false' };
+  execFileSync(process.execPath, ['scripts/ci/build-release-manifest.mjs', '--output', output], { env, stdio: 'pipe' });
+  const manifest = JSON.parse(fs.readFileSync(output, 'utf8'));
+  assert.equal(manifest.planetscale.latestMigration, '0021_media_quarantine_cleanup.sql');
+  assert.equal(manifest.status, 'NO-GO');
+  assert.equal(manifest.recovery.independentRecoveryStatus, 'DEFERRED_BY_OWNER_EXCEPTION');
+  assert.equal(manifest.recovery.requiredAfter0021, true);
+  assert.deepEqual(manifest.recovery.publicReleaseBlockers, ['independent_recovery_destination']);
+  assert.ok(manifest.evidence.unknowns.some(value => value.includes('Independent recovery remains DEFERRED_BY_OWNER_EXCEPTION')));
+  assert.throws(() => execFileSync(process.execPath, ['scripts/ci/build-release-manifest.mjs', '--output', output], {
+    env: { ...env, OWNER_TESTING_DEPLOYMENT: 'false' }, stdio: 'pipe',
+  }), error => /independent recovery exception requires owner testing/.test(String(error.stderr)));
+});
+
 test('STANDARD_RELEASE explicitly records that human auth acceptance is not required', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lythaus-standard-release-manifest-'));
   const output = path.join(directory, 'release-manifest.json');
