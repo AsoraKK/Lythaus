@@ -129,7 +129,7 @@ failure even when navigation controls already rendered.
 
 Evidence must remain outside the public repository. The JSON records only public
 page identity, check outcomes, sanitized request paths, error categories and
-screenshots of empty public forms. It omits request/response bodies, headers,
+screenshots of empty public forms and public guest views. It omits request/response bodies, headers,
 cookies, URL queries and fragments, and raw exception or console text. The harness
 source SHA is captured at startup separately from the deployed source SHA, which
 remains unknown. Tracked changes to the runner or policy are recorded as dirty
