@@ -36,8 +36,8 @@ const allocatedJobsDiagnosticFiles = new Map([
   // PR #1044 head 75d22de8640ba0d1d687a873746820ee7c39ec10 passed 57/57 media CI checks and received independent review.
   // Proposed PR1063 text allocation; subject-lock support remains separately gated.
   ['apps/lythaus-jobs/src/index.ts', '50a6d8c3f4dd73f49db3c68b463a19b8c172ebb9'],
-  // Scoped to reviewed reward receipt fields and persisted timestamps; waitlist bytes remain frozen.
-  ['apps/lythaus-public-api/src/index.ts', '12bda05efcf0bd992a8bfcebbd8ea2d007945980'],
+  // Exact reviewed media retry/quota and rewards receipt integration; waitlist bytes remain frozen.
+  ['apps/lythaus-public-api/src/index.ts', '811a317d8117a87b98ca3e041e19cd348e75bcd5'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],
@@ -880,7 +880,7 @@ test('allocated Jobs pins reject altered historical and unrelated source paths',
     assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, changed), assert.AssertionError);
     if (filename === 'apps/lythaus-public-api/src/index.ts') {
       const previousPublicApiBlob = '5ca637b72d241d89df5178bec6f0f730aafe41cd';
-      assert.notEqual(previousPublicApiBlob, expected, 'The integrated membership-only source bytes replace the previous exact allocation');
+      assert.notEqual(previousPublicApiBlob, expected, 'The reviewed membership and private media retry bytes replace the previous exact allocation');
       assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, previousPublicApiBlob), assert.AssertionError);
     }
     if (filename.endsWith('/index.ts')) {
@@ -899,7 +899,7 @@ test('image-integrity allocation rejects superseded Worker bytes without broaden
   // so these superseded PR commits need not survive squash.
   const supersededWorkerBlobs = new Map([
     ['apps/lythaus-jobs/src/index.ts', ['da112b2d2c869251ed48941d31d4ac854bb93fa1', '8a6487ab099287f151fc8594b3b9ff846a9226b7', 'a842e8c3654a26adcaae7c8e72efae3d20102cbb', '7b25af78fc1e227b85d1758b0cb31fd0aec09d24']],
-    ['apps/lythaus-public-api/src/index.ts', ['1a231c953f23159e922346760510c8eaee96873a', '7a941be1765e82b5cbf00294b114952ab6ea27a1']],
+    ['apps/lythaus-public-api/src/index.ts', ['1a231c953f23159e922346760510c8eaee96873a', '7a941be1765e82b5cbf00294b114952ab6ea27a1', '4640957fba06cbecbf8c87640f3d1a52052d1fe4', '6d89caa73ab83ea682a2a9796388d8f2f2ed4833']],
   ]);
   for (const [filename, superseded] of supersededWorkerBlobs) {
     const current = git('hash-object', `--path=${filename}`, filename);

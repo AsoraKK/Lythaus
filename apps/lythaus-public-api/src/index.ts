@@ -1343,7 +1343,12 @@ async function createUploadSession(request: Request, env: Env, user: Principal):
     const ledger = await client.query<{ bytes_reserved: number; bytes_approved: number }>(
       `SELECT bytes_reserved, bytes_approved FROM media.storage_ledger WHERE user_id = $1 FOR UPDATE`, [user.userId]);
     const current = ledger.rows[0] ?? { bytes_reserved: 0, bytes_approved: 0 };
-    if (Number(current.bytes_reserved) + Number(current.bytes_approved) + requestedBytes > quotaBytes) throw new Error('storage_quota_exceeded');
+    const cleanup = await client.query<{ cleanup_bytes: string }>(
+      `SELECT COALESCE(sum(expected_bytes), 0) AS cleanup_bytes FROM media.upload_sessions
+        WHERE user_id = $1 AND purpose = 'standard' AND quarantine_deleted_at IS NULL
+          AND status IN ('approved', 'rejected', 'expired', 'cancelled')`, [user.userId]);
+    if (Number(current.bytes_reserved) + Number(current.bytes_approved)
+      + Number(cleanup.rows[0]?.cleanup_bytes ?? 0) + requestedBytes > quotaBytes) throw new Error('storage_quota_exceeded');
     await client.query(
       `INSERT INTO media.storage_ledger (user_id, bytes_reserved) VALUES ($1, $2)
        ON CONFLICT (user_id) DO UPDATE SET bytes_reserved = media.storage_ledger.bytes_reserved + EXCLUDED.bytes_reserved`,
@@ -1486,6 +1491,16 @@ async function finaliseUpload(request: Request, env: Env, user: Principal, sessi
   );
   const session = result.rows[0];
   if (!session) throw new Error('upload_session_invalid');
+  if (session.status === 'queued' || session.status === 'approved') {
+    const receipt = await query<{ id: string }>(env.DB_APP_FRESH,
+      `SELECT id FROM system.outbox_events
+        WHERE actor_id = $1 AND aggregate_id = $2 AND aggregate_type = 'upload_session'
+          AND event_type = 'media.upload.finalised'
+          AND payload ->> 'uploadSessionId' = $2::text AND payload ->> 'objectKey' = $3
+        LIMIT 2`, [user.userId, sessionId, session.object_key]);
+    if (receipt.rows.length !== 1) throw new Error('upload_session_invalid');
+    return privateResponse(request, env, { uploadSessionId: sessionId, status: 'queued', eventId: receipt.rows[0].id });
+  }
   if (session.status === 'expired' || session.status === 'rejected' || session.status === 'cancelled') {
     await env.MEDIA_QUARANTINE.delete(session.object_key);
     throw new Error('upload_session_invalid');

@@ -46,6 +46,19 @@ function normalizeSignals(value: unknown): AuthenticitySignal[] {
   });
 }
 
+function validModelEvidence(value: unknown): value is { riskScore: number; signals: AuthenticitySignal[] } {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const record = value as { riskScore?: unknown; signals?: unknown };
+  return typeof record.riskScore === 'number' && Number.isFinite(record.riskScore)
+    && record.riskScore >= 0 && record.riskScore <= 1
+    && Array.isArray(record.signals) && record.signals.length <= 20
+    && record.signals.every(signal => signal && typeof signal === 'object' && !Array.isArray(signal)
+      && typeof signal.category === 'string' && signal.category.length > 0 && signal.category.length <= 80
+      && typeof signal.confidence === 'number' && Number.isFinite(signal.confidence)
+      && signal.confidence >= 0 && signal.confidence <= 1
+      && typeof signal.rationale === 'string' && signal.rationale.length <= 500);
+}
+
 export async function evaluateAuthenticity(input: {
   kind: AuthenticityContentKind;
   content: string;
@@ -74,9 +87,11 @@ export async function evaluateAuthenticity(input: {
     max_tokens: 700,
     temperature: 0,
   }, `authenticity:${input.kind}:${input.contentId}`);
-  let parsed: { riskScore?: unknown; signals?: unknown } = {};
+  let parsed: { riskScore: number; signals: AuthenticitySignal[] };
   try {
-    parsed = JSON.parse(modelText(raw)) as typeof parsed;
+    const candidate: unknown = JSON.parse(modelText(raw));
+    if (!validModelEvidence(candidate)) throw new Error('model_response_invalid');
+    parsed = candidate;
   } catch {
     parsed = { riskScore: 1, signals: [{ category: 'model_response_invalid', confidence: 1, rationale: 'The evaluation response could not be parsed.' }] };
   }

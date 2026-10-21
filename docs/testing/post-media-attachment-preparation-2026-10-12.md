@@ -136,32 +136,36 @@ They cannot forcibly release readers owned by another consumer. Hosted abort
 behavior and service resource/cost limits remain separate acceptance gates;
 mock-clock stalled-operation tests establish only the caller-side cleanup.
 
-## Existing lifecycle and storage follow-up
+## Current lifecycle and storage follow-up (21 October)
 
-- The standard finalizer checks byte count and SHA-256 from the server-side
-  session row. On size/hash mismatch it marks the session rejected and releases
-  the reservation, but does not delete the quarantine object. It also does not
-  select `expires_at` when loading a session. Add a separately reviewed,
-  bounded cleanup design and fake-R2 tests before enabling uploads; cleanup must
-  recheck a locked, terminal session and delete only the exact stored object
-  key after the state transition commits. Do not infer client keys or delete by
-  broad prefix.
-- Standard abandoned sessions have no bounded cleanup path in the inspected
-  upload/finalization flow. The queue worker deletes quarantine bytes on its
-  terminal processing paths, but this is not a general expired-session sweeper.
-  Future cleanup needs a batch bound, deterministic claim, status/version fence,
-  retry behavior, and a race test against finalization and processing.
-- The Jobs transform requests WebP output but does not explicitly request or
-  assert orientation normalization or GPS/EXIF removal. Before image activation,
-  use synthetic metadata-bearing fixtures to assert normalized output pixels,
-  absent GPS/EXIF metadata, and fail-closed handling. Keep original uploads in
-  private quarantine; this preparation creates no public URLs or storage keys.
+- The standard finalizer now checks expiry, exact byte count, signature and
+  SHA-256 against the owner-scoped session. Integrity rejection and expiry
+  release the reservation transactionally; exact-key quarantine deletion is
+  retryable. Repeated finalisation of queued or processed sessions returns the
+  original private queued receipt only when its owner/source-bound outbox event
+  remains available. No second event or publication authority follows.
+- The bounded 100-session janitor locks and rechecks expired standard sessions,
+  releases quota once, retries terminal quarantine/orphan-derivative deletion,
+  preserves database-referenced derivatives and records cleanup completion.
+  Local Workerd/R2 and PostgreSQL 17 tests cover state races and failed cleanup.
+  Migration 0021 and hosted acceptance remain separate gates. Logical quota
+  release can precede successful physical deletion: physical staging headroom,
+  orphan-byte accounting and a storage cost ceiling still need resolution before
+  uploads can be activated.
+- Synthetic EXIF/GPS-bearing JPEG tests now verify rotated, metadata-free WebP
+  derivatives and retry-safe dimensions using a Sharp-backed Images fixture.
+  That fixture is not the hosted Cloudflare Images service. Hosted decoder,
+  orientation, GPS/EXIF removal and service cost/abort behavior remain unaccepted.
+  Originals stay private; media flags remain false and no public URL is added.
 - Account deletion checks active legal holds before redacting posts and purging
   media. Its privacy locator currently enumerates posts, media objects, and
   upload sessions but not a post/media association. A real relation needs an
   owner/hold-aware locator and deletion/export reconciliation path. Retention,
   original disposal, and relation tombstone duration are unresolved, so this
   proposal adds no cascade, cleanup, retention job, or hold rule.
+
+See [the current detector and hosted-media gate inventory](public-detector-media-launch-gates-2026-10-21.md)
+for the remaining evidence, access and approval requirements.
 
 ## Integration gates
 
