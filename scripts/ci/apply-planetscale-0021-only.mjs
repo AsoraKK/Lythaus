@@ -8,6 +8,7 @@ import { assess0021ExecutionConsent, assess0021RegistryState, is0021PlanReadyOut
 import { adminDatabaseConnectionConfig, assertConnectedAdminDatabaseTarget } from './planetscale-0021-target-identity.mjs';
 import { classifyLocked0021State, recordCanonical0021RegistryMarker } from './planetscale-0021-registry-marker.mjs';
 import { applyMediaQuarantineMigration, inspectMediaQuarantineMigration, verifyMediaQuarantineMigration } from './planetscale-media-quarantine-migration.mjs';
+import { assessOwnerRecoveryException, ownerRecoveryContextFromEnvironment } from './owner-recovery-exception.mjs';
 
 const { Client } = pg;
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -41,6 +42,8 @@ function assertExecutionGate() {
     approvalReference: process.env.PLANETSCALE_0021_EXECUTION_APPROVAL_REFERENCE,
   });
   if (!report.ownerExecutionConsent.ok) throw new Error(report.ownerExecutionConsent.blockers[0]);
+  report.ownerRecoveryException = assessOwnerRecoveryException(ownerRecoveryContextFromEnvironment(process.env, 'migration'));
+  if (report.ownerRecoveryException.requested && !report.ownerRecoveryException.ok) throw new Error(report.ownerRecoveryException.blockers[0]);
   let plannedTarget;
   try { plannedTarget = JSON.parse(process.env.PLANETSCALE_0021_PLAN_TARGET_IDENTITY ?? ''); } catch { plannedTarget = null; }
   if (plannedTarget?.provider?.organization !== 'lythaus'
@@ -86,6 +89,7 @@ function safeFailureCode(error) {
     '0021_registry_marker_insert_did_not_create_exact_prefix',
   ]);
   if (controlled.has(message)) return message;
+  if (/^owner_recovery_exception_[a-z_]+$/.test(message)) return message;
   const code = error && typeof error === 'object' && 'code' in error && typeof error.code === 'string' ? error.code : '';
   return /^[A-Z0-9]{2,8}$/.test(code) ? `database_error_${code}` : 'migration_execution_failed';
 }

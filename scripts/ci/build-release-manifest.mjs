@@ -104,6 +104,9 @@ if (previousProductionSha !== 'NONE' && !/^[0-9a-f]{40}$/i.test(previousProducti
 const releaseClass = valueOrNull('RELEASE_CLASS') ?? RELEASE_CLASSES.AUTH_CRITICAL;
 if (!Object.values(RELEASE_CLASSES).includes(releaseClass)) throw new Error(`RELEASE_CLASS must be ${Object.values(RELEASE_CLASSES).join(' or ')}`);
 const ownerTestingDeployment = booleanValue('OWNER_TESTING_DEPLOYMENT');
+const independentRecoveryStatus = valueOrNull('INDEPENDENT_RECOVERY_STATUS') ?? 'BLOCKED';
+if (!['VERIFIED', 'BLOCKED', 'DEFERRED_BY_OWNER_EXCEPTION'].includes(independentRecoveryStatus)) throw new Error('INDEPENDENT_RECOVERY_STATUS is invalid');
+if (!ownerTestingDeployment && independentRecoveryStatus === 'DEFERRED_BY_OWNER_EXCEPTION') throw new Error('independent recovery exception requires owner testing');
 if (ownerTestingDeployment && releaseClass !== RELEASE_CLASSES.AUTH_CRITICAL) throw new Error('OWNER_TESTING_DEPLOYMENT requires AUTH_CRITICAL_RELEASE');
 if (ownerTestingDeployment && (booleanValue('AUTHENTICATED_ACCEPTANCE_PROVEN') || valueOrNull('AUTH_ACCEPTANCE_RUN_ID') || valueOrNull('AUTH_ACCEPTANCE_EXPIRES_AT'))) {
   throw new Error('owner-testing deployment cannot include or claim an acceptance run');
@@ -383,6 +386,8 @@ const requiredEvidence = [
   releaseStateHistoryValid,
   fingerprintOrNull('PLANETSCALE_SCHEMA_FINGERPRINT') !== null,
   process.env.PLANETSCALE_GRANTS_VERIFIED === 'true',
+  process.env.RECOVERY_READINESS_STATUS === 'PASS',
+  independentRecoveryStatus === 'VERIFIED',
   ...['marketing', 'flutter-web', 'control-panel'].map(pagesReady),
   ...['public', 'admin', 'jobs', 'coordinator'].map(workerReady),
   relationCountOrNull('PLANETSCALE_RELATION_COUNT') !== null,
@@ -404,6 +409,8 @@ const productionStatus = !ownerTestingDeployment && readinessStatus === 'ready' 
 const unknowns = [
   cloudflareStatus === 'VERIFIED' ? null : `Cloudflare live inventory status is ${cloudflareStatus}`,
   planetscaleStatus === 'VERIFIED' ? null : `PlanetScale live inventory status is ${planetscaleStatus}`,
+  independentRecoveryStatus === 'VERIFIED' ? null : `Independent recovery remains ${independentRecoveryStatus}; public-release readiness is blocked`,
+  process.env.RECOVERY_READINESS_STATUS === 'PASS' ? null : 'Fresh protected native recovery evidence is unavailable',
   process.env.HYPERDRIVE_VERIFIED_MAIN === 'true' ? null : 'Hyperdrive main-target proof is unavailable',
   process.env.DATABASE_IDENTITY_VERIFIED === 'true' ? null : 'Database identity proof is unavailable',
   process.env.PLANETSCALE_GRANTS_VERIFIED === 'true' ? null : 'PlanetScale grant verification is unavailable',
@@ -483,6 +490,13 @@ const manifest = {
     evidenceRunUrl: urlOrNull('PROVIDER_EVIDENCE_RUN_URL'),
     cloudflarePagesInventoryVerified: booleanValue('CLOUDFLARE_PAGES_INVENTORY_VERIFIED'),
     legacyAsoraActiveResources,
+  },
+  recovery: {
+    readinessStatus: process.env.RECOVERY_READINESS_STATUS === 'PASS' ? 'PASS' : 'BLOCKED',
+    independentRecoveryStatus,
+    publicReleaseBlockers: independentRecoveryStatus === 'VERIFIED' ? [] : ['independent_recovery_destination'],
+    evidencePath: 'recovery-readiness.json',
+    requiredAfter0021: true,
   },
   candidate: {
     state: valueOrNull('CANDIDATE_STATE') ?? (changedComponents.length ? 'CANDIDATE_READY' : 'REUSED_PRODUCTION'),

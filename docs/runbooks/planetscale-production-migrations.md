@@ -91,13 +91,102 @@ path and leave it unverified; that record remains blocked. The record's own
 SHA-256 over canonical JSON with `recordSha256` omitted detects inconsistent
 edits; it is not evidence provenance or a substitute for review. A stale or
 future timestamp, incorrect chronological order, missing required scope, or
-any unresolved gate blocks the plan. Required scope covers independent
+any unresolved gate blocks the strict plan. Backup completion and actual
+restore verification must each be no more than 24 hours old at assessment;
+long retention or an unexpired backup does not establish freshness.
+Required scope covers independent
 backup-to-restore binding, restore completion, extensions/indexes, canonical
 migration registry, effective runtime privileges, application smoke, accepted
 RPO/RTO, and the independent recovery destination. It does not require
 full-data parity. See the
 [restore runbook](planetscale-restore.md) for how to gather the operational
 evidence; the record is reviewed and committed append-only before use.
+
+### One-release owner-testing recovery exception
+
+On 2026-10-21 at 08:45:55 UTC the owner approved implementing a one-release,
+owner-testing-only deferral of independent/off-provider recovery. This policy
+approval does not supply a native restore receipt, exact-candidate execution
+consent, cost evidence, spending, credentials, deletion or a new recovery target.
+Extra R2 export and a separate encryption key remain deferred.
+
+Both workflows default `owner_testing_recovery_exception=false`. The strict
+scope above remains the default. An explicitly requested exception also requires
+the canonical `release_mode=owner_testing` and the protected production variable
+`PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON`. Its reviewed JSON has these fields:
+
+```json
+{
+  "schemaVersion": "lythaus-owner-recovery-exception-v1",
+  "scope": "independent_recovery_destination",
+  "ownerTestingOnly": true,
+  "releaseSha": "<exact lowercase 40-character merged main SHA>",
+  "migrationRunId": "<the single execution-requested 0021 workflow run ID>",
+  "releaseRunId": "<the single canonical owner-testing release workflow run ID>",
+  "approvalReference": "<sanitized reference to the explicit bound owner approval>",
+  "approvedAt": "<ISO-8601 UTC timestamp>",
+  "expiresAt": "<ISO-8601 UTC timestamp, at most 24 hours after approval>"
+}
+```
+
+These are placeholders, not an active approval record. The two run IDs must be
+distinct positive decimal strings. Only their first attempts are eligible;
+different commits, run IDs, attempts and expired windows fail closed. The
+exception cannot be supplied as dispatch JSON. The executor independently
+validates the protected binding before connecting, in addition to the rebuilt
+plan and the separate exact-candidate 0021 execution-consent variables.
+
+The binding defers only `independent_recovery_destination`. The reviewed native
+receipt must omit that item from `verifiedScope` and retain it in
+`unresolvedGates`. Every other unresolved gate still blocks. Fresh successful
+protected native backup, proven backup-to-restore binding, completed native
+restore, exact schema/extensions/indexes and canonical registry, effective
+runtime privileges, approved application smoke, accepted RPO/RTO, actual
+sanitized artifact bytes/hash and independent review remain mandatory. Cost,
+target/role/Hyperdrive, concurrency, exact-candidate consent and protected
+environment review gates are unchanged. The October 18 `pa4t6j6s07b7` receipt
+proves only schema/extensions/indexes and the registry through 0020; the
+exception cannot promote it to a complete native restore receipt.
+
+Record the result as `DEFERRED_BY_OWNER_EXCEPTION`, never as verified independent
+recovery. Preserve the original unresolved gate. Every canonical release now
+checks recovery in preflight and again before Worker or production Pages
+activation, even after 0021 is applied. The release manifest retains
+`recovery.independentRecoveryStatus`, `publicReleaseBlockers` and
+`requiredAfter0021=true`. A deferred requirement keeps public readiness
+`NO-GO`; an ordinary/public release cannot request this exception or inherit it
+from an owner-testing deployment. Completing 0021 cannot erase the requirement.
+
+To obtain the run IDs without approving an unbound action:
+
+1. Complete/review the fresh native receipt, operator estimate and cost ceiling,
+   exact-candidate 0021 execution consent and remaining read-only evidence first.
+   An earlier `execute_0021=false` diagnostic plan performs no mutation and
+   consumes no approval; leave its blockers visible. Do not rerun a completed
+   successful workflow merely to poll it.
+2. Dispatch the exact-SHA `0021-only` workflow with `execute_0021=true` and
+   `owner_testing_recovery_exception=true`. Leave its first plan job awaiting
+   protected production approval. Dispatch the exact same SHA canonical release
+   with `release_mode=owner_testing` and the exception request; leave preflight
+   awaiting its production approval. Capture the two actual run IDs.
+3. Configure the reviewed protected JSON for those exact IDs and candidate,
+   within its bounded window. A missing configuration or inaccessible protected
+   variables API is a concrete configuration blocker; do not fabricate values
+   or bypass the environment review. These configuration steps remain subject
+   to their existing authorization.
+4. Approve the migration plan, inspect its sanitized evidence, then approve the
+   separate execution job only if all gates pass. Its fresh plan and executor
+   must agree. Approve canonical preflight only after verified 0021 completion;
+   activation rechecks both fresh native evidence and the exception window.
+5. A failed/cancelled attempt does not authorize a rerun or another release under
+   this binding. Preserve evidence and obtain a newly reviewed explicit binding
+   if a replacement attempt is approved. After the named release, remove/expire
+   the protected binding through the authorized configuration process. The
+   immutable run/attempt restriction also prevents reuse if cleanup is delayed.
+
+No step provisions a restore branch, creates credentials, expands permissions,
+orders a paid service, exports production data or deletes a resource. Those
+operations retain their separate specific approvals.
 
 These checks also use the [PlanetScale backup API](https://planetscale.com/docs/api/reference/get_backup).
 
