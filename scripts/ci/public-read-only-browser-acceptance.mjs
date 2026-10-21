@@ -119,9 +119,13 @@ try {
         app.guestFeed.loadingVisible = await loading.isVisible();
         app.guestFeed.emptyVisible = await page.getByText('No posts yet', { exact: true }).first().isVisible();
         app.guestFeed.errorVisible = await page.getByText('Couldn’t load posts', { exact: true }).first().isVisible();
+        const cards = page.getByRole('button', { name: 'Trust details', exact: true });
+        app.guestFeed.visiblePostCardCount = (await Promise.all(Array.from({ length: await cards.count() },
+          (_, index) => cards.nth(index).isVisible()))).filter(Boolean).length;
         app.guestFeed.status = app.guestFeed.loadingVisible ? 'FEED_STILL_LOADING'
           : app.guestFeed.errorVisible ? 'FEED_UNAVAILABLE'
           : app.guestFeed.httpStatus === 200 && app.guestFeed.responseCompleted && app.guestFeed.emptyVisible ? 'EMPTY_FEED_OBSERVED'
+          : app.guestFeed.httpStatus === 200 && app.guestFeed.responseCompleted && app.guestFeed.visiblePostCardCount > 0 ? 'POPULATED_FEED_OBSERVED'
           : app.guestFeed.responseCompleted ? 'FEED_RESPONSE_COMPLETE_UNCLASSIFIED' : 'FEED_RESPONSE_NOT_OBSERVED';
         app.guestScreenshot = path.join(output, `${width}-app-guest.png`);
         await page.screenshot({ path: app.guestScreenshot });
