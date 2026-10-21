@@ -87,7 +87,11 @@ membership never grants reputation or reward eligibility. This does not change
 the disabled monthly v2 policy, its approved 13,650 maximum or quarterly rules.
 
 The required `--membership-rewards` test group creates fresh owned loopback
-PostgreSQL 17 databases. It first demonstrates canonical rewards failure and
+PostgreSQL 17 databases. When the broader Actions PostgreSQL sweep discovers
+the rewards suite against its disposable `/postgres` service, the suite creates
+and drops a separate owned database, applies the canonical baseline there and
+asserts the shared service's reward ACLs are unchanged. It first demonstrates
+canonical rewards failure and
 Black News Board failure, then introduces the exact column grants **only into
 those disposable databases** to exercise route behavior. It covers history
 serialization/revocation, persisted timestamps, exact replay, account isolation,

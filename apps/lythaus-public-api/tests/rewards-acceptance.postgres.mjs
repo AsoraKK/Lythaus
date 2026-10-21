@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import pg from 'pg';
 import Ajv from 'ajv';
@@ -11,9 +12,12 @@ import { nativePostgresProfileFixture } from './native-postgres-worker-fixture.m
 import { privacyPostgresTarget } from './privacy-postgres-target.mjs';
 
 const target = privacyPostgresTarget(process.env.PLANETSCALE_PG17_TEST_DATABASE_URL);
-assert.match(target.pathname, /^\/lythaus_auth_test_post_rewards_[a-f0-9]{32}$/,
-  'rewards privilege fixtures require a fresh database owned by the isolated runner');
-const connectionString = target.toString();
+const ownsDatabase = process.env.GITHUB_ACTIONS === 'true' && target.pathname === '/postgres';
+assert.ok(ownsDatabase || /^\/lythaus_auth_test_post_rewards_[a-f0-9]{32}$/.test(target.pathname),
+  'rewards privilege fixtures require the isolated runner or disposable Actions PostgreSQL service');
+const databaseName = ownsDatabase ? `lythaus_auth_test_post_rewards_${randomUUID().replaceAll('-', '')}` : target.pathname.slice(1);
+const local = new URL(target); local.pathname = '/' + databaseName;
+const connectionString = local.toString();
 const actors = Object.fromEntries(['free', 'premium', 'black', 'history', 'young', 'unqualified'].map(name => [name, { id: uuidv7() }]));
 const ajv = new Ajv({ strict: false, allErrors: true });
 addFormats(ajv);
@@ -21,13 +25,31 @@ const spec = JSON.parse(readFileSync(new URL('../../../api/openapi/dist/openapi.
 const validateRedemption = ajv.compile(spec.components.schemas.RewardRedemption);
 const historyIds = [uuidv7(), uuidv7()];
 const historyAt = '2026-05-26T01:02:03.000Z';
-let control, fixture;
+let control, fixture, bootstrapControl, created = false, parentAcl;
+const parentAclQuery = `SELECT relation.relacl, ARRAY(SELECT attribute.attacl::text FROM pg_attribute attribute
+  WHERE attribute.attrelid=relation.oid AND attribute.attnum>0 ORDER BY attribute.attnum) AS columns
+  FROM pg_class relation WHERE relation.oid=to_regclass('trust.reward_redemptions')`;
 
 before(async () => {
+  if (ownsDatabase) {
+    bootstrapControl = new pg.Client({ connectionString: target.toString(), ssl: false, connectionTimeoutMillis: 5000 });
+    await bootstrapControl.connect();
+    assert.match((await bootstrapControl.query('SHOW server_version_num')).rows[0].server_version_num, /^17/);
+    parentAcl = (await bootstrapControl.query(parentAclQuery)).rows;
+    await bootstrapControl.query(`CREATE DATABASE ${databaseName}`); created = true;
+    await new Promise((resolve, reject) => {
+      const child = spawn(process.execPath, ['scripts/ci/validate-planetscale-postgres17.mjs'], {
+        env: { ...process.env, PLANETSCALE_PG17_TEST_DATABASE_URL: connectionString }, stdio: 'inherit',
+      });
+      child.once('error', reject);
+      child.once('exit', (code, signal) => code === 0 && !signal ? resolve() : reject(new Error('canonical_baseline_failed')));
+    });
+  }
   control = new pg.Client({ connectionString, ssl: false, connectionTimeoutMillis: 5000 });
   await control.connect();
   await control.query("SET statement_timeout='5s'");
   assert.match((await control.query('SHOW server_version_num')).rows[0].server_version_num, /^17/);
+  assert.equal((await control.query('SELECT current_database() AS name')).rows[0].name, databaseName);
   for (const [name, actor] of Object.entries(actors)) {
     await control.query(`INSERT INTO identity.users (id, status, created_at)
       VALUES ($1, 'active', now() - $2::interval)`, [actor.id, name === 'young' ? '1 day' : '8 days']);
@@ -59,7 +81,19 @@ before(async () => {
 
 after(async () => {
   try { await fixture?.dispose(); }
-  finally { await control?.end(); }
+  finally {
+    try { await control?.end(); }
+    finally {
+      try {
+        if (created) {
+          await bootstrapControl.query(`DROP DATABASE ${databaseName} WITH (FORCE)`);
+          assert.equal((await bootstrapControl.query('SELECT count(*)::integer AS count FROM pg_database WHERE datname=$1', [databaseName])).rows[0].count, 0);
+          assert.deepEqual((await bootstrapControl.query(parentAclQuery)).rows, parentAcl,
+            'fixture-only reward permissions must not change the shared Actions database');
+        }
+      } finally { await bootstrapControl?.end(); }
+    }
+  }
 });
 
 function call(actor, method, path, key, body) {
