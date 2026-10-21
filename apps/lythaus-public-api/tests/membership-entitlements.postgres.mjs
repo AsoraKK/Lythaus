@@ -171,11 +171,32 @@ test('concurrent distinct creates cannot exceed the remaining Free feed capacity
   assert.deepEqual(activities.rows, [{ event_type: 'social.custom_feed_created', object_id: created.id }]);
 });
 
-test('Black member can fetch News Board content when the runtime publication read is provisioned', {
-  skip: 'blocked: the CI runtime role lacks USAGE on editorial; see membership entitlement boundary notes',
-}, async () => {
-  const response = await call('black', 'GET', '/api/news-board');
-  assert.equal(response.status, 200, await response.clone().text());
+test('Black News Board records the canonical privilege gap and works with a fixture-only publication read', async () => {
+  assert.match(new URL(connectionString).pathname, /^\/lythaus_auth_test_post_membership_[a-f0-9]{32}$/,
+    'publication privilege fixtures require a fresh database owned by the isolated runner');
+  const privileges = (await sql(`SELECT has_schema_privilege('lythaus_runtime', 'editorial', 'USAGE') AS usage,
+    has_column_privilege('lythaus_runtime', 'editorial.publications', 'id', 'SELECT') AS publication_read`)).rows[0];
+  assert.deepEqual(privileges, { usage: false, publication_read: false });
+  assert.deepEqual((await sql(`SELECT relrowsecurity, relforcerowsecurity FROM pg_class
+    WHERE oid='editorial.publications'::regclass`)).rows[0], { relrowsecurity: false, relforcerowsecurity: false });
+  const unavailable = await call('black', 'GET', '/api/news-board');
+  assert.equal(unavailable.status, 500, await unavailable.clone().text());
+  assert.equal((await unavailable.json()).error, 'request_failed');
+
+  await sql(`GRANT USAGE ON SCHEMA editorial TO lythaus_runtime;
+    GRANT SELECT (id, title, post_id, published_at) ON editorial.publications TO lythaus_runtime`);
+  try {
+    const response = await call('black', 'GET', '/api/news-board');
+    assert.equal(response.status, 200, await response.clone().text());
+    assert.deepEqual(await response.json(), { access: 'full', items: [], nextCursor: null });
+    for (const actor of ['free', 'premium']) {
+      const denied = await call(actor, 'GET', '/api/news-board');
+      assert.equal(denied.status, 403, await denied.clone().text());
+    }
+  } finally {
+    await sql(`REVOKE SELECT (id, title, post_id, published_at) ON editorial.publications FROM lythaus_runtime;
+      REVOKE USAGE ON SCHEMA editorial FROM lythaus_runtime`);
+  }
 });
 
 test('forged tier, pending, expired, cancelled, and provider claims do not change the server tier', async () => {

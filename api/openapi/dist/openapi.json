@@ -14049,7 +14049,8 @@
           "status": {
             "type": "string",
             "enum": [
-              "redeemed"
+              "redeemed",
+              "revoked"
             ]
           }
         }

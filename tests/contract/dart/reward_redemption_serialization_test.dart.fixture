@@ -1,0 +1,47 @@
+import 'package:lythaus_api_client/lythaus_api_client.dart';
+import 'package:built_value/serializer.dart';
+import 'package:test/test.dart';
+
+void main() {
+  for (final status in ['redeemed', 'revoked']) {
+    test('reward $status receipt round-trips without losing state or time', () {
+      final wire = <String, Object?>{
+        'id': 'redemption-1',
+        'userId': 'account-1',
+        'rewardId': 'level-1-learning',
+        'rewardLevel': 1,
+        'rewardTitle': 'Learning access',
+        'redeemedAt': '2026-05-26T01:02:03.000Z',
+        'status': status,
+      };
+      final receipt = standardSerializers.deserializeWith(
+        RewardRedemption.serializer,
+        wire,
+      )!;
+      expect(receipt.userId, 'account-1');
+      expect(receipt.redeemedAt, DateTime.utc(2026, 5, 26, 1, 2, 3));
+      expect(receipt.status, RewardRedemptionStatusEnum.valueOf(status));
+      expect(
+        standardSerializers.serializeWith(RewardRedemption.serializer, receipt),
+        wire,
+      );
+    });
+  }
+
+  test('database and pending states cannot impersonate a wire receipt', () {
+    for (final status in ['confirmed', 'pending', 'unknown']) {
+      expect(
+        () => standardSerializers.deserializeWith(RewardRedemption.serializer, {
+          'id': 'redemption-1',
+          'userId': 'account-1',
+          'rewardId': 'level-1-learning',
+          'rewardLevel': 1,
+          'rewardTitle': 'Learning access',
+          'redeemedAt': '2026-05-26T01:02:03.000Z',
+          'status': status,
+        }),
+        throwsA(isA<DeserializationError>()),
+      );
+    }
+  });
+}

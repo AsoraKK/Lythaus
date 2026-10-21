@@ -41,7 +41,7 @@ abstract class RewardRedemption implements Built<RewardRedemption, RewardRedempt
 
   @BuiltValueField(wireName: r'status')
   RewardRedemptionStatusEnum get status;
-  // enum statusEnum {  redeemed,  };
+  // enum statusEnum {  redeemed,  revoked,  };
 
   RewardRedemption._();
 
@@ -206,6 +206,9 @@ class RewardRedemptionStatusEnum extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'redeemed')
   static const RewardRedemptionStatusEnum redeemed = _$rewardRedemptionStatusEnum_redeemed;
+
+  @BuiltValueEnumConst(wireName: r'revoked')
+  static const RewardRedemptionStatusEnum revoked = _$rewardRedemptionStatusEnum_revoked;
 
   static Serializer<RewardRedemptionStatusEnum> get serializer => _$rewardRedemptionStatusEnumSerializer;
 

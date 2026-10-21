@@ -36,8 +36,8 @@ const allocatedJobsDiagnosticFiles = new Map([
   // PR #1044 head 75d22de8640ba0d1d687a873746820ee7c39ec10 passed 57/57 media CI checks and received independent review.
   // Proposed PR1063 text allocation; subject-lock support remains separately gated.
   ['apps/lythaus-jobs/src/index.ts', '50a6d8c3f4dd73f49db3c68b463a19b8c172ebb9'],
-  // Scoped to privacy-request active-status revalidation under the existing account lock.
-  ['apps/lythaus-public-api/src/index.ts', '4640957fba06cbecbf8c87640f3d1a52052d1fe4'],
+  // Scoped to reviewed reward receipt fields and persisted timestamps; waitlist bytes remain frozen.
+  ['apps/lythaus-public-api/src/index.ts', '12bda05efcf0bd992a8bfcebbd8ea2d007945980'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],

@@ -138,6 +138,10 @@ jobs:
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
         run: npm run test:publication:pg17
+      - name: Verify isolated rewards, manual membership and disabled payments on PG17 and Workerd
+        env:
+          PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control
+        run: node scripts/ci/run-publication-pg17.mjs --membership-rewards
       - name: Verify gated standard image integrity and unchanged role boundaries
         env:
           PLANETSCALE_PG17_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/lythaus_auth_test_post_control

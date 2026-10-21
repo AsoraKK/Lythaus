@@ -3299,7 +3299,15 @@ async function rewardsSnapshot(request: Request, env: Env, user: Principal): Pro
     redemptionStatus: mature ? 'active' : 'restricted',
     fraudRiskStatus: 'normal',
     offers,
-    redemptionHistory: history.rows,
+    redemptionHistory: history.rows.map((item) => ({
+      id: item.id,
+      userId: user.userId,
+      rewardId: item.reward_id,
+      rewardLevel: item.reward_level,
+      rewardTitle: item.reward_title,
+      redeemedAt: item.redeemed_at,
+      status: item.status === 'confirmed' ? 'redeemed' : item.status,
+    })),
     affiliateDisclosure: 'Reward availability and partner relationships are disclosed before redemption.',
   });
 }
@@ -3316,8 +3324,8 @@ async function redeemReward(request: Request, env: Env, user: Principal, rewardI
   if (!mature || offer.rewardLevel > level || offer.rewardLevel > REWARD_ACCESS_POLICY.maximumReputationLevel) throw new Error('reward_locked');
   const redemptionId = uuidv7();
   const sourceEventId = uuidv7();
-  await transaction(env.DB_APP_FRESH, async (client) => {
-    const result = await client.query(
+  const redeemedAt = await transaction(env.DB_APP_FRESH, async (client) => {
+    const result = await client.query<{ redeemed_at: string }>(
       `INSERT INTO trust.reward_redemptions (id, user_id, reward_id, reward_level, reward_title)
        VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (user_id, reward_id) DO NOTHING RETURNING redeemed_at`,
@@ -3328,8 +3336,9 @@ async function redeemReward(request: Request, env: Env, user: Principal, rewardI
       explanation: 'The reward was redeemed based on your authoritative reputation eligibility.',
       objectType: 'reward_redemption', objectId: redemptionId, metadata: { rewardId: offer.id },
     });
+    return result.rows[0].redeemed_at;
   });
-  return privateResponse(request, env, { id: redemptionId, rewardId: offer.id, rewardLevel: offer.rewardLevel, rewardTitle: offer.title, status: 'redeemed' }, { status: 201 });
+  return privateResponse(request, env, { id: redemptionId, userId: user.userId, rewardId: offer.id, rewardLevel: offer.rewardLevel, rewardTitle: offer.title, redeemedAt, status: 'redeemed' }, { status: 201 });
 }
 
 async function getPersonalFeed(request: Request, env: Env, user: Principal): Promise<Response> {
