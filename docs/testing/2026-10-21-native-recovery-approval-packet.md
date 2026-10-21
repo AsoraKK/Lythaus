@@ -68,6 +68,34 @@ obtain the final restore preview, measured sizes/allowances and an accepted
 total ceiling before provisioning. Migration storage/WAL cost approval is a
 separate gate; these estimates do not populate either protected approval.
 
+### Proposed bounded approval for owner review
+
+Propose **US$1 total incremental native-rehearsal usage**, only if a current
+provider preview and measurements establish all these bounds: one named
+`lythaus-0021-native-recovery-20261021` branch; PS-5 ARM single instance in
+Frankfurt; at most two hours from creation to approved cleanup; at most 20 GiB
+allocated disk, 3,000 IOPS and 125 MiB/s; at most 20 GiB additional compressed
+backup/WAL retained for 24 hours; and at most 10 MiB query egress. No additional
+replica, PgBouncer, network service, exporter or destination is included.
+
+Conservatively charging all 20 GiB disk rather than an assumed allowance gives
+`(5 + 21.47483648 * 0.149) * 2 / 744`, approximately US$0.02204. Additional
+backup/WAL costs `21.47483648 * 0.023 * 24 / 744`, approximately US$0.01593;
+10 MiB egress costs approximately US$0.00063. The bounded estimate is therefore
+below **US$0.04**, with the proposed US$1 ceiling providing contingency.
+The additional backup/WAL bound must include the selected source backup's
+protection window and any restore-related retention extension. Existing usage
+must be measured separately. These are proposed limits, not observed sizes.
+
+Stop before provisioning if sizes, retention, performance or the provider
+preview cannot establish these bounds. Stop and seek a revised scope if they
+change. Request explicit cleanup of only this newly created branch after the
+sanitized evidence and review are preserved, and explicit removal of protection
+only from the newly selected rehearsal backup when its approved retention ends.
+Do not change any older protected backup. Without those cleanup permissions,
+two-hour/24-hour estimates cannot be treated as the total. This proposal is not
+an approved ceiling, provider spend enforcement or migration usage consent.
+
 ## Temporary credential scope
 
 Restored role passwords are reset; source credentials cannot simply be reused.

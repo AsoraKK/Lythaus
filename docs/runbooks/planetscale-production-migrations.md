@@ -110,9 +110,11 @@ approval does not supply a native restore receipt, exact-candidate execution
 consent, cost evidence, spending, credentials, deletion or a new recovery target.
 Extra R2 export and a separate encryption key remain deferred.
 
-Both workflows default `owner_testing_recovery_exception=false`. The strict
-scope above remains the default. An explicitly requested exception also requires
-the canonical `release_mode=owner_testing` and the protected production variable
+The migration workflow defaults `owner_testing_recovery_exception=false`; the
+canonical release defaults `release_mode=automatic`. The strict scope above
+remains the default. Request the canonical exception explicitly with
+`release_mode=owner_testing_native_recovery_exception`, an owner-testing mode
+that preserves the existing ten-input dispatch contract, and the protected production variable
 `PLANETSCALE_OWNER_RECOVERY_EXCEPTION_JSON`. Its reviewed JSON has these fields:
 
 ```json
@@ -167,7 +169,7 @@ To obtain the run IDs without approving an unbound action:
 2. Dispatch the exact-SHA `0021-only` workflow with `execute_0021=true` and
    `owner_testing_recovery_exception=true`. Leave its first plan job awaiting
    protected production approval. Dispatch the exact same SHA canonical release
-   with `release_mode=owner_testing` and the exception request; leave preflight
+   with `release_mode=owner_testing_native_recovery_exception`; leave preflight
    awaiting its production approval. Capture the two actual run IDs.
 3. Configure the reviewed protected JSON for those exact IDs and candidate,
    within its bounded window. A missing configuration or inaccessible protected
