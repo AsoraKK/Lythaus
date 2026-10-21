@@ -94,6 +94,12 @@ and privileges. A generic all-data reader, source-role password reset or
 all-data writer must not be substituted. Record the minimum identity count
 after that inspection, rather than pretending one reader closes all scopes.
 
+SQL privilege probes and representative queries do not complete
+`application_smoke`. Require isolated application-handler smoke against the
+restored target using the restored identities, with no production routing,
+row mutations or emails. If that smoke cannot run read-only or needs further
+permission, retain the scope as blocked until its exact action is approved.
+
 Do not create application rows, issue auth emails, reset source passwords,
 grant new production permissions, change Hyperdrives, or route production
 traffic to the restore. Any missing extension installation or privilege repair
