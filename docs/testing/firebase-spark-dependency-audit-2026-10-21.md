@@ -12,7 +12,7 @@ opened. No upgrade, sign-in method, credential or provider setting was changed.
 
 | Area | Current repository evidence | Implication |
 | --- | --- | --- |
-| Authentication | Native email/password API in `lib/features/auth/application/auth_service.dart` and the Public API Worker; no `firebase_auth`, Google sign-in dependency or active Firebase authentication call found | The source does not make web signup, verification, reset or sessions depend on this Firebase billing project. Authenticated live acceptance still requires its existing protected evidence. |
+| Authentication | Native email/password API in `lib/features/auth/application/auth_service.dart` and the Public API Worker; no `firebase_auth`, third-party sign-in dependency or active Firebase authentication call found | The source does not make web signup, verification, reset or sessions depend on this Firebase billing project. Authenticated live acceptance still requires its existing protected evidence. |
 | Backend/database | Workers configurations under `apps/lythaus-*/wrangler.jsonc`, existing Hyperdrives and canonical PlanetScale PostgreSQL | No Cloud Run, Google Cloud Functions, Firestore or Google Cloud database runtime dependency found in the current application/configuration search. This is not a live provider inventory. |
 | Media and hosting | Worker/R2 media contracts and Cloudflare Pages release workflows; no tracked `firebase.json` or `.firebaserc`, Firebase Storage SDK, Functions code or Firebase Hosting deployment | No source evidence that the Spark change breaks the current hosted media or web deployment path. Existing native recovery, publishing and hosted qualification gates remain required. |
 | Android crash reporting | `firebase_core`, `firebase_crashlytics`, Android Google Services/Crashlytics Gradle plugins; `FirebaseCrashSink.initialize` in `lib/core/observability/crash_reporting.dart` initializes Firebase only on Android | This is an actual retained mobile dependency. The enclosing service catches initialization errors and returns, allowing `main.dart` to reach `runApp`; runtime availability is not proven by that error path. Release collection and privacy/retention approval remain separate. |
@@ -39,7 +39,7 @@ this restriction is not proof of a Lythaus R2 outage. See the provider's
 [Storage billing requirements](https://firebase.google.com/docs/storage/faqs-storage-changes-announced-sept-2024).
 
 These facts do not authorize a billing upgrade or credential change. No paid
-fallback or Google sign-in should be introduced to address this notice.
+fallback or additional identity provider should be introduced to address this notice.
 
 The final guarded browser observation at 10:01:20 UTC, after the reported
 downgrade, used clean harness `1b7cf2a718d161cb6de8c65f38e0e5ff3b856e09`.
