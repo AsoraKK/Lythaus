@@ -64,7 +64,7 @@ Name | Type | Description  | Notes
 
 Finalise a quarantined media upload
 
-Verifies the uploaded object size and SHA-256 checksum, then queues private media review.
+Verifies the uploaded object size and SHA-256 checksum, then queues private media review. A repeated finalisation of an already queued or processed session returns its original private queued receipt when the canonical event remains available. This receipt does not certify safety, authenticity or publication eligibility.
 
 ### Example
 ```dart
