@@ -117,7 +117,7 @@ try {
         const loading = page.getByText('Loading posts', { exact: true }).first();
         await loading.waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => {});
         app.guestFeed.loadingVisible = await loading.isVisible();
-        app.guestFeed.emptyVisible = await page.getByText('No posts yet', { exact: true }).first().isVisible();
+        app.guestFeed.emptyVisible = await page.getByText(/^No (?:public )?posts yet$/u).first().isVisible();
         app.guestFeed.errorVisible = await page.getByText('Couldn’t load posts', { exact: true }).first().isVisible();
         const cards = page.getByRole('button', { name: 'Trust details', exact: true });
         app.guestFeed.visiblePostCardCount = (await Promise.all(Array.from({ length: await cards.count() },
