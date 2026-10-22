@@ -7,6 +7,7 @@ import {
   inspectDatabaseIdentity,
 } from '../ci/planetscale-cutover-identity-preflight.mjs';
 import { branchQualifiedDatabaseTarget } from '../ci/planetscale-0021-target-identity.mjs';
+import { inspectProductGrantorAuthority, PRODUCT_GRANTOR_CHECKS } from '../ci/product-grantor-authority.mjs';
 
 const workflowPath = '.github/workflows/planetscale-cutover-identity-preflight.yml';
 const workflow = fs.readFileSync(workflowPath, 'utf8');
@@ -75,6 +76,7 @@ class FakeClient {
     this.queries.push(sql);
     if (this.failAt === 'query' && sql.includes('pg_get_userbyid')) throw new Error(this.secret);
     if (this.failAt === 'rollback' && sql === 'ROLLBACK') throw new Error(this.secret);
+    if (this.failAt === 'grantor' && sql.includes('AS grantable')) throw new Error(this.secret);
     if (sql === 'SHOW transaction_read_only') return { rows: [{ transaction_read_only: this.readOnly }] };
     if (sql.includes('current_database() AS database_name')) {
       return { rows: [{
@@ -94,6 +96,7 @@ class FakeClient {
     if (sql.includes('pg_stat_progress_create_index')) {
       return { rows: [{ active_index_build_observed: this.activeBuild }] };
     }
+    if (sql.includes('AS grantable')) return { rows: [{ grantable: true }] };
     return { rows: [] };
   }
 }
@@ -177,6 +180,11 @@ test('requires the live PlanetScale main branch before opening either SQL connec
   });
   assert.equal(report.status, 'IDENTITY_PREFLIGHT_PASSED');
   assert.equal(clients.length, 2);
+  assert.equal(report.productGrantAuthority.status, 'AUTHORITY_PRESENT_NOT_EXECUTED');
+  assert.equal(report.productGrantAuthority.grantsExecuted, false);
+  assert.equal(report.productGrantAuthority.checks.length, 17);
+  assert.ok(clients[0].client.queries.some(sql => sql.includes('AS grantable')));
+  assert.ok(!clients[1].client.queries.some(sql => sql.includes('AS grantable')));
   assert.ok(clients.every(({ config }) => config.ssl.rejectUnauthorized === true));
   assert.ok(clients.every(({ client }) => client.closed));
   const serialized = JSON.stringify(report);
@@ -230,6 +238,12 @@ test('connection, probe, and rollback failures stay sanitized and close both cli
 test('manual workflow is protected, exact-SHA gated, read-only, and has no bypass input', () => {
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /environment: production/);
+  assert.match(workflow, /test "\$GITHUB_REF" = refs\/heads\/main/);
+  assert.match(workflow, /test "\$REF_PROTECTED" = true/);
+  assert.match(workflow, /test "\$GITHUB_SHA" = "\$RELEASE_SHA"/);
+  assert.match(workflow, /ref: \$\{\{ github.sha \}\}/);
+  assert.match(workflow, /test "\$\(git rev-parse FETCH_HEAD\)" = "\$RELEASE_SHA"/);
+  assert.ok(workflow.indexOf('Recheck current main before protected reads') < workflow.indexOf('PLANETSCALE_ADMIN_DATABASE_URL:'));
   assert.match(workflow, /PLANETSCALE_ADMIN_DATABASE_URL: \$\{\{ secrets\.PLANETSCALE_ADMIN_DATABASE_URL \}\}/);
   assert.match(workflow, /PLANETSCALE_SCHEMA_READ_DATABASE_URL: \$\{\{ secrets\.PLANETSCALE_SCHEMA_READ_DATABASE_URL \}\}/);
   assert.match(workflow, /PLANETSCALE_API_TOKEN: \$\{\{ secrets\.PLANETSCALE_API_TOKEN \}\}/);
@@ -244,4 +258,78 @@ test('manual workflow is protected, exact-SHA gated, read-only, and has no bypas
   assert.match(source, /BEGIN READ ONLY/);
   assert.doesNotMatch(source, /console\.(error|warn)\(.*error|error\.message/);
   assert.doesNotMatch(source, /['"`]\s*(?:GRANT|REVOKE|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE)\b/i);
+});
+
+test('product grantor checks require every exact column/schema grant option without reading rows or changing security', async () => {
+  assert.equal(PRODUCT_GRANTOR_CHECKS.length, 17);
+  const queries = [];
+  const client = { query: async (sql, values) => {
+    queries.push({ sql, values });
+    return { rows: sql === 'SHOW transaction_read_only' ? [{ transaction_read_only: 'on' }] : [{ grantable: true }] };
+  } };
+  const observed = await inspectProductGrantorAuthority(client);
+  assert.equal(observed.status, 'AUTHORITY_PRESENT_NOT_EXECUTED');
+  assert.equal(observed.grantsExecuted, false);
+  assert.equal(observed.checks.length, 17);
+  assert.deepEqual(queries.slice(1).map(query => query.values.at(-1)), [
+    ...Array(7).fill('SELECT WITH GRANT OPTION'), ...Array(5).fill('INSERT WITH GRANT OPTION'),
+    ...Array(4).fill('SELECT WITH GRANT OPTION'), 'USAGE WITH GRANT OPTION',
+  ]);
+  for (const { sql } of queries) {
+    assert.doesNotMatch(sql, /\b(SET ROLE|INSERT INTO|UPDATE|DELETE|REVOKE|CREATE|ALTER|DROP|TRUNCATE)\b/i);
+    assert.doesNotMatch(sql, /\bFROM\s+(trust|editorial|identity|content|system)\./i);
+    assert.doesNotMatch(sql, /^\s*GRANT\b/i);
+  }
+});
+
+test('ordinary privileges cannot substitute for even one missing grant option', async () => {
+  for (let missing = 0; missing < PRODUCT_GRANTOR_CHECKS.length; missing++) {
+    let check = 0;
+    const report = await inspectProductGrantorAuthority({ query: async sql => ({ rows:
+      sql === 'SHOW transaction_read_only' ? [{ transaction_read_only: 'on' }] : [{ grantable: check++ !== missing }],
+    }) });
+    assert.equal(report.status, 'BLOCKED');
+    assert.equal(report.reason, 'product_grantor_authority_missing');
+    assert.equal(report.checks.filter(item => !item.grantable).length, 1);
+  }
+});
+
+test('missing, ambiguous, unknown and failed grantor probes remain blocked and sanitized', async () => {
+  for (const rows of [[], [{ grantable: true }, { grantable: true }], [{ grantable: null }], [{ grantable: 'true' }]]) {
+    const report = await inspectProductGrantorAuthority({ query: async sql => ({ rows:
+      sql === 'SHOW transaction_read_only' ? [{ transaction_read_only: 'on' }] : rows,
+    }) });
+    assert.equal(report.status, 'BLOCKED');
+    assert.equal(report.reason, 'product_grantor_catalog_evidence_incomplete');
+  }
+  const failed = await inspectProductGrantorAuthority({ query: async () => { throw new Error('private-connection-secret'); } });
+  assert.equal(failed.reason, 'product_grantor_catalog_probe_failed');
+  assert.ok(!JSON.stringify(failed).includes('private-connection-secret'));
+  let reads = 0;
+  const writable = await inspectProductGrantorAuthority({ query: async () => { reads++; return { rows: [{ transaction_read_only: 'off' }] }; } });
+  assert.equal(writable.reason, 'product_grantor_read_only_not_confirmed');
+  assert.equal(reads, 1);
+});
+
+test('grantor evidence stays independent of cutover status and is suppressed on identity failure', () => {
+  const adminSnapshot = snapshot({ user: 'pscale_api_migrator' });
+  adminSnapshot.productGrantAuthority = { status: 'BLOCKED', reason: 'product_grantor_authority_missing', grantsExecuted: false, checks: [] };
+  const observed = assess({ adminSnapshot });
+  assert.equal(observed.status, 'IDENTITY_PREFLIGHT_PASSED');
+  assert.equal(observed.productGrantAuthority.status, 'BLOCKED');
+  adminSnapshot.productGrantAuthority.status = 'AUTHORITY_PRESENT_NOT_EXECUTED';
+  const mismatched = assess({ adminSnapshot, providerBranchId: 'other123' });
+  assert.equal(mismatched.productGrantAuthority.status, 'BLOCKED');
+  assert.equal(mismatched.productGrantAuthority.reason, 'cutover_identity_preflight_blocked');
+  assert.deepEqual(mismatched.productGrantAuthority.checks, []);
+});
+
+test('failed product authority query retains identity evidence and rolls back the read-only transaction', async () => {
+  const client = new FakeClient({ user: 'pscale_api_migrator', failAt: 'grantor', secret: 'private-error' });
+  const observed = await inspectDatabaseIdentity(client, { inspectProductGrants: true });
+  assert.equal(observed.currentUser, 'pscale_api_migrator');
+  assert.equal(observed.productGrantAuthority.status, 'BLOCKED');
+  assert.equal(observed.productGrantAuthority.reason, 'product_grantor_catalog_probe_failed');
+  assert.equal(client.queries.at(-1), 'ROLLBACK');
+  assert.ok(!JSON.stringify(observed).includes('private-error'));
 });

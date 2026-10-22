@@ -66,3 +66,36 @@ PostgreSQL 17 database. They verify exact column/inherited/schema permissions,
 RLS metadata, sanitized failures, GET-only denial behavior, TLS/identity ordering
 and workflow secret boundaries. They provide code evidence; only a later exact
 merged-SHA protected run can supply live mapped-role and effective-rights evidence.
+
+## 22 October: grantor-authority preparation
+
+The completed mapped-role observation remains run `39588144680`; reuse it
+rather than repeat the same product preflight. Historical approval wording in
+this document is not a request to repeat any valid owner authorization retained
+by the release coordinator.
+
+Source preparation based on main `e0a8eb52e3ec58719007ba8651e1e5d5bc24232d`
+extends the existing protected cutover identity workflow. Its existing migrator
+connection now checks only the sixteen proposed column grant options and
+editorial schema USAGE grant option, in its read-only transaction. This does
+not add an executable grant path or change the product preflight's reader-only
+secret boundary. See the [operator contract](../runbooks/planetscale-0021-cutover-preparation.md#read-only-sql-identity-preflight).
+
+The focused cutover/product unit suite passes 20 tests without skips on Node
+24.19.0, using synthetic provider/SQL responses. Cases cover every missing grant
+option, incomplete/ambiguous/nonboolean metadata, read-only confirmation,
+sanitized failures, transaction rollback, identity failure suppression and
+separate migration/product status. PostgreSQL 17 and hosted execution were not
+performed in this preparation; no existing admin or schema-reader connection
+URL was available in the saved environment.
+
+Next operator action, after review and coordinated integration: run
+`planetscale-cutover-identity-preflight.yml` once from protected main with
+`release_sha` equal to that exact then-current main SHA. Use only its existing
+protected credentials. Inspect both identity and `productGrantAuthority`
+statuses; a green identity result alone does not prove product grant authority.
+Stop on missing access or blocked authority, without credential creation,
+repair or a different connection route. Preserve the sanitized artifact with
+the existing mapped-role packet. Any later grant action retains its separate
+exact authorization, current grantee/ACL/rollback review and independent review;
+no grant action, release, migration or feature activation is authorized here.
