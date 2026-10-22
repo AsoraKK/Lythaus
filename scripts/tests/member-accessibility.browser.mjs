@@ -146,7 +146,7 @@ try {
               await text(page, 'Kai Rivers').waitFor();
               await page.getByLabel(/Author declaration:\s*Human-authored/).waitFor();
               await screenshot(page, result, prefix + '-feed');
-              for (const trigger of ['Feed controls', 'Discover']) {
+              for (const trigger of ['Feed controls']) {
                 await activate(page, button(page, trigger), result);
                 await button(page, 'Close feed controls').waitFor();
                 await reachable(button(page, 'Close feed controls'), result);
@@ -165,7 +165,7 @@ try {
               await button(page, 'Close feed controls').waitFor();
               await button(page, 'Close feed controls').click();
               await button(page, 'Close feed controls').waitFor({ state: 'hidden' });
-              result.checks.push('Feed icon/title Close/Escape restore focus and Enter reopens', 'Repeated feed activation opens one sheet', 'Public name and honest declaration remain present');
+              result.checks.push('Feed control Close/Escape restore focus and Enter reopens', 'Repeated feed activation opens one sheet', 'Public name and honest declaration remain present');
             }
             result.checks.push('Profile tabs expose selected semantics and retain active pane on composer return');
             assert.equal(result.writes.length, 0);

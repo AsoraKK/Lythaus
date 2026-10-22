@@ -124,8 +124,10 @@ class DiscoverFeed extends StatelessWidget {
                   SliverToBoxAdapter(
                     child: _FeedNotice(
                       icon: Icons.forum_outlined,
-                      title: 'No posts yet',
-                      message: 'New public posts will appear here.',
+                      title: 'No public posts yet',
+                      message: currentUserId == null
+                          ? 'Discover shows public posts. Check again later for new posts.'
+                          : 'Only public posts appear in Discover. Your private and pending posts are in Profile.',
                       action: onRefresh == null ? null : () => onRefresh!(),
                       actionLabel: 'Check for posts',
                     ),
@@ -177,7 +179,7 @@ class DiscoverFeed extends StatelessWidget {
                                       child: const Text('Load more posts'),
                                     )
                                   : Text(
-                                      'You’ve reached the end',
+                                      'You’re up to date with public posts.',
                                       textAlign: TextAlign.center,
                                       style: theme.textTheme.bodySmall,
                                     ),

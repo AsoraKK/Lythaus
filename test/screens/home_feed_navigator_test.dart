@@ -11,7 +11,6 @@ import 'package:lythaus/ui/components/lythaus_top_bar.dart';
 import 'package:lythaus/ui/screens/home/home_feed_navigator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -409,16 +408,10 @@ void main() {
       await tester.tap(find.byTooltip('Close feed controls').last);
       await tester.pumpAndSettle();
       expect(find.text('Choose a feed'), findsNothing);
-      final controlsFocus = Focus.of(tester.element(find.byType(SvgPicture)));
-      final titleFocus = Focus.of(
-        tester.element(
-          find.descendant(
-            of: find.byType(LythausTopBar),
-            matching: find.text('Discover'),
-          ),
-        ),
-      );
-      for (final triggerFocus in [controlsFocus, titleFocus]) {
+      final controlsFocus = tester
+          .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.tune))
+          .focusNode!;
+      for (final triggerFocus in [controlsFocus]) {
         triggerFocus.requestFocus();
         await tester.pump();
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);

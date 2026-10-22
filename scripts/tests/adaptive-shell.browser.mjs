@@ -81,7 +81,7 @@ try {
         await page.waitForTimeout(150);
         assert.deepEqual(await snapshot(page), initial, 'Resize preserves controller, text, selection and focus');
         await nav(page, 'Discover').click();
-        await page.locator('flt-semantics').getByText('No posts yet', { exact: true }).waitFor();
+        await page.locator('flt-semantics').getByText('No public posts yet', { exact: true }).waitFor();
         assert.equal((await snapshot(page)).focused, false, 'Hidden composer cannot keep focus');
         await nav(page, 'Create').click();
         await field.waitFor();
@@ -101,7 +101,7 @@ try {
       }
       assert.ok(await discover.evaluate(element => element === document.activeElement), 'Tab reaches navigation');
       await page.keyboard.press('Enter');
-      await page.locator('flt-semantics').getByText('No posts yet', { exact: true }).waitFor();
+      await page.locator('flt-semantics').getByText('No public posts yet', { exact: true }).waitFor();
       await nav(page, 'Create').click();
       await field.waitFor();
       await page.evaluate(() => window.lythausNavigationSignOut());

@@ -284,6 +284,25 @@ class ProfileScreen extends ConsumerWidget {
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
               ],
+              if (isOwner && owner != null && owner.hasDetails) ...[
+                const SizedBox(height: Spacing.lg),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(Spacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Profile visibility & review',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: Spacing.xs),
+                        Text(owner.statusMessage),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               if (isOwner) ...[
                 if (profile.bio?.trim().isNotEmpty != true) ...[
                   const SizedBox(height: Spacing.lg),
@@ -306,8 +325,6 @@ class ProfileScreen extends ConsumerWidget {
                   subtitle: const Text('Security, privacy and notifications'),
                   onTap: () => _openSettings(context),
                 ),
-                if (owner != null && owner.hasDetails)
-                  Text(owner.statusMessage),
                 const Divider(),
                 ListTile(
                   leading: const Icon(Icons.edit_outlined),

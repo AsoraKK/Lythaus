@@ -31,7 +31,7 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
   final bool useWordmark;
 
   @override
-  Size get preferredSize => const Size.fromHeight(56);
+  Size get preferredSize => Size.fromHeight(useWordmark ? 64 : 56);
 
   @override
   Widget build(BuildContext context) {
@@ -48,28 +48,45 @@ class LythausTopBar extends StatelessWidget implements PreferredSizeWidget {
       padding: EdgeInsets.symmetric(horizontal: spacing.lg),
       child: Row(
         children: [
-          IconButton(
-            focusNode: logoFocusNode,
-            onPressed: onLogoTap,
-            tooltip: 'Feed controls',
-            icon: const LythBrand(
-              variant: LythBrandVariant.symbol,
-              height: 24,
-              decorative: true,
-            ),
-          ),
-          SizedBox(width: spacing.sm),
-          Expanded(
-            child: TextButton(
-              focusNode: titleFocusNode,
-              onPressed: onTitleTap,
-              style: TextButton.styleFrom(
+          if (useWordmark) ...[
+            const Expanded(
+              child: Align(
                 alignment: Alignment.centerLeft,
-                foregroundColor: theme.colorScheme.onSurface,
+                child: LythBrand(height: 36),
               ),
-              child: Text(title, style: theme.textTheme.titleLarge),
             ),
-          ),
+            if (onLogoTap != null)
+              IconButton(
+                focusNode: logoFocusNode,
+                onPressed: onLogoTap,
+                tooltip: 'Feed controls',
+                style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
+                icon: const Icon(Icons.tune),
+              ),
+          ] else ...[
+            IconButton(
+              focusNode: logoFocusNode,
+              onPressed: onLogoTap,
+              tooltip: 'Feed controls',
+              icon: const LythBrand(
+                variant: LythBrandVariant.symbol,
+                height: 24,
+                decorative: true,
+              ),
+            ),
+            SizedBox(width: spacing.sm),
+            Expanded(
+              child: TextButton(
+                focusNode: titleFocusNode,
+                onPressed: onTitleTap,
+                style: TextButton.styleFrom(
+                  alignment: Alignment.centerLeft,
+                  foregroundColor: theme.colorScheme.onSurface,
+                ),
+                child: Text(title, style: theme.textTheme.titleLarge),
+              ),
+            ),
+          ],
           Row(
             children: [
               LythIconButton(

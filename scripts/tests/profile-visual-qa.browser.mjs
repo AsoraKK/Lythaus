@@ -169,6 +169,10 @@ test(
         let commentsMode = 'empty';
         let postErrorsRemaining = 0;
         let ownerProfileReadDelay = 0;
+        let feedMode = 'empty';
+        let rewardsMode = 'error';
+        let rewardsRetryGate = null;
+        let rewardsReads = 0;
         const apiCalls = [];
         const runtimeErrors = [];
         const ownerPostsCalls = [];
@@ -350,6 +354,34 @@ test(
               promotionBlockers: [],
               evaluatedAt: null,
             };
+          } else if (requestUrl.pathname === '/api/feed/discover') {
+            body = {
+              items: feedMode === 'single'
+                ? [{ ...firstPage[0], authorUsername: owner.displayName }]
+                : [],
+              hasMore: false,
+              nextCursor: null,
+            };
+          } else if (requestUrl.pathname === '/api/rewards/me') {
+            assert.equal(request.method(), 'GET');
+            assert.equal(requestHeaders.authorization, `Bearer ${accessToken}`);
+            rewardsReads += 1;
+            if (rewardsRetryGate) await rewardsRetryGate;
+            status = rewardsMode === 'error' ? 503 : 200;
+            body = status === 503 ? { error: 'synthetic_service_failure' } : {
+              subscriptionTier: 'free',
+              reputationLevel: 0,
+              reputationBand: 'Synthetic fixture band',
+              availableRewardLevels: [],
+              maxOptionsPerLevel: 0,
+              redemptionStatus: 'restricted',
+              fraudRiskStatus: 'normal',
+              offers: [],
+              redemptionHistory: [],
+              affiliateDisclosure: '',
+            };
+          } else if (/^\/api\/reputation\/me\/reports\/monthly\/\d{4}-\d{2}$/.test(requestUrl.pathname)) {
+            body = { reportState: 'pending', reasonCode: 'approval_unavailable', report: null };
           } else if (requestUrl.pathname === '/api/rewards/me/monthly') {
             body = {
               state: 'pending',
@@ -416,9 +448,13 @@ test(
             const expectedHiddenProfile =
               location.url === `https://api.lythaus.co/api/users/${hiddenMember.id}` &&
               /^Failed to load resource:.*404/.test(message.text());
+            const expectedRewardsError =
+              location.url === 'https://api.lythaus.co/api/rewards/me' &&
+              /^Failed to load resource:.*503/.test(message.text());
             if (
               !expectedRefreshRejection &&
               !expectedProfileError &&
+              !expectedRewardsError &&
               !expectedHiddenProfile
             ) {
               runtimeErrors.push(message.text());
@@ -612,6 +648,93 @@ test(
           assert.equal(ownProfile.presentationPreferences.horizontalSwipeEnabled, true);
           await openApp();
           await signIn();
+          const nav = (name) => page.getByRole('button', {
+            name: new RegExp(`^${name}(?:$|\\s+Tab)`),
+          }).and(page.locator(':not([aria-disabled="true"])')).first();
+          await nav('Discover').click();
+          const emptyFeed = page.locator('flt-semantics').getByText('No public posts yet', { exact: true });
+          await emptyFeed.waitFor();
+          await page.getByText(
+            'Only public posts appear in Discover. Your private and pending posts are in Profile.',
+            { exact: true },
+          ).waitFor();
+          const wordmarks = page.getByRole('img', { name: 'Lythaus', exact: true });
+          await wordmarks.first().waitFor();
+          const wordmarkBoxes = await Promise.all(
+            (await wordmarks.all()).map(mark => mark.boundingBox()),
+          );
+          assert.ok(wordmarkBoxes.some(box => box && box.y < 100 && box.height >= 35),
+            'An approved Lythaus wordmark is visible in the header');
+          assert.equal(await page.getByText('Discover', { exact: true }).count(),
+            size.name === 'desktop' ? 2 : 1,
+            'Discover has one feed heading plus the desktop rail label (mobile navigation includes its tab position)');
+          assert.equal(await nav('Discover').count(), 1,
+            'Discover navigation remains available beside the branded header');
+          await screenshot('feed-branded-empty');
+          feedMode = 'single';
+          await page.getByRole('button', { name: 'Check for posts', exact: true }).click();
+          await page.getByRole('button', { name: 'Post actions', exact: true }).waitFor();
+          assert.equal(await emptyFeed.count(), 0);
+          assert.doesNotMatch(await profileText(), /watering rota|Draft planting schedule|private reminder/);
+          await screenshot('feed-branded-single');
+
+          ownProfile.moderationState = 'under_review';
+          await openApp('/?tab=profile');
+          const reviewNotice = page.locator('flt-semantics').getByText(
+            'Profile visibility & review', { exact: false },
+          ).last();
+          await reviewNotice.waitFor();
+          assert.ok((await reviewNotice.textContent()).includes(
+            'Saved, under review. Your profile changes are not public yet.',
+          ));
+          const noticeBox = await reviewNotice.boundingBox();
+          const bioBox = await page.getByText(owner.bio, { exact: true }).boundingBox();
+          const settingsBox = await page.getByRole('button', {
+            name: /^Settings[\s\S]*Security, privacy and notifications/,
+          }).boundingBox();
+          assert.ok(bioBox && noticeBox && settingsBox &&
+            bioBox.y < noticeBox.y && noticeBox.y + noticeBox.height <= settingsBox.y,
+          'Profile moderation notice belongs below the bio and above Settings');
+          await screenshot('owner-profile-review-notice');
+
+          await nav('Rewards').click();
+          const rewardRetry = page.getByRole('button', { name: 'Retry', exact: true });
+          const rewardError = page.getByText('Rewards could not be loaded', { exact: true });
+          await rewardError.waitFor();
+          await page.getByText('The Rewards service could not complete the request. Try again later.', { exact: true }).waitFor();
+          const assertNoRewardFallback = async () => {
+            assert.doesNotMatch(await profileText(), /Your rewards status|Subscription tier:|Reputation level:|No reward offers are currently available\.|No rewards redeemed yet\.|synthetic_service_failure/);
+            assert.equal(await page.getByRole('button', { name: 'Redeem', exact: true }).count(), 0);
+          };
+          await assertNoRewardFallback();
+          await screenshot('rewards-service-error');
+          const readsBeforeRetry = rewardsReads;
+          let releaseRetry;
+          rewardsRetryGate = new Promise(resolve => { releaseRetry = resolve; });
+          await rewardRetry.click();
+          try {
+            await page.getByText('Loading your rewards…', { exact: true }).waitFor();
+            assert.equal(await rewardRetry.count(), 0);
+            await assertNoRewardFallback();
+            await screenshot('rewards-retry-loading');
+          } finally {
+            rewardsRetryGate = null;
+            releaseRetry();
+          }
+          await rewardError.waitFor();
+          assert.ok(rewardsReads > readsBeforeRetry, 'Retry performs a fresh Rewards read');
+          await assertNoRewardFallback();
+          await screenshot('rewards-repeated-error');
+          rewardsMode = 'recovered';
+          await rewardRetry.click();
+          await page.locator('flt-semantics').getByText('Reputation band: Synthetic fixture band', { exact: false }).last().waitFor();
+          assert.ok((await profileText()).includes('Redemption status: restricted'));
+          assert.equal(await rewardError.count(), 0);
+          assert.equal(await page.getByRole('button', { name: 'Redeem', exact: true }).count(), 0);
+          await screenshot('rewards-recovered');
+          ownProfile.moderationState = 'allowed';
+          await openApp('/?tab=profile');
+          await page.getByRole('button', { name: /^Edit profile(?:\b|$)/ }).waitFor();
           const profileTab = page
             .getByRole('button', { name: /^Profile(?:$|\s+Tab)/ })
             .first();
@@ -907,6 +1030,7 @@ test(
             theme,
             viewport: size.name,
             ownerProfileReloadDelayMs: ownerProfileReadDelay,
+            rewardsReads,
             ownerPostsRequests: ownerPostsCalls.length,
             ownerCommentsRequests: ownerCommentsCalls.length,
             ownerCommentsCursors: ownerCommentsCalls.map(({ cursor }) => cursor),
@@ -932,6 +1056,8 @@ test(
                   requestPath !== '/api/reputation/me' &&
                   requestPath !== '/api/users/me/reputation' &&
                   requestPath !== '/api/rewards/me/monthly' &&
+                  requestPath !== '/api/rewards/me' &&
+                  !/^\/api\/reputation\/me\/reports\/monthly\/\d{4}-\d{2}$/.test(requestPath) &&
                   ![
                     '/api/feed/discover',
                     '/api/custom-feeds',
@@ -976,7 +1102,7 @@ test(
         2,
       ),
     );
-    const expectedCaptures = selectedThemes.length * selectedSizes.length * 19;
+    const expectedCaptures = selectedThemes.length * selectedSizes.length * (19 + 7);
     assert.equal(captures.length, expectedCaptures, 'Every profile state screenshot must be captured');
     assert.deepEqual(
       configResults.flatMap(({ errors }) => errors),
