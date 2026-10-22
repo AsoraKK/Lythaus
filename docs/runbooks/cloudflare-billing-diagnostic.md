@@ -42,9 +42,10 @@ ceiling, authorize a restore, or prove launch readiness.
 
 ## Review and later execution
 
-Recovery-lane status: prepared locally only. Parent review and duplicate-action
-reconciliation are required before any push, PR, merge or dispatch. No billing
-access result has been obtained, and the image implementation is outside this lane.
+Recovery-lane status: proposed for engineering review. Opening a PR does not
+authorize merge or diagnostic dispatch; both remain on hold pending parent review
+and duplicate-action reconciliation. No billing access result has been obtained,
+and the image implementation is outside this lane.
 
 After parent review, integrate through the existing review/CI process. Recheck
 remote main, open PRs and workflow runs immediately before the single dispatch.
