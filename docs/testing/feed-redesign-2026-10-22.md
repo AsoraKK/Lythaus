@@ -95,3 +95,21 @@ candidate; no image recovery implementation was overwritten. Wordmark and other
 parent lanes remain separate. The PR records the resulting exact candidate and
 integration-check outcomes. Earlier test/render records remain identified by
 their original source; they are not silently promoted to integrated evidence.
+
+## Follow-up integration and browser contract
+
+Main advanced to `c221cf94` with the read-only grant-authority preflight (#1076).
+A clean merge preserves its six files without feed or image changes; its eleven
+focused preflight tests pass locally. No protected preflight was dispatched.
+
+Integrated-head CI `39830017177` passed unit/coverage, brand and authentication
+checks, then failed the profile browser fixture's obsolete Discover-heading
+assertion. The fixture now checks the accessible Discovery carousel control,
+retains its wordmark/navigation/privacy assertions, and supplies the canonical
+free-tier entitlement response instead of a generic items envelope. It also
+asserts that this valid fixture produces no feed-loading error. This is a test
+contract correction; application code and publication gates are unchanged.
+The same fixture now provides authenticated read-only empty bookmarks and reuses
+the existing checksum-pinned content fallback font. These close fixture-only
+404/blocked-font requests exposed by the strict console-error assertion; that
+assertion remains enabled and unexpected errors include their URL for diagnosis.
