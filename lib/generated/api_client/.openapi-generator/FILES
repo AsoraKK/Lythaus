@@ -161,6 +161,9 @@ doc/MediaUploadBytesResponse.md
 doc/MediaUploadFinaliseResponse.md
 doc/MediaUploadSessionCreateRequest.md
 doc/MediaUploadSessionCreated.md
+doc/MediaUploadStatus.md
+doc/MediaUploadStatusPublication.md
+doc/MediaUploadStatusSafety.md
 doc/MemberDetail.md
 doc/MemberMutationResult.md
 doc/MemberProblemRequest.md
@@ -495,6 +498,9 @@ lib/src/model/media_upload_bytes_response.dart
 lib/src/model/media_upload_finalise_response.dart
 lib/src/model/media_upload_session_create_request.dart
 lib/src/model/media_upload_session_created.dart
+lib/src/model/media_upload_status.dart
+lib/src/model/media_upload_status_publication.dart
+lib/src/model/media_upload_status_safety.dart
 lib/src/model/member_detail.dart
 lib/src/model/member_mutation_result.dart
 lib/src/model/member_problem_request.dart
@@ -800,6 +806,9 @@ test/media_upload_bytes_response_test.dart
 test/media_upload_finalise_response_test.dart
 test/media_upload_session_create_request_test.dart
 test/media_upload_session_created_test.dart
+test/media_upload_status_publication_test.dart
+test/media_upload_status_safety_test.dart
+test/media_upload_status_test.dart
 test/member_detail_test.dart
 test/member_mutation_result_test.dart
 test/member_problem_request_test.dart

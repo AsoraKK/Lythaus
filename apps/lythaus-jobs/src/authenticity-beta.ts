@@ -1,7 +1,7 @@
 import { query, transaction, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { uuidv7 } from '@lythaus/security';
-import { BETA_ADVISER, BETA_ADVISER_ROLE, BETA_LIMITS, BETA_VERSION, SAFE_CHECKPOINT, SAFE_PREPROCESSING, assertSafeResult, betaAdviceEligible, betaAdviceRequest, betaReuseKey, compileBetaResult, parseBetaAdvice, readBoundedBytes, type BetaResult, type SafeResult } from '../../../packages/authenticity/src/beta.ts';
+import { BETA_ADVISER, BETA_ADVISER_ROLE, BETA_LIMITS, BETA_VERSION, SAFE_CHECKPOINT, SAFE_PREPROCESSING, assertSafeResult, betaEvidenceCurrent, betaResultCurrent, betaAdviceEligible, betaAdviceRequest, betaReuseKey, compileBetaResult, parseBetaAdvice, readBoundedBytes, type BetaResult, type SafeResult } from '../../../packages/authenticity/src/beta.ts';
 import { measuredAlphaBudget, readBetaConfig } from '../../../packages/authenticity/src/beta-config.ts';
 import { sha256Hex } from '../../../packages/authenticity/src/forensics.ts';
 import { validateMediaPayload } from '../../../packages/authenticity/src/media-intake.ts';
@@ -15,8 +15,9 @@ interface StepRow { id: string; state: string; output: unknown; reuse_key: strin
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const fence = `case_id=$1 AND revision=$2 AND lease_token=$3 AND lease_until>now() AND expires_at>now() AND deleted_at IS NULL AND state='analyzing'`;
 
-async function current(env: Env, row: CaseRow): Promise<void> {
+async function current(env: Env, row: CaseRow, evidence?: SafeResult, runId?: string): Promise<void> {
   const config = await readBetaConfig(env);
+  if (evidence && !betaEvidenceCurrent(evidence, config, { caseId: row.case_id, inputHash: row.input_hash, revision: row.revision, runId })) throw new Error('beta_evidence_stale');
   if (!config.enabled || !config.allowlist.includes(row.owner_id)) throw new Error('beta_paused');
   if (env.COST_BUDGET_ENABLED !== 'true' || !config.budgetApproval) throw new Error('beta_paused');
   try { measuredAlphaBudget(config); } catch { throw new Error('beta_paused'); }
@@ -42,10 +43,14 @@ async function step<T>(env: Env, row: CaseRow, name: 'safety' | 'safe' | 'advice
     await client.query(`INSERT INTO moderation.authenticity_beta_steps(id,case_id,revision,step,state,reuse_key,reservation_id) VALUES($1,$2::uuid,$3,$4,'started',$5,(SELECT id FROM system.cost_budget_reservations WHERE correlation_id=$2::uuid::text AND operation='authenticity_beta_case' LIMIT 1))`, [id,row.case_id,row.revision,name,reuseKey]);
     return { id, state: 'started', output: null, reuse_key: reuseKey };
   });
-  if (started.state === 'completed') return started.output as T;
+  if (started.state === 'completed') {
+    if (name === 'safe' && !betaEvidenceCurrent(started.output as SafeResult, await readBetaConfig(env), { caseId: row.case_id, inputHash: row.input_hash, revision: row.revision, runId: started.id })) throw new Error('beta_evidence_stale');
+    await current(env, row);
+    return started.output as T;
+  }
   try {
     const result = await execute(started.id);
-    await current(env, row);
+    await current(env, row, name === 'safe' ? result as SafeResult : undefined, started.id);
     await transaction(env.DB_JOBS_FRESH, async client => {
       const valid = await client.query(`SELECT case_id FROM moderation.authenticity_beta WHERE ${fence} FOR UPDATE`, [row.case_id,row.revision,row.lease_token]);
       if (!valid.rowCount) throw new Error('beta_stale');
@@ -60,7 +65,8 @@ async function step<T>(env: Env, row: CaseRow, name: 'safety' | 'safe' | 'advice
 }
 
 async function saveResult(env: Env, row: CaseRow, result: BetaResult, terminal: boolean): Promise<void> {
-  await current(env,row);
+  if (!betaResultCurrent(result, await readBetaConfig(env), { caseId: row.case_id, inputHash: row.input_hash, revision: row.revision })) throw new Error('beta_evidence_stale');
+  await current(env,row,result.safe);
   const saved = await query(env.DB_JOBS_FRESH, `UPDATE moderation.authenticity_beta SET result=$4::jsonb,state=CASE WHEN $5 THEN $6 ELSE state END,updated_at=now(),lease_token=CASE WHEN $5 THEN NULL ELSE lease_token END,lease_until=CASE WHEN $5 THEN NULL ELSE lease_until END WHERE ${fence}`, [row.case_id,row.revision,row.lease_token,JSON.stringify(result),terminal,result.status]);
   if (!saved.rowCount) throw new Error('beta_stale');
 }
@@ -88,6 +94,7 @@ export async function processBetaEvent(env: Env, eventId: string, payload: unkno
   try {
     await current(env,row);
     const config = await readBetaConfig(env);
+    if (result && !betaResultCurrent(result, config, { caseId: row.case_id, inputHash: row.input_hash, revision: row.revision })) throw new Error('beta_evidence_stale');
     if (operation === 'advice') {
       if (!betaAdviceEligible(result) || result!.safe.inputHash !== row.input_hash || result!.safe.revision !== row.revision || result!.safe.runtimeDigest !== config.runtimeDigest || result!.safe.preprocessingHash !== config.preprocessingHash) throw new Error('beta_attempt_consumed');
       const recorded = await query(env.DB_JOBS_FRESH, `SELECT id FROM moderation.authenticity_beta_steps WHERE case_id=$1 AND ((step='safe' AND state='completed') OR (step='safety' AND state='completed' AND output->>'result'='ALLOW'))`,[row.case_id]);
@@ -147,6 +154,7 @@ export async function processBetaEvent(env: Env, eventId: string, payload: unkno
       }
     }
     if (!result) throw new Error('beta_execution_failed');
+    await current(env,row,result.safe);
     const adviserConfig = await readBetaConfig(env);
     if (betaAdviceEligible(result) && result.advisory.status !== 'complete') {
       const recentFailures = await query<{count:string}>(env.DB_JOBS_FRESH, `SELECT count(DISTINCT case_id)::text AS count FROM moderation.authenticity_beta_steps WHERE step='advice' AND state='ambiguous' AND completed_at>now()-interval '15 minutes'`);
@@ -156,6 +164,7 @@ export async function processBetaEvent(env: Env, eventId: string, payload: unkno
           const packetKey = await sha256Hex(new TextEncoder().encode(JSON.stringify([result.packet,'lythaus-beta-adviser-v1',BETA_ADVISER])));
           const captured = result;
           const advice = await step(env,row,'advice',packetKey,async () => {
+            await current(env,row,captured.safe);
             const request = betaAdviceRequest(captured);
             let timer: ReturnType<typeof setTimeout> | undefined;
             try {
@@ -170,8 +179,8 @@ export async function processBetaEvent(env: Env, eventId: string, payload: unkno
     await saveResult(env,row,result,true);
     await query(env.DB_JOBS_FRESH, `UPDATE system.cost_budget_reservations SET measurement=$2::jsonb,billing_state='measured',updated_at=now() WHERE operation='authenticity_beta_case' AND correlation_id=$1`, [row.case_id,JSON.stringify({ schemaVersion:BETA_VERSION,resourceTimings:result.safe.timings,runtimeMeasurements:result.safe.measurements??null,adviserUsage:result.advisory.usage??null,billedUsd:null })]);
   } catch (error) {
-    const code = error instanceof Error && ['beta_paused','beta_stale','beta_original_changed','beta_original_unavailable','beta_attempt_consumed'].includes(error.message) ? error.message : 'beta_execution_failed';
-    await query(env.DB_JOBS_FRESH, `UPDATE moderation.authenticity_beta SET state=$4,failure_code=$5,lease_token=NULL,lease_until=NULL,updated_at=now() WHERE case_id=$1 AND revision=$2 AND lease_token=$3 AND deleted_at IS NULL`, [row.case_id,row.revision,row.lease_token,code==='beta_paused'?'paused':result?result.status:'failed',code]);
+    const code = error instanceof Error && ['beta_paused','beta_stale','beta_evidence_stale','beta_original_changed','beta_original_unavailable','beta_attempt_consumed'].includes(error.message) ? error.message : 'beta_execution_failed';
+    await query(env.DB_JOBS_FRESH, `UPDATE moderation.authenticity_beta SET state=$4,failure_code=$5,lease_token=NULL,lease_until=NULL,updated_at=now() WHERE case_id=$1 AND revision=$2 AND lease_token=$3 AND deleted_at IS NULL`, [row.case_id,row.revision,row.lease_token,['beta_paused','beta_evidence_stale'].includes(code)?'paused':result?result.status:'failed',code]);
   }
 }
 

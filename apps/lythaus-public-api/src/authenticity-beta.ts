@@ -2,8 +2,8 @@ import { query, transaction, reserveBudget, type HyperdriveBinding, type BudgetC
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { createPresignedPutUrl } from '@lythaus/media';
 import { uuidv7 } from '@lythaus/security';
-import { authorBetaView, BETA_LIMITS, BETA_POLICY, BETA_VERSION, readBoundedBytes, type BetaResult, type BetaState } from '../../../packages/authenticity/src/beta.ts';
-import { measuredAlphaBudget, readBetaConfig } from '../../../packages/authenticity/src/beta-config.ts';
+import { authorBetaView, betaResultCurrent, BETA_LIMITS, BETA_POLICY, BETA_VERSION, readBoundedBytes, type BetaResult, type BetaState } from '../../../packages/authenticity/src/beta.ts';
+import { measuredAlphaBudget, readBetaConfig, type BetaConfig } from '../../../packages/authenticity/src/beta-config.ts';
 import { sha256Hex } from '../../../packages/authenticity/src/forensics.ts';
 import { validateMediaPayload } from '../../../packages/authenticity/src/media-intake.ts';
 import { tombstoneBetaCases, purgeBetaMedia } from '../../../packages/db/src/authenticity-beta.ts';
@@ -11,7 +11,7 @@ import { tombstoneBetaCases, purgeBetaMedia } from '../../../packages/db/src/aut
 type BetaEnv = EnvBindings & { DB_APP_FRESH: HyperdriveBinding };
 type Row = { case_id: string; state: BetaState; original_key: string; original_etag: string; input_hash: string; revision: number; result: BetaResult | null; review_state: string; created_at: Date; updated_at: Date; expires_at: Date; upload_session_id: string };
 const privateJson = (body: unknown, status = 200) => Response.json(body, { status, headers: { 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff' } });
-const view = (row: Row) => authorBetaView({ id: row.case_id, state: row.state, createdAt: row.created_at.toISOString(), updatedAt: row.updated_at.toISOString(), expiresAt: row.expires_at.toISOString(), result: row.result, reviewState: row.review_state });
+const view = (row: Row, config: BetaConfig) => authorBetaView({ id: row.case_id, state: row.state, createdAt: row.created_at.toISOString(), updatedAt: row.updated_at.toISOString(), expiresAt: row.expires_at.toISOString(), result: row.result, reviewState: row.review_state, evidenceCurrent: !row.result || betaResultCurrent(row.result, config, { caseId: row.case_id, inputHash: row.input_hash, revision: row.revision }) });
 function appBudget(env: BetaEnv): BudgetConfig {
   if (env.COST_BUDGET_ENABLED !== 'true') throw new Error('beta_budget_paused');
   return { limitUsd: Number(env.COST_BUDGET_LIMIT_USD), warningUsd: Number(env.COST_BUDGET_WARNING_USD), optionalAnalysisUsd: Number(env.COST_BUDGET_OPTIONAL_ANALYSIS_USD), essentialOnlyUsd: Number(env.COST_BUDGET_ESSENTIAL_ONLY_USD), deepScanStopUsd: Number(env.COST_BUDGET_DEEP_SCAN_STOP_USD) };
@@ -40,7 +40,7 @@ async function routeBetaApi(request: Request, env: BetaEnv, userId: string): Pro
   if (!caseId && request.method === 'GET') {
     await expireCases(env, userId);
     const rows = await query<Row>(env.DB_APP_FRESH, `SELECT * FROM moderation.authenticity_beta WHERE owner_id=$1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 50`, [userId]);
-    return privateJson({ items: rows.rows.map(view) });
+    return privateJson({ items: rows.rows.map(row => view(row, config)) });
   }
   if (!caseId && request.method === 'POST') {
     let measured;
@@ -82,7 +82,7 @@ async function routeBetaApi(request: Request, env: BetaEnv, userId: string): Pro
   const row = found.rows[0]; if (!row) return privateJson({ error: 'not_found' }, 404);
   if (request.method === 'GET' && !action) {
     const reviews=await query(env.DB_APP_FRESH,`SELECT id,message,policy_version AS "policyVersion",created_at AS "createdAt" FROM moderation.authenticity_beta_feedback WHERE case_id=$1 AND kind='review' ORDER BY created_at LIMIT 50`,[caseId]);
-    return privateJson({...view(row),reviews:reviews.rows});
+    return privateJson({...view(row, config),reviews:reviews.rows});
   }
   if (request.method === 'GET' && action === 'image') {
     if (!row.result || !['complete','inconclusive','unsupported'].includes(row.state)) return privateJson({ error: 'beta_image_unavailable' }, 404);
@@ -91,7 +91,7 @@ async function routeBetaApi(request: Request, env: BetaEnv, userId: string): Pro
     return new Response(display.body, { headers: { 'content-type': 'image/png', 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'none'; sandbox" } });
   }
   if (request.method === 'POST' && action === 'finalise') {
-    if (row.state !== 'uploading') return privateJson(view(row));
+    if (row.state !== 'uploading') return privateJson(view(row, config));
     const session = await query<{ object_key: string; content_type: string; expected_bytes: string }>(env.DB_APP_FRESH, `SELECT object_key,content_type,expected_bytes FROM media.upload_sessions WHERE id=$1 AND user_id=$2 AND purpose='authenticity_beta' AND status='pending' AND expires_at>now()`, [caseId,userId]);
     if (!session.rows[0] || !env.MEDIA_QUARANTINE) return privateJson({ error: 'beta_upload_expired' }, 409);
     const source = await env.MEDIA_QUARANTINE.get(session.rows[0].object_key);
@@ -116,7 +116,7 @@ async function routeBetaApi(request: Request, env: BetaEnv, userId: string): Pro
     }); } catch (error) {
       const latest = await query<Row & {deleted_at:Date|null}>(env.DB_APP_FRESH,`SELECT * FROM moderation.authenticity_beta WHERE case_id=$1 AND owner_id=$2`,[caseId,userId]);
       if (latest.rows[0]?.deleted_at || ['cancelled','expired'].includes(latest.rows[0]?.state)) await env.MEDIA_QUARANTINE.delete(row.original_key);
-      else if (latest.rows[0]?.original_etag === original.httpEtag && latest.rows[0]?.state !== 'uploading') return privateJson(view(latest.rows[0]));
+      else if (latest.rows[0]?.original_etag === original.httpEtag && latest.rows[0]?.state !== 'uploading') return privateJson(view(latest.rows[0], await readBetaConfig(env)));
       throw error;
     }
     await env.MEDIA_QUARANTINE.delete(session.rows[0].object_key);

@@ -42,11 +42,11 @@ export async function standardUploadFixture(database, onEffect = async () => {})
         ` + original.slice(end) };
       });
       builder.onLoad({ filter: /apps\/lythaus-public-api\/src\/index\.ts$/ }, args => ({
-        loader: 'ts', contents: readFileSync(args.path, 'utf8') + '\nexport { createUploadSession, finaliseUpload, uploadSessionBytes };',
+        loader: 'ts', contents: readFileSync(args.path, 'utf8') + '\nexport { createUploadSession, finaliseUpload, uploadSessionBytes, uploadSessionStatus, createPost };',
       }));
     }}],
     stdin: { resolveDir: root, contents: `
-      import api, { createUploadSession, finaliseUpload, uploadSessionBytes } from './apps/lythaus-public-api/src/index.ts';
+      import api, { createUploadSession, finaliseUpload, uploadSessionBytes, uploadSessionStatus, createPost } from './apps/lythaus-public-api/src/index.ts';
       import jobs, { reconcileExpiredStandardMediaSessions } from './apps/lythaus-jobs/src/index.ts';
       import { classifyPublicError } from './apps/lythaus-public-api/src/auth-runtime-policy.ts';
       export default { async fetch(request, bindings, ctx) {
@@ -134,6 +134,10 @@ export async function standardUploadFixture(database, onEffect = async () => {})
           delete: async () => { throw new Error('synthetic_approved_delete_unavailable'); },
         };
         try {
+          if (path === '/fixture/status') return await uploadSessionStatus(request, env, { userId: input.userId }, input.sessionId);
+          if (path === '/fixture/post') return await createPost(new Request(request.url, {
+            method: 'POST', body: JSON.stringify(input.post), headers: { 'content-type': 'application/json' },
+          }), env, { userId: input.userId });
           if (path === '/fixture/finalise') return await finaliseUpload(request, env, { userId: input.userId }, input.sessionId);
           if (path === '/fixture/create') return await createUploadSession(new Request(request.url, {
             method: 'POST', body: JSON.stringify(input.upload), headers: { 'content-type': 'application/json' },

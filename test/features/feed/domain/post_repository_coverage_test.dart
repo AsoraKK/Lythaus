@@ -151,10 +151,9 @@ void main() {
       expect(json['geoScope'], 'none');
     });
 
-    test('toJson excludes deferred media and proof fields', () {
+    test('toJson excludes deferred proof fields', () {
       const req = CreatePostRequest(
         text: 'Post',
-        mediaUrl: 'img.png',
         isNews: true,
         proofSignals: ProofSignals(captureMetadataHash: 'hash'),
       );

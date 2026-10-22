@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { BETA_VERSION, SAFE_CHECKPOINT, SAFE_PREPROCESSING, SAFE_THRESHOLD, assertSafeResult, safeSupport, compileBetaResult, authorBetaView, betaAdviceRequest, parseBetaAdvice, readBoundedBytes, betaReuseKey } from '../src/beta.ts';
+import { BETA_VERSION, SAFE_CHECKPOINT, SAFE_PREPROCESSING, SAFE_THRESHOLD, assertSafeResult, betaEvidenceCurrent, betaResultCurrent, safeSupport, compileBetaResult, authorBetaView, betaAdviceRequest, parseBetaAdvice, readBoundedBytes, betaReuseKey } from '../src/beta.ts';
 import { createInsufficientEvidenceRecommendation } from '../src/judge.ts';
 import { readBetaConfig } from '../src/beta-config.ts';
 import { selectResolutionRoute } from '../src/resolution-gate.ts';
@@ -130,4 +130,34 @@ test('real deterministic forensic arithmetic remains bounded and cannot forge mo
 test('advice must explicitly preserve missingness and non-enforcing uncertainty',()=>{
   const result=compileBetaResult(safe(1),safety), recommendation=createInsufficientEvidenceRecommendation('Evidence remains incomplete.');
   for(const change of [{missingEvidence:[]},{requiresReview:false},{uncertainty:'LOW'},{alternativeHypotheses:['SYNTHETIC']}]) assert.throws(()=>parseBetaAdvice({response:JSON.stringify({...recommendation,...change})},result));
+});
+
+const authority = { safeEnabled:true,rightsApproval:'d'.repeat(64),runtimeApproval:'e'.repeat(64),runtimeDigest:binding.runtimeDigest,preprocessingHash:binding.preprocessingHash,sourceHistoryHashes:[binding.inputHash] };
+test('cached evidence requires current source approval and exact case, revision and run identity',()=>{
+  assert.equal(betaEvidenceCurrent(safe(),authority,binding),true);
+  for(const config of [{...authority,sourceHistoryHashes:[]},{...authority,rightsApproval:null},{...authority,runtimeApproval:null},{...authority,safeEnabled:false},{...authority,runtimeDigest:`sha256:${'f'.repeat(64)}`},{...authority,preprocessingHash:'f'.repeat(64)}]) assert.equal(betaEvidenceCurrent(safe(),config,binding),false);
+  for(const key of ['caseId','inputHash','revision','runId']) assert.equal(betaEvidenceCurrent(safe(),authority,{...binding,[key]:'different'}),false,key);
+  for(const invalid of [undefined,null,{},safe(1,{runId:undefined}),safe(1,{facts:{...safe().facts,sourceHistory:'invented'}})]) assert.equal(betaEvidenceCurrent(invalid,authority,binding),false);
+});
+test('saved compiled findings and advice cannot outlive source approval or their protocol',()=>{
+  const result=compileBetaResult(safe(1),safety);
+  assert.equal(betaResultCurrent(result,authority,binding),true);
+  assert.equal(betaResultCurrent(result,{...authority,sourceHistoryHashes:[]},binding),false);
+  for(const change of [{schemaVersion:'old'},{policyVersion:'old'},{finding:'NO_POSITIVE_SAFE_EVIDENCE'},{support:'UNKNOWN'},{rawThresholdCrossing:false},{publicationEligible:true},{advisory:{status:'complete',role:'GPT_OSS_BETA_ADVISOR',recommendation:{primaryHypothesis:'SYNTHETIC'}}}]) assert.equal(betaResultCurrent({...result,...change},authority,binding),false);
+  for(const change of [value=>value.packet.originAxes.syntheticEvidence='NO_POSITIVE_SYNTHETIC_EVIDENCE',value=>value.packet.evidence.find(item=>item.name==='safe_a_beta_positive_specialist').value.supportPolicy='old']) {
+    const altered=structuredClone(result); change(altered); assert.equal(betaResultCurrent(altered,authority,binding),false);
+  }
+  const reordered=structuredClone(result);
+  const measurement=reordered.packet.evidence.find(item=>item.name==='safe_a_beta_positive_specialist');
+  measurement.value=Object.fromEntries(Object.entries(measurement.value).reverse());
+  assert.equal(betaResultCurrent(reordered,authority,binding),true);
+  const dto=authorBetaView({id:binding.caseId,state:'complete',createdAt:'now',updatedAt:'now',expiresAt:'later',reviewState:'none',result,evidenceCurrent:false});
+  assert.equal(dto.finding,'UNAVAILABLE'); assert.equal(dto.status,'inconclusive'); assert.equal(dto.detectorExecution,'no_usable_output'); assert.equal(dto.advisoryStatus,'disabled');
+});
+test('later documentary approval does not upgrade cached unknown history',()=>{
+  const unknown=safe(1,{facts:{...safe().facts,sourceHistory:'UNKNOWN'}});
+  const result=compileBetaResult(unknown,safety);
+  assert.equal(betaResultCurrent(result,authority,binding),true);
+  assert.equal(result.finding,'INCONCLUSIVE'); assert.equal(result.support,'UNKNOWN');
+  assert.throws(()=>betaAdviceRequest(result),/ineligible/);
 });
