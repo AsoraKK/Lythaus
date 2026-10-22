@@ -199,7 +199,7 @@ void main() {
     expect(find.text('Authorship: Under review'), findsOneWidget);
     expect(find.text('Text'), findsNothing);
     expect(find.text('update'), findsNothing);
-    expect(find.text('Plain update'), findsNothing);
+    expect(find.text('Plain update'), findsOneWidget);
     expect(find.byType(Image), findsNothing);
   });
 
@@ -317,9 +317,10 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Source: Reuters'), findsOneWidget);
     expect(find.text('News headline'), findsOneWidget);
     expect(find.text('Reporter Name'), findsOneWidget);
-    expect(find.byIcon(Icons.link), findsOneWidget);
+    await tester.tap(find.byTooltip('Post actions'));
+    await tester.pumpAndSettle();
+    expect(find.text('Source: Reuters'), findsOneWidget);
   });
 }

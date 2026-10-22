@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
@@ -24,6 +25,9 @@ const mime = {
   '.woff2': 'font/woff2',
 };
 const accessToken = 'synthetic-profile-visual-token';
+const contentFont = JSON.parse(await readFile(new URL('./fixtures/content-engine-font.json', import.meta.url), 'utf8'));
+const contentFontBody = Buffer.from(contentFont.base64, 'base64');
+assert.equal(createHash('sha256').update(contentFontBody).digest('hex'), contentFont.sha256);
 const owner = {
   id: '018f0000-0000-7000-8000-000000000001',
   email: 'profile-owner@example.invalid',
@@ -354,6 +358,15 @@ test(
               promotionBlockers: [],
               evaluatedAt: null,
             };
+          } else if (requestUrl.pathname === '/api/bookmarks') {
+            assert.equal(request.method(), 'GET');
+            assert.equal(requestHeaders.authorization, `Bearer ${accessToken}`);
+            body = { items: [] };
+          } else if (requestUrl.pathname === '/api/subscription/status') {
+            body = {
+              tier: 'free',
+              entitlements: { maxCustomFeeds: 1, newsBoardAccess: 'none' },
+            };
           } else if (requestUrl.pathname === '/api/feed/discover') {
             body = {
               items: feedMode === 'single'
@@ -433,6 +446,10 @@ test(
             ignoreHTTPSErrors: true,
           });
           await installFlutterEngineFonts(context);
+          await context.route(contentFont.source, route => route.fulfill({
+            contentType: 'font/woff2', body: contentFontBody,
+            headers: { 'access-control-allow-origin': '*' },
+          }));
           const page = await context.newPage();
           page.setDefaultTimeout(30000);
           page.on('pageerror', (error) => runtimeErrors.push(error.message));
@@ -457,7 +474,9 @@ test(
               !expectedRewardsError &&
               !expectedHiddenProfile
             ) {
-              runtimeErrors.push(message.text());
+              const detail = `${message.text()} (${location.url})`;
+              if (!runtimeErrors.includes(detail)) t.diagnostic(detail);
+              runtimeErrors.push(detail);
             }
           });
 
@@ -665,9 +684,12 @@ test(
           );
           assert.ok(wordmarkBoxes.some(box => box && box.y < 100 && box.height >= 35),
             'An approved Lythaus wordmark is visible in the header');
-          assert.equal(await page.getByText('Discover', { exact: true }).count(),
-            size.name === 'desktop' ? 2 : 1,
-            'Discover has one feed heading plus the desktop rail label (mobile navigation includes its tab position)');
+          const discoveryFeed = page.getByLabel('Discovery', { exact: true });
+          await discoveryFeed.waitFor();
+          assert.equal(await discoveryFeed.count(), 1,
+            'The feed carousel has one accessible Discovery control');
+          assert.equal(await page.getByText('Some feeds could not be loaded.', { exact: true }).count(), 0,
+            'Valid empty custom feeds and free entitlements load without an error');
           assert.equal(await nav('Discover').count(), 1,
             'Discover navigation remains available beside the branded header');
           await screenshot('feed-branded-empty');
@@ -1101,6 +1123,7 @@ test(
                   !/^\/api\/reputation\/me\/reports\/monthly\/\d{4}-\d{2}$/.test(requestPath) &&
                   ![
                     '/api/feed/discover',
+                    '/api/bookmarks',
                     '/api/custom-feeds',
                     '/api/subscription/status',
                   ].includes(requestPath) &&

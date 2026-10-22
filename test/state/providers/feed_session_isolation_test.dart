@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:lythaus/features/feed/application/feed_actions_service.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -159,6 +160,7 @@ class _Harness {
     guest = StateProvider<bool>((_) => false);
     container = ProviderContainer(
       overrides: [
+        feedBookmarksProvider.overrideWith((ref) async => <String>{}),
         contentRecoveryStorageProvider.overrideWithValue(
           MemoryContentRecoveryStorage(),
         ),
@@ -860,7 +862,7 @@ void main() {
       tester.widget<LythausTopBar>(find.byType(LythausTopBar)).onTitleTap!();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
-      expect(find.text(_custom('a').name), findsOneWidget);
+      expect(find.text(_custom('a').name), findsWidgets);
       h.switchTo('b');
       oldScroll.jumpTo(0);
       expect(h.container.read(feedRestoreSnapshotsProvider), isEmpty);
@@ -938,7 +940,7 @@ void main() {
     expect(find.text('No custom feeds yet'), findsNothing);
     expect(find.text('Create custom feed'), findsNothing);
     await _capture(tester, boundary, 'private-feeds-offline-390-light');
-    await tester.tap(find.text('Retry'));
+    await tester.tap(find.text('Retry feeds'));
     await tester.pump();
     expect(h.custom.lists, hasLength(2));
     h.custom.lists.last.result.complete([]);

@@ -101,6 +101,10 @@ class FeedItem {
   final ContentType contentType;
   final String title;
   final String body;
+  final String? viewerReaction;
+  final bool isPublication;
+  final String? backingPostId;
+  String? get interactionPostId => isPublication ? backingPostId : id;
   final String? imageUrl;
   final String? videoThumbnailUrl;
   final List<String> tags;
@@ -122,6 +126,9 @@ class FeedItem {
     required this.contentType,
     required this.title,
     required this.body,
+    this.viewerReaction,
+    this.isPublication = false,
+    this.backingPostId,
     required this.publishedAt,
     this.imageUrl,
     this.videoThumbnailUrl,

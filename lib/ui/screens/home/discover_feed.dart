@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 import 'package:lythaus/state/models/feed_models.dart';
-import 'package:lythaus/ui/components/feed_card.dart';
+import 'package:lythaus/ui/components/interactive_feed_card.dart';
 
 class DiscoverFeed extends StatelessWidget {
   const DiscoverFeed({
@@ -77,14 +77,6 @@ class DiscoverFeed extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Semantics(
-                                header: true,
-                                child: Text(
-                                  'Discover',
-                                  style: theme.textTheme.headlineMedium,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
                               Text(
                                 'Public posts, newest first.',
                                 style: theme.textTheme.bodyMedium,
@@ -151,7 +143,7 @@ class DiscoverFeed extends StatelessWidget {
                     final item = items[index];
                     final canEdit =
                         currentUserId != null && currentUserId == item.authorId;
-                    return FeedCard(
+                    return InteractiveFeedCard(
                       item: item,
                       onTap: onOpenItem == null
                           ? null

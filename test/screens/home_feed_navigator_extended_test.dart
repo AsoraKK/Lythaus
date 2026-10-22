@@ -177,7 +177,7 @@ void main() {
 
       await tester.tap(find.text('Create custom feed'));
       await tester.pumpAndSettle();
-      expect(find.text('Create Custom Feed'), findsOneWidget);
+      expect(find.text('Sign in to create a custom feed.'), findsOneWidget);
 
       await tester.pumpWidget(buildEmpty(AlphaFeedSection.newsBoard));
       await tester.pumpAndSettle();
@@ -417,9 +417,7 @@ void main() {
   });
 
   group('Feed switching via Discover rail', () {
-    testWidgets('rail switches between configured Discover feeds', (
-      tester,
-    ) async {
+    testWidgets('rail switches to a named custom feed', (tester) async {
       tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
       addTearDown(
         () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
@@ -436,7 +434,7 @@ void main() {
               const FeedModel(
                 id: 'discover-local',
                 name: 'Local',
-                type: FeedType.discover,
+                type: FeedType.custom,
                 contentFilters: ContentFilters(
                   allowedTypes: {ContentType.mixed},
                 ),
@@ -490,7 +488,7 @@ void main() {
       expect(selected.selected, isTrue);
     });
 
-    testWidgets('PageView disables swipe gestures by design', (tester) async {
+    testWidgets('PageView enables swipe navigation', (tester) async {
       tester.binding.platformDispatcher.textScaleFactorTestValue = 0.8;
       addTearDown(
         () => tester.binding.platformDispatcher.clearTextScaleFactorTestValue(),
@@ -516,7 +514,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final pageView = tester.widget<PageView>(find.byType(PageView));
-      expect(pageView.physics, isA<NeverScrollableScrollPhysics>());
+      expect(pageView.physics, isNot(isA<NeverScrollableScrollPhysics>()));
     });
 
     testWidgets('feed control panel lists available feeds', (tester) async {

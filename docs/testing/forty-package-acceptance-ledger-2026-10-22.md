@@ -764,6 +764,11 @@ feature activation is recorded by this overlay.
 
 ## Consolidated next gates
 
+The separate [feed redesign candidate](feed-redesign-2026-10-22.md), PR #1077,
+adds a narrow source and synthetic execution overlay for UX-01/02/03/05/06/07/08.
+Its API gaps and review evidence are recorded there. It does not supersede the
+frozen audit, confer deployed acceptance, or close any of the forty packages.
+
 1. Attach the parent's baseline and final integrated rendered evidence to UX-01–08
    and applicable admin surfaces, including the reported branding, repeated
    Discover, profile notice and Rewards failure. Keep the sparse feed and

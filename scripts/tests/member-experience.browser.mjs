@@ -33,19 +33,18 @@ try {
       await text(page, 'Kai Rivers').waitFor();
       await page.getByLabel(/Author declaration:\s*Human-authored/).waitFor();
       await screenshot(page, result, 'member-feed');
-      await button(page, 'Trust details').click();
-      await text(page, 'does not independently verify authorship').waitFor();
+      await button(page, 'Post actions').click();
       for (const diagnostic of ['Created: complete', 'Media checked: none', 'Moderation: none', 'No extra signals']) {
         assert.equal(await page.getByText(diagnostic, { exact: true }).count(), 0);
       }
       await screenshot(page, result, 'member-feed-details');
-      await button(page, 'View content history').click();
+      await text(page, 'Post details').click();
       await text(page, 'Post Receipt').waitFor();
       await text(page, 'Submission recorded').waitFor();
       await screenshot(page, result, 'member-content-history');
       await button(page, 'Close receipt').click();
       assert.equal(result.writes.length, 0);
-      result.checks.push('Public name projection', 'Self-declaration is explicit', 'Expanded details contain no internal states');
+      result.checks.push('Public name projection', 'Self-declaration is explicit', 'Post actions contain no internal states');
       result.checks.push('Accessible history action opens the existing drawer without a content write');
     });
     await run('member-composer', { width, theme }, async (page, _, result) => {
@@ -75,6 +74,7 @@ try {
       await button(page,'Open post').click();
       await text(page,'Synthetic published post').waitFor();
       await button(page,'Trust details').click();
+      await text(page,'does not independently verify authorship').waitFor();
       await button(page,'View content history').click();
       await text(page,'Post Receipt').waitFor();
       await text(page,'Submission recorded').waitFor();
