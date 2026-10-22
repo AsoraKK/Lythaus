@@ -2,6 +2,7 @@ import { pathToFileURL } from 'node:url';
 import pg from 'pg';
 import { branchQualifiedDatabaseTarget } from './planetscale-0021-target-identity.mjs';
 import { planetScaleServiceTokenAuthorizationHeader } from '../planetscale/service-token-auth.mjs';
+import { inspectProductGrantorAuthority } from './product-grantor-authority.mjs';
 
 const { Client } = pg;
 const expectedRelations = [
@@ -53,7 +54,7 @@ function connectionTarget(raw, label) {
   }
 }
 
-export async function inspectDatabaseIdentity(client) {
+export async function inspectDatabaseIdentity(client, { inspectProductGrants = false } = {}) {
   await queryOrFail(client, 'SET statement_timeout = \'5000ms\'', 'session_timeout_setup_failed');
   await queryOrFail(client, 'SET lock_timeout = \'1000ms\'', 'session_timeout_setup_failed');
   await queryOrFail(client, 'SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY', 'read_only_session_setup_failed');
@@ -104,7 +105,9 @@ export async function inspectDatabaseIdentity(client) {
       activeIndexBuildObserved = activeBuildResult.rows[0]?.active_index_build_observed === true;
     }
 
+    const productGrantAuthority = inspectProductGrants ? await inspectProductGrantorAuthority(client) : null;
     return {
+      productGrantAuthority,
       databaseName: identity.database_name,
       currentUser: identity.connected_user,
       sessionUser: identity.login_user,
@@ -239,6 +242,7 @@ export function assessCutoverIdentityPreflight({
       'connected migrator and schema verifier identities',
       'effective access to owners of media.upload_sessions and system.schema_migrations',
       'effective visibility and active state of index progress on main',
+      'separate read-only migrator grant-option evidence for the four product grants',
     ],
     databaseWrites: false,
     providerMutations: false,
@@ -246,6 +250,9 @@ export function assessCutoverIdentityPreflight({
     status: uniqueBlockers.length === 0 ? 'IDENTITY_PREFLIGHT_PASSED' : 'BLOCKED',
     blockers: uniqueBlockers,
     identities: { migrator, verifier },
+    productGrantAuthority: uniqueBlockers.length > 0
+      ? { status: 'BLOCKED', grantsExecuted: false, reason: 'cutover_identity_preflight_blocked', checks: [] }
+      : adminSnapshot?.productGrantAuthority ?? { status: 'NOT_ASSESSED', grantsExecuted: false, checks: [] },
   };
 }
 
@@ -313,12 +320,12 @@ export async function collectCutoverIdentityEvidence({
     });
   }
 
-  const probe = async (config) => {
+  const probe = async (config, inspectProductGrants = false) => {
     let client;
     try {
       client = clientFactory(config);
       await client.connect();
-      return await inspectDatabaseIdentity(client);
+      return await inspectDatabaseIdentity(client, { inspectProductGrants });
     } catch {
       return null;
     } finally {
@@ -326,7 +333,7 @@ export async function collectCutoverIdentityEvidence({
     }
   };
   const [adminSnapshot, verifierSnapshot] = await Promise.all([
-    probe(adminInput.config),
+    probe(adminInput.config, true),
     probe(verifierInput.config),
   ]);
   return assessCutoverIdentityPreflight({

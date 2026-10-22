@@ -82,8 +82,9 @@ restore-test evidence, live registry, and approved usage ceiling remain
 
 The protected manual workflow
 `.github/workflows/planetscale-cutover-identity-preflight.yml` accepts only
-`release_sha`, which must equal both the checked-out and freshly fetched
-`origin/main` commit. It reads the existing
+`release_sha`, which must equal the protected main workflow SHA, checkout and
+freshly fetched `origin/main`, rechecked immediately before protected reads.
+It reads the existing
 `PLANETSCALE_ADMIN_DATABASE_URL`, `PLANETSCALE_SCHEMA_READ_DATABASE_URL`, and
 `PLANETSCALE_API_TOKEN` references from the protected `production`
 environment. Connection URLs are not workflow inputs.
@@ -106,6 +107,28 @@ result covers only this identity preflight; it does not replace the complete
 role/Hyperdrive mapping, registry reconciliation, backup/recovery, cost,
 concurrency, candidate consent, or production review gates above. The workflow
 is not dispatched as part of code validation.
+
+The same existing migrator connection also checks the precise rewards/News
+Board [additional privilege package](../testing/rewards-membership-permissions-approval-2026-10-21.md)
+using `has_column_privilege` and `has_schema_privilege` with `WITH GRANT OPTION`
+inside that read-only transaction. `productGrantAuthority` reports all sixteen
+column checks and editorial schema USAGE separately from the cutover identity
+status, including in the workflow summary. PostgreSQL documents these
+[grant-option privilege predicates](https://www.postgresql.org/docs/17/functions-info.html#FUNCTIONS-INFO-ACCESS-TABLE).
+Missing objects, ambiguous results, unavailable probes or any false
+check keep that authority evidence `BLOCKED`. Identity/target failure suppresses
+an otherwise positive authority result. Only the existing migrator connection
+is inspected; the verifier is not a substitute grantor. No `SET ROLE`, security
+grant, ACL repair or product-row query is executed.
+
+`AUTHORITY_PRESENT_NOT_EXECUTED` proves only the connected identity's effective
+grant option at the recorded time; it grants no execution authorization. It
+does not identify which inherited ACL grantor a later statement would select,
+capture rollback ACLs, prove the current runtime login or replace the existing
+mapped-role packet. Reuse that packet, bind the separately authorized four
+statements to the proven runtime grantee, and independently review the exact
+pre-change ACLs/rollback before any future grant action. A blocked authority
+result neither changes nor weakens the existing migration identity gates.
 
 The repository manifest establishes the intended mapping below. It does not
 establish the current usernames or SQL permissions.
