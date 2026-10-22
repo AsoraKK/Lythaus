@@ -196,7 +196,7 @@ test('manual production workflow binds only the existing token in the final read
   assert.doesNotMatch(workflow, /\b(pull_request|push|schedule|workflow_run|workflow_call):/);
   assert.match(workflow, /^permissions:\n  contents: read$/m);
   assert.match(workflow, /^    environment: production$/m);
-  assert.match(workflow, /github.repository == 'AsoraKK\/Lythaus' && github.ref == 'refs\/heads\/main'/);
+  assert.match(workflow, /github.repository_id == '1010752912' && github.ref == 'refs\/heads\/main'/);
   assert.match(workflow, /test "\$REF_PROTECTED" = true/);
   assert.match(workflow, /test "\$GITHUB_SHA" = "\$EXPECTED_SOURCE_SHA"/);
   assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$EXPECTED_SOURCE_SHA"/);

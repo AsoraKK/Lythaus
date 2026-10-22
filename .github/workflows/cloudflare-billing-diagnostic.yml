@@ -18,7 +18,7 @@ concurrency:
 jobs:
   inspect:
     name: Inspect billing access with redacted historical evidence
-    if: github.repository == 'AsoraKK/Lythaus' && github.ref == 'refs/heads/main'
+    if: github.repository_id == '1010752912' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 3
