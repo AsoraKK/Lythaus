@@ -695,6 +695,17 @@ follow-ups, rather than a claim that final merged-head CI has completed.
 | Discover presentation tests | 39 passed | `lythaus-discover-presentation-tests.log`; includes the updated old empty-copy assertion, responsive states, refresh/retry and paging cases |
 | Approved-brand/onboarding contracts | 22 passed, zero failures/skips | `lythaus-ui-brand-contracts.log`; contract checks do not establish all rendered artwork, native branding or onboarding acceptance |
 | Flutter analysis | No issues found | `lythaus-ui-analyze.log`; static analysis, not runtime acceptance |
+| Corrected complete Flutter suite and coverage | 3,578 passed; six existing skips; 90.24% total coverage; all P1/P2/P3 and per-module authentication gates passed | `lythaus-ui-full-tests-final.log`, SHA256 `2c5785efa16a24f5c45c29bc1868a08757a1458e0a3ea52826f2feff7ea2c787`; rerun completed on 22 October at 04:40 UTC. The earlier run's six old-copy assertion failures remain failed historical evidence, not retroactive passes |
+| Authentication/profile/guest browser regressions | 62 passed, zero failures/skips | `lythaus-ui-auth-browser.log`, SHA256 `8e85dbaeb2b04c8b41327e05f35ee14635f3c0207fe3c2de581697f52519364d`; Chromium/WebKit against synthetic local responses, including request-freshness negatives. No real email delivery, password recovery or hosted authentication certification |
+| Public read-only boundary tests | Eight passed, zero failures/skips | The acceptance runners recognize both deployed and candidate empty-feed wording; request restrictions and classification requirements remain unchanged |
+
+These later checks ran on the same product bytes as the V1 snapshot. The
+remote source checkpoint is `1a4feffc054dd07f5813b49d7c52c4b43e32c57f`, tree
+`139b0ae49e9c52be7435339b34cbae380dc7f0e4`, matching local
+`f2d1eb6faaf8c874496a65ac74a4701011f0f32f`. Subsequent final-head checks,
+independent review and merge identity are recorded in
+[PR 1072](https://github.com/AsoraKK/Lythaus/pull/1072); this ledger preserves
+the dated observations rather than predicting those results.
 
 ### Compiled-release rendered checks
 
@@ -728,10 +739,28 @@ links pretending that uncommitted PNGs are repository artifacts.
 V1 supersedes **PENDING INTEGRATION** only for these precise rendered cases.
 All other V0 cases and all D0 deployed acceptance remain pending; every package
 stays **OPEN**. Complete authentication, actual detector qualification and
-whole-package acceptance are not established. **Full coverage and the durable
-browser harness are IN PROGRESS**; their results and required final-head CI are
-not predicted here. No deployment, provider mutation or feature activation is
-recorded by this overlay.
+whole-package acceptance are not established. The extended Chromium matrix
+completed four mobile/desktop and light/dark configurations, with 104 captures,
+no runtime errors and no unhandled API paths. Its original source labels
+(`06572a4c154c45b00941f1336c458e8f72e166ab` or
+`34a4067b7229048b0dff689444907f49a1a99bcc`) are preserved in the evidence
+bundle; later test-only commits do not relabel earlier receipts.
+
+The first complete WebKit run produced 104 captures but **failed** its error
+gate on three light/mobile access-control page errors. An unchanged
+isolated light/mobile rerun passed. Separate lifecycle tracing observed three
+root-screen GETs cancelled when the harness forced a new document immediately
+after Back; this establishes a sequencing race but does not retrospectively
+prove the cause of every untraced error. The failed receipt is retained. A
+second traced matrix retained the same failure in dark/mobile. The reviewed
+harness correction waits up to ten seconds for the populated root feed and
+successful completion of its observed reads before the hidden-profile check;
+the runtime error gate remains unchanged. Diagnostic instrumentation is not
+part of the candidate.
+**The corrected durable browser matrix and required final-head CI remain
+pending at this checkpoint.** Their outcomes are recorded in PR 1072, not
+inferred from functional screenshots. No deployment, provider mutation or
+feature activation is recorded by this overlay.
 
 ## Consolidated next gates
 

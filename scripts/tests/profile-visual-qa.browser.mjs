@@ -888,12 +888,53 @@ test(
           assert.equal(ownerPostsCalls.length, ownerCallCount);
           await screenshot('other-profile-public');
           const otherProfileUrl = page.url();
-          await page.getByRole('button', { name: 'Back', exact: true }).click();
-          await page.waitForFunction(
-            (currentUrl) => window.location.href !== currentUrl,
-            otherProfileUrl,
-            { timeout: 10000 },
-          );
+          const backReads = [];
+          const observeBackRead = (request) => {
+            const url = new URL(request.url());
+            if (request.method() === 'GET' && url.hostname === 'api.lythaus.co' &&
+                ['/api/subscription/status', '/api/custom-feeds', '/api/feed/discover'].includes(url.pathname)) {
+              backReads.push(request);
+            }
+          };
+          let backDeadline;
+          page.on('request', observeBackRead);
+          try {
+            await Promise.race([
+              (async () => {
+                await page.getByRole('button', { name: 'Back', exact: true }).click();
+                await page.waitForFunction(
+                  (currentUrl) => window.location.href !== currentUrl,
+                  otherProfileUrl,
+                  { timeout: 10000 },
+                );
+                await page.locator('flt-semantics').getByText(
+                  'Public posts, newest first.', { exact: true },
+                ).waitFor({ timeout: 10000 });
+                await page.getByRole('button', {
+                  name: 'Post actions', exact: true,
+                }).waitFor({ timeout: 10000 });
+                await page.locator('flt-semantics').getByText(
+                  'Loading posts', { exact: true },
+                ).waitFor({ state: 'hidden', timeout: 10000 });
+                let completed = 0;
+                while (completed < backReads.length) {
+                  const request = backReads[completed++];
+                  const response = await request.response();
+                  assert.ok(response?.ok(), `Back navigation read failed: ${request.url()}`);
+                  assert.equal(await response.finished(), null,
+                    `Back navigation read did not finish: ${request.url()}`);
+                }
+              })(),
+              new Promise((_, reject) => {
+                backDeadline = setTimeout(() => reject(new Error(
+                  'Back navigation and its observed fixture reads did not complete within 10 seconds',
+                )), 10000);
+              }),
+            ]);
+          } finally {
+            clearTimeout(backDeadline);
+            page.off('request', observeBackRead);
+          }
           const ownerCallCountAfterBack = ownerPostsCalls.length;
 
           await openApp(`/user/${hiddenMember.id}`);
