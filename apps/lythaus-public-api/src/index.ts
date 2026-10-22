@@ -22,7 +22,8 @@ import { assertDistinctReactionAuthor, contentDeletionPlan, planCommentCreation,
 import { assertCommentFeedItemEligibility, assertCustomFeedAvailable, assertFeedItemEligibility, assertNewsBoardItemEligibility, commentPublicLabel, entitlementsForTier, feedResponsePlan, requireFeedPostId, requireNewsBoardAccess, type FeedSurface } from './feed-runtime-policy.ts';
 import { optionalPrivacyRequestType, privacyExportAccessActivity, privacyExportRetryAfter, privacyRequestPlan, requirePrivacyExportDependencies, requirePrivacyExportObject, requirePrivacyExportRequestId, retentionRulePlan } from './privacy-runtime-policy.ts';
 import { normalizeNotificationDevice, normalizeNotificationPreferences } from './notification-policy.ts';
-import { encodeCursor, enforceContentDeclaration, normalizeCustomFeedRules, pageRequest, reputationBand } from './product-policy.ts';
+import { assertTextOnlyPostInput, encodeCursor, enforceContentDeclaration, normalizeCustomFeedRules, pageRequest, reputationBand } from './product-policy.ts';
+import { readStandardMediaStatus } from './standard-media-status.ts';
 import {
   enforcePostTagLimit,
   normalizeTagSearchQuery,
@@ -1247,9 +1248,10 @@ async function idempotentMutation(
 }
 
 async function createPost(request: Request, env: Env, user: Principal): Promise<Response> {
-  await enforceDailyAction(env, user.userId, 'post');
   const input = await readJson<CreatePostInput>(request, 64 * 1024);
+  assertTextOnlyPostInput(input);
   const declaration = enforceContentDeclaration(input);
+  await enforceDailyAction(env, user.userId, 'post');
   const tagSearchMaintenanceEnabled = env.TAG_SEARCH_INDEX_MAINTENANCE_ENABLED === 'true';
   const maxDistinctTags = tagSearchMaintenanceEnabled
     ? TAG_SEARCH_PROPOSED_MAX_DISTINCT_TAGS_PER_POST
@@ -1375,6 +1377,11 @@ async function createUploadSession(request: Request, env: Env, user: Principal):
     maxBytes: MAX_IMAGE_BYTES,
     checksumSha256,
   }, { status: 201 });
+}
+
+async function uploadSessionStatus(request: Request, env: Env, user: Principal, sessionId: string): Promise<Response> {
+  const status = await readStandardMediaStatus(env.DB_APP_FRESH, user.userId, sessionId);
+  return privateResponse(request, env, status ?? { error: 'not_found' }, { status: status ? 200 : 404 });
 }
 
 async function uploadSessionBytes(request: Request, env: Env, user: Principal, sessionId: string): Promise<Response> {
@@ -3867,6 +3874,12 @@ export default {
       if (request.method === 'POST' && url.pathname === '/api/media/uploads') {
         const user = await principal(request, env);
         return await idempotentMutation(request, env, user.userId, 'media.upload.create', () => createUploadSession(request, env, user));
+      }
+      const uploadStatus = url.pathname.match(/^\/api\/media\/uploads\/([^/]+)$/);
+      if (request.method === 'GET' && uploadStatus && env.MEDIA_UPLOADS_ENABLED !== 'true') return response(request, env, { error: 'feature_disabled', feature: 'media_uploads', correlationId: id }, { status: 404 });
+      if (request.method === 'GET' && uploadStatus) {
+        const user = await principal(request, env);
+        return await uploadSessionStatus(request, env, user, uploadStatus[1]);
       }
       const uploadBytes = url.pathname.match(/^\/api\/media\/uploads\/([^/]+)\/bytes$/);
       if (request.method === 'PUT' && uploadBytes && env.MEDIA_UPLOADS_ENABLED !== 'true') return response(request, env, { error: 'feature_disabled', feature: 'media_uploads', correlationId: id }, { status: 404 });

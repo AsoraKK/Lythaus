@@ -3009,6 +3009,65 @@
         }
       }
     },
+    "/media/uploads/{uploadSessionId}": {
+      "get": {
+        "operationId": "mediaUploadsGetStatus",
+        "summary": "Read private upload processing status",
+        "description": "Owner-only, no-store status. Completed integrity processing remains private review; safety and authenticity have not run and publication is not allowed.",
+        "tags": [
+          "Media"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "uploadSessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private processing status; never a publication grant.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "example": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaUploadStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Uploads disabled, session absent or session unavailable to this owner.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/media/uploads/{uploadSessionId}/bytes": {
       "put": {
         "operationId": "mediaUploadsPutBytes",
@@ -15698,6 +15757,96 @@
           "checksumSha256": {
             "type": "string",
             "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      },
+      "MediaUploadStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uploadSessionId",
+          "status",
+          "expiresAt",
+          "processingComplete",
+          "safety",
+          "authenticity",
+          "publication",
+          "private"
+        ],
+        "properties": {
+          "uploadSessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "queued",
+              "review",
+              "rejected",
+              "expired",
+              "cancelled"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "processingComplete": {
+            "type": "boolean",
+            "description": "Integrity processing only; never a safety or authenticity decision."
+          },
+          "safety": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "not_run"
+                ]
+              }
+            }
+          },
+          "authenticity": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "not_run"
+                ]
+              }
+            }
+          },
+          "publication": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "allowed"
+            ],
+            "properties": {
+              "allowed": {
+                "type": "boolean",
+                "enum": [
+                  false
+                ]
+              }
+            }
+          },
+          "private": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
           }
         }
       },

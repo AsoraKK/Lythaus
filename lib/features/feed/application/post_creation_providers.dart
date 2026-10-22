@@ -17,6 +17,7 @@ import 'package:lythaus/features/feed/application/post_repository_impl.dart';
 import 'package:lythaus/features/feed/application/social_feed_providers.dart';
 import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/state/providers/feed_providers.dart' as live;
+import 'package:lythaus/features/media/application/private_image_upload.dart';
 
 /// Provider for the post repository implementation
 final postRepositoryProvider = Provider<PostRepository>((ref) {
@@ -89,6 +90,8 @@ class PostCreationState {
 
   /// Check if the form is valid for submission.
   bool get isValid =>
+      mediaUrl == null &&
+      contentType == 'text' &&
       text.trim().isNotEmpty &&
       text.length <= postTextMaxLength &&
       validatePublicPostAuthorship(text: text, aiLabel: aiLabel) == null;
@@ -357,6 +360,13 @@ class PostCreationNotifier extends StateNotifier<PostCreationState> {
   /// Validate the form before submission
   String? validate() {
     final text = state.text.trim();
+
+    if (state.mediaUrl != null ||
+        state.contentType != 'text' ||
+        (_ref.read(privateImageUploadsEnabledProvider) &&
+            _ref.read(privateImageUploadProvider).blocksPost)) {
+      return 'Images cannot be attached to posts yet. Clear the image selection to submit text only.';
+    }
 
     if (text.isEmpty) {
       return 'Please enter some text for your post';

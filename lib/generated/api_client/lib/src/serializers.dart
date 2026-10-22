@@ -162,6 +162,9 @@ import 'package:lythaus_api_client/src/model/media_upload_bytes_response.dart';
 import 'package:lythaus_api_client/src/model/media_upload_finalise_response.dart';
 import 'package:lythaus_api_client/src/model/media_upload_session_create_request.dart';
 import 'package:lythaus_api_client/src/model/media_upload_session_created.dart';
+import 'package:lythaus_api_client/src/model/media_upload_status.dart';
+import 'package:lythaus_api_client/src/model/media_upload_status_publication.dart';
+import 'package:lythaus_api_client/src/model/media_upload_status_safety.dart';
 import 'package:lythaus_api_client/src/model/member_detail.dart';
 import 'package:lythaus_api_client/src/model/member_mutation_result.dart';
 import 'package:lythaus_api_client/src/model/member_problem_request.dart';
@@ -457,6 +460,9 @@ part 'serializers.g.dart';
   MediaUploadFinaliseResponse,
   MediaUploadSessionCreateRequest,
   MediaUploadSessionCreated,
+  MediaUploadStatus,
+  MediaUploadStatusPublication,
+  MediaUploadStatusSafety,
   MemberDetail,
   MemberMutationResult,
   MemberProblemRequest,

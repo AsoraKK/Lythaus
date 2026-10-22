@@ -281,10 +281,9 @@ void main() {
       expect(json['geoScope'], 'none');
     });
 
-    test('toJson excludes deferred media', () {
+    test('toJson rejects deferred media', () {
       const req = CreatePostRequest(text: 'X', mediaUrl: 'http://img.png');
-      final json = req.toJson();
-      expect(json.containsKey('mediaUrls'), isFalse);
+      expect(req.toJson, throwsArgumentError);
     });
 
     test('toJson excludes deferred proof signals', () {

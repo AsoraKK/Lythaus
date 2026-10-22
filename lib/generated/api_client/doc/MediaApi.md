@@ -11,6 +11,7 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**mediaUploadsCreate**](MediaApi.md#mediauploadscreate) | **POST** /media/uploads | Create a quarantined media upload session
 [**mediaUploadsFinalise**](MediaApi.md#mediauploadsfinalise) | **POST** /media/uploads/{uploadSessionId}/finalise | Finalise a quarantined media upload
+[**mediaUploadsGetStatus**](MediaApi.md#mediauploadsgetstatus) | **GET** /media/uploads/{uploadSessionId} | Read private upload processing status
 [**mediaUploadsPutBytes**](MediaApi.md#mediauploadsputbytes) | **PUT** /media/uploads/{uploadSessionId}/bytes | Upload bytes to a private session
 
 
@@ -92,6 +93,49 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**MediaUploadFinaliseResponse**](MediaUploadFinaliseResponse.md)
+
+### Authorization
+
+[bearerAuth](../README.md#bearerAuth)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **mediaUploadsGetStatus**
+> MediaUploadStatus mediaUploadsGetStatus(uploadSessionId)
+
+Read private upload processing status
+
+Owner-only, no-store status. Completed integrity processing remains private review; safety and authenticity have not run and publication is not allowed.
+
+### Example
+```dart
+import 'package:lythaus_api_client/api.dart';
+
+final api = LythausApiClient().getMediaApi();
+final String uploadSessionId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.mediaUploadsGetStatus(uploadSessionId);
+    print(response);
+} catch on DioException (e) {
+    print('Exception when calling MediaApi->mediaUploadsGetStatus: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **uploadSessionId** | **String**|  |
+
+### Return type
+
+[**MediaUploadStatus**](MediaUploadStatus.md)
 
 ### Authorization
 
