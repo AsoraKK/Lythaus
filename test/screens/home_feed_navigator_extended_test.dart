@@ -222,7 +222,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Retry'), findsNothing);
-      expect(find.text('No posts yet'), findsNothing);
+      expect(find.text('No public posts yet'), findsNothing);
     });
 
     testWidgets(
@@ -246,7 +246,7 @@ void main() {
         await tester.pump();
         expect(find.text('Loading posts'), findsOneWidget);
         expect(find.text(cachedPost.body), findsNothing);
-        expect(find.text('No posts yet'), findsNothing);
+        expect(find.text('No public posts yet'), findsNothing);
       },
     );
 
@@ -286,7 +286,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('No posts yet'), findsOneWidget);
+      expect(find.text('No public posts yet'), findsOneWidget);
       expect(find.text('Unable to load feed right now.'), findsNothing);
       expect(find.text('Retry'), findsNothing);
     });

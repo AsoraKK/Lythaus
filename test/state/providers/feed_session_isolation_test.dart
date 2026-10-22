@@ -916,7 +916,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Synthetic post guest-public'), findsNothing);
     expect(find.text('Sign in'), findsOneWidget);
-    expect(find.text('No posts yet'), findsNothing);
+    expect(find.text('No public posts yet'), findsNothing);
     expect(tester.takeException(), isNull);
     await _capture(tester, boundary, 'session-unverified-390-light');
     await tester.pumpWidget(const SizedBox.shrink());

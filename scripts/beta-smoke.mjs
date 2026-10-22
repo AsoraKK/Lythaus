@@ -380,7 +380,7 @@ try {
     assert(response, `Login request failed for guest smoke at ${loginUrl}`);
     await waitForAnyText(page, ocrWorker, ['Continue as guest']);
     await clickVisibleText(page, ocrWorker, 'Continue as guest');
-    await waitForAnyText(page, ocrWorker, ['Discover calm, trustworthy updates tailored to you.', 'No posts yet']);
+    await waitForAnyText(page, ocrWorker, ['Discover calm, trustworthy updates tailored to you.', 'No posts yet', 'No public posts yet']);
     recordCheck('app shell loads', 'passed', { path: page.url() });
     recordCheck('guest discovery feed loads or empty-states', 'passed', { path: page.url() });
   })();

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lythaus/ui/components/feed_card.dart';
 
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
@@ -119,8 +120,39 @@ void main() {
       await tester.pumpWidget(wrap(const DiscoverFeed(feed: feed, items: [])));
       await tester.pump();
 
-      expect(find.text('No posts yet'), findsOneWidget);
-      expect(find.text('New public posts will appear here.'), findsOneWidget);
+      expect(find.text('No public posts yet'), findsOneWidget);
+      expect(
+        find.text(
+          'Discover shows public posts. Check again later for new posts.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('empty owner feed explains private posts and supports refresh', (
+      tester,
+    ) async {
+      var refreshed = false;
+      await tester.pumpWidget(
+        wrap(
+          DiscoverFeed(
+            feed: feed,
+            items: const [],
+            currentUserId: 'current-user',
+            onRefresh: () async => refreshed = true,
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(
+        find.text(
+          'Only public posts appear in Discover. Your private and pending posts are in Profile.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Check for posts'));
+      expect(refreshed, isTrue);
+      expect(find.byType(FeedCard), findsNothing);
     });
 
     testWidgets('triggers onLoadMore near scroll end', (tester) async {

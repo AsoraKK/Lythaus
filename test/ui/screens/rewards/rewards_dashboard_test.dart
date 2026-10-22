@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -97,9 +100,140 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Unable to load rewards right now.'), findsOneWidget);
+      expect(find.text('Rewards could not be loaded'), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
     });
+
+    testWidgets('retry shows progress and a repeated failure stays an error', (
+      tester,
+    ) async {
+      final retry = Completer<RewardsSnapshot>();
+      var calls = 0;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            rewardsSnapshotProvider.overrideWith((ref, _) {
+              calls++;
+              if (calls == 1) return Future.error(StateError('synthetic'));
+              return retry.future;
+            }),
+          ],
+          child: const MaterialApp(home: RewardsDashboardScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Retry'));
+      await tester.pump();
+      expect(calls, 2);
+      expect(find.text('Loading your rewards…'), findsOneWidget);
+      expect(find.text('Retry'), findsNothing);
+      retry.completeError(StateError('synthetic repeat failure'));
+      await tester.pumpAndSettle();
+      expect(find.text('Rewards could not be loaded'), findsOneWidget);
+      expect(find.text('Your rewards status'), findsNothing);
+      expect(
+        find.text('No reward offers are currently available.'),
+        findsNothing,
+      );
+      expect(find.text('Redeem'), findsNothing);
+    });
+
+    testWidgets('retry recovers only when the server returns rewards', (
+      tester,
+    ) async {
+      var calls = 0;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            rewardsSnapshotProvider.overrideWith((ref, _) async {
+              if (++calls == 1) throw StateError('synthetic');
+              return snapshot;
+            }),
+          ],
+          child: const MaterialApp(home: RewardsDashboardScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+      expect(calls, 2);
+      expect(find.text('Your rewards status'), findsOneWidget);
+      expect(find.text('Rewards could not be loaded'), findsNothing);
+    });
+
+    testWidgets(
+      'connection failure remains readable at narrow width and large text',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(320, 640));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              rewardsSnapshotProvider.overrideWith(
+                (ref, _) async => throw DioException(
+                  requestOptions: RequestOptions(path: '/rewards/me'),
+                  type: DioExceptionType.connectionError,
+                ),
+              ),
+            ],
+            child: MaterialApp(
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: const TextScaler.linear(2)),
+                child: child!,
+              ),
+              home: const RewardsDashboardScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.textContaining('The connection to Rewards failed.'),
+          findsOneWidget,
+        );
+        await tester.ensureVisible(find.text('Retry'));
+        expect(find.text('Retry').hitTestable(), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    for (final status in [403, 503]) {
+      testWidgets('HTTP $status is explained without exposing server details', (
+        tester,
+      ) async {
+        final request = RequestOptions(path: '/rewards/me');
+        await tester.pumpWidget(
+          buildDashboard(
+            rewardsValue: AsyncValue.error(
+              DioException(
+                requestOptions: request,
+                response: Response(
+                  requestOptions: request,
+                  statusCode: status,
+                  data: {'error': 'private internal diagnostic'},
+                ),
+                type: DioExceptionType.badResponse,
+              ),
+              StackTrace.current,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.textContaining(
+            status == 403
+                ? 'Access to your rewards could not be verified.'
+                : 'The Rewards service could not complete the request.',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining('private internal diagnostic'),
+          findsNothing,
+        );
+      });
+    }
 
     testWidgets('shows XP and tier data when loaded', (tester) async {
       await tester.pumpWidget(

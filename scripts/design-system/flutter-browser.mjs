@@ -56,7 +56,7 @@ try {
     result.readyMs = Math.round(performance.now() - start);
     await page.screenshot({ path: path.join(evidence, `login-${width}-${theme}.png`) });
     await page.getByRole('button', { name: 'Continue as guest', exact: true }).click();
-    await page.locator('flt-semantics').getByText('No posts yet', { exact: true }).waitFor();
+    await page.locator('flt-semantics').getByText(/^No (?:public )?posts yet$/u).waitFor();
     await page.screenshot({ path: path.join(evidence, `feed-${width}-${theme}.png`) });
     result.checks.push('guest-entry');
     result.semantics = await page.locator('flt-semantics').evaluateAll(nodes => nodes.map(node => ({ role: node.getAttribute('role'), label: node.getAttribute('aria-label'), text: node.innerText })).filter(node => node.role || node.label));
@@ -71,7 +71,7 @@ try {
       await page.goBack();
       await page.getByText('Sign in to view your rewards.', { exact: true }).waitFor();
       await page.goBack();
-      await page.locator('flt-semantics').getByText('No posts yet', { exact: true }).waitFor();
+      await page.locator('flt-semantics').getByText(/^No (?:public )?posts yet$/u).waitFor();
       await page.getByRole('button', { name: /^Create\b/ }).click();
       await page.locator('flt-semantics').getByText('Sign in to use this Alpha feature.', { exact: true }).waitFor();
       result.checks.push('rewards-profile-browser-back', 'guest-create-gate');

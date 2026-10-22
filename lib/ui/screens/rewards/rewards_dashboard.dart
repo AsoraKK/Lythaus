@@ -26,6 +26,25 @@ class _RewardsDashboardScreenState
   final Set<String> _redeemingIds = <String>{};
   final _redemptionKeys = <({String rewardId, int sessionRevision}), String>{};
 
+  String _loadFailureMessage(Object error) {
+    if (error is DioException) {
+      if (error.type == DioExceptionType.connectionError ||
+          error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.sendTimeout) {
+        return 'The connection to Rewards failed. Check your connection and try again.';
+      }
+      final status = error.response?.statusCode;
+      if (status == 401 || status == 403) {
+        return 'Access to your rewards could not be verified. Try again. If this continues, sign in again.';
+      }
+      if (status != null && status >= 500) {
+        return 'The Rewards service could not complete the request. Try again later.';
+      }
+    }
+    return 'Your rewards details could not be retrieved. Try again, or return later if the problem continues.';
+  }
+
   void _clearRedemptionKeysForSession(int sessionRevision) {
     _redemptionKeys.removeWhere(
       (scope, _) => scope.sessionRevision != sessionRevision,
@@ -128,20 +147,43 @@ class _RewardsDashboardScreenState
     final rewardsAsync = ref.watch(rewardsSnapshotProvider(sessionRevision));
 
     return rewardsAsync.when(
+      skipLoadingOnRefresh: !rewardsAsync.hasError,
       loading: () => ReadingPane(
         child: Scaffold(
           appBar: AppBar(title: const Text('Lythaus Rewards')),
-          body: const Center(child: CircularProgressIndicator()),
-        ),
-      ),
-      error: (_, __) => ReadingPane(
-        child: Scaffold(
-          appBar: AppBar(title: const Text('Lythaus Rewards')),
-          body: Center(
+          body: const Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Unable to load rewards right now.'),
+                CircularProgressIndicator(),
+                SizedBox(height: Spacing.md),
+                Text('Loading your rewards…'),
+              ],
+            ),
+          ),
+        ),
+      ),
+      error: (error, _) => ReadingPane(
+        child: Scaffold(
+          appBar: AppBar(title: const Text('Lythaus Rewards')),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(Spacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.cloud_off_outlined, size: 32),
+                const SizedBox(height: Spacing.md),
+                Text(
+                  'Rewards could not be loaded',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: Spacing.sm),
+                Text(_loadFailureMessage(error)),
+                const SizedBox(height: Spacing.sm),
+                const Text(
+                  'Your reward availability and redemption history cannot be shown until this loads.',
+                ),
                 const SizedBox(height: Spacing.sm),
                 FilledButton(
                   onPressed: () =>

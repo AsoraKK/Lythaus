@@ -229,10 +229,57 @@ Future<void> _scrollTo(WidgetTester tester, Finder target) async {
         )
         .first,
   );
+  await tester.pumpAndSettle();
 }
 
 void main() {
   setUpAll(loadFontsForGoldenTests);
+
+  for (final state in ['under_review', 'blocked', 'allowed', 'unknown']) {
+    testWidgets('owner $state notice belongs to profile above Settings', (
+      tester,
+    ) async {
+      const user = PublicUser(
+        id: 'user-1',
+        displayName: 'Jane Doe',
+        tier: 'silver',
+        bio: 'My bio',
+      );
+      final owner = OwnerProfile(
+        user: user,
+        moderationState: state,
+        publicVisibility: false,
+      );
+      await tester.binding.setSurfaceSize(const Size(430, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        _buildApp(
+          overrides: [
+            currentUserProvider.overrideWithValue(_fakeAuthUser),
+            ownerProfileProvider.overrideWith((ref) async => owner),
+            ownerPostsServiceProvider.overrideWithValue(
+              _FakeOwnerPostsService(),
+            ),
+            jwtProvider.overrideWith((ref) async => 'tok'),
+            reputationProvider.overrideWith(
+              (ref) async => _fakeReputationState,
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(owner.statusMessage), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('Profile visibility & review')).dy,
+        greaterThan(tester.getTopLeft(find.text('My bio')).dy),
+      );
+      expect(
+        tester.getTopLeft(find.text(owner.statusMessage)).dy,
+        lessThan(tester.getTopLeft(find.text('Settings')).dy),
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   // ── No user signed in ──────────────────────────────────────────────────────
   group('No signed-in user', () {
