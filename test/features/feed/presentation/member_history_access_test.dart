@@ -147,12 +147,21 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tester.ensureVisible(find.text('Trust details'));
-        await tester.tap(find.text('Trust details'));
-        await tester.pumpAndSettle();
-        final history = find.widgetWithText(TextButton, 'View content history');
-        await tester.ensureVisible(history);
-        await tester.tap(history);
+        if (detail) {
+          await tester.ensureVisible(find.text('Trust details'));
+          await tester.tap(find.text('Trust details'));
+          await tester.pumpAndSettle();
+          final history = find.widgetWithText(
+            TextButton,
+            'View content history',
+          );
+          await tester.ensureVisible(history);
+          await tester.tap(history);
+        } else {
+          await tester.tap(find.byTooltip('Post actions'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Post details'));
+        }
         await tester.pumpAndSettle();
         expect(find.byType(ReceiptDrawerSheet), findsOneWidget);
         expect(find.text('Review recorded'), findsOneWidget);
@@ -220,11 +229,17 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Trust details'));
-      await tester.tap(find.text('Trust details'));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('View content history'));
-      await tester.tap(find.text('View content history'));
+      if (detail) {
+        await tester.ensureVisible(find.text('Trust details'));
+        await tester.tap(find.text('Trust details'));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('View content history'));
+        await tester.tap(find.text('View content history'));
+      } else {
+        await tester.tap(find.byTooltip('Post actions'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Post details'));
+      }
       await tester.pumpAndSettle();
       expect(find.byType(ReceiptDrawerSheet), findsOneWidget);
       expect(find.text('Receipt unavailable'), findsOneWidget);

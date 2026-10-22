@@ -20,10 +20,16 @@ import 'package:lythaus/ui/screens/rewards/rewards_dashboard.dart';
 const double kDesktopBreakpoint = 768;
 
 class AdaptiveShell extends ConsumerStatefulWidget {
-  const AdaptiveShell({super.key, this.initialIndex = 0, this.brand});
+  const AdaptiveShell({
+    super.key,
+    this.initialIndex = 0,
+    this.brand,
+    this.initialFeedId,
+  });
 
   final int initialIndex;
   final Widget? brand;
+  final String? initialFeedId;
 
   @override
   ConsumerState<AdaptiveShell> createState() => _AdaptiveShellState();
@@ -137,7 +143,10 @@ class _AdaptiveShellState extends ConsumerState<AdaptiveShell> {
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProvider);
     final tabs = <Widget>[
-      const HomeFeedNavigator(section: AlphaFeedSection.discover),
+      HomeFeedNavigator(
+        section: AlphaFeedSection.discover,
+        initialFeedId: widget.initialFeedId,
+      ),
       currentUser == null
           ? const Scaffold(
               body: SignInRequired(

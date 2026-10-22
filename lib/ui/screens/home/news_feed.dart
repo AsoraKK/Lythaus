@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lythaus/design_system/components/lyth_empty_state.dart';
 import 'package:lythaus/state/models/feed_models.dart';
 import 'package:lythaus/state/providers/feed_providers.dart';
-import 'package:lythaus/ui/components/news_card.dart';
+import 'package:lythaus/ui/components/interactive_feed_card.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 
 const _membershipAccessDisclosure =
@@ -172,7 +172,7 @@ class NewsFeed extends ConsumerWidget {
                   final item = items[index];
                   final canEdit =
                       currentUserId != null && currentUserId == item.authorId;
-                  return NewsCard(
+                  return InteractiveFeedCard(
                     item: item,
                     onTap: onOpenItem == null ? null : () => onOpenItem!(item),
                     canEdit: canEdit,

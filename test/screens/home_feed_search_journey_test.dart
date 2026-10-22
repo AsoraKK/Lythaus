@@ -103,6 +103,7 @@ void main() {
       await tester.drag(listView, const Offset(0, -1200));
       await tester.pumpAndSettle();
       await tester.ensureVisible(resultBody);
+      await tester.pumpAndSettle();
       final before = tester.state<ScrollableState>(scrollable).position.pixels;
       expect(before, greaterThan(0));
 

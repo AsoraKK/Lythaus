@@ -16,6 +16,10 @@ class Post {
   final String authorId;
   final String authorUsername;
   final String text;
+  final String? title;
+  final String? viewerReaction;
+  final bool isPublication;
+  final String? backingPostId;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final int likeCount;
@@ -43,6 +47,10 @@ class Post {
     required this.authorId,
     required this.authorUsername,
     required this.text,
+    this.title,
+    this.viewerReaction,
+    this.isPublication = false,
+    this.backingPostId,
     required this.createdAt,
     this.updatedAt,
     this.likeCount = 0,
@@ -103,6 +111,17 @@ class Post {
       authorId: authorId,
       authorUsername: username,
       text: textValue,
+      title: json['title'] is String ? (json['title'] as String).trim() : null,
+      viewerReaction:
+          const [
+            'like',
+            'insightful',
+            'support',
+          ].contains(json['viewerReaction'])
+          ? json['viewerReaction'] as String
+          : null,
+      isPublication: json.containsKey('post_id'),
+      backingPostId: json['post_id'] as String?,
       createdAt:
           DateTime.tryParse(createdAtValue?.toString() ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
@@ -178,6 +197,9 @@ class Post {
       'id': id,
       'authorId': authorId,
       'authorUsername': authorUsername,
+      if (title != null) 'title': title,
+      if (viewerReaction != null) 'viewerReaction': viewerReaction,
+      if (isPublication) 'post_id': backingPostId,
       'text': text,
       'createdAt': createdAt.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),

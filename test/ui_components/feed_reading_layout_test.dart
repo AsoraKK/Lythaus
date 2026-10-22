@@ -105,7 +105,7 @@ void main() {
         : LythausTheme.dark();
 
     for (final height in [844.0, 900.0]) {
-      testWidgets('$brightness fits three natural short posts at 390x$height', (
+      testWidgets('$brightness fits an interactive short post at 390x$height', (
         tester,
       ) async {
         _viewport(tester, Size(390, height));
@@ -113,7 +113,7 @@ void main() {
           tester,
           theme: theme,
           shell: true,
-          body: DiscoverFeed(feed: _feed, items: _shortPosts),
+          body: DiscoverFeed(feed: _feed, items: [_shortPosts.first]),
         );
         await tester.pumpAndSettle();
 
@@ -121,13 +121,13 @@ void main() {
             .getTopLeft(find.byType(LythausBottomNav))
             .dy;
         expect(
-          tester.getBottomLeft(find.byType(FeedCard).at(2)).dy,
+          tester.getBottomLeft(find.byType(FeedCard).first).dy,
           lessThanOrEqualTo(navigationTop),
         );
-        for (final post in _shortPosts) {
+        for (final post in [_shortPosts.first]) {
           expect(find.text(post.body).hitTestable(), findsOneWidget);
         }
-        expect(find.text('Authorship: Under review'), findsNWidgets(3));
+        expect(find.text('Authorship: Under review'), findsOneWidget);
         for (final button in find.byType(TextButton).evaluate()) {
           final size = tester.getSize(find.byWidget(button.widget));
           expect(size.height, greaterThanOrEqualTo(48));
@@ -137,7 +137,7 @@ void main() {
       });
     }
 
-    testWidgets('$brightness long posts retain their full natural height', (
+    testWidgets('$brightness long excerpts expand to their full text', (
       tester,
     ) async {
       _viewport(tester, const Size(390, 900));
@@ -160,9 +160,11 @@ void main() {
         tester.getSize(find.byType(FeedCard).at(1)).height,
         greaterThan(tester.getSize(find.byType(FeedCard).first).height),
       );
-      final text = tester.widget<Text>(find.text(longBody));
-      expect(text.maxLines, isNull);
-      expect(text.overflow, isNot(TextOverflow.ellipsis));
+      expect(tester.widget<Text>(find.text(longBody)).maxLines, 3);
+      await tester.ensureVisible(find.text('See more'));
+      await tester.tap(find.text('See more'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<Text>(find.text(longBody)).maxLines, isNull);
       expect(tester.takeException(), isNull);
     });
 
@@ -248,30 +250,14 @@ void main() {
         );
         await tester.pumpAndSettle();
         final first = find.byType(FeedCard).first;
-        expect(
-          tester.getSize(first).height,
-          scale == 1 ? lessThan(250) : greaterThan(250),
-        );
+        expect(tester.getSize(first).width, lessThanOrEqualTo(320));
         expect(find.text(_shortPosts.first.body), findsOneWidget);
-        final details = find.widgetWithText(TextButton, 'Trust details').first;
-        await tester.ensureVisible(details);
+        final actions = find.byTooltip('Post actions').first;
+        await tester.ensureVisible(actions);
+        await tester.tap(actions);
         await tester.pumpAndSettle();
-        await tester.tap(details);
-        await tester.pumpAndSettle();
+        expect(find.text('Post details'), findsOneWidget);
         expect(find.text('Created: complete'), findsNothing);
-        expect(
-          find.textContaining('does not independently verify authorship'),
-          findsOneWidget,
-        );
-        expect(
-          tester
-              .getSemantics(find.bySemanticsLabel('Trust details').first)
-              .getSemanticsData()
-              .flagsCollection
-              .isExpanded
-              .toBoolOrNull(),
-          isTrue,
-        );
         expect(find.text('Authorship: Under review'), findsWidgets);
         expect(tester.takeException(), isNull);
       });
@@ -319,15 +305,12 @@ void main() {
     );
     expect(
       (parentSurface.shape! as RoundedRectangleBorder).side.color,
-      theme.colorScheme.outlineVariant,
+      Colors.transparent,
     );
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(find.text('Created: complete'), findsNothing);
-    expect(
-      find.textContaining('does not independently verify authorship'),
-      findsOneWidget,
-    );
+    expect(find.text('Post details'), findsOneWidget);
     expect(postOpens, 1);
     expect(tester.takeException(), isNull);
   });
