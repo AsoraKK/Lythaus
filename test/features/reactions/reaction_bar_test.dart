@@ -72,6 +72,35 @@ Widget _wrap(Widget widget, {List<Override> overrides = const []}) {
 
 void main() {
   group('ReactionBar', () {
+    testWidgets(
+      'guest controls are read-only without creating an uncertain write',
+      (tester) async {
+        await tester.pumpWidget(
+          _wrap(
+            const ReactionBar(contentId: 'post-1', authorUserId: 'writer'),
+            overrides: [
+              authStateProvider.overrideWith((ref) => FeedTestAuth(null)),
+            ],
+          ),
+        );
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(ReactionBar)),
+        );
+        expect(
+          tester
+              .widget<OutlinedButton>(
+                find.widgetWithText(OutlinedButton, 'Like'),
+              )
+              .onPressed,
+          isNull,
+        );
+        expect(
+          find.text('Sign in to react to this contribution.'),
+          findsOneWidget,
+        );
+        expect(container.read(pendingFeedActionsProvider), isEmpty);
+      },
+    );
     testWidgets('renders canonical reaction chips', (tester) async {
       await tester.pumpWidget(
         _wrap(const ReactionBar(contentId: 'post-1', authorUserId: 'author-1')),

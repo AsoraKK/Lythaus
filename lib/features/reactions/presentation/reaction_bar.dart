@@ -74,6 +74,7 @@ class _ReactionBarState extends ConsumerState<ReactionBar> {
       return;
     }
     final session = ref.read(feedReadSessionProvider);
+    if (!session.isAuthenticated) return;
     final useful = ref.read(confirmedUsefulProvider.notifier);
     final pending = ref.read(pendingFeedActionsProvider.notifier);
     final postId = widget.contentId;
@@ -100,13 +101,11 @@ class _ReactionBarState extends ConsumerState<ReactionBar> {
     try {
       final token = await session.readToken();
       session.requireCurrent();
-      await service
-          .reaction(
-            postId,
-            previous == type.apiValue ? null : type.apiValue,
-            token!,
-          )
-          .timeout(const Duration(seconds: 10));
+      await service.reaction(
+        postId,
+        previous == type.apiValue ? null : type.apiValue,
+        token!,
+      );
       if (session.isCurrent) {
         useful.state = {
           ...useful.state,
@@ -159,6 +158,7 @@ class _ReactionBarState extends ConsumerState<ReactionBar> {
     final blocked = ref
         .watch(pendingFeedActionsProvider)
         .containsKey(widget.contentId);
+    final signedIn = ref.watch(feedReadSessionProvider).isAuthenticated;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,7 +175,7 @@ class _ReactionBarState extends ConsumerState<ReactionBar> {
                 selected: _isSelected(type),
                 selectedColor: selectedColor,
                 defaultColor: defaultColor,
-                onTap: _submitting || blocked
+                onTap: _submitting || blocked || !signedIn
                     ? null
                     : () => _handleReaction(type),
               ),
@@ -183,7 +183,14 @@ class _ReactionBarState extends ConsumerState<ReactionBar> {
           ],
         ),
 
-        // ── Negative reactions row (collapsible) ──────────────────────────
+        if (!signedIn) const Text('Sign in to react to this contribution.'),
+        if (blocked)
+          Semantics(
+            liveRegion: true,
+            child: const Text(
+              'A change is pending or unconfirmed. Return to the feed to check its current state before reacting again.',
+            ),
+          ),
       ],
     );
   }

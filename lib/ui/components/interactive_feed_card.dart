@@ -461,7 +461,7 @@ class _FeedActionsState extends ConsumerState<_FeedActions> {
                   selected ? Icons.thumb_up : Icons.thumb_up_outlined,
                   size: 20,
                 ),
-                label: Text(selected ? 'Useful ✓' : 'Useful'),
+                label: Text(selected ? 'Useful selected' : 'Useful'),
               ),
               IconButton(
                 tooltip: 'Negative feedback',
