@@ -25,19 +25,23 @@ jobs:
       contents: read
     env:
       RELEASE_SHA: ${{ inputs.release_sha }}
+      REF_PROTECTED: ${{ github.ref_protected }}
     steps:
       - name: Checkout exact current main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: main
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
       - name: Require exact current main SHA
         shell: bash
         run: |
           set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$REF_PROTECTED" = true
           git fetch --no-tags origin main
           [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_SHA" = "$RELEASE_SHA"
           [[ "$RELEASE_SHA" == "$(git rev-parse HEAD)" ]]
           [[ "$RELEASE_SHA" == "$(git rev-parse origin/main)" ]]
 
@@ -56,6 +60,15 @@ jobs:
           npm run test:planetscale-production-migrations
           node --test scripts/tests/planetscale-cutover-identity-preflight.test.mjs
 
+      - name: Recheck current main before protected reads
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA"
+          git diff --quiet
+          git diff --cached --quiet
+
       - name: Inspect current main through existing protected credentials
         env:
           PLANETSCALE_ADMIN_DATABASE_URL: ${{ secrets.PLANETSCALE_ADMIN_DATABASE_URL }}
@@ -69,6 +82,15 @@ jobs:
           mkdir -p "$EVIDENCE_DIR"
           node scripts/ci/planetscale-cutover-identity-preflight.mjs > "$EVIDENCE_DIR/summary.json"
 
+      - name: Summarize identity and separate product authority status
+        if: always()
+        shell: bash
+        run: |
+          report="$RUNNER_TEMP/planetscale-cutover-identity/summary.json"
+          if [[ -s "$report" ]]; then
+            jq '{sourceMainSha,status,blockers,productGrantAuthority}' "$report" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Upload sanitized identity evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -76,3 +98,4 @@ jobs:
           name: planetscale-cutover-identity-${{ inputs.release_sha }}
           path: ${{ runner.temp }}/planetscale-cutover-identity
           if-no-files-found: ignore
+          retention-days: 7
