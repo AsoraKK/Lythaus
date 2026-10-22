@@ -85,3 +85,13 @@ was cherry-picked. Default-disabled media gates remain disabled. Production
 remains the parent-reported release128 / `3880a8be`; schema0021 is not applied,
 and restore/billing evidence remains blocked. Canonical release gates still
 apply to any eventual exact-commit deployment.
+
+## Parent-authorized main integration
+
+After the saved environment recovered, current main `e0a8eb52e3ec58719007ba8651e1e5d5bc24232d`
+(merged image PR1074) was merged into this isolated branch without conflicts.
+Every path changed by the image merge is byte-identical to main in the resulting
+candidate; no image recovery implementation was overwritten. Wordmark and other
+parent lanes remain separate. The PR records the resulting exact candidate and
+integration-check outcomes. Earlier test/render records remain identified by
+their original source; they are not silently promoted to integrated evidence.
