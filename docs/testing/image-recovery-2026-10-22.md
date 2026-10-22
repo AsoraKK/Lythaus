@@ -157,6 +157,20 @@ corrected before the 184-test run. The initial OpenAPI check exposed stale route
 count/inventory expectations, corrected to include the new GET before its
 77-pass/17-skip result. None of these superseded failures is current acceptance.
 
+The initial published candidate `fc081eb1a8cee0ec5384e9b561f5da3091e5d06c`
+failed posting-feedback workflow `39768955832`: the new type-only `BetaConfig`
+import pulled Worker environment types into the scoped offline evaluator,
+which has no `SendEmail` ambient type. The correction replaces that import
+with the identical six-field structural authority interface in `beta.ts`.
+No workflow, global type configuration or runtime guard changed. Independent
+review verified identical emitted runtime JavaScript before and after
+(SHA-256 `b3af1eaa1d15354fc498eafa2a90ac05c481ee2a8da4e3833768be813899aed7`).
+The unchanged offline runner then passed 38 tests and 32 synthetic fixtures,
+with zero external requests and publication withheld. The 25 cache tests and
+native typecheck also passed. This type-only correction changes no client
+source or rendered artifact. The original CI failure is retained; exact-head
+hosted checks must pass on the corrected published candidate.
+
 ## Live blockers and release state
 
 1. SAFE-A has runtime source, not qualified deployed image detection evidence.

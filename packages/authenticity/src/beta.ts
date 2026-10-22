@@ -5,7 +5,6 @@ import type { ModerationAnalysis } from './moderation.ts';
 import { sha256Hex } from './forensics.ts';
 import { selectResolutionRoute } from './resolution-gate.ts';
 import { compileEpistemicLedger, applyWp005aRoutingGate, type EvidenceLedger } from './epistemic-compiler.ts';
-import type { BetaConfig } from './beta-config.ts';
 
 export const BETA_VERSION = 'lythaus-authenticity-beta-v0.1.0';
 export const BETA_POLICY = 'lythaus-author-private-beta-policy-v1';
@@ -77,7 +76,14 @@ export function assertSafeResult(value: SafeResult, expected: BetaBinding & { ru
     check(bundle);
   }
 }
-type BetaEvidenceAuthority = Pick<BetaConfig, 'safeEnabled' | 'rightsApproval' | 'runtimeApproval' | 'runtimeDigest' | 'preprocessingHash' | 'sourceHistoryHashes'>;
+interface BetaEvidenceAuthority {
+  safeEnabled: boolean;
+  rightsApproval: string | null;
+  runtimeApproval: string | null;
+  runtimeDigest: string;
+  preprocessingHash: string;
+  sourceHistoryHashes: string[];
+}
 type BetaEvidenceBinding = Pick<BetaBinding, 'caseId' | 'inputHash' | 'revision'> & { runId?: string };
 export function betaEvidenceCurrent(safe: SafeResult, config: BetaEvidenceAuthority, binding: BetaEvidenceBinding): boolean {
   if (!config.safeEnabled || !config.rightsApproval || !config.runtimeApproval) return false;
