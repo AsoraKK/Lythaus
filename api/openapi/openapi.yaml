@@ -175,6 +175,8 @@ paths:
     $ref: './product-integrity.yaml#/paths/~1content~1flags'
   /media/uploads:
     $ref: './product-integrity.yaml#/paths/~1media~1uploads'
+  /media/uploads/{uploadSessionId}:
+    $ref: './product-integrity.yaml#/paths/~1media~1uploads~1{uploadSessionId}'
   /media/uploads/{uploadSessionId}/bytes:
     $ref: './product-integrity.yaml#/paths/~1media~1uploads~1{uploadSessionId}~1bytes'
   /media/uploads/{uploadSessionId}/finalise:

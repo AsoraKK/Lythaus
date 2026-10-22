@@ -129,6 +129,9 @@ class CreatePostRequest {
   });
 
   Map<String, dynamic> toJson() {
+    if (mediaUrl != null || contentType != 'text') {
+      throw ArgumentError('Images cannot be attached to posts yet');
+    }
     final validationError = validatePublicPostAuthorship(
       text: text,
       aiLabel: aiLabel,

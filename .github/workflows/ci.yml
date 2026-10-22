@@ -168,7 +168,7 @@ jobs:
       - run: npm run test:budget
       - run: npm ci --ignore-scripts --prefix apps/lythaus-authenticity-runtime
       - run: npx tsc -p apps/lythaus-authenticity-runtime/tsconfig.json --noEmit
-      - run: node --experimental-strip-types --test packages/authenticity/tests/beta.test.mjs packages/authenticity/tests/wp005a.test.mjs packages/authenticity/tests/wp005b.test.mjs
+      - run: node --experimental-strip-types --experimental-test-module-mocks --test packages/authenticity/tests/beta.test.mjs packages/authenticity/tests/beta-cache-fence.test.mjs packages/authenticity/tests/wp005a.test.mjs packages/authenticity/tests/wp005b.test.mjs
       - name: Exercise private alpha hardening regressions
         run: npm run test:authenticity-private-alpha
       - run: node --test scripts/tests/authenticity-beta-release.test.mjs

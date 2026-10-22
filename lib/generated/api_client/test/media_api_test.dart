@@ -25,6 +25,15 @@ void main() {
       // TODO
     });
 
+    // Read private upload processing status
+    //
+    // Owner-only, no-store status. Completed integrity processing remains private review; safety and authenticity have not run and publication is not allowed.
+    //
+    //Future<MediaUploadStatus> mediaUploadsGetStatus(String uploadSessionId) async
+    test('test mediaUploadsGetStatus', () async {
+      // TODO
+    });
+
     // Upload bytes to a private session
     //
     // Rechecks the active owner and pending session, bounds the body before R2, and verifies exact size, SHA-256 and MIME before storing bytes in quarantine.

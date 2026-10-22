@@ -1,15 +1,16 @@
 import { query, transaction, type HyperdriveBinding } from '@lythaus/db';
 import type { EnvBindings } from '@lythaus/cloudflare-env';
 import { uuidv7 } from '@lythaus/security';
-import { BETA_POLICY, SAFE_THRESHOLD, authorBetaView, betaAdviceEligible, type BetaResult, type BetaState } from '../../../packages/authenticity/src/beta.ts';
-import { readBetaConfig } from '../../../packages/authenticity/src/beta-config.ts';
+import { BETA_POLICY, SAFE_THRESHOLD, authorBetaView, betaResultCurrent, betaAdviceEligible, type BetaResult, type BetaState } from '../../../packages/authenticity/src/beta.ts';
+import { readBetaConfig, type BetaConfig } from '../../../packages/authenticity/src/beta-config.ts';
 import { readBoundedJson } from './request-body-policy.ts';
 import type { AdminActor } from './admin-access-runtime-policy.ts';
 
 type Env = EnvBindings & { DB_ADMIN_FRESH: HyperdriveBinding };
-type Row = { case_id:string;owner_id:string;state:BetaState;revision:number;review_state:string;failure_code:string|null;result:BetaResult|null;created_at:Date;updated_at:Date;expires_at:Date };
+type Row = { case_id:string;owner_id:string;input_hash:string;state:BetaState;revision:number;review_state:string;failure_code:string|null;result:BetaResult|null;created_at:Date;updated_at:Date;expires_at:Date };
 const json = (value:unknown,status=200)=>Response.json(value,{status,headers:{'cache-control':'private, no-store','x-content-type-options':'nosniff'}});
-const view = (row:Row)=>authorBetaView({id:row.case_id,state:row.state,reviewState:row.review_state,result:row.result,createdAt:row.created_at.toISOString(),updatedAt:row.updated_at.toISOString(),expiresAt:row.expires_at.toISOString()});
+const evidenceCurrent = (row:Row,config:BetaConfig)=>!row.result || betaResultCurrent(row.result,config,{caseId:row.case_id,inputHash:row.input_hash,revision:row.revision});
+const view = (row:Row,config:BetaConfig)=>authorBetaView({id:row.case_id,state:row.state,reviewState:row.review_state,result:row.result,createdAt:row.created_at.toISOString(),updatedAt:row.updated_at.toISOString(),expiresAt:row.expires_at.toISOString(),evidenceCurrent:evidenceCurrent(row,config)});
 
 export async function handleAdminBeta(request:Request,env:Env,actor:AdminActor):Promise<Response>{
   try { return await routeAdminBeta(request,env,actor); } catch (error) {
@@ -22,10 +23,11 @@ async function routeAdminBeta(request:Request,env:Env,actor:AdminActor):Promise<
   const match=new URL(request.url).pathname.match(/^\/api\/admin\/authenticity\/cases(?:\/([a-f0-9-]{36})(?:\/(review|retry|image|advice))?)?$/);
   if(!match) return json({error:'not_found'},404);
   const [,caseId,action]=match;
+  const config=await readBetaConfig(env);
   if(!caseId && request.method==='GET') {
     await query(env.DB_ADMIN_FRESH,`INSERT INTO system.audit_events(id,actor_id,action,target_type,reason_code,correlation_id,metadata) VALUES($1,$2,'authenticity.beta.list','authenticity_case','ADMIN_ACCESS',$1::uuid::text,$3::jsonb)`,[uuidv7(),actor.userId,JSON.stringify({role:actor.role})]);
     const rows=await query<Row>(env.DB_ADMIN_FRESH,`SELECT * FROM moderation.authenticity_beta WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 100`);
-    return json({items:rows.rows.map(view)});
+    return json({items:rows.rows.map(row=>view(row,config))});
   }
   const found=await query<Row>(env.DB_ADMIN_FRESH,`SELECT * FROM moderation.authenticity_beta WHERE case_id=$1 AND deleted_at IS NULL`,[caseId]);
   const row=found.rows[0]; if(!row) return json({error:'not_found'},404);
@@ -37,8 +39,9 @@ async function routeAdminBeta(request:Request,env:Env,actor:AdminActor):Promise<
       return new Response(display.body,{headers:{'content-type':'image/png','cache-control':'private, no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; sandbox"}});
     }
     const feedback=await query(env.DB_ADMIN_FRESH,`SELECT id,kind,message,policy_version,ground_truth,training_consent,created_at FROM moderation.authenticity_beta_feedback WHERE case_id=$1 ORDER BY created_at LIMIT 100`,[caseId]);
-    const safe=row.result?.safe;
-    return json({...view(row),feedback:feedback.rows,diagnostics:{failureCode:row.failure_code,revision:row.revision,safe: safe?{status:safe.status,rawClassifierScore:safe.score,threshold:SAFE_THRESHOLD,checkpoint:safe.checkpoint,preprocessing:safe.preprocessing,preprocessingHash:safe.preprocessingHash,runtimeDigest:safe.runtimeDigest,timings:safe.timings}:null,advisory:row.result?.advisory??null,evidenceFamilies:row.result?.packet.evidenceFamilies??null}});
+    const result=evidenceCurrent(row,config)?row.result:null;
+    const safe=result?.safe;
+    return json({...view(row,config),feedback:feedback.rows,diagnostics:{failureCode:row.failure_code,revision:row.revision,safe: safe?{status:safe.status,rawClassifierScore:safe.score,threshold:SAFE_THRESHOLD,checkpoint:safe.checkpoint,preprocessing:safe.preprocessing,preprocessingHash:safe.preprocessingHash,runtimeDigest:safe.runtimeDigest,timings:safe.timings}:null,advisory:result?.advisory??null,evidenceFamilies:result?.packet.evidenceFamilies??null}});
   }
   if(request.method!=='POST' || !['review','retry','advice'].includes(action)) return json({error:'not_found'},404);
   const input=await readBoundedJson<{message?:unknown}>(request);
@@ -46,13 +49,13 @@ async function routeAdminBeta(request:Request,env:Env,actor:AdminActor):Promise<
   if(!message || message.length>2000) return json({error:'review_explanation_required'},400);
   if(['retry','advice'].includes(action) && !['owner','administrator','operations'].includes(actor.role)) return json({error:'admin_role_required'},403);
   if(['retry','advice'].includes(action)) {
-    const config=await readBetaConfig(env);
     if(!config.enabled || !config.allowlist.includes(row.owner_id)) return json({error:'beta_paused'},409);
     if(action==='advice' && (!config.adviserEnabled || !config.budgetApproval || !config.rightsApproval || !config.runtimeApproval)) return json({error:'beta_paused'},409);
   }
   await transaction(env.DB_ADMIN_FRESH,async client=>{
     const current=await client.query<Row>(`SELECT * FROM moderation.authenticity_beta WHERE case_id=$1 AND deleted_at IS NULL FOR UPDATE`,[caseId]);
     if(!current.rows[0]) throw new Error('moderation_case_not_found');
+    if(['retry','advice'].includes(action) && !evidenceCurrent(current.rows[0],await readBetaConfig(env))) throw new Error('beta_advice_ineligible');
     if(action==='advice') {
       if(!betaAdviceEligible(current.rows[0].result)) throw new Error('beta_advice_ineligible');
       const consumed=await client.query(`SELECT id FROM moderation.authenticity_beta_steps WHERE case_id=$1 AND step='advice' LIMIT 1`,[caseId]);

@@ -5,6 +5,7 @@ import type { ModerationAnalysis } from './moderation.ts';
 import { sha256Hex } from './forensics.ts';
 import { selectResolutionRoute } from './resolution-gate.ts';
 import { compileEpistemicLedger, applyWp005aRoutingGate, type EvidenceLedger } from './epistemic-compiler.ts';
+import type { BetaConfig } from './beta-config.ts';
 
 export const BETA_VERSION = 'lythaus-authenticity-beta-v0.1.0';
 export const BETA_POLICY = 'lythaus-author-private-beta-policy-v1';
@@ -63,6 +64,7 @@ export function assertSafeResult(value: SafeResult, expected: BetaBinding & { ru
   if (!value.timings || ['decodeMs','inferenceMs','peakRssBytes'].some(key => { const v=value.timings[key as keyof SafeResult['timings']]; return typeof v !== 'number' || !Number.isFinite(v) || v < 0; })) throw new Error('beta_timings_invalid');
   if (value.measurements && (typeof value.measurements.warm !== 'boolean' || Object.entries(value.measurements).some(([k,v])=>k!=='warm' && v!==null && (typeof v!=='number' || !Number.isFinite(v) || v<0)))) throw new Error('beta_measurements_invalid');
   if (value.status === 'OK' && !value.facts) throw new Error('beta_facts_missing');
+  if (value.facts && !['UNKNOWN', 'DOCUMENTED_LOSSLESS', 'KNOWN_DEGRADED'].includes(value.facts.sourceHistory)) throw new Error('beta_source_history_invalid');
   if (value.facts && (!Number.isSafeInteger(value.facts.width) || !Number.isSafeInteger(value.facts.height) || value.facts.width < 1 || value.facts.height < 1 || value.facts.width * value.facts.height > BETA_LIMITS.pixels || value.facts.frames !== 1 || value.facts.mode !== 'RGB' || !['image/jpeg', 'image/png'].includes(value.facts.mime))) throw new Error('beta_facts_invalid');
   if (value.forensics) {
     const bundle = value.forensics;
@@ -74,6 +76,39 @@ export function assertSafeResult(value: SafeResult, expected: BetaBinding & { ru
     };
     check(bundle);
   }
+}
+type BetaEvidenceAuthority = Pick<BetaConfig, 'safeEnabled' | 'rightsApproval' | 'runtimeApproval' | 'runtimeDigest' | 'preprocessingHash' | 'sourceHistoryHashes'>;
+type BetaEvidenceBinding = Pick<BetaBinding, 'caseId' | 'inputHash' | 'revision'> & { runId?: string };
+export function betaEvidenceCurrent(safe: SafeResult, config: BetaEvidenceAuthority, binding: BetaEvidenceBinding): boolean {
+  if (!config.safeEnabled || !config.rightsApproval || !config.runtimeApproval) return false;
+  try {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(safe.runId)) return false;
+    assertSafeResult(safe, { ...binding, runId: binding.runId ?? safe.runId, runtimeDigest: config.runtimeDigest, preprocessingHash: config.preprocessingHash });
+  } catch { return false; }
+  return safe.facts?.sourceHistory !== 'DOCUMENTED_LOSSLESS' || config.sourceHistoryHashes.includes(binding.inputHash);
+}
+export function betaResultCurrent(result: BetaResult, config: BetaEvidenceAuthority, binding: BetaEvidenceBinding): boolean {
+  try {
+    if (!result || result.schemaVersion !== BETA_VERSION || result.policyVersion !== BETA_POLICY || !betaEvidenceCurrent(result.safe, config, binding)) return false;
+    assertEvidencePacket(result.packet);
+    if (result.packet.caseId !== binding.caseId || result.packet.inputHash !== binding.inputHash || result.packet.runId !== result.safe.runId) return false;
+    const safety = result.packet.safetyContext;
+    const expected = compileBetaResult(result.safe, { provider: safety.provider ?? 'unavailable', modelVersion: safety.model, result: safety.canonicalResult === 'NOT_RUN' ? 'PROVIDER_FAILURE' : safety.canonicalResult, executionMs: 0, costEstimateUsd: 0, reasonCodes: [] });
+    for (const key of ['status', 'support', 'finding', 'rawThresholdCrossing', 'route', 'publicationEligible', 'authenticityEnforcementEnabled'] as const) if (result[key] !== expected[key]) return false;
+    if (result.packet.originAxes.cameraEvidence !== expected.packet.originAxes.cameraEvidence || result.packet.originAxes.syntheticEvidence !== expected.packet.originAxes.syntheticEvidence) return false;
+    const measurement = result.packet.evidence.filter(item => item.name === 'safe_a_beta_positive_specialist');
+    const expectedMeasurement = expected.packet.evidence.find(item => item.name === 'safe_a_beta_positive_specialist')!;
+    if (measurement.length !== 1 || measurement[0].evidenceId !== expectedMeasurement.evidenceId) return false;
+    const actualValue = measurement[0].value, expectedValue = expectedMeasurement.value;
+    if (!actualValue || typeof actualValue !== 'object' || Array.isArray(actualValue) || !expectedValue || typeof expectedValue !== 'object' || Array.isArray(expectedValue)) return false;
+    if (Object.keys(actualValue).length !== Object.keys(expectedValue).length || Object.entries(expectedValue).some(([key, value]) => actualValue[key] !== value)) return false;
+    if (!result.advisory || result.advisory.role !== BETA_ADVISER_ROLE) return false;
+    if (result.advisory.status === 'complete') {
+      if (!betaAdviceEligible(expected)) return false;
+      parseBetaAdvice({ response: JSON.stringify(result.advisory.recommendation) }, result);
+    }
+    return true;
+  } catch { return false; }
 }
 export function safeSupport(facts: BetaImageFacts | null): BetaResult['support'] {
   if (!facts || !['image/jpeg', 'image/png'].includes(facts.mime) || facts.frames !== 1 || facts.mode !== 'RGB' || Math.min(facts.width, facts.height) < 256) return 'UNSUPPORTED';
@@ -121,12 +156,14 @@ export function parseBetaAdvice(raw: unknown, result: BetaResult): JudgeRecommen
   if (!recommendation.requiresReview || !['HIGH','VERY_HIGH'].includes(recommendation.uncertainty) || recommendation.missingEvidence.length === 0 || recommendation.recommendedAdditionalTests.length !== 0 || recommendation.alternativeHypotheses.length !== 0) throw new Error('beta_advice_boundary_invalid');
   return recommendation;
 }
-export function authorBetaView(input: { id: string; state: BetaState; createdAt: string; updatedAt: string; result: BetaResult | null; reviewState: string; expiresAt: string }) {
+export function authorBetaView(input: { id: string; state: BetaState; createdAt: string; updatedAt: string; result: BetaResult | null; reviewState: string; expiresAt: string; evidenceCurrent?: boolean }) {
   const explanations = { SYNTHETIC_LIKE_EVIDENCE: 'Synthetic-like evidence was detected. This does not establish authorship or identify a generator.', NO_POSITIVE_SAFE_EVIDENCE: 'No positive SAFE evidence was detected. This does not establish human authorship.', INCONCLUSIVE: 'Processing history or image degradation prevents reliable interpretation.', UNAVAILABLE: 'The detector did not produce usable evidence.' };
   const progress: Partial<Record<BetaState,string>> = { uploading: 'Finish uploading this image to begin private analysis.', queued: 'The image is queued for private analysis.', analyzing: 'Safety checks and image analysis are in progress.', paused: 'Analysis is paused. An administrator must resolve activation or budget requirements.', expired: 'The processing deadline expired. This case will not start further model calls.', cancelled: 'Analysis was cancelled.', safety_review: 'Independent Safety checks require review. Authorship analysis has stopped.', safety_blocked: 'Independent Safety checks stopped this image. This says nothing about authorship.' };
-  return { schemaVersion: BETA_VERSION, caseId: input.id, status: input.state, createdAt: input.createdAt, updatedAt: input.updatedAt, expiresAt: input.expiresAt, reviewState: input.reviewState,
-    finding: input.result?.finding ?? 'UNAVAILABLE', explanation: progress[input.state] ?? explanations[input.result?.finding ?? 'UNAVAILABLE'], advisoryStatus: input.result?.advisory.status ?? 'not_requested',
-    detectorExecution: input.result?.safe.status === 'OK' ? 'completed' : input.result ? 'no_usable_output' : 'not_recorded',
+  const withdrawn = input.result !== null && input.evidenceCurrent === false;
+  const result = withdrawn ? null : input.result;
+  return { schemaVersion: BETA_VERSION, caseId: input.id, status: withdrawn && ['complete','inconclusive','unsupported'].includes(input.state) ? 'inconclusive' : input.state, createdAt: input.createdAt, updatedAt: input.updatedAt, expiresAt: input.expiresAt, reviewState: input.reviewState,
+    finding: result?.finding ?? 'UNAVAILABLE', explanation: withdrawn ? 'The recorded analysis is no longer usable under current evidence approvals.' : progress[input.state] ?? explanations[result?.finding ?? 'UNAVAILABLE'], advisoryStatus: withdrawn ? 'disabled' : result?.advisory.status ?? 'not_requested',
+    detectorExecution: withdrawn ? 'no_usable_output' : result?.safe.status === 'OK' ? 'completed' : result ? 'no_usable_output' : 'not_recorded',
     limitations: ['Private experimental analysis; not authenticity certification.', 'JPEG processing and unknown history limit interpretation.', 'Coverage differs across generators; missed detections and false positives occur.'],
     versions: { analysis: BETA_VERSION, policy: BETA_POLICY, detector: 'SAFE-A', adviser: BETA_ADVISER_ROLE }, publicationEligible: false, rewardsEligible: false };
 }

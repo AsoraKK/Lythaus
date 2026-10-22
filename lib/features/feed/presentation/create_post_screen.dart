@@ -23,6 +23,8 @@ import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/services/appeal_provider.dart';
+import 'package:lythaus/features/media/application/private_image_upload.dart';
+import 'package:lythaus/features/media/presentation/private_image_upload_card.dart';
 
 /// Screen for creating a new post
 class CreatePostScreen extends ConsumerStatefulWidget {
@@ -101,6 +103,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       },
     );
     final canCreate = ref.watch(canCreatePostProvider);
+    final privateImagesEnabled = ref.watch(privateImageUploadsEnabledProvider);
+    final imageBlocksPost =
+        privateImagesEnabled &&
+        canCreate &&
+        ref.watch(privateImageUploadProvider).blocksPost;
     final theme = Theme.of(context);
     final isAssisted = state.aiLabel == 'assisted';
     final canEdit =
@@ -141,7 +148,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     });
 
     return PopScope(
-      canPop: !state.isSubmitting && (state.text.isEmpty || state.isSuccess),
+      canPop:
+          !imageBlocksPost &&
+          !state.isSubmitting &&
+          (state.text.isEmpty || state.isSuccess),
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _handleClose(context);
       },
@@ -161,6 +171,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                   onPressed:
                       state.isSubmitting ||
                           state.isRestoring ||
+                          imageBlocksPost ||
                           !state.isValid ||
                           !canCreate
                       ? null
@@ -343,16 +354,20 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                               ),
                             ),
                           const SizedBox(height: 12),
-                          Text(
-                            'Photos are not available yet',
-                            style: context.textTheme.titleSmall,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Image sharing will open after the required safety '
-                            'and authenticity checks are ready. You can submit text for review.',
-                            style: context.textTheme.bodySmall,
-                          ),
+                          if (privateImagesEnabled && canCreate)
+                            PrivateImageUploadCard(canEdit: canEdit)
+                          else ...[
+                            Text(
+                              'Photos are not available yet',
+                              style: context.textTheme.titleSmall,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Image sharing will open after the required safety '
+                              'and authenticity checks are ready. You can submit text for review.',
+                              style: context.textTheme.bodySmall,
+                            ),
+                          ],
                           const SizedBox(height: 12),
                           Text(
                             'Submissions stay private while publication checks are pending. '
@@ -445,6 +460,15 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   void _handleClose(BuildContext context) {
+    if (ref.read(privateImageUploadsEnabledProvider) &&
+        ref.read(privateImageUploadProvider).blocksPost) {
+      LythSnackbar.info(
+        context: context,
+        message:
+            'Finish or clear the private image selection before closing. Uploaded images remain private.',
+      );
+      return;
+    }
     if (_memberDialogOpen) return;
     final state = ref.read(postCreationProvider);
     if (state.isSubmitting) {

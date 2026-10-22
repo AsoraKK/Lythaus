@@ -1,12 +1,24 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  assertTextOnlyPostInput,
   decodeCursor,
   encodeCursor,
   normalizeCustomFeedRules,
   pageRequest,
   reputationBand,
 } from '../src/product-policy.ts';
+
+test('text post ingress accepts only canonical fields and never discards attachment intent', () => {
+  const canonical = { body: 'Synthetic caption', declaredCreationMode: 'human', geoScope: 'none' };
+  assert.doesNotThrow(() => assertTextOnlyPostInput(canonical));
+  assert.doesNotThrow(() => assertTextOnlyPostInput({ ...canonical, geoScope: 'country', placeId: '01900000-0000-7000-8000-000000000001' }));
+  for (const extra of [{ mediaUrl: 'private' }, { attachments: [] }, { image: null }, { mediaIds: [] },
+    { contentType: 'text' }, { publication: { allowed: true } }]) {
+    assert.throws(() => assertTextOnlyPostInput({ ...canonical, ...extra }), /unsupported_content_type/);
+  }
+  for (const malformed of [null, [], 'text', 3]) assert.throws(() => assertTextOnlyPostInput(malformed), /invalid_post/);
+});
 
 const cursor = {
   timestamp: '2026-08-10T12:34:56.000Z',

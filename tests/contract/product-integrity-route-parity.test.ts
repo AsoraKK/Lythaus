@@ -29,6 +29,7 @@ const runtimeRoutes: RuntimeRoute[] = [
   { path: '/flags', method: 'post', worker: 'public', dispatcherNeedle: "url.pathname === '/api/flags'" },
   { path: '/content/flags', method: 'post', worker: 'public', dispatcherNeedle: "url.pathname === '/api/content/flags'" },
   { path: '/media/uploads', method: 'post', worker: 'public', dispatcherNeedle: "url.pathname === '/api/media/uploads'" },
+  { path: '/media/uploads/{uploadSessionId}', method: 'get', worker: 'public', dispatcherNeedle: 'const uploadStatus =' },
   { path: '/media/uploads/{uploadSessionId}/bytes', method: 'put', worker: 'public', dispatcherNeedle: 'const uploadBytes =' },
   { path: '/media/uploads/{uploadSessionId}/finalise', method: 'post', worker: 'public', dispatcherNeedle: 'const finalise =' },
   { path: '/feed', method: 'get', worker: 'public', dispatcherNeedle: "url.pathname === '/api/feed'" },
@@ -305,6 +306,21 @@ describe('product-integrity OpenAPI parity', () => {
     expect(emailVerifyPost.responses['200'].content['application/json'].schema.$ref).toContain('EmailVerificationResponse');
     expect(emailVerifyPost.responses['200'].headers['Cache-Control'].schema.example).toBe('private, no-store');
     expect(spec.components.schemas.EmailVerificationResponse.properties.state.enum).toEqual(['verified']);
+  });
+
+  test('private image status cannot certify safety, human authorship or publication', () => {
+    const operation = spec.paths['/media/uploads/{uploadSessionId}'].get;
+    const schema = spec.components.schemas.MediaUploadStatus;
+    expect(operation.security).toEqual([{ bearerAuth: [] }]);
+    expect(operation.responses['200'].headers['Cache-Control'].schema.example).toBe('private, no-store');
+    expect(schema.additionalProperties).toBe(false);
+    expect(schema.properties.status.enum).toEqual(['pending', 'queued', 'review', 'rejected', 'expired', 'cancelled']);
+    expect(schema.properties.private.enum).toEqual([true]);
+    expect(schema.properties.publication.properties.allowed.enum).toEqual([false]);
+    expect(schema.properties.safety.properties.status.enum).toEqual(['not_run']);
+    expect(schema.properties.authenticity.properties.status.enum).toEqual(['not_run']);
+    expect(schema.properties.objectKey).toBeUndefined();
+    expect(schema.properties.url).toBeUndefined();
   });
 
   test('neutral anti-abuse limits expose stable 429 contracts', () => {

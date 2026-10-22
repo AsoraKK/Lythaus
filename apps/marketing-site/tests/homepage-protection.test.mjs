@@ -36,8 +36,8 @@ const allocatedJobsDiagnosticFiles = new Map([
   // PR #1044 head 75d22de8640ba0d1d687a873746820ee7c39ec10 passed 57/57 media CI checks and received independent review.
   // Proposed PR1063 text allocation; subject-lock support remains separately gated.
   ['apps/lythaus-jobs/src/index.ts', '50a6d8c3f4dd73f49db3c68b463a19b8c172ebb9'],
-  // Exact reviewed media retry/quota and rewards receipt integration; waitlist bytes remain frozen.
-  ['apps/lythaus-public-api/src/index.ts', '811a317d8117a87b98ca3e041e19cd348e75bcd5'],
+  // Exact independently reviewed private image status and attachment gate; waitlist bytes remain frozen.
+  ['apps/lythaus-public-api/src/index.ts', 'dbdbd18ee726e3e399e04fbd01c649534729bb4b'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],
@@ -366,6 +366,15 @@ const reviewedReputationRepairFiles = new Map([
   ['packages/db/src/reputation.ts', '1e58faf3a4d8859de4d659615984025d3d24d2bd'],
   ['packages/db/tests/reputation-persistence.test.mjs', '09168383904d4a62319aae6345b820ed29946f13'],
 ]);
+const reviewedImageRecoveryFiles = new Map([
+  ['apps/lythaus-public-api/src/product-policy.ts', '19a483dde1862c72685cd95b846f0e0517c20879'],
+  ['apps/lythaus-public-api/tests/critical-product-policy.test.mjs', 'e4b8d86ef63b476243e186188619b64fa7269c95'],
+  ['apps/lythaus-public-api/src/authenticity-beta.ts', '4e0eeb56bff042ff80e22bc9cfd9a8ea71cee9b0'],
+]);
+function assertReviewedImageRecoveryFile(filename, blob) {
+  assert.ok(reviewedImageRecoveryFiles.has(filename), 'Image recovery covers only its three independently reviewed dependencies');
+  assert.equal(blob, reviewedImageRecoveryFiles.get(filename), 'Image recovery must match exact independently reviewed source and test bytes');
+}
 function assertReviewedReputationRepair(filename, blob) {
   assert.ok(reviewedReputationRepairFiles.has(filename), 'The reputation exception covers only the independently reviewed implementation and regression test');
   assert.equal(blob, reviewedReputationRepairFiles.get(filename), 'Reputation changes must match the exact reviewed source and test bytes');
@@ -440,6 +449,10 @@ export function assertHomepageFrozen() {
     }
     if (reviewedReputationRepairFiles.has(filename)) {
       assertReviewedReputationRepair(filename, git('hash-object', `--path=${filename}`, filename));
+      continue;
+    }
+    if (reviewedImageRecoveryFiles.has(filename)) {
+      assertReviewedImageRecoveryFile(filename, git('hash-object', `--path=${filename}`, filename));
       continue;
     }
     if (reviewedPrivacyStatusFiles.has(filename)) {
@@ -955,13 +968,27 @@ test('allocated Jobs pins reject altered historical and unrelated source paths',
     allocatedJobsDiagnosticFiles.values().next().value), assert.AssertionError);
 });
 
+test('image recovery allocation rejects previous and unrelated dependency bytes', () => {
+  for (const [filename, expected] of reviewedImageRecoveryFiles) {
+    assert.doesNotThrow(() => assertReviewedImageRecoveryFile(filename, git('hash-object', `--path=${filename}`, filename)));
+    const previous = git('rev-parse', `d9d50807dd36664cda61b137a25aba8f31017b6f:${filename}`);
+    assert.notEqual(previous, expected);
+    assert.throws(() => assertReviewedImageRecoveryFile(filename, previous), assert.AssertionError);
+    assert.throws(() => assertReviewedImageRecoveryFile(filename, '0'.repeat(40)), assert.AssertionError);
+  }
+  assert.throws(() => assertReviewedImageRecoveryFile('apps/marketing-site/src/pages/index.astro',
+    reviewedImageRecoveryFiles.values().next().value), assert.AssertionError);
+  assert.throws(() => assertReviewedImageRecoveryFile('apps/lythaus-public-api/src/auth-runtime-policy.ts',
+    reviewedImageRecoveryFiles.values().next().value), assert.AssertionError);
+});
+
 test('image-integrity allocation rejects superseded Worker bytes without broadening the diagnostic scope', () => {
   // Exact blob IDs from 489aef297ff0b1a40744504594122c9ebc43930d (both Workers)
   // and fecdd6f6b19ad5ea9dd17afa70e420e6deb147b8 (Jobs); the guard compares IDs,
   // so these superseded PR commits need not survive squash.
   const supersededWorkerBlobs = new Map([
     ['apps/lythaus-jobs/src/index.ts', ['da112b2d2c869251ed48941d31d4ac854bb93fa1', '8a6487ab099287f151fc8594b3b9ff846a9226b7', 'a842e8c3654a26adcaae7c8e72efae3d20102cbb', '7b25af78fc1e227b85d1758b0cb31fd0aec09d24']],
-    ['apps/lythaus-public-api/src/index.ts', ['1a231c953f23159e922346760510c8eaee96873a', '7a941be1765e82b5cbf00294b114952ab6ea27a1', '4640957fba06cbecbf8c87640f3d1a52052d1fe4', '6d89caa73ab83ea682a2a9796388d8f2f2ed4833']],
+    ['apps/lythaus-public-api/src/index.ts', ['1a231c953f23159e922346760510c8eaee96873a', '7a941be1765e82b5cbf00294b114952ab6ea27a1', '4640957fba06cbecbf8c87640f3d1a52052d1fe4', '6d89caa73ab83ea682a2a9796388d8f2f2ed4833', '811a317d8117a87b98ca3e041e19cd348e75bcd5']],
   ]);
   for (const [filename, superseded] of supersededWorkerBlobs) {
     const current = git('hash-object', `--path=${filename}`, filename);

@@ -192,6 +192,7 @@ Class | Method | HTTP request | Description
 [*HealthApi*](doc/HealthApi.md) | [**ready**](doc/HealthApi.md#ready) | **GET** /ready | Readiness probe
 [*MediaApi*](doc/MediaApi.md) | [**mediaUploadsCreate**](doc/MediaApi.md#mediauploadscreate) | **POST** /media/uploads | Create a quarantined media upload session
 [*MediaApi*](doc/MediaApi.md) | [**mediaUploadsFinalise**](doc/MediaApi.md#mediauploadsfinalise) | **POST** /media/uploads/{uploadSessionId}/finalise | Finalise a quarantined media upload
+[*MediaApi*](doc/MediaApi.md) | [**mediaUploadsGetStatus**](doc/MediaApi.md#mediauploadsgetstatus) | **GET** /media/uploads/{uploadSessionId} | Read private upload processing status
 [*MediaApi*](doc/MediaApi.md) | [**mediaUploadsPutBytes**](doc/MediaApi.md#mediauploadsputbytes) | **PUT** /media/uploads/{uploadSessionId}/bytes | Upload bytes to a private session
 [*ModerationApi*](doc/ModerationApi.md) | [**contentFlagsCreate**](doc/ModerationApi.md#contentflagscreate) | **POST** /content/flags | Submit a moderation flag
 [*ModerationApi*](doc/ModerationApi.md) | [**flagsCreate**](doc/ModerationApi.md#flagscreate) | **POST** /flags | Submit a moderation flag
@@ -422,6 +423,9 @@ Class | Method | HTTP request | Description
  - [MediaUploadFinaliseResponse](doc/MediaUploadFinaliseResponse.md)
  - [MediaUploadSessionCreateRequest](doc/MediaUploadSessionCreateRequest.md)
  - [MediaUploadSessionCreated](doc/MediaUploadSessionCreated.md)
+ - [MediaUploadStatus](doc/MediaUploadStatus.md)
+ - [MediaUploadStatusPublication](doc/MediaUploadStatusPublication.md)
+ - [MediaUploadStatusSafety](doc/MediaUploadStatusSafety.md)
  - [MemberDetail](doc/MemberDetail.md)
  - [MemberMutationResult](doc/MemberMutationResult.md)
  - [MemberProblemRequest](doc/MemberProblemRequest.md)
