@@ -149,7 +149,7 @@ for (const [engineName, engine] of Object.entries(engines)) for (const width of 
           actualFlutterRelease: true, base, diffSha256, bundleSha256, harnessSha256, sourceManifestSha256,
           at: new Date().toISOString(), engine: engineName, width, scenario, complete,
           calls, errors, unhandled, captures }, null, 2));
-        await browser.close(); await fixture.close();
+        await context.close(); await browser.close(); await fixture.close();
       });
       const button = name => page.getByRole('button', { name, exact: true });
       const text = value => page.getByText(value, { exact: false }).or(page.getByLabel(value, { exact: false })).first();
