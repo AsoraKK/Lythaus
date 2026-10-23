@@ -13,6 +13,7 @@ import 'package:lythaus/core/logging/app_logger.dart';
 import 'package:lythaus/features/privacy/services/privacy_api.dart';
 import 'package:lythaus/features/privacy/services/privacy_repository.dart';
 import 'package:lythaus/features/privacy/state/privacy_state.dart';
+import 'package:lythaus/features/member_verification/application/recent_account_action.dart';
 
 class PrivacyController extends StateNotifier<PrivacyState> {
   PrivacyController({
@@ -136,7 +137,7 @@ class PrivacyController extends StateNotifier<PrivacyState> {
     }
   }
 
-  Future<void> delete() async {
+  Future<void> delete({AccountActionVerification? verification}) async {
     if (!isCurrentSession || !state.canRequestDeletion) return;
     final epoch = ++_epoch;
     state = state.copyWith(
@@ -151,7 +152,10 @@ class PrivacyController extends StateNotifier<PrivacyState> {
         AnalyticsEvents.privacyDeleteRequested,
       );
       if (!_current(epoch)) return;
-      final result = await _repository.deleteAccount(authToken: token);
+      final result = await _repository.deleteAccount(
+        authToken: token,
+        verification: verification,
+      );
       if (_current(epoch)) _applyDeletion(result);
     } on PrivacyException catch (error) {
       if (_current(epoch)) {

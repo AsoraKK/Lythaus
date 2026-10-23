@@ -7,6 +7,7 @@ import 'package:lythaus/core/logging/app_logger.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/services/service_providers.dart';
 import 'package:lythaus/features/privacy/services/privacy_api.dart';
+import 'package:lythaus/features/member_verification/application/recent_account_action.dart';
 
 /// Server status and cooldown are independent: a completed export may still
 /// have a cooldown before another request is permitted.
@@ -129,9 +130,15 @@ class PrivacyRepository {
     }
   }
 
-  Future<ExportStatusDTO> deleteAccount({required String authToken}) async {
+  Future<ExportStatusDTO> deleteAccount({
+    required String authToken,
+    AccountActionVerification? verification,
+  }) async {
     try {
-      return await _api.deleteAccount(authToken: authToken);
+      return await _api.deleteAccount(
+        authToken: authToken,
+        verification: verification,
+      );
     } on PrivacyApiException catch (error) {
       throw _mapApiException(error);
     }
@@ -176,6 +183,7 @@ class PrivacyRepository {
       'A request is active or the request limit has been reached. Refresh status before trying again.',
     PrivacyErrorType.network ||
     PrivacyErrorType.server => 'Something went wrong. Try again.',
+    PrivacyErrorType.verification => error.message,
   }, retryAfter: error.retryAfter);
 }
 

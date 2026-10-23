@@ -10,6 +10,9 @@ import 'package:lythaus/core/network/idempotency_key.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/features/rewards/application/reward_providers.dart';
 import 'package:lythaus/features/rewards/domain/reward_models.dart';
+import 'package:lythaus/features/member_verification/application/recent_account_action.dart';
+import 'package:lythaus/features/member_verification/application/recent_account_action_providers.dart';
+import 'package:lythaus/features/member_verification/presentation/account_password_dialog.dart';
 import 'package:lythaus/ui/screens/rewards/monthly_reputation_widgets.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 
@@ -58,6 +61,7 @@ class _RewardsDashboardScreenState
   }
 
   bool _redemptionOutcomeUncertain(Object error, String? errorCode) {
+    if (error is RecentAccountActionException) return !error.confirmedNoEffect;
     if (errorCode == 'idempotency_outcome_unknown' ||
         errorCode == 'idempotency_in_progress') {
       return true;
@@ -85,14 +89,36 @@ class _RewardsDashboardScreenState
     );
     final redemptionProvider = redeemRewardProvider(redemptionRequest);
     setState(() => _redeemingIds.add(rewardId));
-    ref.invalidate(redemptionProvider);
-    final redemptionSubscription = ref.listenManual(
-      redemptionProvider,
-      (_, _) {},
-    );
+    final stepUpEnabled = ref.read(recentAccountActionClientEnabledProvider);
+    final actionProvider = recentAccountActionClientProvider(sessionRevision);
+    if (!stepUpEnabled) ref.invalidate(redemptionProvider);
+    final redemptionSubscription = stepUpEnabled
+        ? ref.listenManual(actionProvider, (_, _) {})
+        : ref.listenManual(redemptionProvider, (_, _) {});
 
     try {
-      final redemption = await ref.read(redemptionProvider.future);
+      late final RewardRedemption redemption;
+      if (stepUpEnabled) {
+        final response = await ref
+            .read(actionProvider)
+            .post(
+              path: '/api/rewards/$rewardId/redeem',
+              body: '',
+              idempotencyKey: idempotencyKey,
+              onRetryKey: (key) => _redemptionKeys[keyScope] = key,
+              passwordPrompt: (verify, cancellation) async {
+                if (!mounted ||
+                    ref.read(authSessionRevisionProvider) != sessionRevision) {
+                  return null;
+                }
+                return showAccountPasswordDialog(context, verify, cancellation);
+              },
+            );
+        if (response.data == null) throw StateError('Empty reward response');
+        redemption = RewardRedemption.fromJson(response.data!);
+      } else {
+        redemption = await ref.read(redemptionProvider.future);
+      }
       if (!mounted ||
           ref.read(authSessionRevisionProvider) != sessionRevision) {
         return;
@@ -124,8 +150,12 @@ class _RewardsDashboardScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            errorCode == 'reward_already_redeemed'
+            error is RecentAccountActionException
+                ? error.message
+                : errorCode == 'reward_already_redeemed'
                 ? 'This reward was already redeemed. Your rewards have been refreshed.'
+                : errorCode == 'recent_authentication_required'
+                ? 'Verification expired or could not be used. Try again to verify this action.'
                 : outcomeUncertain
                 ? 'We could not confirm this redemption. Your rewards are refreshing; retrying will reuse this request.'
                 : 'Unable to redeem this reward right now.',

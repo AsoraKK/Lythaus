@@ -24,6 +24,7 @@ import 'package:lythaus/core/observability/crash_reporting.dart';
 import 'package:lythaus/features/feed/application/content_mutation.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/core/network/pending_authenticated_operations.dart';
+import 'package:lythaus/features/member_verification/presentation/device_app_lock.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -180,6 +181,8 @@ class _LythausAppState extends ConsumerState<LythausApp> {
         darkTheme: LythausTheme.dark(),
         themeMode: ThemeMode.system,
         routerConfig: router,
+        builder: (context, child) =>
+            DeviceAppLock(child: child ?? const SizedBox.shrink()),
       ),
     );
   }

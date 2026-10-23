@@ -24,6 +24,10 @@ import 'package:lythaus/features/privacy/widgets/export_section.dart';
 import 'package:lythaus/features/privacy/widgets/privacy_blocking_overlay.dart';
 import 'package:lythaus/features/privacy/widgets/privacy_error_banner.dart';
 import 'package:lythaus/features/privacy/widgets/privacy_info_card.dart';
+import 'package:lythaus/features/auth/application/auth_session_revision.dart';
+import 'package:lythaus/features/member_verification/application/recent_account_action.dart';
+import 'package:lythaus/features/member_verification/application/recent_account_action_providers.dart';
+import 'package:lythaus/features/member_verification/presentation/account_password_dialog.dart';
 
 class PrivacySettingsScreen extends ConsumerStatefulWidget {
   const PrivacySettingsScreen({super.key});
@@ -34,6 +38,7 @@ class PrivacySettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
+  bool _confirmingDelete = false;
   @override
   void initState() {
     super.initState();
@@ -152,23 +157,53 @@ class _PrivacySettingsScreenState extends ConsumerState<PrivacySettingsScreen> {
   }
 
   Future<void> _confirmDelete(PrivacyController controller) async {
-    controller.beginDeleteConfirmation();
-    final confirmed =
-        await showDialog<bool>(
-          context: context,
-          builder: (_) => const DeleteConfirmationDialog(),
-        ) ??
-        false;
-    if (!mounted || !controller.isCurrentSession) return;
-    if (confirmed) {
-      await runWithDeviceGuard(
-        context,
-        ref,
-        IntegrityUseCase.privacyDsr,
-        () => controller.delete(),
-      );
-    } else {
-      controller.cancelDeleteConfirmation();
+    if (_confirmingDelete) return;
+    _confirmingDelete = true;
+    try {
+      controller.beginDeleteConfirmation();
+      final confirmed =
+          await showDialog<bool>(
+            context: context,
+            builder: (_) => const DeleteConfirmationDialog(),
+          ) ??
+          false;
+      if (!mounted || !controller.isCurrentSession) return;
+      if (confirmed) {
+        final revision = ref.read(authSessionRevisionProvider);
+        final actionProvider = recentAccountActionClientProvider(revision);
+        final enabled = ref.read(recentAccountActionClientEnabledProvider);
+        final subscription = enabled
+            ? ref.listenManual(actionProvider, (_, _) {})
+            : null;
+        try {
+          await runWithDeviceGuard(
+            context,
+            ref,
+            IntegrityUseCase.privacyDsr,
+            () => controller.delete(
+              verification: enabled
+                  ? AccountActionVerification(ref.read(actionProvider), (
+                      verify,
+                      cancellation,
+                    ) async {
+                      if (!mounted || !controller.isCurrentSession) return null;
+                      return showAccountPasswordDialog(
+                        context,
+                        verify,
+                        cancellation,
+                      );
+                    })
+                  : null,
+            ),
+          );
+        } finally {
+          subscription?.close();
+        }
+      } else {
+        controller.cancelDeleteConfirmation();
+      }
+    } finally {
+      _confirmingDelete = false;
     }
   }
 

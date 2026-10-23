@@ -1,4 +1,5 @@
 import 'package:lythaus/features/privacy/services/privacy_api.dart';
+import 'package:lythaus/features/member_verification/application/recent_account_action.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:typed_data';
 
@@ -22,7 +23,10 @@ class TestPrivacyApi implements PrivacyApi {
   int downloadCalls = 0;
 
   @override
-  Future<ExportStatusDTO> deleteAccount({required String authToken}) async {
+  Future<ExportStatusDTO> deleteAccount({
+    required String authToken,
+    AccountActionVerification? verification,
+  }) async {
     deleteCalls++;
     return onDelete == null
         ? ExportStatusDTO(
