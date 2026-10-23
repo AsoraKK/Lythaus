@@ -75,5 +75,6 @@ export function integrateAdminCommentRevision(source) {
 export function integrateCommentNotificationNavigation(source) {
   source = replaceOnce(source, "        nativeType: json['notificationType'] as String,",
     "        nativeType: json['notificationType'] as String,\n        deeplink: commentNotificationLink(json),");
-  return "import 'package:lythaus/features/feed/domain/comment_notification_link.dart';\n" + source;
+  return replaceOnce(source, 'library;',
+    "library;\n\nimport 'package:lythaus/features/feed/domain/comment_notification_link.dart';");
 }
