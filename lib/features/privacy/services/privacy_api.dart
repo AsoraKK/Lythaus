@@ -11,9 +11,16 @@ import 'package:lythaus/features/auth/application/auth_session_revision.dart';
 import 'package:lythaus/core/logging/app_logger.dart';
 import 'package:lythaus/core/network/api_endpoints.dart';
 import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/features/member_verification/application/recent_account_action.dart';
 
 /// Normalized error categories returned by the privacy API client.
-enum PrivacyErrorType { unauthorized, rateLimited, network, server }
+enum PrivacyErrorType {
+  unauthorized,
+  rateLimited,
+  network,
+  server,
+  verification,
+}
 
 enum PrivacyRequestState {
   idle,
@@ -88,7 +95,10 @@ abstract class PrivacyApi {
   Future<ExportRequestResult> requestExport({required String authToken});
   Future<ExportStatusDTO> getExportStatus({required String authToken});
   Future<ExportStatusDTO> getDeleteStatus({required String authToken});
-  Future<ExportStatusDTO> deleteAccount({required String authToken});
+  Future<ExportStatusDTO> deleteAccount({
+    required String authToken,
+    AccountActionVerification? verification,
+  });
   Future<Uint8List> downloadExport({
     required String authToken,
     required String requestId,
@@ -112,6 +122,7 @@ class DioPrivacyApi implements PrivacyApi {
   final DateTime Function() _now;
   final CancelToken? _cancelToken;
   static const Uuid _uuid = Uuid();
+  String? _verifiedDeleteKey;
 
   @override
   Future<ExportRequestResult> requestExport({required String authToken}) async {
@@ -203,8 +214,23 @@ class DioPrivacyApi implements PrivacyApi {
   }
 
   @override
-  Future<ExportStatusDTO> deleteAccount({required String authToken}) async {
+  Future<ExportStatusDTO> deleteAccount({
+    required String authToken,
+    AccountActionVerification? verification,
+  }) async {
     try {
+      if (verification != null) {
+        final response = await verification.client.post(
+          path: ApiEndpoints.deleteUser,
+          body: '{"requestType":"delete"}',
+          idempotencyKey: _verifiedDeleteKey ??= 'privacy-${_uuid.v4()}',
+          onRetryKey: (key) => _verifiedDeleteKey = key,
+          passwordPrompt: verification.prompt,
+        );
+        final result = _parseRequest(response.data ?? const {});
+        _verifiedDeleteKey = null;
+        return result;
+      }
       final response = await _dio.post<Map<String, dynamic>>(
         ApiEndpoints.deleteUser,
         data: const {'requestType': 'delete'},
@@ -212,8 +238,25 @@ class DioPrivacyApi implements PrivacyApi {
         cancelToken: _cancelToken,
       );
       return _parseRequest(response.data ?? const {});
-    } on DioException catch (error, stackTrace) {
-      _logger.error('privacy_delete_request_failed', error, stackTrace);
+    } on RecentAccountActionException catch (error) {
+      if (error.confirmedNoEffect) _verifiedDeleteKey = null;
+      throw PrivacyApiException(
+        PrivacyErrorType.verification,
+        message: error.message,
+      );
+    } on DioException catch (error) {
+      final status = error.response?.statusCode;
+      final code = error.response?.data is Map
+          ? (error.response!.data as Map)['error']
+          : null;
+      if (status != null &&
+          status < 500 &&
+          code != 'idempotency_outcome_unknown' &&
+          code != 'idempotency_in_progress') {
+        _verifiedDeleteKey = null;
+      }
+      // Never log an action request carrying proof or session-binding headers.
+      _logger.warning('privacy_delete_request_failed');
       throw _mapException(error);
     }
   }

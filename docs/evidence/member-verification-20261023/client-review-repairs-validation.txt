@@ -1,0 +1,163 @@
+PR #1092 independent-review repairs, local synthetic validation, 2026-10-23 UTC
+Predecessor: dfba52acd9cbcd463a14402ce4253c504a0a1fdd
+
+Combined private-dialog -> locked -> guest predecessor regression:
+00:00 +0: loading /workspace/Lythaus/test/features/member_verification/device_app_lock_test.dart
+00:00 +0: private dialog is disposed before locked guest recovery reveals browsing
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: no matching candidates
+  Actual: _TextWidgetFinder:<Found 1 widget with text "Private dialog": [
+            Text("Private dialog", dependencies: [DefaultSelectionStyle, DefaultTextStyle,
+MediaQuery]),
+          ]>
+   Which: means one was found but none were expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///workspace/Lythaus/test/features/member_verification/device_app_lock_test.dart:234:7)
+
+Real native-adapter predecessor 303 probes (counts/booleans only):
+redirect stage=initial action permissive=false target_requests=1 sensitive_headers_forwarded=true
+redirect stage=password verification permissive=false target_requests=1 sensitive_headers_forwarded=true
+redirect stage=verified action permissive=false target_requests=1 sensitive_headers_forwarded=true
+redirect stage=initial action permissive=true target_requests=1 sensitive_headers_forwarded=true
+redirect stage=password verification permissive=true target_requests=0 sensitive_headers_forwarded=false
+redirect stage=verified action permissive=true target_requests=0 sensitive_headers_forwarded=false
+
+Native fixed command: flutter test --no-pub test/features/member_verification/account_action_native_redirect_test.dart --reporter expanded
+00:00 +0: loading /workspace/Lythaus/test/features/member_verification/account_action_native_redirect_test.dart
+00:00 +0: real native adapter refuses cross-origin 303 at initial action (permissive status: false)
+redirect stage=initial action permissive=false target_requests=0 sensitive_headers_forwarded=false
+00:00 +1: real native adapter refuses cross-origin 303 at password verification (permissive status: false)
+redirect stage=password verification permissive=false target_requests=0 sensitive_headers_forwarded=false
+00:00 +2: real native adapter refuses cross-origin 303 at verified action (permissive status: false)
+redirect stage=verified action permissive=false target_requests=0 sensitive_headers_forwarded=false
+00:00 +3: real native adapter refuses cross-origin 303 at initial action (permissive status: true)
+redirect stage=initial action permissive=true target_requests=0 sensitive_headers_forwarded=false
+00:00 +4: real native adapter refuses cross-origin 303 at password verification (permissive status: true)
+redirect stage=password verification permissive=true target_requests=0 sensitive_headers_forwarded=false
+00:00 +5: real native adapter refuses cross-origin 303 at verified action (permissive status: true)
+redirect stage=verified action permissive=true target_requests=0 sensitive_headers_forwarded=false
+00:00 +6: All tests passed!
+
+Root/navigation fixed command: flutter test --no-pub test/features/member_verification/device_app_lock_test.dart --reporter expanded
+00:00 +0: loading /workspace/Lythaus/test/features/member_verification/device_app_lock_test.dart
+00:00 +0: disabled composition never reads preferences or prompts
+00:00 +1: Off keeps browsing available without OS support or network
+00:00 +2: DeviceUnlockPreference.everyReopen cold reopen hides private content until OS success
+00:00 +3: DeviceUnlockPreference.afterOneMinute cold reopen hides private content until OS success
+00:00 +4: DeviceUnlockPreference.afterFiveMinutes cold reopen hides private content until OS success
+00:01 +5: DeviceUnlockPreference.afterFifteenMinutes cold reopen hides private content until OS success
+00:01 +6: every reopen shields existing navigator dialogs and requires deliberate unlock on resume
+00:01 +7: DeviceUnlockResult.cancelled keeps shield and permits existing guest recovery without changing preference
+00:01 +8: DeviceUnlockResult.lockedOut keeps shield and permits existing guest recovery without changing preference
+00:01 +9: DeviceUnlockResult.unavailable keeps shield and permits existing guest recovery without changing preference
+00:01 +10: private dialog is disposed before locked guest recovery reveals browsing
+00:01 +11: real router guest recovery disposes private route and late dialog result before guest navigation
+00:02 +12: A to B Off keeps private route and dialog hidden until the real router is replaced
+00:02 +13: late A guest recovery cannot sign out B or clear B navigation after account replacement
+00:02 +14: navigation reset failure keeps shield and does not initiate guest sign-out
+00:02 +15: same-account validation preserves private dialog and navigation
+00:02 +16: storage failure never reveals private routes and supports reload
+00:02 +17: OS inactive is tolerated but background cancels and late success cannot unlock
+00:02 +18: account switch discards late A unlock and applies B preference independently
+00:02 +19: All tests passed!
+
+Compiled browser command: flutter build web --debug --no-pub --no-wasm-dry-run --no-web-resources-cdn --target test/browser/account_action_redirect_entry.dart --output build/member-action-redirect-fixture
+Compiling test/browser/account_action_redirect_entry.dart for the Web...        15.9s
+✓ Built build/member-action-redirect-fixture
+Browser command: node scripts/tests/account-action-redirect.browser.mjs
+PASS Chromium Fetch initial_action: result=blocked, redirect-target requests=0, HttpOnly cookie preserved
+PASS Chromium Fetch password_verification: result=blocked, redirect-target requests=0, HttpOnly cookie preserved
+PASS Chromium Fetch verified_action: result=blocked, redirect-target requests=0, HttpOnly cookie preserved
+PASS Chromium Fetch success: result=completed, redirect-target requests=0, HttpOnly cookie preserved
+
+Full suite: flutter test --no-pub --coverage --concurrency=2 --reporter expanded
+06:41 +3711 ~6: All tests passed!
+Six unchanged skips: five SPKI launch-gate checks, one disabled support-feedback UI case.
+
+Coverage and critical-auth gates:
+════════════════════════════════════════════════════════════════════════
+                        COVERAGE GATES CHECK
+════════════════════════════════════════════════════════════════════════
+
+
+Scope        |    Lines |      Hit |  Coverage |  Threshold | Result
+-------------+----------+----------+-----------+------------+---------
+Total        |    21374 |    19164 |    89.66% |        87% | PASS
+P1           |    11967 |    10913 |       91% |        80% | PASS
+P2           |     3283 |     3100 |       94% |        80% | PASS
+P3           |     3406 |     2750 |       80% |        80% | PASS
+⚠️  P3 coverage (80%) is below target headroom (85%).
+Shared       |        0 |        0 |        0% |         - | INFO
+Unknown      |     2718 |     2401 |       88% |         - | INFO
+
+Unknown files (no pattern match):
+lib/core/error/error_codes.dart
+lib/features/authenticity/alpha_api.dart
+lib/features/authenticity/alpha_screen.dart
+lib/features/authenticity/beta_api.dart
+lib/features/authenticity/beta_screen.dart
+lib/features/media/application/private_image_api.dart
+lib/features/media/application/private_image_upload.dart
+lib/features/media/presentation/private_image_upload_card.dart
+lib/features/member_verification/application/account_action_transport.dart
+lib/features/member_verification/application/device_unlock_authenticator.dart
+lib/features/member_verification/application/device_unlock_preferences_store.dart
+lib/features/member_verification/application/device_unlock_settings_providers.dart
+lib/features/member_verification/application/draft_device_unlock_controller.dart
+lib/features/member_verification/application/recent_account_action.dart
+lib/features/member_verification/application/recent_account_action_providers.dart
+lib/features/member_verification/domain/device_unlock_preference.dart
+lib/features/member_verification/presentation/account_password_dialog.dart
+lib/features/member_verification/presentation/device_app_lock.dart
+lib/features/member_verification/presentation/device_unlock_settings_card.dart
+lib/features/member_verification/presentation/member_verification_policy_preview.dart
+lib/features/reactions/application/reaction_providers.dart
+lib/features/reactions/domain/reaction.dart
+lib/features/reactions/presentation/reaction_bar.dart
+lib/features/rewards/application/reward_providers.dart
+lib/features/rewards/domain/reward_models.dart
+lib/features/support/application/support_feedback_api.dart
+lib/features/support/application/support_feedback_providers.dart
+lib/features/support/presentation/support_feedback_screen.dart
+lib/services/subscription/subscription_service.dart
+lib/state/models/post_feed_item_mapper.dart
+lib/ui/screens/adaptive_shell.dart
+
+════════════════════════════════════════════════════════════════════════
+                     ALL COVERAGE GATES PASSED
+════════════════════════════════════════════════════════════════════════
+
+Tip: Total coverage (89.66%) exceeds baseline (87%).
+  bash scripts/check_coverage_gates.sh update-baseline total 89.66
+
+Tip: P1 coverage (91%) exceeds baseline (80%).
+  bash scripts/check_coverage_gates.sh update-baseline p1 91
+
+Tip: P2 coverage (94%) exceeds baseline (80%).
+  bash scripts/check_coverage_gates.sh update-baseline p2 94
+
+lib/core/network/dio_client.dart: 83.19% line coverage
+lib/core/security/device_integrity_guard.dart: 80.95% line coverage
+lib/features/auth/application/auth_service.dart: 94.82% line coverage
+lib/features/auth/application/auth_providers.dart: 95.00% line coverage
+lib/features/auth/application/session_platform_native.dart: 100.00% line coverage
+lib/features/auth/domain/password_policy.dart: 100.00% line coverage
+lib/features/auth/domain/auth_failure.dart: 86.67% line coverage
+lib/features/auth/presentation/auth_choice_screen.dart: 95.83% line coverage
+
+Full analysis:
+Analyzing Lythaus...
+No issues found! (ran in 28.1s)
+
+Enabled release compile against synthetic .invalid URLs (all three client flags true, build only):
+Compiling lib/main.dart for the Web...
+Font asset "MaterialIcons-Regular.otf" was tree-shaken, reducing it from 1645184 to 24352 bytes (98.5% reduction). Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.
+Font asset "CupertinoIcons.ttf" was tree-shaken, reducing it from 257628 to 1472 bytes (99.4% reduction). Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.
+Compiling lib/main.dart for the Web...                             49.3s
+✓ Built build/member-client-review
+
+Source boundary: no changes relative to dfba52ac in API, Jobs, Admin, auth/session implementation, database/schema, packages, production release/grant/migration workflows, dependencies, or runtime flags.
+Only CI change: add the browser fixture build and actual Fetch redirect/cookie regression; no existing gate or assertion removed.
+No stored/live credentials read by network fixtures. All origins are disposable loopback servers. Probes are runtime-only and no probe/header/password/cookie/proof value is printed or persisted.

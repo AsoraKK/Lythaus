@@ -270,6 +270,58 @@ void main() {
     FlutterSecureStorage.setMockInitialValues({});
   });
 
+  test(
+    'account action session read preserves stored tokens and performs no network or refresh',
+    () async {
+      FlutterSecureStorage.setMockInitialValues({
+        'jwt': 'unchanged-access',
+        'refreshToken': 'unchanged-refresh',
+      });
+      var calls = 0;
+      final service = AuthService(
+        authUrl: 'https://api.lythaus.co/api',
+        httpClient: MockClient((_) async {
+          calls++;
+          throw StateError('No network expected');
+        }),
+      );
+      expect(await service.accountActionSessionHeaders(), {
+        'Authorization': 'Bearer unchanged-access',
+        'X-Lythaus-Session-Binding': 'unchanged-refresh',
+      });
+      expect(await const FlutterSecureStorage().readAll(), {
+        'jwt': 'unchanged-access',
+        'refreshToken': 'unchanged-refresh',
+      });
+      expect(calls, 0);
+    },
+  );
+
+  test(
+    'web account action read never exposes a refresh token or restores a cookie',
+    () async {
+      FlutterSecureStorage.setMockInitialValues({
+        'jwt': 'native-access',
+        'refreshToken': 'native-refresh',
+      });
+      var calls = 0;
+      final service = AuthService(
+        useWebSession: true,
+        authUrl: 'https://api.lythaus.co/api',
+        httpClient: MockClient((_) async {
+          calls++;
+          throw StateError('No network expected');
+        }),
+      );
+      expect(await service.accountActionSessionHeaders(), isNull);
+      expect(calls, 0);
+      expect(
+        await const FlutterSecureStorage().read(key: 'refreshToken'),
+        'native-refresh',
+      );
+    },
+  );
+
   for (final initialUnauthorized in [false, true]) {
     test(
       'native restoration validates userinfo and rotates only when needed: $initialUnauthorized',
@@ -549,6 +601,10 @@ void main() {
         'legacy-password',
       );
       expect(await service.getJwtToken(), 'memory-access');
+      expect(await service.accountActionSessionHeaders(), {
+        'Authorization': 'Bearer memory-access',
+        'X-Lythaus-Auth-Transport': 'cookie-v1',
+      });
       expect(await const FlutterSecureStorage().readAll(), isEmpty);
     },
   );

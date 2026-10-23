@@ -531,6 +531,32 @@ class AuthService {
     return token;
   }
 
+  /// Read the existing session for an account-bound action. This never refreshes,
+  /// rotates, writes or extends either credential. Web credentials stay HttpOnly.
+  Future<Map<String, String>?> accountActionSessionHeaders() async {
+    final owner = _sessionOwnerRevision;
+    if (_signedOut || _logoutFenceIsActive) return null;
+    return _serializeStorage(() async {
+      final access = await _readStoredAccessToken();
+      final refresh = _useWebSession
+          ? null
+          : await _secureStorage.read(key: _refreshTokenKey);
+      if (owner != _sessionOwnerRevision ||
+          _signedOut ||
+          _logoutFenceIsActive ||
+          access == null ||
+          access.isEmpty ||
+          (!_useWebSession && (refresh == null || refresh.isEmpty))) {
+        return null;
+      }
+      return {
+        'Authorization': 'Bearer $access',
+        if (_useWebSession) 'X-Lythaus-Auth-Transport': 'cookie-v1',
+        if (refresh != null) 'X-Lythaus-Session-Binding': refresh,
+      };
+    });
+  }
+
   Future<bool> validateAndRefreshToken() async {
     final token = await getJwtToken();
     if (token == null) return _useWebSession ? refreshSession() : false;

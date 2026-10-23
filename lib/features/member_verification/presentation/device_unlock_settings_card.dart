@@ -6,6 +6,7 @@ import 'package:lythaus/features/member_verification/application/device_unlock_a
 import 'package:lythaus/features/member_verification/application/device_unlock_settings_providers.dart';
 import 'package:lythaus/features/member_verification/application/draft_device_unlock_controller.dart';
 import 'package:lythaus/features/member_verification/domain/device_unlock_preference.dart';
+import 'package:lythaus/features/member_verification/presentation/device_app_lock.dart';
 
 class DeviceUnlockSettingsCard extends ConsumerWidget {
   const DeviceUnlockSettingsCard({required this.accountId, super.key});
@@ -51,8 +52,10 @@ class DeviceUnlockSettingsCard extends ConsumerWidget {
           'Device unlock preference',
           style: Theme.of(context).textTheme.titleMedium,
         ),
-        const Text(
-          'Implementation preview: app-wide protection is inactive pending device acceptance. Browsing and session refresh continue.',
+        Text(
+          ref.watch(deviceAppLockEnabledProvider)
+              ? 'Device protection is enabled in this build. Off remains optional. Guest browsing and session refresh continue.'
+              : 'Implementation preview: app-wide protection is inactive pending device acceptance. Browsing and session refresh continue.',
         ),
         const Text(
           'Use OS-managed biometrics, password, passcode or pattern. No new Lythaus PIN is created.',

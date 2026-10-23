@@ -1,0 +1,172 @@
+Member verification client: local synthetic validation, 2026-10-23 UTC
+Base: PR #1084 / 6270c2b95c808b33b3bc115c0e3066d8d00d6296
+
+Full suite command: flutter test --no-pub --coverage --concurrency=2 --reporter expanded
+06:37 +3699 ~6: All tests passed!
+Existing skips: five SPKI_GATE launch checks; one disabled support-feedback UI check. No skips added.
+
+Targeted command: flutter test --no-pub --concurrency=1 test/features/member_verification test/features/auth/application test/features/privacy test/integration/rewards_redemption_integration_test.dart --reporter expanded
+00:36 +312: All tests passed!
+
+New client screen, transport, dialog and app-shield cases from the full passing run:
+04:07 +2711: /workspace/Lythaus/test/features/member_verification/device_app_lock_test.dart: Off keeps browsing available without OS support or network
+04:07 +2714: /workspace/Lythaus/test/features/member_verification/device_app_lock_test.dart: DeviceUnlockPreference.afterOneMinute cold reopen hides private content until OS success
+04:07 +2715: /workspace/Lythaus/test/features/member_verification/device_app_lock_test.dart: DeviceUnlockPreference.afterOneMinute cold reopen hides private content until OS success
+04:07 +2720: /workspace/Lythaus/test/features/member_verification/device_app_lock_test.dart: DeviceUnlockResult.cancelled keeps shield and permits existing guest recovery without changing preference
+04:08 +2724: /workspace/Lythaus/test/features/member_verification/device_app_lock_test.dart: storage failure never reveals private routes and supports reload
+04:08 +2727: /workspace/Lythaus/test/features/member_verification/device_app_lock_test.dart: account switch discards late A unlock and applies B preference independently
+04:10 +2735: /workspace/Lythaus/test/features/member_verification/account_action_screen_flow_test.dart: actual reward screen verifies password and retries only once with a fresh key
+04:10 +2736: /workspace/Lythaus/test/features/member_verification/account_action_screen_flow_test.dart: actual reward screen verifies password and retries only once with a fresh key
+04:11 +2737: /workspace/Lythaus/test/features/member_verification/account_action_screen_flow_test.dart: actual reward screen verifies password and retries only once with a fresh key
+04:11 +2739: /workspace/Lythaus/test/features/member_verification/account_action_screen_flow_test.dart: actual reward screen cancellation leaves the confirmed challenge without a mutation retry
+04:12 +2740: /workspace/Lythaus/test/features/member_verification/account_action_screen_flow_test.dart: actual reward screen cancellation leaves the confirmed challenge without a mutation retry
+04:12 +2742: /workspace/Lythaus/test/features/member_verification/account_action_screen_flow_test.dart: actual deletion screen verifies password and retries only once with a fresh key
+04:12 +2743: /workspace/Lythaus/test/features/member_verification/account_action_screen_flow_test.dart: actual deletion screen verifies password and retries only once with a fresh key
+04:12 +2745: /workspace/Lythaus/test/features/member_verification/account_action_screen_flow_test.dart: actual deletion screen cancellation leaves the confirmed challenge without a mutation retry
+04:13 +2747: /workspace/Lythaus/test/features/member_verification/account_action_screen_flow_test.dart: actual reward unknown outcome reuses its fresh key and never verifies twice
+04:13 +2748: /workspace/Lythaus/test/features/member_verification/account_action_screen_flow_test.dart: actual reward unknown outcome reuses its fresh key and never verifies twice
+04:13 +2749: /workspace/Lythaus/test/features/member_verification/account_action_screen_flow_test.dart: actual reward unknown outcome reuses its fresh key and never verifies twice
+04:13 +2750: /workspace/Lythaus/test/features/member_verification/account_action_screen_flow_test.dart: actual deletion unknown outcome reuses its fresh key and never verifies twice
+04:13 +2751: /workspace/Lythaus/test/features/member_verification/account_action_screen_flow_test.dart: account switch closes actual password dialog and cannot submit verification for replacement owner
+04:17 +2770: /workspace/Lythaus/test/features/member_verification/recent_account_action_test.dart: account switch while password prompt waits discards proof with no retry
+04:17 +2774: /workspace/Lythaus/test/features/member_verification/recent_account_action_test.dart: deletion adapter retains a fresh unknown key across status reconciliation and surfaces cancellation
+04:18 +2778: loading /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart
+04:19 +2778: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:19 +2779: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:19 +2780: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:19 +2781: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:19 +2782: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:19 +2783: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:19 +2784: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:19 +2785: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:19 +2786: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:19 +2787: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:19 +2788: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:19 +2789: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:20 +2790: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:20 +2791: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:20 +2792: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:20 +2793: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:20 +2794: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:20 +2795: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:20 +2796: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:20 +2797: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:20 +2798: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:20 +2799: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:20 +2800: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:20 +2801: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:20 +2802: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:20 +2803: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:20 +2804: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:20 +2805: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: button cancels verification and discards late success
+04:20 +2806: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: account cancels verification and discards late success
+04:20 +2807: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: background cancels verification and discards late success
+04:20 +2808: /workspace/Lythaus/test/features/member_verification/account_password_dialog_test.dart: wrong password error is accessible, clears input and allows deliberate retry
+
+Coverage gates and critical-auth coverage:
+════════════════════════════════════════════════════════════════════════
+                        COVERAGE GATES CHECK
+════════════════════════════════════════════════════════════════════════
+
+
+Scope        |    Lines |      Hit |  Coverage |  Threshold | Result
+-------------+----------+----------+-----------+------------+---------
+Total        |    21324 |    19117 |    89.65% |        87% | PASS
+P1           |    11967 |    10913 |       91% |        80% | PASS
+P2           |     3283 |     3100 |       94% |        80% | PASS
+P3           |     3403 |     2751 |       80% |        80% | PASS
+⚠️  P3 coverage (80%) is below target headroom (85%).
+Shared       |        0 |        0 |        0% |         - | INFO
+Unknown      |     2671 |     2353 |       88% |         - | INFO
+
+Unknown files (no pattern match):
+lib/core/error/error_codes.dart
+lib/features/authenticity/alpha_api.dart
+lib/features/authenticity/alpha_screen.dart
+lib/features/authenticity/beta_api.dart
+lib/features/authenticity/beta_screen.dart
+lib/features/media/application/private_image_api.dart
+lib/features/media/application/private_image_upload.dart
+lib/features/media/presentation/private_image_upload_card.dart
+lib/features/member_verification/application/account_action_transport.dart
+lib/features/member_verification/application/device_unlock_authenticator.dart
+lib/features/member_verification/application/device_unlock_preferences_store.dart
+lib/features/member_verification/application/device_unlock_settings_providers.dart
+lib/features/member_verification/application/draft_device_unlock_controller.dart
+lib/features/member_verification/application/recent_account_action.dart
+lib/features/member_verification/application/recent_account_action_providers.dart
+lib/features/member_verification/domain/device_unlock_preference.dart
+lib/features/member_verification/presentation/account_password_dialog.dart
+lib/features/member_verification/presentation/device_app_lock.dart
+lib/features/member_verification/presentation/device_unlock_settings_card.dart
+lib/features/member_verification/presentation/member_verification_policy_preview.dart
+lib/features/reactions/application/reaction_providers.dart
+lib/features/reactions/domain/reaction.dart
+lib/features/reactions/presentation/reaction_bar.dart
+lib/features/rewards/application/reward_providers.dart
+lib/features/rewards/domain/reward_models.dart
+lib/features/support/application/support_feedback_api.dart
+lib/features/support/application/support_feedback_providers.dart
+lib/features/support/presentation/support_feedback_screen.dart
+lib/services/subscription/subscription_service.dart
+lib/state/models/post_feed_item_mapper.dart
+lib/ui/screens/adaptive_shell.dart
+
+════════════════════════════════════════════════════════════════════════
+                     ALL COVERAGE GATES PASSED
+════════════════════════════════════════════════════════════════════════
+
+Tip: Total coverage (89.65%) exceeds baseline (87%).
+  bash scripts/check_coverage_gates.sh update-baseline total 89.65
+
+Tip: P1 coverage (91%) exceeds baseline (80%).
+  bash scripts/check_coverage_gates.sh update-baseline p1 91
+
+Tip: P2 coverage (94%) exceeds baseline (80%).
+  bash scripts/check_coverage_gates.sh update-baseline p2 94
+
+lib/core/network/dio_client.dart: 83.19% line coverage
+lib/core/security/device_integrity_guard.dart: 80.95% line coverage
+lib/features/auth/application/auth_service.dart: 94.82% line coverage
+lib/features/auth/application/auth_providers.dart: 95.00% line coverage
+lib/features/auth/application/session_platform_native.dart: 100.00% line coverage
+lib/features/auth/domain/password_policy.dart: 100.00% line coverage
+lib/features/auth/domain/auth_failure.dart: 86.67% line coverage
+lib/features/auth/presentation/auth_choice_screen.dart: 95.83% line coverage
+
+
+Analysis:
+Analyzing Lythaus...
+No issues found! (ran in 24.6s)
+
+
+Node server/idempotency/monthly regressions:
+  ...
+1..89
+# tests 89
+# suites 0
+# pass 89
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 15059.979679
+
+Native TypeScript:
+
+> lythaus-monorepo@1.0.0 typecheck:native
+> tsc -p tsconfig.native.json --noEmit
+
+
+
+Enabled compile command: flutter build web --release --no-pub --no-wasm-dry-run --no-web-resources-cdn --dart-define=AUTH_URL=https://api.example.invalid/api --dart-define=API_BASE_URL=https://api.example.invalid/api --dart-define=MEMBER_RECENT_AUTH_CLIENT_ENABLED=true --dart-define=MEMBER_DEVICE_UNLOCK_SETTINGS_ENABLED=true --dart-define=MEMBER_DEVICE_APP_LOCK_ENABLED=true --output=build/member-client-review
+Compiling lib/main.dart for the Web...
+Font asset "CupertinoIcons.ttf" was tree-shaken, reducing it from 257628 to 1472 bytes (99.4% reduction). Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.
+Font asset "MaterialIcons-Regular.otf" was tree-shaken, reducing it from 1645184 to 24352 bytes (98.5% reduction). Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.
+Compiling lib/main.dart for the Web...                             51.2s
+✓ Built build/member-client-review
+
+
+Source guard: AuthService minus only the new read-only accountActionSessionHeaders method is byte-identical to reviewed base.
+Source guard: no diff from reviewed base in apps/, packages/, database/, infrastructure/, .github/, pubspec.yaml, pubspec.lock or existing auth/session provider and platform modules.
+No credentials, schema executions, remote security activation, reputation writes, reward claims or deployments.

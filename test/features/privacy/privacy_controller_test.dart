@@ -1,6 +1,7 @@
 import 'package:lythaus/core/logging/app_logger.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/privacy/services/privacy_api.dart';
+import 'package:lythaus/features/member_verification/application/recent_account_action.dart';
 import 'package:lythaus/core/analytics/analytics_client.dart';
 import 'package:lythaus/features/privacy/services/privacy_repository.dart';
 import 'package:lythaus/features/privacy/state/privacy_controller.dart';
@@ -281,12 +282,14 @@ class _ControllerRepository extends PrivacyRepository {
   }
 
   @override
-  Future<ExportStatusDTO> deleteAccount({required String authToken}) async =>
-      ExportStatusDTO(
-        state: 'received',
-        requestId: 'delete-1',
-        acceptedAt: DateTime.utc(2026, 10, 2),
-      );
+  Future<ExportStatusDTO> deleteAccount({
+    required String authToken,
+    AccountActionVerification? verification,
+  }) async => ExportStatusDTO(
+    state: 'received',
+    requestId: 'delete-1',
+    acceptedAt: DateTime.utc(2026, 10, 2),
+  );
 
   @override
   Future<void> clearPersistedExport() async {}
