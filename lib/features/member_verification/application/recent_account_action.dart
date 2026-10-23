@@ -104,7 +104,12 @@ class RecentAccountActionClient {
               'operation': {'method': 'POST', 'path': path, 'body': body},
             },
             cancelToken: cancellation,
-            options: Options(headers: headers),
+            options: Options(
+              headers: headers,
+              followRedirects: false,
+              maxRedirects: 0,
+              validateStatus: _successfulStatus,
+            ),
           );
           _check(cancellation);
           final value = response.data?['proof'];
@@ -179,6 +184,9 @@ class RecentAccountActionClient {
       data: body,
       cancelToken: cancellation,
       options: Options(
+        followRedirects: false,
+        maxRedirects: 0,
+        validateStatus: _successfulStatus,
         contentType: Headers.jsonContentType,
         headers: {
           ...headers,
@@ -197,3 +205,6 @@ class RecentAccountActionClient {
     return response;
   }
 }
+
+bool _successfulStatus(int? status) =>
+    status != null && status >= 200 && status < 300;

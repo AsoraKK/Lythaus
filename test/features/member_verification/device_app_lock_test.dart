@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:lythaus/core/routing/app_router.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_service.dart';
 import 'package:lythaus/features/auth/domain/user.dart';
@@ -25,11 +27,15 @@ User _user(String id) => User(
 class _Auth extends AuthService {
   _Auth() : super(authUrl: 'https://api.example.invalid/api');
   int logouts = 0;
+  Completer<void>? pendingLogout;
   @override
   Future<User?> getCurrentUser() async => _user('a');
   @override
+  Future<bool> validateAndRefreshToken() async => true;
+  @override
   Future<void> logout() async {
     logouts++;
+    await pendingLogout?.future;
   }
 }
 
@@ -76,6 +82,13 @@ class _Harness {
   final os = _OS();
   final auth = _Auth();
   late ProviderContainer container;
+  int resets = 0;
+  bool failNavigation = false;
+  Completer<void>? pendingNavigation;
+  Completer<String>? dialogResult;
+  final navigator = StateProvider<GlobalKey<NavigatorState>>(
+    (_) => GlobalKey<NavigatorState>(),
+  );
   Future<void> open(WidgetTester tester, {bool enabled = true}) async {
     resumeApp(tester);
     container = ProviderContainer(
@@ -91,27 +104,149 @@ class _Harness {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(
-          builder: (_, child) => DeviceAppLock(child: child!),
-          home: Consumer(
-            builder: (context, ref, _) => Scaffold(
-              body: Column(
-                children: [
-                  Text(
-                    ref.watch(currentUserProvider) == null
-                        ? 'Public browsing'
-                        : 'Private account ${ref.watch(currentUserProvider)!.id}',
-                  ),
-                  TextButton(
-                    onPressed: () => showDialog<void>(
-                      context: context,
-                      builder: (_) =>
-                          const AlertDialog(content: Text('Private dialog')),
+        child: Consumer(
+          builder: (_, ref, _) => MaterialApp(
+            navigatorKey: ref.watch(navigator),
+            builder: (_, child) => DeviceAppLock(
+              resetPrivateNavigation: () async {
+                resets++;
+                await pendingNavigation?.future;
+                if (failNavigation) {
+                  throw StateError('synthetic_navigation_failure');
+                }
+                container.invalidate(navigator);
+                await WidgetsBinding.instance.endOfFrame;
+              },
+              child: child!,
+            ),
+            home: Consumer(
+              builder: (context, ref, _) => Scaffold(
+                body: Column(
+                  children: [
+                    Text(
+                      ref.watch(currentUserProvider) == null
+                          ? 'Public browsing'
+                          : 'Private account ${ref.watch(currentUserProvider)!.id}',
                     ),
-                    child: const Text('Open private dialog'),
-                  ),
-                ],
+                    TextButton(
+                      onPressed: () => showDialog<void>(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          content: FutureBuilder<String>(
+                            future: dialogResult?.future,
+                            builder: (_, snapshot) =>
+                                Text(snapshot.data ?? 'Private dialog'),
+                          ),
+                        ),
+                      ),
+                      child: const Text('Open private dialog'),
+                    ),
+                  ],
+                ),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> openRouter(WidgetTester tester) async {
+    resumeApp(tester);
+    Widget page(BuildContext context, WidgetRef ref, String location) =>
+        Scaffold(
+          body: Column(
+            children: [
+              Text(
+                location == '/private'
+                    ? 'Private route ${ref.read(currentUserProvider)?.id}'
+                    : location == '/public'
+                    ? 'Public destination'
+                    : ref.watch(currentUserProvider) == null
+                    ? 'Public browsing'
+                    : 'Private account ${ref.watch(currentUserProvider)!.id}',
+              ),
+              TextButton(
+                onPressed: () => context.push('/private'),
+                child: const Text('Open private route'),
+              ),
+              TextButton(
+                onPressed: () {
+                  final future = dialogResult?.future;
+                  showDialog<void>(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      content: FutureBuilder<String>(
+                        future: future,
+                        builder: (_, snapshot) =>
+                            Text(snapshot.data ?? 'Private dialog'),
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('Open private dialog'),
+              ),
+            ],
+          ),
+        );
+    container = ProviderContainer(
+      overrides: [
+        enhancedAuthServiceProvider.overrideWithValue(auth),
+        deviceAppLockEnabledProvider.overrideWithValue(true),
+        deviceUnlockSettingsEnabledProvider.overrideWithValue(true),
+        deviceUnlockPreferencesStoreProvider.overrideWithValue(store),
+        deviceUnlockAuthenticatorProvider.overrideWithValue(os),
+        appRouterProvider.overrideWith((ref) {
+          final refresh = ValueNotifier<int>(0);
+          ref.listen(authStateProvider, (_, _) => refresh.value++);
+          ref.listen(guestModeProvider, (_, _) => refresh.value++);
+          final router = GoRouter(
+            initialLocation: '/',
+            refreshListenable: refresh,
+            redirect: (_, state) => resolveAppRedirect(
+              matchedLocation: state.matchedLocation,
+              user: ref.read(currentUserProvider),
+              isGuest: ref.read(guestModeProvider),
+              requestedUri: state.uri,
+            ),
+            routes: [
+              for (final path in ['/', '/private', '/public', '/login'])
+                GoRoute(
+                  path: path,
+                  builder: (context, _) => Consumer(
+                    builder: (context, ref, _) => page(context, ref, path),
+                  ),
+                ),
+            ],
+          );
+          ref.onDispose(() {
+            router.dispose();
+            refresh.dispose();
+          });
+          return router;
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: Consumer(
+          builder: (_, ref, _) => MaterialApp.router(
+            routerConfig: ref.watch(appRouterProvider),
+            builder: (_, child) => DeviceAppLock(
+              resetPrivateNavigation: () async {
+                resets++;
+                await pendingNavigation?.future;
+                if (failNavigation) {
+                  throw StateError('synthetic_navigation_failure');
+                }
+                ref.invalidate(appRouterProvider);
+                ref.read(appRouterProvider).go('/');
+                await WidgetsBinding.instance.endOfFrame;
+              },
+              child: child!,
             ),
           ),
         ),
@@ -213,6 +348,184 @@ void main() {
       },
     );
   }
+
+  testWidgets(
+    'private dialog is disposed before locked guest recovery reveals browsing',
+    (tester) async {
+      final h = _Harness()
+        ..store.values['a'] = DeviceUnlockPreference.everyReopen;
+      await h.open(tester);
+      await tester.tap(find.text('Unlock with device credentials'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open private dialog'));
+      await tester.pumpAndSettle();
+      expect(find.text('Private dialog'), findsOneWidget);
+      backgroundApp(tester);
+      resumeApp(tester);
+      await tester.pumpAndSettle();
+      expect(find.text('Private dialog'), findsNothing);
+      await tester.tap(find.text('Sign out here and browse as guest'));
+      await tester.pumpAndSettle();
+      expect(h.container.read(guestModeProvider), isTrue);
+      expect(find.text('Private dialog', skipOffstage: false), findsNothing);
+      expect(find.text('Public browsing'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'real router guest recovery disposes private route and late dialog result before guest navigation',
+    (tester) async {
+      final h = _Harness()
+        ..store.values['a'] = DeviceUnlockPreference.everyReopen;
+      h.dialogResult = Completer<String>();
+      await h.openRouter(tester);
+      await tester.tap(find.text('Unlock with device credentials'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open private route'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open private dialog'));
+      await tester.pumpAndSettle();
+      backgroundApp(tester);
+      resumeApp(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sign out here and browse as guest'));
+      await tester.pumpAndSettle();
+      expect(find.text('Public browsing'), findsOneWidget);
+      expect(find.text('Private dialog', skipOffstage: false), findsNothing);
+      expect(find.text('Private route a', skipOffstage: false), findsNothing);
+      h.dialogResult!.complete('Late private A result');
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Late private A result', skipOffstage: false),
+        findsNothing,
+      );
+      final resets = h.resets;
+      h.container.read(appRouterProvider).go('/public');
+      await tester.pumpAndSettle();
+      expect(find.text('Public destination'), findsOneWidget);
+      expect(h.resets, resets);
+      expect(h.container.read(guestModeProvider), isTrue);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'A to B Off keeps private route and dialog hidden until the real router is replaced',
+    (tester) async {
+      final h = _Harness()
+        ..store.values['a'] = DeviceUnlockPreference.everyReopen;
+      h.dialogResult = Completer<String>();
+      await h.openRouter(tester);
+      await tester.tap(find.text('Unlock with device credentials'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open private route'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open private dialog'));
+      await tester.pumpAndSettle();
+      backgroundApp(tester);
+      resumeApp(tester);
+      await tester.pumpAndSettle();
+      h.pendingNavigation = Completer<void>();
+      h.container.read(authStateProvider.notifier).setUser(_user('b'));
+      await tester.pump();
+      expect(find.text('Private dialog'), findsNothing);
+      expect(find.text('Private account b'), findsNothing);
+      expect(find.text('Clearing private navigation…'), findsOneWidget);
+      h.pendingNavigation!.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('Private account b'), findsOneWidget);
+      expect(find.text('Private dialog', skipOffstage: false), findsNothing);
+      expect(find.text('Private route a', skipOffstage: false), findsNothing);
+      h.dialogResult!.complete('Late private A result');
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Late private A result', skipOffstage: false),
+        findsNothing,
+      );
+      expect(h.container.read(currentUserProvider)?.id, 'b');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'late A guest recovery cannot sign out B or clear B navigation after account replacement',
+    (tester) async {
+      final h = _Harness()
+        ..store.values['a'] = DeviceUnlockPreference.everyReopen;
+      h.auth.pendingLogout = Completer<void>();
+      h.dialogResult = Completer<String>();
+      await h.openRouter(tester);
+      await tester.tap(find.text('Unlock with device credentials'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open private dialog'));
+      await tester.pumpAndSettle();
+      backgroundApp(tester);
+      resumeApp(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sign out here and browse as guest'));
+      for (var frame = 0; frame < 30 && h.auth.logouts == 0; frame++) {
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      expect(h.auth.logouts, 1);
+      h.container.read(authStateProvider.notifier).setUser(_user('b'));
+      await tester.pumpAndSettle();
+      expect(find.text('Private account b'), findsOneWidget);
+      h.container.read(appRouterProvider).go('/public');
+      await tester.pumpAndSettle();
+      h.auth.pendingLogout!.complete();
+      h.dialogResult!.complete('Late private A result');
+      await tester.pumpAndSettle();
+      expect(h.container.read(currentUserProvider)?.id, 'b');
+      expect(h.container.read(guestModeProvider), isFalse);
+      expect(find.text('Public destination'), findsOneWidget);
+      expect(
+        find.text('Late private A result', skipOffstage: false),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'navigation reset failure keeps shield and does not initiate guest sign-out',
+    (tester) async {
+      final h = _Harness()
+        ..store.values['a'] = DeviceUnlockPreference.everyReopen;
+      await h.openRouter(tester);
+      h.failNavigation = true;
+      await tester.tap(find.text('Sign out here and browse as guest'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Private navigation could not be cleared'),
+        findsOneWidget,
+      );
+      expect(find.text('Private account a'), findsNothing);
+      expect(h.auth.logouts, 0);
+      h.failNavigation = false;
+      await tester.tap(find.text('Retry clearing private navigation'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sign out here and browse as guest'));
+      await tester.pumpAndSettle();
+      expect(find.text('Public browsing'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'same-account validation preserves private dialog and navigation',
+    (tester) async {
+      final h = _Harness();
+      await h.openRouter(tester);
+      await tester.tap(find.text('Open private dialog'));
+      await tester.pumpAndSettle();
+      final validation = h.container
+          .read(authStateProvider.notifier)
+          .validateToken();
+      await tester.pumpAndSettle();
+      await validation;
+      expect(find.text('Private dialog'), findsOneWidget);
+      expect(h.resets, 0);
+    },
+  );
 
   testWidgets(
     'storage failure never reveals private routes and supports reload',

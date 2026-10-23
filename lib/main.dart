@@ -181,8 +181,14 @@ class _LythausAppState extends ConsumerState<LythausApp> {
         darkTheme: LythausTheme.dark(),
         themeMode: ThemeMode.system,
         routerConfig: router,
-        builder: (context, child) =>
-            DeviceAppLock(child: child ?? const SizedBox.shrink()),
+        builder: (context, child) => DeviceAppLock(
+          resetPrivateNavigation: () async {
+            ref.invalidate(appRouterProvider);
+            ref.read(appRouterProvider).go('/');
+            await WidgetsBinding.instance.endOfFrame;
+          },
+          child: child ?? const SizedBox.shrink(),
+        ),
       ),
     );
   }

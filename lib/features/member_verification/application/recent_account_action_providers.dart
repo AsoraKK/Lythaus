@@ -26,8 +26,10 @@ final recentAccountActionClientProvider = Provider.autoDispose
       ref.onDispose(stop);
       ref.onDispose(() => cancellation.cancel('action_disposed'));
       final auth = ref.watch(enhancedAuthServiceProvider);
+      final dio = accountActionTransport(ref.watch(secureDioProvider));
+      ref.onDispose(() => disposeAccountActionTransport(dio));
       return RecentAccountActionClient(
-        dio: accountActionTransport(ref.watch(secureDioProvider)),
+        dio: dio,
         sessionHeaders: auth.accountActionSessionHeaders,
         isCurrent: () =>
             session.revision == revision &&

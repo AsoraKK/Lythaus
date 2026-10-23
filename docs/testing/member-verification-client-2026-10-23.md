@@ -6,7 +6,7 @@ Scope and activation decisions are in the
 [Captured local output](../evidence/member-verification-20261023/client-validation.txt)
 records the passing full suite and individual new cases.
 
-## Results
+## Initial client checkpoint (`dfba52ac`)
 
 | Check | Result |
 | --- | --- |
@@ -58,9 +58,56 @@ dialog's bounded visible milestone and all exact request-count/key assertions.
 No remote CI rerun was used to hide these local failures.
 
 The server, schema proposal, monthly calculator, current catalogue, Jobs,
-session/JWT implementation, workflows, release settings and dependencies are
+session/JWT implementation, release settings and dependencies are
 byte-unchanged from the reviewed base. AuthService differs only by the additive
 read-only method; removing it gives exact byte equality with the base file.
+
+## Independent-review repairs
+
+Current repair validation: **3,711 Flutter tests passed**, six unchanged skips,
+zero failures; full analysis and enabled release compilation passed. All
+existing coverage gates pass: total 89.66% >=87%, P1 91%, P2 94%, P3 80%,
+each >=80%. The eight critical-auth module checks also pass, with AuthService
+unchanged at 94.82%. See the
+[predecessor/fix output](../evidence/member-verification-20261023/client-review-repairs-validation.txt).
+
+The guest-recovery predecessor regression fails at `dfba52ac`: a private
+navigator dialog becomes visible after the shield drops for guest mode.
+The fix holds a navigation boundary until a fresh root router has disposed
+private overlays/routes. It observes account exit synchronously, fences late
+guest completion against B, and retains the shield if navigation reset fails.
+Nineteen shield tests include real GoRouter/production redirect logic, combined
+private-route/dialog -> lock -> guest, late dialog data, A -> B with B set to
+Off, late A guest completion after B navigation, and same-account route retention.
+
+The predecessor native adapter also follows POST303 and forwards synthetic
+custom headers to a different local origin. Both account-action requests now
+disable redirects and impose a strict 2xx status predicate. Six real native
+IO-adapter cases exercise initial action, password verification and verified
+retry, each with default/permissive inherited status handling. All six reject
+the redirect with zero requests or forwarded headers at the other origin.
+
+Because browser XHR ignores redirect control, the isolated web adapter now uses
+the existing Fetch-backed HTTP client with redirect rejection and HttpOnly
+cookie credentials. A compiled Chromium fixture verifies three redirect stages
+and a legitimate success: zero target-origin requests, no native binding from
+web, the existing HttpOnly cookie present at the intended API, and unreadable
+from JavaScript. The CI workflow adds only its fixture build and verification
+steps; existing required assertions, security gates and deployment workflows
+remain unchanged.
+
+Reproduce the network checks without any provider, stored credential or real
+account operation:
+
+```sh
+flutter test --no-pub test/features/member_verification/account_action_native_redirect_test.dart
+flutter build web --debug --no-pub --no-wasm-dry-run --no-web-resources-cdn --target test/browser/account_action_redirect_entry.dart --output build/member-action-redirect-fixture
+node scripts/tests/account-action-redirect.browser.mjs
+```
+
+All network fixtures use two disposable loopback origins and runtime-only
+synthetic probes. Captured evidence contains case names, counts and booleans;
+no header values, passwords, cookies or proof values are written to logs.
 
 Required full remote CI remains due after normal dependent-base reconciliation;
 scoped workflows on a dependent draft cannot certify the resulting main-based

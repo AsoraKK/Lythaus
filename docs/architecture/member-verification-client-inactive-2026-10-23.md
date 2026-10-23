@@ -24,6 +24,21 @@ memory and uses the existing HttpOnly cookie contract; an isolated Dio clone
 carries credentials, preserving the shared client's defaults and interceptors.
 No new secret, provider, application PIN, credential or enrollment is created.
 
+Both verification and mutation explicitly reject redirects and accept only 2xx,
+even if a caller's shared Dio status predicate is permissive. Native requests
+set `followRedirects: false` and zero redirects. The isolated web clone reuses
+the existing Fetch-backed `http` BrowserClient with credentials included and
+redirect rejection; XHR cannot enforce this boundary. Cancellation and response
+timeouts abort that isolated request, and disposal never closes the shared
+native adapter. No custom binding, proof, password or cookie is forwarded to
+a redirect target.
+
+The underlying behavior is documented by the
+[Dart redirect contract](https://api.dart.dev/dart-io/HttpClientRequest/followRedirects.html)
+and [pinned Dio native adapter](https://raw.githubusercontent.com/cfug/dio/dio_v5.9.0/dio/lib/src/adapters/io_adapter.dart).
+Controlled native-adapter and Chromium Fetch regressions verify the actual
+network boundary with runtime-only synthetic probes, never live credentials.
+
 ## Sensitive actions
 
 The enabled flow is limited to existing POST reward redemption and POST privacy
@@ -75,7 +90,14 @@ unavailable hardware and storage failure retain an honest locked/unavailable
 state. No local unlock becomes a server proof.
 
 The existing guest/sign-out path remains available while locked and retains the
-device preference. Users can restore their OS credentials separately; account
+device preference. Guest recovery first replaces private navigation and keeps
+the shield until the new router has painted and the old routes/dialogs have
+been disposed. A synchronous account-exit listener also serializes that boundary
+for A-to-guest, A-to-B (including B set to Off), and coalesced owner transitions.
+Late A logout or dialog completion cannot expose A content or replace B's new
+navigation. Failure to reset navigation retains the shield with an explicit
+retry. Same-account validation and ordinary guest navigation retain their routes.
+Users can restore their OS credentials separately; account
 password recovery does not silently reset a device lock. Once unlocked, members
 can select Off without an award gate. Actual native-device acceptance, including
 OS passcode/pattern accessibility, unavailable-device recovery and snapshots,
