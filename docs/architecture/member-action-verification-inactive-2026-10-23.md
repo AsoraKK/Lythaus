@@ -153,23 +153,40 @@ Account locking serializes changes. Event IDs are idempotent; ownership and know
 email credentials are checked. Callers cannot backdate choices. Disablement and
 recovery never depend on award eligibility.
 
-The pure adapter reconstructs intervals, rejects incomplete revision history,
-accounts for switches/disablement/revocation/gaps, and requires one qualifying
-option throughout the entire source calendar month. It intersects choices with
-existing canonical protection spans and matching server authentication. It cannot
-create coverage from selection or a local biometric boolean. A same-option
-credential replacement must have continuous actual coverage. A different option
-midmonth, late enrollment or any gap yields no security evidence; method choices
-do not stack. Boundaries use the existing UTC candidate calendar and configured
-settlement hours (72 in the unapproved existing candidate fixture), not rolling
-30 days or a device timezone. Those operational defaults are not newly approved.
+The owner subsequently approved one equal security benefit for qualifying choices
+and a cumulative 24-hour allowance per calendar month. The separate versioned
+adapter `member-security-calendar-grace-24h-v1` reconstructs account choice and
+canonical protection intervals, rejects incomplete revision history, and counts
+the union of verified unprotected intervals clipped to the source month. Exactly
+24 hours is allowed; one millisecond more loses only that month's security benefit.
+Repeated switches share the same allowance. Continuous transitions among mapped
+qualifying methods preserve eligibility where actual evidence supports coverage.
+Overlapping disablement, expiry and revocation gaps are counted once. Unknown
+telemetry is kept separate and cannot be treated as protection or silently spent
+as grace. A preference alone never creates coverage.
+
+The member must already have qualifying enrollment and genuine protection
+evidence at/before the calendar month's start; grace cannot backdate a midmonth or
+last-day enrollment. Cross-month gaps consume only their portion in each month.
+A matching server-verified authentication must occur during actual protected
+coverage that month, rather than during a gap. Local biometric success, refreshed
+tokens and reputation cannot satisfy it. UTC calendar boundaries and existing
+configured settlement hours (72 in the candidate fixture) remain unchanged;
+neither device timezone nor rolling 30-day windows apply.
 
 The optional collector can append an existing `authentication` observation from
 an actual new server password proof and a matching held account-credential choice.
 It emits only the existing `credential` category, never MFA, points or reputation
 updates. Monthly collection failure does not block account verification. The
 assembly adapter replaces only security facts, retains nonsecurity maintenance,
-and includes interval/history/mapping configuration in the shadow report/digest.
+and includes intervals, grace/unknown time and mapping configuration in the shadow
+report/digest. Raw evidence keeps its real gaps: the adapter does not fabricate
+protection spans to make the old strict calculator accept them. The new optional
+shadow calculation applies one common explicitly mapped **existing catalogue
+action**, reusing its existing maximum; it zeros the other security maintenance
+component to prevent stacking. Neither a point amount nor a common award action
+has a default. An old mapping lacking the new requirement version is unavailable.
+Historical calculator and signed catalogue bytes are untouched.
 Adopting or changing this policy for an existing assembly requires explicit review.
 
 There is deliberately no client preference-to-qualifying-credential conversion,
@@ -198,13 +215,17 @@ The expiry column is authorization expiry, not a claim that physical purge exist
 ## Activation decision packet
 
 - **Already approved for implementation:** the five optional device choices, OS
-  fallback, and five-minute action-bound verification for reward claims,
-  security/email changes and deletion. Browsing remains uninterrupted.
+  fallback, five-minute action-bound verification for reward claims, security/email
+  changes and deletion; equal monthly benefit for qualifying choices and cumulative
+  calendar-month grace of at most 24 hours. Browsing remains uninterrupted. No
+  other reputation is deducted for exceeding the allowance.
 - **Narrow unresolved policy question:** which account-level chosen option maps
-  to the existing credential-maintenance award? Should local unlock frequency
-  remain preference-only, with only separately protected account credentials
-  eligible? Email/password verification alone cannot be labelled MFA. No award
-  mapping or point amount is selected by this PR.
+  to the common existing security-maintenance award, and which existing catalogue
+  action represents that common benefit? Should local unlock frequency remain
+  preference-only, with only separately protected account credentials eligible?
+  Email/password verification alone cannot be labelled MFA. Equal treatment and
+  24-hour grace are settled; credential qualification and explicit catalogue
+  mapping remain unavailable, with no arbitrary point amount selected.
 - **Policy-lane acceptance:** explicit versioned mapping, qualifying credential
   coverage source and revocation semantics, UTC/settlement operational approval,
   privacy/retention and prospective-policy compatibility. No retroactive full-month

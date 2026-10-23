@@ -15,6 +15,7 @@ import { requireMonthlyPeerIngestionDrained } from './monthly-peer-participation
 import { requireMonthlyContextIngestionDrained } from './monthly-context-review.ts';
 import { prepareMonthlySecurityEvidence } from './member-security-maintenance.ts';
 import type { SecurityChoiceMapping } from '../../contracts/src/monthly-security-choice.ts';
+import { applyCommonSecurityBenefit } from '../../contracts/src/monthly-security-choice.ts';
 
 interface AssemblyInput {
   subjectUserId: string; sourceMonth: string; weeklyRulesVersion: string; maintenanceRulesVersion: string; evaluatedAt: string; peerRulesVersion?: string; contextRulesVersion?: string;
@@ -130,8 +131,9 @@ async function assembleCanonicalMonthlyReputation(client: Client, input: Assembl
   }
   const maintenanceEvidence = securityChoice ? [...observations.evidence.filter(item =>
     item.facts.kind !== 'protection' && item.facts.kind !== 'authentication'), ...securityChoice.evidence] : observations.evidence;
-  const maintenanceReport = calculateMonthlyMaintenance({ subjectUserId: input.subjectUserId, sourceMonth: input.sourceMonth,
+  const baseMaintenanceReport = calculateMonthlyMaintenance({ subjectUserId: input.subjectUserId, sourceMonth: input.sourceMonth,
     rules: maintenance.rules, evidence: maintenanceEvidence });
+  const maintenanceReport = securityChoice ? applyCommonSecurityBenefit(baseMaintenanceReport, securityChoice) : baseMaintenanceReport;
   const sourceInput: Omit<MonthlyReputationInput, 'quarterlyPoints'> = { policyVersion: MONTHLY_REPUTATION_POLICY_VERSION, sourceMonth: input.sourceMonth, sourceCutoff,
     periodPolicyVersion: weekly.rules.periodPolicyVersion, weeks: locked, monthlyPoints: maintenanceReport.monthlyPoints };
   const previewInput = preparation ? { subjectUserId: input.subjectUserId, source: sourceInput,

@@ -90,7 +90,7 @@ class DeviceUnlockSettingsCard extends ConsumerWidget {
             child: const Text('Reload choice and device support'),
           ),
         const Text(
-          'Monthly eligibility mapping is pending. Changing or disabling this choice does not deduct reputation. A qualifying option would need whole-calendar-month coverage and genuine server authentication; local biometric success is not that evidence.',
+          'Monthly eligibility mapping is pending. All qualifying protection choices share the same benefit, with a total allowance of 24 hours off per calendar month. Switching does not reset that allowance. More than 24 hours forfeits only that month’s security benefit. Genuine server authentication and verified coverage are required; local biometric success is not that evidence. Disabling does not deduct other reputation.',
         ),
       ],
     );

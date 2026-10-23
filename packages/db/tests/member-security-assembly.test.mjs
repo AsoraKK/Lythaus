@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { PROPOSED_MONTHLY_MAINTENANCE_RULES as defaults } from '../../contracts/src/monthly-maintenance-policy.ts';
 import { MONTHLY_REPUTATION_POLICY_VERSION as policyVersion, MONTHLY_REPUTATION_CATALOGUE_HASH as catalogueHash } from '../../contracts/src/monthly-reputation-policy.ts';
+import { MONTHLY_SECURITY_GRACE_POLICY } from '../../contracts/src/monthly-security-grace.ts';
 
 const subject = '019a4a90-0000-7000-8000-000000000001';
 const rules = { ...defaults, capabilities: { ...defaults.capabilities, credential: 'verified_authentication' } };
 const mapping = { version: 'synthetic-reviewed-mapping', status: 'approved_for_shadow', policyVersion, catalogueHash,
-  maintenanceRulesVersion: rules.version, timezone: 'UTC', options: { email_password: ['credential'] } };
+  maintenanceRulesVersion: rules.version, timezone: 'UTC', securityRequirementVersion: MONTHLY_SECURITY_GRACE_POLICY,
+  commonBenefitAction: 'monthly.credential_maintenance', options: { email_password: ['credential'] } };
 const evidence = [
   { id: 'coverage', subjectUserId: subject, performedAt: '2026-10-01T00:00:00.000Z', revokedAt: null,
     facts: { kind: 'protection', credentialId: subject, protections: ['credential'], expiresAt: null } },
@@ -90,5 +92,18 @@ test('existing assemblies require separate policy review before adopting or chan
       rules_version: rules.version, weekly_rules_version: 'weekly', report: { ...(securityChoice ? { securityChoice } : {}) } };
     await assert.rejects(assemble(db, { enabled: true, mapping }), /previous_policy_requires_review/);
     assert.equal(db.report, undefined);
+  }
+});
+
+test('approved cumulative grace changes only the common security component in inactive shadow assembly', async () => {
+  for (const hours of [24, 24 + 1 / 3600000]) {
+    const db = new Database();
+    db.changes.push(change(2, '2026-10-15T00:00:00.000Z', 'disabled'));
+    db.changes.push(change(3, new Date(Date.parse('2026-10-15T00:00:00.000Z') + Math.round(hours * 3600000)).toISOString()));
+    await assemble(db, { enabled: true, mapping });
+    assert.equal(capturedInput.monthlyPoints, hours <= 24 ? 1000 : 0);
+    assert.equal(capturedInput.quarterlyPoints, 1000);
+    assert.equal(db.report.securityChoice.grace.verifiedUnprotectedMs, Math.round(hours * 3600000));
+    assert.equal(db.calls.some(([sql]) => /UPDATE.*reputation_profiles/.test(sql)), false);
   }
 });

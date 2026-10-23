@@ -11,7 +11,7 @@ Publication check fetched main `868be4ee163ba5f7968212230d731682ff005e45`
 (restore inventory #1083). That work remains separate. This dependent PR's CI
 registration is additive; current-main integration is not claimed by local tests.
 
-## Commands and results
+## Initial dependent-slice results
 
 ```sh
 npm run typecheck:native
@@ -128,3 +128,28 @@ types are prepared but no working-looking invented endpoint was added.
 The option-to-award mapping and coverage-source integration remain **pending**;
 the current implementation makes these states explicit. See the
 [activation packet](../architecture/member-action-verification-inactive-2026-10-23.md).
+
+## Approved equal-benefit and monthly grace delta
+
+The owner's later approval supersedes the earlier strict no-gap/same-option
+candidate in this PR. The new versioned adapter permits a cumulative union of
+verified unprotected intervals of at most 24 hours per UTC calendar month. Tests
+cover zero, under/exactly/over 24 hours; repeated method switches without resets;
+overlapping expiry/revocation/disablement intervals; cross-month clipping and
+monthly reset; enrollment after month start; unknown coverage and missing/revoked
+authentication; unchanged timezone/settlement boundaries; and equal treatment of
+synthetically mapped different verified methods without stacking.
+
+The fixture's common action is explicitly synthetic configuration. No production
+qualifying credential, common catalogue mapping or new point value is chosen.
+The old calculator still rejects real coverage gaps in raw facts; only the new
+optional shadow adapter applies the approved grace rule to one existing mapped
+component. Other monthly/quarterly components and reputation remain unchanged.
+
+Final grace-delta validation reruns the exact ten-file Node command in the review
+section above: **87 passed**, no failed/cancelled/skipped tests. The complete
+targeted Flutter command passes **110 tests**. TypeScript checking, Flutter
+analysis, Dart formatting (11 files, zero changes) and diff checks pass. Raw output
+is in [monthly-grace-validation.txt](../evidence/member-verification-20261023/monthly-grace-validation.txt).
+This delta follows `d1e66ed61ebaa2506b9e6da8495a203381ade3a4`; that predecessor
+contains the reviewed retry/UTF-8 fixes but does not implement the later grace rule.

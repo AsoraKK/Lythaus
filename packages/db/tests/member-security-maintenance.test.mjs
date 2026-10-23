@@ -3,10 +3,12 @@ import test from 'node:test';
 import { recordMemberSecurityChoice, recordMonthlyAccountAuthentication, prepareMonthlySecurityEvidence, securityChoiceMapping } from '../src/member-security-maintenance.ts';
 import { PROPOSED_MONTHLY_MAINTENANCE_RULES as defaults } from '../../contracts/src/monthly-maintenance-policy.ts';
 import { MONTHLY_REPUTATION_POLICY_VERSION as policyVersion, MONTHLY_REPUTATION_CATALOGUE_HASH as catalogueHash } from '../../contracts/src/monthly-reputation-policy.ts';
+import { MONTHLY_SECURITY_GRACE_POLICY } from '../../contracts/src/monthly-security-grace.ts';
 
 const rules = { ...defaults, capabilities: { ...defaults.capabilities, credential: 'verified_authentication' } };
 const mapping = { version: 'synthetic-reviewed-choice', status: 'approved_for_shadow', policyVersion, catalogueHash,
-  maintenanceRulesVersion: rules.version, timezone: 'UTC', options: { email_password: ['credential'] } };
+  maintenanceRulesVersion: rules.version, timezone: 'UTC', securityRequirementVersion: MONTHLY_SECURITY_GRACE_POLICY,
+  commonBenefitAction: 'monthly.credential_maintenance', options: { email_password: ['credential'] } };
 class Database {
   calls = []; sourceKind = 'account_credential'; choiceState = 'enabled'; proofOwner = 'a'; existing;
   async query(sql, values = []) {
@@ -83,7 +85,9 @@ test('mapping rejects unknown versions, operational timezone and invented protec
   assert.equal(securityChoiceMapping(undefined), undefined);
   assert.deepEqual(securityChoiceMapping(JSON.stringify(mapping)), mapping);
   for (const value of [{ ...mapping, catalogueHash: 'wrong' }, { ...mapping, timezone: 'local' },
-    { ...mapping, options: { pin: ['points'] } }, { ...mapping, options: { x: ['credential', 'credential'] } }]) {
+    { ...mapping, options: { pin: ['points'] } }, { ...mapping, options: { x: ['credential', 'credential'] } },
+    { ...mapping, securityRequirementVersion: 'old-policy' }, { ...mapping, commonBenefitAction: undefined },
+    { ...mapping, commonBenefitAction: 'invented.new_award' }]) {
     assert.throws(() => securityChoiceMapping(JSON.stringify(value)), /mapping_unavailable/);
   }
 });

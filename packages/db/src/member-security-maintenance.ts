@@ -1,6 +1,7 @@
 import type { Client } from 'pg';
 import { MONTHLY_REPUTATION_CATALOGUE_HASH, MONTHLY_REPUTATION_POLICY_VERSION, nextReputationMonth, requireSourceMonth } from '../../contracts/src/monthly-reputation-policy.ts';
 import { selectedSecurityMaintenanceEvidence, type SecurityChoiceChange, type SecurityChoiceMapping } from '../../contracts/src/monthly-security-choice.ts';
+import { MONTHLY_SECURITY_GRACE_POLICY } from '../../contracts/src/monthly-security-grace.ts';
 import { loadMonthlyMaintenanceConfiguration, readMonthlyMaintenanceEvidence } from './monthly-maintenance.ts';
 
 export function securityChoiceMapping(value: string | undefined): SecurityChoiceMapping | undefined {
@@ -9,6 +10,8 @@ export function securityChoiceMapping(value: string | undefined): SecurityChoice
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('security_mapping_unavailable');
   const mapping = parsed as SecurityChoiceMapping;
   if (mapping.status !== 'approved_for_shadow' || !mapping.version || mapping.timezone !== 'UTC'
+    || mapping.securityRequirementVersion !== MONTHLY_SECURITY_GRACE_POLICY
+    || !['monthly.credential_maintenance', 'monthly.mfa_maintenance'].includes(mapping.commonBenefitAction)
     || mapping.policyVersion !== MONTHLY_REPUTATION_POLICY_VERSION
     || mapping.catalogueHash !== MONTHLY_REPUTATION_CATALOGUE_HASH || !mapping.options
     || typeof mapping.options !== 'object' || Array.isArray(mapping.options)
