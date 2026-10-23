@@ -115,7 +115,7 @@ function fixture(options = {}) {
     }
   }
   const environment = { RELEASE_SHA: sourceSha, GITHUB_SHA: sourceSha, GITHUB_REF: 'refs/heads/main', REF_PROTECTED: 'true',
-    GITHUB_REPOSITORY: 'AsoraKK/Lythaus', GITHUB_REPOSITORY_ID: '1010752912', GITHUB_RUN_ID: '123', GITHUB_RUN_ATTEMPT: '1', GH_TOKEN: secret,
+    GITHUB_REPOSITORY: 'fixture-owner/Lythaus', GITHUB_REPOSITORY_ID: '1010752912', GITHUB_RUN_ID: '123', GITHUB_RUN_ATTEMPT: '1', GH_TOKEN: secret,
     PLANETSCALE_ADMIN_DATABASE_URL: url(TARGET.admin), PLANETSCALE_SCHEMA_READ_DATABASE_URL: url(TARGET.verifier),
     PLANETSCALE_API_TOKEN: `synthetic-id:${secret}`, CLOUDFLARE_API_TOKEN: secret, PSCALE_ROLE_IDENTIFIERS: JSON.stringify({ lythaus_runtime: TARGET.runtime }) };
   const checkpoints = [];
@@ -129,7 +129,10 @@ function fixture(options = {}) {
     fetchImpl: async (address, request) => {
       requests.push({ address, request });
       if (options.providerDenied && address.includes('planetscale')) return { ok: false };
-      return { ok: true, json: async () => address.includes('github') ? { protected: true, commit: { sha: options.mainChanged ? 'b'.repeat(40) : sourceSha } }
+      if (options.repositoryDenied && address.endsWith('/fixture-owner/Lythaus')) return { ok: false };
+      return { ok: true, json: async () => address.endsWith('/fixture-owner/Lythaus') || address.endsWith('/other/Lythaus')
+        ? { id: options.wrongRepositoryId ? 123 : 1010752912, name: 'Lythaus', full_name: 'fixture-owner/Lythaus' }
+        : address.includes('github') ? { protected: true, commit: { sha: options.mainChanged ? 'b'.repeat(40) : sourceSha } }
         : { name: 'main', id: TARGET.branchId, kind: 'postgresql', ready: true, production: true } };
     }, verifyTargets: async input => { assert.equal(input.readOnlyGetOnly, true); return { status: options.mappingFailure ? 'fail' : 'pass',
       targetBranch: 'main', originFingerprint: fingerprint, bindings: [{ hyperdriveId: TARGET.hyperdriveId, roleClass: 'lythaus_runtime', roleMatches: true }] }; },
@@ -149,7 +152,7 @@ test('pinned artifact baseline produces exactly four approved statements, sevent
   assert.equal(f.clients.length, 3);
   assert.equal(f.checkpoints.find(receipt => receipt.phase === 'COMMIT_ATTEMPT_PENDING').mutationOutcome, 'UNKNOWN_COMMIT_OUTCOME');
   assert.ok(f.clients.every(client => client.closed && client.config.ssl.rejectUnauthorized));
-  assert.equal(f.requests.length, 3);
+  assert.equal(f.requests.length, 5);
   assert.ok(f.requests.every(call => call.request.method === 'GET' && call.request.redirect === 'error'));
   const encoded = JSON.stringify(report);
   for (const value of [secret, 'postgresql://', 'psdb.cloud', 'connectionString', 'Authorization']) assert.equal(encoded.includes(value), false);
@@ -167,7 +170,8 @@ test('unwritable receipt checkpoints prevent commit and roll back any staged gra
 });
 
 test('preconditions, denied reads and rerun attempts stop without a grant or fallback', async () => {
-  const cases = [ [{ providerDenied: true }, {}], [{ mainChanged: true }, {}], [{ mappingFailure: true }, {}],
+  const cases = [ [{ providerDenied: true }, {}], [{ repositoryDenied: true }, {}], [{ wrongRepositoryId: true }, {}],
+    [{ mainChanged: true }, {}], [{ mappingFailure: true }, {}],
     [{ memberships: true }, {}], [{ rls: true }, {}], [{ authorityFailure: true }, {}], [{ wrongDatabase: true }, {}], [{ unsafeMetadata: true }, {}],
     [{}, { GITHUB_RUN_ATTEMPT: '2' }], [{}, { REF_PROTECTED: 'false' }], [{}, { GITHUB_REPOSITORY: 'other/Lythaus' }],
     [{}, { PLANETSCALE_ADMIN_DATABASE_URL: url(TARGET.runtime) }], [{}, { PSCALE_ROLE_IDENTIFIERS: '{}' }] ];

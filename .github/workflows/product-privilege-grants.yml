@@ -33,7 +33,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_REPOSITORY" = AsoraKK/Lythaus
+          test "${GITHUB_REPOSITORY##*/}" = Lythaus
           test "$GITHUB_REPOSITORY_ID" = 1010752912
           test "$GITHUB_REF" = refs/heads/main
           test "$REF_PROTECTED" = true

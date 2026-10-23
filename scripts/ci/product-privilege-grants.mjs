@@ -298,17 +298,25 @@ export async function runProductGrants({ environment: env = process.env, fetchIm
     status: 'BLOCKED', mutationOutcome: 'NOT_ATTEMPTED', providerMutations: false, productRowsRead: false, blockers: [] };
   let admin;
   const currentMain = async () => {
-    const response = await fetchImpl('https://api.github.com/repos/AsoraKK/Lythaus/branches/main', {
+    const request = {
       method: 'GET', redirect: 'error', signal: AbortSignal.timeout(15_000),
       headers: { Authorization: `Bearer ${env.GH_TOKEN}`, Accept: 'application/json' },
-    });
+    };
+    const repositoryUrl = `https://api.github.com/repos/${env.GITHUB_REPOSITORY}`;
+    const repositoryResponse = await fetchImpl(repositoryUrl, request);
+    requireThat(repositoryResponse.ok, 'repository_identity_read_failed');
+    const repository = await repositoryResponse.json();
+    requireThat(repository.id === 1010752912 && repository.name === 'Lythaus'
+      && repository.full_name === env.GITHUB_REPOSITORY, 'repository_identity_changed');
+    const response = await fetchImpl(`${repositoryUrl}/branches/main`, request);
     requireThat(response.ok, 'current_main_read_failed');
     const branch = await response.json();
     requireThat(branch.protected === true && branch.commit?.sha === env.RELEASE_SHA, 'current_main_changed');
   };
   try {
     requireThat(report.sourceMainSha && report.runId && env.GITHUB_SHA === env.RELEASE_SHA && env.GITHUB_REF === 'refs/heads/main'
-      && env.REF_PROTECTED === 'true' && env.GITHUB_REPOSITORY === 'AsoraKK/Lythaus' && env.GITHUB_REPOSITORY_ID === '1010752912'
+      && env.REF_PROTECTED === 'true' && /^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/Lythaus$/.test(env.GITHUB_REPOSITORY ?? '')
+      && env.GITHUB_REPOSITORY_ID === '1010752912'
       && env.GITHUB_RUN_ATTEMPT === '1' && env.GH_TOKEN, 'invalid_execution_context');
     const adminConfig = connection(env.PLANETSCALE_ADMIN_DATABASE_URL, TARGET.admin, reviewedOriginFingerprint);
     const verifierConfig = connection(env.PLANETSCALE_SCHEMA_READ_DATABASE_URL, TARGET.verifier, reviewedOriginFingerprint);
