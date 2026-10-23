@@ -2,7 +2,9 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import signal
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -165,6 +167,28 @@ class SmokeBoundaryTests(unittest.TestCase):
         self.assertEqual(calls, [0.25])
         self.assertEqual(receipt['state'], 'TIME_BOUND_EXHAUSTED')
         self.assertEqual(receipt['attempts'][-1]['state'], 'DEADLINE_EXCEEDED_NO_RETRY')
+
+    @unittest.skipUnless(hasattr(signal, 'setitimer'), 'attended runtime requires Unix interval timers')
+    def test_wall_clock_alarm_interrupts_blocked_io_and_restores_handler(self):
+        previous = signal.getsignal(signal.SIGALRM)
+        started = time.monotonic()
+        with self.assertRaises(smoke.DeadlineExceeded):
+            with smoke.active_request_deadline(0.05):
+                time.sleep(1)
+        self.assertLess(time.monotonic() - started, 0.5)
+        self.assertEqual(signal.getsignal(signal.SIGALRM), previous)
+        self.assertEqual(signal.getitimer(signal.ITIMER_REAL), (0.0, 0.0))
+
+    @unittest.skipUnless(hasattr(signal, 'setitimer'), 'attended runtime requires Unix interval timers')
+    def test_wall_clock_alarm_is_disarmed_after_success_and_transport_failure(self):
+        previous = signal.getsignal(signal.SIGALRM)
+        with smoke.active_request_deadline(1):
+            pass
+        with self.assertRaisesRegex(ValueError, 'synthetic_transport_failure'):
+            with smoke.active_request_deadline(1):
+                raise ValueError('synthetic_transport_failure')
+        self.assertEqual(signal.getsignal(signal.SIGALRM), previous)
+        self.assertEqual(signal.getitimer(signal.ITIMER_REAL), (0.0, 0.0))
 
 
 if __name__ == '__main__':

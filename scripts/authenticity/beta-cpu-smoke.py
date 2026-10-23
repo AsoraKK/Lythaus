@@ -1,5 +1,6 @@
 """Attended, no-retry parity runner for an explicitly authorized loopback Container."""
 import argparse
+from contextlib import contextmanager
 import hashlib
 import io
 import json
@@ -7,6 +8,7 @@ import math
 import os
 from pathlib import Path
 import re
+import signal
 import time
 import urllib.request
 import uuid
@@ -24,6 +26,23 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 class DeadlineExceeded(ValueError):
     pass
+
+
+@contextmanager
+def active_request_deadline(seconds):
+    if not hasattr(signal, "setitimer") or signal.getitimer(signal.ITIMER_REAL)[0] > 0:
+        raise ValueError("REQUEST_DEADLINE_UNAVAILABLE")
+
+    def expired(_signal, _frame):
+        raise DeadlineExceeded("ACTIVE_DEADLINE")
+
+    previous_handler = signal.signal(signal.SIGALRM, expired)
+    try:
+        signal.setitimer(signal.ITIMER_REAL, seconds)
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous_handler)
 
 
 def sha(data):
@@ -155,10 +174,11 @@ def main():
                 remaining = deadline - sent
                 if remaining <= 0:
                     raise DeadlineExceeded("ACTIVE_DEADLINE")
-                with urllib.request.build_opener(NoRedirect()).open(request, timeout=min(180, remaining)) as response:
-                    if time.monotonic() >= deadline:
-                        raise DeadlineExceeded("ACTIVE_DEADLINE")
-                    raw = response.read(8 * 1024 * 1024 + 1)
+                with active_request_deadline(remaining):
+                    with urllib.request.build_opener(NoRedirect()).open(request, timeout=min(180, remaining)) as response:
+                        if time.monotonic() >= deadline:
+                            raise DeadlineExceeded("ACTIVE_DEADLINE")
+                        raw = response.read(8 * 1024 * 1024 + 1)
                 if time.monotonic() >= deadline:
                     raise DeadlineExceeded("ACTIVE_DEADLINE")
                 if len(raw) > 8 * 1024 * 1024:
