@@ -14,6 +14,7 @@ part 'notification.g.dart';
 /// * [id]
 /// * [notificationType]
 /// * [entityId]
+/// * [deeplink] - Current first-party post/comment destination for a visible comment notification.
 /// * [title]
 /// * [readAt]
 /// * [createdAt]
@@ -27,6 +28,10 @@ abstract class Notification implements Built<Notification, NotificationBuilder> 
 
   @BuiltValueField(wireName: r'entityId')
   String? get entityId;
+
+  /// Current first-party post/comment destination for a visible comment notification.
+  @BuiltValueField(wireName: r'deeplink')
+  String? get deeplink;
 
   @BuiltValueField(wireName: r'title')
   String get title;
@@ -74,6 +79,13 @@ class _$NotificationSerializer implements PrimitiveSerializer<Notification> {
       yield r'entityId';
       yield serializers.serialize(
         object.entityId,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.deeplink != null) {
+      yield r'deeplink';
+      yield serializers.serialize(
+        object.deeplink,
         specifiedType: const FullType.nullable(String),
       );
     }
@@ -138,6 +150,14 @@ class _$NotificationSerializer implements PrimitiveSerializer<Notification> {
           ) as String?;
           if (valueDes == null) continue;
           result.entityId = valueDes;
+          break;
+        case r'deeplink':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.deeplink = valueDes;
           break;
         case r'title':
           final valueDes = serializers.deserialize(

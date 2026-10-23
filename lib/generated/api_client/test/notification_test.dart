@@ -22,6 +22,12 @@ void main() {
       // TODO
     });
 
+    // Current first-party post/comment destination for a visible comment notification.
+    // String deeplink
+    test('to test the property `deeplink`', () async {
+      // TODO
+    });
+
     // String title
     test('to test the property `title`', () async {
       // TODO

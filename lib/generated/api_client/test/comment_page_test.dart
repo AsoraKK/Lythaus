@@ -13,6 +13,17 @@ void main() {
       // TODO
     });
 
+    // Reply tail cursor for an explicit check for new replies.
+    // String refreshCursor
+    test('to test the property `refreshCursor`', () async {
+      // TODO
+    });
+
+    // CommentPageAllOfCapabilities capabilities
+    test('to test the property `capabilities`', () async {
+      // TODO
+    });
+
     // BuiltList<Comment> items
     test('to test the property `items`', () async {
       // TODO

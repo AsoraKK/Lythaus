@@ -22,6 +22,28 @@ void main() {
       // TODO
     });
 
+    // Canonical top-level comment for this conversation.
+    // String conversationId
+    test('to test the property `conversationId`', () async {
+      // TODO
+    });
+
+    // Visible non-deleted descendant replies at the page snapshot. Includes nested replies; excludes hidden and pending contributions.
+    // int replyCount
+    test('to test the property `replyCount`', () async {
+      // TODO
+    });
+
+    // String replyToAuthorId
+    test('to test the property `replyToAuthorId`', () async {
+      // TODO
+    });
+
+    // bool replyToDeleted
+    test('to test the property `replyToDeleted`', () async {
+      // TODO
+    });
+
     // String body
     test('to test the property `body`', () async {
       // TODO

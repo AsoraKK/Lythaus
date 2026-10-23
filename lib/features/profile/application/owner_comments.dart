@@ -79,10 +79,18 @@ class OwnerCommentsController
       if (!_sessionMatches() || requestRevision != _requestRevision) return;
       final latest = state.valueOrNull ?? current;
       state = AsyncData(latest.append(page));
-    } catch (error) {
+    } catch (error, stack) {
       if (!_sessionMatches() ||
           requestRevision != _requestRevision ||
           (error is DioException && CancelToken.isCancel(error))) {
+        return;
+      }
+      if (error is DioException &&
+          [401, 403].contains(error.response?.statusCode)) {
+        state = const AsyncData(
+          OwnerCommentsTimeline(items: [], nextCursor: null),
+        );
+        state = AsyncError(error, stack);
         return;
       }
       final latest = state.valueOrNull;
