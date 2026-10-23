@@ -35,9 +35,10 @@ const allocatedJobsDiagnosticTests = 'apps/lythaus-jobs/tests/reputation-session
 const allocatedJobsDiagnosticFiles = new Map([
   // PR #1044 head 75d22de8640ba0d1d687a873746820ee7c39ec10 passed 57/57 media CI checks and received independent review.
   // Proposed PR1063 text allocation; subject-lock support remains separately gated.
-  ['apps/lythaus-jobs/src/index.ts', '50a6d8c3f4dd73f49db3c68b463a19b8c172ebb9'],
+  // Exact comment hooks independently reviewed at 211f0e064b501ec6ed680c891ee36bd3e38d8a41.
+  ['apps/lythaus-jobs/src/index.ts', '9d192e7f489fd5d0f6db0e010bfcb1dd79c02a12'],
   // Exact independently reviewed private image status and attachment gate; waitlist bytes remain frozen.
-  ['apps/lythaus-public-api/src/index.ts', 'dbdbd18ee726e3e399e04fbd01c649534729bb4b'],
+  ['apps/lythaus-public-api/src/index.ts', 'aacfbb522f8387a72db133fa8c5384dcf9d4e2f2'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],
@@ -1097,6 +1098,35 @@ test('allocated Jobs pins reject altered historical and unrelated source paths',
     allocatedJobsDiagnosticFiles.values().next().value), assert.AssertionError);
   assert.throws(() => assertAllocatedJobsDiagnosticFile('apps/lythaus-public-api/src/auth-runtime-policy.ts',
     allocatedJobsDiagnosticFiles.values().next().value), assert.AssertionError);
+});
+
+test('comment entrypoint allocations reject predecessor blobs and unauthorized visibility or revision mutations', () => {
+  const cases = [
+    ['apps/lythaus-public-api/src/index.ts', 'dbdbd18ee726e3e399e04fbd01c649534729bb4b', [
+      ['return privateResponse(request, env, body);', 'return response(request, env, body);'],
+      ['AND ${commentNotificationVisibilitySql}', ''],
+      ['depth = nestedReplyDepth(parent.rows[0]);', 'depth = 1;'],
+    ]],
+    ['apps/lythaus-jobs/src/index.ts', '50a6d8c3f4dd73f49db3c68b463a19b8c172ebb9', [
+      ['await client.query(commentNotificationRevisionLockQuery, [eventId]);', ''],
+      ['notificationType: recipient.rows[0].notification_type,', "notificationType: 'content.comment_received',"],
+    ]],
+  ];
+  for (const [filename, previous, mutations] of cases) {
+    const source = readFileSync(path.join(root, filename), 'utf8');
+    const current = git('hash-object', `--path=${filename}`, filename);
+    assert.doesNotThrow(() => assertAllocatedJobsDiagnosticFile(filename, current));
+    assert.notEqual(previous, current);
+    assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, previous), assert.AssertionError);
+    for (const [before, after] of mutations) {
+      assert.ok(source.includes(before), 'The synthetic mutation must alter an actual reviewed comment hook');
+      const altered = execFileSync('git', ['hash-object', '--stdin'], {
+        cwd: root, encoding: 'utf8', input: source.replace(before, after),
+      }).trim();
+      assert.notEqual(altered, current);
+      assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, altered), assert.AssertionError);
+    }
+  }
 });
 
 test('image recovery allocation rejects previous and unrelated dependency bytes', () => {

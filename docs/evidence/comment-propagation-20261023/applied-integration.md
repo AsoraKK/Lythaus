@@ -54,11 +54,15 @@ supporting modules. Neither source branch nor the checked-out entrypoints are
 overwritten by this compatibility check. This is compile/source compatibility,
 not a claim that every other lane's runtime acceptance was rerun.
 
-## Exact-source allocation hold
+## Exact-source allocation review
 
-The homepage protection guard is deliberately unchanged. Its actual applied test
-fails because these new API/Jobs blobs are not yet independently allocated. Do
-not update the pins merely to obtain green CI.
+At `211f0e06`, the unchanged homepage guard rejected the new API/Jobs blobs.
+Parent subsequently supplied independent review of the four exact applied blobs
+below and requested the narrow allocation follow-up. That follow-up changes only
+the two existing API/Jobs entries in `allocatedJobsDiagnosticFiles`; all other
+allocations, baselines, protected paths and assertion functions remain unchanged.
+Admin and the native model are outside this existing allocation map, so no new
+exception or broader inventory is introduced for them.
 
 | Path | Actual applied blob |
 | --- | --- |
@@ -67,13 +71,30 @@ not update the pins merely to obtain green CI.
 | Admin index | `233a52ab45ccfa394f1335bf64470b5983bd693b` |
 | Native notification model | `d21357b572a89b62974d7cb366f6de43153888d7` |
 
+The API pin changes from `dbdbd18ee726e3e399e04fbd01c649534729bb4b` to the
+reviewed `aacfbb522f8387a72db133fa8c5384dcf9d4e2f2`; Jobs changes from
+`50a6d8c3f4dd73f49db3c68b463a19b8c172ebb9` to the reviewed
+`9d192e7f489fd5d0f6db0e010bfcb1dd79c02a12`. The new regression rejects both
+predecessors and five actual-source mutations: public caching, removed
+notification visibility filtering, bypassed nested-parent depth validation,
+removed revision locking and an altered notification type. Existing generic
+mutation, historical-blob, unrelated-path and fresh-squash rejection tests remain.
+
+Allocation follow-up validation: 43 protection tests and all 102 marketing Node
+tests pass; actual applied workerd journeys pass four tests; native feed and
+comment propagation PG17 suites pass 20 tests. TypeScript, full Flutter analyzer,
+26 actual native model/screen/navigation regressions and the pinned 14-file
+security/detection compatibility check pass. The runtime files still hash exactly
+to the four independently reviewed values above. The only follow-up changed files
+are the protection test and this evidence note.
+
 The purely composed pending-security/detection compatibility outputs have API
 blob `dfb94053f9ac2762d58c29983021e5870594f133` and Jobs blob
 `d4d53ed44c995bce8b52943be7b747bf644b8e46`. These are compatibility outputs, not
 checked-out production candidates or permission to change allocations. Parent
 must choose/review the actual combined merge order and resulting bytes.
 
-Normal exact-head required CI and any reviewed allocation update remain pending.
+Parent review of the allocation delta and normal required integrated CI remain pending.
 Public posting, Most relevant, provider delivery and all pre-existing launch
 acceptance gates stay withheld. The trusted-signal contract is a proposal only;
 no AI service, new ranking, earning effect or reputation penalty is activated.
