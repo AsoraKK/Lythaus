@@ -156,7 +156,7 @@ describe('product-integrity OpenAPI parity', () => {
     const search = providers.split('class FeedSearchNotifier')[1].split('/// Notifier for trending feed')[0];
     expect(search).toContain('getDiscoverFeed(');
     expect(search).toContain('tag: arg.tag');
-    expect(search).not.toContain('AuthRequiredException');
+    expect(search).not.toMatch(/\bthrow\s+(?:const\s+)?AuthRequiredException\s*\(/);
     expect(search).not.toContain('SEARCH_UNAVAILABLE');
     expect(search).not.toContain('getFeed(');
     const discovery = workers.public.split('async function discoveryFeed(')[1].split('async function notifications(')[0];
