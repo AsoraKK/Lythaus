@@ -1,0 +1,88 @@
+# Inactive action verification: validation record
+
+Date: 23 October 2026. Dependent base:
+`68496e624790b6dc4a2ca2dd1b2971685e8829b6` (draft #1082). The dependent PR's
+exact head identifies this source. Flutter 3.41.1 / Dart 3.11.0 / Node 22.23.3;
+existing dependencies, no lockfile changes or new providers. All tests below use
+synthetic fixtures. No migration, real credential, security activation or
+reputation mutation was performed.
+
+Publication check fetched main `868be4ee163ba5f7968212230d731682ff005e45`
+(restore inventory #1083). That work remains separate. This dependent PR's CI
+registration is additive; current-main integration is not claimed by local tests.
+
+## Commands and results
+
+```sh
+npm run typecheck:native
+# Passed.
+
+node --experimental-strip-types --experimental-test-module-mocks --test packages/security/tests/member-action-verification.test.mjs apps/lythaus-public-api/tests/member-action-verification.test.mjs packages/contracts/tests/monthly-security-choice.test.mjs packages/db/tests/member-security-maintenance.test.mjs packages/db/tests/member-security-assembly.test.mjs packages/contracts/tests/monthly-maintenance.test.mjs apps/lythaus-public-api/tests/auth-session-runtime.test.mjs apps/lythaus-public-api/tests/auth-session-transport.test.mjs
+# 62 passed, 0 failed/skipped.
+
+node --experimental-strip-types --test packages/security/tests/critical-security-policy.test.mjs packages/security/tests/recent-account-authentication.test.mjs
+# 6 passed, 0 failed/skipped.
+
+node --experimental-strip-types --test packages/db/tests/member-security-maintenance.test.mjs
+# 5 passed after the final explicit cross-account choice validation assertion.
+
+flutter test --no-pub --concurrency=1 test/features/member_verification test/features/auth/application test/integration/rewards_redemption_integration_test.dart --reporter expanded
+# 110 passed: foundation/device settings plus existing restoration/redemption tests.
+
+flutter analyze --no-pub lib/features/member_verification lib/ui/screens/profile/account_security_screen.dart test/features/member_verification
+# No issues found.
+
+dart format --output=none --set-exit-if-changed lib/features/member_verification lib/ui/screens/profile/account_security_screen.dart test/features/member_verification
+# Passed, no changes.
+
+git diff --check
+# Passed.
+```
+
+Final command output is retained in
+[`action-validation.txt`](../evidence/member-verification-20261023/action-validation.txt).
+The existing CI job registers the five new Node test files; no release gate,
+assertion threshold or deployment workflow changes. The dependent base preserves
+#1082's reviewed source and successful remote run history. Its green checks do
+not certify this new head; inspect the dependent PR's own checks before merging.
+
+## Evidence matrix
+
+| Concern | Evidence |
+| --- | --- |
+| Default inactivity | Card disabled without provider/store/OS calls; proof consumption disabled without DB calls; collection disabled or mapping absent without reads/writes; assembly does not read new schema or change legacy calculation when disabled. |
+| Preference persistence/account separation | Five settings choices confirmed and persisted; foundation real secure-store fixtures, serialized cross-controller writes, guest/account fences and late hydration retained. |
+| Lifecycle, cancellation, lockout | OS inactive sheet stays valid; hidden/paused cancels, late success cannot save; explicit cancellation, lockout and storage failures retain choice; Off does not require OS or reward approval. Foundation tests cover exact 1/5/15-minute boundaries and every reopen. |
+| Hardware/web/offline/time | Unsupported-web/hardware cannot enable choices; OS fallback is configured; local OS operation has no network dependency. Existing monotonic/wall-clock/clock-reset cases pass. Monthly timezone/DST, leap/year/month-length and settlement cases use canonical calendar boundaries. |
+| Genuine verification | Real existing password hash/verifier exercised; incorrect password, unavailable credential/schema, missing session and unrecognized action deny issuance. Client actor/family/authentication time/local boolean claims cannot substitute. |
+| Binding, expiry and replay | Exact five-minute server clock, future time denied, account/family/session/version checks, action/raw-body/query/HMAC key and secret binding; conditional consumption/rollback/single effect tested through SQL-aware synthetic transaction fixtures. These fixtures do not replace actual PG17 concurrency acceptance. |
+| Refresh invariants | Existing session expiry/rotation/CAS/reuse/token-version and transport suites pass; rotated read-only binding in the same family retains original proof age. JWT tests retain existing 900-second expiry and Principal claims. Auth restoration/redemption Flutter suites pass unchanged. |
+| Monthly eligibility | Missing mapping/capability emits no security facts; no local face/fingerprint/PIN choice becomes proof. Whole-month selection plus actual coverage and matching server event required; last-day enrollment, midmonth switch, disable/revoke/gap and wrong account fail. Exact cutoff and credential rotation cases included. Existing calculator amounts are reused without stacking or mutation. |
+| Assembly integration | Explicit selection filter withholds security points for gaps/settlement/mapping pending while preserving other maintenance; version/history recorded, policy changes on existing reports require review. Actual assembly module exercised with synthetic module/DB dependencies. |
+
+The first widget run found a test-fixture lifecycle transition error and a disposed
+controller getter read. The fixture now uses valid lifecycle transitions and the
+getter checks `mounted`; final assertions remain intact. There were no security
+assertions relaxed to obtain these results.
+
+## Protected sources and limits
+
+This comparison returned no differences from the reviewed foundation:
+
+```sh
+git diff --exit-code 68496e624790b6dc4a2ca2dd1b2971685e8829b6 -- apps/lythaus-public-api/src/auth-session-runtime.ts apps/lythaus-public-api/src/auth-session-transport.ts apps/lythaus-public-api/src/auth-account-transaction.ts packages/security/src/jwt.ts lib/features/auth
+```
+
+The original principal/issue/refresh callbacks in public API `index.ts` also remain
+unchanged. No changes to existing auth storage, cookies, restoration, expiry,
+rotation, revocation, signed monthly policies, migration manifest or release/grant
+workflows. All new runtime flags remain absent from build/provider configuration.
+
+No new SQL proposal was executed, so real DB privileges, transaction isolation and
+migration compatibility are **pending**, not passed. Device/browser acceptance,
+app-wide lock composition and client server-verification UX remain **pending**.
+Security/email settings mutation routes do not exist at this baseline; policy
+types are prepared but no working-looking invented endpoint was added.
+The option-to-award mapping and coverage-source integration remain **pending**;
+the current implementation makes these states explicit. See the
+[activation packet](../architecture/member-action-verification-inactive-2026-10-23.md).

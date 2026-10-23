@@ -35,6 +35,8 @@ export type ExistingIdempotencyPlan =
   | { action: 'outcome_unknown' };
 
 const PUBLIC_ERROR_CODES = new Set([
+  'recent_authentication_unavailable', 'recent_authentication_operation_unavailable',
+  'recent_authentication_required', 'recent_authentication_failed',
   'account_exists', 'account_unavailable', 'admin_public_label_declaration_mismatch',
   'ai_assisted_character_limit_exceeded', 'ai_generated_public_content_blocked',
   'appeal_not_allowed', 'appeal_not_found', 'appeal_recusal_not_allowed',
@@ -85,7 +87,7 @@ export function classifyPublicError(error: unknown): { exposedCode: string; inte
   const exposedCode = expected ? internalCode : 'request_failed';
   const status = exposedCode === 'request_failed' ? 500
     : ['authentication_required', 'invalid_credentials', 'refresh_token_invalid', 'refresh_token_reuse'].includes(exposedCode) ? 401
-      : ['news_board_not_entitled', 'social_interaction_not_allowed', 'appeal_vote_not_allowed', 'appeal_recusal_not_allowed', 'auth_origin_not_allowed'].includes(exposedCode) ? 403
+      : ['recent_authentication_required', 'recent_authentication_failed', 'news_board_not_entitled', 'social_interaction_not_allowed', 'appeal_vote_not_allowed', 'appeal_recusal_not_allowed', 'auth_origin_not_allowed'].includes(exposedCode) ? 403
         : exposedCode === 'not_found' || exposedCode.endsWith('_not_found') ? 404
           : exposedCode === 'method_not_allowed' ? 405
             : ['presentation_preferences_conflict', 'idempotency_key_conflict', 'idempotency_in_progress', 'idempotency_outcome_unknown', 'appeal_vote_locked', 'appeal_already_resolved', 'account_exists', 'reward_already_redeemed', 'community_appeal_closed', 'community_appeal_revision_conflict', 'community_appeal_legacy_case_pending'].includes(exposedCode) ? 409
@@ -193,7 +195,7 @@ export function isCurrentActivePrincipal(
 }
 
 export function rateLimitPlan(pathname: string): { scope: string; limit: number } {
-  const authPaths = ['/api/auth/email', '/api/auth/email/verify', '/api/auth/password/reset/request', '/api/auth/password/reset/complete', '/api/auth/refresh', '/api/auth/logout'];
+  const authPaths = ['/api/auth/recent-verification', '/api/auth/email', '/api/auth/email/verify', '/api/auth/password/reset/request', '/api/auth/password/reset/complete', '/api/auth/refresh', '/api/auth/logout'];
   return authPaths.includes(pathname) ? { scope: `auth:${pathname}`, limit: 10 } : { scope: 'public-api', limit: 120 };
 }
 
