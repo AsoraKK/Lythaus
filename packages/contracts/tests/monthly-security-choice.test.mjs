@@ -254,3 +254,32 @@ test('an unused unavailable optional method is not a hidden provider dependency 
     mapping: { ...mapping, options: { ...mapping.options, synthetic_optional_mfa: ['mfa'] } } });
   assert.equal(result.state, 'ready'); assert.equal(result.grace.unknownMs, 0);
 });
+
+for (const [verifiedMethod, unavailableBudget] of [['mfa', 'credential'], ['credential', 'mfa']]) {
+  test(`${verifiedMethod}-only proof with unavailable common ${unavailableBudget} budget cannot claim eligibility`, () => {
+    const asymmetricRules = { ...rules, capabilities: { ...rules.capabilities,
+      [verifiedMethod]: 'verified_authentication', [unavailableBudget]: 'unavailable' } };
+    const explicitTestMapping = { ...mapping, commonBenefitAction: `monthly.${unavailableBudget}_maintenance`,
+      options: { synthetic_verified_method: [verifiedMethod] } };
+    const fixture = { rules: asymmetricRules, mapping: explicitTestMapping,
+      changes: [change(1, undefined, { optionKey: 'synthetic_verified_method' })], serverEvidence: [
+        { ...protection(), facts: { ...protection().facts, protections: [verifiedMethod] } },
+        { ...auth(), facts: { ...auth().facts, protections: [verifiedMethod] } },
+      ] };
+    const unavailable = prepare(fixture);
+    assert.equal(unavailable.state, 'unavailable'); assert.equal(unavailable.reason, 'common_security_benefit_unavailable');
+    assert.deepEqual(unavailable.evidence, []);
+    const base = calculateMonthlyMaintenance({ subjectUserId: 'a', sourceMonth: '2026-10', rules: asymmetricRules,
+      evidence: fixture.serverEvidence });
+    assert.ok(base.actions.find(row => row.actionId === `monthly.${verifiedMethod}_maintenance`).points > 0);
+    assert.equal(applyCommonSecurityBenefit(base, unavailable).monthlyPoints, 0, 'no fallback or stacked benefit');
+    const available = prepare({ ...fixture, mapping: { ...explicitTestMapping,
+      commonBenefitAction: `monthly.${verifiedMethod}_maintenance` } });
+    assert.equal(available.state, 'ready');
+    const report = applyCommonSecurityBenefit(base, available);
+    assert.equal(report.actions.filter(row => row.actionId.includes('maintenance') && row.points > 0).length, 1);
+    const unknown = prepare({ ...fixture, mapping: { ...explicitTestMapping,
+      commonBenefitAction: `monthly.${verifiedMethod}_maintenance` }, serverEvidence: [auth()] });
+    assert.notEqual(unknown.state, 'ready'); assert.equal(applyCommonSecurityBenefit(base, unknown).monthlyPoints, 0);
+  });
+}

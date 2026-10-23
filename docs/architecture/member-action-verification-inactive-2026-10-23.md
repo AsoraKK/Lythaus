@@ -187,6 +187,11 @@ action**, reusing its existing maximum; it zeros the other security maintenance
 component to prevent stacking. Neither a point amount nor a common award action
 has a default. An old mapping lacking the new requirement version is unavailable.
 Historical calculator and signed catalogue bytes are untouched.
+Before reporting eligibility, the adapter also checks that the configured common
+catalogue component is available under the current rule set. A verified method
+with an unavailable common budget is reported unavailable, never "ready" with a
+zero award or a fallback award from another method category. Availability of unused
+optional methods is not an enrollment dependency.
 Adopting or changing this policy for an existing assembly requires explicit review.
 
 There is deliberately no client preference-to-qualifying-credential conversion,

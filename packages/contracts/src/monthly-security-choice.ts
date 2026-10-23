@@ -85,6 +85,10 @@ export function selectedSecurityMaintenanceEvidence(input: {
   const protections = intervals.filter(interval => interval.state === 'enabled')
     .flatMap(interval => mapping.options[interval.optionKey] ?? []);
   if (protections.some((p: Protection) => input.rules.capabilities[p] !== 'verified_authentication')) return output('unavailable', 'credential_capability_unavailable');
+  const commonBudget = mapping.commonBenefitAction === 'monthly.mfa_maintenance' ? 'mfa' : 'credential';
+  if (input.rules.capabilities[commonBudget] !== 'verified_authentication') {
+    return output('unavailable', 'common_security_benefit_unavailable');
+  }
   const result = evaluateMonthlySecurityGrace({ subjectUserId: input.subjectUserId, startsAt: startAt, cutoffAt,
     intervals: timeline.intervals, mapping, serverEvidence: input.serverEvidence });
   return output(result.eligible ? 'ready' : 'insufficient_evidence', result.reason, result.evidence, result.grace);

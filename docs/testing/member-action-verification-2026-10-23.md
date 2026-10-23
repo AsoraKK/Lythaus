@@ -146,10 +146,28 @@ The old calculator still rejects real coverage gaps in raw facts; only the new
 optional shadow adapter applies the approved grace rule to one existing mapped
 component. Other monthly/quarterly components and reputation remain unchanged.
 
-Final grace-delta validation reruns the exact ten-file Node command in the review
+Grace-delta validation at `1c8f937036911cd2687158e95e1a38c650c1fcb3` reruns the exact ten-file Node command in the review
 section above: **87 passed**, no failed/cancelled/skipped tests. The complete
 targeted Flutter command passes **110 tests**. TypeScript checking, Flutter
 analysis, Dart formatting (11 files, zero changes) and diff checks pass. Raw output
 is in [monthly-grace-validation.txt](../evidence/member-verification-20261023/monthly-grace-validation.txt).
 This delta follows `d1e66ed61ebaa2506b9e6da8495a203381ade3a4`; that predecessor
 contains the reviewed retry/UTF-8 fixes but does not implement the later grace rule.
+
+## Common-benefit availability correction
+
+Independent review found that a verified MFA-only method with the configured
+common credential action unavailable could report ready but receive zero; the
+reverse capability configuration had the same risk. The adapter now reports
+`unavailable / common_security_benefit_unavailable` before claiming eligibility
+when the common component cannot be awarded under the current rules. It does not
+select another amount, require user enrollment into another method, or fall back
+to a second security benefit.
+
+Two asymmetric regressions cover both directions, available-budget controls,
+one-benefit behavior and unknown-evidence denial. Both fail unchanged against the
+predecessor guard and pass with the correction. The exact ten-file Node command
+above now passes **89 tests**, with no failures/cancellations/skips, and native
+TypeScript checking passes. No Dart source changed after the 110-test validation.
+See [common-budget-validation.txt](../evidence/member-verification-20261023/common-budget-validation.txt)
+for the predecessor, final regression and complete test output.
