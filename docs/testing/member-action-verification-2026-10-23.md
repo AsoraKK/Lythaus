@@ -65,6 +65,48 @@ controller getter read. The fixture now uses valid lifecycle transitions and the
 getter checks `mounted`; final assertions remain intact. There were no security
 assertions relaxed to obtain these results.
 
+## Independent-review integration regressions
+
+`member-action-routes.test.mjs` executes the actual public API router, real
+password verification, actual proof issuance/consumption and existing idempotency
+implementation. Only DB transport and activity persistence are synthetic module
+dependencies; it does not execute SQL or create schema. Reward and deletion routes
+cover challenge, real verification and fresh-key recovery; intentional old-key
+403 replay without consuming a fresh proof; expired-proof renewal; concurrent
+same-key success; replay after expiry; different-key proof reuse denial; body/key
+conflict; and commit followed by finalization failure remaining quarantined.
+Default-disabled routes are also exercised. This validates the review-approved
+fresh-key recovery alternative; it does not claim same-key challenge recovery.
+
+The operation reader now rejects malformed UTF-8 with `invalid_json`, preserves
+valid BOM/replacement characters distinctly, and checks the 8,192-byte boundary.
+The actual reward route rejects invalid bytes before proof consumption or effect.
+The idempotency engine and request hash remain unchanged.
+
+Review-delta validation (all final checks exit 0):
+
+```sh
+node --experimental-strip-types --experimental-test-module-mocks --test packages/security/tests/member-action-verification.test.mjs apps/lythaus-public-api/tests/member-action-verification.test.mjs apps/lythaus-public-api/tests/member-action-routes.test.mjs apps/lythaus-public-api/tests/idempotency-runtime.test.mjs packages/contracts/tests/monthly-security-choice.test.mjs packages/db/tests/member-security-maintenance.test.mjs packages/db/tests/member-security-assembly.test.mjs packages/contracts/tests/monthly-maintenance.test.mjs apps/lythaus-public-api/tests/auth-session-runtime.test.mjs apps/lythaus-public-api/tests/auth-session-transport.test.mjs
+# 77 passed, 0 failed/cancelled/skipped.
+npm run typecheck:native
+# Passed.
+```
+
+Only the operation reader was temporarily replaced by its predecessor at
+`4f2ecbd27283c317c7841a77a7d277ff77aee717` for negative regression evidence.
+The actual route then returned **201 instead of 400** for different invalid bytes
+decoded into the approved replacement-character body; the unit assertion failed
+with "Missing expected rejection." The oversized clone test remained pending and
+was cancelled by the test harness. Restoring the fixed reader passes the same
+assertions unchanged. The local reader cancels both request branches without
+awaiting tee cancellation, rejects invalid UTF-8 and preserves valid body bytes.
+No shared media reader or idempotency implementation changed.
+
+Exact final and predecessor output:
+[`review-integration-regressions.txt`](../evidence/member-verification-20261023/review-integration-regressions.txt).
+Earlier 110-test Flutter evidence remains applicable: this delta changes no Dart
+source. Actual database concurrency and physical-device acceptance remain pending.
+
 ## Protected sources and limits
 
 This comparison returned no differences from the reviewed foundation:

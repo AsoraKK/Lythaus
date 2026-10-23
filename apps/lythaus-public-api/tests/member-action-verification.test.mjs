@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { hashPassword, hashResetToken } from '../../../packages/security/src/index.ts';
 import { createRecentAccountProof, consumeRecentAccountProof } from '../src/member-action-verification-db.ts';
-import { knownSensitiveOperation } from '../../../packages/security/src/member-action-verification.ts';
+import { knownSensitiveOperation, sensitiveOperationDigest } from '../../../packages/security/src/member-action-verification.ts';
 import { classifyPublicError, rateLimitPlan } from '../src/auth-runtime-policy.ts';
 import { readSensitiveOperation, recentVerificationRefreshCredential, verifyAccountActionRequest } from '../src/member-action-verification-http.ts';
 
@@ -203,4 +203,31 @@ test('actual request binding includes query/body; disabled reads do not consume 
   assert.equal(absent, undefined);
   await assert.rejects(consumeRecentAccountProof(new Database(), { enabled: true, user,
     operation: absent, proof: null, bindingKey: 'synthetic-binding-key' }), /operation_unavailable/);
+});
+
+test('exact body binding rejects malformed UTF-8 and preserves valid bytes at the boundary', async () => {
+  const request = body => new Request('https://api.example.invalid/api/rewards/synthetic-reward/redeem', { method: 'POST', body });
+  for (const bytes of [[0xff], [0xfe], [0xc0, 0xaf], [0xc3], [0xed, 0xa0, 0x80]]) {
+    await assert.rejects(readSensitiveOperation(request(new Uint8Array(bytes)), true), /invalid_json/);
+  }
+  const plain = await readSensitiveOperation(request('{}'), true);
+  const bom = await readSensitiveOperation(request(new Uint8Array([0xef, 0xbb, 0xbf, 0x7b, 0x7d])), true);
+  assert.equal(bom.body, '\ufeff{}');
+  assert.notEqual(await sensitiveOperationDigest(plain, 'synthetic-key'), await sensitiveOperationDigest(bom, 'synthetic-key'));
+  const replacement = await readSensitiveOperation(request('\ufffd'), true);
+  assert.equal(replacement.body, '\ufffd');
+  const boundary = await readSensitiveOperation(request('é'.repeat(4096)), true);
+  assert.equal(new TextEncoder().encode(boundary.body).length, 8192);
+  const disabled = request(new Uint8Array([0xff]));
+  assert.equal(await readSensitiveOperation(disabled, false), undefined);
+  assert.equal(disabled.bodyUsed, false);
+});
+
+test('oversized cloned bodies reject promptly with absent or misleading Content-Length', { timeout: 2000 }, async () => {
+  for (const length of [undefined, '1', '8193']) {
+    const request = new Request('https://api.example.invalid/api/rewards/synthetic-reward/redeem', {
+      method: 'POST', body: 'é'.repeat(4096) + 'x', headers: length ? { 'content-length': length } : {},
+    });
+    await assert.rejects(readSensitiveOperation(request, true), /request_too_large/);
+  }
 });

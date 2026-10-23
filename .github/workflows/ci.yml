@@ -118,6 +118,7 @@ jobs:
           node --experimental-strip-types --experimental-test-module-mocks --test
           packages/security/tests/member-action-verification.test.mjs
           apps/lythaus-public-api/tests/member-action-verification.test.mjs
+          apps/lythaus-public-api/tests/member-action-routes.test.mjs
           packages/contracts/tests/monthly-security-choice.test.mjs
           packages/db/tests/member-security-maintenance.test.mjs
           packages/db/tests/member-security-assembly.test.mjs

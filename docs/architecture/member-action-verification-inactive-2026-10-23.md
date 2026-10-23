@@ -112,6 +112,28 @@ version/operation/secret, then uses a single-use conditional update in the same
 transaction as the protected effect. Rollback restores unused proof. Generic
 idempotency may replay an already cached response without another effect; a new
 effect still requires a valid unused proof. Refresh/local unlock cannot mint it.
+Malformed UTF-8 is rejected before proof consumption. Valid body bytes, including
+a leading BOM, are preserved when building the operation binding rather than
+collapsed to replacement text.
+
+The step-up retry contract deliberately preserves existing idempotency behavior.
+A confirmed HTTP 403 `recent_authentication_required` occurs before the protected
+effect and is stored as that key's completed denial. After genuine verification,
+retry the exact operation with a **new** idempotency key and the fresh proof.
+Reusing the old key replays its denial and does not consume the fresh proof. An
+expired-proof denial follows the same renewal/new-key rule. The current Rewards
+UI already clears its key after confirmed errors; the deferred step-up UX must
+implement this explicit contract rather than assume every retry retains a key.
+
+Do not put the proof in the operation hash, delete/reclaim completed denials, or
+change the idempotency engine. A completed success replays with its original key
+even after proof expiry, with no further effect or proof consumption. Concurrent
+same-key attempts return an in-progress conflict or the completed response; a
+different key cannot reuse a consumed proof. Network/5xx errors and
+`idempotency_outcome_unknown` are **not** confirmed verification denials and do not
+authorize discarding an operation key: preserve the existing quarantine and
+reconcile the outcome. Finalization failure after a domain commit remains unknown,
+not a verification retry.
 
 | Approved action | Prepared integration |
 | --- | --- |
