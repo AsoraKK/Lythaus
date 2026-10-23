@@ -85,6 +85,8 @@ def prepare(manifest, approval):
         data = file.read_bytes()
         if sha(data) != record["sha256"]:
             raise ValueError("FIXTURE_CHECKSUM_MISMATCH")
+        if not data.startswith((b"\x89PNG\r\n\x1a\n", b"\xff\xd8\xff")):
+            raise ValueError("FIXTURE_FORMAT_UNSUPPORTED")
         records.append(({**record, "descendant": False}, data))
     from PIL import Image, __version__
     if __version__ != "12.3.0":
