@@ -140,6 +140,7 @@ for(const {name,engine,width,ownerResponseDelayMs} of scenarios) {
     await page.getByRole('button',{name:'Forgot password?',exact:true}).click();
     await page.waitForURL('https://lythaus.co/forgot-password');
     await openApp();
+    await page.getByText('Verification & invites',{exact:true}).click();
     await page.getByRole('button',{name:'Resend verification email',exact:true}).click();
     await page.waitForURL('https://lythaus.co/resend-verification');
     await openApp();
