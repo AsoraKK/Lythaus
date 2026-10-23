@@ -5,7 +5,19 @@ function replaceOnce(source, before, after) {
   return source.replace(before, after);
 }
 
+function alreadyIntegrated(source, marker, required) {
+  if (!source.includes(marker)) return false;
+  assert.equal(source.split(marker).length, 2);
+  for (const value of required) assert.ok(source.includes(value), 'Applied comment hook is incomplete: ' + value);
+  return true;
+}
+
 export function integratePublicApiComments(source) {
+  if (alreadyIntegrated(source, "import { readCommentThread, commentThreadErrorStatus } from './comment-thread-reader.ts';", [
+    'const body = await readCommentThread(', 'return privateResponse(request, env, body);',
+    'depth = nestedReplyDepth(parent.rows[0]);', 'AND ${commentNotificationVisibilitySql}',
+    "THEN (SELECT '/post/' || comment.post_id::text || '?commentId=' || comment.id::text",
+  ])) return source;
   const start = source.indexOf('async function getComments(');
   const end = source.indexOf('async function dispatchBeta(', start);
   assert.ok(start > 0 && end > start);
@@ -48,6 +60,10 @@ import { commentNotificationVisibilitySql } from '../../../packages/db/src/comme
 }
 
 export function integrateJobsCommentNotifications(source) {
+  if (alreadyIntegrated(source, "import { commentNotificationRecipientQuery, commentNotificationRevisionLockQuery } from '../../../packages/db/src/comment-notifications.ts';", [
+    'await client.query(commentNotificationRevisionLockQuery, [eventId]);',
+    '(commentNotificationRecipientQuery, [eventId]);', 'notificationType: recipient.rows[0].notification_type,',
+  ])) return source;
   const start = source.indexOf('      const authorId = stringValue(payload.authorId);', source.indexOf('async function processNotificationSource('));
   const end = source.indexOf("    if (eventType === 'social.follow.created')", start);
   assert.ok(start > 0 && end > start);
@@ -68,11 +84,18 @@ export function integrateJobsCommentNotifications(source) {
 }
 
 export function integrateAdminCommentRevision(source) {
+  const applied = "...(moderationCase.content_type === 'comment' ? { sourceEventId: moderationCase.source_event_id, decisionId } : {})";
+  if (alreadyIntegrated(source, applied, [])) return source;
   return replaceOnce(source, '            parentId: moderationCase.parent_id,',
     "            parentId: moderationCase.parent_id,\n            ...(moderationCase.content_type === 'comment' ? { sourceEventId: moderationCase.source_event_id, decisionId } : {}),");
 }
 
 export function integrateCommentNotificationNavigation(source) {
+  const applied = "import 'package:lythaus/features/feed/domain/comment_notification_link.dart';";
+  if (alreadyIntegrated(source, applied, ['deeplink: commentNotificationLink(json),'])) {
+    assert.ok(source.indexOf('library;') >= 0 && source.indexOf(applied) > source.indexOf('library;'));
+    return source;
+  }
   source = replaceOnce(source, "        nativeType: json['notificationType'] as String,",
     "        nativeType: json['notificationType'] as String,\n        deeplink: commentNotificationLink(json),");
   return replaceOnce(source, 'library;',
