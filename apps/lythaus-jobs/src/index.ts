@@ -6,6 +6,8 @@ import { checkTransactionHealth } from '@lythaus/db';
 import { verifyStandardUploadBytes, UploadIntegrityError, readStandardDerivative, standardDerivativeMetadata, validStandardImageDimensions, type StandardDerivative } from '../../../packages/media/src/standard-upload.ts';
 import { detectMediaMime, readBoundedRequestBody } from '../../../packages/authenticity/src/media-intake.ts';
 import { sha256Hex as mediaSha256Hex } from '../../../packages/authenticity/src/forensics.ts';
+import { createImageReviewEvidence } from '../../../packages/authenticity/src/image-review-evidence.ts';
+import { IMAGE_REVIEW_MEDIA_EXPORT_SQL, purgeImageReviewEvidence } from './image-review-privacy.ts';
 import { json, logEvent } from '@lythaus/observability';
 import { constantTimeEqual, decryptField, uuidv7 } from '@lythaus/security';
 import { buildPrivacyDataPassport, decryptPrivatePassportIdentity, ensureWorkflowCreate, isCurrentContentModerationRevision, isCurrentProfileModerationRevision, legalHoldPlan, lockedAppealVote, moderationReputationSignal, parseContentModerationRevision, parseProfileModerationRevision, privacyRequestLifecyclePlan, queueRouteForEvent, reconcilePrivacyRequestPayload, reputationActivity, retentionCleanupPlan, reviewerReplacementPlan, securityAuditRetentionPlan, type PrivacyRequestPayload, type WorkflowCreateBinding } from './runtime-policy.ts';
@@ -1107,12 +1109,21 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
       [sessionId, objectKey]);
     const row = session.rows[0];
     if (!row) throw new Error('upload_session_not_found');
+    const canonical = await client.query<{ id: string }>(
+      `SELECT id FROM system.outbox_events
+        WHERE actor_id = $1 AND aggregate_id = $2 AND aggregate_type = 'upload_session'
+          AND event_type = 'media.upload.finalised'
+          AND payload ->> 'uploadSessionId' = $2::text AND payload ->> 'objectKey' = $3
+        LIMIT 2`, [row.user_id, sessionId, objectKey]);
+    if (canonical.rows.length !== 1 || canonical.rows[0].id !== eventId) throw new Error('media_source_event_invalid');
     const approvedKey = `approved/${row.user_id}/${sessionId}.webp`;
     cleanupDerivativeKey = approvedKey;
+    let transformVersion: 'standard-webp-v1' | 'standard-webp-v2' = 'standard-webp-v2';
     const readCachedDerivative = async (source: {
       size: number; body: ReadableStream<Uint8Array>; customMetadata?: Record<string, string>;
     }): Promise<StandardDerivative> => {
       const cached = await readStandardDerivative(source, row);
+      transformVersion = cached.needsDimensionRevalidation ? 'standard-webp-v1' : 'standard-webp-v2';
       if (!cached.needsDimensionRevalidation) return cached;
       const info = await images.info(new Response(cached.bytes).body!);
       if (typeof info.width !== 'number' || typeof info.height !== 'number'
@@ -1177,8 +1188,11 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
 
     const existing = await approved.get(approvedKey);
     let derivative: StandardDerivative;
+    let sourceBytes: Uint8Array | null = null;
     if (existing) {
       derivative = await readCachedDerivative(existing);
+      const source = await quarantine.get(objectKey);
+      if (source) sourceBytes = await verifyStandardUploadBytes(source, row);
     } else {
       const source = await quarantine.get(objectKey);
       if (!source) throw new Error('quarantine_object_missing');
@@ -1191,6 +1205,7 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
           : error.message === 'unsupported_media_type' ? 'MEDIA_SIGNATURE_INVALID' : 'MEDIA_SIZE_MISMATCH');
         return 'rejected';
       }
+      sourceBytes = bytes;
       if (!await sessionIsUnexpired()) {
         await expireQueued();
         return 'expired';
@@ -1237,12 +1252,18 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
     const evaluation = manualReviewEvaluation('image', 'not-executed',
       'Image safety and authenticity evidence is unavailable; human review is required. Metadata is not image inference.');
     const { bytes: approvedBytes, sha256, width, height } = derivative;
+    const objectId = uuidv7();
+    const imageReview = await createImageReviewEvidence({
+      binding: { ownerId: row.user_id, uploadSessionId: sessionId, sourceEventId: eventId, objectId,
+        sourceSha256: row.checksum_sha256, sourceContentType: row.content_type, sourceBytes: Number(row.expected_bytes),
+        derivativeSha256: sha256, derivativeBytes: approvedBytes.byteLength, width, height, transformVersion },
+      sourceBytes, derivativeBytes: approvedBytes,
+    });
     const inserted = await client.query<{ id: string }>(
       `INSERT INTO media.objects (id, owner_id, object_key, content_type, byte_size, sha256, state)
        VALUES ($1, $2, $3, 'image/webp', $4, $5, $6) ON CONFLICT (object_key) DO NOTHING RETURNING id`,
-      [uuidv7(), row.user_id, approvedKey, approvedBytes.byteLength, sha256, 'review']);
+      [objectId, row.user_id, approvedKey, approvedBytes.byteLength, sha256, 'review']);
     if (inserted.rowCount !== 1) throw new Error('media_object_conflict');
-    const objectId = inserted.rows[0].id;
     await client.query(`INSERT INTO media.ownership (object_id, owner_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [objectId, row.user_id]);
     await client.query(
       `INSERT INTO media.variants (id, object_id, object_key, content_type, byte_size, width, height)
@@ -1250,7 +1271,7 @@ async function processMediaUpload(message: QueueMessage, env: Env): Promise<void
       [uuidv7(), objectId, approvedKey, approvedBytes.byteLength, width, height]);
     await client.query(
       `INSERT INTO media.moderation_results (id, object_id, provider, model_version, signal) VALUES ($1, $2, $3, $4, $5::jsonb)`,
-      [uuidv7(), objectId, AUTHENTICITY_PROVIDER, evaluation.modelId, JSON.stringify(evaluation)]);
+      [uuidv7(), objectId, AUTHENTICITY_PROVIDER, evaluation.modelId, JSON.stringify({ ...evaluation, imageReview })]);
     const settled = await client.query(
       `UPDATE media.storage_ledger SET bytes_uploaded = bytes_uploaded + $2,
          bytes_approved = bytes_approved + $2, bytes_reserved = bytes_reserved - $3,
@@ -2335,6 +2356,7 @@ export class AccountDeleteWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
             [uuidv7(), object.id, subjectId, object.sha256],
           );
         }
+        await purgeImageReviewEvidence(client, subjectId);
         await client.query(`UPDATE media.objects SET state = 'deleted', deleted_at = COALESCE(deleted_at, now()) WHERE owner_id = $1`, [subjectId]);
         await client.query(`UPDATE media.upload_sessions SET status = 'expired' WHERE user_id = $1 AND status IN ('pending', 'queued')`, [subjectId]);
         await client.query(`DELETE FROM media.storage_ledger WHERE user_id = $1`, [subjectId]);
@@ -2559,7 +2581,7 @@ export class AccountExportWorkflow extends WorkflowEntrypoint<Env, { subjectId: 
             WHERE reporter_id = $1
             ORDER BY created_at, id`,
           [subjectId]),
-        query(this.env.DB_JOBS_FRESH, `SELECT id, object_key, content_type, byte_size, sha256, state, created_at, deleted_at FROM media.objects WHERE owner_id = $1 ORDER BY created_at`, [subjectId]),
+        query(this.env.DB_JOBS_FRESH, IMAGE_REVIEW_MEDIA_EXPORT_SQL, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT content_id, declared_creation_mode, detected_content_class, detector_provider, detector_model_version, policy_version, appeal_state, final_decision, created_at FROM trust.provenance_events WHERE author_id = $1 ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT content_id, human_authorship_eligibility, quality_signal, source_signal, behaviour_signal, policy_version, points_delta, reversal_reference, created_at FROM trust.human_contribution_events WHERE subject_user_id = $1 ORDER BY created_at`, [subjectId]),
         query(this.env.DB_JOBS_FRESH, `SELECT id, content_id, event_type, pillar, impact, source_event_id, moderation_decision_id, appeal_id, status, effective_at, expires_at, explanation_code, visibility, policy_version, points_delta, reversal_reference, created_at FROM trust.reputation_events WHERE subject_user_id = $1 ORDER BY created_at`, [subjectId]),
@@ -2808,6 +2830,7 @@ export class RetentionCleanupWorkflow extends WorkflowEntrypoint<Env, { runId: s
                 [object.id],
               );
               if (updated.rowCount === 0) continue;
+              await purgeImageReviewEvidence(client, candidate.user_id, object.id);
               deletedCount += 1;
               await client.query(
                 `UPDATE media.storage_ledger SET bytes_approved = greatest(bytes_approved - $1, 0), object_count = greatest(object_count - 1, 0), last_reconciled_at = now() WHERE user_id = $2`,
