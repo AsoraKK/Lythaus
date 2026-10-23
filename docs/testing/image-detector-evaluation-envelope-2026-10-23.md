@@ -120,7 +120,10 @@ invalid or ambiguous provider outcome consumes its attempt and stops further
 work; no fallback to zero, human authorship, allow, enforcement or rewards.
 The runner now fail-stops every structured non-OK status on originals and
 descendants, caps each request timeout by the remaining active window, and rejects
-responses at or after the deadline before scoring or completion. Protocol tests
+responses at or after the deadline before scoring or completion. A Unix wall-clock
+alarm also interrupts blocked/streaming I/O at the active deadline; socket timeout
+resets cannot extend it. This is specific to the attended Ubuntu runner and fails
+closed when interval timers are unavailable or already in use. Protocol tests
 cover all eight non-OK statuses on both source roles, late original/descendant
 responses and deadline expiry between reservation and dispatch. No model executes
 in those tests.
@@ -264,7 +267,7 @@ The combined local run passes 54 tests, zero failed/skipped (including parent
 tests); the new detector chain contributes nine cases plus its parent. No runtime
 Worker source, flag, migration, grant, provider resource or production data changes.
 The separate evaluation runner/validator and receipt-retention corrections pass
-ten Python boundary tests (including 16 structured-status subcases) and eight
+twelve Python boundary tests (including 16 structured-status subcases) and eight
 Node orchestration tests, without inference, private fixtures or credentials.
 Owner-testable now: the local synthetic chain and private readiness evidence.
 Owner-testable after approval A: real checkpoint parity and measured bounded
