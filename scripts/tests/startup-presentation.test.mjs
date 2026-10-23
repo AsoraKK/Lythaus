@@ -67,3 +67,13 @@ test('entrypoint download failure offers retry; unrelated resource errors do not
   assert.equal(f.retry.hidden, false);
   assert.equal(f.overlay.removed, false);
 });
+
+test('content-addressed release scripts also expose a failed download', () => {
+  for (const name of ['main.dart.0123456789abcdef.js', 'flutter_bootstrap.0123456789abcdef.js']) {
+    const f = fixture();
+    const script = new f.Script(); script.src = `https://app.example.invalid/${name}`;
+    f.events.get('error')({target: script});
+    assert.equal(f.retry.hidden, false);
+    assert.match(f.status.textContent, /could not open/);
+  }
+});

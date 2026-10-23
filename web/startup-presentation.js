@@ -23,7 +23,7 @@
   const timer = setTimeout(() => offerRetry('Lythaus is taking longer to open. You can wait or try again.'), 30000);
   const onError = (event) => {
     if (event.target instanceof HTMLScriptElement &&
-        /(?:flutter_bootstrap|main\.dart)\.js(?:\?|$)/.test(event.target.src)) {
+        /\/(?:flutter_bootstrap|main\.dart)(?:\.[a-f0-9]{16})?\.js(?:\?|$)/.test(event.target.src)) {
       window.lythausStartupFailed();
     }
   };

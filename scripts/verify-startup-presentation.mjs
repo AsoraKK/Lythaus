@@ -34,7 +34,7 @@ try {for(const [engine,type] of Object.entries({webkit,chromium})) {
    await context.route('**/*',async route=>{
     const request=route.request(),url=request.url(),method=request.method();
     if(new URL(url).origin===origin) {
-     if(failureCase&&!failedDownload&&url.endsWith('/flutter_bootstrap.js')) {failedDownload=true;return route.abort();}
+     if(failureCase&&!failedDownload&&/\/flutter_bootstrap(?:\.[a-f0-9]{16})?\.js$/.test(url)) {failedDownload=true;return route.abort();}
      return route.continue();
     }
     let response=loginFixtureResponse(url,method,request.headers()['access-control-request-method']);
@@ -47,7 +47,7 @@ try {for(const [engine,type] of Object.entries({webkit,chromium})) {
    });
    await installFlutterEngineFonts(context);
    await context.addInitScript(()=>{window.__frameAt=null;window.addEventListener('flutter-first-frame',()=>window.__frameAt??=performance.now());});
-   const page=await context.newPage();page.on('pageerror',e=>result.errors.push(e.message));page.on('console',m=>{if(m.type()==='error'&&!(failureCase&&m.location().url.endsWith('/flutter_bootstrap.js'))&&!expectedRefreshConsole({text:m.text(),url:m.location().url},result.requests))result.errors.push(m.text());});
+   const page=await context.newPage();page.on('pageerror',e=>result.errors.push(e.message));page.on('console',m=>{if(m.type()==='error'&&!(failureCase&&/\/flutter_bootstrap(?:\.[a-f0-9]{16})?\.js$/.test(m.location().url))&&!expectedRefreshConsole({text:m.text(),url:m.location().url},result.requests))result.errors.push(m.text());});
    const entry = process.env.STARTUP_ENTRY ?? '/login';
    await page.goto(origin+entry);
    if(failureCase) {
