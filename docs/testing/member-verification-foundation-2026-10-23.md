@@ -83,3 +83,35 @@ here. No real server recent-authentication provider or action-level freshness
 policy was implemented. Production DB/API behavior was not exercised. Those
 dependencies remain pending the owner/parent decisions in the
 [activation packet](../architecture/member-verification-inactive-foundation-2026-10-23.md#activation-decision-packet).
+
+## Integration with current main
+
+Main `868be4ee163ba5f7968212230d731682ff005e45` merged cleanly into the reviewed
+foundation as `adbbd62f5180d55ca52ebe8fda37e33e64c96493`. Feature, JWT, refresh,
+storage, restoration and reward source remained unchanged. Local targeted tests
+on that integrated source pass: 102 Flutter and 29 Node tests.
+
+Fresh CI run **39953628902 attempt 1** failed its rendered-auth browser step.
+The complete connector log identifies **WebKit 390 notifications**, waiting for
+the notification group after Enter while no login POST was sent. The grouped
+browser step had 69 passed cases and this one failure. All six other primary jobs
+passed. Dependency audits passed; their aggregate summary rejected the failed
+Flutter gate. The initial CLI log was incomplete. The separate guest-search
+artifact read was denied HTTP 403 and was not retried; successful job-log retrieval
+provided the actual diagnosis. See [the exact failure excerpt](../evidence/member-verification-20261023/integration-ci-diagnosis.txt).
+
+The following test-only delta follows the existing current-main privacy fixture:
+assert each field's entered value, then wait two animation frames before pressing
+the same Enter action. Notifications, authentication, guest isolation, preference,
+device, expiry and error assertions remain; no timeout or gate is weakened.
+
+Local validation uses a freshly compiled release with the canonical environment,
+API/auth URLs and renderer flags, plus the normal service-worker/entrypoint
+versioning. Chromium notifications journeys pass at 1440 and 390 widths. Local
+WebKit launch reports a missing `libGLESv2.so.2` host requirement, so it is **not
+passed** locally. Hosted CI must verify the complete unchanged browser matrix on
+the new exact candidate. `node --check` and diff checks pass. No same-head CI retry,
+provider operation, deployment, migration, activation or merge occurred here.
+
+Actual foundation merge also remains held for inventory 39955420359's exact-main
+preflight until parent releases that sequencing hold.

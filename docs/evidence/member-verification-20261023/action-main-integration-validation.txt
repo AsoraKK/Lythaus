@@ -1,0 +1,35 @@
+PR #1084 main-base integration validation, 2026-10-23 UTC
+Reviewed feature predecessor: 6270c2b95c808b33b3bc115c0e3066d8d00d6296
+Integrated main/foundation: 5b7e457d4fb4df35c999aa10a8a4f5d1ecfe663a
+
+Source guard: staged diff against reviewed feature predecessor is empty for apps/, packages/, database/, lib/features/auth/, lib/features/member_verification/ and account_security_screen.dart.
+Resolutions: reviewed device controller/settings retained byte-for-byte; CI preserves both test sets; foundation integration documentation from main retained.
+
+Flutter command: flutter test --no-pub --concurrency=1 test/features/member_verification test/features/auth/application test/integration/rewards_redemption_integration_test.dart --reporter expanded
+00:12 +108: /workspace/Lythaus-action-integration/test/integration/rewards_redemption_integration_test.dart: negative redemption scenarios uncertain idempotency outcome refreshes rewards and reuses its key
+00:12 +109: /workspace/Lythaus-action-integration/test/integration/rewards_redemption_integration_test.dart: negative redemption scenarios already redeemed response refreshes the dashboard state
+00:12 +110: All tests passed!
+
+Node command: the same 10-file proof/actual-route/idempotency/monthly/session regression suite documented above; first setup run failed before workspace package links existed. npm ci installed the unchanged lockfile, then:
+  ...
+1..89
+# tests 89
+# suites 0
+# pass 89
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 9363.935866
+
+Native TypeScript:
+
+> lythaus-monorepo@1.0.0 typecheck:native
+> tsc -p tsconfig.native.json --noEmit
+
+Targeted Flutter analysis:
+Analyzing 3 items...
+No issues found! (ran in 3.6s)
+
+Dart format: 11 files, zero changes. Source and staged diff checks passed.
+No migration, credential/provider mutation, production requests, enforcement/evidence activation, reward awards or deployments.

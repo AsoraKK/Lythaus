@@ -171,3 +171,26 @@ above now passes **89 tests**, with no failures/cancellations/skips, and native
 TypeScript checking passes. No Dart source changed after the 110-test validation.
 See [common-budget-validation.txt](../evidence/member-verification-20261023/common-budget-validation.txt)
 for the predecessor, final regression and complete test output.
+# Main-base integration after foundation merge
+
+PR #1082 squash-merged as `5b7e457d4fb4df35c999aa10a8a4f5d1ecfe663a`;
+its tree equals reviewed foundation head `4c21b5c5594c7216648268cf5bd91b62551916ee`.
+This dependent draft is now based on main. The branch merge retains the reviewed
+`6270c2b95c808b33b3bc115c0e3066d8d00d6296` API/auth, proof, device settings,
+schema proposal and monthly policy bytes without modification. It inherits
+main's already merged inventory and rendered-browser fixes.
+
+Four conflicts were resolved: retain reviewed #1084 controller/settings source
+and Node verification step; retain main's expanded foundation evidence. No
+assertions, thresholds, feature defaults or runtime paths were weakened.
+
+On the integrated source, 110 targeted Flutter tests and 89 Node regressions
+pass, with native TypeScript, targeted analysis, formatting and diff checks
+passing. The first Node invocation in the new worktree lacked workspace package
+links; installing the unchanged lockfile with `npm ci --ignore-scripts --no-audit`
+resolved that setup error before the passing run. Full required remote CI must
+run for the resulting exact main-based head; earlier scoped workflows do not
+clear it. See [integration evidence](../evidence/member-verification-20261023/action-main-integration-validation.txt).
+
+The PR remains draft/unmerged. All enforcement/evidence flags stay off; no
+credential, migration, reputation mutation, award or deployment is performed.

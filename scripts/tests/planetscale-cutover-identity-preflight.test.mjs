@@ -236,6 +236,7 @@ test('connection, probe, and rollback failures stay sanitized and close both cli
 });
 
 test('manual workflow is protected, exact-SHA gated, read-only, and has no bypass input', () => {
+  const identityWorkflow = workflow.split('\n  restore_inventory:')[0];
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /environment: production/);
   assert.match(workflow, /test "\$GITHUB_REF" = refs\/heads\/main/);
@@ -250,9 +251,10 @@ test('manual workflow is protected, exact-SHA gated, read-only, and has no bypas
   assert.match(workflow, /\[\[ "\$RELEASE_SHA" == "\$\(git rev-parse HEAD\)" \]\]/);
   assert.match(workflow, /\[\[ "\$RELEASE_SHA" == "\$\(git rev-parse origin\/main\)" \]\]/);
   assert.match(workflow, /\[\[ "\$RELEASE_SHA" =~ \^\[0-9a-f\]\{40\}\$ \]\]/);
-  assert.doesNotMatch(workflow, /PLANETSCALE_SERVICE_TOKEN|PSCALE_ROLE_IDENTIFIERS|execute_0021|reconcile-planetscale|apply-planetscale/);
+  assert.doesNotMatch(identityWorkflow, /PLANETSCALE_SERVICE_TOKEN|PSCALE_ROLE_IDENTIFIERS|execute_0021|reconcile-planetscale|apply-planetscale/);
   assert.doesNotMatch(workflow, /\b(GRANT|REVOKE|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE)\b/i);
-  assert.equal((workflow.match(/^      [a-zA-Z0-9_]+:\s*$/gm) ?? []).length, 1);
+  assert.equal((workflow.match(/^      [a-zA-Z0-9_]+:\s*$/gm) ?? []).length, 2);
+  assert.match(workflow, /if: inputs.inspection == 'identity'/);
   const source = fs.readFileSync('scripts/ci/planetscale-cutover-identity-preflight.mjs', 'utf8');
   assert.match(source, /method: 'GET'/);
   assert.match(source, /BEGIN READ ONLY/);
