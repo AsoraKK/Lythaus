@@ -28,6 +28,16 @@ class FakeClient {
     if (text.startsWith('SELECT oid, rolname')) return result(this.options.roles ?? [{ oid: 42, rolname: runtimeRole,
       rolsuper: false, rolbypassrls: this.options.bypassRls ?? false, rolcreaterole: false, rolcreatedb: false, rolinherit: true, rolcanlogin: true }]);
     if (text.includes('pg_catalog.pg_auth_members')) return result([{ rolname: 'inherited_fixture', effective: true, direct: true }]);
+    if (text.startsWith('WITH target AS (')) {
+      if (this.options.aclFail) throw new Error(secret);
+      const rows = [
+        { kind: 'schema', column_name: null, attribute_number: null, object_oid: 200 },
+        { kind: 'table', column_name: null, attribute_number: null, object_oid: values[2] },
+        ...values[3].map((column_name, index) => ({ kind: 'column', column_name, attribute_number: index + 1, object_oid: values[2] })),
+      ].map(row => ({ ...row, owner_oid: 7, owner: 'pscale_api_owner', acl_is_null: true,
+        grantor_oid: null, grantor: null, grantee_oid: null, grantee: null, privilege: null, is_grantable: null }));
+      return result(this.options.aclRows ? this.options.aclRows(rows) : rows);
+    }
     if (text.includes('pg_catalog.pg_policy')) return result([{ oid: 100 + PRODUCT_PRIVILEGE_REQUIREMENTS.findIndex(item => item.schema === values[1] && item.relation === values[2]),
       relrowsecurity: this.options.rls ?? false, relforcerowsecurity: false, owner: 'pscale_api_owner', effective_owner: false,
       schema_usage: values[1] !== this.options.missingSchema, policy_count: 0 }]);
@@ -99,6 +109,71 @@ test('missing exact column or schema rights are an approval need, never repaired
     { object: 'trust.reward_redemptions', kind: 'column', column: 'user_id', privilege: 'INSERT', scope: 'proposed_additional' },
     { object: 'editorial', kind: 'schema', privilege: 'USAGE', scope: 'proposed_additional' },
   ]);
+});
+
+test('only the two proposed relations retain bounded, projected ACL provenance for their schemas, tables and requested columns', async () => {
+  const { report, client } = await collect({}, new FakeClient({ aclRows: rows => rows.map(row => {
+    if (row.kind === 'schema') return { ...row, acl_is_null: false, ignored: secret };
+    if (row.kind === 'table') return { ...row, acl_is_null: false, grantor_oid: 7, grantor: 'pscale_api_owner',
+      grantee_oid: 0, grantee: 'PUBLIC', privilege: 'REFERENCES', is_grantable: false, ignored: secret };
+    if (row.column_name === 'id') return { ...row, acl_is_null: false, grantor_oid: 9, grantor: 'inherited_fixture',
+      grantee_oid: 42, grantee: runtimeRole, privilege: 'SELECT', is_grantable: true };
+    return row;
+  }) }));
+  assert.equal(report.status, 'PRIVILEGES_PRESENT_NOT_ACCEPTED');
+  const captured = report.evidence.objects.filter(object => object.aclSnapshot);
+  assert.deepEqual(captured.map(object => object.object), ['trust.reward_redemptions', 'editorial.publications']);
+  for (const object of captured) {
+    const [schema, table, ...columns] = object.aclSnapshot;
+    const requirement = PRODUCT_PRIVILEGE_REQUIREMENTS.find(item => `${item.schema}.${item.relation}` === object.object);
+    assert.deepEqual(columns.map(item => item.column), [...new Set(Object.values(requirement.columns).flat())]);
+    assert.deepEqual(schema, { kind: 'schema', objectOid: 200, ownerOid: 7, owner: 'pscale_api_owner', aclIsNull: false, entries: [] });
+    assert.deepEqual(table.entries, [{ grantorOid: 7, grantor: 'pscale_api_owner', granteeOid: 0, grantee: 'PUBLIC',
+      privilege: 'REFERENCES', isGrantable: false }]);
+    assert.equal(columns[0].attributeNumber, 1);
+    assert.deepEqual(columns[0].entries, [{ grantorOid: 9, grantor: 'inherited_fixture', granteeOid: 42,
+      grantee: runtimeRole, privilege: 'SELECT', isGrantable: true }]);
+    assert.equal(columns[1].aclIsNull, true);
+    assert.deepEqual(columns[1].entries, []);
+  }
+  const queries = client.queries.filter(query => query.text.startsWith('WITH target AS ('));
+  assert.equal(queries.length, 2);
+  assert.deepEqual(queries.map(query => query.values.slice(0, 2)), [['trust', 'reward_redemptions'], ['editorial', 'publications']]);
+  for (const query of queries) assert.match(query.text, /LIMIT 513$/);
+  assert.equal(JSON.stringify(report).includes(secret), false);
+});
+
+test('missing, oversized, inconsistent or unsafe ACL metadata fails closed and always rolls back without leaking query errors', async () => {
+  const entry = { acl_is_null: false, grantor_oid: 7, grantor: 'pscale_api_owner', grantee_oid: 42,
+    grantee: runtimeRole, privilege: 'SELECT', is_grantable: false };
+  const cases = [
+    rows => rows.slice(1),
+    rows => Array.from({ length: 513 }, () => rows[0]),
+    rows => [...rows, { ...rows[2], column_name: 'unrelated_private_column' }],
+    rows => rows.map((row, index) => index === 1 ? { ...row, ...entry, grantor: `${secret}\n` } : row),
+    rows => rows.map((row, index) => index === 1 ? { ...row, ...entry, grantor_oid: 0 } : row),
+    rows => rows.map((row, index) => index === 1 ? { ...row, ...entry, is_grantable: 'false' } : row),
+    rows => rows.map((row, index) => index === 1 ? { ...row, ...entry, acl_is_null: true } : row),
+    rows => rows.map((row, index) => index === 1 ? { ...row, ...entry, privilege: secret } : row),
+    rows => [...rows.slice(0, 1), { ...rows[1], ...entry }, { ...rows[1], ...entry }, ...rows.slice(2)],
+    rows => [...rows, { ...rows[1], ...entry }],
+    rows => rows.map((row, index) => index === 2 ? { ...row, owner_oid: 8 } : row),
+    rows => rows.map((row, index) => index === 3 ? { ...row, attribute_number: rows[2].attribute_number } : row),
+  ];
+  for (const aclRows of cases) {
+    const { report, client } = await collect({}, new FakeClient({ aclRows }));
+    assert.equal(report.status, 'BLOCKED');
+    assert.deepEqual(report.blockers, ['relation_acl_metadata_unavailable']);
+    assert.equal(report.evidence, null);
+    assert.equal(client.closed, true);
+    assert.equal(client.queries.at(-1).text, 'ROLLBACK');
+    assert.equal(JSON.stringify(report).includes(secret), false);
+  }
+  const { report, client } = await collect({}, new FakeClient({ aclFail: true }));
+  assert.deepEqual(report.blockers, ['catalog_probe_failed']);
+  assert.equal(client.closed, true);
+  assert.equal(client.queries.at(-1).text, 'ROLLBACK');
+  assert.equal(JSON.stringify(report).includes(secret), false);
 });
 
 test('RLS and privileged runtime identities require review even when all column booleans pass', async () => {
