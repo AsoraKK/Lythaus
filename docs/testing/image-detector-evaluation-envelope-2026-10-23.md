@@ -138,10 +138,23 @@ accuracy claim. Low SAFE is not human evidence. Full maximum-input memory
 acceptance is still separate: the frozen smoke must not be relabelled a measured
 16,777,216-pixel case. Existing release checks require that actual measurement
 and `4 * peakBytes < 3 * capacityBytes`; this proposal changes neither condition.
-The quoted historical figures are model-card inventory, not independently
-retrieved new runtime receipts; the referenced old report Git objects were not
-available in this checkout. No completed current parity or qualified deployment
-artifact was found in the available readiness records.
+The old report Git objects were unavailable locally, but subsequent read-only
+GitHub lookup retrieved the pinned [WP007H report](https://github.com/AsoraKK/Lythaus/blob/bcbadd676f8ff0670369de80d487d77a6613fcf5/research/wp007h/wp007h-final-report.md),
+[WP007I report](https://github.com/AsoraKK/Lythaus/blob/cce247e66be4de3fb0e927cc12e7a0c87d70561d/research/wp007i/wp007i-final-report.md)
+and [WP007J-R1 report](https://github.com/AsoraKK/Lythaus/blob/d6eb253b8e219d1920196fda037bae6b2e3caf4c/research/wp007j-r1/final-report.md).
+They confirm the bounded positive research-specialist role, unproven applicability
+gate and unmet population FPR target. They do not provide current serving-image
+parity or a qualified deployed detector receipt.
+
+Public metadata also supplies the following rights/provenance starting points;
+none supplies the current private tarball or its per-file handling authorization:
+
+| Frozen originals | Existing evidence |
+| --- | --- |
+| Two CSAFE files | `research/wp007a/ef3-negative-foundation.json` records evaluation eligibility and CC BY 4.0 attribution; `research/wp006e/csafe-rights-and-attribution.md` binds the archive README; later role metadata records local-only processing |
+| Two PNGN chart files | The same negative foundation records Lythaus-controlled evaluation rights and deterministic render configurations; exact historical PNG bytes are still required, not a replacement SVG or newly rendered image |
+| BLIP3o and Janus files | Pinned WP007H `qualification-corpus-freeze.json` records retrieved/verified original PNG hashes and individual source revisions, with research-only rights unless separate per-family output rights are established |
+| Seedream and Imagen files | Pinned WP007I `fresh-synthetic-freeze.json` records the exact individual Git-LFS identities and the same research-only rights limit |
 
 ## Separate optional approval B: current external adapter acceptance
 
@@ -268,7 +281,9 @@ tests); the new detector chain contributes nine cases plus its parent. No runtim
 Worker source, flag, migration, grant, provider resource or production data changes.
 The separate evaluation runner/validator and receipt-retention corrections pass
 twelve Python boundary tests (including 16 structured-status subcases) and eight
-Node orchestration tests, without inference, private fixtures or credentials.
+Node orchestration tests. Two additional private-receipt tests bring that Node
+command's total to ten; these are separate from the 54 image/Workerd tests.
+All run without inference, private fixtures or credentials.
 Owner-testable now: the local synthetic chain and private readiness evidence.
 Owner-testable after approval A: real checkpoint parity and measured bounded
 specialist execution. An owner-facing live private app still needs separately
