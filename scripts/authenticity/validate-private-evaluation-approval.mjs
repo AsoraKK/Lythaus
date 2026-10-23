@@ -38,6 +38,7 @@ function validate() {
   if (!Number.isSafeInteger(approval.expiresAtEpochSeconds) || now >= approval.expiresAtEpochSeconds || approval.expiresAtEpochSeconds > now + 86400) fail('APPROVAL_EXPIRED');
   for (const [field, value] of Object.entries(EXPECTED)) if (approval[field] !== value) fail('EVALUATION_LIMIT_MISMATCH');
   if (approval.automaticRetries !== false || approval.publicInferenceEndpoint !== false) fail('UNSAFE_EVALUATION_MODE');
+  if (approval.preprocessingHash !== digest(new URL('../../apps/lythaus-authenticity-runtime/container/safe_process.py', import.meta.url))) fail('PREPROCESSING_IDENTITY_MISMATCH');
   if (!approval.fixtures || typeof approval.fixtures !== 'object' || Array.isArray(approval.fixtures)) fail('FIXTURE_MAPPING_REQUIRED');
   relativeFile('models/resnet.py', EXPECTED_SOURCE);
   relativeFile('checkpoint.pth', EXPECTED_CHECKPOINT);
