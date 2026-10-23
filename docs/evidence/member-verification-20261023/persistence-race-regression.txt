@@ -1,0 +1,31 @@
+Command (same assertions for both runs):
+flutter test --no-pub test/features/member_verification/device_unlock_foundation_test.dart --name 'delayed save from disposed controller|A guest A hydration' --reporter expanded
+
+Only the store implementation was temporarily replaced with the predecessor source from 51be6f3e0f2f59047ae8fb157cf9d6771a9e080d.
+Intentional negative run (exit 1):
+00:00 +0: loading /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart
+00:00 +0: delayed save from disposed controller cannot overwrite newer A choice
+00:00 +0 -1: delayed save from disposed controller cannot overwrite newer A choice [E]
+  Expected: DeviceUnlockPreference:<DeviceUnlockPreference.everyReopen>
+    Actual: DeviceUnlockPreference:<DeviceUnlockPreference.off>
+
+  package:matcher                                                             expect
+  package:flutter_test/src/widget_tester.dart 473:18                          expect
+  test/features/member_verification/device_unlock_foundation_test.dart 294:7  main.<fn>
+
+00:00 +0 -1: A guest A hydration waits for old persistence before accepting a new save
+00:00 +0 -2: A guest A hydration waits for old persistence before accepting a new save [E]
+  Expected: DraftDeviceUnlockStatus:<DraftDeviceUnlockStatus.loading>
+    Actual: DraftDeviceUnlockStatus:<DraftDeviceUnlockStatus.locked>
+
+  package:matcher                                                             expect
+  package:flutter_test/src/widget_tester.dart 473:18                          expect
+  test/features/member_verification/device_unlock_foundation_test.dart 327:7  main.<fn>
+
+00:00 +0 -2: Some tests failed.
+
+Restored serialized store, unchanged assertions (exit 0):
+00:00 +0: loading /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart
+00:00 +0: delayed save from disposed controller cannot overwrite newer A choice
+00:00 +1: A guest A hydration waits for old persistence before accepting a new save
+00:00 +2: All tests passed!
