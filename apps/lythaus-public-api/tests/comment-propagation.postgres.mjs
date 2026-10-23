@@ -149,16 +149,44 @@ test('current parent access controls guest and A to B to A reads independently',
   const root = await comment(postId, author);
   await control.query('INSERT INTO social.follows(follower_id,followed_id) VALUES($1,$2)', [author, owner]);
   for (const viewer of [author, outsider, author, null]) {
-    assert.deepEqual(ids(await read(postId, viewer)), viewer === author ? [root] : []);
+    if (viewer === author) assert.deepEqual(ids(await read(postId, viewer)), [root]);
+    else await assert.rejects(read(postId, viewer), /post_not_found/);
     assert.equal((await query(ownerCommentQuery, [root, viewer ?? outsider])).rowCount, viewer === author ? 1 : 0);
   }
   await control.query('DELETE FROM social.follows WHERE follower_id=$1 AND followed_id=$2', [author, owner]);
   assert.equal((await query(ownerCommentQuery, [root, author])).rowCount, 0);
   for (const change of ["visibility='private'", "moderation_state='under_review'", 'deleted_at=now()']) {
     await control.query('UPDATE content.posts SET ' + change + ' WHERE id=$1', [postId]);
-    assert.deepEqual(ids(await read(postId, author)), []);
+    await assert.rejects(read(postId, author), /post_not_found/);
     assert.equal((await query(ownerCommentQuery, [root, author])).rowCount, 0);
   }
+});
+
+test('reply tail revalidation authoritatively removes hidden ancestors and redacts tombstones on 200 reads', async () => {
+  const owner = await actor(), author = await actor(), postId = await post(owner);
+  const root = await comment(postId, owner);
+  const middle = await comment(postId, author, { parent: root, timestamp: '2026-10-01T00:00:00.123457Z' });
+  const child = await comment(postId, owner, { parent: middle, timestamp: '2026-10-01T00:00:00.123458Z' });
+  const initial = await read(postId, owner, { conversationId: root });
+  for (const state of ['blocked', 'under_review']) {
+    await control.query('UPDATE content.comments SET moderation_state=$2,body=$3 WHERE id=$1', [middle, state, 'Private revised ancestor']);
+    const refreshed = await read(postId, owner, { conversationId: root, cursor: initial.refreshCursor,
+      refresh: 'true', revalidateIds: [middle, child].join(',') });
+    assert.deepEqual(refreshed.items, []);
+    assert.deepEqual(refreshed.revalidatedItems, []);
+    assert.ok(!JSON.stringify(refreshed).includes('Private revised ancestor'));
+  }
+  const ownPending = await read(postId, author, { conversationId: root, revalidationOnly: 'true', revalidateIds: [middle, child].join(',') });
+  assert.deepEqual(ownPending.revalidatedItems.map(row => row.id), [middle]);
+  assert.equal(ownPending.revalidatedItems[0].body, 'Private revised ancestor');
+  await control.query("UPDATE content.comments SET moderation_state='allowed',deleted_at=now() WHERE id=$1", [middle]);
+  const deleted = await read(postId, owner, { conversationId: root, revalidationOnly: 'true', revalidateIds: [middle, child].join(',') });
+  assert.equal(deleted.revalidatedItems.find(row => row.id === middle).body, null);
+  assert.equal(deleted.revalidatedItems.find(row => row.id === middle).deleted, true);
+  assert.ok(deleted.revalidatedItems.some(row => row.id === child));
+  assert.equal(deleted.revalidatedItems.find(row => row.id === child).replyToDeleted, true);
+  const unrelated = await comment(await post(owner), owner);
+  assert.deepEqual((await read(postId, owner, { conversationId: root, revalidationOnly: 'true', revalidateIds: unrelated })).revalidatedItems, []);
 });
 
 test('reply pagination holds its snapshot until the reader explicitly checks for new replies', async () => {

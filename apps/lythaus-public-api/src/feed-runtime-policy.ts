@@ -31,7 +31,7 @@ export function feedResponsePlan(surface: FeedSurface, hasViewer: boolean): Feed
     return { privateResponse: false, cacheControl: 'public, max-age=15, s-maxage=15' };
   }
   if (surface === 'comments') {
-    return PRIVATE_FEED_RESPONSE;
+    return { privateResponse: false, cacheControl: 'public, max-age=10, s-maxage=10' };
   }
   return PRIVATE_FEED_RESPONSE;
 }

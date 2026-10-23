@@ -1,4 +1,4 @@
-import { commentPostVisibilitySql } from '../../../packages/db/src/comment-visibility.ts';
+import { commentConversationRootSql, commentParentVisibilitySql, commentPostVisibilitySql } from '../../../packages/db/src/comment-visibility.ts';
 import { FEED_AUTHOR_FIELDS, FEED_AUTHOR_JOINS } from './feed-author-projection.ts';
 import { requireFeedPostId } from './feed-runtime-policy.ts';
 
@@ -80,6 +80,30 @@ const conversationAccessQuery = `SELECT comment.id FROM content.comments comment
      OR (b.blocker_id = comment.author_id AND b.blocked_id = $2))
    AND NOT EXISTS (SELECT 1 FROM social.mutes m WHERE m.muter_id = $2 AND m.muted_id = comment.author_id)`;
 
+const postAccessQuery = `SELECT post.id FROM content.posts post WHERE post.id = $1 AND ${commentPostVisibilitySql('$2')}`;
+
+const replyRevalidationQuery = `SELECT comment.id, comment.author_id AS "authorId", ${FEED_AUTHOR_FIELDS},
+    comment.parent_id AS "parentId", comment.depth, ${commentConversationRootSql} AS "conversationId",
+    CASE WHEN comment.deleted_at IS NULL THEN comment.body ELSE NULL END AS body,
+    comment.declared_creation_mode AS "declaredCreationMode", comment.moderation_state AS "moderationState",
+    (comment.deleted_at IS NOT NULL) AS deleted,
+    to_char(comment.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "createdAt",
+    comment.updated_at AS "updatedAt", (reply_target.deleted_at IS NOT NULL) AS "replyToDeleted",
+    CASE WHEN reply_target.deleted_at IS NULL THEN reply_target.author_id END AS "replyToAuthorId"
+  FROM content.comments comment JOIN content.posts post ON post.id = comment.post_id
+  JOIN identity.users author ON author.id = comment.author_id AND author.status = 'active' AND author.deleted_at IS NULL
+  LEFT JOIN content.comments reply_target ON reply_target.id = comment.parent_id
+  ${FEED_AUTHOR_JOINS}
+ WHERE comment.post_id = $1 AND comment.id = ANY($3::uuid[]) AND comment.parent_id IS NOT NULL
+   AND comment.declared_creation_mode IN ('human', 'ai_assisted')
+   AND (comment.moderation_state = 'allowed' OR (comment.author_id = $2 AND comment.moderation_state = 'under_review' AND comment.deleted_at IS NULL))
+   AND ${commentPostVisibilitySql('$2')} AND ${commentParentVisibilitySql('$2')}
+   AND ${commentConversationRootSql} = $4::uuid
+   AND NOT EXISTS (SELECT 1 FROM social.blocks b WHERE (b.blocker_id = $2 AND b.blocked_id = comment.author_id)
+     OR (b.blocker_id = comment.author_id AND b.blocked_id = $2))
+   AND NOT EXISTS (SELECT 1 FROM social.mutes m WHERE m.muter_id = $2 AND m.muted_id = comment.author_id)
+ ORDER BY comment.created_at ASC, comment.id ASC`;
+
 export async function readCommentThread(input: {
   request: Request;
   postId: string;
@@ -113,12 +137,22 @@ export async function readCommentThread(input: {
   }
   const refresh = params.get('refresh') === 'true';
   if (refresh && !conversationId) throw new Error('invalid_pagination');
+  const rawIds = params.get('revalidateIds');
+  const revalidationOnly = params.get('revalidationOnly') === 'true';
+  const revalidateIds = rawIds?.split(',');
+  if ((rawIds !== null && (rawIds.length > 3699 || !conversationId || !revalidateIds?.length
+      || revalidateIds.length > 100 || revalidateIds.some(id => !uuid.test(id))))
+      || (revalidationOnly && (!revalidateIds || rawCursor !== null || targetId !== null))) throw new Error('invalid_pagination');
+  const postAccess = await input.query(postAccessQuery, [postId, input.viewerId]);
+  if (!postAccess.rows[0]) throw new Error('post_not_found');
   if (conversationId) {
     const access = await input.query(conversationAccessQuery, [postId, input.viewerId, conversationId]);
     if (!access.rows[0]) throw new Error('comment_not_found');
   }
-  const result = await input.query(threadQuery(sort, view, conversationId, targetId), [postId, input.viewerId,
+  const result = revalidationOnly ? { rows: [] } : await input.query(threadQuery(sort, view, conversationId, targetId), [postId, input.viewerId,
     cursor?.timestamp ?? null, cursor?.id ?? null, limit + 1, refresh ? null : cursor?.snapshot ?? null, conversationId, targetId]);
+  const revalidated = revalidateIds ? await input.query(replyRevalidationQuery,
+    [postId, input.viewerId, [...new Set(revalidateIds)], conversationId]) : undefined;
   const rows = result.rows.slice(0, limit);
   const tail = rows.at(-1);
   const tailCursor = tail ? btoa(JSON.stringify({ version: 1, postId, sort, view, conversationId,
@@ -126,6 +160,7 @@ export async function readCommentThread(input: {
   const nextCursor = result.rows.length > limit ? tailCursor : null;
   const items = rows.map(({ cursorCreatedAt: _, snapshotAt: __, ...row }) => row);
   return { items, nextCursor, refreshCursor: conversationId ? tailCursor ?? rawCursor : null,
+    ...(revalidated ? { revalidatedItems: revalidated.rows } : {}),
     capabilities: { conversations: true, nestedReplies: true,
     sorts: ['newest', 'oldest'], mostRelevantAvailable: false,
     mostRelevantUnavailableReason: 'Comment usefulness signals have not been validated.' } };

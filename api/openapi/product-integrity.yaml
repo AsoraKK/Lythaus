@@ -349,6 +349,10 @@ components:
           required: [items]
           properties:
             refreshCursor: { type: string, nullable: true, description: Reply tail cursor for an explicit check for new replies. }
+            revalidatedItems:
+              type: array
+              description: Authoritative current rows for the requested cached reply IDs. Missing IDs are unavailable; tombstones have no body. Only the signed-in author's eligible pending body may be returned privately.
+              items: { $ref: '#/components/schemas/Comment' }
             capabilities:
               type: object
               properties:
@@ -3638,6 +3642,14 @@ paths:
           in: query
           schema: { type: boolean }
           description: Start a fresh reply snapshot after the supplied tail cursor. Requires conversationId.
+        - name: revalidateIds
+          in: query
+          schema: { type: string, maxLength: 3699 }
+          description: Comma-separated cached reply UUIDs, at most 100 per request. Requires conversationId. Returns their current eligible rows independently of the tail cursor.
+        - name: revalidationOnly
+          in: query
+          schema: { type: boolean }
+          description: Return only revalidation data without fetching a new reply page. Requires conversationId and revalidateIds; cannot be combined with a cursor or targetId.
       responses:
         '200':
           description: Publicly visible comments.
@@ -3648,7 +3660,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
-          description: The requested conversation is unavailable.
+          description: The parent post or requested conversation is unavailable. Missing and inaccessible parents share this response.
         '503':
           description: The requested relevance sort is unavailable.
           content:

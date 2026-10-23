@@ -39,6 +39,17 @@ argument-volume, raw-like or reputation boost is substituted. A future formula
 needs a trusted comment-level signal, eligibility, missing-signal behavior,
 gaming limits and calibration tests before activation.
 
+A practical next proposal is a distinct, comment-level helpfulness assessment,
+with independently eligible reviewers, one assessment per reviewer/comment,
+author/self-vote exclusion and explicit reversal/audit evidence. A conservative
+lower confidence bound on helpful-versus-not-helpful assessments could rank
+eligible conversations; equal scores would use newest timestamp/ID, with a
+separate insufficient-evidence state rather than inventing a score. Reviewer
+eligibility, minimum independent evidence, abuse limits and calibration need
+product approval and executable adversarial tests first. Replies would remain
+chronological and each ranked page would freeze its snapshot. This is a proposed
+next slice, not implemented ranking or an active earning/reputation policy.
+
 ## Source trace and behavior
 
 | Area | Existing contract and candidate behavior |
@@ -50,7 +61,7 @@ gaming limits and calibration tests before activation.
 | Counts | A root's reply count is the number of visible, non-deleted descendants at its snapshot, including nested replies. Pending/blocked/muted/blocked-author and unavailable-ancestor rows are excluded. Counts come from canonical rows, not queue increments. Counts refresh with root reads; loading a reply page does not claim to update a whole-post total. The detail button no longer invents `Comments (0)` when the API supplies no post comment count. |
 | Edits | The stored declaration is preserved by body-only edits; edits return to review. Old pending receipts no longer override fresh owner reads. A locally edited ancestor withholds its loaded descendants. |
 | Deletion/hiding | Allowed deleted ancestors remain body-free tombstones, preserving the existing thread contract. A blocked/under-review/inactive/blocked-author ancestor withholds descendants. Parent-post privacy, follow, block, moderation, author status and deletion eligibility applies to public and private owner-comment reads. No cascading deletion or retention policy is introduced. |
-| Cache | Comment responses, including guest reads, are private/no-store. Account changes clear comment/reply state and invalidate outstanding loads. HTTP 401/403/404 clears cached child content. Transient errors retain an honest retry state. There is no new live invalidation service. |
+| Cache | The proposed shared comment-read wrapper returns private/no-store, including for guests. The pinned feed-policy files remain byte-identical to the reviewed base; marketing source locks are unchanged. Account changes clear comment/reply state and invalidate outstanding loads. HTTP 401/403/404 clears cached child content. Transient errors retain an honest retry state. There is no new live invalidation service. |
 | Notifications | Jobs locks the comment revision, verifies the canonical outbox aggregate, current revision and latest resolved allow decision, derives recipient from current relationships, then retains existing preference-aware, conflict-safe insertion. Public projections recheck current revision/visibility with existing runtime permissions. List and both unread-count projections share the same visibility predicate. Canonical first-party deep links include the post and exact comment. |
 | Historical events | An event without the exact revision/decision envelope is withheld from delivery/projection; stored rows are not deleted or backfilled. Community-appeal publication already carries these fields. The parent patch adds them to admin comment publication. Historical reconciliation requires separate parent review. |
 
@@ -63,6 +74,8 @@ only after coordinating the active workers:
 - Public API `index.ts`: delegate comment reads to the reader; use the nested
   target validator; filter notification list and both unread-count sources;
   derive comment notification destinations from current canonical relationships.
+  Return private/no-store directly for comment reads, preserving pinned shared
+  feed-policy bytes and their exact-source release guard.
 - Jobs `index.ts`: lock the revision before recipient selection, then use the
   current publication/visibility query with the existing notification inserter.
 - Admin API `index.ts`: include existing `source_event_id` and `decisionId` on
@@ -92,6 +105,25 @@ from account A cannot clear account B. The 25 controller/presentation regression
 pass. Only the owner-comments controller and tests are changed; #1088's
 owner-post files are untouched.
 
+Independent review reproduced a newly introduced tail-refresh gap: a successful
+200 response containing only newer replies retained an already loaded blocked,
+review-hidden or deleted reply body. Reply requests now batch up to 100 cached
+IDs for authoritative current revalidation, independent of the tail cursor;
+larger loaded conversations use additional bounded revalidation-only requests.
+Missing rows and descendants are removed, fresh owner-only pending content stays
+private, and deleted allowed ancestors become body-free tombstones. Surviving
+rows keep chronological order. Partial completed revalidation still applies if
+a later request fails; unvalidated rows retain an honest retry state.
+
+The parent-access 200/empty-pagination retention existed in the old flat reader;
+it is an acceptance gap closed here, not a new regression. Every new reader call
+checks canonical post access first. Missing, private, withdrawn and inaccessible
+parents share `post_not_found`/404. The real route-to-UI regression distinguishes
+a valid empty tail (keep accessible loaded rows) from follow revocation or parent
+privatization (404 and clear loaded content). Off-screen exact targets now scroll
+to their actual root index and materialize lazy rows before highlighting;
+repeated target navigation and navigation/session epochs are covered.
+
 ## Validation and evidence
 
 Disposable local PostgreSQL 17 is initialized from the approved migration
@@ -108,6 +140,7 @@ Run from the repository root:
 node --experimental-strip-types --test apps/lythaus-public-api/tests/comment-integration-hooks.test.mjs
 node --experimental-strip-types --test apps/lythaus-public-api/tests/comment-propagation.postgres.mjs
 node --experimental-strip-types --test apps/lythaus-public-api/tests/comment-propagation.workerd.mjs
+node apps/lythaus-public-api/tests/run-comment-route-ui.mjs
 flutter test --no-pub test/features/feed/presentation/comment_thread_screen_test.dart test/features/feed/presentation/post_comment_journey_test.dart test/features/feed/domain/comment_notification_link_test.dart
 flutter test --no-pub test/features/profile/application/owner_comments_test.dart test/features/profile/presentation/owner_comments_section_test.dart
 npm run typecheck:native
@@ -137,6 +170,15 @@ They cover collapsed/expanded conversations, Oldest, 320-pixel large text and
 desktop dark mode. Browser assertions cover exact context links, chronological
 reply positions, real sort selection, disabled relevance, no horizontal overflow,
 no page exceptions and no requests outside the local preview origin.
+
+The pinned Flutter engine loads a default Roboto font before Dart main when its
+asset manifest lacks that family (`canvaskit/fonts.dart`, `loadAssetFonts`). The
+local browser harness serves the preview manifest with the already bundled
+Manrope regular font registered as that fallback. This prevents an external
+Google font request at its source; the strict external-origin rejection and
+zero-external-request assertion remain enabled. Production font packaging is
+unchanged. Browser screenshots are rendered Chromium output with synthetic data;
+the separate widget-raster images are synthetic Flutter test captures.
 
 ## Remaining acceptance
 

@@ -70,6 +70,7 @@ void main() {
     ],
     'nextCursor': null,
     'refreshCursor': 'synthetic-reply-tail',
+    'revalidatedItems': [],
     'capabilities': {
       'conversations': true,
       'nestedReplies': true,
@@ -99,6 +100,7 @@ void main() {
       expect(page.capabilities!.nestedReplies, true);
       expect(page.capabilities!.mostRelevantAvailable, false);
       expect(page.refreshCursor, 'synthetic-reply-tail');
+      expect(page.revalidatedItems, isEmpty);
       final encoded = standardSerializers.serializeWith(
           CommentPage.serializer, page) as Map;
       expect((encoded['capabilities'] as Map)['mostRelevantAvailable'], false);
@@ -121,14 +123,17 @@ void main() {
             conversationId: '0192c000-0000-7000-8000-000000000001',
             cursor: 'synthetic-reply-tail',
             refresh: true,
+            revalidateIds: '0192c000-0000-7000-8000-000000000004',
           );
       expect(result.data!.capabilities!.mostRelevantAvailable, false);
       expect(adapter.requests.single.queryParameters, {
+        'limit': 25,
         'view': 'conversations',
         'sort': 'newest',
         'conversationId': '0192c000-0000-7000-8000-000000000001',
         'cursor': 'synthetic-reply-tail',
         'refresh': true,
+        'revalidateIds': '0192c000-0000-7000-8000-000000000004',
       });
     },
   );

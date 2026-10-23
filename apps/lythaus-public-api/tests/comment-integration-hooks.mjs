@@ -13,7 +13,7 @@ export function integratePublicApiComments(source) {
   try {
     const body = await readCommentThread({ request, postId, viewerId: viewer?.userId ?? null,
       query: (sql, values) => query(env.DB_APP_FRESH, sql, [...values]) });
-    return feedResponse(request, env, body, 'comments', Boolean(viewer));
+    return privateResponse(request, env, body);
   } catch (error) {
     const status = commentThreadErrorStatus(error);
     if (status) return privateResponse(request, env, { error: (error as Error).message }, { status });

@@ -454,6 +454,8 @@ class PostsApi {
   /// * [conversationId]
   /// * [targetId] - Resolve one exact visible comment and its canonical conversation; cannot be combined with a cursor.
   /// * [refresh] - Start a fresh reply snapshot after the supplied tail cursor. Requires conversationId.
+  /// * [revalidateIds] - Comma-separated cached reply UUIDs, at most 100 per request. Requires conversationId. Returns their current eligible rows independently of the tail cursor.
+  /// * [revalidationOnly] - Return only revalidation data without fetching a new reply page. Requires conversationId and revalidateIds; cannot be combined with a cursor or targetId.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -472,6 +474,8 @@ class PostsApi {
     String? conversationId,
     String? targetId,
     bool? refresh,
+    String? revalidateIds,
+    bool? revalidationOnly,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -506,6 +510,8 @@ class PostsApi {
       if (conversationId != null) r'conversationId': encodeQueryParameter(_serializers, conversationId, const FullType(String)),
       if (targetId != null) r'targetId': encodeQueryParameter(_serializers, targetId, const FullType(String)),
       if (refresh != null) r'refresh': encodeQueryParameter(_serializers, refresh, const FullType(bool)),
+      if (revalidateIds != null) r'revalidateIds': encodeQueryParameter(_serializers, revalidateIds, const FullType(String)),
+      if (revalidationOnly != null) r'revalidationOnly': encodeQueryParameter(_serializers, revalidationOnly, const FullType(bool)),
     };
 
     final _response = await _dio.request<Object>(
