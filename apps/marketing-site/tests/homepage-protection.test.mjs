@@ -972,7 +972,7 @@ test('allocated Jobs pins reject altered historical and unrelated source paths',
 test('comment entrypoint allocations reject predecessor blobs and unauthorized visibility or revision mutations', () => {
   const cases = [
     ['apps/lythaus-public-api/src/index.ts', 'dbdbd18ee726e3e399e04fbd01c649534729bb4b', [
-      ['return privateResponse(request, env, body);', 'return response(request, env, body);'],
+      ['return privateResponse(request, env, body);', 'return response(request, env, body);', 'getComments'],
       ['AND ${commentNotificationVisibilitySql}', ''],
       ['depth = nestedReplyDepth(parent.rows[0]);', 'depth = 1;'],
     ]],
@@ -987,10 +987,22 @@ test('comment entrypoint allocations reject predecessor blobs and unauthorized v
     assert.doesNotThrow(() => assertAllocatedJobsDiagnosticFile(filename, current));
     assert.notEqual(previous, current);
     assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, previous), assert.AssertionError);
-    for (const [before, after] of mutations) {
-      assert.ok(source.includes(before), 'The synthetic mutation must alter an actual reviewed comment hook');
+    for (const [before, after, scope] of mutations) {
+      const start = scope ? source.indexOf(`async function ${scope}(`) : 0;
+      const end = scope ? source.indexOf('\nasync function ', start + 1) : source.length;
+      assert.ok(start >= 0 && end > start, 'The mutation scope must identify an existing complete function');
+      const target = source.slice(start, end);
+      assert.ok(target.includes(before), 'The synthetic mutation must alter an actual reviewed comment hook');
+      const changedTarget = target.replace(before, after);
+      const changedSource = source.slice(0, start) + changedTarget + source.slice(end);
+      if (scope) {
+        assert.equal(target.split(before).length, 2, 'The intended function must contain exactly one mutation target');
+        assert.ok(changedTarget.includes(after) && !changedTarget.includes(before));
+        assert.equal(changedSource.slice(0, start), source.slice(0, start));
+        assert.equal(changedSource.slice(start + changedTarget.length), source.slice(end));
+      }
       const altered = execFileSync('git', ['hash-object', '--stdin'], {
-        cwd: root, encoding: 'utf8', input: source.replace(before, after),
+        cwd: root, encoding: 'utf8', input: changedSource,
       }).trim();
       assert.notEqual(altered, current);
       assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, altered), assert.AssertionError);
