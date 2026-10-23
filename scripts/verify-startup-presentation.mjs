@@ -94,6 +94,13 @@ try {for(const [engine,type] of Object.entries({webkit,chromium})) {
    const after=await page.evaluate(()=>JSON.parse(window.__readBrandLoginLayout()));assertMatchingLoginLayout(before,after);
    const measured=loginFirstPaintPixels(PNG.sync.read(bytes),before);assertLoginFirstPaintPixels(measured);
    result.captures.push({stage:'ready-flutter-before-semantics',...measured,sha256:createHash('sha256').update(bytes).digest('hex')});
+   result.readyEditing=await page.evaluate(()=>JSON.parse(window.__readBrandLoginEditing()));
+   assert.equal(result.readyEditing.email[0].readOnly,false);
+   await page.waitForTimeout(5000);
+   const settledBytes=await page.screenshot({path:`${output}/${result.name}-ready-settled-before-semantics.png`});
+   const settledPixels=loginFirstPaintPixels(PNG.sync.read(settledBytes),before);
+   assertLoginFirstPaintPixels(settledPixels);
+   result.captures.push({stage:'ready-settled-before-semantics',...settledPixels,sha256:createHash('sha256').update(settledBytes).digest('hex')});
    await page.locator('flt-semantics-placeholder').evaluate(e=>e.click());await page.getByRole('button',{name:'Sign in with email',exact:true}).waitFor();
    await page.getByRole('textbox',{name:'Email',exact:true}).click();await page.waitForTimeout(300);await page.keyboard.insertText('draft@example.invalid');
    await page.waitForFunction(()=>JSON.parse(window.__readBrandLoginEditing()).email[0].hasExpectedDraft);
