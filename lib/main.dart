@@ -27,6 +27,7 @@ import 'package:lythaus/core/network/pending_authenticated_operations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  deferStartupPresentation();
   configureAppUrlStrategy();
   if (isReleaseWebBuild) {
     requirePublicHttpsOrigin(

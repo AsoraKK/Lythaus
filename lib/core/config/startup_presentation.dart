@@ -5,3 +5,5 @@ import 'package:lythaus/core/config/startup_presentation_stub.dart'
     as platform;
 
 void dismissStartupPresentation() => platform.dismissStartupPresentation();
+
+void deferStartupPresentation() => platform.deferStartupPresentation();

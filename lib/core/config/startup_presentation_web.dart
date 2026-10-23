@@ -6,3 +6,8 @@ import 'dart:js_interop';
 external JSFunction? get _startupReady;
 
 void dismissStartupPresentation() => _startupReady?.callAsFunction(null);
+
+@JS('globalThis.lythausStartupDeferred')
+external JSFunction? get _startupDeferred;
+
+void deferStartupPresentation() => _startupDeferred?.callAsFunction(null);

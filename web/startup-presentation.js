@@ -6,6 +6,12 @@
   const retry = overlay.querySelector('button');
   const views = new Map();
   let finished = false;
+  let deferred = false;
+  window.lythausStartupDeferred = () => { deferred = true; };
+  const onFirstFrame = () => {
+    if (!deferred) window.lythausStartupReady();
+  };
+  window.addEventListener('flutter-first-frame', onFirstFrame);
   const blockViews = () => {
     for (const view of document.querySelectorAll('flutter-view')) {
       if (!views.has(view)) views.set(view, view.inert);
@@ -35,6 +41,7 @@
     finished = true;
     clearTimeout(timer);
     window.removeEventListener('error', onError, true);
+    window.removeEventListener('flutter-first-frame', onFirstFrame);
     observer.disconnect();
     overlay.remove();
     for (const [view, inert] of views) view.inert = inert;

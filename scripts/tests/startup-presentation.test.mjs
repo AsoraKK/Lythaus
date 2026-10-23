@@ -34,6 +34,9 @@ function fixture() {
 
 test('startup blocks only until ready and restores prior inert states once', () => {
   const f = fixture();
+  f.window.lythausStartupDeferred();
+  f.events.get('flutter-first-frame')();
+  assert.equal(f.overlay.removed, false);
   assert.equal(f.overlay.hidden, false);
   assert.deepEqual(f.views.map(v => v.inert), [true, true]);
   f.views.push({inert: false}); f.observe();
@@ -44,6 +47,14 @@ test('startup blocks only until ready and restores prior inert states once', () 
   assert.deepEqual(f.state(), {cancelled: true, disconnected: true, reloads: 0});
   f.window.lythausStartupReady(); f.window.lythausStartupFailed(); f.timer();
   assert.equal(f.retry.hidden, true);
+  assert.equal(f.events.size, 0);
+});
+
+test('standalone Flutter entrypoints finish on their natural first frame', () => {
+  const f = fixture();
+  f.events.get('flutter-first-frame')();
+  assert.equal(f.overlay.removed, true);
+  assert.equal(f.views[0].inert, false);
   assert.equal(f.events.size, 0);
 });
 
