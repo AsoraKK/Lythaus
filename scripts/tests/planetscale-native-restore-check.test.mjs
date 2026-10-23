@@ -250,7 +250,7 @@ test('credential projection rejects main, mismatched role, host and password; ne
 });
 test('GitHub preconditions enforce immutable repository, main, attempt, named human production review and no prior execute', async () => {
   const env = { ...environment(), GH_TOKEN: password, GITHUB_SHA: sha, GITHUB_REF: 'refs/heads/main', REF_PROTECTED: 'true',
-    GITHUB_REPOSITORY_ID: '1010752912', GITHUB_REPOSITORY: 'AsoraKK/Lythaus', GITHUB_RUN_ATTEMPT: '1' };
+    GITHUB_REPOSITORY_ID: '1010752912', GITHUB_REPOSITORY: 'fixture-owner/Lythaus', GITHUB_RUN_ATTEMPT: '1' };
   const fetcher = mode => async url => Response.json(url.endsWith('/branches/main') ? { protected: true, commit: { sha: mode === 'main' ? 'b'.repeat(40) : sha } }
     : url.endsWith('/approvals') ? [{ state: 'approved', user: { type: mode === 'bot' ? 'Bot' : 'User', login: 'owner' }, environments: [{ name: 'production' }] }]
       : url.includes('/runs?') ? { total_count: mode === 'prior' ? 1 : 0, workflow_runs: mode === 'prior' ? [{ id: 1, display_title: `Native restore execute ${sha}` }] : [] }
