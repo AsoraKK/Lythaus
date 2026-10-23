@@ -251,7 +251,10 @@ void main() {
     } finally {
       semantics.dispose();
     }
-    expect(tester.getRect(find.widgetWithText(TextField, 'Email')), emailBefore);
+    expect(
+      tester.getRect(find.widgetWithText(TextField, 'Email')),
+      emailBefore,
+    );
     await tester.tap(find.text('Sign in with email'));
     await tester.pumpAndSettle();
     expect(
