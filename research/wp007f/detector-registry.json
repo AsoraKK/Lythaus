@@ -1,0 +1,75 @@
+{
+  "schemaVersion": "lythaus-authenticity-detector-registry-v1",
+  "registryVersion": "2026-09-16.wp007f.alpha-calibration-1",
+  "defaultMode": "SHADOW",
+  "productAuthority": "Detectors provide evidence only; deterministic policy remains authoritative.",
+  "entries": [
+    {
+      "detectorId": "SPAI_C512",
+      "displayName": "SPAI C512",
+      "enabled": true,
+      "shadowMode": true,
+      "evidenceFamily": "EF3_SPECTRAL_SYNTHETIC",
+      "correlationGroup": "SPAI_SPECTRAL",
+      "adapterVersion": "wp007f-spai-c512-adapter-v1",
+      "checkpointHash": "24159f27d7c8c2cd0cb6c4019189eb89ad0874a0d9d15f8dc9afd39ca9648a55",
+      "checkpointLicense": "Apache-2.0 research evaluation; deployment rights require separate review",
+      "inputPolicy": "Decoded pixels; deterministic C512 center crop; no metadata, filename, or provenance features",
+      "runtimeBudgetMs": 5000,
+      "calibrationProfile": "wp007f-spai_c512-calibration-v1",
+      "weightCapBytes": 1073741824,
+      "replacementFor": null,
+      "introducedAt": "2026-09-16T00:00:00.000Z",
+      "retiredAt": null
+    },
+    {
+      "detectorId": "UNIVERSAL_FAKE_DETECT",
+      "displayName": "UniversalFakeDetect",
+      "enabled": true,
+      "shadowMode": true,
+      "evidenceFamily": "EF3_LEARNED_SYNTHETIC",
+      "correlationGroup": "CLIP_GENERATIVE",
+      "adapterVersion": "wp007f-ufd-adapter-v1",
+      "checkpointHash": "477100745713bcc957beb2b40859536859b6483fd6301b3b9293151b194c7847",
+      "checkpointLicense": "MIT repository material; OpenAI CLIP deployment/model-card review remains required",
+      "inputPolicy": "Decoded pixels through official OpenAI CLIP ViT-L/14 preprocessing",
+      "runtimeBudgetMs": 5000,
+      "calibrationProfile": "wp007f-universal_fake_detect-calibration-v1",
+      "weightCapBytes": 4096,
+      "replacementFor": null,
+      "introducedAt": "2026-09-16T00:00:00.000Z",
+      "retiredAt": null
+    },
+    {
+      "detectorId": "RINE",
+      "displayName": "RINE",
+      "enabled": true,
+      "shadowMode": true,
+      "evidenceFamily": "EF3_LEARNED_SYNTHETIC",
+      "correlationGroup": "CLIP_GENERATIVE",
+      "adapterVersion": "wp007f-rine-adapter-v1",
+      "checkpointHash": "13986ffc86e1bd9d57fd640f891358c4f14c0f8aea8e590e52c598541f69fdc1",
+      "checkpointLicense": "Apache-2.0 repository material; OpenAI CLIP deployment/model-card review remains required",
+      "inputPolicy": "Decoded pixels through official OpenAI CLIP ViT-L/14 preprocessing and published RINE head",
+      "runtimeBudgetMs": 5000,
+      "calibrationProfile": "wp007f-rine-calibration-v1",
+      "weightCapBytes": 44040192,
+      "replacementFor": null,
+      "introducedAt": "2026-09-16T00:00:00.000Z",
+      "retiredAt": null
+    }
+  ],
+  "correlationGroups": {
+    "SPAI_SPECTRAL": {
+      "members": ["SPAI_C512"],
+      "maxContributionPoints": 35
+    },
+    "CLIP_GENERATIVE": {
+      "members": ["UNIVERSAL_FAKE_DETECT", "RINE"],
+      "maxContributionPoints": 35,
+      "independence": "CORRELATED_NOT_TWO_INDEPENDENT_FAMILIES"
+    }
+  },
+  "replacementRule": "Register, qualify, shadow, freeze calibration, then promote; retain historical versions for appeals.",
+  "productionDefault": "SHADOW"
+}

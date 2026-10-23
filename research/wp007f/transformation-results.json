@@ -1,0 +1,2462 @@
+{
+  "schemaVersion": "lythaus-wp007f-transformation-results-v1",
+  "scoreBlind": true,
+  "flux1PixelAccess": false,
+  "flux2PixelAccess": false,
+  "inputManifestSha256": "3ef81fab74b7c05046f312a5f59dde9bf218e510ffa699d86441fcde6f715c62",
+  "thresholds": {
+    "SPAI_C512": 1.0,
+    "UNIVERSAL_FAKE_DETECT": 0.543838277,
+    "RINE": 0.890092938
+  },
+  "detectors": [
+    {
+      "detectorId": "RINE",
+      "thresholdSource": "operating-curves development pooled negatives target 1%",
+      "frozenThreshold": 0.890092938,
+      "sampleCount": 96,
+      "transforms": [
+        {
+          "transform": "CANONICAL",
+          "syntheticRecall": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 0,
+            "total": 8,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.324408
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 0.567174107,
+              "iqr": [
+                0.38871938,
+                0.76163578
+              ],
+              "min": 0.340573251,
+              "max": 0.76163578
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.382770628,
+              "iqr": [
+                0.378858119,
+                0.41889137
+              ],
+              "min": 0.197767138,
+              "max": 0.41889137
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.324197918,
+              "iqr": [
+                0.304284692,
+                0.345181644
+              ],
+              "min": 0.094193198,
+              "max": 0.345181644
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.344646394,
+              "iqr": [
+                0.304284692,
+                0.386683136
+              ],
+              "min": 0.094193198,
+              "max": 0.41889137
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": 0.0,
+              "iqr": [
+                0.0,
+                0.0
+              ],
+              "min": 0.0,
+              "max": 0.0
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 0.9522645,
+            "iqr": [
+              0.914207,
+              1.817001
+            ],
+            "min": 0.816121,
+            "max": 4.509639
+          }
+        },
+        {
+          "transform": "JPEG75",
+          "syntheticRecall": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 0,
+            "total": 8,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.324408
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 0.16060755,
+              "iqr": [
+                0.108887471,
+                0.297949344
+              ],
+              "min": 0.079962805,
+              "max": 0.297949344
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.241512045,
+              "iqr": [
+                0.240127265,
+                0.288092524
+              ],
+              "min": 0.059633959,
+              "max": 0.288092524
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.341636136,
+              "iqr": [
+                0.331005663,
+                0.3601349
+              ],
+              "min": 0.065732852,
+              "max": 0.3601349
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.265494674,
+              "iqr": [
+                0.240127265,
+                0.35226661
+              ],
+              "min": 0.059633959,
+              "max": 0.3601349
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": -0.133189401,
+              "iqr": [
+                -0.175994545,
+                -0.014175981
+              ],
+              "min": -0.665666029,
+              "max": 0.055850208
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 0.9908,
+            "iqr": [
+              0.915982,
+              1.950649
+            ],
+            "min": 0.841818,
+            "max": 4.153428
+          }
+        },
+        {
+          "transform": "JPEG85",
+          "syntheticRecall": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 0,
+            "total": 8,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.324408
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 0.332203045,
+              "iqr": [
+                0.304650694,
+                0.454008698
+              ],
+              "min": 0.191703767,
+              "max": 0.454008698
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.350386232,
+              "iqr": [
+                0.342440963,
+                0.402468145
+              ],
+              "min": 0.16729717,
+              "max": 0.402468145
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.327038229,
+              "iqr": [
+                0.322870255,
+                0.355963409
+              ],
+              "min": 0.090084299,
+              "max": 0.355963409
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.336823583,
+              "iqr": [
+                0.322870255,
+                0.358331501
+              ],
+              "min": 0.090084299,
+              "max": 0.402468145
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": -0.028657809,
+              "iqr": [
+                -0.035922557,
+                -0.012904942
+              ],
+              "min": -0.553925067,
+              "max": 0.051678717
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 0.9813145,
+            "iqr": [
+              0.915813,
+              2.116611
+            ],
+            "min": 0.871499,
+            "max": 3.677855
+          }
+        },
+        {
+          "transform": "JPEG95",
+          "syntheticRecall": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 0,
+            "total": 8,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.324408
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 0.424890146,
+              "iqr": [
+                0.397258073,
+                0.457399011
+              ],
+              "min": 0.38366577,
+              "max": 0.457399011
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.369830057,
+              "iqr": [
+                0.351446152,
+                0.394684315
+              ],
+              "min": 0.186575606,
+              "max": 0.394684315
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.351078466,
+              "iqr": [
+                0.348428816,
+                0.358167827
+              ],
+              "min": 0.093055718,
+              "max": 0.358167827
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.352587134,
+              "iqr": [
+                0.348428816,
+                0.388213962
+              ],
+              "min": 0.093055718,
+              "max": 0.394684315
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": 0.000196673,
+              "iqr": [
+                -0.024207056,
+                0.009616971
+              ],
+              "min": -0.30423677,
+              "max": 0.053883135
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 0.992276,
+            "iqr": [
+              0.943088,
+              1.899437
+            ],
+            "min": 0.818748,
+            "max": 7.337046
+          }
+        },
+        {
+          "transform": "METADATA_STRIPPED",
+          "syntheticRecall": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 0,
+            "total": 8,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.324408
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 0.567174107,
+              "iqr": [
+                0.38871938,
+                0.76163578
+              ],
+              "min": 0.340573251,
+              "max": 0.76163578
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.382770628,
+              "iqr": [
+                0.378858119,
+                0.41889137
+              ],
+              "min": 0.197767138,
+              "max": 0.41889137
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.324197918,
+              "iqr": [
+                0.304284692,
+                0.345181644
+              ],
+              "min": 0.094193198,
+              "max": 0.345181644
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.344646394,
+              "iqr": [
+                0.304284692,
+                0.386683136
+              ],
+              "min": 0.094193198,
+              "max": 0.41889137
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": 0.0,
+              "iqr": [
+                0.0,
+                0.0
+              ],
+              "min": 0.0,
+              "max": 0.0
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 1.014508,
+            "iqr": [
+              0.971453,
+              1.45646
+            ],
+            "min": 0.797523,
+            "max": 2.369082
+          }
+        },
+        {
+          "transform": "RESIZE50",
+          "syntheticRecall": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 0,
+            "total": 8,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.324408
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 0.38347584,
+              "iqr": [
+                0.341981977,
+                0.448569894
+              ],
+              "min": 0.184056118,
+              "max": 0.448569894
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.312833846,
+              "iqr": [
+                0.234555602,
+                0.396630347
+              ],
+              "min": 0.16452235,
+              "max": 0.396630347
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.28334555,
+              "iqr": [
+                0.273701429,
+                0.301436275
+              ],
+              "min": 0.093711123,
+              "max": 0.301436275
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.28334555,
+              "iqr": [
+                0.234555602,
+                0.391112089
+              ],
+              "min": 0.093711123,
+              "max": 0.396630347
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": -0.049464688,
+              "iqr": [
+                -0.144302517,
+                -0.002848417
+              ],
+              "min": -0.336666077,
+              "max": 0.004428953
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 0.979595,
+            "iqr": [
+              0.886364,
+              2.036418
+            ],
+            "min": 0.788198,
+            "max": 2.956464
+          }
+        },
+        {
+          "transform": "RESIZE75",
+          "syntheticRecall": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 0,
+            "total": 8,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.324408
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 0.572924137,
+              "iqr": [
+                0.390235782,
+                0.861081958
+              ],
+              "min": 0.332085282,
+              "max": 0.861081958
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.369998142,
+              "iqr": [
+                0.366957039,
+                0.423102587
+              ],
+              "min": 0.202351153,
+              "max": 0.423102587
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.324220732,
+              "iqr": [
+                0.303040862,
+                0.346927315
+              ],
+              "min": 0.091788076,
+              "max": 0.346927315
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.346163958,
+              "iqr": [
+                0.303040862,
+                0.373039246
+              ],
+              "min": 0.091788076,
+              "max": 0.423102587
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": 2.2814e-05,
+              "iqr": [
+                -0.006023288,
+                0.004211217
+              ],
+              "min": -0.013643891,
+              "max": 0.115453124
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 0.985094,
+            "iqr": [
+              0.890887,
+              1.441531
+            ],
+            "min": 0.818275,
+            "max": 5.61115
+          }
+        },
+        {
+          "transform": "SCREENSHOT_STYLE_RESAMPLING",
+          "syntheticRecall": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 0,
+            "total": 8,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.324408
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 0.5262492,
+              "iqr": [
+                0.414210558,
+                0.756872833
+              ],
+              "min": 0.294427693,
+              "max": 0.756872833
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.365191966,
+              "iqr": [
+                0.329076856,
+                0.42087239
+              ],
+              "min": 0.199142754,
+              "max": 0.42087239
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.328364566,
+              "iqr": [
+                0.297003388,
+                0.360391647
+              ],
+              "min": 0.077653736,
+              "max": 0.360391647
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.3444013,
+              "iqr": [
+                0.297003388,
+                0.401307076
+              ],
+              "min": 0.077653736,
+              "max": 0.42087239
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": 0.001678318,
+              "iqr": [
+                -0.016539462,
+                0.01462394
+              ],
+              "min": -0.123347938,
+              "max": 0.025491178
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 0.9598425,
+            "iqr": [
+              0.920687,
+              1.484371
+            ],
+            "min": 0.882019,
+            "max": 2.647366
+          }
+        }
+      ]
+    },
+    {
+      "detectorId": "SPAI_C512",
+      "thresholdSource": "operating-curves development pooled negatives target 1%",
+      "frozenThreshold": 1.0,
+      "sampleCount": 96,
+      "transforms": [
+        {
+          "transform": "CANONICAL",
+          "syntheticRecall": {
+            "count": 4,
+            "total": 4,
+            "rate": 1.0,
+            "wilson95": [
+              0.510109,
+              1.0
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 0,
+            "total": 8,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.324408
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 1.0,
+              "iqr": [
+                1.0,
+                1.0
+              ],
+              "min": 1.0,
+              "max": 1.0
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.677043647,
+              "iqr": [
+                0.509400666,
+                0.925789893
+              ],
+              "min": 0.011449941,
+              "max": 0.925789893
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.0,
+              "iqr": [
+                0.0,
+                1e-09
+              ],
+              "min": 0.0,
+              "max": 1e-09
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.005724971,
+              "iqr": [
+                0.0,
+                0.844686627
+              ],
+              "min": 0.0,
+              "max": 0.925789893
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": 0.0,
+              "iqr": [
+                0.0,
+                0.0
+              ],
+              "min": 0.0,
+              "max": 0.0
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 2.5371225,
+            "iqr": [
+              2.529575,
+              3.659338
+            ],
+            "min": 2.071944,
+            "max": 5.904467
+          }
+        },
+        {
+          "transform": "JPEG75",
+          "syntheticRecall": {
+            "count": 1,
+            "total": 4,
+            "rate": 0.25,
+            "wilson95": [
+              0.045587,
+              0.699358
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 0,
+            "total": 8,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.324408
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 0.999992609,
+              "iqr": [
+                0.999990582,
+                1.0
+              ],
+              "min": 0.999989986,
+              "max": 1.0
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.346527629,
+              "iqr": [
+                0.221693739,
+                0.631751835
+              ],
+              "min": 3.15e-07,
+              "max": 0.631751835
+            },
+            "digital": {
+              "count": 4,
+              "median": 2e-09,
+              "iqr": [
+                0.0,
+                2.7e-08
+              ],
+              "min": 0.0,
+              "max": 2.7e-08
+            },
+            "negative": {
+              "count": 8,
+              "median": 1.71e-07,
+              "iqr": [
+                5e-09,
+                0.471361518
+              ],
+              "min": 0.0,
+              "max": 0.631751835
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": -7.391e-06,
+              "iqr": [
+                -0.011449626,
+                0.0
+              ],
+              "min": -0.622992888,
+              "max": 2.7e-08
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 2.5320385,
+            "iqr": [
+              2.465061,
+              3.837095
+            ],
+            "min": 2.04104,
+            "max": 4.151108
+          }
+        },
+        {
+          "transform": "JPEG85",
+          "syntheticRecall": {
+            "count": 3,
+            "total": 4,
+            "rate": 0.75,
+            "wilson95": [
+              0.300642,
+              0.954413
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 0,
+            "total": 8,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.324408
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 1.0,
+              "iqr": [
+                1.0,
+                1.0
+              ],
+              "min": 0.999999881,
+              "max": 1.0
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.70778349,
+              "iqr": [
+                0.706737697,
+                0.84155935
+              ],
+              "min": 0.125878632,
+              "max": 0.84155935
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.0,
+              "iqr": [
+                0.0,
+                2e-09
+              ],
+              "min": 0.0,
+              "max": 2e-09
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.062939317,
+              "iqr": [
+                0.0,
+                0.708829284
+              ],
+              "min": 0.0,
+              "max": 0.84155935
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": 0.0,
+              "iqr": [
+                0.0,
+                1e-09
+              ],
+              "min": -0.216960609,
+              "max": 0.197337031
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 2.535959,
+            "iqr": [
+              2.518432,
+              3.842591
+            ],
+            "min": 2.045168,
+            "max": 4.201308
+          }
+        },
+        {
+          "transform": "JPEG95",
+          "syntheticRecall": {
+            "count": 4,
+            "total": 4,
+            "rate": 1.0,
+            "wilson95": [
+              0.510109,
+              1.0
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 0,
+            "total": 8,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.324408
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 1.0,
+              "iqr": [
+                1.0,
+                1.0
+              ],
+              "min": 1.0,
+              "max": 1.0
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.70884797,
+              "iqr": [
+                0.547085702,
+                0.958692908
+              ],
+              "min": 0.062274098,
+              "max": 0.958692908
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.0,
+              "iqr": [
+                0.0,
+                3e-08
+              ],
+              "min": 0.0,
+              "max": 3e-08
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.031137064,
+              "iqr": [
+                0.0,
+                0.870610237
+              ],
+              "min": 0.0,
+              "max": 0.958692908
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": 0.0,
+              "iqr": [
+                0.0,
+                0.032903016
+              ],
+              "min": 0.0,
+              "max": 0.050824158
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 2.773143,
+            "iqr": [
+              2.487685,
+              3.642355
+            ],
+            "min": 2.048623,
+            "max": 3.953294
+          }
+        },
+        {
+          "transform": "METADATA_STRIPPED",
+          "syntheticRecall": {
+            "count": 4,
+            "total": 4,
+            "rate": 1.0,
+            "wilson95": [
+              0.510109,
+              1.0
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 0,
+            "total": 8,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.324408
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 1.0,
+              "iqr": [
+                1.0,
+                1.0
+              ],
+              "min": 1.0,
+              "max": 1.0
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.677043647,
+              "iqr": [
+                0.509400666,
+                0.925789893
+              ],
+              "min": 0.011449941,
+              "max": 0.925789893
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.0,
+              "iqr": [
+                0.0,
+                1e-09
+              ],
+              "min": 0.0,
+              "max": 1e-09
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.005724971,
+              "iqr": [
+                0.0,
+                0.844686627
+              ],
+              "min": 0.0,
+              "max": 0.925789893
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": 0.0,
+              "iqr": [
+                0.0,
+                0.0
+              ],
+              "min": 0.0,
+              "max": 0.0
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 2.529977,
+            "iqr": [
+              2.511836,
+              5.42981
+            ],
+            "min": 2.055455,
+            "max": 6.60915
+          }
+        },
+        {
+          "transform": "RESIZE50",
+          "syntheticRecall": {
+            "count": 4,
+            "total": 4,
+            "rate": 1.0,
+            "wilson95": [
+              0.510109,
+              1.0
+            ]
+          },
+          "cameraFpr": {
+            "count": 1,
+            "total": 4,
+            "rate": 0.25,
+            "wilson95": [
+              0.045587,
+              0.699358
+            ]
+          },
+          "digitalFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 1,
+            "total": 8,
+            "rate": 0.125,
+            "wilson95": [
+              0.022417,
+              0.470888
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 1.0,
+              "iqr": [
+                1.0,
+                1.0
+              ],
+              "min": 1.0,
+              "max": 1.0
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.825282276,
+              "iqr": [
+                0.652133763,
+                1.0
+              ],
+              "min": 0.423232973,
+              "max": 1.0
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.0,
+              "iqr": [
+                0.0,
+                6.801e-06
+              ],
+              "min": 0.0,
+              "max": 6.801e-06
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.211619887,
+              "iqr": [
+                0.0,
+                0.998430789
+              ],
+              "min": 0.0,
+              "max": 1.0
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": 0.0,
+              "iqr": [
+                0.0,
+                0.142733097
+              ],
+              "min": 0.0,
+              "max": 0.411783032
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 2.5413055,
+            "iqr": [
+              2.514399,
+              3.690938
+            ],
+            "min": 2.098592,
+            "max": 12.612109
+          }
+        },
+        {
+          "transform": "RESIZE75",
+          "syntheticRecall": {
+            "count": 4,
+            "total": 4,
+            "rate": 1.0,
+            "wilson95": [
+              0.510109,
+              1.0
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 0,
+            "total": 8,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.324408
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 1.0,
+              "iqr": [
+                1.0,
+                1.0
+              ],
+              "min": 1.0,
+              "max": 1.0
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.752827078,
+              "iqr": [
+                0.560558021,
+                0.999522805
+              ],
+              "min": 0.007663386,
+              "max": 0.999522805
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.0,
+              "iqr": [
+                0.0,
+                1.891e-06
+              ],
+              "min": 0.0,
+              "max": 1.891e-06
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.003832639,
+              "iqr": [
+                0.0,
+                0.945096135
+              ],
+              "min": 0.0,
+              "max": 0.999522805
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": 0.0,
+              "iqr": [
+                0.0,
+                0.051157355
+              ],
+              "min": -0.003786554,
+              "max": 0.100409508
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 2.547808,
+            "iqr": [
+              2.476778,
+              3.973609
+            ],
+            "min": 2.068138,
+            "max": 4.383004
+          }
+        },
+        {
+          "transform": "SCREENSHOT_STYLE_RESAMPLING",
+          "syntheticRecall": {
+            "count": 4,
+            "total": 4,
+            "rate": 1.0,
+            "wilson95": [
+              0.510109,
+              1.0
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 0,
+            "total": 8,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.324408
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 1.0,
+              "iqr": [
+                1.0,
+                1.0
+              ],
+              "min": 1.0,
+              "max": 1.0
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.7518695,
+              "iqr": [
+                0.515775681,
+                0.99993062
+              ],
+              "min": 0.194577187,
+              "max": 0.99993062
+            },
+            "digital": {
+              "count": 4,
+              "median": 4e-09,
+              "iqr": [
+                0.0,
+                0.000204691
+              ],
+              "min": 0.0,
+              "max": 0.000204691
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.097390939,
+              "iqr": [
+                9e-09,
+                0.987963319
+              ],
+              "min": 0.0,
+              "max": 0.99993062
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": 4e-09,
+              "iqr": [
+                0.0,
+                0.074140728
+              ],
+              "min": 0.0,
+              "max": 0.183127247
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 2.567926,
+            "iqr": [
+              2.532139,
+              5.641721
+            ],
+            "min": 2.047382,
+            "max": 6.841489
+          }
+        }
+      ]
+    },
+    {
+      "detectorId": "UNIVERSAL_FAKE_DETECT",
+      "thresholdSource": "operating-curves development pooled negatives target 1%",
+      "frozenThreshold": 0.543838277,
+      "sampleCount": 96,
+      "transforms": [
+        {
+          "transform": "CANONICAL",
+          "syntheticRecall": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 1,
+            "total": 4,
+            "rate": 0.25,
+            "wilson95": [
+              0.045587,
+              0.699358
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 1,
+            "total": 8,
+            "rate": 0.125,
+            "wilson95": [
+              0.022417,
+              0.470888
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 0.020506302,
+              "iqr": [
+                0.013513593,
+                0.055554256
+              ],
+              "min": 0.001511941,
+              "max": 0.055554256
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.001482472,
+              "iqr": [
+                0.001015069,
+                0.139734879
+              ],
+              "min": 0.000190019,
+              "max": 0.139734879
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.020856516,
+              "iqr": [
+                0.002343829,
+                0.745001316
+              ],
+              "min": 0.000755253,
+              "max": 0.745001316
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.002146852,
+              "iqr": [
+                0.001015069,
+                0.139734879
+              ],
+              "min": 0.000190019,
+              "max": 0.745001316
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": 0.0,
+              "iqr": [
+                0.0,
+                0.0
+              ],
+              "min": 0.0,
+              "max": 0.0
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 1.669329,
+            "iqr": [
+              1.647764,
+              2.382075
+            ],
+            "min": 1.638272,
+            "max": 2.738242
+          }
+        },
+        {
+          "transform": "JPEG75",
+          "syntheticRecall": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "cameraFpr": {
+            "count": 1,
+            "total": 4,
+            "rate": 0.25,
+            "wilson95": [
+              0.045587,
+              0.699358
+            ]
+          },
+          "digitalFpr": {
+            "count": 1,
+            "total": 4,
+            "rate": 0.25,
+            "wilson95": [
+              0.045587,
+              0.699358
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 2,
+            "total": 8,
+            "rate": 0.25,
+            "wilson95": [
+              0.071479,
+              0.590725
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 0.014817211,
+              "iqr": [
+                0.012055455,
+                0.024330122
+              ],
+              "min": 0.00116593,
+              "max": 0.024330122
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.001130645,
+              "iqr": [
+                0.000172555,
+                0.572965682
+              ],
+              "min": 1.9561e-05,
+              "max": 0.572965682
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.02159366,
+              "iqr": [
+                0.00159926,
+                0.846992612
+              ],
+              "min": 0.000995241,
+              "max": 0.846992612
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.001843997,
+              "iqr": [
+                0.000995241,
+                0.572965682
+              ],
+              "min": 1.9561e-05,
+              "max": 0.846992612
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": -0.000258235,
+              "iqr": [
+                -0.000842514,
+                0.002218857
+              ],
+              "min": -0.037975289,
+              "max": 0.433230802
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 1.643033,
+            "iqr": [
+              1.633159,
+              2.235188
+            ],
+            "min": 1.422035,
+            "max": 2.675603
+          }
+        },
+        {
+          "transform": "JPEG85",
+          "syntheticRecall": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 1,
+            "total": 4,
+            "rate": 0.25,
+            "wilson95": [
+              0.045587,
+              0.699358
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 1,
+            "total": 8,
+            "rate": 0.125,
+            "wilson95": [
+              0.022417,
+              0.470888
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 0.015174585,
+              "iqr": [
+                0.012853355,
+                0.017989369
+              ],
+              "min": 0.001028641,
+              "max": 0.017989369
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.00095573,
+              "iqr": [
+                0.000849326,
+                0.163467035
+              ],
+              "min": 0.000201746,
+              "max": 0.163467035
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.019385247,
+              "iqr": [
+                0.001848423,
+                0.845713377
+              ],
+              "min": 0.000827925,
+              "max": 0.845713377
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.001455279,
+              "iqr": [
+                0.000849326,
+                0.163467035
+              ],
+              "min": 0.000201746,
+              "max": 0.845713377
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": -0.000489353,
+              "iqr": [
+                -0.001100549,
+                7.2672e-05
+              ],
+              "min": -0.038058441,
+              "max": 0.100712061
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 1.649601,
+            "iqr": [
+              1.640316,
+              2.28127
+            ],
+            "min": 1.615034,
+            "max": 2.521117
+          }
+        },
+        {
+          "transform": "JPEG95",
+          "syntheticRecall": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 1,
+            "total": 4,
+            "rate": 0.25,
+            "wilson95": [
+              0.045587,
+              0.699358
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 1,
+            "total": 8,
+            "rate": 0.125,
+            "wilson95": [
+              0.022417,
+              0.470888
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 0.01185943,
+              "iqr": [
+                0.010911102,
+                0.037200417
+              ],
+              "min": 0.001013815,
+              "max": 0.037200417
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.001374192,
+              "iqr": [
+                0.001025349,
+                0.168233708
+              ],
+              "min": 0.000211457,
+              "max": 0.168233708
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.017413928,
+              "iqr": [
+                0.001469453,
+                0.849896967
+              ],
+              "min": 0.000804147,
+              "max": 0.849896967
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.001596245,
+              "iqr": [
+                0.001025349,
+                0.168233708
+              ],
+              "min": 0.000211457,
+              "max": 0.849896967
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": -0.000108279,
+              "iqr": [
+                -0.000874377,
+                0.009701407
+              ],
+              "min": -0.042746498,
+              "max": 0.104895651
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 1.645724,
+            "iqr": [
+              1.633014,
+              2.353805
+            ],
+            "min": 1.623041,
+            "max": 2.656658
+          }
+        },
+        {
+          "transform": "METADATA_STRIPPED",
+          "syntheticRecall": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 1,
+            "total": 4,
+            "rate": 0.25,
+            "wilson95": [
+              0.045587,
+              0.699358
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 1,
+            "total": 8,
+            "rate": 0.125,
+            "wilson95": [
+              0.022417,
+              0.470888
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 0.020506302,
+              "iqr": [
+                0.013513593,
+                0.055554256
+              ],
+              "min": 0.001511941,
+              "max": 0.055554256
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.001482472,
+              "iqr": [
+                0.001015069,
+                0.139734879
+              ],
+              "min": 0.000190019,
+              "max": 0.139734879
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.020856516,
+              "iqr": [
+                0.002343829,
+                0.745001316
+              ],
+              "min": 0.000755253,
+              "max": 0.745001316
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.002146852,
+              "iqr": [
+                0.001015069,
+                0.139734879
+              ],
+              "min": 0.000190019,
+              "max": 0.745001316
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": 0.0,
+              "iqr": [
+                0.0,
+                0.0
+              ],
+              "min": 0.0,
+              "max": 0.0
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 1.658017,
+            "iqr": [
+              1.605637,
+              2.510538
+            ],
+            "min": 1.288174,
+            "max": 2.646454
+          }
+        },
+        {
+          "transform": "RESIZE50",
+          "syntheticRecall": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 1,
+            "total": 4,
+            "rate": 0.25,
+            "wilson95": [
+              0.045587,
+              0.699358
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 1,
+            "total": 8,
+            "rate": 0.125,
+            "wilson95": [
+              0.022417,
+              0.470888
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 0.014431371,
+              "iqr": [
+                0.006585936,
+                0.073625922
+              ],
+              "min": 0.003307584,
+              "max": 0.073625922
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.001681007,
+              "iqr": [
+                0.001193504,
+                0.159917355
+              ],
+              "min": 0.000179546,
+              "max": 0.159917355
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.07928602,
+              "iqr": [
+                0.008429996,
+                0.754453361
+              ],
+              "min": 0.001302137,
+              "max": 0.754453361
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.005299253,
+              "iqr": [
+                0.001302137,
+                0.159917355
+              ],
+              "min": 0.000179546,
+              "max": 0.754453361
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": 0.001171263,
+              "iqr": [
+                0.000178435,
+                0.020182475
+              ],
+              "min": -0.03327745,
+              "max": 0.110772841
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 1.679152,
+            "iqr": [
+              1.641289,
+              2.426536
+            ],
+            "min": 1.340138,
+            "max": 2.769161
+          }
+        },
+        {
+          "transform": "RESIZE75",
+          "syntheticRecall": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 1,
+            "total": 4,
+            "rate": 0.25,
+            "wilson95": [
+              0.045587,
+              0.699358
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 1,
+            "total": 8,
+            "rate": 0.125,
+            "wilson95": [
+              0.022417,
+              0.470888
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 0.024155172,
+              "iqr": [
+                0.014150311,
+                0.04427518
+              ],
+              "min": 0.0013991,
+              "max": 0.04427518
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.001200885,
+              "iqr": [
+                0.000786178,
+                0.159474462
+              ],
+              "min": 0.00018019,
+              "max": 0.159474462
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.024679126,
+              "iqr": [
+                0.002661365,
+                0.744342268
+              ],
+              "min": 0.000943393,
+              "max": 0.744342268
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.002138478,
+              "iqr": [
+                0.000943393,
+                0.159474462
+              ],
+              "min": 0.00018019,
+              "max": 0.744342268
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": 8.9156e-05,
+              "iqr": [
+                -0.000228891,
+                0.006661022
+              ],
+              "min": -0.011279076,
+              "max": 0.019739583
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 1.644697,
+            "iqr": [
+              1.628935,
+              2.373124
+            ],
+            "min": 1.520984,
+            "max": 2.665605
+          }
+        },
+        {
+          "transform": "SCREENSHOT_STYLE_RESAMPLING",
+          "syntheticRecall": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "cameraFpr": {
+            "count": 0,
+            "total": 4,
+            "rate": 0.0,
+            "wilson95": [
+              0.0,
+              0.489891
+            ]
+          },
+          "digitalFpr": {
+            "count": 1,
+            "total": 4,
+            "rate": 0.25,
+            "wilson95": [
+              0.045587,
+              0.699358
+            ]
+          },
+          "overallNegativeFpr": {
+            "count": 1,
+            "total": 8,
+            "rate": 0.125,
+            "wilson95": [
+              0.022417,
+              0.470888
+            ]
+          },
+          "score": {
+            "synthetic": {
+              "count": 4,
+              "median": 0.010635893,
+              "iqr": [
+                0.005560145,
+                0.032307908
+              ],
+              "min": 0.001186312,
+              "max": 0.032307908
+            },
+            "camera": {
+              "count": 4,
+              "median": 0.001431045,
+              "iqr": [
+                0.000992202,
+                0.169333503
+              ],
+              "min": 0.000122252,
+              "max": 0.169333503
+            },
+            "digital": {
+              "count": 4,
+              "median": 0.023364734,
+              "iqr": [
+                0.002021966,
+                0.748259783
+              ],
+              "min": 0.000506492,
+              "max": 0.748259783
+            },
+            "negative": {
+              "count": 8,
+              "median": 0.001945926,
+              "iqr": [
+                0.000992202,
+                0.169333503
+              ],
+              "min": 0.000122252,
+              "max": 0.748259783
+            },
+            "parentMatchedShift": {
+              "count": 12,
+              "median": -0.000164374,
+              "iqr": [
+                -0.000325629,
+                0.003258467
+              ],
+              "min": -0.023246348,
+              "max": 0.029598624
+            }
+          },
+          "runtimeSeconds": {
+            "count": 12,
+            "median": 1.6617965,
+            "iqr": [
+              1.652793,
+              2.367018
+            ],
+            "min": 1.33655,
+            "max": 2.68594
+          }
+        }
+      ]
+    }
+  ]
+}
