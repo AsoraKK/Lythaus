@@ -294,6 +294,13 @@ function assertMarketingLockOnlyHasSecurityPatch(current = JSON.parse(readFileSy
   const filename = 'apps/marketing-site/package-lock.json';
   const original = JSON.parse(git('show', `${baselineSha}:${filename}`));
   assertExactImageAndQuotingPatches(current, original, filename);
+  assert.deepEqual(current.packages['node_modules/zod'], {
+    ...original.packages['node_modules/zod'],
+    version: '4.6.6',
+    resolved: 'https://registry.npmjs.org/zod/-/zod-4.6.6.tgz',
+    integrity: 'sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA==',
+  }, 'Zod must use the exact reviewed security patch metadata');
+  current.packages['node_modules/zod'] = original.packages['node_modules/zod'];
   assert.deepEqual(current.packages['node_modules/vite'], {
     ...original.packages['node_modules/vite'],
     version: '8.1.6',
@@ -682,6 +689,31 @@ test('image and quoting security exceptions reject vulnerable versions, altered 
   const changed = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
   changed.packages['node_modules/shell-quote'].version = '1.9.0';
   assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(changed), /exact reviewed security patch metadata/);
+});
+
+test('Zod security patch rejects vulnerable or unreviewed metadata and unrelated dependency changes', () => {
+  const readLock = () => JSON.parse(readFileSync(path.join(root, 'apps/marketing-site/package-lock.json'), 'utf8'));
+  for (const [field, value] of [
+    ['version', '4.5.4'],
+    ['version', '4.6.5'],
+    ['version', '4.6.7'],
+    ['resolved', 'https://example.invalid/zod.tgz'],
+    ['integrity', 'sha512-invalid'],
+    ['dependencies', { unexpected: '1.0.0' }],
+  ]) {
+    const changed = readLock(); changed.packages['node_modules/zod'][field] = value;
+    assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(changed), /Zod must use the exact reviewed security patch metadata/);
+  }
+  const missing = readLock(); delete missing.packages['node_modules/zod'];
+  assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(missing), /Zod must use the exact reviewed security patch metadata/);
+  for (const change of [
+    lock => { lock.packages['node_modules/astro'].version = '7.3.2'; },
+    lock => { lock.packages[''].dependencies.zod = '4.6.6'; },
+    lock => { lock.packages['node_modules/unreviewed'] = { version: '1.0.0' }; },
+  ]) {
+    const changed = readLock(); change(changed);
+    assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(changed), /Marketing lock may change only for the exact reviewed security repairs/);
+  }
 });
 
 test('Spectral security replacement rejects changed targets, metadata or resurrected vulnerable dependencies', () => {
