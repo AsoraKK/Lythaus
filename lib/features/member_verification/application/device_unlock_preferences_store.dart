@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
@@ -25,6 +26,21 @@ class SecureDeviceUnlockPreferencesStore
   }) : _storage = storage;
 
   final FlutterSecureStorage _storage;
+  static final _operations = <String, Future<void>>{};
+
+  static Future<T> _serialize<T>(String key, Future<T> Function() operation) {
+    final result = (_operations[key] ?? Future<void>.value()).then(
+      (_) => operation(),
+    );
+    final settled = result.then<void>((_) {}, onError: (Object _) {});
+    _operations[key] = settled;
+    unawaited(
+      settled.then((_) {
+        if (identical(_operations[key], settled)) _operations.remove(key);
+      }),
+    );
+    return result;
+  }
 
   static String keyForAccount(String accountId) {
     if (accountId.trim().isEmpty) throw ArgumentError('An account is required');
@@ -33,21 +49,29 @@ class SecureDeviceUnlockPreferencesStore
 
   @override
   Future<DeviceUnlockPreference> load(String accountId) async {
-    final value = await _storage.read(key: keyForAccount(accountId));
-    if (value == null) return DeviceUnlockPreference.off;
-    final decoded = jsonDecode(value);
-    if (decoded is! Map<String, dynamic> ||
-        decoded['version'] != 1 ||
-        decoded['preference'] is! String) {
-      throw const FormatException('Invalid draft unlock preference');
-    }
-    return DeviceUnlockPreference.parse(decoded['preference'] as String);
+    final key = keyForAccount(accountId);
+    return _serialize(key, () async {
+      final value = await _storage.read(key: key);
+      if (value == null) return DeviceUnlockPreference.off;
+      final decoded = jsonDecode(value);
+      if (decoded is! Map<String, dynamic> ||
+          decoded['version'] != 1 ||
+          decoded['preference'] is! String) {
+        throw const FormatException('Invalid draft unlock preference');
+      }
+      return DeviceUnlockPreference.parse(decoded['preference'] as String);
+    });
   }
 
   @override
-  Future<void> save(String accountId, DeviceUnlockPreference preference) =>
-      _storage.write(
-        key: keyForAccount(accountId),
+  Future<void> save(String accountId, DeviceUnlockPreference preference) {
+    final key = keyForAccount(accountId);
+    return _serialize(
+      key,
+      () => _storage.write(
+        key: key,
         value: jsonEncode({'version': 1, 'preference': preference.value}),
-      );
+      ),
+    );
+  }
 }

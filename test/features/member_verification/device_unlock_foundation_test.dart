@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -88,6 +89,63 @@ class _Harness {
     wallTime = wallTime.add(duration);
     controller.onLifecycleChanged(AppLifecycleState.resumed);
   }
+}
+
+class _HeldWriteStorage extends FlutterSecureStorage {
+  final values = <String, String>{
+    SecureDeviceUnlockPreferencesStore.keyForAccount('a'): jsonEncode({
+      'version': 1,
+      'preference': DeviceUnlockPreference.afterFiveMinutes.value,
+    }),
+  };
+  final started = Completer<void>();
+  final release = Completer<void>();
+  bool _held = false;
+  bool failHeldWrite = false;
+
+  @override
+  Future<String?> read({
+    required String key,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async => values[key];
+
+  @override
+  Future<void> write({
+    required String key,
+    required String? value,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    if (!_held &&
+        key == SecureDeviceUnlockPreferencesStore.keyForAccount('a')) {
+      _held = true;
+      started.complete();
+      await release.future;
+      if (failHeldWrite) throw StateError('held write failed');
+    }
+    if (value == null) {
+      values.remove(key);
+    } else {
+      values[key] = value;
+    }
+  }
+}
+
+_HeldWriteStorage _heldStorage() {
+  final storage = _HeldWriteStorage();
+  addTearDown(() {
+    if (!storage.release.isCompleted) storage.release.complete();
+  });
+  return storage;
 }
 
 class _LocalAuth extends LocalAuthentication {
@@ -198,6 +256,118 @@ void main() {
       );
     }
   });
+
+  test(
+    'delayed save from disposed controller cannot overwrite newer A choice',
+    () async {
+      final storage = _heldStorage();
+      final oldStore = SecureDeviceUnlockPreferencesStore(storage: storage);
+      final newStore = SecureDeviceUnlockPreferencesStore(storage: storage);
+      final old = DraftDeviceUnlockController(
+        accountId: 'a',
+        store: oldStore,
+        authenticator: _Authenticator(),
+        enabled: true,
+      );
+      final replacement = DraftDeviceUnlockController(
+        accountId: 'a',
+        store: newStore,
+        authenticator: _Authenticator(),
+        enabled: true,
+      );
+      addTearDown(() {
+        if (old.mounted) old.dispose();
+      });
+      addTearDown(replacement.dispose);
+      await old.initialize();
+      await replacement.initialize();
+      final olderSave = old.savePreference(DeviceUnlockPreference.off);
+      await storage.started.future;
+      old.dispose();
+      final newerSave = replacement.savePreference(
+        DeviceUnlockPreference.everyReopen,
+      );
+      await Future<void>.delayed(Duration.zero);
+      storage.release.complete();
+      await Future.wait([olderSave, newerSave]);
+      expect(replacement.state.preference, DeviceUnlockPreference.everyReopen);
+      expect(
+        await SecureDeviceUnlockPreferencesStore(storage: storage).load('a'),
+        DeviceUnlockPreference.everyReopen,
+      );
+    },
+  );
+
+  test(
+    'A guest A hydration waits for old persistence before accepting a new save',
+    () async {
+      final storage = _heldStorage();
+      final old = DraftDeviceUnlockController(
+        accountId: 'a',
+        store: SecureDeviceUnlockPreferencesStore(storage: storage),
+        authenticator: _Authenticator(),
+        enabled: true,
+      );
+      addTearDown(() {
+        if (old.mounted) old.dispose();
+      });
+      await old.initialize();
+      final olderSave = old.savePreference(DeviceUnlockPreference.off);
+      await storage.started.future;
+      old.dispose();
+      final replacement = DraftDeviceUnlockController(
+        accountId: 'a',
+        store: SecureDeviceUnlockPreferencesStore(storage: storage),
+        authenticator: _Authenticator(),
+        enabled: true,
+      );
+      addTearDown(replacement.dispose);
+      final hydrate = replacement.initialize();
+      await Future<void>.delayed(Duration.zero);
+      expect(replacement.state.status, DraftDeviceUnlockStatus.loading);
+      storage.release.complete();
+      await Future.wait([olderSave, hydrate]);
+      await replacement.savePreference(DeviceUnlockPreference.afterOneMinute);
+      expect(
+        await SecureDeviceUnlockPreferencesStore(storage: storage).load('a'),
+        DeviceUnlockPreference.afterOneMinute,
+      );
+    },
+  );
+
+  test('pending A write does not block B or write to B storage', () async {
+    final storage = _heldStorage();
+    final store = SecureDeviceUnlockPreferencesStore(storage: storage);
+    final pending = store.save('a', DeviceUnlockPreference.off);
+    await storage.started.future;
+    await store
+        .save('b', DeviceUnlockPreference.afterFifteenMinutes)
+        .timeout(const Duration(seconds: 1));
+    expect(await store.load('b'), DeviceUnlockPreference.afterFifteenMinutes);
+    storage.release.complete();
+    await pending;
+    expect(await store.load('a'), DeviceUnlockPreference.off);
+    expect(await store.load('b'), DeviceUnlockPreference.afterFifteenMinutes);
+  });
+
+  test(
+    'failed older write propagates its error without poisoning the next save',
+    () async {
+      final storage = _heldStorage()..failHeldWrite = true;
+      final firstStore = SecureDeviceUnlockPreferencesStore(storage: storage);
+      final secondStore = SecureDeviceUnlockPreferencesStore(storage: storage);
+      final first = expectLater(
+        firstStore.save('a', DeviceUnlockPreference.off),
+        throwsStateError,
+      );
+      await storage.started.future;
+      final second = secondStore.save('a', DeviceUnlockPreference.everyReopen);
+      storage.release.complete();
+      await first;
+      await second;
+      expect(await secondStore.load('a'), DeviceUnlockPreference.everyReopen);
+    },
+  );
 
   for (final preference in DeviceUnlockPreference.values) {
     test('${preference.value}: cold open and exact away boundary', () async {

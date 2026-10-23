@@ -41,6 +41,12 @@ never auth keys or shared guest settings. Apple defaults use non-synchronizing,
 device-only keychain accessibility. No preference is synced to the server. Missing
 data means draft Off; unsupported versions, corrupt values and failed reads/writes
 remain unavailable rather than silently claiming a saved/usable preference.
+Reads and writes are serialized by account key across all secure-store instances
+within the application isolate. A replacement controller's load/save waits for
+older persistence, so an already-started write cannot finish after and overwrite
+its newer choice during A → guest → A. A failed operation propagates its error
+without poisoning later operations; another account uses an independent queue.
+No persistence format, auth-storage key or session behavior changes.
 
 The draft controller binds one immutable account ID. Future integration must
 dispose it on the existing synchronous auth-session revision, including

@@ -15,7 +15,7 @@ All commands ran from the repository root and exited **0** on the final source.
 
 ```sh
 flutter test --no-pub --concurrency=1 test/features/member_verification test/features/auth/application test/integration/rewards_redemption_integration_test.dart --reporter expanded
-# 98 passed: 26 new foundation/widget tests + 72 existing auth/redemption tests.
+# 102 passed: 30 new foundation/widget tests + 72 existing auth/redemption tests.
 
 node --experimental-strip-types --test packages/security/tests/critical-security-policy.test.mjs packages/security/tests/recent-account-authentication.test.mjs apps/lythaus-public-api/tests/auth-session-runtime.test.mjs apps/lythaus-public-api/tests/auth-session-transport.test.mjs packages/contracts/tests/monthly-maintenance.test.mjs
 # 29 passed, 0 failed/skipped: 3 new gate tests + 26 existing regressions.
@@ -38,12 +38,20 @@ Raw final Flutter and Node output is retained in
 The existing security CI step now includes the new Node gate tests. Local results
 do not claim the complete remote CI suite passed.
 
+The two persistence-race assertions were also run with only the store replaced
+by its predecessor implementation from `51be6f3e0f2f59047ae8fb157cf9d6771a9e080d`:
+both failed, including the actual persisted `Off` overwriting newer `Every reopen`.
+Restoring the serialized store passes the same two assertions unchanged. See
+[`persistence-race-regression.txt`](../evidence/member-verification-20261023/persistence-race-regression.txt)
+for the command and before/after output. This is intentional negative regression
+evidence, not a failure on the final candidate.
+
 ## Requirement evidence
 
 | Requirement | Tests / observed behavior |
 | --- | --- |
 | Disabled behavior | Controller + native adapter perform no store/probe/prompt/cancel work by default. Widget tests verify default screen unchanged, read-only preview when flagged, no preview for guests. |
-| Persistence and account separation | Real secure-storage mock roundtrips every versioned option; A and B remain distinct through reconstruction. Auth storage keys remain byte-for-byte unchanged. Empty accounts, corrupt JSON, unsupported versions and unknown choices are rejected. |
+| Persistence and account separation | Real secure-storage mock roundtrips every versioned option; A and B remain distinct through reconstruction. Held native-write fixtures cover a disposed controller's delayed save versus a newer A choice across separate store instances, A → guest → A load ordering, independent B progress and queue recovery after failed writes. Auth storage keys remain byte-for-byte unchanged. Empty accounts, corrupt JSON, unsupported versions and unknown choices are rejected. |
 | Reopen/background/resume | All five draft choices test cold open and exact timeout; just-before boundary remains locally unlocked. First inactive timestamp survives hidden/paused transitions. Resume never automatically prompts. |
 | Cancellation, races and lockout | False/cancelled, OS lockout and unavailable results remain locked. Duplicate requests do not prompt twice. Cancel/background/dispose invalidate late success. Late hydration cannot update a replacement controller. Native cancel during capability check prevents a late prompt; cancel after prompt rejects a late platform success. |
 | Hardware/web/accessibility | Explicit unsupported-web/hardware cases make no native authentication call. Native adapter allows OS credential fallback (`biometricOnly: false`), with no enrolled-biometric query, enrollment dialog or sticky automatic resume. Passcode-not-set, lockout and other platform errors stay unavailable/locked. Platform behavior is mocked. |
