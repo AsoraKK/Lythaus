@@ -5,6 +5,7 @@ import test from 'node:test';
 import { standardUploadFixture } from './standard-upload-fixture.mjs';
 import { createExifGpsJpeg } from './image-fixtures.mjs';
 import { verifyImageReviewEvidence } from '../../authenticity/src/image-review-evidence.ts';
+import '../../../apps/lythaus-jobs/tests/image-detection-acceptance.workerd.mjs';
 
 const png = new Uint8Array(await sharp({ create: { width: 1, height: 1, channels: 4, background: { r: 12, g: 34, b: 56, alpha: 1 } } }).png().toBuffer());
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
