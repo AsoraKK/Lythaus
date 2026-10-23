@@ -51,6 +51,24 @@ recalibrate or select a new threshold to make this integration pass.
 
 ## Minimal renewed approval: A, real SAFE-A execution
 
+**Input-lineage blocker: A is not dispatch-ready.** The frozen hashes for
+`PNGN_CHART_03` and `PNGN_CHART_05` identify 1,047-byte and 1,052-byte SVG
+sources, respectively, not PNGs. The pinned public H negative freeze records
+those source formats/paths; its scorer's `decode_rgb` invokes CairoSVG at
+1024×1024 before SAFE. No hash of that intermediate raster is recorded in the
+inspected evidence. The current CPU runner/runtime deliberately accept only
+PNG/JPEG. Providing the exact SVG therefore fails format preflight; replacing it
+with a PNG fails the frozen checksum. The runner now rejects unsupported file
+signatures before importing Pillow, with a provider-free regression covering
+both cases. Do not rename, rasterize, remove or replace these fixtures silently,
+add SVG to the serving runtime, change frozen hashes or claim parity readiness.
+The next concrete step is to recover the existing historical raster/preprocessing
+receipt if it exists, or prepare a separately reviewed deterministic conversion
+and source-to-raster identity proposal before any inference approval or dispatch.
+This is preprocessing reconciliation, not a new detector experiment or tolerance
+change. Public sources: [H negative freeze](https://github.com/AsoraKK/Lythaus/blob/bcbadd676f8ff0670369de80d487d77a6613fcf5/research/wp007h/negative-data-freeze.json)
+and [H scorer](https://github.com/AsoraKK/Lythaus/blob/bcbadd676f8ff0670369de80d487d77a6613fcf5/scripts/authenticity/wp007h_score_safe.py).
+
 | Item | Exact proposed scope |
 | --- | --- |
 | Source | Exact reviewed post-merge main SHA, bound into approval and built image; no mutable branch or old release substitution |
@@ -152,7 +170,7 @@ none supplies the current private tarball or its per-file handling authorization
 | Frozen originals | Existing evidence |
 | --- | --- |
 | Two CSAFE files | `research/wp007a/ef3-negative-foundation.json` records evaluation eligibility and CC BY 4.0 attribution; `research/wp006e/csafe-rights-and-attribution.md` binds the archive README; later role metadata records local-only processing |
-| Two PNGN chart files | The same negative foundation records Lythaus-controlled evaluation rights and deterministic render configurations; exact historical PNG bytes are still required, not a replacement SVG or newly rendered image |
+| Two PNGN chart files | Lythaus-controlled SVG source hashes/bytes are frozen; H scored a CairoSVG rasterization, whose raster identity is not recorded in the inspected evidence. Current PNG/JPEG preflight cannot use these frozen SVGs; resolve the source-to-raster lineage blocker above before execution |
 | BLIP3o and Janus files | Pinned WP007H `qualification-corpus-freeze.json` records retrieved/verified original PNG hashes and individual source revisions, with research-only rights unless separate per-family output rights are established |
 | Seedream and Imagen files | Pinned WP007I `fresh-synthetic-freeze.json` records the exact individual Git-LFS identities and the same research-only rights limit |
 
@@ -280,7 +298,7 @@ The combined local run passes 54 tests, zero failed/skipped (including parent
 tests); the new detector chain contributes nine cases plus its parent. No runtime
 Worker source, flag, migration, grant, provider resource or production data changes.
 The separate evaluation runner/validator and receipt-retention corrections pass
-twelve Python boundary tests (including 16 structured-status subcases) and eight
+thirteen Python boundary tests (including 16 structured-status subcases) and eight
 Node orchestration tests. Two additional private-receipt tests bring that Node
 command's total to ten; these are separate from the 54 image/Workerd tests.
 All run without inference, private fixtures or credentials.

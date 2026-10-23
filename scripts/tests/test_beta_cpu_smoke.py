@@ -122,6 +122,33 @@ class SmokeBoundaryTests(unittest.TestCase):
                     self.assertIsNone(attempt['parity'])
                     self.assertEqual(receipt['rawClassifierCountsHistoricalReuseOnly']['unavailable'], 1 if failure_index == 0 else 0)
 
+    def test_svg_source_is_rejected_before_dependency_access_and_raster_substitution_fails_checksum(self):
+        source = b'<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"/>'
+        approval = {
+            'attendedRuntimeAuthorized': True, 'computePolicySatisfied': True,
+            'checkpointUseAuthorized': True, 'fixtureUseAuthorized': True,
+            'rightsEvidenceSha256': 'a' * 64, 'runtimeEvidenceSha256': 'b' * 64,
+            'preprocessingHash': 'c' * 64, 'runtimeDigest': 'sha256:' + 'd' * 64,
+            'sourceSha': 'e' * 40, 'authorizationId': 'protocol-svg-source',
+            'checkpointSha256': smoke.CHECKPOINT, 'preprocessing': smoke.PREPROCESSING,
+            'maxSafeAttempts': 16, 'maxActiveMinutes': 30,
+            'maxFileBytes': 10 * 1024 * 1024, 'maxDecodedPixels': 16_777_216,
+            'automaticRetries': False, 'publicInferenceEndpoint': False,
+            'expiresAtEpochSeconds': int(time.time()) + 600,
+        }
+        with tempfile.TemporaryDirectory(prefix='lythaus-image-source-protocol-') as directory:
+            file = Path(directory) / 'synthetic.png'
+            file.write_bytes(source)
+            approval['fixtures'] = {'protocol-chart': {'path': str(file),
+                'nonsealedEngineeringUseAuthorized': True, 'rightsEvidenceSha256': 'f' * 64}}
+            manifest = {'records': [{'sampleId': 'protocol-chart', 'sha256': smoke.sha(source)}]}
+            with patch.dict('sys.modules', {'PIL': None}):
+                with self.assertRaisesRegex(ValueError, 'FIXTURE_FORMAT_UNSUPPORTED'):
+                    smoke.prepare(manifest, approval)
+                file.write_bytes(b'\x89PNG\r\n\x1a\nsynthetic-raster-substitution')
+                with self.assertRaisesRegex(ValueError, 'FIXTURE_CHECKSUM_MISMATCH'):
+                    smoke.prepare(manifest, approval)
+
     def test_successful_descendants_still_abstain_and_do_not_enter_historical_counts(self):
         code, receipt, calls = self.run_transport_fixture()
         self.assertEqual(code, 0)
