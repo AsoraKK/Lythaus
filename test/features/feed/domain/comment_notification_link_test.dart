@@ -9,6 +9,18 @@ void main() {
     'entityId': comment,
     'deeplink': '/post/$post?commentId=$comment',
   };
+  test('malformed UTF-8 in lazy URI fields fails closed without throwing', () {
+    for (final link in [
+      '/post/%FF?commentId=$comment',
+      '/post/%C0%AF?commentId=$comment',
+      '/post/$post?commentId=%FF',
+      '/post/$post?%FF=$comment',
+      '/post/$post?commentId=$comment&%FF=1',
+    ]) {
+      expect(commentNotificationLink({...wire, 'deeplink': link}), isNull);
+    }
+    expect(commentNotificationLink(wire), '/post/$post?commentId=$comment');
+  });
   test(
     'comment notifications link only to the exact first-party comment destination',
     () {

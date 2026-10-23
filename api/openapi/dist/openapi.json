@@ -6765,7 +6765,7 @@
               "type": "string",
               "maxLength": 3699
             },
-            "description": "Comma-separated cached reply UUIDs, at most 100 per request. Requires conversationId. Returns their current eligible rows independently of the tail cursor."
+            "description": "Comma-separated cached root/reply UUIDs, at most 100 per request. Requires conversationId. Include the canonical root ID to revalidate its current body/tombstone and visible reply count independently of the tail cursor."
           },
           {
             "name": "revalidationOnly",
@@ -17611,7 +17611,7 @@
               },
               "revalidatedItems": {
                 "type": "array",
-                "description": "Authoritative current rows for the requested cached reply IDs. Missing IDs are unavailable; tombstones have no body. Only the signed-in author's eligible pending body may be returned privately.",
+                "description": "Authoritative current rows for the requested cached root/reply IDs. Missing IDs are unavailable; tombstones have no body. Canonical roots include their current visible reply count. Only the signed-in author's eligible pending body may be returned privately.",
                 "items": {
                   "$ref": "#/components/schemas/Comment"
                 }

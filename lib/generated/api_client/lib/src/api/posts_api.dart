@@ -454,7 +454,7 @@ class PostsApi {
   /// * [conversationId]
   /// * [targetId] - Resolve one exact visible comment and its canonical conversation; cannot be combined with a cursor.
   /// * [refresh] - Start a fresh reply snapshot after the supplied tail cursor. Requires conversationId.
-  /// * [revalidateIds] - Comma-separated cached reply UUIDs, at most 100 per request. Requires conversationId. Returns their current eligible rows independently of the tail cursor.
+  /// * [revalidateIds] - Comma-separated cached root/reply UUIDs, at most 100 per request. Requires conversationId. Include the canonical root ID to revalidate its current body/tombstone and visible reply count independently of the tail cursor.
   /// * [revalidationOnly] - Return only revalidation data without fetching a new reply page. Requires conversationId and revalidateIds; cannot be combined with a cursor or targetId.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request

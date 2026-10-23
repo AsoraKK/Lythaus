@@ -49,6 +49,9 @@ eligibility, minimum independent evidence, abuse limits and calibration need
 product approval and executable adversarial tests first. Replies would remain
 chronological and each ranked page would freeze its snapshot. This is a proposed
 next slice, not implemented ranking or an active earning/reputation policy.
+The [smallest trusted-signal contract](comment-relevance-signal-contract-2026-10-23.md)
+specifies revision-bound explicit assessments, a deterministic proposed ranker,
+missing-signal behavior and bounded acceptance without an AI service.
 
 ## Source trace and behavior
 
@@ -123,6 +126,16 @@ a valid empty tail (keep accessible loaded rows) from follow revocation or paren
 privatization (404 and clear loaded content). Off-screen exact targets now scroll
 to their actual root index and materialize lazy rows before highlighting;
 repeated target navigation and navigation/session epochs are covered.
+
+Follow-up review also found cached root bodies were missing from reply
+revalidation. Every reply-page/check request now includes its canonical root ID
+in the first bounded batch. The server returns the current root through the same
+canonical thread projection, including body-free deletion and current visible
+reply count. The client replaces that root without inserting it among replies,
+retains allowed descendants and restores a surviving visible row's position.
+A remotely deleted root regression checks redaction, descendants and its reading
+anchor. Malformed UTF-8 in lazy notification URI path/query decoding reproduced
+a `FormatException`; the comment link guard now catches it and returns no link.
 
 ## Validation and evidence
 

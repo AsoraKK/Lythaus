@@ -17,7 +17,7 @@ part 'comment_page.g.dart';
 /// Properties:
 /// * [nextCursor] - Opaque cursor for the next page, or null when exhausted.
 /// * [refreshCursor] - Reply tail cursor for an explicit check for new replies.
-/// * [revalidatedItems] - Authoritative current rows for the requested cached reply IDs. Missing IDs are unavailable; tombstones have no body. Only the signed-in author's eligible pending body may be returned privately.
+/// * [revalidatedItems] - Authoritative current rows for the requested cached root/reply IDs. Missing IDs are unavailable; tombstones have no body. Canonical roots include their current visible reply count. Only the signed-in author's eligible pending body may be returned privately.
 /// * [capabilities]
 /// * [items]
 @BuiltValue()
@@ -25,7 +25,7 @@ abstract class CommentPage implements CursorPage, Built<CommentPage, CommentPage
   @BuiltValueField(wireName: r'capabilities')
   CommentPageAllOfCapabilities? get capabilities;
 
-  /// Authoritative current rows for the requested cached reply IDs. Missing IDs are unavailable; tombstones have no body. Only the signed-in author's eligible pending body may be returned privately.
+  /// Authoritative current rows for the requested cached root/reply IDs. Missing IDs are unavailable; tombstones have no body. Canonical roots include their current visible reply count. Only the signed-in author's eligible pending body may be returned privately.
   @BuiltValueField(wireName: r'revalidatedItems')
   BuiltList<Comment>? get revalidatedItems;
 

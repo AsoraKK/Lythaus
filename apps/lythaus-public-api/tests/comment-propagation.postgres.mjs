@@ -189,6 +189,21 @@ test('reply tail revalidation authoritatively removes hidden ancestors and redac
   assert.deepEqual((await read(postId, owner, { conversationId: root, revalidationOnly: 'true', revalidateIds: unrelated })).revalidatedItems, []);
 });
 
+test('reply refresh authoritatively redacts a remotely deleted root and preserves its allowed descendants', async () => {
+  const owner = await actor(), postId = await post(owner), root = await comment(postId, owner);
+  const child = await comment(postId, owner, { parent: root });
+  const page = await read(postId, owner, { conversationId: root });
+  await control.query('UPDATE content.comments SET deleted_at=now() WHERE id=$1', [root]);
+  const refreshed = await read(postId, owner, { conversationId: root, cursor: page.refreshCursor,
+    refresh: 'true', revalidateIds: [root, child].join(',') });
+  const tombstone = refreshed.revalidatedItems.find(row => row.id === root);
+  assert.equal(tombstone.body, null);
+  assert.equal(tombstone.deleted, true);
+  assert.equal(tombstone.replyCount, 1);
+  assert.equal(refreshed.revalidatedItems.find(row => row.id === child).replyToDeleted, true);
+  assert.deepEqual(refreshed.items, []);
+});
+
 test('reply pagination holds its snapshot until the reader explicitly checks for new replies', async () => {
   const owner = await actor(), postId = await post(owner), root = await comment(postId, owner);
   const first = await comment(postId, owner, { parent: root });

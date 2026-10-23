@@ -72,3 +72,29 @@ approved eligibility/abuse calibration; a concrete next proposal is documented i
 `docs/testing/comment-propagation-2026-10-23.md`. Provider delivery, real device and
 screen-reader acceptance, query-plan/cost review, and full integrated release
 gates remain pending. Public posting stays withheld and the PR stays draft.
+
+## Follow-up review
+
+The f0397896 shared patch placed an import before `library;` in the native
+notification model. A separate dependent integration-preflight commit fixes the
+generator to insert after that directive and tests the order. Do not apply the
+old f0397896 patch; actual shared-file application and analyzer/navigation tests
+remain pending ownership clearance.
+
+The next module repair includes canonical roots in the first revalidation batch.
+The server uses the canonical thread projection for the root, including current
+body-free deletion and visible reply count. A PostgreSQL regression preserves an
+allowed descendant under a remotely deleted root; the Flutter regression also
+keeps a surviving visible reply within one pixel of its previous position. Roots
+are never inserted into the reply collection.
+
+Malformed notification paths/queries such as `/post/%FF?commentId=...` reproduced
+`FormatException: Invalid UTF-8 byte` at lazy URI field decoding before the guard
+repair (`/tmp/lythaus-comment-uri-reproduction.log`). The helper now catches that
+format error and returns no link; valid canonical links retain exact targeting.
+
+The practical next relevance contract is
+`docs/testing/comment-relevance-signal-contract-2026-10-23.md`: revision-bound
+explicit helpfulness evidence, existing member verification/outbox, deterministic
+proposed confidence-bound ordering and explicit missing-evidence behavior. It
+adds no AI service or active reputation/earning effect.

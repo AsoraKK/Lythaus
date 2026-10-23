@@ -540,12 +540,17 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       _comments
           .where(
             (item) =>
-                item.parentCommentId != null &&
+                item.id == conversationId ||
                 item.conversationId == conversationId,
           )
           .toList(),
     );
-    final ids = cached.map((item) => item.id).toList();
+    final ids = [
+      conversationId,
+      ...cached
+          .where((item) => item.id != conversationId)
+          .map((item) => item.id),
+    ];
     final checked = <String>{};
     final revalidated = <_ThreadComment>[];
     setState(() {
@@ -580,6 +585,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         checked.addAll(chunk);
         revalidated.addAll(validation.revalidatedItems);
       }
+      final anchor = _captureReadingAnchor();
       setState(() {
         _applyReplyRevalidation(previous, checked, revalidated, page.items);
         previous.nextCursor = page.nextCursor;
@@ -587,6 +593,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         previous.loaded = true;
         previous.loading = false;
       });
+      await _restoreReadingAnchor(anchor, epoch);
     } on DioException catch (error) {
       if (!mounted || epoch != _loadEpoch || mutationEpoch != _mutationEpoch) {
         return;
@@ -650,15 +657,57 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     );
     page.items = _mergeComments(
       page.items.where((item) => !removed.contains(item.id)).toList(),
-      [
-        ...validated,
-        ...added,
-      ].where((item) => !removed.contains(item.id)).toList(),
+      [...validated, ...added]
+          .where(
+            (item) =>
+                item.parentCommentId != null && !removed.contains(item.id),
+          )
+          .toList(),
       chronological: true,
     );
     if (removed.contains(_replyTarget?.id)) {
       _pendingParentId ??= _replyTarget?.id;
       _replyTarget = null;
+    }
+  }
+
+  ({String id, double top})? _captureReadingAnchor() {
+    if (!_scrollController.hasClients) return null;
+    final viewport = _scrollController.position.context.notificationContext
+        ?.findRenderObject();
+    if (viewport is! RenderBox || !viewport.hasSize) return null;
+    final top = viewport.localToGlobal(Offset.zero).dy;
+    final bottom = top + _scrollController.position.viewportDimension;
+    final visible = <({String id, double top})>[];
+    for (final entry in _commentKeys.entries) {
+      final box = entry.value.currentContext?.findRenderObject();
+      if (box is! RenderBox || !box.hasSize) continue;
+      final rowTop = box.localToGlobal(Offset.zero).dy;
+      if (rowTop >= top && rowTop < bottom) {
+        visible.add((id: entry.key, top: rowTop));
+      }
+    }
+    visible.sort((a, b) => a.top.compareTo(b.top));
+    return visible.firstOrNull;
+  }
+
+  Future<void> _restoreReadingAnchor(
+    ({String id, double top})? anchor,
+    int epoch,
+  ) async {
+    if (anchor == null) return;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || epoch != _loadEpoch || !_scrollController.hasClients) {
+      return;
+    }
+    final box = _commentKeys[anchor.id]?.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return;
+    final scroll = _scrollController.position;
+    final delta = box.localToGlobal(Offset.zero).dy - anchor.top;
+    if (delta.abs() > 0.5) {
+      _scrollController.jumpTo(
+        (scroll.pixels + delta).clamp(0.0, scroll.maxScrollExtent).toDouble(),
+      );
     }
   }
 

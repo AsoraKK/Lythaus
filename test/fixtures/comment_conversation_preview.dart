@@ -122,6 +122,16 @@ class _PreviewAdapter implements HttpClientAdapter {
         'items': items,
         'nextCursor': null,
         'refreshCursor': null,
+        if (params['revalidateIds'] is String)
+          'revalidatedItems': _rows
+              .where(
+                (row) =>
+                    (params['revalidateIds'] as String)
+                        .split(',')
+                        .contains(row['id']) &&
+                    row['moderationState'] == 'allowed',
+              )
+              .toList(),
         'capabilities': {'conversations': true, 'nestedReplies': true},
       };
     } else {

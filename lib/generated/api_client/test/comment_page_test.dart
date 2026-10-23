@@ -19,7 +19,7 @@ void main() {
       // TODO
     });
 
-    // Authoritative current rows for the requested cached reply IDs. Missing IDs are unavailable; tombstones have no body. Only the signed-in author's eligible pending body may be returned privately.
+    // Authoritative current rows for the requested cached root/reply IDs. Missing IDs are unavailable; tombstones have no body. Canonical roots include their current visible reply count. Only the signed-in author's eligible pending body may be returned privately.
     // BuiltList<Comment> revalidatedItems
     test('to test the property `revalidatedItems`', () async {
       // TODO
