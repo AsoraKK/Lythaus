@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/member_verification/presentation/member_verification_policy_preview.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 
 class AccountSecurityScreen extends ConsumerWidget {
@@ -45,6 +46,11 @@ class AccountSecurityScreen extends ConsumerWidget {
               ),
             ),
             const Divider(height: Spacing.xl),
+            if (user != null &&
+                ref.watch(memberVerificationPreviewEnabledProvider)) ...[
+              const MemberVerificationPolicyPreview(),
+              const Divider(height: Spacing.xl),
+            ],
             FilledButton.tonalIcon(
               onPressed: user == null
                   ? null
