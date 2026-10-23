@@ -112,7 +112,7 @@ const call = (actor, path) => fixture.dispatchFetch('https://api.lythaus.test' +
 async function read(actor, path, surface = 'post') {
   const response = await call(actor, path);
   assert.equal(response.status, 200, await response.clone().text());
-  assert.equal(response.headers.get('cache-control'), feedResponsePlan(surface, Boolean(actor)).cacheControl);
+  assert.equal(response.headers.get('cache-control'), surface === 'comments' ? 'private, no-store' : feedResponsePlan(surface, Boolean(actor)).cacheControl);
   assert.equal(response.headers.get('vary'), 'Origin, Authorization');
   return response.json();
 }
@@ -190,8 +190,9 @@ test('native comments hide pending and rejected bodies, redact deleted bodies an
     assert.equal(body.items.find(item => item.id === comments.deleted.id).body, null);
     for (const name of ['pending', 'rejected', 'deleted']) assert.ok(!JSON.stringify(body).includes(comments[name].body));
     for (const name of ['pendingA', 'rejectedA', 'deletedA', 'privateA', 'followersA', 'unlabelledA']) {
-      const hidden = await read(actor, postPath(name) + '/comments', 'comments');
-      assert.deepEqual(idsOf(hidden.items), actor === 'a' && ['privateA', 'followersA'].includes(name) ? [comments[name].id] : []);
+      if (actor === 'a' && ['privateA', 'followersA'].includes(name)) {
+        assert.deepEqual(idsOf((await read(actor, postPath(name) + '/comments', 'comments')).items), [comments[name].id]);
+      } else await denied(actor, postPath(name) + '/comments');
     }
   }
   for (const actor of ['a', 'b', 'a']) {
@@ -211,7 +212,7 @@ test('native reads withdraw current post and comment revisions while stale inbox
     for (const actor of [undefined, 'a', 'b', 'a']) {
       await denied(actor, postPath('publicA'));
       assert.ok(!(await read(actor, '/api/feed/discover', 'discovery')).items.some(item => item.id === posts.publicA.id));
-      assert.deepEqual((await read(actor, postPath('publicA') + '/comments', 'comments')).items, []);
+      await denied(actor, postPath('publicA') + '/comments');
       assert.ok(!JSON.stringify(await read(actor, postPath('publicB') + '/comments', 'comments')).includes(revisedComment));
       if (actor) assert.ok(!(await read(actor, '/api/feed', 'personal')).items.some(item => item.id === posts.publicA.id));
     }
@@ -230,7 +231,7 @@ test('native comment listings respect parent-author blocks', async () => {
     await control.query('INSERT INTO social.blocks(blocker_id,blocked_id) VALUES($1,$2)', pair);
     try {
       await denied('b', postPath('publicA'));
-      assert.deepEqual((await read('b', postPath('publicA') + '/comments', 'comments')).items, []);
+      await denied('b', postPath('publicA') + '/comments');
     } finally { await control.query('DELETE FROM social.blocks WHERE blocker_id=$1 AND blocked_id=$2', pair); }
   }
 });
@@ -240,7 +241,7 @@ test('native comment listings respect inactive parent-author accounts', async ()
   try {
     for (const actor of [undefined, 'b']) {
       await denied(actor, postPath('publicA'));
-      assert.deepEqual((await read(actor, postPath('publicA') + '/comments', 'comments')).items, []);
+      await denied(actor, postPath('publicA') + '/comments');
     }
   } finally { await control.query("UPDATE identity.users SET status='active' WHERE id=$1", [actors.a.id]); }
 });
@@ -258,7 +259,7 @@ for (const suffix of ['', '/comments']) {
         assert.deepEqual(await denied(actor, path), missing);
         assert.ok(!queries.slice(start).some(row => row.text.includes('FROM content.posts') || row.text.includes('FROM content.comments')));
       }
-      assert.deepEqual((await read(actor, '/api/posts/' + uuidv7() + '/comments', 'comments')).items, []);
+      await denied(actor, '/api/posts/' + uuidv7() + '/comments');
     }
   });
 }
