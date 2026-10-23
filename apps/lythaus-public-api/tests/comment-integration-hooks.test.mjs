@@ -2,7 +2,18 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import ts from 'typescript';
-import { integratePublicApiComments, integrateJobsCommentNotifications, integrateAdminCommentRevision } from './comment-integration-hooks.mjs';
+import { integratePublicApiComments, integrateJobsCommentNotifications, integrateAdminCommentRevision, integrateCommentNotificationNavigation } from './comment-integration-hooks.mjs';
+
+test('native notification hook keeps its import after the library directive', () => {
+  const path = 'lib/features/notifications/domain/notification_models.dart';
+  const before = readFileSync(path, 'utf8');
+  const integrated = integrateCommentNotificationNavigation(before);
+  const library = integrated.indexOf('library;');
+  const firstImport = integrated.indexOf("import 'package:");
+  assert.ok(library >= 0 && firstImport > library);
+  assert.ok(integrated.includes('deeplink: commentNotificationLink(json),'));
+  assert.equal(readFileSync(path, 'utf8'), before);
+});
 
 test('proposed shared comment hooks typecheck with the complete native runtime without editing owned files', { timeout: 30000 }, () => {
   const paths = ['apps/lythaus-public-api/src/index.ts', 'apps/lythaus-jobs/src/index.ts', 'apps/lythaus-admin-api/src/index.ts'];
