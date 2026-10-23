@@ -153,6 +153,11 @@ export async function readCommentThread(input: {
     cursor?.timestamp ?? null, cursor?.id ?? null, limit + 1, refresh ? null : cursor?.snapshot ?? null, conversationId, targetId]);
   const revalidated = revalidateIds ? await input.query(replyRevalidationQuery,
     [postId, input.viewerId, [...new Set(revalidateIds)], conversationId]) : undefined;
+  if (revalidated && conversationId && revalidateIds?.includes(conversationId)) {
+    const currentRoot = await input.query(threadQuery(sort, view, conversationId, conversationId),
+      [postId, input.viewerId, null, null, 1, null, conversationId, conversationId]);
+    revalidated.rows.push(...currentRoot.rows.map(({ cursorCreatedAt: _, snapshotAt: __, ...row }) => row));
+  }
   const rows = result.rows.slice(0, limit);
   const tail = rows.at(-1);
   const tailCursor = tail ? btoa(JSON.stringify({ version: 1, postId, sort, view, conversationId,

@@ -246,11 +246,13 @@ Map<String, dynamic> _conversationPage(
   String? nextCursor,
   String? refreshCursor,
   List<Map<String, dynamic>>? revalidatedItems,
+  Map<String, dynamic>? root,
 }) => {
   'items': items,
   'nextCursor': nextCursor,
   'refreshCursor': refreshCursor,
-  if (revalidatedItems != null) 'revalidatedItems': revalidatedItems,
+  if (revalidatedItems != null || root != null)
+    'revalidatedItems': [if (root != null) root, ...?revalidatedItems],
   'capabilities': {'conversations': true, 'nestedReplies': true},
 };
 
@@ -1788,6 +1790,11 @@ void main() {
   testWidgets(
     'conversation replies expand, keep context and check new replies explicitly',
     (tester) async {
+      final root = {
+        ..._comment('root', author: 'other'),
+        'conversationId': 'root',
+        'replyCount': 2,
+      };
       final adapter = _Adapter((request) async {
         if (request.queryParameters['conversationId'] == 'root') {
           expect(request.queryParameters['sort'], 'newest');
@@ -1803,6 +1810,7 @@ void main() {
                   },
                 ],
                 refreshCursor: 'new-tail',
+                root: root,
                 revalidatedItems: [
                   {
                     ..._comment('reply', author: 'other', parent: 'root'),
@@ -1818,24 +1826,24 @@ void main() {
             );
           }
           return _response(
-            _conversationPage([
-              {
-                ..._comment('reply', author: 'other', parent: 'root'),
-                'conversationId': 'root',
-              },
-              {
-                ..._comment('nested', author: 'other', parent: 'reply'),
-                'conversationId': 'root',
-                'createdAt': '2026-10-01T01:00:00Z',
-              },
-            ], refreshCursor: 'reply-tail'),
+            _conversationPage(
+              [
+                {
+                  ..._comment('reply', author: 'other', parent: 'root'),
+                  'conversationId': 'root',
+                },
+                {
+                  ..._comment('nested', author: 'other', parent: 'reply'),
+                  'conversationId': 'root',
+                  'createdAt': '2026-10-01T01:00:00Z',
+                },
+              ],
+              refreshCursor: 'reply-tail',
+              root: root,
+            ),
           );
         }
-        return _response(
-          _conversationPage([
-            {..._comment('root', author: 'other'), 'replyCount': 2},
-          ]),
-        );
+        return _response(_conversationPage([root]));
       });
       await _pump(tester, adapter);
       await _openComments(tester);
@@ -1929,6 +1937,11 @@ void main() {
       'successful new-reply check revalidates a $revoked middle reply',
       (tester) async {
         var reads = 0;
+        final root = {
+          ..._comment('root', author: 'other'),
+          'conversationId': 'root',
+          'replyCount': 2,
+        };
         final middle = {
           ..._comment('middle', author: 'other', parent: 'root'),
           'conversationId': 'root',
@@ -1941,7 +1954,11 @@ void main() {
           if (request.queryParameters['conversationId'] == 'root') {
             if (++reads == 1) {
               return _response(
-                _conversationPage([middle, child], refreshCursor: 'tail'),
+                _conversationPage(
+                  [middle, child],
+                  refreshCursor: 'tail',
+                  root: root,
+                ),
               );
             }
             expect(
@@ -1952,6 +1969,7 @@ void main() {
               _conversationPage(
                 [],
                 refreshCursor: 'tail',
+                root: root,
                 revalidatedItems: revoked == 'deleted'
                     ? [
                         {...middle, 'deleted': true, 'body': null},
@@ -1984,6 +2002,88 @@ void main() {
       },
     );
   }
+
+  testWidgets(
+    'deleted root is authoritatively redacted while descendants and reading anchor survive',
+    (tester) async {
+      var deleted = false;
+      final root = {
+        ..._comment('root', author: 'other'),
+        'conversationId': 'root',
+        'replyCount': 20,
+        'body': List.filled(12, 'Original root context.').join('\n'),
+      };
+      final replies = List.generate(
+        20,
+        (index) => {
+          ..._comment(
+            'child${index.toString().padLeft(2, '0')}',
+            author: 'other',
+            parent: 'root',
+          ),
+          'conversationId': 'root',
+        },
+      );
+      final adapter = _Adapter((request) async {
+        if (request.queryParameters['conversationId'] == 'root') {
+          expect(
+            (request.queryParameters['revalidateIds'] as String).split(','),
+            contains('root'),
+          );
+          return _response(
+            _conversationPage(
+              deleted ? [] : replies,
+              refreshCursor: 'tail',
+              root: {
+                ...root,
+                if (deleted) ...{'deleted': true, 'body': null},
+              },
+              revalidatedItems: deleted
+                  ? replies
+                        .map((row) => {...row, 'replyToDeleted': true})
+                        .toList()
+                  : [],
+            ),
+          );
+        }
+        return _response(
+          _conversationPage([
+            root,
+            {
+              ..._comment('other', author: 'other'),
+              'body': List.filled(30, 'Another conversation.').join('\n'),
+            },
+          ]),
+        );
+      });
+      await _pump(tester, adapter);
+      await _openComments(tester);
+      await tester.ensureVisible(find.byKey(const ValueKey('expand:root')));
+      await tester.tap(find.byKey(const ValueKey('expand:root')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Check for new replies'));
+      await tester.pumpAndSettle();
+      final scroll = tester
+          .widget<ListView>(find.byType(ListView).first)
+          .controller!;
+      scroll.jumpTo(scroll.offset - 220);
+      await tester.pumpAndSettle();
+      expect(find.text('Comment child19').hitTestable(), findsOneWidget);
+      final before = tester.getRect(find.text('Comment child19')).top;
+      deleted = true;
+      await tester.tap(find.text('Check for new replies'));
+      await tester.pumpAndSettle();
+      expect(find.text(root['body'] as String), findsNothing);
+      expect(find.text('[deleted]'), findsOneWidget);
+      expect(find.text('Comment child19').hitTestable(), findsOneWidget);
+      expect(
+        tester.getRect(find.text('Comment child19')).top,
+        closeTo(before, 1),
+      );
+      expect(find.text('Comment child00'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'fresh not-found owner receipt removes a previously submitted local comment',
@@ -2092,6 +2192,11 @@ void main() {
   testWidgets(
     'reply context resolves and links to the exact unloaded parent comment',
     (tester) async {
+      final root = {
+        ..._comment('root', author: 'other'),
+        'conversationId': 'root',
+        'replyCount': 2,
+      };
       final adapter = _Adapter((request) async {
         if (request.queryParameters['targetId'] == 'parent') {
           return _response(
@@ -2110,7 +2215,7 @@ void main() {
                 ..._comment('nested', author: 'other', parent: 'parent'),
                 'conversationId': 'root',
               },
-            ]),
+            ], root: root),
           );
         }
         return _response(
@@ -2279,6 +2384,12 @@ void main() {
     'nested conversations wrap at 320 pixels and large text without increasing indentation',
     (tester) async {
       await loadFontsForGoldenTests();
+      final root = {
+        ..._comment('root', author: 'other'),
+        'conversationId': 'root',
+        'replyCount': 1,
+        'body': 'A conversation can stay readable on a small phone.',
+      };
       final adapter = _Adapter(
         (request) async => _response(
           _conversationPage(
@@ -2290,14 +2401,10 @@ void main() {
                       'body': 'A clear reply with context on a narrow screen.',
                     },
                   ]
-                : [
-                    {
-                      ..._comment('root', author: 'other'),
-                      'replyCount': 1,
-                      'body':
-                          'A conversation can stay readable on a small phone.',
-                    },
-                  ],
+                : [root],
+            root: request.queryParameters['conversationId'] == 'root'
+                ? root
+                : null,
           ),
         ),
       );
