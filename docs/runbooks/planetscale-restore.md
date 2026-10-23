@@ -8,6 +8,24 @@ data. There is only one approved hosted branch, `main`; this runbook alone
 authorizes no temporary hosted branch, restore, credential reset, export,
 configuration change or deletion.
 
+The manual `planetscale-cutover-identity-preflight.yml` workflow has a separate
+`inspection=restore-inventory` mode. After exact-source review and normal
+production approval, it uses the existing API secrets to list backups of the
+fixed source `lythaus/lythaus-core/main` and resolve the four canonical
+application role names from their existing Hyperdrive configurations. It opens
+no SQL connection, creates no credentials and changes no provider state. The
+default `identity` mode retains the existing SQL identity inspection.
+
+Inventory evidence is sanitized and retained for seven days. Pagination is
+bounded and must be complete; denied, malformed or inconsistent responses
+block collection without retry or partial success. Numeric size fields need
+unit/billing interpretation before costing. Start/completion comparisons with
+grant run `39917326612` do not prove an exact recovery point or restored grants.
+The inventory does not select/protect a backup or qualify a restore; copied
+verifier/administrator roles and actual grants still need restored-target
+verification. Keep access, extensions, spending and irreversible cleanup in
+the separate, exact-target owner approval packet before billable creation.
+
 For a failed additive 0021 migration, first classify the exact registry and
 catalog state using the [tested roll-forward contingency](planetscale-0021-cutover-preparation.md).
 Preserving the column/index and safely completing the migration can avoid a

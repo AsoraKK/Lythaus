@@ -7,6 +7,12 @@ on:
         description: Exact current main SHA for this read-only identity preflight
         required: true
         type: string
+      inspection:
+        description: Existing SQL identity inspection or metadata-only native restore inventory
+        required: true
+        type: choice
+        default: identity
+        options: [identity, restore-inventory]
 
 permissions:
   contents: read
@@ -17,6 +23,7 @@ concurrency:
 
 jobs:
   inspect:
+    if: inputs.inspection == 'identity'
     name: Inspect protected production SQL identities
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -97,5 +104,64 @@ jobs:
         with:
           name: planetscale-cutover-identity-${{ inputs.release_sha }}
           path: ${{ runner.temp }}/planetscale-cutover-identity
+          if-no-files-found: ignore
+          retention-days: 7
+
+  restore_inventory:
+    if: inputs.inspection == 'restore-inventory'
+    name: Collect fixed main backup and role metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      REF_PROTECTED: ${{ github.ref_protected }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Require protected main in the existing repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY_ID" = 1010752912
+          test "$GITHUB_REF" = refs/heads/main
+          test "$REF_PROTECTED" = true
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_SHA" = "$RELEASE_SHA"
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked test dependencies
+        run: npm ci --ignore-scripts --no-audit
+      - name: Verify metadata boundaries without provider access
+        run: |
+          node --check scripts/ci/planetscale-native-restore-inventory.mjs
+          node --test scripts/tests/planetscale-native-restore-inventory.test.mjs
+      - name: Recheck current main before metadata reads
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA"
+          git diff --quiet
+          git diff --cached --quiet
+      - name: Read backup inventory and canonical role mappings
+        env:
+          PLANETSCALE_API_TOKEN: ${{ secrets.PLANETSCALE_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          PSCALE_ROLE_IDENTIFIERS: ${{ secrets.PSCALE_ROLE_IDENTIFIERS }}
+        run: node scripts/ci/planetscale-native-restore-inventory.mjs > "$RUNNER_TEMP/native-restore-inventory.json"
+      - name: Retain only sanitized restore metadata
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-restore-inventory-${{ inputs.release_sha }}
+          path: ${{ runner.temp }}/native-restore-inventory.json
           if-no-files-found: ignore
           retention-days: 7
