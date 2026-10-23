@@ -1,5 +1,11 @@
 # PlanetScale restore runbook
 
+The [fixed-target runner](planetscale-native-restore-runner.md) prepares the
+bounded October restore qualification. It defaults to metadata-only planning;
+execution still requires the separate exact owner packet, protected review,
+existing access and current recovery gates. It does not certify a live restore
+from mocked or local synthetic tests.
+
 This is a recovery procedure requiring a named recovery target, selected
 protected backup/PITR point, approved RPO/RTO, retention and data handling,
 additional-cost ceiling, and explicit permission for each consequential action.
