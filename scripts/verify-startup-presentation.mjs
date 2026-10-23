@@ -18,6 +18,7 @@ for(const [file,expected] of Object.entries(provenance.files)) {
  assert.equal(createHash('sha256').update(await readFile(path.join(root,file))).digest('hex'),expected,`Rendered build changed: ${file}`);
 }
 const buildIdentity={candidateSha:provenance.candidateSha,sourceTree:provenance.sourceTree,
+ compiledFromSha:provenance.compiledFromSha,
  mainSha256:provenance.files['main.dart.js'],provenanceSha256:createHash('sha256').update(provenanceBytes).digest('hex')};
 const timeoutCase=process.env.TIMEOUT_CASE==='1';
 const immediateCase=process.env.IMMEDIATE_CASE==='1';
@@ -52,6 +53,7 @@ try {for(const [engine,type] of Object.entries({webkit,chromium})) {
     let response=loginFixtureResponse(url,method,request.headers()['access-control-request-method']);
     if(authenticatedCase&&url===refreshUrl&&method==='POST') response={method:'POST',status:200,body:{accessToken:'synthetic-local-only',sessionTransport:'cookie-v1'}};
     if(authenticatedCase&&url==='https://api.lythaus.co/api/auth/userinfo') response={method:'GET',status:200,body:method==='OPTIONS'?null:{id:'synthetic-user',email:'synthetic@example.invalid',role:'user',createdAt:'2026-01-01T00:00:00Z',lastLoginAt:'2026-01-01T00:00:00Z'}};
+    if(authenticatedCase&&url==='https://api.lythaus.co/api/users/me') response={method:'GET',status:200,body:method==='OPTIONS'?null:{user:{id:'synthetic-user',displayName:'Synthetic startup fixture',trustPassportVisibility:'private',moderationState:'allowed',publicVisibility:false,reputationScore:0}}};
     if(authenticatedCase&&new URL(url).origin==='https://api.lythaus.co'&&['/api/subscription/status','/api/custom-feeds','/api/users/me/reputation'].includes(new URL(url).pathname)) response={method:'GET',status:200,body:method==='OPTIONS'?null:{items:[],hasMore:false,nextCursor:null}};
     if(!response){result.blocked.push(url);return route.abort();}
     result.requests.push({url,method,status:response.status});

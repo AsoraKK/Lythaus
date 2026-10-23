@@ -9,6 +9,9 @@ const [fixtureDirectory,buildDirectory]=process.argv.slice(2);
 assert.ok(fixtureDirectory&&buildDirectory,'Pass the instrumented worktree and built directory');
 const git=(...args)=>execFileSync('git',args,{encoding:'utf8'}).trim();
 const candidateSha=git('rev-parse','HEAD');
+const previous=await readFile(path.join(buildDirectory,'startup-build-provenance.json'),'utf8').then(JSON.parse).catch(error=>{if(error.code==='ENOENT')return null;throw error;});
+const compiledFromSha=previous?.compiledFromSha??previous?.candidateSha??candidateSha;
+assert.equal(git('diff','--name-only',compiledFromSha,candidateSha,'--','lib','web','assets','pubspec.yaml','pubspec.lock'),'','Reused build requires identical production inputs');
 assert.equal(git('-C',fixtureDirectory,'rev-parse','HEAD'),candidateSha);
 assert.equal(git('status','--porcelain'),'','Candidate checkout must be clean');
 assert.equal(git('-C',fixtureDirectory,'diff','--name-only','HEAD','--','lib','web','assets','pubspec.yaml','pubspec.lock'),'lib/main.dart');
@@ -28,7 +31,8 @@ async function walk(directory,relative='') {
   }
 }
 await walk(buildDirectory);
-const provenance={candidateSha,sourceTree:git('rev-parse','HEAD^{tree}'),
+if(previous)assert.deepEqual(files,previous.files,'Reused bundle bytes must remain identical');
+const provenance={candidateSha,compiledFromSha,sourceTree:git('rev-parse','HEAD^{tree}'),
   fixture:{originalMainSha256:hash(original),preparedMainSha256:hash(prepared),geometrySha256:hash(geometry),
     description:'Production main/router/providers with existing fixed-scale wrapper and read-only geometry getter; no focus, repaint, auth override or semantics activation.'},
   files};
