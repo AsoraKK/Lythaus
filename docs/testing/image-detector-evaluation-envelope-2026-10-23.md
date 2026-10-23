@@ -13,6 +13,30 @@ loopback-only container on the existing standard GitHub runner. It does not need
 a new Cloudflare service, production database write, hosted upload or user photo.
 Do not dispatch it under the expired September approval.
 
+Approval has two distinct parts. The owner can review the fixed provider, frozen
+data, attempt/time/cost and retention scope below now. After integration, the
+existing protected run must still bind the exact reviewed current-main SHA,
+immutable built-image identity, current approval expiry and one-use authorization.
+That later validation cannot change inputs, providers, model, preprocessing,
+counts, ceiling or retention; a scope change requires a new owner decision. An
+unresolved run identity is not permission to execute from a mutable branch.
+
+Safely obtained identities at this proposal's source are:
+
+| Component | SHA-256 |
+| --- | --- |
+| `container/safe_process.py` (the runtime's actual preprocessing hash) | `6a6289c7234a778b42a1baf35759d9b53a7b8f5c069d736d54bd0d1f141058fb` |
+| `container/server.mjs` | `d48c713a626ad1cb2a2a4c90f5e784842a4115c5a09f3c17e214e5ca054b2b21` |
+| `container/Dockerfile` | `020ecabde8167e15f18f1afadd0ea85dc789c8b66f1d037522c100b800b5eda3` |
+| `container/requirements.txt` | `169d2d1e9d599180044a02f4bf859fd12992d0a72472a8876633586012456858` |
+| `scripts/authenticity/evaluation-client-requirements.txt` | `3f23efb36b418113796852814d09660d4302226da5d648ecc872fb84d55a5905` |
+
+Container paths are under `apps/lythaus-authenticity-runtime/`. The approval
+validator now rejects a preprocessing hash that differs from the actual checked-in
+`safe_process.py` before private fixture or checkpoint access. No evaluation
+image was built or checkpoint loaded to obtain these hashes. A source-code hash
+or code-validation image is not a substitute for the final evaluated image ID.
+
 SAFE-A licence reliance was accepted by the owner on 28 September for bounded
 private evaluation and intended private beta hosting, subject to the recorded
 Apache-2.0 obligations. That does not expire merely because execution approval
@@ -32,15 +56,15 @@ recalibrate or select a new threshold to make this integration pass.
 | Source | Exact reviewed post-merge main SHA, bound into approval and built image; no mutable branch or old release substitution |
 | Runtime/provider | Existing standard GitHub-hosted Ubuntu 24.04 runner; existing pinned evaluation Dockerfile; local loopback `/infer` only; no Cloudflare container creation/deployment |
 | Model | SAFE-A; upstream `4e998724651b227def64f5be0cd60c0aa1552c35`; checkpoint SHA-256 `b3f5ecfb46a154ed553aaaf4bf3ba59182310726ddb0cbb1fe42bd0e22d2f20e` |
-| Preprocessing | `SAFE_OFFICIAL_RGB_CENTER_CROP_256_DWT_CLASS1_V1`; approval must supply the current preprocessing hash, runtime evidence hash and immutable runtime digest |
+| Preprocessing | `SAFE_OFFICIAL_RGB_CENTER_CROP_256_DWT_CLASS1_V1`; preprocessing hash is `6a6289c7234a778b42a1baf35759d9b53a7b8f5c069d736d54bd0d1f141058fb`; runtime evidence hash and immutable built-image identity must bind after exact-source build |
 | Inputs | Exactly `docs/models/safe-a-v0.1-smoke.json`, SHA-256 `ca033720b795f700f7985d431fc807e749b5fda1c0cbf47637561e3042b89132`: eight already-used originals plus its eight prescribed descendants; no new dataset selection |
 | Attempts | At most 16 SAFE attempts, batch one, one intra/inter-op thread, 30 active minutes; one authorization consumption; no automatic retry or rerun after ambiguous dispatch |
 | Request limits | At most 10 MiB and 16,777,216 decoded pixels; single-frame RGB PNG/JPEG; existing decode/inference/supervisor bounds remain unchanged |
-| External image recipients | None. Historical pixels go only to the private loopback evaluation container; no OpenAI, Workers AI, public endpoint, public Git or image artifact upload |
+| Image processors | The explicitly approved GitHub-hosted Ubuntu runner and its private loopback container. No external image AI API, OpenAI, Workers AI, public endpoint, public Git or image artifact upload |
 | Cost ceiling requested | USD 0.50 total incremental run cost, with fresh usage/allowance evidence proving the existing standard runner fits; stop before execution if that bound or existing allowance cannot be established; no purchase, new resource or credential |
 | Window | One attended run, approval expires within 24 hours of issuance; existing workflow timeout remains 45 minutes |
 | Working-copy retention | Read-only originals in the private bundle/runtime mount; remove ephemeral images, weights, mounts and raw receipts in existing always-cleanup at run end, at most the 45-minute workflow lifetime; do not delete the owner's source bundle |
-| Receipt retention proposed | Sanitized hash/status/performance receipt and consumed marker only, no image pixels, paths, weights, credentials or raw provider body; 48 hours in an explicitly approved evidence destination. Existing sanitized-artifact retention must be verified or bounded before dispatch; do not assume the workflow's repository default is 48 hours |
+| Receipt destination and lifetime | Existing GitHub repository `AsoraKK/Lythaus`, workflow `authenticity-cpu-evaluation.yml`, exact-source run, artifact `authenticity-cpu-evaluation-<release_sha>`, from `$RUNNER_TEMP/authenticity-cpu-receipt-sanitized.json`; explicit `retention-days: 2`. Consumed marker has its own separate two-day setting. This is sanitized source/hash/status/performance metadata only, no pixels, raw scores, paths, weights, credentials or provider body |
 
 The exact originals and hashes are already frozen in the referenced manifest:
 `CSAFE_WP006E_iPhone11_1_02`, `CSAFE_WP006E_iPhone11_1_03`, `PNGN_CHART_03`,
@@ -61,6 +85,23 @@ The retention periods above are proposed limits, not measured deletion evidence.
 Timeout/cancellation cleanup and artifact expiry must be observed; missing or
 failed cleanup remains unresolved and cannot be reported as successful deletion.
 
+Read-only GitHub repository metadata confirmed `AsoraKK/Lythaus` is public on
+23 October. The receipt destination therefore must not be described as private.
+Owner scope approval must explicitly permit only the sanitizer's enumerated
+non-content metadata in that repository's Actions artifact; raw evidence stays
+ephemeral and is not uploaded. If all receipts must instead be private, stop:
+the existing public-repository artifact is not that destination. The two-day
+setting is now in code and regression-tested; actual expiry remains acceptance.
+
+GitHub documents standard hosted runner use in public repositories as free;
+this resolves the runner class/visibility fact, not every account charge. The
+protected private bundle host, any attributable transfer/storage cost and fresh
+usage commitments still require their exact receipt before execution. No
+Cloudflare billing connector was available in this task, and no secret values
+or new credentials were requested. Do not claim the USD 0.50 reservation was
+funded, billed or authorized merely because the standard runner is free.
+[GitHub billing reference](https://docs.github.com/en/billing/managing-billing-for-github-actions/about-billing-for-github-actions).
+
 ## Measurements and acceptance for A
 
 Preflight must accept exact source/model/runtime/preprocessing identity, current
@@ -77,6 +118,12 @@ stops the run; do not widen tolerance or tune the historical threshold
 abstention/inconclusive interpretation even above threshold. Any unavailable,
 invalid or ambiguous provider outcome consumes its attempt and stops further
 work; no fallback to zero, human authorship, allow, enforcement or rewards.
+The runner now fail-stops every structured non-OK status on originals and
+descendants, caps each request timeout by the remaining active window, and rejects
+responses at or after the deadline before scoring or completion. Protocol tests
+cover all eight non-OK statuses on both source roles, late original/descendant
+responses and deadline expiry between reservation and dispatch. No model executes
+in those tests.
 
 Passing A demonstrates that the real checkpoint and runtime reproduce their
 frozen specialist behavior. It does **not** establish modern generator coverage,
@@ -88,6 +135,10 @@ accuracy claim. Low SAFE is not human evidence. Full maximum-input memory
 acceptance is still separate: the frozen smoke must not be relabelled a measured
 16,777,216-pixel case. Existing release checks require that actual measurement
 and `4 * peakBytes < 3 * capacityBytes`; this proposal changes neither condition.
+The quoted historical figures are model-card inventory, not independently
+retrieved new runtime receipts; the referenced old report Git objects were not
+available in this checkout. No completed current parity or qualified deployment
+artifact was found in the available readiness records.
 
 ## Separate optional approval B: current external adapter acceptance
 
@@ -211,7 +262,10 @@ node --experimental-strip-types --test --test-concurrency=1 packages/media/tests
 
 The combined local run passes 54 tests, zero failed/skipped (including parent
 tests); the new detector chain contributes nine cases plus its parent. No runtime
-source, flag, migration, grant, provider resource or production data changes.
+Worker source, flag, migration, grant, provider resource or production data changes.
+The separate evaluation runner/validator and receipt-retention corrections pass
+ten Python boundary tests (including 16 structured-status subcases) and eight
+Node orchestration tests, without inference, private fixtures or credentials.
 Owner-testable now: the local synthetic chain and private readiness evidence.
 Owner-testable after approval A: real checkpoint parity and measured bounded
 specialist execution. An owner-facing live private app still needs separately
