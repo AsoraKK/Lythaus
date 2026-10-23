@@ -30,11 +30,7 @@ class DeeplinkRouter {
       final hasId = parsed.id != null && parsed.id!.isNotEmpty;
       final supported = switch (parsed.type) {
         'post' || 'user' => hasId,
-        'comment' =>
-          hasId &&
-              ((parsed.query['postId'] ?? parsed.query['post'] ?? '')
-                      .isNotEmpty ||
-                  parsed.remainingPathSegments.isNotEmpty),
+        'comment' => hasId && _commentPostId(parsed) != null,
         'settings' => parsed.id == 'notifications',
         'moderation' => parsed.id == null || parsed.id == 'appeal',
         'invite' => hasId || (parsed.query['code'] ?? '').isNotEmpty,
@@ -125,12 +121,7 @@ class DeeplinkRouter {
     String commentId,
     _NormalizedDeepLink parsed,
   ) async {
-    final postId =
-        parsed.query['postId'] ??
-        parsed.query['post'] ??
-        (parsed.remainingPathSegments.isNotEmpty
-            ? parsed.remainingPathSegments.first
-            : null);
+    final postId = _commentPostId(parsed);
     if (postId == null || postId.isEmpty) {
       debugPrint(
         '[DeepLink] Missing postId for comment deep-link: comment=$commentId',
@@ -138,6 +129,17 @@ class DeeplinkRouter {
       return;
     }
     await _navigateToPost(context, postId, initialCommentId: commentId);
+  }
+
+  static String? _commentPostId(_NormalizedDeepLink parsed) {
+    for (final candidate in [
+      parsed.query['postId'],
+      parsed.query['post'],
+      ...parsed.remainingPathSegments.take(1),
+    ]) {
+      if (candidate != null && candidate.isNotEmpty) return candidate;
+    }
+    return null;
   }
 
   static Future<void> _navigateToModeration(

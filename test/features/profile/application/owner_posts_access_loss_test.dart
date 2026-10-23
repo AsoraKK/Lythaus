@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -82,8 +83,98 @@ class _Posts extends OwnerPostsService {
   }
 }
 
+class _DelayedPosts extends _Posts {
+  _DelayedPosts(super.failure);
+
+  final started = Completer<void>();
+  final response = Completer<OwnerPostsPage>();
+
+  @override
+  Future<OwnerPostsPage> getPage({
+    required String accessToken,
+    String? cursor,
+    CancelToken? cancelToken,
+  }) {
+    if (cursor != null) {
+      cursors.add(cursor);
+      started.complete();
+      return response.future;
+    }
+    return super.getPage(
+      accessToken: accessToken,
+      cursor: cursor,
+      cancelToken: cancelToken,
+    );
+  }
+}
+
 void main() {
   setUpAll(loadFontsForGoldenTests);
+
+  for (final status in [401, 403]) {
+    for (final transition in ['refresh', 'account re-entry']) {
+      test(
+        'late owner denial $status cannot clear posts after $transition',
+        () async {
+          final options = RequestOptions(path: '/api/users/me/posts');
+          final failure = DioException(
+            requestOptions: options,
+            type: DioExceptionType.badResponse,
+            response: Response<dynamic>(
+              requestOptions: options,
+              statusCode: status,
+            ),
+          );
+          final service = _DelayedPosts(failure);
+          final auth = FeedTestAuth(feedTestUser('owner'));
+          final container = ProviderContainer(
+            overrides: [
+              authStateProvider.overrideWith((_) => auth),
+              jwtProvider.overrideWith((_) async => 'synthetic-token'),
+              ownerPostsServiceProvider.overrideWithValue(service),
+            ],
+          );
+          addTearDown(container.dispose);
+          final provider = ownerPostsTimelineProvider(
+            OwnerPostsKey(
+              userId: 'owner',
+              sessionRevision: container.read(authSessionRevisionProvider),
+            ),
+          );
+          final subscription = container.listen(provider, (_, _) {});
+          addTearDown(subscription.close);
+          await container.read(provider.future);
+          final pending = container.read(provider.notifier).loadMore();
+          await service.started.future;
+          if (transition == 'refresh') {
+            await container.read(provider.notifier).refresh();
+          } else {
+            auth.change(const AsyncData(null));
+            auth.setUser(feedTestUser('owner'));
+          }
+          final currentProvider = ownerPostsTimelineProvider(
+            OwnerPostsKey(
+              userId: 'owner',
+              sessionRevision: container.read(authSessionRevisionProvider),
+            ),
+          );
+          final currentSubscription = container.listen(
+            currentProvider,
+            (_, _) {},
+          );
+          addTearDown(currentSubscription.close);
+          await container.read(currentProvider.future);
+          service.response.completeError(failure);
+          await pending;
+          final current = container.read(currentProvider);
+          expect(current.hasError, isFalse);
+          expect(current.requireValue.items.single.id, 'private-first');
+          expect(current.requireValue.nextCursor, 'page-2');
+          expect(current.requireValue.loadMoreError, isNull);
+        },
+      );
+    }
+  }
 
   for (final status in [401, 403]) {
     testWidgets('private cards disappear after pagination denial $status', (
