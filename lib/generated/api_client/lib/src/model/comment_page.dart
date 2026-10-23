@@ -17,12 +17,17 @@ part 'comment_page.g.dart';
 /// Properties:
 /// * [nextCursor] - Opaque cursor for the next page, or null when exhausted.
 /// * [refreshCursor] - Reply tail cursor for an explicit check for new replies.
+/// * [revalidatedItems] - Authoritative current rows for the requested cached reply IDs. Missing IDs are unavailable; tombstones have no body. Only the signed-in author's eligible pending body may be returned privately.
 /// * [capabilities]
 /// * [items]
 @BuiltValue()
 abstract class CommentPage implements CursorPage, Built<CommentPage, CommentPageBuilder> {
   @BuiltValueField(wireName: r'capabilities')
   CommentPageAllOfCapabilities? get capabilities;
+
+  /// Authoritative current rows for the requested cached reply IDs. Missing IDs are unavailable; tombstones have no body. Only the signed-in author's eligible pending body may be returned privately.
+  @BuiltValueField(wireName: r'revalidatedItems')
+  BuiltList<Comment>? get revalidatedItems;
 
   /// Reply tail cursor for an explicit check for new replies.
   @BuiltValueField(wireName: r'refreshCursor')
@@ -64,6 +69,13 @@ class _$CommentPageSerializer implements PrimitiveSerializer<CommentPage> {
       yield serializers.serialize(
         object.capabilities,
         specifiedType: const FullType(CommentPageAllOfCapabilities),
+      );
+    }
+    if (object.revalidatedItems != null) {
+      yield r'revalidatedItems';
+      yield serializers.serialize(
+        object.revalidatedItems,
+        specifiedType: const FullType(BuiltList, [FullType(Comment)]),
       );
     }
     if (object.refreshCursor != null) {
@@ -115,6 +127,13 @@ class _$CommentPageSerializer implements PrimitiveSerializer<CommentPage> {
             specifiedType: const FullType(CommentPageAllOfCapabilities),
           ) as CommentPageAllOfCapabilities;
           result.capabilities.replace(valueDes);
+          break;
+        case r'revalidatedItems':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(Comment)]),
+          ) as BuiltList<Comment>;
+          result.revalidatedItems.replace(valueDes);
           break;
         case r'refreshCursor':
           final valueDes = serializers.deserialize(

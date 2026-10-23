@@ -204,7 +204,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **postsCommentsList**
-> CommentPage postsCommentsList(postId, cursor, limit, view, sort, conversationId, targetId, refresh)
+> CommentPage postsCommentsList(postId, cursor, limit, view, sort, conversationId, targetId, refresh, revalidateIds, revalidationOnly)
 
 List publicly visible comments
 
@@ -223,9 +223,11 @@ final String sort = sort_example; // String | Sort top-level conversations. Repl
 final String conversationId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final String targetId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String | Resolve one exact visible comment and its canonical conversation; cannot be combined with a cursor.
 final bool refresh = true; // bool | Start a fresh reply snapshot after the supplied tail cursor. Requires conversationId.
+final String revalidateIds = revalidateIds_example; // String | Comma-separated cached reply UUIDs, at most 100 per request. Requires conversationId. Returns their current eligible rows independently of the tail cursor.
+final bool revalidationOnly = true; // bool | Return only revalidation data without fetching a new reply page. Requires conversationId and revalidateIds; cannot be combined with a cursor or targetId.
 
 try {
-    final response = api.postsCommentsList(postId, cursor, limit, view, sort, conversationId, targetId, refresh);
+    final response = api.postsCommentsList(postId, cursor, limit, view, sort, conversationId, targetId, refresh, revalidateIds, revalidationOnly);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling PostsApi->postsCommentsList: $e\n');
@@ -244,6 +246,8 @@ Name | Type | Description  | Notes
  **conversationId** | **String**|  | [optional]
  **targetId** | **String**| Resolve one exact visible comment and its canonical conversation; cannot be combined with a cursor. | [optional]
  **refresh** | **bool**| Start a fresh reply snapshot after the supplied tail cursor. Requires conversationId. | [optional]
+ **revalidateIds** | **String**| Comma-separated cached reply UUIDs, at most 100 per request. Requires conversationId. Returns their current eligible rows independently of the tail cursor. | [optional]
+ **revalidationOnly** | **bool**| Return only revalidation data without fetching a new reply page. Requires conversationId and revalidateIds; cannot be combined with a cursor or targetId. | [optional]
 
 ### Return type
 

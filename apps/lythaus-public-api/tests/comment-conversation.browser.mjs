@@ -20,6 +20,17 @@ test('local Flutter web conversations support exact context, chronological repli
       }
       return route.continue();
     });
+    await context.route(target.origin + '/assets/FontManifest.json', async route => {
+      const response = await route.fetch();
+      const manifest = await response.json();
+      const regular = manifest.find(family => family.family === 'Manrope')?.fonts
+        .find(font => font.asset.endsWith('Manrope-Regular.ttf'));
+      assert.ok(regular, 'Preview requires the bundled Manrope regular font');
+      if (!manifest.some(family => family.family === 'Roboto')) {
+        manifest.push({ family: 'Roboto', fonts: [regular] });
+      }
+      await route.fulfill({ response, json: manifest });
+    });
     const page = await context.newPage();
     const painted = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     page.on('pageerror', error => errors.push(error.message));

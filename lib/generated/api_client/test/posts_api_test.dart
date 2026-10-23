@@ -41,7 +41,7 @@ void main() {
     //
     // Only allowed comments with currently eligible posts and ancestors are returned. Anonymous callers may read public posts; members receive relationship filtering. The conversations view pages top-level comments, newest by default. A conversationId pages its replies chronologically, preserving immediate parentId links at every level while visual depth stays capped at one. Deleted allowed ancestors remain tombstones; hidden or blocked ancestors withhold their descendants. Cursors bind the post, sort, view, conversation and microsecond snapshot. Refresh starts a new root snapshot; refresh=true with a reply tail cursor explicitly checks for newer replies. Most relevant is unavailable until trusted comment usefulness signals are validated.
     //
-    //Future<CommentPage> postsCommentsList(String postId, { String cursor, int limit, String view, String sort, String conversationId, String targetId, bool refresh }) async
+    //Future<CommentPage> postsCommentsList(String postId, { String cursor, int limit, String view, String sort, String conversationId, String targetId, bool refresh, String revalidateIds, bool revalidationOnly }) async
     test('test postsCommentsList', () async {
       // TODO
     });

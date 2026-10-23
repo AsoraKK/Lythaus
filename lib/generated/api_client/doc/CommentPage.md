@@ -10,6 +10,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **nextCursor** | **String** | Opaque cursor for the next page, or null when exhausted. |
 **refreshCursor** | **String** | Reply tail cursor for an explicit check for new replies. | [optional]
+**revalidatedItems** | [**BuiltList&lt;Comment&gt;**](Comment.md) | Authoritative current rows for the requested cached reply IDs. Missing IDs are unavailable; tombstones have no body. Only the signed-in author's eligible pending body may be returned privately. | [optional]
 **capabilities** | [**CommentPageAllOfCapabilities**](CommentPageAllOfCapabilities.md) |  | [optional]
 **items** | [**BuiltList&lt;Comment&gt;**](Comment.md) |  |
 

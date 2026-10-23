@@ -245,10 +245,12 @@ Map<String, dynamic> _conversationPage(
   List<Map<String, dynamic>> items, {
   String? nextCursor,
   String? refreshCursor,
+  List<Map<String, dynamic>>? revalidatedItems,
 }) => {
   'items': items,
   'nextCursor': nextCursor,
   'refreshCursor': refreshCursor,
+  if (revalidatedItems != null) 'revalidatedItems': revalidatedItems,
   'capabilities': {'conversations': true, 'nestedReplies': true},
 };
 
@@ -1792,13 +1794,27 @@ void main() {
           if (request.queryParameters['refresh'] == 'true') {
             expect(request.queryParameters['cursor'], 'reply-tail');
             return _response(
-              _conversationPage([
-                {
-                  ..._comment('late', author: 'other', parent: 'nested'),
-                  'conversationId': 'root',
-                  'createdAt': '2026-10-02T00:00:00Z',
-                },
-              ], refreshCursor: 'new-tail'),
+              _conversationPage(
+                [
+                  {
+                    ..._comment('late', author: 'other', parent: 'nested'),
+                    'conversationId': 'root',
+                    'createdAt': '2026-10-02T00:00:00Z',
+                  },
+                ],
+                refreshCursor: 'new-tail',
+                revalidatedItems: [
+                  {
+                    ..._comment('reply', author: 'other', parent: 'root'),
+                    'conversationId': 'root',
+                  },
+                  {
+                    ..._comment('nested', author: 'other', parent: 'reply'),
+                    'conversationId': 'root',
+                    'createdAt': '2026-10-01T01:00:00Z',
+                  },
+                ],
+              ),
             );
           }
           return _response(
@@ -1907,6 +1923,67 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  for (final revoked in ['blocked', 'under_review', 'deleted']) {
+    testWidgets(
+      'successful new-reply check revalidates a $revoked middle reply',
+      (tester) async {
+        var reads = 0;
+        final middle = {
+          ..._comment('middle', author: 'other', parent: 'root'),
+          'conversationId': 'root',
+        };
+        final child = {
+          ..._comment('child', author: 'other', parent: 'middle'),
+          'conversationId': 'root',
+        };
+        final adapter = _Adapter((request) async {
+          if (request.queryParameters['conversationId'] == 'root') {
+            if (++reads == 1) {
+              return _response(
+                _conversationPage([middle, child], refreshCursor: 'tail'),
+              );
+            }
+            expect(
+              (request.queryParameters['revalidateIds'] as String).split(','),
+              containsAll(['middle', 'child']),
+            );
+            return _response(
+              _conversationPage(
+                [],
+                refreshCursor: 'tail',
+                revalidatedItems: revoked == 'deleted'
+                    ? [
+                        {...middle, 'deleted': true, 'body': null},
+                        child,
+                      ]
+                    : [],
+              ),
+            );
+          }
+          return _response(
+            _conversationPage([
+              {..._comment('root', author: 'other'), 'replyCount': 2},
+            ]),
+          );
+        });
+        await _pump(tester, adapter);
+        await _openComments(tester);
+        await tester.tap(find.byKey(const ValueKey('expand:root')));
+        await tester.pumpAndSettle();
+        expect(find.text('Comment middle'), findsOneWidget);
+        await tester.ensureVisible(find.text('Check for new replies'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Check for new replies'));
+        await tester.pumpAndSettle();
+        expect(find.text('Comment middle'), findsNothing);
+        expect(
+          find.text('Comment child'),
+          revoked == 'deleted' ? findsOneWidget : findsNothing,
+        );
+      },
+    );
+  }
 
   testWidgets(
     'fresh not-found owner receipt removes a previously submitted local comment',
@@ -2101,6 +2178,75 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'a cached notification target is materialized outside the lazy viewport on repeated navigation',
+    (tester) async {
+      final roots = List.generate(
+        25,
+        (index) => _comment(
+          'root${index.toString().padLeft(2, '0')}',
+          author: 'other',
+        ),
+      );
+      final adapter = _Adapter(
+        (request) async => _response(
+          _conversationPage(
+            request.queryParameters['targetId'] != null
+                ? roots
+                      .where(
+                        (row) =>
+                            row['id'] == request.queryParameters['targetId'],
+                      )
+                      .toList()
+                : roots,
+          ),
+        ),
+      );
+      await _pump(tester, adapter, initialCommentId: 'root00');
+      for (var visit = 0; visit < 2; visit++) {
+        await _openComments(tester);
+        expect(find.text('Comment root00').hitTestable(), findsOneWidget);
+        final list = tester
+            .widget<ListView>(find.byType(ListView).first)
+            .controller!;
+        expect(list.offset, greaterThan(0));
+        final row = tester.getRect(find.text('Comment root00'));
+        final viewport = tester.getRect(find.byType(ListView).first);
+        expect(row.top, greaterThanOrEqualTo(viewport.top));
+        expect(row.bottom, lessThanOrEqualTo(viewport.bottom));
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final status in [404, 500]) {
+    testWidgets('exact-target denial $status handles cached content honestly', (
+      tester,
+    ) async {
+      final adapter = _Adapter((request) async {
+        if (request.queryParameters['targetId'] != null) {
+          return _response({'error': 'post_not_found'}, status);
+        }
+        return _response(
+          _conversationPage([_comment('cached', author: 'other')]),
+        );
+      });
+      await _pump(tester, adapter, initialCommentId: 'unavailable');
+      await _openComments(tester);
+      expect(
+        find.text('Comment cached'),
+        status == 404 ? findsNothing : findsOneWidget,
+      );
+      expect(
+        find.text('This post is unavailable.'),
+        status == 404 ? findsOneWidget : findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   for (final status in [401, 403, 404]) {
     testWidgets(

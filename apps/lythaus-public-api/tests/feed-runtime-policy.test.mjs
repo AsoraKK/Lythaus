@@ -31,7 +31,7 @@ test('public feed surfaces receive only their bounded cache policy', () => {
     privateResponse: false, cacheControl: 'public, max-age=15, s-maxage=15',
   });
   assert.deepEqual(feedResponsePlan('comments', false), {
-    privateResponse: true, cacheControl: 'private, no-store',
+    privateResponse: false, cacheControl: 'public, max-age=10, s-maxage=10',
   });
 });
 

@@ -47,6 +47,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   final _replyPages = <String, _ReplyPageState>{};
   final _commentKeys = <String, GlobalKey>{};
   String? _contextHighlightId;
+  int _navigationEpoch = 0;
   String? _nextCursor;
   bool _isInitialLoading = true;
   bool _isLoadingMore = false;
@@ -448,6 +449,8 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     String? cursor,
     String? conversationId,
     String? targetId,
+    List<String> revalidateIds = const [],
+    bool revalidationOnly = false,
     bool refresh = false,
   }) async {
     final dio = ref.read(secureDioProvider);
@@ -461,6 +464,8 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         if (cursor != null) 'cursor': cursor,
         if (conversationId != null) 'conversationId': conversationId,
         if (targetId != null) 'targetId': targetId,
+        if (revalidateIds.isNotEmpty) 'revalidateIds': revalidateIds.join(','),
+        if (revalidationOnly) 'revalidationOnly': 'true',
         if (refresh) 'refresh': 'true',
       },
       options: Options(
@@ -489,6 +494,26 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     }
 
     final capabilities = data['capabilities'];
+    final rawRevalidated = data['revalidatedItems'];
+    if (revalidateIds.isNotEmpty && rawRevalidated is! List) {
+      throw const FormatException('Reply visibility was not revalidated');
+    }
+    final validated = rawRevalidated is List
+        ? rawRevalidated
+              .map(
+                (row) => _ThreadComment.fromJson(
+                  Map<String, dynamic>.from(row as Map),
+                ),
+              )
+              .toList()
+        : const <_ThreadComment>[];
+    if (validated.any(
+      (row) =>
+          !revalidateIds.contains(row.id) ||
+          row.conversationId != conversationId,
+    )) {
+      throw const FormatException('Reply revalidation scope does not match');
+    }
     return _CommentsPage(
       items: items,
       nextCursor: nextCursor,
@@ -497,6 +522,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
           capabilities is Map && capabilities['conversations'] == true,
       nestedReplies:
           capabilities is Map && capabilities['nestedReplies'] == true,
+      revalidatedItems: validated,
     );
   }
 
@@ -509,6 +535,19 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     final epoch = _loadEpoch;
     final mutationEpoch = _mutationEpoch;
     final cursor = checkNew ? previous.refreshCursor : previous.nextCursor;
+    final cached = _mergeComments(
+      previous.items,
+      _comments
+          .where(
+            (item) =>
+                item.parentCommentId != null &&
+                item.conversationId == conversationId,
+          )
+          .toList(),
+    );
+    final ids = cached.map((item) => item.id).toList();
+    final checked = <String>{};
+    final revalidated = <_ThreadComment>[];
     setState(() {
       _expandedConversations.add(conversationId);
       _replyPages[conversationId] = previous..loading = true;
@@ -519,17 +558,30 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         cursor: cursor,
         conversationId: conversationId,
         refresh: checkNew,
+        revalidateIds: ids.take(100).toList(),
       );
       if (!mounted || epoch != _loadEpoch || mutationEpoch != _mutationEpoch) {
         return;
       }
-      setState(() {
-        previous.items = _mergeComments(
-          previous.items,
-          page.items,
-          chronological: true,
+      checked.addAll(ids.take(100));
+      revalidated.addAll(page.revalidatedItems);
+      for (var offset = 100; offset < ids.length; offset += 100) {
+        final chunk = ids.skip(offset).take(100).toList();
+        final validation = await _fetchComments(
+          conversationId: conversationId,
+          revalidateIds: chunk,
+          revalidationOnly: true,
         );
-        _comments = _mergeComments(_comments, page.items);
+        if (!mounted ||
+            epoch != _loadEpoch ||
+            mutationEpoch != _mutationEpoch) {
+          return;
+        }
+        checked.addAll(chunk);
+        revalidated.addAll(validation.revalidatedItems);
+      }
+      setState(() {
+        _applyReplyRevalidation(previous, checked, revalidated, page.items);
         previous.nextCursor = page.nextCursor;
         previous.refreshCursor = page.refreshCursor ?? previous.refreshCursor;
         previous.loaded = true;
@@ -540,6 +592,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         return;
       }
       setState(() {
+        _applyReplyRevalidation(previous, checked, revalidated, const []);
         previous.loading = false;
         previous.error = 'Unable to load replies. Please try again.';
         _clearUnavailableComments(error);
@@ -553,6 +606,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         return;
       }
       setState(() {
+        _applyReplyRevalidation(previous, checked, revalidated, const []);
         previous.loading = false;
         previous.error = 'Unable to load replies. Please try again.';
       });
@@ -560,6 +614,51 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       if (mounted && epoch == _loadEpoch && previous.loading) {
         setState(() => previous.loading = false);
       }
+    }
+  }
+
+  void _applyReplyRevalidation(
+    _ReplyPageState page,
+    Set<String> checked,
+    List<_ThreadComment> validated,
+    List<_ThreadComment> added,
+  ) {
+    final current = {for (final item in validated) item.id: item};
+    final removed = checked.difference(current.keys.toSet());
+    final hiddenAncestors = {
+      ...removed,
+      for (final item in validated)
+        if (item.moderationState != 'allowed') item.id,
+    };
+    var changed = true;
+    while (changed) {
+      changed = false;
+      for (final item in [..._comments, ...page.items, ...added]) {
+        if (hiddenAncestors.contains(item.parentCommentId) &&
+            removed.add(item.id)) {
+          hiddenAncestors.add(item.id);
+          changed = true;
+        }
+      }
+    }
+    _comments = _mergeComments(
+      _comments.where((item) => !removed.contains(item.id)).toList(),
+      [
+        ...validated,
+        ...added,
+      ].where((item) => !removed.contains(item.id)).toList(),
+    );
+    page.items = _mergeComments(
+      page.items.where((item) => !removed.contains(item.id)).toList(),
+      [
+        ...validated,
+        ...added,
+      ].where((item) => !removed.contains(item.id)).toList(),
+      chronological: true,
+    );
+    if (removed.contains(_replyTarget?.id)) {
+      _pendingParentId ??= _replyTarget?.id;
+      _replyTarget = null;
     }
   }
 
@@ -583,7 +682,13 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
 
   Future<void> _revealComment(String targetId) async {
     final epoch = _loadEpoch;
-    var revealAtEnd = false;
+    final navigation = ++_navigationEpoch;
+    var rootId =
+        _comments
+            .where((item) => item.id == targetId)
+            .firstOrNull
+            ?.conversationId ??
+        targetId;
     try {
       if (_commentKeys[targetId]?.currentContext == null) {
         final targetPage = await _fetchComments(targetId: targetId);
@@ -594,44 +699,80 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         if (target == null) {
           throw const FormatException('Unavailable reply target');
         }
-        final rootId = target.conversationId ?? target.id;
+        rootId = target.conversationId ?? target.id;
         final rootPage = _comments.any((item) => item.id == rootId)
             ? null
             : await _fetchComments(targetId: rootId);
         if (!mounted || epoch != _loadEpoch) return;
-        revealAtEnd = rootPage != null;
         setState(() {
           _comments = _mergeComments(_comments, [...?rootPage?.items, target]);
-          _expandedConversations.add(rootId);
+          if (target.parentCommentId != null) {
+            _expandedConversations.add(rootId);
+          }
         });
       }
-      if (!mounted || epoch != _loadEpoch) return;
-      setState(() => _contextHighlightId = targetId);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || epoch != _loadEpoch) return;
-        void reveal() {
-          if (!mounted || epoch != _loadEpoch) return;
-          final targetContext = _commentKeys[targetId]?.currentContext;
-          if (targetContext != null) {
-            unawaited(
-              Scrollable.ensureVisible(
-                targetContext,
-                duration: const Duration(milliseconds: 200),
-                alignment: 0.15,
-              ),
-            );
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted || epoch != _loadEpoch || navigation != _navigationEpoch) {
+        return;
+      }
+      final rows = _topLevelComments();
+      final index = rows.indexWhere((item) => item.id == rootId);
+      if (_commentKeys[targetId]?.currentContext == null &&
+          index >= 0 &&
+          _scrollController.hasClients) {
+        final fraction = rows.length <= 1 ? 0.0 : index / (rows.length - 1);
+        _scrollController.jumpTo(
+          _scrollController.position.maxScrollExtent * fraction,
+        );
+      }
+      for (var attempt = 0; attempt < 64; attempt++) {
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted || epoch != _loadEpoch || navigation != _navigationEpoch) {
+          return;
+        }
+        final targetContext = _commentKeys[targetId]?.currentContext;
+        if (targetContext != null && targetContext.mounted) {
+          await Scrollable.ensureVisible(
+            targetContext,
+            duration: const Duration(milliseconds: 200),
+            alignment: 0.15,
+          );
+          if (!mounted ||
+              epoch != _loadEpoch ||
+              navigation != _navigationEpoch) {
+            return;
           }
+          setState(() => _contextHighlightId = targetId);
+          return;
         }
-
-        if (revealAtEnd && _scrollController.hasClients) {
-          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-          WidgetsBinding.instance.addPostFrameCallback((_) => reveal());
-        } else {
-          reveal();
-        }
-      });
-    } catch (_) {
-      if (!mounted || epoch != _loadEpoch) return;
+        if (!_scrollController.hasClients || index < 0) break;
+        final built = [
+          for (var position = 0; position < rows.length; position++)
+            if (_commentKeys[rows[position].id]?.currentContext != null)
+              position,
+        ];
+        final direction = built.isNotEmpty && index < built.first ? -1 : 1;
+        final scroll = _scrollController.position;
+        final next =
+            (scroll.pixels + direction * scroll.viewportDimension * 0.8)
+                .clamp(0.0, scroll.maxScrollExtent)
+                .toDouble();
+        if (next == scroll.pixels) break;
+        _scrollController.jumpTo(next);
+      }
+      throw const FormatException('Reply target could not be revealed');
+    } catch (error) {
+      if (!mounted || epoch != _loadEpoch || navigation != _navigationEpoch) {
+        return;
+      }
+      if (error is DioException &&
+          [401, 403, 404].contains(error.response?.statusCode)) {
+        setState(() {
+          _clearUnavailableComments(error);
+          _errorMessage = _messageForCommentsFailure(error);
+          _retryAction = _loadInitial;
+        });
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('This reply target is unavailable.')),
       );
@@ -1095,6 +1236,8 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
 
   void _clearUnavailableComments(DioException error) {
     if (![401, 403, 404].contains(error.response?.statusCode)) return;
+    ++_loadEpoch;
+    ++_navigationEpoch;
     _comments = const [];
     _replyPages.clear();
     _expandedConversations.clear();
@@ -1266,12 +1409,12 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     );
   }
 
-  Widget _buildCommentList() {
+  List<_ThreadComment> _topLevelComments() {
     final roots = _comments
         .where((comment) => comment.parentCommentId == null)
         .map((comment) => comment.id)
         .toSet();
-    final comments = _conversationMode
+    return _conversationMode
         ? _comments
               .where(
                 (comment) =>
@@ -1280,6 +1423,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
               )
               .toList()
         : _comments;
+  }
+
+  Widget _buildCommentList() {
+    final comments = _topLevelComments();
     if (_isInitialLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -1290,13 +1437,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         child: ListView(
           children: [
             const SizedBox(height: 120),
-            Center(
-              child: Text(
-                _errorMessage != null
-                    ? 'Comments are unavailable.'
-                    : 'No comments yet. Be the first to reply.',
+            if (_errorMessage == null)
+              const Center(
+                child: Text('No comments yet. Be the first to reply.'),
               ),
-            ),
           ],
         ),
       );
@@ -1729,6 +1873,7 @@ class _CommentsPage {
     this.refreshCursor,
     this.conversations = false,
     this.nestedReplies = false,
+    this.revalidatedItems = const [],
   });
 
   final List<_ThreadComment> items;
@@ -1736,6 +1881,7 @@ class _CommentsPage {
   final String? refreshCursor;
   final bool conversations;
   final bool nestedReplies;
+  final List<_ThreadComment> revalidatedItems;
 }
 
 class _ReplyPageState {
