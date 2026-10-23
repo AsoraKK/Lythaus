@@ -265,17 +265,23 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
                           style: Theme.of(context).textTheme.headlineSmall
                               ?.copyWith(fontWeight: FontWeight.w600),
                         ),
-                        if (isRestoringSession) ...[
-                          SizedBox(height: context.spacing.sm),
-                          Semantics(
-                            liveRegion: true,
-                            child: const Text(
-                              'Checking your session…',
-                              textAlign: TextAlign.center,
+                        Visibility(
+                          visible: isRestoringSession,
+                          maintainSize: true,
+                          maintainState: true,
+                          maintainAnimation: true,
+                          child: Padding(
+                            padding: EdgeInsets.only(top: context.spacing.sm),
+                            child: Semantics(
+                              liveRegion: true,
+                              child: const Text(
+                                'Checking your session…',
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
-                        ],
-                        SizedBox(height: context.spacing.xxl),
+                        ),
+                        SizedBox(height: context.spacing.lg),
                         TextField(
                           controller: _emailController,
                           enabled: !isBusy,

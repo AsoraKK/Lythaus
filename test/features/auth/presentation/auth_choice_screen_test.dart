@@ -238,11 +238,20 @@ void main() {
     await tester.pump();
     expect(find.text('Checking your session…'), findsOneWidget);
     expect(find.text('Signing in…'), findsNothing);
+    final emailBefore = tester.getRect(find.widgetWithText(TextField, 'Email'));
     await tester.tap(find.text('Sign in with email'));
     verifyNever(() => auth.loginWithEmail(any(), any()));
     restoration.complete(null);
     await tester.pumpAndSettle();
-    expect(find.text('Checking your session…'), findsNothing);
+    expect(find.text('Checking your session…').hitTestable(), findsNothing);
+    final semantics = tester.ensureSemantics();
+    try {
+      await tester.pump();
+      expect(find.semantics.byLabel('Checking your session…'), findsNothing);
+    } finally {
+      semantics.dispose();
+    }
+    expect(tester.getRect(find.widgetWithText(TextField, 'Email')), emailBefore);
     await tester.tap(find.text('Sign in with email'));
     await tester.pumpAndSettle();
     expect(
