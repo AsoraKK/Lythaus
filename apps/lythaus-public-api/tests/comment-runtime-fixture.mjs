@@ -14,12 +14,19 @@ export async function commentRuntimeFixture(connectionString, bindings) {
   const root = fileURLToPath(new URL('../../../', import.meta.url));
   const clients = new Map(), statements = [];
   let sequence = 0, failNotification = false;
+  const requireAppliedHooks = process.env.COMMENT_REQUIRE_APPLIED_HOOKS === 'true';
+  const sourceFor = (path, marker, integrate) => {
+    const source = readFileSync(path, 'utf8');
+    if (!requireAppliedHooks) return integrate(source);
+    assert.ok(source.includes(marker), 'Actual applied comment hooks are required');
+    return source;
+  };
   const bundle = await build({ absWorkingDir: root, bundle: true, write: false,
     format: 'esm', platform: 'node', target: 'es2022', external: ['cloudflare:workers'],
     banner: { js: "import { createRequire } from 'node:module'; const require = createRequire('file:///fixture.mjs');" },
     plugins: [{ name: 'comment-integration-local', setup(builder) {
-      builder.onLoad({ filter: /apps\/lythaus-public-api\/src\/index\.ts$/ }, args => ({ loader: 'ts', contents: integratePublicApiComments(readFileSync(args.path, 'utf8')) }));
-      builder.onLoad({ filter: /apps\/lythaus-jobs\/src\/index\.ts$/ }, args => ({ loader: 'ts', contents: integrateJobsCommentNotifications(readFileSync(args.path, 'utf8')) + '\nexport { processNotificationSource as fixtureNotification };' }));
+      builder.onLoad({ filter: /apps\/lythaus-public-api\/src\/index\.ts$/ }, args => ({ loader: 'ts', contents: sourceFor(args.path, 'const body = await readCommentThread(', integratePublicApiComments) }));
+      builder.onLoad({ filter: /apps\/lythaus-jobs\/src\/index\.ts$/ }, args => ({ loader: 'ts', contents: sourceFor(args.path, 'await client.query(commentNotificationRevisionLockQuery, [eventId]);', integrateJobsCommentNotifications) + '\nexport { processNotificationSource as fixtureNotification };' }));
       builder.onResolve({ filter: /^@lythaus\/db$/ }, () => ({ path: 'database', namespace: 'comment-postgres' }));
       builder.onLoad({ filter: /.*/, namespace: 'comment-postgres' }, () => ({ resolveDir: root, contents: `
         export * from './packages/db/src/index.ts';
