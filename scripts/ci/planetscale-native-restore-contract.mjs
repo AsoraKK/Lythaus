@@ -123,7 +123,10 @@ export class RestoreApi {
     requireThat(response.status >= 200 && response.status < 300,
       [401, 403].includes(response.status) ? 'provider_access_denied' : 'provider_request_failed',
       method === 'GET' || [400, 401, 403, 404, 409, 422].includes(response.status) ? 'DENIED' : 'UNKNOWN_MUTATION_OUTCOME');
-    if (response.status === 204) return null;
+    if (response.status === 204) {
+      requireThat(method === 'DELETE', 'provider_response_invalid', method === 'GET' ? 'BLOCKED' : 'UNKNOWN_MUTATION_OUTCOME');
+      return null;
+    }
     let size = 0; const chunks = [];
     try {
       for await (const chunk of response.body) { size += chunk.byteLength; if (size > 1048576) throw new Error(); chunks.push(chunk); }

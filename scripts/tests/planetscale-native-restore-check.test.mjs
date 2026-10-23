@@ -70,7 +70,28 @@ function fixture(mode = '') {
         if (mode === 'binding_mismatch' && created) b.restored_branches = [{ id: 'other', name: RESTORE.target }];
         return b;
       }
-      if (path === `/branches/${RESTORE.target}`) return deleted && options.absent ? null : target();
+      if (path === `/branches/${RESTORE.target}`) {
+        if (!deleted || !options.absent) return target();
+        const deletedRecord = { ...target(), deleted_at: '2026-10-23T17:00:00.000Z' };
+        if (mode === 'cleanup_deleted_record') return deletedRecord;
+        if (mode === 'cleanup_deleted_at_missing') { delete deletedRecord.deleted_at; return deletedRecord; }
+        if (mode === 'cleanup_deleted_at_null') return { ...deletedRecord, deleted_at: null };
+        if (mode === 'cleanup_deleted_at_malformed') return { ...deletedRecord, deleted_at: 'not-a-date' };
+        if (mode === 'cleanup_deleted_at_wrong_type') return { ...deletedRecord, deleted_at: 12345 };
+        if (mode === 'cleanup_deleted_at_impossible') return { ...deletedRecord, deleted_at: '2026-02-30T17:00:00.000Z' };
+        if (mode === 'cleanup_deleted_at_future') return { ...deletedRecord, deleted_at: '2026-10-23T17:01:00.000Z' };
+        if (mode === 'cleanup_deleted_at_before_run') return { ...deletedRecord, deleted_at: '2026-10-22T17:00:00.000Z' };
+        if (mode === 'cleanup_wrong_id') return { ...deletedRecord, id: 'replacedtarget' };
+        if (mode === 'cleanup_wrong_name') return { ...deletedRecord, name: 'main' };
+        if (mode === 'cleanup_wrong_source') return { ...deletedRecord, restored_from_branch: { id: 'differentbranch' } };
+        if (mode === 'cleanup_wrong_kind') return { ...deletedRecord, kind: 'mysql' };
+        if (mode === 'cleanup_default_branch') return { ...deletedRecord, default: true };
+        if (mode === 'cleanup_get_204') {
+          const transport = new RestoreApi('fixture-id:fixture-token', async () => new Response(null, { status: 204 }));
+          return transport.request(path, { absent: true });
+        }
+        return null;
+      }
       throw new Error(`unexpected synthetic path ${path}`);
     },
   };
@@ -134,6 +155,24 @@ test('lost DELETE acknowledgment is reconciled read-only, never repeated', async
   assert.equal(report.cleanup, 'DELETED_READBACK_VERIFIED_ACK_UNCERTAIN');
   assert.equal(f.calls.filter(value => value.startsWith('DELETE')).length, 1);
 });
+test('cleanup also accepts a validated deletion timestamp for the exact owned target identity', async () => {
+  const f = fixture('cleanup_deleted_record'), report = await runNativeRestore(f.options);
+  assert.equal(report.cleanup, 'DELETED_AND_READBACK_VERIFIED');
+  assert.equal(report.status, 'TARGET_CHECKS_PASSED_REVIEW_REQUIRED');
+  assert.equal(f.calls.filter(value => value.startsWith('DELETE')).length, 1);
+});
+for (const mode of ['cleanup_deleted_at_missing', 'cleanup_deleted_at_null', 'cleanup_deleted_at_malformed',
+  'cleanup_deleted_at_wrong_type', 'cleanup_deleted_at_impossible', 'cleanup_deleted_at_future', 'cleanup_deleted_at_before_run',
+  'cleanup_wrong_id', 'cleanup_wrong_name', 'cleanup_wrong_source', 'cleanup_wrong_kind', 'cleanup_default_branch', 'cleanup_get_204']) {
+  test(`cleanup remains unresolved with no repeated mutation: ${mode}`, async () => {
+    const f = fixture(mode), report = await runNativeRestore(f.options);
+    assert.equal(report.cleanup, 'FAILED_OR_UNCERTAIN_MANUAL_OPERATOR_REQUIRED');
+    assert.equal(report.status, 'CLEANUP_INCOMPLETE_BILLING_MAY_CONTINUE');
+    assert.ok(report.blockers.includes(mode === 'cleanup_get_204' ? 'provider_response_invalid' : 'cleanup_deletion_not_confirmed'));
+    assert.equal(f.calls.filter(value => value.startsWith('DELETE')).length, 1);
+    assert.equal(f.calls.filter(value => /^(POST|PATCH) /.test(value)).length, 7);
+  });
+}
 test('only proven missing named extensions are installed', async () => {
   const f = fixture('missing_extensions'); assert.equal((await runNativeRestore(f.options)).status, 'TARGET_CHECKS_PASSED_REVIEW_REQUIRED');
   assert.equal(f.calls.filter(value => value.startsWith('INSTALL')).length, 1);
@@ -174,6 +213,19 @@ test('provider transport refuses redirects, denied/oversized responses and unkno
   const redirect = new RestoreApi('fixture-id:fixture-token', async () => ({ status: 201, redirected: true }));
   await assert.rejects(() => redirect.request('/branches', { method: 'POST', body: CREATE_TARGET_BODY }),
     error => error.code === 'provider_redirect_rejected' && error.outcome === 'UNKNOWN_MUTATION_OUTCOME');
+});
+test('only an explicit absent GET 404 is translated to null; GET 204 or null JSON is never deletion evidence', async () => {
+  const path = `/branches/${RESTORE.target}`;
+  let calls = 0;
+  const api = response => new RestoreApi('fixture-id:fixture-token', async () => { calls++; return response; });
+  assert.equal(await api(new Response(null, { status: 404 })).request(path, { absent: true }), null);
+  await assert.rejects(() => api(new Response(null, { status: 404 })).request(path), /provider_request_failed/);
+  for (const absent of [false, true]) {
+    await assert.rejects(() => api(new Response(null, { status: 204 })).request(path, { absent }), /provider_response_invalid/);
+    await assert.rejects(() => api(Response.json(null)).request(path, { absent }), /provider_response_invalid/);
+  }
+  assert.equal(await api(new Response(null, { status: 204 })).request(path, { method: 'DELETE' }), null);
+  assert.equal(calls, 7);
 });
 test('provider permissions require existing database scope, not a branch-specific or differently named resource', async () => {
   for (const resource of [{ id: RESTORE.sourceId, name: 'main', type: 'Branch' },

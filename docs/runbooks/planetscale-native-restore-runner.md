@@ -175,6 +175,9 @@ Cleanup independently rechecks the acknowledged new ID, fixed name, source
 branch and backup's restored-target list. It cannot delete main, a preexisting
 target, a replacement ID, a protected target or a guessed resource. DELETE is
 sent once, then read-only absence is checked even if acknowledgment was lost.
+Only an explicit GET 404 or a valid UTC deletion timestamp for the exact owned
+identity confirms cleanup. GET 204, omitted/malformed timestamps and changed
+identities keep cleanup unresolved and potentially billable.
 It never retries a denied/uncertain DELETE. Failed binding, failed cleanup,
 cancelled jobs, runner crashes, API outages and artifact failures require the
 named operator to inspect the provider and stop ongoing charges. A software

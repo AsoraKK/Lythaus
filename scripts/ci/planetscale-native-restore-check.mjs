@@ -159,7 +159,15 @@ export async function runNativeRestore({ environment = process.env, api, now = D
         let deleteError;
         try { await api.request(targetPath, { method: 'DELETE' }); } catch (error) { deleteError = error; }
         const remaining = await api.request(targetPath, { absent: true });
-        requireThat(remaining === null || (remaining.id === report.createdTargetId && remaining.deleted_at !== null), 'cleanup_deletion_not_confirmed');
+        const deletedAt = remaining?.deleted_at;
+        const deletedTime = typeof deletedAt === 'string' ? Date.parse(deletedAt) : NaN;
+        const deletedRecord = remaining?.id === report.createdTargetId && remaining.name === RESTORE.target
+          && remaining.kind === 'postgresql' && remaining.default === false
+          && remaining.restored_from_branch?.id === RESTORE.sourceId
+          && typeof deletedAt === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/.test(deletedAt)
+          && Number.isFinite(deletedTime) && deletedTime >= started && deletedTime <= now()
+          && new Date(deletedTime).toISOString().slice(0, 19) === deletedAt.slice(0, 19);
+        requireThat(remaining === null || deletedRecord, 'cleanup_deletion_not_confirmed');
         report.cleanup = deleteError ? 'DELETED_READBACK_VERIFIED_ACK_UNCERTAIN' : 'DELETED_AND_READBACK_VERIFIED';
       } catch (error) {
         report.cleanup = 'FAILED_OR_UNCERTAIN_MANUAL_OPERATOR_REQUIRED'; report.blockers.push(failureCode(error));
