@@ -45,6 +45,77 @@ async function probe(client, text, values = []) {
   try { return await client.query(text, values); } catch { fail('catalog_probe_failed'); }
 }
 
+async function inspectAclSnapshot(client, requirement, relation) {
+  const columns = [...new Set(Object.values(requirement.columns).flat())];
+  const rows = (await probe(client, `WITH target AS (
+      SELECT relation.oid, relation.relowner, relation.relacl,
+        namespace.oid AS schema_oid, namespace.nspowner, namespace.nspacl
+      FROM pg_catalog.pg_class relation
+      JOIN pg_catalog.pg_namespace namespace ON namespace.oid = relation.relnamespace
+      WHERE namespace.nspname = $1 AND relation.relname = $2 AND relation.oid = $3::oid
+        AND relation.relkind IN ('r', 'p')
+    ), acl_objects AS (
+      SELECT 'schema'::text AS kind, NULL::text AS column_name, NULL::smallint AS attribute_number,
+        schema_oid AS object_oid, nspowner AS owner_oid, nspacl AS acl FROM target
+      UNION ALL
+      SELECT 'table', NULL, NULL, oid, relowner, relacl FROM target
+      UNION ALL
+      SELECT 'column', attribute.attname, attribute.attnum, target.oid, target.relowner, attribute.attacl
+      FROM target JOIN pg_catalog.pg_attribute attribute ON attribute.attrelid = target.oid
+      WHERE attribute.attnum > 0 AND NOT attribute.attisdropped AND attribute.attname = ANY($4::text[])
+    )
+    SELECT object.kind, object.column_name, object.attribute_number, object.object_oid, object.owner_oid,
+      pg_catalog.pg_get_userbyid(object.owner_oid) AS owner, object.acl IS NULL AS acl_is_null,
+      entry.grantor AS grantor_oid, pg_catalog.pg_get_userbyid(entry.grantor) AS grantor,
+      entry.grantee AS grantee_oid,
+      CASE WHEN entry.grantee = 0 THEN 'PUBLIC' ELSE pg_catalog.pg_get_userbyid(entry.grantee) END AS grantee,
+      entry.privilege_type AS privilege, entry.is_grantable
+    FROM acl_objects object LEFT JOIN LATERAL pg_catalog.aclexplode(object.acl) entry ON true
+    ORDER BY object.kind, object.column_name, entry.grantor, entry.grantee, entry.privilege_type
+    LIMIT 513`, [requirement.schema, requirement.relation, relation.oid, columns])).rows;
+  const expected = ['schema', 'table', ...columns.map(column => `column:${column}`)];
+  const snapshots = new Map();
+  const oid = value => Number.isSafeInteger(value) && value > 0 && value <= 4294967295;
+  const privileges = { schema: ['USAGE', 'CREATE'], table: ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER', 'MAINTAIN'],
+    column: ['SELECT', 'INSERT', 'UPDATE', 'REFERENCES'] };
+  const invalid = () => fail('relation_acl_metadata_unavailable');
+  if (rows.length > 512) invalid();
+  for (const row of rows) {
+    const key = row.kind === 'column' ? `column:${row.column_name}` : row.kind;
+    if (!expected.includes(key) || !oid(row.object_oid) || !oid(row.owner_oid) || !safeRole(row.owner)
+      || typeof row.acl_is_null !== 'boolean'
+      || (row.kind === 'column' ? !Number.isInteger(row.attribute_number) || row.attribute_number <= 0
+        : row.column_name !== null || row.attribute_number !== null)
+      || (row.kind !== 'schema' && (row.object_oid !== relation.oid || row.owner !== relation.owner))) invalid();
+    const metadata = { kind: row.kind, ...(row.kind === 'column' ? { column: row.column_name, attributeNumber: row.attribute_number } : {}),
+      objectOid: row.object_oid, ownerOid: row.owner_oid, owner: row.owner, aclIsNull: row.acl_is_null };
+    let snapshot = snapshots.get(key);
+    if (!snapshot) { snapshot = { metadata, entries: [], seen: new Set(), empty: false }; snapshots.set(key, snapshot); }
+    if (JSON.stringify(snapshot.metadata) !== JSON.stringify(metadata) || snapshot.empty) invalid();
+    const fields = ['grantor_oid', 'grantor', 'grantee_oid', 'grantee', 'privilege', 'is_grantable'];
+    if (fields.every(field => row[field] === null)) {
+      if (snapshot.entries.length) invalid();
+      snapshot.empty = true;
+      continue;
+    }
+    if (row.acl_is_null || !oid(row.grantor_oid) || !safeRole(row.grantor)
+      || !(oid(row.grantee_oid) || row.grantee_oid === 0) || !safeRole(row.grantee)
+      || (row.grantee_oid === 0 && row.grantee !== 'PUBLIC')
+      || !privileges[row.kind].includes(row.privilege) || typeof row.is_grantable !== 'boolean') invalid();
+    const entry = { grantorOid: row.grantor_oid, grantor: row.grantor, granteeOid: row.grantee_oid,
+      grantee: row.grantee, privilege: row.privilege, isGrantable: row.is_grantable };
+    const entryKey = `${entry.grantorOid}:${entry.granteeOid}:${entry.privilege}`;
+    if (snapshot.seen.has(entryKey)) invalid();
+    snapshot.seen.add(entryKey);
+    snapshot.entries.push(entry);
+  }
+  if (snapshots.size !== expected.length) invalid();
+  const tableOwner = snapshots.get('table').metadata.ownerOid;
+  if (columns.some(column => snapshots.get(`column:${column}`).metadata.ownerOid !== tableOwner)
+    || new Set(columns.map(column => snapshots.get(`column:${column}`).metadata.attributeNumber)).size !== columns.length) invalid();
+  return expected.map(key => { const snapshot = snapshots.get(key); return { ...snapshot.metadata, entries: snapshot.entries }; });
+}
+
 export async function inspectProductPrivileges(client, { target, runtimeRole }) {
   await probe(client, "SET statement_timeout = '5000ms'");
   await probe(client, "SET lock_timeout = '1000ms'");
@@ -112,9 +183,11 @@ export async function inspectProductPrivileges(client, { target, runtimeRole }) 
           if (!permitted) missingPrivileges.push({ object: objectName, kind: 'column', column: name, privilege, scope: requirement.scope });
         }
       }
+      const aclSnapshot = requirement.scope === 'proposed_additional' ? await inspectAclSnapshot(client, requirement, row) : null;
       objects.push({ object: objectName, scope: requirement.scope, schemaUsage: row.schema_usage,
         owner: row.owner, effectiveOwner: row.effective_owner, rowSecurity: row.relrowsecurity,
-        forceRowSecurity: row.relforcerowsecurity, policyCount: row.policy_count, tablePrivileges, columns });
+        forceRowSecurity: row.relforcerowsecurity, policyCount: row.policy_count, tablePrivileges, columns,
+        ...(aclSnapshot ? { aclSnapshot } : {}) });
     }
     const defaultFunction = (await probe(client, `SELECT pg_catalog.has_function_privilege(
       $1::oid, 'pg_catalog.now()'::regprocedure, 'EXECUTE') AS permitted`, [role.oid])).rows[0];
@@ -188,7 +261,7 @@ export async function collectProductPrivilegeEvidence({ environment = process.en
       'planetscale_main_branch_read_failed', 'planetscale_main_branch_identity_mismatch', 'hyperdrive_mapping_not_verified',
       'read_only_transaction_not_confirmed', 'verifier_session_target_mismatch', 'mapped_sql_role_not_uniquely_resolved',
       'mapped_sql_role_flags_unavailable', 'mapped_role_memberships_unavailable', 'required_relation_not_uniquely_resolved',
-      'relation_security_metadata_unavailable', 'table_privilege_evidence_unavailable', 'column_privilege_evidence_incomplete',
+      'relation_security_metadata_unavailable', 'relation_acl_metadata_unavailable', 'table_privilege_evidence_unavailable', 'column_privilege_evidence_incomplete',
       'function_privilege_evidence_unavailable', 'catalog_probe_failed'];
     report.blockers.push(allowed.includes(error?.code) ? error.code : 'protected_read_only_preflight_unavailable');
   } finally { if (client) await client.end().catch(() => undefined); }
