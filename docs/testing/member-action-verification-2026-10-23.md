@@ -226,7 +226,7 @@ independent review before integration; it adds no wildcard or admitted path.
 Local validation: 78 OpenAPI contract tests pass (17 existing skips); 1,601
 generated SDK tests pass, including two real two-origin native 303 refusals and
 a successful exact-body/password/receipt round trip; 7 generator/validator
-regressions, 42 homepage-protection tests, 89 inactive action/monthly/session
+regressions, 103 marketing unit tests (44 homepage-protection tests), 89 inactive action/monthly/session
 tests, native TypeScript and diff checks pass. SDK analysis retains 76 existing
 warnings with no errors. Two clean generations produce identical source trees.
 See [contract repair evidence](../evidence/member-verification-20261023/action-contract-repair-validation.txt).
@@ -235,3 +235,14 @@ No reviewed proof, session, account-security UI, migration proposal or monthly
 security calculation is altered. Qualifying credential/coverage production and
 the existing common catalogue action mapping remain activation decisions;
 equal benefit and cumulative 24-hour monthly grace do not invent that mapping.
+
+Head `4049cd4ea99d7997ce3d218c64a0ec41e6d93e11` CI `39996953745`, attempt 1,
+passed OpenAPI but its web unit job `120563560256` caught one remaining exact
+package-command pin. The earlier standalone 42-test marketing pass preceded
+the new SDK generation hook and therefore did not clear those final command
+bytes. The follow-up pins only the two complete new SDK commands, preserving
+their historical baselines, and adds negative tests for removed security steps,
+appended commands/bytes and unknown command names. The complete final marketing
+unit command above passes 103/103, including 44 homepage protection tests, after
+installing the unchanged marketing lockfile in the isolated worktree. SDK and
+production implementation bytes are unchanged by this test-only follow-up.

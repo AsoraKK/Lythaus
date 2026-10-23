@@ -201,15 +201,20 @@ const reviewedOpenApiDartScripts = {
       'openapi-generator-cli generate -g dart-dio -i api/openapi/dist/openapi.json -o lib/generated/api_client --additional-properties=pubName=lythaus_api_client,nullableFields=true,hideGenerationTimestamp=true',
       'node scripts/fix-openapi-dart-nested-builder-assignment.mjs lib/generated/api_client',
       'node scripts/remove-openapi-oauth-support.mjs lib/generated/api_client',
+      'node scripts/protect-openapi-member-verification.mjs lib/generated/api_client',
       'node scripts/trim-trailing-whitespace.js lib/generated/api_client',
       'node scripts/install-openapi-dart-membership-tests.mjs lib/generated/api_client',
     ].join(' && '),
   },
   'openapi:test:dart': {
     baseline: 'node scripts/validate-openapi-dart-client.mjs',
-    reviewed: 'node --test scripts/tests/openapi-dart-nested-builder-assignment.test.mjs && node scripts/validate-openapi-dart-client.mjs',
+    reviewed: 'node --test scripts/tests/openapi-dart-nested-builder-assignment.test.mjs scripts/tests/openapi-member-verification-transport.test.mjs && node scripts/validate-openapi-dart-client.mjs',
   },
 };
+function assertExactOpenApiDartScript(name, source) {
+  assert.ok(Object.hasOwn(reviewedOpenApiDartScripts, name), 'Only explicitly pinned SDK commands are admitted');
+  assert.equal(source, reviewedOpenApiDartScripts[name].reviewed, `${name} must match the exact SDK normalization and verification transport command`);
+}
 function assertSpectralAdapterReference(dependencies) {
   assert.equal(dependencies['fast-glob'], reviewedSpectralAdapter, 'Spectral must use the exact reviewed local adapter');
 }
@@ -815,7 +820,7 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
       before.overrides['concurrently@10.0.5'] = { 'shell-quote': '1.11.0' };
       for (const [name, scripts] of Object.entries(reviewedOpenApiDartScripts)) {
         assert.equal(before.scripts[name], scripts.baseline, `${name} baseline must stay pinned`);
-        assert.equal(after.scripts[name], scripts.reviewed, `${name} must match the exact PR896 normalization script`);
+        assertExactOpenApiDartScript(name, after.scripts[name]);
         before.scripts[name] = scripts.reviewed;
       }
       assert.equal(after.overrides['brace-expansion'], '5.0.12');
@@ -945,6 +950,22 @@ test('allocated Jobs registration rejects missing reordered duplicate extra comm
     assert.throws(() => assertOnlyAllocatedJobsDiagnosticRegistration(structuredClone(before), changed), assert.AssertionError);
   }
 });
+
+for (const name of Object.keys(reviewedOpenApiDartScripts)) {
+  test(`${name} allocation rejects missing security steps and arbitrary commands`, () => {
+    const actual = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')).scripts[name];
+    assertExactOpenApiDartScript(name, actual);
+    const step = name === 'openapi:gen:dart'
+      ? 'node scripts/protect-openapi-member-verification.mjs lib/generated/api_client && '
+      : ' scripts/tests/openapi-member-verification-transport.test.mjs';
+    const missing = actual.replace(step, '');
+    assert.notEqual(missing, actual);
+    for (const changed of [missing, actual + ' && node unreviewed.mjs', actual + '\n']) {
+      assert.throws(() => assertExactOpenApiDartScript(name, changed), assert.AssertionError);
+    }
+    assert.throws(() => assertExactOpenApiDartScript('unallocated:command', actual), assert.AssertionError);
+  });
+}
 
 test('allocated Jobs pins reject altered historical and unrelated source paths', () => {
   for (const [filename, expected] of allocatedJobsDiagnosticFiles) {
