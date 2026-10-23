@@ -95,10 +95,31 @@ export async function recordMonthlyPeerParticipation(client: Client, input: {
 }
 
 export async function requireMonthlyPeerIngestionDrained(client: Client, input: {
-  subjectUserId: string; weeklyRulesVersion: string; peerRulesVersion: string; startsAt: string; endsAt: string;
+  subjectUserId: string; weeklyRulesVersion: string; peerRulesVersion?: string; startsAt: string; endsAt: string;
 }): Promise<MonthlyPeerConfiguration | null> {
+  if (!(await client.query('SELECT 1 FROM system.feature_flags WHERE flag_key = $1 AND policy_version = $2',
+    [MONTHLY_PEER_PARTICIPATION_FLAG, MONTHLY_REPUTATION_POLICY_VERSION])).rowCount) return null;
+  const versions = await client.query<{ rules_version: string }>(`SELECT DISTINCT rules.version AS rules_version
+    FROM moderation.community_appeal_valid_participation participation
+    JOIN moderation.community_appeal_ballots ballot ON ballot.id = participation.ballot_id
+    JOIN moderation.community_appeal_sessions session ON session.appeal_id = ballot.appeal_id
+    JOIN trust.monthly_peer_participation_rule_sets rules ON rules.appeal_rules_version = session.rules_version
+    LEFT JOIN trust.monthly_peer_participation_receipts receipt ON receipt.appeal_id = session.appeal_id
+    WHERE ballot.voter_user_id = $1 AND rules.weekly_rules_version = $2 AND rules.policy_version = $5
+      AND rules.catalogue_hash = $6 AND rules.mode = 'shadow' AND rules.award_rule = 'one_valid_final_ballot'
+      AND rules.weekly_points = 250 AND rules.approved_by IS NOT NULL AND rules.approved_at <= clock_timestamp()
+      AND rules.approval_reference IS NOT NULL
+      AND participation.performed_at >= greatest($3::timestamptz, rules.collect_from) AND participation.performed_at < $4
+      AND (receipt.appeal_id IS NULL OR receipt.rules_version = rules.version)`,
+  [input.subjectUserId, input.weeklyRulesVersion, input.startsAt, input.endsAt,
+    MONTHLY_REPUTATION_POLICY_VERSION, MONTHLY_REPUTATION_CATALOGUE_HASH]);
+  if (versions.rows.some(row => row.rules_version !== input.peerRulesVersion)) throw new Error('monthly_assembly_peer_policy_requires_review');
+  if (!input.peerRulesVersion) return null;
   const configuration = await loadMonthlyPeerConfiguration(client, input.peerRulesVersion, input.weeklyRulesVersion, true);
-  if (!configuration) return null;
+  if (!configuration) {
+    if (versions.rowCount) throw new Error('monthly_assembly_peer_policy_requires_review');
+    return null;
+  }
   if (reputationInstant(configuration.collectFrom) >= reputationInstant(input.endsAt)) return null;
   if (!configuration.enabled) throw new Error('monthly_assembly_peer_participation_paused');
   const pending = await client.query(`SELECT 1 FROM moderation.community_appeal_valid_participation participation

@@ -138,6 +138,9 @@ class MonthlyRewardsView {
     required this.currentLevel,
     required this.sourceMonth,
     required this.sourceScore,
+    this.snapshot = const MonthlyLevelSnapshot(state: 'unavailable'),
+    this.selectionState = 'unavailable',
+    this.selectionReasonCode,
   });
 
   final String state;
@@ -146,14 +149,153 @@ class MonthlyRewardsView {
   final int? currentLevel;
   final String? sourceMonth;
   final int? sourceScore;
+  final MonthlyLevelSnapshot snapshot;
+  final String selectionState;
+  final String? selectionReasonCode;
 
-  factory MonthlyRewardsView.fromJson(Map<String, dynamic> json) =>
-      MonthlyRewardsView(
-        state: json['state'] as String? ?? 'pending',
-        reasonCode: json['reasonCode'] as String?,
-        effectiveMonth: json['effectiveMonth'] as String?,
-        currentLevel: (json['currentLevel'] as num?)?.toInt(),
-        sourceMonth: json['sourceMonth'] as String?,
-        sourceScore: (json['sourceScore'] as num?)?.toInt(),
-      );
+  bool get hasConfirmedLevel =>
+      snapshot.isConfirmed &&
+      currentLevel == snapshot.level &&
+      effectiveMonth == snapshot.effectiveMonth &&
+      sourceMonth == snapshot.sourceMonth &&
+      sourceScore == snapshot.sourceScore;
+
+  bool get rewardsReady =>
+      hasConfirmedLevel && state == 'ready' && selectionState == 'ready';
+
+  factory MonthlyRewardsView.fromJson(Map<String, dynamic> json) {
+    final selection = _monthlyObject(json['selection']);
+    return MonthlyRewardsView(
+      state: _monthlyString(json['state']) ?? 'pending',
+      reasonCode: _monthlyString(json['reasonCode']),
+      effectiveMonth: _monthlyMonth(json['effectiveMonth']),
+      currentLevel: _monthlyInteger(json['currentLevel'], 1, 5),
+      sourceMonth: _monthlyMonth(json['sourceMonth']),
+      sourceScore: _monthlyInteger(json['sourceScore'], 0, 13650),
+      snapshot: MonthlyLevelSnapshot.fromResponse(json),
+      selectionState: _monthlyString(selection['state']) ?? 'unavailable',
+      selectionReasonCode: _monthlyString(selection['reasonCode']),
+    );
+  }
+}
+
+class MonthlyLevelSnapshot {
+  const MonthlyLevelSnapshot({
+    required this.state,
+    this.reasonCode,
+    this.effectiveMonth,
+    this.sourceMonth,
+    this.sourceScore,
+    this.level,
+    this.policyVersion,
+    this.maximumSourceMonth,
+    this.preparationOnly = false,
+  });
+
+  final String state;
+  final String? reasonCode;
+  final String? effectiveMonth;
+  final String? sourceMonth;
+  final int? sourceScore;
+  final int? level;
+  final String? policyVersion;
+  final int? maximumSourceMonth;
+  final bool preparationOnly;
+
+  bool get isAssessed =>
+      sourceMonth != null &&
+      effectiveMonth != null &&
+      sourceScore != null &&
+      level != null &&
+      maximumSourceMonth != null;
+
+  bool get isConfirmed =>
+      isAssessed &&
+      state == 'confirmed' &&
+      policyVersion == _monthlyV1Policy &&
+      !preparationOnly;
+
+  bool get isShadow => isAssessed && state == 'shadow';
+
+  factory MonthlyLevelSnapshot.fromResponse(Map<String, dynamic> response) {
+    final prepared =
+        response['responseVersion'] ==
+            'monthly-rewards-response-v2-preparation' &&
+        response['responseKind'] == 'monthly_rewards' &&
+        response['policyVersion'] == _monthlyV2Policy &&
+        response['catalogueHash'] ==
+            '26213abccce99ee51be6c0623406c28aaa7d39ed3ea3b4ac630b7cffd859db67' &&
+        response['dataVersion'] == 2 &&
+        response['preparationOnly'] == true &&
+        response['runtimeActivationAllowed'] == false &&
+        response['appliedPoints'] == 0 &&
+        response['maximumSourceMonth'] == 13650;
+    if (response['responseVersion'] != null && !prepared) {
+      return const MonthlyLevelSnapshot(state: 'unavailable');
+    }
+    final snapshot = _monthlyObject(
+      response[prepared ? 'snapshotProjection' : 'snapshot'],
+    );
+    final policy = prepared
+        ? _monthlyV2Policy
+        : _monthlyString(snapshot['policyVersion']);
+    final maximum = prepared
+        ? 13650
+        : policy == _monthlyV1Policy &&
+              (snapshot['maximumSourceMonth'] == null ||
+                  snapshot['maximumSourceMonth'] == 13500)
+        ? 13500
+        : null;
+    final sourceMonth = _monthlyMonth(snapshot['sourceMonth']);
+    final effectiveMonth = _monthlyMonth(snapshot['effectiveMonth']);
+    final assessed =
+        (snapshot['state'] == 'shadow' || snapshot['state'] == 'confirmed') &&
+        snapshot['levelKind'] == null &&
+        maximum != null &&
+        sourceMonth != null &&
+        effectiveMonth == _followingMonthlyMonth(sourceMonth) &&
+        effectiveMonth == _monthlyMonth(response['effectiveMonth']);
+    return MonthlyLevelSnapshot(
+      state: _monthlyString(snapshot['state']) ?? 'unavailable',
+      reasonCode: _monthlyString(snapshot['reasonCode']),
+      effectiveMonth: effectiveMonth,
+      sourceMonth: assessed ? sourceMonth : null,
+      sourceScore: assessed
+          ? _monthlyInteger(snapshot['sourceScore'], 0, maximum)
+          : null,
+      level: assessed ? _monthlyInteger(snapshot['level'], 1, 5) : null,
+      policyVersion: policy,
+      maximumSourceMonth: maximum,
+      preparationOnly:
+          prepared ||
+          snapshot['preparationOnly'] == true ||
+          snapshot['runtimeActivationAllowed'] == false ||
+          response['preparationOnly'] == true ||
+          response['runtimeActivationAllowed'] == false,
+    );
+  }
+}
+
+const _monthlyV1Policy = 'lythaus-monthly-rewards-2026-10-v1';
+const _monthlyV2Policy = 'lythaus-monthly-rewards-2026-10-v2';
+
+Map<String, dynamic> _monthlyObject(Object? value) =>
+    value is Map ? Map<String, dynamic>.from(value) : const <String, dynamic>{};
+
+String? _monthlyString(Object? value) => value is String ? value : null;
+
+int? _monthlyInteger(Object? value, int minimum, int? maximum) =>
+    value is int && maximum != null && value >= minimum && value <= maximum
+    ? value
+    : null;
+
+String? _monthlyMonth(Object? value) =>
+    value is String && RegExp(r'^[1-9]\d{3}-(0[1-9]|1[0-2])$').hasMatch(value)
+    ? value
+    : null;
+
+String _followingMonthlyMonth(String month) {
+  final parts = month.split('-');
+  final date = DateTime.utc(int.parse(parts[0]), int.parse(parts[1]) + 1);
+  return '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}';
 }
