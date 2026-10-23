@@ -44,6 +44,7 @@ class _Adapter implements HttpClientAdapter {
   _Adapter(this.status);
   final int? status;
   final cursors = <Object?>[];
+  final requests = <RequestOptions>[];
   bool fail = true;
   Completer<ResponseBody>? delayed;
   final pageStarted = Completer<void>();
@@ -54,6 +55,7 @@ class _Adapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
+    requests.add(options);
     final cursor = options.queryParameters['cursor'];
     cursors.add(cursor);
     if (cursor == null) return _page('first', cursor: 'page-2');
@@ -74,61 +76,112 @@ class _Adapter implements HttpClientAdapter {
 }
 
 void main() {
-  for (final status in [401, 403, 404, 500, null]) {
-    test(
-      'search pagination handles access/transport response $status',
-      () async {
-        final adapter = _Adapter(status);
-        final dio = Dio(BaseOptions(baseUrl: 'https://synthetic.invalid'))
-          ..httpClientAdapter = adapter;
-        addTearDown(dio.close);
-        final container = ProviderContainer(
-          overrides: [
-            jwtProvider.overrideWith((_) async => 'synthetic-token'),
-            socialFeedServiceProvider.overrideWithValue(SocialFeedService(dio)),
-          ],
+  test(
+    'guest search and pagination reach discovery without authorization',
+    () async {
+      final adapter = _Adapter(null)..fail = false;
+      final dio = Dio(BaseOptions(baseUrl: 'https://synthetic.invalid'))
+        ..httpClientAdapter = adapter;
+      addTearDown(dio.close);
+      final container = ProviderContainer(
+        overrides: [
+          jwtProvider.overrideWith((_) async => null),
+          socialFeedServiceProvider.overrideWithValue(SocialFeedService(dio)),
+        ],
+      );
+      addTearDown(container.dispose);
+      final provider = feedSearchProvider((tag: 'civic', tokenVersion: 0));
+      final subscription = container.listen(provider, (_, _) {});
+      addTearDown(subscription.close);
+      await container.read(provider.future);
+      await container.read(provider.notifier).loadMore();
+      expect(
+        container.read(provider).requireValue.posts.map((post) => post.id),
+        ['first', 'second'],
+      );
+      expect(adapter.cursors, [null, 'page-2']);
+      for (final request in adapter.requests) {
+        expect(request.path, '/feed/discover');
+        expect(request.queryParameters['tag'], 'civic');
+        expect(
+          request.headers.keys.map((key) => key.toLowerCase()),
+          isNot(contains('authorization')),
         );
-        addTearDown(container.dispose);
-        final provider = feedSearchProvider((tag: 'civic', tokenVersion: 0));
-        final subscription = container.listen(provider, (_, _) {});
-        addTearDown(subscription.close);
-        await container.read(provider.future);
-        final notifier = container.read(provider.notifier);
-        await expectLater(
-          notifier.loadMore(),
-          throwsA(
-            status == 401
-                ? isA<AuthRequiredException>()
-                : isA<SocialFeedException>(),
-          ),
-        );
-        final state = container.read(provider);
-        if (status == 401 || status == 403 || status == 404) {
-          expect(state.hasError, isTrue);
-          expect(state.valueOrNull?.posts ?? [], isEmpty);
-          expect(state.valueOrNull?.hasMore ?? false, isFalse);
-          await notifier.loadMore();
-          expect(adapter.cursors, [null, 'page-2']);
-          adapter.fail = false;
-          await notifier.refresh();
-          expect(
-            container.read(provider).requireValue.posts.single.id,
-            'first',
+      }
+    },
+  );
+
+  for (final token in [null, 'synthetic-token']) {
+    for (final status in [401, 403, 404, 500, null]) {
+      test(
+        '${token == null ? 'guest' : 'member'} search pagination handles access/transport response $status',
+        () async {
+          final adapter = _Adapter(status);
+          final dio = Dio(BaseOptions(baseUrl: 'https://synthetic.invalid'))
+            ..httpClientAdapter = adapter;
+          addTearDown(dio.close);
+          final container = ProviderContainer(
+            overrides: [
+              jwtProvider.overrideWith((_) async => token),
+              socialFeedServiceProvider.overrideWithValue(
+                SocialFeedService(dio),
+              ),
+            ],
           );
-          expect(adapter.cursors, [null, 'page-2', null]);
-        } else {
-          expect(state.requireValue.posts.single.id, 'first');
-          expect(state.requireValue.nextCursor, 'page-2');
-          adapter.fail = false;
-          await notifier.loadMore();
-          expect(
-            container.read(provider).requireValue.posts.map((post) => post.id),
-            ['first', 'second'],
+          addTearDown(container.dispose);
+          final provider = feedSearchProvider((tag: 'civic', tokenVersion: 0));
+          final subscription = container.listen(provider, (_, _) {});
+          addTearDown(subscription.close);
+          await container.read(provider.future);
+          final notifier = container.read(provider.notifier);
+          await expectLater(
+            notifier.loadMore(),
+            throwsA(
+              status == 401
+                  ? isA<AuthRequiredException>()
+                  : isA<SocialFeedException>(),
+            ),
           );
-          expect(adapter.cursors, [null, 'page-2', 'page-2']);
-        }
-      },
-    );
+          final state = container.read(provider);
+          if (token == null) {
+            for (final request in adapter.requests) {
+              expect(
+                request.headers.keys.map((key) => key.toLowerCase()),
+                isNot(contains('authorization')),
+              );
+            }
+          }
+          if (status == 401 || status == 403 || status == 404) {
+            expect(state.hasError, isTrue);
+            expect(state.valueOrNull?.posts ?? [], isEmpty);
+            expect(state.valueOrNull?.hasMore ?? false, isFalse);
+            await notifier.loadMore();
+            expect(adapter.cursors, [null, 'page-2']);
+            adapter.fail = false;
+            await notifier.refresh();
+            expect(
+              container.read(provider).requireValue.posts.single.id,
+              'first',
+            );
+            expect(adapter.cursors, [null, 'page-2', null]);
+          } else {
+            expect(state.requireValue.posts.single.id, 'first');
+            expect(state.requireValue.nextCursor, 'page-2');
+            adapter.fail = false;
+            await notifier.loadMore();
+            expect(
+              container
+                  .read(provider)
+                  .requireValue
+                  .posts
+                  .map((post) => post.id),
+              ['first', 'second'],
+            );
+            expect(adapter.cursors, [null, 'page-2', 'page-2']);
+          }
+        },
+      );
+    }
   }
 
   testWidgets(
