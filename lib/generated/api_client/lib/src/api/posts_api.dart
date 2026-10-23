@@ -22,6 +22,7 @@ import 'package:lythaus_api_client/src/model/forbidden_error.dart';
 import 'package:lythaus_api_client/src/model/owner_timeline_page.dart';
 import 'package:lythaus_api_client/src/model/post.dart';
 import 'package:lythaus_api_client/src/model/post_revision_response.dart';
+import 'package:lythaus_api_client/src/model/posts_comments_list503_response.dart';
 import 'package:lythaus_api_client/src/model/posts_delete200_response.dart';
 import 'package:lythaus_api_client/src/model/posts_get200_response.dart';
 import 'package:lythaus_api_client/src/model/posts_owner_view200_response.dart';
@@ -335,7 +336,7 @@ class PostsApi {
     );
   }
 
-  /// Submit a comment or one-level reply
+  /// Submit a comment or linked reply
   /// A submission is recorded as under review; it is not immediately published to public comment listings.
   ///
   /// Parameters:
@@ -442,12 +443,17 @@ class PostsApi {
   }
 
   /// List publicly visible comments
-  /// Only allowed comments are returned. Anonymous callers may read public posts; authenticated callers additionally receive relationship filtering.
+  /// Only allowed comments with currently eligible posts and ancestors are returned. Anonymous callers may read public posts; members receive relationship filtering. The conversations view pages top-level comments, newest by default. A conversationId pages its replies chronologically, preserving immediate parentId links at every level while visual depth stays capped at one. Deleted allowed ancestors remain tombstones; hidden or blocked ancestors withhold their descendants. Cursors bind the post, sort, view, conversation and microsecond snapshot. Refresh starts a new root snapshot; refresh&#x3D;true with a reply tail cursor explicitly checks for newer replies. Most relevant is unavailable until trusted comment usefulness signals are validated.
   ///
   /// Parameters:
   /// * [postId]
   /// * [cursor] - Opaque keyset cursor returned by the preceding page.
   /// * [limit]
+  /// * [view] - Omit for the legacy flat chronological list.
+  /// * [sort] - Sort top-level conversations. Replies remain chronological. Most relevant returns 503.
+  /// * [conversationId]
+  /// * [targetId] - Resolve one exact visible comment and its canonical conversation; cannot be combined with a cursor.
+  /// * [refresh] - Start a fresh reply snapshot after the supplied tail cursor. Requires conversationId.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -461,6 +467,11 @@ class PostsApi {
     required String postId,
     String? cursor,
     int? limit = 25,
+    String? view,
+    String? sort,
+    String? conversationId,
+    String? targetId,
+    bool? refresh,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -490,6 +501,11 @@ class PostsApi {
     final _queryParameters = <String, dynamic>{
       if (cursor != null) r'cursor': encodeQueryParameter(_serializers, cursor, const FullType(String)),
       if (limit != null) r'limit': encodeQueryParameter(_serializers, limit, const FullType(int)),
+      if (view != null) r'view': encodeQueryParameter(_serializers, view, const FullType(String)),
+      if (sort != null) r'sort': encodeQueryParameter(_serializers, sort, const FullType(String)),
+      if (conversationId != null) r'conversationId': encodeQueryParameter(_serializers, conversationId, const FullType(String)),
+      if (targetId != null) r'targetId': encodeQueryParameter(_serializers, targetId, const FullType(String)),
+      if (refresh != null) r'refresh': encodeQueryParameter(_serializers, refresh, const FullType(bool)),
     };
 
     final _response = await _dio.request<Object>(

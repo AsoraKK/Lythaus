@@ -328,6 +328,13 @@ components:
         id: { type: string, format: uuid }
         authorId: { type: string, format: uuid }
         parentId: { type: string, format: uuid, nullable: true }
+        conversationId: { type: string, format: uuid, description: Canonical top-level comment for this conversation. }
+        replyCount:
+          type: integer
+          minimum: 0
+          description: Visible non-deleted descendant replies at the page snapshot. Includes nested replies; excludes hidden and pending contributions.
+        replyToAuthorId: { type: string, format: uuid, nullable: true }
+        replyToDeleted: { type: boolean }
         body: { type: string, nullable: true }
         depth: { type: integer, enum: [0, 1] }
         declaredCreationMode: { $ref: '#/components/schemas/DeclaredCreationMode' }
@@ -341,6 +348,17 @@ components:
         - type: object
           required: [items]
           properties:
+            refreshCursor: { type: string, nullable: true, description: Reply tail cursor for an explicit check for new replies. }
+            capabilities:
+              type: object
+              properties:
+                conversations: { type: boolean }
+                nestedReplies: { type: boolean }
+                sorts:
+                  type: array
+                  items: { type: string, enum: [newest, oldest] }
+                mostRelevantAvailable: { type: boolean, enum: [false] }
+                mostRelevantUnavailableReason: { type: string }
             items:
               type: array
               items: { $ref: '#/components/schemas/Comment' }
@@ -929,6 +947,7 @@ components:
         id: { type: string, format: uuid }
         notificationType: { type: string }
         entityId: { type: string, format: uuid, nullable: true }
+        deeplink: { type: string, nullable: true, description: Current first-party post/comment destination for a visible comment notification. }
         title: { type: string }
         readAt: { type: string, format: date-time, nullable: true }
         createdAt: { type: string, format: date-time }
@@ -3579,7 +3598,16 @@ paths:
     get:
       operationId: postsCommentsList
       summary: List publicly visible comments
-      description: Only allowed comments are returned. Anonymous callers may read public posts; authenticated callers additionally receive relationship filtering.
+      description: |
+        Only allowed comments with currently eligible posts and ancestors are returned.
+        Anonymous callers may read public posts; members receive relationship filtering.
+        The conversations view pages top-level comments, newest by default. A conversationId
+        pages its replies chronologically, preserving immediate parentId links at every level
+        while visual depth stays capped at one. Deleted allowed ancestors remain tombstones;
+        hidden or blocked ancestors withhold their descendants. Cursors bind the post, sort,
+        view, conversation and microsecond snapshot. Refresh starts a new root snapshot;
+        refresh=true with a reply tail cursor explicitly checks for newer replies.
+        Most relevant is unavailable until trusted comment usefulness signals are validated.
       tags: [Posts]
       security:
         - {}
@@ -3591,6 +3619,25 @@ paths:
           schema: { type: string, format: uuid }
         - $ref: '#/components/parameters/cursor'
         - $ref: '#/components/parameters/limit100'
+        - name: view
+          in: query
+          schema: { type: string, enum: [conversations] }
+          description: Omit for the legacy flat chronological list.
+        - name: sort
+          in: query
+          schema: { type: string, enum: [newest, oldest, most_relevant] }
+          description: Sort top-level conversations. Replies remain chronological. Most relevant returns 503.
+        - name: conversationId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: targetId
+          in: query
+          schema: { type: string, format: uuid }
+          description: Resolve one exact visible comment and its canonical conversation; cannot be combined with a cursor.
+        - name: refresh
+          in: query
+          schema: { type: boolean }
+          description: Start a fresh reply snapshot after the supplied tail cursor. Requires conversationId.
       responses:
         '200':
           description: Publicly visible comments.
@@ -3600,9 +3647,20 @@ paths:
                 $ref: '#/components/schemas/CommentPage'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '404':
+          description: The requested conversation is unavailable.
+        '503':
+          description: The requested relevance sort is unavailable.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error: { type: string, enum: [comment_sort_unavailable] }
     post:
       operationId: postsCommentsCreate
-      summary: Submit a comment or one-level reply
+      summary: Submit a comment or linked reply
       description: A submission is recorded as under review; it is not immediately published to public comment listings.
       tags: [Posts]
       security:

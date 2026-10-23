@@ -209,7 +209,7 @@ Class | Method | HTTP request | Description
 [*PostsApi*](doc/PostsApi.md) | [**commentsDelete**](doc/PostsApi.md#commentsdelete) | **DELETE** /comments/{commentId} | Delete my comment
 [*PostsApi*](doc/PostsApi.md) | [**commentsReplace**](doc/PostsApi.md#commentsreplace) | **PUT** /comments/{commentId} | Replace my comment body
 [*PostsApi*](doc/PostsApi.md) | [**commentsUpdate**](doc/PostsApi.md#commentsupdate) | **PATCH** /comments/{commentId} | Partially update my comment body
-[*PostsApi*](doc/PostsApi.md) | [**postsCommentsCreate**](doc/PostsApi.md#postscommentscreate) | **POST** /posts/{postId}/comments | Submit a comment or one-level reply
+[*PostsApi*](doc/PostsApi.md) | [**postsCommentsCreate**](doc/PostsApi.md#postscommentscreate) | **POST** /posts/{postId}/comments | Submit a comment or linked reply
 [*PostsApi*](doc/PostsApi.md) | [**postsCommentsList**](doc/PostsApi.md#postscommentslist) | **GET** /posts/{postId}/comments | List publicly visible comments
 [*PostsApi*](doc/PostsApi.md) | [**postsCreate**](doc/PostsApi.md#postscreate) | **POST** /posts | Create a post with moderation and AI authenticity checks
 [*PostsApi*](doc/PostsApi.md) | [**postsDelete**](doc/PostsApi.md#postsdelete) | **DELETE** /posts/{id} | Soft-delete a post owned by the authenticated user
@@ -363,6 +363,7 @@ Class | Method | HTTP request | Description
  - [CommentCreateRequest](doc/CommentCreateRequest.md)
  - [CommentDeleteResponse](doc/CommentDeleteResponse.md)
  - [CommentPage](doc/CommentPage.md)
+ - [CommentPageAllOfCapabilities](doc/CommentPageAllOfCapabilities.md)
  - [CommentSubmission](doc/CommentSubmission.md)
  - [CommentUpdateRequest](doc/CommentUpdateRequest.md)
  - [CommentUpdateResponse](doc/CommentUpdateResponse.md)
@@ -485,6 +486,7 @@ Class | Method | HTTP request | Description
  - [Post](doc/Post.md)
  - [PostRevision](doc/PostRevision.md)
  - [PostRevisionResponse](doc/PostRevisionResponse.md)
+ - [PostsCommentsList503Response](doc/PostsCommentsList503Response.md)
  - [PostsDelete200Response](doc/PostsDelete200Response.md)
  - [PostsGet200Response](doc/PostsGet200Response.md)
  - [PostsOwnerView200Response](doc/PostsOwnerView200Response.md)
