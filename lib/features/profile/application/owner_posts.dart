@@ -72,10 +72,19 @@ class OwnerPostsController
       if (!_sessionMatches() || requestRevision != _requestRevision) return;
       final latest = state.valueOrNull ?? current;
       state = AsyncData(latest.append(page));
-    } catch (error) {
+    } catch (error, stackTrace) {
       if (!_sessionMatches() ||
           requestRevision != _requestRevision ||
           (error is DioException && CancelToken.isCancel(error))) {
+        return;
+      }
+      if (error is DioException &&
+          (error.response?.statusCode == 401 ||
+              error.response?.statusCode == 403)) {
+        state = const AsyncData(
+          OwnerPostsTimeline(items: [], nextCursor: null),
+        );
+        state = AsyncError(error, stackTrace);
         return;
       }
       final latest = state.valueOrNull;
