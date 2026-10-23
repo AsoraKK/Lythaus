@@ -18,10 +18,29 @@ for (const [browser, vendor] of [
     const calls = [];
     vm.runInNewContext(script, {
       navigator: { vendor },
-      _flutter: { loader: { load: options => calls.push(options) } },
+      _flutter: { loader: { load: async options => calls.push(options) } },
     });
     assert.equal(calls.length, 1);
     assert.equal(calls[0].config?.canvasKitForceCpuOnly, undefined);
     assert.equal(calls[0].serviceWorkerSettings.serviceWorkerVersion, 'test-release');
   });
 }
+
+test('startup failure is recoverable without changing engine configuration', async () => {
+  let options;
+  let failures = 0;
+  vm.runInNewContext(script, {
+    window: { lythausStartupFailed: () => failures++ },
+    _flutter: { loader: { load: async value => { options = value; } } },
+  });
+  let started = 0;
+  await options.onEntrypointLoaded({ initializeEngine: async (...args) => {
+    assert.deepEqual(args, []);
+    return { runApp: async () => started++ };
+  } });
+  assert.equal(started, 1);
+  assert.equal(failures, 0);
+  await options.onEntrypointLoaded({ initializeEngine: async () => { throw Error('synthetic engine failure'); } });
+  await options.onEntrypointLoaded({ initializeEngine: async () => ({ runApp: async () => { throw Error('synthetic app failure'); } }) });
+  assert.equal(failures, 2);
+});

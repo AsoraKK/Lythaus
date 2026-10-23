@@ -14,6 +14,7 @@ import 'package:lythaus/core/routing/url_strategy.dart';
 import 'package:lythaus/core/config/web_release_guard.dart';
 import 'package:lythaus/core/config/web_release_reload_gate.dart';
 import 'package:lythaus/core/config/web_release_update_bridge.dart';
+import 'package:lythaus/core/config/startup_presentation.dart';
 import 'package:lythaus/design_system/index.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_session_revision.dart';
@@ -54,6 +55,7 @@ class LythausApp extends ConsumerStatefulWidget {
 
 class _LythausAppState extends ConsumerState<LythausApp> {
   bool _appStartedLogged = false;
+  bool _startupPresented = false;
   ProviderSubscription<AsyncValue<User?>>? _authStateSub;
   ProviderSubscription<int>? _authSessionRevisionSub;
   ProviderSubscription<ContentMutationRegistry>? _contentMutationSub;
@@ -72,6 +74,7 @@ class _LythausAppState extends ConsumerState<LythausApp> {
           .read(analyticsEventTrackerProvider)
           .logEventOnce(analytics, AnalyticsEvents.onboardingStart);
       _appStartedLogged = true;
+      _dismissStartupWhenReady();
     });
 
     _authStateSub = ref.listenManual<AsyncValue<User?>>(authStateProvider, (
@@ -82,6 +85,11 @@ class _LythausAppState extends ConsumerState<LythausApp> {
       final user = next.valueOrNull;
       analytics.setUserId(user?.id);
       _scheduleReloadSafetySync();
+      if (!next.isLoading) {
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          _dismissStartupWhenReady();
+        });
+      }
     });
 
     // The registry must observe account transitions on every platform so
@@ -142,6 +150,16 @@ class _LythausAppState extends ConsumerState<LythausApp> {
     if (!isReleaseWebBuild || !mounted) return;
     final sync = _reloadGate?.schedule();
     if (sync != null) unawaited(sync);
+  }
+
+  void _dismissStartupWhenReady() {
+    if (!mounted ||
+        _startupPresented ||
+        ref.read(authStateProvider).isLoading) {
+      return;
+    }
+    _startupPresented = true;
+    dismissStartupPresentation();
   }
 
   bool _hasFocusedTextEntry() {
