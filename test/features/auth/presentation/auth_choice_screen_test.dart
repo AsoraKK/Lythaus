@@ -10,6 +10,7 @@ import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/core/security/device_integrity_guard.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/application/auth_service.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
 import 'package:lythaus/features/auth/presentation/auth_choice_screen.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
@@ -121,6 +122,11 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
+          if (action == 'Resend verification email') {
+            await tester.tap(find.text('Verification & invites'));
+            await tester.pumpAndSettle();
+          }
+          await tester.ensureVisible(find.text(action));
           await tester.tap(find.text(action));
           await tester.pumpAndSettle();
           expect(launches.single.scheme, 'https');
@@ -198,13 +204,185 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Welcome to Lythaus'), findsOneWidget);
+    expect(find.text('Welcome back'), findsOneWidget);
     expect(find.text('Email'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
     expect(find.text('Sign in with email'), findsOneWidget);
     expect(find.text('Forgot password?'), findsOneWidget);
-    expect(find.text('Resend verification email'), findsOneWidget);
+    expect(find.text('Resend verification email'), findsNothing);
     expect(find.text('Create account'), findsOneWidget);
     expect(find.text('Continue as guest'), findsOneWidget);
+    await tester.tap(find.text('Verification & invites'));
+    await tester.pumpAndSettle();
+    expect(find.text('Resend verification email'), findsOneWidget);
+    expect(find.text('Redeem invite'), findsOneWidget);
+  });
+
+  testWidgets('session restoration is distinct from submitting credentials', (
+    tester,
+  ) async {
+    final auth = _MockAuthService();
+    final restoration = Completer<User?>();
+    when(() => auth.getCurrentUser()).thenAnswer((_) => restoration.future);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          analyticsClientProvider.overrideWithValue(
+            const NullAnalyticsClient(),
+          ),
+          enhancedAuthServiceProvider.overrideWithValue(auth),
+        ],
+        child: const MaterialApp(home: AuthChoiceScreen()),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Checking your session…'), findsOneWidget);
+    expect(find.text('Signing in…'), findsNothing);
+    final emailBefore = tester.getRect(find.widgetWithText(TextField, 'Email'));
+    await tester.tap(find.text('Sign in with email'));
+    verifyNever(() => auth.loginWithEmail(any(), any()));
+    restoration.complete(null);
+    await tester.pumpAndSettle();
+    expect(find.text('Checking your session…').hitTestable(), findsNothing);
+    final semantics = tester.ensureSemantics();
+    try {
+      await tester.pump();
+      expect(find.semantics.byLabel('Checking your session…'), findsNothing);
+    } finally {
+      semantics.dispose();
+    }
+    expect(
+      tester.getRect(find.widgetWithText(TextField, 'Email')),
+      emailBefore,
+    );
+    await tester.tap(find.text('Sign in with email'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Enter a valid email and your existing password.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('external launch is single-flight and usable after return', (
+    tester,
+  ) async {
+    final auth = _MockAuthService();
+    when(() => auth.getCurrentUser()).thenAnswer((_) async => null);
+    var launch = Completer<bool>();
+    var calls = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          analyticsClientProvider.overrideWithValue(
+            const NullAnalyticsClient(),
+          ),
+          enhancedAuthServiceProvider.overrideWithValue(auth),
+        ],
+        child: MaterialApp(
+          home: AuthChoiceScreen(
+            launchAuthPage: (_) {
+              calls++;
+              return launch.future;
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Create account'));
+    await tester.tap(find.text('Create account'));
+    await tester.pump();
+    await tester.tap(find.text('Create account'));
+    expect(calls, 1);
+    launch.complete(true);
+    await tester.pumpAndSettle();
+    launch = Completer<bool>();
+    await tester.tap(find.text('Create account'));
+    expect(calls, 2);
+    launch.complete(false);
+    await tester.pumpAndSettle();
+    expect(find.text('Unable to open account creation.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('mobile keyboard next and done keep sign-in reachable', (
+    tester,
+  ) async {
+    final auth = _MockAuthService();
+    when(() => auth.getCurrentUser()).thenAnswer((_) async => null);
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 320);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          analyticsClientProvider.overrideWithValue(
+            const NullAnalyticsClient(),
+          ),
+          enhancedAuthServiceProvider.overrideWithValue(auth),
+        ],
+        child: const MaterialApp(home: AuthChoiceScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.showKeyboard(find.widgetWithText(TextField, 'Email'));
+    await tester.testTextInput.receiveAction(TextInputAction.next);
+    await tester.pumpAndSettle();
+    final password = tester.widget<EditableText>(
+      find.descendant(
+        of: find.widgetWithText(TextField, 'Password'),
+        matching: find.byType(EditableText),
+      ),
+    );
+    expect(password.focusNode.hasFocus, isTrue);
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Enter a valid email and your existing password.'),
+      findsOneWidget,
+    );
+    await tester.ensureVisible(find.text('Sign in with email'));
+    expect(find.text('Sign in with email').hitTestable(), findsOneWidget);
+    verifyNever(() => auth.loginWithEmail(any(), any()));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('invite disclosure supports navigation and return with draft', (
+    tester,
+  ) async {
+    final auth = _MockAuthService();
+    when(() => auth.getCurrentUser()).thenAnswer((_) async => null);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          analyticsClientProvider.overrideWithValue(
+            const NullAnalyticsClient(),
+          ),
+          enhancedAuthServiceProvider.overrideWithValue(auth),
+        ],
+        child: const MaterialApp(home: AuthChoiceScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Email'),
+      'draft@example.invalid',
+    );
+    await tester.ensureVisible(find.text('Verification & invites'));
+    await tester.tap(find.text('Verification & invites'));
+    await tester.pumpAndSettle();
+    for (var attempt = 0; attempt < 2; attempt++) {
+      await tester.ensureVisible(find.text('Redeem invite'));
+      await tester.tap(find.text('Redeem invite'));
+      await tester.pumpAndSettle();
+      expect(find.text('Enter your invite code'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.text('draft@example.invalid'), findsOneWidget);
+    }
+    expect(tester.takeException(), isNull);
   });
 }

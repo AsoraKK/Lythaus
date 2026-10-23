@@ -109,6 +109,9 @@ void main() {
           expect(callbacks, 0);
           expect(observer.completions, 0);
           expect(find.text('Synthetic continuation completed'), findsNothing);
+          await tester.tap(find.text('Continue as guest'));
+          await tester.pump();
+          expect(authCalls, 1);
           pendingLogout.complete();
           await tester.pumpAndSettle();
           expect(authCalls, 1);

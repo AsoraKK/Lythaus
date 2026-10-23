@@ -14,6 +14,7 @@ import 'package:lythaus/core/analytics/analytics_events.dart';
 import 'package:lythaus/core/analytics/analytics_providers.dart';
 import 'package:lythaus/core/security/device_integrity_guard.dart';
 import 'package:lythaus/design_system/components/lyth_button.dart';
+import 'package:lythaus/design_system/theme/theme_build_context_x.dart';
 import 'package:lythaus/design_system/widgets/lyth_brand.dart';
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/auth/domain/auth_failure.dart';
@@ -44,8 +45,24 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
   late final AnalyticsClient _analyticsClient;
   bool _screenViewLogged = false;
   bool _obscurePassword = true;
-  bool _isRecoveryActionLoading = false;
+  bool _isSecondaryPending = false;
   bool _isSignInPending = false;
+
+  bool get _isBusy =>
+      ref.read(authStateProvider).isLoading ||
+      _isSecondaryPending ||
+      _isSignInPending;
+
+  Future<void> _runSecondaryAction(Future<void> Function() action) async {
+    if (_isBusy) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _isSecondaryPending = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) setState(() => _isSecondaryPending = false);
+    }
+  }
 
   @override
   void initState() {
@@ -93,11 +110,7 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
           .timeout(const Duration(seconds: 10));
 
   Future<void> _handleEmailSignIn() async {
-    if (ref.read(authStateProvider).isLoading ||
-        _isRecoveryActionLoading ||
-        _isSignInPending) {
-      return;
-    }
+    if (_isBusy) return;
     FocusScope.of(context).unfocus();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
@@ -197,16 +210,11 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
   }
 
   Future<void> _handleResendVerificationEmail() async {
-    setState(() => _isRecoveryActionLoading = true);
     _track(
       AnalyticsEvents.authStarted,
       properties: {AnalyticsEvents.propMethod: 'resend_verification'},
     );
-    try {
-      await _openResendVerification();
-    } finally {
-      if (mounted) setState(() => _isRecoveryActionLoading = false);
-    }
+    await _openResendVerification();
   }
 
   Future<void> _openSignup() async {
@@ -230,143 +238,178 @@ class _AuthChoiceScreenState extends ConsumerState<AuthChoiceScreen> {
               ? (authState.error! as AuthFailure).message
               : 'Unable to sign in. Check your details and connection, then try again.')
         : null;
-    final isBusy =
-        authState.isLoading || _isRecoveryActionLoading || _isSignInPending;
+    final isBusy = _isBusy;
+    final isRestoringSession = authState.isLoading && !_isSignInPending;
     return ReadingPane(
       child: Scaffold(
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 420),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 32,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.spacing.xxl,
+                    vertical: context.spacing.xxl,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const LythBrand(height: 40),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Welcome to Lythaus',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Create a verified email account, sign in, or browse as a guest.',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 28),
-                      TextField(
-                        controller: _emailController,
-                        enabled: !isBusy,
-                        keyboardType: TextInputType.emailAddress,
-                        autofillHints: const [AutofillHints.email],
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: Icon(Icons.email_outlined),
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _passwordController,
-                        enabled: !isBusy,
-                        obscureText: _obscurePassword,
-                        autofillHints: const [AutofillHints.password],
-                        onSubmitted: (_) => _handleEmailSignIn(),
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          border: const OutlineInputBorder(),
-                          suffixIcon: IconButton(
-                            tooltip: _obscurePassword
-                                ? 'Show password'
-                                : 'Hide password',
-                            onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword,
-                            ),
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (error != null) ...[
+                  child: AutofillGroup(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const LythBrand(height: 40),
                         const SizedBox(height: 12),
-                        Semantics(
-                          liveRegion: true,
-                          child: Text(
-                            error,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
+                        Text(
+                          'Welcome back',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        Visibility(
+                          visible: isRestoringSession,
+                          maintainSize: true,
+                          maintainState: true,
+                          maintainAnimation: true,
+                          child: Padding(
+                            padding: EdgeInsets.only(top: context.spacing.sm),
+                            child: Semantics(
+                              liveRegion: true,
+                              child: const Text(
+                                'Checking your session…',
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
                         ),
-                      ],
-                      const SizedBox(height: 20),
-                      LythButton.primary(
-                        label: authState.isLoading || _isSignInPending
-                            ? 'Signing in…'
-                            : 'Sign in with email',
-                        icon: Icons.login,
-                        onPressed: isBusy ? null : _handleEmailSignIn,
-                      ),
-                      const SizedBox(height: 12),
-                      LythButton.tertiary(
-                        label: 'Forgot password?',
-                        icon: Icons.lock_reset,
-                        onPressed: isBusy ? null : _openPasswordReset,
-                      ),
-                      LythButton.tertiary(
-                        label: _isRecoveryActionLoading
-                            ? 'Opening verification…'
-                            : 'Resend verification email',
-                        onPressed: isBusy
-                            ? null
-                            : _handleResendVerificationEmail,
-                      ),
-                      const SizedBox(height: 12),
-                      LythButton.secondary(
-                        label: 'Create account',
-                        icon: Icons.person_add_alt_1,
-                        onPressed: isBusy ? null : _openSignup,
-                      ),
-                      const SizedBox(height: 12),
-                      LythButton.secondary(
-                        label: 'Continue as guest',
-                        onPressed: isBusy ? null : _handleGuestContinue,
-                      ),
-                      const SizedBox(height: 20),
-                      LythButton.tertiary(
-                        label: 'Redeem invite',
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const InviteRedeemScreen(),
+                        SizedBox(height: context.spacing.lg),
+                        TextField(
+                          controller: _emailController,
+                          enabled: !isBusy,
+                          keyboardType: TextInputType.emailAddress,
+                          autocorrect: false,
+                          autofillHints: const [AutofillHints.email],
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                            labelText: 'Email',
+                            prefixIcon: Icon(Icons.email_outlined),
+                            border: OutlineInputBorder(),
                           ),
                         ),
-                      ),
-                      if (kDebugMode) ...[
                         const SizedBox(height: 12),
+                        TextField(
+                          controller: _passwordController,
+                          enabled: !isBusy,
+                          obscureText: _obscurePassword,
+                          autocorrect: false,
+                          enableSuggestions: false,
+                          textInputAction: TextInputAction.done,
+                          autofillHints: const [AutofillHints.password],
+                          onSubmitted: (_) => _handleEmailSignIn(),
+                          decoration: InputDecoration(
+                            labelText: 'Password',
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            border: const OutlineInputBorder(),
+                            suffixIcon: IconButton(
+                              tooltip: _obscurePassword
+                                  ? 'Show password'
+                                  : 'Hide password',
+                              onPressed: isBusy
+                                  ? null
+                                  : () => setState(
+                                      () =>
+                                          _obscurePassword = !_obscurePassword,
+                                    ),
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (error != null) ...[
+                          const SizedBox(height: 12),
+                          Semantics(
+                            liveRegion: true,
+                            child: Text(
+                              error,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                            ),
+                          ),
+                        ],
+                        SizedBox(height: context.spacing.lg),
+                        LythButton.primary(
+                          label: _isSignInPending
+                              ? 'Signing in…'
+                              : 'Sign in with email',
+                          icon: Icons.login,
+                          onPressed: isBusy ? null : _handleEmailSignIn,
+                        ),
+                        LythButton.tertiary(
+                          label: 'Forgot password?',
+                          onPressed: isBusy
+                              ? null
+                              : () => _runSecondaryAction(_openPasswordReset),
+                        ),
+                        SizedBox(height: context.spacing.sm),
                         LythButton.secondary(
-                          label: 'Security Debug',
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const SecurityDebugScreen(),
+                          label: 'Create account',
+                          onPressed: isBusy
+                              ? null
+                              : () => _runSecondaryAction(_openSignup),
+                        ),
+                        LythButton.tertiary(
+                          label: 'Continue as guest',
+                          onPressed: isBusy
+                              ? null
+                              : () => _runSecondaryAction(_handleGuestContinue),
+                        ),
+                        SizedBox(height: context.spacing.sm),
+                        ExpansionTile(
+                          title: const Text('Verification & invites'),
+                          tilePadding: EdgeInsets.symmetric(
+                            horizontal: context.spacing.sm,
+                          ),
+                          children: [
+                            LythButton.tertiary(
+                              label: 'Resend verification email',
+                              onPressed: isBusy
+                                  ? null
+                                  : () => _runSecondaryAction(
+                                      _handleResendVerificationEmail,
+                                    ),
+                            ),
+                            LythButton.tertiary(
+                              label: 'Redeem invite',
+                              onPressed: isBusy
+                                  ? null
+                                  : () => _runSecondaryAction(() async {
+                                      await Navigator.of(context).push(
+                                        MaterialPageRoute<void>(
+                                          builder: (_) =>
+                                              const InviteRedeemScreen(),
+                                        ),
+                                      );
+                                    }),
+                            ),
+                          ],
+                        ),
+                        if (kDebugMode) ...[
+                          const SizedBox(height: 12),
+                          LythButton.secondary(
+                            label: 'Security Debug',
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const SecurityDebugScreen(),
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
               ),

@@ -141,6 +141,19 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(registry.canSafelyReload, isFalse);
+      for (final state in [
+        AppLifecycleState.inactive,
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+        AppLifecycleState.hidden,
+        AppLifecycleState.inactive,
+        AppLifecycleState.resumed,
+      ]) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+      expect(find.text('first unsaved character'), findsOneWidget);
       expect(
         find.byKey(const ValueKey('reload-blocking-draft')),
         findsOneWidget,

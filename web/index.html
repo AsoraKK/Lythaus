@@ -54,8 +54,18 @@
   <title>Lythaus</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="flutter-semantics.css">
+  <link rel="stylesheet" href="startup-presentation.css">
 </head>
 <body>
+  <div id="lythaus-startup" hidden>
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="brand/lythaus-v1/lythaus-wordmark-white.5ba0451347e2.svg">
+      <img src="brand/lythaus-v1/lythaus-wordmark-black.e450176663e0.svg" alt="Lythaus" width="144" height="40">
+    </picture>
+    <p role="status" aria-live="polite">Opening Lythaus…</p>
+    <button type="button" hidden>Try again</button>
+  </div>
+  <script src="startup-presentation.js"></script>
   <noscript>Lythaus requires JavaScript to run. Please enable JavaScript in your browser.</noscript>
   <script src="release-update.js"></script>
   <script src="flutter_bootstrap.js" async></script>
