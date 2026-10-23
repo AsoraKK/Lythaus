@@ -4,6 +4,7 @@ import sharp from 'sharp';
 import test from 'node:test';
 import { standardUploadFixture } from './standard-upload-fixture.mjs';
 import { createExifGpsJpeg } from './image-fixtures.mjs';
+import { verifyImageReviewEvidence } from '../../authenticity/src/image-review-evidence.ts';
 
 const png = new Uint8Array(await sharp({ create: { width: 1, height: 1, channels: 4, background: { r: 12, g: 34, b: 56, alpha: 1 } } }).png().toBuffer());
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -137,9 +138,12 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       await fixture.quarantine.put(state.session.object_key, png, { httpMetadata: { contentType: 'image/png' } });
     }
     fixture.statements.length = 0;
-    return { userId: state.session.user_id, sessionId: state.session.id,
+    const input = { userId: state.session.user_id, sessionId: state.session.id,
       event: { eventId: randomUUID(), eventType: 'media.upload.finalised',
         payload: { uploadSessionId: state.session.id, objectKey: state.session.object_key } } };
+    if (status !== 'pending') state.outbox.push({ id: input.event.eventId, actorId: input.userId,
+      aggregateId: input.sessionId, payload: structuredClone(input.event.payload) });
+    return input;
   }
   const queue = async input => (await fixture.request('/fixture/queue', input)).json();
   const create = async (userId, bytes = png, contentType = 'image/png') => fixture.request('/fixture/create', { userId,
@@ -181,7 +185,7 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
         assert.deepEqual(await response.json(), { uploadSessionId: input.sessionId, status: expected,
           expiresAt: state.session.expires_at, processingComplete: stored === 'approved', safety: { status: 'not_run' },
           authenticity: { status: 'not_run' }, publication: { allowed: false }, private: true });
-        assert.equal(state.outbox.length, 0);
+        assert.equal(state.outbox.length, stored === 'pending' ? 0 : 1);
         assert.equal(state.ledgerWrites, 0);
       }
       const input = await seed('queued', { unexpired: false });
@@ -214,7 +218,7 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
         assert.equal(response.status, 415);
         assert.equal((await response.json()).error, 'unsupported_content_type');
         assert.equal(fixture.statements.length, 0);
-        assert.equal(state.outbox.length, 0);
+        assert.equal(state.outbox.length, 1);
       }
     });
     await t.test('upload URL is a session-checked Worker route with no reusable R2 signature', async () => {
@@ -252,6 +256,7 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       assert.equal(uploaded.status, 201);
       const finalised = await fixture.request('/fixture/finalise', input);
       assert.equal(finalised.status, 200);
+      input.event.eventId = (await finalised.json()).eventId;
       assert.deepEqual(await queue(input), { ack: 1, retry: 0, imageCalls: 1 });
       assert.equal(state.session.status, 'approved');
       assert.ok(Date.parse(receipt.expiresAt) > Date.now(), 'the reused URL must still be within the session window');
@@ -295,7 +300,9 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       const originalKey = state.session.object_key;
       const input = { userId, sessionId: state.session.id, event: { eventId: randomUUID(), eventType: 'media.upload.finalised',
         payload: { uploadSessionId: state.session.id, objectKey: originalKey } } };
-      assert.equal((await fixture.request('/fixture/finalise', input)).status, 200);
+      const finalised = await fixture.request('/fixture/finalise', input);
+      assert.equal(finalised.status, 200);
+      input.event.eventId = (await finalised.json()).eventId;
       effects.length = 0;
       assert.deepEqual(await queue(input), { ack: 1, retry: 0, imageCalls: 1 });
       const object = state.objects[0];
@@ -310,6 +317,16 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       assert.equal(derivativeMetadata.orientation, undefined);
       assert.equal(derivativeMetadata.exif, undefined);
       assert.equal(derivativeMetadata.xmp, undefined);
+      const review = state.evidence[0].imageReview;
+      assert.equal(await verifyImageReviewEvidence(review, { ...review.binding, ownerId: userId,
+        uploadSessionId: state.session.id, sourceEventId: input.event.eventId, objectId: object.id,
+        sourceSha256: digest(jpeg), derivativeSha256: digest(derivativeBytes) }), true);
+      assert.equal(review.provenance.exifPresent, true);
+      assert.equal(review.provenance.cameraOrigin, 'UNKNOWN');
+      assert.equal(review.authorship.state, 'ABSTAIN');
+      assert.equal(review.safety.state, 'NOT_RUN');
+      assert.equal(review.policy.publicationEligible, false);
+      assert.doesNotMatch(JSON.stringify(review), /Lythaus fixture|GPS|quarantine\/|approved\//);
       const head = await fixture.approved.head(object.object_key);
       assert.equal(head.size, derivativeBytes.length);
       assert.deepEqual([head.customMetadata.width, head.customMetadata.height], ['2', '3']);
@@ -420,6 +437,7 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       assert.equal(response.headers.get('vary'), 'Origin, Authorization');
       const receipt = await response.json();
       assert.deepEqual(Object.keys(receipt).sort(), ['eventId', 'status', 'uploadSessionId']);
+      input.event.eventId = receipt.eventId;
       assert.equal(state.session.status, 'queued');
       assert.equal(state.outbox.length, 1);
       const retry = await fixture.request('/fixture/finalise', input);
@@ -494,6 +512,26 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       assert.deepEqual(await queue({ ...input, enabled: false }), { ack: 0, retry: 1, imageCalls: 0 });
       assert.equal(state.inbox, null);
       assert.equal(state.objects.length, 0);
+    });
+    await t.test('forged, ambiguous and owner/source-mismatched jobs cannot inspect or settle media', async () => {
+      for (const alter of [
+        (input) => { input.event.eventId = randomUUID(); },
+        () => { state.outbox.length = 0; },
+        () => { state.outbox.push({ ...state.outbox[0], id: randomUUID() }); },
+        () => { state.outbox[0].actorId = randomUUID(); },
+        () => { state.outbox[0].aggregateId = randomUUID(); },
+        () => { state.outbox[0].payload.objectKey = 'other-private-key'; },
+        () => { state.outbox[0].payload.uploadSessionId = randomUUID(); },
+      ]) {
+        const input = await seed();
+        alter(input);
+        assert.deepEqual(await queue(input), { ack: 0, retry: 1, imageCalls: 0 });
+        assert.equal(state.session.status, 'queued');
+        assert.equal(state.ledgerWrites, 0);
+        assert.equal(state.evidence.length, 0);
+        assert.equal(state.objects.length, 0);
+        assert.ok(await fixture.quarantine.head(state.session.object_key));
+      }
     });
     await t.test('rewritten source bytes fail checksum before decoder, settlement and cleanup are idempotent', async () => {
       const input = await seed();
@@ -580,6 +618,35 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       assert.deepEqual(await queue(input), { ack: 1, retry: 0, imageCalls: 0 });
       assert.equal(state.objects.length, 1);
       assert.equal(state.evidence.length, 1);
+      const review = state.evidence[0].imageReview;
+      assert.equal(review.provenance.state, 'OBSERVED_UNVERIFIED');
+      assert.equal(await verifyImageReviewEvidence(review, review.binding), true);
+    });
+    await t.test('cached derivative retry with a missing original records unavailable provenance and remains review-only', async () => {
+      const input = await seed();
+      beforeQuery = sql => { if (sql.includes('INSERT INTO media.moderation_results')) throw new Error('synthetic_evidence_unavailable'); };
+      assert.deepEqual(await queue(input), { ack: 0, retry: 1, imageCalls: 1 });
+      await fixture.quarantine.delete(state.session.object_key);
+      beforeQuery = undefined;
+      assert.deepEqual(await queue(input), { ack: 1, retry: 0, imageCalls: 0 });
+      const review = state.evidence[0].imageReview;
+      assert.equal(review.provenance.state, 'UNAVAILABLE');
+      assert.equal(review.provenance.c2pa, 'UNKNOWN');
+      assert.equal(review.authorship.state, 'ABSTAIN');
+      assert.equal(review.policy.publicationEligible, false);
+      assert.equal(await verifyImageReviewEvidence(review, review.binding), true);
+    });
+    await t.test('cached derivative retry cannot reuse provenance from a changed source revision', async () => {
+      const input = await seed();
+      beforeQuery = sql => { if (sql.includes('INSERT INTO media.moderation_results')) throw new Error('synthetic_evidence_unavailable'); };
+      assert.deepEqual(await queue(input), { ack: 0, retry: 1, imageCalls: 1 });
+      const changed = png.slice(); changed[11] ^= 1;
+      await fixture.quarantine.put(state.session.object_key, changed);
+      beforeQuery = undefined;
+      assert.deepEqual(await queue(input), { ack: 0, retry: 1, imageCalls: 0 });
+      assert.equal(state.evidence.length, 0);
+      assert.equal(state.objects.length, 0);
+      assert.equal(state.ledgerWrites, 0);
     });
     await t.test('a missing reservation cannot settle a review object or invent a ledger', async () => {
       const input = await seed();

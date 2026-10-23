@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import sharp from 'sharp';
 import { MAX_IMAGE_BYTES } from '../src/index.ts';
 import { parseStandardUpload, verifyStandardUploadBytes, UploadIntegrityError, readStandardDerivative, standardDerivativeMetadata } from '../src/standard-upload.ts';
+import { createImageReviewEvidence, verifyImageReviewEvidence } from '../../authenticity/src/image-review-evidence.ts';
+import { createExifGpsJpeg } from './image-fixtures.mjs';
 
 const png = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 0]);
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -80,4 +83,103 @@ test('cached derivatives bind exact bytes and source identity within the existin
   await assert.rejects(readStandardDerivative({ ...source(bytes), customMetadata: standardDerivativeMetadata(derivative, smallerReservation) },
     smallerReservation), /media_derivative_conflict/);
   await assert.rejects(readStandardDerivative(source(bytes), metadata()), /media_derivative_conflict/);
+});
+
+async function imageReviewInput() {
+  const sourceBytes = new Uint8Array(await createExifGpsJpeg());
+  const derivativeBytes = new Uint8Array(await sharp(sourceBytes).rotate().webp({ quality: 85 }).toBuffer());
+  return { sourceBytes, derivativeBytes, binding: {
+    ownerId: randomUUID(), uploadSessionId: randomUUID(), sourceEventId: randomUUID(), objectId: randomUUID(),
+    sourceSha256: digest(sourceBytes), sourceContentType: 'image/jpeg', sourceBytes: sourceBytes.length,
+    derivativeSha256: digest(derivativeBytes), derivativeBytes: derivativeBytes.length,
+    width: 2, height: 3, transformVersion: 'standard-webp-v2',
+  } };
+}
+
+test('image review preserves only source marker observations and withholds every model authority', async () => {
+  const input = await imageReviewInput();
+  const evidence = await createImageReviewEvidence(input);
+  assert.equal(await verifyImageReviewEvidence(evidence, input.binding), true);
+  assert.equal(evidence.provenance.state, 'OBSERVED_UNVERIFIED');
+  assert.equal(evidence.provenance.exifPresent, true);
+  assert.equal(evidence.provenance.cameraOrigin, 'UNKNOWN');
+  assert.equal(evidence.authorship.state, 'ABSTAIN');
+  assert.equal(evidence.authorship.thresholdVersion, null);
+  assert.equal(evidence.safety.state, 'NOT_RUN');
+  assert.equal(evidence.reasoning.state, 'NOT_RUN');
+  assert.deepEqual(evidence.policy, { outcome: 'review_required', publicationEligible: false,
+    reputationEligible: false, enforcementAuthority: false });
+  assert.doesNotMatch(JSON.stringify(evidence), /Lythaus fixture|GPS|encoderInformation|pixels|objectKey|riskScore/);
+  assert.equal((await createImageReviewEvidence(input)).evidenceHash, evidence.evidenceHash);
+});
+
+test('metadata absence, unverified C2PA markers and unavailable originals never certify human authorship', async () => {
+  const input = await imageReviewInput();
+  const unavailable = await createImageReviewEvidence({ ...input, sourceBytes: null });
+  assert.deepEqual(unavailable.provenance, { state: 'UNAVAILABLE', exifPresent: null, xmpPresent: null,
+    c2pa: 'UNKNOWN', cameraOrigin: 'UNKNOWN' });
+  assert.equal(await verifyImageReviewEvidence(unavailable, input.binding), true);
+  const noMetadata = new Uint8Array(await sharp(input.sourceBytes).rotate().png().toBuffer());
+  const absent = await createImageReviewEvidence({ ...input, sourceBytes: noMetadata, binding: { ...input.binding,
+    sourceSha256: digest(noMetadata), sourceContentType: 'image/png', sourceBytes: noMetadata.length } });
+  assert.equal(absent.provenance.c2pa, 'ABSENT');
+  assert.equal(absent.provenance.exifPresent, false);
+  const marked = new Uint8Array([...noMetadata, ...new TextEncoder().encode('c2pa')]);
+  const unverified = await createImageReviewEvidence({ ...input, sourceBytes: marked, binding: { ...input.binding,
+    sourceSha256: digest(marked), sourceContentType: 'image/png', sourceBytes: marked.length } });
+  assert.equal(unverified.provenance.c2pa, 'PRESENT_UNVERIFIED');
+  for (const evidence of [unavailable, absent, unverified]) {
+    assert.equal(evidence.provenance.cameraOrigin, 'UNKNOWN');
+    assert.equal(evidence.authorship.state, 'ABSTAIN');
+    assert.equal(evidence.policy.publicationEligible, false);
+  }
+});
+
+test('every source revision, owner, derivative and transform mismatch invalidates image evidence', async () => {
+  const input = await imageReviewInput();
+  const evidence = await createImageReviewEvidence(input);
+  for (const [key, replacement] of Object.entries({ ownerId: randomUUID(), uploadSessionId: randomUUID(),
+    sourceEventId: randomUUID(), objectId: randomUUID(), sourceSha256: '0'.repeat(64), sourceContentType: 'image/png',
+    sourceBytes: input.binding.sourceBytes + 1, derivativeSha256: '0'.repeat(64), derivativeBytes: input.derivativeBytes.length - 1,
+    width: 3, height: 2, transformVersion: 'standard-webp-v1' })) {
+    assert.equal(await verifyImageReviewEvidence(evidence, { ...input.binding, [key]: replacement }), false, key);
+    const changed = structuredClone(evidence);
+    changed.binding[key] = replacement;
+    assert.equal(await verifyImageReviewEvidence(changed, changed.binding), false, key);
+  }
+  for (const [section, field, value] of [['policy', 'publicationEligible', true], ['policy', 'reputationEligible', true],
+    ['policy', 'enforcementAuthority', true], ['safety', 'state', 'ALLOW'], ['safety', 'authority', 'AUTHORSHIP'],
+    ['authorship', 'state', 'HUMAN'], ['reasoning', 'state', 'OBSERVED'], ['provenance', 'cameraOrigin', 'CAMERA'],
+    ['provenance', 'c2pa', 'VERIFIED'], ['provenance', 'exifPresent', false]]) {
+    const changed = structuredClone(evidence);
+    changed[section][field] = value;
+    assert.equal(await verifyImageReviewEvidence(changed, input.binding), false, `${section}.${field}`);
+  }
+});
+
+test('changed source and derivative bytes cannot enter persisted image evidence', async () => {
+  const input = await imageReviewInput();
+  const sourceChanged = input.sourceBytes.slice(); sourceChanged[sourceChanged.length - 1] ^= 1;
+  const derivativeChanged = input.derivativeBytes.slice(); derivativeChanged[derivativeChanged.length - 1] ^= 1;
+  await assert.rejects(createImageReviewEvidence({ ...input, sourceBytes: sourceChanged }), /image_review_source_changed/);
+  await assert.rejects(createImageReviewEvidence({ ...input, derivativeBytes: derivativeChanged }), /image_review_derivative_changed/);
+  for (const patch of [{ width: 0 }, { height: 1.5 }, { width: 40000001 }, { sourceBytes: MAX_IMAGE_BYTES + 1 },
+    { ownerId: 'untrusted' }, { sourceContentType: 'image/svg+xml' }, { transformVersion: 'unknown' }]) {
+    await assert.rejects(createImageReviewEvidence({ ...input, binding: { ...input.binding, ...patch } }), /image_review_binding_invalid/);
+  }
+});
+
+test('caller mutation while hashing cannot replace the bound revision or marker observations', async () => {
+  const input = await imageReviewInput();
+  const expected = structuredClone(input.binding);
+  const pending = createImageReviewEvidence(input);
+  input.binding.ownerId = randomUUID();
+  input.binding.sourceEventId = randomUUID();
+  input.binding.transformVersion = 'standard-webp-v1';
+  input.sourceBytes.fill(0);
+  input.derivativeBytes.fill(0);
+  const evidence = await pending;
+  assert.equal(await verifyImageReviewEvidence(evidence, expected), true);
+  assert.equal(evidence.provenance.exifPresent, true);
+  assert.deepEqual(evidence.binding, expected);
 });
