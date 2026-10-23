@@ -194,3 +194,44 @@ clear it. See [integration evidence](../evidence/member-verification-20261023/ac
 
 The PR remains draft/unmerged. All enforcement/evidence flags stay off; no
 credential, migration, reputation mutation, award or deployment is performed.
+
+# Required-CI contract repair
+
+Main-based head `4909a47537a9dd6c7ff415db4c96e1b508e4a567` started full CI
+`39992571253`, attempt 1. Actual logs identify three failed jobs: the OpenAPI
+route count/spec omitted the new verification endpoint; homepage allocation
+checks rejected the reviewed Public API blob and two redundant Jobs Env type
+fields; the pinned Wrangler subprocess hit its existing 55-second timeout.
+The timeout cause is unproven. No old-head rerun, timeout increase or assertion
+relaxation is used to resolve these failures.
+
+The additive v14 contract documents the existing-password endpoint, disabled
+503, bounded exact operation, existing cookie/native session context, five-minute
+one-use receipt and confirmed-no-effect fresh-key retry contract. The generated
+Dart SDK receives only the new method/models. Its native verification method
+rejects redirects even with permissive status predicates; its generic web
+adapter reports unavailable before transport because XHR cannot enforce that
+boundary. The separate #1092 app client retains its redirect-rejecting Fetch
+transport. Generation applies this restriction repeatably. Existing generated
+login/refresh/logout methods and their behavior remain unchanged.
+
+Jobs drops only the two redundant optional Env declarations and returns to the
+existing exact allocation `50a6d8c3f4dd73f49db3c68b463a19b8c172ebb9`; the monthly
+module owns those optional fields. Public API source is untouched. Its strict
+allocation advances to the independently reviewed `6270c2b` blob
+`95ae09a2df0d260d699b4526a18bc682ff6cc485`; negative tests explicitly reject the
+prior blob, unrelated paths and mutated bytes. This allocation delta needs
+independent review before integration; it adds no wildcard or admitted path.
+
+Local validation: 78 OpenAPI contract tests pass (17 existing skips); 1,601
+generated SDK tests pass, including two real two-origin native 303 refusals and
+a successful exact-body/password/receipt round trip; 7 generator/validator
+regressions, 42 homepage-protection tests, 89 inactive action/monthly/session
+tests, native TypeScript and diff checks pass. SDK analysis retains 76 existing
+warnings with no errors. Two clean generations produce identical source trees.
+See [contract repair evidence](../evidence/member-verification-20261023/action-contract-repair-validation.txt).
+
+No reviewed proof, session, account-security UI, migration proposal or monthly
+security calculation is altered. Qualifying credential/coverage production and
+the existing common catalogue action mapping remain activation decisions;
+equal benefit and cumulative 24-hour monthly grace do not invent that mapping.

@@ -1,0 +1,124 @@
+@TestOn('vm')
+library member_verification_transport_test;
+
+import 'dart:convert';
+import 'dart:io';
+import 'dart:math';
+import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
+import 'package:lythaus_api_client/lythaus_api_client.dart';
+import 'package:test/test.dart';
+
+String probe() => List.generate(
+      48,
+      (_) => Random.secure().nextInt(16).toRadixString(16),
+    ).join();
+
+void main() {
+  for (final mode in ['redirect', 'permissive redirect', 'success']) {
+    test('verification SDK real native transport: $mode', () async {
+      final target = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final source = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      var targetRequests = 0, sourceRequests = 0;
+      var forwardedSensitiveHeaders = false, exactDescriptor = false;
+      final password = probe(), binding = probe(), proof = probe();
+      const body = '{ "requestType" : "delete" }';
+      target.listen((request) async {
+        targetRequests++;
+        forwardedSensitiveHeaders =
+            request.headers.value('x-lythaus-session-binding') != null ||
+                request.headers.value('x-lythaus-action-verification') !=
+                    null ||
+                request.headers.value('authorization') != null;
+        await request.drain<void>();
+        request.response.write('{}');
+        await request.response.close();
+      });
+      source.listen((request) async {
+        sourceRequests++;
+        final wire = jsonDecode(await utf8.decoder.bind(request).join()) as Map;
+        exactDescriptor = request.uri.path == '/auth/recent-verification' &&
+            request.method == 'POST' &&
+            request.headers.value('x-lythaus-session-binding') == binding &&
+            wire['password'] == password &&
+            wire['operation']['method'] == 'POST' &&
+            wire['operation']['path'] == '/api/privacy/requests' &&
+            wire['operation']['body'] == body;
+        if (mode != 'success') {
+          request.response.statusCode = 303;
+          request.response.headers.set(
+            HttpHeaders.locationHeader,
+            'http://${target.address.address}:${target.port}/redirect-target',
+          );
+        } else {
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(
+            jsonEncode({
+              'proof': proof,
+              'verifiedAt': '2026-10-23T12:00:00Z',
+              'expiresAt': '2026-10-23T12:05:00Z',
+              'action': 'account_delete',
+              'maintenanceEvidence': {'state': 'disabled'},
+            }),
+          );
+        }
+        await request.response.close();
+      });
+      final dio = Dio(
+        BaseOptions(
+          baseUrl: 'http://${source.address.address}:${source.port}',
+          followRedirects: true,
+          validateStatus: mode == 'permissive redirect' ? (_) => true : null,
+          connectTimeout: const Duration(seconds: 3),
+          receiveTimeout: const Duration(seconds: 3),
+        ),
+      )..httpClientAdapter = IOHttpClientAdapter(
+          createHttpClient: () => HttpClient()..findProxy = (_) => 'DIRECT',
+        );
+      try {
+        var denied = false, receivedProof = false;
+        try {
+          final response =
+              await AuthApi(dio, standardSerializers).verifyRecentAccountAction(
+            memberActionVerificationRequest: MemberActionVerificationRequest(
+              (b) => b
+                ..password = password
+                ..operation.update(
+                  (o) => o
+                    ..method =
+                        MemberActionVerificationRequestOperationMethodEnum.POST
+                    ..path = '/api/privacy/requests'
+                    ..body = body,
+                ),
+            ),
+            xLythausSessionBinding: binding,
+            headers: {
+              'Authorization': 'Bearer ${probe()}',
+              'X-Lythaus-Action-Verification': probe(),
+            },
+            validateStatus: mode == 'permissive redirect' ? (_) => true : null,
+          );
+          receivedProof = response.statusCode == 200 &&
+              response.data?.proof == proof &&
+              response.data?.action ==
+                  MemberActionVerificationReceiptActionEnum.accountDelete &&
+              response.data!.expiresAt.difference(response.data!.verifiedAt) ==
+                  const Duration(minutes: 5);
+        } on DioException catch (error) {
+          denied = error.response?.statusCode == 303;
+        }
+        // Assert booleans/counts only; never put transient probes in failure output.
+        expect(exactDescriptor, isTrue);
+        expect(denied, mode != 'success');
+        expect(receivedProof, mode == 'success');
+        expect(sourceRequests, 1);
+        expect(targetRequests, 0);
+        expect(forwardedSensitiveHeaders, isFalse);
+      } finally {
+        dio.close(force: true);
+        await source.close(force: true);
+        await target.close(force: true);
+      }
+    });
+  }
+}

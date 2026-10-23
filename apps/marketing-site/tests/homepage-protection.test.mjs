@@ -36,8 +36,8 @@ const allocatedJobsDiagnosticFiles = new Map([
   // PR #1044 head 75d22de8640ba0d1d687a873746820ee7c39ec10 passed 57/57 media CI checks and received independent review.
   // Proposed PR1063 text allocation; subject-lock support remains separately gated.
   ['apps/lythaus-jobs/src/index.ts', '50a6d8c3f4dd73f49db3c68b463a19b8c172ebb9'],
-  // Exact independently reviewed private image status and attachment gate; waitlist bytes remain frozen.
-  ['apps/lythaus-public-api/src/index.ts', 'dbdbd18ee726e3e399e04fbd01c649534729bb4b'],
+  // Exact inactive account-action source reviewed at 6270c2b; image and waitlist boundaries remain frozen.
+  ['apps/lythaus-public-api/src/index.ts', '95ae09a2df0d260d699b4526a18bc682ff6cc485'],
   ['apps/lythaus-jobs/src/reputation-session-diagnostic.ts', '058811914e95c404369a31d696c834b4d43d77f8'],
   ['apps/lythaus-public-api/src/jobs-reputation-session-bridge.ts', 'be480beb3c083c9ce4c7edc9310781c42987db31'],
   ['packages/contracts/src/jobs-reputation-session.ts', 'eb501f6cfa74188b6b3a280507b2f17575893e27'],
@@ -954,6 +954,9 @@ test('allocated Jobs pins reject altered historical and unrelated source paths',
     assert.notEqual(changed, expected);
     assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, changed), assert.AssertionError);
     if (filename === 'apps/lythaus-public-api/src/index.ts') {
+      const previousAllocation = 'dbdbd18ee726e3e399e04fbd01c649534729bb4b';
+      assert.notEqual(previousAllocation, expected, 'The reviewed inactive verification bytes replace the prior exact allocation');
+      assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, previousAllocation), assert.AssertionError);
       const previousPublicApiBlob = '5ca637b72d241d89df5178bec6f0f730aafe41cd';
       assert.notEqual(previousPublicApiBlob, expected, 'The reviewed membership and private media retry bytes replace the previous exact allocation');
       assert.throws(() => assertAllocatedJobsDiagnosticFile(filename, previousPublicApiBlob), assert.AssertionError);
