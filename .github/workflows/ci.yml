@@ -144,6 +144,7 @@ jobs:
           --test packages/contracts/tests/monthly-reputation.test.mjs
           packages/contracts/tests/monthly-peer-appeal.test.mjs
           packages/contracts/tests/monthly-earning.test.mjs
+          packages/contracts/tests/monthly-earning-human-eligibility.test.mjs
           packages/contracts/tests/monthly-maintenance.test.mjs
       - run: npm run test:critical-coverage
       - name: Verify text revision evidence, decision binding and account fencing

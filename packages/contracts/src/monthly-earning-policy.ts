@@ -14,6 +14,7 @@ export interface WeeklyEarningRules {
   usefulnessFullPercent: number;
   usefulnessPartialPercent: number;
   receptionOutcomePoints: number;
+  contributionEligibilityVersion?: 'human-contributions-2026-10-v1';
 }
 
 export const PROPOSED_WEEKLY_EARNING_RULES = Object.freeze<WeeklyEarningRules>({
@@ -22,6 +23,12 @@ export const PROPOSED_WEEKLY_EARNING_RULES = Object.freeze<WeeklyEarningRules>({
   discussionContributions: 1, sourceUnitPoints: 150, helpUnitPoints: 125,
   breadthRequiredFamilies: 4, usefulnessMinimum: 5, usefulnessFullPercent: 80,
   usefulnessPartialPercent: 60, receptionOutcomePoints: 125,
+});
+
+export const PROPOSED_HUMAN_CONTRIBUTION_RULES = Object.freeze<WeeklyEarningRules>({
+  ...PROPOSED_WEEKLY_EARNING_RULES,
+  version: 'weekly-earning-human-contributions-proposal-v2',
+  contributionEligibilityVersion: 'human-contributions-2026-10-v1',
 });
 
 export type PrimaryContributionKind = 'post' | 'own_comment' | 'own_reply' | 'other_comment'
@@ -70,6 +77,13 @@ const STATES = ['accepted', 'pending_review', 'withheld', 'reversed'];
 export function validateWeeklyEarningRules(rules: WeeklyEarningRules): void {
   if (!rules || rules.status !== 'pending_owner_approval' || !rules.version
     || rules.periodPolicyVersion !== 'closing-sunday-utc-proposal-v1') throw new Error('monthly_earning_rules_invalid');
+  if ((rules.contributionEligibilityVersion !== undefined
+      && (rules.contributionEligibilityVersion !== PROPOSED_HUMAN_CONTRIBUTION_RULES.contributionEligibilityVersion
+        || rules.version !== PROPOSED_HUMAN_CONTRIBUTION_RULES.version))
+    || (rules.version === PROPOSED_HUMAN_CONTRIBUTION_RULES.version
+      && rules.contributionEligibilityVersion !== PROPOSED_HUMAN_CONTRIBUTION_RULES.contributionEligibilityVersion)) {
+    throw new Error('monthly_earning_rules_invalid');
+  }
   for (const [value, maximum] of [
     [rules.settlementHours, 720], [rules.discussionContributions, 100], [rules.sourceUnitPoints, 300],
     [rules.helpUnitPoints, 250], [rules.breadthRequiredFamilies, 6], [rules.usefulnessMinimum, 1000],
@@ -134,6 +148,8 @@ export function calculateProposedWeeklyEarning(input: {
     else action.accepted++;
   }
   const accepted = primary.filter(item => item.state === 'accepted');
+  const acceptedContributions = input.rules.contributionEligibilityVersion === PROPOSED_HUMAN_CONTRIBUTION_RULES.contributionEligibilityVersion
+    ? accepted.filter(item => item.creationMode !== 'ai_assisted') : accepted;
   const awards = new Map<string, number>();
   const award = (action: string, points: number, evidenceIds: string[]) => {
     const target = row(action);
@@ -152,18 +168,18 @@ export function calculateProposedWeeklyEarning(input: {
   const human = compliant.filter(item => item.creationMode === 'human');
   if (human.length) award('human_authorship', 200, human.map(item => item.id));
   for (const kinds of [['own_comment', 'own_reply'], ['other_comment', 'other_reply']]) {
-    const discussion = accepted.filter(item => kinds.includes(item.kind));
+    const discussion = acceptedContributions.filter(item => kinds.includes(item.kind));
     if (discussion.length >= input.rules.discussionContributions) {
       const completion = discussion[input.rules.discussionContributions - 1];
       award(PRIMARY_ACTION[completion.kind], 150, discussion.slice(0, input.rules.discussionContributions).map(item => item.id));
     }
   }
-  for (const item of accepted) {
+  for (const item of acceptedContributions) {
     if (['source', 'correction'].includes(item.kind)) award(PRIMARY_ACTION[item.kind], input.rules.sourceUnitPoints, [item.id]);
     if (['help', 'accessibility'].includes(item.kind)) award(PRIMARY_ACTION[item.kind], input.rules.helpUnitPoints, [item.id]);
     if (item.kind === 'peer_ballot') award('peer_appeal_participation', 250, [item.id]);
   }
-  const acceptedWork = new Set(accepted.map(item => item.workId));
+  const acceptedWork = new Set(acceptedContributions.map(item => item.workId));
   const reception = [...input.reception].sort((a, b) => a.performedAt.localeCompare(b.performedAt) || a.id.localeCompare(b.id));
   const unique = new Set<string>();
   const counted: WeeklyReceptionEvidence[] = [];

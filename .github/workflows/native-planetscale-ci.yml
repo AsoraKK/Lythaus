@@ -54,8 +54,12 @@ on:
       - 'packages/contracts/fixtures/monthly-rewards-response-preparation.mjs'
       - 'apps/lythaus-public-api/src/monthly-reputation-routes.ts'
       - 'apps/lythaus-public-api/tests/monthly-reputation-routes.test.mjs'
+      - 'apps/lythaus-public-api/src/monthly-reputation-projection.ts'
+      - 'apps/lythaus-public-api/tests/monthly-reputation-projection.test.mjs'
       - 'apps/lythaus-jobs/tests/monthly-reputation-dsr.test.mjs'
       - 'packages/db/src/monthly-earning.ts'
+      - 'packages/db/src/monthly-assembly.ts'
+      - 'packages/db/src/monthly-peer-participation.ts'
       - 'packages/db/src/monthly-context*.ts'
       - 'packages/db/src/monthly-publication.ts'
       - 'packages/db/src/monthly-reward-*.ts'
@@ -67,6 +71,7 @@ on:
       - 'apps/lythaus-jobs/src/index.ts'
       - 'apps/lythaus-jobs/tests/monthly-reputation.postgres.mjs'
       - 'apps/lythaus-jobs/tests/monthly-earning.postgres.mjs'
+      - 'apps/lythaus-public-api/tests/community-appeals.postgres.mjs'
       - 'apps/lythaus-jobs/tests/monthly-context.postgres.mjs'
       - 'apps/lythaus-jobs/tests/monthly-reward-*.postgres.mjs'
       - 'apps/lythaus-jobs/tests/monthly-reward-*.cases.mjs'
@@ -219,10 +224,12 @@ jobs:
           '--test-coverage-include=packages/db/src/monthly-reward-claims.ts'
           '--test-coverage-include=packages/db/src/monthly-reputation-report.ts'
           '--test-coverage-include=apps/lythaus-public-api/src/monthly-reputation-report-export.ts'
+          '--test-coverage-include=apps/lythaus-public-api/src/monthly-reputation-projection.ts'
           --test-coverage-lines=80 --test-coverage-branches=80
           --test apps/lythaus-jobs/tests/monthly-reward-selections.postgres.mjs
           packages/db/tests/monthly-reputation-report-config.test.mjs
           apps/lythaus-public-api/tests/monthly-reputation-routes.test.mjs
+          apps/lythaus-public-api/tests/monthly-reputation-projection.test.mjs
           apps/lythaus-jobs/tests/monthly-reputation-dsr.test.mjs
       - name: Prove column-only incident audit grants on real PostgreSQL
         env:
