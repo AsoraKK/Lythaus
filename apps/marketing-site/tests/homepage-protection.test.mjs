@@ -258,10 +258,23 @@ function assertExactImageAndQuotingPatches(current, original, filename) {
   assert.equal(digest, reviewedImageAndQuotingPatchHashes[filename], 'Image and quoting packages must use exact reviewed security patch metadata');
   for (const packagePath of paths) current.packages[packagePath] = original.packages[packagePath];
 }
+function assertUndiciOverrides(manifest) {
+  assert.equal(manifest.overrides.undici, '7.30.1', 'Undici must retain the exact patched root override');
+  assert.equal(manifest.overrides.miniflare.undici, '7.30.1', 'Miniflare must retain the exact patched Undici override');
+}
 function assertRootToolingLockOnlyHasSecurityPatches(current = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'))) {
   const original = JSON.parse(git('show', `${upstreamBaselineSha}:package-lock.json`));
   assertExactImageAndQuotingPatches(current, original, 'package-lock.json');
-  for (const [name, version] of [['brace-expansion', '5.0.12'], ['undici', '7.29.1'], ['basic-ftp', '6.2.1']]) {
+  assert.deepEqual(current.packages['node_modules/undici'], {
+    version: '7.30.1',
+    resolved: 'https://registry.npmjs.org/undici/-/undici-7.30.1.tgz',
+    integrity: 'sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==',
+    dev: true,
+    license: 'MIT',
+    engines: { node: '>=20.18.1' },
+  }, 'Undici must use the exact reviewed security patch metadata');
+  current.packages['node_modules/undici'] = original.packages['node_modules/undici'];
+  for (const [name, version] of [['brace-expansion', '5.0.12'], ['basic-ftp', '6.2.1']]) {
     const packagePath = `node_modules/${name}`;
     const patched = current.packages[packagePath];
     assert.equal(patched?.version, version, `${name} must use the reviewed patched version`);
@@ -691,6 +704,63 @@ test('image and quoting security exceptions reject vulnerable versions, altered 
   assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(changed), /exact reviewed security patch metadata/);
 });
 
+test('Undici security pins reject altered metadata, stale overrides and unrelated dependencies', () => {
+  const readLock = () => JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+  for (const [field, value] of [
+    ['version', '7.29.1'], ['version', '7.30.0'], ['version', '7.30.2'],
+    ['resolved', 'https://example.invalid/undici-7.30.1.tgz'],
+    ['integrity', 'sha512-invalid'], ['dev', false],
+    ['engines', { node: '>=24' }], ['dependencies', { unreviewed: '1.0.0' }],
+  ]) {
+    const changed = readLock(); changed.packages['node_modules/undici'][field] = value;
+    assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(changed), /Undici must use the exact reviewed security patch metadata/);
+  }
+  const missing = readLock(); delete missing.packages['node_modules/undici'];
+  assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(missing), /Undici must use the exact reviewed security patch metadata/);
+  const unrelated = readLock(); unrelated.packages['node_modules/miniflare'].version = '0.0.0';
+  assert.throws(() => assertRootToolingLockOnlyHasSecurityPatches(unrelated), /Root tooling lock may change only for the reviewed security patches/);
+  for (const target of ['root', 'miniflare']) {
+    const manifest = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
+    const overrides = target === 'root' ? manifest.overrides : manifest.overrides.miniflare;
+    overrides.undici = '7.29.1';
+    assert.throws(() => assertUndiciOverrides(manifest), /exact patched/);
+    delete overrides.undici;
+    assert.throws(() => assertUndiciOverrides(manifest), /exact patched/);
+  }
+});
+
+test('Undici rejects excessive encodings and early close without terminating its caller', () => {
+  const child = spawnSync(process.execPath, ['--input-type=module', '-e', `
+    import assert from 'node:assert/strict';
+    import { createServer } from 'node:net';
+    import { once } from 'node:events';
+    import { Agent, fetch } from 'undici';
+    const server = createServer(socket => socket.once('data', request => {
+      if (request.toString().includes('/healthy')) {
+        socket.end('HTTP/1.1 200 OK\\r\\nContent-Length: 2\\r\\nConnection: close\\r\\n\\r\\nok');
+      } else {
+        socket.end('HTTP/1.1 200 OK\\r\\nContent-Encoding: gzip, gzip, gzip, gzip, gzip, gzip\\r\\nContent-Length: 1\\r\\nConnection: close\\r\\n\\r\\n');
+      }
+    }));
+    server.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    const dispatcher = new Agent();
+    const origin = 'http://127.0.0.1:' + server.address().port;
+    try {
+      await assert.rejects(fetch(origin, { dispatcher }), error => /content-encoding/.test(error.cause?.message));
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const response = await fetch(origin + '/healthy', { dispatcher });
+      assert.equal(await response.text(), 'ok');
+    } finally {
+      await dispatcher.destroy();
+      await new Promise(resolve => server.close(resolve));
+    }
+  `], { cwd: root, encoding: 'utf8', timeout: 10000 });
+  assert.equal(child.error, undefined);
+  assert.equal(child.signal, null);
+  assert.equal(child.status, 0, child.stderr);
+});
+
 test('Zod security patch rejects vulnerable or unreviewed metadata and unrelated dependency changes', () => {
   const readLock = () => JSON.parse(readFileSync(path.join(root, 'apps/marketing-site/package-lock.json'), 'utf8'));
   for (const [field, value] of [
@@ -851,14 +921,13 @@ export class AuthEmailEnvelope extends WorkerEntrypoint<EnvBindings> {
         before.scripts[name] = scripts.reviewed;
       }
       assert.equal(after.overrides['brace-expansion'], '5.0.12');
-      assert.equal(after.overrides.undici, '7.29.1');
-      assert.equal(after.overrides.miniflare.undici, '7.29.1');
+      assertUndiciOverrides(after);
       assert.deepEqual(after.overrides['get-uri@8.0.1'], { 'basic-ftp': '6.2.1' });
       assert.equal(after.overrides['fast-uri'], '3.1.8');
       assert.equal(after.overrides['ip-address'], '10.7.1');
       before.overrides['brace-expansion'] = '5.0.12';
-      before.overrides.undici = '7.29.1';
-      before.overrides.miniflare.undici = '7.29.1';
+      before.overrides.undici = '7.30.1';
+      before.overrides.miniflare.undici = '7.30.1';
       before.overrides['get-uri@8.0.1'] = { 'basic-ftp': '6.2.1' };
       before.overrides['fast-uri'] = '3.1.8';
       before.overrides['ip-address'] = '10.7.1';
