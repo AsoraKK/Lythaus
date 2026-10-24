@@ -22,23 +22,35 @@ export function restoredConnection(row, branchId, expectedRole) {
   return url.toString();
 }
 
-export async function readOnly(raw, branchId, role, work, clientFactory = config => new pg.Client(config)) {
+function closeOnAbort(client, signal) {
+  let closing;
+  const close = () => closing ??= Promise.resolve().then(() => client.end());
+  const abort = () => { void close().catch(() => {}); };
+  signal?.addEventListener('abort', abort, { once: true });
+  return { close, detach: () => signal?.removeEventListener('abort', abort) };
+}
+
+export async function readOnly(raw, branchId, role, work, clientFactory = config => new pg.Client(config), signal) {
   const target = branchQualifiedDatabaseTarget(raw);
   requireThat(target.branchId === branchId && target.role === role && target.sqlDatabaseName === 'postgres', 'sql_connection_target_mismatch');
   const client = clientFactory({ ...adminDatabaseConnectionConfig(raw), connectionTimeoutMillis: 10000,
     statement_timeout: 15000, query_timeout: 20000, application_name: 'lythaus-native-restore-check' });
   client.on?.('error', () => {});
+  const shutdown = closeOnAbort(client, signal);
   try {
+    signal?.throwIfAborted();
     await client.connect();
+    signal?.throwIfAborted();
     await client.query('BEGIN READ ONLY');
     const row = (await client.query(`SELECT current_database() AS database, current_user AS username,
       session_user AS session, current_setting('transaction_read_only') AS read_only,
       current_setting('server_version_num') AS version`)).rows[0];
     requireThat(row?.database === 'postgres' && [role, `${role}.${branchId}`].includes(row.username)
       && [role, `${role}.${branchId}`].includes(row.session) && row.read_only === 'on' && /^17\d{4}$/.test(row.version), 'sql_session_identity_invalid');
-    return await work(client);
+    const result = await work(client); signal?.throwIfAborted(); return result;
   } finally {
-    try { await client.query('ROLLBACK'); } finally { await client.end(); }
+    try { if (!signal?.aborted) await client.query('ROLLBACK'); }
+    finally { try { await shutdown.close(); } finally { shutdown.detach(); } }
   }
 }
 
@@ -117,7 +129,7 @@ export async function collectRestoreCatalog(client) {
     schemaVersion: '0020_auth_recovery_delivery.sql', approvedPrivilegeChecks: 17, extensionCount: extensions.length };
 }
 
-export async function inspectExtensionAuthority(raw, branchId, clientFactory) {
+export async function inspectExtensionAuthority(raw, branchId, clientFactory, signal) {
   return readOnly(raw, branchId, RESTORE.setup, async client => {
     const rows = (await client.query(`SELECT e.name,e.default_version,e.installed_version,v.trusted,v.superuser,
       has_database_privilege(current_user,current_database(),'CREATE') AS can_create_database,
@@ -130,10 +142,10 @@ export async function inspectExtensionAuthority(raw, branchId, clientFactory) {
     requireThat(missing.every(row => row.can_create_database === true && row.can_create_schema === true
       && (row.trusted === true || row.superuser === false || row.is_superuser === true)), 'missing_extension_install_authority_unproven');
     return missing.map(row => row.name);
-  }, clientFactory);
+  }, clientFactory, signal);
 }
 
-export async function installMissingExtensions(raw, branchId, missing, clientFactory = config => new pg.Client(config)) {
+export async function installMissingExtensions(raw, branchId, missing, clientFactory = config => new pg.Client(config), signal) {
   requireThat(branchId !== RESTORE.sourceId && missing.every(name => EXTENSIONS.includes(name)) && new Set(missing).size === missing.length,
     'extension_scope_invalid');
   const target = branchQualifiedDatabaseTarget(raw);
@@ -141,16 +153,18 @@ export async function installMissingExtensions(raw, branchId, missing, clientFac
   if (missing.length === 0) return;
   const client = clientFactory({ ...adminDatabaseConnectionConfig(raw), connectionTimeoutMillis: 10000, statement_timeout: 15000 });
   client.on?.('error', () => {});
+  const shutdown = closeOnAbort(client, signal);
   let committing = false;
   try {
-    await client.connect(); await client.query('BEGIN');
+    signal?.throwIfAborted(); await client.connect(); signal?.throwIfAborted(); await client.query('BEGIN');
     const row = (await client.query('SELECT current_user AS username,current_database() AS database')).rows[0];
     requireThat(row?.database === 'postgres' && [RESTORE.setup,`${RESTORE.setup}.${branchId}`].includes(row.username), 'extension_session_mismatch');
-    for (const name of missing) await client.query(`CREATE EXTENSION "${name}"`);
+    for (const name of missing) { signal?.throwIfAborted(); await client.query(`CREATE EXTENSION "${name}"`); }
+    signal?.throwIfAborted();
     committing = true; const committed = await client.query('COMMIT');
     requireThat(committed?.command === 'COMMIT', 'extension_commit_ack_missing', 'UNKNOWN_MUTATION_OUTCOME');
   } catch (error) {
     if (committing) throw Object.assign(new Error(), { extensionOutcomeUnknown: true });
-    await client.query('ROLLBACK'); throw error;
-  } finally { await client.end(); }
+    if (!signal?.aborted) await client.query('ROLLBACK'); throw error;
+  } finally { try { await shutdown.close(); } finally { shutdown.detach(); } }
 }

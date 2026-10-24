@@ -68,7 +68,7 @@ jobs:
       - name: Validate fixed read-only native restore inventory
         run: node --test scripts/tests/planetscale-native-restore-inventory.test.mjs
       - name: Verify fixed native restore runner without provider access
-        run: node --test scripts/tests/planetscale-native-restore-check.test.mjs
+        run: node --test scripts/tests/planetscale-native-restore-check.test.mjs scripts/tests/planetscale-native-restore-cleanup.test.mjs
       - name: Validate protected Jobs session lifecycle without provider access
         run: node --experimental-strip-types --test scripts/tests/jobs-session-executor.test.mjs
       - name: Validate read-only Cloudflare audit contract
