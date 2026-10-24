@@ -606,6 +606,32 @@ test('actual standard-upload handlers, Queue dispatcher and local private R2', {
       assert.equal(await fixture.quarantine.head(state.session.object_key), null);
       assert.equal(await fixture.approved.head(key), null);
     });
+    await t.test('cancelled queue work retries orphan cleanup without transforming or persisting evidence', async () => {
+      const input = await seed('cancelled');
+      state.ledgerReserved = 0;
+      const key = `approved/${input.userId}/${input.sessionId}.webp`;
+      await fixture.approved.put(key, png);
+      const effectOffset = effects.length;
+
+      assert.deepEqual(await queue({ ...input, failApprovedDelete: true }), { ack: 0, retry: 1, imageCalls: 0 });
+      assert.equal(state.session.status, 'cancelled');
+      assert.equal(state.objects.length, 0);
+      assert.equal(state.evidence.length, 0);
+      assert.equal(state.ledgerWrites, 0);
+      assert.equal(state.ledgerReserved, 0);
+      assert.equal(await fixture.quarantine.head(state.session.object_key), null);
+      assert.ok(await fixture.approved.head(key), 'failed private derivative cleanup must remain retryable');
+
+      assert.deepEqual(await queue(input), { ack: 1, retry: 0, imageCalls: 0 });
+      assert.equal(state.session.status, 'cancelled');
+      assert.equal(state.objects.length, 0);
+      assert.equal(state.evidence.length, 0);
+      assert.equal(state.ledgerWrites, 0);
+      assert.equal(state.ledgerReserved, 0);
+      assert.equal(await fixture.approved.head(key), null);
+      assert.equal(effects.slice(effectOffset).filter(effect => effect.type === 'transform').length, 0);
+      assert.equal(fixture.outbound.length, 0);
+    });
     await t.test('review evidence persistence failure rolls back database effects and retries', async () => {
       const input = await seed();
       beforeQuery = sql => { if (sql.includes('INSERT INTO media.moderation_results')) throw new Error('synthetic_evidence_unavailable'); };
