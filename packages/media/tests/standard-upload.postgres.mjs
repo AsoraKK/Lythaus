@@ -7,6 +7,8 @@ import pg from 'pg';
 import { createExifGpsJpeg } from './image-fixtures.mjs';
 import { publicationControlTarget } from '../../../scripts/ci/run-publication-pg17.mjs';
 import { standardUploadFixture } from './standard-upload-fixture.mjs';
+import { IMAGE_REVIEW_MEDIA_EXPORT_SQL, purgeImageReviewEvidence } from '../../../apps/lythaus-jobs/src/image-review-privacy.ts';
+import { createImageReviewEvidence, verifyImageReviewEvidence } from '../../authenticity/src/image-review-evidence.ts';
 
 test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles', { timeout: 120_000 }, async t => {
   const target = publicationControlTarget(process.env.PLANETSCALE_PG17_TEST_DATABASE_URL ?? '');
@@ -85,6 +87,10 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
         createHash('sha256').update(sourceBytes).digest('hex'), purpose, status]);
       await admin.query('INSERT INTO media.storage_ledger(user_id,bytes_reserved) VALUES($1,$2)', [userId, sourceBytes.length]);
       await fixture.quarantine.put(objectKey, sourceBytes, { httpMetadata: { contentType } });
+      if (status !== 'pending') await admin.query(`INSERT INTO system.outbox_events
+        (id,event_type,aggregate_type,aggregate_id,actor_id,payload)
+        VALUES($1,'media.upload.finalised','upload_session',$2,$3,$4::jsonb)`,
+      [eventId, sessionId, userId, JSON.stringify({ uploadSessionId: sessionId, objectKey })]);
       return { userId, sessionId, objectKey, event: { eventId, eventType: 'media.upload.finalised',
         payload: { uploadSessionId: sessionId, objectKey } } };
     }
@@ -92,6 +98,71 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
     const queue = async input => (await fixture.request('/fixture/queue', input)).json();
     const create = async (userId, sourceBytes = png, contentType = 'image/png') => fixture.request('/fixture/create', { userId,
       upload: { contentType, size: sourceBytes.length, checksumSha256: createHash('sha256').update(sourceBytes).digest('hex') } });
+
+    await t.test('unchanged Jobs role exports and purges only the owning image review packets', async () => {
+      const owner = await seed('queued'), other = await seed('queued');
+      const objectIds = [randomUUID(), randomUUID(), randomUUID()];
+      const derivativeBytes = new Uint8Array(await sharp(png).webp({ quality: 85 }).toBuffer());
+      for (const [index, objectId] of objectIds.entries()) {
+        const input = index === 2 ? other : owner;
+        const review = await createImageReviewEvidence({ binding: {
+          ownerId: input.userId, uploadSessionId: input.sessionId, sourceEventId: input.event.eventId, objectId,
+          sourceSha256: checksum, sourceContentType: 'image/png', sourceBytes: png.length,
+          derivativeSha256: createHash('sha256').update(derivativeBytes).digest('hex'), derivativeBytes: derivativeBytes.length,
+          width: 1, height: 1, transformVersion: 'standard-webp-v2',
+        }, sourceBytes: png, derivativeBytes });
+        await admin.query(`INSERT INTO media.objects(id,owner_id,object_key,content_type,byte_size,sha256,state)
+          VALUES($1,$2,$3,'image/webp',$4,$5,'review')`, [objectId,input.userId,`private/${objectId}`,derivativeBytes.length,review.binding.derivativeSha256]);
+        await admin.query(`INSERT INTO media.moderation_results(id,object_id,provider,model_version,signal)
+          VALUES($1,$2,'lythaus-authenticity-ai','not-executed',$3::jsonb)`,
+        [randomUUID(),objectId,JSON.stringify({ modelId:'not-executed',reviewRequired:true,imageReview:review })]);
+      }
+      const jobs = await open('lythaus_jobs');
+      try {
+        const exported = (await jobs.query(IMAGE_REVIEW_MEDIA_EXPORT_SQL, [owner.userId])).rows;
+        assert.equal(exported.length, 2);
+        for (const object of exported) {
+          assert.equal(object.image_review.length, 1);
+          const review = object.image_review[0];
+          assert.equal(await verifyImageReviewEvidence(review, { ...review.binding, ownerId: owner.userId, objectId: object.id }), true);
+        }
+        await purgeImageReviewEvidence(jobs, other.userId, objectIds[0]);
+        assert.equal((await jobs.query(IMAGE_REVIEW_MEDIA_EXPORT_SQL,[owner.userId])).rows[0].image_review.length,1);
+        await purgeImageReviewEvidence(jobs, owner.userId, objectIds[0]);
+        const retained = (await jobs.query(IMAGE_REVIEW_MEDIA_EXPORT_SQL,[owner.userId])).rows;
+        assert.equal(retained.find(object=>object.id===objectIds[0]).image_review.length,0);
+        assert.equal(retained.find(object=>object.id===objectIds[1]).image_review.length,1);
+        await purgeImageReviewEvidence(jobs, owner.userId);
+        await purgeImageReviewEvidence(jobs, owner.userId);
+        assert.ok((await jobs.query(IMAGE_REVIEW_MEDIA_EXPORT_SQL,[owner.userId])).rows.every(object=>object.image_review.length===0));
+        assert.equal((await jobs.query(IMAGE_REVIEW_MEDIA_EXPORT_SQL,[other.userId])).rows[0].image_review.length,1);
+        const legacy = (await jobs.query('SELECT signal FROM media.moderation_results WHERE object_id=$1',[objectIds[0]])).rows[0].signal;
+        assert.deepEqual(legacy,{modelId:'not-executed',reviewRequired:true});
+      } finally { await jobs.end(); }
+    });
+
+    await t.test('real SQL rejects forged event identity and owner/source mismatches before Images', async () => {
+      for (const alter of [
+        async input => { input.event.eventId=randomUUID(); },
+        async input => {
+          const foreign = await seed('queued');
+          return admin.query('UPDATE system.outbox_events SET actor_id=$2 WHERE id=$1',[input.event.eventId,foreign.userId]);
+        },
+        async input => admin.query(`UPDATE system.outbox_events SET payload=jsonb_set(payload,'{objectKey}','"unrelated-private-key"') WHERE id=$1`,[input.event.eventId]),
+        async input => admin.query("UPDATE system.outbox_events SET event_type='content.post.created' WHERE id=$1",[input.event.eventId]),
+        async input => admin.query("UPDATE system.outbox_events SET aggregate_type='post' WHERE id=$1",[input.event.eventId]),
+        async input => admin.query('UPDATE system.outbox_events SET aggregate_id=$2 WHERE id=$1',[input.event.eventId,randomUUID()]),
+        async input => admin.query(`INSERT INTO system.outbox_events(id,event_type,aggregate_type,aggregate_id,actor_id,payload)
+          SELECT $2,event_type,aggregate_type,aggregate_id,actor_id,payload FROM system.outbox_events WHERE id=$1`,[input.event.eventId,randomUUID()]),
+      ]) {
+        const input=await seed('queued');
+        await alter(input);
+        assert.deepEqual(await queue(input),{ack:0,retry:1,imageCalls:0});
+        assert.equal((await session(input)).status,'queued');
+        assert.equal((await admin.query('SELECT count(*)::integer AS n FROM media.objects WHERE owner_id=$1',[input.userId])).rows[0].n,0);
+        assert.ok(await fixture.quarantine.head(input.objectKey));
+      }
+    });
 
     await t.test('Worker ingress bounds bytes before R2 and retries after a lost SQL transition', async () => {
       const userId = randomUUID();
@@ -312,7 +383,9 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
         const orientedInput = { userId: orientedUser, sessionId: orientedReceipt.uploadSessionId,
           objectKey: orientedSession.object_key, event: { eventId: randomUUID(), eventType: 'media.upload.finalised',
             payload: { uploadSessionId: orientedReceipt.uploadSessionId, objectKey: orientedSession.object_key } } };
-        assert.equal((await fixture.request('/fixture/finalise', orientedInput)).status, 200);
+        const orientedFinalised = await fixture.request('/fixture/finalise', orientedInput);
+        assert.equal(orientedFinalised.status, 200);
+        orientedInput.event.eventId = (await orientedFinalised.json()).eventId;
         effects.length = 0;
         assert.deepEqual(await queue(orientedInput), { ack: 1, retry: 0, imageCalls: 1 });
         const orientedObject = (await admin.query('SELECT id, object_key, state FROM media.objects WHERE owner_id=$1', [orientedUser])).rows[0];
@@ -619,6 +692,11 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
         assert.equal(object.state, 'review');
         assert.equal(Number(object.byte_size), derivativeBytes.byteLength);
         assert.equal(object.sha256, derivativeSha256);
+        const review = (await admin.query('SELECT signal FROM media.moderation_results WHERE object_id=$1', [object.id])).rows[0].signal.imageReview;
+        assert.equal(review.binding.transformVersion, 'standard-webp-v1');
+        assert.equal(review.provenance.exifPresent, true);
+        assert.equal(await verifyImageReviewEvidence(review, { ...review.binding, ownerId: input.userId,
+          sourceEventId: input.event.eventId, sourceSha256, derivativeSha256 }), true);
         const variant = (await admin.query('SELECT width,height FROM media.variants WHERE object_id=$1', [object.id])).rows[0];
         assert.deepEqual(Object.values(variant).map(Number), [2, 3]);
         assert.equal(effects.filter(effect => effect.type === 'transform').length, 0);
@@ -657,7 +735,8 @@ test('standard uploads with Workerd, local R2 and unchanged canonical PG17 roles
         assert.ok(firstTransaction);
         const backend = connections.get(firstTransaction).processID;
         assert.equal((await admin.query('SELECT pg_terminate_backend($1) AS terminated', [backend])).rows[0].terminated, true);
-        const event = { ...input.event, eventId: randomUUID() };
+        const event = input.event;
+        await admin.query('DELETE FROM system.consumer_inbox WHERE event_id=$1', [event.eventId]);
         assert.deepEqual(await queue({ ...input, event, attempt: 'winner', transformed: Array.from(winnerBytes) }), { ack: 0, retry: 1, imageCalls: 1 });
       } finally { release.resolve(); }
       assert.deepEqual(await stale, { ack: 0, retry: 1, imageCalls: 1 });
