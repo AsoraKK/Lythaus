@@ -4,6 +4,7 @@ import { MONTHLY_REPUTATION_POLICY_VERSION } from '../../../packages/contracts/s
 import { loadMonthlyEarningConfiguration } from '../../../packages/db/src/monthly-earning.ts';
 import { loadMonthlyMaintenanceConfiguration } from '../../../packages/db/src/monthly-maintenance.ts';
 import { assembleMonthlyReputation } from '../../../packages/db/src/monthly-assembly.ts';
+import { securityChoiceMapping } from '../../../packages/db/src/member-security-maintenance.ts';
 
 export interface MonthlyAssemblyEnv {
   DB_JOBS_FRESH: HyperdriveBinding;
@@ -11,11 +12,15 @@ export interface MonthlyAssemblyEnv {
   MONTHLY_REPUTATION_MAINTENANCE_RULES?: string;
   MONTHLY_REPUTATION_PEER_PARTICIPATION_RULES?: string;
   MONTHLY_REPUTATION_CONTEXT_RULES?: string;
+  MEMBER_SECURITY_EVIDENCE_ENABLED?: string;
+  MEMBER_SECURITY_EVIDENCE_MAPPING?: string;
 }
 
 export async function reconcileMonthlyAssembly(env: MonthlyAssemblyEnv): Promise<{ processed: number }> {
   const weeklyVersion = env.MONTHLY_REPUTATION_SHADOW_RULES, maintenanceVersion = env.MONTHLY_REPUTATION_MAINTENANCE_RULES;
   if (!weeklyVersion || !maintenanceVersion) return { processed: 0 };
+  const securityChoice = env.MEMBER_SECURITY_EVIDENCE_ENABLED === 'true'
+    ? { enabled: true, mapping: securityChoiceMapping(env.MEMBER_SECURITY_EVIDENCE_MAPPING) } : undefined;
   const configuration = await transaction(env.DB_JOBS_FRESH, async client => ({
     weekly: await loadMonthlyEarningConfiguration(client, weeklyVersion),
     maintenance: await loadMonthlyMaintenanceConfiguration(client, maintenanceVersion),
@@ -58,6 +63,7 @@ export async function reconcileMonthlyAssembly(env: MonthlyAssemblyEnv): Promise
         peerRulesVersion: env.MONTHLY_REPUTATION_PEER_PARTICIPATION_RULES,
         contextRulesVersion: env.MONTHLY_REPUTATION_CONTEXT_RULES,
         maintenanceRulesVersion: maintenanceVersion, evaluatedAt: new Date().toISOString(),
+        ...(securityChoice ? { securityChoice } : {}),
       }));
       if (result?.created) processed++;
     } catch {

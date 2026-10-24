@@ -1,0 +1,694 @@
+Inactive monthly grace validation, 2026-10-23. Parent d1e66ed61ebaa2506b9e6da8495a203381ade3a4.
+Policy: cumulative union of verified unprotected time, at most 24 hours per UTC calendar month.
+Equal benefit uses one explicitly mapped existing catalogue action, with no configured production mapping.
+No new schema executed, no providers/credentials/enrollment, live security, reputation mutation or awards.
+
+=== member-security-grace-final-node.log ===
+TAP version 13
+# Subtest: issues one family and one session only for an active account
+ok 1 - issues one family and one session only for an active account
+  ---
+  duration_ms: 2.3929
+  type: 'test'
+  ...
+# Subtest: does not persist a refresh session when access-token signing fails
+ok 2 - does not persist a refresh session when access-token signing fails
+  ---
+  duration_ms: 0.269705
+  type: 'test'
+  ...
+# Subtest: rotates only the presented session and signs a replacement token
+ok 3 - rotates only the presented session and signs a replacement token
+  ---
+  duration_ms: 0.477931
+  type: 'test'
+  ...
+# Subtest: revokes the whole refresh family after a CAS reuse conflict
+ok 4 - revokes the whole refresh family after a CAS reuse conflict
+  ---
+  duration_ms: 0.258599
+  type: 'test'
+  ...
+# Subtest: denies unknown or inactive refresh sessions before persistence
+ok 5 - denies unknown or inactive refresh sessions before persistence
+  ---
+  duration_ms: 0.339959
+  type: 'test'
+  ...
+# Subtest: logout and password-reset invalidation revoke sessions, families, then token versions
+ok 6 - logout and password-reset invalidation revoke sessions, families, then token versions
+  ---
+  duration_ms: 0.179784
+  type: 'test'
+  ...
+# Subtest: rejects invalid account token versions before issuing a refresh family
+ok 7 - rejects invalid account token versions before issuing a refresh family
+  ---
+  duration_ms: 0.364074
+  type: 'test'
+  ...
+# Subtest: sequential reuse of a known rotated token revokes its family but unknown tokens do not
+ok 8 - sequential reuse of a known rotated token revokes its family but unknown tokens do not
+  ---
+  duration_ms: 0.274994
+  type: 'test'
+  ...
+# Subtest: revokes the replacement family when the active account version disappears or signing fails
+ok 9 - revokes the replacement family when the active account version disappears or signing fails
+  ---
+  duration_ms: 0.527854
+  type: 'test'
+  ...
+# Subtest: all auth POST operations enforce origin before dispatch, including recovery
+ok 10 - all auth POST operations enforce origin before dispatch, including recovery
+  ---
+  duration_ms: 31.454028
+  type: 'test'
+  ...
+# Subtest: browser session never returns refresh credentials in JSON; host-only secure cookie has no Domain
+ok 11 - browser session never returns refresh credentials in JSON; host-only secure cookie has no Domain
+  ---
+  duration_ms: 0.867512
+  type: 'test'
+  ...
+# Subtest: native/deployed legacy clients retain explicit compatible token transport
+ok 12 - native/deployed legacy clients retain explicit compatible token transport
+  ---
+  duration_ms: 1.042349
+  type: 'test'
+  ...
+# Subtest: cookie transport requires custom header and exact HTTPS origin, never wildcard or sibling trust
+ok 13 - cookie transport requires custom header and exact HTTPS origin, never wildcard or sibling trust
+  ---
+  duration_ms: 1.229304
+  type: 'test'
+  ...
+# Subtest: refresh cookie parser rejects absent, duplicate, malformed or oversized credentials
+ok 14 - refresh cookie parser rejects absent, duplicate, malformed or oversized credentials
+  ---
+  duration_ms: 0.714338
+  type: 'test'
+  ...
+# Subtest: optional logout cookie permits absence without weakening credential parsing
+ok 15 - optional logout cookie permits absence without weakening credential parsing
+  ---
+  duration_ms: 0.46374
+  type: 'test'
+  ...
+# Subtest: a domain commit followed by finalization failure is quarantined and never reported as safe to retry
+ok 16 - a domain commit followed by finalization failure is quarantined and never reported as safe to retry
+  ---
+  duration_ms: 25.215071
+  type: 'test'
+  ...
+# Subtest: a validation error is finalized as a stable replayable response
+ok 17 - a validation error is finalized as a stable replayable response
+  ---
+  duration_ms: 2.21565
+  type: 'test'
+  ...
+# Subtest: an ambiguous server failure is quarantined without finalizing an error replay
+ok 18 - an ambiguous server failure is quarantined without finalizing an error replay
+  ---
+  duration_ms: 0.27212
+  type: 'test'
+  ...
+# (node:10255) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# {"timestamp":"2026-10-23T13:09:38.768Z","service":"lythaus-public-api","correlationId":"2c6081bd-d8fb-4c6c-aa7c-8205e0045c83","errorCode":"recent_authentication_required","internalErrorCode":"recent_authentication_required","route":"/api/rewards/level-1-learning/redeem"}
+# Subtest: reward: confirmed challenge → real verification → new-key recovery; old-key denial remains stable
+ok 19 - reward: confirmed challenge → real verification → new-key recovery; old-key denial remains stable
+  ---
+  duration_ms: 710.902825
+  type: 'test'
+  ...
+# {"timestamp":"2026-10-23T13:09:40.041Z","service":"lythaus-public-api","correlationId":"54b1047b-d3a6-42fb-aed3-7ea1328b9950","errorCode":"recent_authentication_required","internalErrorCode":"recent_authentication_required","route":"/api/rewards/level-1-learning/redeem"}
+# Subtest: reward: expired proof denial recovers only after renewal and a fresh operation key
+ok 20 - reward: expired proof denial recovers only after renewal and a fresh operation key
+  ---
+  duration_ms: 1241.45242
+  type: 'test'
+  ...
+# {"timestamp":"2026-10-23T13:09:41.216Z","service":"lythaus-public-api","correlationId":"81bc317b-5787-4412-8095-34ce477e1716","errorCode":"idempotency_in_progress","internalErrorCode":"idempotency_in_progress","route":"/api/rewards/level-1-learning/redeem"}
+# {"timestamp":"2026-10-23T13:09:41.222Z","service":"lythaus-public-api","correlationId":"9e1fc59a-4414-4649-8714-b07b11bc1f34","errorCode":"recent_authentication_required","internalErrorCode":"recent_authentication_required","route":"/api/rewards/level-1-learning/redeem"}
+# {"timestamp":"2026-10-23T13:09:41.231Z","service":"lythaus-public-api","correlationId":"477b27a6-5839-40e1-a02a-42b9fe485cc2","errorCode":"idempotency_key_conflict","internalErrorCode":"idempotency_key_conflict","route":"/api/rewards/level-1-learning/redeem"}
+# Subtest: reward: concurrent same-key success replays once; another key cannot reuse its proof
+ok 21 - reward: concurrent same-key success replays once; another key cannot reuse its proof
+  ---
+  duration_ms: 549.511017
+  type: 'test'
+  ...
+# {"timestamp":"2026-10-23T13:09:41.823Z","service":"lythaus-public-api","correlationId":"2a1e8aed-28e7-4b9e-bd24-be3629fd874c","errorCode":"idempotency_outcome_unknown","internalErrorCode":"idempotency_outcome_unknown","route":"/api/rewards/level-1-learning/redeem"}
+# {"timestamp":"2026-10-23T13:09:41.824Z","service":"lythaus-public-api","correlationId":"85b965fb-81db-448b-916c-5c854d775b00","errorCode":"idempotency_outcome_unknown","internalErrorCode":"idempotency_outcome_unknown","route":"/api/rewards/level-1-learning/redeem"}
+# Subtest: reward: unknown finalization remains quarantined after one committed effect
+ok 22 - reward: unknown finalization remains quarantined after one committed effect
+  ---
+  duration_ms: 593.2207
+  type: 'test'
+  ...
+# {"timestamp":"2026-10-23T13:09:41.827Z","service":"lythaus-public-api","correlationId":"6da10f4d-8187-4d3a-8848-e796917b0645","errorCode":"recent_authentication_required","internalErrorCode":"recent_authentication_required","route":"/api/privacy/requests"}
+# Subtest: deletion: confirmed challenge → real verification → new-key recovery; old-key denial remains stable
+ok 23 - deletion: confirmed challenge → real verification → new-key recovery; old-key denial remains stable
+  ---
+  duration_ms: 603.597459
+  type: 'test'
+  ...
+# {"timestamp":"2026-10-23T13:09:43.014Z","service":"lythaus-public-api","correlationId":"2937a98b-8f48-4a5a-bc11-72c8460a96d4","errorCode":"recent_authentication_required","internalErrorCode":"recent_authentication_required","route":"/api/privacy/requests"}
+# Subtest: deletion: expired proof denial recovers only after renewal and a fresh operation key
+ok 24 - deletion: expired proof denial recovers only after renewal and a fresh operation key
+  ---
+  duration_ms: 1171.906349
+  type: 'test'
+  ...
+# {"timestamp":"2026-10-23T13:09:44.200Z","service":"lythaus-public-api","correlationId":"081271c2-9120-4fca-b454-d5c7bd856369","errorCode":"idempotency_in_progress","internalErrorCode":"idempotency_in_progress","route":"/api/privacy/requests"}
+# {"timestamp":"2026-10-23T13:09:44.209Z","service":"lythaus-public-api","correlationId":"b04e1514-a9a2-4696-b71c-7c66059ab92e","errorCode":"recent_authentication_required","internalErrorCode":"recent_authentication_required","route":"/api/privacy/requests"}
+# {"timestamp":"2026-10-23T13:09:44.212Z","service":"lythaus-public-api","correlationId":"1fbeadfb-f465-45eb-9f04-b24333aedf1d","errorCode":"idempotency_key_conflict","internalErrorCode":"idempotency_key_conflict","route":"/api/privacy/requests"}
+# Subtest: deletion: concurrent same-key success replays once; another key cannot reuse its proof
+ok 25 - deletion: concurrent same-key success replays once; another key cannot reuse its proof
+  ---
+  duration_ms: 611.95568
+  type: 'test'
+  ...
+# {"timestamp":"2026-10-23T13:09:44.905Z","service":"lythaus-public-api","correlationId":"f9dc8a72-d220-473e-ab16-978e1a958554","errorCode":"idempotency_outcome_unknown","internalErrorCode":"idempotency_outcome_unknown","route":"/api/privacy/requests"}
+# {"timestamp":"2026-10-23T13:09:44.907Z","service":"lythaus-public-api","correlationId":"8eac6f2c-07d4-4376-bccd-ef886886904b","errorCode":"idempotency_outcome_unknown","internalErrorCode":"idempotency_outcome_unknown","route":"/api/privacy/requests"}
+# Subtest: deletion: unknown finalization remains quarantined after one committed effect
+ok 26 - deletion: unknown finalization remains quarantined after one committed effect
+  ---
+  duration_ms: 694.566061
+  type: 'test'
+  ...
+# Subtest: disabled actual routes preserve optional-key behavior without reading or consuming proof schema
+ok 27 - disabled actual routes preserve optional-key behavior without reading or consuming proof schema
+  ---
+  duration_ms: 3.102745
+  type: 'test'
+  ...
+# {"timestamp":"2026-10-23T13:09:45.618Z","service":"lythaus-public-api","correlationId":"838f8079-226a-4eb1-83da-c8e8eb9dbbb2","errorCode":"invalid_json","internalErrorCode":"invalid_json","route":"/api/rewards/level-1-learning/redeem"}
+# Subtest: actual route rejects malformed body bytes before any proof consumption or protected effect
+ok 28 - actual route rejects malformed body bytes before any proof consumption or protected effect
+  ---
+  duration_ms: 709.172105
+  type: 'test'
+  ...
+# Subtest: disabled consume performs no database I/O; explicitly enabled missing operation fails closed
+ok 29 - disabled consume performs no database I/O; explicitly enabled missing operation fails closed
+  ---
+  duration_ms: 1.798919
+  type: 'test'
+  ...
+# Subtest: real existing password verifier must succeed; unknown credentials/schema and wrong password fail closed
+ok 30 - real existing password verifier must succeed; unknown credentials/schema and wrong password fail closed
+  ---
+  duration_ms: 1223.129609
+  type: 'test'
+  ...
+# Subtest: action and nonce are single-use; concurrent transactions have only one successful effect
+ok 31 - action and nonce are single-use; concurrent transactions have only one successful effect
+  ---
+  duration_ms: 531.435815
+  type: 'test'
+  ...
+# Subtest: protected mutation rollback restores proof; a retry may commit once before expiry
+ok 32 - protected mutation rollback restores proof; a retry may commit once before expiry
+  ---
+  duration_ms: 526.300076
+  type: 'test'
+  ...
+# Subtest: server-time expiry, family/account revocation, token version and binding mismatches deny effects
+ok 33 - server-time expiry, family/account revocation, token version and binding mismatches deny effects
+  ---
+  duration_ms: 6222.571733
+  type: 'test'
+  ...
+# Subtest: read-only binding survives a rotated credential in the same family without resetting verification age
+ok 34 - read-only binding survives a rotated credential in the same family without resetting verification age
+  ---
+  duration_ms: 984.691204
+  type: 'test'
+  ...
+# Subtest: step-up failures use 403/503 rather than triggering existing 401 refresh handling
+ok 35 - step-up failures use 403/503 rather than triggering existing 401 refresh handling
+  ---
+  duration_ms: 0.506804
+  type: 'test'
+  ...
+# Subtest: actual verification request uses only the server principal and isolates monthly collection failure
+ok 36 - actual verification request uses only the server principal and isolates monthly collection failure
+  ---
+  duration_ms: 508.43409
+  type: 'test'
+  ...
+# Subtest: disabled HTTP path, unsupported operations and offline failures never mint proof
+ok 37 - disabled HTTP path, unsupported operations and offline failures never mint proof
+  ---
+  duration_ms: 1.589402
+  type: 'test'
+  ...
+# Subtest: existing cookie/native refresh credential supplies binding without changing its transport or rotating it
+ok 38 - existing cookie/native refresh credential supplies binding without changing its transport or rotating it
+  ---
+  duration_ms: 2.395625
+  type: 'test'
+  ...
+# Subtest: actual request binding includes query/body; disabled reads do not consume the request
+ok 39 - actual request binding includes query/body; disabled reads do not consume the request
+  ---
+  duration_ms: 2.658821
+  type: 'test'
+  ...
+# Subtest: exact body binding rejects malformed UTF-8 and preserves valid bytes at the boundary
+ok 40 - exact body binding rejects malformed UTF-8 and preserves valid bytes at the boundary
+  ---
+  duration_ms: 11.305828
+  type: 'test'
+  ...
+# Subtest: oversized cloned bodies reject promptly with absent or misleading Content-Length
+ok 41 - oversized cloned bodies reject promptly with absent or misleading Content-Length
+  ---
+  duration_ms: 1.933016
+  type: 'test'
+  ...
+# Subtest: SEC-01/12/13: unavailable capabilities and an unobserved account never imply clearance or points
+ok 42 - SEC-01/12/13: unavailable capabilities and an unobserved account never imply clearance or points
+  ---
+  duration_ms: 10.714869
+  type: 'test'
+  ...
+# Subtest: SEC-03/10/11: one credential can meet both conditions, with fixed non-stacking maintenance budgets
+ok 43 - SEC-03/10/11: one credential can meet both conditions, with fixed non-stacking maintenance budgets
+  ---
+  duration_ms: 1.682007
+  type: 'test'
+  ...
+# Subtest: SEC-08/09: late enrollment, protection gaps and expired credentials are incomplete
+ok 44 - SEC-08/09: late enrollment, protection gaps and expired credentials are incomplete
+  ---
+  duration_ms: 0.344185
+  type: 'test'
+  ...
+# Subtest: SEC-08/11: rotation without a gap preserves coverage and authentication must match its registered credential
+ok 45 - SEC-08/11: rotation without a gap preserves coverage and authentication must match its registered credential
+  ---
+  duration_ms: 5.78025
+  type: 'test'
+  ...
+# Subtest: SEC-04/12/14: integrity verdicts remain distinct and are not inferred from challenges or absent telemetry
+ok 46 - SEC-04/12/14: integrity verdicts remain distinct and are not inferred from challenges or absent telemetry
+  ---
+  duration_ms: 0.421899
+  type: 'test'
+  ...
+# Subtest: SEC-02/03: challenge evidence is bound to its subject and only valid current-policy refreshers qualify
+ok 47 - SEC-02/03: challenge evidence is bound to its subject and only valid current-policy refreshers qualify
+  ---
+  duration_ms: 0.510079
+  type: 'test'
+  ...
+# Subtest: CAL-16/17: calendar validity, exact-cutoff expiry, renewals and email revocation never stack
+ok 48 - CAL-16/17: calendar validity, exact-cutoff expiry, renewals and email revocation never stack
+  ---
+  duration_ms: 0.347149
+  type: 'test'
+  ...
+# Subtest: REL-03: unknown operational rules and malformed evidence fail closed
+ok 49 - REL-03: unknown operational rules and malformed evidence fail closed
+  ---
+  duration_ms: 0.509377
+  type: 'test'
+  ...
+# Subtest: inactive/default and unmapped collection never emit qualifying evidence
+ok 50 - inactive/default and unmapped collection never emit qualifying evidence
+  ---
+  duration_ms: 4.814864
+  type: 'test'
+  ...
+# Subtest: full calendar-month protected selection plus genuine matching authentication uses existing award only
+ok 51 - full calendar-month protected selection plus genuine matching authentication uses existing award only
+  ---
+  duration_ms: 10.409671
+  type: 'test'
+  ...
+# Subtest: local unlock, face/fingerprint/PIN preferences cannot become server credential coverage
+ok 52 - local unlock, face/fingerprint/PIN preferences cannot become server credential coverage
+  ---
+  duration_ms: 1.045534
+  type: 'test'
+  ...
+# Subtest: missing/incorrect authentication cannot qualify despite a held choice
+ok 53 - missing/incorrect authentication cannot qualify despite a held choice
+  ---
+  duration_ms: 0.598418
+  type: 'test'
+  ...
+# Subtest: last-day enrollment, late collection cutover, disablement, revocation and re-enable gaps yield no award
+ok 54 - last-day enrollment, late collection cutover, disablement, revocation and re-enable gaps yield no award
+  ---
+  duration_ms: 0.832351
+  type: 'test'
+  ...
+# Subtest: switching qualifying options with actual continuous evidence shares a single common benefit
+ok 55 - switching qualifying options with actual continuous evidence shares a single common benefit
+  ---
+  duration_ms: 0.678646
+  type: 'test'
+  ...
+# Subtest: credential rotation under the same held option preserves only gap-free server coverage
+ok 56 - credential rotation under the same held option preserves only gap-free server coverage
+  ---
+  duration_ms: 0.555034
+  type: 'test'
+  ...
+# Subtest: cutoff is exclusive: a disablement at next-month start preserves the completed month
+ok 57 - cutoff is exclusive: a disablement at next-month start preserves the completed month
+  ---
+  duration_ms: 0.632938
+  type: 'test'
+  ...
+# Subtest: account changes, duplicate events and missing revisions cannot leak or fabricate coverage
+ok 58 - account changes, duplicate events and missing revisions cannot leak or fabricate coverage
+  ---
+  duration_ms: 1.150888
+  type: 'test'
+  ...
+# Subtest: UTC candidate calendar and settlement boundaries remain independent of device timezone
+ok 59 - UTC candidate calendar and settlement boundaries remain independent of device timezone
+  ---
+  duration_ms: 2.525285
+  type: 'test'
+  ...
+# Subtest: month lengths and year transitions use calendar boundaries, not rolling thirty days
+ok 60 - month lengths and year transitions use calendar boundaries, not rolling thirty days
+  ---
+  duration_ms: 0.544519
+  type: 'test'
+  ...
+# Subtest: mapping must match versioned rules/catalogue and existing unavailable capabilities remain unavailable
+ok 61 - mapping must match versioned rules/catalogue and existing unavailable capabilities remain unavailable
+  ---
+  duration_ms: 0.258188
+  type: 'test'
+  ...
+# Subtest: zero, under and exactly 24 cumulative hours qualify; one millisecond over loses only security benefit
+ok 62 - zero, under and exactly 24 cumulative hours qualify; one millisecond over loses only security benefit
+  ---
+  duration_ms: 1.590994
+  type: 'test'
+  ...
+# Subtest: repeated switches share one monthly allowance and never reset it or stack methods
+ok 63 - repeated switches share one monthly allowance and never reset it or stack methods
+  ---
+  duration_ms: 0.837849
+  type: 'test'
+  ...
+# Subtest: overlapping explicit disablement, revocation and expiry gaps count their union once
+ok 64 - overlapping explicit disablement, revocation and expiry gaps count their union once
+  ---
+  duration_ms: 0.493123
+  type: 'test'
+  ...
+# Subtest: a confirmed credential expiry gap consumes grace while unobserved replacement coverage stays unknown
+ok 65 - a confirmed credential expiry gap consumes grace while unobserved replacement coverage stays unknown
+  ---
+  duration_ms: 0.447557
+  type: 'test'
+  ...
+# Subtest: cross-month intervals are clipped and each calendar month receives one independent allowance
+ok 66 - cross-month intervals are clipped and each calendar month receives one independent allowance
+  ---
+  duration_ms: 0.508696
+  type: 'test'
+  ...
+# Subtest: grace cannot backdate enrollment, fabricate telemetry, substitute preference or skip genuine authentication
+ok 67 - grace cannot backdate enrollment, fabricate telemetry, substitute preference or skip genuine authentication
+  ---
+  duration_ms: 0.834074
+  type: 'test'
+  ...
+# Subtest: synthetically mapped distinct verified methods receive one equal existing benefit without MFA/credential stacking
+ok 68 - synthetically mapped distinct verified methods receive one equal existing benefit without MFA/credential stacking
+  ---
+  duration_ms: 1.535843
+  type: 'test'
+  ...
+# Subtest: exceeding grace withholds only the security component and preserves other monthly and quarterly benefits
+ok 69 - exceeding grace withholds only the security component and preserves other monthly and quarterly benefits
+  ---
+  duration_ms: 0.768468
+  type: 'test'
+  ...
+# Subtest: an unused unavailable optional method is not a hidden provider dependency for a qualifying held choice
+ok 70 - an unused unavailable optional method is not a hidden provider dependency for a qualifying held choice
+  ---
+  duration_ms: 0.267813
+  type: 'test'
+  ...
+# (node:10285) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: disabled assembly preserves the previous calculator and does not read choices or new schema
+ok 71 - disabled assembly preserves the previous calculator and does not read choices or new schema
+  ---
+  duration_ms: 12.756745
+  type: 'test'
+  ...
+# Subtest: explicit selection policy uses DB time, withholds only security credit for gaps or pending mapping
+ok 72 - explicit selection policy uses DB time, withholds only security credit for gaps or pending mapping
+  ---
+  duration_ms: 5.505738
+  type: 'test'
+  ...
+# Subtest: full held option passes only canonical facts to existing calculator and records version/history
+ok 73 - full held option passes only canonical facts to existing calculator and records version/history
+  ---
+  duration_ms: 1.849353
+  type: 'test'
+  ...
+# Subtest: existing assemblies require separate policy review before adopting or changing selection mapping
+ok 74 - existing assemblies require separate policy review before adopting or changing selection mapping
+  ---
+  duration_ms: 1.202594
+  type: 'test'
+  ...
+# Subtest: approved cumulative grace changes only the common security component in inactive shadow assembly
+ok 75 - approved cumulative grace changes only the common security component in inactive shadow assembly
+  ---
+  duration_ms: 2.289809
+  type: 'test'
+  ...
+# Subtest: collection is inactive by default and a missing mapping performs no queries or writes
+ok 76 - collection is inactive by default and a missing mapping performs no queries or writes
+  ---
+  duration_ms: 1.928979
+  type: 'test'
+  ...
+# Subtest: only canonical server password authentication can append an existing credential fact; never points/MFA/biometrics
+ok 77 - only canonical server password authentication can append an existing credential fact; never points/MFA/biometrics
+  ---
+  duration_ms: 3.133547
+  type: 'test'
+  ...
+# Subtest: local choice or disabled/revoked protection cannot record qualifying authentication
+ok 78 - local choice or disabled/revoked protection cannot record qualifying authentication
+  ---
+  duration_ms: 0.636594
+  type: 'test'
+  ...
+# Subtest: choice journal serializes account changes and uses server effective time; disabling/revocation require no award eligibility
+ok 79 - choice journal serializes account changes and uses server effective time; disabling/revocation require no award eligibility
+  ---
+  duration_ms: 0.631887
+  type: 'test'
+  ...
+# Subtest: mapping rejects unknown versions, operational timezone and invented protection categories
+ok 80 - mapping rejects unknown versions, operational timezone and invented protection categories
+  ---
+  duration_ms: 0.432684
+  type: 'test'
+  ...
+# Subtest: policy is disabled by default; issuance performs no I/O while disabled
+ok 81 - policy is disabled by default; issuance performs no I/O while disabled
+  ---
+  duration_ms: 1.87477
+  type: 'test'
+  ...
+# Subtest: server password verification precedes minting; persistence receives hashes, not password or nonce
+ok 82 - server password verification precedes minting; persistence receives hashes, not password or nonce
+  ---
+  duration_ms: 7.08892
+  type: 'test'
+  ...
+# Subtest: wrong/absent password, absent credential or session binding never mints proof
+ok 83 - wrong/absent password, absent credential or session binding never mints proof
+  ---
+  duration_ms: 1.257235
+  type: 'test'
+  ...
+# Subtest: only the approved existing mutation routes classify; query strings cannot bypass policy
+ok 84 - only the approved existing mutation routes classify; query strings cannot bypass policy
+  ---
+  duration_ms: 0.44361
+  type: 'test'
+  ...
+# Subtest: all approved action types require exact user/session/version/action/operation/secret and five-minute age
+ok 85 - all approved action types require exact user/session/version/action/operation/secret and five-minute age
+  ---
+  duration_ms: 1.379473
+  type: 'test'
+  ...
+# Subtest: request binding distinguishes body, query, method and sensitive action
+ok 86 - request binding distinguishes body, query, method and sensitive action
+  ---
+  duration_ms: 1.947778
+  type: 'test'
+  ...
+# Subtest: access-token lifetime, claims and Principal stay unchanged; fresh iat is not authentication evidence
+ok 87 - access-token lifetime, claims and Principal stay unchanged; fresh iat is not authentication evidence
+  ---
+  duration_ms: 10.594211
+  type: 'test'
+  ...
+1..87
+# tests 87
+# suites 0
+# pass 87
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11101.742091
+
+=== member-security-grace-flutter.log ===
+00:00 +0: loading /workspace/Lythaus/test/features/member_verification/member_verification_policy_preview_test.dart
+00:00 +0: /workspace/Lythaus/test/features/member_verification/member_verification_policy_preview_test.dart: default flag leaves the account security screen unchanged
+00:00 +1: /workspace/Lythaus/test/features/member_verification/member_verification_policy_preview_test.dart: flag exposes only an honest, read-only policy preview
+00:00 +2: /workspace/Lythaus/test/features/member_verification/member_verification_policy_preview_test.dart: guests see no member verification preview
+00:00 +3: loading /workspace/Lythaus/test/features/member_verification/device_unlock_settings_test.dart
+00:01 +3: /workspace/Lythaus/test/features/member_verification/device_unlock_settings_test.dart: default flag performs no store/native work and exposes no preference controls
+00:01 +4: /workspace/Lythaus/test/features/member_verification/device_unlock_settings_test.dart: all five approved choices persist per account only after OS confirmation
+00:02 +5: /workspace/Lythaus/test/features/member_verification/device_unlock_settings_test.dart: cancelled confirmation and lockout retain old choice; Off is never blocked by an award
+00:02 +6: /workspace/Lythaus/test/features/member_verification/device_unlock_settings_test.dart: web/unsupported OS makes enabled choices unavailable while keeping Off and browsing available
+00:02 +7: /workspace/Lythaus/test/features/member_verification/device_unlock_settings_test.dart: explicit cancellation ignores late success without saving an enabled choice
+00:02 +8: /workspace/Lythaus/test/features/member_verification/device_unlock_settings_test.dart: system-sheet inactive is tolerated; actual background/resume cancels late confirmation
+00:02 +9: /workspace/Lythaus/test/features/member_verification/device_unlock_settings_test.dart: A guest A transition fences in-flight confirmation synchronously
+00:03 +10: /workspace/Lythaus/test/features/member_verification/device_unlock_settings_test.dart: unconfirmed storage can reload without reporting a changed preference
+00:03 +11: loading /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart
+00:03 +11: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: default controller and native adapter perform no work
+00:03 +12: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: versioned per-device preferences survive reconstruction and isolate accounts
+00:03 +13: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: unknown or corrupt stored choices never silently become Off
+00:03 +14: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: delayed save from disposed controller cannot overwrite newer A choice
+00:03 +15: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: A guest A hydration waits for old persistence before accepting a new save
+00:03 +16: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: pending A write does not block B or write to B storage
+00:03 +17: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: failed older write propagates its error without poisoning the next save
+00:03 +18: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: off: cold open and exact away boundary
+00:03 +19: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: every_reopen: cold open and exact away boundary
+00:03 +20: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: after_1_minute: cold open and exact away boundary
+00:03 +21: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: after_5_minutes: cold open and exact away boundary
+00:03 +22: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: after_15_minutes: cold open and exact away boundary
+00:03 +23: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: inactive/hidden/paused events retain the first away timestamp
+00:03 +24: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: clock jumps cannot extend grace; monotonic reset locks
+00:03 +25: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: DeviceUnlockResult.cancelled remains locked; explicit OS retry can recover offline
+00:03 +26: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: DeviceUnlockResult.lockedOut remains locked; explicit OS retry can recover offline
+00:03 +27: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: DeviceUnlockResult.unavailable remains locked; explicit OS retry can recover offline
+00:03 +28: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: late success after cancel cannot unlock another session
+00:03 +29: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: late success after background cannot unlock another session
+00:03 +30: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: late success after dispose cannot unlock another session
+00:03 +31: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: late hydration from a disposed account cannot change replacement choices
+00:03 +32: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: storage failure never reports a saved preference or unlock success
+00:03 +33: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: unavailable device cannot save a working-looking unlock preference
+00:03 +34: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: web and unsupported hardware never invoke a native prompt
+00:03 +35: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: native cancellation during preflight prevents a late OS prompt
+00:03 +36: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: native cancellation also rejects a late positive platform result
+00:03 +37: /workspace/Lythaus/test/features/member_verification/device_unlock_foundation_test.dart: native OS fallback works without querying enrolled biometrics
+00:03 +38: loading /workspace/Lythaus/test/features/auth/application/auth_providers_test.dart
+00:04 +38: /workspace/Lythaus/test/features/auth/application/auth_providers_test.dart: derived state and explicit user updates remain consistent
+00:04 +39: /workspace/Lythaus/test/features/auth/application/auth_providers_test.dart: restoration failure has an explicit error state
+00:04 +40: /workspace/Lythaus/test/features/auth/application/auth_providers_test.dart: cold auth startup tracks pending work synchronously and notifies after provider creation
+00:04 +41: /workspace/Lythaus/test/features/auth/application/auth_providers_test.dart: login failure is typed and never exposes internal detail: AuthFailure
+00:04 +42: /workspace/Lythaus/test/features/auth/application/auth_providers_test.dart: login failure is typed and never exposes internal detail: StateError
+00:04 +43: /workspace/Lythaus/test/features/auth/application/auth_providers_test.dart: refresh and validation expose the true session result
+00:04 +44: /workspace/Lythaus/test/features/auth/application/auth_providers_test.dart: refresh and validation expose the false session result
+00:04 +45: /workspace/Lythaus/test/features/auth/application/auth_providers_test.dart: refresh errors clear usable auth state: AuthFailure
+00:04 +46: /workspace/Lythaus/test/features/auth/application/auth_providers_test.dart: refresh errors clear usable auth state: StateError
+00:04 +47: /workspace/Lythaus/test/features/auth/application/auth_providers_test.dart: unconfirmed remote logout is not described as revoked
+00:04 +48: /workspace/Lythaus/test/features/auth/application/auth_providers_test.dart: offline logout still permits public guest browsing
+00:04 +49: /workspace/Lythaus/test/features/auth/application/auth_providers_test.dart: email sign-in updates authenticated state
+00:04 +50: /workspace/Lythaus/test/features/auth/application/auth_providers_test.dart: guest access clears the authenticated session
+00:04 +51: /workspace/Lythaus/test/features/auth/application/auth_providers_test.dart: jwt provider reads the email session token
+00:04 +52: /workspace/Lythaus/test/features/auth/application/auth_providers_test.dart: late initial restoration cannot overwrite a completed sign-in
+00:04 +53: /workspace/Lythaus/test/features/auth/application/auth_providers_test.dart: sign-out fences a late successful sign-in and clears user state immediately
+00:04 +54: /workspace/Lythaus/test/features/auth/application/auth_providers_test.dart: disposed notifier ignores an interrupted request result
+00:04 +55: loading /workspace/Lythaus/test/features/auth/application/auth_service_test.dart
+00:05 +55: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: native restoration validates userinfo and rotates only when needed: false
+00:05 +56: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: native restoration validates userinfo and rotates only when needed: true
+00:05 +57: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: userinfo and refresh rejection stay fail-closed: 401
+00:05 +58: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: userinfo and refresh rejection stay fail-closed: 503
+00:05 +59: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: resend recovers from missing_challenge without claiming delivery
+00:05 +60: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: resend recovers from rejected without claiming delivery
+00:05 +61: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: resend recovers from offline without claiming delivery
+00:05 +62: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: resend recovers from timeout without claiming delivery
+00:05 +63: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: malformed login response and network failure never persist a partial session
+00:05 +64: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: native logout presents refresh proof when access has expired
+00:05 +65: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: 401 logout is not represented as successful server revocation
+00:05 +66: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: email login stores the session and loads the current user
+00:05 +67: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: email login rejects empty passwords before network access
+00:05 +68: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: web login keeps access in memory and refresh solely in the cookie contract
+00:05 +69: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: web restore refreshes its cookie without reading or sending legacy browser tokens
+00:05 +70: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: userinfo dependency failure allows retry without refresh loops or destructive logout
+00:05 +71: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: stale successful refresh cannot make getCurrentUser log out the replacement account
+00:05 +72: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: stale refresh transport failure cannot make getCurrentUser log out the replacement account
+00:05 +73: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: getCurrentUser begun during replacement storage commit stays bound to the old owner
+00:05 +74: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: web sign out calls cookie logout even without an in-memory access token
+00:05 +75: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: legacy passwords reach the server unmodified
+00:05 +76: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: userinfo failure does not persist a half-authenticated session
+00:05 +77: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: stalled sign-in has a bounded recoverable timeout
+00:05 +78: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: verification instruction is safe and actionable
+00:05 +79: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: simultaneous refreshes share one request
+00:05 +80: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: replacement account does not join a superseded refresh after logout
+00:05 +81: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: direct account replacement fences refreshes started while login is pending
+00:05 +82: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: refresh during the serialized replacement write cannot overwrite the new account
+00:05 +83: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: failed replacement login does not cancel an in-progress logout
+00:05 +84: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: successful replacement login survives an older in-progress logout
+00:05 +85: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: refresh started during logout cannot restore the signed-out account
+00:05 +86: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: a refresh response arriving after logout cannot restore credentials
+00:05 +87: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: resend verification email uses the neutral auth mode
+00:05 +88: /workspace/Lythaus/test/features/auth/application/auth_service_test.dart: resend verification rejects an empty email before network access
+00:05 +89: loading /workspace/Lythaus/test/features/auth/application/auth_session_revision_test.dart
+00:05 +89: /workspace/Lythaus/test/features/auth/application/auth_session_revision_test.dart: raw auth transitions cancel synchronously before derived provider flush
+00:05 +90: /workspace/Lythaus/test/features/auth/application/auth_session_revision_test.dart: replacement and disposal invalidate previously captured revision
+00:05 +91: loading /workspace/Lythaus/test/features/auth/application/auth_state_test.dart
+00:06 +91: /workspace/Lythaus/test/features/auth/application/auth_state_test.dart: AuthState constructors default constructor creates state with status and optional userId
+00:06 +92: /workspace/Lythaus/test/features/auth/application/auth_state_test.dart: AuthState constructors default constructor creates state without userId
+00:06 +93: /workspace/Lythaus/test/features/auth/application/auth_state_test.dart: AuthState constructors loading constructor creates loading state
+00:06 +94: /workspace/Lythaus/test/features/auth/application/auth_state_test.dart: AuthState constructors guest constructor creates guest state
+00:06 +95: /workspace/Lythaus/test/features/auth/application/auth_state_test.dart: AuthState constructors authed constructor creates authenticated state with userId
+00:06 +96: /workspace/Lythaus/test/features/auth/application/auth_state_test.dart: AuthState AuthStatus enum has expected values
+00:06 +97: /workspace/Lythaus/test/features/auth/application/auth_state_test.dart: AuthState equality and hashCode states with same status and userId are equal
+00:06 +98: /workspace/Lythaus/test/features/auth/application/auth_state_test.dart: AuthState equality and hashCode states with different status are different
+00:06 +99: /workspace/Lythaus/test/features/auth/application/auth_state_test.dart: AuthState equality and hashCode states with different userId are different
+00:06 +100: loading /workspace/Lythaus/test/features/auth/application/invite_redeem_service_test.dart
+00:06 +100: /workspace/Lythaus/test/features/auth/application/invite_redeem_service_test.dart: (setUpAll)
+00:06 +100: /workspace/Lythaus/test/features/auth/application/invite_redeem_service_test.dart: redeemInvite posts invite code with auth header
+00:06 +101: /workspace/Lythaus/test/features/auth/application/invite_redeem_service_test.dart: (tearDownAll)
+00:06 +101: loading /workspace/Lythaus/test/integration/rewards_redemption_integration_test.dart
+00:07 +101: /workspace/Lythaus/test/integration/rewards_redemption_integration_test.dart: Rewards redemption flow updates dashboard after redeem
+00:08 +102: /workspace/Lythaus/test/integration/rewards_redemption_integration_test.dart: real redemption stays alive until session change cancels it
+00:08 +103: /workspace/Lythaus/test/integration/rewards_redemption_integration_test.dart: lost response refreshes rewards and scopes manual retry keys to accounts
+00:08 +104: /workspace/Lythaus/test/integration/rewards_redemption_integration_test.dart: negative redemption scenarios locked reward shows Locked chip and omits Redeem button
+00:08 +105: /workspace/Lythaus/test/integration/rewards_redemption_integration_test.dart: negative redemption scenarios already-redeemed offer shows Redeemed chip and no Redeem button
+00:09 +106: /workspace/Lythaus/test/integration/rewards_redemption_integration_test.dart: negative redemption scenarios restricted account shows all offers locked with restriction reason
+00:09 +107: /workspace/Lythaus/test/integration/rewards_redemption_integration_test.dart: negative redemption scenarios API error during redeem shows error snackbar and does not refresh snapshot
+00:09 +108: /workspace/Lythaus/test/integration/rewards_redemption_integration_test.dart: negative redemption scenarios uncertain idempotency outcome refreshes rewards and reuses its key
+00:09 +109: /workspace/Lythaus/test/integration/rewards_redemption_integration_test.dart: negative redemption scenarios already redeemed response refreshes the dashboard state
+00:09 +110: All tests passed!
+
+=== member-security-grace-typecheck.log ===
+
+> lythaus-monorepo@1.0.0 typecheck:native
+> tsc -p tsconfig.native.json --noEmit
+
+
+=== member-security-grace-analyze.log ===
+Analyzing 3 items...
+No issues found! (ran in 3.0s)
+
+=== member-security-grace-format.log ===
+Formatted 11 files (0 changed) in 0.04 seconds.

@@ -73,5 +73,14 @@ void main() {
       // TODO
     });
 
+    // Verify an existing account password for one sensitive operation
+    //
+    // Inactive by default; returns 503 while the explicit server policy is disabled. When enabled, verifies the existing account password and issues one opaque proof bound to the authenticated subject, current token version, refresh family, action and exact operation bytes. The server derives the action; only existing reward redemption and deletion request routes are supported. Security/email mutation handlers remain unavailable. The proof expires after five minutes of server DB time and is consumed atomically once inside the protected mutation transaction. Token refresh, JWT iat, local biometrics and reputation cannot satisfy verification. No session credentials are created, rotated or extended. Clients must reject redirects and must not persist or log passwords, existing refresh bindings or proof values. After a confirmed no-effect 403 recent_authentication_required, verify and retry with a fresh Idempotency-Key; an uncertain mutation outcome must retain its old key. The generated Dart method supports native transport only; on web use the bounded app client with redirect rejection and existing HttpOnly cookies. Generic browser SDK adapters cannot guarantee redirect rejection.
+    //
+    //Future<MemberActionVerificationReceipt> verifyRecentAccountAction(MemberActionVerificationRequest memberActionVerificationRequest, { String xLythausAuthTransport, String xLythausSessionBinding }) async
+    test('test verifyRecentAccountAction', () async {
+      // TODO
+    });
+
   });
 }

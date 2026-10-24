@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Lythaus API",
-    "version": "v13",
+    "version": "v14",
     "description": "HTTP contract for the Lythaus API. The active runtime is Cloudflare Workers backed by PlanetScale PostgreSQL through Hyperdrive. Initial authentication is Guest plus Email only. Production releases are coordinated from one reviewed main SHA; the release manifest and provider evidence remain outside this HTTP contract.\n",
     "license": {
       "name": "MIT",
@@ -3733,6 +3733,134 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/recent-verification": {
+      "post": {
+        "operationId": "verifyRecentAccountAction",
+        "summary": "Verify an existing account password for one sensitive operation",
+        "description": "Inactive by default; returns 503 while the explicit server policy is disabled. When enabled, verifies the existing account password and issues one opaque proof bound to the authenticated subject, current token version, refresh family, action and exact operation bytes. The server derives the action; only existing reward redemption and deletion request routes are supported. Security/email mutation handlers remain unavailable. The proof expires after five minutes of server DB time and is consumed atomically once inside the protected mutation transaction. Token refresh, JWT iat, local biometrics and reputation cannot satisfy verification. No session credentials are created, rotated or extended. Clients must reject redirects and must not persist or log passwords, existing refresh bindings or proof values. After a confirmed no-effect 403 recent_authentication_required, verify and retry with a fresh Idempotency-Key; an uncertain mutation outcome must retain its old key. The generated Dart method supports native transport only; on web use the bounded app client with redirect rejection and existing HttpOnly cookies. Generic browser SDK adapters cannot guarantee redirect rejection.\n",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Lythaus-Auth-Transport",
+            "in": "header",
+            "description": "Browser cookie transport requires cookie-v1, credentials included and an exact allowed Origin. The existing HttpOnly refresh cookie binds the session; never read it into JavaScript or Web Storage.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "cookie-v1"
+              ]
+            }
+          },
+          {
+            "name": "X-Lythaus-Session-Binding",
+            "in": "header",
+            "description": "Native clients supply their current existing securely stored refresh credential as session context. This is not a new API key or login provider. Browser clients instead use the existing HttpOnly cookie contract. One valid existing refresh-family binding is required when verification is enabled.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{32,256}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "JSON body limited to 16 KiB; the operation body must also fit the protected route's 8192-byte bound.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberActionVerificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "One action-bound proof; no access or refresh credential is returned. No reputation benefit is awarded by this response.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Private no-store response."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberActionVerificationReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid password input or operation descriptor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimpleError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired access credential.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimpleError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Password verification failed, session binding was rejected, or browser origin was not permitted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimpleError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request exceeds the bounded JSON body limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimpleError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Existing per-IP or per-account verification rate limit reached.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimpleError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Verification is disabled or required account/session/action infrastructure is unavailable; fails closed without enrollment or a local-unlock fallback.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimpleError"
                 }
               }
             }
@@ -13111,6 +13239,92 @@
       }
     },
     "schemas": {
+      "MemberActionVerificationRequest": {
+        "type": "object",
+        "required": [
+          "password",
+          "operation"
+        ],
+        "properties": {
+          "password": {
+            "type": "string",
+            "format": "password",
+            "writeOnly": true,
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Existing account password, unchanged and unnormalized. Login compatibility applies; this is not password creation or enrollment."
+          },
+          "operation": {
+            "type": "object",
+            "required": [
+              "method",
+              "path",
+              "body"
+            ],
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "POST"
+                ]
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 256,
+                "description": "Exact canonical /api path and query of the intended reward redemption or privacy deletion request. Actor, action and session identity are derived by the server."
+              },
+              "body": {
+                "type": "string",
+                "maxLength": 8192,
+                "description": "Exact UTF-8 body text used by the mutation, at most 8192 bytes. Reward redemption may use an empty body; privacy deletion uses requestType delete JSON. Whitespace, property order and query bytes are bound to the proof."
+              }
+            }
+          }
+        }
+      },
+      "MemberActionVerificationReceipt": {
+        "type": "object",
+        "required": [
+          "proof",
+          "verifiedAt",
+          "expiresAt",
+          "action",
+          "maintenanceEvidence"
+        ],
+        "properties": {
+          "proof": {
+            "type": "string",
+            "readOnly": true,
+            "pattern": "^[0-9a-f-]{36}\\.[0-9a-f]{64}$",
+            "description": "Opaque one-use proof, bound to this account/session/action/request. Send only to the intended API in X-Lythaus-Action-Verification; do not persist, log or forward on redirects."
+          },
+          "verifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "description": "Exactly five minutes after verifiedAt, enforced using server DB time."
+          },
+          "action": {
+            "type": "string",
+            "readOnly": true,
+            "enum": [
+              "reward_claim",
+              "account_delete"
+            ]
+          },
+          "maintenanceEvidence": {
+            "type": "object",
+            "readOnly": true,
+            "additionalProperties": true,
+            "description": "Optional evidence-collection outcome only. Inactive or unavailable collection never implies monthly eligibility, protection coverage, a point award or a reputation deduction."
+          }
+        }
+      },
       "ActivityConsentInput": {
         "type": "object",
         "additionalProperties": false,

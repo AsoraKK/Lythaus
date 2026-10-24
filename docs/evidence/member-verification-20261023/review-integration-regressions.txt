@@ -1,0 +1,567 @@
+Review-delta evidence, 2026-10-23. Predecessor 4f2ecbd27283c317c7841a77a7d277ff77aee717.
+No new SQL proposal executed, no credentials/providers/enrollment, enforcement or awards.
+Fresh-key recovery contract leaves idempotency runtime and request hash unchanged.
+
+=== member-action-utf8-predecessor.log ===
+TAP version 13
+# (node:8435) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: actual route rejects malformed body bytes before any proof consumption or protected effect
+not ok 1 - actual route rejects malformed body bytes before any proof consumption or protected effect
+  ---
+  duration_ms: 550.880883
+  type: 'test'
+  location: '/workspace/Lythaus/apps/lythaus-public-api/tests/member-action-routes.test.mjs:181:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+
+    201 !== 400
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 400
+  actual: 201
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///workspace/Lythaus/apps/lythaus-public-api/tests/member-action-routes.test.mjs:186:10)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: exact body binding rejects malformed UTF-8 and preserves valid bytes at the boundary
+not ok 2 - exact body binding rejects malformed UTF-8 and preserves valid bytes at the boundary
+  ---
+  duration_ms: 26.576599
+  type: 'test'
+  location: '/workspace/Lythaus/apps/lythaus-public-api/tests/member-action-verification.test.mjs:208:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected rejection.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (file:///workspace/Lythaus/apps/lythaus-public-api/tests/member-action-verification.test.mjs:211:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: oversized cloned bodies reject promptly with absent or misleading Content-Length
+not ok 3 - oversized cloned bodies reject promptly with absent or misleading Content-Length
+  ---
+  duration_ms: 6.604623
+  type: 'test'
+  location: '/workspace/Lythaus/apps/lythaus-public-api/tests/member-action-verification.test.mjs:226:1'
+  failureType: 'cancelledByParent'
+  error: 'Promise resolution is still pending but the event loop has already resolved'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    process.emit (node:events:519:28)
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 0
+# fail 2
+# cancelled 1
+# skipped 0
+# todo 0
+# duration_ms 1545.619138
+
+=== member-action-review-final.log ===
+TAP version 13
+# Subtest: issues one family and one session only for an active account
+ok 1 - issues one family and one session only for an active account
+  ---
+  duration_ms: 2.153777
+  type: 'test'
+  ...
+# Subtest: does not persist a refresh session when access-token signing fails
+ok 2 - does not persist a refresh session when access-token signing fails
+  ---
+  duration_ms: 0.272312
+  type: 'test'
+  ...
+# Subtest: rotates only the presented session and signs a replacement token
+ok 3 - rotates only the presented session and signs a replacement token
+  ---
+  duration_ms: 0.307633
+  type: 'test'
+  ...
+# Subtest: revokes the whole refresh family after a CAS reuse conflict
+ok 4 - revokes the whole refresh family after a CAS reuse conflict
+  ---
+  duration_ms: 0.2442
+  type: 'test'
+  ...
+# Subtest: denies unknown or inactive refresh sessions before persistence
+ok 5 - denies unknown or inactive refresh sessions before persistence
+  ---
+  duration_ms: 0.287073
+  type: 'test'
+  ...
+# Subtest: logout and password-reset invalidation revoke sessions, families, then token versions
+ok 6 - logout and password-reset invalidation revoke sessions, families, then token versions
+  ---
+  duration_ms: 0.265953
+  type: 'test'
+  ...
+# Subtest: rejects invalid account token versions before issuing a refresh family
+ok 7 - rejects invalid account token versions before issuing a refresh family
+  ---
+  duration_ms: 0.431596
+  type: 'test'
+  ...
+# Subtest: sequential reuse of a known rotated token revokes its family but unknown tokens do not
+ok 8 - sequential reuse of a known rotated token revokes its family but unknown tokens do not
+  ---
+  duration_ms: 0.27797
+  type: 'test'
+  ...
+# Subtest: revokes the replacement family when the active account version disappears or signing fails
+ok 9 - revokes the replacement family when the active account version disappears or signing fails
+  ---
+  duration_ms: 0.524193
+  type: 'test'
+  ...
+# Subtest: all auth POST operations enforce origin before dispatch, including recovery
+ok 10 - all auth POST operations enforce origin before dispatch, including recovery
+  ---
+  duration_ms: 41.102274
+  type: 'test'
+  ...
+# Subtest: browser session never returns refresh credentials in JSON; host-only secure cookie has no Domain
+ok 11 - browser session never returns refresh credentials in JSON; host-only secure cookie has no Domain
+  ---
+  duration_ms: 1.136286
+  type: 'test'
+  ...
+# Subtest: native/deployed legacy clients retain explicit compatible token transport
+ok 12 - native/deployed legacy clients retain explicit compatible token transport
+  ---
+  duration_ms: 0.749385
+  type: 'test'
+  ...
+# Subtest: cookie transport requires custom header and exact HTTPS origin, never wildcard or sibling trust
+ok 13 - cookie transport requires custom header and exact HTTPS origin, never wildcard or sibling trust
+  ---
+  duration_ms: 1.516657
+  type: 'test'
+  ...
+# Subtest: refresh cookie parser rejects absent, duplicate, malformed or oversized credentials
+ok 14 - refresh cookie parser rejects absent, duplicate, malformed or oversized credentials
+  ---
+  duration_ms: 0.450535
+  type: 'test'
+  ...
+# Subtest: optional logout cookie permits absence without weakening credential parsing
+ok 15 - optional logout cookie permits absence without weakening credential parsing
+  ---
+  duration_ms: 0.342335
+  type: 'test'
+  ...
+# Subtest: a domain commit followed by finalization failure is quarantined and never reported as safe to retry
+ok 16 - a domain commit followed by finalization failure is quarantined and never reported as safe to retry
+  ---
+  duration_ms: 32.73345
+  type: 'test'
+  ...
+# Subtest: a validation error is finalized as a stable replayable response
+ok 17 - a validation error is finalized as a stable replayable response
+  ---
+  duration_ms: 4.009074
+  type: 'test'
+  ...
+# Subtest: an ambiguous server failure is quarantined without finalizing an error replay
+ok 18 - an ambiguous server failure is quarantined without finalizing an error replay
+  ---
+  duration_ms: 0.456253
+  type: 'test'
+  ...
+# (node:8537) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# {"timestamp":"2026-10-23T12:43:02.609Z","service":"lythaus-public-api","correlationId":"543c8375-3684-40ea-a3b5-2c1304f36c7c","errorCode":"recent_authentication_required","internalErrorCode":"recent_authentication_required","route":"/api/rewards/level-1-learning/redeem"}
+# Subtest: reward: confirmed challenge → real verification → new-key recovery; old-key denial remains stable
+ok 19 - reward: confirmed challenge → real verification → new-key recovery; old-key denial remains stable
+  ---
+  duration_ms: 552.338466
+  type: 'test'
+  ...
+# {"timestamp":"2026-10-23T12:43:03.737Z","service":"lythaus-public-api","correlationId":"bd8e3d4a-2dc8-43bc-8731-50cd6dea4ca7","errorCode":"recent_authentication_required","internalErrorCode":"recent_authentication_required","route":"/api/rewards/level-1-learning/redeem"}
+# Subtest: reward: expired proof denial recovers only after renewal and a fresh operation key
+ok 20 - reward: expired proof denial recovers only after renewal and a fresh operation key
+  ---
+  duration_ms: 1129.648132
+  type: 'test'
+  ...
+# {"timestamp":"2026-10-23T12:43:04.773Z","service":"lythaus-public-api","correlationId":"d4fd88e6-292d-4dff-bdd5-09f024b71a99","errorCode":"idempotency_in_progress","internalErrorCode":"idempotency_in_progress","route":"/api/rewards/level-1-learning/redeem"}
+# {"timestamp":"2026-10-23T12:43:04.782Z","service":"lythaus-public-api","correlationId":"b3a0f945-2046-446a-990b-eb1174c0b53b","errorCode":"recent_authentication_required","internalErrorCode":"recent_authentication_required","route":"/api/rewards/level-1-learning/redeem"}
+# {"timestamp":"2026-10-23T12:43:04.784Z","service":"lythaus-public-api","correlationId":"fb095662-2c6c-4cf6-b3e1-a3bd4afc7746","errorCode":"idempotency_key_conflict","internalErrorCode":"idempotency_key_conflict","route":"/api/rewards/level-1-learning/redeem"}
+# Subtest: reward: concurrent same-key success replays once; another key cannot reuse its proof
+ok 21 - reward: concurrent same-key success replays once; another key cannot reuse its proof
+  ---
+  duration_ms: 525.989461
+  type: 'test'
+  ...
+# {"timestamp":"2026-10-23T12:43:05.283Z","service":"lythaus-public-api","correlationId":"c1bb08de-49bf-4faa-a3e3-89ef22b66394","errorCode":"idempotency_outcome_unknown","internalErrorCode":"idempotency_outcome_unknown","route":"/api/rewards/level-1-learning/redeem"}
+# {"timestamp":"2026-10-23T12:43:05.288Z","service":"lythaus-public-api","correlationId":"4c6bebaa-b5f5-40ca-8dcd-a3d2b1962334","errorCode":"idempotency_outcome_unknown","internalErrorCode":"idempotency_outcome_unknown","route":"/api/rewards/level-1-learning/redeem"}
+# Subtest: reward: unknown finalization remains quarantined after one committed effect
+ok 22 - reward: unknown finalization remains quarantined after one committed effect
+  ---
+  duration_ms: 503.85712
+  type: 'test'
+  ...
+# {"timestamp":"2026-10-23T12:43:05.291Z","service":"lythaus-public-api","correlationId":"1702b8df-3a34-41f2-9632-9cf66e5deb04","errorCode":"recent_authentication_required","internalErrorCode":"recent_authentication_required","route":"/api/privacy/requests"}
+# Subtest: deletion: confirmed challenge → real verification → new-key recovery; old-key denial remains stable
+ok 23 - deletion: confirmed challenge → real verification → new-key recovery; old-key denial remains stable
+  ---
+  duration_ms: 532.860864
+  type: 'test'
+  ...
+# {"timestamp":"2026-10-23T12:43:06.357Z","service":"lythaus-public-api","correlationId":"d871bc53-0d21-4d3f-8f6e-1d351ff42414","errorCode":"recent_authentication_required","internalErrorCode":"recent_authentication_required","route":"/api/privacy/requests"}
+# Subtest: deletion: expired proof denial recovers only after renewal and a fresh operation key
+ok 24 - deletion: expired proof denial recovers only after renewal and a fresh operation key
+  ---
+  duration_ms: 1082.442804
+  type: 'test'
+  ...
+# {"timestamp":"2026-10-23T12:43:07.449Z","service":"lythaus-public-api","correlationId":"52b4d115-5b15-42b6-b0be-cb807c0f96dd","errorCode":"idempotency_in_progress","internalErrorCode":"idempotency_in_progress","route":"/api/privacy/requests"}
+# {"timestamp":"2026-10-23T12:43:07.454Z","service":"lythaus-public-api","correlationId":"d546c2d0-8520-46f1-8b85-4168dc8a92b7","errorCode":"recent_authentication_required","internalErrorCode":"recent_authentication_required","route":"/api/privacy/requests"}
+# {"timestamp":"2026-10-23T12:43:07.456Z","service":"lythaus-public-api","correlationId":"4902b694-0445-4083-a1fb-c5fe46ee2929","errorCode":"idempotency_key_conflict","internalErrorCode":"idempotency_key_conflict","route":"/api/privacy/requests"}
+# Subtest: deletion: concurrent same-key success replays once; another key cannot reuse its proof
+ok 25 - deletion: concurrent same-key success replays once; another key cannot reuse its proof
+  ---
+  duration_ms: 551.8481
+  type: 'test'
+  ...
+# {"timestamp":"2026-10-23T12:43:07.912Z","service":"lythaus-public-api","correlationId":"209d134d-49d4-4504-9a66-42317fbceade","errorCode":"idempotency_outcome_unknown","internalErrorCode":"idempotency_outcome_unknown","route":"/api/privacy/requests"}
+# {"timestamp":"2026-10-23T12:43:07.913Z","service":"lythaus-public-api","correlationId":"09387417-5ac3-4f12-b0cb-b60ce002174c","errorCode":"idempotency_outcome_unknown","internalErrorCode":"idempotency_outcome_unknown","route":"/api/privacy/requests"}
+# Subtest: deletion: unknown finalization remains quarantined after one committed effect
+ok 26 - deletion: unknown finalization remains quarantined after one committed effect
+  ---
+  duration_ms: 457.286208
+  type: 'test'
+  ...
+# Subtest: disabled actual routes preserve optional-key behavior without reading or consuming proof schema
+ok 27 - disabled actual routes preserve optional-key behavior without reading or consuming proof schema
+  ---
+  duration_ms: 2.070531
+  type: 'test'
+  ...
+# {"timestamp":"2026-10-23T12:43:08.455Z","service":"lythaus-public-api","correlationId":"7f7c3995-78b8-498c-955c-a7a338994328","errorCode":"invalid_json","internalErrorCode":"invalid_json","route":"/api/rewards/level-1-learning/redeem"}
+# Subtest: actual route rejects malformed body bytes before any proof consumption or protected effect
+ok 28 - actual route rejects malformed body bytes before any proof consumption or protected effect
+  ---
+  duration_ms: 542.998709
+  type: 'test'
+  ...
+# Subtest: disabled consume performs no database I/O; explicitly enabled missing operation fails closed
+ok 29 - disabled consume performs no database I/O; explicitly enabled missing operation fails closed
+  ---
+  duration_ms: 1.672662
+  type: 'test'
+  ...
+# Subtest: real existing password verifier must succeed; unknown credentials/schema and wrong password fail closed
+ok 30 - real existing password verifier must succeed; unknown credentials/schema and wrong password fail closed
+  ---
+  duration_ms: 1166.77559
+  type: 'test'
+  ...
+# Subtest: action and nonce are single-use; concurrent transactions have only one successful effect
+ok 31 - action and nonce are single-use; concurrent transactions have only one successful effect
+  ---
+  duration_ms: 571.246549
+  type: 'test'
+  ...
+# Subtest: protected mutation rollback restores proof; a retry may commit once before expiry
+ok 32 - protected mutation rollback restores proof; a retry may commit once before expiry
+  ---
+  duration_ms: 520.558024
+  type: 'test'
+  ...
+# Subtest: server-time expiry, family/account revocation, token version and binding mismatches deny effects
+ok 33 - server-time expiry, family/account revocation, token version and binding mismatches deny effects
+  ---
+  duration_ms: 6408.326286
+  type: 'test'
+  ...
+# Subtest: read-only binding survives a rotated credential in the same family without resetting verification age
+ok 34 - read-only binding survives a rotated credential in the same family without resetting verification age
+  ---
+  duration_ms: 1073.209213
+  type: 'test'
+  ...
+# Subtest: step-up failures use 403/503 rather than triggering existing 401 refresh handling
+ok 35 - step-up failures use 403/503 rather than triggering existing 401 refresh handling
+  ---
+  duration_ms: 0.561256
+  type: 'test'
+  ...
+# Subtest: actual verification request uses only the server principal and isolates monthly collection failure
+ok 36 - actual verification request uses only the server principal and isolates monthly collection failure
+  ---
+  duration_ms: 542.931397
+  type: 'test'
+  ...
+# Subtest: disabled HTTP path, unsupported operations and offline failures never mint proof
+ok 37 - disabled HTTP path, unsupported operations and offline failures never mint proof
+  ---
+  duration_ms: 1.3107
+  type: 'test'
+  ...
+# Subtest: existing cookie/native refresh credential supplies binding without changing its transport or rotating it
+ok 38 - existing cookie/native refresh credential supplies binding without changing its transport or rotating it
+  ---
+  duration_ms: 2.154502
+  type: 'test'
+  ...
+# Subtest: actual request binding includes query/body; disabled reads do not consume the request
+ok 39 - actual request binding includes query/body; disabled reads do not consume the request
+  ---
+  duration_ms: 2.293677
+  type: 'test'
+  ...
+# Subtest: exact body binding rejects malformed UTF-8 and preserves valid bytes at the boundary
+ok 40 - exact body binding rejects malformed UTF-8 and preserves valid bytes at the boundary
+  ---
+  duration_ms: 5.342135
+  type: 'test'
+  ...
+# Subtest: oversized cloned bodies reject promptly with absent or misleading Content-Length
+ok 41 - oversized cloned bodies reject promptly with absent or misleading Content-Length
+  ---
+  duration_ms: 1.848291
+  type: 'test'
+  ...
+# Subtest: SEC-01/12/13: unavailable capabilities and an unobserved account never imply clearance or points
+ok 42 - SEC-01/12/13: unavailable capabilities and an unobserved account never imply clearance or points
+  ---
+  duration_ms: 13.7338
+  type: 'test'
+  ...
+# Subtest: SEC-03/10/11: one credential can meet both conditions, with fixed non-stacking maintenance budgets
+ok 43 - SEC-03/10/11: one credential can meet both conditions, with fixed non-stacking maintenance budgets
+  ---
+  duration_ms: 1.686248
+  type: 'test'
+  ...
+# Subtest: SEC-08/09: late enrollment, protection gaps and expired credentials are incomplete
+ok 44 - SEC-08/09: late enrollment, protection gaps and expired credentials are incomplete
+  ---
+  duration_ms: 0.334444
+  type: 'test'
+  ...
+# Subtest: SEC-08/11: rotation without a gap preserves coverage and authentication must match its registered credential
+ok 45 - SEC-08/11: rotation without a gap preserves coverage and authentication must match its registered credential
+  ---
+  duration_ms: 1.358635
+  type: 'test'
+  ...
+# Subtest: SEC-04/12/14: integrity verdicts remain distinct and are not inferred from challenges or absent telemetry
+ok 46 - SEC-04/12/14: integrity verdicts remain distinct and are not inferred from challenges or absent telemetry
+  ---
+  duration_ms: 0.377066
+  type: 'test'
+  ...
+# Subtest: SEC-02/03: challenge evidence is bound to its subject and only valid current-policy refreshers qualify
+ok 47 - SEC-02/03: challenge evidence is bound to its subject and only valid current-policy refreshers qualify
+  ---
+  duration_ms: 0.794993
+  type: 'test'
+  ...
+# Subtest: CAL-16/17: calendar validity, exact-cutoff expiry, renewals and email revocation never stack
+ok 48 - CAL-16/17: calendar validity, exact-cutoff expiry, renewals and email revocation never stack
+  ---
+  duration_ms: 0.351749
+  type: 'test'
+  ...
+# Subtest: REL-03: unknown operational rules and malformed evidence fail closed
+ok 49 - REL-03: unknown operational rules and malformed evidence fail closed
+  ---
+  duration_ms: 0.472176
+  type: 'test'
+  ...
+# Subtest: inactive/default and unmapped collection never emit qualifying evidence
+ok 50 - inactive/default and unmapped collection never emit qualifying evidence
+  ---
+  duration_ms: 3.96713
+  type: 'test'
+  ...
+# Subtest: full calendar-month protected selection plus genuine matching authentication uses existing award only
+ok 51 - full calendar-month protected selection plus genuine matching authentication uses existing award only
+  ---
+  duration_ms: 10.852295
+  type: 'test'
+  ...
+# Subtest: local unlock, face/fingerprint/PIN preferences cannot become server credential coverage
+ok 52 - local unlock, face/fingerprint/PIN preferences cannot become server credential coverage
+  ---
+  duration_ms: 2.026633
+  type: 'test'
+  ...
+# Subtest: missing/incorrect authentication or actual protection gaps cannot qualify despite a held choice
+ok 53 - missing/incorrect authentication or actual protection gaps cannot qualify despite a held choice
+  ---
+  duration_ms: 0.561717
+  type: 'test'
+  ...
+# Subtest: last-day enrollment, late collection cutover, disablement, revocation and re-enable gaps yield no award
+ok 54 - last-day enrollment, late collection cutover, disablement, revocation and re-enable gaps yield no award
+  ---
+  duration_ms: 0.536069
+  type: 'test'
+  ...
+# Subtest: a distinct option switched midmonth cannot stack or claim it was selected the whole month
+ok 55 - a distinct option switched midmonth cannot stack or claim it was selected the whole month
+  ---
+  duration_ms: 0.273402
+  type: 'test'
+  ...
+# Subtest: credential rotation under the same held option preserves only gap-free server coverage
+ok 56 - credential rotation under the same held option preserves only gap-free server coverage
+  ---
+  duration_ms: 0.494779
+  type: 'test'
+  ...
+# Subtest: cutoff is exclusive: a disablement at next-month start preserves the completed month
+ok 57 - cutoff is exclusive: a disablement at next-month start preserves the completed month
+  ---
+  duration_ms: 0.406248
+  type: 'test'
+  ...
+# Subtest: account changes, duplicate events and missing revisions cannot leak or fabricate coverage
+ok 58 - account changes, duplicate events and missing revisions cannot leak or fabricate coverage
+  ---
+  duration_ms: 0.989577
+  type: 'test'
+  ...
+# Subtest: UTC candidate calendar and settlement boundaries remain independent of device timezone
+ok 59 - UTC candidate calendar and settlement boundaries remain independent of device timezone
+  ---
+  duration_ms: 1.654866
+  type: 'test'
+  ...
+# Subtest: month lengths and year transitions use calendar boundaries, not rolling thirty days
+ok 60 - month lengths and year transitions use calendar boundaries, not rolling thirty days
+  ---
+  duration_ms: 1.317709
+  type: 'test'
+  ...
+# Subtest: mapping must match versioned rules/catalogue and existing unavailable capabilities remain unavailable
+ok 61 - mapping must match versioned rules/catalogue and existing unavailable capabilities remain unavailable
+  ---
+  duration_ms: 0.40038
+  type: 'test'
+  ...
+# (node:8568) ExperimentalWarning: Module mocking is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: disabled assembly preserves the previous calculator and does not read choices or new schema
+ok 62 - disabled assembly preserves the previous calculator and does not read choices or new schema
+  ---
+  duration_ms: 16.924008
+  type: 'test'
+  ...
+# Subtest: explicit selection policy uses DB time, withholds only security credit for gaps or pending mapping
+ok 63 - explicit selection policy uses DB time, withholds only security credit for gaps or pending mapping
+  ---
+  duration_ms: 4.690735
+  type: 'test'
+  ...
+# Subtest: full held option passes only canonical facts to existing calculator and records version/history
+ok 64 - full held option passes only canonical facts to existing calculator and records version/history
+  ---
+  duration_ms: 1.975508
+  type: 'test'
+  ...
+# Subtest: existing assemblies require separate policy review before adopting or changing selection mapping
+ok 65 - existing assemblies require separate policy review before adopting or changing selection mapping
+  ---
+  duration_ms: 1.674185
+  type: 'test'
+  ...
+# Subtest: collection is inactive by default and a missing mapping performs no queries or writes
+ok 66 - collection is inactive by default and a missing mapping performs no queries or writes
+  ---
+  duration_ms: 1.980214
+  type: 'test'
+  ...
+# Subtest: only canonical server password authentication can append an existing credential fact; never points/MFA/biometrics
+ok 67 - only canonical server password authentication can append an existing credential fact; never points/MFA/biometrics
+  ---
+  duration_ms: 2.293125
+  type: 'test'
+  ...
+# Subtest: local choice or disabled/revoked protection cannot record qualifying authentication
+ok 68 - local choice or disabled/revoked protection cannot record qualifying authentication
+  ---
+  duration_ms: 1.453469
+  type: 'test'
+  ...
+# Subtest: choice journal serializes account changes and uses server effective time; disabling/revocation require no award eligibility
+ok 69 - choice journal serializes account changes and uses server effective time; disabling/revocation require no award eligibility
+  ---
+  duration_ms: 0.657658
+  type: 'test'
+  ...
+# Subtest: mapping rejects unknown versions, operational timezone and invented protection categories
+ok 70 - mapping rejects unknown versions, operational timezone and invented protection categories
+  ---
+  duration_ms: 0.384797
+  type: 'test'
+  ...
+# Subtest: policy is disabled by default; issuance performs no I/O while disabled
+ok 71 - policy is disabled by default; issuance performs no I/O while disabled
+  ---
+  duration_ms: 2.082776
+  type: 'test'
+  ...
+# Subtest: server password verification precedes minting; persistence receives hashes, not password or nonce
+ok 72 - server password verification precedes minting; persistence receives hashes, not password or nonce
+  ---
+  duration_ms: 8.422618
+  type: 'test'
+  ...
+# Subtest: wrong/absent password, absent credential or session binding never mints proof
+ok 73 - wrong/absent password, absent credential or session binding never mints proof
+  ---
+  duration_ms: 1.587206
+  type: 'test'
+  ...
+# Subtest: only the approved existing mutation routes classify; query strings cannot bypass policy
+ok 74 - only the approved existing mutation routes classify; query strings cannot bypass policy
+  ---
+  duration_ms: 0.438265
+  type: 'test'
+  ...
+# Subtest: all approved action types require exact user/session/version/action/operation/secret and five-minute age
+ok 75 - all approved action types require exact user/session/version/action/operation/secret and five-minute age
+  ---
+  duration_ms: 1.498425
+  type: 'test'
+  ...
+# Subtest: request binding distinguishes body, query, method and sensitive action
+ok 76 - request binding distinguishes body, query, method and sensitive action
+  ---
+  duration_ms: 2.337781
+  type: 'test'
+  ...
+# Subtest: access-token lifetime, claims and Principal stay unchanged; fresh iat is not authentication evidence
+ok 77 - access-token lifetime, claims and Principal stay unchanged; fresh iat is not authentication evidence
+  ---
+  duration_ms: 12.739784
+  type: 'test'
+  ...
+1..77
+# tests 77
+# suites 0
+# pass 77
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11332.349053
+
+=== member-action-review-typecheck.log ===
+
+> lythaus-monorepo@1.0.0 typecheck:native
+> tsc -p tsconfig.native.json --noEmit
+Final typecheck exit: 0. Final Node tests: 77 passed, no failures/cancellations/skips.

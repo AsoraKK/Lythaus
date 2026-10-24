@@ -1,0 +1,35 @@
+Inactive #1084 required-CI repair, 2026-10-23 UTC
+Predecessor: 4909a47537a9dd6c7ff415db4c96e1b508e4a567
+Source-reviewed policy predecessor: 6270c2b95c808b33b3bc115c0e3066d8d00d6296
+Merged foundation/main: 5b7e457d4fb4df35c999aa10a8a4f5d1ecfe663a
+
+Observed predecessor CI 39992571253 attempt 1 failures:
+- Native job 120547774516: pinned Wrangler 4.123.0 offline regression, spawnSync npx ETIMEDOUT at existing 55000 ms subprocess bound. Negative rollback error fixtures elsewhere are expected. Cause not proven; no timeout or assertion change.
+- Web job 120547774792: strict source-allocation pins reject changed Jobs/Public API index blobs. Jobs type-only addition removed; existing approved Jobs pin retained. Public pin advances only to reviewed source blob 95ae09a2df0d260d699b4526a18bc682ff6cc485. Negative mutation/path/prior-blob checks retained/expanded.
+- OpenAPI job 120547775050: runtime public route count 131 versus 130 and missing POST /auth/recent-verification. Add bounded route contract, exact-count regression and generated SDK; do not bypass parity.
+No old-head rerun requested. New source requires a new complete required-CI run.
+
+Commands/results on repaired source:
+npm run openapi:lint: valid, 2 pre-existing composition warnings.
+npm run openapi:bundle: pass.
+npm run openapi:test:contract: 7 suites pass, 1 existing skipped; 78 tests pass, 17 existing skipped, 0 failed.
+npm run openapi:gen:dart: pinned generator 7.7.0, complete pipeline pass.
+Two clean generated file trees equal: SHA256 1c8696ec37c512b261de5082833300f8e2cd6aaf36206938efee5a9127c74a39.
+npm run openapi:test:dart: 7 Node regressions pass; generated build/format pass; analyzer 76 existing warnings, no errors; 1601 Dart tests pass.
+New native SDK tests use real Dio IOHttpClientAdapter and two separate loopback origins, runtime-only probes, counts/boolean assertions. Default and permissive status policies reject 303; redirect-origin requests=0 and sensitive forwarding=false. Normal native 200 preserves exact descriptor and five-minute receipt.
+Generic browser SDK new method throws unavailable before sending; production app browser transport is owned by separate draft #1092.
+Initial standalone homepage-protection run: 42 pass before the package SDK hook changed. This did not clear final head 4049cd4e's exact package-command bytes; remote CI correctly caught the stale pin.
+Exact ten-file Node action/routes/idempotency/monthly/session command in testing document: 89 tests pass, 0 failed/skipped.
+npm run typecheck:native: pass.
+git diff --check: pass.
+
+Production source delta from reviewed 6270c2b in apps/, packages/, database/ and lib/features/: only two redundant optional Jobs Env declarations removed; marketing test allocation changes are test-only. Public API/proof/monthly/session/controller/schema source preserved.
+Local test setup corrections: validator expected-format file list extended for new fixture; fixture uses generated package Dart 2.18 syntax/format. Assertions and checks retained.
+No stored or production credentials, live sensitive operations, schema execution, new provider, flag activation, rewards/reputation writes or deployment.
+
+Test-only follow-up after 4049cd4ea99d7997ce3d218c64a0ec41e6d93e11:
+CI 39996953745 attempt 1 web job 120563560256 failed only `openapi:gen:dart must match the exact PR896 normalization script`: expected command lacked the new transport guard. OpenAPI job passed on the same head. Fix only the two exact expected SDK command strings, retain historical baseline equality, and add removal/appended-byte/unknown-command rejection regressions. No arbitrary command or path allocation is admitted.
+Fresh worktree's first full marketing unit invocation lacked apps/marketing-site/node_modules/astro; npm ci --prefix apps/marketing-site --ignore-scripts --no-audit installed its unchanged lockfile. No package/lockfile source changes.
+node --test apps/marketing-site/tests/*.test.mjs: 103 pass, 0 failed/skipped (includes 44 homepage-protection cases).
+node --test scripts/tests/openapi-dart-nested-builder-assignment.test.mjs scripts/tests/openapi-member-verification-transport.test.mjs: 7 pass, 0 failed/skipped.
+SDK, Public API, Jobs, monthly policy, Flutter, schema and runtime source unchanged by this follow-up. New final source requires fresh exact-head required CI; no old-head blind rerun.

@@ -45,6 +45,10 @@ import { recordMonthlyEmailControl } from '../../../packages/db/src/monthly-main
 import { handleMonthlyReputationRead } from './monthly-reputation-routes.ts';
 import { handleJobsReputationSessionBridge } from './jobs-reputation-session-bridge.ts';
 import { JOBS_SESSION_PATH } from '../../../packages/contracts/src/jobs-reputation-session.ts';
+import { recentAccountPolicyEnabled, type SensitiveOperation } from '../../../packages/security/src/member-action-verification.ts';
+import { createRecentAccountProof, consumeRecentAccountProof } from './member-action-verification-db.ts';
+import { recordMonthlyAccountAuthentication, securityChoiceMapping } from '../../../packages/db/src/member-security-maintenance.ts';
+import { readSensitiveOperation, recentVerificationRefreshCredential, verifyAccountActionRequest } from './member-action-verification-http.ts';
 
 interface Env extends EnvBindings {
   WORKER_VERSION: NonNullable<EnvBindings['WORKER_VERSION']>;
@@ -66,6 +70,9 @@ interface Env extends EnvBindings {
   TAG_SEARCH_INDEX_READ_ENABLED?: string;
   TAG_SEARCH_MAX_DISTINCT_TAGS_PER_POST?: string;
   TAG_SEARCH_MAX_CANDIDATES_PER_REQUEST?: string;
+  MEMBER_RECENT_AUTH_ENABLED?: string;
+  MEMBER_SECURITY_EVIDENCE_ENABLED?: string;
+  MEMBER_SECURITY_EVIDENCE_MAPPING?: string;
 }
 
 function hasReadinessAuthorization(request: Request, env: Env): boolean {
@@ -2525,6 +2532,7 @@ async function reviewerAssignments(request: Request, env: Env, user: Principal):
 }
 
 async function createPrivacyRequest(request: Request, env: Env, user: Principal): Promise<Response> {
+  const operation = await currentSensitiveOperation(request, env);
   const input = await readJson<{ requestType?: 'export' | 'delete' | 'rectify' }>(request, 8 * 1024);
   const plan = privacyRequestPlan(input.requestType);
   const requestId = uuidv7();
@@ -2532,6 +2540,11 @@ async function createPrivacyRequest(request: Request, env: Env, user: Principal)
     const account = await client.query<{ status: string }>(
       `SELECT status FROM identity.users WHERE id = $1 FOR UPDATE`, [user.userId]);
     if (account.rows[0]?.status !== 'active') throw new Error('authentication_required');
+    if (plan.requestType === 'delete') {
+      await consumeRecentAccountProof(client, { enabled: recentAccountPolicyEnabled(env.MEMBER_RECENT_AUTH_ENABLED),
+        user, operation, proof: request.headers.get('x-lythaus-action-verification'), bindingKey: env.PII_HMAC_KEY_V1,
+        refreshCredential: recentVerificationRefreshCredential(request, env.CORS_ALLOWED_ORIGINS, recentAccountPolicyEnabled(env.MEMBER_RECENT_AUTH_ENABLED)) });
+    }
     const active = await client.query(
       `SELECT 1 FROM privacy.requests
         WHERE subject_id = $1
@@ -3335,6 +3348,7 @@ async function rewardsSnapshot(request: Request, env: Env, user: Principal): Pro
 }
 
 async function redeemReward(request: Request, env: Env, user: Principal, rewardId: string): Promise<Response> {
+  const operation = await currentSensitiveOperation(request, env);
   const offer = REWARD_CATALOG.find((candidate) => candidate.id === rewardId);
   if (!offer) throw new Error('reward_not_found');
   const reputation = await query<{ current_level: number; created_at: string }>(env.DB_APP_FRESH,
@@ -3347,6 +3361,9 @@ async function redeemReward(request: Request, env: Env, user: Principal, rewardI
   const redemptionId = uuidv7();
   const sourceEventId = uuidv7();
   const redeemedAt = await transaction(env.DB_APP_FRESH, async (client) => {
+    await consumeRecentAccountProof(client, { enabled: recentAccountPolicyEnabled(env.MEMBER_RECENT_AUTH_ENABLED),
+      user, operation, proof: request.headers.get('x-lythaus-action-verification'), bindingKey: env.PII_HMAC_KEY_V1,
+      refreshCredential: recentVerificationRefreshCredential(request, env.CORS_ALLOWED_ORIGINS, recentAccountPolicyEnabled(env.MEMBER_RECENT_AUTH_ENABLED)) });
     const result = await client.query<{ redeemed_at: string }>(
       `INSERT INTO trust.reward_redemptions (id, user_id, reward_id, reward_level, reward_title)
        VALUES ($1, $2, $3, $4, $5)
@@ -3523,6 +3540,33 @@ async function authIntake(request: Request, env: Env, reset = false): Promise<Re
   return replay;
 }
 
+async function currentSensitiveOperation(request: Request, env: Env): Promise<SensitiveOperation | undefined> {
+  return readSensitiveOperation(request, recentAccountPolicyEnabled(env.MEMBER_RECENT_AUTH_ENABLED));
+}
+
+async function verifyRecentAccountAction(request: Request, env: Env): Promise<Response> {
+  const result = await verifyAccountActionRequest(request, recentAccountPolicyEnabled(env.MEMBER_RECENT_AUTH_ENABLED), {
+    authenticate: incoming => principal(incoming, env),
+    limitUser: userId => enforceRateLimit(request, env, 'auth:recent-account-user', 10, userId),
+    issue: input => {
+      const secrets = requireAuthSecrets(env);
+      return transaction(env.DB_APP_FRESH, client => createRecentAccountProof(client, {
+        enabled: true, ...input, pepper: secrets.pepper, bindingKey: secrets.hmacKey,
+        refreshCredential: recentVerificationRefreshCredential(request, env.CORS_ALLOWED_ORIGINS, true),
+      }));
+    },
+    ...(env.MEMBER_SECURITY_EVIDENCE_ENABLED === 'true' ? { recordMaintenance: async (proofId: string, userId: string) => {
+      const mapping = securityChoiceMapping(env.MEMBER_SECURITY_EVIDENCE_MAPPING);
+      if (!mapping) return { state: 'unavailable', reason: 'option_award_mapping_pending' };
+      return transaction(env.DB_APP_FRESH, client => recordMonthlyAccountAuthentication(client, {
+        enabled: true, subjectUserId: userId, proofId,
+        rulesVersion: env.MONTHLY_REPUTATION_MAINTENANCE_RULES, mapping,
+      }));
+    } } : {}),
+  });
+  return privateResponse(request, env, result);
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const resetRequest = /^(?:\/api)?\/auth\/password\/reset\/request$/.test(new URL(request.url).pathname);
@@ -3533,7 +3577,7 @@ export default {
     try {
       assertExpectedHostname(request, env.EXPECTED_HOSTNAMES);
       const url = new URL(request.url);
-      if (request.method === 'OPTIONS') return response(request, env, null, { status: 204, headers: { 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS', 'access-control-allow-headers': 'Authorization, Content-Type, Idempotency-Key, X-Correlation-ID, X-Device-Rooted, X-Device-Emulator, X-Device-Debug, X-Live-Test-Mode, X-Lythaus-Auth-Transport' } });
+      if (request.method === 'OPTIONS') return response(request, env, null, { status: 204, headers: { 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS', 'access-control-allow-headers': 'Authorization, Content-Type, Idempotency-Key, X-Correlation-ID, X-Device-Rooted, X-Device-Emulator, X-Device-Debug, X-Live-Test-Mode, X-Lythaus-Auth-Transport' + (recentAccountPolicyEnabled(env.MEMBER_RECENT_AUTH_ENABLED) ? ', X-Lythaus-Action-Verification, X-Lythaus-Session-Binding' : '') } });
       validateAuthRequestOrigin(request, env.CORS_ALLOWED_ORIGINS);
       if (request.method === 'GET' && (url.pathname === '/health' || url.pathname === '/api/health')) return response(request, env, { status: 'ok', service: 'lythaus-public-api', environment: env.ENVIRONMENT ?? 'unknown' });
       if (url.pathname === JOBS_SESSION_PATH || url.pathname === '/api' + JOBS_SESSION_PATH) {
@@ -3559,8 +3603,11 @@ export default {
       if (request.method === 'GET' && url.pathname === '/.well-known/jwks.json') return new Response(env.JWT_PUBLIC_JWKS ?? '{"keys":[]}', { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=300' } });
       if (request.method === 'POST' && url.pathname === '/api/waitlist') return await waitlistRoute(request, env);
       if (url.pathname === '/api/waitlist') return await waitlistRoute(request, env);
+      if (request.method === 'POST' && url.pathname === '/api/auth/recent-verification'
+        && !recentAccountPolicyEnabled(env.MEMBER_RECENT_AUTH_ENABLED)) throw new Error('recent_authentication_unavailable');
       const rateLimit = rateLimitPlan(url.pathname);
       await enforceRateLimit(request, env, rateLimit.scope, rateLimit.limit);
+      if (request.method === 'POST' && url.pathname === '/api/auth/recent-verification') return await verifyRecentAccountAction(request, env);
       if (url.pathname === '/api/analytics/activity-consent' && ['GET', 'PUT'].includes(request.method)) {
         if (request.method === 'PUT') sessionTransport(request, env.CORS_ALLOWED_ORIGINS);
         const result = await handleActivityMeasurement(request, env, await principal(request, env));

@@ -13,9 +13,13 @@ import { previewProspectiveMonthlyReputation, PROSPECTIVE_REPUTATION_POLICY_VERS
 import type { SuggestionAcceptanceRevision } from '../../contracts/src/monthly-suggestion-policy.ts';
 import { requireMonthlyPeerIngestionDrained } from './monthly-peer-participation.ts';
 import { requireMonthlyContextIngestionDrained } from './monthly-context-review.ts';
+import { prepareMonthlySecurityEvidence } from './member-security-maintenance.ts';
+import type { SecurityChoiceMapping } from '../../contracts/src/monthly-security-choice.ts';
+import { applyCommonSecurityBenefit } from '../../contracts/src/monthly-security-choice.ts';
 
 interface AssemblyInput {
   subjectUserId: string; sourceMonth: string; weeklyRulesVersion: string; maintenanceRulesVersion: string; evaluatedAt: string; peerRulesVersion?: string; contextRulesVersion?: string;
+  securityChoice?: { enabled: boolean; mapping?: SecurityChoiceMapping };
 }
 interface AssemblyPreparation {
   configuration: ProspectiveReputationConfiguration;
@@ -113,8 +117,23 @@ async function assembleCanonicalMonthlyReputation(client: Client, input: Assembl
       lockedAt: week.recorded_at.toISOString() };
   });
   const observations = await readMonthlyMaintenanceEvidence(client, input.subjectUserId, sourceCutoff);
-  const maintenanceReport = calculateMonthlyMaintenance({ subjectUserId: input.subjectUserId, sourceMonth: input.sourceMonth,
-    rules: maintenance.rules, evidence: observations.evidence });
+  const securityChoice = input.securityChoice?.enabled === true ? await prepareMonthlySecurityEvidence(client, {
+    enabled: true, subjectUserId: input.subjectUserId, sourceMonth: input.sourceMonth,
+    rulesVersion: input.maintenanceRulesVersion, mapping: input.securityChoice.mapping,
+  }) : null;
+  const previousSecurityChoice = previous?.report && typeof previous.report === 'object'
+    ? (previous.report as { securityChoice?: { configuration?: unknown } }).securityChoice ?? null : null;
+  const securityConfiguration = securityChoice ? input.securityChoice?.mapping ?? null : null;
+  if (previous && ((previousSecurityChoice !== null) !== (securityChoice !== null)
+    || JSON.stringify(canonicalPreparationValue(previousSecurityChoice?.configuration ?? null))
+      !== JSON.stringify(canonicalPreparationValue(securityConfiguration)))) {
+    throw new Error('monthly_assembly_previous_policy_requires_review');
+  }
+  const maintenanceEvidence = securityChoice ? [...observations.evidence.filter(item =>
+    item.facts.kind !== 'protection' && item.facts.kind !== 'authentication'), ...securityChoice.evidence] : observations.evidence;
+  const baseMaintenanceReport = calculateMonthlyMaintenance({ subjectUserId: input.subjectUserId, sourceMonth: input.sourceMonth,
+    rules: maintenance.rules, evidence: maintenanceEvidence });
+  const maintenanceReport = securityChoice ? applyCommonSecurityBenefit(baseMaintenanceReport, securityChoice) : baseMaintenanceReport;
   const sourceInput: Omit<MonthlyReputationInput, 'quarterlyPoints'> = { policyVersion: MONTHLY_REPUTATION_POLICY_VERSION, sourceMonth: input.sourceMonth, sourceCutoff,
     periodPolicyVersion: weekly.rules.periodPolicyVersion, weeks: locked, monthlyPoints: maintenanceReport.monthlyPoints };
   const previewInput = preparation ? { subjectUserId: input.subjectUserId, source: sourceInput,
@@ -143,6 +162,7 @@ async function assembleCanonicalMonthlyReputation(client: Client, input: Assembl
     missingWeeks: periods.filter(period => !locked.some(week => week.startsAt === period.startsAt)).map(period => ({ ...period,
       points: 0, reasonCode: period.endsAt <= weekly.collectFrom ? 'before_collection' : period.endsAt <= account.created_at.toISOString() ? 'before_account' : 'no_recorded_activity' })),
     observationIds: observations.observationIds, revocationIds: observations.revocationIds,
+    ...(securityChoice ? { securityChoice: { ...securityChoice, evidence: undefined, configuration: securityConfiguration } } : {}),
     ...(preparation ? { preparationOnly: true, runtimeActivationAllowed: false, appliedPoints: 0,
       catalogueHash: PROSPECTIVE_REPUTATION_CATALOGUE_HASH,
       inheritance: { weeklyPolicyVersion: MONTHLY_REPUTATION_POLICY_VERSION,

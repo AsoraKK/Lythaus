@@ -21,10 +21,17 @@ enum DraftDeviceUnlockStatus {
 }
 
 class DraftDeviceUnlockState {
-  const DraftDeviceUnlockState(this.status, this.preference);
+  const DraftDeviceUnlockState(
+    this.status,
+    this.preference, {
+    this.availability = DeviceUnlockAvailability.disabled,
+    this.saving = false,
+  });
 
   final DraftDeviceUnlockStatus status;
   final DeviceUnlockPreference preference;
+  final DeviceUnlockAvailability availability;
+  final bool saving;
 }
 
 class DraftDeviceUnlockController
@@ -64,9 +71,35 @@ class DraftDeviceUnlockController
   DeviceUnlockAvailability _availability = DeviceUnlockAvailability.unavailable;
 
   bool _current(int revision) => enabled && mounted && revision == _revision;
+  bool get isAuthenticating =>
+      mounted && state.status == DraftDeviceUnlockStatus.authenticating;
 
   void _status(DraftDeviceUnlockStatus status) {
-    state = DraftDeviceUnlockState(status, state.preference);
+    state = _snapshot(status, state.preference);
+  }
+
+  DraftDeviceUnlockState _snapshot(
+    DraftDeviceUnlockStatus status,
+    DeviceUnlockPreference preference,
+  ) => DraftDeviceUnlockState(
+    status,
+    preference,
+    availability: _availability,
+    saving: _saving,
+  );
+
+  void clearSession() {
+    if (!mounted) return;
+    _revision++;
+    _loaded = false;
+    _away = false;
+    if (state.status == DraftDeviceUnlockStatus.authenticating) {
+      unawaited(_cancelPrompt());
+    }
+    state = const DraftDeviceUnlockState(
+      DraftDeviceUnlockStatus.inactive,
+      DeviceUnlockPreference.off,
+    );
   }
 
   Future<void> initialize() async {
@@ -80,12 +113,23 @@ class DraftDeviceUnlockController
       if (!_current(revision)) return;
       _availability = availability;
       _loaded = true;
-      state = DraftDeviceUnlockState(_initialStatus(preference), preference);
+      state = _snapshot(_initialStatus(preference), preference);
     } catch (_) {
       if (_current(revision)) {
         _status(DraftDeviceUnlockStatus.storageUnavailable);
       }
     }
+  }
+
+  Future<void> reloadPreference() async {
+    if (!enabled ||
+        !mounted ||
+        _saving ||
+        state.status == DraftDeviceUnlockStatus.authenticating) {
+      return;
+    }
+    _loaded = false;
+    await initialize();
   }
 
   DraftDeviceUnlockStatus _initialStatus(DeviceUnlockPreference preference) =>
@@ -110,16 +154,66 @@ class DraftDeviceUnlockController
     }
     _saving = true;
     final revision = ++_revision;
+    _status(state.status);
     try {
       await _store.save(accountId, preference);
       if (!_current(revision)) return;
-      state = DraftDeviceUnlockState(_initialStatus(preference), preference);
+      state = _snapshot(_initialStatus(preference), preference);
     } catch (_) {
       if (_current(revision)) {
         _status(DraftDeviceUnlockStatus.storageUnavailable);
       }
     } finally {
       _saving = false;
+      if (_current(revision)) _status(state.status);
+    }
+  }
+
+  Future<void> confirmAndSavePreference(
+    DeviceUnlockPreference preference,
+  ) async {
+    if (!enabled ||
+        !mounted ||
+        !_loaded ||
+        _saving ||
+        _away ||
+        state.status == DraftDeviceUnlockStatus.authenticating) {
+      return;
+    }
+    if (preference == DeviceUnlockPreference.off) {
+      await savePreference(preference);
+      return;
+    }
+    if (_availability != DeviceUnlockAvailability.available) {
+      _status(DraftDeviceUnlockStatus.unavailable);
+      return;
+    }
+    final revision = ++_revision;
+    _status(DraftDeviceUnlockStatus.authenticating);
+    DeviceUnlockResult result;
+    try {
+      result = await _authenticator.unlock();
+    } catch (_) {
+      result = DeviceUnlockResult.unavailable;
+    }
+    if (!_current(revision)) return;
+    if (result != DeviceUnlockResult.unlocked) {
+      _status(switch (result) {
+        DeviceUnlockResult.cancelled => DraftDeviceUnlockStatus.cancelled,
+        DeviceUnlockResult.lockedOut => DraftDeviceUnlockStatus.lockedOut,
+        _ => DraftDeviceUnlockStatus.unavailable,
+      });
+      return;
+    }
+    _status(DraftDeviceUnlockStatus.locked);
+    final saving = savePreference(preference);
+    final saveRevision = _revision;
+    await saving;
+    if (_current(saveRevision) &&
+        !_away &&
+        state.preference == preference &&
+        state.status != DraftDeviceUnlockStatus.storageUnavailable) {
+      _status(DraftDeviceUnlockStatus.unlocked);
     }
   }
 

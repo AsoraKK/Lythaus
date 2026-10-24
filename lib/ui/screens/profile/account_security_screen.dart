@@ -7,6 +7,8 @@ import 'package:intl/intl.dart';
 
 import 'package:lythaus/features/auth/application/auth_providers.dart';
 import 'package:lythaus/features/member_verification/presentation/member_verification_policy_preview.dart';
+import 'package:lythaus/features/member_verification/application/device_unlock_settings_providers.dart';
+import 'package:lythaus/features/member_verification/presentation/device_unlock_settings_card.dart';
 import 'package:lythaus/ui/theme/spacing.dart';
 
 class AccountSecurityScreen extends ConsumerWidget {
@@ -47,6 +49,10 @@ class AccountSecurityScreen extends ConsumerWidget {
             ),
             const Divider(height: Spacing.xl),
             if (user != null &&
+                ref.watch(deviceUnlockSettingsEnabledProvider)) ...[
+              DeviceUnlockSettingsCard(accountId: user.id),
+              const Divider(height: Spacing.xl),
+            ] else if (user != null &&
                 ref.watch(memberVerificationPreviewEnabledProvider)) ...[
               const MemberVerificationPolicyPreview(),
               const Divider(height: Spacing.xl),

@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as ts from 'typescript';
+import { randomBytes, randomUUID } from 'node:crypto';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 type WorkerName = 'public' | 'admin';
@@ -304,6 +305,29 @@ function routeKey(route: Pick<RuntimeRoute, 'method' | 'path'>): string {
 }
 
 describe('source-derived OpenAPI route parity', () => {
+  test('inactive account verification documents existing credentials and fail-closed unavailability', () => {
+    const operation = contract.paths['/auth/recent-verification'].post;
+    const request = contract.components.schemas.MemberActionVerificationRequest;
+    const receipt = contract.components.schemas.MemberActionVerificationReceipt;
+    expect(operation.security).toEqual([{ bearerAuth: [] }]);
+    expect(operation.parameters.map((parameter: any) => parameter.name)).toEqual([
+      'X-Lythaus-Auth-Transport', 'X-Lythaus-Session-Binding',
+    ]);
+    expect(operation.responses['503'].description).toContain('disabled');
+    expect(request.required).toEqual(['password', 'operation']);
+    expect(Object.keys(request.properties).sort()).toEqual(['operation', 'password']);
+    expect(request.properties.password).toMatchObject({ writeOnly: true, minLength: 1, maxLength: 128 });
+    expect(receipt.properties.proof.description).toContain('one-use');
+    const proofPattern = new RegExp(receipt.properties.proof.pattern);
+    const identifier = randomUUID();
+    const transientProbe = randomBytes(32).toString('hex');
+    expect(proofPattern.test(`${identifier}.${transientProbe}`)).toBe(true);
+    expect(proofPattern.test(`${identifier}x${transientProbe}`)).toBe(false);
+    expect(receipt.properties.action.enum).toEqual(['reward_claim', 'account_delete']);
+    expect(receipt.properties.accessToken).toBeUndefined();
+    expect(receipt.properties.refreshToken).toBeUndefined();
+  });
+
   test('contextual review contract documents runtime authorization and request limits', () => {
     const path = contract.paths['/admin/reputation/comments/{commentId}/context-review'];
     const operation = path.post;
@@ -369,7 +393,7 @@ describe('source-derived OpenAPI route parity', () => {
       public: publicExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
       admin: adminExtraction.routes.filter((route) => !internalRouteKeys.has(routeKey(route))).length,
     };
-    expect(routeCounts).toEqual({ public: 130, admin: 65 });
+    expect(routeCounts).toEqual({ public: 131, admin: 65 });
     expect(runtimeRoutes.map(routeKey)).toEqual(expect.arrayContaining([
       'GET /.well-known/jwks.json',
       'PUT /media/uploads/{param}/bytes',
@@ -383,6 +407,7 @@ describe('source-derived OpenAPI route parity', () => {
       'GET /posts/{param}/owner-view',
       'GET /comments/{param}/owner-view',
       'POST /auth/password/reset/request',
+      'POST /auth/recent-verification',
       'POST /appeals/{param}/vote',
       'GET /appeals/review/queue',
       'POST /appeals/{param}/withdraw',
