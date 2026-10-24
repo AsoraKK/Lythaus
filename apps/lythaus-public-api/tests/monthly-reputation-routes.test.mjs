@@ -156,11 +156,12 @@ test('monthly rewards stays pending without approved server configuration and pe
   assert.equal(deps.calls.transactions, 0);
 });
 
-test('monthly reward projections share the revision protected by the selection period lock', async () => {
+for (const mode of ['confirmed', 'shadow', 'pending']) test(`monthly ${mode} projection preserves authority under the selection period lock`, async () => {
   const calls = [];
   let locked = false;
   let current = { ...snapshot, source_month: new Date('2026-09-01T00:00:00Z'),
-    effective_month: new Date('2026-10-01T00:00:00Z'), revision: 1, source_revision: 1, source_score: 500, level: 1 };
+    effective_month: new Date('2026-10-01T00:00:00Z'), mode: mode === 'pending' ? 'confirmed' : mode,
+    revision: 1, source_revision: 1, source_score: 500, level: 1 };
   const client = { async query(sql, values = []) {
     calls.push({ sql, values });
     if (sql.includes('SELECT pg_advisory_xact_lock')) {
@@ -195,12 +196,15 @@ test('monthly reward projections share the revision protected by the selection p
       { enabled: true, policy_version: MONTHLY_REPUTATION_POLICY_VERSION },
     ], rowCount: 2 };
     if (sql.includes('SELECT version,mode,first_source_month')) return { rows: [{
-      version: 'synthetic-snapshot-rules', policy_version: MONTHLY_REPUTATION_POLICY_VERSION, mode: 'confirmed', first_source_month: new Date('2026-08-01T00:00:00Z'),
+      version: 'synthetic-snapshot-rules', policy_version: MONTHLY_REPUTATION_POLICY_VERSION,
+      mode: mode === 'pending' ? 'confirmed' : mode, first_source_month: new Date('2026-08-01T00:00:00Z'),
       weekly_rules_version: 'weekly', maintenance_rules_version: 'maintenance',
       decision_approvals: Object.fromEntries(MONTHLY_REPUTATION_DECISIONS.map(id => [id, 'synthetic approval'])),
     }], rowCount: 1 };
     if (sql.includes('trust.lock_monthly_reward_subject')) return { rows: [{ allowed: true }], rowCount: 1 };
-    if (sql.includes('FROM trust.monthly_reward_snapshots')) return { rows: [{ ...current }], rowCount: 1 };
+    if (sql.includes('FROM trust.monthly_reward_snapshots')) return mode === 'pending'
+      ? { rows: [], rowCount: 0 } : { rows: [{ ...current }], rowCount: 1 };
+    if (sql.includes('SELECT 1 FROM trust.monthly_reputation_sources')) return { rows: [], rowCount: 0 };
     if (sql.includes('FROM trust.monthly_reward_selection_revisions')) return { rows: [], rowCount: 0 };
     assert.fail(`unexpected query: ${sql}`);
   } };
@@ -208,11 +212,30 @@ test('monthly reward projections share the revision protected by the selection p
     transaction: async work => work(client) });
   const response = await handleMonthlyReputationRead(request('/api/rewards/me/monthly'), deps);
   assert.equal(response.status, 200);
+  assert.equal(response.headers.get('cache-control'), 'private, no-store');
   const body = await response.json();
   assert.equal(locked, true);
-  assert.equal(body.snapshot.revision, 2);
-  assert.equal(body.snapshot.sourceScore, 2000);
-  assert.equal(body.selection.profileLevel, 2);
+  assert.equal(body.snapshot.state, mode);
+  if (mode === 'pending') {
+    assert.equal(body.snapshot.level, 1);
+    assert.equal(body.snapshot.levelKind, 'unassessed_default');
+    assert.equal(body.reasonCode, 'no_previous_assessment');
+  } else {
+    assert.equal(body.snapshot.revision, 2);
+    assert.equal(body.snapshot.sourceScore, 2000);
+  }
+  if (mode === 'confirmed') {
+    assert.equal(body.state, 'ready');
+    assert.equal(body.currentLevel, 2);
+    assert.equal(body.sourceScore, 2000);
+    assert.equal(body.selection.profileLevel, 2);
+  } else {
+    assert.equal(body.state, 'pending');
+    assert.equal(body.currentLevel, null);
+    assert.equal(body.sourceScore, null);
+    assert.equal(body.sourceMonth, null);
+    assert.equal(body.selection.profileLevel, null);
+  }
   const periodLock = calls.findIndex(call => call.sql.includes('pg_advisory_xact_lock')
     && call.values[0] === `monthly-reputation:${owner}:2026-09`);
   const firstSnapshotRead = calls.findIndex(call => call.sql.includes('FROM trust.monthly_reward_snapshots'));
