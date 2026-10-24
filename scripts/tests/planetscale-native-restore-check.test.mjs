@@ -340,7 +340,7 @@ const authorityAccesses = ['read_database', 'read_branch', 'delete_branch', 'del
   'create_branch', 'connect_branch', 'connect_production_branch', 'restore_production_branch_backup'];
 const authorityRows = () => authorityAccesses.map(access => ({ access, resource_id: RESTORE.databaseId, resource_type: 'Database',
   resource: { id: RESTORE.databaseId, name: RESTORE.database, deleted_at: null } }));
-function grantDiagnosticFixture({ rows = [], pages, mode = '', validAuthority = false } = {}) {
+function grantDiagnosticFixture({ rows = [], pages, mode = '', validAuthority = false, selfFields = {} } = {}) {
   const calls = [], evidence = [];
   const api = new RestoreApi('estjkwtxzsmh:' + password, async (url, options) => {
     calls.push({ url, method: options.method });
@@ -349,6 +349,7 @@ function grantDiagnosticFixture({ rows = [], pages, mode = '', validAuthority = 
     if (url.endsWith('/service-tokens/estjkwtxzsmh')) return Response.json({
       id: mode === 'wrong_self' ? 'differentid' : 'estjkwtxzsmh', token: password, name: password,
       service_token_accesses: validAuthority ? authorityRows() : rows,
+      ...selfFields,
     });
     if (mode === 'denied') return Response.json({ token: password, message: password }, { status: 403 });
     if (mode === 'transport') throw new Error(password);
@@ -358,6 +359,85 @@ function grantDiagnosticFixture({ rows = [], pages, mode = '', validAuthority = 
   });
   return { api, calls, evidence, observe: value => { evidence.push(value); } };
 }
+test('documented organization permission enums and OAuth scope groups are observable without authorizing global access', async () => {
+  const permissions = ['read_organization', 'read_invoices', 'read_audit_logs', 'create_databases', 'delete_databases',
+    'read_oauth_applications', 'read_oauth_tokens', 'write_oauth_tokens', 'delete_oauth_tokens', 'write_service_tokens',
+    'delete_service_tokens', 'write_teams', 'read_metrics_endpoints', 'read_databases', 'read_service_tokens'];
+  const f = grantDiagnosticFixture({ rows: permissions.map(access => ({ access, resource_type: 'Organization',
+    resource_id: 'organization123', resource: { id: 'organization123', name: RESTORE.organization, deleted_at: null } })),
+  selfFields: { oauth_accesses_by_resource: {
+    organization: { organizations: [{ id: 'organization123', name: RESTORE.organization, url: password }],
+      accesses: [{ name: 'read_branches', description: password }, { name: 'restore_production_branch_backups' }] },
+    database: { databases: [{ id: RESTORE.databaseId, name: RESTORE.database, organization: RESTORE.organization, url: password },
+      { id: RESTORE.databaseId, name: RESTORE.database, organization: 'otherorganization' },
+      { id: 'otherdatabase', name: 'otherdatabase', organization: RESTORE.organization }],
+    accesses: [{ name: 'read_database' }, { name: 'restore_backups' }, { name: password }, { name: '*' }] },
+    branch: { branches: [{ id: RESTORE.sourceId, name: RESTORE.source, database: RESTORE.database,
+      organization: RESTORE.organization, url: password }], accesses: [{ name: 'manage_passwords' }, { name: 'write_branch' }] },
+    user: { users: [{ id: password, name: password }], accesses: [{ name: password }] }, [password]: password,
+  } } });
+  await assert.rejects(() => f.api.authority(f.observe), /existing_token_missing_read_database/);
+  assert.equal(f.calls.length, 2); assert.ok(f.calls.every(row => row.method === 'GET'));
+  const result = f.evidence[0], oauth = result.oauthAccessesByResource;
+  assert.equal(result.version, 3); assert.deepEqual(result.rows.map(row => row.access), permissions);
+  assert.equal(result.grants.status, 'NOT_REQUESTED'); assert.equal(oauth.kind, 'OBJECT');
+  assert.equal(oauth.unknownGroupCount, 1); assert.equal(oauth.userKind, 'OBJECT');
+  assert.equal(oauth.groups.organization.resources.rows[0].nameMatchesOrganization, true);
+  const databases = oauth.groups.database.resources.rows;
+  assert.ok(databases[0].idMatchesDatabase && databases[0].nameMatchesDatabase && databases[0].organizationMatches);
+  assert.ok(databases[1].idMatchesDatabase && databases[1].nameMatchesDatabase && !databases[1].organizationMatches);
+  assert.ok(!databases[2].idMatchesDatabase && !databases[2].nameMatchesDatabase && databases[2].organizationMatches);
+  const branch = oauth.groups.branch.resources.rows[0];
+  assert.ok(branch.idMatchesSourceBranch && branch.nameMatchesSourceBranch && branch.databaseMatches && branch.organizationMatches);
+  assert.deepEqual(oauth.groups.database.accesses.rows.map(row => row.access), ['read_database', 'restore_backups', 'UNKNOWN_STRING', 'WILDCARD']);
+  assert.doesNotMatch(JSON.stringify(result), new RegExp(password));
+  assert.doesNotMatch(JSON.stringify(result), /otherorganization|otherdatabase|organization123|https?:|users|description/);
+});
+test('OAuth wildcard, null and malformed resources never imply target binding or database authority', async () => {
+  const resources = [{ id: '*', name: '*', organization: '*', database: '*' },
+    { id: null, name: null, organization: null, database: null }, {}, null, password, 42,
+    { id: RESTORE.databaseId, name: RESTORE.database, organization: { name: RESTORE.organization } }];
+  const f = grantDiagnosticFixture({ selfFields: { oauth_accesses_by_resource: {
+    database: { databases: resources, accesses: [{ name: null }, {}, null, password, { name: 'constructor' }] },
+    organization: '*', branch: { branches: '*', accesses: null },
+  } } });
+  await assert.rejects(() => f.api.authority(f.observe), /existing_token_missing_read_database/);
+  const groups = f.evidence[0].oauthAccessesByResource.groups, rows = groups.database.resources.rows;
+  assert.equal(rows[0].idKind, 'WILDCARD'); assert.equal(rows[1].idKind, 'NULL'); assert.equal(rows[2].idKind, 'MISSING');
+  assert.equal(rows[3].rowKind, 'NULL'); assert.equal(rows[4].rowKind, 'UNKNOWN_STRING'); assert.equal(rows[5].rowKind, 'NON_OBJECT');
+  assert.ok(rows.every(row => !row.organizationMatches));
+  assert.equal(rows[6].organizationKind, 'NON_STRING');
+  assert.equal(groups.organization.kind, 'WILDCARD'); assert.equal(groups.organization.resources.kind, 'MISSING');
+  assert.equal(groups.branch.resources.kind, 'WILDCARD'); assert.equal(groups.branch.resources.count, null);
+  assert.equal(groups.branch.accesses.kind, 'NULL');
+  assert.deepEqual(groups.database.accesses.rows.map(row => row.access), ['NULL', 'MISSING', 'MISSING', 'MISSING', 'UNKNOWN_STRING']);
+  assert.doesNotMatch(JSON.stringify(f.evidence), new RegExp(password));
+});
+test('missing and malformed OAuth containers preserve strict valid database authority with bounded shape-only output', async () => {
+  for (const [selfFields, kind] of [[{}, 'MISSING'], [{ oauth_accesses_by_resource: null }, 'NULL'],
+    [{ oauth_accesses_by_resource: '*' }, 'WILDCARD'], [{ oauth_accesses_by_resource: password }, 'UNKNOWN_STRING'],
+    [{ oauth_accesses_by_resource: [] }, 'ARRAY'], [{ oauth_accesses_by_resource: false }, 'NON_STRING'],
+    [{ oauth_accesses_by_resource: { database: [] } }, 'OBJECT']]) {
+    const f = grantDiagnosticFixture({ validAuthority: true, selfFields });
+    await f.api.authority(f.observe);
+    assert.equal(f.calls.length, 2); assert.equal(f.evidence[0].oauthAccessesByResource.kind, kind);
+    assert.doesNotMatch(JSON.stringify(f.evidence), new RegExp(password));
+  }
+});
+test('OAuth resource and permission projections are bounded per known group and cannot claim untruncated evidence', async () => {
+  const scopes = Object.fromEntries([['organization', 'organizations'], ['database', 'databases'], ['branch', 'branches']]
+    .map(([group, key]) => [group, { [key]: Array(70).fill({ id: password, name: password, organization: password, url: password }),
+      accesses: Array(71).fill({ name: password, description: password }) }]));
+  const f = grantDiagnosticFixture({ validAuthority: true, selfFields: { oauth_accesses_by_resource: scopes } });
+  await f.api.authority(f.observe);
+  const result = f.evidence[0];
+  for (const group of Object.values(result.oauthAccessesByResource.groups)) {
+    assert.equal(group.resources.count, 70); assert.equal(group.resources.rows.length, 64); assert.equal(group.resources.truncated, true);
+    assert.equal(group.accesses.count, 71); assert.equal(group.accesses.rows.length, 64); assert.equal(group.accesses.truncated, true);
+  }
+  assert.ok(JSON.stringify(result).length < 100000); assert.doesNotMatch(JSON.stringify(result), new RegExp(password));
+  assert.equal(f.calls.length, 2);
+});
 test('official grants GET retains all descriptor shapes as enums and never accepts unmatched all-database or organization grants', async () => {
   const variants = [
     { resource_type: 'Database', resource_id: '*', resource_name: 'All databases',
@@ -378,7 +458,7 @@ test('official grants GET retains all descriptor shapes as enums and never accep
   assert.equal(f.calls[2].url, 'https://api.planetscale.com/v1/organizations/lythaus/service-tokens/estjkwtxzsmh/grants?page=1&per_page=100');
   assert.equal(f.evidence[0].grants.status, 'NOT_REQUESTED');
   const report = f.evidence.at(-1);
-  assert.equal(report.version, 2); assert.equal(report.rows.length, variants.length);
+  assert.equal(report.version, 3); assert.equal(report.rows.length, variants.length);
   assert.equal(report.grants.status, 'COLLECTED'); assert.equal(report.grants.rows.length, variants.length);
   assert.equal(report.rows[0].resourceIdKind, 'WILDCARD'); assert.equal(report.rows[0].nestedNameKind, 'ALL_DATABASES_MARKER');
   assert.equal(report.rows[1].resourceIdKind, 'NULL'); assert.equal(report.rows[1].resourceTypeKind, 'ALL_DATABASES_MARKER');
@@ -433,6 +513,25 @@ test('grant read failure still blocks a plan whose original database authority p
   const f = grantDiagnosticFixture({ mode: 'denied', validAuthority: true });
   await assert.rejects(() => f.api.authority(f.observe, true), /provider_access_denied/);
   assert.equal(f.evidence.at(-1).grants.status, 'DENIED'); assert.equal(f.calls.length, 3);
+  assert.equal(f.evidence.at(-1).grants.httpStatus, 403);
+});
+test('optional grant GET failures retain only bounded HTTP status and preserve rejection without retrying', async () => {
+  for (const status of [401, 403, 404, 429, 500]) {
+    const f = grantDiagnosticFixture();
+    const original = f.api.fetchImpl;
+    let grantRequests = 0;
+    f.api.fetchImpl = async (url, options) => {
+      if (!url.includes('/grants?')) return original(url, options);
+      grantRequests++; assert.equal(options.method, 'GET');
+      return new Response(password, { status, headers: { 'x-provider-secret': password } });
+    };
+    await assert.rejects(() => f.api.authority(f.observe, true), /existing_token_missing_read_database/);
+    const result = f.evidence.at(-1).grants;
+    assert.equal(result.httpStatus, status); assert.equal(result.status, 'DENIED');
+    assert.equal(result.errorCode, [401, 403].includes(status) ? 'provider_access_denied' : 'provider_request_failed');
+    assert.equal(grantRequests, 1);
+    assert.doesNotMatch(JSON.stringify(result), new RegExp(password));
+  }
 });
 test('diagnostic output limits are explicit and cannot certify complete grant collection', async () => {
   for (const mode of ['grant_rows', 'grant_accesses', 'self_rows']) {
@@ -465,7 +564,7 @@ test('grants reads remain fixed to the existing token and cannot be used by clea
   await assert.rejects(() => cleanup.request('/../service-tokens/self/grants?page=1&per_page=100'), /fixed_provider_operation_required/);
   assert.equal(calls, 0);
 });
-test('grants diagnostics wait for database/self identity and execute mode never requests them', async () => {
+test('diagnostics wait for database/self identity and neither workflow mode requests optional grants', async () => {
   for (const mode of ['wrong_database', 'wrong_self']) {
     const f = grantDiagnosticFixture({ mode });
     await assert.rejects(() => f.api.authority(f.observe, true), /database_identity_changed|existing_token_authority_unverifiable/);
@@ -478,8 +577,8 @@ test('grants diagnostics wait for database/self identity and execute mode never 
     const report = await runNativeRestore(f.options);
     assert.deepEqual(report.providerMutations, []); assert.deepEqual(report.credentialActions, []);
     assert.equal(report.createdTargetId, null); assert.equal(report.cleanup, 'NOT_NEEDED');
-    assert.equal(g.calls.length, execute ? 2 : 3); assert.ok(g.calls.every(row => row.method === 'GET'));
-    assert.equal(report.authorityDiagnostic.grants.status, execute ? 'NOT_REQUESTED' : 'COLLECTED');
+    assert.equal(g.calls.length, 2); assert.ok(g.calls.every(row => row.method === 'GET'));
+    assert.equal(report.authorityDiagnostic.grants.status, 'NOT_REQUESTED');
   }
 });
 test('credential projection rejects main, mismatched role, host and password; never creates a role', () => {

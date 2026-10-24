@@ -56,7 +56,7 @@ are absent, report the exact missing existing permission; do not expand the
 token or create a branch to discover whether cleanup will work.
 
 Read-only plans preserve an `authorityDiagnostic` checkpoint before rejecting
-missing database-specific permissions. Version 2 projects every access row up
+missing database-specific permissions. Version 3 projects every access row up
 to an explicit output bound, including unknown/unrelated representations,
 instead of dropping rows that fail the target filter. It reports only the two
 observed public token-ID match booleans, allowlisted type/permission enums and
@@ -64,15 +64,23 @@ resource-match/shape classifications. Unknown strings become `UNKNOWN_STRING`;
 missing, null, wildcard and malformed shapes remain distinguishable. No token
 material, names, unrelated IDs or arbitrary provider bodies are exported.
 
-Only `execute=false` additionally reads the fixed current token's GET
-`/v1/organizations/lythaus/service-tokens/{current-token-id}/grants` route. The
-official SDK defines grouped resource descriptors and `accesses` lists. Pages
-are reconstructed locally with fixed 100-row/five-page limits; supplied next
-URLs are ignored. Output is capped at 64 rows and 64 permissions per group,
-with truncation explicit and incomplete diagnostics blocked. Base evidence is
-checkpointed before the grant read; a denied or malformed read is recorded
-without retry, credential fallback or replacing an existing authority rejection.
-Production execution and cleanup do not acquire this additional diagnostic read.
+The same successful self GET documents an optional `oauth_accesses_by_resource`
+object. Its organization/database/branch groups are projected with 64-resource
+and 64-permission bounds per group, explicit counts/truncation, field shapes and
+fixed-target match booleans. User data is omitted; only the user group's shape
+and a count of unknown groups are retained. Documented organization/global
+permission names are allowlisted observations, not accepted authority. Null,
+missing, wildcard, cross-organization and malformed scopes do not imply access.
+See the official [self-response contract](https://planetscale.com/docs/api/reference/get_service_token),
+[service-token permissions](https://planetscale.com/docs/api/reference/service-tokens)
+and [OAuth scope enums](https://planetscale.com/docs/api/reference/oauth-access-scopes).
+
+Neither workflow mode requests the optional `/grants` route again. The prior
+run 40129927762 recorded `provider_request_failed`, not a proven 401/403 denial;
+its exact HTTP status was not captured. Existing optional-helper GET error
+handling now preserves only a bounded numeric HTTP status, without provider
+bodies or headers. This does not authorize a retry of that route. The evidence
+checkpoint is awaited before the unchanged authority decision.
 
 The public contract does not establish an authoritative all-database encoding.
 `ALL_DATABASES_MARKER` is an observation label, never authority. Such grants
