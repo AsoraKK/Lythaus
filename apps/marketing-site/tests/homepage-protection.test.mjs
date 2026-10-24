@@ -314,6 +314,14 @@ function assertMarketingLockOnlyHasSecurityPatch(current = JSON.parse(readFileSy
     integrity: 'sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA==',
   }, 'Zod must use the exact reviewed security patch metadata');
   current.packages['node_modules/zod'] = original.packages['node_modules/zod'];
+  assert.deepEqual(current.packages['node_modules/undici'], {
+    version: '8.12.2',
+    resolved: 'https://registry.npmjs.org/undici/-/undici-8.12.2.tgz',
+    integrity: 'sha512-XtuDWVdqTLr3NAxm2ly9/hU6kUsJOgGh1RASzMBbsw6aWCOaQzHdW+QQDfdERjfJ2V5vL5pRPa4RetO9UfivDg==',
+    license: 'MIT',
+    engines: { node: '>=22.19.0' },
+  }, 'Marketing Undici must use the exact reviewed security patch metadata');
+  current.packages['node_modules/undici'] = original.packages['node_modules/undici'];
   assert.deepEqual(current.packages['node_modules/vite'], {
     ...original.packages['node_modules/vite'],
     version: '8.1.6',
@@ -729,7 +737,24 @@ test('Undici security pins reject altered metadata, stale overrides and unrelate
   }
 });
 
-test('Undici rejects excessive encodings and early close without terminating its caller', () => {
+test('Marketing Undici security pin rejects altered metadata and unrelated dependencies', () => {
+  const readLock = () => JSON.parse(readFileSync(path.join(root, 'apps/marketing-site/package-lock.json'), 'utf8'));
+  for (const [field, value] of [
+    ['version', '8.10.2'], ['version', '8.12.1'], ['version', '8.12.3'],
+    ['resolved', 'https://example.invalid/undici-8.12.2.tgz'],
+    ['integrity', 'sha512-invalid'], ['dev', true],
+    ['engines', { node: '>=24' }], ['dependencies', { unreviewed: '1.0.0' }],
+  ]) {
+    const changed = readLock(); changed.packages['node_modules/undici'][field] = value;
+    assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(changed), /Marketing Undici must use the exact reviewed security patch metadata/);
+  }
+  const missing = readLock(); delete missing.packages['node_modules/undici'];
+  assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(missing), /Marketing Undici must use the exact reviewed security patch metadata/);
+  const unrelated = readLock(); unrelated.packages['node_modules/unifont'].version = '0.0.0';
+  assert.throws(() => assertMarketingLockOnlyHasSecurityPatch(unrelated), /Marketing lock may change only for the exact reviewed security repairs/);
+});
+
+function assertUndiciMalformedResponseRecovery(cwd) {
   const child = spawnSync(process.execPath, ['--input-type=module', '-e', `
     import assert from 'node:assert/strict';
     import { createServer } from 'node:net';
@@ -755,11 +780,16 @@ test('Undici rejects excessive encodings and early close without terminating its
       await dispatcher.destroy();
       await new Promise(resolve => server.close(resolve));
     }
-  `], { cwd: root, encoding: 'utf8', timeout: 10000 });
+  `], { cwd, encoding: 'utf8', timeout: 10000 });
   assert.equal(child.error, undefined);
   assert.equal(child.signal, null);
   assert.equal(child.status, 0, child.stderr);
-});
+}
+for (const cwd of [root, path.join(root, 'apps/marketing-site')]) {
+  test(`Undici rejects excessive encodings and early close without terminating its caller (${path.relative(root, cwd) || 'root'})`, () => {
+    assertUndiciMalformedResponseRecovery(cwd);
+  });
+}
 
 test('Zod security patch rejects vulnerable or unreviewed metadata and unrelated dependency changes', () => {
   const readLock = () => JSON.parse(readFileSync(path.join(root, 'apps/marketing-site/package-lock.json'), 'utf8'));
