@@ -407,13 +407,15 @@ function assertReviewedReputationRepair(filename, blob) {
   assert.ok(reviewedReputationRepairFiles.has(filename), 'The reputation exception covers only the independently reviewed implementation and regression test');
   assert.equal(blob, reviewedReputationRepairFiles.get(filename), 'Reputation changes must match the exact reviewed source and test bytes');
 }
+// Owner authorization is limited to replacing the opening artwork and its masks.
+// Pin the complete component, including all unchanged optics and accessibility.
+function assertAuthorizedOpeningWordmark(filename, blob) {
+  assert.equal(filename, 'apps/marketing-site/src/components/OpeningWordmark.astro',
+    'The wordmark authorization covers only the existing opening component');
+  assert.equal(blob, '4ded41662b5bdd7efbb6546e31e4d07c4396fda3',
+    'Only the exact approved-artwork replacement is permitted; the rest of the homepage remains frozen');
+}
 const approvedHomepageVisualEdits = new Map([
-  ['apps/marketing-site/src/components/OpeningWordmark.astro', (source) => `${replaceExactText(
-    source,
-    '<rect x="-110" y="-140" width="1220" height="450" />',
-    '<rect x="-600" y="-500" width="2300" height="1150" />',
-    'wordmark beam clip',
-  )}\n`],
   ['apps/marketing-site/src/styles/home-opening.css', (source) => `${replaceExactText(
     source,
     'width: min(100%, 980px);',
@@ -471,6 +473,10 @@ export function assertHomepageFrozen() {
   const changed = [];
   for (const entry of entries) {
     const [metadata, filename] = entry.split('\t');
+    if (filename === 'apps/marketing-site/src/components/OpeningWordmark.astro') {
+      assertAuthorizedOpeningWordmark(filename, git('hash-object', `--path=${filename}`, filename));
+      continue;
+    }
     if (allocatedDeclarationRepairFiles.has(filename)) {
       assertAllocatedDeclarationRepair(filename, git('hash-object', `--path=${filename}`, filename));
       continue;
@@ -543,6 +549,31 @@ export function assertHomepageFrozen() {
 
 test('homepage visual assets, build and waitlist dependencies remain frozen', () => {
   assertHomepageFrozen();
+});
+test('opening artwork authorization rejects every other component byte and path', () => {
+  const filename = 'apps/marketing-site/src/components/OpeningWordmark.astro';
+  const blob = git('hash-object', `--path=${filename}`, filename);
+  assertAuthorizedOpeningWordmark(filename, blob);
+  assert.throws(() => assertAuthorizedOpeningWordmark(filename, git('rev-parse', `${baselineSha}:${filename}`)), assert.AssertionError);
+  for (const other of ['apps/marketing-site/src/pages/index.astro', 'apps/marketing-site/src/scripts/home-opening.js',
+    'apps/marketing-site/src/styles/home-opening.css', '.github/workflows/deploy-marketing.yml']) {
+    assert.throws(() => assertAuthorizedOpeningWordmark(other, blob), assert.AssertionError);
+  }
+  const source = readFileSync(path.join(root, filename), 'utf8');
+  for (const [before, after] of [
+    ['lythaus-wordmark-white.5ba0451347e2.svg', 'unapproved.svg'],
+    ['xMidYMid meet', 'none'],
+    ['viewBox="0 0 1000 166"', 'viewBox="0 0 1000 200"'],
+    ['mask-type: alpha', 'mask-type: luminance'],
+    ['rx="44" ry="82"', 'rx="45" ry="82"'],
+    ['stop-opacity=".96"', 'stop-opacity=".95"'],
+    ['aria-label="Lythaus"', 'aria-label="Other"'],
+  ]) {
+    const changed = source.replace(before, after);
+    assert.notEqual(changed, source, 'The mutation must alter the authorized component');
+    const altered = execFileSync('git', ['hash-object', '--stdin'], { cwd: root, encoding: 'utf8', input: changed }).trim();
+    assert.throws(() => assertAuthorizedOpeningWordmark(filename, altered), assert.AssertionError);
+  }
 });
 test('waitlist freeze permits only the approved shared Worker lock group', () => {
   const filename = '.github/workflows/deploy-public-waitlist.yml';
