@@ -35,24 +35,36 @@ class MonthlyReputationTrackerCard extends ConsumerWidget {
               child: const Text('Retry'),
             ),
           ),
-          data: (view) => _TrackerMessage(
-            icon: view.currentLevel == null
-                ? Icons.hourglass_empty
-                : Icons.insights_outlined,
-            title: view.currentLevel == null
-                ? 'Monthly level pending'
-                : 'Level ${view.currentLevel} confirmed',
-            message: view.currentLevel == null
-                ? _pendingMessage(view.reasonCode)
-                : 'This level is fixed for ${view.effectiveMonth ?? 'the current month'}. Activity in that month is assessed for the next calendar month.',
-            detail: view.sourceScore == null || view.sourceMonth == null
-                ? null
-                : 'Server-assessed ${view.sourceMonth} source score: ${view.sourceScore} of 13,500.',
-            action: TextButton(
-              onPressed: () => ref.invalidate(monthlyRewardsViewProvider),
-              child: const Text('Refresh'),
-            ),
-          ),
+          data: (view) {
+            final snapshot = view.snapshot;
+            final confirmed = view.hasConfirmedLevel;
+            final shadow = snapshot.isShadow;
+            final maximum = snapshot.maximumSourceMonth == 13500
+                ? '13,500'
+                : '13,650';
+            return _TrackerMessage(
+              icon: confirmed || shadow
+                  ? Icons.insights_outlined
+                  : Icons.hourglass_empty,
+              title: confirmed
+                  ? 'Level ${view.currentLevel} confirmed'
+                  : shadow
+                  ? 'Shadow level ${snapshot.level}'
+                  : 'Monthly level pending',
+              message: confirmed
+                  ? 'This level is fixed for ${snapshot.effectiveMonth}. Activity in that month is assessed for the next calendar month. ${view.rewardsReady ? 'Reward selection is ready.' : 'Reward selection is pending.'}'
+                  : shadow
+                  ? 'This server-assessed level is a shadow projection for ${snapshot.effectiveMonth}. It does not confirm a monthly level or activate rewards.'
+                  : _pendingMessage(snapshot.reasonCode ?? view.reasonCode),
+              detail: confirmed || shadow
+                  ? 'Server-assessed ${snapshot.sourceMonth} source score: ${snapshot.sourceScore} of $maximum.'
+                  : null,
+              action: TextButton(
+                onPressed: () => ref.invalidate(monthlyRewardsViewProvider),
+                child: const Text('Refresh'),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -324,6 +336,10 @@ String _pendingMessage(String? reason) => switch (reason) {
     'This source month is waiting for its server assessment.',
   'settlement_pending' || 'confirmed_month_unavailable' =>
     'The fixed monthly level is waiting for settlement and review.',
+  'no_previous_assessment' =>
+    'Your monthly level is pending your first server-assessed source month.',
+  'activation_not_approved' =>
+    'Monthly scoring and rewards are pending activation approval. No monthly level or reward entitlement has been confirmed.',
   _ => 'No server-assessed report is available for this month yet.',
 };
 
