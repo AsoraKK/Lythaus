@@ -56,13 +56,29 @@ are absent, report the exact missing existing permission; do not expand the
 token or create a branch to discover whether cleanup will work.
 
 Read-only plans preserve an `authorityDiagnostic` checkpoint before rejecting
-missing database-specific permissions. It reports only match booleans for the
-two observed public dashboard token IDs, fixed permission names and bounded
-resource-match booleans, including missing versus null metadata. It never
-exports token material, names, raw resource values or provider bodies. Dashboard
-"all databases" permissions remain unaccepted until their actual representation
-and authority are independently reconciled; diagnostic output does not relax
-any existing permission or execution gate.
+missing database-specific permissions. Version 2 projects every access row up
+to an explicit output bound, including unknown/unrelated representations,
+instead of dropping rows that fail the target filter. It reports only the two
+observed public token-ID match booleans, allowlisted type/permission enums and
+resource-match/shape classifications. Unknown strings become `UNKNOWN_STRING`;
+missing, null, wildcard and malformed shapes remain distinguishable. No token
+material, names, unrelated IDs or arbitrary provider bodies are exported.
+
+Only `execute=false` additionally reads the fixed current token's GET
+`/v1/organizations/lythaus/service-tokens/{current-token-id}/grants` route. The
+official SDK defines grouped resource descriptors and `accesses` lists. Pages
+are reconstructed locally with fixed 100-row/five-page limits; supplied next
+URLs are ignored. Output is capped at 64 rows and 64 permissions per group,
+with truncation explicit and incomplete diagnostics blocked. Base evidence is
+checkpointed before the grant read; a denied or malformed read is recorded
+without retry, credential fallback or replacing an existing authority rejection.
+Production execution and cleanup do not acquire this additional diagnostic read.
+
+The public contract does not establish an authoritative all-database encoding.
+`ALL_DATABASES_MARKER` is an observation label, never authority. Such grants
+remain unaccepted until actual representation and binding are independently
+reconciled. This change does not alter the existing database-specific matcher,
+required permissions or release/credential/cleanup gates.
 
 Copied role IDs are discovered by exact base username and branch identity,
 never guessed from SQL names. Metadata must match the source's inheritance:
