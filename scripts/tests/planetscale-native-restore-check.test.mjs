@@ -252,6 +252,87 @@ test('provider permissions require existing database scope, not a branch-specifi
     await assert.rejects(() => api.authority(), /existing_token_missing_read_database/);
   }
 });
+test('authority diagnostic proves candidate identity and describes unbound permissions without accepting them', async () => {
+  const evidence = [], calls = [];
+  const token = { id: 'estjkwtxzsmh', token: password, plain_text_refresh_token: password, name: password,
+    service_token_accesses: ['read_database', 'read_branch', 'read_backups', 'restore_production_branch_backup']
+      .map(access => ({ access, resource_id: null, resource_type: 'Database', resource: null, description: password })) };
+  const api = new RestoreApi(`estjkwtxzsmh:${password}`, async (url, options) => {
+    calls.push({ url, method: options.method });
+    return Response.json(url === apiBase ? { id: RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' } : token);
+  });
+  await assert.rejects(() => api.authority(value => evidence.push(value)), /existing_token_missing_read_database/);
+  assert.equal(evidence.length, 1); assert.equal(evidence[0].tokenMatchesCodeXToken, true);
+  assert.equal(evidence[0].tokenMatchesOtherKnownToken, false); assert.equal(evidence[0].rows.length, 4);
+  assert.ok(evidence[0].rows.every(row => row.resourceIdNull && row.resourceNull && row.resourceTypeIsDatabase
+    && !row.resourceIdMatchesDatabase && !row.nestedIdMatchesDatabase));
+  assert.ok(calls.every(row => row.method === 'GET')); assert.equal(calls.length, 2);
+  assert.doesNotMatch(JSON.stringify(evidence), new RegExp(password));
+});
+test('authority diagnostic preserves missing, null, organization and exact database distinctions; valid authority still passes', async () => {
+  const names = ['read_database', 'read_branch', 'delete_branch', 'delete_production_branch', 'read_backups',
+    'create_branch', 'connect_branch', 'connect_production_branch', 'restore_production_branch_backup'];
+  const rows = names.map(access => ({ access, resource_id: RESTORE.databaseId, resource_type: 'Database',
+    resource: { id: RESTORE.databaseId, name: RESTORE.database, deleted_at: null } }));
+  rows.push({ access: 'read_database' }, { access: 'read_database', resource_id: null, resource: null },
+    { access: 'read_databases', resource_id: 'organization123', resource_type: 'Organization',
+      resource: { id: 'organization123', name: RESTORE.organization } });
+  let evidence;
+  const api = new RestoreApi(`v6pg9b7rz38a:${password}`, async url => Response.json(url === apiBase
+    ? { id: RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' }
+    : { id: 'v6pg9b7rz38a', service_token_accesses: rows }));
+  await api.authority(value => { evidence = value; });
+  assert.equal(evidence.tokenMatchesCodeXToken, false); assert.equal(evidence.tokenMatchesOtherKnownToken, true);
+  assert.ok(evidence.rows[0].resourceIdMatchesDatabase && evidence.rows[0].nestedIdMatchesDatabase
+    && evidence.rows[0].nestedNameMatchesDatabase && evidence.rows[0].deletedAtNull);
+  assert.equal(evidence.rows[9].resourceMissing, true); assert.equal(evidence.rows[9].resourceIdMissing, true);
+  assert.equal(evidence.rows[10].resourceMissing, false); assert.equal(evidence.rows[10].resourceIdMissing, false);
+  assert.equal(evidence.rows[11].resourceTypeIsOrganization, true); assert.equal(evidence.rows[11].deletedAtMissing, true);
+});
+test('authority diagnostic excludes unrelated resources and unknown values, caps output and never exposes credentials', async () => {
+  let evidence;
+  const rows = [{ access: password, resource_id: RESTORE.databaseId, resource: { name: RESTORE.database } },
+    { access: 'read_database', resource_id: 'otherdatabase', resource_name: password,
+      resource_type: password, resource: { id: 'otherdatabase', name: password, deleted_at: null } },
+    ...Array.from({ length: 70 }, () => ({ access: 'read_database', resource_id: null, resource_type: password,
+      resource: null, resource_name: password, token: password }))];
+  const api = new RestoreApi(`unknownid:${password}`, async url => Response.json(url === apiBase
+    ? { id: RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' }
+    : { id: 'unknownid', name: password, token: password, plain_text_refresh_token: password, service_token_accesses: rows }));
+  await assert.rejects(() => api.authority(value => { evidence = value; }), /existing_token_missing_read_database/);
+  assert.equal(evidence.accessRowCount, 72); assert.equal(evidence.relevantRowCount, 70);
+  assert.equal(evidence.rowsTruncated, true); assert.equal(evidence.rows.length, 64);
+  assert.equal(evidence.tokenMatchesCodeXToken, false); assert.equal(evidence.tokenMatchesOtherKnownToken, false);
+  assert.doesNotMatch(JSON.stringify(evidence), new RegExp(password));
+  assert.ok(evidence.rows.every(row => row.access === 'read_database' && row.resourceTypeIsDatabase === false));
+});
+test('read-only plan durably checkpoints sanitized authority evidence before retaining the original rejection', async () => {
+  const f = fixture(); f.options.environment.RESTORE_CHECK_EXECUTE = 'false';
+  f.options.api.authority = async observe => {
+    await observe({ version: 1, tokenMatchesCodeXToken: true, rows: [] });
+    throw new RestoreFailure('existing_token_missing_read_database');
+  };
+  const report = await runNativeRestore(f.options);
+  assert.deepEqual(report.blockers, ['existing_token_missing_read_database']);
+  assert.equal(report.authorityDiagnostic.tokenMatchesCodeXToken, true);
+  assert.ok(f.checkpoints.some(row => row.authorityDiagnostic?.tokenMatchesCodeXToken));
+  assert.deepEqual(report.providerMutations, []); assert.deepEqual(report.credentialActions, []);
+  assert.equal(report.createdTargetId, null); assert.equal(report.cleanup, 'NOT_NEEDED');
+});
+test('authority diagnostics require verified database and self identity and never turn organization rows into database grants', async () => {
+  for (const mode of ['wrong_database', 'wrong_self', 'missing_access_array', 'organization_only']) {
+    const evidence = [];
+    const token = { id: mode === 'wrong_self' ? 'differentid' : 'estjkwtxzsmh', token: password,
+      service_token_accesses: mode === 'missing_access_array' ? null : [{ access: 'read_database',
+        resource_id: 'organization123', resource_type: 'Organization', resource: { name: RESTORE.organization, deleted_at: null } }] };
+    const api = new RestoreApi(`estjkwtxzsmh:${password}`, async url => Response.json(url === apiBase
+      ? { id: mode === 'wrong_database' ? 'differentdatabase' : RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' } : token));
+    await assert.rejects(() => api.authority(value => evidence.push(value)), new RegExp(mode === 'wrong_database'
+      ? 'database_identity_changed' : mode === 'organization_only' ? 'existing_token_missing_read_database' : 'existing_token_authority_unverifiable'));
+    assert.equal(evidence.length, mode === 'organization_only' ? 1 : 0);
+    assert.doesNotMatch(JSON.stringify(evidence), new RegExp(password));
+  }
+});
 test('credential projection rejects main, mismatched role, host and password; never creates a role', () => {
   const row = { ...roleRows()[0], password, access_host_url: 'aws.connect.psdb.cloud' };
   assert.match(restoredConnection(row, newId, RESTORE.setup), /sslmode=verify-full/);

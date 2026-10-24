@@ -113,7 +113,7 @@ export async function runNativeRestore({ environment = process.env, api, now = D
     report.cleanupPermit = await reserveCleanup();
     if (execute) requireThat(hash(report.cleanupPermit) === hash(approval.cleanupPermit), 'cleanup_reservation_not_approved');
     api ??= new RestoreApi(environment.PLANETSCALE_API_TOKEN);
-    await api.authority();
+    await api.authority(async evidence => { report.authorityDiagnostic = evidence; await save(); });
     const source = await api.request('/branches/main');
     requireThat(source.id === RESTORE.sourceId && source.name === 'main' && source.kind === 'postgresql'
       && source.default === true && source.deleted_at === null && source.ready === true, 'source_branch_identity_changed');

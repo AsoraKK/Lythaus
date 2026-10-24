@@ -111,6 +111,36 @@ export function checkedRoles(rows, branchId, sourceRoles) {
   return result;
 }
 
+function authorityDiagnostic(token) {
+  const permissions = new Set(['read_database', 'read_databases', 'read_service_tokens', 'read_branch', 'read_backups',
+    'delete_branch', 'delete_production_branch', 'create_branch', 'connect_branch', 'connect_production_branch',
+    'restore_backup', 'restore_production_branch_backup', 'restore_production_branch_backups']);
+  const rows = token.service_token_accesses.filter(row => object(row) && permissions.has(row.access)
+    && (row.resource_id === RESTORE.databaseId || row.resource?.id === RESTORE.databaseId
+      || row.resource?.name === RESTORE.database || row.resource_name === RESTORE.database
+      || row.resource?.name === RESTORE.organization || row.resource_name === RESTORE.organization || row.resource == null));
+  return {
+    version: 1, databaseId: RESTORE.databaseId,
+    tokenMatchesCodeXToken: token.id === 'estjkwtxzsmh', tokenMatchesOtherKnownToken: token.id === 'v6pg9b7rz38a',
+    accessRowCount: token.service_token_accesses.length, relevantRowCount: rows.length, rowsTruncated: rows.length > 64,
+    rows: rows.slice(0, 64).map(row => ({
+      access: row.access,
+      resourceIdMatchesDatabase: row.resource_id === RESTORE.databaseId,
+      resourceIdMissing: !Object.hasOwn(row, 'resource_id'), resourceIdNull: row.resource_id === null,
+      nestedIdMatchesDatabase: row.resource?.id === RESTORE.databaseId,
+      nestedNameMatchesDatabase: row.resource?.name === RESTORE.database,
+      nestedNameMatchesOrganization: row.resource?.name === RESTORE.organization,
+      resourceNameMatchesDatabase: row.resource_name === RESTORE.database,
+      resourceNameMatchesOrganization: row.resource_name === RESTORE.organization,
+      resourceTypeIsDatabase: typeof row.resource_type === 'string' && row.resource_type.toLowerCase() === 'database',
+      resourceTypeIsOrganization: typeof row.resource_type === 'string' && row.resource_type.toLowerCase() === 'organization',
+      resourceMissing: !Object.hasOwn(row, 'resource'), resourceNull: row.resource === null,
+      deletedAtMissing: !object(row.resource) || !Object.hasOwn(row.resource, 'deleted_at'),
+      deletedAtNull: row.resource?.deleted_at === null,
+    })),
+  };
+}
+
 export class RestoreApi {
   #cleanupOnly;
   constructor(token, fetchImpl = fetch, capability) {
@@ -169,11 +199,12 @@ export class RestoreApi {
     }
     throw new RestoreFailure('provider_inventory_incomplete');
   }
-  async authority() {
+  async authority(onEvidence = () => {}) {
     const database = await this.request('');
     requireThat(database.id === RESTORE.databaseId && database.name === RESTORE.database && database.kind === 'postgresql', 'database_identity_changed');
     const token = await this.request('/../service-tokens/self');
     requireThat(token.id === this.tokenId && Array.isArray(token.service_token_accesses), 'existing_token_authority_unverifiable');
+    await onEvidence(authorityDiagnostic(token));
     const accesses = new Set(token.service_token_accesses.filter(row => row.resource_id === RESTORE.databaseId
       && row.resource?.id === RESTORE.databaseId && row.resource.name === RESTORE.database && row.resource.deleted_at === null
       && row.resource_type?.toLowerCase() === 'database').map(row => row.access));
