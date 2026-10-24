@@ -12,7 +12,7 @@ Method | HTTP request | Description
 [**commentsDelete**](PostsApi.md#commentsdelete) | **DELETE** /comments/{commentId} | Delete my comment
 [**commentsReplace**](PostsApi.md#commentsreplace) | **PUT** /comments/{commentId} | Replace my comment body
 [**commentsUpdate**](PostsApi.md#commentsupdate) | **PATCH** /comments/{commentId} | Partially update my comment body
-[**postsCommentsCreate**](PostsApi.md#postscommentscreate) | **POST** /posts/{postId}/comments | Submit a comment or one-level reply
+[**postsCommentsCreate**](PostsApi.md#postscommentscreate) | **POST** /posts/{postId}/comments | Submit a comment or linked reply
 [**postsCommentsList**](PostsApi.md#postscommentslist) | **GET** /posts/{postId}/comments | List publicly visible comments
 [**postsCreate**](PostsApi.md#postscreate) | **POST** /posts | Create a post with moderation and AI authenticity checks
 [**postsDelete**](PostsApi.md#postsdelete) | **DELETE** /posts/{id} | Soft-delete a post owned by the authenticated user
@@ -159,7 +159,7 @@ Name | Type | Description  | Notes
 # **postsCommentsCreate**
 > CommentSubmission postsCommentsCreate(postId, commentCreateRequest, idempotencyKey)
 
-Submit a comment or one-level reply
+Submit a comment or linked reply
 
 A submission is recorded as under review; it is not immediately published to public comment listings.
 
@@ -204,11 +204,11 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **postsCommentsList**
-> CommentPage postsCommentsList(postId, cursor, limit)
+> CommentPage postsCommentsList(postId, cursor, limit, view, sort, conversationId, targetId, refresh, revalidateIds, revalidationOnly)
 
 List publicly visible comments
 
-Only allowed comments are returned. Anonymous callers may read public posts; authenticated callers additionally receive relationship filtering.
+Only allowed comments with currently eligible posts and ancestors are returned. Anonymous callers may read public posts; members receive relationship filtering. The conversations view pages top-level comments, newest by default. A conversationId pages its replies chronologically, preserving immediate parentId links at every level while visual depth stays capped at one. Deleted allowed ancestors remain tombstones; hidden or blocked ancestors withhold their descendants. Cursors bind the post, sort, view, conversation and microsecond snapshot. Refresh starts a new root snapshot; refresh=true with a reply tail cursor explicitly checks for newer replies. Most relevant is unavailable until trusted comment usefulness signals are validated.
 
 ### Example
 ```dart
@@ -218,9 +218,16 @@ final api = LythausApiClient().getPostsApi();
 final String postId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final String cursor = cursor_example; // String | Opaque keyset cursor returned by the preceding page.
 final int limit = 56; // int |
+final String view = view_example; // String | Omit for the legacy flat chronological list.
+final String sort = sort_example; // String | Sort top-level conversations. Replies remain chronological. Most relevant returns 503.
+final String conversationId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String targetId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String | Resolve one exact visible comment and its canonical conversation; cannot be combined with a cursor.
+final bool refresh = true; // bool | Start a fresh reply snapshot after the supplied tail cursor. Requires conversationId.
+final String revalidateIds = revalidateIds_example; // String | Comma-separated cached root/reply UUIDs, at most 100 per request. Requires conversationId. Include the canonical root ID to revalidate its current body/tombstone and visible reply count independently of the tail cursor.
+final bool revalidationOnly = true; // bool | Return only revalidation data without fetching a new reply page. Requires conversationId and revalidateIds; cannot be combined with a cursor or targetId.
 
 try {
-    final response = api.postsCommentsList(postId, cursor, limit);
+    final response = api.postsCommentsList(postId, cursor, limit, view, sort, conversationId, targetId, refresh, revalidateIds, revalidationOnly);
     print(response);
 } catch on DioException (e) {
     print('Exception when calling PostsApi->postsCommentsList: $e\n');
@@ -234,6 +241,13 @@ Name | Type | Description  | Notes
  **postId** | **String**|  |
  **cursor** | **String**| Opaque keyset cursor returned by the preceding page. | [optional]
  **limit** | **int**|  | [optional] [default to 25]
+ **view** | **String**| Omit for the legacy flat chronological list. | [optional]
+ **sort** | **String**| Sort top-level conversations. Replies remain chronological. Most relevant returns 503. | [optional]
+ **conversationId** | **String**|  | [optional]
+ **targetId** | **String**| Resolve one exact visible comment and its canonical conversation; cannot be combined with a cursor. | [optional]
+ **refresh** | **bool**| Start a fresh reply snapshot after the supplied tail cursor. Requires conversationId. | [optional]
+ **revalidateIds** | **String**| Comma-separated cached root/reply UUIDs, at most 100 per request. Requires conversationId. Include the canonical root ID to revalidate its current body/tombstone and visible reply count independently of the tail cursor. | [optional]
+ **revalidationOnly** | **bool**| Return only revalidation data without fetching a new reply page. Requires conversationId and revalidateIds; cannot be combined with a cursor or targetId. | [optional]
 
 ### Return type
 

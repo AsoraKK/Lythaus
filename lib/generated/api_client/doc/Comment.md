@@ -11,6 +11,10 @@ Name | Type | Description | Notes
 **id** | **String** |  |
 **authorId** | **String** |  |
 **parentId** | **String** |  | [optional]
+**conversationId** | **String** | Canonical top-level comment for this conversation. | [optional]
+**replyCount** | **int** | Visible non-deleted descendant replies at the page snapshot. Includes nested replies; excludes hidden and pending contributions. | [optional]
+**replyToAuthorId** | **String** |  | [optional]
+**replyToDeleted** | **bool** |  | [optional]
 **body** | **String** |  |
 **depth** | **int** |  |
 **declaredCreationMode** | [**DeclaredCreationMode**](DeclaredCreationMode.md) |  |

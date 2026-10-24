@@ -397,6 +397,8 @@ void main() {
         (_) async => Response<Map<String, dynamic>>(
           data: {
             ..._commentJson('new1'),
+            'authorId': 'synthetic-comment-owner',
+            'postId': 'p1',
             'body': 'Hello world',
             'moderationState': 'under_review',
           },

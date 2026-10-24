@@ -12,6 +12,7 @@ Name | Type | Description | Notes
 **postId** | **String** |  |
 **authorId** | **String** |  |
 **parentId** | **String** |  |
+**conversationId** | **String** |  | [optional]
 **depth** | **int** |  |
 **body** | **String** |  |
 **declaredCreationMode** | **String** |  |

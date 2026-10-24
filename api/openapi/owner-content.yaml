@@ -48,6 +48,7 @@ components:
         postId: { type: string, format: uuid }
         authorId: { type: string, format: uuid }
         parentId: { type: string, format: uuid, nullable: true }
+        conversationId: { type: string, format: uuid }
         depth: { type: integer, enum: [0, 1] }
         body: { type: string }
         declaredCreationMode: { type: string, enum: [human, ai_assisted] }

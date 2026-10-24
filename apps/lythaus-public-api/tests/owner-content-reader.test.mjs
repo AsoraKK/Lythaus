@@ -72,7 +72,7 @@ test('allowed revisions remain readable, and queries exclude deleted and inactiv
     assert.match(sql,/deleted_at IS NULL/);
     assert.match(sql,/moderation_state IN \('allowed', 'under_review'\)/);
   }
-  assert.doesNotMatch(ownerCommentQuery,/post\.author_id = \$2/);
+  assert.match(ownerCommentQuery,/WHERE comment\.id = \$1::uuid AND comment\.author_id = \$2::uuid/);
 });
 
 test('public and mutation routes are left to the existing dispatcher',async()=>{

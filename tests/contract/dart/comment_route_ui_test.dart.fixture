@@ -1,0 +1,130 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:lythaus/core/network/dio_client.dart';
+import 'package:lythaus/features/auth/application/auth_providers.dart';
+import 'package:lythaus/features/auth/domain/user.dart';
+import 'package:lythaus/features/feed/application/content_recovery_storage.dart';
+import 'package:lythaus/features/feed/presentation/comment_thread_screen.dart';
+
+final endpoint = Platform.environment['COMMENT_ROUTE_FIXTURE_URL']!;
+
+Map<String, dynamic> call(String path, [String method = 'GET']) {
+  final result = Process.runSync('node', [
+    '--input-type=module',
+    '-e',
+    'const r=await fetch(process.argv[1],{method:process.argv[2]}); console.log(JSON.stringify({status:r.status,body:await r.json()}));',
+    endpoint + path,
+    method,
+  ]);
+  if (result.exitCode != 0) throw StateError(result.stderr.toString());
+  return jsonDecode(result.stdout.toString()) as Map<String, dynamic>;
+}
+
+class MemoryStorage implements ContentRecoveryStorage {
+  final values = <String, String>{};
+  @override
+  Future<String?> read(String key) async => values[key];
+  @override
+  Future<void> write(String key, String value) async => values[key] = value;
+}
+
+class RouteAdapter implements HttpClientAdapter {
+  final statuses = <int>[];
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? stream,
+    Future<void>? cancel,
+  ) async {
+    final query = Uri(
+      queryParameters: options.queryParameters.map(
+        (key, value) => MapEntry(key, value.toString()),
+      ),
+    ).query;
+    final result = call(options.path + '?' + query);
+    statuses.add(result['status'] as int);
+    return ResponseBody.fromString(
+      jsonEncode(result['body']),
+      result['status'] as int,
+      headers: {
+        'content-type': ['application/json'],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+void main() {
+  setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
+  for (final kind in ['empty-tail', 'unfollow', 'private']) {
+    testWidgets(
+      'real Worker route to UI handles $kind after a private first page',
+      (tester) async {
+        call('/fixture/reset', 'POST');
+        final config = call('/fixture/config')['body'] as Map;
+        final adapter = RouteAdapter();
+        final dio = Dio()..httpClientAdapter = adapter;
+        tester.view.physicalSize = const Size(390, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              secureDioProvider.overrideWithValue(dio),
+              contentRecoveryStorageProvider.overrideWithValue(MemoryStorage()),
+              currentUserProvider.overrideWithValue(
+                User(
+                  id: config['actor'] as String,
+                  email: 'synthetic@example.invalid',
+                  role: UserRole.user,
+                  tier: UserTier.bronze,
+                  reputationScore: 0,
+                  createdAt: DateTime.utc(2026),
+                  lastLoginAt: DateTime.utc(2026),
+                ),
+              ),
+              jwtProvider.overrideWith((ref) async => 'synthetic-ui-session'),
+            ],
+            child: MaterialApp(
+              home: CommentThreadScreen(postId: config['postId'] as String),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Synthetic gated comment 29'), findsOneWidget);
+        expect(adapter.statuses, [200]);
+        call('/fixture/revoke?kind=$kind', 'POST');
+        final scroll = tester
+            .widget<ListView>(find.byType(ListView).first)
+            .controller!;
+        scroll.jumpTo(scroll.position.maxScrollExtent);
+        await tester.pumpAndSettle();
+        if (kind == 'empty-tail') {
+          expect(adapter.statuses, [200, 200]);
+          scroll.jumpTo(0);
+          await tester.pumpAndSettle();
+          expect(find.text('Synthetic gated comment 29'), findsOneWidget);
+          expect(find.byType(MaterialBanner), findsNothing);
+        } else {
+          expect(adapter.statuses, [200, 404]);
+          expect(find.text('This post is unavailable.'), findsOneWidget);
+          expect(
+            find.text('No comments yet. Be the first to reply.'),
+            findsNothing,
+          );
+          expect(find.textContaining('Synthetic gated comment'), findsNothing);
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+}

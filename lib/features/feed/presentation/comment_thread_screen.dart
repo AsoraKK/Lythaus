@@ -15,6 +15,7 @@ import 'package:lythaus/features/feed/domain/post_repository.dart';
 import 'package:lythaus/features/feed/application/post_creation_providers.dart';
 import 'package:lythaus/features/feed/presentation/content_editor_screen.dart';
 import 'package:lythaus/features/feed/application/owner_content_repository.dart';
+import 'package:lythaus/features/feed/application/comment_preferences.dart';
 
 class CommentThreadScreen extends ConsumerStatefulWidget {
   const CommentThreadScreen({
@@ -39,6 +40,14 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   final FocusNode _composerFocusNode = FocusNode();
 
   List<_ThreadComment> _comments = const [];
+  bool _conversationMode = false;
+  bool _nestedReplies = false;
+  String _sort = 'newest';
+  final _expandedConversations = <String>{};
+  final _replyPages = <String, _ReplyPageState>{};
+  final _commentKeys = <String, GlobalKey>{};
+  String? _contextHighlightId;
+  int _navigationEpoch = 0;
   String? _nextCursor;
   bool _isInitialLoading = true;
   bool _isLoadingMore = false;
@@ -62,7 +71,6 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
   ProviderSubscription<String?>? _sessionSub;
   Future<void> Function()? _retryAction;
   Future<void> Function()? _mutationRetryAction;
-  final _locallySubmitted = <String>{};
   late final String _reloadBlockKey =
       'comment-thread:${identityHashCode(this)}';
   ContentMutationRegistry? _reloadRegistry;
@@ -73,6 +81,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     _reloadRegistry = ref.read(contentMutationRegistryProvider);
     _composerController.addListener(_syncReloadBlock);
     _actor = ref.read(currentUserProvider)?.id ?? 'session';
+    _sort = ref.read(commentSortPreferenceProvider(_actor));
     final pending = ref
         .read(contentMutationRegistryProvider)
         .pending(_createScope);
@@ -95,10 +104,17 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         ++_draftVersion;
         _deferredInitialReload = false;
         _actor = next ?? 'session';
+        _sort = ref.read(commentSortPreferenceProvider(_actor));
         _composerController.clear();
-        _locallySubmitted.clear();
         setState(() {
           _comments = const [];
+          _expandedConversations.clear();
+          _replyPages.clear();
+          _nextCursor = null;
+          _conversationMode = false;
+          _nestedReplies = false;
+          _contextHighlightId = null;
+          _commentKeys.clear();
           _replyTarget = null;
           _pendingParentId = null;
           _aiLabel = null;
@@ -113,12 +129,12 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _retryAction = null;
         _mutationRetryAction = null;
         unawaited(_restoreComposer());
-        unawaited(_loadInitial());
+        unawaited(_restoreSortAndLoad());
         _syncReloadBlock();
       },
     );
     unawaited(_restoreComposer());
-    Future<void>.microtask(_loadInitial);
+    Future<void>.microtask(_restoreSortAndLoad);
     _syncReloadBlock();
   }
 
@@ -160,6 +176,28 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       }
     });
     _syncReloadBlock();
+  }
+
+  Future<void> _restoreSort() async {
+    final actor = _actor;
+    final epoch = _sessionEpoch;
+    try {
+      final saved = await ref.read(commentSortStoreProvider).read(actor);
+      if (!mounted ||
+          actor != _actor ||
+          epoch != _sessionEpoch ||
+          saved == null) {
+        return;
+      }
+      _sort = saved;
+      ref.read(commentSortPreferenceProvider(actor).notifier).state = saved;
+    } catch (_) {}
+  }
+
+  Future<void> _restoreSortAndLoad() async {
+    final epoch = _sessionEpoch;
+    await _restoreSort();
+    if (mounted && epoch == _sessionEpoch) await _loadInitial();
   }
 
   void _saveDraft() {
@@ -280,7 +318,8 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
                 actor: actor,
                 token: token,
               );
-              if (data['postId'] == widget.postId) {
+              if (data['postId'] == widget.postId &&
+                  data['moderationState'] == 'under_review') {
                 privateComments.add(_ThreadComment.fromJson(data));
               }
             } on DioException catch (error) {
@@ -294,20 +333,28 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _requestInitialReload();
         return;
       }
-      _locallySubmitted.removeAll(page.items.map((comment) => comment.id));
       setState(() {
-        _comments = _mergeComments(
-          _mergeComments(page.items, privateComments),
-          _comments
-              .where((comment) => _locallySubmitted.contains(comment.id))
-              .toList(),
-        );
+        _conversationMode = page.conversations;
+        _nestedReplies = page.nestedReplies;
+        _replyPages.clear();
+        _comments = _mergeComments(page.items, privateComments);
+        if (!_comments.any((comment) => comment.id == _replyTarget?.id)) {
+          _pendingParentId ??= _replyTarget?.id;
+          _replyTarget = null;
+        }
         _nextCursor = page.nextCursor;
         _isInitialLoading = false;
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _highlightInitialCommentIfNeeded();
       });
+      for (final root in page.items.where(
+        (comment) =>
+            comment.parentCommentId == null &&
+            _expandedConversations.contains(comment.id),
+      )) {
+        unawaited(_loadReplies(root.id));
+      }
     } on DioException catch (error) {
       if (!mounted || epoch != _loadEpoch) return;
       if (mutationEpoch != _mutationEpoch) {
@@ -316,6 +363,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       }
       setState(() {
         _isInitialLoading = false;
+        _clearUnavailableComments(error);
         _errorMessage = _messageForCommentsFailure(error);
         _retryAction = _loadInitial;
       });
@@ -379,6 +427,7 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       }
       setState(() {
         _isLoadingMore = false;
+        _clearUnavailableComments(error);
         _errorMessage = _messageForCommentsFailure(error);
         _retryAction = _loadMore;
       });
@@ -396,12 +445,29 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     }
   }
 
-  Future<_CommentsPage> _fetchComments({String? cursor}) async {
+  Future<_CommentsPage> _fetchComments({
+    String? cursor,
+    String? conversationId,
+    String? targetId,
+    List<String> revalidateIds = const [],
+    bool revalidationOnly = false,
+    bool refresh = false,
+  }) async {
     final dio = ref.read(secureDioProvider);
     final token = await ref.read(jwtProvider.future);
     final response = await dio.get<Map<String, dynamic>>(
       '/api/posts/${widget.postId}/comments',
-      queryParameters: {'limit': 25, if (cursor != null) 'cursor': cursor},
+      queryParameters: {
+        'limit': 25,
+        'view': 'conversations',
+        'sort': _sort,
+        if (cursor != null) 'cursor': cursor,
+        if (conversationId != null) 'conversationId': conversationId,
+        if (targetId != null) 'targetId': targetId,
+        if (revalidateIds.isNotEmpty) 'revalidateIds': revalidateIds.join(','),
+        if (revalidationOnly) 'revalidationOnly': 'true',
+        if (refresh) 'refresh': 'true',
+      },
       options: Options(
         headers: token != null ? {'Authorization': 'Bearer $token'} : null,
       ),
@@ -427,7 +493,339 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       nextCursor = data['nextCursor'] as String;
     }
 
-    return _CommentsPage(items: items, nextCursor: nextCursor);
+    final capabilities = data['capabilities'];
+    final rawRevalidated = data['revalidatedItems'];
+    if (revalidateIds.isNotEmpty && rawRevalidated is! List) {
+      throw const FormatException('Reply visibility was not revalidated');
+    }
+    final validated = rawRevalidated is List
+        ? rawRevalidated
+              .map(
+                (row) => _ThreadComment.fromJson(
+                  Map<String, dynamic>.from(row as Map),
+                ),
+              )
+              .toList()
+        : const <_ThreadComment>[];
+    if (validated.any(
+      (row) =>
+          !revalidateIds.contains(row.id) ||
+          row.conversationId != conversationId,
+    )) {
+      throw const FormatException('Reply revalidation scope does not match');
+    }
+    return _CommentsPage(
+      items: items,
+      nextCursor: nextCursor,
+      refreshCursor: data['refreshCursor'] as String?,
+      conversations:
+          capabilities is Map && capabilities['conversations'] == true,
+      nestedReplies:
+          capabilities is Map && capabilities['nestedReplies'] == true,
+      revalidatedItems: validated,
+    );
+  }
+
+  Future<void> _loadReplies(
+    String conversationId, {
+    bool checkNew = false,
+  }) async {
+    final previous = _replyPages[conversationId] ?? _ReplyPageState();
+    if (previous.loading) return;
+    final epoch = _loadEpoch;
+    final mutationEpoch = _mutationEpoch;
+    final cursor = checkNew ? previous.refreshCursor : previous.nextCursor;
+    final cached = _mergeComments(
+      previous.items,
+      _comments
+          .where(
+            (item) =>
+                item.id == conversationId ||
+                item.conversationId == conversationId,
+          )
+          .toList(),
+    );
+    final ids = [
+      conversationId,
+      ...cached
+          .where((item) => item.id != conversationId)
+          .map((item) => item.id),
+    ];
+    final checked = <String>{};
+    final revalidated = <_ThreadComment>[];
+    setState(() {
+      _expandedConversations.add(conversationId);
+      _replyPages[conversationId] = previous..loading = true;
+      previous.error = null;
+    });
+    try {
+      final page = await _fetchComments(
+        cursor: cursor,
+        conversationId: conversationId,
+        refresh: checkNew,
+        revalidateIds: ids.take(100).toList(),
+      );
+      if (!mounted || epoch != _loadEpoch || mutationEpoch != _mutationEpoch) {
+        return;
+      }
+      checked.addAll(ids.take(100));
+      revalidated.addAll(page.revalidatedItems);
+      for (var offset = 100; offset < ids.length; offset += 100) {
+        final chunk = ids.skip(offset).take(100).toList();
+        final validation = await _fetchComments(
+          conversationId: conversationId,
+          revalidateIds: chunk,
+          revalidationOnly: true,
+        );
+        if (!mounted ||
+            epoch != _loadEpoch ||
+            mutationEpoch != _mutationEpoch) {
+          return;
+        }
+        checked.addAll(chunk);
+        revalidated.addAll(validation.revalidatedItems);
+      }
+      final anchor = _captureReadingAnchor();
+      setState(() {
+        _applyReplyRevalidation(previous, checked, revalidated, page.items);
+        previous.nextCursor = page.nextCursor;
+        previous.refreshCursor = page.refreshCursor ?? previous.refreshCursor;
+        previous.loaded = true;
+        previous.loading = false;
+      });
+      await _restoreReadingAnchor(anchor, epoch);
+    } on DioException catch (error) {
+      if (!mounted || epoch != _loadEpoch || mutationEpoch != _mutationEpoch) {
+        return;
+      }
+      setState(() {
+        _applyReplyRevalidation(previous, checked, revalidated, const []);
+        previous.loading = false;
+        previous.error = 'Unable to load replies. Please try again.';
+        _clearUnavailableComments(error);
+        if ([401, 403, 404].contains(error.response?.statusCode)) {
+          _errorMessage = 'This conversation is unavailable.';
+          _retryAction = _loadInitial;
+        }
+      });
+    } catch (_) {
+      if (!mounted || epoch != _loadEpoch || mutationEpoch != _mutationEpoch) {
+        return;
+      }
+      setState(() {
+        _applyReplyRevalidation(previous, checked, revalidated, const []);
+        previous.loading = false;
+        previous.error = 'Unable to load replies. Please try again.';
+      });
+    } finally {
+      if (mounted && epoch == _loadEpoch && previous.loading) {
+        setState(() => previous.loading = false);
+      }
+    }
+  }
+
+  void _applyReplyRevalidation(
+    _ReplyPageState page,
+    Set<String> checked,
+    List<_ThreadComment> validated,
+    List<_ThreadComment> added,
+  ) {
+    final current = {for (final item in validated) item.id: item};
+    final removed = checked.difference(current.keys.toSet());
+    final hiddenAncestors = {
+      ...removed,
+      for (final item in validated)
+        if (item.moderationState != 'allowed') item.id,
+    };
+    var changed = true;
+    while (changed) {
+      changed = false;
+      for (final item in [..._comments, ...page.items, ...added]) {
+        if (hiddenAncestors.contains(item.parentCommentId) &&
+            removed.add(item.id)) {
+          hiddenAncestors.add(item.id);
+          changed = true;
+        }
+      }
+    }
+    _comments = _mergeComments(
+      _comments.where((item) => !removed.contains(item.id)).toList(),
+      [
+        ...validated,
+        ...added,
+      ].where((item) => !removed.contains(item.id)).toList(),
+    );
+    page.items = _mergeComments(
+      page.items.where((item) => !removed.contains(item.id)).toList(),
+      [...validated, ...added]
+          .where(
+            (item) =>
+                item.parentCommentId != null && !removed.contains(item.id),
+          )
+          .toList(),
+      chronological: true,
+    );
+    if (removed.contains(_replyTarget?.id)) {
+      _pendingParentId ??= _replyTarget?.id;
+      _replyTarget = null;
+    }
+  }
+
+  ({String id, double top})? _captureReadingAnchor() {
+    if (!_scrollController.hasClients) return null;
+    final viewport = _scrollController.position.context.notificationContext
+        ?.findRenderObject();
+    if (viewport is! RenderBox || !viewport.hasSize) return null;
+    final top = viewport.localToGlobal(Offset.zero).dy;
+    final bottom = top + _scrollController.position.viewportDimension;
+    final visible = <({String id, double top})>[];
+    for (final entry in _commentKeys.entries) {
+      final box = entry.value.currentContext?.findRenderObject();
+      if (box is! RenderBox || !box.hasSize) continue;
+      final rowTop = box.localToGlobal(Offset.zero).dy;
+      if (rowTop >= top && rowTop < bottom) {
+        visible.add((id: entry.key, top: rowTop));
+      }
+    }
+    visible.sort((a, b) => a.top.compareTo(b.top));
+    return visible.firstOrNull;
+  }
+
+  Future<void> _restoreReadingAnchor(
+    ({String id, double top})? anchor,
+    int epoch,
+  ) async {
+    if (anchor == null) return;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || epoch != _loadEpoch || !_scrollController.hasClients) {
+      return;
+    }
+    final box = _commentKeys[anchor.id]?.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return;
+    final scroll = _scrollController.position;
+    final delta = box.localToGlobal(Offset.zero).dy - anchor.top;
+    if (delta.abs() > 0.5) {
+      _scrollController.jumpTo(
+        (scroll.pixels + delta).clamp(0.0, scroll.maxScrollExtent).toDouble(),
+      );
+    }
+  }
+
+  void _changeSort(String sort) {
+    if (_sort == sort || _isSubmitting) return;
+    setState(() {
+      _sort = sort;
+      _nextCursor = null;
+      _replyPages.clear();
+    });
+    ref.read(commentSortPreferenceProvider(_actor).notifier).state = sort;
+    unawaited(
+      ref
+          .read(commentSortStoreProvider)
+          .write(_actor, sort)
+          .catchError((Object _) {}),
+    );
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
+    unawaited(_loadInitial());
+  }
+
+  Future<void> _revealComment(String targetId) async {
+    final epoch = _loadEpoch;
+    final navigation = ++_navigationEpoch;
+    var rootId =
+        _comments
+            .where((item) => item.id == targetId)
+            .firstOrNull
+            ?.conversationId ??
+        targetId;
+    try {
+      if (_commentKeys[targetId]?.currentContext == null) {
+        final targetPage = await _fetchComments(targetId: targetId);
+        if (!mounted || epoch != _loadEpoch) return;
+        final target = targetPage.items
+            .where((item) => item.id == targetId)
+            .firstOrNull;
+        if (target == null) {
+          throw const FormatException('Unavailable reply target');
+        }
+        rootId = target.conversationId ?? target.id;
+        final rootPage = _comments.any((item) => item.id == rootId)
+            ? null
+            : await _fetchComments(targetId: rootId);
+        if (!mounted || epoch != _loadEpoch) return;
+        setState(() {
+          _comments = _mergeComments(_comments, [...?rootPage?.items, target]);
+          if (target.parentCommentId != null) {
+            _expandedConversations.add(rootId);
+          }
+        });
+      }
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted || epoch != _loadEpoch || navigation != _navigationEpoch) {
+        return;
+      }
+      final rows = _topLevelComments();
+      final index = rows.indexWhere((item) => item.id == rootId);
+      if (_commentKeys[targetId]?.currentContext == null &&
+          index >= 0 &&
+          _scrollController.hasClients) {
+        final fraction = rows.length <= 1 ? 0.0 : index / (rows.length - 1);
+        _scrollController.jumpTo(
+          _scrollController.position.maxScrollExtent * fraction,
+        );
+      }
+      for (var attempt = 0; attempt < 64; attempt++) {
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted || epoch != _loadEpoch || navigation != _navigationEpoch) {
+          return;
+        }
+        final targetContext = _commentKeys[targetId]?.currentContext;
+        if (targetContext != null && targetContext.mounted) {
+          await Scrollable.ensureVisible(
+            targetContext,
+            duration: const Duration(milliseconds: 200),
+            alignment: 0.15,
+          );
+          if (!mounted ||
+              epoch != _loadEpoch ||
+              navigation != _navigationEpoch) {
+            return;
+          }
+          setState(() => _contextHighlightId = targetId);
+          return;
+        }
+        if (!_scrollController.hasClients || index < 0) break;
+        final built = [
+          for (var position = 0; position < rows.length; position++)
+            if (_commentKeys[rows[position].id]?.currentContext != null)
+              position,
+        ];
+        final direction = built.isNotEmpty && index < built.first ? -1 : 1;
+        final scroll = _scrollController.position;
+        final next =
+            (scroll.pixels + direction * scroll.viewportDimension * 0.8)
+                .clamp(0.0, scroll.maxScrollExtent)
+                .toDouble();
+        if (next == scroll.pixels) break;
+        _scrollController.jumpTo(next);
+      }
+      throw const FormatException('Reply target could not be revealed');
+    } catch (error) {
+      if (!mounted || epoch != _loadEpoch || navigation != _navigationEpoch) {
+        return;
+      }
+      if (error is DioException &&
+          [401, 403, 404].contains(error.response?.statusCode)) {
+        setState(() {
+          _clearUnavailableComments(error);
+          _errorMessage = _messageForCommentsFailure(error);
+          _retryAction = _loadInitial;
+        });
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This reply target is unavailable.')),
+      );
+    }
   }
 
   Future<void> _submitComment() async {
@@ -497,13 +895,16 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
           (payload['body'] as String).isEmpty ||
           payload['declaredCreationMode'] != body['declaredCreationMode'] ||
           payload['parentId'] != parentId ||
-          payload['moderationState'] is! String) {
+          payload['moderationState'] != 'under_review' ||
+          (payload['postId'] != null && payload['postId'] != widget.postId) ||
+          (payload['authorId'] != null && payload['authorId'] != actor)) {
         throw const ContentMutationFailure(
           'The comment outcome is unknown. Retry to check the same submission.',
         );
       }
       final created = _ThreadComment.fromJson({
         'postId': widget.postId,
+        'conversationId': _replyTarget?.conversationId ?? _replyTarget?.id,
         'authorId': _actor == 'session' ? '' : _actor,
         'createdAt': DateTime.now().toIso8601String(),
         ...payload,
@@ -523,8 +924,10 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
         _aiLabel = null;
         _locked = false;
         _draftStatus = null;
-        _locallySubmitted.add(created.id);
         _comments = _mergeComments(_comments, [created]);
+        if (created.parentCommentId != null && created.conversationId != null) {
+          _expandedConversations.add(created.conversationId!);
+        }
       });
       _syncReloadBlock();
       _drainDeferredInitialReload();
@@ -551,12 +954,23 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
 
   List<_ThreadComment> _mergeComments(
     List<_ThreadComment> existing,
-    List<_ThreadComment> added,
-  ) {
-    return {
+    List<_ThreadComment> added, {
+    bool chronological = false,
+  }) {
+    final merged = {
       for (final comment in existing) comment.id: comment,
       for (final comment in added) comment.id: comment,
     }.values.toList();
+    merged.sort((left, right) {
+      final timestamp = left.createdAt.compareTo(right.createdAt);
+      final comparison = timestamp != 0
+          ? timestamp
+          : left.id.compareTo(right.id);
+      return _conversationMode && _sort == 'newest' && !chronological
+          ? -comparison
+          : comparison;
+    });
+    return merged;
   }
 
   bool _isOwner(_ThreadComment comment) {
@@ -591,12 +1005,15 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       'authorUsername': current.authorUsername,
       'createdAt': current.createdAt.toIso8601String(),
       'parentId': current.parentCommentId,
+      'conversationId': current.conversationId,
+      'replyCount': current.replyCount,
+      'replyToAuthorId': current.replyToAuthorId,
+      'replyToDeleted': current.replyToDeleted,
       ...revised,
     });
     ++_mutationEpoch;
     setState(() {
       _comments = _mergeComments(_comments, [updated]);
-      _locallySubmitted.add(updated.id);
     });
   }
 
@@ -687,8 +1104,23 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       ++_mutationEpoch;
       setState(() {
         _isSubmitting = false;
-        _comments = _comments.where((item) => item.id != comment.id).toList();
-        _locallySubmitted.remove(comment.id);
+        final tombstone = _ThreadComment.fromJson({
+          'id': comment.id,
+          'authorId': comment.authorId,
+          'authorUsername': comment.authorUsername,
+          'createdAt': comment.createdAt.toIso8601String(),
+          'parentId': comment.parentCommentId,
+          'conversationId': comment.conversationId,
+          'replyCount': comment.replyCount,
+          'moderationState': comment.moderationState,
+          'deleted': true,
+        });
+        _comments = comment.moderationState == 'allowed'
+            ? _mergeComments(_comments, [tombstone])
+            : _comments.where((item) => item.id != comment.id).toList();
+        for (final page in _replyPages.values) {
+          page.items.removeWhere((item) => item.id == comment.id);
+        }
         if (_replyTarget?.id == comment.id) _replyTarget = null;
       });
       _syncReloadBlock();
@@ -851,8 +1283,26 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
     return message ?? 'Unable to load comments right now.';
   }
 
+  void _clearUnavailableComments(DioException error) {
+    if (![401, 403, 404].contains(error.response?.statusCode)) return;
+    ++_loadEpoch;
+    ++_navigationEpoch;
+    _comments = const [];
+    _replyPages.clear();
+    _expandedConversations.clear();
+    _nextCursor = null;
+    _pendingParentId ??= _replyTarget?.id;
+    _replyTarget = null;
+  }
+
   void _highlightInitialCommentIfNeeded() {
     final targetId = widget.initialCommentId;
+    if (_conversationMode &&
+        targetId != null &&
+        _contextHighlightId != targetId) {
+      unawaited(_revealComment(targetId));
+      return;
+    }
     if (targetId == null || targetId.isEmpty || !_scrollController.hasClients) {
       return;
     }
@@ -881,103 +1331,165 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       child: ReadingPane(
         child: Scaffold(
           appBar: AppBar(title: const Text('Comments')),
-          body: Column(
-            children: [
-              if (_mutationErrorMessage != null)
-                MaterialBanner(
-                  content: Text(_mutationErrorMessage!),
-                  actions: [
-                    TextButton(
-                      onPressed: _isSubmitting
-                          ? null
-                          : () => _mutationRetryAction?.call(),
-                      child: const Text('Retry'),
+          body: LayoutBuilder(
+            builder: (context, constraints) => Column(
+              children: [
+                if (_mutationErrorMessage != null)
+                  MaterialBanner(
+                    content: Text(_mutationErrorMessage!),
+                    actions: [
+                      TextButton(
+                        onPressed: _isSubmitting
+                            ? null
+                            : () => _mutationRetryAction?.call(),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                if (_errorMessage != null)
+                  MaterialBanner(
+                    content: Text(_errorMessage!),
+                    actions: [
+                      TextButton(
+                        onPressed: _isSubmitting
+                            ? null
+                            : () => _retryAction?.call(),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                if (_conversationMode)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Wrap(
+                      spacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('Newest'),
+                          selected: _sort == 'newest',
+                          onSelected: _isSubmitting
+                              ? null
+                              : (_) => _changeSort('newest'),
+                        ),
+                        ChoiceChip(
+                          label: const Text('Oldest'),
+                          selected: _sort == 'oldest',
+                          onSelected: _isSubmitting
+                              ? null
+                              : (_) => _changeSort('oldest'),
+                        ),
+                        const Tooltip(
+                          message:
+                              'Relevance sorting is not available yet. Choose Newest or Oldest.',
+                          child: ChoiceChip(
+                            label: Text('Most relevant'),
+                            selected: false,
+                          ),
+                        ),
+                        const Text('Most relevant is not available yet.'),
+                      ],
                     ),
-                  ],
-                ),
-              if (_errorMessage != null)
-                MaterialBanner(
-                  content: Text(_errorMessage!),
-                  actions: [
-                    TextButton(
-                      onPressed: _isSubmitting
-                          ? null
-                          : () => _retryAction?.call(),
-                      child: const Text('Retry'),
+                  ),
+                Expanded(child: _buildCommentList()),
+                for (final attempt in journal.attempts.where(
+                  (attempt) =>
+                      attempt.scope.startsWith('comment:$_actor:') &&
+                      attempt.payload['method'] == 'DELETE' &&
+                      attempt.payload['postId'] == widget.postId &&
+                      !_comments.any(
+                        (comment) =>
+                            !comment.deleted &&
+                            attempt.scope.endsWith(':${comment.id}'),
+                      ),
+                ))
+                  TextButton(
+                    onPressed: _isSubmitting
+                        ? null
+                        : () => _retryDeletedComment(attempt),
+                    child: const Text('Retry saved comment deletion'),
+                  ),
+                if (_restoring) const Text('Restoring draft…'),
+                if (!signedIn) const Text('Sign in to comment.'),
+                if (signedIn && !widget.canSubmit)
+                  Text(
+                    _sessionEpoch == 0
+                        ? 'This post is awaiting publication checks. Comments can be submitted after publication.'
+                        : 'Reopen the post to check whether comments are available.',
+                  ),
+                if (_draftStatus != null) Text(_draftStatus!),
+                if (_pendingParentId != null && _replyTarget == null)
+                  const Text('Saved reply target retained.'),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: constraints.maxHeight * 0.5,
+                  ),
+                  child: SingleChildScrollView(
+                    child: _ComposerBar(
+                      key: ValueKey('comment-create-input:$_sessionEpoch'),
+                      enabled: canCompose,
+                      controller: _composerController,
+                      replyTarget: _replyTarget,
+                      isSubmitting: _isSubmitting || _restoring,
+                      locked: _locked,
+                      aiLabel: _aiLabel,
+                      composerFocusNode: _composerFocusNode,
+                      onCancelReply: () => setState(() {
+                        if (!_isSubmitting && !_locked) {
+                          _replyTarget = null;
+                          _pendingParentId = null;
+                          _saveDraft();
+                        }
+                      }),
+                      onChanged: _saveDraft,
+                      onDisclosureChanged: (label) => setState(() {
+                        _aiLabel = label;
+                        _saveDraft();
+                      }),
+                      onSend: _submitComment,
                     ),
-                  ],
+                  ),
                 ),
-              Expanded(child: _buildCommentList()),
-              for (final attempt in journal.attempts.where(
-                (attempt) =>
-                    attempt.scope.startsWith('comment:$_actor:') &&
-                    attempt.payload['method'] == 'DELETE' &&
-                    attempt.payload['postId'] == widget.postId &&
-                    !_comments.any(
-                      (comment) =>
-                          !comment.deleted &&
-                          attempt.scope.endsWith(':${comment.id}'),
-                    ),
-              ))
-                TextButton(
-                  onPressed: _isSubmitting
-                      ? null
-                      : () => _retryDeletedComment(attempt),
-                  child: const Text('Retry saved comment deletion'),
-                ),
-              if (_restoring) const Text('Restoring draft…'),
-              if (!signedIn) const Text('Sign in to comment.'),
-              if (signedIn && !widget.canSubmit)
-                Text(
-                  _sessionEpoch == 0
-                      ? 'This post is awaiting publication checks. Comments can be submitted after publication.'
-                      : 'Reopen the post to check whether comments are available.',
-                ),
-              if (_draftStatus != null) Text(_draftStatus!),
-              if (_pendingParentId != null && _replyTarget == null)
-                const Text('Saved reply target retained.'),
-              _ComposerBar(
-                key: ValueKey('comment-create-input:$_sessionEpoch'),
-                enabled: canCompose,
-                controller: _composerController,
-                replyTarget: _replyTarget,
-                isSubmitting: _isSubmitting || _restoring,
-                locked: _locked,
-                aiLabel: _aiLabel,
-                composerFocusNode: _composerFocusNode,
-                onCancelReply: () => setState(() {
-                  if (!_isSubmitting && !_locked) {
-                    _replyTarget = null;
-                    _pendingParentId = null;
-                    _saveDraft();
-                  }
-                }),
-                onChanged: _saveDraft,
-                onDisclosureChanged: (label) => setState(() {
-                  _aiLabel = label;
-                  _saveDraft();
-                }),
-                onSend: _submitComment,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
+  List<_ThreadComment> _topLevelComments() {
+    final roots = _comments
+        .where((comment) => comment.parentCommentId == null)
+        .map((comment) => comment.id)
+        .toSet();
+    return _conversationMode
+        ? _comments
+              .where(
+                (comment) =>
+                    comment.parentCommentId == null ||
+                    !roots.contains(comment.conversationId),
+              )
+              .toList()
+        : _comments;
+  }
+
   Widget _buildCommentList() {
+    final comments = _topLevelComments();
     if (_isInitialLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_comments.isEmpty) {
+    if (comments.isEmpty) {
       return RefreshIndicator(
         onRefresh: _loadInitial,
         child: ListView(
-          children: const [
-            SizedBox(height: 120),
-            Center(child: Text('No comments yet. Be the first to reply.')),
+          children: [
+            const SizedBox(height: 120),
+            if (_errorMessage == null)
+              const Center(
+                child: Text('No comments yet. Be the first to reply.'),
+              ),
           ],
         ),
       );
@@ -988,48 +1500,170 @@ class _CommentThreadScreenState extends ConsumerState<CommentThreadScreen> {
       child: ListView.separated(
         controller: _scrollController,
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-        itemCount: _comments.length + (_isLoadingMore ? 1 : 0),
+        itemCount: comments.length + (_isLoadingMore ? 1 : 0),
         separatorBuilder: (_, __) => const SizedBox(height: 6),
         itemBuilder: (context, index) {
-          if (_isLoadingMore && index == _comments.length) {
+          if (_isLoadingMore && index == comments.length) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
               child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
             );
           }
 
-          final comment = _comments[index];
+          final comment = comments[index];
           final isHighlighted = widget.initialCommentId == comment.id;
-          return _CommentTile(
-            comment: comment,
-            highlighted: isHighlighted,
-            onEdit: _isOwner(comment) && !_isSubmitting
-                ? () => _editComment(comment)
-                : null,
-            onDelete: _isOwner(comment) && !_isSubmitting
-                ? () => _deleteComment(comment)
-                : null,
-            onReply:
-                comment.deleted ||
-                    comment.moderationState == 'under_review' ||
-                    !widget.canSubmit ||
-                    ref.read(currentUserProvider) == null ||
-                    comment.parentCommentId != null ||
-                    _isSubmitting ||
-                    _locked
-                ? null
-                : () {
-                    setState(() {
-                      _replyTarget = comment;
-                      _pendingParentId = null;
-                    });
-                    _saveDraft();
-                    _composerFocusNode.requestFocus();
-                  },
-          );
+          return _conversationMode && comment.parentCommentId == null
+              ? _buildConversation(comment)
+              : _buildCommentTile(comment, isHighlighted);
         },
       ),
     );
+  }
+
+  Widget _buildConversation(_ThreadComment root) {
+    if (root.moderationState != 'allowed') {
+      return _buildCommentTile(root, widget.initialCommentId == root.id);
+    }
+    final expanded = _expandedConversations.contains(root.id);
+    final page = _replyPages[root.id];
+    final privateReplies = _comments
+        .where(
+          (comment) =>
+              comment.parentCommentId != null &&
+              comment.conversationId == root.id,
+        )
+        .toList();
+    final replies = _mergeComments(
+      page?.items ?? [],
+      privateReplies,
+      chronological: true,
+    ).where(_hasVisibleLoadedAncestors).toList();
+    return Column(
+      key: ValueKey('conversation:${root.id}'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildCommentTile(root, widget.initialCommentId == root.id),
+        if (root.replyCount > 0 || replies.isNotEmpty || expanded)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Semantics(
+              expanded: expanded,
+              child: TextButton.icon(
+                key: ValueKey('expand:${root.id}'),
+                icon: Icon(expanded ? Icons.expand_less : Icons.expand_more),
+                label: Text(
+                  expanded
+                      ? 'Hide replies'
+                      : root.replyCount > 0
+                      ? 'View ${root.replyCount} replies'
+                      : 'View replies',
+                ),
+                onPressed: () {
+                  if (expanded) {
+                    setState(() => _expandedConversations.remove(root.id));
+                  } else if (page?.loaded == true) {
+                    setState(() => _expandedConversations.add(root.id));
+                  } else {
+                    unawaited(_loadReplies(root.id));
+                  }
+                },
+              ),
+            ),
+          ),
+        if (expanded) ...[
+          for (final reply in replies)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: _buildCommentTile(
+                reply,
+                widget.initialCommentId == reply.id,
+              ),
+            ),
+          if (page?.error != null)
+            Text(page!.error!, semanticsLabel: page.error),
+          if (page?.loading == true)
+            const Center(child: CircularProgressIndicator())
+          else
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton(
+                onPressed: () => _loadReplies(
+                  root.id,
+                  checkNew: page?.loaded == true && page?.nextCursor == null,
+                ),
+                child: Text(
+                  page?.error != null
+                      ? 'Retry replies'
+                      : page?.nextCursor != null
+                      ? 'Load more replies'
+                      : 'Check for new replies',
+                ),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCommentTile(_ThreadComment comment, bool isHighlighted) {
+    final replyTarget = [
+      ..._comments,
+      for (final page in _replyPages.values) ...page.items,
+    ].where((candidate) => candidate.id == comment.parentCommentId).firstOrNull;
+    return _CommentTile(
+      key: _commentKeys.putIfAbsent(comment.id, GlobalKey.new),
+      comment: comment,
+      replyContext: comment.parentCommentId == null
+          ? null
+          : comment.replyToDeleted || replyTarget?.deleted == true
+          ? 'Replying to a deleted comment'
+          : replyTarget != null
+          ? 'Replying to ${replyTarget.authorUsername}'
+          : comment.replyToAuthorId != null
+          ? 'Replying to ${publicAuthorLabel(null, authorId: comment.replyToAuthorId!)}'
+          : 'Replying to an earlier comment',
+      highlighted: isHighlighted || _contextHighlightId == comment.id,
+      onReplyContext: comment.parentCommentId == null
+          ? null
+          : () => _revealComment(comment.parentCommentId!),
+      onEdit: _isOwner(comment) && !_isSubmitting
+          ? () => _editComment(comment)
+          : null,
+      onDelete: _isOwner(comment) && !_isSubmitting
+          ? () => _deleteComment(comment)
+          : null,
+      onReply:
+          comment.deleted ||
+              comment.moderationState == 'under_review' ||
+              !widget.canSubmit ||
+              ref.read(currentUserProvider) == null ||
+              (comment.parentCommentId != null && !_nestedReplies) ||
+              _isSubmitting ||
+              _locked
+          ? null
+          : () {
+              setState(() {
+                _replyTarget = comment;
+                _pendingParentId = null;
+              });
+              _saveDraft();
+              _composerFocusNode.requestFocus();
+            },
+    );
+  }
+
+  bool _hasVisibleLoadedAncestors(_ThreadComment comment) {
+    final byId = {for (final item in _comments) item.id: item};
+    final seen = <String>{comment.id};
+    var parentId = comment.parentCommentId;
+    while (parentId != null) {
+      if (!seen.add(parentId)) return false;
+      final parent = byId[parentId];
+      if (parent == null) return true;
+      if (parent.moderationState != 'allowed') return false;
+      parentId = parent.parentCommentId;
+    }
+    return true;
   }
 }
 
@@ -1168,11 +1802,14 @@ class _ComposerBar extends StatelessWidget {
 
 class _CommentTile extends StatelessWidget {
   const _CommentTile({
+    super.key,
     required this.comment,
     required this.highlighted,
     required this.onReply,
     this.onEdit,
     this.onDelete,
+    this.replyContext,
+    this.onReplyContext,
   });
 
   final _ThreadComment comment;
@@ -1180,6 +1817,8 @@ class _CommentTile extends StatelessWidget {
   final VoidCallback? onReply;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final String? replyContext;
+  final VoidCallback? onReplyContext;
 
   @override
   Widget build(BuildContext context) {
@@ -1218,6 +1857,18 @@ class _CommentTile extends StatelessWidget {
               ),
             ],
           ),
+          if (replyContext != null)
+            Semantics(
+              button: true,
+              label: replyContext,
+              onTap: onReplyContext,
+              child: ExcludeSemantics(
+                child: TextButton(
+                  onPressed: onReplyContext,
+                  child: Text(replyContext!),
+                ),
+              ),
+            ),
           Text(comment.text, style: Theme.of(context).textTheme.bodyMedium),
           if (comment.moderationState == 'under_review')
             const Text('Under review. Publication checks are pending.'),
@@ -1265,10 +1916,30 @@ class _CommentTile extends StatelessWidget {
 }
 
 class _CommentsPage {
-  const _CommentsPage({required this.items, required this.nextCursor});
+  const _CommentsPage({
+    required this.items,
+    required this.nextCursor,
+    this.refreshCursor,
+    this.conversations = false,
+    this.nestedReplies = false,
+    this.revalidatedItems = const [],
+  });
 
   final List<_ThreadComment> items;
   final String? nextCursor;
+  final String? refreshCursor;
+  final bool conversations;
+  final bool nestedReplies;
+  final List<_ThreadComment> revalidatedItems;
+}
+
+class _ReplyPageState {
+  List<_ThreadComment> items = [];
+  String? nextCursor;
+  String? refreshCursor;
+  bool loaded = false;
+  bool loading = false;
+  String? error;
 }
 
 class _ThreadComment {
@@ -1283,6 +1954,10 @@ class _ThreadComment {
     this.declaredCreationMode,
     this.moderationState,
     this.deleted = false,
+    this.conversationId,
+    this.replyCount = 0,
+    this.replyToAuthorId,
+    this.replyToDeleted = false,
   });
 
   final String id;
@@ -1295,6 +1970,10 @@ class _ThreadComment {
   final String? declaredCreationMode;
   final String? moderationState;
   final bool deleted;
+  final String? conversationId;
+  final int replyCount;
+  final String? replyToAuthorId;
+  final bool replyToDeleted;
 
   factory _ThreadComment.fromJson(Map<String, dynamic> json) {
     final id =
@@ -1327,6 +2006,10 @@ class _ThreadComment {
       declaredCreationMode: json['declaredCreationMode'] as String?,
       moderationState: json['moderationState'] as String?,
       deleted: json['deleted'] == true,
+      conversationId: json['conversationId'] as String?,
+      replyCount: json['replyCount'] as int? ?? 0,
+      replyToAuthorId: json['replyToAuthorId'] as String?,
+      replyToDeleted: json['replyToDeleted'] == true,
     );
   }
 }
