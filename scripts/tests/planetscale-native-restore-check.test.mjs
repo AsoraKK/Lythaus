@@ -289,7 +289,7 @@ test('authority diagnostic preserves missing, null, organization and exact datab
   assert.equal(evidence.rows[10].resourceMissing, false); assert.equal(evidence.rows[10].resourceIdMissing, false);
   assert.equal(evidence.rows[11].resourceTypeIsOrganization, true); assert.equal(evidence.rows[11].deletedAtMissing, true);
 });
-test('authority diagnostic excludes unrelated resources and unknown values, caps output and never exposes credentials', async () => {
+test('authority diagnostic retains unknown and unrelated rows as bounded enums without exporting their values', async () => {
   let evidence;
   const rows = [{ access: password, resource_id: RESTORE.databaseId, resource: { name: RESTORE.database } },
     { access: 'read_database', resource_id: 'otherdatabase', resource_name: password,
@@ -300,11 +300,14 @@ test('authority diagnostic excludes unrelated resources and unknown values, caps
     ? { id: RESTORE.databaseId, name: RESTORE.database, kind: 'postgresql' }
     : { id: 'unknownid', name: password, token: password, plain_text_refresh_token: password, service_token_accesses: rows }));
   await assert.rejects(() => api.authority(value => { evidence = value; }), /existing_token_missing_read_database/);
-  assert.equal(evidence.accessRowCount, 72); assert.equal(evidence.relevantRowCount, 70);
+  assert.equal(evidence.accessRowCount, 72);
   assert.equal(evidence.rowsTruncated, true); assert.equal(evidence.rows.length, 64);
   assert.equal(evidence.tokenMatchesCodeXToken, false); assert.equal(evidence.tokenMatchesOtherKnownToken, false);
   assert.doesNotMatch(JSON.stringify(evidence), new RegExp(password));
-  assert.ok(evidence.rows.every(row => row.access === 'read_database' && row.resourceTypeIsDatabase === false));
+  assert.equal(evidence.rows[0].access, 'UNKNOWN_STRING');
+  assert.equal(evidence.rows[1].resourceIdMatchesDatabase, false);
+  assert.equal(evidence.rows[1].nestedNameMatchesDatabase, false);
+  assert.ok(evidence.rows.every(row => row.resourceTypeIsDatabase === false));
 });
 test('read-only plan durably checkpoints sanitized authority evidence before retaining the original rejection', async () => {
   const f = fixture(); f.options.environment.RESTORE_CHECK_EXECUTE = 'false';
@@ -331,6 +334,152 @@ test('authority diagnostics require verified database and self identity and neve
       ? 'database_identity_changed' : mode === 'organization_only' ? 'existing_token_missing_read_database' : 'existing_token_authority_unverifiable'));
     assert.equal(evidence.length, mode === 'organization_only' ? 1 : 0);
     assert.doesNotMatch(JSON.stringify(evidence), new RegExp(password));
+  }
+});
+const authorityAccesses = ['read_database', 'read_branch', 'delete_branch', 'delete_production_branch', 'read_backups',
+  'create_branch', 'connect_branch', 'connect_production_branch', 'restore_production_branch_backup'];
+const authorityRows = () => authorityAccesses.map(access => ({ access, resource_id: RESTORE.databaseId, resource_type: 'Database',
+  resource: { id: RESTORE.databaseId, name: RESTORE.database, deleted_at: null } }));
+function grantDiagnosticFixture({ rows = [], pages, mode = '', validAuthority = false } = {}) {
+  const calls = [], evidence = [];
+  const api = new RestoreApi('estjkwtxzsmh:' + password, async (url, options) => {
+    calls.push({ url, method: options.method });
+    if (url === apiBase) return Response.json({ id: mode === 'wrong_database' ? 'differentdatabase' : RESTORE.databaseId,
+      name: RESTORE.database, kind: 'postgresql' });
+    if (url.endsWith('/service-tokens/estjkwtxzsmh')) return Response.json({
+      id: mode === 'wrong_self' ? 'differentid' : 'estjkwtxzsmh', token: password, name: password,
+      service_token_accesses: validAuthority ? authorityRows() : rows,
+    });
+    if (mode === 'denied') return Response.json({ token: password, message: password }, { status: 403 });
+    if (mode === 'transport') throw new Error(password);
+    if (mode === 'redirect') return { status: 200, redirected: true };
+    const page = Number(new URL(url).searchParams.get('page'));
+    return Response.json(pages ? pages(page) : { type: 'list', current_page: page, next_page: null, data: [] });
+  });
+  return { api, calls, evidence, observe: value => { evidence.push(value); } };
+}
+test('official grants GET retains all descriptor shapes as enums and never accepts unmatched all-database or organization grants', async () => {
+  const variants = [
+    { resource_type: 'Database', resource_id: '*', resource_name: 'All databases',
+      resource: { type: 'Database', id: '*', name: 'All databases' } },
+    { resource_type: 'AllDatabases', resource_id: null, resource: null },
+    { resource_type: 'Organization', resource_id: 'organization123', resource_name: RESTORE.organization,
+      resource: { type: 'Organization', id: 'organization123', name: RESTORE.organization, deleted_at: null } },
+    { resource_type: 'Database', resource_id: 'otherdatabase', resource_name: password, resource: { id: 'otherdatabase', name: password } },
+    { resource_type: 'Organization', resource_id: 'otherorganization', resource: { id: 'otherorganization', name: password } },
+    { resource_type: 'constructor', resource_id: '', resource_name: password },
+    {}, null, password, { resource_id: null, resource: password },
+  ];
+  const rows = variants.map(row => objectFixtureRow(row));
+  const f = grantDiagnosticFixture({ rows, pages: page => ({ type: 'list', current_page: page, next_page: null,
+    data: variants.map(row => row && typeof row === 'object' ? { ...row, accesses: [{ access: 'read_database' }, { access: password }, null, password] } : row) }) });
+  await assert.rejects(() => f.api.authority(f.observe, true), TypeError);
+  assert.equal(f.calls.length, 3); assert.ok(f.calls.every(row => row.method === 'GET'));
+  assert.equal(f.calls[2].url, 'https://api.planetscale.com/v1/organizations/lythaus/service-tokens/estjkwtxzsmh/grants?page=1&per_page=100');
+  assert.equal(f.evidence[0].grants.status, 'NOT_REQUESTED');
+  const report = f.evidence.at(-1);
+  assert.equal(report.version, 2); assert.equal(report.rows.length, variants.length);
+  assert.equal(report.grants.status, 'COLLECTED'); assert.equal(report.grants.rows.length, variants.length);
+  assert.equal(report.rows[0].resourceIdKind, 'WILDCARD'); assert.equal(report.rows[0].nestedNameKind, 'ALL_DATABASES_MARKER');
+  assert.equal(report.rows[1].resourceIdKind, 'NULL'); assert.equal(report.rows[1].resourceTypeKind, 'ALL_DATABASES_MARKER');
+  assert.equal(report.rows[2].nestedNameMatchesOrganization, true);
+  assert.equal(report.rows[3].nestedIdMatchesDatabase, false); assert.equal(report.rows[4].nestedNameMatchesOrganization, false);
+  assert.equal(report.rows[5].resourceTypeKind, 'UNKNOWN_STRING'); assert.equal(report.rows[5].resourceIdKind, 'EMPTY_STRING');
+  assert.equal(report.rows[6].resourceIdKind, 'MISSING'); assert.equal(report.rows[7].rowKind, 'NULL');
+  assert.equal(report.rows[8].rowKind, 'UNKNOWN_STRING'); assert.equal(report.rows[9].resourceKind, 'UNKNOWN_STRING');
+  assert.deepEqual(report.grants.rows[0].accesses.map(row => row.access), ['read_database', 'UNKNOWN_STRING', 'MISSING', 'MISSING']);
+  assert.doesNotMatch(JSON.stringify(f.evidence), new RegExp(password));
+  assert.doesNotMatch(JSON.stringify(f.evidence), /otherdatabase|otherorganization|organization123/);
+});
+function objectFixtureRow(row) { return row && typeof row === 'object' ? { ...row, access: 'read_database' } : row; }
+test('complete grants diagnostics preserve valid database authority while grouped grants alone cannot grant it', async () => {
+  const pages = page => ({ type: 'list', current_page: page, next_page: null, data: [
+    { resource_type: 'Database', resource_id: RESTORE.databaseId, resource_name: RESTORE.database,
+      accesses: authorityAccesses.map(access => ({ access, description: password })) },
+  ] });
+  const valid = grantDiagnosticFixture({ validAuthority: true, pages });
+  await valid.api.authority(valid.observe, true);
+  assert.equal(valid.evidence.at(-1).grants.rows[0].resourceIdMatchesDatabase, true);
+  const missing = grantDiagnosticFixture({ pages });
+  await assert.rejects(() => missing.api.authority(missing.observe, true), /existing_token_missing_read_database/);
+});
+test('grants diagnostics use bounded reconstructed pages, ignore redirect links and retain unknown rows', async () => {
+  const f = grantDiagnosticFixture({ pages: page => ({ type: 'list', current_page: page, next_page: page === 1 ? 2 : null,
+    next_page_url: 'https://unrelated.invalid/' + password, data: [{ resource_type: page === 1 ? 'Database' : password,
+      resource_id: page === 1 ? '*' : null, accesses: [{ access: 'read_branch' }] }] }) });
+  await assert.rejects(() => f.api.authority(f.observe, true), /existing_token_missing_read_database/);
+  assert.equal(f.calls.length, 4); assert.ok(f.calls.every(row => row.url.startsWith('https://api.planetscale.com/')));
+  assert.match(f.calls[3].url, /grants[?]page=2&per_page=100$/);
+  assert.equal(f.evidence.at(-1).grants.pages, 2); assert.equal(f.evidence.at(-1).grants.rowCount, 2);
+  assert.equal(f.evidence.at(-1).grants.rows[1].resourceTypeKind, 'UNKNOWN_STRING');
+  assert.doesNotMatch(JSON.stringify(f.evidence), new RegExp(password));
+});
+for (const mode of ['denied', 'transport', 'redirect', 'malformed_page', 'missing_next_page', 'excessive_page', 'page_limit', 'inconsistent_total']) {
+  test('grants diagnostic failure is recorded without retry or replacement of original authority rejection: ' + mode, async () => {
+    const f = grantDiagnosticFixture({ mode, pages: page => ({
+      type: 'list', current_page: mode === 'malformed_page' ? page + 1 : page,
+      next_page: mode === 'missing_next_page' ? undefined : ['page_limit', 'inconsistent_total'].includes(mode) ? page + 1 : null,
+      ...(mode === 'inconsistent_total' ? { total_count: page === 1 ? 2 : 3 } : {}),
+      data: mode === 'excessive_page' ? Array(101).fill({}) : [],
+    }) });
+    await assert.rejects(() => f.api.authority(f.observe, true), /existing_token_missing_read_database/);
+    const result = f.evidence.at(-1).grants;
+    assert.ok(['BLOCKED', 'DENIED'].includes(result.status)); assert.equal(typeof result.errorCode, 'string');
+    assert.ok(f.calls.every(row => row.method === 'GET')); assert.equal(f.calls.length, mode === 'page_limit' ? 7 : mode === 'inconsistent_total' ? 4 : 3);
+    assert.doesNotMatch(JSON.stringify(f.evidence), new RegExp(password));
+  });
+}
+test('grant read failure still blocks a plan whose original database authority passes', async () => {
+  const f = grantDiagnosticFixture({ mode: 'denied', validAuthority: true });
+  await assert.rejects(() => f.api.authority(f.observe, true), /provider_access_denied/);
+  assert.equal(f.evidence.at(-1).grants.status, 'DENIED'); assert.equal(f.calls.length, 3);
+});
+test('diagnostic output limits are explicit and cannot certify complete grant collection', async () => {
+  for (const mode of ['grant_rows', 'grant_accesses', 'self_rows']) {
+    const f = grantDiagnosticFixture({ validAuthority: true, pages: page => ({ type: 'list', current_page: page, next_page: null,
+      data: mode === 'grant_rows' ? Array(65).fill({ accesses: [] }) : [{ accesses: Array(mode === 'grant_accesses' ? 65 : 1).fill({ access: 'read_database' }) }] }) });
+    if (mode === 'self_rows') {
+      const original = f.api.fetchImpl;
+      f.api.fetchImpl = async (url, options) => url.endsWith('/service-tokens/estjkwtxzsmh')
+        ? Response.json({ id: 'estjkwtxzsmh', service_token_accesses: [...authorityRows(), ...Array(65).fill({ access: password })] })
+        : original(url, options);
+    }
+    await assert.rejects(() => f.api.authority(f.observe, true), new RegExp(mode === 'self_rows' ? 'token_authority_diagnostic_truncated' : 'token_grants_diagnostic_truncated'));
+    const result = f.evidence.at(-1);
+    assert.ok(result.rows.length <= 64 && result.grants.rows.length <= 64);
+    assert.ok(result.grants.rows.every(row => row.accesses.length <= 64));
+    assert.doesNotMatch(JSON.stringify(result), new RegExp(password));
+  }
+});
+test('grants reads remain fixed to the existing token and cannot be used by cleanup or issue mutations', async () => {
+  let calls = 0;
+  const api = new RestoreApi('estjkwtxzsmh:' + password, async () => { calls++; return Response.json({}); });
+  for (const path of ['/../service-tokens/other/grants?page=1&per_page=100',
+    '/../service-tokens/self/grants?page=6&per_page=100', '/../service-tokens/self/grants?page=1&per_page=101',
+    '/../service-tokens/self/grants?page=1&per_page=100&extra=secret']) {
+    await assert.rejects(() => api.request(path), /fixed_provider_operation_required/);
+  }
+  for (const method of ['POST', 'PATCH', 'DELETE']) await assert.rejects(
+    () => api.request('/../service-tokens/self/grants?page=1&per_page=100', { method }), /fixed_provider_operation_required/);
+  const cleanup = new RestoreCleanupApi('estjkwtxzsmh:' + password, async () => { calls++; return Response.json({}); });
+  await assert.rejects(() => cleanup.request('/../service-tokens/self/grants?page=1&per_page=100'), /fixed_provider_operation_required/);
+  assert.equal(calls, 0);
+});
+test('grants diagnostics wait for database/self identity and execute mode never requests them', async () => {
+  for (const mode of ['wrong_database', 'wrong_self']) {
+    const f = grantDiagnosticFixture({ mode });
+    await assert.rejects(() => f.api.authority(f.observe, true), /database_identity_changed|existing_token_authority_unverifiable/);
+    assert.equal(f.calls.length, mode === 'wrong_database' ? 1 : 2); assert.equal(f.evidence.length, 0);
+  }
+  for (const execute of [true, false]) {
+    const f = fixture(); f.options.environment.RESTORE_CHECK_EXECUTE = String(execute);
+    const g = grantDiagnosticFixture();
+    f.options.api = g.api;
+    const report = await runNativeRestore(f.options);
+    assert.deepEqual(report.providerMutations, []); assert.deepEqual(report.credentialActions, []);
+    assert.equal(report.createdTargetId, null); assert.equal(report.cleanup, 'NOT_NEEDED');
+    assert.equal(g.calls.length, execute ? 2 : 3); assert.ok(g.calls.every(row => row.method === 'GET'));
+    assert.equal(report.authorityDiagnostic.grants.status, execute ? 'NOT_REQUESTED' : 'COLLECTED');
   }
 });
 test('credential projection rejects main, mismatched role, host and password; never creates a role', () => {
