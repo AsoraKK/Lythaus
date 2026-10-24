@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { parse } from 'yaml';
 import { execFile, execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
@@ -35,6 +36,20 @@ test('workflow uses root build context, hash-pinned client, preflight and extern
   assert.ok(workflow.indexOf('consume-evaluation-authorization.mjs') < workflow.indexOf('docker build --target evaluation'));
   assert.ok(workflow.indexOf('Persist consumed authorization marker') < workflow.indexOf('Verify durable authorization marker before runtime build'));
   assert.ok(workflow.indexOf('Verify durable authorization marker before runtime build') < workflow.indexOf('docker build --target evaluation'));
+});
+
+test('sanitized receipt destination and consumed marker each have an explicit two-day artifact lifetime', () => {
+  const workflow = parse(fs.readFileSync(path.join(root, '.github/workflows/authenticity-cpu-evaluation.yml'), 'utf8'));
+  const steps = workflow.jobs.evaluate.steps;
+  const receipt = steps.find(step => step.name === 'Upload sanitized receipt only');
+  const marker = steps.find(step => step.name === 'Persist consumed authorization marker');
+  for (const upload of [receipt, marker]) {
+    assert.ok(upload);
+    assert.equal(upload.with['retention-days'], 2);
+  }
+  assert.equal(receipt.with.name, 'authenticity-cpu-evaluation-${{ inputs.release_sha }}');
+  assert.equal(receipt.with.path, '${{ runner.temp }}/authenticity-cpu-receipt-sanitized.json');
+  assert.doesNotMatch(receipt.with.path, /private-beta|approval|checkpoint|fixtures|\.tgz/);
 });
 
 test('authorization ledger is atomic across reruns', () => {
@@ -109,6 +124,14 @@ test('private archive and expired approval fail with sanitized errors before sta
     assert.notEqual(expired.status, 0);
     assert.match(expired.stdout, /PRIVATE_APPROVAL_REJECTED:APPROVAL_EXPIRED/);
     assert.doesNotMatch(expired.stdout, new RegExp(directory.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    const mismatched = JSON.parse(fs.readFileSync(approval, 'utf8'));
+    mismatched.expiresAtEpochSeconds = Math.floor(Date.now() / 1000) + 3600;
+    mismatched.preprocessingHash = '0'.repeat(64);
+    fs.writeFileSync(approval, JSON.stringify(mismatched));
+    const preprocessing = run(process.execPath, [script('validate-private-evaluation-approval.mjs'), '--approval', approval, '--root', directory, '--source-sha', 'a'.repeat(40)]);
+    assert.notEqual(preprocessing.status, 0);
+    assert.match(preprocessing.stdout, /PRIVATE_APPROVAL_REJECTED:PREPROCESSING_IDENTITY_MISMATCH/);
+    assert.doesNotMatch(preprocessing.stdout, new RegExp(directory.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
 });
 

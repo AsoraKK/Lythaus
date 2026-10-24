@@ -1,5 +1,6 @@
 """Attended, no-retry parity runner for an explicitly authorized loopback Container."""
 import argparse
+from contextlib import contextmanager
 import hashlib
 import io
 import json
@@ -7,6 +8,7 @@ import math
 import os
 from pathlib import Path
 import re
+import signal
 import time
 import urllib.request
 import uuid
@@ -20,6 +22,27 @@ THRESHOLD = 0.5864923000335693
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         raise ValueError("REDIRECT_FORBIDDEN")
+
+
+class DeadlineExceeded(ValueError):
+    pass
+
+
+@contextmanager
+def active_request_deadline(seconds):
+    if not hasattr(signal, "setitimer") or signal.getitimer(signal.ITIMER_REAL)[0] > 0:
+        raise ValueError("REQUEST_DEADLINE_UNAVAILABLE")
+
+    def expired(_signal, _frame):
+        raise DeadlineExceeded("ACTIVE_DEADLINE")
+
+    previous_handler = signal.signal(signal.SIGALRM, expired)
+    try:
+        signal.setitimer(signal.ITIMER_REAL, seconds)
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous_handler)
 
 
 def sha(data):
@@ -62,6 +85,8 @@ def prepare(manifest, approval):
         data = file.read_bytes()
         if sha(data) != record["sha256"]:
             raise ValueError("FIXTURE_CHECKSUM_MISMATCH")
+        if not data.startswith((b"\x89PNG\r\n\x1a\n", b"\xff\xd8\xff")):
+            raise ValueError("FIXTURE_FORMAT_UNSUPPORTED")
         records.append(({**record, "descendant": False}, data))
     from PIL import Image, __version__
     if __version__ != "12.3.0":
@@ -135,9 +160,9 @@ def main():
             report["preflight"] = {"recordCount": len(records), "maxSafeAttempts": approval["maxSafeAttempts"], "maxDecodedPixels": approval["maxDecodedPixels"]}
             save()
             return 0
-        started = time.monotonic()
+        deadline = time.monotonic() + approval["maxActiveMinutes"] * 60
         for record, data in records:
-            if time.monotonic() - started >= 30 * 60:
+            if time.monotonic() >= deadline:
                 report["state"] = "TIME_BOUND_EXHAUSTED"
                 save()
                 return 1
@@ -148,8 +173,16 @@ def main():
             request = urllib.request.Request(f"http://127.0.0.1:{args.port}/infer", data=data, headers={"authorization": "Bearer " + secret, "content-type": "image/png" if data.startswith(b"\x89PNG\r\n\x1a\n") else "image/jpeg", "x-beta-binding": json.dumps(binding)}, method="POST")
             sent = time.monotonic()
             try:
-                with urllib.request.build_opener(NoRedirect()).open(request, timeout=180) as response:
-                    raw = response.read(8 * 1024 * 1024 + 1)
+                remaining = deadline - sent
+                if remaining <= 0:
+                    raise DeadlineExceeded("ACTIVE_DEADLINE")
+                with active_request_deadline(remaining):
+                    with urllib.request.build_opener(NoRedirect()).open(request, timeout=min(180, remaining)) as response:
+                        if time.monotonic() >= deadline:
+                            raise DeadlineExceeded("ACTIVE_DEADLINE")
+                        raw = response.read(8 * 1024 * 1024 + 1)
+                if time.monotonic() >= deadline:
+                    raise DeadlineExceeded("ACTIVE_DEADLINE")
                 if len(raw) > 8 * 1024 * 1024:
                     raise ValueError("RESPONSE_LIMIT")
                 result = json.loads(raw)["result"]
@@ -162,8 +195,19 @@ def main():
                     raise ValueError("INVALID_SCORE")
                 if result["status"] != "OK" and score is not None:
                     raise ValueError("FAILURE_WITH_SCORE")
-                parity = None if record["descendant"] else result["status"] == "OK" and close_enough(score, record["historicalScore"], manifest)
-                attempt.update(state="COMPLETED", modelStatus=result["status"], rawScore=score, parity=parity, endToEndMs=(time.monotonic() - sent) * 1000, timings=result.get("timings"), measurements=result.get("measurements"), interpretation="ABSTAIN_DEGRADED" if record["descendant"] else "HISTORICAL_REUSE_DIAGNOSTIC_ONLY")
+                completed = time.monotonic()
+                if completed >= deadline:
+                    raise DeadlineExceeded("ACTIVE_DEADLINE")
+                if result["status"] != "OK":
+                    attempt.update(state="MODEL_UNAVAILABLE_NO_RETRY", modelStatus=result["status"], rawScore=None,
+                                   parity=None, endToEndMs=(completed - sent) * 1000, interpretation="UNAVAILABLE_NO_AUTHORITY")
+                    if not record["descendant"]:
+                        report["rawClassifierCountsHistoricalReuseOnly"]["unavailable"] += 1
+                    report["state"] = "MODEL_UNAVAILABLE_STOPPED"
+                    save()
+                    return 1
+                parity = None if record["descendant"] else close_enough(score, record["historicalScore"], manifest)
+                attempt.update(state="COMPLETED", modelStatus=result["status"], rawScore=score, parity=parity, endToEndMs=(completed - sent) * 1000, timings=result.get("timings"), measurements=result.get("measurements"), interpretation="ABSTAIN_DEGRADED" if record["descendant"] else "HISTORICAL_REUSE_DIAGNOSTIC_ONLY")
                 if not record["descendant"]:
                     key = "unavailable" if score is None else ("TP" if score >= THRESHOLD else "FN") if record["groundTruth"] else ("FP" if score >= THRESHOLD else "TN")
                     report["rawClassifierCountsHistoricalReuseOnly"][key] += 1
@@ -171,6 +215,11 @@ def main():
                     report["state"] = "PARITY_FAILED_STOPPED"
                     save()
                     return 1
+            except DeadlineExceeded:
+                attempt["state"] = "DEADLINE_EXCEEDED_NO_RETRY"
+                report["state"] = "TIME_BOUND_EXHAUSTED"
+                save()
+                return 1
             except Exception:
                 attempt["state"] = "FAILED_OR_AMBIGUOUS_NO_RETRY"
                 report["state"] = "STOPPED"
