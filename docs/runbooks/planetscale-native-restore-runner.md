@@ -55,6 +55,15 @@ existing connection/deletion permissions for both classifications. If these
 are absent, report the exact missing existing permission; do not expand the
 token or create a branch to discover whether cleanup will work.
 
+Read-only plans preserve an `authorityDiagnostic` checkpoint before rejecting
+missing database-specific permissions. It reports only match booleans for the
+two observed public dashboard token IDs, fixed permission names and bounded
+resource-match booleans, including missing versus null metadata. It never
+exports token material, names, raw resource values or provider bodies. Dashboard
+"all databases" permissions remain unaccepted until their actual representation
+and authority are independently reconciled; diagnostic output does not relax
+any existing permission or execution gate.
+
 Copied role IDs are discovered by exact base username and branch identity,
 never guessed from SQL names. Metadata must match the source's inheritance:
 
